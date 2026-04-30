@@ -1,0 +1,41 @@
+# Dependabot config. Weekly grouped PRs so we batch updates instead of being
+# DDoS'd by daily PR noise. Security-only updates are also enabled by GitHub
+# automatically (separate from this schedule).
+
+version: 2
+updates:
+  # npm dependencies
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Europe/Kyiv'
+    open-pull-requests-limit: 5
+    groups:
+      # Group dev tooling so we don't get 5 PRs every Monday for ESLint/Prettier/TS.
+      dev-tools:
+        patterns:
+          - 'eslint*'
+          - '@eslint/*'
+          - 'prettier'
+          - 'typescript'
+          - '@types/*'
+          - 'globals'
+      # Group runtime deps separately so prod changes are easier to review.
+      runtime:
+        patterns:
+          - 'better-sqlite3'
+    commit-message:
+      prefix: 'chore(deps)'
+
+  # GitHub Actions versions in .github/workflows/*.yml
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: 'chore(ci)'

@@ -1,5 +1,7 @@
 # Spyglass
 
+[![CI](https://github.com/vladikkrasulya/adtech-spyglass/actions/workflows/ci.yml/badge.svg)](https://github.com/vladikkrasulya/adtech-spyglass/actions/workflows/ci.yml)
+
 OpenRTB inspector — paste a `BidRequest` / `BidResponse` JSON and get human-readable validation, semantic crosscheck, and creative preview. Saves test samples per partner.
 
 Runs at [kyivtech.com.ua/spyglass-proxy/](https://kyivtech.com.ua/spyglass-proxy/) (auth-gated through the kyivtech-portal).

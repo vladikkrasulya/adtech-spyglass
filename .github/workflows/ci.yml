@@ -1,0 +1,50 @@
+name: CI
+
+# Runs on pushes to main and on every PR. Mirrors what `npm run ci` does
+# locally — Prettier, ESLint, tsc --noEmit, and the node:test suite.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs of the same ref when a new commit lands. No need to
+# burn minutes finishing a run for a commit that's already been replaced.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # better-sqlite3 ships prebuilds for ubuntu-latest, so this is fast.
+      # If a prebuild miss ever forces compilation, ubuntu runners already
+      # have python3 + build-essential preinstalled.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check (JSDoc + tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test

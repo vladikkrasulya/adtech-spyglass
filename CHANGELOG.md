@@ -6,6 +6,12 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### CI / repo hygiene
+
+- GitHub Actions workflow (`.github/workflows/ci.yml`) running `npm run ci` (format:check → lint → typecheck → tests) on every push to `main` and every PR. Concurrency-cancelled per ref so old runs don't keep eating minutes.
+- Dependabot config (`.github/dependabot.yml`) with weekly grouped PRs: dev-tools cluster (eslint/prettier/typescript/@types) and runtime cluster (better-sqlite3) updated separately to keep diffs reviewable. GitHub Actions versions bumped on the same cadence.
+- CI status badge in README.
+
 ### Phase 1 — Foundation refactor
 
 #### Validator core split into modules
