@@ -51,6 +51,24 @@
         gap: var(--space-3);
         flex-wrap: wrap;
       }
+      .auth-widget {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding-left: var(--space-3);
+        margin-left: var(--space-2);
+        border-left: 1px solid var(--border);
+      }
+      .anon-cta {
+        text-align: center;
+        padding: var(--space-4);
+        color: var(--text-dim);
+        font-size: var(--fs-sm);
+        line-height: 1.5;
+      }
+      .anon-cta button {
+        margin-top: var(--space-2);
+      }
       .sim-price-wrap {
         display: flex;
         align-items: center;
@@ -1050,6 +1068,33 @@
         <button onclick="runAnalysis()" class="btn btn-primary btn-sm" id="analyzeBtn">
           analyze stream
         </button>
+        <!-- Auth widget — switches between sign-in button and email/logout based on /api/auth/me -->
+        <div id="authWidget" class="auth-widget" aria-live="polite">
+          <button
+            id="authSignInBtn"
+            class="btn btn-ghost btn-sm"
+            onclick="openAuthModal('login')"
+            style="display: none"
+          >
+            sign in
+          </button>
+          <span id="authUserBlock" style="display: none; align-items: center; gap: var(--space-2)">
+            <span
+              id="authEmail"
+              class="mono-label hide-sm"
+              style="
+                color: var(--text);
+                text-transform: none;
+                letter-spacing: 0;
+                max-width: 180px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              "
+            ></span>
+            <button class="btn btn-ghost btn-sm" onclick="signOut()">sign out</button>
+          </span>
+        </div>
       </div>
     </header>
 
@@ -1227,6 +1272,6 @@
     </footer>
 
     <div id="modalRoot"></div>
-    <script src="spyglass.app.js?v=6"></script>
+    <script src="spyglass.app.js?v=7"></script>
   </body>
 </html>

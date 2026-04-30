@@ -1,16 +1,24 @@
 'use strict';
 
 /**
- * Spyglass HTTP server. Thin wrapper around the validator core (validator/)
- * and the SQLite store (db.js). Endpoints:
+ * Spyglass HTTP server. Thin wrapper around the validator core (validator/),
+ * the SQLite store (db.js), and the auth module (auth.js).
  *
- *   GET  /api/health               — DB ping + version, 200 ok / 503 down
- *   POST /api/analyze              — { bidReq, bidRes } → { validation, crosscheck }
- *   POST /api/proxy                — SSRF-safe forwarder to a small allow-list
+ * Public (no auth):
+ *   GET  /api/health                 — DB ping
+ *   POST /api/analyze                — { bidReq, bidRes } → validation + crosscheck
+ *   POST /api/proxy                  — SSRF-safe forwarder (allow-listed)
+ *   POST /api/auth/register          — { email, password }
+ *   POST /api/auth/login             — { email, password }
+ *   POST /api/auth/logout            — clear session
+ *   GET  /api/auth/me                — current user or { user: null }
+ *
+ * Auth required (per-user scoped, returns 401 when anonymous):
  *   GET/POST/PATCH/DELETE
- *        /api/partners[/:id]       — partner CRUD
- *        /api/samples[/:id]        — saved sample CRUD
- *   GET /                          — static UI (public/index.html, etc.)
+ *        /api/partners[/:id]         — partner CRUD
+ *        /api/samples[/:id]          — saved sample CRUD
+ *
+ * Static UI at GET /.
  *
  * Error contract:
  *   - All /api/* responses follow {success: bool, ...payload | error, code?}
@@ -23,7 +31,8 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const { Partners, Samples, db } = require('./db');
+const { Users, Partners, Samples, db } = require('./db');
+const { createAuth } = require('./auth');
 const { validate, crosscheck, listLocales, listDialects } = require('./validator');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -31,9 +40,9 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const DEFAULT_LOCALE = 'uk';
 const DEFAULT_DIALECT = 'iab';
 
+const auth = createAuth({ Users });
+
 // ── Process-level safety net ────────────────────────────────────────────────
-// Node's default for uncaught errors is to exit. We log and continue so a
-// single malformed payload doesn't take down the workspace.
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err && err.stack ? err.stack : err);
 });
@@ -64,7 +73,6 @@ function serveStaticFile(req, res) {
   const filePath = path.join(PUBLIC_DIR, normalized);
   const resolved = path.resolve(filePath);
 
-  // Path-traversal guard
   if (resolved.indexOf(path.resolve(PUBLIC_DIR)) !== 0) {
     res.writeHead(403);
     res.end('Forbidden');
@@ -111,10 +119,6 @@ function sendJson(res, code, payload) {
   res.end(JSON.stringify(payload));
 }
 
-/**
- * Uniform error envelope. Use this for every 4xx/5xx /api/* response.
- *   { success: false, error: 'human msg', code: 'machine_id', detail?: any }
- */
 function sendError(res, status, code, error, detail) {
   const body = { success: false, error, code };
   if (detail !== undefined) body.detail = detail;
@@ -127,7 +131,11 @@ function makeError(code, msg) {
   return e;
 }
 
-// resolveLocale picks a locale from query string with a strict allow-list.
+function publicUser(u) {
+  if (!u) return null;
+  return { id: u.id, email: u.email, created_at: u.created_at };
+}
+
 function resolveLocale(parsed) {
   const want = parsed.searchParams.get('locale');
   if (want && listLocales().includes(want)) return want;
@@ -140,7 +148,46 @@ function resolveDialect(parsed) {
   return DEFAULT_DIALECT;
 }
 
-// ── Proxy (test harness, allow-listed) ──────────────────────────────────────
+// ── Auth routes ─────────────────────────────────────────────────────────────
+
+function handleAuthRoute(req, res, parsed) {
+  const { pathname } = parsed;
+  const method = req.method;
+
+  if (pathname === '/api/auth/me' && method === 'GET') {
+    const user = auth.getCurrentUser(req);
+    return sendJson(res, 200, { success: true, user: publicUser(user) });
+  }
+
+  if (pathname === '/api/auth/register' && method === 'POST') {
+    return readJson(req)
+      .then(async ({ email, password }) => {
+        const user = await auth.register({ email, password }, req);
+        auth.createSession(req, res, user);
+        sendJson(res, 200, { success: true, user: publicUser(user) });
+      })
+      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+  }
+
+  if (pathname === '/api/auth/login' && method === 'POST') {
+    return readJson(req)
+      .then(async ({ email, password }) => {
+        const user = await auth.login({ email, password }, req);
+        auth.createSession(req, res, user);
+        sendJson(res, 200, { success: true, user: publicUser(user) });
+      })
+      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+  }
+
+  if (pathname === '/api/auth/logout' && method === 'POST') {
+    auth.destroySession(req, res);
+    return sendJson(res, 200, { success: true });
+  }
+
+  return false;
+}
+
+// ── /api/proxy (allow-listed test harness) ──────────────────────────────────
 
 function handleProxy(req, res) {
   readJson(req)
@@ -221,15 +268,16 @@ function handleAnalyze(req, res, parsed) {
     .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
 }
 
-// ── DB-backed CRUD: partners + samples ──────────────────────────────────────
+// ── Per-user CRUD: partners + samples (auth-required) ──────────────────────
 
-function handleApi(req, res, parsed) {
+function handleApi(req, res, parsed, user) {
   const { pathname, searchParams } = parsed;
   const method = req.method;
+  const userId = user.id;
 
   // ── partners ────────────────────────────────────────────────────────────
   if (pathname === '/api/partners' && method === 'GET') {
-    return sendJson(res, 200, { success: true, partners: Partners.list() });
+    return sendJson(res, 200, { success: true, partners: Partners.list({ userId }) });
   }
   if (pathname === '/api/partners' && method === 'POST') {
     return readJson(req)
@@ -237,7 +285,7 @@ function handleApi(req, res, parsed) {
         if (!b.name || !String(b.name).trim()) {
           return sendError(res, 400, 'name_required', 'Partner name is required');
         }
-        const p = Partners.create(b);
+        const p = Partners.create({ userId, ...b });
         sendJson(res, 200, { success: true, partner: p });
       })
       .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
@@ -247,14 +295,14 @@ function handleApi(req, res, parsed) {
     const id = Number(m[1]);
     return readJson(req)
       .then((b) => {
-        const p = Partners.update(id, b);
+        const p = Partners.update({ id, userId, ...b });
         if (!p) return sendError(res, 404, 'not_found', 'Partner not found');
         sendJson(res, 200, { success: true, partner: p });
       })
       .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }
   if (m && method === 'DELETE') {
-    const ok = Partners.delete(Number(m[1]));
+    const ok = Partners.delete({ id: Number(m[1]), userId });
     return ok
       ? sendJson(res, 200, { success: true })
       : sendError(res, 404, 'not_found', 'Partner not found');
@@ -267,7 +315,10 @@ function handleApi(req, res, parsed) {
     let partnerId;
     if (pid === 'unassigned') partnerId = 'unassigned';
     else if (pid != null && pid !== '') partnerId = Number(pid);
-    return sendJson(res, 200, { success: true, samples: Samples.list({ partnerId }) });
+    return sendJson(res, 200, {
+      success: true,
+      samples: Samples.list({ userId, partnerId }),
+    });
   }
   if (pathname === '/api/samples' && method === 'POST') {
     return readJson(req)
@@ -275,14 +326,14 @@ function handleApi(req, res, parsed) {
         if (!b.title || !String(b.title).trim()) {
           return sendError(res, 400, 'title_required', 'Sample title is required');
         }
-        const s = Samples.create(b);
+        const s = Samples.create({ userId, ...b });
         sendJson(res, 200, { success: true, sample: s });
       })
       .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }
   m = pathname.match(/^\/api\/samples\/(\d+)$/);
   if (m && method === 'GET') {
-    const s = Samples.get(Number(m[1]));
+    const s = Samples.get({ id: Number(m[1]), userId });
     if (!s) return sendError(res, 404, 'not_found', 'Sample not found');
     return sendJson(res, 200, { success: true, sample: s });
   }
@@ -290,14 +341,14 @@ function handleApi(req, res, parsed) {
     const id = Number(m[1]);
     return readJson(req)
       .then((b) => {
-        const s = Samples.update(id, b);
+        const s = Samples.update({ id, userId, ...b });
         if (!s) return sendError(res, 404, 'not_found', 'Sample not found');
         sendJson(res, 200, { success: true, sample: s });
       })
       .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }
   if (m && method === 'DELETE') {
-    const ok = Samples.delete(Number(m[1]));
+    const ok = Samples.delete({ id: Number(m[1]), userId });
     return ok
       ? sendJson(res, 200, { success: true })
       : sendError(res, 404, 'not_found', 'Sample not found');
@@ -306,7 +357,7 @@ function handleApi(req, res, parsed) {
   return false;
 }
 
-// ── /api/health: liveness + DB ping ─────────────────────────────────────────
+// ── /api/health ─────────────────────────────────────────────────────────────
 
 function handleHealth(_req, res) {
   let dbOk = false;
@@ -321,6 +372,8 @@ function handleHealth(_req, res) {
     success: dbOk,
     status: dbOk ? 'ok' : 'degraded',
     checks: { db: dbOk },
+    sessions: auth.activeSessionCount(),
+    users: Users.count(),
     uptime: Math.round(process.uptime()),
     pid: process.pid,
     node: process.version,
@@ -343,8 +396,16 @@ const server = http.createServer((req, res) => {
     if (pathname === '/api/analyze' && req.method === 'POST')
       return handleAnalyze(req, res, parsed);
     if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);
+    if (pathname.startsWith('/api/auth/')) {
+      if (handleAuthRoute(req, res, parsed) !== false) return;
+      return sendError(res, 405, 'method_not_allowed', 'Method not allowed for this resource');
+    }
     if (pathname.startsWith('/api/partners') || pathname.startsWith('/api/samples')) {
-      if (handleApi(req, res, parsed) !== false) return;
+      const user = auth.getCurrentUser(req);
+      if (!user) {
+        return sendError(res, 401, 'unauthorized', 'Sign in to access your library');
+      }
+      if (handleApi(req, res, parsed, user) !== false) return;
       return sendError(res, 405, 'method_not_allowed', 'Method not allowed for this resource');
     }
     return serveStaticFile(req, res);
@@ -358,11 +419,10 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('Spyglass backend listening at http://0.0.0.0:' + PORT);
 });
 
-// Graceful shutdown
 const shutdown = (signal) => {
   console.log('[' + signal + '] shutting down');
+  auth.shutdown();
   server.close(() => process.exit(0));
-  // Hard exit after 5s in case connections hang
   setTimeout(() => process.exit(1), 5000).unref();
 };
 process.on('SIGINT', () => shutdown('SIGINT'));

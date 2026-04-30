@@ -32,9 +32,9 @@ module.exports = [
     },
   },
 
-  // Server-side (Node) — server.js, db.js, validator.js
+  // Server-side (Node) — server.js, db.js, auth.js, validator/**
   {
-    files: ['server.js', 'db.js', 'validator.js', 'scripts/**/*.js'],
+    files: ['server.js', 'db.js', 'auth.js', 'validator/**/*.js', 'scripts/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,

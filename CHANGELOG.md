@@ -6,6 +6,56 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### Phase 7 (partial) — Multi-user accounts
+
+The validator/crosscheck/preview path stays **fully public** (no login needed). Only the saved-samples library and partner taxonomy are gated behind a per-user account. Aligns with the deploy decision: spyglass.kyivtech.com.ua is a public tool with optional accounts for persistent state.
+
+#### Storage
+
+- `db.js` schema bumped to `user_version = 2`. Adds `users(id, email, password_hash, created_at)`. Both `partners` and `samples` get a non-null `user_id` FK with `ON DELETE CASCADE`. Slug uniqueness moves from global to `UNIQUE(user_id, slug)` so two users can each have a partner named "Adsterra".
+- Existing v0 data dropped (was test-only — confirmed empty in production).
+- Sample creation verifies `partner_id` belongs to the same user — prevents cross-user assignment via crafted POST.
+
+#### Auth (`auth.js`)
+
+- bcrypt password hashing (12 rounds), email/password registration.
+- Sessions stored in-process: random 32-byte hex token in `spy_session` cookie (HttpOnly, SameSite=Lax, Secure when behind HTTPS, 30-day Max-Age).
+- Constant-time login: bcrypt compare always runs even on missing email, so timing doesn't leak whether an email exists.
+- Per-IP rate limits: register 5/hour, login 10/15min.
+- Hourly sweeper purges expired sessions.
+- Graceful shutdown clears the session map.
+
+#### API
+
+Public (no auth):
+
+- `POST /api/auth/register` `{ email, password }` → creates user + sets session cookie.
+- `POST /api/auth/login` `{ email, password }` → sets session cookie.
+- `POST /api/auth/logout` → clears session.
+- `GET  /api/auth/me` → `{ user: { id, email, created_at } | null }`.
+
+Required to be logged in (returns 401 with uniform error envelope when anonymous):
+
+- `/api/partners[/:id]` — all CRUD ops, scoped per user.
+- `/api/samples[/:id]` — all CRUD ops, scoped per user.
+
+`/api/health` now also surfaces `sessions` (active count) and `users` (total registered).
+
+#### UI
+
+- Auth widget in header: "sign in" button when anonymous; user email + "sign out" when logged in.
+- Login/register modal with mode-toggle link, password length hint, and Enter-to-submit.
+- `Save` button auth-gates: anonymous click prompts the sign-in modal instead of erroring on the API.
+- Library panel renders an "Sign in to save" CTA for anonymous users; the partner filter / partner manager only appears when logged in.
+- Localized auth errors (`invalid_email`, `weak_password`, `email_taken`, `invalid_credentials`, `rate_limited` → human Ukrainian copy).
+- 401 responses on `/api/partners` or `/api/samples` (e.g. session expired during use) trigger silent fallback to anonymous state — no error toast spam.
+
+#### Tests
+
+- `tests/db.test.js` rewritten — 17 tests covering Users CRUD, slug-per-user uniqueness, ON DELETE CASCADE for users → partners + samples, scope enforcement (userB cannot read/update/delete userA's data), partner-of-other-user rejection on sample creation.
+- `tests/auth.test.js` new — 11 tests covering register validation, login (correct + wrong + non-existent email with constant-time response), session round-trip, logout invalidation, register/login rate limits.
+- All 83 tests pass.
+
 ### Phase 2 — IAB-spec authoritative validator (initial)
 
 - `validator/detect.js` extended with `detectVersion(payload)` returning `{ version, confidence, signals }`.

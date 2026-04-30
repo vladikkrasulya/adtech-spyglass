@@ -881,19 +881,157 @@
     `;
   }
 
-  // ── Saved samples library (DB-backed) ─────────────────────────
-  // partners + samples are stored in spyglass.db. This block owns the left
-  // panel "saved" section, the partner filter, and the save/edit/delete modals.
+  // ── Auth state + saved samples library ────────────────────────
+  // The library is per-account: anonymous users see a "Sign in to save"
+  // panel; logged-in users get partners/samples scoped to their user_id.
   let _partnerCache = [];
   let _currentSampleId = null;
+  let _currentUser = null;
 
   async function api(method, url, body) {
-    const init = { method, headers: { 'Content-Type': 'application/json' } };
+    const init = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+    };
     if (body !== undefined) init.body = JSON.stringify(body);
     const r = await fetch(url, init);
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || j.success === false) throw new Error(j.error || 'http ' + r.status);
+    if (!r.ok || j.success === false) {
+      const err = new Error(j.error || 'http ' + r.status);
+      err.status = r.status;
+      err.code = j.code;
+      throw err;
+    }
     return j;
+  }
+
+  // ── Auth widget ───────────────────────────────────────────────
+
+  function renderAuthWidget() {
+    const signInBtn = $('authSignInBtn');
+    const userBlock = $('authUserBlock');
+    const emailEl = $('authEmail');
+    if (_currentUser) {
+      signInBtn.style.display = 'none';
+      userBlock.style.display = 'inline-flex';
+      emailEl.textContent = _currentUser.email;
+    } else {
+      signInBtn.style.display = 'inline-flex';
+      userBlock.style.display = 'none';
+      emailEl.textContent = '';
+    }
+  }
+
+  async function bootAuth() {
+    try {
+      const j = await api('GET', 'api/auth/me');
+      _currentUser = j.user || null;
+    } catch {
+      _currentUser = null;
+    }
+    renderAuthWidget();
+  }
+
+  window.openAuthModal = function (mode) {
+    const isReg = mode === 'register';
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-card">' +
+      '<div class="modal-title">' +
+      (isReg ? 'створити акаунт' : 'увійти') +
+      '</div>' +
+      '<div class="modal-row"><label>email</label><input id="authEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
+      '<div class="modal-row"><label>пароль' +
+      (isReg ? ' (мінімум 8 символів)' : '') +
+      '</label><input id="authPasswordInput" type="password" autocomplete="' +
+      (isReg ? 'new-password' : 'current-password') +
+      '"></div>' +
+      '<div id="authError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
+      '<div class="modal-actions" style="justify-content:space-between">' +
+      '<button class="btn btn-ghost btn-sm" onclick="' +
+      (isReg ? "openAuthModal('login')" : "openAuthModal('register')") +
+      '">' +
+      (isReg ? 'вже є акаунт? увійти' : 'немає акаунту? створити') +
+      '</button>' +
+      '<div style="display:flex;gap:var(--space-2)">' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">скасувати</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="' +
+      (isReg ? 'doRegister()' : 'doLogin()') +
+      '">' +
+      (isReg ? 'створити' : 'увійти') +
+      '</button>' +
+      '</div></div></div></div>';
+    setTimeout(() => $('authEmailInput').focus(), 0);
+    // Submit on Enter
+    const submit = isReg ? () => window.doRegister() : () => window.doLogin();
+    ['authEmailInput', 'authPasswordInput'].forEach((id) => {
+      $(id).addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submit();
+        }
+      });
+    });
+  };
+
+  window.doLogin = async function () {
+    const email = $('authEmailInput').value.trim();
+    const password = $('authPasswordInput').value;
+    const errEl = $('authError');
+    errEl.textContent = '';
+    try {
+      const j = await api('POST', 'api/auth/login', { email, password });
+      _currentUser = j.user;
+      renderAuthWidget();
+      closeModal();
+      toast('Привіт, ' + j.user.email, 'success');
+      await refreshPartners();
+      refreshSamples();
+    } catch (e) {
+      errEl.textContent = humanAuthError(e);
+    }
+  };
+
+  window.doRegister = async function () {
+    const email = $('authEmailInput').value.trim();
+    const password = $('authPasswordInput').value;
+    const errEl = $('authError');
+    errEl.textContent = '';
+    try {
+      const j = await api('POST', 'api/auth/register', { email, password });
+      _currentUser = j.user;
+      renderAuthWidget();
+      closeModal();
+      toast('Акаунт створено, ' + j.user.email, 'success');
+      await refreshPartners();
+      refreshSamples();
+    } catch (e) {
+      errEl.textContent = humanAuthError(e);
+    }
+  };
+
+  window.signOut = async function () {
+    try {
+      await api('POST', 'api/auth/logout');
+    } catch {
+      /* logout is idempotent — ignore failures */
+    }
+    _currentUser = null;
+    _partnerCache = [];
+    renderAuthWidget();
+    refreshSamples();
+    toast('Ви вийшли з акаунту', 'success');
+  };
+
+  function humanAuthError(e) {
+    const code = e.code || '';
+    if (code === 'invalid_email') return 'Невалідний email';
+    if (code === 'weak_password') return 'Пароль має бути хоча б 8 символів';
+    if (code === 'email_taken') return 'Цей email вже зареєстровано';
+    if (code === 'invalid_credentials') return 'Невірний email або пароль';
+    if (code === 'rate_limited') return 'Забагато спроб — спробуй пізніше';
+    return e.message || 'Помилка';
   }
 
   function humanStatus(s) {
@@ -912,6 +1050,13 @@
   window.humanStatus = humanStatus;
 
   async function refreshPartners() {
+    if (!_currentUser) {
+      _partnerCache = [];
+      const sel = $('partnerFilter');
+      sel.innerHTML =
+        '<option value="">усі партнери</option><option value="unassigned">— без партнера —</option>';
+      return;
+    }
     try {
       const j = await api('GET', 'api/partners');
       _partnerCache = j.partners || [];
@@ -925,18 +1070,29 @@
           .join('');
       if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
     } catch (e) {
+      if (e.status === 401) {
+        // session expired — fall back to anonymous state cleanly
+        _currentUser = null;
+        renderAuthWidget();
+        return;
+      }
       toast('Не вдалося завантажити список партнерів: ' + e.message, 'error');
     }
   }
 
   async function refreshSamples() {
+    const el = $('savedList');
+    if (!_currentUser) {
+      el.innerHTML =
+        '<div class="anon-cta">Увійди в акаунт щоб зберігати запити в особисту бібліотеку.<br><button class="btn btn-primary btn-sm" onclick="openAuthModal(\'login\')">увійти або створити акаунт</button></div>';
+      return;
+    }
     const sel = $('partnerFilter');
     const v = sel.value;
     const qs = v === '' ? '' : '?partner_id=' + encodeURIComponent(v);
     try {
       const j = await api('GET', 'api/samples' + qs);
       const list = j.samples || [];
-      const el = $('savedList');
       if (!list.length) {
         el.innerHTML = '<div class="saved-empty">Збережених запитів ще немає</div>';
         return;
@@ -978,6 +1134,12 @@
         })
         .join('');
     } catch (e) {
+      if (e.status === 401) {
+        _currentUser = null;
+        renderAuthWidget();
+        refreshSamples(); // re-render anonymous state
+        return;
+      }
       toast('Не вдалося завантажити запити: ' + e.message, 'error');
     }
   }
@@ -1005,6 +1167,12 @@
   }
 
   window.openSaveModal = function () {
+    if (!_currentUser) {
+      // Auth-gate the save action: prompt sign-in instead of erroring on the API.
+      toast('Увійди в акаунт щоб зберегти у бібліотеку', 'error');
+      window.openAuthModal('login');
+      return;
+    }
     const reqVal = $('bidReq').value || '';
     const resVal = $('bidRes').value || '';
     if (!reqVal.trim() && !resVal.trim()) {
@@ -1230,6 +1398,7 @@
     renderReference();
     updateCharCount('bidReq');
     updateCharCount('bidRes');
+    await bootAuth();
     await refreshPartners();
     refreshSamples();
   });
