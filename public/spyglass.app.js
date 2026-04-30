@@ -20,6 +20,7 @@
 
   function toast(msg, type) {
     const c = $('toastContainer');
+    if (!c) return; // boundary fired before DOM ready — silent skip
     const t = document.createElement('div');
     t.className = 'toast ' + (type || 'success');
     t.innerHTML = (type === 'error' ? '⚠ ' : '✓ ') + escapeHtml(msg);
@@ -30,6 +31,22 @@
       setTimeout(() => t.remove(), 300);
     }, 2500);
   }
+
+  // ── Global error boundary ──────────────────────────────────────
+  // One bug in a handler shouldn't kill the page. Catch synchronous errors
+  // and unhandled promise rejections, log them, and surface a toast so the
+  // user sees that something went wrong (instead of a silent dead button).
+  window.addEventListener('error', (e) => {
+    // Resource-load errors (img/script 404) come through here too — skip.
+    if (!e.error) return;
+    console.error('[spyglass:error]', e.error);
+    toast('Внутрішня помилка інтерфейсу: ' + (e.error.message || 'unknown'), 'error');
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error('[spyglass:unhandledrejection]', e.reason);
+    const msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+    toast('Невловлений збій: ' + msg, 'error');
+  });
 
   window.utils = {
     format(id) {
@@ -333,20 +350,28 @@
         $('statusText').textContent = 'backend offline';
       }
 
-      // Validation tab
+      // Validation tab — new findings model: { id, level, path, params, specRef, msg }
       const valEl = $('tValidation');
-      if (validation && validation.errors && validation.errors.length) {
-        $('validationBadge').textContent = validation.errors.length;
+      const findings = validation && (validation.findings || validation.errors); // graceful migration
+      if (validation && findings && findings.length) {
+        $('validationBadge').textContent = findings.length;
         valEl.innerHTML =
           '<div class="mono-label" style="margin-bottom:var(--space-3)">' +
           escapeHtml(validation.type) +
           ' · ' +
-          escapeHtml(validation.status) +
+          escapeHtml(humanStatus(validation.status)) +
           '</div>' +
-          validation.errors
-            .map((e) => {
-              const cls = e.level === 'danger' ? 'danger' : e.level === 'info' ? 'info' : 'warning';
-              const ic = e.level === 'danger' ? '✕' : e.level === 'info' ? 'i' : '!';
+          findings
+            .map((f) => {
+              // 'error' is canonical; fall back to old 'danger' if API still emits it.
+              const lvl = f.level === 'danger' ? 'error' : f.level;
+              const cls = lvl === 'error' ? 'danger' : lvl === 'info' ? 'info' : 'warning';
+              const ic = lvl === 'error' ? '✕' : lvl === 'info' ? 'i' : '!';
+              const specLink = f.specRef
+                ? ' <a href="' +
+                  escapeHtml(f.specRef) +
+                  '" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px;text-decoration:none" title="OpenRTB spec reference">spec ↗</a>'
+                : '';
               return (
                 '<div class="validation-item ' +
                 cls +
@@ -355,12 +380,13 @@
                 ic +
                 '</span>' +
                 '<span>' +
-                escapeHtml(e.msg) +
-                (e.path
+                escapeHtml(f.msg) +
+                (f.path
                   ? ' <span style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px">[' +
-                    escapeHtml(e.path) +
+                    escapeHtml(f.path) +
                     ']</span>'
                   : '') +
+                specLink +
                 '</span>' +
                 '</div>'
               );
@@ -425,7 +451,7 @@
         });
         $('hList').innerHTML = historyStore
           .map((e, i) => {
-            const cls = e.status === 'Critical' ? 'critical' : 'healthy';
+            const cls = e.status === 'errors' || e.status === 'Critical' ? 'critical' : 'healthy';
             return (
               '<div class="history-item" onclick="runAnalysis(historyStore[' +
               i +
@@ -851,6 +877,12 @@
   }
 
   function humanStatus(s) {
+    // Canonical (new validator) statuses
+    if (s === 'errors') return 'критичні помилки';
+    if (s === 'warnings') return 'попередження';
+    if (s === 'clean') return 'чисто';
+    if (s === 'invalid') return 'невалідний payload';
+    // Backward compat with the pre-Phase-1 server (transitional)
     if (s === 'Critical') return 'критичні помилки';
     if (s === 'Healthy') return 'без критичних помилок';
     if (s === 'Invalid') return 'невалідний payload';

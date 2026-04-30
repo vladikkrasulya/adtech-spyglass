@@ -1,83 +1,94 @@
 'use strict';
 
+/**
+ * Validator tests. Findings are asserted by stable `id` and `path` fields,
+ * not by message text — so the suite survives future i18n / copy edits.
+ *
+ * Test fixtures default to the IAB dialect (no Kadam-isms unless the test
+ * explicitly opts in via { dialect: 'kadam' }).
+ */
+
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { validateORTB, crosscheck, detectType, nativeAssetCrosscheck } = require('../validator');
+const { validate, crosscheck, detectType, nativeAssetCrosscheck, TYPES } = require('../validator');
 
 const { validRequest, validResponse, nativeRequest, nativeResponse } = require('./fixtures');
 
-// Findings are asserted by `path` rather than message text so tests survive
-// future i18n / message-key refactors. Path is structurally stable.
-const findByPath = (errors, path) => errors.find((e) => e.path === path);
-const findingsByLevel = (errors, level) => errors.filter((e) => e.level === level);
+const findById = (findings, id) => findings.find((f) => f.id === id);
+const byLevel = (findings, level) => findings.filter((f) => f.level === level);
 
 // ── detectType ────────────────────────────────────────────────────────────
 
 test('detectType: BidRequest', () => {
-  assert.equal(detectType(validRequest()), 'oRTB BidRequest');
+  assert.equal(detectType(validRequest()), TYPES.ORTB_REQUEST);
 });
 
 test('detectType: BidResponse', () => {
-  assert.equal(detectType(validResponse()), 'oRTB BidResponse');
+  assert.equal(detectType(validResponse()), TYPES.ORTB_RESPONSE);
 });
 
 test('detectType: Kadam Feed (clickunder)', () => {
-  assert.equal(detectType({ result: { listing: [{ url: 'x', bid: 1 }] } }), 'Kadam Feed Response');
+  assert.equal(detectType({ result: { listing: [{ url: 'x', bid: 1 }] } }), TYPES.KADAM_FEED);
 });
 
 test('detectType: Kadam Feed (push array)', () => {
-  assert.equal(detectType([{ id: 'm1' }]), 'Kadam Feed Response');
+  assert.equal(detectType([{ id: 'm1' }]), TYPES.KADAM_FEED);
 });
 
 test('detectType: garbage', () => {
-  assert.equal(detectType('not an object'), 'unknown');
-  assert.equal(detectType(42), 'unknown');
+  assert.equal(detectType('not an object'), TYPES.UNKNOWN);
+  assert.equal(detectType(42), TYPES.UNKNOWN);
 });
 
-// ── validateORTB on a valid BidRequest ────────────────────────────────────
+// ── validate on a valid BidRequest (default IAB dialect) ─────────────────
 
-test('valid BidRequest: status Healthy, no danger findings', () => {
-  const result = validateORTB(validRequest());
-  assert.equal(result.status, 'Healthy');
-  assert.equal(findingsByLevel(result.errors, 'danger').length, 0);
+test('valid BidRequest under IAB: status clean, no error findings', () => {
+  const result = validate(validRequest());
+  assert.equal(result.status, 'clean');
+  assert.equal(byLevel(result.findings, 'error').length, 0);
   assert.match(result.type, /BidRequest/);
 });
 
-// ── BidRequest danger paths ──────────────────────────────────────────────
+// ── BidRequest error-level findings (by stable id) ───────────────────────
 
-test('missing BidRequest.id is danger at path "id"', () => {
+test('missing BidRequest.id is error at id "request.id_required"', () => {
   const req = validRequest();
   delete req.id;
-  const { errors, status } = validateORTB(req);
-  assert.equal(status, 'Critical');
-  assert.ok(findByPath(errors, 'id'));
-  assert.equal(findByPath(errors, 'id').level, 'danger');
+  const { findings, status } = validate(req);
+  assert.equal(status, 'errors');
+  const f = findById(findings, 'request.id_required');
+  assert.ok(f);
+  assert.equal(f.level, 'error');
+  assert.equal(f.path, 'id');
 });
 
-test('empty imp[] is danger at path "imp"', () => {
+test('empty imp[] is error "request.imp_required"', () => {
   const req = validRequest();
   req.imp = [];
-  const { errors, status } = validateORTB(req);
-  assert.equal(status, 'Critical');
-  assert.ok(findByPath(errors, 'imp'));
+  const { findings, status } = validate(req);
+  assert.equal(status, 'errors');
+  assert.ok(findById(findings, 'request.imp_required'));
 });
 
-test('missing site AND app is danger at path "site/app"', () => {
+test('missing site AND app is error "request.no_site_or_app"', () => {
   const req = validRequest();
   delete req.site;
   delete req.app;
-  const { errors, status } = validateORTB(req);
-  assert.equal(status, 'Critical');
-  assert.ok(findByPath(errors, 'site/app'));
+  const { findings, status } = validate(req);
+  assert.equal(status, 'errors');
+  assert.ok(findById(findings, 'request.no_site_or_app'));
 });
 
-test('banner without w/h or format[] is danger at path "imp[0].banner"', () => {
+test('banner without w/h or format[] is error "imp.banner.size_required"', () => {
   const req = validRequest();
-  req.imp[0].banner = {}; // no w, no h, no format
-  const { errors } = validateORTB(req);
-  assert.ok(findByPath(errors, 'imp[0].banner'));
-  assert.equal(findByPath(errors, 'imp[0].banner').level, 'danger');
+  req.imp[0].banner = {};
+  const { findings } = validate(req);
+  const f = findById(findings, 'imp.banner.size_required');
+  assert.ok(f);
+  assert.equal(f.level, 'error');
+  assert.equal(f.path, 'imp[0].banner');
+  assert.equal(f.params.num, 1);
 });
 
 test('banner with format[] but no w/h is OK', () => {
@@ -88,133 +99,202 @@ test('banner with format[] but no w/h is OK', () => {
       { w: 728, h: 90 },
     ],
   };
-  const { errors } = validateORTB(req);
-  assert.equal(findByPath(errors, 'imp[0].banner'), undefined);
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'imp.banner.size_required'), undefined);
 });
 
-test('imp without any format slot is danger at path "imp[0]"', () => {
+test('imp without any format slot is error "imp.format_required"', () => {
   const req = validRequest();
-  delete req.imp[0].banner; // no banner, video, native, audio
-  const { errors } = validateORTB(req);
-  assert.ok(findByPath(errors, 'imp[0]'));
+  delete req.imp[0].banner;
+  const { findings } = validate(req);
+  assert.ok(findById(findings, 'imp.format_required'));
 });
 
-// ── BidRequest warning paths ─────────────────────────────────────────────
+// ── BidRequest warnings ──────────────────────────────────────────────────
 
-test('non-ISO-3166 country is warning at path "device.geo.country"', () => {
+test('non-ISO-3166 country is warning with country param', () => {
   const req = validRequest();
-  req.device.geo.country = 'UA'; // alpha-2 instead of alpha-3
-  const { errors } = validateORTB(req);
-  const f = findByPath(errors, 'device.geo.country');
+  req.device.geo.country = 'UA';
+  const { findings } = validate(req);
+  const f = findById(findings, 'request.device.geo.country_invalid');
   assert.ok(f);
   assert.equal(f.level, 'warning');
+  assert.equal(f.params.country, 'UA');
 });
 
 test('valid alpha-3 country produces no country warning', () => {
   const req = validRequest();
   req.device.geo.country = 'POL';
-  const { errors } = validateORTB(req);
-  assert.equal(findByPath(errors, 'device.geo.country'), undefined);
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'request.device.geo.country_invalid'), undefined);
 });
 
-test('non-array bcat is warning at path "bcat"', () => {
+test('non-array bcat is warning "request.bcat_invalid"', () => {
   const req = validRequest();
   req.bcat = 'IAB7';
-  const { errors } = validateORTB(req);
-  assert.ok(findByPath(errors, 'bcat'));
+  const { findings } = validate(req);
+  assert.ok(findById(findings, 'request.bcat_invalid'));
 });
 
-test('invalid user.gender is warning', () => {
+test('invalid user.gender is warning with gender param', () => {
   const req = validRequest();
   req.user = { gender: 'X' };
-  const { errors } = validateORTB(req);
-  assert.ok(findByPath(errors, 'user.gender'));
+  const { findings } = validate(req);
+  const f = findById(findings, 'request.user.gender_invalid');
+  assert.ok(f);
+  assert.equal(f.params.gender, 'X');
 });
 
-// ── Push trafffic detection ──────────────────────────────────────────────
+// ── Dialect: IAB default does NOT emit Kadam-isms ────────────────────────
 
-test('push impression detection adds info finding', () => {
+test('IAB dialect ignores ext.bsection (no kadam-* findings)', () => {
+  const req = validRequest();
+  req.ext = { bsection: 'wrong-type' };
+  const { findings } = validate(req, { dialect: 'iab' });
+  assert.equal(findings.filter((f) => f.id.startsWith('kadam.')).length, 0);
+});
+
+test('IAB dialect ignores push markers (no kadam.push_detected)', () => {
+  const req = validRequest();
+  req.site.ext = { idzone: 'push-zone' };
+  req.imp[0].ext = { subage: 7 };
+  const { findings } = validate(req, { dialect: 'iab' });
+  assert.equal(findings.filter((f) => f.id.startsWith('kadam.')).length, 0);
+});
+
+// ── Dialect: Kadam emits its extras ──────────────────────────────────────
+
+test('Kadam dialect: ext.bsection wrong type → kadam.ext.bsection_invalid', () => {
+  const req = validRequest();
+  req.ext = { bsection: 'wrong-type' };
+  const { findings } = validate(req, { dialect: 'kadam' });
+  assert.ok(findById(findings, 'kadam.ext.bsection_invalid'));
+});
+
+test('Kadam dialect: push detected emits info finding', () => {
   const req = validRequest();
   req.site.ext = { idzone: 'push-1234' };
   req.imp[0].ext = { subage: 7 };
-  const { errors, type } = validateORTB(req);
-  assert.match(type, /push/);
-  assert.ok(errors.some((e) => e.level === 'info' && e.path === 'imp.ext'));
+  const { findings, type } = validate(req, { dialect: 'kadam' });
+  assert.ok(findById(findings, 'kadam.push_detected'));
+  // type comes from detect.js — pure IAB BidRequest (no push suffix any more)
+  assert.equal(type, TYPES.ORTB_REQUEST);
 });
 
-test('push without subage triggers warning', () => {
+test('Kadam dialect: push without subage triggers kadam.imp.subage_missing', () => {
   const req = validRequest();
   req.site.ext = { idzone: 'push-zone' };
-  // no imp.ext.subage → warning
-  const { errors } = validateORTB(req);
-  assert.ok(findByPath(errors, 'imp[0].ext.subage'));
+  // imp.ext absent → push detected via idzone, subage missing
+  const { findings } = validate(req, { dialect: 'kadam' });
+  assert.ok(findById(findings, 'kadam.imp.subage_missing'));
+});
+
+test('Kadam dialect: unsupported macro in bid.adm → kadam.bid.macro_unsupported', () => {
+  const res = validResponse();
+  res.seatbid[0].bid[0].adm = '<a href="${CLICKURL}">click</a>';
+  const { findings } = validate(res, { dialect: 'kadam' });
+  const f = findById(findings, 'kadam.bid.macro_unsupported');
+  assert.ok(f);
+  assert.equal(f.params.macro, 'CLICKURL');
+});
+
+test('IAB dialect does NOT flag macros — they belong to kadam dialect only', () => {
+  const res = validResponse();
+  res.seatbid[0].bid[0].adm = '<a href="${CLICKURL}">click</a>';
+  const { findings } = validate(res, { dialect: 'iab' });
+  assert.equal(findById(findings, 'kadam.bid.macro_unsupported'), undefined);
 });
 
 // ── BidResponse paths ────────────────────────────────────────────────────
 
 test('valid BidResponse passes', () => {
-  const result = validateORTB(validResponse());
-  assert.equal(result.status, 'Healthy');
-  assert.equal(findingsByLevel(result.errors, 'danger').length, 0);
+  const result = validate(validResponse());
+  assert.equal(result.status, 'clean');
+  assert.equal(byLevel(result.findings, 'error').length, 0);
 });
 
-test('BidResponse missing seatbid is danger', () => {
+test('BidResponse missing seatbid is error "response.seatbid_required"', () => {
   const res = validResponse();
   delete res.seatbid;
-  const { errors, status } = validateORTB(res);
-  assert.equal(status, 'Critical');
-  assert.ok(findByPath(errors, 'seatbid'));
+  const { findings, status } = validate(res);
+  assert.equal(status, 'errors');
+  assert.ok(findById(findings, 'response.seatbid_required'));
 });
 
-test('bid without price is danger', () => {
+test('bid without price is error "response.bid.price_required"', () => {
   const res = validResponse();
   delete res.seatbid[0].bid[0].price;
-  const { errors } = validateORTB(res);
-  assert.ok(findByPath(errors, 'seatbid[0].bid[0].price'));
+  const { findings } = validate(res);
+  assert.ok(findById(findings, 'response.bid.price_required'));
 });
 
-test('bid with no adm and no nurl is warning', () => {
+test('bid with no adm and no nurl is warning "response.bid.payload_missing"', () => {
   const res = validResponse();
   delete res.seatbid[0].bid[0].adm;
   delete res.seatbid[0].bid[0].nurl;
-  const { errors } = validateORTB(res);
-  const f = findByPath(errors, 'seatbid[0].bid[0].adm');
+  const { findings } = validate(res);
+  const f = findById(findings, 'response.bid.payload_missing');
   assert.ok(f);
   assert.equal(f.level, 'warning');
 });
 
-test('unsupported macro in bid.adm yields warning', () => {
-  const res = validResponse();
-  res.seatbid[0].bid[0].adm = '<a href="${CLICKURL}">click</a>'; // not in supported set
-  const { errors } = validateORTB(res);
-  assert.ok(errors.some((e) => e.level === 'warning' && /CLICKURL/.test(e.msg)));
-});
-
 // ── Garbage / detection ──────────────────────────────────────────────────
 
-test('non-object payload is Invalid', () => {
-  const result = validateORTB('hello');
-  assert.equal(result.status, 'Invalid');
+test('non-object payload is invalid', () => {
+  const result = validate('hello');
+  assert.equal(result.status, 'invalid');
 });
 
-test('object that matches no known type is Critical with detection error', () => {
-  const result = validateORTB({ unknown: 'shape' });
-  assert.equal(result.status, 'Critical');
-  assert.ok(result.errors.length > 0);
+test('object with unknown shape is errors with payload.unknown_type', () => {
+  const result = validate({ unknown: 'shape' });
+  assert.equal(result.status, 'errors');
+  assert.ok(findById(result.findings, 'payload.unknown_type'));
+});
+
+// ── Localized messages ───────────────────────────────────────────────────
+
+test('messages resolve for default locale (uk)', () => {
+  const req = validRequest();
+  delete req.id;
+  const { findings } = validate(req);
+  const f = findById(findings, 'request.id_required');
+  assert.ok(f.msg);
+  assert.match(f.msg, /id|запит/i);
+});
+
+test('messages interpolate params', () => {
+  const req = validRequest();
+  req.device.geo.country = 'UA';
+  const { findings } = validate(req);
+  const f = findById(findings, 'request.device.geo.country_invalid');
+  assert.match(f.msg, /UA/);
+});
+
+test('unknown locale falls back to uk', () => {
+  const req = validRequest();
+  delete req.id;
+  const { findings } = validate(req, { locale: 'xx' });
+  assert.ok(findById(findings, 'request.id_required').msg.length > 0);
+});
+
+// ── Spec refs attached to known findings ─────────────────────────────────
+
+test('findings carry specRef URLs', () => {
+  const req = validRequest();
+  delete req.id;
+  const { findings } = validate(req);
+  const f = findById(findings, 'request.id_required');
+  assert.match(f.specRef, /^https:\/\/github\.com\/InteractiveAdvertisingBureau/);
 });
 
 // ── Crosscheck — semantic req↔res ─────────────────────────────────────────
 
-test('crosscheck: matching pair produces ok findings', () => {
+test('crosscheck: matching pair has ok findings', () => {
   const findings = crosscheck(validRequest(), validResponse());
-  // id match
-  assert.ok(findings.some((f) => f.path === 'id' && f.ok));
-  // impid resolution
-  assert.ok(findings.some((f) => f.path.endsWith('.impid') && f.ok));
-  // price ≥ floor
-  assert.ok(findings.some((f) => f.path.endsWith('.price') && f.ok));
-  // auction summary
-  assert.ok(findings.some((f) => f.path === 'auction'));
+  assert.ok(findings.some((f) => f.id === 'crosscheck.id_match' && f.ok));
+  assert.ok(findings.some((f) => f.id === 'crosscheck.bid.impid_resolved' && f.ok));
+  assert.ok(findings.some((f) => f.id === 'crosscheck.bid.above_floor' && f.ok));
+  assert.ok(findings.some((f) => f.id === 'crosscheck.auction.summary'));
 });
 
 test('crosscheck: id mismatch is crit', () => {
@@ -222,9 +302,11 @@ test('crosscheck: id mismatch is crit', () => {
   const res = validResponse();
   res.id = 'different-id';
   const findings = crosscheck(req, res);
-  const idFinding = findings.find((f) => f.path === 'id');
-  assert.ok(idFinding);
-  assert.equal(idFinding.level, 'crit');
+  const f = findings.find((x) => x.id === 'crosscheck.id_mismatch');
+  assert.ok(f);
+  assert.equal(f.level, 'crit');
+  assert.equal(f.params.reqId, 'req-1');
+  assert.equal(f.params.resId, 'different-id');
 });
 
 test('crosscheck: bid.impid not in request is crit', () => {
@@ -232,7 +314,7 @@ test('crosscheck: bid.impid not in request is crit', () => {
   const res = validResponse();
   res.seatbid[0].bid[0].impid = 'nonexistent-imp';
   const findings = crosscheck(req, res);
-  const f = findings.find((x) => x.path.endsWith('.impid') && !x.ok);
+  const f = findings.find((x) => x.id === 'crosscheck.bid.impid_unresolved');
   assert.ok(f);
   assert.equal(f.level, 'crit');
 });
@@ -240,9 +322,9 @@ test('crosscheck: bid.impid not in request is crit', () => {
 test('crosscheck: price below floor is crit', () => {
   const req = validRequest();
   const res = validResponse();
-  res.seatbid[0].bid[0].price = 0.05; // below 0.10 floor
+  res.seatbid[0].bid[0].price = 0.05;
   const findings = crosscheck(req, res);
-  const f = findings.find((x) => x.path.endsWith('.price') && !x.ok);
+  const f = findings.find((x) => x.id === 'crosscheck.bid.below_floor');
   assert.ok(f);
   assert.equal(f.level, 'crit');
 });
@@ -253,9 +335,7 @@ test('crosscheck: bid.cat in bcat is crit', () => {
   const res = validResponse();
   res.seatbid[0].bid[0].cat = ['IAB7-39'];
   const findings = crosscheck(req, res);
-  const f = findings.find((x) => x.path.endsWith('.cat') && !x.ok);
-  assert.ok(f);
-  assert.equal(f.level, 'crit');
+  assert.ok(findings.some((f) => f.id === 'crosscheck.bid.cat_blocked' && f.level === 'crit'));
 });
 
 test('crosscheck: banner size mismatch is warn', () => {
@@ -264,20 +344,25 @@ test('crosscheck: banner size mismatch is warn', () => {
   res.seatbid[0].bid[0].w = 728;
   res.seatbid[0].bid[0].h = 90;
   const findings = crosscheck(req, res);
-  const f = findings.find((x) => x.path.endsWith('.size') && !x.ok);
-  assert.ok(f);
-  assert.equal(f.level, 'warn');
+  assert.ok(findings.some((f) => f.id === 'crosscheck.bid.size_mismatch' && f.level === 'warn'));
 });
 
-test('crosscheck: empty seatbid returns single crit', () => {
+test('crosscheck: empty seatbid returns single crit (crosscheck.no_response)', () => {
   const req = validRequest();
   const res = { id: 'req-1', seatbid: [] };
   const findings = crosscheck(req, res);
   assert.equal(findings.length, 1);
-  assert.equal(findings[0].level, 'crit');
+  assert.equal(findings[0].id, 'crosscheck.no_response');
 });
 
-// ── Native asset crosscheck ───────────────────────────────────────────────
+test('crosscheck findings carry localized msg', () => {
+  const findings = crosscheck(validRequest(), validResponse());
+  const summary = findings.find((f) => f.id === 'crosscheck.auction.summary');
+  assert.ok(summary);
+  assert.match(summary.msg, /Підсумок|ставк/);
+});
+
+// ── Native asset crosscheck (low-level helper) ───────────────────────────
 
 test('nativeAssetCrosscheck: complete response has no missing', () => {
   const req = nativeRequest();
@@ -289,12 +374,8 @@ test('nativeAssetCrosscheck: complete response has no missing', () => {
 
 test('nativeAssetCrosscheck: missing required asset is reported', () => {
   const req = nativeRequest();
-  // Response missing one of the required assets (id 2)
   const adm = JSON.stringify({
-    native: {
-      assets: [{ id: 1, title: { text: 'h' } }], // only id 1
-      link: { url: 'x' },
-    },
+    native: { assets: [{ id: 1, title: { text: 'h' } }], link: { url: 'x' } },
   });
   const cm = nativeAssetCrosscheck(req.imp[0].native, adm);
   assert.deepEqual(cm.missing, [2]);
@@ -307,7 +388,7 @@ test('nativeAssetCrosscheck: extra asset id is flagged', () => {
       assets: [
         { id: 1, title: { text: 'h' } },
         { id: 2, img: { url: 'x' } },
-        { id: 99, data: { value: 'rogue' } }, // not in request
+        { id: 99, data: { value: 'rogue' } },
       ],
     },
   });
@@ -315,8 +396,8 @@ test('nativeAssetCrosscheck: extra asset id is flagged', () => {
   assert.deepEqual(cm.extra, [99]);
 });
 
-test('nativeAssetCrosscheck: invalid JSON adm returns error', () => {
+test('nativeAssetCrosscheck: invalid JSON adm returns errorKey', () => {
   const req = nativeRequest();
   const cm = nativeAssetCrosscheck(req.imp[0].native, 'not json');
-  assert.ok(cm.error);
+  assert.equal(cm.errorKey, 'crosscheck.bid.native_invalid_adm');
 });

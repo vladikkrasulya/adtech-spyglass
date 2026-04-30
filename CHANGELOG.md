@@ -6,7 +6,51 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
-### Added
+### Phase 1 — Foundation refactor
+
+#### Validator core split into modules
+
+- New `validator/` directory replaces the single-file monolith. Pure JS, browser-runnable.
+  - `validator/index.js` — public API: `validate()`, `crosscheck()`, `detectType()`, `listDialects()`, `listLocales()`.
+  - `validator/helpers.js` — predicates, ISO regexes.
+  - `validator/findings.js` — `makeFinding()` factory + level constants (`error`/`warning`/`info`).
+  - `validator/detect.js` — payload type detection (Phase 2 will add version detection).
+  - `validator/rules-request.js` — IAB BidRequest rules.
+  - `validator/rules-response.js` — IAB BidResponse rules.
+  - `validator/rules-feed.js` — Kadam feed format (push + clickunder).
+  - `validator/crosscheck.js` — semantic req↔res crosscheck + native asset compare.
+  - `validator/dialects/iab.js` — base dialect (currently empty hooks).
+  - `validator/dialects/kadam.js` — Kadam-specific extras (`ext.bsection`, `subage`, macros, push detection).
+  - `validator/spec-refs.json` — finding-id → IAB markdown anchor map.
+  - `validator/messages/{uk,en}.json` + `index.js` — locale resolver with `{var}` interpolation.
+
+#### Findings model
+
+- Findings now carry **stable `id`** (e.g. `'imp.banner.size_required'`), structured `params` for interpolation, `level` (`error`/`warning`/`info`), `path`, `specRef` (deep link to IAB spec), and `msg` (localized at presentation time).
+- Top-level `status` values are now `'clean' | 'warnings' | 'errors' | 'invalid'` (was `'Healthy' | 'Critical' | 'Invalid'`).
+- API response payload uses `validation.findings[]` (was `validation.errors[]`).
+
+#### Dialect split — IAB default, Kadam opt-in
+
+- Default dialect is now `iab` — payloads validate strictly against the OpenRTB spec without Kadam-specific rules.
+- `?dialect=kadam` query param activates the Kadam overlay (push detection, `subage`, `ext.bsection`/`btags`, macro support check).
+- Future dialects (PropellerAds, Adsterra, MGID …) add via the same overlay pattern.
+
+#### API surface
+
+- `/api/analyze?locale=uk&dialect=iab` accepts both as optional query params.
+- Response gained `meta: { locale, dialect }`.
+
+### Resilience sub-tasks (paired with Phase 1)
+
+- **`GET /api/health`** — pings the SQLite DB (`SELECT 1`) and returns `{ status, checks, uptime, pid, node }`. Returns 503 if DB is unreachable.
+- **Uniform API error shape** — every 4xx/5xx /api/\* response now follows `{ success: false, error: 'human msg', code: 'machine_id', detail?: any }`.
+- **Process safety net** — `uncaughtException` and `unhandledRejection` handlers log and continue rather than letting Node kill the worker.
+- **Graceful shutdown** — `SIGINT`/`SIGTERM` close the HTTP server cleanly with a 5s hard-exit fallback.
+- **UI error boundary** — global `error` and `unhandledrejection` listeners surface a toast instead of letting one bug freeze the whole page.
+- **Spec deep-links in UI** — every validation finding now shows a `spec ↗` link to the relevant IAB markdown section.
+
+### Earlier groundwork (still in Unreleased)
 
 - Architecture document (`ARCHITECTURE.md`) describing target shape: validator core, dialect overlays, public-vs-auth'd surfaces, i18n strategy.
 - Roadmap (`ROADMAP.md`) with phased plan from current monolith to OSS-able core + hosted product.
@@ -26,7 +70,7 @@ All notable changes to Spyglass are documented here. Format follows
 
 ### Changed
 
-- Extracted validator core into `validator.js` (formerly inline in `server.js`). Pure JS, no Node-only APIs — runs in browser too. `server.js` is now a thin HTTP wrapper.
+- Extracted validator core into `validator.js` (formerly inline in `server.js`). Pure JS, no Node-only APIs — runs in browser too. `server.js` is now a thin HTTP wrapper. (Phase-1 superseded this with `validator/` directory split.)
 - `detectType()` now uses structural array markers (`Array.isArray(obj.imp)`) rather than `id`-presence checks, so payloads missing their `id` still dispatch to the right validator and produce actionable findings instead of "unrecognized payload". Adds heuristics for malformed payloads (site/app present → request; id+cur present → response).
 - `server.js`: `PORT` is now `process.env.PORT || 3000` to support test fixtures.
 

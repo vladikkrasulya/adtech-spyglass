@@ -1,26 +1,45 @@
 'use strict';
 
 /**
- * Spyglass HTTP server. Thin wrapper around the validator core (validator.js)
+ * Spyglass HTTP server. Thin wrapper around the validator core (validator/)
  * and the SQLite store (db.js). Endpoints:
  *
- *   POST /api/analyze         — { bidReq, bidRes } → { validation, crosscheck }
- *   POST /api/proxy           — SSRF-safe forwarder to a small allow-list
+ *   GET  /api/health               — DB ping + version, 200 ok / 503 down
+ *   POST /api/analyze              — { bidReq, bidRes } → { validation, crosscheck }
+ *   POST /api/proxy                — SSRF-safe forwarder to a small allow-list
  *   GET/POST/PATCH/DELETE
- *        /api/partners[/:id]  — partner CRUD
- *        /api/samples[/:id]   — saved sample CRUD
- *   GET /                     — static UI (public/index.html, etc.)
+ *        /api/partners[/:id]       — partner CRUD
+ *        /api/samples[/:id]        — saved sample CRUD
+ *   GET /                          — static UI (public/index.html, etc.)
+ *
+ * Error contract:
+ *   - All /api/* responses follow {success: bool, ...payload | error, code?}
+ *   - Unhandled exceptions get logged + return 500 with a stable shape
+ *   - process-level unhandledRejection / uncaughtException are caught so a
+ *     single bug doesn't kill the worker — they log and continue
  */
 
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const { Partners, Samples } = require('./db');
-const { validateORTB, crosscheck } = require('./validator');
+const { Partners, Samples, db } = require('./db');
+const { validate, crosscheck, listLocales, listDialects } = require('./validator');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DEFAULT_LOCALE = 'uk';
+const DEFAULT_DIALECT = 'iab';
+
+// ── Process-level safety net ────────────────────────────────────────────────
+// Node's default for uncaught errors is to exit. We log and continue so a
+// single malformed payload doesn't take down the workspace.
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err && err.stack ? err.stack : err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
 
 // ── Static file serving ─────────────────────────────────────────────────────
 
@@ -64,28 +83,80 @@ function serveStaticFile(req, res) {
   });
 }
 
+// ── HTTP helpers ────────────────────────────────────────────────────────────
+
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (c) => {
+      body += c;
+      if (body.length > 2 * 1024 * 1024) {
+        reject(makeError('payload_too_large', 'Payload exceeds 2MB limit'));
+        req.destroy();
+      }
+    });
+    req.on('end', () => {
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (e) {
+        reject(makeError('invalid_json', 'Body is not valid JSON: ' + e.message));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function sendJson(res, code, payload) {
+  res.writeHead(code, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(payload));
+}
+
+/**
+ * Uniform error envelope. Use this for every 4xx/5xx /api/* response.
+ *   { success: false, error: 'human msg', code: 'machine_id', detail?: any }
+ */
+function sendError(res, status, code, error, detail) {
+  const body = { success: false, error, code };
+  if (detail !== undefined) body.detail = detail;
+  sendJson(res, status, body);
+}
+
+function makeError(code, msg) {
+  const e = /** @type {Error & {code?: string}} */ (new Error(msg));
+  e.code = code;
+  return e;
+}
+
+// resolveLocale picks a locale from query string with a strict allow-list.
+function resolveLocale(parsed) {
+  const want = parsed.searchParams.get('locale');
+  if (want && listLocales().includes(want)) return want;
+  return DEFAULT_LOCALE;
+}
+
+function resolveDialect(parsed) {
+  const want = parsed.searchParams.get('dialect');
+  if (want && listDialects().includes(want)) return want;
+  return DEFAULT_DIALECT;
+}
+
 // ── Proxy (test harness, allow-listed) ──────────────────────────────────────
 
 function handleProxy(req, res) {
-  let body = '';
-  req.on('data', (c) => {
-    body += c;
-  });
-  req.on('end', () => {
-    try {
-      const { url, data } = JSON.parse(body);
+  readJson(req)
+    .then(({ url, data }) => {
       const targetUrl = new URL(url);
       const ALLOWED_HOSTS = ['httpbin.org', 'postman-echo.com', 'webhook.site'];
       const hostname = targetUrl.hostname;
       const isAllowed = ALLOWED_HOSTS.some((h) => hostname === h || hostname.endsWith('.' + h));
       if (!isAllowed) {
-        res.writeHead(403);
-        res.end(
-          JSON.stringify({
-            error: 'Host not allowed. Proxy is restricted to public test endpoints only.',
-          }),
+        return sendError(
+          res,
+          403,
+          'host_not_allowed',
+          'Host not allowed. Proxy is restricted to public test endpoints only.',
+          { allowedHosts: ALLOWED_HOSTS },
         );
-        return;
       }
       const client = targetUrl.protocol === 'https:' ? https : http;
       const proxyReq = client.request(
@@ -97,87 +168,60 @@ function handleProxy(req, res) {
             resData += d;
           });
           proxyRes.on('end', () => {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ status: proxyRes.statusCode, data: resData }));
+            sendJson(res, 200, {
+              success: true,
+              status: proxyRes.statusCode,
+              data: resData,
+            });
           });
         },
       );
-      proxyReq.on('error', (e) => {
-        res.writeHead(500);
-        res.end(JSON.stringify({ error: e.message }));
-      });
+      proxyReq.on('error', (e) => sendError(res, 502, 'upstream_error', e.message));
       proxyReq.write(JSON.stringify(data));
       proxyReq.end();
-    } catch (e) {
-      res.writeHead(400);
-      res.end(JSON.stringify({ error: e.message }));
-    }
-  });
+    })
+    .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
 }
 
-// ── /api/analyze: validate request + response, diff them ───────────────────
+// ── /api/analyze ────────────────────────────────────────────────────────────
 
-function handleAnalyze(req, res) {
-  let body = '';
-  req.on('data', (c) => {
-    body += c;
-  });
-  req.on('end', () => {
-    try {
-      const { bidReq, bidRes } = JSON.parse(body);
-      // Validate request — primary signal in the panel.
-      const validation = validateORTB(bidReq || {});
-      // Bonus: validate response if provided, append its issues to the same list.
+function handleAnalyze(req, res, parsed) {
+  const locale = resolveLocale(parsed);
+  const dialect = resolveDialect(parsed);
+  readJson(req)
+    .then(({ bidReq, bidRes }) => {
+      const validation = validate(bidReq || {}, { locale, dialect });
+
       if (bidRes && Object.keys(bidRes).length) {
-        const resValidation = validateORTB(bidRes);
-        if (resValidation.errors && resValidation.errors.length) {
-          validation.errors = validation.errors.concat(
-            resValidation.errors.map((e) => ({ ...e, msg: '[response] ' + e.msg })),
+        const resValidation = validate(bidRes, { locale, dialect });
+        if (resValidation.findings && resValidation.findings.length) {
+          validation.findings = validation.findings.concat(
+            resValidation.findings.map((f) => Object.assign({}, f, { msg: '[response] ' + f.msg })),
           );
-          if (resValidation.status === 'Critical' && validation.status !== 'Critical') {
-            validation.status = 'Critical';
+          if (resValidation.status === 'errors' && validation.status !== 'errors') {
+            validation.status = 'errors';
+          } else if (resValidation.status === 'warnings' && validation.status === 'clean') {
+            validation.status = 'warnings';
           }
         }
       }
-      // Semantic crosscheck: matters only when both sides are present.
+
       const cross =
-        bidReq && bidRes && Object.keys(bidRes).length ? crosscheck(bidReq, bidRes) : [];
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, validation, crosscheck: cross }));
-    } catch (e) {
-      res.writeHead(400);
-      res.end(JSON.stringify({ error: e.message }));
-    }
-  });
+        bidReq && bidRes && Object.keys(bidRes).length
+          ? crosscheck(bidReq, bidRes, { locale })
+          : [];
+
+      sendJson(res, 200, {
+        success: true,
+        validation,
+        crosscheck: cross,
+        meta: { locale, dialect },
+      });
+    })
+    .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
 }
 
 // ── DB-backed CRUD: partners + samples ──────────────────────────────────────
-
-function readJson(req) {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', (c) => {
-      body += c;
-      if (body.length > 2 * 1024 * 1024) {
-        reject(new Error('payload too large'));
-        req.destroy();
-      }
-    });
-    req.on('end', () => {
-      try {
-        resolve(body ? JSON.parse(body) : {});
-      } catch (e) {
-        reject(e);
-      }
-    });
-    req.on('error', reject);
-  });
-}
-
-function sendJson(res, code, payload) {
-  res.writeHead(code, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(payload));
-}
 
 function handleApi(req, res, parsed) {
   const { pathname, searchParams } = parsed;
@@ -190,12 +234,13 @@ function handleApi(req, res, parsed) {
   if (pathname === '/api/partners' && method === 'POST') {
     return readJson(req)
       .then((b) => {
-        if (!b.name || !String(b.name).trim())
-          return sendJson(res, 400, { success: false, error: 'name required' });
+        if (!b.name || !String(b.name).trim()) {
+          return sendError(res, 400, 'name_required', 'Partner name is required');
+        }
         const p = Partners.create(b);
         sendJson(res, 200, { success: true, partner: p });
       })
-      .catch((e) => sendJson(res, 400, { success: false, error: e.message }));
+      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }
   let m = pathname.match(/^\/api\/partners\/(\d+)$/);
   if (m && method === 'PATCH') {
@@ -203,14 +248,16 @@ function handleApi(req, res, parsed) {
     return readJson(req)
       .then((b) => {
         const p = Partners.update(id, b);
-        if (!p) return sendJson(res, 404, { success: false, error: 'not found' });
+        if (!p) return sendError(res, 404, 'not_found', 'Partner not found');
         sendJson(res, 200, { success: true, partner: p });
       })
-      .catch((e) => sendJson(res, 400, { success: false, error: e.message }));
+      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }
   if (m && method === 'DELETE') {
     const ok = Partners.delete(Number(m[1]));
-    return sendJson(res, ok ? 200 : 404, { success: ok });
+    return ok
+      ? sendJson(res, 200, { success: true })
+      : sendError(res, 404, 'not_found', 'Partner not found');
   }
 
   // ── samples ─────────────────────────────────────────────────────────────
@@ -225,17 +272,18 @@ function handleApi(req, res, parsed) {
   if (pathname === '/api/samples' && method === 'POST') {
     return readJson(req)
       .then((b) => {
-        if (!b.title || !String(b.title).trim())
-          return sendJson(res, 400, { success: false, error: 'title required' });
+        if (!b.title || !String(b.title).trim()) {
+          return sendError(res, 400, 'title_required', 'Sample title is required');
+        }
         const s = Samples.create(b);
         sendJson(res, 200, { success: true, sample: s });
       })
-      .catch((e) => sendJson(res, 400, { success: false, error: e.message }));
+      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }
   m = pathname.match(/^\/api\/samples\/(\d+)$/);
   if (m && method === 'GET') {
     const s = Samples.get(Number(m[1]));
-    if (!s) return sendJson(res, 404, { success: false, error: 'not found' });
+    if (!s) return sendError(res, 404, 'not_found', 'Sample not found');
     return sendJson(res, 200, { success: true, sample: s });
   }
   if (m && method === 'PATCH') {
@@ -243,32 +291,79 @@ function handleApi(req, res, parsed) {
     return readJson(req)
       .then((b) => {
         const s = Samples.update(id, b);
-        if (!s) return sendJson(res, 404, { success: false, error: 'not found' });
+        if (!s) return sendError(res, 404, 'not_found', 'Sample not found');
         sendJson(res, 200, { success: true, sample: s });
       })
-      .catch((e) => sendJson(res, 400, { success: false, error: e.message }));
+      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }
   if (m && method === 'DELETE') {
     const ok = Samples.delete(Number(m[1]));
-    return sendJson(res, ok ? 200 : 404, { success: ok });
+    return ok
+      ? sendJson(res, 200, { success: true })
+      : sendError(res, 404, 'not_found', 'Sample not found');
   }
 
   return false;
 }
 
-const server = http.createServer((req, res) => {
-  const parsed = new URL(req.url, 'http://localhost');
-  const pathname = parsed.pathname;
+// ── /api/health: liveness + DB ping ─────────────────────────────────────────
 
-  if (pathname === '/api/analyze' && req.method === 'POST') return handleAnalyze(req, res);
-  if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);
-  if (pathname.startsWith('/api/partners') || pathname.startsWith('/api/samples')) {
-    if (handleApi(req, res, parsed) !== false) return;
-    return sendJson(res, 405, { success: false, error: 'method not allowed' });
+function handleHealth(_req, res) {
+  let dbOk = false;
+  try {
+    db.prepare('SELECT 1').get();
+    dbOk = true;
+  } catch {
+    dbOk = false;
   }
-  serveStaticFile(req, res);
+  const status = dbOk ? 200 : 503;
+  sendJson(res, status, {
+    success: dbOk,
+    status: dbOk ? 'ok' : 'degraded',
+    checks: { db: dbOk },
+    uptime: Math.round(process.uptime()),
+    pid: process.pid,
+    node: process.version,
+  });
+}
+
+// ── HTTP dispatch ────────────────────────────────────────────────────────────
+
+const server = http.createServer((req, res) => {
+  let parsed;
+  try {
+    parsed = new URL(req.url, 'http://localhost');
+  } catch {
+    return sendError(res, 400, 'bad_url', 'Invalid request URL');
+  }
+  const { pathname } = parsed;
+
+  try {
+    if (pathname === '/api/health' && req.method === 'GET') return handleHealth(req, res);
+    if (pathname === '/api/analyze' && req.method === 'POST')
+      return handleAnalyze(req, res, parsed);
+    if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);
+    if (pathname.startsWith('/api/partners') || pathname.startsWith('/api/samples')) {
+      if (handleApi(req, res, parsed) !== false) return;
+      return sendError(res, 405, 'method_not_allowed', 'Method not allowed for this resource');
+    }
+    return serveStaticFile(req, res);
+  } catch (err) {
+    console.error('[handler error]', err && err.stack ? err.stack : err);
+    return sendError(res, 500, 'internal_error', 'Internal server error');
+  }
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('Spyglass v8 backend running at http://0.0.0.0:' + PORT);
+  console.log('Spyglass backend listening at http://0.0.0.0:' + PORT);
 });
+
+// Graceful shutdown
+const shutdown = (signal) => {
+  console.log('[' + signal + '] shutting down');
+  server.close(() => process.exit(0));
+  // Hard exit after 5s in case connections hang
+  setTimeout(() => process.exit(1), 5000).unref();
+};
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
