@@ -1,0 +1,36 @@
+# Don't ship git history into the image
+.git/
+.gitignore
+.github/
+
+# Don't ship docs / planning into the image
+*.md
+ARCHITECTURE.md
+ROADMAP.md
+README.md
+
+# Don't ship dev-only files
+.env*
+!.env.example
+.vscode/
+.idea/
+*.swp
+
+# Don't ship dependency caches — Dockerfile re-installs cleanly
+node_modules/
+
+# Don't ship local data
+*.db*
+*.sqlite*
+data/
+backups/
+logs/
+*.log
+
+# Don't ship test artifacts
+coverage/
+.nyc_output/
+tests/
+
+# Scripts directory contains ops tooling (backup etc.) — runs on host, not container
+scripts/

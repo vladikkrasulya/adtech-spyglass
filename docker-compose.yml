@@ -1,0 +1,26 @@
+services:
+  spyglass:
+    container_name: adtech-spyglass
+    build:
+      context: /srv/DATA/Stacks/adtech-spyglass
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8090:3000"
+    volumes:
+      # Live-edit assets: HTML/CSS/JS changes apply on browser refresh, no rebuild.
+      # Not :ro because design-system.css is bind-mounted on top — Docker can't
+      # create a sub-mountpoint inside a read-only parent.
+      - ./public:/app/public
+      # Shared design-system from portal — single source of truth for tokens/primitives.
+      - /srv/DATA/Stacks/kyivtech-portal/public/design-system.css:/app/public/design-system.css:ro
+      # Persistent SQLite store (partners + saved bid samples).
+      - /srv/DATA/AppData/adtech-spyglass:/data
+    restart: always
+    healthcheck:
+      # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).
+      # GET (not --spider/HEAD); Spyglass returns 404 on HEAD.
+      test: ["CMD-SHELL", "wget -qO- --tries=1 --timeout=3 http://127.0.0.1:3000/ > /dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
