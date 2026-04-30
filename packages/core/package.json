@@ -1,0 +1,53 @@
+{
+  "name": "@kyivtech/spyglass-core",
+  "version": "0.1.0",
+  "description": "OpenRTB inspector engine — version detection, IAB-spec validation, semantic crosscheck. Pure JavaScript, runs in Node and the browser.",
+  "license": "MIT",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "helpers.js",
+    "findings.js",
+    "detect.js",
+    "crosscheck.js",
+    "rules-request.js",
+    "rules-response.js",
+    "rules-feed.js",
+    "spec-refs.json",
+    "messages/",
+    "dialects/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "openrtb",
+    "rtb",
+    "validator",
+    "inspector",
+    "iab",
+    "advertising",
+    "adtech",
+    "bid-request",
+    "bid-response",
+    "vast",
+    "native",
+    "kadam"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vladikkrasulya/adtech-spyglass.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://spyglass.kyivtech.com.ua",
+  "bugs": {
+    "url": "https://github.com/vladikkrasulya/adtech-spyglass/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false
+}

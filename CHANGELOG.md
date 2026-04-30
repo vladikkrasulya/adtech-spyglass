@@ -6,6 +6,18 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### Phase 4 — Validator extracted as `@kyivtech/spyglass-core`
+
+The validator engine moves from a sub-directory to a separately-publishable npm package, while the parent app still consumes it through a workspace symlink. This is the structural prerequisite for the public Spyglass demo (browser-side validation) and CI/CLI use cases. Publishing to npm is a separate one-step decision when ready.
+
+- Repo becomes an npm workspace: `validator/` → `packages/core/` with its own `package.json`, `LICENSE` (MIT), and `README.md`.
+- Package metadata: `@kyivtech/spyglass-core` v0.1.0, MIT, `engines.node >=18`, `sideEffects: false`, full `files` allow-list (no source leakage).
+- Server.js and tests now consume the engine via `require('@kyivtech/spyglass-core')` — same module, resolved through `node_modules/@kyivtech/spyglass-core` symlink to `packages/core/`.
+- README in the package documents the public API, dialect contract, version coverage, i18n approach, and design principles — ready for npm landing page.
+- Dockerfile updated to copy workspace manifests before `npm install` so the symlink resolves correctly inside the container.
+- UI is unaffected: same `/api/analyze` contract, same JSON shape, same bind-mounted hot-reload workflow.
+- All 83 tests pass; full CI green; container rebuilt and live-verified at `https://spyglass.kyivtech.com.ua`.
+
 ### Phase 7 (partial) — Multi-user accounts
 
 The validator/crosscheck/preview path stays **fully public** (no login needed). Only the saved-samples library and partner taxonomy are gated behind a per-user account. Aligns with the deploy decision: spyglass.kyivtech.com.ua is a public tool with optional accounts for persistent state.

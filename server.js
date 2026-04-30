@@ -33,7 +33,7 @@ const fs = require('fs');
 const path = require('path');
 const { Users, Partners, Samples, db } = require('./db');
 const { createAuth } = require('./auth');
-const { validate, crosscheck, listLocales, listDialects } = require('./validator');
+const { validate, crosscheck, listLocales, listDialects } = require('@kyivtech/spyglass-core');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');

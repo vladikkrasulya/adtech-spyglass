@@ -19,7 +19,7 @@ const {
   nativeAssetCrosscheck,
   TYPES,
   VERSIONS,
-} = require('../validator');
+} = require('@kyivtech/spyglass-core');
 
 const {
   validRequest,
