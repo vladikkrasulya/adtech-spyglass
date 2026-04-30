@@ -884,9 +884,15 @@
   // ── Auth state + saved samples library ────────────────────────
   // The library is per-account: anonymous users see a "Sign in to save"
   // panel; logged-in users get partners/samples scoped to their user_id.
+  //
+  // Phase 7 (zero-knowledge): _sessionDEK is the live AES-GCM key derived
+  // from the user's password. It lives only in this closure — never in
+  // localStorage, never on window, never sent to the server. Cleared on
+  // signOut. Server stores only ciphertext + wrapped DEK + salt.
   let _partnerCache = [];
   let _currentSampleId = null;
   let _currentUser = null;
+  let _sessionDEK = null;
 
   async function api(method, url, body) {
     const init = {
@@ -927,11 +933,73 @@
     try {
       const j = await api('GET', 'api/auth/me');
       _currentUser = j.user || null;
+      // At page-reload, cookie keeps the user logged in, but the in-memory
+      // DEK is gone (and storing it would defeat the threat model). If the
+      // user has crypto state set up but no DEK in this tab, we'll prompt
+      // for password to unlock — but only after the page renders, so the
+      // user sees the auth widget first and isn't slammed with a modal.
+      _sessionDEK = null;
+      _pendingUnlock = !!(j.user && j.encryption);
     } catch {
       _currentUser = null;
+      _sessionDEK = null;
+      _pendingUnlock = false;
     }
     renderAuthWidget();
   }
+  let _pendingUnlock = false;
+
+  // Show a minimal modal that takes only the password — lets a user with a
+  // live cookie session re-derive the DEK without going through the full
+  // login dance. Used after page-reload.
+  window.openUnlockModal = function () {
+    if (!_currentUser) {
+      return window.openAuthModal('login');
+    }
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-card">' +
+      '<div class="modal-title">розблокувати бібліотеку</div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
+      escapeHtml(_currentUser.email) +
+      ' · введи пароль щоб розшифрувати збережені запити' +
+      '</div>' +
+      '<div class="modal-row"><label>пароль</label><input id="unlockPwInput" type="password" autocomplete="current-password"></div>' +
+      '<div id="unlockError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-ghost btn-sm" onclick="signOut();closeModal()">вийти замість цього</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="doUnlock()">розблокувати</button>' +
+      '</div></div></div>';
+    setTimeout(() => $('unlockPwInput').focus(), 0);
+    $('unlockPwInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        window.doUnlock();
+      }
+    });
+  };
+
+  window.doUnlock = async function () {
+    const password = $('unlockPwInput').value;
+    const errEl = $('unlockError');
+    errEl.textContent = '';
+    try {
+      // Re-fetch crypto state via /api/auth/me (it's already stable across
+      // calls). Then derive KEK + unwrap DEK.
+      const me = await api('GET', 'api/auth/me');
+      if (!me.encryption) {
+        errEl.textContent = 'Шифрування не налаштовано — спробуй увійти спочатку';
+        return;
+      }
+      _sessionDEK = await SpyglassCrypto.openWithPassword(password, me.encryption);
+      _pendingUnlock = false;
+      closeModal();
+      toast('Бібліотеку розблоковано', 'success');
+      refreshSamples();
+    } catch {
+      errEl.textContent = 'Невірний пароль';
+    }
+  };
 
   window.openAuthModal = function (mode) {
     const isReg = mode === 'register';
@@ -983,6 +1051,16 @@
     try {
       const j = await api('POST', 'api/auth/login', { email, password });
       _currentUser = j.user;
+      // Resolve session DEK. Two paths:
+      //   - Existing user with crypto already set up → derive KEK from
+      //     password, unwrap DEK, keep in memory for this session.
+      //   - Existing pre-Phase-7 user with no crypto state yet → bootstrap
+      //     now (we have the password in hand). Show recovery key.
+      if (j.encryption) {
+        _sessionDEK = await SpyglassCrypto.openWithPassword(password, j.encryption);
+      } else {
+        await bootstrapNewCrypto(password);
+      }
       renderAuthWidget();
       closeModal();
       toast('Привіт, ' + j.user.email, 'success');
@@ -1001,6 +1079,7 @@
     try {
       const j = await api('POST', 'api/auth/register', { email, password });
       _currentUser = j.user;
+      await bootstrapNewCrypto(password); // brand-new user → always bootstrap
       renderAuthWidget();
       closeModal();
       toast('Акаунт створено, ' + j.user.email, 'success');
@@ -1011,6 +1090,48 @@
     }
   };
 
+  // Generates DEK + recovery key, wraps DEK with both password-KEK and
+  // recovery-KEK in the browser, persists the opaque state to the server,
+  // shows the recovery key to the user once. Caller must already hold the
+  // user's plaintext password (passed in here, never stored anywhere).
+  async function bootstrapNewCrypto(password) {
+    const result = await SpyglassCrypto.bootstrap(password);
+    await api('POST', 'api/auth/setup-encryption', result.state);
+    _sessionDEK = result.dekKey;
+    showRecoveryKeyModal(result.recoveryKey);
+  }
+
+  function showRecoveryKeyModal(recoveryKey) {
+    // Format as 4-char groups for legibility: "abcd-1234-..."
+    const grouped = recoveryKey.match(/.{1,4}/g).join('-');
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" onclick="if(event.target===this){if(confirm(\'Ти точно зберіг recovery key? Без нього неможливо відновити дані якщо забудеш пароль.\')){closeModal()}}">' +
+      '<div class="modal-card" style="max-width:520px">' +
+      '<div class="modal-title">⚠ recovery key — збережи зараз</div>' +
+      '<div style="font-size:var(--fs-sm);line-height:1.5;margin-bottom:var(--space-3);color:var(--text)">' +
+      'Це <b>єдиний</b> спосіб відновити доступ до твоєї бібліотеки якщо забудеш пароль. ' +
+      'Я (оператор сервера) не маю його і не зможу відновити твої дані без нього. ' +
+      'Запиши його у password-manager або на папері.' +
+      '</div>' +
+      '<div style="background:var(--bg-2);padding:var(--space-3);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:14px;letter-spacing:0.05em;text-align:center;margin-bottom:var(--space-3);user-select:all">' +
+      escapeHtml(grouped) +
+      '</div>' +
+      '<div class="modal-actions" style="justify-content:space-between">' +
+      '<button class="btn btn-ghost btn-sm" onclick="copyRecoveryKey(\'' +
+      escapeHtml(recoveryKey) +
+      '\')">копіювати</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="closeModal()">я зберіг</button>' +
+      '</div>' +
+      '</div></div>';
+  }
+
+  window.copyRecoveryKey = function (key) {
+    navigator.clipboard
+      .writeText(key)
+      .then(() => toast('Recovery key скопійовано', 'success'))
+      .catch(() => toast('Не вдалося скопіювати — виділи мишею', 'error'));
+  };
+
   window.signOut = async function () {
     try {
       await api('POST', 'api/auth/logout');
@@ -1019,6 +1140,7 @@
     }
     _currentUser = null;
     _partnerCache = [];
+    _sessionDEK = null; // wipe DEK from memory on logout
     renderAuthWidget();
     refreshSamples();
     toast('Ви вийшли з акаунту', 'success');
@@ -1085,6 +1207,12 @@
     if (!_currentUser) {
       el.innerHTML =
         '<div class="anon-cta">Увійди в акаунт щоб зберігати запити в особисту бібліотеку.<br><button class="btn btn-primary btn-sm" onclick="openAuthModal(\'login\')">увійти або створити акаунт</button></div>';
+      return;
+    }
+    // Logged-in but DEK is gone (page reload): surface unlock CTA.
+    if (_pendingUnlock && !_sessionDEK) {
+      el.innerHTML =
+        '<div class="anon-cta">Бібліотека зашифрована. Введи пароль щоб розблокувати.<br><button class="btn btn-primary btn-sm" onclick="openUnlockModal()">розблокувати</button></div>';
       return;
     }
     const sel = $('partnerFilter');
@@ -1210,6 +1338,10 @@
   };
 
   window.confirmSave = async function () {
+    if (!_sessionDEK) {
+      toast('Сесія шифрування не активна — увійди в акаунт ще раз', 'error');
+      return;
+    }
     const title = $('mTitle').value.trim() || 'sample';
     const partnerId = $('mPartner').value || null;
     const notes = $('mNotes').value.trim();
@@ -1217,6 +1349,9 @@
     const bid_res = $('bidRes').value || '';
     let status = '';
     try {
+      // Run analysis OUTSIDE the encryption flow — analyze sees plaintext
+      // because it lives in the same browser tab. The encryption applies
+      // only at the storage boundary (POST /api/samples).
       const r = await fetch('api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1231,11 +1366,16 @@
       /* status optional */
     }
     try {
+      // Encrypt blobs locally before POSTing. Server stores opaque ciphertext.
+      const encReq = await SpyglassCrypto.encryptBlob(_sessionDEK, bid_req);
+      const encRes = await SpyglassCrypto.encryptBlob(_sessionDEK, bid_res);
       await api('POST', 'api/samples', {
         partner_id: partnerId ? Number(partnerId) : null,
         title,
-        bid_req,
-        bid_res,
+        bid_req: encReq.ct,
+        bid_res: encRes.ct,
+        req_iv: encReq.iv,
+        res_iv: encRes.iv,
         status,
         notes,
       });
@@ -1248,17 +1388,27 @@
   };
 
   window.loadSample = async function (id) {
+    if (!_sessionDEK) {
+      toast('Сесія шифрування не активна — увійди в акаунт ще раз', 'error');
+      return;
+    }
     try {
       const j = await api('GET', 'api/samples/' + id);
       const s = j.sample;
-      $('bidReq').value = s.bid_req || '';
-      $('bidRes').value = s.bid_res || '';
+      // Decrypt locally — server returned opaque ciphertext + IVs.
+      const reqText = await SpyglassCrypto.decryptBlob(_sessionDEK, s.req_iv, s.bid_req);
+      const resText = await SpyglassCrypto.decryptBlob(_sessionDEK, s.res_iv, s.bid_res);
+      $('bidReq').value = reqText;
+      $('bidRes').value = resText;
       updateCharCount('bidReq');
       updateCharCount('bidRes');
       _currentSampleId = s.id;
       toast('Завантажено · ' + s.title, 'success');
     } catch (e) {
-      toast('Не вдалося завантажити: ' + e.message, 'error');
+      // Most common cause: tampered ciphertext or wrong DEK (e.g. cookie
+      // outlived the in-memory DEK after a page reload without re-login).
+      console.error('[loadSample]', e);
+      toast('Не вдалося розшифрувати — увійди в акаунт ще раз', 'error');
     }
   };
 

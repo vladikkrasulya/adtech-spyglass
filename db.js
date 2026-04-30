@@ -21,7 +21,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const DATA_DIR = process.env.SPYGLASS_DATA_DIR || '/data';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -80,6 +80,29 @@ function migrate(db, fromVersion) {
       CREATE INDEX idx_samples_created ON samples(created_at DESC);
     `);
   }
+
+  // v2 → v3: zero-knowledge client-side encryption.
+  // Adds per-user crypto state (KEK/DEK pattern) plus per-sample IVs.
+  // Existing samples are wiped — they're plaintext relics from before crypto;
+  // we don't try to retrofit them since v0 data was already test-only.
+  // Existing users keep their accounts but get NULL crypto state — they
+  // bootstrap encryption on next login (the password is in hand at that
+  // moment to derive the KEK).
+  if (fromVersion < 3) {
+    db.exec(`
+      DELETE FROM samples;
+
+      ALTER TABLE users ADD COLUMN kdf_salt TEXT;
+      ALTER TABLE users ADD COLUMN dek_wrapped TEXT;
+      ALTER TABLE users ADD COLUMN dek_iv TEXT;
+      ALTER TABLE users ADD COLUMN recovery_salt TEXT;
+      ALTER TABLE users ADD COLUMN recovery_dek_wrapped TEXT;
+      ALTER TABLE users ADD COLUMN recovery_dek_iv TEXT;
+
+      ALTER TABLE samples ADD COLUMN req_iv TEXT;
+      ALTER TABLE samples ADD COLUMN res_iv TEXT;
+    `);
+  }
 }
 
 const db = init();
@@ -130,6 +153,52 @@ const Users = {
   },
   count() {
     return db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+  },
+
+  // ── Crypto state (Phase 7 — zero-knowledge encryption) ───────────────
+  // Server is opaque storage for these. Salt + wrapped DEK + IV come from
+  // the client (Web Crypto API in browser); server never sees the password
+  // beyond bcrypt-verify, never sees the plaintext DEK, never sees decrypted
+  // sample bodies.
+
+  /**
+   * Returns crypto state for the user, or null fields if not yet bootstrapped.
+   * @param {number} id
+   */
+  getCryptoState(id) {
+    return db
+      .prepare(
+        `SELECT kdf_salt, dek_wrapped, dek_iv,
+                recovery_salt, recovery_dek_wrapped, recovery_dek_iv
+         FROM users WHERE id = ?`,
+      )
+      .get(id);
+  },
+
+  /**
+   * Persist the per-user crypto state. Called once at register/first-login
+   * (bootstrap), and again on password change (re-wraps DEK with new KEK).
+   * @param {number} id
+   * @param {{
+   *   kdf_salt: string, dek_wrapped: string, dek_iv: string,
+   *   recovery_salt: string, recovery_dek_wrapped: string, recovery_dek_iv: string
+   * }} state
+   */
+  setCryptoState(id, state) {
+    db.prepare(
+      `UPDATE users
+       SET kdf_salt = ?, dek_wrapped = ?, dek_iv = ?,
+           recovery_salt = ?, recovery_dek_wrapped = ?, recovery_dek_iv = ?
+       WHERE id = ?`,
+    ).run(
+      String(state.kdf_salt),
+      String(state.dek_wrapped),
+      String(state.dek_iv),
+      String(state.recovery_salt),
+      String(state.recovery_dek_wrapped),
+      String(state.recovery_dek_iv),
+      id,
+    );
   },
 };
 
@@ -211,13 +280,18 @@ const Samples = {
     return db
       .prepare(
         `
-      SELECT id, user_id, partner_id, title, bid_req, bid_res, status, notes, created_at
+      SELECT id, user_id, partner_id, title,
+             bid_req, bid_res, req_iv, res_iv,
+             status, notes, created_at
       FROM samples WHERE id = ? AND user_id = ?
     `,
       )
       .get(id, userId);
   },
-  create({ userId, partner_id, title, bid_req, bid_res, status, notes }) {
+  // bid_req / bid_res are AES-GCM ciphertext (base64) when crypto is enabled.
+  // req_iv / res_iv are the per-blob IVs (base64). Both are opaque to the
+  // server — it just stores and returns them.
+  create({ userId, partner_id, title, bid_req, bid_res, req_iv, res_iv, status, notes }) {
     // Verify partner belongs to user (or is null) — prevents cross-user assignment.
     if (partner_id != null) {
       const owns = Partners.get({ id: partner_id, userId });
@@ -226,8 +300,8 @@ const Samples = {
     const info = db
       .prepare(
         `
-      INSERT INTO samples(user_id, partner_id, title, bid_req, bid_res, status, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO samples(user_id, partner_id, title, bid_req, bid_res, req_iv, res_iv, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       )
       .run(
@@ -236,12 +310,14 @@ const Samples = {
         String(title || 'untitled').trim(),
         String(bid_req || ''),
         String(bid_res || ''),
+        req_iv != null ? String(req_iv) : null,
+        res_iv != null ? String(res_iv) : null,
         String(status || ''),
         String(notes || '').trim(),
       );
     return Samples.get({ id: info.lastInsertRowid, userId });
   },
-  update({ id, userId, partner_id, title, bid_req, bid_res, status, notes }) {
+  update({ id, userId, partner_id, title, bid_req, bid_res, req_iv, res_iv, status, notes }) {
     const cur = Samples.get({ id, userId });
     if (!cur) return null;
     // If reassigning partner, verify ownership.
@@ -252,7 +328,9 @@ const Samples = {
     db.prepare(
       `
       UPDATE samples
-      SET partner_id = ?, title = ?, bid_req = ?, bid_res = ?, status = ?, notes = ?
+      SET partner_id = ?, title = ?,
+          bid_req = ?, bid_res = ?, req_iv = ?, res_iv = ?,
+          status = ?, notes = ?
       WHERE id = ? AND user_id = ?
     `,
     ).run(
@@ -260,6 +338,8 @@ const Samples = {
       title != null ? String(title).trim() : cur.title,
       bid_req != null ? String(bid_req) : cur.bid_req,
       bid_res != null ? String(bid_res) : cur.bid_res,
+      req_iv !== undefined ? (req_iv != null ? String(req_iv) : null) : cur.req_iv,
+      res_iv !== undefined ? (res_iv != null ? String(res_iv) : null) : cur.res_iv,
       status != null ? String(status) : cur.status,
       notes != null ? String(notes).trim() : cur.notes,
       id,

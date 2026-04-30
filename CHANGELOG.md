@@ -6,6 +6,68 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### Phase 7 (full) — Zero-knowledge encryption for saved samples
+
+The library moves from "operator can read everything in SQLite" to a **zero-knowledge** model: I (server operator) hold only opaque ciphertext and a per-user wrapped key. Without the user's password I cannot decrypt their `bid_req` / `bid_res` payloads even with full DB access.
+
+#### Architecture
+
+KEK/DEK pattern (industry-standard — same as 1Password, Bitwarden):
+
+- A random 256-bit **DEK** (Data Encryption Key) is generated per user at register time, **in the browser**.
+- A **KEK** (Key Encryption Key) is derived from the user's password via PBKDF2-SHA-256 with 600,000 iterations and a per-user 16-byte salt — also in the browser.
+- The DEK is wrapped with the KEK using AES-GCM-256 (12-byte IV) and the wrapped blob + salt + IV are persisted to the server.
+- A **second wrap** of the same DEK is made with a KEK derived from a recovery key (32 hex chars). The recovery key is shown to the user once at register and never sent to the server again — it's the only way to regain access if the password is lost.
+- `bid_req` and `bid_res` blobs are AES-GCM-256 encrypted in the browser with the DEK before each `POST /api/samples`. Per-blob random IVs.
+- `title`, `partner_id`, `notes`, `status`, `created_at` stay plaintext — needed for sorting / filtering, low sensitivity.
+
+#### Schema (PRAGMA user_version: 2 → 3)
+
+`users`:
+
+- `kdf_salt` — base64(16 random bytes), per-user, used to derive KEK from password
+- `dek_wrapped` — base64 ciphertext: AES-GCM(KEK, DEK)
+- `dek_iv` — base64(12-byte IV) for the wrap above
+- `recovery_salt` — second salt for the recovery-key KEK
+- `recovery_dek_wrapped` — DEK wrapped with recovery-key KEK
+- `recovery_dek_iv` — IV for the recovery wrap
+
+`samples`:
+
+- `req_iv`, `res_iv` — per-blob 12-byte IVs (base64). The existing `bid_req`/`bid_res` columns now store AES-GCM ciphertext (base64) instead of plaintext JSON.
+
+Migration v2→v3 wipes existing samples (they were plaintext relics, all empty in production). Existing user accounts are kept — they bootstrap encryption on next login (the password is in hand at that moment to derive the KEK).
+
+#### New module: `public/spyglass-crypto.js`
+
+Pure browser-side wrapper around Web Crypto API. Zero dependencies. Exposes `SpyglassCrypto.bootstrap(password)`, `openWithPassword(password, state)`, `openWithRecoveryKey(hex, state)`, `encryptBlob(dek, plaintext)`, `decryptBlob(dek, iv, ct)`. All operations happen in the browser; the module never sends anything anywhere.
+
+#### Server changes
+
+- `db.js`: schema migration v3, new `Users.getCryptoState(id)` and `Users.setCryptoState(id, state)`. `Samples` create/get/update accept and return `req_iv` / `res_iv` alongside the now-ciphertext `bid_req` / `bid_res`. Server has zero crypto code beyond passing the opaque blobs through.
+- `server.js`: new `POST /api/auth/setup-encryption` (auth-required) accepts the 6-field crypto state and persists it. `/api/auth/me` and the login response now include the user's crypto state so the client can derive KEK + unwrap DEK without a second round-trip.
+
+#### UI flow
+
+- **Register** → bootstrap encryption automatically → show recovery-key modal once with copy-to-clipboard.
+- **Login** → if encryption state exists, derive KEK + unwrap DEK locally; if not yet set up (existing pre-Phase-7 user), bootstrap immediately (we have the password in hand).
+- **Page reload while logged in** → cookie persists session, but in-memory DEK is gone. The library shows a "Розблокуй бібліотеку" CTA → re-enter password modal → unwrap DEK → continue. We deliberately don't store the DEK anywhere persistent — that would defeat the threat model.
+- **Save sample** → encrypt `bid_req` + `bid_res` locally with DEK → POST opaque ciphertext + IVs.
+- **Load sample** → GET ciphertext + IVs → decrypt locally with DEK → fill textarea.
+- **Sign out** → wipe DEK from memory.
+
+#### Tests
+
+- `tests/crypto.test.js` (new, 13 tests) — base64/hex round-trips, KDF determinism, bootstrap → openWithPassword round-trip, recovery-key path, AES-GCM auth (tampered ciphertext rejected), random IV per encrypt, full simulated two-session flow.
+- `tests/db.test.js` — still 17 tests, unchanged (Phase 7 partial scoping rules still apply).
+- All 96 tests pass.
+
+#### Tradeoffs surfaced to the user
+
+- Forgot password **and** lost recovery key = lost data. Documented in the recovery-key modal copy. There is no operator-side reset that preserves data — by design.
+- Title / partner / notes remain server-readable (so the library can render filters and meta lines without unlock). To fully encrypt those too we'd lose server-side filtering; flagged as a possible v0.2 toggle.
+- After page reload, the user has to re-enter the password to unlock the library. Cookie session alone isn't enough. Same UX as Bitwarden/1Password.
+
 ### Phase 4 — Validator extracted as `@kyivtech/spyglass-core`
 
 The validator engine moves from a sub-directory to a separately-publishable npm package, while the parent app still consumes it through a workspace symlink. This is the structural prerequisite for the public Spyglass demo (browser-side validation) and CI/CLI use cases. Publishing to npm is a separate one-step decision when ready.

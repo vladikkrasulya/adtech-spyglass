@@ -11,12 +11,15 @@
  *   POST /api/auth/register          — { email, password }
  *   POST /api/auth/login             — { email, password }
  *   POST /api/auth/logout            — clear session
- *   GET  /api/auth/me                — current user or { user: null }
+ *   GET  /api/auth/me                — current user + opaque crypto state
  *
  * Auth required (per-user scoped, returns 401 when anonymous):
+ *   POST /api/auth/setup-encryption  — opaque crypto-state bootstrap (Phase 7)
  *   GET/POST/PATCH/DELETE
  *        /api/partners[/:id]         — partner CRUD
- *        /api/samples[/:id]          — saved sample CRUD
+ *        /api/samples[/:id]          — saved sample CRUD (bid_req/bid_res
+ *                                      are AES-GCM ciphertext + IVs; server
+ *                                      cannot decrypt — Phase 7 zero-knowledge)
  *
  * Static UI at GET /.
  *
@@ -156,7 +159,18 @@ function handleAuthRoute(req, res, parsed) {
 
   if (pathname === '/api/auth/me' && method === 'GET') {
     const user = auth.getCurrentUser(req);
-    return sendJson(res, 200, { success: true, user: publicUser(user) });
+    if (!user) return sendJson(res, 200, { success: true, user: null, encryption: null });
+    // Surface crypto state so the client can derive KEK and unwrap DEK.
+    const cs = Users.getCryptoState(user.id);
+    const encryption =
+      cs && cs.kdf_salt
+        ? {
+            kdf_salt: cs.kdf_salt,
+            dek_wrapped: cs.dek_wrapped,
+            dek_iv: cs.dek_iv,
+          }
+        : null;
+    return sendJson(res, 200, { success: true, user: publicUser(user), encryption });
   }
 
   if (pathname === '/api/auth/register' && method === 'POST') {
@@ -174,7 +188,16 @@ function handleAuthRoute(req, res, parsed) {
       .then(async ({ email, password }) => {
         const user = await auth.login({ email, password }, req);
         auth.createSession(req, res, user);
-        sendJson(res, 200, { success: true, user: publicUser(user) });
+        const cs = Users.getCryptoState(user.id);
+        const encryption =
+          cs && cs.kdf_salt
+            ? {
+                kdf_salt: cs.kdf_salt,
+                dek_wrapped: cs.dek_wrapped,
+                dek_iv: cs.dek_iv,
+              }
+            : null;
+        sendJson(res, 200, { success: true, user: publicUser(user), encryption });
       })
       .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
   }
@@ -182,6 +205,36 @@ function handleAuthRoute(req, res, parsed) {
   if (pathname === '/api/auth/logout' && method === 'POST') {
     auth.destroySession(req, res);
     return sendJson(res, 200, { success: true });
+  }
+
+  // Bootstrap or rotate the per-user crypto state. Body is opaque to the
+  // server — it just stores what the client computed in the browser.
+  // Required: { kdf_salt, dek_wrapped, dek_iv,
+  //             recovery_salt, recovery_dek_wrapped, recovery_dek_iv }.
+  if (pathname === '/api/auth/setup-encryption' && method === 'POST') {
+    const user = auth.getCurrentUser(req);
+    if (!user) {
+      return sendError(res, 401, 'unauthorized', 'Sign in first');
+    }
+    return readJson(req)
+      .then((b) => {
+        const required = [
+          'kdf_salt',
+          'dek_wrapped',
+          'dek_iv',
+          'recovery_salt',
+          'recovery_dek_wrapped',
+          'recovery_dek_iv',
+        ];
+        for (const k of required) {
+          if (typeof b[k] !== 'string' || !b[k].length) {
+            return sendError(res, 400, 'invalid_state', `Missing field: ${k}`);
+          }
+        }
+        Users.setCryptoState(user.id, b);
+        sendJson(res, 200, { success: true });
+      })
+      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }
 
   return false;
