@@ -17,6 +17,7 @@ This document describes the target architecture. The current codebase is the see
 3. **Semantic crosscheck** beyond schema: `bid.impid` ↔ `imp.id` resolution, `price` vs `bidfloor`, `bcat`/`badv`/`battr` enforcement, Native asset-id back-reference, VAST detection in `bid.adm`, auction summary.
 
 **Positioning** (validated by competitive research):
+
 - **Free public demo** — paste-and-validate, no auth, no storage. Showcase tier. Drives organic discovery.
 - **Authenticated workspace** — saved samples per partner, history, dialects, team features. Behind login.
 - **Open-source validator core** (`@spyglass/core` on npm) — solves the trust gap (engineers won't paste real bid traffic into a black box) and replaces the dead `openrtb-validator` package.
@@ -74,10 +75,10 @@ const detection = detectVersion(payload);
 //   → { version: '2.6-202309', confidence: 0.95, signals: ['regs.gpp', 'imp[0].rwdd'] }
 
 const result = validate(payload, {
-  version: 'auto',          // 'auto' | '2.5' | '2.6' | '2.6-202309' | …
-  dialect: 'iab',           // 'iab' | 'kadam' | 'propellerads' | …
-  strictness: 'normal',     // 'lax' | 'normal' | 'pedantic'
-  locale: 'uk',             // resolved client-side; server passes through
+  version: 'auto', // 'auto' | '2.5' | '2.6' | '2.6-202309' | …
+  dialect: 'iab', // 'iab' | 'kadam' | 'propellerads' | …
+  strictness: 'normal', // 'lax' | 'normal' | 'pedantic'
+  locale: 'uk', // resolved client-side; server passes through
 });
 //   → {
 //       version: '2.6-202309',
@@ -102,11 +103,11 @@ const cross = crosscheck(bidReq, bidRes, { version: 'auto' });
 
 ### 3.2 Findings model — three levels
 
-| Level     | Meaning                                                              |
-|-----------|----------------------------------------------------------------------|
-| `error`   | Spec violation that an exchange will reject. Fail the bid.           |
-| `warning` | Spec violation tolerated by most exchanges. Reduces fill / quality.  |
-| `info`    | Best-practice or recommendation. Optional improvement.                |
+| Level     | Meaning                                                             |
+| --------- | ------------------------------------------------------------------- |
+| `error`   | Spec violation that an exchange will reject. Fail the bid.          |
+| `warning` | Spec violation tolerated by most exchanges. Reduces fill / quality. |
+| `info`    | Best-practice or recommendation. Optional improvement.              |
 
 Findings carry **structured `id`s and `params`** — never inline copy. Localization happens at presentation time, by the consuming surface, via `@spyglass/i18n` (see §5). This is non-negotiable for the OSS-able core.
 
@@ -114,20 +115,20 @@ Findings carry **structured `id`s and `params`** — never inline copy. Localiza
 
 Pasted JSON has no HTTP headers, so `X-Openrtb-Version` is unavailable. Detection uses **field-presence signals** in tiered confidence:
 
-| Tier              | Signals (subset)                                                                   | Verdict             |
-|-------------------|-------------------------------------------------------------------------------------|---------------------|
-| OpenRTB 3.0       | `item[]`, `context`, top-level `openrtb` envelope                                  | `3.0` (DOA)         |
-| ≥ 2.6-202505      | `data.cids`, `content.genres` as string                                            | newest 2.6          |
-| ≥ 2.6-202501      | `content.gtax`, `content.genres`                                                    |                     |
-| ≥ 2.6-202409      | `eid.inserter`, `eid.matcher`, `eid.mm`                                             |                     |
-| ≥ 2.6-202402      | `video.poddedupe`                                                                   |                     |
-| ≥ 2.6-202309      | `acat`, `durfloors`, `deal.guaranteed`, `deal.mincpmpersec`                         |                     |
-| ≥ 2.6-202303      | `imp.video.plcmt`, `imp.refresh`, `${AUCTION_IMP_TS}`                               |                     |
-| ≥ 2.6-202211      | `regs.gpp`, `regs.gpp_sid`, `dooh`, `imp.qty`, first-class `inventorypartnerdomain` |                     |
-| ≥ 2.6 baseline    | `imp.rwdd`, `imp.ssai`, `bid.mtype`, `bid.apis`, any `*.cattax`, `device.sua`, `langb`, `Network`/`Channel`, pod fields | 2.6 |
-| ≥ 2.5             | `source`, `source.pchain`, `bseat`, `wlang`, `imp.metric[]`, `banner.vcm`, …       | 2.5                 |
-| Default           | none of the above + valid 2.5-shaped payload                                        | assume 2.5          |
-| Deprecated/legacy | `banner.wmax`, `video.protocol` singular, `device.didsha1`, `user.yob`, …          | hint as legacy      |
+| Tier              | Signals (subset)                                                                                                        | Verdict        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------- |
+| OpenRTB 3.0       | `item[]`, `context`, top-level `openrtb` envelope                                                                       | `3.0` (DOA)    |
+| ≥ 2.6-202505      | `data.cids`, `content.genres` as string                                                                                 | newest 2.6     |
+| ≥ 2.6-202501      | `content.gtax`, `content.genres`                                                                                        |                |
+| ≥ 2.6-202409      | `eid.inserter`, `eid.matcher`, `eid.mm`                                                                                 |                |
+| ≥ 2.6-202402      | `video.poddedupe`                                                                                                       |                |
+| ≥ 2.6-202309      | `acat`, `durfloors`, `deal.guaranteed`, `deal.mincpmpersec`                                                             |                |
+| ≥ 2.6-202303      | `imp.video.plcmt`, `imp.refresh`, `${AUCTION_IMP_TS}`                                                                   |                |
+| ≥ 2.6-202211      | `regs.gpp`, `regs.gpp_sid`, `dooh`, `imp.qty`, first-class `inventorypartnerdomain`                                     |                |
+| ≥ 2.6 baseline    | `imp.rwdd`, `imp.ssai`, `bid.mtype`, `bid.apis`, any `*.cattax`, `device.sua`, `langb`, `Network`/`Channel`, pod fields | 2.6            |
+| ≥ 2.5             | `source`, `source.pchain`, `bseat`, `wlang`, `imp.metric[]`, `banner.vcm`, …                                            | 2.5            |
+| Default           | none of the above + valid 2.5-shaped payload                                                                            | assume 2.5     |
+| Deprecated/legacy | `banner.wmax`, `video.protocol` singular, `device.didsha1`, `user.yob`, …                                               | hint as legacy |
 
 **OpenRTB 3.0 is intentionally not a primary target.** Production adoption is essentially zero (BidSwitch's own blog title: "OpenRTB 3.0: What Is It, and Why Is (Almost) Nobody Using It?"). IAB back-ported the wanted bits into 2.6. Spyglass detects 3.0 and labels it; full validation deferred until adoption changes.
 
@@ -236,10 +237,12 @@ POST   /api/share/:id         (planned) generate read-only share link for a save
 ### 5.3 Schema (current + planned)
 
 Current (`db.js`):
+
 - `partners(id, name, slug, notes, created_at)`
 - `samples(id, partner_id, title, bid_req, bid_res, status, notes, created_at)`
 
 Planned additions:
+
 - `samples.version_pinned` — `null` for auto-detect, else explicit `'2.6'` etc.
 - `samples.dialect` — `null` for `'iab'`, else specific dialect.
 - `partners.default_version`, `partners.default_dialect`, `partners.default_strictness` — applied when saving a sample with that partner.
@@ -290,19 +293,19 @@ Planned additions:
 
 ```ts
 type Finding = {
-  id: string;                  // 'imp.banner.size_required' — stable, namespaced
+  id: string; // 'imp.banner.size_required' — stable, namespaced
   level: 'error' | 'warning' | 'info';
-  path: string;                // JSON pointer-ish: 'imp[0].banner'
+  path: string; // JSON pointer-ish: 'imp[0].banner'
   params?: Record<string, unknown>; // for ICU interpolation: { idx: 0, count: 3 }
-  specRef?: string;            // permalink into IAB GitHub markdown
-  versionRequired?: string;    // 'requires ≥ 2.6-202309 for durfloors'
-  fixKey?: string;             // i18n key for actionable fix hint
-  messageKey: string;          // i18n key for explanation
-  detail?: object;             // arbitrary structured data for UI rendering
+  specRef?: string; // permalink into IAB GitHub markdown
+  versionRequired?: string; // 'requires ≥ 2.6-202309 for durfloors'
+  fixKey?: string; // i18n key for actionable fix hint
+  messageKey: string; // i18n key for explanation
+  detail?: object; // arbitrary structured data for UI rendering
 };
 
 type ValidationResult = {
-  version: string;             // detected or pinned
+  version: string; // detected or pinned
   versionDetect: { confidence: number; signals: string[] };
   dialect: string;
   status: 'clean' | 'warnings' | 'errors';

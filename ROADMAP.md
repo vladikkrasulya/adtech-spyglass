@@ -107,18 +107,18 @@ A command-line wrapper for CI use.
 
 These are individually shippable; pick whichever the auth'd users ask loudest for.
 
-| Feature                        | Estimate | Notes                                                           |
-|--------------------------------|---------:|------------------------------------------------------------------|
-| Per-partner default profiles   |   3 days | `partners.default_version/dialect/strictness`; pre-fills on save |
-| Persistent history             |   2 days | Replace in-memory `historyStore` with DB-backed `histories` table|
-| Share read-only sample         |   3 days | `/api/share/:id` → public read-only viewer URL                   |
-| Mock generation                |  1 week  | Generate a valid BidRequest matching given constraints           |
-| Schema diff (2.5 → 2.6 → …)    |   3 days | Side-by-side diff of fields per version                          |
-| Replay against allow-listed    |  1 week  | Extends current `/api/proxy`; rate-limited, opt-in              |
-| Team workspaces (multi-user)   |  2 weeks | `users` table, workspace memberships, sharing                    |
-| Partner dialect contributions  |   1 week | UI to author + propose new dialect overlays                      |
-| Browser extension              |  1 week  | Capture bid JSON from network tab; pipe into Spyglass            |
-| VAST validator integration     |   3 days | Iframe IAB's tester from inside our preview pane                 |
+| Feature                       | Estimate | Notes                                                             |
+| ----------------------------- | -------: | ----------------------------------------------------------------- |
+| Per-partner default profiles  |   3 days | `partners.default_version/dialect/strictness`; pre-fills on save  |
+| Persistent history            |   2 days | Replace in-memory `historyStore` with DB-backed `histories` table |
+| Share read-only sample        |   3 days | `/api/share/:id` → public read-only viewer URL                    |
+| Mock generation               |   1 week | Generate a valid BidRequest matching given constraints            |
+| Schema diff (2.5 → 2.6 → …)   |   3 days | Side-by-side diff of fields per version                           |
+| Replay against allow-listed   |   1 week | Extends current `/api/proxy`; rate-limited, opt-in                |
+| Team workspaces (multi-user)  |  2 weeks | `users` table, workspace memberships, sharing                     |
+| Partner dialect contributions |   1 week | UI to author + propose new dialect overlays                       |
+| Browser extension             |   1 week | Capture bid JSON from network tab; pipe into Spyglass             |
+| VAST validator integration    |   3 days | Iframe IAB's tester from inside our preview pane                  |
 
 ---
 

@@ -16,6 +16,7 @@ docker compose up -d --build
 ```
 
 The container bind-mounts:
+
 - `./public` for live-edit of HTML/CSS/JS (no rebuild on UI changes)
 - `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` for the shared design system
 - `/srv/DATA/AppData/adtech-spyglass` for persistent SQLite

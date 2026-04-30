@@ -1,0 +1,7 @@
+node_modules/
+public/design-system.css
+*.min.js
+dist/
+build/
+coverage/
+package-lock.json
