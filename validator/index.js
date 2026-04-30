@@ -20,7 +20,7 @@
  *   - CLI / CI mode in Phase 6 (same module wrapped by @spyglass/cli)
  */
 
-const { detectType, TYPES } = require('./detect');
+const { detectType, detectVersion, TYPES, VERSIONS } = require('./detect');
 const { validateRequest } = require('./rules-request');
 const { validateResponse } = require('./rules-response');
 const { validateFeedResponse } = require('./rules-feed');
@@ -51,6 +51,7 @@ function validate(payload, opts) {
     return finalize(
       {
         type: TYPES.UNKNOWN,
+        version: detectVersion(payload),
         findings: [makeFinding('payload.invalid_root', LEVELS.ERROR, '')],
       },
       'invalid',
@@ -59,24 +60,25 @@ function validate(payload, opts) {
   }
 
   const t = detectType(payload);
+  const version = detectVersion(payload);
   let findings = [];
   let resolvedType = t;
 
   if (t === TYPES.ORTB_REQUEST) {
-    findings = validateRequest(payload, { dialect });
+    findings = validateRequest(payload, { dialect, version });
   } else if (t === TYPES.ORTB_RESPONSE) {
-    findings = validateResponse(payload, { dialect });
+    findings = validateResponse(payload, { dialect, version });
   } else if (t === TYPES.KADAM_FEED) {
     const r = validateFeedResponse(payload);
     findings = r.findings;
     resolvedType = r.type;
   } else if (t === TYPES.JSON_FEED) {
-    return finalize({ type: TYPES.JSON_FEED, findings: [] }, 'clean', locale);
+    return finalize({ type: TYPES.JSON_FEED, version, findings: [] }, 'clean', locale);
   } else {
     findings = [makeFinding('payload.unknown_type', LEVELS.ERROR, '')];
   }
 
-  return finalize({ type: resolvedType, findings }, null, locale);
+  return finalize({ type: resolvedType, version, findings }, null, locale);
 }
 
 /**
@@ -97,7 +99,7 @@ function crosscheck(req, res, opts) {
 function finalize(result, statusOverride, locale) {
   const decorated = result.findings.map((f) => decorate(f, locale));
   const status = statusOverride || rollupStatus(result.findings);
-  return { type: result.type, status, findings: decorated };
+  return { type: result.type, version: result.version, status, findings: decorated };
 }
 
 function decorate(f, locale) {
@@ -115,10 +117,12 @@ module.exports = {
   validate,
   crosscheck,
   detectType,
+  detectVersion,
   listDialects,
   listLocales,
   // re-exports for advanced usage / testing
   TYPES,
+  VERSIONS,
   LEVELS,
   CROSS_LEVELS,
   nativeAssetCrosscheck,

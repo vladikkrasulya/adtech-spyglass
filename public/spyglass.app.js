@@ -353,6 +353,25 @@
       // Validation tab — new findings model: { id, level, path, params, specRef, msg }
       const valEl = $('tValidation');
       const findings = validation && (validation.findings || validation.errors); // graceful migration
+      // Detected oRTB version pill (Phase 2). Renders only when version data is present.
+      const versionPill = (() => {
+        const v = validation && validation.version;
+        if (!v || !v.version || v.version === 'unknown') return '';
+        const cf = v.confidence;
+        const cfTag = cf >= 1 ? '' : cf >= 0.5 ? ' ~' : ' ?';
+        const sigTitle =
+          v.signals && v.signals.length
+            ? 'Detected via: ' + v.signals.join(', ')
+            : 'No version-specific markers — defaulted';
+        return (
+          ' · <span style="font-family:var(--font-mono);color:var(--text-dim)" title="' +
+          escapeHtml(sigTitle) +
+          '">oRTB ' +
+          escapeHtml(v.version) +
+          cfTag +
+          '</span>'
+        );
+      })();
       if (validation && findings && findings.length) {
         $('validationBadge').textContent = findings.length;
         valEl.innerHTML =
@@ -360,6 +379,7 @@
           escapeHtml(validation.type) +
           ' · ' +
           escapeHtml(humanStatus(validation.status)) +
+          versionPill +
           '</div>' +
           findings
             .map((f) => {

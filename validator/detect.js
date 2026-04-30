@@ -1,9 +1,20 @@
 'use strict';
 
 /**
- * Payload type detection. Phase 1 only distinguishes the four top-level shapes
- * we know how to validate. Phase 2 will add `detectVersion()` for OpenRTB 2.5
- * vs 2.6 vs 2.6-202309 etc., per the tiered signals in ARCHITECTURE §3.3.
+ * Payload type + OpenRTB version detection.
+ *
+ * `detectType()` answers the four-way question: is this a BidRequest, a
+ * BidResponse, a Kadam feed, or a JSON Feed.
+ *
+ * `detectVersion()` answers "which OpenRTB version produced this?" by walking
+ * the payload for **field-presence signals** that only exist in particular
+ * versions. Per ARCHITECTURE §3.3, the canonical X-Openrtb-Version header is
+ * unavailable when the payload is pasted into the UI — field signals are the
+ * only thing we can rely on.
+ *
+ * Scope here is three buckets: '2.5', '2.6', '3.0', plus 'unknown' fallback.
+ * Future minor-revision detection (2.6-202211 / 202309 / 202505) is a follow-
+ * up — the signal table extends without API changes.
  */
 
 const { isObj } = require('./helpers');
@@ -16,21 +27,115 @@ const TYPES = {
   UNKNOWN: 'unknown',
 };
 
+const VERSIONS = {
+  V_2_5: '2.5',
+  V_2_6: '2.6',
+  V_3_0: '3.0',
+  UNKNOWN: 'unknown',
+};
+
+// Signals that mean "this payload is at least 2.6". Any one of these is
+// a definitive marker — they didn't exist in 2.5 or earlier.
+//
+// Path syntax:
+//   'a.b'      — object key
+//   'a[].b'    — array element's b (matches if ANY element has b set)
+const SIGNALS_2_6 = [
+  // BidRequest
+  'imp[].rwdd',
+  'imp[].ssai',
+  'imp[].qty',
+  'device.sua',
+  'regs.gpp',
+  'regs.gpp_sid',
+  'site.cattax',
+  'app.cattax',
+  'site.publisher.cattax',
+  'app.publisher.cattax',
+  'site.langb',
+  'app.langb',
+  'imp[].video.plcmt',
+  'imp[].video.poddedupe',
+  'imp[].refresh',
+  'acat',
+  'dooh',
+  // BidResponse
+  'seatbid[].bid[].mtype',
+  'seatbid[].bid[].apis',
+  'seatbid[].bid[].cattax',
+];
+
+// Signals that confirm "at least 2.5" (but don't elevate to 2.6).
+// Used as the floor when no 2.6 markers are seen.
+const SIGNALS_2_5 = [
+  'source',
+  'bseat',
+  'wlang',
+  'imp[].metric',
+  'imp[].banner.vcm',
+  'imp[].video.placement',
+  'imp[].video.playbackend',
+  'device.mccmnc',
+  'seatbid[].bid[].burl',
+  'seatbid[].bid[].lurl',
+  'seatbid[].bid[].tactic',
+  'seatbid[].bid[].language',
+  'seatbid[].bid[].wratio',
+];
+
+// Path traversal that handles 'a.b' and 'a[].b'.
+// Returns true if any reachable value at the path is non-null/undefined.
+function pathExists(obj, path) {
+  const parts = path.split('.');
+  /** @type {any[]} */
+  let cur = [obj];
+  for (const part of parts) {
+    if (!cur.length) return false;
+    if (part.endsWith('[]')) {
+      const key = part.slice(0, -2);
+      const next = [];
+      for (const c of cur) {
+        if (c && Array.isArray(c[key])) {
+          for (const item of c[key]) if (item != null) next.push(item);
+        }
+      }
+      cur = next;
+    } else {
+      const next = [];
+      for (const c of cur) {
+        if (c && c[part] != null) next.push(c[part]);
+      }
+      cur = next;
+    }
+  }
+  return cur.length > 0;
+}
+
+function collectMatches(payload, paths) {
+  const hits = [];
+  for (const p of paths) {
+    if (pathExists(payload, p)) hits.push(p);
+  }
+  return hits;
+}
+
 function detectType(obj) {
   // Arrays are Kadam push-feed responses (list of materials).
   if (Array.isArray(obj)) return TYPES.KADAM_FEED;
   if (!isObj(obj)) return TYPES.UNKNOWN;
 
+  // 3.0 envelope check (the only structurally-distinct shape)
+  if (Array.isArray(obj.item) || (obj.openrtb && obj.openrtb.ver === '3.0')) {
+    return TYPES.ORTB_REQUEST; // we still treat as request; version detection labels it 3.0
+  }
+
   // Structural markers — the canonical array decides the type.
-  // (id is recommended but not load-bearing; payloads missing id should still
-  // dispatch to the right validator so it can emit "missing id" findings.)
   if (Array.isArray(obj.imp)) return TYPES.ORTB_REQUEST;
   if (Array.isArray(obj.seatbid)) return TYPES.ORTB_RESPONSE;
   if (obj.result && Array.isArray(obj.result.listing)) return TYPES.KADAM_FEED;
   if (obj.version && obj.items) return TYPES.JSON_FEED;
 
-  // Heuristics for malformed payloads — dispatch to the validator that can
-  // produce actionable findings instead of "unknown".
+  // Heuristics for malformed payloads.
   if (obj.site || obj.app || obj.device) return TYPES.ORTB_REQUEST;
   if (typeof obj.id === 'string' && (obj.cur != null || obj.bidid != null || obj.nbr != null)) {
     return TYPES.ORTB_RESPONSE;
@@ -38,4 +143,47 @@ function detectType(obj) {
   return TYPES.UNKNOWN;
 }
 
-module.exports = { detectType, TYPES };
+/**
+ * Detect OpenRTB version from payload field signals.
+ * Returns { version, confidence, signals }.
+ *
+ *   confidence = 1   any 2.6 marker found
+ *   confidence = 1   3.0 envelope detected
+ *   confidence = 0.7 only 2.5 markers found (might still be 2.6 with no 2.6-only fields populated)
+ *   confidence = 0.3 no markers at all (defaulted to 2.5)
+ *   confidence = 0   non-object / can't tell
+ *
+ * @param {unknown} payload
+ * @returns {{ version: string, confidence: number, signals: string[] }}
+ */
+function detectVersion(payload) {
+  if (!payload || (typeof payload !== 'object' && !Array.isArray(payload))) {
+    return { version: VERSIONS.UNKNOWN, confidence: 0, signals: [] };
+  }
+  /** @type {any} */
+  const p = payload;
+
+  // 3.0 — distinct top-level shape
+  if (Array.isArray(p.item) || (p.openrtb && p.openrtb.ver === '3.0')) {
+    const signals = [];
+    if (Array.isArray(p.item)) signals.push('item[]');
+    if (p.openrtb) signals.push('openrtb.ver');
+    return { version: VERSIONS.V_3_0, confidence: 1, signals };
+  }
+
+  const sig26 = collectMatches(payload, SIGNALS_2_6);
+  if (sig26.length) {
+    return { version: VERSIONS.V_2_6, confidence: 1, signals: sig26 };
+  }
+
+  const sig25 = collectMatches(payload, SIGNALS_2_5);
+  if (sig25.length) {
+    return { version: VERSIONS.V_2_5, confidence: 0.7, signals: sig25 };
+  }
+
+  // No markers — assume 2.5 (the lowest-friction default; fields used by the
+  // current rule set are all in 2.5 baseline).
+  return { version: VERSIONS.V_2_5, confidence: 0.3, signals: [] };
+}
+
+module.exports = { detectType, detectVersion, TYPES, VERSIONS };

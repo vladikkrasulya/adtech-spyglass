@@ -107,9 +107,45 @@ const nativeResponse = ({ omitAsset } = {}) => {
   };
 };
 
+// Version-marker variants for detectVersion() tests.
+//
+// 2.5: presence of `source` (with pchain) — added in 2.5.
+// 2.6: presence of `imp[].rwdd` — added in 2.6 (rewarded video flag).
+// 3.0: distinct `item[]` array shape replaces `imp[]`.
+/** @returns {any} */
+const v25Request = () => {
+  const r = validRequest();
+  r.source = { pchain: 'a:b' };
+  return r;
+};
+
+/** @returns {any} */
+const v26Request = () => {
+  const r = validRequest();
+  r.imp[0].rwdd = 1;
+  return r;
+};
+
+/** @returns {any} */
+const v26GppRequest = () => {
+  const r = validRequest();
+  r.regs = { gpp: 'CPv6XYZ', gpp_sid: [7] };
+  return r;
+};
+
+/** @returns {any} */
+const v3Request = () => ({
+  openrtb: { ver: '3.0' },
+  item: [{ id: '1', spec: {} }],
+});
+
 module.exports = {
   validRequest,
   validResponse,
   nativeRequest,
   nativeResponse,
+  v25Request,
+  v26Request,
+  v26GppRequest,
+  v3Request,
 };

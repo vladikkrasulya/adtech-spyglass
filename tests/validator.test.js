@@ -11,9 +11,26 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { validate, crosscheck, detectType, nativeAssetCrosscheck, TYPES } = require('../validator');
+const {
+  validate,
+  crosscheck,
+  detectType,
+  detectVersion,
+  nativeAssetCrosscheck,
+  TYPES,
+  VERSIONS,
+} = require('../validator');
 
-const { validRequest, validResponse, nativeRequest, nativeResponse } = require('./fixtures');
+const {
+  validRequest,
+  validResponse,
+  nativeRequest,
+  nativeResponse,
+  v25Request,
+  v26Request,
+  v26GppRequest,
+  v3Request,
+} = require('./fixtures');
 
 const findById = (findings, id) => findings.find((f) => f.id === id);
 const byLevel = (findings, level) => findings.filter((f) => f.level === level);
@@ -360,6 +377,88 @@ test('crosscheck findings carry localized msg', () => {
   const summary = findings.find((f) => f.id === 'crosscheck.auction.summary');
   assert.ok(summary);
   assert.match(summary.msg, /Підсумок|ставк/);
+});
+
+// ── detectVersion ────────────────────────────────────────────────────────
+
+test('detectVersion: 2.5 marker (source.pchain)', () => {
+  const v = detectVersion(v25Request());
+  assert.equal(v.version, VERSIONS.V_2_5);
+  assert.ok(v.signals.includes('source'));
+  assert.equal(v.confidence, 0.7);
+});
+
+test('detectVersion: 2.6 marker (imp[].rwdd)', () => {
+  const v = detectVersion(v26Request());
+  assert.equal(v.version, VERSIONS.V_2_6);
+  assert.ok(v.signals.includes('imp[].rwdd'));
+  assert.equal(v.confidence, 1);
+});
+
+test('detectVersion: 2.6 marker (regs.gpp)', () => {
+  const v = detectVersion(v26GppRequest());
+  assert.equal(v.version, VERSIONS.V_2_6);
+  assert.ok(v.signals.includes('regs.gpp'));
+});
+
+test('detectVersion: 3.0 envelope (openrtb.ver + item[])', () => {
+  const v = detectVersion(v3Request());
+  assert.equal(v.version, VERSIONS.V_3_0);
+});
+
+test('detectVersion: bare BidRequest with no markers defaults to 2.5 with low confidence', () => {
+  const v = detectVersion(validRequest());
+  assert.equal(v.version, VERSIONS.V_2_5);
+  assert.ok(v.confidence < 0.5);
+  assert.equal(v.signals.length, 0);
+});
+
+test('detectVersion: garbage input is unknown with confidence 0', () => {
+  const v = detectVersion('garbage');
+  assert.equal(v.version, VERSIONS.UNKNOWN);
+  assert.equal(v.confidence, 0);
+});
+
+test('validate() result includes version detection', () => {
+  const result = validate(v26Request());
+  assert.ok(result.version);
+  assert.equal(result.version.version, VERSIONS.V_2_6);
+  assert.ok(Array.isArray(result.version.signals));
+});
+
+// ── VAST 4.x acceptance + unknown protocol detection ─────────────────────
+
+test('video.protocols with VAST 4.x codes (10, 11, 12) is accepted', () => {
+  const req = validRequest();
+  req.imp[0] = {
+    id: 'i1',
+    video: { mimes: ['video/mp4'], protocols: [7, 11, 12] },
+  };
+  const { findings } = validate(req);
+  // Should NOT flag protocols_unknown for these
+  assert.equal(findById(findings, 'imp.video.protocols_unknown'), undefined);
+});
+
+test('video.protocols with malformed code (e.g. 99) is flagged', () => {
+  const req = validRequest();
+  req.imp[0] = {
+    id: 'i1',
+    video: { mimes: ['video/mp4'], protocols: [7, 99] },
+  };
+  const { findings } = validate(req);
+  const f = findById(findings, 'imp.video.protocols_unknown');
+  assert.ok(f);
+  assert.match(f.params.values, /99/);
+});
+
+test('video.protocols with exchange-specific code (>=500) is accepted', () => {
+  const req = validRequest();
+  req.imp[0] = {
+    id: 'i1',
+    video: { mimes: ['video/mp4'], protocols: [7, 501] },
+  };
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'imp.video.protocols_unknown'), undefined);
 });
 
 // ── Native asset crosscheck (low-level helper) ───────────────────────────

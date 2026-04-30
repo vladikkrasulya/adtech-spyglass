@@ -23,6 +23,7 @@
   "imp.banner.size_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#326-object-banner",
   "imp.video.mimes_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "imp.video.protocols_missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
+  "imp.video.protocols_unknown": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#58--video-bid-response-protocols-",
   "imp.native.assets_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#329-object-native",
   "imp.native.ver_missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#329-object-native",
   "imp.native.invalid_json": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#329-object-native",

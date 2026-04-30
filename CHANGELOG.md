@@ -6,6 +6,21 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### Phase 2 — IAB-spec authoritative validator (initial)
+
+- `validator/detect.js` extended with `detectVersion(payload)` returning `{ version, confidence, signals }`.
+  - Buckets: `'2.5' | '2.6' | '3.0' | 'unknown'` — minor revisions (`2.6-202309`, `2.6-202505`, etc.) deferred.
+  - Detection by **field-presence signals** since pasted JSON has no `X-Openrtb-Version` header. 2.6 markers checked first (e.g. `imp[].rwdd`, `device.sua`, `regs.gpp`, `*.cattax`, pod fields), then 2.5 markers (`source`, `bseat`, `imp[].metric`, etc.). 3.0 uses the distinct `item[]` / `openrtb.ver` envelope.
+  - Confidence: `1` for definitive markers, `0.7` for 2.5-only signals, `0.3` for default-when-no-markers, `0` for non-objects.
+- `validate()` result now carries `result.version` so callers can show the detected version without a second function call.
+- Public API: `detectVersion`, `VERSIONS` re-exported from `validator/index.js`.
+- UI: validation tab header shows the detected version pill (e.g. "oRTB BidRequest · errors · oRTB 2.6"). Hover reveals the matched signal list. `~`/`?` suffixes mark medium/low confidence.
+
+#### VAST 4.x acceptance
+
+- New `imp.video.protocols_unknown` warning for `video.protocols` codes outside the IAB List 5.8 range (1-14 + `>=500` exchange-specific).
+- Codes 10/11/12/13/14 (VAST 4.0 Wrapper, VAST 4.1, VAST 4.1 Wrapper, VAST 4.2, VAST 4.2 Wrapper) accepted without warning — previously the rule had no idea what valid codes were.
+
 ### CI / repo hygiene
 
 - GitHub Actions workflow (`.github/workflows/ci.yml`) running `npm run ci` (format:check → lint → typecheck → tests) on every push to `main` and every PR. Concurrency-cancelled per ref so old runs don't keep eating minutes.

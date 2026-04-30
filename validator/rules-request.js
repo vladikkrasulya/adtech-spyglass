@@ -114,6 +114,24 @@ function validateImp(imp, i) {
       findings.push(
         F('imp.video.protocols_missing', LEVELS.WARNING, `${p}.video.protocols`, { num }),
       );
+    } else {
+      // Per IAB OpenRTB 2.6 List 5.8: 1=VAST 1.0, 2=VAST 2.0, 3=VAST 3.0,
+      // 4=VAST 1.0 Wrapper, 5=VAST 2.0 Wrapper, 6=VAST 3.0 Wrapper,
+      // 7=VAST 4.0, 8=VAST 4.0 Wrapper, 9=DAAST 1.0, 10=DAAST 1.0 Wrapper,
+      // 11=VAST 4.1, 12=VAST 4.1 Wrapper, 13=VAST 4.2, 14=VAST 4.2 Wrapper.
+      // 500+ = exchange-specific. Anything else is malformed.
+      const KNOWN = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+      const unknown = imp.video.protocols.filter(
+        (v) => Number.isFinite(v) && !KNOWN.has(v) && v < 500,
+      );
+      if (unknown.length) {
+        findings.push(
+          F('imp.video.protocols_unknown', LEVELS.WARNING, `${p}.video.protocols`, {
+            num,
+            values: JSON.stringify(unknown),
+          }),
+        );
+      }
     }
   }
 
