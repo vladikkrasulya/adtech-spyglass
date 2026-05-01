@@ -1047,6 +1047,23 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- ── Header ── -->
+    <!-- Phase 8: unverified-email banner. Shown only when logged-in user has NULL email_verified_at. -->
+    <div
+      id="verifyBanner"
+      style="
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        padding: var(--space-2) var(--space-3);
+        background: rgba(255, 180, 60, 0.12);
+        border-bottom: 1px solid rgba(255, 180, 60, 0.4);
+        font-size: var(--fs-sm);
+      "
+    >
+      <span>Підтверди свою email-адресу — це покращує захист акаунту.</span>
+      <button class="btn btn-ghost btn-sm" onclick="requestVerifyEmail()">надіслати лист</button>
+    </div>
     <header class="app-header">
       <div class="kt-brand">
         <span class="kt-brand-spark">K</span>
@@ -1273,6 +1290,6 @@
 
     <div id="modalRoot"></div>
     <script src="spyglass-crypto.js?v=1"></script>
-    <script src="spyglass.app.js?v=8"></script>
+    <script src="spyglass.app.js?v=9"></script>
   </body>
 </html>

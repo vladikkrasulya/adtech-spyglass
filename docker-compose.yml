@@ -4,6 +4,10 @@ services:
     build:
       context: /srv/DATA/Stacks/adtech-spyglass
       dockerfile: Dockerfile
+    env_file:
+      # Phase 8: NODE_ENV, RESEND_API_KEY, EMAIL_FROM, EMAIL_TOKEN_SECRET,
+      # PUBLIC_BASE_URL. File is gitignored; .env.example documents the keys.
+      - .env
     ports:
       - '127.0.0.1:8090:3000'
     volumes:

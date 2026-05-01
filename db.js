@@ -14,6 +14,8 @@
  *   v0 → v2 (Phase 7): added users, scoped partners+samples per user. v0 data
  *                      wiped (was test-only).
  *   v1 was an internal draft, never shipped.
+ *   v2 → v3 (Phase 7 full): zero-knowledge crypto columns on users + samples.
+ *   v3 → v4 (Phase 8): users.email_verified_at for SMTP-based email verify.
  */
 
 const fs = require('fs');
@@ -21,7 +23,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const DATA_DIR = process.env.SPYGLASS_DATA_DIR || '/data';
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -103,6 +105,16 @@ function migrate(db, fromVersion) {
       ALTER TABLE samples ADD COLUMN res_iv TEXT;
     `);
   }
+
+  // v3 → v4 (Phase 8): track email verification timestamp. NULL = unverified;
+  // unix-ms when the user clicked their verify-email link. Existing users get
+  // NULL (we don't grandfather them as verified — they'll see the banner and
+  // can request a fresh verify email).
+  if (fromVersion < 4) {
+    db.exec(`
+      ALTER TABLE users ADD COLUMN email_verified_at INTEGER;
+    `);
+  }
 }
 
 const db = init();
@@ -142,14 +154,20 @@ const Users = {
     return Users.get(info.lastInsertRowid);
   },
   get(id) {
-    return db.prepare('SELECT id, email, created_at FROM users WHERE id = ?').get(id);
+    return db
+      .prepare('SELECT id, email, created_at, email_verified_at FROM users WHERE id = ?')
+      .get(id);
   },
   getByEmail(email) {
-    return db.prepare('SELECT id, email, password_hash, created_at FROM users WHERE email = ?').get(
-      String(email || '')
-        .trim()
-        .toLowerCase(),
-    );
+    return db
+      .prepare(
+        'SELECT id, email, password_hash, created_at, email_verified_at FROM users WHERE email = ?',
+      )
+      .get(
+        String(email || '')
+          .trim()
+          .toLowerCase(),
+      );
   },
   count() {
     return db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
@@ -199,6 +217,74 @@ const Users = {
       String(state.recovery_dek_iv),
       id,
     );
+  },
+
+  /**
+   * Update only the password-derived crypto fields (kdf_salt + dek_wrapped +
+   * dek_iv). Recovery state stays untouched — used by reset-password modes
+   * 'rotate' and 'recover' where the user re-wraps DEK with a new KEK derived
+   * from the new password, but the recovery wrap (under the recovery KEK) is
+   * still valid.
+   * @param {number} id
+   * @param {{ kdf_salt: string, dek_wrapped: string, dek_iv: string }} state
+   */
+  setPasswordCryptoState(id, state) {
+    db.prepare(
+      `UPDATE users
+       SET kdf_salt = ?, dek_wrapped = ?, dek_iv = ?
+       WHERE id = ?`,
+    ).run(String(state.kdf_salt), String(state.dek_wrapped), String(state.dek_iv), id);
+  },
+
+  // ── Phase 8 — email verification + password reset ───────────────────
+
+  /**
+   * Stamp email_verified_at = now (unix-ms). Idempotent: re-verifying a
+   * verified email is a no-op overwrite.
+   * @param {number} id
+   */
+  markEmailVerified(id) {
+    db.prepare('UPDATE users SET email_verified_at = ? WHERE id = ?').run(Date.now(), id);
+  },
+
+  /**
+   * Replace bcrypt password hash. Used by both /reset-password and any
+   * future change-password endpoint. Caller is responsible for rotating
+   * crypto state via setCryptoState in the same transaction-shaped flow
+   * (see spyglass_crypto_architecture: wrap-rotation gotcha).
+   * @param {number} id
+   * @param {string} password_hash
+   */
+  updatePassword(id, password_hash) {
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(String(password_hash), id);
+  },
+
+  /**
+   * Null out crypto state — used by reset-password mode='wipe' so the user
+   * re-bootstraps encryption on next login (existing flow handles NULL
+   * crypto state by triggering bootstrap).
+   * @param {number} id
+   */
+  clearCryptoState(id) {
+    db.prepare(
+      `UPDATE users
+       SET kdf_salt = NULL, dek_wrapped = NULL, dek_iv = NULL,
+           recovery_salt = NULL, recovery_dek_wrapped = NULL, recovery_dek_iv = NULL
+       WHERE id = ?`,
+    ).run(id);
+  },
+
+  /**
+   * Hard-delete all user data: samples + partners. Used by reset-password
+   * mode='wipe' when user has lost both password AND recovery key. Does
+   * NOT delete the user row (account survives, becomes empty). Returns
+   * counts of rows deleted.
+   * @param {number} id
+   */
+  wipeUserData(id) {
+    const samplesDeleted = db.prepare('DELETE FROM samples WHERE user_id = ?').run(id).changes;
+    const partnersDeleted = db.prepare('DELETE FROM partners WHERE user_id = ?').run(id).changes;
+    return { samplesDeleted, partnersDeleted };
   },
 };
 

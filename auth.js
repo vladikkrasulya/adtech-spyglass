@@ -227,6 +227,52 @@ function createAuth({ Users, logger }) {
     return sessions.size;
   }
 
+  // ── Phase 8 — password reset helpers ───────────────────────────────────
+
+  /** Bcrypt-hash a password (rounds=12). */
+  async function hashPassword(plaintext) {
+    if (typeof plaintext !== 'string' || plaintext.length < MIN_PASSWORD_LEN) {
+      const e = /** @type {Error & {code?: string, status?: number}} */ (
+        new Error(`Password must be at least ${MIN_PASSWORD_LEN} characters`)
+      );
+      e.code = 'weak_password';
+      e.status = 400;
+      throw e;
+    }
+    return bcrypt.hash(plaintext, BCRYPT_ROUNDS);
+  }
+
+  /** Verify a password against a bcrypt hash. */
+  async function verifyPassword(plaintext, hash) {
+    if (typeof plaintext !== 'string' || typeof hash !== 'string') return false;
+    return bcrypt.compare(plaintext, hash);
+  }
+
+  /**
+   * Drop all in-memory sessions belonging to a user. Used on password reset
+   * so previously-stolen cookies stop working immediately. Returns count
+   * removed.
+   * @param {number} userId
+   */
+  function invalidateUserSessions(userId) {
+    let removed = 0;
+    for (const [t, s] of sessions) {
+      if (s.userId === userId) {
+        sessions.delete(t);
+        removed++;
+      }
+    }
+    return removed;
+  }
+
+  // Per-IP rate limit for /forgot-password — 5 / 15 min. Same response
+  // ("200 ok") regardless of whether email exists, so callers can't probe
+  // existence; the limiter just stops trivial flooding.
+  const forgotPasswordLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
+  function checkForgotPasswordLimit(req) {
+    return forgotPasswordLimiter(clientIp(req));
+  }
+
   function shutdown() {
     clearInterval(sweepTimer);
     sessions.clear();
@@ -240,6 +286,10 @@ function createAuth({ Users, logger }) {
     destroySession,
     getCurrentUser,
     activeSessionCount,
+    hashPassword,
+    verifyPassword,
+    invalidateUserSessions,
+    checkForgotPasswordLimit,
     shutdown,
   };
 }

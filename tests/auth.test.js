@@ -184,6 +184,63 @@ test('login: rate limits after 10 attempts from same IP', async () => {
   );
 });
 
+// ── Phase 8: hashPassword / verifyPassword / invalidateUserSessions ─────
+
+test('hashPassword + verifyPassword round-trip', async () => {
+  const hash = await auth.hashPassword('correctpassword');
+  assert.ok(hash.startsWith('$2b$'), 'should be a bcrypt hash');
+  assert.equal(await auth.verifyPassword('correctpassword', hash), true);
+  assert.equal(await auth.verifyPassword('wrongpassword', hash), false);
+});
+
+test('hashPassword: rejects short password', async () => {
+  await assert.rejects(auth.hashPassword('short'), /at least/);
+});
+
+test('verifyPassword: returns false for non-string inputs (no throw)', async () => {
+  assert.equal(await auth.verifyPassword(null, '$2b$xxxx'), false);
+  assert.equal(await auth.verifyPassword('x', null), false);
+});
+
+test('invalidateUserSessions drops only the target user sessions', async () => {
+  const ipA = nextIp();
+  const ipB = nextIp();
+  const userA = await auth.register(
+    { email: 'invalA@example.com', password: 'longenough' },
+    fakeReq({ ip: ipA }),
+  );
+  const userB = await auth.register(
+    { email: 'invalB@example.com', password: 'longenough' },
+    fakeReq({ ip: ipB }),
+  );
+  const resA = fakeRes();
+  auth.createSession(fakeReq({ ip: ipA }), resA, userA);
+  const cookieA = cookieFromSetCookie(resA.getHeader('Set-Cookie'));
+
+  const resB = fakeRes();
+  auth.createSession(fakeReq({ ip: ipB }), resB, userB);
+  const cookieB = cookieFromSetCookie(resB.getHeader('Set-Cookie'));
+
+  // Both sessions valid before
+  assert.ok(auth.getCurrentUser(fakeReq({ cookie: cookieA })));
+  assert.ok(auth.getCurrentUser(fakeReq({ cookie: cookieB })));
+
+  // Drop only A's
+  const removed = auth.invalidateUserSessions(userA.id);
+  assert.ok(removed >= 1, 'should remove at least one session');
+
+  assert.equal(auth.getCurrentUser(fakeReq({ cookie: cookieA })), null);
+  assert.ok(auth.getCurrentUser(fakeReq({ cookie: cookieB })), 'B unaffected');
+});
+
+test('checkForgotPasswordLimit: returns true under limit, false over', () => {
+  const ip = '10.99.99.1';
+  for (let i = 0; i < 5; i++) {
+    assert.equal(auth.checkForgotPasswordLimit(fakeReq({ ip })), true, `attempt ${i + 1}`);
+  }
+  assert.equal(auth.checkForgotPasswordLimit(fakeReq({ ip })), false, '6th attempt blocked');
+});
+
 // ── teardown ─────────────────────────────────────────────────────────────
 
 process.on('exit', () => {

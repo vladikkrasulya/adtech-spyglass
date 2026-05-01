@@ -36,12 +36,22 @@ const fs = require('fs');
 const path = require('path');
 const { Users, Partners, Samples, db } = require('./db');
 const { createAuth } = require('./auth');
+const { signToken, verifyToken, TokenError } = require('./tokens');
+const { sendVerifyEmail, sendResetEmail } = require('./email');
 const { validate, crosscheck, listLocales, listDialects } = require('@kyivtech/spyglass-core');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DEFAULT_LOCALE = 'uk';
 const DEFAULT_DIALECT = 'iab';
+
+// Phase 8 token durations
+const VERIFY_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 days
+const RESET_TOKEN_TTL = 15 * 60; // 15 min
+
+function getPublicBaseUrl() {
+  return process.env.PUBLIC_BASE_URL || 'http://localhost:' + PORT;
+}
 
 const auth = createAuth({ Users });
 
@@ -136,7 +146,12 @@ function makeError(code, msg) {
 
 function publicUser(u) {
   if (!u) return null;
-  return { id: u.id, email: u.email, created_at: u.created_at };
+  return {
+    id: u.id,
+    email: u.email,
+    created_at: u.created_at,
+    email_verified_at: u.email_verified_at != null ? u.email_verified_at : null,
+  };
 }
 
 function resolveLocale(parsed) {
@@ -179,6 +194,22 @@ function handleAuthRoute(req, res, parsed) {
         const user = await auth.register({ email, password }, req);
         auth.createSession(req, res, user);
         sendJson(res, 200, { success: true, user: publicUser(user) });
+        // Fire-and-forget: don't block the register response on email send.
+        // Failures are logged; user will see "unverified" banner regardless
+        // and can re-trigger via /api/auth/verify-email/request.
+        try {
+          const tok = signToken({
+            purpose: 'verify',
+            user_id: user.id,
+            email: user.email,
+            expirySeconds: VERIFY_TOKEN_TTL,
+          });
+          sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).catch((err) =>
+            console.error('[register] verify email send failed:', err.message),
+          );
+        } catch (err) {
+          console.error('[register] verify token sign failed:', err.message);
+        }
       })
       .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
   }
@@ -235,6 +266,195 @@ function handleAuthRoute(req, res, parsed) {
         sendJson(res, 200, { success: true });
       })
       .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
+  }
+
+  // ── Phase 8 — email verification + password reset ──────────────────────
+
+  // Re-send verify email for the currently logged-in user.
+  if (pathname === '/api/auth/verify-email/request' && method === 'POST') {
+    const user = auth.getCurrentUser(req);
+    if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
+    try {
+      const tok = signToken({
+        purpose: 'verify',
+        user_id: user.id,
+        email: user.email,
+        expirySeconds: VERIFY_TOKEN_TTL,
+      });
+      sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).catch((err) =>
+        console.error('[verify-email/request] send failed:', err.message),
+      );
+      return sendJson(res, 200, { success: true });
+    } catch (err) {
+      return sendError(res, 500, 'verify_email_failed', err.message);
+    }
+  }
+
+  // GET because user clicks a link from their email. Browser does GET, we
+  // 302-redirect to / with a status param the UI reads to show a banner.
+  if (pathname === '/api/auth/verify-email/confirm' && method === 'GET') {
+    const tok = parsed.searchParams.get('token');
+    const base = getPublicBaseUrl();
+    if (!tok) {
+      res.writeHead(302, { Location: `${base}/?verify_error=missing` });
+      return res.end();
+    }
+    try {
+      const payload = verifyToken(tok, 'verify');
+      const u = Users.get(payload.user_id);
+      if (!u || u.email !== payload.email) {
+        // Email rotated since token was issued, or user gone.
+        res.writeHead(302, { Location: `${base}/?verify_error=stale` });
+        return res.end();
+      }
+      Users.markEmailVerified(payload.user_id);
+      res.writeHead(302, { Location: `${base}/?verified=1` });
+      return res.end();
+    } catch (err) {
+      const code = err instanceof TokenError ? err.code : 'invalid';
+      res.writeHead(302, { Location: `${base}/?verify_error=${encodeURIComponent(code)}` });
+      return res.end();
+    }
+  }
+
+  // Public — always returns 200 (don't leak which emails exist).
+  if (pathname === '/api/auth/forgot-password' && method === 'POST') {
+    return readJson(req)
+      .then(async ({ email }) => {
+        // Rate-limit silently: success response either way, but stop floods.
+        if (!auth.checkForgotPasswordLimit(req)) {
+          return sendJson(res, 200, { success: true });
+        }
+        if (typeof email === 'string' && email.trim()) {
+          const u = Users.getByEmail(email);
+          if (u) {
+            try {
+              const tok = signToken({
+                purpose: 'reset',
+                user_id: u.id,
+                email: u.email,
+                expirySeconds: RESET_TOKEN_TTL,
+              });
+              sendResetEmail({ email: u.email }, tok, getPublicBaseUrl()).catch((err) =>
+                console.error('[forgot-password] send failed:', err.message),
+              );
+            } catch (err) {
+              console.error('[forgot-password] sign failed:', err.message);
+            }
+          }
+        }
+        return sendJson(res, 200, { success: true });
+      })
+      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
+  }
+
+  // Used by the reset-password UI: with a valid reset token (proof of email
+  // ownership), client fetches the user's crypto state so it can unwrap the
+  // DEK locally and re-wrap under a new KEK before POSTing to /reset-password.
+  // Same-token-as-proof: no separate auth needed.
+  if (pathname === '/api/auth/reset-password/state' && method === 'POST') {
+    return readJson(req)
+      .then((b) => {
+        let payload;
+        try {
+          payload = verifyToken(b.token, 'reset');
+        } catch (err) {
+          const code = err instanceof TokenError ? err.code : 'invalid_token';
+          return sendError(res, 400, code, 'Reset link is invalid or expired');
+        }
+        const u = Users.get(payload.user_id);
+        if (!u || u.email !== payload.email) {
+          return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
+        }
+        const cs = Users.getCryptoState(payload.user_id);
+        return sendJson(res, 200, {
+          success: true,
+          email: u.email,
+          encryption: cs && cs.kdf_salt ? cs : null,
+        });
+      })
+      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
+  }
+
+  // Public — body shape depends on `mode`. See spyglass_phase_8_plan.md and
+  // spyglass_crypto_architecture.md (wrap-rotation gotcha) for context.
+  if (pathname === '/api/auth/reset-password' && method === 'POST') {
+    return readJson(req)
+      .then(async (b) => {
+        let payload;
+        try {
+          payload = verifyToken(b.token, 'reset');
+        } catch (err) {
+          const code = err instanceof TokenError ? err.code : 'invalid_token';
+          return sendError(res, 400, code, 'Reset link is invalid or expired');
+        }
+        const u = Users.get(payload.user_id);
+        if (!u || u.email !== payload.email) {
+          return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
+        }
+        if (typeof b.newPassword !== 'string') {
+          return sendError(res, 400, 'invalid_request', 'newPassword required');
+        }
+
+        const mode = b.mode;
+        if (mode === 'rotate') {
+          // Browser unwrapped DEK using OLD password, re-wrapped under NEW KEK.
+          // Server verifies old password as proof, then stores new wrap.
+          const fullUser = Users.getByEmail(payload.email);
+          const ok = await auth.verifyPassword(b.oldPassword, fullUser.password_hash);
+          if (!ok) return sendError(res, 401, 'invalid_credentials', 'Wrong current password');
+          const required = ['new_kdf_salt', 'new_dek_wrapped', 'new_dek_iv'];
+          for (const k of required) {
+            if (typeof b[k] !== 'string' || !b[k].length) {
+              return sendError(res, 400, 'invalid_state', `Missing field: ${k}`);
+            }
+          }
+          const newHash = await auth.hashPassword(b.newPassword);
+          Users.updatePassword(payload.user_id, newHash);
+          Users.setPasswordCryptoState(payload.user_id, {
+            kdf_salt: b.new_kdf_salt,
+            dek_wrapped: b.new_dek_wrapped,
+            dek_iv: b.new_dek_iv,
+          });
+        } else if (mode === 'recover') {
+          // Browser unwrapped DEK using recovery key, re-wrapped under new KEK.
+          // No password proof needed (recovery key WAS the proof).
+          const required = ['new_kdf_salt', 'new_dek_wrapped', 'new_dek_iv'];
+          for (const k of required) {
+            if (typeof b[k] !== 'string' || !b[k].length) {
+              return sendError(res, 400, 'invalid_state', `Missing field: ${k}`);
+            }
+          }
+          const newHash = await auth.hashPassword(b.newPassword);
+          Users.updatePassword(payload.user_id, newHash);
+          Users.setPasswordCryptoState(payload.user_id, {
+            kdf_salt: b.new_kdf_salt,
+            dek_wrapped: b.new_dek_wrapped,
+            dek_iv: b.new_dek_iv,
+          });
+        } else if (mode === 'wipe') {
+          // Lost both password AND recovery key. User accepts data loss.
+          const newHash = await auth.hashPassword(b.newPassword);
+          Users.updatePassword(payload.user_id, newHash);
+          Users.clearCryptoState(payload.user_id);
+          Users.wipeUserData(payload.user_id);
+        } else {
+          return sendError(res, 400, 'invalid_mode', `Unknown reset mode: ${mode}`);
+        }
+
+        // Drop all old sessions, mint a new one. Old cookies (if stolen)
+        // stop working immediately.
+        auth.invalidateUserSessions(payload.user_id);
+        const fresh = Users.get(payload.user_id);
+        auth.createSession(req, res, fresh);
+        const cs = Users.getCryptoState(payload.user_id);
+        const encryption =
+          cs && cs.kdf_salt
+            ? { kdf_salt: cs.kdf_salt, dek_wrapped: cs.dek_wrapped, dek_iv: cs.dek_iv }
+            : null;
+        return sendJson(res, 200, { success: true, user: publicUser(fresh), encryption });
+      })
+      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
   }
 
   return false;

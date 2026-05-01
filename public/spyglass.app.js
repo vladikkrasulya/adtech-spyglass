@@ -946,6 +946,7 @@
       _pendingUnlock = false;
     }
     renderAuthWidget();
+    renderVerifyBanner();
   }
   let _pendingUnlock = false;
 
@@ -1016,6 +1017,9 @@
       (isReg ? 'new-password' : 'current-password') +
       '"></div>' +
       '<div id="authError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
+      (isReg
+        ? ''
+        : '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" onclick="event.preventDefault();openForgotPasswordModal()" style="font-size:var(--fs-sm);color:var(--text-dim)">забув пароль?</a></div>') +
       '<div class="modal-actions" style="justify-content:space-between">' +
       '<button class="btn btn-ghost btn-sm" onclick="' +
       (isReg ? "openAuthModal('login')" : "openAuthModal('register')") +
@@ -1145,6 +1149,244 @@
     refreshSamples();
     toast('Ви вийшли з акаунту', 'success');
   };
+
+  // ── Phase 8: forgot/reset password + email verification ──────────────
+
+  window.openForgotPasswordModal = function () {
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-card">' +
+      '<div class="modal-title">скидання паролю</div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
+      'введи email — пришлемо посилання для скидання паролю (діє 15 хв).' +
+      '</div>' +
+      '<div class="modal-row"><label>email</label><input id="forgotEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
+      '<div id="forgotMessage" style="font-size:var(--fs-sm);color:var(--text-dim);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-ghost btn-sm" onclick="openAuthModal(\'login\')">назад до входу</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="doForgotPassword()">надіслати</button>' +
+      '</div></div></div>';
+    setTimeout(() => $('forgotEmailInput').focus(), 0);
+    $('forgotEmailInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        window.doForgotPassword();
+      }
+    });
+  };
+
+  window.doForgotPassword = async function () {
+    const email = $('forgotEmailInput').value.trim();
+    const msgEl = $('forgotMessage');
+    if (!email) {
+      msgEl.style.color = 'var(--danger)';
+      msgEl.textContent = 'Введи email';
+      return;
+    }
+    msgEl.style.color = 'var(--text-dim)';
+    msgEl.textContent = 'Відправляємо...';
+    try {
+      await api('POST', 'api/auth/forgot-password', { email });
+      msgEl.style.color = 'var(--success, green)';
+      msgEl.textContent = 'Якщо такий email існує, лист відправлено. Перевір пошту (і спам).';
+    } catch (e) {
+      msgEl.style.color = 'var(--danger)';
+      msgEl.textContent = e.message || 'Помилка';
+    }
+  };
+
+  window.openResetPasswordModal = async function (token) {
+    // Fetch crypto state (proves token is valid via server) before showing UI.
+    let stateRes;
+    try {
+      stateRes = await api('POST', 'api/auth/reset-password/state', { token });
+    } catch (e) {
+      toast('Посилання недійсне або застаріле: ' + (e.message || ''), 'error');
+      // Strip ?reset= from URL so refresh doesn't re-trigger.
+      history.replaceState({}, '', location.pathname);
+      return;
+    }
+    const enc = stateRes.encryption;
+    const email = stateRes.email;
+    _resetCtx = { token, encryption: enc, email };
+
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-card" style="max-width:520px">' +
+      '<div class="modal-title">скидання паролю</div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
+      escapeHtml(email) +
+      '</div>' +
+      '<div class="modal-row" style="display:block">' +
+      '<label style="display:flex;align-items:flex-start;gap:var(--space-2);cursor:pointer;padding:var(--space-2);border:1px solid var(--border);border-radius:4px;margin-bottom:var(--space-2)">' +
+      '<input type="radio" name="resetMode" value="rotate" checked onchange="updateResetModeUI()" style="margin-top:3px">' +
+      '<span><b>Я памʼятаю поточний пароль</b><br>' +
+      '<span style="font-size:var(--fs-sm);color:var(--text-dim)">Бібліотека збережеться. Просто ротуємо пароль.</span></span></label>' +
+      '<label style="display:flex;align-items:flex-start;gap:var(--space-2);cursor:pointer;padding:var(--space-2);border:1px solid var(--border);border-radius:4px;margin-bottom:var(--space-2)">' +
+      '<input type="radio" name="resetMode" value="recover" onchange="updateResetModeUI()" style="margin-top:3px">' +
+      '<span><b>У мене є recovery key</b><br>' +
+      '<span style="font-size:var(--fs-sm);color:var(--text-dim)">32-символьний ключ, який показували при реєстрації. Бібліотека збережеться.</span></span></label>' +
+      '<label style="display:flex;align-items:flex-start;gap:var(--space-2);cursor:pointer;padding:var(--space-2);border:1px solid var(--border);border-radius:4px;margin-bottom:var(--space-2)">' +
+      '<input type="radio" name="resetMode" value="wipe" onchange="updateResetModeUI()" style="margin-top:3px">' +
+      '<span><b>Я втратив обидва — стерти все</b><br>' +
+      '<span style="font-size:var(--fs-sm);color:var(--danger)">Усі збережені запити та партнери будуть видалені.</span></span></label>' +
+      '</div>' +
+      '<div id="resetModeFields"></div>' +
+      '<div class="modal-row"><label>новий пароль (мін. 8 символів)</label>' +
+      '<input id="resetNewPwInput" type="password" autocomplete="new-password"></div>' +
+      '<div id="resetError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeModal();history.replaceState({},\'\',location.pathname)">скасувати</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="doResetPassword()">скинути пароль</button>' +
+      '</div></div></div>';
+    window.updateResetModeUI();
+  };
+
+  window.updateResetModeUI = function () {
+    const mode = document.querySelector('input[name="resetMode"]:checked').value;
+    const f = $('resetModeFields');
+    if (mode === 'rotate') {
+      f.innerHTML =
+        '<div class="modal-row"><label>поточний пароль</label>' +
+        '<input id="resetOldPwInput" type="password" autocomplete="current-password"></div>';
+    } else if (mode === 'recover') {
+      f.innerHTML =
+        '<div class="modal-row"><label>recovery key (32 символи)</label>' +
+        '<input id="resetRecoveryInput" type="text" autocomplete="off" placeholder="xxxx-xxxx-xxxx-xxxx-..." style="font-family:monospace"></div>';
+    } else {
+      f.innerHTML =
+        '<div style="background:rgba(220,40,40,.08);border:1px solid var(--danger);padding:var(--space-2);border-radius:4px;margin-bottom:var(--space-3);font-size:var(--fs-sm)">' +
+        '<b>Це знищить всі ваші збережені запити та партнерів.</b> Зашифровані дані не можна відновити без паролю чи recovery key.' +
+        '<label style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-2);cursor:pointer">' +
+        '<input type="checkbox" id="resetWipeConfirm"> Я розумію і приймаю втрату даних</label>' +
+        '</div>';
+    }
+  };
+
+  window.doResetPassword = async function () {
+    const mode = document.querySelector('input[name="resetMode"]:checked').value;
+    const newPassword = $('resetNewPwInput').value;
+    const errEl = $('resetError');
+    errEl.textContent = '';
+    if (newPassword.length < 8) {
+      errEl.textContent = 'Новий пароль має бути хоча б 8 символів';
+      return;
+    }
+    const ctx = _resetCtx;
+    if (!ctx) {
+      errEl.textContent = 'Сесія скидання втрачена — відкрий посилання заново';
+      return;
+    }
+    try {
+      let body;
+      if (mode === 'wipe') {
+        if (!$('resetWipeConfirm').checked) {
+          errEl.textContent = 'Підтверди, що приймаєш втрату даних';
+          return;
+        }
+        body = { token: ctx.token, mode: 'wipe', newPassword };
+      } else {
+        // rotate / recover: unwrap DEK locally, re-wrap under new KEK.
+        if (!ctx.encryption) {
+          errEl.textContent = 'Немає стану шифрування — використай "стерти все"';
+          return;
+        }
+        let dekBytes;
+        if (mode === 'rotate') {
+          const oldPassword = $('resetOldPwInput').value;
+          if (!oldPassword) {
+            errEl.textContent = 'Введи поточний пароль';
+            return;
+          }
+          const oldSalt = SpyglassCrypto._b64ToBytes(ctx.encryption.kdf_salt);
+          const oldKEK = await SpyglassCrypto.deriveKEK(oldPassword, oldSalt);
+          try {
+            dekBytes = await SpyglassCrypto.unwrapBytes(
+              oldKEK,
+              ctx.encryption.dek_iv,
+              ctx.encryption.dek_wrapped,
+            );
+          } catch {
+            errEl.textContent = 'Невірний поточний пароль';
+            return;
+          }
+          body = {
+            token: ctx.token,
+            mode: 'rotate',
+            oldPassword,
+            newPassword,
+          };
+        } else {
+          const recovery = $('resetRecoveryInput')
+            .value.replace(/[^0-9a-fA-F]/g, '')
+            .toLowerCase();
+          if (recovery.length !== 32) {
+            errEl.textContent = 'Recovery key має бути 32 hex символи';
+            return;
+          }
+          const recSalt = SpyglassCrypto._b64ToBytes(ctx.encryption.recovery_salt);
+          const recKEK = await SpyglassCrypto.deriveKEK(recovery, recSalt);
+          try {
+            dekBytes = await SpyglassCrypto.unwrapBytes(
+              recKEK,
+              ctx.encryption.recovery_dek_iv,
+              ctx.encryption.recovery_dek_wrapped,
+            );
+          } catch {
+            errEl.textContent = 'Невірний recovery key';
+            return;
+          }
+          body = {
+            token: ctx.token,
+            mode: 'recover',
+            newPassword,
+          };
+        }
+        // Re-wrap DEK under new KEK (common for rotate + recover).
+        const newSalt = crypto.getRandomValues(new Uint8Array(16));
+        const newKEK = await SpyglassCrypto.deriveKEK(newPassword, newSalt);
+        const wrapped = await SpyglassCrypto.wrapBytes(newKEK, dekBytes);
+        body.new_kdf_salt = SpyglassCrypto._bytesToB64(newSalt);
+        body.new_dek_wrapped = wrapped.ct;
+        body.new_dek_iv = wrapped.iv;
+        // Keep DEK live so user is unlocked immediately after reset.
+        _sessionDEK = await SpyglassCrypto.importDEK(dekBytes);
+      }
+      const resp = await api('POST', 'api/auth/reset-password', body);
+      _currentUser = resp.user;
+      _resetCtx = null;
+      _pendingUnlock = mode === 'wipe'; // wipe needs fresh bootstrap on next save
+      if (mode === 'wipe') _sessionDEK = null;
+      history.replaceState({}, '', location.pathname);
+      closeModal();
+      renderAuthWidget();
+      renderVerifyBanner();
+      refreshSamples();
+      toast('Пароль скинуто. Ти увійшов(ла).', 'success');
+    } catch (e) {
+      errEl.textContent = e.message || 'Помилка';
+    }
+  };
+  let _resetCtx = null;
+
+  window.requestVerifyEmail = async function () {
+    try {
+      await api('POST', 'api/auth/verify-email/request');
+      toast('Лист підтвердження відправлено на ' + (_currentUser && _currentUser.email), 'success');
+    } catch (e) {
+      toast('Не вдалося відправити: ' + (e.message || ''), 'error');
+    }
+  };
+
+  function renderVerifyBanner() {
+    const banner = $('verifyBanner');
+    if (!banner) return;
+    if (_currentUser && !_currentUser.email_verified_at) {
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
 
   function humanAuthError(e) {
     const code = e.code || '';
@@ -1551,6 +1793,26 @@
     await bootAuth();
     await refreshPartners();
     refreshSamples();
+    // Phase 8 URL params: ?reset=token | ?verified=1 | ?verify_error=...
+    const qp = new URLSearchParams(location.search);
+    if (qp.get('reset')) {
+      window.openResetPasswordModal(qp.get('reset'));
+    } else if (qp.get('verified') === '1') {
+      toast('Email підтверджено ✓', 'success');
+      history.replaceState({}, '', location.pathname);
+      // Refresh /api/auth/me so banner clears
+      bootAuth();
+    } else if (qp.get('verify_error')) {
+      const code = qp.get('verify_error');
+      const msg =
+        code === 'expired'
+          ? 'Посилання застаріло — запитай нове'
+          : code === 'tampered' || code === 'malformed'
+            ? 'Посилання пошкоджено'
+            : 'Не вдалося підтвердити email';
+      toast(msg, 'error');
+      history.replaceState({}, '', location.pathname);
+    }
   });
   window.refreshSamples = refreshSamples;
 })();

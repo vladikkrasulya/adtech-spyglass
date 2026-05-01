@@ -184,3 +184,72 @@ test('samples: deleting a user cascades to their samples and partners', () => {
   assert.equal(Partners.get({ id: p.id, userId: tmpUser.id }), undefined);
   assert.equal(Samples.get({ id: s.id, userId: tmpUser.id }), undefined);
 });
+
+// ── Phase 8: email verification + password reset ─────────────────────────
+
+test('users: get() and getByEmail() include email_verified_at (NULL by default)', () => {
+  const u = Users.create({ email: 'verify-default@example.com', password_hash: 'x' });
+  assert.equal(Users.get(u.id).email_verified_at, null);
+  assert.equal(Users.getByEmail('verify-default@example.com').email_verified_at, null);
+});
+
+test('users: markEmailVerified stamps a timestamp; second call overwrites', () => {
+  const u = Users.create({ email: 'mark-verify@example.com', password_hash: 'x' });
+  Users.markEmailVerified(u.id);
+  const after1 = Users.get(u.id).email_verified_at;
+  assert.ok(typeof after1 === 'number' && after1 > 0, 'should be unix-ms timestamp');
+  // Sleep a few ms so the second timestamp is strictly greater (or at least equal).
+  const before2 = Date.now();
+  Users.markEmailVerified(u.id);
+  const after2 = Users.get(u.id).email_verified_at;
+  assert.ok(after2 >= before2 - 50, 'second mark should also produce a recent timestamp');
+});
+
+test('users: updatePassword replaces the bcrypt hash', () => {
+  const u = Users.create({ email: 'pwchange@example.com', password_hash: 'old-hash' });
+  Users.updatePassword(u.id, 'new-hash');
+  const fetched = Users.getByEmail('pwchange@example.com');
+  assert.equal(fetched.password_hash, 'new-hash');
+});
+
+test('users: clearCryptoState nulls all 6 crypto columns', () => {
+  const u = Users.create({ email: 'clearcrypto@example.com', password_hash: 'x' });
+  Users.setCryptoState(u.id, {
+    kdf_salt: 'sa',
+    dek_wrapped: 'dw',
+    dek_iv: 'di',
+    recovery_salt: 'rs',
+    recovery_dek_wrapped: 'rdw',
+    recovery_dek_iv: 'rdi',
+  });
+  const before = Users.getCryptoState(u.id);
+  assert.equal(before.kdf_salt, 'sa');
+  assert.equal(before.recovery_dek_iv, 'rdi');
+
+  Users.clearCryptoState(u.id);
+  const after = Users.getCryptoState(u.id);
+  assert.equal(after.kdf_salt, null);
+  assert.equal(after.dek_wrapped, null);
+  assert.equal(after.dek_iv, null);
+  assert.equal(after.recovery_salt, null);
+  assert.equal(after.recovery_dek_wrapped, null);
+  assert.equal(after.recovery_dek_iv, null);
+});
+
+test('users: wipeUserData deletes samples + partners but keeps the user row', () => {
+  const u = Users.create({ email: 'wipe@example.com', password_hash: 'x' });
+  const p = Partners.create({ userId: u.id, name: 'WipePartner' });
+  const s1 = Samples.create({ userId: u.id, title: 's1' });
+  const s2 = Samples.create({ userId: u.id, partner_id: p.id, title: 's2' });
+
+  const result = Users.wipeUserData(u.id);
+  assert.equal(result.samplesDeleted, 2);
+  assert.equal(result.partnersDeleted, 1);
+
+  // User row still exists
+  assert.ok(Users.get(u.id), 'user must survive');
+  // Samples and partners gone
+  assert.equal(Samples.get({ id: s1.id, userId: u.id }), undefined);
+  assert.equal(Samples.get({ id: s2.id, userId: u.id }), undefined);
+  assert.equal(Partners.get({ id: p.id, userId: u.id }), undefined);
+});
