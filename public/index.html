@@ -1,15 +1,71 @@
 <!doctype html>
-<html lang="en">
+<html lang="uk">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="robots" content="index,follow" />
+    <title>Spyglass · OpenRTB Inspector — oRTB 2.5/2.6/3.0, native, VAST</title>
+    <meta
+      name="description"
+      content="Публічний OpenRTB-інспектор: вставив BidRequest/BidResponse JSON, побачив validation findings, crosscheck request↔response, декодовані IAB-категорії. oRTB 2.5/2.6/3.0, Native 1.x, VAST 4.x. Без реклами, без логів, zero-knowledge шифрування для збережених зразків."
+    />
+    <meta
+      name="keywords"
+      content="openrtb, oRTB, openrtb inspector, openrtb validator, IAB, bid request, bid response, RTB, AdTech, VAST, native ads, programmatic, real-time bidding"
+    />
+    <meta name="author" content="kyivtech.com.ua" />
+    <link rel="canonical" href="https://spyglass.kyivtech.com.ua/" />
+
+    <!-- Open Graph (Facebook, Telegram, Slack, Discord previews) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Kyiv Tech" />
+    <meta property="og:title" content="Spyglass · OpenRTB Inspector" />
+    <meta
+      property="og:description"
+      content="Public OpenRTB inspector: paste BidRequest/BidResponse, see validation findings, request↔response crosscheck, IAB category decoding. oRTB 2.5/2.6/3.0, Native, VAST. No ads, no logs."
+    />
+    <meta property="og:url" content="https://spyglass.kyivtech.com.ua/" />
+    <meta property="og:locale" content="uk_UA" />
+    <meta property="og:locale:alternate" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Spyglass · OpenRTB Inspector" />
+    <meta
+      name="twitter:description"
+      content="Public OpenRTB inspector with validation, crosscheck, and IAB-category decoding. oRTB 2.5/2.6/3.0, Native, VAST. Free, no ads, no logs."
+    />
+
+    <!-- JSON-LD structured data — tells Google this is a free, browser-based dev tool -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Spyglass · OpenRTB Inspector",
+        "url": "https://spyglass.kyivtech.com.ua/",
+        "description": "Public OpenRTB inspector with validation, crosscheck request↔response, and IAB Content Taxonomy decoding. Supports oRTB 2.5/2.6/3.0, Native 1.1/1.2, VAST 4.x.",
+        "applicationCategory": "DeveloperApplication",
+        "applicationSubCategory": "AdTech tooling",
+        "operatingSystem": "Any (browser)",
+        "browserRequirements": "Requires modern browser with JavaScript and Web Crypto",
+        "inLanguage": ["uk", "en"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "creator": {
+          "@type": "Organization",
+          "name": "Kyiv Tech",
+          "url": "https://kyivtech.com.ua/"
+        }
+      }
+    </script>
+
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFCC00'/%3E%3Ctext x='50%25' y='65%25' text-anchor='middle' font-family='Onest,sans-serif' font-size='20' font-weight='700' fill='%23181818'%3EK%3C/text%3E%3C/svg%3E"
     />
-    <title>Spyglass · OpenRTB Inspector</title>
-    <link rel="stylesheet" href="design-system.css?v=2" />
+    <link rel="stylesheet" href="design-system.css?v=9" />
+    <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'тема: авто · клік → світла':(s==='light'?'тема: світла · клік → темна':'тема: темна · клік → авто');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){if(document.querySelector('.kt-theme-toggle'))return;var b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Перемкнути тему');b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});document.body.appendChild(b);apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
+    <script>(function(){try{var K='kt-lang';var SUPPORTED=['uk','en'];function get(){try{var v=localStorage.getItem(K);return SUPPORTED.indexOf(v)>=0?v:'uk';}catch(e){return 'uk';}}function set(v){try{localStorage.setItem(K,v);}catch(e){}}function apply(){document.documentElement.setAttribute('data-lang',get());var b=document.querySelector('.kt-lang-toggle');if(b){b.textContent=get().toUpperCase();b.title=get()==='uk'?'мова: українська · клік → English':'lang: English · click → Українська';}}apply();function inject(){if(document.querySelector('.kt-lang-toggle'))return;var b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';b.setAttribute('aria-label','Switch language');b.addEventListener('click',function(){set(get()==='uk'?'en':'uk');apply();window.dispatchEvent(new CustomEvent('kt:lang-change',{detail:{lang:get()}}));});document.body.appendChild(b);apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
     <style>
       /* ============================================================
    Spyglass v8 — re-skinned on kyivtech-portal design-system.
@@ -30,6 +86,53 @@
         display: grid;
         grid-template-rows: auto auto 1fr auto;
         height: 100vh;
+      }
+
+      /* ── Responsive breakpoints ────────────────────────────────────────
+         Spyglass was desktop-only until 2026-05-02. Mobile is rare for an
+         oRTB inspector but useful for "peek at a copied JSON on the train".
+         Two breakpoints:
+           ≤1024px → main 3-column grid stacks vertically (left sidebar
+                     becomes top, right sidebar becomes bottom)
+           ≤720px  → bid-request/response stack vertically too, page scrolls
+                     instead of being height: 100vh.
+      */
+      @media (max-width: 1024px) {
+        .main-grid {
+          grid-template-columns: 1fr !important;
+          grid-template-rows: auto auto auto;
+        }
+        .sidebar-left {
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .sidebar-right {
+          border-left: 0;
+          border-top: 1px solid var(--border);
+        }
+      }
+      @media (max-width: 720px) {
+        .workbench {
+          height: auto; /* let page scroll naturally on phones */
+          min-height: 100vh;
+        }
+        .input-section {
+          grid-template-columns: 1fr !important;
+          height: auto;
+        }
+        .input-section .input-card {
+          min-height: 180px;
+        }
+        .app-header {
+          padding: var(--space-3);
+          gap: var(--space-2);
+        }
+        .app-header .kt-brand {
+          font-size: var(--fs-sm);
+        }
+        .sim-price-wrap {
+          display: none; /* sim-price box rarely needed on phone */
+        }
       }
 
       /* ── Header ── */
@@ -316,6 +419,7 @@
         gap: var(--space-2);
       }
       .history-item {
+        position: relative;
         padding: var(--space-3);
         border: 1px solid var(--border);
         border-radius: var(--r-sm);
@@ -328,6 +432,58 @@
       .history-item:hover {
         background: var(--bg-2);
         border-color: var(--border-strong);
+      }
+      .history-item:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+      /* Active = currently loaded into the editor. Accent border + soft tint
+         so the user can scan the list and instantly see "this is what I'm
+         editing right now". */
+      .history-item--active {
+        border-color: var(--accent);
+        background: var(--accent-soft, rgba(255, 204, 0, 0.08));
+      }
+      .history-item--active:hover {
+        border-color: var(--accent-strong, var(--accent));
+        background: var(--accent-soft, rgba(255, 204, 0, 0.12));
+      }
+      /* Hover-revealed action buttons in top-right corner. Hidden until the
+         row is hovered (or focused) so the resting state stays clean. */
+      .history-actions {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: flex;
+        gap: 2px;
+        opacity: 0;
+        transition: opacity var(--t-fast);
+      }
+      .history-item:hover .history-actions,
+      .history-item:focus-within .history-actions,
+      .history-item--active .history-actions {
+        opacity: 1;
+      }
+      .history-act-btn {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 11px;
+        line-height: 1;
+        padding: 3px 6px;
+        border-radius: var(--r-sm);
+        cursor: pointer;
+        transition: all var(--t-fast);
+      }
+      .history-act-btn:hover {
+        background: var(--bg-2);
+        color: var(--text);
+        border-color: var(--text-dim);
+      }
+      .history-act-btn.danger:hover {
+        background: rgba(220, 38, 38, 0.1);
+        color: var(--danger);
+        border-color: var(--danger);
       }
       .history-title {
         font-family: var(--font-mono);
@@ -1068,13 +1224,23 @@
       <div class="kt-brand">
         <span class="kt-brand-spark">K</span>
         <span>spyglass · openrtb inspector</span>
-        <span class="mono-label hide-sm" style="margin-left: var(--space-2)">v8.0</span>
+        <span class="mono-label hide-sm" style="margin-left: var(--space-2)">v8.0.0</span>
       </div>
       <div class="app-header-actions">
         <div class="sim-price-wrap">
           <label for="simPrice">sim price</label>
           <input id="simPrice" type="text" value="1.50" />
         </div>
+        <a
+          href="/about.html"
+          target="_blank"
+          rel="noopener"
+          class="btn btn-ghost btn-sm"
+          title="Як користуватись · що Spyglass вміє і не вміє"
+          style="text-decoration: none;"
+        >
+          docs ↗
+        </a>
         <button
           onclick="openSaveModal()"
           class="btn btn-ghost btn-sm"
@@ -1122,16 +1288,16 @@
           <span class="input-card-title">bid request</span>
           <div class="input-card-actions">
             <span class="char-count" id="reqCount">0</span>
-            <span class="json-badge empty" id="reqBadge">empty</span>
-            <button onclick="clearInput('bidReq')" class="btn-icon" title="Clear">clear</button>
-            <button onclick="utils.format('bidReq')" class="btn-icon" title="Format">format</button>
-            <button onclick="utils.copy('bidReq')" class="btn-icon" title="Copy">copy</button>
+            <span class="json-badge empty" id="reqBadge">порожньо</span>
+            <button onclick="clearInput('bidReq')" class="btn-icon" title="Очистити поле">очистити</button>
+            <button onclick="utils.format('bidReq')" class="btn-icon" title="Відформатувати JSON">формат</button>
+            <button onclick="utils.copy('bidReq')" class="btn-icon" title="Скопіювати в буфер">копія</button>
           </div>
         </div>
         <textarea
           id="bidReq"
           class="json-input"
-          placeholder="Paste OpenRTB BidRequest JSON here.&#10;&#10;Tip: Ctrl+Enter to analyze."
+          placeholder="Встав сюди oRTB BidRequest JSON.&#10;&#10;Підказка: Ctrl+Enter — запустити аналіз."
           oninput="updateCharCount('bidReq')"
           onkeydown="handleKeydown(event)"
         ></textarea>
@@ -1141,16 +1307,16 @@
           <span class="input-card-title">bid response</span>
           <div class="input-card-actions">
             <span class="char-count" id="resCount">0</span>
-            <span class="json-badge empty" id="resBadge">empty</span>
-            <button onclick="clearInput('bidRes')" class="btn-icon" title="Clear">clear</button>
-            <button onclick="utils.format('bidRes')" class="btn-icon" title="Format">format</button>
-            <button onclick="utils.copy('bidRes')" class="btn-icon" title="Copy">copy</button>
+            <span class="json-badge empty" id="resBadge">порожньо</span>
+            <button onclick="clearInput('bidRes')" class="btn-icon" title="Очистити поле">очистити</button>
+            <button onclick="utils.format('bidRes')" class="btn-icon" title="Відформатувати JSON">формат</button>
+            <button onclick="utils.copy('bidRes')" class="btn-icon" title="Скопіювати в буфер">копія</button>
           </div>
         </div>
         <textarea
           id="bidRes"
           class="json-input"
-          placeholder="Paste OpenRTB BidResponse JSON here (optional)."
+          placeholder="Встав oRTB BidResponse JSON (необовʼязково)."
           oninput="updateCharCount('bidRes')"
           onkeydown="handleKeydown(event)"
         ></textarea>
@@ -1182,7 +1348,7 @@
         </div>
         <div class="section-title">бібліотека</div>
         <div class="saved-toolbar">
-          <select id="partnerFilter" class="saved-select" onchange="refreshSamples()">
+          <select id="partnerFilter" class="saved-select" aria-label="Фільтр збережених запитів за партнером" onchange="refreshSamples()">
             <option value="">усі партнери</option>
             <option value="unassigned">— без партнера —</option>
           </select>
@@ -1193,7 +1359,21 @@
         <div class="saved-list" id="savedList">
           <div class="saved-empty">Збережених запитів ще немає</div>
         </div>
-        <div class="section-title">history</div>
+        <div
+          class="section-title"
+          style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)"
+        >
+          <span>history</span>
+          <button
+            type="button"
+            onclick="clearHistory()"
+            class="saved-act-btn"
+            title="Очистити локальну історію"
+            style="font-size:11px"
+          >
+            clear
+          </button>
+        </div>
         <div class="history-list" id="hList">
           <div
             style="
@@ -1203,7 +1383,7 @@
               padding: var(--space-5);
             "
           >
-            No analyses yet
+            Історія порожня — встав запит щоб почати
           </div>
         </div>
       </aside>
@@ -1220,22 +1400,29 @@
           <button class="tab-btn" onclick="switchTab(this, 'tCross')">
             crosscheck <span class="tab-badge" id="crossBadge">0</span>
           </button>
-          <button class="tab-btn" onclick="switchTab(this, 'tRef')">kadam ref</button>
+          <button class="tab-btn" onclick="switchTab(this, 'tCategories')">
+            categories <span class="tab-badge" id="categoriesBadge">0</span>
+          </button>
+          <button class="tab-btn" id="kadamRefTab" onclick="switchTab(this, 'tRef')" hidden>vendor ref</button>
         </div>
         <div class="tab-content active" id="tInspector">
           <div class="slot-grid" id="slotGrid">
             <div class="empty-hint" style="grid-column: 1/-1">
-              Enter a Bid Request to see placements.
+              Встав BidRequest зліва — тут зʼявляться слоти imp[]
             </div>
           </div>
         </div>
         <div class="tab-content" id="tValidation">
-          <div class="empty-hint">Validation results will appear here.</div>
+          <div class="empty-hint">Знахідки валідації зʼявляться тут після аналізу</div>
         </div>
         <div class="tab-content" id="tCross">
           <div class="empty-hint">
-            Semantic crosscheck (id match · floor · bcat · native assets · format) will appear here
-            once you paste both Request and Response.
+            Звірка request↔response (id match · floor · bcat · native assets · format) — потрібні обидві сторони
+          </div>
+        </div>
+        <div class="tab-content" id="tCategories">
+          <div class="empty-hint">
+            Декодовані IAB-категорії з cat[] / bcat[] / pcat[] — зʼявляться коли коди є в payload
           </div>
         </div>
         <div class="tab-content" id="tRef">
@@ -1247,7 +1434,7 @@
       <aside class="sidebar-right">
         <div class="section-title">ad preview</div>
         <div class="preview-container" id="creativePreview">
-          <div class="preview-placeholder">awaiting ad markup</div>
+          <div class="preview-placeholder">очікується adm — встав BidResponse</div>
         </div>
         <div class="section-title" style="margin-top: var(--space-2)">placement stats</div>
         <div class="quick-stats" id="quickStats">
@@ -1274,22 +1461,23 @@
     <!-- ── Footer ── -->
     <footer class="app-footer">
       <div style="display: flex; align-items: center; gap: var(--space-3)">
-        <span id="stEntity" style="color: var(--text); font-weight: 500">ready</span>
+        <span id="stEntity" style="color: var(--text); font-weight: 500">готовий</span>
         <span style="color: var(--text-dim)">·</span>
         <span style="color: var(--text-dim)"
           >engine <span id="engineVer" style="color: var(--text)">v8.0.0</span></span
         >
         <span style="color: var(--text-dim)">·</span>
-        <span style="color: var(--text-dim)">openrtb 2.5 · native 1.1 · kadam feed</span>
+        <span style="color: var(--text-dim)" title="Підтримувані специфікації">openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast 4.x</span>
       </div>
       <div style="display: flex; align-items: center; gap: 6px">
         <span class="status-dot online" id="statusDot"></span>
-        <span id="statusText" style="color: var(--text-muted)">online</span>
+        <span id="statusText" style="color: var(--text-muted)">онлайн</span>
       </div>
     </footer>
 
     <div id="modalRoot"></div>
     <script src="spyglass-crypto.js?v=1"></script>
-    <script src="spyglass.app.js?v=9"></script>
+    <script src="i18n.js?v=2"></script>
+    <script src="spyglass.app.js?v=13"></script>
   </body>
 </html>

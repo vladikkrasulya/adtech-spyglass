@@ -77,11 +77,85 @@ function validateRequest(req, ctx) {
     findings.push(...validateImp(imp, i));
   });
 
+  // ── Non-IAB ad-format detection (pop / clickunder / pushunder / push) ────
+  // These formats are NOT in canonical OpenRTB; networks signal them via
+  // vendor-specific `ext.*`. We surface a single info-level finding per
+  // unique format detected so the inspector can flag what's really being
+  // bought without pretending it's spec-canonical.
+  findings.push(...detectNonStandardFormats(req));
+
   // ── Dialect overlay ──────────────────────────────────────────────────────
   if (dialect && typeof dialect.validateRequest === 'function') {
     findings.push(...dialect.validateRequest(req));
   }
 
+  return findings;
+}
+
+// Recognised non-IAB format strings (lowercase, normalised). Underscores and
+// hyphens are stripped before comparison so `pop_under`/`pop-under` match.
+const NON_STANDARD_FORMATS = new Set([
+  'pop',
+  'popup',
+  'popunder',
+  'clickunder',
+  'pushunder',
+  'push',
+  'nativepush',
+  'banner_pop'.replace(/[-_]/g, ''),
+]);
+
+// Boolean flags networks use to mark these formats. Same name conventions as
+// strings above but addressed as truthy markers instead of `adtype: "pop"`.
+const NON_STANDARD_FLAG_KEYS = [
+  'pop',
+  'popup',
+  'popunder',
+  'clickunder',
+  'pushunder',
+  'push',
+  'pushup',
+];
+
+function normaliseFormatName(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[-_\s]/g, '');
+}
+
+function detectNonStandardFormats(req) {
+  const findings = [];
+  const seen = new Map(); // format → first-seen path
+
+  function record(format, path) {
+    const key = normaliseFormatName(format);
+    if (!NON_STANDARD_FORMATS.has(key)) return;
+    if (!seen.has(key)) seen.set(key, { format: key, path });
+  }
+
+  function scanExt(ext, basePath) {
+    if (!isObj(ext)) return;
+    // String hints: ext.adtype = "pop" / ext.format = "popunder" / ext.type = ...
+    for (const k of ['adtype', 'format', 'type', 'ad_format']) {
+      const v = ext[k];
+      if (typeof v === 'string') record(v, `${basePath}.${k}`);
+    }
+    // Boolean / truthy flags: ext.pop = true, ext.popunder = 1, etc.
+    for (const k of NON_STANDARD_FLAG_KEYS) {
+      if (ext[k]) record(k, `${basePath}.${k}`);
+    }
+  }
+
+  scanExt(req.ext, 'ext');
+  (req.imp || []).forEach((imp, i) => {
+    scanExt(imp && imp.ext, `imp[${i}].ext`);
+    if (imp && imp.banner) scanExt(imp.banner.ext, `imp[${i}].banner.ext`);
+    if (imp && imp.video) scanExt(imp.video.ext, `imp[${i}].video.ext`);
+  });
+
+  for (const { format, path } of seen.values()) {
+    findings.push(F('imp.non_standard_format', LEVELS.INFO, path, { format, path }));
+  }
   return findings;
 }
 

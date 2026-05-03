@@ -13,7 +13,6 @@
   "request.site.domain_missing": "site.domain не вказано. Це доменна категоризація — без неї SSP не зможе перевірити whitelist/blacklist і знизить ставку.",
   "request.app.bundle_missing": "app.bundle не вказано. Без bundle ID (наприклад \"com.example.app\") неможливо ідентифікувати застосунок — таргетинг по інвентарю не працює.",
   "request.bcat_invalid": "bcat має бути масивом рядків з IAB-категоріями (наприклад [\"IAB7-39\",\"IAB25\"]). Зараз — не масив, біддер ігнорує блокування.",
-
   "imp.id_required": "Слот #{num}: немає imp.id. Без id не вийде звʼязати ставку з конкретним слотом — біддер відсіє.",
   "imp.bidfloor_invalid": "Слот #{num}: bidfloor має бути числом (наприклад 0.05). Зараз — інший тип, аукціон буде проводитись без флора.",
   "imp.format_required": "Слот #{num}: не вказано формат креативу. Треба хоча б один: banner, video, native або audio — інакше біддеру нічого пропонувати.",
@@ -24,7 +23,6 @@
   "imp.native.assets_required": "Слот #{num}: native запит без assets[]. Native 1.1 вимагає список ассетів (title, image, data) — без них креатив зібрати неможливо.",
   "imp.native.ver_missing": "Слот #{num}: не вказано native.ver. Рекомендується \"1.1\" або \"1.2\", щоб біддер знав яку версію специфікації використовувати.",
   "imp.native.invalid_json": "Слот #{num}: native.request — не валідний JSON ({error}). Це поле має бути JSON-рядком зі структурою native, або вже розпарсеним обʼєктом.",
-
   "response.id_required": "У відповіді немає id. Має бути той самий, що й у BidRequest.id — інакше SSP не зможе сматчити пару запит/відповідь і відкине ставку.",
   "response.seatbid_required": "Немає seatbid[]. Це масив сідбідів — без нього у відповіді просто немає ставок.",
   "response.seatbid.empty": "Сідбід #{num}: порожній bid[]. Сідбід без жодної ставки — еквівалентно \"no bid\", біддеру немає сенсу його відсилати.",
@@ -33,13 +31,11 @@
   "response.bid.price_required": "Сідбід #{sNum} → ставка #{bNum}: немає або не число bid.price. Це сама ставка в CPM/CPC — без неї аукціон не зможе її врахувати.",
   "response.bid.payload_missing": "Сідбід #{sNum} → ставка #{bNum}: ні adm, ні nurl. Один з них обовʼязковий: adm — інлайн-креатив (HTML/VAST/Native JSON), nurl — URL за яким SSP підтягне креатив.",
   "response.bid.adomain_missing": "Сідбід #{sNum} → ставка #{bNum}: немає adomain[]. Це список доменів рекламодавця — без нього SSP не може звірити з блокліст-доменами видавця і може забанити ставку.",
-
   "kadam.ext.bsection_invalid": "ext.bsection — Kadam-розширення для блокування секцій. Має бути масивом цілих чисел, інакше ігнорується і блок не діє.",
   "kadam.ext.btags_invalid": "ext.btags — Kadam-розширення для блокування тегів. Має бути масивом цілих чисел, інакше ігнорується і блок не діє.",
   "kadam.imp.subage_missing": "Слот #{num}: для push-показу не вказано ext.subage (вік підписки в днях). Без нього Kadam трактує підписника як \"невідомого\" і знижує ставку — додай число.",
   "kadam.push_detected": "Це push-трафік. Щоб максимізувати викуп, заповни subage / subage0 / subage_dt — Kadam використовує їх для оцінки якості підписника.",
   "kadam.bid.macro_unsupported": "Сідбід #{sNum} → ставка #{bNum}: макрос ${{macro}} не підставляється Kadam-ом. Підтримуються лише три: AUCTION_PRICE, AUCTION_CURRENCY, AUCTION_LOSS — інші залишаться літеральним рядком у креативі.",
-
   "feed.shape_unknown": "Не схоже ні на push (масив матеріалів), ні на клікандер ({result: {listing: [...]}}). Перевір формат — Kadam Feed має одну з цих двох структур.",
   "feed.clickunder.url_required": "Кліклістинг #{num}: не вказано url. Це сама ціль кліку — без URL клікандер немає куди редіректити.",
   "feed.clickunder.bid_required": "Кліклістинг #{num}: bid має бути числом (ставка за клік). Без нього аукціон не може врахувати пропозицію.",
@@ -49,10 +45,8 @@
   "feed.push.title_recommended": "Push-матеріал #{num}: бажано задати title — заголовок, що зʼявляється в push-нотифікації.",
   "feed.push.image_url_recommended": "Push-матеріал #{num}: бажано додати image_url — велике зображення підвищує CTR push-показу.",
   "feed.push.nurl_recommended": "Push-матеріал #{num}: немає nurl (та не \"зашитий\" у icon_url) — win-нотіс не спрацює, статистика покази/виграші буде розсинхронована.",
-
   "payload.unknown_type": "Не вдалося визначити тип payload-у. Очікується oRTB BidRequest (з imp[]), BidResponse (з seatbid[]) або Kadam Feed (push-масив чи клікандер з result.listing).",
   "payload.invalid_root": "Очікується JSON-обʼєкт або масив. Інші типи (рядок, число) не є валідним RTB-payload-ом.",
-
   "crosscheck.no_request": "Немає валідного BidRequest для звірки. Встав запит у ліве поле, щоб порівняти його з відповіддю.",
   "crosscheck.no_response": "У відповіді немає seatbid[] або вона пуста — нема чого звіряти. Встав BidResponse з хоча б одним сідбідом.",
   "crosscheck.id_match": "id запиту і відповіді збігаються (\"{id}\") — SSP зможе сматчити пару.",
@@ -75,5 +69,6 @@
   "crosscheck.bid.native_invalid_adm": "Сідбід #{sNum} → ставка #{bNum}: bid.adm — не валідний JSON для native-відповіді. Очікується {\"native\":{\"assets\":[...],\"link\":...}}.",
   "crosscheck.bid.video_vast": "Сідбід #{sNum} → ставка #{bNum}: adm — валідний VAST XML для відео-слоту.",
   "crosscheck.bid.video_not_vast": "Сідбід #{sNum} → ставка #{bNum}: слот відеоформату, але adm не схожий на VAST XML. Плеєр не зможе відрендерити цей креатив — у відео-відповіді має бути <VAST>...</VAST>.",
-  "crosscheck.auction.summary": "Підсумок аукціону: {totalBids} ставок · {bidsAboveFloor} над флором · {impsFilled} з {impsTotal} слотів заповнено · найвища ціна {topPrice}."
+  "crosscheck.auction.summary": "Підсумок аукціону: {totalBids} ставок · {bidsAboveFloor} над флором · {impsFilled} з {impsTotal} слотів заповнено · найвища ціна {topPrice}.",
+  "imp.non_standard_format": "Виявлено non-IAB формат `{format}` за шляхом `{path}`. Це не канонічний oRTB — vendor-specific (pop / clickunder / pushunder / push)."
 }

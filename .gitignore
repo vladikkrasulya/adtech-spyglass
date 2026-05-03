@@ -9,6 +9,7 @@ package-lock.json.backup
 .env.*.local
 .env.production
 .env.development
+.env.bak*
 *.pem
 *.key
 *.crt

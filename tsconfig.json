@@ -25,6 +25,16 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["server.js", "db.js", "validator.js", "tests/**/*.js"],
+  "//include-rationale":
+    "validator.js was split into packages/core/* in Phase 1 — kept JSDoc-only typecheck across the whole backend + tests so obvious typos still surface. strict-* flags stay off until Phase 3 hand-tunes types; npm run typecheck currently passes silently as a smoke gate.",
+  "include": [
+    "server.js",
+    "auth.js",
+    "db.js",
+    "email.js",
+    "tokens.js",
+    "packages/core/**/*.js",
+    "tests/**/*.js"
+  ],
   "exclude": ["node_modules", "public", "dist", "build", "coverage"]
 }

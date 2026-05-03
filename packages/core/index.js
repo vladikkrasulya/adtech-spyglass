@@ -113,6 +113,8 @@ function listDialects() {
   return Object.keys(DIALECTS);
 }
 
+const { decodeCategory, decodeCategories, extractAllCategories } = require('./categories');
+
 module.exports = {
   validate,
   crosscheck,
@@ -120,6 +122,10 @@ module.exports = {
   detectVersion,
   listDialects,
   listLocales,
+  // IAB Content Taxonomy lookup — bundled English labels.
+  decodeCategory,
+  decodeCategories,
+  extractAllCategories,
   // re-exports for advanced usage / testing
   TYPES,
   VERSIONS,

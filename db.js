@@ -31,7 +31,10 @@ function init() {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  const cur = db.pragma('user_version', { simple: true });
+  // better-sqlite3 returns user_version as a number on some builds and a
+  // string on others — coerce so the comparison is numeric, not lexicographic
+  // ("10" < "9" is true otherwise and migrations would silently skip).
+  const cur = Number(db.pragma('user_version', { simple: true })) || 0;
   if (cur < SCHEMA_VERSION) {
     migrate(db, cur);
     db.pragma(`user_version = ${SCHEMA_VERSION}`);

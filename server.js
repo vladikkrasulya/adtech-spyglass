@@ -38,7 +38,13 @@ const { Users, Partners, Samples, db } = require('./db');
 const { createAuth } = require('./auth');
 const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
-const { validate, crosscheck, listLocales, listDialects } = require('@kyivtech/spyglass-core');
+const {
+  validate,
+  crosscheck,
+  listLocales,
+  listDialects,
+  extractAllCategories,
+} = require('@kyivtech/spyglass-core');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -48,6 +54,36 @@ const DEFAULT_DIALECT = 'iab';
 // Phase 8 token durations
 const VERIFY_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 days
 const RESET_TOKEN_TTL = 15 * 60; // 15 min
+
+// Limits and rates. Centralised so tuning doesn't require grepping the file.
+const MAX_BODY_BYTES = 2 * 1024 * 1024; // 2 MB — covers the largest realistic oRTB payload by ~10x
+const ANALYZE_WINDOW_MS = 60 * 1000;
+const ANALYZE_MAX_PER_WINDOW = 60; // 60 analyse calls/min/IP — generous human use, tight enough vs CPU-bound DoS
+
+// Tiny per-IP analyze limiter using same shape as auth.makeLimiter
+// (but kept inline because exporting a single helper across two files
+// would be more boilerplate than it saves).
+function makeAnalyzeLimiter() {
+  const buckets = new Map();
+  setInterval(() => {
+    const cutoff = Date.now() - ANALYZE_WINDOW_MS;
+    for (const [k, list] of buckets) {
+      const fresh = list.filter((t) => t > cutoff);
+      if (fresh.length === 0) buckets.delete(k);
+      else buckets.set(k, fresh);
+    }
+  }, ANALYZE_WINDOW_MS).unref();
+  return (key) => {
+    const now = Date.now();
+    const cutoff = now - ANALYZE_WINDOW_MS;
+    const list = (buckets.get(key) || []).filter((t) => t > cutoff);
+    if (list.length >= ANALYZE_MAX_PER_WINDOW) return false;
+    list.push(now);
+    buckets.set(key, list);
+    return true;
+  };
+}
+const analyzeLimiter = makeAnalyzeLimiter();
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || 'http://localhost:' + PORT;
@@ -111,7 +147,7 @@ function readJson(req) {
     let body = '';
     req.on('data', (c) => {
       body += c;
-      if (body.length > 2 * 1024 * 1024) {
+      if (body.length > MAX_BODY_BYTES) {
         reject(makeError('payload_too_large', 'Payload exceeds 2MB limit'));
         req.destroy();
       }
@@ -154,6 +190,15 @@ function publicUser(u) {
   };
 }
 
+// Public projection of the per-user crypto state. The wrapped-DEK + IV
+// + salt is what the client needs to derive a KEK from the password and
+// unwrap the DEK on login. Returns null when the user hasn't completed
+// `setup-encryption` yet — clients use that to render the bootstrap UI.
+function publicEncryption(cs) {
+  if (!cs || !cs.kdf_salt) return null;
+  return { kdf_salt: cs.kdf_salt, dek_wrapped: cs.dek_wrapped, dek_iv: cs.dek_iv };
+}
+
 function resolveLocale(parsed) {
   const want = parsed.searchParams.get('locale');
   if (want && listLocales().includes(want)) return want;
@@ -176,15 +221,7 @@ function handleAuthRoute(req, res, parsed) {
     const user = auth.getCurrentUser(req);
     if (!user) return sendJson(res, 200, { success: true, user: null, encryption: null });
     // Surface crypto state so the client can derive KEK and unwrap DEK.
-    const cs = Users.getCryptoState(user.id);
-    const encryption =
-      cs && cs.kdf_salt
-        ? {
-            kdf_salt: cs.kdf_salt,
-            dek_wrapped: cs.dek_wrapped,
-            dek_iv: cs.dek_iv,
-          }
-        : null;
+    const encryption = publicEncryption(Users.getCryptoState(user.id));
     return sendJson(res, 200, { success: true, user: publicUser(user), encryption });
   }
 
@@ -219,15 +256,7 @@ function handleAuthRoute(req, res, parsed) {
       .then(async ({ email, password }) => {
         const user = await auth.login({ email, password }, req);
         auth.createSession(req, res, user);
-        const cs = Users.getCryptoState(user.id);
-        const encryption =
-          cs && cs.kdf_salt
-            ? {
-                kdf_salt: cs.kdf_salt,
-                dek_wrapped: cs.dek_wrapped,
-                dek_iv: cs.dek_iv,
-              }
-            : null;
+        const encryption = publicEncryption(Users.getCryptoState(user.id));
         sendJson(res, 200, { success: true, user: publicUser(user), encryption });
       })
       .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
@@ -447,11 +476,7 @@ function handleAuthRoute(req, res, parsed) {
         auth.invalidateUserSessions(payload.user_id);
         const fresh = Users.get(payload.user_id);
         auth.createSession(req, res, fresh);
-        const cs = Users.getCryptoState(payload.user_id);
-        const encryption =
-          cs && cs.kdf_salt
-            ? { kdf_salt: cs.kdf_salt, dek_wrapped: cs.dek_wrapped, dek_iv: cs.dek_iv }
-            : null;
+        const encryption = publicEncryption(Users.getCryptoState(payload.user_id));
         return sendJson(res, 200, { success: true, user: publicUser(fresh), encryption });
       })
       .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
@@ -460,22 +485,34 @@ function handleAuthRoute(req, res, parsed) {
   return false;
 }
 
-// ── /api/proxy (allow-listed test harness) ──────────────────────────────────
+// ── /api/proxy (allow-listed test harness, session-gated) ──────────────────
+//
+// Used only by the developer for ad-hoc forward-to-test-harness experiments;
+// no frontend code calls it. We gate on session because an unauth proxy that
+// echoes attacker-controlled JSON to public request bins is an abuse amplifier
+// (attacker burns *our* IP+TLS to hit their webhook). webhook.site was the
+// worst offender — wildcard subdomain → any attacker-controlled bin — so it's
+// off the allow-list.
+
+const PROXY_ALLOWED_HOSTS = ['httpbin.org', 'postman-echo.com'];
 
 function handleProxy(req, res) {
+  const user = auth.getCurrentUser(req);
+  if (!user) {
+    return sendError(res, 401, 'unauthorized', 'Sign in to use the proxy harness');
+  }
   readJson(req)
     .then(({ url, data }) => {
       const targetUrl = new URL(url);
-      const ALLOWED_HOSTS = ['httpbin.org', 'postman-echo.com', 'webhook.site'];
       const hostname = targetUrl.hostname;
-      const isAllowed = ALLOWED_HOSTS.some((h) => hostname === h || hostname.endsWith('.' + h));
+      const isAllowed = PROXY_ALLOWED_HOSTS.some((h) => hostname === h || hostname.endsWith('.' + h));
       if (!isAllowed) {
         return sendError(
           res,
           403,
           'host_not_allowed',
           'Host not allowed. Proxy is restricted to public test endpoints only.',
-          { allowedHosts: ALLOWED_HOSTS },
+          { allowedHosts: PROXY_ALLOWED_HOSTS },
         );
       }
       const client = targetUrl.protocol === 'https:' ? https : http;
@@ -506,36 +543,80 @@ function handleProxy(req, res) {
 // ── /api/analyze ────────────────────────────────────────────────────────────
 
 function handleAnalyze(req, res, parsed) {
+  if (!analyzeLimiter(auth.clientIp(req))) {
+    return sendError(
+      res,
+      429,
+      'rate_limited',
+      `Too many analyze calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
+    );
+  }
   const locale = resolveLocale(parsed);
   const dialect = resolveDialect(parsed);
   readJson(req)
     .then(({ bidReq, bidRes }) => {
-      const validation = validate(bidReq || {}, { locale, dialect });
+      const hasReq = bidReq && typeof bidReq === 'object' && Object.keys(bidReq).length > 0;
+      const hasRes = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0;
 
-      if (bidRes && Object.keys(bidRes).length) {
-        const resValidation = validate(bidRes, { locale, dialect });
-        if (resValidation.findings && resValidation.findings.length) {
-          validation.findings = validation.findings.concat(
-            resValidation.findings.map((f) => Object.assign({}, f, { msg: '[response] ' + f.msg })),
-          );
-          if (resValidation.status === 'errors' && validation.status !== 'errors') {
-            validation.status = 'errors';
-          } else if (resValidation.status === 'warnings' && validation.status === 'clean') {
-            validation.status = 'warnings';
-          }
-        }
+      // Empty payload is now an explicit 400 instead of a synthetic
+      // "unknown_type" finding masquerading as a real validation error.
+      if (!hasReq && !hasRes) {
+        return sendError(
+          res,
+          400,
+          'empty_payload',
+          'Provide bidReq or bidRes (or both) in the request body',
+        );
       }
 
-      const cross =
-        bidReq && bidRes && Object.keys(bidRes).length
-          ? crosscheck(bidReq, bidRes, { locale })
-          : [];
+      // Branch on what was actually sent — running validate({}) when only
+      // bidRes is present produced a misleading payload.unknown_type error
+      // that masked perfectly valid response findings.
+      let validation;
+      if (hasReq) {
+        validation = validate(bidReq, { locale, dialect });
+        if (hasRes) {
+          const resValidation = validate(bidRes, { locale, dialect });
+          if (resValidation.findings && resValidation.findings.length) {
+            validation.findings = validation.findings.concat(
+              resValidation.findings.map((f) =>
+                Object.assign({}, f, { msg: '[response] ' + f.msg }),
+              ),
+            );
+          }
+        }
+      } else {
+        // Response-only path. Validate bidRes and prefix findings for clarity.
+        validation = validate(bidRes, { locale, dialect });
+        validation.findings = validation.findings.map((f) =>
+          Object.assign({}, f, { msg: '[response] ' + f.msg }),
+        );
+      }
+
+      // Recompute status from the union — `errors` if any finding is error,
+      // else `warnings` if any warning, else `clean`. (Mirrors the core
+      // rollupStatus helper without importing it; keep in sync.)
+      const levels = new Set((validation.findings || []).map((f) => f.level));
+      validation.status = levels.has('error')
+        ? 'errors'
+        : levels.has('warning')
+          ? 'warnings'
+          : 'clean';
+
+      const cross = hasReq && hasRes ? crosscheck(bidReq, bidRes, { locale }) : [];
+
+      // Decode IAB Content Taxonomy codes (cat / bcat / pcat / sectioncat
+      // / pagecat / bid.cat) into English labels so the frontend can render
+      // human text alongside `IAB9-11` etc. without bundling its own dict.
+      const categories = {};
+      if (hasReq) Object.assign(categories, extractAllCategories(bidReq));
+      if (hasRes) Object.assign(categories, extractAllCategories(bidRes));
 
       sendJson(res, 200, {
         success: true,
         validation,
         crosscheck: cross,
-        meta: { locale, dialect },
+        meta: { locale, dialect, categories },
       });
     })
     .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
@@ -632,7 +713,7 @@ function handleApi(req, res, parsed, user) {
 
 // ── /api/health ─────────────────────────────────────────────────────────────
 
-function handleHealth(_req, res) {
+function handleHealth(req, res) {
   let dbOk = false;
   try {
     db.prepare('SELECT 1').get();
@@ -641,21 +722,45 @@ function handleHealth(_req, res) {
     dbOk = false;
   }
   const status = dbOk ? 200 : 503;
-  sendJson(res, status, {
+  // Anonymous callers (Docker healthcheck, Uptime Kuma, random probes) get
+  // only liveness — no pid/node-version/user-count fingerprinting. Authed
+  // sessions get the full operational view.
+  const body = {
     success: dbOk,
     status: dbOk ? 'ok' : 'degraded',
     checks: { db: dbOk },
-    sessions: auth.activeSessionCount(),
-    users: Users.count(),
-    uptime: Math.round(process.uptime()),
-    pid: process.pid,
-    node: process.version,
-  });
+  };
+  if (auth.getCurrentUser(req)) {
+    body.sessions = auth.activeSessionCount();
+    body.users = Users.count();
+    body.uptime = Math.round(process.uptime());
+    body.pid = process.pid;
+    body.node = process.version;
+  }
+  sendJson(res, status, body);
 }
 
 // ── HTTP dispatch ────────────────────────────────────────────────────────────
 
+// Baseline hardening headers applied to every response. The portal proxy
+// in front of this app also sets some of these, but defense-in-depth means
+// keeping them at the origin too — direct access (debug ports, dev) never
+// loses the floor. CSP intentionally omitted: the frontend is full of
+// inline event handlers + innerHTML usage that would break under any non-
+// trivial CSP. Re-enable once those are migrated to delegated listeners.
+function applyBaselineHeaders(res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  // Spyglass landing/docs are public — no global X-Robots-Tag. Admin/auth
+  // surfaces aren't crawler-relevant (no GET-renders to index), so a global
+  // noindex would just hurt the public demo's discoverability.
+}
+
 const server = http.createServer((req, res) => {
+  applyBaselineHeaders(res);
+
   let parsed;
   try {
     parsed = new URL(req.url, 'http://localhost');

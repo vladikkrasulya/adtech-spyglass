@@ -461,6 +461,116 @@ test('video.protocols with exchange-specific code (>=500) is accepted', () => {
   assert.equal(findById(findings, 'imp.video.protocols_unknown'), undefined);
 });
 
+// ── Non-IAB ad-format detection (pop / clickunder / pushunder / push) ────
+
+test('non-standard format: ext.adtype="popunder" is flagged', () => {
+  const req = validRequest();
+  req.imp[0].ext = { adtype: 'popunder' };
+  const { findings } = validate(req);
+  const f = findById(findings, 'imp.non_standard_format');
+  assert.ok(f, 'expected imp.non_standard_format finding');
+  assert.equal(f.params.format, 'popunder');
+  assert.equal(f.level, 'info');
+});
+
+test('non-standard format: ext.pop = true is flagged', () => {
+  const req = validRequest();
+  req.imp[0].ext = { pop: true };
+  const { findings } = validate(req);
+  const f = findById(findings, 'imp.non_standard_format');
+  assert.ok(f);
+  assert.equal(f.params.format, 'pop');
+});
+
+test('non-standard format: ext.format="click_under" normalises to clickunder', () => {
+  const req = validRequest();
+  req.imp[0].ext = { format: 'click_under' };
+  const { findings } = validate(req);
+  const f = findById(findings, 'imp.non_standard_format');
+  assert.ok(f);
+  assert.equal(f.params.format, 'clickunder');
+});
+
+test('non-standard format: req.ext.adtype="push" surfaces from request root', () => {
+  const req = validRequest();
+  req.ext = { adtype: 'push' };
+  const { findings } = validate(req);
+  const f = findById(findings, 'imp.non_standard_format');
+  assert.ok(f);
+  assert.equal(f.params.format, 'push');
+  assert.ok(f.path.startsWith('ext'), 'path should point at request.ext');
+});
+
+test('non-standard format: same format on multiple imps emits one finding (deduped)', () => {
+  const req = validRequest();
+  req.imp = [
+    { id: 'i1', banner: { w: 300, h: 250 }, ext: { adtype: 'popunder' } },
+    { id: 'i2', banner: { w: 300, h: 250 }, ext: { adtype: 'popunder' } },
+  ];
+  const { findings } = validate(req);
+  const all = findings.filter((f) => f.id === 'imp.non_standard_format');
+  assert.equal(all.length, 1, 'duplicate format should be deduped');
+});
+
+test('non-standard format: legitimate ext.adtype="banner" is NOT flagged', () => {
+  const req = validRequest();
+  req.imp[0].ext = { adtype: 'banner' };
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'imp.non_standard_format'), undefined);
+});
+
+// ── IAB Content Taxonomy decoder ─────────────────────────────────────────
+
+const {
+  decodeCategory,
+  decodeCategories,
+  extractAllCategories,
+} = require('@kyivtech/spyglass-core');
+
+test('decodeCategory: known sub-code resolves to "Top → Sub"', () => {
+  assert.equal(decodeCategory('IAB9-11'), 'Hobbies & Interests → Comic Books');
+});
+
+test('decodeCategory: top-level code resolves alone', () => {
+  assert.equal(decodeCategory('IAB17'), 'Sports');
+});
+
+test('decodeCategory: unknown sub falls back to parent label', () => {
+  // IAB9-99 is NOT in the dict; should fall back to "Hobbies & Interests"
+  assert.equal(decodeCategory('IAB9-99'), 'Hobbies & Interests');
+});
+
+test('decodeCategory: garbage returns null', () => {
+  assert.equal(decodeCategory('NOT_A_CODE'), null);
+  assert.equal(decodeCategory(''), null);
+  assert.equal(decodeCategory(null), null);
+});
+
+test('decodeCategories: keeps order + nulls unrecognised codes', () => {
+  const out = decodeCategories(['IAB1', 'GARBAGE', 'IAB25-3']);
+  assert.equal(out.length, 3);
+  assert.equal(out[0].code, 'IAB1');
+  assert.equal(out[0].label, 'Arts & Entertainment');
+  assert.equal(out[1].code, 'GARBAGE');
+  assert.equal(out[1].label, null);
+  assert.equal(out[2].label, 'Non-Standard Content → Pornography');
+});
+
+test('extractAllCategories: walks bcat / site.cat / app.cat / bid.cat', () => {
+  const payload = {
+    bcat: ['IAB25-3'],
+    site: { cat: ['IAB1', 'IAB12'] },
+    seatbid: [{ bid: [{ cat: ['IAB17-12'] }] }],
+  };
+  const out = extractAllCategories(payload);
+  assert.ok(out['bcat']);
+  assert.equal(out['bcat'][0].label, 'Non-Standard Content → Pornography');
+  assert.ok(out['site.cat']);
+  assert.equal(out['site.cat'].length, 2);
+  assert.ok(out['seatbid[0].bid[0].cat']);
+  assert.equal(out['seatbid[0].bid[0].cat'][0].label, 'Sports → Football');
+});
+
 // ── Native asset crosscheck (low-level helper) ───────────────────────────
 
 test('nativeAssetCrosscheck: complete response has no missing', () => {

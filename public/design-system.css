@@ -1,0 +1,16 @@
+/* ============================================================
+   PLACEHOLDER — DO NOT EDIT.
+
+   At runtime this file is **bind-mount-overridden** by docker-compose
+   from /srv/DATA/Stacks/kyivtech-portal/public/design-system.css
+   (see ../docker-compose.yml `volumes:` entry).
+
+   Edits made here have NO runtime effect — the container will keep
+   serving the portal's copy. To change tokens or chrome, edit the
+   portal's design-system.css; this file stays as a marker so Docker's
+   single-file bind mount has a target to overlay.
+
+   If you delete this file, `docker compose up` may create an empty
+   target on first run; subsequent edits to the portal copy still
+   propagate via the read-only mount.
+   ============================================================ */

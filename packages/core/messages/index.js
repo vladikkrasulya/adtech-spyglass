@@ -52,8 +52,16 @@ function interpolate(tpl, params) {
   });
 }
 
+// Don't advertise a locale that's still a stub (en.json holds only `_note`
+// until Phase 3). Otherwise the API would accept `?locale=en` and silently
+// fall back to UK strings — meta would lie about what was returned.
+function isPopulated(dict) {
+  const keys = Object.keys(dict).filter((k) => !k.startsWith('_'));
+  return keys.length > 0;
+}
+
 function listLocales() {
-  return Object.keys(LOCALES);
+  return Object.keys(LOCALES).filter((k) => isPopulated(LOCALES[k]));
 }
 
 module.exports = { resolve, listLocales, FALLBACK_LOCALE };

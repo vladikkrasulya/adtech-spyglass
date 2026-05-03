@@ -1,10 +1,10 @@
 /* ============================================================
-   Spyglass v8 — OpenRTB inspector tuned for Kadam.net SSP/DSP.
+   Spyglass v8 — OpenRTB inspector (IAB 2.5 / 2.6 / 3.0).
    - Inspector: parses BidRequest, shows imp slots, types, floors
-   - Validation: Kadam-aware oRTB + Feed checks (subage, ext.bsection,
-     site.ext.idzone, etc.)
+   - Validation: structural checks + version detection + crosscheck
    - Diff: deep diff between request and response
-   - Kadam reference tab: pasteable templates + macros + field map
+   - Vendor reference tab: pasteable templates + macros + field map
+     (hidden by default; revealed only with ?dialect=<vendor>)
    ============================================================ */
 (function () {
   'use strict';
@@ -56,19 +56,19 @@
         updateCharCount(id);
         updateJsonBadge(id);
       } catch (e) {
-        toast('Невалідний JSON: ' + e.message, 'error');
+        toast(t('toast.invalid_json', { error: e.message }), 'error');
       }
     },
     copy(id) {
       const el = $(id);
       if (!el.value) {
-        toast('Поле пусте — нічого копіювати', 'error');
+        toast(t('toast.empty_field_copy'), 'error');
         return;
       }
       navigator.clipboard
         .writeText(el.value)
-        .then(() => toast('Скопійовано', 'success'))
-        .catch(() => toast('Не вдалося скопіювати', 'error'));
+        .then(() => toast(t('toast.copied'), 'success'))
+        .catch(() => toast(t('toast.copy_failed'), 'error'));
     },
   };
 
@@ -82,6 +82,10 @@
   window.clearInput = function (id) {
     $(id).value = '';
     updateCharCount(id);
+    // Clear → drop the loaded-sample anchor so the next save starts fresh.
+    _currentSampleId = null;
+    _currentSampleMeta = null;
+    _isDirty = false;
   };
 
   window.handleKeydown = function (e) {
@@ -90,6 +94,99 @@
       runAnalysis();
     }
   };
+
+  // Active UI locale. Read once at module load + listen for toggle event.
+  // Used to pass ?locale=… to /api/analyze so the server resolves finding
+  // messages in the user's chosen language.
+  function activeLocale() {
+    try {
+      var v = localStorage.getItem('kt-lang');
+      return v === 'uk' || v === 'en' ? v : 'uk';
+    } catch (e) {
+      return 'uk';
+    }
+  }
+  function analyzeUrl() {
+    return 'api/analyze?locale=' + encodeURIComponent(activeLocale());
+  }
+
+  // When the toggle changes, re-run analysis if there's a request to
+  // analyse — gives instant visual feedback that EN labels appeared.
+  // Pass current inputs as a `fromHist`-shaped object so runAnalysis treats
+  // it as a re-run (skips spinner + history push + completion toast). Without
+  // this every lang toggle was creating a duplicate history entry.
+  window.addEventListener('kt:lang-change', function () {
+    // Re-render the dynamic chrome that holds translated strings. Toasts
+    // use t() at fire time so they're auto-correct; modals stay stale until
+    // closed (acceptable — modal flicker on toggle would be worse UX).
+    try {
+      if (typeof renderHistory === 'function') renderHistory();
+      if (typeof refreshSamples === 'function') refreshSamples();
+    } catch (_) {
+      /* render functions may not be defined yet during init */
+    }
+    if (typeof window.runAnalysis !== 'function') return;
+    try {
+      var req = document.getElementById('bidReq').value;
+      if (!req) return;
+      var res = document.getElementById('bidRes').value;
+      window.runAnalysis({ req: req, res: res });
+    } catch (e) {
+      /* silent — user may not have a payload yet */
+    }
+  });
+
+  // IAB Content Taxonomy decoder render. Reads the `meta.categories` map
+  // from /api/analyze (path → [{code,label}]) and lays it out as a
+  // collapsible-style list in the categories tab.
+  function renderCategories(catsByPath) {
+    const el = $('tCategories');
+    const badge = $('categoriesBadge');
+    if (!el) return;
+    const paths = Object.keys(catsByPath || {});
+    const total = paths.reduce((n, p) => n + catsByPath[p].length, 0);
+    if (badge) badge.textContent = total ? String(total) : '0';
+    if (!paths.length) {
+      el.innerHTML =
+        '<div class="empty-hint">' +
+        'Жодних IAB-категорій у payload (cat[] / bcat[] / pcat[] порожні)' +
+        '</div>';
+      return;
+    }
+    el.innerHTML = paths
+      .map((path) => {
+        const items = catsByPath[path];
+        const rows = items
+          .map((c) => {
+            const label = c.label
+              ? '<span style="color:var(--text)">' + escapeHtml(c.label) + '</span>'
+              : '<span style="color:var(--text-dim);font-style:italic">unknown / not in IAB 1.0</span>';
+            return (
+              '<div class="validation-item info" style="align-items:flex-start">' +
+              '<span class="validation-icon" style="font-family:var(--font-mono);font-size:11px">' +
+              escapeHtml(c.code) +
+              '</span>' +
+              '<span style="flex:1;min-width:0">' +
+              label +
+              '</span>' +
+              '</div>'
+            );
+          })
+          .join('');
+        return (
+          '<div style="margin-bottom:var(--space-4)">' +
+          '<div class="mono-label" style="margin-bottom:var(--space-2)">' +
+          escapeHtml(path) +
+          ' <span style="color:var(--text-dim)">(' +
+          items.length +
+          ')</span>' +
+          '</div>' +
+          rows +
+          '</div>'
+        );
+      })
+      .join('');
+  }
 
   window.updateCharCount = updateCharCount;
   function updateCharCount(id) {
@@ -106,16 +203,16 @@
     const badge = $(id === 'bidReq' ? 'reqBadge' : 'resBadge');
     const v = el.value.trim();
     if (!v) {
-      badge.textContent = 'empty';
+      badge.textContent = 'порожньо';
       badge.className = 'json-badge empty';
       return;
     }
     try {
       JSON.parse(v);
-      badge.textContent = 'valid';
+      badge.textContent = 'валідний';
       badge.className = 'json-badge valid';
     } catch {
-      badge.textContent = 'invalid';
+      badge.textContent = 'невалідний';
       badge.className = 'json-badge invalid';
     }
   }
@@ -148,7 +245,7 @@
     const el = $('creativePreview');
     el.innerHTML = '';
     if (!adm) {
-      el.innerHTML = '<div class="preview-placeholder">no ad content detected</div>';
+      el.innerHTML = '<div class="preview-placeholder">у відповіді немає adm/nurl</div>';
       return;
     }
     // Resolve known macros so the preview reflects an actual rendered impression.
@@ -158,12 +255,22 @@
       .replace(/\$\{AUCTION_LOSS\}/g, '0');
     const trimmed = resolved.trim();
 
-    // 1) VAST XML → show as expandable XML preview (video can't render here).
+    // 1) VAST XML → show as expandable XML preview. We can't actually play
+    //    video here (no VAST player + sandbox-allow-scripts is too narrow).
+    //    8000 chars is generous for modern VAST 4.x with multiple wrappers;
+    //    surface a "trimmed" hint when we hit it so the user isn't surprised.
     if (/^<\?xml|<VAST/i.test(trimmed)) {
+      const VAST_MAX = 8000;
+      const truncated = trimmed.length > VAST_MAX;
+      const display = truncated ? trimmed.slice(0, VAST_MAX) : trimmed;
+      const note = truncated
+        ? `<div class="mono-label" style="margin-top:var(--space-2);color:var(--text-dim)">… trimmed (${trimmed.length - VAST_MAX} chars hidden)</div>`
+        : '';
       el.innerHTML = `
         <div style="padding:var(--space-4);font-family:var(--font-mono);font-size:11px;color:var(--text-muted);overflow:auto;height:100%;width:100%">
-          <div class="mono-label" style="margin-bottom:var(--space-2)">vast · video xml</div>
-          <pre style="white-space:pre-wrap;word-break:break-word;margin:0;color:var(--text)">${escapeHtml(trimmed.slice(0, 4000))}</pre>
+          <div class="mono-label" style="margin-bottom:var(--space-2)">vast · video xml · preview-only (no playback)</div>
+          <pre style="white-space:pre-wrap;word-break:break-word;margin:0;color:var(--text)">${escapeHtml(display)}</pre>
+          ${note}
         </div>`;
       return;
     }
@@ -232,13 +339,179 @@
   }
 
   // ── Analysis ──────────────────────────────────────────────────
-  const historyStore = [];
+  // History: in-memory ring of recent analyses, persisted to localStorage so
+  // a refresh doesn't lose state. Cap at HISTORY_MAX entries to keep the
+  // localStorage footprint bounded (each entry can be up to ~2MB raw if user
+  // pastes a huge payload — the cap is the only soft limit we have).
+  const HISTORY_KEY = 'spyglass_history_v1';
+  const HISTORY_MAX = 50;
+  const historyStore = (() => {
+    try {
+      const saved = localStorage.getItem(HISTORY_KEY);
+      if (!saved) return [];
+      const arr = JSON.parse(saved);
+      return Array.isArray(arr) ? arr.slice(0, HISTORY_MAX) : [];
+    } catch {
+      return [];
+    }
+  })();
+  function persistHistory() {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(historyStore.slice(0, HISTORY_MAX)));
+    } catch (e) {
+      // QuotaExceeded — drop oldest half until it fits, or give up gracefully.
+      try {
+        historyStore.length = Math.floor(historyStore.length / 2);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(historyStore));
+      } catch {
+        /* persistence is best-effort; in-memory store keeps working */
+      }
+    }
+  }
+  // Index of the history entry currently loaded into the editor (so we can
+  // highlight it). Set on every loadFromHistory + reset to 0 (top of stack)
+  // after a fresh analysis. -1 = nothing in editor matches any entry.
+  let _currentHistoryIdx = -1;
+
+  function renderHistory() {
+    const list = $('hList');
+    if (!list) return;
+    if (!historyStore.length) {
+      list.innerHTML =
+        '<div style="color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-5)">Історія порожня — встав запит щоб почати</div>';
+      return;
+    }
+    list.innerHTML = historyStore
+      .map((e, i) => {
+        const cls = e.status === 'errors' || e.status === 'Critical' ? 'critical' : 'healthy';
+        const activeCls = i === _currentHistoryIdx ? ' history-item--active' : '';
+        return (
+          '<div class="history-item' +
+          activeCls +
+          '" tabindex="0" onclick="loadFromHistory(' +
+          i +
+          ')" onkeydown="if(event.key===\'Enter\'){event.preventDefault();loadFromHistory(' +
+          i +
+          ')}">' +
+          // Hover-revealed actions. Stop propagation so clicking × or 👁
+          // doesn't also trigger the row\'s loadFromHistory.
+          '<div class="history-actions" onclick="event.stopPropagation()">' +
+          '<button class="history-act-btn" onclick="peekHistoryItem(' +
+          i +
+          ')" title="Переглянути без завантаження">👁</button>' +
+          '<button class="history-act-btn danger" onclick="deleteHistoryItem(' +
+          i +
+          ')" title="Видалити з історії">×</button>' +
+          '</div>' +
+          '<div class="history-title">' +
+          escapeHtml(e.title) +
+          '</div>' +
+          '<div class="history-meta">' +
+          '<span>' +
+          escapeHtml(e.time) +
+          '</span>' +
+          '<span class="history-status ' +
+          cls +
+          '">' +
+          escapeHtml(humanStatus(e.status) || e.status || '') +
+          '</span>' +
+          '</div></div>'
+        );
+      })
+      .join('');
+  }
+  // History-item click handler — populates the editor textareas with the
+  // saved JSON, then re-runs analysis. Without the value-set step the
+  // user saw the toast "Завантажено · X" but the editors stayed empty —
+  // confusing because they had no copy of the JSON to tweak. JS `.value`
+  // assignment doesn't fire input events (per HTML spec), so `_isDirty`
+  // stays false — no false-positive clobber-protection on next load.
+  window.loadFromHistory = function (idx) {
+    const entry = historyStore[idx];
+    if (!entry) return;
+    $('bidReq').value = entry.req || '';
+    $('bidRes').value = entry.res || '';
+    updateCharCount('bidReq');
+    updateCharCount('bidRes');
+    _currentHistoryIdx = idx;
+    _isDirty = false;
+    runAnalysis(entry);
+    renderHistory(); // re-render to update the active-highlight
+    toast(t('toast.loaded', { title: entry.title || 'історія' }), 'success');
+  };
+  // Per-item delete from history. Cheap because historyStore is in-memory
+  // + localStorage persist; no server roundtrip.
+  window.deleteHistoryItem = function (idx) {
+    if (!historyStore[idx]) return;
+    historyStore.splice(idx, 1);
+    // Active-index stays consistent: if we deleted the active one, drop the
+    // anchor; if we deleted ABOVE the active, shift its index down.
+    if (idx === _currentHistoryIdx) _currentHistoryIdx = -1;
+    else if (idx < _currentHistoryIdx) _currentHistoryIdx--;
+    persistHistory();
+    renderHistory();
+  };
+  // Peek modal: show the request/response JSON for an entry without
+  // clobbering the editor. Read-only — for "did I save the right one
+  // earlier?" lookups.
+  window.peekHistoryItem = function (idx) {
+    const e = historyStore[idx];
+    if (!e) return;
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-card" style="max-width:720px;width:90vw">' +
+      '<div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">' +
+      '<span>' +
+      escapeHtml(e.title || 'історія') +
+      ' · ' +
+      escapeHtml(e.time || '') +
+      '</span>' +
+      '<span class="mono-label" style="color:var(--text-dim)">' +
+      escapeHtml(humanStatus(e.status) || e.status || '') +
+      '</span>' +
+      '</div>' +
+      '<div style="font-family:var(--font-mono);font-size:11px;max-height:50vh;overflow:auto;border:1px solid var(--border);border-radius:4px;padding:var(--space-3);background:var(--bg-2);margin-bottom:var(--space-3)">' +
+      '<div class="mono-label" style="margin-bottom:var(--space-2)">' +
+      t('peek.label.bid_req') +
+      '</div>' +
+      '<pre style="white-space:pre-wrap;word-break:break-word;margin:0">' +
+      escapeHtml(e.req || '') +
+      '</pre>' +
+      (e.res
+        ? '<div class="mono-label" style="margin:var(--space-3) 0 var(--space-2)">' +
+          t('peek.label.bid_res') +
+          '</div>' +
+          '<pre style="white-space:pre-wrap;word-break:break-word;margin:0">' +
+          escapeHtml(e.res) +
+          '</pre>'
+        : '') +
+      '</div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+      t('btn.close') +
+      '</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="closeModal();loadFromHistory(' +
+      idx +
+      ')">' +
+      t('btn.load_to_editor') +
+      '</button>' +
+      '</div></div></div>';
+  };
+  window.clearHistory = function () {
+    if (!historyStore.length) return;
+    if (!confirm(t('confirm.clear_history'))) return;
+    historyStore.length = 0;
+    _currentHistoryIdx = -1;
+    persistHistory();
+    renderHistory();
+    toast(t('toast.history_cleared'), 'success');
+  };
 
   window.runAnalysis = async function (fromHist) {
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
     const resVal = fromHist ? fromHist.res : $('bidRes').value;
     if (!reqVal) {
-      toast('Встав BidRequest у ліве поле', 'error');
+      toast(t('toast.paste_request'), 'error');
       return;
     }
 
@@ -261,7 +534,12 @@
       }
 
       const entity =
-        (req.site || req.app || {}).domain || (req.site || req.app || {}).bundle || 'local-stream';
+        (req.site || req.app || {}).domain ||
+        (req.site || req.app || {}).bundle ||
+        // Fallback when neither site.domain nor app.bundle is set — used to
+        // be the inscrutable "local-stream"; "локальний запит" reads as a
+        // human label and matches surrounding UI strings.
+        'локальний запит';
 
       // Summary info rows (left sidebar)
       const dev = req.device || {};
@@ -285,6 +563,50 @@
       // Inspector tab — slot cards
       const imps = req.imp || [];
       const slotGrid = $('slotGrid');
+      // Currency for bidfloor: pick first allowed in req.cur (typical: ["USD"]).
+      // Fallback "$" for legacy/empty payloads.
+      const curList = Array.isArray(req.cur) ? req.cur.filter((x) => typeof x === 'string') : [];
+      const curSym = curList.length ? curList[0] : 'USD';
+      // Banner sizes: prefer w×h if both set, otherwise pull from format[] (up
+      // to 3 entries) so multi-size slots render meaningfully instead of empty.
+      const bannerDims = (b) => {
+        if (!b) return '';
+        if (b.w && b.h) return b.w + '×' + b.h;
+        if (Array.isArray(b.format) && b.format.length) {
+          const sizes = b.format
+            .filter((f) => f && f.w && f.h)
+            .slice(0, 3)
+            .map((f) => f.w + '×' + f.h)
+            .join(', ');
+          const more = b.format.length > 3 ? ` (+${b.format.length - 3})` : '';
+          return sizes ? sizes + more : '';
+        }
+        return '';
+      };
+      // Slot-level flags surfaced as small chips. Helps spot rewarded /
+      // interstitial / secure / private deals at a glance without expanding.
+      const slotFlags = (i) => {
+        const flags = [];
+        if (i.secure === 1) flags.push('secure');
+        if (i.instl === 1) flags.push('instl');
+        if (i.rwdd === 1) flags.push('rwdd');
+        if (i.pmp && Array.isArray(i.pmp.deals) && i.pmp.deals.length) flags.push('pmp');
+        return flags;
+      };
+      // First MIME for video/audio gives quick "what player do I need" hint.
+      const mimeHint = (i) => {
+        if (i.video && Array.isArray(i.video.mimes) && i.video.mimes.length) {
+          const first = i.video.mimes[0];
+          const more = i.video.mimes.length > 1 ? ` +${i.video.mimes.length - 1}` : '';
+          return first + more;
+        }
+        if (i.audio && Array.isArray(i.audio.mimes) && i.audio.mimes.length) {
+          const first = i.audio.mimes[0];
+          const more = i.audio.mimes.length > 1 ? ` +${i.audio.mimes.length - 1}` : '';
+          return first + more;
+        }
+        return '';
+      };
       slotGrid.innerHTML = imps.length
         ? imps
             .map((i, idx) => {
@@ -293,26 +615,49 @@
                 '<div class="slot-type-row">' +
                 types.map((t) => '<span class="slot-type ' + t + '">' + t + '</span>').join('') +
                 '</div>';
-              let dims = '';
-              if (i.banner && i.banner.w && i.banner.h) dims = i.banner.w + '×' + i.banner.h;
-              else if (i.video && i.video.w && i.video.h)
+              let dims = bannerDims(i.banner);
+              if (!dims && i.video && i.video.w && i.video.h)
                 dims = i.video.w + '×' + i.video.h + ' video';
+              const mh = mimeHint(i);
+              const flags = slotFlags(i);
+              const flagsHtml = flags.length
+                ? '<div class="slot-type-row" style="margin-top:4px">' +
+                  flags
+                    .map((f) => '<span class="slot-type" style="opacity:0.7">' + f + '</span>')
+                    .join('') +
+                  '</div>'
+                : '';
+              const tagidHtml = i.tagid
+                ? '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:140px;vertical-align:bottom" title="' +
+                  escapeHtml(i.tagid) +
+                  '"> · ' +
+                  escapeHtml(i.tagid) +
+                  '</span>'
+                : '';
               return (
                 '<div class="slot-card">' +
                 typeHtml +
                 '<div class="slot-id">' +
                 escapeHtml(i.id || 'imp-' + idx) +
-                (i.tagid ? ' · ' + escapeHtml(i.tagid) : '') +
+                tagidHtml +
                 '</div>' +
-                (dims ? '<div class="slot-dims">' + dims + '</div>' : '') +
-                '<div class="slot-floor"><span class="slot-floor-label">floor</span><span class="slot-floor-value">$' +
+                (dims ? '<div class="slot-dims">' + escapeHtml(dims) + '</div>' : '') +
+                (mh
+                  ? '<div class="slot-dims" style="font-size:10px;color:var(--text-dim)">' +
+                    escapeHtml(mh) +
+                    '</div>'
+                  : '') +
+                flagsHtml +
+                '<div class="slot-floor"><span class="slot-floor-label">floor</span><span class="slot-floor-value">' +
                 (Number(i.bidfloor) || 0).toFixed(3) +
+                ' ' +
+                escapeHtml(curSym) +
                 '</span></div>' +
                 '</div>'
               );
             })
             .join('')
-        : '<div class="empty-hint" style="grid-column:1/-1">No impressions found.</div>';
+        : '<div class="empty-hint" style="grid-column:1/-1">У запиті немає imp[] — слоти не знайдено</div>';
 
       // Quick stats (right sidebar)
       const counts = {
@@ -332,7 +677,7 @@
       let validation = null,
         cross = null;
       try {
-        const r = await fetch('api/analyze', {
+        const r = await fetch(analyzeUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bidReq: req, bidRes: res }),
@@ -341,11 +686,20 @@
         if (j.success) {
           validation = j.validation;
           cross = j.crosscheck;
-          $('stEntity').innerText = entity + ' · ' + (validation.status || '');
+          // IAB cat decoding (Phase 2 feature) — surface as a side-panel
+          // tab regardless of validation status. Empty object means no
+          // category fields present in the payload.
+          renderCategories((j.meta && j.meta.categories) || {});
+          // Show humanised status to the user; stash raw canonical status
+          // ('errors'/'warnings'/'clean'/'invalid') on a data-attribute so
+          // confirmSave can read it without parsing localised text.
+          $('stEntity').innerText = entity + ' · ' + humanStatus(validation.status);
+          $('stEntity').dataset.status = validation.status || '';
         }
       } catch (e) {
         console.warn('Backend unavailable:', e);
-        $('stEntity').innerText = entity + ' · local';
+        $('stEntity').innerText = entity + ' · локально';
+        $('stEntity').dataset.status = ''; // backend unreachable — no canonical status
         $('statusDot').className = 'status-dot error';
         $('statusText').textContent = 'backend offline';
       }
@@ -353,18 +707,22 @@
       // Validation tab — new findings model: { id, level, path, params, specRef, msg }
       const valEl = $('tValidation');
       const findings = validation && (validation.findings || validation.errors); // graceful migration
-      // Detected oRTB version pill (Phase 2). Renders only when version data is present.
+      // Detected oRTB version pill (Phase 2). Renders whenever version data
+      // is present — including the all-clean branch — so the user always
+      // sees what spec version was assumed for the validation.
       const versionPill = (() => {
         const v = validation && validation.version;
         if (!v || !v.version || v.version === 'unknown') return '';
         const cf = v.confidence;
-        const cfTag = cf >= 1 ? '' : cf >= 0.5 ? ' ~' : ' ?';
+        // ≈ for partial-confidence (≥0.5), ? for low. Was bare ~ / ? which
+        // disappeared visually next to the version string.
+        const cfTag = cf >= 1 ? '' : cf >= 0.5 ? ' (≈)' : ' (?)';
         const sigTitle =
           v.signals && v.signals.length
             ? 'Detected via: ' + v.signals.join(', ')
-            : 'No version-specific markers — defaulted';
+            : 'No version-specific markers — defaulted to spec baseline';
         return (
-          ' · <span style="font-family:var(--font-mono);color:var(--text-dim)" title="' +
+          ' · <span style="font-family:var(--font-mono);color:var(--text-dim);cursor:help" title="' +
           escapeHtml(sigTitle) +
           '">oRTB ' +
           escapeHtml(v.version) +
@@ -414,10 +772,19 @@
             .join('');
       } else if (validation) {
         $('validationBadge').textContent = '✓';
+        // Clean state — still surface the detected oRTB version so the user
+        // knows which spec the inspector validated against. Was hidden before.
         valEl.innerHTML =
-          '<div style="text-align:center;padding:var(--space-7);color:var(--success);font-weight:500;">All checks passed — ' +
+          '<div class="mono-label" style="margin-bottom:var(--space-3)">' +
           escapeHtml(validation.type) +
-          ' is valid.</div>';
+          ' · ' +
+          escapeHtml(humanStatus(validation.status)) +
+          versionPill +
+          '</div>' +
+          '<div style="text-align:center;padding:var(--space-7);color:var(--success);font-weight:500;">' +
+          'Усі перевірки пройдено — ' +
+          escapeHtml(validation.type) +
+          ' валідний</div>';
       } else {
         $('validationBadge').textContent = '—';
       }
@@ -430,8 +797,8 @@
         $('crossBadge').textContent = crit + warn ? `${crit + warn}` : '✓';
         const summaryRow =
           crit || warn
-            ? `<div class="mono-label" style="margin-bottom:var(--space-3)">${crit} critical · ${warn} warning · ${cross.length - crit - warn} ok</div>`
-            : `<div class="mono-label" style="color:var(--success);margin-bottom:var(--space-3)">All ${cross.length} crosschecks passed</div>`;
+            ? `<div class="mono-label" style="margin-bottom:var(--space-3)">${crit} критичних · ${warn} попереджень · ${cross.length - crit - warn} ok</div>`
+            : `<div class="mono-label" style="color:var(--success);margin-bottom:var(--space-3)">Усі ${cross.length} звірок пройдено</div>`;
         crossEl.innerHTML =
           summaryRow +
           cross
@@ -454,12 +821,14 @@
       } else if (cross) {
         $('crossBadge').textContent = '—';
         crossEl.innerHTML =
-          '<div class="empty-hint">Crosscheck needs both Bid Request and Bid Response.</div>';
+          '<div class="empty-hint">Для звірки потрібен ще BidResponse у правому полі</div>';
       } else {
         $('crossBadge').textContent = '—';
       }
 
-      // History
+      // History — push to the in-memory ring + persist to localStorage so
+      // it survives reload. Drop overflow past HISTORY_MAX to keep the
+      // serialised state bounded.
       if (!fromHist) {
         const status = validation ? validation.status : 'local';
         historyStore.unshift({
@@ -469,37 +838,22 @@
           status,
           time: new Date().toLocaleTimeString(),
         });
-        $('hList').innerHTML = historyStore
-          .map((e, i) => {
-            const cls = e.status === 'errors' || e.status === 'Critical' ? 'critical' : 'healthy';
-            return (
-              '<div class="history-item" onclick="runAnalysis(historyStore[' +
-              i +
-              '])">' +
-              '<div class="history-title">' +
-              escapeHtml(e.title) +
-              '</div>' +
-              '<div class="history-meta">' +
-              '<span>' +
-              escapeHtml(e.time) +
-              '</span>' +
-              '<span class="history-status ' +
-              cls +
-              '">' +
-              escapeHtml(e.status) +
-              '</span>' +
-              '</div></div>'
-            );
-          })
-          .join('');
+        if (historyStore.length > HISTORY_MAX) historyStore.length = HISTORY_MAX;
+        // Fresh analysis is always at index 0 — pin the active highlight
+        // there so the user sees which row they just produced.
+        _currentHistoryIdx = 0;
+        renderHistory();
+        persistHistory();
         if (resVal)
           toast(
-            'Аналіз завершено · ' + (validation ? humanStatus(validation.status) : 'локально'),
+            t('toast.analysis_complete', {
+              status: validation ? humanStatus(validation.status) : t('status.local'),
+            }),
             'success',
           );
       }
     } catch (e) {
-      toast('Помилка: ' + e.message, 'error');
+      toast(t('toast.error_generic', { error: e.message }), 'error');
       console.error('Analysis error:', e);
     } finally {
       if (!fromHist) {
@@ -891,6 +1245,13 @@
   // signOut. Server stores only ciphertext + wrapped DEK + salt.
   let _partnerCache = [];
   let _currentSampleId = null;
+  // Metadata of the currently-loaded sample (so the Save modal can pre-fill
+  // title/partner/notes when the user wants to UPDATE the existing record).
+  // Set by loadSample, cleared by clear-button + signOut.
+  let _currentSampleMeta = null;
+  // Dirty flag — set on input into bidReq/bidRes after a successful load.
+  // Used to: (a) warn before clobber on loadSample, (b) reset after save.
+  let _isDirty = false;
   let _currentUser = null;
   let _sessionDEK = null;
 
@@ -960,16 +1321,26 @@
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
       '<div class="modal-card">' +
-      '<div class="modal-title">розблокувати бібліотеку</div>' +
-      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
-      escapeHtml(_currentUser.email) +
-      ' · введи пароль щоб розшифрувати збережені запити' +
+      '<div class="modal-title">' +
+      t('modal.unlock.title') +
       '</div>' +
-      '<div class="modal-row"><label>пароль</label><input id="unlockPwInput" type="password" autocomplete="current-password"></div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
+      t('unlock.subtitle', { email: escapeHtml(_currentUser.email) }) +
+      '</div>' +
+      '<div class="modal-row"><label>' +
+      t('auth.label.password') +
+      '</label><input id="unlockPwInput" type="password" autocomplete="current-password"></div>' +
       '<div id="unlockError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
+      '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" onclick="event.preventDefault();closeModal();openForgotPasswordModal()" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
+      t('auth.forgot_password') +
+      '</a></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="signOut();closeModal()">вийти замість цього</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="doUnlock()">розблокувати</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="signOut();closeModal()">' +
+      t('btn.signout_instead') +
+      '</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="doUnlock()">' +
+      t('btn.unlock') +
+      '</button>' +
       '</div></div></div>';
     setTimeout(() => $('unlockPwInput').focus(), 0);
     $('unlockPwInput').addEventListener('keydown', (e) => {
@@ -989,52 +1360,69 @@
       // calls). Then derive KEK + unwrap DEK.
       const me = await api('GET', 'api/auth/me');
       if (!me.encryption) {
-        errEl.textContent = 'Шифрування не налаштовано — спробуй увійти спочатку';
+        errEl.textContent = t('unlock.err.no_crypto');
         return;
       }
       _sessionDEK = await SpyglassCrypto.openWithPassword(password, me.encryption);
       _pendingUnlock = false;
       closeModal();
-      toast('Бібліотеку розблоковано', 'success');
+      toast(t('toast.library_unlocked'), 'success');
       refreshSamples();
     } catch {
-      errEl.textContent = 'Невірний пароль';
+      errEl.textContent = t('unlock.err.wrong_password');
     }
   };
 
   window.openAuthModal = function (mode) {
     const isReg = mode === 'register';
+    // Preserve any email/password the user already typed before switching
+    // login ↔ register so the field doesn't reset on every toggle.
+    const prevEmail = $('authEmailInput')?.value || '';
+    const prevPassword = $('authPasswordInput')?.value || '';
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
       '<div class="modal-card">' +
       '<div class="modal-title">' +
-      (isReg ? 'створити акаунт' : 'увійти') +
+      t(isReg ? 'auth.register.title' : 'auth.login.title') +
       '</div>' +
-      '<div class="modal-row"><label>email</label><input id="authEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
-      '<div class="modal-row"><label>пароль' +
-      (isReg ? ' (мінімум 8 символів)' : '') +
+      '<div class="modal-row"><label>' +
+      t('auth.label.email') +
+      '</label><input id="authEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
+      '<div class="modal-row"><label>' +
+      t(isReg ? 'auth.label.password_hint' : 'auth.label.password') +
       '</label><input id="authPasswordInput" type="password" autocomplete="' +
       (isReg ? 'new-password' : 'current-password') +
       '"></div>' +
       '<div id="authError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
       (isReg
         ? ''
-        : '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" onclick="event.preventDefault();openForgotPasswordModal()" style="font-size:var(--fs-sm);color:var(--text-dim)">забув пароль?</a></div>') +
+        : '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" onclick="event.preventDefault();openForgotPasswordModal()" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
+          t('auth.forgot_password') +
+          '</a></div>') +
       '<div class="modal-actions" style="justify-content:space-between">' +
       '<button class="btn btn-ghost btn-sm" onclick="' +
       (isReg ? "openAuthModal('login')" : "openAuthModal('register')") +
       '">' +
-      (isReg ? 'вже є акаунт? увійти' : 'немає акаунту? створити') +
+      t(isReg ? 'auth.switch_to_login' : 'auth.switch_to_register') +
       '</button>' +
       '<div style="display:flex;gap:var(--space-2)">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">скасувати</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+      t('btn.cancel') +
+      '</button>' +
       '<button class="btn btn-primary btn-sm" onclick="' +
       (isReg ? 'doRegister()' : 'doLogin()') +
       '">' +
-      (isReg ? 'створити' : 'увійти') +
+      t(isReg ? 'auth.btn.register' : 'auth.btn.login') +
       '</button>' +
       '</div></div></div></div>';
-    setTimeout(() => $('authEmailInput').focus(), 0);
+    setTimeout(() => {
+      // Restore prior values from previous mode (preserved across switches).
+      // Don't auto-focus password if it was empty — focus email first.
+      if (prevEmail) $('authEmailInput').value = prevEmail;
+      if (prevPassword) $('authPasswordInput').value = prevPassword;
+      const focusTarget = prevEmail && !prevPassword ? 'authPasswordInput' : 'authEmailInput';
+      $(focusTarget).focus();
+    }, 0);
     // Submit on Enter
     const submit = isReg ? () => window.doRegister() : () => window.doLogin();
     ['authEmailInput', 'authPasswordInput'].forEach((id) => {
@@ -1067,7 +1455,7 @@
       }
       renderAuthWidget();
       closeModal();
-      toast('Привіт, ' + j.user.email, 'success');
+      toast(t('toast.hello', { email: j.user.email }), 'success');
       await refreshPartners();
       refreshSamples();
     } catch (e) {
@@ -1086,7 +1474,7 @@
       await bootstrapNewCrypto(password); // brand-new user → always bootstrap
       renderAuthWidget();
       closeModal();
-      toast('Акаунт створено, ' + j.user.email, 'success');
+      toast(t('toast.account_created', { email: j.user.email }), 'success');
       await refreshPartners();
       refreshSamples();
     } catch (e) {
@@ -1105,35 +1493,66 @@
     showRecoveryKeyModal(result.recoveryKey);
   }
 
+  // Recovery-key modal close goes through this gate so Esc + backdrop +
+  // explicit button all share the same "did you really save it?" confirm.
+  // Without this, an accidental Esc or button-misclick lost the key forever
+  // (single-show by design — the server stores only the wrap, not the key).
+  let _recoveryKeyModalActive = false;
+  window.closeRecoveryKeyModal = function () {
+    if (!confirm(t('confirm.recovery_save'))) return;
+    _recoveryKeyModalActive = false;
+    closeModal();
+  };
+
   function showRecoveryKeyModal(recoveryKey) {
-    // Format as 4-char groups for legibility: "abcd-1234-..."
-    const grouped = recoveryKey.match(/.{1,4}/g).join('-');
+    // Defensive null-guard on match() — if recoveryKey is somehow empty
+    // (shouldn't happen, but guards against null.join() crash).
+    const grouped = (String(recoveryKey || '').match(/.{1,4}/g) || []).join('-');
+    _recoveryKeyModalActive = true;
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this){if(confirm(\'Ти точно зберіг recovery key? Без нього неможливо відновити дані якщо забудеш пароль.\')){closeModal()}}">' +
+      '<div class="modal-backdrop" onclick="if(event.target===this)closeRecoveryKeyModal()">' +
       '<div class="modal-card" style="max-width:520px">' +
-      '<div class="modal-title">⚠ recovery key — збережи зараз</div>' +
-      '<div style="font-size:var(--fs-sm);line-height:1.5;margin-bottom:var(--space-3);color:var(--text)">' +
-      'Це <b>єдиний</b> спосіб відновити доступ до твоєї бібліотеки якщо забудеш пароль. ' +
-      'Я (оператор сервера) не маю його і не зможу відновити твої дані без нього. ' +
-      'Запиши його у password-manager або на папері.' +
+      '<div class="modal-title">' +
+      t('modal.recovery.title') +
       '</div>' +
-      '<div style="background:var(--bg-2);padding:var(--space-3);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:14px;letter-spacing:0.05em;text-align:center;margin-bottom:var(--space-3);user-select:all">' +
+      '<div style="font-size:var(--fs-sm);line-height:1.5;margin-bottom:var(--space-3);color:var(--text)">' +
+      t('recovery.body') +
+      '</div>' +
+      '<div style="background:var(--bg-2);padding:var(--space-3);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:14px;letter-spacing:0.05em;text-align:center;margin-bottom:var(--space-3);user-select:all;word-break:break-all">' +
       escapeHtml(grouped) +
       '</div>' +
       '<div class="modal-actions" style="justify-content:space-between">' +
-      '<button class="btn btn-ghost btn-sm" onclick="copyRecoveryKey(\'' +
+      '<button id="rkCopyBtn" class="btn btn-ghost btn-sm" onclick="copyRecoveryKey(\'' +
       escapeHtml(recoveryKey) +
-      '\')">копіювати</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="closeModal()">я зберіг</button>' +
+      '\')">' +
+      t('btn.copy') +
+      '</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="closeRecoveryKeyModal()">' +
+      t('btn.recovery_saved') +
+      '</button>' +
       '</div>' +
       '</div></div>';
   }
 
   window.copyRecoveryKey = function (key) {
+    const btn = $('rkCopyBtn');
+    const flashSuccess = () => {
+      if (!btn) return;
+      const orig = btn.textContent;
+      btn.textContent = t('btn.copied');
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.disabled = false;
+      }, 1800);
+    };
     navigator.clipboard
       .writeText(key)
-      .then(() => toast('Recovery key скопійовано', 'success'))
-      .catch(() => toast('Не вдалося скопіювати — виділи мишею', 'error'));
+      .then(() => {
+        flashSuccess();
+        toast(t('toast.recovery_key_copied'), 'success');
+      })
+      .catch(() => toast(t('toast.copy_failed_select'), 'error'));
   };
 
   window.signOut = async function () {
@@ -1145,9 +1564,12 @@
     _currentUser = null;
     _partnerCache = [];
     _sessionDEK = null; // wipe DEK from memory on logout
+    _currentSampleId = null;
+    _currentSampleMeta = null;
+    _isDirty = false;
     renderAuthWidget();
     refreshSamples();
-    toast('Ви вийшли з акаунту', 'success');
+    toast(t('toast.signed_out'), 'success');
   };
 
   // ── Phase 8: forgot/reset password + email verification ──────────────
@@ -1156,15 +1578,23 @@
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
       '<div class="modal-card">' +
-      '<div class="modal-title">скидання паролю</div>' +
-      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
-      'введи email — пришлемо посилання для скидання паролю (діє 15 хв).' +
+      '<div class="modal-title">' +
+      t('modal.password_reset.title') +
       '</div>' +
-      '<div class="modal-row"><label>email</label><input id="forgotEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
+      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
+      t('forgot.subtitle') +
+      '</div>' +
+      '<div class="modal-row"><label>' +
+      t('auth.label.email') +
+      '</label><input id="forgotEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
       '<div id="forgotMessage" style="font-size:var(--fs-sm);color:var(--text-dim);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="openAuthModal(\'login\')">назад до входу</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="doForgotPassword()">надіслати</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="openAuthModal(\'login\')">' +
+      t('forgot.btn.back_to_login') +
+      '</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="doForgotPassword()">' +
+      t('forgot.btn.send') +
+      '</button>' +
       '</div></div></div>';
     setTimeout(() => $('forgotEmailInput').focus(), 0);
     $('forgotEmailInput').addEventListener('keydown', (e) => {
@@ -1180,18 +1610,26 @@
     const msgEl = $('forgotMessage');
     if (!email) {
       msgEl.style.color = 'var(--danger)';
-      msgEl.textContent = 'Введи email';
+      msgEl.textContent = t('forgot.email_required');
+      return;
+    }
+    // Client-side email shape check — mirrors auth.js EMAIL_RE on server.
+    // Without it, "asdf" hits the API, server returns 200 (anti-enumeration),
+    // UI showed misleading "лист відправлено" for an obviously-bad address.
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      msgEl.style.color = 'var(--danger)';
+      msgEl.textContent = t('forgot.invalid_email');
       return;
     }
     msgEl.style.color = 'var(--text-dim)';
-    msgEl.textContent = 'Відправляємо...';
+    msgEl.textContent = t('forgot.sending');
     try {
       await api('POST', 'api/auth/forgot-password', { email });
       msgEl.style.color = 'var(--success, green)';
-      msgEl.textContent = 'Якщо такий email існує, лист відправлено. Перевір пошту (і спам).';
+      msgEl.textContent = t('forgot.sent');
     } catch (e) {
       msgEl.style.color = 'var(--danger)';
-      msgEl.textContent = e.message || 'Помилка';
+      msgEl.textContent = e.message || t('toast.error_generic', { error: '' });
     }
   };
 
@@ -1201,7 +1639,7 @@
     try {
       stateRes = await api('POST', 'api/auth/reset-password/state', { token });
     } catch (e) {
-      toast('Посилання недійсне або застаріле: ' + (e.message || ''), 'error');
+      toast(t('reset.err.link_invalid', { error: e.message || '' }), 'error');
       // Strip ?reset= from URL so refresh doesn't re-trigger.
       history.replaceState({}, '', location.pathname);
       return;
@@ -1210,56 +1648,98 @@
     const email = stateRes.email;
     _resetCtx = { token, encryption: enc, email };
 
+    const radioBox = (val, key, hintColor) =>
+      '<label style="display:flex;align-items:flex-start;gap:var(--space-2);cursor:pointer;padding:var(--space-2);border:1px solid var(--border);border-radius:4px;margin-bottom:var(--space-2)">' +
+      '<input type="radio" name="resetMode" value="' +
+      val +
+      '"' +
+      (val === 'rotate' ? ' checked' : '') +
+      ' onchange="updateResetModeUI()" style="margin-top:3px">' +
+      '<span><b>' +
+      t('reset.mode.' + key) +
+      '</b><br><span style="font-size:var(--fs-sm);color:' +
+      hintColor +
+      '">' +
+      t('reset.mode.' + key + '_hint') +
+      '</span></span></label>';
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
       '<div class="modal-card" style="max-width:520px">' +
-      '<div class="modal-title">скидання паролю</div>' +
+      '<div class="modal-title">' +
+      t('modal.password_reset.title') +
+      '</div>' +
       '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
       escapeHtml(email) +
       '</div>' +
       '<div class="modal-row" style="display:block">' +
-      '<label style="display:flex;align-items:flex-start;gap:var(--space-2);cursor:pointer;padding:var(--space-2);border:1px solid var(--border);border-radius:4px;margin-bottom:var(--space-2)">' +
-      '<input type="radio" name="resetMode" value="rotate" checked onchange="updateResetModeUI()" style="margin-top:3px">' +
-      '<span><b>Я памʼятаю поточний пароль</b><br>' +
-      '<span style="font-size:var(--fs-sm);color:var(--text-dim)">Бібліотека збережеться. Просто ротуємо пароль.</span></span></label>' +
-      '<label style="display:flex;align-items:flex-start;gap:var(--space-2);cursor:pointer;padding:var(--space-2);border:1px solid var(--border);border-radius:4px;margin-bottom:var(--space-2)">' +
-      '<input type="radio" name="resetMode" value="recover" onchange="updateResetModeUI()" style="margin-top:3px">' +
-      '<span><b>У мене є recovery key</b><br>' +
-      '<span style="font-size:var(--fs-sm);color:var(--text-dim)">32-символьний ключ, який показували при реєстрації. Бібліотека збережеться.</span></span></label>' +
-      '<label style="display:flex;align-items:flex-start;gap:var(--space-2);cursor:pointer;padding:var(--space-2);border:1px solid var(--border);border-radius:4px;margin-bottom:var(--space-2)">' +
-      '<input type="radio" name="resetMode" value="wipe" onchange="updateResetModeUI()" style="margin-top:3px">' +
-      '<span><b>Я втратив обидва — стерти все</b><br>' +
-      '<span style="font-size:var(--fs-sm);color:var(--danger)">Усі збережені запити та партнери будуть видалені.</span></span></label>' +
+      radioBox('rotate', 'rotate', 'var(--text-dim)') +
+      radioBox('recover', 'recover', 'var(--text-dim)') +
+      radioBox('wipe', 'wipe', 'var(--danger)') +
       '</div>' +
       '<div id="resetModeFields"></div>' +
-      '<div class="modal-row"><label>новий пароль (мін. 8 символів)</label>' +
+      '<div class="modal-row"><label>' +
+      t('reset.label.new_password') +
+      '</label>' +
       '<input id="resetNewPwInput" type="password" autocomplete="new-password"></div>' +
       '<div id="resetError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal();history.replaceState({},\'\',location.pathname)">скасувати</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="doResetPassword()">скинути пароль</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeModal();history.replaceState({},\'\',location.pathname)">' +
+      t('btn.cancel') +
+      '</button>' +
+      '<button id="resetPrimaryBtn" class="btn btn-primary btn-sm" onclick="doResetPassword()">' +
+      t('reset.btn.reset') +
+      '</button>' +
       '</div></div></div>';
     window.updateResetModeUI();
+    // Auto-focus the first input visible in the default mode (rotate → oldPw).
+    setTimeout(() => $('resetOldPwInput')?.focus(), 0);
   };
 
   window.updateResetModeUI = function () {
     const mode = document.querySelector('input[name="resetMode"]:checked').value;
     const f = $('resetModeFields');
+    // Preserve any values the user typed in the previous mode so toggling
+    // radios doesn't wipe their input.
+    const prev = {
+      old: $('resetOldPwInput')?.value || '',
+      recovery: $('resetRecoveryInput')?.value || '',
+      wipeConfirm: $('resetWipeConfirm')?.checked || false,
+    };
     if (mode === 'rotate') {
       f.innerHTML =
-        '<div class="modal-row"><label>поточний пароль</label>' +
-        '<input id="resetOldPwInput" type="password" autocomplete="current-password"></div>';
+        '<div class="modal-row"><label>' +
+        t('reset.label.old_password') +
+        '</label>' +
+        '<input id="resetOldPwInput" type="password" autocomplete="current-password" value="' +
+        escapeHtml(prev.old) +
+        '"></div>';
+      setTimeout(() => $('resetOldPwInput')?.focus(), 0);
     } else if (mode === 'recover') {
       f.innerHTML =
-        '<div class="modal-row"><label>recovery key (32 символи)</label>' +
-        '<input id="resetRecoveryInput" type="text" autocomplete="off" placeholder="xxxx-xxxx-xxxx-xxxx-..." style="font-family:monospace"></div>';
+        '<div class="modal-row"><label>' +
+        t('reset.label.recovery') +
+        '</label>' +
+        '<input id="resetRecoveryInput" type="text" autocomplete="off" placeholder="xxxx-xxxx-xxxx-xxxx-..." style="font-family:monospace" value="' +
+        escapeHtml(prev.recovery) +
+        '"></div>';
+      setTimeout(() => $('resetRecoveryInput')?.focus(), 0);
     } else {
       f.innerHTML =
         '<div style="background:rgba(220,40,40,.08);border:1px solid var(--danger);padding:var(--space-2);border-radius:4px;margin-bottom:var(--space-3);font-size:var(--fs-sm)">' +
-        '<b>Це знищить всі ваші збережені запити та партнерів.</b> Зашифровані дані не можна відновити без паролю чи recovery key.' +
+        t('reset.wipe_warn') +
         '<label style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-2);cursor:pointer">' +
-        '<input type="checkbox" id="resetWipeConfirm"> Я розумію і приймаю втрату даних</label>' +
+        '<input type="checkbox" id="resetWipeConfirm"' +
+        (prev.wipeConfirm ? ' checked' : '') +
+        '> ' +
+        t('reset.wipe_confirm') +
+        '</label>' +
         '</div>';
+    }
+    // Primary button label matches the destructive intent in wipe mode.
+    const btn = $('resetPrimaryBtn');
+    if (btn) {
+      btn.textContent = t(mode === 'wipe' ? 'reset.btn.wipe_reset' : 'reset.btn.reset');
+      btn.classList.toggle('danger', mode === 'wipe');
     }
   };
 
@@ -1269,33 +1749,33 @@
     const errEl = $('resetError');
     errEl.textContent = '';
     if (newPassword.length < 8) {
-      errEl.textContent = 'Новий пароль має бути хоча б 8 символів';
+      errEl.textContent = t('reset.err.short_password');
       return;
     }
     const ctx = _resetCtx;
     if (!ctx) {
-      errEl.textContent = 'Сесія скидання втрачена — відкрий посилання заново';
+      errEl.textContent = t('reset.err.session_lost');
       return;
     }
     try {
       let body;
       if (mode === 'wipe') {
         if (!$('resetWipeConfirm').checked) {
-          errEl.textContent = 'Підтверди, що приймаєш втрату даних';
+          errEl.textContent = t('reset.err.wipe_unconfirmed');
           return;
         }
         body = { token: ctx.token, mode: 'wipe', newPassword };
       } else {
         // rotate / recover: unwrap DEK locally, re-wrap under new KEK.
         if (!ctx.encryption) {
-          errEl.textContent = 'Немає стану шифрування — використай "стерти все"';
+          errEl.textContent = t('reset.err.no_state');
           return;
         }
         let dekBytes;
         if (mode === 'rotate') {
           const oldPassword = $('resetOldPwInput').value;
           if (!oldPassword) {
-            errEl.textContent = 'Введи поточний пароль';
+            errEl.textContent = t('reset.err.old_required');
             return;
           }
           const oldSalt = SpyglassCrypto._b64ToBytes(ctx.encryption.kdf_salt);
@@ -1307,7 +1787,7 @@
               ctx.encryption.dek_wrapped,
             );
           } catch {
-            errEl.textContent = 'Невірний поточний пароль';
+            errEl.textContent = t('reset.err.old_wrong');
             return;
           }
           body = {
@@ -1321,7 +1801,7 @@
             .value.replace(/[^0-9a-fA-F]/g, '')
             .toLowerCase();
           if (recovery.length !== 32) {
-            errEl.textContent = 'Recovery key має бути 32 hex символи';
+            errEl.textContent = t('reset.err.recovery_format');
             return;
           }
           const recSalt = SpyglassCrypto._b64ToBytes(ctx.encryption.recovery_salt);
@@ -1333,7 +1813,7 @@
               ctx.encryption.recovery_dek_wrapped,
             );
           } catch {
-            errEl.textContent = 'Невірний recovery key';
+            errEl.textContent = t('reset.err.recovery_wrong');
             return;
           }
           body = {
@@ -1362,7 +1842,7 @@
       renderAuthWidget();
       renderVerifyBanner();
       refreshSamples();
-      toast('Пароль скинуто. Ти увійшов(ла).', 'success');
+      toast(t('toast.password_reset'), 'success');
     } catch (e) {
       errEl.textContent = e.message || 'Помилка';
     }
@@ -1372,9 +1852,9 @@
   window.requestVerifyEmail = async function () {
     try {
       await api('POST', 'api/auth/verify-email/request');
-      toast('Лист підтвердження відправлено на ' + (_currentUser && _currentUser.email), 'success');
+      toast(t('toast.verify_email_sent', { email: (_currentUser && _currentUser.email) || '' }), 'success');
     } catch (e) {
-      toast('Не вдалося відправити: ' + (e.message || ''), 'error');
+      toast(t('toast.send_failed', { error: e.message || '' }), 'error');
     }
   };
 
@@ -1390,20 +1870,21 @@
 
   function humanAuthError(e) {
     const code = e.code || '';
-    if (code === 'invalid_email') return 'Невалідний email';
-    if (code === 'weak_password') return 'Пароль має бути хоча б 8 символів';
-    if (code === 'email_taken') return 'Цей email вже зареєстровано';
-    if (code === 'invalid_credentials') return 'Невірний email або пароль';
-    if (code === 'rate_limited') return 'Забагато спроб — спробуй пізніше';
-    return e.message || 'Помилка';
+    if (code === 'invalid_email') return t('auth.err.invalid_email');
+    if (code === 'weak_password') return t('auth.err.weak_password');
+    if (code === 'email_taken') return t('auth.err.email_taken');
+    if (code === 'invalid_credentials') return t('auth.err.invalid_creds');
+    if (code === 'rate_limited') return t('auth.err.rate_limited');
+    return e.message || t('toast.error_generic', { error: '' }).replace(/[:\s]+$/, '');
   }
 
   function humanStatus(s) {
-    // Canonical (new validator) statuses
-    if (s === 'errors') return 'критичні помилки';
-    if (s === 'warnings') return 'попередження';
-    if (s === 'clean') return 'чисто';
-    if (s === 'invalid') return 'невалідний payload';
+    // Canonical (new validator) statuses — pull from i18n bundle so they
+    // pivot UK ↔ EN with the language toggle.
+    if (s === 'errors') return t('status.errors');
+    if (s === 'warnings') return t('status.warnings');
+    if (s === 'clean') return t('status.clean');
+    if (s === 'invalid') return t('status.invalid');
     // Backward compat with the pre-Phase-1 server (transitional)
     if (s === 'Critical') return 'критичні помилки';
     if (s === 'Healthy') return 'без критичних помилок';
@@ -1418,7 +1899,7 @@
       _partnerCache = [];
       const sel = $('partnerFilter');
       sel.innerHTML =
-        '<option value="">усі партнери</option><option value="unassigned">— без партнера —</option>';
+        '<option value="">' + t('sample.partner_all') + '</option><option value="unassigned">' + t('sample.partner_none') + '</option>';
       return;
     }
     try {
@@ -1427,8 +1908,8 @@
       const sel = $('partnerFilter');
       const cur = sel.value;
       sel.innerHTML =
-        '<option value="">усі партнери</option>' +
-        '<option value="unassigned">— без партнера —</option>' +
+        '<option value="">' + t('sample.partner_all') + '</option>' +
+        '<option value="unassigned">' + t('sample.partner_none') + '</option>' +
         _partnerCache
           .map((p) => '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>')
           .join('');
@@ -1448,13 +1929,21 @@
     const el = $('savedList');
     if (!_currentUser) {
       el.innerHTML =
-        '<div class="anon-cta">Увійди в акаунт щоб зберігати запити в особисту бібліотеку.<br><button class="btn btn-primary btn-sm" onclick="openAuthModal(\'login\')">увійти або створити акаунт</button></div>';
+        '<div class="anon-cta">' +
+        t('sample.anon_cta') +
+        '<br><button class="btn btn-primary btn-sm" onclick="openAuthModal(\'login\')">' +
+        t('sample.btn.signin') +
+        '</button></div>';
       return;
     }
     // Logged-in but DEK is gone (page reload): surface unlock CTA.
     if (_pendingUnlock && !_sessionDEK) {
       el.innerHTML =
-        '<div class="anon-cta">Бібліотека зашифрована. Введи пароль щоб розблокувати.<br><button class="btn btn-primary btn-sm" onclick="openUnlockModal()">розблокувати</button></div>';
+        '<div class="anon-cta">' +
+        t('sample.unlock_cta') +
+        '<br><button class="btn btn-primary btn-sm" onclick="openUnlockModal()">' +
+        t('sample.btn.unlock') +
+        '</button></div>';
       return;
     }
     const sel = $('partnerFilter');
@@ -1464,19 +1953,27 @@
       const j = await api('GET', 'api/samples' + qs);
       const list = j.samples || [];
       if (!list.length) {
-        el.innerHTML = '<div class="saved-empty">Збережених запитів ще немає</div>';
+        el.innerHTML = '<div class="saved-empty">' + t('empty.samples') + '</div>';
         return;
       }
       const partnerName = (id) => {
-        if (id == null) return 'без партнера';
+        if (id == null) return t('sample.partner_unassigned');
         const p = _partnerCache.find((x) => x.id === id);
         return p ? p.name : 'партнер #' + id;
+      };
+      // Stored req_len/res_len are length(ciphertext_base64). The original
+      // JSON byte count ≈ ciphertext_bytes − 16 (AES-GCM auth tag). Base64
+      // chars → bytes via *3/4. Subtract the tag, clamp to ≥ 0. Result is
+      // a rough estimate; we don't render decimals.
+      const plainKb = (n) => {
+        const bytes = Math.max(0, Math.round((n * 3) / 4) - 16);
+        return Math.round(bytes / 1024);
       };
       el.innerHTML = list
         .map((s) => {
           const pieces = [];
-          if (s.req_len) pieces.push('req ' + Math.round(s.req_len / 1024) + 'k');
-          if (s.res_len) pieces.push('res ' + Math.round(s.res_len / 1024) + 'k');
+          if (s.req_len) pieces.push('req ~' + plainKb(s.req_len) + 'k');
+          if (s.res_len) pieces.push('res ~' + plainKb(s.res_len) + 'k');
           if (s.status) pieces.push(escapeHtml(humanStatus(s.status)));
           return (
             '<div class="saved-item" onclick="loadSample(' +
@@ -1515,12 +2012,40 @@
   }
 
   function closeModal() {
+    // Recovery-key modal has special "really?" gate — route Esc/backdrop
+    // closures through it instead of the silent close path.
+    if (_recoveryKeyModalActive) {
+      window.closeRecoveryKeyModal();
+      return;
+    }
     $('modalRoot').innerHTML = '';
+    // If the user closes the reset-password modal via Esc or backdrop click
+    // (rather than the cancel button), still strip the `?reset=...` query
+    // so a refresh doesn't silently re-trigger the same flow.
+    if (_resetCtx && new URLSearchParams(location.search).has('reset')) {
+      _resetCtx = null;
+      history.replaceState({}, '', location.pathname);
+    }
+  }
+
+  // Wire Enter-to-submit on a modal text input so the user can hit ⏎ from
+  // the title / name field and not have to mouse over to the primary button.
+  // Pass the input id and the action to fire (confirmSave, confirmAddPartner,
+  // etc.). Skips Shift+Enter so multiline textareas behave normally.
+  function wireEnterSubmit(inputId, action) {
+    const el = $(inputId);
+    if (!el) return;
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        action();
+      }
+    });
   }
 
   function partnerOptionsHtml(selectedId) {
     return (
-      '<option value="">— без партнера —</option>' +
+      '<option value="">' + t('sample.partner_none') + '</option>' +
       _partnerCache
         .map(
           (p) =>
@@ -1538,80 +2063,108 @@
 
   window.openSaveModal = function () {
     if (!_currentUser) {
-      // Auth-gate the save action: prompt sign-in instead of erroring on the API.
-      toast('Увійди в акаунт щоб зберегти у бібліотеку', 'error');
+      // Auth-gate: open sign-in modal directly (no double-toast over the modal).
       window.openAuthModal('login');
       return;
     }
     const reqVal = $('bidReq').value || '';
     const resVal = $('bidRes').value || '';
     if (!reqVal.trim() && !resVal.trim()) {
-      toast('Нічого зберігати — обидва поля порожні', 'error');
+      toast(t('toast.nothing_to_save'), 'error');
       return;
     }
-    const guess = (() => {
-      try {
-        const j = JSON.parse(reqVal);
-        return j.id || j.site?.domain || j.app?.bundle || 'sample';
-      } catch {
-        return 'sample';
-      }
-    })();
-    const sel = $('partnerFilter');
-    const presetPartner = sel && sel.value && sel.value !== 'unassigned' ? Number(sel.value) : null;
+    // Updating an existing record? Pre-fill from loaded meta so user
+    // doesn't lose title/partner/notes by accident.
+    const updating = !!_currentSampleId && !!_currentSampleMeta;
+    let title;
+    let presetPartner;
+    let presetNotes;
+    if (updating) {
+      title = _currentSampleMeta.title || 'sample';
+      presetPartner = _currentSampleMeta.partner_id;
+      presetNotes = _currentSampleMeta.notes || '';
+    } else {
+      title = (() => {
+        try {
+          const j = JSON.parse(reqVal);
+          return j.id || j.site?.domain || j.app?.bundle || 'sample';
+        } catch {
+          return 'sample';
+        }
+      })();
+      const sel = $('partnerFilter');
+      presetPartner =
+        sel && sel.value && sel.value !== 'unassigned' ? Number(sel.value) : null;
+      presetNotes = '';
+    }
+    const headerText = updating
+      ? t('modal.save_sample.update_title', { id: _currentSampleId })
+      : t('modal.save_sample.title');
+    const primaryBtn =
+      '<button class="btn btn-primary btn-sm" onclick="confirmSave()">' +
+      t(updating ? 'btn.update' : 'btn.save') +
+      '</button>';
+    const secondaryBtn = updating
+      ? '<button class="btn btn-ghost btn-sm" onclick="confirmSave({asNew:true})">' +
+        t('btn.save_as_new') +
+        '</button>'
+      : '';
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
       '<div class="modal-card">' +
-      '<div class="modal-title">зберегти запит</div>' +
-      '<div class="modal-row"><label>назва</label><input id="mTitle" type="text" value="' +
-      escapeHtml(String(guess)) +
+      '<div class="modal-title">' +
+      escapeHtml(headerText) +
+      '</div>' +
+      '<div class="modal-row"><label>' +
+      t('sample.label.title') +
+      '</label><input id="mTitle" type="text" value="' +
+      escapeHtml(String(title)) +
       '"></div>' +
-      '<div class="modal-row"><label>партнер</label><select id="mPartner">' +
+      '<div class="modal-row"><label>' +
+      t('sample.label.partner') +
+      '</label><select id="mPartner">' +
       partnerOptionsHtml(presetPartner) +
       '</select></div>' +
-      '<div class="modal-row"><label>нотатки (необовʼязково)</label><textarea id="mNotes"></textarea></div>' +
+      '<div class="modal-row"><label>' +
+      t('sample.label.notes') +
+      '</label><textarea id="mNotes">' +
+      escapeHtml(presetNotes) +
+      '</textarea></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">скасувати</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="confirmSave()">зберегти</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+      t('btn.cancel') +
+      '</button>' +
+      secondaryBtn +
+      primaryBtn +
       '</div>' +
       '</div>' +
       '</div>';
-    setTimeout(() => $('mTitle').focus(), 0);
+    setTimeout(() => {
+      $('mTitle').focus();
+      wireEnterSubmit('mTitle', () => window.confirmSave());
+    }, 0);
   };
 
-  window.confirmSave = async function () {
+  window.confirmSave = async function (opts) {
     if (!_sessionDEK) {
-      toast('Сесія шифрування не активна — увійди в акаунт ще раз', 'error');
+      toast(t('toast.crypto_session_lost'), 'error');
       return;
     }
+    const asNew = !!(opts && opts.asNew);
+    const updating = !asNew && !!_currentSampleId;
     const title = $('mTitle').value.trim() || 'sample';
     const partnerId = $('mPartner').value || null;
     const notes = $('mNotes').value.trim();
     const bid_req = $('bidReq').value || '';
     const bid_res = $('bidRes').value || '';
-    let status = '';
-    try {
-      // Run analysis OUTSIDE the encryption flow — analyze sees plaintext
-      // because it lives in the same browser tab. The encryption applies
-      // only at the storage boundary (POST /api/samples).
-      const r = await fetch('api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bidReq: bid_req ? JSON.parse(bid_req) : {},
-          bidRes: bid_res ? JSON.parse(bid_res) : {},
-        }),
-      });
-      const j = await r.json();
-      if (j.success && j.validation) status = j.validation.status || '';
-    } catch (_) {
-      /* status optional */
-    }
+    // Status from the most recent analysis. Stored on a data-attribute by
+    // the analyzer so localised text in `innerText` doesn't break this read.
+    const status = ($('stEntity')?.dataset.status || '').trim();
     try {
       // Encrypt blobs locally before POSTing. Server stores opaque ciphertext.
       const encReq = await SpyglassCrypto.encryptBlob(_sessionDEK, bid_req);
       const encRes = await SpyglassCrypto.encryptBlob(_sessionDEK, bid_res);
-      await api('POST', 'api/samples', {
+      const payload = {
         partner_id: partnerId ? Number(partnerId) : null,
         title,
         bid_req: encReq.ct,
@@ -1620,19 +2173,48 @@
         res_iv: encRes.iv,
         status,
         notes,
-      });
+      };
+      let saved;
+      if (updating) {
+        saved = await api('PATCH', 'api/samples/' + _currentSampleId, payload);
+        toast(t('toast.updated', { title }), 'success');
+      } else {
+        saved = await api('POST', 'api/samples', payload);
+        // After save-as-new (or first save), track the new id so subsequent
+        // saves keep updating instead of duplicating.
+        if (saved && saved.sample) {
+          _currentSampleId = saved.sample.id;
+          _currentSampleMeta = {
+            title,
+            partner_id: payload.partner_id,
+            notes,
+          };
+        }
+        toast(t('toast.saved', { title }), 'success');
+      }
+      // Bring the cached meta in sync with whatever the user just wrote.
+      if (updating) {
+        _currentSampleMeta = { title, partner_id: payload.partner_id, notes };
+      }
+      _isDirty = false;
       closeModal();
-      toast('Збережено · ' + title, 'success');
       refreshSamples();
     } catch (e) {
-      toast('Не вдалося зберегти: ' + e.message, 'error');
+      toast(t('toast.save_failed', { error: e.message }), 'error');
     }
   };
 
   window.loadSample = async function (id) {
     if (!_sessionDEK) {
-      toast('Сесія шифрування не активна — увійди в акаунт ще раз', 'error');
+      toast(t('toast.crypto_session_lost'), 'error');
       return;
+    }
+    // Clobber-protection: warn before discarding unsaved edits.
+    const hasContent = ($('bidReq').value || '').trim() || ($('bidRes').value || '').trim();
+    if (_isDirty && hasContent) {
+      if (!confirm(t('confirm.clobber_load'))) {
+        return;
+      }
     }
     try {
       const j = await api('GET', 'api/samples/' + id);
@@ -1645,22 +2227,35 @@
       updateCharCount('bidReq');
       updateCharCount('bidRes');
       _currentSampleId = s.id;
-      toast('Завантажено · ' + s.title, 'success');
+      _currentSampleMeta = {
+        title: s.title,
+        partner_id: s.partner_id,
+        notes: s.notes || '',
+      };
+      _isDirty = false;
+      toast(t('toast.loaded', { title: s.title }), 'success');
     } catch (e) {
       // Most common cause: tampered ciphertext or wrong DEK (e.g. cookie
       // outlived the in-memory DEK after a page reload without re-login).
       console.error('[loadSample]', e);
-      toast('Не вдалося розшифрувати — увійди в акаунт ще раз', 'error');
+      toast(t('toast.decrypt_failed'), 'error');
     }
   };
 
   window.deleteSample = async function (id) {
-    if (!confirm('Видалити цей запит з бібліотеки?')) return;
+    if (!confirm(t('confirm.delete_sample'))) return;
     try {
       await api('DELETE', 'api/samples/' + id);
+      // If the deleted sample is the one currently loaded, drop the anchor
+      // so the next save creates a fresh record (not a 404 PATCH).
+      if (_currentSampleId === id) {
+        _currentSampleId = null;
+        _currentSampleMeta = null;
+      }
+      toast(t('toast.deleted'), 'success');
       refreshSamples();
     } catch (e) {
-      toast('Не вдалося видалити: ' + e.message, 'error');
+      toast(t('toast.delete_failed', { error: e.message }), 'error');
     }
   };
 
@@ -1671,25 +2266,40 @@
       $('modalRoot').innerHTML =
         '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
         '<div class="modal-card">' +
-        '<div class="modal-title">редагувати запит</div>' +
-        '<div class="modal-row"><label>назва</label><input id="mTitle" type="text" value="' +
+        '<div class="modal-title">' +
+        t('modal.edit_sample.title') +
+        '</div>' +
+        '<div class="modal-row"><label>' +
+        t('sample.label.title') +
+        '</label><input id="mTitle" type="text" value="' +
         escapeHtml(s.title) +
         '"></div>' +
-        '<div class="modal-row"><label>партнер</label><select id="mPartner">' +
+        '<div class="modal-row"><label>' +
+        t('sample.label.partner') +
+        '</label><select id="mPartner">' +
         partnerOptionsHtml(s.partner_id) +
         '</select></div>' +
-        '<div class="modal-row"><label>нотатки</label><textarea id="mNotes">' +
+        '<div class="modal-row"><label>' +
+        t('sample.label.notes_short') +
+        '</label><textarea id="mNotes">' +
         escapeHtml(s.notes || '') +
         '</textarea></div>' +
         '<div class="modal-actions">' +
-        '<button class="btn btn-ghost btn-sm" onclick="closeModal()">скасувати</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+        t('btn.cancel') +
+        '</button>' +
         '<button class="btn btn-primary btn-sm" onclick="confirmEdit(' +
         s.id +
-        ')">зберегти</button>' +
+        ')">' +
+        t('btn.save') +
+        '</button>' +
         '</div>' +
         '</div>' +
         '</div>';
-      setTimeout(() => $('mTitle').focus(), 0);
+      setTimeout(() => {
+        $('mTitle').focus();
+        wireEnterSubmit('mTitle', () => window.confirmEdit(s.id));
+      }, 0);
     } catch (e) {
       toast(e.message, 'error');
     }
@@ -1705,15 +2315,20 @@
         partner_id: partnerId ? Number(partnerId) : null,
         notes,
       });
+      // Keep the loaded-meta in sync if the user just edited the same record.
+      if (_currentSampleId === id && _currentSampleMeta) {
+        _currentSampleMeta = { title, partner_id: partnerId ? Number(partnerId) : null, notes };
+      }
       closeModal();
+      toast(t('toast.saved', { title }), 'success');
       refreshSamples();
     } catch (e) {
-      toast('Не вдалося зберегти зміни: ' + e.message, 'error');
+      toast(t('toast.save_changes_failed', { error: e.message }), 'error');
     }
   };
 
   function partnerListHtml() {
-    if (!_partnerCache.length) return '<div class="saved-empty">Партнерів ще немає</div>';
+    if (!_partnerCache.length) return '<div class="saved-empty">' + t('empty.partners') + '</div>';
     return _partnerCache
       .map(
         (p) =>
@@ -1738,48 +2353,63 @@
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
       '<div class="modal-card">' +
-      '<div class="modal-title">партнери</div>' +
+      '<div class="modal-title">' +
+      t('modal.partners.title') +
+      '</div>' +
       '<div id="pList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:var(--space-3);max-height:240px;overflow-y:auto">' +
       partnerListHtml() +
       '</div>' +
-      '<div class="modal-row"><label>додати нового</label><input id="pName" type="text" placeholder="наприклад Kadam, BidMachine"></div>' +
+      '<div class="modal-row"><label>' +
+      t('partner.label.add_new') +
+      '</label><input id="pName" type="text" placeholder="' +
+      escapeHtml(t('partner.placeholder')) +
+      '"></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">закрити</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="confirmAddPartner()">додати</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+      t('btn.close') +
+      '</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="confirmAddPartner()">' +
+      t('btn.add') +
+      '</button>' +
       '</div>' +
       '</div>' +
       '</div>';
-    setTimeout(() => $('pName').focus(), 0);
+    setTimeout(() => {
+      $('pName').focus();
+      wireEnterSubmit('pName', () => window.confirmAddPartner());
+    }, 0);
   };
 
   window.confirmAddPartner = async function () {
     const name = $('pName').value.trim();
-    if (!name) return;
+    if (!name) {
+      toast(t('toast.partner_name_required'), 'error');
+      $('pName').focus();
+      return;
+    }
     try {
       await api('POST', 'api/partners', { name });
       await refreshPartners();
       $('pList').innerHTML = partnerListHtml();
       $('pName').value = '';
+      $('pName').focus();
+      toast(t('toast.added', { name }), 'success');
       refreshSamples();
     } catch (e) {
-      toast('Не вдалося додати партнера: ' + e.message, 'error');
+      toast(t('toast.partner_add_failed', { error: e.message }), 'error');
     }
   };
 
   window.deletePartner = async function (id) {
-    if (
-      !confirm(
-        'Видалити цього партнера? Запити що були з ним повʼязані стануть "без партнера" (не видаляються).',
-      )
-    )
-      return;
+    if (!confirm(t('confirm.delete_partner'))) return;
     try {
       await api('DELETE', 'api/partners/' + id);
       await refreshPartners();
       $('pList').innerHTML = partnerListHtml();
+      toast(t('toast.partner_deleted'), 'success');
       refreshSamples();
     } catch (e) {
-      toast('Не вдалося видалити партнера: ' + e.message, 'error');
+      toast(t('toast.partner_delete_failed', { error: e.message }), 'error');
     }
   };
 
@@ -1790,15 +2420,48 @@
     renderReference();
     updateCharCount('bidReq');
     updateCharCount('bidRes');
+
+    // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
+    // input events (per HTML spec), so loadSample / clearInput don't
+    // accidentally mark the editor dirty. User typing → dirty → save
+    // modal can offer "оновити" + clobber-protection on next loadSample.
+    ['bidReq', 'bidRes'].forEach((id) => {
+      const el = $(id);
+      if (el) el.addEventListener('input', () => { _isDirty = true; });
+    });
+
+    // Partner filter dropdown — refresh sample list on change. Without
+    // this listener users selected a partner and saw no UI reaction.
+    const pf = $('partnerFilter');
+    if (pf) pf.addEventListener('change', () => refreshSamples());
+
+    // Global Esc closes any open modal. Modals each had their own Enter
+    // handler before; consolidating Esc here covers all of them.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && $('modalRoot').children.length) {
+        closeModal();
+      }
+    });
+
+    // Render any history that was persisted from a prior session.
+    renderHistory();
+
     await bootAuth();
     await refreshPartners();
     refreshSamples();
     // Phase 8 URL params: ?reset=token | ?verified=1 | ?verify_error=...
     const qp = new URLSearchParams(location.search);
+    // Vendor-specific reference tab is hidden by default — only revealed when
+    // the user explicitly opts into a vendor dialect via ?dialect=<name>.
+    // Keeps the public landing strictly oRTB-generic.
+    if (qp.get('dialect') && qp.get('dialect') !== 'iab') {
+      const tab = document.getElementById('kadamRefTab');
+      if (tab) tab.hidden = false;
+    }
     if (qp.get('reset')) {
       window.openResetPasswordModal(qp.get('reset'));
     } else if (qp.get('verified') === '1') {
-      toast('Email підтверджено ✓', 'success');
+      toast(t('toast.email_verified'), 'success');
       history.replaceState({}, '', location.pathname);
       // Refresh /api/auth/me so banner clears
       bootAuth();
@@ -1806,10 +2469,10 @@
       const code = qp.get('verify_error');
       const msg =
         code === 'expired'
-          ? 'Посилання застаріло — запитай нове'
+          ? t('reset.err.link_expired')
           : code === 'tampered' || code === 'malformed'
-            ? 'Посилання пошкоджено'
-            : 'Не вдалося підтвердити email';
+            ? t('reset.err.link_tampered')
+            : t('reset.err.verify_failed');
       toast(msg, 'error');
       history.replaceState({}, '', location.pathname);
     }

@@ -58,6 +58,13 @@ function createAuth({ Users, logger }) {
   /** @type {Map<string, { userId: number, expiresAt: number, ip: string, ua: string }>} */
   const sessions = new Map();
 
+  // Pre-computed real bcrypt hash used as a stand-in when login is attempted
+  // for a non-existent email. A literal "looks-like-bcrypt" string short-
+  // circuits inside bcrypt.compare on bad cost/salt parsing — leaking the
+  // "user not found" branch via timing. Generating once at boot keeps the
+  // compare path identical to the real-user path.
+  const TIMING_DUMMY_HASH = bcrypt.hashSync('timing-dummy', BCRYPT_ROUNDS);
+
   // Periodic sweep of expired sessions
   const sweepTimer = setInterval(() => {
     const now = Date.now();
@@ -73,6 +80,11 @@ function createAuth({ Users, logger }) {
   sweepTimer.unref();
 
   const loginLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 10 });
+  // Per-account lockout: if an attacker rotates IPs (botnet) the per-IP
+  // limiter doesn't help. Bucketed by normalised email so 8 failed logins
+  // within 15min on the same email lock everyone out — including
+  // legitimate user, by design (typo five times then go drink coffee).
+  const loginEmailLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 8 });
   const registerLimiter = makeLimiter({ windowMs: 60 * 60 * 1000, max: 5 });
 
   function newToken() {
@@ -107,10 +119,18 @@ function createAuth({ Users, logger }) {
     );
   }
 
+  // Trust X-Forwarded-For only when the request actually came from the local
+  // proxy (kyivtech-portal binds the container on 127.0.0.1:8090). Otherwise
+  // an attacker who reaches the app directly could spoof XFF and bypass the
+  // per-IP rate limiters on /login and /register.
   function clientIp(req) {
-    const fwd = req.headers['x-forwarded-for'];
-    if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0].trim();
-    return (req.socket && req.socket.remoteAddress) || 'unknown';
+    const peer = (req.socket && req.socket.remoteAddress) || 'unknown';
+    const peerIsLoopback = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
+    if (peerIsLoopback) {
+      const fwd = req.headers['x-forwarded-for'];
+      if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0].trim();
+    }
+    return peer;
   }
 
   function setSessionCookie(req, res, token) {
@@ -172,6 +192,12 @@ function createAuth({ Users, logger }) {
       throw e;
     }
     const normEmail = email.trim().toLowerCase();
+    // Hash *before* the existence check so the bcrypt cost (≈300ms at rounds=12)
+    // is paid by both branches — kills the timing-side-channel that lets an
+    // attacker enumerate registered emails by measuring response latency.
+    // The 409 response code itself is a residual disclosure but at this
+    // scale (small user base) the UX win of an honest error outweighs it.
+    const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     if (Users.getByEmail(normEmail)) {
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Email already registered')
@@ -180,14 +206,18 @@ function createAuth({ Users, logger }) {
       e.status = 409;
       throw e;
     }
-    const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const user = Users.create({ email: normEmail, password_hash });
     return user;
   }
 
   async function login({ email, password }, req) {
     const ip = clientIp(req);
-    if (!loginLimiter(ip)) {
+    const emailKey =
+      typeof email === 'string' && email.length ? email.trim().toLowerCase() : '<empty>';
+    // Belt-and-suspenders: per-IP catches one host abusing the form,
+    // per-account catches one identity getting hammered from many IPs.
+    // Any failure to either bucket → 429 (without saying which one).
+    if (!loginLimiter(ip) || !loginEmailLimiter(emailKey)) {
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Too many login attempts. Try again in 15 minutes.')
       );
@@ -208,9 +238,7 @@ function createAuth({ Users, logger }) {
     // "wrong password" cases.
     const ok = await bcrypt.compare(
       password,
-      userRow
-        ? userRow.password_hash
-        : '$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalid',
+      userRow ? userRow.password_hash : TIMING_DUMMY_HASH,
     );
     if (!userRow || !ok) {
       const e = /** @type {Error & {code?: string, status?: number}} */ (
@@ -290,6 +318,7 @@ function createAuth({ Users, logger }) {
     verifyPassword,
     invalidateUserSessions,
     checkForgotPasswordLimit,
+    clientIp, // exposed so other handlers (e.g. /api/analyze rate-limit) reuse the same loopback-XFF logic
     shutdown,
   };
 }
