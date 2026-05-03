@@ -35,7 +35,10 @@
     }
   </script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFCC00'/%3E%3Ctext x='50%25' y='65%25' text-anchor='middle' font-family='Onest,sans-serif' font-size='20' font-weight='700' fill='%23181818'%3EK%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="design-system.css?v=9">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="design-system.css?v=10">
   <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'тема: авто · клік → світла':(s==='light'?'тема: світла · клік → темна':'тема: темна · клік → авто');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){if(document.querySelector('.kt-theme-toggle'))return;var b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Перемкнути тему');b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});document.body.appendChild(b);apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
   <style>
     body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: var(--fs-base); line-height: 1.6; margin: 0; }
