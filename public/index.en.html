@@ -469,6 +469,26 @@
         background: var(--bg);
         border-bottom: 1px solid var(--border);
         height: 280px;
+        transition: height var(--t-fast);
+      }
+      /* Auto-collapse after successful analyze: textareas hide, only the
+         compact card-headers stay visible. Click any collapsed card → expand
+         the whole section back to edit mode. */
+      .input-section.collapsed {
+        height: auto;
+      }
+      .input-section.collapsed .input-card textarea {
+        display: none;
+      }
+      .input-section.collapsed .input-card {
+        cursor: pointer;
+      }
+      .input-section.collapsed .input-card-header::after {
+        content: '▼ click to edit';
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-dim);
+        margin-left: var(--space-3);
       }
       .input-card {
         background: var(--surface);

@@ -930,6 +930,9 @@
             meta: j.meta || null,
             at: new Date().toISOString(),
           };
+          // Fold the input panes — frees vertical space for the result tabs.
+          // User clicks a header to expand back if they need to edit.
+          collapseInputs();
         }
       } catch (e) {
         console.warn('Backend unavailable:', e);
@@ -2669,6 +2672,38 @@
 
   window.closeModal = closeModal;
 
+  // After a successful analyze, fold the BID REQUEST / BID RESPONSE panes
+  // into a thin strip (just the headers) so the inspector tabs below get
+  // more vertical room. Click any collapsed card to expand the whole
+  // section back. The class is on `.input-section` so both cards toggle
+  // together — independent collapse per pane would be confusing.
+  function collapseInputs() {
+    const sec = document.querySelector('.input-section');
+    if (sec) sec.classList.add('collapsed');
+  }
+  function expandInputs() {
+    const sec = document.querySelector('.input-section');
+    if (sec) sec.classList.remove('collapsed');
+  }
+  function setupInputCollapse() {
+    document.querySelectorAll('.input-section .input-card').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        // Buttons inside the card header keep their own click — don't expand.
+        if (e.target && e.target.closest('button')) return;
+        const sec = card.closest('.input-section');
+        if (sec && sec.classList.contains('collapsed')) {
+          expandInputs();
+          // After expand, focus the textarea inside the clicked card so the
+          // user can immediately edit.
+          const ta = card.querySelector('textarea');
+          if (ta) setTimeout(() => ta.focus(), 0);
+        }
+      });
+    });
+  }
+  window.collapseInputs = collapseInputs;
+  window.expandInputs = expandInputs;
+
   // Left-sidebar accordion: only one section (summary | library | history)
   // open at a time. Click the section-title to expand it; clicking buttons
   // inside the title (e.g. history's "clear") doesn't toggle thanks to
@@ -2696,6 +2731,7 @@
     updateCharCount('bidReq');
     updateCharCount('bidRes');
     setupSidebarAccordion();
+    setupInputCollapse();
 
     // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
     // input events (per HTML spec), so loadSample / clearInput don't
