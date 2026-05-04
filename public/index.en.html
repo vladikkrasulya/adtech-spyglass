@@ -680,42 +680,6 @@
         letter-spacing: 0.14em;
       }
 
-      /* Left-sidebar accordion: Summary / Library / History — only one open at a time.
-         Click the section-title to expand it (others collapse). Buttons inside
-         the title (e.g. history's "clear") still work — their click is stopPropagation'd. */
-      .sb-accordion {
-        display: flex;
-        flex-direction: column;
-      }
-      .sb-accordion > .section-title {
-        cursor: pointer;
-        user-select: none;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 0;
-      }
-      .sb-accordion > .section-title::before {
-        content: '▸';
-        font-size: 10px;
-        color: var(--text-dim);
-        transition: transform var(--t-fast);
-        display: inline-block;
-        width: 10px;
-      }
-      .sb-accordion[data-open='true'] > .section-title::before {
-        transform: rotate(90deg);
-      }
-      .sb-accordion > .sb-content {
-        display: none;
-        margin-top: var(--space-2);
-      }
-      .sb-accordion[data-open='true'] > .sb-content {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-3);
-      }
-
       /* Hero metric card on left side. */
       .metric-card {
         background: var(--surface);
@@ -1841,88 +1805,73 @@
     <main class="main-grid">
       <!-- Left sidebar -->
       <aside class="sidebar-left">
-        <div class="sb-accordion" data-open="true" data-section="summary">
-          <div class="section-title">summary</div>
-          <div class="sb-content">
-            <div class="metric-card">
-              <div class="metric-label">winning bid</div>
-              <div class="metric-value" id="mPrice">$0.00</div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0" id="mInfo">
-              <div class="info-row">
-                <span class="info-key">os</span><span class="info-val">—</span>
-              </div>
-              <div class="info-row">
-                <span class="info-key">geo</span><span class="info-val">—</span>
-              </div>
-              <div class="info-row">
-                <span class="info-key">device</span><span class="info-val">—</span>
-              </div>
-              <div class="info-row">
-                <span class="info-key">connection</span><span class="info-val">—</span>
-              </div>
-            </div>
+        <div class="section-title">summary</div>
+        <div class="metric-card">
+          <div class="metric-label">winning bid</div>
+          <div class="metric-value" id="mPrice">$0.00</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0" id="mInfo">
+          <div class="info-row">
+            <span class="info-key">os</span><span class="info-val">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">geo</span><span class="info-val">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">device</span><span class="info-val">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">connection</span><span class="info-val">—</span>
           </div>
         </div>
-        <div class="sb-accordion" data-open="false" data-section="library">
-          <div class="section-title">library</div>
-          <div class="sb-content">
-            <div class="saved-toolbar">
-              <select
-                id="partnerFilter"
-                class="saved-select"
-                aria-label="Filter saved samples by partner"
-                onchange="refreshSamples()"
-              >
-                <option value="">all partners</option>
-                <option value="unassigned">— no partner —</option>
-              </select>
-              <button onclick="openPartnerModal()" class="saved-act-btn" title="Manage partners">
-                + partner
-              </button>
-            </div>
-            <div class="saved-list" id="savedList">
-              <div class="saved-empty">No saved samples yet</div>
-            </div>
-          </div>
+        <div class="section-title">library</div>
+        <div class="saved-toolbar">
+          <select
+            id="partnerFilter"
+            class="saved-select"
+            aria-label="Filter saved samples by partner"
+            onchange="refreshSamples()"
+          >
+            <option value="">all partners</option>
+            <option value="unassigned">— no partner —</option>
+          </select>
+          <button onclick="openPartnerModal()" class="saved-act-btn" title="Manage partners">
+            + partner
+          </button>
         </div>
-        <div class="sb-accordion" data-open="false" data-section="history">
+        <div class="saved-list" id="savedList">
+          <div class="saved-empty">No saved samples yet</div>
+        </div>
+        <div
+          class="section-title"
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-2);
+          "
+        >
+          <span>history</span>
+          <button
+            type="button"
+            onclick="clearHistory()"
+            class="saved-act-btn"
+            title="Clear local history"
+            style="font-size: 11px"
+          >
+            clear
+          </button>
+        </div>
+        <div class="history-list" id="hList">
           <div
-            class="section-title"
             style="
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              gap: var(--space-2);
+              color: var(--text-dim);
+              font-size: var(--fs-sm);
+              text-align: center;
+              padding: var(--space-5);
             "
           >
-            <span>history</span>
-            <button
-              type="button"
-              onclick="
-                event.stopPropagation();
-                clearHistory();
-              "
-              class="saved-act-btn"
-              title="Clear local history"
-              style="font-size: 11px"
-            >
-              clear
-            </button>
-          </div>
-          <div class="sb-content">
-            <div class="history-list" id="hList">
-              <div
-                style="
-                  color: var(--text-dim);
-                  font-size: var(--fs-sm);
-                  text-align: center;
-                  padding: var(--space-5);
-                "
-              >
-                History empty — paste a request to get started
-              </div>
-            </div>
+            History empty — paste a request to get started
           </div>
         </div>
       </aside>
