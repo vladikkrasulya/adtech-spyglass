@@ -50,6 +50,23 @@
   "feed.push.image_url_recommended": "Push material #{num}: image_url is recommended — a large image lifts CTR significantly on push surfaces.",
   "feed.push.nurl_recommended": "Push material #{num}: nurl is missing (and not embedded in icon_url) — win notification won't fire, billing tracking breaks.",
 
+  "feed.exoclick.id_required": "ExoClick: missing `id` — bid identifier returned to the caller for win/loss tracking.",
+  "feed.exoclick.value_required": "ExoClick: missing `value` (number) — this is the bid price (CPM) for the auction.",
+  "feed.exoclick.click_url_required": "ExoClick: missing `clickUrl` — destination URL when the user clicks. Without it the bid has no redirect target.",
+  "feed.exoclick.title_recommended": "ExoClick: `title` is recommended — push/native creatives without a title degrade to a generic prompt.",
+  "feed.exoclick.description_recommended": "ExoClick: `description` is recommended for native/push surfaces — supplements the title.",
+  "feed.exoclick.notify_recommended": "ExoClick: neither `iconUrl` nor `nUrl` is set — win notification can't fire and creative has no thumbnail.",
+
+  "feed.richads.bid_price_required": "RichAds: missing `bid_price` (number) — this is the bid amount the auction uses.",
+  "feed.richads.link_required": "RichAds: missing `link` — the click destination. Without it the bid is unactionable.",
+  "feed.richads.notification_url_recommended": "RichAds: `notification_url` is recommended — used by the SSP to confirm impression delivery.",
+  "feed.richads.copy_recommended": "RichAds: neither `title` nor `message` is set — the user-facing copy is empty.",
+  "feed.richads.icon_recommended": "RichAds: `icon` is recommended for push/TG-mini-app surfaces — improves CTR.",
+
+  "feed.zeropark.bid_required": "Zeropark: missing `bid` (number) — the auction price for this redirect.",
+  "feed.zeropark.redirecturl_required": "Zeropark: missing `redirecturl` — destination URL the user is sent to after the win.",
+  "feed.zeropark.campaignid_invalid": "Zeropark: `campaignid` is set but isn't a string or number — Zeropark uses string IDs in newer feeds.",
+
   "payload.unknown_type": "Couldn't determine payload type. Expected oRTB BidRequest (with imp[]), BidResponse (with seatbid[]), or a feed (push array / clickunder wrapper). Check the root structure.",
   "payload.invalid_root": "Expected a JSON object or array. Other types (string, number) are not valid RTB payloads — paste the full request/response body.",
 

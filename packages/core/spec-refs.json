@@ -72,5 +72,22 @@
   "crosscheck.bid.video_vast": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "crosscheck.bid.video_not_vast": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "crosscheck.auction.summary": "",
-  "imp.non_standard_format": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp"
+  "imp.non_standard_format": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
+
+  "feed.exoclick.id_required": "https://docs.exoclick.com/docs/rtb-direct",
+  "feed.exoclick.value_required": "https://docs.exoclick.com/docs/rtb-direct",
+  "feed.exoclick.click_url_required": "https://docs.exoclick.com/docs/rtb-direct",
+  "feed.exoclick.title_recommended": "https://docs.exoclick.com/docs/rtb-direct",
+  "feed.exoclick.description_recommended": "https://docs.exoclick.com/docs/rtb-direct",
+  "feed.exoclick.notify_recommended": "https://docs.exoclick.com/docs/rtb-direct",
+
+  "feed.richads.bid_price_required": "https://docs.richads.com/",
+  "feed.richads.link_required": "https://docs.richads.com/",
+  "feed.richads.notification_url_recommended": "https://docs.richads.com/",
+  "feed.richads.copy_recommended": "https://docs.richads.com/",
+  "feed.richads.icon_recommended": "https://docs.richads.com/",
+
+  "feed.zeropark.bid_required": "https://help.zeropark.com/",
+  "feed.zeropark.redirecturl_required": "https://help.zeropark.com/",
+  "feed.zeropark.campaignid_invalid": "https://help.zeropark.com/"
 }

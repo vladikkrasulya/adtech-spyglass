@@ -119,6 +119,23 @@ function collectMatches(payload, paths) {
   return hits;
 }
 
+// Single-object signatures for non-RTB JSON feeds. These vendors return one
+// bid as a top-level object (not an array, not wrapped in seatbid). Each has
+// a small set of keys unique enough to discriminate from oRTB/Kadam.
+//   ExoClick — `clickUrl` (camelCase) or `value` + `nUrl`
+//   RichAds  — `notification_url` or `bid_price` + `link`
+//   Zeropark — `redirecturl` + `bid` (small object, ≤6 keys)
+function looksLikeJsonFeedSingle(o) {
+  // Each predicate uses a key unique enough that no other format we care
+  // about ships it. `bid` / `link` alone are too generic — those check that
+  // they appear *together* with a vendor-specific neighbour.
+  if ('clickUrl' in o) return true; // ExoClick (camelCase is unique)
+  if ('notification_url' in o) return true; // RichAds
+  if ('bid_price' in o) return true; // RichAds
+  if ('redirecturl' in o) return true; // Zeropark
+  return false;
+}
+
 function detectType(obj) {
   // Arrays are Kadam push-feed responses (list of materials).
   if (Array.isArray(obj)) return TYPES.KADAM_FEED;
@@ -134,6 +151,11 @@ function detectType(obj) {
   if (Array.isArray(obj.seatbid)) return TYPES.ORTB_RESPONSE;
   if (obj.result && Array.isArray(obj.result.listing)) return TYPES.KADAM_FEED;
   if (obj.version && obj.items) return TYPES.JSON_FEED;
+
+  // Single-bid JSON-feed responses (ExoClick, RichAds, Zeropark, …). These
+  // get routed through the same KADAM_FEED type — the rules-feed dispatcher
+  // discriminates the actual vendor and returns a vendor-named result type.
+  if (looksLikeJsonFeedSingle(obj)) return TYPES.KADAM_FEED;
 
   // Heuristics for malformed payloads.
   if (obj.site || obj.app || obj.device) return TYPES.ORTB_REQUEST;

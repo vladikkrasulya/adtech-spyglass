@@ -45,6 +45,24 @@
   "feed.push.title_recommended": "Push-матеріал #{num}: бажано задати title — заголовок, що зʼявляється в push-нотифікації.",
   "feed.push.image_url_recommended": "Push-матеріал #{num}: бажано додати image_url — велике зображення підвищує CTR push-показу.",
   "feed.push.nurl_recommended": "Push-матеріал #{num}: немає nurl (та не \"зашитий\" у icon_url) — win-нотіс не спрацює, статистика покази/виграші буде розсинхронована.",
+
+  "feed.exoclick.id_required": "ExoClick: немає `id` — ідентифікатор біду, який повертається ініціатору для win/loss-трекінгу.",
+  "feed.exoclick.value_required": "ExoClick: немає `value` (число) — це ціна біду (CPM) для аукціону.",
+  "feed.exoclick.click_url_required": "ExoClick: немає `clickUrl` — куди веде клік користувача. Без цього бід немає сенсу.",
+  "feed.exoclick.title_recommended": "ExoClick: бажано задати `title` — креатив push/native без заголовка перетворюється на загальний промпт.",
+  "feed.exoclick.description_recommended": "ExoClick: бажано задати `description` для native/push — доповнює заголовок.",
+  "feed.exoclick.notify_recommended": "ExoClick: не задано ні `iconUrl`, ні `nUrl` — win-нотіс не спрацює, креатив без мініатюри.",
+
+  "feed.richads.bid_price_required": "RichAds: немає `bid_price` (число) — це сума ставки в аукціоні.",
+  "feed.richads.link_required": "RichAds: немає `link` — кінцева URL після кліку. Без неї бід нерезультативний.",
+  "feed.richads.notification_url_recommended": "RichAds: бажано задати `notification_url` — SSP підтверджує доставку показу через цей URL.",
+  "feed.richads.copy_recommended": "RichAds: не задано ні `title`, ні `message` — текст для користувача порожній.",
+  "feed.richads.icon_recommended": "RichAds: бажано задати `icon` для push / Telegram-mini-app — піднімає CTR.",
+
+  "feed.zeropark.bid_required": "Zeropark: немає `bid` (число) — ціна аукціону за редірект.",
+  "feed.zeropark.redirecturl_required": "Zeropark: немає `redirecturl` — куди редіректнути користувача після виграшу.",
+  "feed.zeropark.campaignid_invalid": "Zeropark: `campaignid` задано, але це не рядок і не число — у нових фідах Zeropark використовує string ID.",
+
   "payload.unknown_type": "Не вдалося визначити тип payload-у. Очікується oRTB BidRequest (з imp[]), BidResponse (з seatbid[]) або Kadam Feed (push-масив чи клікандер з result.listing).",
   "payload.invalid_root": "Очікується JSON-обʼєкт або масив. Інші типи (рядок, число) не є валідним RTB-payload-ом.",
   "crosscheck.no_request": "Немає валідного BidRequest для звірки. Встав запит у ліве поле, щоб порівняти його з відповіддю.",
