@@ -2343,8 +2343,12 @@
           return 'sample';
         }
       })();
-      const sel = $('partnerFilter');
-      presetPartner = sel && sel.value && sel.value !== 'unassigned' ? Number(sel.value) : null;
+      // Don't seed the save-modal partner picker from the library filter.
+      // Old behaviour silently coerced every new save to whatever partner
+      // the user had set as the library filter — confusing and the source
+      // of "all my samples ended up under partner X" reports. Default to
+      // unassigned; let the user pick explicitly in the modal.
+      presetPartner = null;
       presetNotes = '';
     }
     const headerText = updating
