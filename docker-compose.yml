@@ -17,6 +17,11 @@ services:
       - ./public:/app/public
       # Shared design-system from portal — single source of truth for tokens/primitives.
       - /srv/DATA/Stacks/kyivtech-portal/public/design-system.css:/app/public/design-system.css:ro
+      # Validator core — bind-mounted so rule changes take effect on `compose
+      # restart` (no `compose build` needed). Without this every validator
+      # tweak required a full image rebuild, slowing iteration to minutes.
+      # :ro because nothing in the container should write to it.
+      - ./packages:/app/packages:ro
       # Persistent SQLite store (partners + saved bid samples).
       - /srv/DATA/AppData/adtech-spyglass:/data
     restart: always
