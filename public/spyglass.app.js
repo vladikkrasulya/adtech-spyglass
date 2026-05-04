@@ -2693,6 +2693,21 @@
 
   async function switchLang(targetUrl, opts) {
     const push = !(opts && opts.push === false);
+
+    // Modals are constructed on-open via t() at fire-time; their already-
+    // rendered text doesn't auto-update. Close any open modal so it
+    // re-opens (if user re-triggers) in the new locale. This loses any
+    // in-progress modal input — acceptable since the user explicitly
+    // chose to switch language mid-flow.
+    try {
+      const modalRoot = document.getElementById('modalRoot');
+      if (modalRoot && modalRoot.children.length > 0 && typeof window.closeModal === 'function') {
+        window.closeModal();
+      }
+    } catch (_) {
+      /* don't block the swap on modal-close failure */
+    }
+
     try {
       const res = await fetch(targetUrl, { credentials: 'same-origin' });
       if (!res.ok) throw new Error('fetch failed: ' + res.status);
