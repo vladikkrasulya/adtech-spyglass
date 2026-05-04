@@ -17,8 +17,9 @@
 
 const uk = require('./uk.json');
 const en = require('./en.json');
+const ru = require('./ru.json');
 
-const LOCALES = { uk, en };
+const LOCALES = { uk, en, ru };
 const FALLBACK_LOCALE = 'uk';
 
 /**
