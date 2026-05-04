@@ -2,34 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://spyglass.kyivtech.com.ua/en/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/en/"/>
+    <loc>https://spyglass.kyivtech.com.ua/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/"/>
     <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/"/>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://spyglass.kyivtech.com.ua/uk/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/en/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/"/>
     <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/"/>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://spyglass.kyivtech.com.ua/en/about</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/en/about"/>
+    <loc>https://spyglass.kyivtech.com.ua/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about"/>
     <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/en/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about"/>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://spyglass.kyivtech.com.ua/uk/about</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/en/about"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about"/>
     <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/en/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about"/>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

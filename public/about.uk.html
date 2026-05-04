@@ -8,8 +8,8 @@
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://spyglass.kyivtech.com.ua/uk/about">
   <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about">
-  <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/en/about">
-  <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/en/about">
+  <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about">
+  <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about">
 
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Kyiv Tech">
@@ -72,7 +72,7 @@
 
     .pill-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-4); }
   </style>
-  <script>(function(){try{var LANG='uk';var OTHER='en';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}function inject(){if(document.querySelector('.kt-lang-toggle'))return;var b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';b.setAttribute('aria-label','Switch language');b.textContent=LANG.toUpperCase();b.title='мова: українська · клік → English';b.addEventListener('click',function(){location.href='/'+OTHER+'/about'+location.search;});document.body.appendChild(b);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
+  <script>(function(){try{var LANG='uk';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}function bind(){var b=document.querySelector('.kt-lang-toggle');if(!b){b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';document.body.appendChild(b);}b.setAttribute('aria-label','Switch language');b.textContent=LANG.toUpperCase();b.title='мова: українська · клік → English';if(!b.dataset.langBound){b.addEventListener('click',function(){location.href='/about'+location.search;});b.dataset.langBound='1';}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();}catch(e){}})();</script>
 </head>
 <body>
 

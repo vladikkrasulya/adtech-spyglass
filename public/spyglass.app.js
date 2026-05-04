@@ -378,7 +378,8 @@
     if (!list) return;
     if (!historyStore.length) {
       list.innerHTML =
-        '<div style="color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-5)">Історія порожня — встав запит щоб почати</div>';
+        '<div style="color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-5)">' +
+        t('history.empty') + '</div>';
       return;
     }
     list.innerHTML = historyStore

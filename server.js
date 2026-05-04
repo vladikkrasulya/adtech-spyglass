@@ -115,24 +115,26 @@ const CONTENT_TYPES = {
   '.txt': 'text/plain',
 };
 
-// Locale routing for the static UI. Returns either a redirect target (for
-// "/" and legacy "/index.html" / "/about.html" paths) or the file to serve.
-// Anything not matched falls through to plain static-file resolution.
+// Locale routing for the static UI. English (the global default) lives at
+// the root — "/" serves index.en.html directly, "/about" serves about.en.html.
+// Ukrainian gets a /uk/ subpath. This way the canonical English URL is the
+// shortest one, which matches what Google indexes as the primary entry.
 //
-// Default for the root URL is English — the SEO-canonical landing for the
-// global audience. Users who want Ukrainian use the in-page language toggle
-// (or hit /uk/ directly), which then sticks via localStorage on subsequent
-// visits if we ever add cookie-based preference. Accept-Language is *not*
-// honoured on / by design: showing UA users a UK page on first visit would
-// dilute the English-canonical signal Google relies on.
+// /en/ and /en/about are kept as 301-redirects to canonicalize any URL that
+// briefly leaked while the prefix-style was deployed (a few hours window).
+// /index.html and /about.html are legacy paths from the pre-i18n single-file
+// layout — same 301 treatment.
 function resolveLocaleRoute(reqUrl) {
   const u = reqUrl.replace(/\/$/, '');
-  if (u === '' || u === '/index.html') return { redirect: '/en/' };
-  if (u === '/about' || u === '/about.html') return { redirect: '/en/about' };
+  if (u === '' || u === '/index.html') {
+    return u === '' ? { file: '/index.en.html' } : { redirect: '/' };
+  }
+  if (u === '/about') return { file: '/about.en.html' };
+  if (u === '/about.html') return { redirect: '/about' };
+  if (u === '/en') return { redirect: '/' };
+  if (u === '/en/about') return { redirect: '/about' };
   if (u === '/uk') return { file: '/index.uk.html' };
-  if (u === '/en') return { file: '/index.en.html' };
   if (u === '/uk/about') return { file: '/about.uk.html' };
-  if (u === '/en/about') return { file: '/about.en.html' };
   return null;
 }
 

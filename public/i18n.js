@@ -344,6 +344,8 @@
   I18N.uk['badge.empty']   = 'порожньо';
   I18N.uk['badge.valid']   = 'валідний';
   I18N.uk['badge.invalid'] = 'невалідний';
+  I18N.uk['history.empty'] = 'Історія порожня — встав запит щоб почати';
+  I18N.en['history.empty'] = 'History empty — paste a request to get started';
 
   // Locale source of truth: <html lang="…"> (set server-side per /uk/ or
   // /en/ route by the inline IIFE in each HTML file). localStorage is only
