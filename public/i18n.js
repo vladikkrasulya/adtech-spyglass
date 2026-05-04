@@ -100,6 +100,17 @@
       'shortcuts.row.save': 'Зберегти в бібліотеку',
       'shortcuts.row.close': 'Закрити модалку',
 
+      // ── behavior tab (creative-probe) ─────────────────────
+      'behavior.empty':
+        'Відрендер креатив справа — тут зʼявляться спроби click-skim та авто-навігації.',
+      'behavior.label.trigger': 'тригер',
+      'behavior.kind.click_skim_suspect': 'підозра на click-skim',
+      'behavior.kind.auto_navigate': 'авто-навігація без gesture',
+      'behavior.kind.window_open': 'window.open',
+      'behavior.kind.location_set': 'зміна location',
+      'behavior.kind.programmatic_click': 'програмний клік',
+      'behavior.kind.navigation': 'навігація',
+
       // ── empty / placeholder hints ─────────────────────────
       'empty.partners': 'Партнерів ще немає',
       'empty.samples': 'Збережених запитів ще немає',
@@ -290,6 +301,17 @@
       'shortcuts.row.save': 'Save to library',
       'shortcuts.row.close': 'Close modal',
 
+      // ── behavior tab (creative-probe) ─────────────────────
+      'behavior.empty':
+        'Render a creative on the right to see what it actually does — click-skim and auto-navigate attempts surface here.',
+      'behavior.label.trigger': 'trigger',
+      'behavior.kind.click_skim_suspect': 'click-skim suspect',
+      'behavior.kind.auto_navigate': 'auto-navigate (no gesture)',
+      'behavior.kind.window_open': 'window.open',
+      'behavior.kind.location_set': 'location change',
+      'behavior.kind.programmatic_click': 'programmatic click',
+      'behavior.kind.navigation': 'navigation',
+
       // ── empty / placeholder hints ─────────────────────────
       'empty.partners': 'No partners yet',
       'empty.samples': 'No saved samples yet',
@@ -475,6 +497,15 @@
       'shortcuts.row.run': 'Запустить анализ',
       'shortcuts.row.save': 'Сохранить в библиотеку',
       'shortcuts.row.close': 'Закрыть модалку',
+      'behavior.empty':
+        'Отрендерь креатив справа — здесь появятся попытки click-skim и авто-навигации.',
+      'behavior.label.trigger': 'триггер',
+      'behavior.kind.click_skim_suspect': 'подозрение на click-skim',
+      'behavior.kind.auto_navigate': 'авто-навигация без gesture',
+      'behavior.kind.window_open': 'window.open',
+      'behavior.kind.location_set': 'смена location',
+      'behavior.kind.programmatic_click': 'программный клик',
+      'behavior.kind.navigation': 'навигация',
       'empty.partners': 'Партнёров пока нет',
       'empty.samples': 'Сохранённых запросов пока нет',
       'status.errors': 'критические ошибки',

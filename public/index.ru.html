@@ -1801,6 +1801,13 @@
           <button class="tab-btn" onclick="switchTab(this, 'tCategories')">
             categories <span class="tab-badge" id="categoriesBadge">0</span>
           </button>
+          <button
+            class="tab-btn"
+            onclick="switchTab(this, 'tBehavior')"
+            title="Попытки click-skim и авто-навигации, перехваченные в iframe креатива"
+          >
+            behavior <span class="tab-badge" id="behaviorBadge">0</span>
+          </button>
           <button class="tab-btn" id="kadamRefTab" onclick="switchTab(this, 'tRef')" hidden>
             vendor ref
           </button>
@@ -1825,6 +1832,11 @@
           <div class="empty-hint">
             Декодированные IAB-категории из cat[] / bcat[] / pcat[] — появятся когда коды есть в
             payload
+          </div>
+        </div>
+        <div class="tab-content" id="tBehavior">
+          <div class="empty-hint">
+            Отрендерь креатив справа — здесь появятся попытки click-skim и авто-навигации.
           </div>
         </div>
         <div class="tab-content" id="tRef">
@@ -1890,9 +1902,9 @@
 
     <div id="modalRoot"></div>
     <script src="/spyglass-crypto.js?v=1"></script>
-    <script src="/i18n.js?v=11"></script>
+    <script src="/i18n.js?v=12"></script>
     <script src="/lang-switch.js?v=1"></script>
-    <script src="/spyglass.app.js?v=28"></script>
+    <script src="/spyglass.app.js?v=29"></script>
     <script src="/shortcuts.js?v=1"></script>
     <script src="/export.js?v=1"></script>
     <script src="/share.js?v=1"></script>

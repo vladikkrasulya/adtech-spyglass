@@ -309,9 +309,45 @@
     return types.length ? types : ['unknown'];
   }
 
+  // Lazy-loaded source of /creative-probe.js — fetched once and inlined
+  // into the iframe srcdoc so the probe runs BEFORE creative scripts.
+  // Inlining avoids cross-origin nuance with sandbox `srcdoc` + opaque
+  // origin loading external `<script src>`. Prefetch fires on DOMReady.
+  let _probeSource = null;
+  let _probeSourcePromise = null;
+  function loadProbeSource() {
+    if (_probeSourcePromise) return _probeSourcePromise;
+    _probeSourcePromise = fetch('/creative-probe.js')
+      .then((r) => (r.ok ? r.text() : ''))
+      .then((src) => {
+        _probeSource = src;
+        return src;
+      })
+      .catch(() => {
+        _probeSource = '';
+        return '';
+      });
+    return _probeSourcePromise;
+  }
+
+  function buildProbedSrcdoc(creativeHtml) {
+    if (!_probeSource) return creativeHtml; // graceful: probe not loaded yet
+    // Wrap in a <script> at the very top so listeners are hooked before
+    // creative HTML parses any inline handlers.
+    return '<script>' + _probeSource + '</' + 'script>' + creativeHtml;
+  }
+
+  function resetBehavior() {
+    window.__spyglassBehavior = { events: [], startedAt: Date.now() };
+    renderBehaviorTab();
+  }
+
   function setAdPreview(adm, simPrice, dims) {
     const el = $('creativePreview');
     el.innerHTML = '';
+    // New creative → fresh behaviour log. Old findings would otherwise leak
+    // across previews and produce confusing per-tab counts.
+    resetBehavior();
     if (!adm) {
       el.innerHTML = '<div class="preview-placeholder">у відповіді немає adm/nurl</div>';
       return;
@@ -362,7 +398,7 @@
     // Otherwise fall back to legacy 100%-of-container behaviour.
     const iframe = document.createElement('iframe');
     iframe.setAttribute('sandbox', 'allow-scripts');
-    iframe.srcdoc = resolved;
+    iframe.srcdoc = buildProbedSrcdoc(resolved);
     if (dims && dims.w > 0 && dims.h > 0) {
       // Skip .preview-iframe class — its `width: 100%` rule is winning the
       // cascade in this flex container even against inline declarations
@@ -391,6 +427,81 @@
       el.appendChild(iframe);
     }
   }
+
+  // ── Creative-probe receiver ──────────────────────────────────
+  // The probe (creative-probe.js) runs INSIDE the sandboxed iframe and
+  // posts every navigation attempt + click event lineage back here.
+  // Findings show up in the Behavior tab; counts feed the tab badge.
+  function humanizeBehaviorKind(kind) {
+    const map = {
+      click_skim_suspect: t('behavior.kind.click_skim_suspect'),
+      auto_navigate: t('behavior.kind.auto_navigate'),
+      window_open: t('behavior.kind.window_open'),
+      navigation: t('behavior.kind.navigation'),
+      location_set: t('behavior.kind.location_set'),
+      programmatic_click: t('behavior.kind.programmatic_click'),
+    };
+    return map[kind] || kind;
+  }
+
+  function severityForKind(kind) {
+    if (kind === 'click_skim_suspect') return 'danger';
+    if (kind === 'auto_navigate') return 'warning';
+    return 'info';
+  }
+
+  function renderBehaviorTab() {
+    const tab = $('tBehavior');
+    const badge = $('behaviorBadge');
+    if (!tab || !badge) return;
+    const all = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
+    // probe_ready is an internal signal, not user-visible.
+    const events = all.filter((e) => e.kind !== 'probe_ready');
+    badge.textContent = events.length;
+    if (!events.length) {
+      tab.innerHTML = '<div class="empty-hint">' + escapeHtml(t('behavior.empty')) + '</div>';
+      return;
+    }
+    tab.innerHTML = events
+      .map((ev) => {
+        const sev = severityForKind(ev.kind);
+        const cls = sev === 'danger' ? 'danger' : sev === 'warning' ? 'warning' : 'info';
+        const ic = sev === 'danger' ? '✕' : sev === 'warning' ? '!' : 'i';
+        const url = ev.url ? String(ev.url) : '';
+        const urlSnip = url.length > 90 ? escapeHtml(url.slice(0, 90)) + '…' : escapeHtml(url);
+        return (
+          '<div class="validation-item ' +
+          cls +
+          '">' +
+          '<span class="validation-icon">' +
+          ic +
+          '</span>' +
+          '<span>' +
+          '<strong>' +
+          escapeHtml(humanizeBehaviorKind(ev.kind)) +
+          '</strong>' +
+          ' <span style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px">' +
+          escapeHtml(ev.method || '') +
+          '</span>' +
+          (url
+            ? ' → <span style="font-family:var(--font-mono);font-size:11px;color:var(--text)">' +
+              urlSnip +
+              '</span>'
+            : '') +
+          (ev.trigger
+            ? ' <span style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px">[' +
+              t('behavior.label.trigger') +
+              ': ' +
+              escapeHtml(ev.trigger) +
+              ']</span>'
+            : '') +
+          '</span>' +
+          '</div>'
+        );
+      })
+      .join('');
+  }
+  window.renderBehaviorTab = renderBehaviorTab;
 
   // Render a Native 1.1 response as a card mockup so the user sees what the
   // creative will look like, not raw JSON.
@@ -2583,6 +2694,24 @@
       if (e.key === 'Escape' && $('modalRoot').children.length) {
         closeModal();
       }
+    });
+
+    // Prefetch the creative-probe source so it's ready when the first
+    // adm renders. Fire-and-forget — setAdPreview gracefully renders
+    // without the probe if the fetch hasn't resolved yet.
+    loadProbeSource();
+
+    // Receive postMessage events from the in-iframe creative probe.
+    // Origin will be 'null' for sandboxed iframes (opaque origin) — we
+    // identify our messages by the type tag instead.
+    window.addEventListener('message', (e) => {
+      const d = e.data;
+      if (!d || d.type !== 'spyglass-probe') return;
+      if (!window.__spyglassBehavior) {
+        window.__spyglassBehavior = { events: [], startedAt: Date.now() };
+      }
+      window.__spyglassBehavior.events.push(d);
+      renderBehaviorTab();
     });
 
     // Render any history that was persisted from a prior session.
