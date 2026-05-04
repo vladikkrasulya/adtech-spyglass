@@ -144,6 +144,59 @@
         }
       }
 
+      /* ── Large-display responsive (added 2026-05-04) ──────────────────
+         The original tokens (--fs-* in design-system.css) are tuned for
+         laptop/desktop viewports up to ~1600px. On WQHD / UWQHD / 4K the
+         site looked tiny + content sprawled across the entire viewport.
+
+         Strategy:
+           1. Override font-size tokens with clamp() at ≥1600px so type
+              scales fluidly with viewport width up to a sensible cap.
+           2. Cap workbench at max-width 2200px and centre it — prevents
+              JSON paste areas from becoming a kilometre wide on UWQHD.
+           3. Bump padding tokens at ≥2000px so the chrome doesn't look
+              cramped against the absolute edges of the centred workbench.
+      */
+      @media (min-width: 1600px) {
+        :root {
+          --fs-mono: clamp(11px, 0.55vw, 14px);
+          --fs-sm:   clamp(13px, 0.65vw, 17px);
+          --fs-base: clamp(15px, 0.75vw, 20px);
+          --fs-md:   clamp(17px, 0.85vw, 22px);
+          --fs-lg:   clamp(20px, 1vw, 26px);
+        }
+      }
+      @media (min-width: 2000px) {
+        .workbench {
+          max-width: 2200px;
+          margin: 0 auto;
+          /* The body still fills the whole viewport — anything outside
+             the centred workbench shows the body background colour. */
+        }
+        .app-header,
+        .input-section,
+        .footer-bar {
+          padding-left: var(--space-6);
+          padding-right: var(--space-6);
+        }
+      }
+      @media (min-width: 2800px) {
+        /* True 4K / 5K2K / Dual-QHD: workbench is centred at 2200px so the
+           clamp() math (which uses vw of the *whole* viewport) hits its cap
+           and stops growing. Apply a viewport-relative font-size on the html
+           root that nudges the rem baseline up a little. */
+        :root {
+          --fs-mono: clamp(13px, 0.5vw, 17px);
+          --fs-sm:   clamp(15px, 0.55vw, 19px);
+          --fs-base: clamp(17px, 0.65vw, 22px);
+          --fs-md:   clamp(19px, 0.7vw, 25px);
+          --fs-lg:   clamp(22px, 0.85vw, 30px);
+        }
+        .stat-value, .winning-bid-amount, .stat-num {
+          font-size: clamp(22px, 1vw, 36px);
+        }
+      }
+
       /* ── Header ── */
       .app-header {
         background: var(--surface);
