@@ -334,8 +334,14 @@
     },
   };
 
+  // Locale source of truth: <html lang="…"> (set server-side per /uk/ or
+  // /en/ route by the inline IIFE in each HTML file). localStorage is only
+  // read as a fallback for surfaces that haven't set the attribute yet.
   function activeLocale() {
     try {
+      var fromHtml = document.documentElement.getAttribute('lang') ||
+                     document.documentElement.getAttribute('data-lang');
+      if (fromHtml === 'en' || fromHtml === 'uk') return fromHtml;
       var v = localStorage.getItem('kt-lang');
       return v === 'en' ? 'en' : 'uk';
     } catch (e) {

@@ -6,13 +6,17 @@
   <title>Spyglass — як ним користуватись · документація</title>
   <meta name="description" content="Документація Spyglass: що вміє OpenRTB-інспектор (oRTB 2.5/2.6/3.0, native, VAST), чого не робить, які дані використовує локально, що зберігає на сервері (zero-knowledge шифрування), і як читати результат validation/crosscheck.">
   <meta name="robots" content="index,follow">
-  <link rel="canonical" href="https://spyglass.kyivtech.com.ua/about.html">
+  <link rel="canonical" href="https://spyglass.kyivtech.com.ua/uk/about">
+  <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about">
+  <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/en/about">
+  <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/en/about">
 
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Kyiv Tech">
   <meta property="og:title" content="Spyglass — як ним користуватись">
   <meta property="og:description" content="Документація OpenRTB-інспектора: що вміє, чого не робить, які дані використовує, що зберігає.">
-  <meta property="og:url" content="https://spyglass.kyivtech.com.ua/about.html">
+  <meta property="og:url" content="https://spyglass.kyivtech.com.ua/uk/about">
+  <meta property="og:locale:alternate" content="en_US">
   <meta property="og:locale" content="uk_UA">
 
   <meta name="twitter:card" content="summary">
@@ -25,7 +29,7 @@
       "@type": "TechArticle",
       "headline": "Spyglass — як ним користуватись",
       "description": "Документація OpenRTB-інспектора Spyglass.",
-      "url": "https://spyglass.kyivtech.com.ua/about.html",
+      "url": "https://spyglass.kyivtech.com.ua/uk/about",
       "inLanguage": "uk",
       "isPartOf": {
         "@type": "WebApplication",
@@ -68,12 +72,13 @@
 
     .pill-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-4); }
   </style>
+  <script>(function(){try{var LANG='uk';var OTHER='en';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}function inject(){if(document.querySelector('.kt-lang-toggle'))return;var b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';b.setAttribute('aria-label','Switch language');b.textContent=LANG.toUpperCase();b.title='мова: українська · клік → English';b.addEventListener('click',function(){location.href='/'+OTHER+'/about'+location.search;});document.body.appendChild(b);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
 </head>
 <body>
 
 <header class="kt-topnav">
   <div class="kt-container kt-topnav-inner">
-    <a href="/" class="kt-brand">
+    <a href="/uk/" class="kt-brand">
       <span class="kt-brand-spark">K</span>
       <span>spyglass · docs</span>
     </a>
@@ -84,7 +89,7 @@
       <a href="#privacy">Приватність</a>
       <a href="#example">Приклад</a>
     </nav>
-    <a href="/" class="btn btn-ghost btn-sm">← Spyglass</a>
+    <a href="/uk/" class="btn btn-ghost btn-sm">← Spyglass</a>
   </div>
 </header>
 
@@ -320,7 +325,7 @@ findings[]: { id, level, path, params, msg, specRef }
 
       <p style="margin-top: var(--space-8); padding-top: var(--space-5); border-top: 1px solid var(--border); color: var(--text-dim); font-size: var(--fs-sm);">
         v8.0.0 · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast 4.x ·
-        <a href="/" style="color: var(--text-dim);">↗ Spyglass</a> ·
+        <a href="/uk/" style="color: var(--text-dim);">↗ Spyglass</a> ·
         <a href="https://kyivtech.com.ua/" style="color: var(--text-dim);">kyivtech.com.ua</a>
       </p>
 
