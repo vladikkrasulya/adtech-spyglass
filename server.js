@@ -34,6 +34,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { Users, Partners, Samples, db } = require('./db');
 const { createAuth } = require('./auth');
 const { signToken, verifyToken, TokenError } = require('./tokens');
@@ -140,6 +141,43 @@ function resolveLocaleRoute(reqUrl) {
   return null;
 }
 
+// ── Asset cache-bust: content-hash injection ──────────────────────────────
+// Replaces manual `?v=N` bumps in HTML with `?v=<sha1[0..7]>` of the
+// referenced file's contents. Hash is mtime-cached so each HTML render is
+// near-zero cost; the cache invalidates when a file is touched.
+//
+// Why bother: Cloudflare aggressively caches static `*.js`/`*.css` and our
+// `Cache-Control: no-cache` from the origin doesn't always override CDN
+// rules. A content-hash in the URL is the only bulletproof invalidation.
+const _hashCache = new Map(); // absPath → { hash, mtimeMs }
+
+function fileHash(filepath) {
+  try {
+    const st = fs.statSync(filepath);
+    const cached = _hashCache.get(filepath);
+    if (cached && cached.mtimeMs === st.mtimeMs) return cached.hash;
+    const buf = fs.readFileSync(filepath);
+    const hash = crypto.createHash('sha1').update(buf).digest('hex').slice(0, 8);
+    _hashCache.set(filepath, { hash, mtimeMs: st.mtimeMs });
+    return hash;
+  } catch {
+    return null;
+  }
+}
+
+function rewriteAssetVersions(html) {
+  // Match `<script src="/foo.js">` and `<link href="/bar.css">` (with or
+  // without an existing `?v=…`). Skips external URLs (`https://…`) because
+  // the regex requires the path to start with `/`.
+  const re = /(<(?:script|link)[^>]*?(?:src|href)=")(\/[^"?]+\.(?:js|css))(?:\?v=[^"]+)?"/g;
+  return html.replace(re, (match, prefix, asset) => {
+    const filepath = path.join(PUBLIC_DIR, asset);
+    const hash = fileHash(filepath);
+    if (!hash) return match; // file missing — leave the original tag alone
+    return `${prefix}${asset}?v=${hash}"`;
+  });
+}
+
 function serveStaticFile(req, res) {
   const reqPath = req.url.split('?')[0];
 
@@ -169,8 +207,12 @@ function serveStaticFile(req, res) {
       return;
     }
     const ct = CONTENT_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+    let body = content;
+    if (ct === 'text/html') {
+      body = Buffer.from(rewriteAssetVersions(content.toString('utf8')), 'utf8');
+    }
     res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'no-cache' });
-    res.end(content);
+    res.end(body);
   });
 }
 
