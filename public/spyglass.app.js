@@ -107,7 +107,9 @@
     }
   }
   function analyzeUrl() {
-    return 'api/analyze?locale=' + encodeURIComponent(activeLocale());
+    // Absolute path — relative would resolve against pathname (e.g. /uk/),
+    // breaking API access from non-root locales.
+    return '/api/analyze?locale=' + encodeURIComponent(activeLocale());
   }
 
   // When the toggle changes, re-run analysis if there's a request to
@@ -1324,7 +1326,10 @@
       credentials: 'same-origin',
     };
     if (body !== undefined) init.body = JSON.stringify(body);
-    const r = await fetch(url, init);
+    // Force absolute path so callers passing 'api/...' work from non-root
+    // locale URLs (e.g. /uk/, /ru/) — relative would resolve to /uk/api/…
+    const absUrl = /^https?:|^\//.test(url) ? url : '/' + url;
+    const r = await fetch(absUrl, init);
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.success === false) {
       const err = new Error(j.error || 'http ' + r.status);
