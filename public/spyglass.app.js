@@ -309,7 +309,7 @@
     return types.length ? types : ['unknown'];
   }
 
-  function setAdPreview(adm, simPrice) {
+  function setAdPreview(adm, simPrice, dims) {
     const el = $('creativePreview');
     el.innerHTML = '';
     if (!adm) {
@@ -357,11 +357,35 @@
     }
 
     // 3) Banner HTML → iframe sandbox.
+    // If we know native banner dimensions, render the iframe at native size
+    // and scale-to-fit the (narrow) preview container, preserving aspect.
+    // Otherwise fall back to legacy 100%-of-container behaviour.
     const iframe = document.createElement('iframe');
-    iframe.className = 'preview-iframe';
     iframe.setAttribute('sandbox', 'allow-scripts');
     iframe.srcdoc = resolved;
-    el.appendChild(iframe);
+    if (dims && dims.w > 0 && dims.h > 0) {
+      // Skip .preview-iframe class — its `width: 100%` rule is winning the
+      // cascade in this flex container even against inline declarations
+      // (cause unclear, possibly UA-specific). Pure inline keeps things
+      // predictable for the scale-to-fit math below.
+      iframe.style.cssText =
+        'border:none;background:#fff;flex:none;transform-origin:center center;' +
+        'width:' + dims.w + 'px;height:' + dims.h + 'px;';
+      el.appendChild(iframe);
+      // Compute scale after layout so we read the *current* container size.
+      requestAnimationFrame(() => {
+        const cw = el.clientWidth;
+        const ch = el.clientHeight;
+        // Width-based scale always applies; height factor only when measurable
+        // (some flex layouts can briefly report 0 on first paint).
+        const scaleW = cw > 0 ? cw / dims.w : 1;
+        const scaleH = ch > 0 ? ch / dims.h : 1;
+        const scale = Math.min(1, scaleW, scaleH);
+        iframe.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
+      });
+    } else {
+      el.appendChild(iframe);
+    }
   }
 
   // Render a Native 1.1 response as a card mockup so the user sees what the
@@ -631,7 +655,21 @@
           ? '$' + Number(bid.price).toFixed(2)
           : 'BID'
         : '$0.00';
-      setAdPreview(adm, simP);
+      // Banner dimensions: prefer bid.{w,h} (winning creative size), fall back
+      // to req.imp[0].banner.{w,h}, then to format[0] when banner has multi-size.
+      // Used by setAdPreview to render at native size and scale-to-fit the
+      // narrow right-sidebar preview container.
+      let previewDims = null;
+      if (bid && bid.w && bid.h) {
+        previewDims = { w: Number(bid.w), h: Number(bid.h) };
+      } else if (req.imp && req.imp[0] && req.imp[0].banner) {
+        const b = req.imp[0].banner;
+        if (b.w && b.h) previewDims = { w: Number(b.w), h: Number(b.h) };
+        else if (Array.isArray(b.format) && b.format[0] && b.format[0].w && b.format[0].h) {
+          previewDims = { w: Number(b.format[0].w), h: Number(b.format[0].h) };
+        }
+      }
+      setAdPreview(adm, simP, previewDims);
 
       // Inspector tab — slot cards
       const imps = req.imp || [];
