@@ -158,6 +158,17 @@
         } catch (e) {}
       })();
     </script>
+    <!-- Embed-mode flag: when ?embed=1 is in the URL, strip chrome via
+         CSS gated on [data-embed='1']. Set BEFORE first paint to avoid FOUC. -->
+    <script>
+      (function () {
+        try {
+          if (new URLSearchParams(location.search).has('embed')) {
+            document.documentElement.setAttribute('data-embed', '1');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <style>
       /* ============================================================
    Spyglass v8 — re-skinned on kyivtech-portal design-system.
@@ -952,6 +963,45 @@
         background: var(--bg-2);
       }
       .format-bar[hidden] {
+        display: none;
+      }
+
+      /* ── Embed mode (when ?embed=1) ── */
+      [data-embed='1'] .app-header,
+      [data-embed='1'] .app-footer,
+      [data-embed='1'] .input-section,
+      [data-embed='1'] .sidebar-left,
+      [data-embed='1'] #verifyBanner,
+      [data-embed='1'] .toast-container,
+      [data-embed='1'] .kt-theme-toggle,
+      [data-embed='1'] .format-bar-actions {
+        display: none !important;
+      }
+      [data-embed='1'] .main-grid {
+        grid-template-columns: 1fr 320px;
+        height: 100vh;
+      }
+      [data-embed='1'] body.workbench {
+        display: block;
+      }
+      [data-embed='1'] .embed-footer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        padding: 6px 12px;
+        font-size: 11px;
+        font-family: var(--font-mono);
+        color: var(--text-dim);
+        border-top: 1px solid var(--border);
+        background: var(--bg-2);
+      }
+      [data-embed='1'] .embed-footer a {
+        color: var(--text);
+        text-decoration: none;
+        border-bottom: 1px dotted var(--text-dim);
+      }
+      .embed-footer {
         display: none;
       }
       .format-pill {
@@ -1777,6 +1827,14 @@
           <div class="format-bar-actions">
             <button
               class="btn btn-ghost btn-sm"
+              id="embedBtn"
+              onclick="openEmbedModal()"
+              title="Отримати iframe-сніпет щоб вставити цей вид у блог, Notion або документ"
+            >
+              embed
+            </button>
+            <button
+              class="btn btn-ghost btn-sm"
               id="shareLinkBtn"
               onclick="copyShareLink()"
               title="Скопіювати permalink — payload закодовано у URL-фрагменті, на сервер ніколи не потрапляє"
@@ -1876,6 +1934,12 @@
       </aside>
     </main>
 
+    <!-- Embed-mode footer — only shown when ?embed=1 strips the regular footer. -->
+    <div class="embed-footer">
+      <span>powered by</span>
+      <a href="/uk/" target="_blank" rel="noopener">spyglass · openrtb inspector ↗</a>
+    </div>
+
     <!-- ── Footer ── -->
     <footer class="app-footer">
       <div style="display: flex; align-items: center; gap: var(--space-3)">
@@ -1906,11 +1970,12 @@
 
     <div id="modalRoot"></div>
     <script src="/spyglass-crypto.js?v=1"></script>
-    <script src="/i18n.js?v=12"></script>
+    <script src="/i18n.js?v=13"></script>
     <script src="/lang-switch.js?v=1"></script>
     <script src="/spyglass.app.js?v=29"></script>
     <script src="/shortcuts.js?v=1"></script>
     <script src="/export.js?v=1"></script>
-    <script src="/share.js?v=1"></script>
+    <script src="/share.js?v=2"></script>
+    <script src="/embed.js?v=1"></script>
   </body>
 </html>

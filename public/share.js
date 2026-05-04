@@ -177,4 +177,8 @@
   }
 
   window.copyShareLink = copyShareLink;
+  // Exposed so embed.js can build URLs without duplicating the
+  // compress + base64url pipeline.
+  window.buildShareUrl = buildShareUrl;
+  window.spyglassShareSupported = hasCompressionStream;
 })();

@@ -59,6 +59,15 @@
         'Браузер не підтримує стиснення для share-посилань — використай "завантажити".',
       'toast.share_link_manual_copy': 'Скопіюй це посилання вручну (буфер обміну заблоковано):',
 
+      // ── embed modal ───────────────────────────────────────
+      'embed.title': 'Вбудувати в інший сайт',
+      'embed.body':
+        'Вставиш цей сніпет у блог, Notion або документ — і він покаже інтерактивний Spyglass з поточним bid. Payload зашитий у hash-фрагмент URL — на сервер не йде.',
+      'embed.label.height': 'Висота (px)',
+      'embed.label.snippet': 'iframe-сніпет',
+      'embed.btn.copy': 'скопіювати',
+      'embed.toast.copied': 'iframe-сніпет скопійовано',
+
       // ── confirm() dialogs ─────────────────────────────────
       'confirm.recovery_save':
         'Ти точно зберіг recovery key? Без нього неможливо відновити дані якщо забудеш пароль.',
@@ -262,6 +271,15 @@
         'Browser doesn\'t support share-link compression — use "download".',
       'toast.share_link_manual_copy': 'Copy this link manually (clipboard blocked):',
 
+      // ── embed modal ───────────────────────────────────────
+      'embed.title': 'Embed in another site',
+      'embed.body':
+        'Paste this snippet into a blog, Notion or doc — it will render an interactive Spyglass view with the current bid. The payload is in the URL hash fragment — never reaches the server.',
+      'embed.label.height': 'Height (px)',
+      'embed.label.snippet': 'iframe snippet',
+      'embed.btn.copy': 'copy',
+      'embed.toast.copied': 'iframe snippet copied',
+
       // ── confirm() dialogs ─────────────────────────────────
       'confirm.recovery_save':
         'Did you really save your recovery key? You can’t recover data without it if you forget your password.',
@@ -464,6 +482,13 @@
       'toast.share_unsupported':
         'Браузер не поддерживает сжатие для share-ссылок — используй "скачать".',
       'toast.share_link_manual_copy': 'Скопируй ссылку вручную (буфер обмена заблокирован):',
+      'embed.title': 'Встроить в другой сайт',
+      'embed.body':
+        'Вставь этот сниппет в блог, Notion или документ — и он покажет интерактивный Spyglass с текущим bid. Payload зашит в hash-фрагменте URL — на сервер не идёт.',
+      'embed.label.height': 'Высота (px)',
+      'embed.label.snippet': 'iframe-сниппет',
+      'embed.btn.copy': 'скопировать',
+      'embed.toast.copied': 'iframe-сниппет скопирован',
       'confirm.recovery_save':
         'Ты точно сохранил recovery key? Без него невозможно восстановить данные если забудешь пароль.',
       'confirm.delete_sample': 'Удалить этот запрос из библиотеки?',
