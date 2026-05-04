@@ -84,6 +84,17 @@ function validateRequest(req, ctx) {
   // bought without pretending it's spec-canonical.
   findings.push(...detectNonStandardFormats(req));
 
+  // ── AdKernel-routed traffic (any of 49 aliased networks) ─────────────────
+  const adkernel = detectAdKernelRouting(req);
+  if (adkernel) {
+    findings.push(
+      F('info.adkernel.routed', LEVELS.INFO, adkernel.signal, {
+        alias: adkernel.alias,
+        signal: adkernel.signal,
+      }),
+    );
+  }
+
   // ── Dialect overlay ──────────────────────────────────────────────────────
   if (dialect && typeof dialect.validateRequest === 'function') {
     findings.push(...dialect.validateRequest(req));
@@ -121,6 +132,71 @@ function normaliseFormatName(s) {
   return String(s || '')
     .toLowerCase()
     .replace(/[-_\s]/g, '');
+}
+
+// AdKernel runs as a white-label engine across 49+ alias networks (Waardex,
+// Monetix, Denakop, Türk Telekom, Display.io, …). All share the same wire
+// format (oRTB 2.5) and Prebid adapter — only the `host` and `zoneId` differ.
+// When we spot a Prebid-style `imp.ext.{alias}` block we surface a single
+// info-level finding per request so the inspector can flag "this is AdKernel
+// traffic — read the `zoneId` for tenant routing" without it being a true
+// dialect (the bytes themselves are vanilla oRTB).
+//
+// Source: docs/jsonfeed-research-adkernel-2026-05-04.md §6 (alias list from
+// Prebid.js adkernelBidAdapter.js v1.8).
+const ADKERNEL_ALIASES = new Set([
+  'adkernel',
+  'waardex_ak', 'turktelekom', 'monetix', 'denakop', 'ergadx', 'engageadx',
+  'converge', 'displayioads', 'appmonsta', 'spinx', 'pixelpluses',
+  'oppamedia', 'houseofpubs', 'urekamedia', 'smartyexchange', 'infinety',
+  'unibots', 'headbidding', 'adsolut', 'oftmediahb', 'audiencemedia',
+  'roqoon', 'adbite', 'torchad', 'stringads', 'bcm', 'adomega',
+  'rtbanalytica', 'motionspots', 'sonic_twist', 'rtbdemand_com', 'bidbuddy',
+  'didnadisplay', 'qortex', 'adpluto', 'headbidder', 'digiad', 'hyperbrainz',
+  'voisetech', 'global_sun', 'rxnetwork', 'revbid', 'qohere', 'blutonic',
+  'intlscoop',
+]);
+
+function detectAdKernelRouting(req) {
+  const imps = Array.isArray(req && req.imp) ? req.imp : [];
+
+  // Helper: any AdKernel-shaped block has zoneId (always) and usually host.
+  function looksLikeAdKernelParams(o) {
+    return isObj(o) && o.zoneId != null;
+  }
+
+  for (let i = 0; i < imps.length; i++) {
+    const ext = imps[i] && imps[i].ext;
+    if (!isObj(ext)) continue;
+
+    // 1. Direct adapter key: imp.ext.adkernel = { zoneId, host } — what the
+    //    AdKernel server adapter writes after routing.
+    for (const k of Object.keys(ext)) {
+      const lk = k.toLowerCase();
+      if (ADKERNEL_ALIASES.has(lk) && looksLikeAdKernelParams(ext[k])) {
+        return { alias: k, signal: 'imp.ext.' + k };
+      }
+    }
+
+    // 2. Prebid-server style: imp.ext.bidder.<alias>
+    if (isObj(ext.bidder)) {
+      for (const k of Object.keys(ext.bidder)) {
+        if (ADKERNEL_ALIASES.has(k.toLowerCase())) {
+          return { alias: k, signal: 'imp.ext.bidder.' + k };
+        }
+      }
+    }
+
+    // 3. Prebid.js ext.prebid.bidder.<alias>
+    if (isObj(ext.prebid) && isObj(ext.prebid.bidder)) {
+      for (const k of Object.keys(ext.prebid.bidder)) {
+        if (ADKERNEL_ALIASES.has(k.toLowerCase())) {
+          return { alias: k, signal: 'imp.ext.prebid.bidder.' + k };
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function detectNonStandardFormats(req) {

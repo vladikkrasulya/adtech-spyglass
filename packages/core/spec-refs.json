@@ -73,6 +73,7 @@
   "crosscheck.bid.video_not_vast": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "crosscheck.auction.summary": "",
   "imp.non_standard_format": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
+  "info.adkernel.routed": "https://docs.prebid.org/dev-docs/bidders/adkernel.html",
 
   "feed.exoclick.id_required": "https://docs.exoclick.com/docs/rtb-direct",
   "feed.exoclick.value_required": "https://docs.exoclick.com/docs/rtb-direct",

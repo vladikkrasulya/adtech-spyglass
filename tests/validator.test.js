@@ -519,6 +519,48 @@ test('non-standard format: legitimate ext.adtype="banner" is NOT flagged', () =>
   assert.equal(findById(findings, 'imp.non_standard_format'), undefined);
 });
 
+// ── AdKernel-routed traffic detection ────────────────────────────────────
+
+test('adkernel: imp.ext.adkernel = { zoneId } emits info-level finding', () => {
+  const req = validRequest();
+  req.imp[0].ext = { adkernel: { zoneId: 12345, host: 'pbs.adksrv.com' } };
+  const { findings } = validate(req);
+  const f = findById(findings, 'info.adkernel.routed');
+  assert.ok(f, 'expected info.adkernel.routed finding');
+  assert.equal(f.level, 'info');
+  assert.equal(f.params.alias, 'adkernel');
+});
+
+test('adkernel: aliased network (waardex_ak) is detected', () => {
+  const req = validRequest();
+  req.imp[0].ext = { waardex_ak: { zoneId: 999, host: 'rtb.waardex.com' } };
+  const { findings } = validate(req);
+  const f = findById(findings, 'info.adkernel.routed');
+  assert.ok(f);
+  assert.equal(f.params.alias, 'waardex_ak');
+});
+
+test('adkernel: Prebid-server style imp.ext.bidder.adkernel detected', () => {
+  const req = validRequest();
+  req.imp[0].ext = { bidder: { adkernel: { zoneId: 1, host: 'h' } } };
+  const { findings } = validate(req);
+  assert.ok(findById(findings, 'info.adkernel.routed'));
+});
+
+test('adkernel: no adapter signature → no finding', () => {
+  const req = validRequest();
+  req.imp[0].ext = { adtype: 'banner' }; // unrelated ext
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'info.adkernel.routed'), undefined);
+});
+
+test('adkernel: alias key without zoneId is NOT flagged (avoids false positives)', () => {
+  const req = validRequest();
+  req.imp[0].ext = { adkernel: { something_else: 1 } };
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'info.adkernel.routed'), undefined);
+});
+
 // ── IAB Content Taxonomy decoder ─────────────────────────────────────────
 
 const {

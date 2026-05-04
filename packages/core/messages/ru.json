@@ -88,5 +88,6 @@
   "crosscheck.bid.video_vast": "Сидбид #{sNum} → ставка #{bNum}: adm — валидный VAST XML для видео-слота.",
   "crosscheck.bid.video_not_vast": "Сидбид #{sNum} → ставка #{bNum}: слот видеоформата, но adm не похож на VAST XML. Плеер не сможет отрендерить этот креатив — в видео-ответе должен быть <VAST>...</VAST>.",
   "crosscheck.auction.summary": "Итог аукциона: {totalBids} ставок · {bidsAboveFloor} над флором · {impsFilled} из {impsTotal} слотов заполнено · наивысшая цена {topPrice}.",
-  "imp.non_standard_format": "Обнаружен non-IAB формат `{format}` по пути `{path}`. Это не канонический oRTB — vendor-specific (pop / clickunder / pushunder / push)."
+  "imp.non_standard_format": "Обнаружен non-IAB формат `{format}` по пути `{path}`. Это не канонический oRTB — vendor-specific (pop / clickunder / pushunder / push).",
+  "info.adkernel.routed": "Трафик маршрутизируется через AdKernel (alias `{alias}` по пути `{signal}`). AdKernel — white-label движок с 49+ сетями-aliasами (Waardex, Monetix, Denakop, Türk Telekom, Display.io и др.). Wire-формат — обычный oRTB 2.5; tenant определяется по `host` + `zoneId`."
 }

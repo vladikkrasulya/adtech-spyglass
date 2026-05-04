@@ -94,5 +94,6 @@
   "crosscheck.bid.video_not_vast": "Seatbid #{sNum} → bid #{bNum}: video slot, but adm doesn't look like VAST XML. Player may fail to play the creative.",
   "crosscheck.auction.summary": "Auction summary: {totalBids} bids · {bidsAboveFloor} clear floor · {impsFilled}/{impsTotal} slots filled.",
 
-  "imp.non_standard_format": "Detected non-IAB format `{format}` at path `{path}`. Not in canonical oRTB — vendor-specific (pop / clickunder / pushunder / push)."
+  "imp.non_standard_format": "Detected non-IAB format `{format}` at path `{path}`. Not in canonical oRTB — vendor-specific (pop / clickunder / pushunder / push).",
+  "info.adkernel.routed": "Traffic is routed through AdKernel (alias `{alias}` at `{signal}`). AdKernel is a white-label engine powering 49+ alias networks (Waardex, Monetix, Denakop, Türk Telekom, Display.io, …). Wire format is standard oRTB 2.5 — tenant is identified by `host` + `zoneId`."
 }
