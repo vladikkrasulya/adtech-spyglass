@@ -40,7 +40,7 @@
   "kadam.push_detected": "This is push traffic. To maximise win rate, fill subage / subage0 / subage_dt — these reflect subscription age and significantly narrow the audience targeting.",
   "kadam.bid.macro_unsupported": "Seatbid #{sNum} → bid #{bNum}: macro {{macro}} is not substituted by Kadam. Only AUCTION_PRICE, AUCTION_CURRENCY, AUCTION_LOSS are supported in nurl/burl/lurl/adm.",
 
-  "feed.shape_unknown": "Doesn't look like a push (array of materials) or clickunder (`{result: {listing: [...]}}`) shape. Check the response wrapper structure.",
+  "feed.shape_unknown": "Doesn't match any known JSON-feed shape — Kadam push array, `{result: {listing: [...]}}` clickunder wrapper, or a single-bid vendor object (ExoClick / RichAds / Zeropark). Check the response wrapper structure.",
   "feed.clickunder.url_required": "Click-listing #{num}: missing url. This is the click target — without a URL the clickunder has nothing to redirect to.",
   "feed.clickunder.bid_required": "Click-listing #{num}: bid must be a number (CPC). Without it the auction can't determine the winning price.",
   "feed.push.id_required": "Push material #{num}: missing id. Unique identifier of the material — used in subsequent click/win callbacks.",
@@ -67,7 +67,7 @@
   "feed.zeropark.redirecturl_required": "Zeropark: missing `redirecturl` — destination URL the user is sent to after the win.",
   "feed.zeropark.campaignid_invalid": "Zeropark: `campaignid` is set but isn't a string or number — Zeropark uses string IDs in newer feeds.",
 
-  "payload.unknown_type": "Couldn't determine payload type. Expected oRTB BidRequest (with imp[]), BidResponse (with seatbid[]), or a feed (push array / clickunder wrapper). Check the root structure.",
+  "payload.unknown_type": "Couldn't determine payload type. Expected oRTB BidRequest (with imp[]), BidResponse (with seatbid[]), or a JSON feed (Kadam push array, clickunder wrapper, or single-bid object). Check the root structure.",
   "payload.invalid_root": "Expected a JSON object or array. Other types (string, number) are not valid RTB payloads — paste the full request/response body.",
 
   "crosscheck.no_request": "No valid BidRequest to crosscheck against. Paste the request in the left field to compare it against the response.",

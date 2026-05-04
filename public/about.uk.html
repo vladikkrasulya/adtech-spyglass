@@ -121,6 +121,7 @@
       <a href="#data">Дані</a>
       <a href="#privacy">Приватність</a>
       <a href="#example">Приклад</a>
+      <a href="#sources">Джерела</a>
     </nav>
     <details class="kt-lang-menu">
       <summary class="kt-lang-toggle" title="мова: українська"><span class="kt-lang-current">UK</span><span class="kt-lang-caret">▾</span></summary>
@@ -350,6 +351,28 @@ findings[]: { id, level, path, params, msg, specRef }
           <tr><td>Locale</td><td>EN</td><td class="pending">Phase 3 (en.json — stub)</td></tr>
         </tbody>
       </table>
+
+      <hr>
+
+      <h2 id="sources">Джерела</h2>
+      <p>
+        Spyglass — приватний проєкт з відкритим кодом. Правила валідації
+        виведено з публічно доступної документації постачальників. Якщо хочеш
+        копнути глибше в конкретний формат — ось першоджерела:
+      </p>
+      <ul>
+        <li><strong>OpenRTB 2.5 / 2.6 / 3.0</strong> — <a href="https://github.com/InteractiveAdvertisingBureau/openrtb2.x" target="_blank" rel="noopener">github.com/InteractiveAdvertisingBureau/openrtb2.x</a> (IAB Tech Lab)</li>
+        <li><strong>IAB Content Taxonomy 1.0</strong> — <a href="https://github.com/InteractiveAdvertisingBureau/Content-Taxonomy" target="_blank" rel="noopener">github.com/InteractiveAdvertisingBureau/Content-Taxonomy</a></li>
+        <li><strong>Native 1.1 / 1.2</strong> — <a href="https://github.com/InteractiveAdvertisingBureau/openrtb" target="_blank" rel="noopener">github.com/InteractiveAdvertisingBureau/openrtb</a></li>
+        <li><strong>Kadam feed (push + клікандер)</strong> — <a href="https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP" target="_blank" rel="noopener">wiki.kadam.net — OpenRTB / Feed Integration SSP</a></li>
+        <li><strong>ExoClick proprietary RTB</strong> — <a href="https://docs.exoclick.com/docs/rtb-direct" target="_blank" rel="noopener">docs.exoclick.com — RTB Direct</a></li>
+        <li><strong>RichAds telegram-bid + per-format</strong> — <a href="https://docs.richads.com/" target="_blank" rel="noopener">docs.richads.com</a></li>
+        <li><strong>Zeropark redirect feed</strong> — <a href="https://help.zeropark.com/" target="_blank" rel="noopener">help.zeropark.com</a></li>
+        <li><strong>AdKernel (oRTB-based)</strong> — покривається стандартним OpenRTB-валідатором; форма інтеграції — <a href="https://github.com/prebid/prebid-server/tree/master/adapters/adkernel" target="_blank" rel="noopener">prebid-server/adapters/adkernel</a></li>
+      </ul>
+      <p>
+        Сирці: <a href="https://github.com/vladikkrasulya/adtech-spyglass" target="_blank" rel="noopener">github.com/vladikkrasulya/adtech-spyglass</a>
+      </p>
 
       <hr>
 
