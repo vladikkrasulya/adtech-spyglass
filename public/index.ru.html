@@ -35,7 +35,10 @@
     <meta property="og:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Spyglass — OpenRTB-инспектор. Вставь bid, увидишь правду." />
+    <meta
+      property="og:image:alt"
+      content="Spyglass — OpenRTB-инспектор. Вставь bid, увидишь правду."
+    />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -77,10 +80,85 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    />
     <link rel="stylesheet" href="/design-system.css?v=10" />
-    <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'theme: auto · click → light':(s==='light'?'theme: light · click → dark':'theme: dark · click → auto');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){var b=document.querySelector('.kt-theme-toggle');if(!b){b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Toggle theme');document.body.appendChild(b);}if(!b.dataset.themeBound){b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});b.dataset.themeBound='1';}apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
-    <script>(function(){try{var LANG='ru';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}}catch(e){}})();</script>
+    <script>
+      (function () {
+        try {
+          var K = 'kt-theme';
+          var mq = matchMedia('(prefers-color-scheme: dark)');
+          function get() {
+            try {
+              return localStorage.getItem(K);
+            } catch (e) {
+              return null;
+            }
+          }
+          function set(v) {
+            try {
+              v === null ? localStorage.removeItem(K) : localStorage.setItem(K, v);
+            } catch (e) {}
+          }
+          function eff() {
+            var s = get();
+            return s === 'light' || s === 'dark' ? s : mq.matches ? 'dark' : 'light';
+          }
+          function apply() {
+            document.documentElement.setAttribute('data-theme', eff());
+            var b = document.querySelector('.kt-theme-toggle');
+            if (b) {
+              var s = get();
+              b.textContent = s === null ? '◐' : s === 'dark' ? '☀' : '☾';
+              b.title =
+                s === null
+                  ? 'theme: auto · click → light'
+                  : s === 'light'
+                    ? 'theme: light · click → dark'
+                    : 'theme: dark · click → auto';
+            }
+          }
+          apply();
+          if (mq.addEventListener) mq.addEventListener('change', apply);
+          else if (mq.addListener) mq.addListener(apply);
+          function inject() {
+            var b = document.querySelector('.kt-theme-toggle');
+            if (!b) {
+              b = document.createElement('button');
+              b.className = 'kt-theme-toggle';
+              b.type = 'button';
+              b.setAttribute('aria-label', 'Toggle theme');
+              document.body.appendChild(b);
+            }
+            if (!b.dataset.themeBound) {
+              b.addEventListener('click', function () {
+                var s = get();
+                set(s === null ? 'light' : s === 'light' ? 'dark' : null);
+                apply();
+              });
+              b.dataset.themeBound = '1';
+            }
+            apply();
+          }
+          if (document.readyState === 'loading')
+            document.addEventListener('DOMContentLoaded', inject);
+          else inject();
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      (function () {
+        try {
+          var LANG = 'ru';
+          document.documentElement.setAttribute('data-lang', LANG);
+          try {
+            localStorage.setItem('kt-lang', LANG);
+          } catch (e) {}
+        } catch (e) {}
+      })();
+    </script>
     <style>
       /* ============================================================
    Spyglass v8 — re-skinned on kyivtech-portal design-system.
@@ -166,10 +244,10 @@
       @media (min-width: 1600px) {
         :root {
           --fs-mono: clamp(11px, 0.55vw, 14px);
-          --fs-sm:   clamp(13px, 0.65vw, 17px);
+          --fs-sm: clamp(13px, 0.65vw, 17px);
           --fs-base: clamp(15px, 0.75vw, 20px);
-          --fs-md:   clamp(17px, 0.85vw, 22px);
-          --fs-lg:   clamp(20px, 1vw, 26px);
+          --fs-md: clamp(17px, 0.85vw, 22px);
+          --fs-lg: clamp(20px, 1vw, 26px);
         }
       }
       @media (min-width: 2000px) {
@@ -193,12 +271,14 @@
            root that nudges the rem baseline up a little. */
         :root {
           --fs-mono: clamp(13px, 0.5vw, 17px);
-          --fs-sm:   clamp(15px, 0.55vw, 19px);
+          --fs-sm: clamp(15px, 0.55vw, 19px);
           --fs-base: clamp(17px, 0.65vw, 22px);
-          --fs-md:   clamp(19px, 0.7vw, 25px);
-          --fs-lg:   clamp(22px, 0.85vw, 30px);
+          --fs-md: clamp(19px, 0.7vw, 25px);
+          --fs-lg: clamp(22px, 0.85vw, 30px);
         }
-        .stat-value, .winning-bid-amount, .stat-num {
+        .stat-value,
+        .winning-bid-amount,
+        .stat-num {
           font-size: clamp(22px, 1vw, 36px);
         }
       }
@@ -246,35 +326,75 @@
       }
       /* 3-locale dropdown menu (replaces the single-button toggle).
          Native <details>/<summary> — no JS for open/close, links navigate. */
-      .kt-lang-menu { position: relative; display: inline-flex; }
-      .kt-lang-menu summary { list-style: none; cursor: pointer; user-select: none; }
-      .kt-lang-menu summary::-webkit-details-marker { display: none; }
-      .kt-lang-menu summary.kt-lang-toggle {
-        height: 32px; min-width: 56px; padding: 0 var(--space-3);
-        display: inline-flex; align-items: center; gap: 6px;
-        background: var(--surface); color: var(--text);
-        border: 1px solid var(--border); border-radius: var(--r-pill);
-        font-family: var(--font-mono); font-size: var(--fs-mono);
-        letter-spacing: 0.06em; text-transform: uppercase;
-        position: static; width: auto;
+      .kt-lang-menu {
+        position: relative;
+        display: inline-flex;
       }
-      .kt-lang-menu summary.kt-lang-toggle:hover { border-color: var(--text-dim); }
-      .kt-lang-menu .kt-lang-caret { font-size: 9px; opacity: 0.55; }
-      .kt-lang-menu[open] summary.kt-lang-toggle { border-color: var(--text-dim); }
+      .kt-lang-menu summary {
+        list-style: none;
+        cursor: pointer;
+        user-select: none;
+      }
+      .kt-lang-menu summary::-webkit-details-marker {
+        display: none;
+      }
+      .kt-lang-menu summary.kt-lang-toggle {
+        height: 32px;
+        min-width: 56px;
+        padding: 0 var(--space-3);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: var(--r-pill);
+        font-family: var(--font-mono);
+        font-size: var(--fs-mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        position: static;
+        width: auto;
+      }
+      .kt-lang-menu summary.kt-lang-toggle:hover {
+        border-color: var(--text-dim);
+      }
+      .kt-lang-menu .kt-lang-caret {
+        font-size: 9px;
+        opacity: 0.55;
+      }
+      .kt-lang-menu[open] summary.kt-lang-toggle {
+        border-color: var(--text-dim);
+      }
       .kt-lang-menu-list {
-        position: absolute; top: calc(100% + 4px); right: 0;
-        min-width: 200px; background: var(--surface);
-        border: 1px solid var(--border); border-radius: var(--r-md);
-        box-shadow: var(--shadow-md); padding: 4px 0; z-index: 100;
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        min-width: 200px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-md);
+        padding: 4px 0;
+        z-index: 100;
       }
       .kt-lang-menu-list a {
-        display: block; padding: 8px var(--space-4); color: var(--text);
-        text-decoration: none; font-family: var(--font-mono);
-        font-size: var(--fs-sm); letter-spacing: 0;
+        display: block;
+        padding: 8px var(--space-4);
+        color: var(--text);
+        text-decoration: none;
+        font-family: var(--font-mono);
+        font-size: var(--fs-sm);
+        letter-spacing: 0;
       }
-      .kt-lang-menu-list a:hover { background: var(--bg-2); color: var(--text); }
-      .kt-lang-menu-list a[aria-current="true"] {
-        background: var(--accent-soft); color: var(--text); font-weight: 600;
+      .kt-lang-menu-list a:hover {
+        background: var(--bg-2);
+        color: var(--text);
+      }
+      .kt-lang-menu-list a[aria-current='true'] {
+        background: var(--accent-soft);
+        color: var(--text);
+        font-weight: 600;
       }
 
       .auth-widget {
@@ -824,46 +944,76 @@
          version (if applicable) and active dialect. Hidden until first
          /api/analyze response lands. */
       .format-bar {
-        display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap;
+        display: flex;
+        gap: var(--space-2);
+        align-items: center;
+        flex-wrap: wrap;
         padding: var(--space-3) var(--space-5);
         border-bottom: 1px solid var(--border);
         background: var(--bg-2);
       }
       .format-pill {
-        display: inline-flex; align-items: center; padding: 3px 10px;
-        border-radius: var(--r-pill); font-family: var(--font-mono);
-        font-size: var(--fs-mono); letter-spacing: 0.06em;
-        text-transform: uppercase; font-weight: 600;
-        background: var(--surface); color: var(--text);
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: var(--r-pill);
+        font-family: var(--font-mono);
+        font-size: var(--fs-mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 600;
+        background: var(--surface);
+        color: var(--text);
         border: 1px solid var(--border);
         white-space: nowrap;
       }
-      .format-pill[hidden] { display: none; }
-      .format-pill-type[data-format="ortb"] {
-        background: var(--accent-soft); border-color: var(--accent); color: var(--text);
+      .format-pill[hidden] {
+        display: none;
       }
-      .format-pill-type[data-format="feed"] {
-        background: rgba(76,175,80,0.12); border-color: rgba(76,175,80,0.35); color: var(--success);
+      .format-pill-type[data-format='ortb'] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--text);
       }
-      .format-pill-status[data-status="errors"] {
-        background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.35); color: var(--danger);
+      .format-pill-type[data-format='feed'] {
+        background: rgba(76, 175, 80, 0.12);
+        border-color: rgba(76, 175, 80, 0.35);
+        color: var(--success);
       }
-      .format-pill-status[data-status="warnings"] {
-        background: rgba(255,193,7,0.18); border-color: rgba(255,193,7,0.45); color: #8a6900;
+      .format-pill-status[data-status='errors'] {
+        background: rgba(220, 38, 38, 0.12);
+        border-color: rgba(220, 38, 38, 0.35);
+        color: var(--danger);
       }
-      [data-theme="dark"] .format-pill-status[data-status="warnings"] { color: #ffc107; }
-      .format-pill-status[data-status="clean"] {
-        background: rgba(76,175,80,0.12); border-color: rgba(76,175,80,0.35); color: var(--success);
+      .format-pill-status[data-status='warnings'] {
+        background: rgba(255, 193, 7, 0.18);
+        border-color: rgba(255, 193, 7, 0.45);
+        color: #8a6900;
       }
-      .format-pill-status[data-status="invalid"] {
-        background: rgba(220,38,38,0.18); border-color: rgba(220,38,38,0.45); color: var(--danger);
+      [data-theme='dark'] .format-pill-status[data-status='warnings'] {
+        color: #ffc107;
       }
-      .format-pill-version, .format-pill-dialect {
-        font-size: 10px; opacity: 0.85;
-        background: var(--surface); color: var(--text-dim);
+      .format-pill-status[data-status='clean'] {
+        background: rgba(76, 175, 80, 0.12);
+        border-color: rgba(76, 175, 80, 0.35);
+        color: var(--success);
+      }
+      .format-pill-status[data-status='invalid'] {
+        background: rgba(220, 38, 38, 0.18);
+        border-color: rgba(220, 38, 38, 0.45);
+        color: var(--danger);
+      }
+      .format-pill-version,
+      .format-pill-dialect {
+        font-size: 10px;
+        opacity: 0.85;
+        background: var(--surface);
+        color: var(--text-dim);
       }
       .format-pill-dialect {
-        background: var(--accent-soft); color: var(--text); border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--text);
+        border-color: var(--accent);
       }
       .tab-bar {
         display: flex;
@@ -1419,7 +1569,7 @@
           rel="noopener"
           class="btn btn-ghost btn-sm"
           title="Как пользоваться · что Spyglass умеет и не умеет"
-          style="text-decoration: none;"
+          style="text-decoration: none"
         >
           docs ↗
         </a>
@@ -1438,7 +1588,9 @@
              detect these existing buttons and bind their handlers (rather
              than appending floating fixed-position fallbacks). -->
         <details class="kt-lang-menu">
-          <summary class="kt-lang-toggle" title="язык: Русский"><span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span></summary>
+          <summary class="kt-lang-toggle" title="язык: Русский">
+            <span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span>
+          </summary>
           <div class="kt-lang-menu-list" role="menu">
             <a href="/" role="menuitem" lang="en">EN · English</a>
             <a href="/uk/" role="menuitem" lang="uk">UK · Українська</a>
@@ -1484,9 +1636,15 @@
           <div class="input-card-actions">
             <span class="char-count" id="reqCount">0</span>
             <span class="json-badge empty" id="reqBadge">пусто</span>
-            <button onclick="clearInput('bidReq')" class="btn-icon" title="Очистить поле">очистить</button>
-            <button onclick="utils.format('bidReq')" class="btn-icon" title="Отформатировать JSON">формат</button>
-            <button onclick="utils.copy('bidReq')" class="btn-icon" title="Скопировать в буфер">копия</button>
+            <button onclick="clearInput('bidReq')" class="btn-icon" title="Очистить поле">
+              очистить
+            </button>
+            <button onclick="utils.format('bidReq')" class="btn-icon" title="Отформатировать JSON">
+              формат
+            </button>
+            <button onclick="utils.copy('bidReq')" class="btn-icon" title="Скопировать в буфер">
+              копия
+            </button>
           </div>
         </div>
         <textarea
@@ -1503,9 +1661,15 @@
           <div class="input-card-actions">
             <span class="char-count" id="resCount">0</span>
             <span class="json-badge empty" id="resBadge">пусто</span>
-            <button onclick="clearInput('bidRes')" class="btn-icon" title="Очистить поле">очистить</button>
-            <button onclick="utils.format('bidRes')" class="btn-icon" title="Отформатировать JSON">формат</button>
-            <button onclick="utils.copy('bidRes')" class="btn-icon" title="Скопировать в буфер">копия</button>
+            <button onclick="clearInput('bidRes')" class="btn-icon" title="Очистить поле">
+              очистить
+            </button>
+            <button onclick="utils.format('bidRes')" class="btn-icon" title="Отформатировать JSON">
+              формат
+            </button>
+            <button onclick="utils.copy('bidRes')" class="btn-icon" title="Скопировать в буфер">
+              копия
+            </button>
           </div>
         </div>
         <textarea
@@ -1543,7 +1707,12 @@
         </div>
         <div class="section-title">библиотека</div>
         <div class="saved-toolbar">
-          <select id="partnerFilter" class="saved-select" aria-label="Фильтр сохранённых запросов по партнёру" onchange="refreshSamples()">
+          <select
+            id="partnerFilter"
+            class="saved-select"
+            aria-label="Фильтр сохранённых запросов по партнёру"
+            onchange="refreshSamples()"
+          >
             <option value="">все партнёры</option>
             <option value="unassigned">— без партнёра —</option>
           </select>
@@ -1556,7 +1725,12 @@
         </div>
         <div
           class="section-title"
-          style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)"
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-2);
+          "
         >
           <span>history</span>
           <button
@@ -1564,7 +1738,7 @@
             onclick="clearHistory()"
             class="saved-act-btn"
             title="Очистить локальную историю"
-            style="font-size:11px"
+            style="font-size: 11px"
           >
             clear
           </button>
@@ -1604,7 +1778,9 @@
           <button class="tab-btn" onclick="switchTab(this, 'tCategories')">
             categories <span class="tab-badge" id="categoriesBadge">0</span>
           </button>
-          <button class="tab-btn" id="kadamRefTab" onclick="switchTab(this, 'tRef')" hidden>vendor ref</button>
+          <button class="tab-btn" id="kadamRefTab" onclick="switchTab(this, 'tRef')" hidden>
+            vendor ref
+          </button>
         </div>
         <div class="tab-content active" id="tInspector">
           <div class="slot-grid" id="slotGrid">
@@ -1618,12 +1794,14 @@
         </div>
         <div class="tab-content" id="tCross">
           <div class="empty-hint">
-            Сверка request↔response (id match · floor · bcat · native assets · format) — нужны обе стороны
+            Сверка request↔response (id match · floor · bcat · native assets · format) — нужны обе
+            стороны
           </div>
         </div>
         <div class="tab-content" id="tCategories">
           <div class="empty-hint">
-            Декодированные IAB-категории из cat[] / bcat[] / pcat[] — появятся когда коды есть в payload
+            Декодированные IAB-категории из cat[] / bcat[] / pcat[] — появятся когда коды есть в
+            payload
           </div>
         </div>
         <div class="tab-content" id="tRef">
@@ -1668,9 +1846,18 @@
           >engine <span id="engineVer" style="color: var(--text)">v8.0.0</span></span
         >
         <span style="color: var(--text-dim)">·</span>
-        <span style="color: var(--text-dim)" title="Поддерживаемые спецификации">openrtb 2.5/2.6/3.0 · native 1.x · vast 4.x · jsonfeed</span>
+        <span style="color: var(--text-dim)" title="Поддерживаемые спецификации"
+          >openrtb 2.5/2.6/3.0 · native 1.x · vast 4.x · jsonfeed</span
+        >
         <span style="color: var(--text-dim)">·</span>
-        <a href="https://github.com/vladikkrasulya/adtech-spyglass" target="_blank" rel="noopener" style="color: var(--text-dim); text-decoration: none" title="Исходники на GitHub">открытый код ↗</a>
+        <a
+          href="https://github.com/vladikkrasulya/adtech-spyglass"
+          target="_blank"
+          rel="noopener"
+          style="color: var(--text-dim); text-decoration: none"
+          title="Исходники на GitHub"
+          >открытый код ↗</a
+        >
       </div>
       <div style="display: flex; align-items: center; gap: 6px">
         <span class="status-dot online" id="statusDot"></span>

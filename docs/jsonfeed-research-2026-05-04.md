@@ -6,7 +6,7 @@ Dated 2026-05-04. Research-only; no code changes.
 
 Spec a "JsonFeed baseline validator" for Spyglass alongside the existing oRTB validator. World mostly speaks oRTB; CIS networks frequently speak proprietary GET-with-query-params or POST-JSON variants. Pattern target: IAB-baseline + per-vendor overlay (same as the existing `dialects/iab.js` + `dialects/kadam.js` split).
 
-This doc captures (a) what each vendor's *non-oRTB* surface actually looks like, (b) what fields are common across vendors, and (c) which vendors are worth overlaying first.
+This doc captures (a) what each vendor's _non-oRTB_ surface actually looks like, (b) what fields are common across vendors, and (c) which vendors are worth overlaying first.
 
 Method note: probe public dev docs only. Where a vendor's docs are gated, I fall back to public help-center articles, GitHub repos, or third-party tracker integration pages. "Gated" is called out per-vendor.
 
@@ -17,68 +17,74 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### Kadam (kadam.net)
 
 **Doc URLs**
+
 - Feed + oRTB SSP integration: https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP (public)
 - Management API (Bearer token, campaigns/materials/audiences/reports): https://wiki.kadam.net/en/index.php?title=API_setting (public)
 - RTB settings: https://wiki.kadam.net/en/index.php?title=RTB_setting
 
 **Envelope**
-- *Two parallel surfaces:* oRTB endpoint (already covered by `dialects/kadam.js`) **and** a separate proprietary `/feed` surface.
+
+- _Two parallel surfaces:_ oRTB endpoint (already covered by `dialects/kadam.js`) **and** a separate proprietary `/feed` surface.
 - Feed = HTTP GET with URL query params, response = JSON array (or XML).
 - Auth = `skey` query param.
 
 **Feed request fields (proprietary, GET)**
 
-| field | type | req | meaning |
-|---|---|---|---|
-| `sid` | string | yes | endpoint/stream id |
-| `skey` | string | yes | API key |
-| `ua` | string | yes | user agent |
-| `ip` | string | cond | IPv4, required if no `ipv6` |
-| `ipv6` | string | cond | IPv6, required if no `ip` |
-| `uid` | string | yes | user id in SSP system |
-| `pid` | string | yes | publisher id |
-| `format` | string | yes | `push` (default) / `native` / `teaser` / `cu` / `pops` |
-| `limit` | int | no | creatives, default 1 |
-| `language` | string | no | ISO 3166-1 alpha-2 |
-| `subage` / `subage_dt` / `subage_ts` | int/str | cond | push subscription age (mandatory for push) |
-| `cat` | string | no | IAB category, default IAB24 / IAB25-3 |
-| `page` | string | rec | page domain |
+| field                                | type    | req  | meaning                                                |
+| ------------------------------------ | ------- | ---- | ------------------------------------------------------ |
+| `sid`                                | string  | yes  | endpoint/stream id                                     |
+| `skey`                               | string  | yes  | API key                                                |
+| `ua`                                 | string  | yes  | user agent                                             |
+| `ip`                                 | string  | cond | IPv4, required if no `ipv6`                            |
+| `ipv6`                               | string  | cond | IPv6, required if no `ip`                              |
+| `uid`                                | string  | yes  | user id in SSP system                                  |
+| `pid`                                | string  | yes  | publisher id                                           |
+| `format`                             | string  | yes  | `push` (default) / `native` / `teaser` / `cu` / `pops` |
+| `limit`                              | int     | no   | creatives, default 1                                   |
+| `language`                           | string  | no   | ISO 3166-1 alpha-2                                     |
+| `subage` / `subage_dt` / `subage_ts` | int/str | cond | push subscription age (mandatory for push)             |
+| `cat`                                | string  | no   | IAB category, default IAB24 / IAB25-3                  |
+| `page`                               | string  | rec  | page domain                                            |
 
 **Feed response fields**
 
 ```json
-[{
-  "id": "5555555",
-  "impid": "5",
-  "crid": "555555",
-  "click_url": "https://...",
-  "campaign_id": 555555,
-  "category": "1368",
-  "title": "It's like nothing you've ever seen!",
-  "text": "The cutest kittens",
-  "image_url": "https://.../492x328/...",
-  "icon_url": "https://.../nurl/...",
-  "cpc": 0.0316
-}]
+[
+  {
+    "id": "5555555",
+    "impid": "5",
+    "crid": "555555",
+    "click_url": "https://...",
+    "campaign_id": 555555,
+    "category": "1368",
+    "title": "It's like nothing you've ever seen!",
+    "text": "The cutest kittens",
+    "image_url": "https://.../492x328/...",
+    "icon_url": "https://.../nurl/...",
+    "cpc": 0.0316
+  }
+]
 ```
 
 `id`, `impid`, `crid`, `click_url` (alias `link`), `title`, `image_url`, `cpc` are required. `nurl`, `description`/`text`, `icon_url`, `category`, `campaign_id` are optional.
 
 **Formats:** push, native, teaser, popunder, in-page push, iOS calendar push.
 
-**Quirks:** GET with query params (not POST JSON). Push traffic identified via `subage*`. Push response shape (title/icon/image/text) matches Native 1.2-ish but is *not* native-spec encoded — flat top-level fields.
+**Quirks:** GET with query params (not POST JSON). Push traffic identified via `subage*`. Push response shape (title/icon/image/text) matches Native 1.2-ish but is _not_ native-spec encoded — flat top-level fields.
 
 ---
 
 ### PropellerAds (propellerads.com)
 
 **Doc URLs**
+
 - Swagger UI for SSP API v5: https://ssp-api.propellerads.com/v5/docs/ (public, but the Swagger page itself renders as an SPA; programmatic GETs return only the title)
 - Propush.me API (publisher subscription/push management): https://help.propellerads.com/en/articles/4262401-propush-me-api (public)
 - Help center: https://help.propellerads.com/en/
 
 **Envelope**
-- The public "SSP API v5" is **not** a bid feed — it's an OAuth/Bearer-token *management* API for advertisers (campaigns, statistics, zones). Same niche as Kadam's `/api/v1`.
+
+- The public "SSP API v5" is **not** a bid feed — it's an OAuth/Bearer-token _management_ API for advertisers (campaigns, statistics, zones). Same niche as Kadam's `/api/v1`.
 - PropellerAds does not publish a public bid-feed spec. Demand-side integration ("DSP partners") is gated behind a partner manager.
 - Propush.me API is also reporting/management-shaped — `/v5/statistics/pub-statistics`, `/v5/sites/pub-sites-list`, etc.
 
@@ -86,11 +92,11 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 
 **Reporting endpoints (illustrative — Propush v5)**
 
-| endpoint | purpose |
-|---|---|
+| endpoint                            | purpose                                                           |
+| ----------------------------------- | ----------------------------------------------------------------- |
 | `GET /v5/statistics/pub-statistics` | account stats; `date_from`, `date_to`, `group_by[]`, `zone_ids[]` |
-| `GET /v5/sites/pub-sites-list` | added sites/landings |
-| `GET /v5/sites/pub-zones-list` | zones list |
+| `GET /v5/sites/pub-sites-list`      | added sites/landings                                              |
+| `GET /v5/sites/pub-zones-list`      | zones list                                                        |
 
 **Formats:** push, in-page push, popunder, interstitial, native.
 
@@ -101,13 +107,15 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### RichAds (richads.com)
 
 **Doc URLs**
+
 - Docs portal: https://docs.richads.com/ (public)
 - SSP overview: https://docs.richads.com/ssp/overview
 - SSP — Telegram interstitial video bid endpoint: https://docs.richads.com/ssp/telegram-interstitial-video.html (public, has full spec)
 - Publisher overview: https://docs.richads.com/publishers/overview
 
 **Envelope**
-- Proprietary POST-JSON, *not* oRTB.
+
+- Proprietary POST-JSON, _not_ oRTB.
 - One bid endpoint per format; example below is `telegram-bid`. Other formats follow the same shape.
 
 **Endpoint:** `POST http://{ssp_id}.xml.adx1.com/telegram-bid`
@@ -116,33 +124,33 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 
 **Request fields**
 
-| field | type | req | meaning |
-|---|---|---|---|
-| `ip` | string | yes | user IPv4/IPv6 |
-| `user_agent` | string | yes | full UA string |
-| `publisher_id` | string | yes | unique publisher id |
-| `language_code` | string | no | ISO 639-1 |
-| `widget_id` | string | no | mini-app integration id |
-| `telegram_id` | string | no | TG user id |
-| `bid_floor` | float | no | min acceptable CPM |
-| `number_of_bids` | int | no | 1–5, default 1 |
-| `blocked_categories` | int[] | no | category ids to exclude |
-| `premium` | bool | no | premium user, default false |
-| `motivated` | bool | no | intentional action flag |
-| `production` | bool | no | test mode if false, default true |
+| field                | type   | req | meaning                          |
+| -------------------- | ------ | --- | -------------------------------- |
+| `ip`                 | string | yes | user IPv4/IPv6                   |
+| `user_agent`         | string | yes | full UA string                   |
+| `publisher_id`       | string | yes | unique publisher id              |
+| `language_code`      | string | no  | ISO 639-1                        |
+| `widget_id`          | string | no  | mini-app integration id          |
+| `telegram_id`        | string | no  | TG user id                       |
+| `bid_floor`          | float  | no  | min acceptable CPM               |
+| `number_of_bids`     | int    | no  | 1–5, default 1                   |
+| `blocked_categories` | int[]  | no  | category ids to exclude          |
+| `premium`            | bool   | no  | premium user, default false      |
+| `motivated`          | bool   | no  | intentional action flag          |
+| `production`         | bool   | no  | test mode if false, default true |
 
 **Response (array of bids)**
 
-| field | type | meaning |
-|---|---|---|
-| `title` | string | creative title |
-| `message` | string | body text |
-| `button` | string | CTA label |
-| `video` | string | MP4/HLS URL (≤30s, 16:9) |
-| `icon` | string | square ≥300×300 |
-| `link` | string | destination URL |
-| `notification_url` | string | impression pixel |
-| `bid_price` | float | winning CPM |
+| field              | type   | meaning                  |
+| ------------------ | ------ | ------------------------ |
+| `title`            | string | creative title           |
+| `message`          | string | body text                |
+| `button`           | string | CTA label                |
+| `video`            | string | MP4/HLS URL (≤30s, 16:9) |
+| `icon`             | string | square ≥300×300          |
+| `link`             | string | destination URL          |
+| `notification_url` | string | impression pixel         |
+| `bid_price`        | float  | winning CPM              |
 
 **Formats:** push, in-page, pop, native, calendar, video, Telegram interstitial video, Telegram Mini Apps, interstitial.
 
@@ -153,14 +161,16 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### Adsterra (adsterra.com)
 
 **Doc URLs**
+
 - Publisher reporting API article: https://adsterra.com/blog/how-to-use-adsterra-publishers-api/ (public, reporting shape)
 - Publisher API portal (reporting): https://api3.adsterratools.com/docs/publishers — **404 at time of probe**, doc URL referenced from blog only
 - Ads API v3 (advertiser side): https://adsterra.com/blog/api-v3/
 - RTB partner page: https://adsterra.com/rtb/
 
 **Envelope**
-- *Reporting API* — GET, `X-API-Key` header, JSON/XML/CSV output.
-- *RTB SSP integration* — Adsterra accepts XML/JSON feed *or* OpenRTB endpoints from SSP partners. The actual feed schema is **not published**; it's negotiated per-partner via account manager. Stated constraints: ≤200 ms response, 100 kRPS capacity, first-price auction.
+
+- _Reporting API_ — GET, `X-API-Key` header, JSON/XML/CSV output.
+- _RTB SSP integration_ — Adsterra accepts XML/JSON feed _or_ OpenRTB endpoints from SSP partners. The actual feed schema is **not published**; it's negotiated per-partner via account manager. Stated constraints: ≤200 ms response, 100 kRPS capacity, first-price auction.
 - No public proprietary JsonFeed schema.
 
 **Auth:** `X-API-Key: <token>` header (reporting only).
@@ -172,12 +182,14 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### ClickAdu (clickadu.com)
 
 **Doc URLs**
+
 - API collection (help center): https://faq.clickadu.com/en/collections/3474608-api (public, 403 to fetcher but viewable)
 - API documentation article: https://faq.clickadu.com/en/articles/6234861-api-documentation (gated to fetcher)
 - API integration guide: https://faq.clickadu.com/en/articles/6234995-api-integration-guide (gated to fetcher)
 
 **Envelope**
-- Two surfaces: a *campaign-management* API (POST JSON with `Authorization` header, used by Voluum / Postman style integrations) and a *feed* surface that supports both XML and JSON (default JSON), shape negotiated with partner manager.
+
+- Two surfaces: a _campaign-management_ API (POST JSON with `Authorization` header, used by Voluum / Postman style integrations) and a _feed_ surface that supports both XML and JSON (default JSON), shape negotiated with partner manager.
 - Public articles describe the management API more thoroughly than the SSP/feed.
 
 **Auth:** API token in header, `Content-Type: application/json`.
@@ -193,40 +205,44 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### AdMaven (ad-maven.com)
 
 **Doc URLs**
+
 - Publishers HelpDesk API category: https://publishers-help.ad-maven.com/en/category/api-1fvhmuv/ (public)
 - Content Locker API: https://publishers-help.ad-maven.com/en/article/admaven-content-locker-api-documentation-11q0a5r/ (public, full spec)
 
 **Envelope**
-- Proprietary content-locker endpoint, *not* a bid feed.
+
+- Proprietary content-locker endpoint, _not_ a bid feed.
 - POST or GET; `POST https://publishers.ad-maven.com/api/public/content_locker`.
 
 **Auth:** `Authorization: Bearer <token>` (POST) or `?api_token=<token>` query (GET).
 
 **Request:**
 
-| field | type | req | notes |
-|---|---|---|---|
-| `title` | string | yes | ≤30 chars |
-| `url` | string | yes | valid link, URL-encode special chars |
-| `background` | string | no | image or YouTube link |
-| `sub_id` | string | no | ≤7 chars, must be pre-configured |
+| field        | type   | req | notes                                |
+| ------------ | ------ | --- | ------------------------------------ |
+| `title`      | string | yes | ≤30 chars                            |
+| `url`        | string | yes | valid link, URL-encode special chars |
+| `background` | string | no  | image or YouTube link                |
+| `sub_id`     | string | no  | ≤7 chars, must be pre-configured     |
 
 **Response:** `{ type: "created"|"fetched"|"error", request_time, message: { title, url, background, short, desturl } }`.
 
 **Formats (broader product, not all in API):** popunder, lightbox, push, interstitial, content-locker.
 
-**Conclusion:** the public API is *creator-side*, not an auction feed — out of scope for our JsonFeed validator.
+**Conclusion:** the public API is _creator-side_, not an auction feed — out of scope for our JsonFeed validator.
 
 ---
 
 ### AdCash (adcash.com)
 
 **Doc URLs**
+
 - Advertiser Reporting API: https://support.adcash.com/en/articles/38-advertiser-reporting-api (public)
 - Publisher Reporting API: https://support.adcash.com/en/articles/367-publisher-reporting-api (public)
 - Voluum integration (third-party reference): https://doc.voluum.com/article/adcash-full-integration
 
 **Envelope**
+
 - Reporting only (token derived from username/password). No public JsonFeed/RTB schema.
 - Filterable by date, country, campaign id, device type, pack id, platform; metrics impressions/clicks/conversions/spend.
 
@@ -237,11 +253,13 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### EvaDav (evadav.com)
 
 **Doc URLs**
+
 - API (Swagger UI shell): https://evadavapi.com/docs/api (public; renders as SPA so HTTP fetchers see only the title)
 - Publisher FAQ: https://evadav.com/faq-publisher
 - Pop-up push article: https://support.evadav.com/en/articles/7250864-publishers-ad-formats-pop-up-push-notification
 
 **Envelope**
+
 - Public API exists but requires `apiKey` from manager and the schema is not published outside the Swagger UI. From observed integrations: standard reporting + campaign-management, JSON.
 - Bid/feed surface for SSP partners is gated.
 
@@ -254,10 +272,12 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### Galaksion (galaksion.com)
 
 **Doc URLs**
+
 - Self-service / SSP product: https://galaksion.com/self-service
 - CPV Lab integration page (third-party): https://doc.cpvlab.pro/integrations/galaksion-integration.html
 
 **Envelope**
+
 - No public dev docs. Tracker integration is via postback URL with macro tokens (`{clickid}`, etc.) — that's URL-params pixel, not a JsonFeed.
 - Bid surface gated to direct partners.
 
@@ -270,9 +290,11 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### Mondiad (mondiad.com)
 
 **Doc URLs**
+
 - Members API (Swagger shell): https://docs.api.members.mondiad.com/ (public; SPA — fetcher gets only the title, but the OpenAPI JSON is reachable inside)
 
 **Envelope**
+
 - Members API = campaign management / reporting, JSON over HTTPS, token auth.
 - No public JsonFeed bid endpoint.
 
@@ -287,11 +309,13 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### TrafficStars (trafficstars.com)
 
 **Doc URLs**
+
 - Integration API (GitHub, archived 2020): https://github.com/trafficstars/integrationapi
 - Public API: gated behind login
 
 **Envelope**
-- The "Integration API" is a *complement* to OpenRTB, not a replacement. Custom HTTP headers (`X-Request-Ts`, `X-Response-Ts`, `X-Response-Node`, etc.) and a single `GET /v2/ssp/{id}/integration` endpoint with Basic auth that returns latency/success metrics.
+
+- The "Integration API" is a _complement_ to OpenRTB, not a replacement. Custom HTTP headers (`X-Request-Ts`, `X-Response-Ts`, `X-Response-Node`, etc.) and a single `GET /v2/ssp/{id}/integration` endpoint with Basic auth that returns latency/success metrics.
 - TrafficStars itself runs OpenRTB 2.x for bidding.
 
 **Formats:** banner, popunder, video pre-roll/outstream, in-stream, native, push (adult vertical).
@@ -303,12 +327,14 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 ### ExoClick (exoclick.com)
 
 **Doc URLs**
+
 - Publisher RTB overview: https://docs.exoclick.com/docs/rtb-publishers/exoclick-rtb/ (public)
 - Publisher request/response examples: https://docs.exoclick.com/docs/rtb-publishers/exoclick-rtb/exoclick-rtb-publisher-code-examples/ (public, full JSON examples)
 - OpenRTB 2.4/2.5 reference: https://docs.exoclick.com/docs/rtb-publishers/open-rtb/
 
 **Envelope**
-- *Two parallel surfaces:* OpenRTB 2.4/2.5 *and* a proprietary "ExoClick RTB" template. The proprietary one is the relevant target here.
+
+- _Two parallel surfaces:_ OpenRTB 2.4/2.5 _and_ a proprietary "ExoClick RTB" template. The proprietary one is the relevant target here.
 - Endpoint: `POST https://rtb.{network}/rtb.php` — POST JSON or GET URL-params.
 - Currency EUR or USD per account; one bid per request.
 
@@ -335,35 +361,37 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 **Response:**
 
 ```json
-{ "bid": {
-  "id": "d4b5c697-...",
-  "iconUrl": "http://.../myadicon.jpg",
-  "clickUrl": "http://.../landingpages/mypage",
-  "nUrl": "http://.../win-notification",
-  "title": "My Ad Title",
-  "description": "My Ad Description Text",
-  "btype": 2,
-  "value": 0.13
-}}
+{
+  "bid": {
+    "id": "d4b5c697-...",
+    "iconUrl": "http://.../myadicon.jpg",
+    "clickUrl": "http://.../landingpages/mypage",
+    "nUrl": "http://.../win-notification",
+    "title": "My Ad Title",
+    "description": "My Ad Description Text",
+    "btype": 2,
+    "value": 0.13
+  }
+}
 ```
 
 **Fields**
 
-| field | type | req | meaning |
-|---|---|---|---|
-| `id` | string | yes | request id |
-| `ip` | string | yes | IPv4/IPv6 |
-| `ua` | string | yes | UA |
-| `type` | string | yes | format: `push_notification`, `banner`, `direct_link`, `email_clicks`, `popunder` |
-| `url` | string | yes | page URL |
-| `user_id` | string | rec | publisher-stable user id |
-| `sub` | int | yes | publisher id |
-| `export` | string | yes | `json` / `xml` |
-| `language` | string | no | ISO |
-| `size` | string | cond | `720x480` for push, `300x250` for banner |
-| `keyword` | string | no | targeting hint |
-| `remote_addr` / `x_forwarded_for` | string | no | extra IP signal |
-| `el` | string | cond | base64 email (for direct-link/email-clicks) |
+| field                             | type   | req  | meaning                                                                          |
+| --------------------------------- | ------ | ---- | -------------------------------------------------------------------------------- |
+| `id`                              | string | yes  | request id                                                                       |
+| `ip`                              | string | yes  | IPv4/IPv6                                                                        |
+| `ua`                              | string | yes  | UA                                                                               |
+| `type`                            | string | yes  | format: `push_notification`, `banner`, `direct_link`, `email_clicks`, `popunder` |
+| `url`                             | string | yes  | page URL                                                                         |
+| `user_id`                         | string | rec  | publisher-stable user id                                                         |
+| `sub`                             | int    | yes  | publisher id                                                                     |
+| `export`                          | string | yes  | `json` / `xml`                                                                   |
+| `language`                        | string | no   | ISO                                                                              |
+| `size`                            | string | cond | `720x480` for push, `300x250` for banner                                         |
+| `keyword`                         | string | no   | targeting hint                                                                   |
+| `remote_addr` / `x_forwarded_for` | string | no   | extra IP signal                                                                  |
+| `el`                              | string | cond | base64 email (for direct-link/email-clicks)                                      |
 
 **Formats:** banner, direct link, email clicks, popunder, push notifications (720×480 and 192×192).
 
@@ -373,7 +401,7 @@ Method note: probe public dev docs only. Where a vendor's docs are gated, I fall
 
 ## Bonus reference — Zeropark (Codewise)
 
-Not in the original list, but Zeropark publishes the cleanest non-oRTB JsonFeed in the public CIS-adjacent space. Useful as a *baseline reference* because it strips the format down to the minimum.
+Not in the original list, but Zeropark publishes the cleanest non-oRTB JsonFeed in the public CIS-adjacent space. Useful as a _baseline reference_ because it strips the format down to the minimum.
 
 - Doc: https://doc.zeropark.com/article/redirect-rtb-integration-xml-json-open-rtb (public)
 - Endpoint: `GET https://feed.zeropark.com/zeroclick`
@@ -403,37 +431,37 @@ So a public "JsonFeed" baseline can only be drawn from the four vendors that pub
 
 Looking at Kadam-feed + ExoClick-rtb + RichAds-telegram + Zeropark across request side:
 
-| baseline field | Kadam | ExoClick | RichAds | Zeropark | %  |
-|---|---|---|---|---|---|
-| request id            | (impid)`impid`  | `id`     | (none)        | (none)    | 50% |
-| user IP               | `ip`/`ipv6`     | `ip`     | `ip`          | `ip`      | 100% |
-| user agent            | `ua`            | `ua`     | `user_agent`  | `useragent` | 100% |
-| publisher id          | `pid`           | `sub`    | `publisher_id`| `domainid`/`feedid` | 100% |
-| page / domain         | `page`          | `url`    | (n/a TG)      | `domain`  | 75% |
-| language              | `language`      | `language` | `language_code` | (none) | 75% |
-| ad format / type      | `format`        | `type`   | (path)        | (none)    | 50% |
-| ad-count limit        | `limit`         | (1 only) | `number_of_bids` | (1 only) | 50% |
-| bid floor             | (none)          | (none)   | `bid_floor`   | (none)    | 25% |
-| keyword/category      | `cat`           | `keyword`| `blocked_categories` | `keywords` | 100% |
-| user id               | `uid`           | `user_id`| `telegram_id` | (none)    | 75% |
-| fallback URL          | (none)          | (none)   | (none)        | `fallbackurl` | 25% |
+| baseline field   | Kadam          | ExoClick   | RichAds              | Zeropark            | %    |
+| ---------------- | -------------- | ---------- | -------------------- | ------------------- | ---- |
+| request id       | (impid)`impid` | `id`       | (none)               | (none)              | 50%  |
+| user IP          | `ip`/`ipv6`    | `ip`       | `ip`                 | `ip`                | 100% |
+| user agent       | `ua`           | `ua`       | `user_agent`         | `useragent`         | 100% |
+| publisher id     | `pid`          | `sub`      | `publisher_id`       | `domainid`/`feedid` | 100% |
+| page / domain    | `page`         | `url`      | (n/a TG)             | `domain`            | 75%  |
+| language         | `language`     | `language` | `language_code`      | (none)              | 75%  |
+| ad format / type | `format`       | `type`     | (path)               | (none)              | 50%  |
+| ad-count limit   | `limit`        | (1 only)   | `number_of_bids`     | (1 only)            | 50%  |
+| bid floor        | (none)         | (none)     | `bid_floor`          | (none)              | 25%  |
+| keyword/category | `cat`          | `keyword`  | `blocked_categories` | `keywords`          | 100% |
+| user id          | `uid`          | `user_id`  | `telegram_id`        | (none)              | 75%  |
+| fallback URL     | (none)         | (none)     | (none)               | `fallbackurl`       | 25%  |
 
 On the response side:
 
-| baseline field | Kadam | ExoClick | RichAds | Zeropark | %  |
-|---|---|---|---|---|---|
-| bid price             | `cpc`           | `value`  | `bid_price`   | `bid`     | 100% |
-| destination URL       | `click_url`/`link` | `clickUrl` | `link` | `redirecturl` | 100% |
-| creative id           | `crid`          | `id`     | (none)        | `campaignid` | 75% |
-| win-notify URL        | `nurl`          | `nUrl`   | `notification_url` | (none) | 75% |
-| title                 | `title`         | `title`  | `title`       | (none)    | 75% |
-| body / description    | `text`/`description` | `description` | `message` | (none) | 75% |
-| icon URL              | `icon_url`      | `iconUrl`| `icon`        | (none)    | 75% |
-| image URL             | `image_url`     | (n/a)    | (none)        | (none)    | 25% |
-| video URL             | (none)          | (none)   | `video`       | (none)    | 25% |
-| campaign id           | `campaign_id`   | (none)   | (none)        | `campaignid` | 50% |
-| category              | `category`      | (none)   | (none)        | (none)    | 25% |
-| no-bid signal         | (empty array)   | (empty obj) | (empty arr) | HTTP 204 | varies |
+| baseline field     | Kadam                | ExoClick      | RichAds            | Zeropark      | %      |
+| ------------------ | -------------------- | ------------- | ------------------ | ------------- | ------ |
+| bid price          | `cpc`                | `value`       | `bid_price`        | `bid`         | 100%   |
+| destination URL    | `click_url`/`link`   | `clickUrl`    | `link`             | `redirecturl` | 100%   |
+| creative id        | `crid`               | `id`          | (none)             | `campaignid`  | 75%    |
+| win-notify URL     | `nurl`               | `nUrl`        | `notification_url` | (none)        | 75%    |
+| title              | `title`              | `title`       | `title`            | (none)        | 75%    |
+| body / description | `text`/`description` | `description` | `message`          | (none)        | 75%    |
+| icon URL           | `icon_url`           | `iconUrl`     | `icon`             | (none)        | 75%    |
+| image URL          | `image_url`          | (n/a)         | (none)             | (none)        | 25%    |
+| video URL          | (none)               | (none)        | `video`            | (none)        | 25%    |
+| campaign id        | `campaign_id`        | (none)        | (none)             | `campaignid`  | 50%    |
+| category           | `category`           | (none)        | (none)             | (none)        | 25%    |
+| no-bid signal      | (empty array)        | (empty obj)   | (empty arr)        | HTTP 204      | varies |
 
 **Baseline candidates (≥75% coverage):**
 
@@ -447,16 +475,16 @@ These are the shape-of-a-JsonFeed fields. Anything beyond is overlay territory.
 
 Even on the same semantic field, vendors disagree:
 
-| concept | Kadam | ExoClick | RichAds | Zeropark |
-|---|---|---|---|---|
-| user agent | `ua` | `ua` | `user_agent` | `useragent` |
-| page URL | `page` | `url` | (n/a) | `domain` |
-| publisher id | `pid` | `sub` | `publisher_id` | `domainid` |
-| bid price | `cpc` | `value` | `bid_price` | `bid` |
-| click URL | `click_url` / `link` | `clickUrl` | `link` | `redirecturl` |
-| win notify | `nurl` | `nUrl` | `notification_url` | (none) |
+| concept      | Kadam                | ExoClick   | RichAds            | Zeropark      |
+| ------------ | -------------------- | ---------- | ------------------ | ------------- |
+| user agent   | `ua`                 | `ua`       | `user_agent`       | `useragent`   |
+| page URL     | `page`               | `url`      | (n/a)              | `domain`      |
+| publisher id | `pid`                | `sub`      | `publisher_id`     | `domainid`    |
+| bid price    | `cpc`                | `value`    | `bid_price`        | `bid`         |
+| click URL    | `click_url` / `link` | `clickUrl` | `link`             | `redirecturl` |
+| win notify   | `nurl`               | `nUrl`     | `notification_url` | (none)        |
 
-Implication: the JsonFeed baseline validator has to be **field-aliased**, not field-named. Each "logical field" is a set of acceptable keys per dialect — closer to how Prebid's `params` adapters work than how `dialects/iab.js` works today. The baseline validates *presence* of a logical field, the dialect resolves which physical key is in use.
+Implication: the JsonFeed baseline validator has to be **field-aliased**, not field-named. Each "logical field" is a set of acceptable keys per dialect — closer to how Prebid's `params` adapters work than how `dialects/iab.js` works today. The baseline validates _presence_ of a logical field, the dialect resolves which physical key is in use.
 
 ### Vendor-specific overlay fields (beyond baseline)
 

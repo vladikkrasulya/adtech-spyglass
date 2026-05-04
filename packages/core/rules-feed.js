@@ -28,11 +28,7 @@ const F = makeFinding;
 
 function validateFeedResponse(arrOrObj) {
   // Kadam clickunder
-  if (
-    isObj(arrOrObj) &&
-    isObj(arrOrObj.result) &&
-    Array.isArray(arrOrObj.result.listing)
-  ) {
+  if (isObj(arrOrObj) && isObj(arrOrObj.result) && Array.isArray(arrOrObj.result.listing)) {
     return validateKadamClickunder(arrOrObj);
   }
 
@@ -151,7 +147,9 @@ function validateRichAds(o) {
     findings.push(F('feed.richads.link_required', LEVELS.ERROR, 'link'));
   }
   if (!isStr(o.notification_url)) {
-    findings.push(F('feed.richads.notification_url_recommended', LEVELS.WARNING, 'notification_url'));
+    findings.push(
+      F('feed.richads.notification_url_recommended', LEVELS.WARNING, 'notification_url'),
+    );
   }
   if (!isStr(o.title) && !isStr(o.message)) {
     findings.push(F('feed.richads.copy_recommended', LEVELS.WARNING, 'title'));

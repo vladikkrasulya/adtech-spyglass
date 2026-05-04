@@ -36,11 +36,13 @@ user's password (PBKDF2-SHA-256, 600 000 iterations). The server stores
 opaque AES-GCM ciphertext + a wrapped DEK + IVs.
 
 **The server cannot decrypt**:
+
 - Sample `bid_req` / `bid_res` payloads
 - Sample notes / metadata
 - Partner labels
 
 **The server can see**:
+
 - email + bcrypt hash
 - Sample title, partner-id reference, status, created-at timestamp (these
   fields are plaintext for sorting/filtering)

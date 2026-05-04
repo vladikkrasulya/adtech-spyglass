@@ -54,7 +54,7 @@
 
 - **Збереження зразків** — реальні запити/відповіді що ти аналізуєш,
   з нотатками, групуванням за партнерами. Save-модал показує `оновити
-  запис · #N` коли поточний editor завантажений з бібліотеки — натиск
+запис · #N` коли поточний editor завантажений з бібліотеки — натиск
   "оновити" перезаписує існуючий запис, "зберегти як новий" — створює
   окремий.
 - **Партнери** — каталог SSP/DSP/AdNetwork з якими працюєш. Drop-down
@@ -96,24 +96,24 @@
   з телефона працює; великі редагування — все ж зручніше з десктопу.
 - **Категорії** — окрема вкладка `categories`. Decoded IAB Content Taxonomy
   лейбли з `cat[] / bcat[] / pcat[]` (наприклад `IAB9-11 → Hobbies & Interests
-  → Comic Books`). Англійська-only поки.
+→ Comic Books`). Англійська-only поки.
 
 ---
 
 ## Чого Spyglass **НЕ робить**
 
-| Обмеження | Чому |
-|---|---|
-| Не робить реальні bid-и | Це інспектор JSON, не RTB-клієнт. Spyglass не підключається до жодного exchange |
-| Не виконує макроси (`${AUCTION_PRICE}` тощо) у runtime | Перевіряємо лише статично — чи макрос валідний, чи правильно записаний |
-| Не показує реальний рендер креативу з третіх сторін | iframe-preview лише локальний `adm` HTML, без VAST-плеєру і без external-tag fetching |
-| Не перевіряє повну oRTB 2.6 enforcement | Поточна баzeline — 2.5 + детект 2.6 сигналів. **Strict 2.6 валідація — Phase 2 у roadmap** |
-| Не зберігає твої зразки якщо ти не залогінений | Анонім — все живе тільки у вкладці браузера; reload — і пусто |
-| Не логує IP/User-Agent при `/api/analyze` | Без auth-у — залишаєш мінімальний слід (Cloudflare Tunnel запис, але не наш) |
-| Не підтримує English UI | Поки тільки українська. `en.json` — заглушка, Phase 3 roadmap |
-| Не оптимізує bid strategy / eCPM / yield | Це інспектор, не yield manager |
-| Не парсить TCF/GPP consent strings | Запланована окрема вкладка (Tier-2 AdTech extension у `kyivtech-portal/tools/`) |
-| Не валідує `ads.txt` / `sellers.json` / `app-ads.txt` | Те саме — окремий тулз, не замішаний у oRTB-інспектор |
+| Обмеження                                              | Чому                                                                                       |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Не робить реальні bid-и                                | Це інспектор JSON, не RTB-клієнт. Spyglass не підключається до жодного exchange            |
+| Не виконує макроси (`${AUCTION_PRICE}` тощо) у runtime | Перевіряємо лише статично — чи макрос валідний, чи правильно записаний                     |
+| Не показує реальний рендер креативу з третіх сторін    | iframe-preview лише локальний `adm` HTML, без VAST-плеєру і без external-tag fetching      |
+| Не перевіряє повну oRTB 2.6 enforcement                | Поточна баzeline — 2.5 + детект 2.6 сигналів. **Strict 2.6 валідація — Phase 2 у roadmap** |
+| Не зберігає твої зразки якщо ти не залогінений         | Анонім — все живе тільки у вкладці браузера; reload — і пусто                              |
+| Не логує IP/User-Agent при `/api/analyze`              | Без auth-у — залишаєш мінімальний слід (Cloudflare Tunnel запис, але не наш)               |
+| Не підтримує English UI                                | Поки тільки українська. `en.json` — заглушка, Phase 3 roadmap                              |
+| Не оптимізує bid strategy / eCPM / yield               | Це інспектор, не yield manager                                                             |
+| Не парсить TCF/GPP consent strings                     | Запланована окрема вкладка (Tier-2 AdTech extension у `kyivtech-portal/tools/`)            |
+| Не валідує `ads.txt` / `sellers.json` / `app-ads.txt`  | Те саме — окремий тулз, не замішаний у oRTB-інспектор                                      |
 
 ---
 
@@ -168,15 +168,15 @@ findings[]: {id, level, path, params, msg, specRef}
 
 ### Зареєстровані користувачі (коли логінишся)
 
-| Що | Як зберігається |
-|---|---|
-| email + password hash | bcrypt, 12 rounds |
-| Сесія | in-memory (TTL 30 днів). Restart серверу — всі вилогінились |
+| Що                                   | Як зберігається                                                       |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| email + password hash                | bcrypt, 12 rounds                                                     |
+| Сесія                                | in-memory (TTL 30 днів). Restart серверу — всі вилогінились           |
 | Saved samples (`bid_req`, `bid_res`) | **AES-GCM ciphertext**. Сервер бачить байти, але не може розшифрувати |
-| KDF salt + wrapped DEK + IVs | Так. Без твого пароля — марно для атакера |
-| Notes / metadata зразка | Те саме шифрування |
-| Партнери (label) | Те саме шифрування |
-| `email_verified_at` | timestamp (тільки після verify-email) |
+| KDF salt + wrapped DEK + IVs         | Так. Без твого пароля — марно для атакера                             |
+| Notes / metadata зразка              | Те саме шифрування                                                    |
+| Партнери (label)                     | Те саме шифрування                                                    |
+| `email_verified_at`                  | timestamp (тільки після verify-email)                                 |
 
 Реалізація: пароль на клієнті → PBKDF2 600k SHA-256 → KEK → розгортає
 збережений DEK → DEK шифрує контент. **Сервер не бачить пароля
@@ -207,6 +207,7 @@ findings[]: {id, level, path, params, msg, specRef}
 - **`specRef`** — пряме посилання на параграф IAB-специфікації
 
 **Загальний статус:**
+
 - `errors` — є хоча б одна `level: error`
 - `warnings` — лише warnings/info, але не clean
 - `clean` — нічого не знайдено
@@ -233,6 +234,7 @@ findings[]: {id, level, path, params, msg, specRef}
 ```
 
 Натисни **analyze stream** (або `Ctrl+Enter`) — побачиш:
+
 - detected version: `2.5` (немає 2.6 сигналів)
 - кілька warnings (наприклад: немає `at`, `tmax`, `cur`)
 - spec-refs до IAB §3.2.1, §3.2.4
@@ -243,16 +245,26 @@ findings[]: {id, level, path, params, msg, specRef}
 {
   "id": "test-001",
   "seatbid": [
-    { "bid": [
-      { "id": "b1", "impid": "1", "price": 1.5, "adm": "<html>creative</html>",
-        "adomain": ["example.com"], "w": 300, "h": 250 }
-    ] }
+    {
+      "bid": [
+        {
+          "id": "b1",
+          "impid": "1",
+          "price": 1.5,
+          "adm": "<html>creative</html>",
+          "adomain": ["example.com"],
+          "w": 300,
+          "h": 250
+        }
+      ]
+    }
   ],
   "cur": "USD"
 }
 ```
 
 Тепер crosscheck активний — побачиш:
+
 - `bid.impid → imp.id` матч ✓
 - `bid.w/h → imp.banner.w/h` матч ✓
 - `price > bidfloor` ✓
@@ -262,20 +274,20 @@ findings[]: {id, level, path, params, msg, specRef}
 
 ## Підтримувані версії
 
-| Тип | Версія | Статус |
-|---|---|---|
-| OpenRTB | 2.5 | ✅ Validation + detection |
-| OpenRTB | 2.6 baseline | ✅ Detection (signals: rwdd, sua, gpp_sid). Strict validation — Phase 2 |
-| OpenRTB | 2.6-202211 | ✅ Detection. Strict validation — Phase 2 |
-| OpenRTB | 2.6-202309 | ✅ Detection. Strict validation — Phase 2 |
-| OpenRTB | 3.0 | ✅ Detection (envelope `openrtb.ver`). Strict validation — Phase 2 |
-| Native | 1.1 | ✅ Validation + asset matching |
-| Native | 1.2 | ✅ Validation (eventtrackers signal) |
-| VAST | 2 / 3 / 4.x | ✅ `video.protocols` accept 2-12 |
-| Dialect | IAB | ✅ default |
-| Dialect | Vendor overlays | ✅ опціонально, через `?dialect=<vendor>` query |
-| Locale | UK 🇺🇦 | ✅ |
-| Locale | EN | ⏳ Phase 3 (en.json — stub) |
+| Тип     | Версія          | Статус                                                                  |
+| ------- | --------------- | ----------------------------------------------------------------------- |
+| OpenRTB | 2.5             | ✅ Validation + detection                                               |
+| OpenRTB | 2.6 baseline    | ✅ Detection (signals: rwdd, sua, gpp_sid). Strict validation — Phase 2 |
+| OpenRTB | 2.6-202211      | ✅ Detection. Strict validation — Phase 2                               |
+| OpenRTB | 2.6-202309      | ✅ Detection. Strict validation — Phase 2                               |
+| OpenRTB | 3.0             | ✅ Detection (envelope `openrtb.ver`). Strict validation — Phase 2      |
+| Native  | 1.1             | ✅ Validation + asset matching                                          |
+| Native  | 1.2             | ✅ Validation (eventtrackers signal)                                    |
+| VAST    | 2 / 3 / 4.x     | ✅ `video.protocols` accept 2-12                                        |
+| Dialect | IAB             | ✅ default                                                              |
+| Dialect | Vendor overlays | ✅ опціонально, через `?dialect=<vendor>` query                         |
+| Locale  | UK 🇺🇦           | ✅                                                                      |
+| Locale  | EN              | ⏳ Phase 3 (en.json — stub)                                             |
 
 ---
 

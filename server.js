@@ -539,7 +539,9 @@ function handleProxy(req, res) {
     .then(({ url, data }) => {
       const targetUrl = new URL(url);
       const hostname = targetUrl.hostname;
-      const isAllowed = PROXY_ALLOWED_HOSTS.some((h) => hostname === h || hostname.endsWith('.' + h));
+      const isAllowed = PROXY_ALLOWED_HOSTS.some(
+        (h) => hostname === h || hostname.endsWith('.' + h),
+      );
       if (!isAllowed) {
         return sendError(
           res,

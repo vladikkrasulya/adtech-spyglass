@@ -34,20 +34,34 @@
   // Most are inspector-specific; on surfaces that don't have them (e.g.
   // /about) the matches just return false and the morph proceeds normally.
   const LANG_PRESERVE = [
-    '#bidReq', '#bidRes', '#simPrice',
-    '#authWidget', '#stEntity', '#statusText', '#statusDot',
-    '#inspectorBadge', '#crosscheckBadge', '#slotsBadge',
+    '#bidReq',
+    '#bidRes',
+    '#simPrice',
+    '#authWidget',
+    '#stEntity',
+    '#statusText',
+    '#statusDot',
+    '#inspectorBadge',
+    '#crosscheckBadge',
+    '#slotsBadge',
     '#formatBar',
-    '#tInspector', '#tCrosscheck', '#tSlots', '#tSummary', '#tRaw',
-    '#historyList', '#libList', '#partnersList',
-    '#savedSamplesList', '#partnerOptions',
-    '#bidReqChars', '#bidResChars',
+    '#tInspector',
+    '#tCrosscheck',
+    '#tSlots',
+    '#tSummary',
+    '#tRaw',
+    '#historyList',
+    '#libList',
+    '#partnersList',
+    '#savedSamplesList',
+    '#partnerOptions',
+    '#bidReqChars',
+    '#bidResChars',
     '#modalRoot',
-    '.toast-container', '#toastRoot',
+    '.toast-container',
+    '#toastRoot',
   ];
-  const LANG_SKIP_TAGS = new Set([
-    'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'TEMPLATE',
-  ]);
+  const LANG_SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'TEMPLATE']);
   const LANG_ATTRS = ['title', 'placeholder', 'aria-label', 'alt', 'aria-current', 'href'];
 
   function langShouldPreserve(el) {
@@ -195,9 +209,7 @@
       const html = await res.text();
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const newLang =
-        doc.documentElement.getAttribute('data-lang') ||
-        doc.documentElement.lang ||
-        'en';
+        doc.documentElement.getAttribute('data-lang') || doc.documentElement.lang || 'en';
 
       langMorphHead(doc);
       langMorph(document.body, doc.body);
@@ -224,9 +236,7 @@
       // Fires kt:lang-change for subscribers (inspector re-runs analysis,
       // re-renders history sidebar, etc.). No-ops on surfaces without
       // listeners.
-      window.dispatchEvent(
-        new CustomEvent('kt:lang-change', { detail: { lang: newLang } })
-      );
+      window.dispatchEvent(new CustomEvent('kt:lang-change', { detail: { lang: newLang } }));
     } catch (e) {
       console.warn('Seamless lang switch failed, falling back to navigation:', e);
       window.location.href = targetUrl;

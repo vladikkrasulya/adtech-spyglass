@@ -236,10 +236,7 @@ function createAuth({ Users, logger }) {
     const userRow = Users.getByEmail(email);
     // Always run bcrypt to keep timing similar between "no such email" and
     // "wrong password" cases.
-    const ok = await bcrypt.compare(
-      password,
-      userRow ? userRow.password_hash : TIMING_DUMMY_HASH,
-    );
+    const ok = await bcrypt.compare(password, userRow ? userRow.password_hash : TIMING_DUMMY_HASH);
     if (!userRow || !ok) {
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Wrong email or password')

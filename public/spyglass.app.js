@@ -104,9 +104,9 @@
     // collapsed to UK here, which made /api/analyze return Ukrainian
     // findings even on the /ru/ surface.
     try {
-      var fromHtml = document.documentElement.getAttribute('lang');
+      const fromHtml = document.documentElement.getAttribute('lang');
       if (fromHtml === 'uk' || fromHtml === 'en' || fromHtml === 'ru') return fromHtml;
-      var v = localStorage.getItem('kt-lang');
+      const v = localStorage.getItem('kt-lang');
       if (v === 'uk' || v === 'en' || v === 'ru') return v;
       return 'uk';
     } catch (e) {
@@ -136,8 +136,8 @@
     }
     if (typeof window.runAnalysis !== 'function') return;
     try {
-      var req = document.getElementById('bidReq').value;
-      var res = document.getElementById('bidRes').value;
+      const req = document.getElementById('bidReq').value;
+      const res = document.getElementById('bidRes').value;
       // Re-run when either pane has content — JsonFeed payloads (ExoClick,
       // RichAds, Zeropark) live in bidRes only, so gating on req-presence
       // would skip the lang-change re-render for that whole branch.
@@ -219,7 +219,7 @@
     pillType.textContent = type;
     // Discriminator drives colour. "oRTB BidRequest" / "oRTB BidResponse" → ortb;
     // anything with "Feed Response" → feed. Unknown stays neutral.
-    var family = 'unknown';
+    let family = 'unknown';
     if (/oRTB/i.test(type)) family = 'ortb';
     else if (/Feed Response/i.test(type)) family = 'feed';
     pillType.dataset.format = family;
@@ -317,7 +317,7 @@
       return;
     }
     // Resolve known macros so the preview reflects an actual rendered impression.
-    let resolved = String(adm)
+    const resolved = String(adm)
       .replace(/\$\{AUCTION_PRICE\}/g, simPrice)
       .replace(/\$\{AUCTION_CURRENCY\}/g, 'USD')
       .replace(/\$\{AUCTION_LOSS\}/g, '0');
@@ -370,7 +370,11 @@
       // predictable for the scale-to-fit math below.
       iframe.style.cssText =
         'border:none;background:#fff;flex:none;transform-origin:center center;' +
-        'width:' + dims.w + 'px;height:' + dims.h + 'px;';
+        'width:' +
+        dims.w +
+        'px;height:' +
+        dims.h +
+        'px;';
       el.appendChild(iframe);
       // Compute scale after layout so we read the *current* container size.
       requestAnimationFrame(() => {
@@ -471,7 +475,8 @@
     if (!historyStore.length) {
       list.innerHTML =
         '<div style="color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-5)">' +
-        t('history.empty') + '</div>';
+        t('history.empty') +
+        '</div>';
       return;
     }
     list.innerHTML = historyStore
@@ -1967,7 +1972,10 @@
   window.requestVerifyEmail = async function () {
     try {
       await api('POST', 'api/auth/verify-email/request');
-      toast(t('toast.verify_email_sent', { email: (_currentUser && _currentUser.email) || '' }), 'success');
+      toast(
+        t('toast.verify_email_sent', { email: (_currentUser && _currentUser.email) || '' }),
+        'success',
+      );
     } catch (e) {
       toast(t('toast.send_failed', { error: e.message || '' }), 'error');
     }
@@ -2014,7 +2022,11 @@
       _partnerCache = [];
       const sel = $('partnerFilter');
       sel.innerHTML =
-        '<option value="">' + t('sample.partner_all') + '</option><option value="unassigned">' + t('sample.partner_none') + '</option>';
+        '<option value="">' +
+        t('sample.partner_all') +
+        '</option><option value="unassigned">' +
+        t('sample.partner_none') +
+        '</option>';
       return;
     }
     try {
@@ -2023,8 +2035,12 @@
       const sel = $('partnerFilter');
       const cur = sel.value;
       sel.innerHTML =
-        '<option value="">' + t('sample.partner_all') + '</option>' +
-        '<option value="unassigned">' + t('sample.partner_none') + '</option>' +
+        '<option value="">' +
+        t('sample.partner_all') +
+        '</option>' +
+        '<option value="unassigned">' +
+        t('sample.partner_none') +
+        '</option>' +
         _partnerCache
           .map((p) => '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>')
           .join('');
@@ -2160,7 +2176,9 @@
 
   function partnerOptionsHtml(selectedId) {
     return (
-      '<option value="">' + t('sample.partner_none') + '</option>' +
+      '<option value="">' +
+      t('sample.partner_none') +
+      '</option>' +
       _partnerCache
         .map(
           (p) =>
@@ -2208,8 +2226,7 @@
         }
       })();
       const sel = $('partnerFilter');
-      presetPartner =
-        sel && sel.value && sel.value !== 'unassigned' ? Number(sel.value) : null;
+      presetPartner = sel && sel.value && sel.value !== 'unassigned' ? Number(sel.value) : null;
       presetNotes = '';
     }
     const headerText = updating
@@ -2542,7 +2559,10 @@
     // modal can offer "оновити" + clobber-protection on next loadSample.
     ['bidReq', 'bidRes'].forEach((id) => {
       const el = $(id);
-      if (el) el.addEventListener('input', () => { _isDirty = true; });
+      if (el)
+        el.addEventListener('input', () => {
+          _isDirty = true;
+        });
     });
 
     // Partner filter dropdown — refresh sample list on change. Without

@@ -25,8 +25,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "//include-rationale":
-    "validator.js was split into packages/core/* in Phase 1 — kept JSDoc-only typecheck across the whole backend + tests so obvious typos still surface. strict-* flags stay off until Phase 3 hand-tunes types; npm run typecheck currently passes silently as a smoke gate.",
+  "//include-rationale": "validator.js was split into packages/core/* in Phase 1 — kept JSDoc-only typecheck across the whole backend + tests so obvious typos still surface. strict-* flags stay off until Phase 3 hand-tunes types; npm run typecheck currently passes silently as a smoke gate.",
   "include": [
     "server.js",
     "auth.js",

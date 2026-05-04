@@ -35,7 +35,7 @@ before(() => {
   // Loading the module attaches SpyglassCrypto onto window. It's not a
   // CommonJS module (it's a browser IIFE), so eval rather than require.
   const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'spyglass-crypto.js'), 'utf8');
-  // eslint-disable-next-line no-eval
+
   (0, eval)(src);
   SC = globalThis.SpyglassCrypto;
 });
