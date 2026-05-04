@@ -48,6 +48,16 @@
       'toast.added': 'Додано · {name}',
       'toast.nothing_to_save': 'Нічого зберігати — обидва поля порожні',
       'toast.bundle_downloaded': 'Завантажено · {name}',
+      'toast.share_link_copied':
+        'Посилання скопійовано — payload зашитий у URL-фрагменті, на сервер не потрапляє',
+      'toast.share_link_loaded': 'Завантажено зі share-посилання',
+      'toast.share_link_invalid': 'Не вдалося розпакувати share-посилання: {error}',
+      'toast.share_link_failed': 'Не вдалося згенерувати посилання: {error}',
+      'toast.share_link_too_long':
+        'Payload завеликий для share-посилання ({size} символів). Спробуй "завантажити" — JSON-бандл як файл.',
+      'toast.share_unsupported':
+        'Браузер не підтримує стиснення для share-посилань — використай "завантажити".',
+      'toast.share_link_manual_copy': 'Скопіюй це посилання вручну (буфер обміну заблоковано):',
 
       // ── confirm() dialogs ─────────────────────────────────
       'confirm.recovery_save':
@@ -230,6 +240,16 @@
       'toast.added': 'Added · {name}',
       'toast.nothing_to_save': 'Nothing to save — both fields are empty',
       'toast.bundle_downloaded': 'Downloaded · {name}',
+      'toast.share_link_copied':
+        'Link copied — payload is embedded in the URL fragment, never reaches the server',
+      'toast.share_link_loaded': 'Loaded from share link',
+      'toast.share_link_invalid': "Couldn't decode share link: {error}",
+      'toast.share_link_failed': "Couldn't build share link: {error}",
+      'toast.share_link_too_long':
+        'Payload too large for a share link ({size} chars). Try "download" instead — JSON bundle as a file.',
+      'toast.share_unsupported':
+        'Browser doesn\'t support share-link compression — use "download".',
+      'toast.share_link_manual_copy': 'Copy this link manually (clipboard blocked):',
 
       // ── confirm() dialogs ─────────────────────────────────
       'confirm.recovery_save':
@@ -412,6 +432,16 @@
       'toast.added': 'Добавлено · {name}',
       'toast.nothing_to_save': 'Нечего сохранять — оба поля пусты',
       'toast.bundle_downloaded': 'Скачано · {name}',
+      'toast.share_link_copied':
+        'Ссылка скопирована — payload встроен в URL-фрагмент, на сервер не попадает',
+      'toast.share_link_loaded': 'Загружено из share-ссылки',
+      'toast.share_link_invalid': 'Не удалось декодировать share-ссылку: {error}',
+      'toast.share_link_failed': 'Не удалось сгенерировать ссылку: {error}',
+      'toast.share_link_too_long':
+        'Payload слишком большой для share-ссылки ({size} символов). Попробуй "скачать" — JSON-бандл файлом.',
+      'toast.share_unsupported':
+        'Браузер не поддерживает сжатие для share-ссылок — используй "скачать".',
+      'toast.share_link_manual_copy': 'Скопируй ссылку вручную (буфер обмена заблокирован):',
       'confirm.recovery_save':
         'Ты точно сохранил recovery key? Без него невозможно восстановить данные если забудешь пароль.',
       'confirm.delete_sample': 'Удалить этот запрос из библиотеки?',
