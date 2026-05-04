@@ -130,8 +130,11 @@
     if (typeof window.runAnalysis !== 'function') return;
     try {
       var req = document.getElementById('bidReq').value;
-      if (!req) return;
       var res = document.getElementById('bidRes').value;
+      // Re-run when either pane has content — JsonFeed payloads (ExoClick,
+      // RichAds, Zeropark) live in bidRes only, so gating on req-presence
+      // would skip the lang-change re-render for that whole branch.
+      if (!req && !res) return;
       window.runAnalysis({ req: req, res: res });
     } catch (e) {
       /* silent — user may not have a payload yet */
@@ -1326,8 +1329,8 @@
       credentials: 'same-origin',
     };
     if (body !== undefined) init.body = JSON.stringify(body);
-    // Force absolute path so callers passing 'api/...' work from non-root
-    // locale URLs (e.g. /uk/, /ru/) — relative would resolve to /uk/api/…
+    // Force absolute path so calls work after seamless lang-switch shifts
+    // pathname to /uk/ or /ru/ (callers pass 'api/...' historically).
     const absUrl = /^https?:|^\//.test(url) ? url : '/' + url;
     const r = await fetch(absUrl, init);
     const j = await r.json().catch(() => ({}));
@@ -2545,4 +2548,208 @@
     }
   });
   window.refreshSamples = refreshSamples;
+
+  // ────────────────────────────────────────────────────────────────────
+  // Seamless language switch
+  //
+  // The 3-locale architecture (en at /, uk at /uk/, ru at /ru/) exists for
+  // SEO — each is a real, fully-rendered HTML file. But naively letting the
+  // <a href> links in the language dropdown navigate causes a full reload,
+  // which dumps any in-progress analysis (pasted JSON, findings, etc).
+  //
+  // Strategy:
+  //   1. Intercept clicks on .kt-lang-menu-list a
+  //   2. Fetch the target locale's HTML
+  //   3. Morph in place: walk both DOMs in parallel, copy text/attrs of
+  //      *parallel* elements without replacing nodes (preserves bound
+  //      handlers and user state in textareas / result panels)
+  //   4. Update <html lang>, meta tags, <title>, URL via pushState
+  //   5. Fire kt:lang-change so the existing handler re-renders dynamic
+  //      chrome (history sidebar, samples list) and re-runs analysis in
+  //      the new locale
+  //
+  // Limitations:
+  //   - The inline <head> IIFE that sets the theme-toggle tooltip strings
+  //     bakes English/Ukrainian/Russian text at parse time — those
+  //     tooltips stay stale until a real reload. Acceptable.
+  //   - Open modals stay in the old locale until reopened.
+  // ────────────────────────────────────────────────────────────────────
+  const LANG_PRESERVE = [
+    '#bidReq', '#bidRes', '#simPrice',
+    '#authWidget', '#stEntity', '#statusText', '#statusDot',
+    '#inspectorBadge', '#crosscheckBadge', '#slotsBadge',
+    '#formatBar',
+    '#tInspector', '#tCrosscheck', '#tSlots', '#tSummary', '#tRaw',
+    '#historyList', '#libList', '#partnersList',
+    '#savedSamplesList', '#partnerOptions',
+    '#bidReqChars', '#bidResChars',
+    '#modalRoot',
+    '.toast-container', '#toastRoot',
+  ];
+  const LANG_SKIP_TAGS = new Set([
+    'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT', 'TEMPLATE',
+  ]);
+  // Attributes that may carry locale-specific text or per-locale URLs.
+  const LANG_ATTRS = ['title', 'placeholder', 'aria-label', 'alt', 'aria-current', 'href'];
+
+  function langShouldPreserve(el) {
+    if (!el || !el.matches) return false;
+    for (let i = 0; i < LANG_PRESERVE.length; i++) {
+      if (el.matches(LANG_PRESERVE[i])) return true;
+    }
+    return false;
+  }
+
+  function langMorphAttrs(curEl, newEl) {
+    for (let i = 0; i < LANG_ATTRS.length; i++) {
+      const attr = LANG_ATTRS[i];
+      const nw = newEl.getAttribute(attr);
+      const cur = curEl.getAttribute(attr);
+      if (nw !== null && cur !== nw) curEl.setAttribute(attr, nw);
+      else if (nw === null && cur !== null) curEl.removeAttribute(attr);
+    }
+  }
+
+  function langMorphTextSiblings(curEl, newEl) {
+    // Update interleaved text nodes (between element children) when structure
+    // matches.
+    const curText = [];
+    const newText = [];
+    curEl.childNodes.forEach((n) => {
+      if (n.nodeType === Node.TEXT_NODE) curText.push(n);
+    });
+    newEl.childNodes.forEach((n) => {
+      if (n.nodeType === Node.TEXT_NODE) newText.push(n);
+    });
+    if (curText.length !== newText.length) return;
+    for (let i = 0; i < curText.length; i++) {
+      if (curText[i].nodeValue !== newText[i].nodeValue) {
+        curText[i].nodeValue = newText[i].nodeValue;
+      }
+    }
+  }
+
+  function langMorph(curEl, newEl) {
+    if (!curEl || !newEl) return;
+    if (curEl.tagName !== newEl.tagName) return;
+    if (LANG_SKIP_TAGS.has(curEl.tagName)) return;
+    if (langShouldPreserve(curEl)) return;
+
+    langMorphAttrs(curEl, newEl);
+
+    const curKids = curEl.childNodes;
+    const newKids = newEl.childNodes;
+    const allText = (nl) => {
+      if (nl.length === 0) return false;
+      for (let i = 0; i < nl.length; i++) {
+        if (nl[i].nodeType !== Node.TEXT_NODE) return false;
+      }
+      return true;
+    };
+    if (allText(curKids) && allText(newKids)) {
+      if (curEl.textContent !== newEl.textContent) {
+        curEl.textContent = newEl.textContent;
+      }
+      return;
+    }
+
+    const curChildren = curEl.children;
+    const newChildren = newEl.children;
+    if (curChildren.length !== newChildren.length) return;
+    for (let i = 0; i < curChildren.length; i++) {
+      langMorph(curChildren[i], newChildren[i]);
+    }
+    langMorphTextSiblings(curEl, newEl);
+  }
+
+  function langMorphHead(newDoc) {
+    document.title = newDoc.title;
+    document.documentElement.lang = newDoc.documentElement.lang || '';
+
+    const newMetas = newDoc.head.querySelectorAll('meta[name], meta[property]');
+    newMetas.forEach((nm) => {
+      const name = nm.getAttribute('name');
+      const prop = nm.getAttribute('property');
+      const sel = name ? 'meta[name="' + name + '"]' : 'meta[property="' + prop + '"]';
+      const cur = document.head.querySelector(sel);
+      if (cur && nm.getAttribute('content') !== null) {
+        cur.setAttribute('content', nm.getAttribute('content'));
+      }
+    });
+
+    const canon = newDoc.head.querySelector('link[rel="canonical"]');
+    if (canon) {
+      const cur = document.head.querySelector('link[rel="canonical"]');
+      if (cur) cur.setAttribute('href', canon.getAttribute('href'));
+    }
+  }
+
+  async function switchLang(targetUrl, opts) {
+    const push = !(opts && opts.push === false);
+    try {
+      const res = await fetch(targetUrl, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('fetch failed: ' + res.status);
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const newLang =
+        doc.documentElement.getAttribute('data-lang') ||
+        doc.documentElement.lang ||
+        'en';
+
+      langMorphHead(doc);
+      langMorph(document.body, doc.body);
+
+      document.documentElement.setAttribute('data-lang', newLang);
+      try {
+        localStorage.setItem('kt-lang', newLang);
+      } catch (_) {
+        /* ignore quota/disabled */
+      }
+
+      if (push) history.pushState({ lang: newLang }, '', targetUrl);
+
+      // Close lang dropdown (the <details> stays open after click otherwise)
+      const menu = document.querySelector('.kt-lang-menu');
+      if (menu) menu.removeAttribute('open');
+
+      // Re-bind in case the menu got morphed (idempotent — guarded by dataset)
+      bindLangLinks();
+
+      // Fires the existing kt:lang-change listener (line ~118), which
+      // re-renders dynamic chrome (history, samples) and re-runs analysis
+      // so /api/analyze findings come back in the new locale.
+      window.dispatchEvent(
+        new CustomEvent('kt:lang-change', { detail: { lang: newLang } })
+      );
+    } catch (e) {
+      console.warn('Seamless lang switch failed, falling back to navigation:', e);
+      window.location.href = targetUrl;
+    }
+  }
+
+  function bindLangLinks() {
+    document.querySelectorAll('.kt-lang-menu-list a').forEach((a) => {
+      if (a.dataset.langSwapBound) return;
+      a.dataset.langSwapBound = '1';
+      a.addEventListener('click', (e) => {
+        const href = a.getAttribute('href');
+        if (!href || /^https?:/i.test(href)) return;
+        e.preventDefault();
+        switchLang(href);
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindLangLinks);
+  } else {
+    bindLangLinks();
+  }
+
+  // Browser back/forward — re-morph without pushing a new history entry.
+  window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.lang) {
+      switchLang(window.location.pathname, { push: false });
+    }
+  });
 })();
