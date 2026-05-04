@@ -89,6 +89,11 @@
       'status.invalid':            'невалідний payload',
       'status.local':              'локально',
 
+      // ── theme toggle tooltips ─────────────────────────────
+      'theme.tooltip.auto':        'тема: авто · клік → світла',
+      'theme.tooltip.light':       'тема: світла · клік → темна',
+      'theme.tooltip.dark':        'тема: темна · клік → авто',
+
       // ── auth modal ────────────────────────────────────────
       'auth.login.title':          'увійти',
       'auth.register.title':       'створити акаунт',
@@ -251,6 +256,11 @@
       'status.invalid':            'invalid payload',
       'status.local':              'local',
 
+      // ── theme toggle tooltips ─────────────────────────────
+      'theme.tooltip.auto':        'theme: auto · click → light',
+      'theme.tooltip.light':       'theme: light · click → dark',
+      'theme.tooltip.dark':        'theme: dark · click → auto',
+
       // ── auth modal ────────────────────────────────────────
       'auth.login.title':          'sign in',
       'auth.register.title':       'create account',
@@ -405,6 +415,9 @@
       'status.clean':                  'чисто',
       'status.invalid':                'невалидный payload',
       'status.local':                  'локально',
+      'theme.tooltip.auto':            'тема: авто · клик → светлая',
+      'theme.tooltip.light':           'тема: светлая · клик → тёмная',
+      'theme.tooltip.dark':            'тема: тёмная · клик → авто',
       'auth.login.title':              'войти',
       'auth.register.title':           'создать аккаунт',
       'auth.label.email':              'email',

@@ -2722,6 +2722,11 @@
       // Re-bind in case the menu got morphed (idempotent — guarded by dataset)
       bindLangLinks();
 
+      // Re-apply theme-toggle tooltip in the new locale (see
+      // applyThemeTooltipI18n — the inline <head> IIFE bakes per-locale
+      // strings at parse-time and overwrites our tooltip on click).
+      applyThemeTooltipI18n();
+
       // Fires the existing kt:lang-change listener (line ~118), which
       // re-renders dynamic chrome (history, samples) and re-runs analysis
       // so /api/analyze findings come back in the new locale.
@@ -2747,10 +2752,47 @@
     });
   }
 
+  // Theme-toggle tooltip stays stale after lang swap because the inline
+  // <head> IIFE bakes per-locale strings at parse-time and re-applies them
+  // on every theme-button click. We override here:
+  //   - At init (after i18n.js loaded) we set a localized tooltip
+  //   - On every click we re-apply in a microtask, so we run *after* the
+  //     IIFE's sync click-handler has clobbered the title
+  function applyThemeTooltipI18n() {
+    if (typeof window.t !== 'function') return;
+    const btn = document.querySelector('.kt-theme-toggle');
+    if (!btn) return;
+    let saved = null;
+    try {
+      saved = localStorage.getItem('kt-theme');
+    } catch (_) {
+      /* storage may be disabled */
+    }
+    btn.title =
+      saved === null
+        ? window.t('theme.tooltip.auto')
+        : saved === 'light'
+          ? window.t('theme.tooltip.light')
+          : window.t('theme.tooltip.dark');
+  }
+  function bindThemeTooltipI18n() {
+    const btn = document.querySelector('.kt-theme-toggle');
+    if (!btn || btn.dataset.themeTooltipBound) return;
+    btn.dataset.themeTooltipBound = '1';
+    btn.addEventListener('click', () => {
+      Promise.resolve().then(applyThemeTooltipI18n);
+    });
+    applyThemeTooltipI18n();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindLangLinks);
+    document.addEventListener('DOMContentLoaded', () => {
+      bindLangLinks();
+      bindThemeTooltipI18n();
+    });
   } else {
     bindLangLinks();
+    bindThemeTooltipI18n();
   }
 
   // Browser back/forward — re-morph without pushing a new history entry.
