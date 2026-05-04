@@ -188,6 +188,62 @@
       .join('');
   }
 
+  // Format pill — surfaces detected payload type, status, version, dialect
+  // as a coloured pill row above the inspector tabs. Hidden until first
+  // analysis result lands. Categorises type into oRTB-family vs JsonFeed-
+  // family for colour coding (see CSS .format-pill-type[data-format]).
+  function updateFormatBar(validation, dialect) {
+    const bar = $('formatBar');
+    if (!bar) return;
+    if (!validation || !validation.type) {
+      bar.hidden = true;
+      return;
+    }
+    bar.hidden = false;
+    const type = String(validation.type || '');
+    const status = String(validation.status || '');
+
+    const pillType = $('formatPillType');
+    pillType.textContent = type;
+    // Discriminator drives colour. "oRTB BidRequest" / "oRTB BidResponse" → ortb;
+    // anything with "Feed Response" → feed. Unknown stays neutral.
+    var family = 'unknown';
+    if (/oRTB/i.test(type)) family = 'ortb';
+    else if (/Feed Response/i.test(type)) family = 'feed';
+    pillType.dataset.format = family;
+
+    const pillStatus = $('formatPillStatus');
+    pillStatus.textContent = humanStatus(status) || status || '—';
+    pillStatus.dataset.status = status;
+
+    const pillVer = $('formatPillVersion');
+    const v = validation.version;
+    // oRTB version pill only makes sense for oRTB-family payloads. JsonFeed
+    // formats don't have an oRTB version dimension — suppress to avoid
+    // showing a confusing "oRTB 2.5 ?" tag on e.g. an ExoClick rtb.php feed.
+    if (family === 'ortb' && v && v.version && v.version !== 'unknown') {
+      const cf = v.confidence;
+      const cfTag = cf >= 1 ? '' : cf >= 0.5 ? ' ≈' : ' ?';
+      pillVer.textContent = 'oRTB ' + v.version + cfTag;
+      pillVer.title =
+        v.signals && v.signals.length
+          ? 'Detected via: ' + v.signals.join(', ')
+          : 'No version-specific markers — defaulted to spec baseline';
+      pillVer.hidden = false;
+    } else {
+      pillVer.hidden = true;
+    }
+
+    const pillDialect = $('formatPillDialect');
+    if (dialect && dialect !== 'iab') {
+      pillDialect.textContent = '+ ' + dialect;
+      pillDialect.title = 'Active dialect overlay: ' + dialect;
+      pillDialect.hidden = false;
+    } else {
+      pillDialect.hidden = true;
+    }
+  }
+
   window.updateCharCount = updateCharCount;
   function updateCharCount(id) {
     const el = $(id);
@@ -696,6 +752,7 @@
           // confirmSave can read it without parsing localised text.
           $('stEntity').innerText = entity + ' · ' + humanStatus(validation.status);
           $('stEntity').dataset.status = validation.status || '';
+          updateFormatBar(validation, (j.meta && j.meta.dialect) || null);
         }
       } catch (e) {
         console.warn('Backend unavailable:', e);
