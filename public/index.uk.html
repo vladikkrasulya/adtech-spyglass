@@ -70,8 +70,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" />
     <link rel="stylesheet" href="/design-system.css?v=10" />
-    <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'тема: авто · клік → світла':(s==='light'?'тема: світла · клік → темна':'тема: темна · клік → авто');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){if(document.querySelector('.kt-theme-toggle'))return;var b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Перемкнути тему');b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});document.body.appendChild(b);apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
-    <script>(function(){try{var LANG='uk';var OTHER='en';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}function inject(){if(document.querySelector('.kt-lang-toggle'))return;var b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';b.setAttribute('aria-label','Switch language');b.textContent=LANG.toUpperCase();b.title='мова: українська · клік → English';b.addEventListener('click',function(){location.href='/'+OTHER+'/'+location.search;});document.body.appendChild(b);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
+    <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'тема: авто · клік → світла':(s==='light'?'тема: світла · клік → темна':'тема: темна · клік → авто');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){var b=document.querySelector('.kt-theme-toggle');if(!b){b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Перемкнути тему');document.body.appendChild(b);}if(!b.dataset.themeBound){b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});b.dataset.themeBound='1';}apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
+    <script>(function(){try{var LANG='uk';var OTHER='en';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}function bind(){var b=document.querySelector('.kt-lang-toggle');if(!b){b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';document.body.appendChild(b);}b.setAttribute('aria-label','Switch language');b.textContent=LANG.toUpperCase();b.title='мова: українська · клік → English';if(!b.dataset.langBound){b.addEventListener('click',function(){location.href='/'+OTHER+'/'+location.search;});b.dataset.langBound='1';}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();}catch(e){}})();</script>
     <style>
       /* ============================================================
    Spyglass v8 — re-skinned on kyivtech-portal design-system.
@@ -159,6 +159,28 @@
         align-items: center;
         gap: var(--space-3);
         flex-wrap: wrap;
+      }
+      /* The lang + theme toggles default to fixed-position floating circles
+         (design-system.css). In Spyglass we render them inline in the header
+         instead — so users can see the active locale/theme alongside the
+         primary actions. Override layout/sizing here, keep colours/states. */
+      .app-header-actions .kt-lang-toggle,
+      .app-header-actions .kt-theme-toggle {
+        position: static;
+        right: auto;
+        bottom: auto;
+        width: auto;
+        min-width: 32px;
+        height: 32px;
+        padding: 0 var(--space-3);
+        font-family: var(--font-mono);
+        font-size: var(--fs-mono);
+        letter-spacing: 0.06em;
+      }
+      .app-header-actions .kt-theme-toggle {
+        padding: 0;
+        width: 32px;
+        font-size: 14px;
       }
       .auth-widget {
         display: flex;
@@ -1257,6 +1279,12 @@
         <button onclick="runAnalysis()" class="btn btn-primary btn-sm" id="analyzeBtn">
           analyze stream
         </button>
+        <!-- Language + theme toggles. Buttons live in the header so users can
+             see at a glance which locale/theme is active. The IIFEs in <head>
+             detect these existing buttons and bind their handlers (rather
+             than appending floating fixed-position fallbacks). -->
+        <button class="kt-lang-toggle" type="button" aria-label="Switch language" title="мова: українська · клік → English">UK</button>
+        <button class="kt-theme-toggle" type="button" aria-label="Перемкнути тему">◐</button>
         <!-- Auth widget — switches between sign-in button and email/logout based on /api/auth/me -->
         <div id="authWidget" class="auth-widget" aria-live="polite">
           <button
