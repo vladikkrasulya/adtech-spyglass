@@ -2669,11 +2669,33 @@
 
   window.closeModal = closeModal;
 
+  // Left-sidebar accordion: only one section (summary | library | history)
+  // open at a time. Click the section-title to expand it; clicking buttons
+  // inside the title (e.g. history's "clear") doesn't toggle thanks to
+  // event.stopPropagation() in their inline handlers.
+  function setupSidebarAccordion() {
+    const accs = document.querySelectorAll('.sb-accordion');
+    accs.forEach((acc) => {
+      const title = acc.querySelector('.section-title');
+      if (!title) return;
+      title.addEventListener('click', (e) => {
+        // Defensive: if click bubbled from a button child, ignore it.
+        if (e.target && e.target.closest('button')) return;
+        // Strict accordion — open clicked, close all others. Always exactly
+        // one open; second click on already-open section is a no-op.
+        accs.forEach((a) => {
+          a.dataset.open = a === acc ? 'true' : 'false';
+        });
+      });
+    });
+  }
+
   // ── Init ──────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
     renderReference();
     updateCharCount('bidReq');
     updateCharCount('bidRes');
+    setupSidebarAccordion();
 
     // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
     // input events (per HTML spec), so loadSample / clearInput don't
