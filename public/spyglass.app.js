@@ -567,8 +567,12 @@
   window.runAnalysis = async function (fromHist) {
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
     const resVal = fromHist ? fromHist.res : $('bidRes').value;
-    if (!reqVal) {
-      toast(t('toast.paste_request'), 'error');
+    // Backend supports request-only, response-only, or both. JsonFeed-format
+    // payloads (Kadam push, ExoClick rtb.php, RichAds, Zeropark) are typically
+    // pasted into bidRes — refusing to analyze in that case loses the whole
+    // JsonFeed branch. Only block when both fields are empty.
+    if (!reqVal && !resVal) {
+      toast(t('toast.nothing_to_analyze'), 'error');
       return;
     }
 
@@ -579,14 +583,14 @@
     }
 
     try {
-      const req = JSON.parse(reqVal);
+      const req = reqVal ? JSON.parse(reqVal) : {};
       const res = resVal ? JSON.parse(resVal) : {};
       const simP = $('simPrice').value;
 
       if (!fromHist) {
-        $('bidReq').value = JSON.stringify(req, null, 2);
+        if (reqVal) $('bidReq').value = JSON.stringify(req, null, 2);
         if (resVal) $('bidRes').value = JSON.stringify(res, null, 2);
-        updateCharCount('bidReq');
+        if (reqVal) updateCharCount('bidReq');
         if (resVal) updateCharCount('bidRes');
       }
 
