@@ -82,6 +82,13 @@
       'btn.close': 'закрити',
       'btn.load_to_editor': 'завантажити в редактор',
 
+      // ── keyboard shortcuts cheat-sheet ────────────────────
+      'shortcuts.title': 'Гарячі клавіші',
+      'shortcuts.row.help': 'Показати цю довідку',
+      'shortcuts.row.run': 'Запустити аналіз',
+      'shortcuts.row.save': 'Зберегти в бібліотеку',
+      'shortcuts.row.close': 'Закрити модалку',
+
       // ── empty / placeholder hints ─────────────────────────
       'empty.partners': 'Партнерів ще немає',
       'empty.samples': 'Збережених запитів ще немає',
@@ -254,6 +261,13 @@
       'btn.close': 'close',
       'btn.load_to_editor': 'load to editor',
 
+      // ── keyboard shortcuts cheat-sheet ────────────────────
+      'shortcuts.title': 'Keyboard shortcuts',
+      'shortcuts.row.help': 'Show this help',
+      'shortcuts.row.run': 'Run analysis',
+      'shortcuts.row.save': 'Save to library',
+      'shortcuts.row.close': 'Close modal',
+
       // ── empty / placeholder hints ─────────────────────────
       'empty.partners': 'No partners yet',
       'empty.samples': 'No saved samples yet',
@@ -423,6 +437,11 @@
       'btn.add': 'добавить',
       'btn.close': 'закрыть',
       'btn.load_to_editor': 'загрузить в редактор',
+      'shortcuts.title': 'Горячие клавиши',
+      'shortcuts.row.help': 'Показать эту справку',
+      'shortcuts.row.run': 'Запустить анализ',
+      'shortcuts.row.save': 'Сохранить в библиотеку',
+      'shortcuts.row.close': 'Закрыть модалку',
       'empty.partners': 'Партнёров пока нет',
       'empty.samples': 'Сохранённых запросов пока нет',
       'status.errors': 'критические ошибки',
