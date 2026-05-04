@@ -2,7 +2,34 @@
 
 OpenRTB inspector and validator. Paste a `BidRequest`/`BidResponse` JSON, get human-readable explanations of every issue, semantic crosscheck between request and response, creative preview, and a saved-sample library per partner.
 
-This document describes the target architecture. The current codebase is the seed; phases below in [ROADMAP.md](./ROADMAP.md) describe how it evolves.
+This document describes the **target architecture**. The current state has converged toward this target on most axes; what's still in flight is called out in the **Current State** section just below. Sequencing of remaining work lives in [ROADMAP.md](./ROADMAP.md) (with status markers per phase).
+
+---
+
+## 0. Current state (as of 2026-05-04)
+
+A snapshot of what's actually live on `spyglass.kyivtech.com.ua`. Anything below differs from later sections — those describe target architecture, this section describes today.
+
+**Live and working:**
+
+- **Validator core in `packages/core/`** — extracted from `server.js`, used by both the Node server and (planned) the browser. Pure JS, no Node-only APIs. 209 unit tests pass. Phase 1 ✅, Phase 4 🟢 (npm publish pending).
+- **3 locales** (`/`, `/uk/`, `/ru/`) with **seamless DOM-morph language switch** (no full reload, preserves analysis state). About pages parallel: `/about`, `/uk/about`, `/ru/about`. SEO via hreflang + sitemap.
+- **Anonymous-first UX**: paste-and-validate works without login. Login is opt-in for the encrypted library (zero-knowledge AES-GCM-256, PBKDF2 600k, recovery key) + partner profiles.
+- **JsonFeed validators** for non-RTB CIS adtech: Kadam push + clickunder, ExoClick `rtb.php`, RichAds, Zeropark.
+- **AdKernel routing detection** as info-level finding (49+ alias networks share the same wire format).
+- **Format-pill bar** in inspector — surfaces type / status / oRTB version / dialect at a glance.
+- **Operations**: SQLite daily backup (cron, gzipped, 30-day rotation, restore drill verified), per-IP rate-limiting (60/min on analyze, 10/15min on login, 5/hour on register), HttpOnly+SameSite+Secure cookies, full `npm run ci` green (format/lint/typecheck/tests).
+
+**Diverges from target (still on the roadmap):**
+
+- ❌ **No public/private domain split** — Phase 5 was rejected 2026-05-04 (anonymous use already works, single domain is the simpler architecture; see decision log in ROADMAP.md). The "free public demo" tier in §1 below is therefore _the same domain_, with login as opt-in unlock.
+- 🟢 **Validator strictness levels** (`lax`/`normal`/`pedantic`) and full version-aware rule gating (Phase 2) are partially shipped — `detectVersion()` works with confidence + signals, but most rules don't yet branch by version.
+- 🟢 **`@spyglass/core` is extracted as a workspace** but **not yet npm-published** — held back until Phase 2 strict-mode work stabilises the public API.
+- ⏹️ **`@spyglass/cli` (Phase 6)** not started.
+- 🟢 **Phase 7 Pro features**: multi-user accounts ✅, encrypted library ✅, per-user history ✅. Per-partner default profiles, share read-only sample, mock generation, schema diff, browser extension — not started.
+- ❌ **Operationalize gaps** (Phase 8 ⏸️ partial): error tracking (Sentry/GlitchTip), structured logging (Pino), build-SHA in `/api/health`, content-hashed cache-bust automation — all on the backlog.
+
+For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md).
 
 ---
 

@@ -11,6 +11,13 @@ encrypted library of saved samples per partner.
 [/about](https://spyglass.kyivtech.com.ua/about) · 🇺🇦 / 🇬🇧 / 🇷🇺
 ([UK](https://spyglass.kyivtech.com.ua/uk/) · [EN](https://spyglass.kyivtech.com.ua/) · [RU](https://spyglass.kyivtech.com.ua/ru/))
 
+**No account required** to inspect bids — paste-and-validate works
+anonymously, no logs of your payloads are kept (a per-tab in-memory
+history is the only retention). Login is **opt-in** for the
+encrypted library of saved samples and partner profiles. The whole
+surface lives on a single domain by design — see [decision log in
+ROADMAP.md](./ROADMAP.md#decision-log-live).
+
 ## What it does
 
 - **OpenRTB**: oRTB 2.5 / 2.6 / 3.0 detection + validation. Auto-detect the
@@ -77,12 +84,13 @@ packages/core/            validator core (browser + server-side compatible)
   categories.js           IAB Content Taxonomy decoder
   dialects/iab.js         IAB-canonical baseline (default)
   dialects/kadam.js       Kadam oRTB-extension overlay
-  messages/{uk,en}.json   localised finding messages
+  messages/{uk,en,ru}.json  localised finding messages
 
 public/index.{en,uk,ru}.html   UI per locale (EN at /, others under /uk/, /ru/)
 public/about.{en,uk,ru}.html   docs per locale
 public/spyglass.app.js         UI behaviours
 public/spyglass-crypto.js      zero-knowledge crypto (browser-only)
+public/lang-switch.js          seamless DOM-morph language switch (shared by index + about)
 public/i18n.js                 ~140-key UK/EN/RU dictionary
 
 docker-compose.yml        service definition (ports + bind mounts)

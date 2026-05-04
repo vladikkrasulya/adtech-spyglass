@@ -4,9 +4,17 @@ Phased plan for evolving the current single-container app into the architecture 
 
 The phases are **sequential where they share substrate** (you can't do the public/private split before the validator core is extracted) and **parallelizable where they don't** (i18n and theme can land any time after Phase 1).
 
+**Status legend** (added 2026-05-04 to track real progress against the original phase plan):
+- ✅ DONE — shipped in production
+- 🟢 MOSTLY DONE — main scope shipped; minor follow-ups remain
+- 🔄 IN PROGRESS — actively being worked on
+- ⏸️ DEFERRED — explicitly postponed; see decision log
+- ❌ REJECTED — decided not to do; see decision log
+- ⏹️ NOT STARTED — on the list but no work yet
+
 ---
 
-## Phase 0 — Done (this session)
+## Phase 0 — Done (this session) ✅ DONE
 
 - ✅ Competitive landscape research
 - ✅ OpenRTB 2.6 version-history research with detection signals
@@ -16,7 +24,7 @@ The phases are **sequential where they share substrate** (you can't do the publi
 
 ---
 
-## Phase 1 — Foundation refactor (1–2 weeks)
+## Phase 1 — Foundation refactor (1–2 weeks) ✅ DONE
 
 The single goal: turn the current monolithic `server.js` into a layered codebase the rest of the roadmap can build on.
 
@@ -30,7 +38,9 @@ The single goal: turn the current monolithic `server.js` into a layered codebase
 
 ---
 
-## Phase 2 — IAB-spec authoritative validator (2 weeks)
+## Phase 2 — IAB-spec authoritative validator (2 weeks) 🟢 MOSTLY DONE
+
+> Update 2026-05-04: `detectVersion()` shipped with confidence scoring + signals; native 1.1↔1.2 detection works; VAST 4.x in `video.protocols` accepted; canonical fixtures in `tests/fixtures.js`. **Remaining**: full version-aware rule gating (some rules still spec-version-agnostic) and `strictness` levels (lax/normal/pedantic) — not yet wired through the API.
 
 Make Spyglass actually credible against the official spec.
 
@@ -46,7 +56,9 @@ Make Spyglass actually credible against the official spec.
 
 ---
 
-## Phase 3 — Foundations: i18n + theme (1 week)
+## Phase 3 — Foundations: i18n + theme (1 week) ✅ DONE
+
+> Update 2026-05-04: 3 locales (uk/en/ru), URL routing per locale (`/`, `/uk/`, `/ru/`), language dropdown with **seamless DOM-morph switch** (no full reload, preserves analysis state), theme toggle with persistence + system-preference auto, theme-tooltip i18n, modal close-on-swap. `i18n.js` registry covers ~140 chrome strings; backend findings use `messages/{uk,en,ru}.json`.
 
 Already requested. Lands after Phase 1 because the i18n key-extraction depends on the findings refactor, not before — otherwise the keys get baked in twice.
 
@@ -61,7 +73,9 @@ Already requested. Lands after Phase 1 because the i18n key-extraction depends o
 
 ---
 
-## Phase 4 — Open-source `@spyglass/core` (1 week)
+## Phase 4 — Open-source `@spyglass/core` (1 week) 🟢 MOSTLY DONE
+
+> Update 2026-05-04: `packages/core/` extracted as npm workspace, validator engine pure JS (no Node-only APIs), repo went **public** on GitHub with MIT LICENSE + SECURITY.md + Sources documented. **Remaining**: actual npm publish (still `private: true` in workspace) — held back until API stabilizes after Phase 2 strict-mode work.
 
 The validator engine becomes a public npm package. This is the trust play and the SEO play in one.
 
@@ -76,7 +90,11 @@ The validator engine becomes a public npm package. This is the trust play and th
 
 ---
 
-## Phase 5 — Public demo split (1–2 weeks)
+## Phase 5 — Public demo split (1–2 weeks) ❌ REJECTED 2026-05-04
+
+> Decision 2026-05-04: **NOT splitting** the surface to a separate `rtb.kyivtech.com.ua` domain. The public-demo experience already works without an account on `spyglass.kyivtech.com.ua/` — login only unlocks Save/Library/Partners. Real-world adoption confirmed (senior engineer at user's workplace used it for SSP 3027 click-without-click investigation 2026-05-04). Cost of split (2 deployments, 2 DNS, 2 CF Tunnel routes, 2 build configs) > benefit. The single-domain decision is in [memory `spyglass_no_public_split.md`](../../home/vk/.claude/projects/-home-vk/memory/spyglass_no_public_split.md).
+>
+> What of Phase 5 *was* worth doing happened anyway: anonymous use works, SEO landing exists (`/about` + index pages with hreflang + sitemap), privacy copy is live, og:image for socials shipped (commit `7a606ea`).
 
 The public surface comes online.
 
@@ -91,7 +109,7 @@ The public surface comes online.
 
 ---
 
-## Phase 6 — `@spyglass/cli` (3–5 days)
+## Phase 6 — `@spyglass/cli` (3–5 days) ⏹️ NOT STARTED
 
 A command-line wrapper for CI use.
 
@@ -103,7 +121,9 @@ A command-line wrapper for CI use.
 
 ---
 
-## Phase 7 — Pro features (ongoing, prioritized)
+## Phase 7 — Pro features (ongoing, prioritized) 🟢 PARTIAL
+
+> Update 2026-05-04: **Multi-user accounts shipped** (`feat(auth): Phase 7 — multi-user accounts with per-user library`, commit `32a756a`); **zero-knowledge crypto shipped** (`feat(crypto): Phase 7 (full)`, commit `ca29b54`); **persistent history** done as part of multi-user library; **share read-only sample** NOT shipped; **per-partner default profiles** NOT shipped; **mock generation, schema diff, browser extension, VAST validator iframe** NOT started.
 
 These are individually shippable; pick whichever the auth'd users ask loudest for.
 
@@ -122,7 +142,9 @@ These are individually shippable; pick whichever the auth'd users ask loudest fo
 
 ---
 
-## Phase 8 — Operationalize (continuous)
+## Phase 8 — Operationalize (continuous) 🟢 PARTIAL
+
+> Update 2026-05-04: **SQLite backups** ✅ shipped — daily 03:30 cron via `scripts/backup-db.sh`, gzipped, 30-day rotation, restore drill verified. **Rate limiting** ✅ on `/api/analyze` (60 req/min/IP), `/auth/login` (10/15min), `/auth/register` (5/hour). **Health endpoint** ✅ exists at `/api/health` with DB ping (build SHA + version metadata still missing). **CI** ✅ via GitHub Actions; format/lint/typecheck/tests all green as of commit `affb4ec`. **Cache-bust automation** ❌ still manual `?v=N`. **Error tracking** ❌ Sentry/GlitchTip not integrated. **Structured logging** ❌ still `console.log/.error` (Pino not added).
 
 Things that have to be true before we open the public demo, even if individual phases finish "before" them.
 
@@ -147,3 +169,4 @@ Decisions made during this planning session:
 - **Wedge market: CIS/EE push & pop SSPs** — Kadam, PropellerAds, Adsterra, MGID. Localization + dialect overlays = no competition. Then mainstream programmatic.
 - **Two themes only** (light + dark). No "auto" pseudo-mode in the picker; OS preference is the load-time default.
 - **Three locales for v1**: UK, EN, RU.
+- **2026-05-04 — Phase 5 (public/private domain split) REJECTED.** Anonymous validation already works on the single domain `spyglass.kyivtech.com.ua/`. Login is opt-in for Save/Library/Partners only. Real-world adoption confirmed (senior engineer used the existing single-domain inspector to debug an SSP 3027 click-without-click complaint). Cost > benefit. Dev-environment split (`dev-spyglass.kyivtech.com.ua`) is a **separate idea** — not decided either way; revisit when a specific risky migration warrants side-by-side. See [memory: spyglass_no_public_split.md](../../.claude/projects/-home-vk/memory/spyglass_no_public_split.md).
