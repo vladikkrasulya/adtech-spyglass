@@ -585,7 +585,7 @@
     try {
       const req = reqVal ? JSON.parse(reqVal) : {};
       const res = resVal ? JSON.parse(resVal) : {};
-      const simP = $('simPrice').value;
+      const simP = $('simPrice').value || '1.50';
 
       if (!fromHist) {
         if (reqVal) $('bidReq').value = JSON.stringify(req, null, 2);
