@@ -331,8 +331,19 @@
       // ── peek modal ────────────────────────────────────────
       'peek.label.bid_req':        'bid request',
       'peek.label.bid_res':        'bid response',
+
+      // ── json-input badge (live) ───────────────────────────
+      'badge.empty':               'empty',
+      'badge.valid':               'valid',
+      'badge.invalid':             'invalid',
     },
   };
+
+  // EN locale doesn't have these by default — they were added together with
+  // the locale flip, after the original 131-key Tier-1 cut.
+  I18N.uk['badge.empty']   = 'порожньо';
+  I18N.uk['badge.valid']   = 'валідний';
+  I18N.uk['badge.invalid'] = 'невалідний';
 
   // Locale source of truth: <html lang="…"> (set server-side per /uk/ or
   // /en/ route by the inline IIFE in each HTML file). localStorage is only

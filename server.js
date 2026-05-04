@@ -115,27 +115,20 @@ const CONTENT_TYPES = {
   '.txt': 'text/plain',
 };
 
-// Pick the preferred UI locale from Accept-Language. Anything in the Slavic
-// cluster (uk / ru / be / kk) lands on /uk/, everyone else gets /en/. This
-// keeps the SEO-canonical page English (x-default) while still giving CIS
-// users their language by default on first visit.
-function pickLocaleFromAccept(req) {
-  const al = String(req.headers['accept-language'] || '').toLowerCase();
-  if (/\b(uk|ru|be|kk|ky|tg|uz)\b/.test(al)) return 'uk';
-  return 'en';
-}
-
 // Locale routing for the static UI. Returns either a redirect target (for
 // "/" and legacy "/index.html" / "/about.html" paths) or the file to serve.
 // Anything not matched falls through to plain static-file resolution.
-function resolveLocaleRoute(reqUrl, req) {
-  const u = reqUrl.replace(/\/$/, ''); // strip trailing slash for comparison
-  if (u === '' || u === '/index.html') {
-    return { redirect: '/' + pickLocaleFromAccept(req) + '/' };
-  }
-  if (u === '/about' || u === '/about.html') {
-    return { redirect: '/' + pickLocaleFromAccept(req) + '/about' };
-  }
+//
+// Default for the root URL is English — the SEO-canonical landing for the
+// global audience. Users who want Ukrainian use the in-page language toggle
+// (or hit /uk/ directly), which then sticks via localStorage on subsequent
+// visits if we ever add cookie-based preference. Accept-Language is *not*
+// honoured on / by design: showing UA users a UK page on first visit would
+// dilute the English-canonical signal Google relies on.
+function resolveLocaleRoute(reqUrl) {
+  const u = reqUrl.replace(/\/$/, '');
+  if (u === '' || u === '/index.html') return { redirect: '/en/' };
+  if (u === '/about' || u === '/about.html') return { redirect: '/en/about' };
   if (u === '/uk') return { file: '/index.uk.html' };
   if (u === '/en') return { file: '/index.en.html' };
   if (u === '/uk/about') return { file: '/about.uk.html' };
@@ -146,7 +139,7 @@ function resolveLocaleRoute(reqUrl, req) {
 function serveStaticFile(req, res) {
   const reqPath = req.url.split('?')[0];
 
-  const route = resolveLocaleRoute(reqPath, req);
+  const route = resolveLocaleRoute(reqPath);
   if (route && route.redirect) {
     res.writeHead(302, { Location: route.redirect, 'Cache-Control': 'no-cache' });
     res.end();

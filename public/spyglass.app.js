@@ -203,16 +203,16 @@
     const badge = $(id === 'bidReq' ? 'reqBadge' : 'resBadge');
     const v = el.value.trim();
     if (!v) {
-      badge.textContent = 'порожньо';
+      badge.textContent = t('badge.empty');
       badge.className = 'json-badge empty';
       return;
     }
     try {
       JSON.parse(v);
-      badge.textContent = 'валідний';
+      badge.textContent = t('badge.valid');
       badge.className = 'json-badge valid';
     } catch {
-      badge.textContent = 'невалідний';
+      badge.textContent = t('badge.invalid');
       badge.className = 'json-badge invalid';
     }
   }
