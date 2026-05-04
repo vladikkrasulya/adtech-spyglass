@@ -2672,6 +2672,47 @@
 
   window.closeModal = closeModal;
 
+  // Sidebar visibility toggles. Click ◀ in the tab-bar to hide the left
+  // sidebar (summary/library/history); click ▶ at the right end to hide
+  // the ad-preview sidebar. State persists in localStorage so refreshes
+  // keep the user's choice. Used together they collapse to a full-width
+  // workbench for inspecting big payloads.
+  const SB_HIDDEN_KEYS = { left: 'spy-sb-left-hidden', right: 'spy-sb-right-hidden' };
+  function arrowFor(side, hidden) {
+    if (side === 'left') return hidden ? '▶' : '◀';
+    return hidden ? '◀' : '▶';
+  }
+  function toggleSidebar(side) {
+    const cls = 'sb-' + side + '-hidden';
+    const isHidden = document.body.classList.toggle(cls);
+    try {
+      localStorage.setItem(SB_HIDDEN_KEYS[side], isHidden ? '1' : '0');
+    } catch (e) {
+      /* private mode */
+    }
+    const btn = document.getElementById(
+      side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
+    );
+    if (btn) btn.textContent = arrowFor(side, isHidden);
+  }
+  function setupSidebarToggles() {
+    ['left', 'right'].forEach((side) => {
+      const cls = 'sb-' + side + '-hidden';
+      let saved;
+      try {
+        saved = localStorage.getItem(SB_HIDDEN_KEYS[side]);
+      } catch (e) {
+        saved = null;
+      }
+      if (saved === '1') document.body.classList.add(cls);
+      const btn = document.getElementById(
+        side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
+      );
+      if (btn) btn.textContent = arrowFor(side, document.body.classList.contains(cls));
+    });
+  }
+  window.toggleSidebar = toggleSidebar;
+
   // After a successful analyze, fold the BID REQUEST / BID RESPONSE panes
   // into a thin strip (just the headers) so the inspector tabs below get
   // more vertical room. Click any collapsed card to expand the whole
@@ -2732,6 +2773,7 @@
     updateCharCount('bidRes');
     setupSidebarAccordion();
     setupInputCollapse();
+    setupSidebarToggles();
 
     // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
     // input events (per HTML spec), so loadSample / clearInput don't
