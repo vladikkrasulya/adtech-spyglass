@@ -188,8 +188,29 @@
 
       .workbench {
         display: grid;
-        grid-template-rows: auto auto 1fr auto;
+        grid-template-rows: auto auto auto 1fr auto;
+        grid-template-areas:
+          'banner'
+          'header'
+          'inputs'
+          'main'
+          'footer';
         height: 100vh;
+      }
+      #verifyBanner {
+        grid-area: banner;
+      }
+      .app-header {
+        grid-area: header;
+      }
+      .input-section {
+        grid-area: inputs;
+      }
+      .main-grid {
+        grid-area: main;
+      }
+      .app-footer {
+        grid-area: footer;
       }
 
       /* ── Responsive breakpoints ────────────────────────────────────────
