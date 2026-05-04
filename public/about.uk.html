@@ -8,6 +8,7 @@
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://spyglass.kyivtech.com.ua/uk/about">
   <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about">
+  <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/about">
   <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about">
   <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about">
 
@@ -71,8 +72,40 @@
     .doc-table .pending { color: var(--text-dim); }
 
     .pill-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-4); }
+    /* 3-locale dropdown — same family as index pages, scoped to top-nav. */
+    .kt-lang-menu { position: relative; display: inline-flex; }
+    .kt-lang-menu summary { list-style: none; cursor: pointer; user-select: none; }
+    .kt-lang-menu summary::-webkit-details-marker { display: none; }
+    .kt-lang-menu summary.kt-lang-toggle {
+      height: 32px; min-width: 56px; padding: 0 var(--space-3);
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--r-pill);
+      font-family: var(--font-mono); font-size: var(--fs-mono);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      position: static; width: auto;
+    }
+    .kt-lang-menu summary.kt-lang-toggle:hover { border-color: var(--text-dim); }
+    .kt-lang-menu .kt-lang-caret { font-size: 9px; opacity: 0.55; }
+    .kt-lang-menu[open] summary.kt-lang-toggle { border-color: var(--text-dim); }
+    .kt-lang-menu-list {
+      position: absolute; top: calc(100% + 4px); right: 0;
+      min-width: 200px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--r-md);
+      box-shadow: var(--shadow-md); padding: 4px 0; z-index: 100;
+    }
+    .kt-lang-menu-list a {
+      display: block; padding: 8px var(--space-4); color: var(--text);
+      text-decoration: none; font-family: var(--font-mono);
+      font-size: var(--fs-sm); letter-spacing: 0;
+    }
+    .kt-lang-menu-list a:hover { background: var(--bg-2); }
+    .kt-lang-menu-list a[aria-current="true"] {
+      background: var(--accent-soft); font-weight: 600;
+    }
+
   </style>
-  <script>(function(){try{var LANG='uk';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}function bind(){var b=document.querySelector('.kt-lang-toggle');if(!b){b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';document.body.appendChild(b);}b.setAttribute('aria-label','Switch language');b.textContent=LANG.toUpperCase();b.title='мова: українська · клік → English';if(!b.dataset.langBound){b.addEventListener('click',function(){location.href='/about'+location.search;});b.dataset.langBound='1';}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();}catch(e){}})();</script>
+  <script>(function(){try{var LANG='uk';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}}catch(e){}})();</script>
 </head>
 <body>
 
@@ -89,6 +122,14 @@
       <a href="#privacy">Приватність</a>
       <a href="#example">Приклад</a>
     </nav>
+    <details class="kt-lang-menu">
+      <summary class="kt-lang-toggle" title="мова: українська"><span class="kt-lang-current">UK</span><span class="kt-lang-caret">▾</span></summary>
+      <div class="kt-lang-menu-list" role="menu">
+        <a href="/about" role="menuitem" lang="en">EN · English</a>
+        <a href="/uk/about" role="menuitem" lang="uk" aria-current="true">UK · Українська</a>
+        <a href="/ru/about" role="menuitem" lang="ru">RU · Русский</a>
+      </div>
+    </details>
     <a href="/uk/" class="btn btn-ghost btn-sm">← Spyglass</a>
   </div>
 </header>

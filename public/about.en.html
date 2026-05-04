@@ -8,6 +8,7 @@
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://spyglass.kyivtech.com.ua/about">
   <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about">
+  <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/about">
   <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about">
   <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about">
 
@@ -44,7 +45,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="/design-system.css?v=10">
   <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'theme: auto · click → light':(s==='light'?'theme: light · click → dark':'theme: dark · click → auto');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){if(document.querySelector('.kt-theme-toggle'))return;var b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Toggle theme');b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});document.body.appendChild(b);apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
-  <script>(function(){try{var LANG='en';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}function bind(){var b=document.querySelector('.kt-lang-toggle');if(!b){b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';document.body.appendChild(b);}b.setAttribute('aria-label','Switch language');b.textContent=LANG.toUpperCase();b.title='lang: English · click → Українська';if(!b.dataset.langBound){b.addEventListener('click',function(){location.href='/uk/about'+location.search;});b.dataset.langBound='1';}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();}catch(e){}})();</script>
+  <script>(function(){try{var LANG='en';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}}catch(e){}})();</script>
   <style>
     body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: var(--fs-base); line-height: 1.6; margin: 0; }
     .doc-prose { max-width: 70ch; }
@@ -72,6 +73,38 @@
     .doc-table .pending { color: var(--text-dim); }
 
     .pill-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-4); }
+    /* 3-locale dropdown — same family as index pages, scoped to top-nav. */
+    .kt-lang-menu { position: relative; display: inline-flex; }
+    .kt-lang-menu summary { list-style: none; cursor: pointer; user-select: none; }
+    .kt-lang-menu summary::-webkit-details-marker { display: none; }
+    .kt-lang-menu summary.kt-lang-toggle {
+      height: 32px; min-width: 56px; padding: 0 var(--space-3);
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--r-pill);
+      font-family: var(--font-mono); font-size: var(--fs-mono);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      position: static; width: auto;
+    }
+    .kt-lang-menu summary.kt-lang-toggle:hover { border-color: var(--text-dim); }
+    .kt-lang-menu .kt-lang-caret { font-size: 9px; opacity: 0.55; }
+    .kt-lang-menu[open] summary.kt-lang-toggle { border-color: var(--text-dim); }
+    .kt-lang-menu-list {
+      position: absolute; top: calc(100% + 4px); right: 0;
+      min-width: 200px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--r-md);
+      box-shadow: var(--shadow-md); padding: 4px 0; z-index: 100;
+    }
+    .kt-lang-menu-list a {
+      display: block; padding: 8px var(--space-4); color: var(--text);
+      text-decoration: none; font-family: var(--font-mono);
+      font-size: var(--fs-sm); letter-spacing: 0;
+    }
+    .kt-lang-menu-list a:hover { background: var(--bg-2); }
+    .kt-lang-menu-list a[aria-current="true"] {
+      background: var(--accent-soft); font-weight: 600;
+    }
+
   </style>
 </head>
 <body>
@@ -89,6 +122,14 @@
       <a href="#privacy">Privacy</a>
       <a href="#example">Example</a>
     </nav>
+    <details class="kt-lang-menu">
+      <summary class="kt-lang-toggle" title="lang: English"><span class="kt-lang-current">EN</span><span class="kt-lang-caret">▾</span></summary>
+      <div class="kt-lang-menu-list" role="menu">
+        <a href="/about" role="menuitem" lang="en" aria-current="true">EN · English</a>
+        <a href="/uk/about" role="menuitem" lang="uk">UK · Українська</a>
+        <a href="/ru/about" role="menuitem" lang="ru">RU · Русский</a>
+      </div>
+    </details>
     <a href="/" class="btn btn-ghost btn-sm">← Spyglass</a>
   </div>
 </header>

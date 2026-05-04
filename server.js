@@ -135,6 +135,8 @@ function resolveLocaleRoute(reqUrl) {
   if (u === '/en/about') return { redirect: '/about' };
   if (u === '/uk') return { file: '/index.uk.html' };
   if (u === '/uk/about') return { file: '/about.uk.html' };
+  if (u === '/ru') return { file: '/index.ru.html' };
+  if (u === '/ru/about') return { file: '/about.ru.html' };
   return null;
 }
 

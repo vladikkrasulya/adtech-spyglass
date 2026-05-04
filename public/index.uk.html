@@ -16,6 +16,7 @@
     <meta name="author" content="kyivtech.com.ua" />
     <link rel="canonical" href="https://spyglass.kyivtech.com.ua/uk/" />
     <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/" />
+  <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/">
     <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/" />
     <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/" />
 
@@ -51,7 +52,7 @@
         "applicationSubCategory": "AdTech tooling",
         "operatingSystem": "Any (browser)",
         "browserRequirements": "Requires modern browser with JavaScript and Web Crypto",
-        "inLanguage": ["uk", "en"],
+        "inLanguage": ["uk", "en", "ru"],
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
         "creator": {
@@ -71,7 +72,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" />
     <link rel="stylesheet" href="/design-system.css?v=10" />
     <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'тема: авто · клік → світла':(s==='light'?'тема: світла · клік → темна':'тема: темна · клік → авто');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){var b=document.querySelector('.kt-theme-toggle');if(!b){b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Перемкнути тему');document.body.appendChild(b);}if(!b.dataset.themeBound){b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});b.dataset.themeBound='1';}apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
-    <script>(function(){try{var LANG='uk';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}function bind(){var b=document.querySelector('.kt-lang-toggle');if(!b){b=document.createElement('button');b.className='kt-lang-toggle';b.type='button';document.body.appendChild(b);}b.setAttribute('aria-label','Switch language');b.textContent=LANG.toUpperCase();b.title='мова: українська · клік → English';if(!b.dataset.langBound){b.addEventListener('click',function(){location.href='/'+location.search;});b.dataset.langBound='1';}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();}catch(e){}})();</script>
+    <script>(function(){try{var LANG='uk';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}}catch(e){}})();</script>
     <style>
       /* ============================================================
    Spyglass v8 — re-skinned on kyivtech-portal design-system.
@@ -182,6 +183,39 @@
         width: 32px;
         font-size: 14px;
       }
+      /* 3-locale dropdown menu (replaces the single-button toggle).
+         Native <details>/<summary> — no JS for open/close, links navigate. */
+      .kt-lang-menu { position: relative; display: inline-flex; }
+      .kt-lang-menu summary { list-style: none; cursor: pointer; user-select: none; }
+      .kt-lang-menu summary::-webkit-details-marker { display: none; }
+      .kt-lang-menu summary.kt-lang-toggle {
+        height: 32px; min-width: 56px; padding: 0 var(--space-3);
+        display: inline-flex; align-items: center; gap: 6px;
+        background: var(--surface); color: var(--text);
+        border: 1px solid var(--border); border-radius: var(--r-pill);
+        font-family: var(--font-mono); font-size: var(--fs-mono);
+        letter-spacing: 0.06em; text-transform: uppercase;
+        position: static; width: auto;
+      }
+      .kt-lang-menu summary.kt-lang-toggle:hover { border-color: var(--text-dim); }
+      .kt-lang-menu .kt-lang-caret { font-size: 9px; opacity: 0.55; }
+      .kt-lang-menu[open] summary.kt-lang-toggle { border-color: var(--text-dim); }
+      .kt-lang-menu-list {
+        position: absolute; top: calc(100% + 4px); right: 0;
+        min-width: 200px; background: var(--surface);
+        border: 1px solid var(--border); border-radius: var(--r-md);
+        box-shadow: var(--shadow-md); padding: 4px 0; z-index: 100;
+      }
+      .kt-lang-menu-list a {
+        display: block; padding: 8px var(--space-4); color: var(--text);
+        text-decoration: none; font-family: var(--font-mono);
+        font-size: var(--fs-sm); letter-spacing: 0;
+      }
+      .kt-lang-menu-list a:hover { background: var(--bg-2); color: var(--text); }
+      .kt-lang-menu-list a[aria-current="true"] {
+        background: var(--accent-soft); color: var(--text); font-weight: 600;
+      }
+
       .auth-widget {
         display: flex;
         align-items: center;
@@ -1283,7 +1317,14 @@
              see at a glance which locale/theme is active. The IIFEs in <head>
              detect these existing buttons and bind their handlers (rather
              than appending floating fixed-position fallbacks). -->
-        <button class="kt-lang-toggle" type="button" aria-label="Switch language" title="мова: українська · клік → English">UK</button>
+        <details class="kt-lang-menu">
+          <summary class="kt-lang-toggle" title="мова: українська"><span class="kt-lang-current">UK</span><span class="kt-lang-caret">▾</span></summary>
+          <div class="kt-lang-menu-list" role="menu">
+            <a href="/" role="menuitem" lang="en">EN · English</a>
+            <a href="/uk/" role="menuitem" lang="uk" aria-current="true">UK · Українська</a>
+            <a href="/ru/" role="menuitem" lang="ru">RU · Русский</a>
+          </div>
+        </details>
         <button class="kt-theme-toggle" type="button" aria-label="Перемкнути тему">◐</button>
         <!-- Auth widget — switches between sign-in button and email/logout based on /api/auth/me -->
         <div id="authWidget" class="auth-widget" aria-live="polite">
@@ -1511,7 +1552,7 @@
 
     <div id="modalRoot"></div>
     <script src="/spyglass-crypto.js?v=1"></script>
-    <script src="/i18n.js?v=5"></script>
-    <script src="/spyglass.app.js?v=15"></script>
+    <script src="/i18n.js?v=6"></script>
+    <script src="/spyglass.app.js?v=16"></script>
   </body>
 </html>

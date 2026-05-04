@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,16 +7,16 @@
     <title>Spyglass · OpenRTB Inspector — oRTB 2.5/2.6/3.0, native, VAST</title>
     <meta
       name="description"
-      content="Public OpenRTB inspector: paste BidRequest / BidResponse JSON, get validation findings, request↔response crosscheck, IAB-category decoding. oRTB 2.5/2.6/3.0, Native 1.x, VAST 4.x. No ads, no logs, zero-knowledge encryption for saved samples."
+      content="Публичный OpenRTB-инспектор: вставь BidRequest / BidResponse JSON, получи validation findings, crosscheck request↔response, декодированные IAB-категории. oRTB 2.5/2.6/3.0, Native 1.x, VAST 4.x. Без рекламы, без логов, zero-knowledge шифрование для сохранённых образцов."
     />
     <meta
       name="keywords"
       content="openrtb, oRTB, openrtb inspector, openrtb validator, IAB, bid request, bid response, RTB, AdTech, VAST, native ads, programmatic, real-time bidding"
     />
     <meta name="author" content="kyivtech.com.ua" />
-    <link rel="canonical" href="https://spyglass.kyivtech.com.ua/" />
+    <link rel="canonical" href="https://spyglass.kyivtech.com.ua/ru/" />
+    <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/" />
     <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/" />
-  <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/">
     <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/" />
     <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/" />
 
@@ -26,10 +26,11 @@
     <meta property="og:title" content="Spyglass · OpenRTB Inspector" />
     <meta
       property="og:description"
-      content="Public OpenRTB inspector: paste BidRequest / BidResponse JSON → validation findings, request↔response crosscheck, IAB-category decoding. oRTB 2.5/2.6/3.0, Native, VAST. No ads, no logs."
+      content="Публичный OpenRTB-инспектор: BidRequest / BidResponse JSON → validation findings, crosscheck request↔response, декодированные IAB-категории. oRTB 2.5/2.6/3.0, Native, VAST. Без рекламы, без логов."
     />
-    <meta property="og:url" content="https://spyglass.kyivtech.com.ua/" />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://spyglass.kyivtech.com.ua/ru/" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:locale:alternate" content="uk_UA" />
 
     <!-- Twitter Card -->
@@ -37,7 +38,7 @@
     <meta name="twitter:title" content="Spyglass · OpenRTB Inspector" />
     <meta
       name="twitter:description"
-      content="Public OpenRTB inspector with validation, crosscheck, and IAB-category decoding. oRTB 2.5/2.6/3.0, Native, VAST. Free, no ads, no logs."
+      content="Публичный OpenRTB-инспектор с валидацией, crosscheck и декодированием IAB-категорий. oRTB 2.5/2.6/3.0, Native, VAST. Бесплатно, без рекламы, без логов."
     />
 
     <!-- JSON-LD structured data — tells Google this is a free, browser-based dev tool -->
@@ -72,7 +73,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" />
     <link rel="stylesheet" href="/design-system.css?v=10" />
     <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'theme: auto · click → light':(s==='light'?'theme: light · click → dark':'theme: dark · click → auto');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){var b=document.querySelector('.kt-theme-toggle');if(!b){b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Toggle theme');document.body.appendChild(b);}if(!b.dataset.themeBound){b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});b.dataset.themeBound='1';}apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
-    <script>(function(){try{var LANG='en';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}}catch(e){}})();</script>
+    <script>(function(){try{var LANG='ru';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}}catch(e){}})();</script>
     <style>
       /* ============================================================
    Spyglass v8 — re-skinned on kyivtech-portal design-system.
@@ -1279,8 +1280,8 @@
         font-size: var(--fs-sm);
       "
     >
-      <span>Verify your email address — it improves account security.</span>
-      <button class="btn btn-ghost btn-sm" onclick="requestVerifyEmail()">send email</button>
+      <span>Подтверди свой email — это улучшает защиту аккаунта.</span>
+      <button class="btn btn-ghost btn-sm" onclick="requestVerifyEmail()">отправить письмо</button>
     </div>
     <header class="app-header">
       <div class="kt-brand">
@@ -1294,11 +1295,11 @@
           <input id="simPrice" type="text" value="1.50" />
         </div>
         <a
-          href="/about"
+          href="/ru/about"
           target="_blank"
           rel="noopener"
           class="btn btn-ghost btn-sm"
-          title="How it works · what Spyglass can and can't do"
+          title="Как пользоваться · что Spyglass умеет и не умеет"
           style="text-decoration: none;"
         >
           docs ↗
@@ -1318,11 +1319,11 @@
              detect these existing buttons and bind their handlers (rather
              than appending floating fixed-position fallbacks). -->
         <details class="kt-lang-menu">
-          <summary class="kt-lang-toggle" title="lang: English"><span class="kt-lang-current">EN</span><span class="kt-lang-caret">▾</span></summary>
+          <summary class="kt-lang-toggle" title="язык: Русский"><span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span></summary>
           <div class="kt-lang-menu-list" role="menu">
-            <a href="/" role="menuitem" lang="en" aria-current="true">EN · English</a>
+            <a href="/" role="menuitem" lang="en">EN · English</a>
             <a href="/uk/" role="menuitem" lang="uk">UK · Українська</a>
-            <a href="/ru/" role="menuitem" lang="ru">RU · Русский</a>
+            <a href="/ru/" role="menuitem" lang="ru" aria-current="true">RU · Русский</a>
           </div>
         </details>
         <button class="kt-theme-toggle" type="button" aria-label="Toggle theme">◐</button>
@@ -1363,16 +1364,16 @@
           <span class="input-card-title">bid request</span>
           <div class="input-card-actions">
             <span class="char-count" id="reqCount">0</span>
-            <span class="json-badge empty" id="reqBadge">empty</span>
-            <button onclick="clearInput('bidReq')" class="btn-icon" title="Clear field">clear</button>
-            <button onclick="utils.format('bidReq')" class="btn-icon" title="Format JSON">format</button>
-            <button onclick="utils.copy('bidReq')" class="btn-icon" title="Copy to clipboard">copy</button>
+            <span class="json-badge empty" id="reqBadge">пусто</span>
+            <button onclick="clearInput('bidReq')" class="btn-icon" title="Очистить поле">очистить</button>
+            <button onclick="utils.format('bidReq')" class="btn-icon" title="Отформатировать JSON">формат</button>
+            <button onclick="utils.copy('bidReq')" class="btn-icon" title="Скопировать в буфер">копия</button>
           </div>
         </div>
         <textarea
           id="bidReq"
           class="json-input"
-          placeholder="Paste oRTB BidRequest JSON here.&#10;&#10;Hint: Ctrl+Enter to run analysis."
+          placeholder="Вставь сюда oRTB BidRequest JSON.&#10;&#10;Подсказка: Ctrl+Enter — запустить анализ."
           oninput="updateCharCount('bidReq')"
           onkeydown="handleKeydown(event)"
         ></textarea>
@@ -1382,16 +1383,16 @@
           <span class="input-card-title">bid response</span>
           <div class="input-card-actions">
             <span class="char-count" id="resCount">0</span>
-            <span class="json-badge empty" id="resBadge">empty</span>
-            <button onclick="clearInput('bidRes')" class="btn-icon" title="Clear field">clear</button>
-            <button onclick="utils.format('bidRes')" class="btn-icon" title="Format JSON">format</button>
-            <button onclick="utils.copy('bidRes')" class="btn-icon" title="Copy to clipboard">copy</button>
+            <span class="json-badge empty" id="resBadge">пусто</span>
+            <button onclick="clearInput('bidRes')" class="btn-icon" title="Очистить поле">очистить</button>
+            <button onclick="utils.format('bidRes')" class="btn-icon" title="Отформатировать JSON">формат</button>
+            <button onclick="utils.copy('bidRes')" class="btn-icon" title="Скопировать в буфер">копия</button>
           </div>
         </div>
         <textarea
           id="bidRes"
           class="json-input"
-          placeholder="Paste oRTB BidResponse JSON (optional)."
+          placeholder="Вставь oRTB BidResponse JSON (необязательно)."
           oninput="updateCharCount('bidRes')"
           onkeydown="handleKeydown(event)"
         ></textarea>
@@ -1421,18 +1422,18 @@
             <span class="info-key">connection</span><span class="info-val">—</span>
           </div>
         </div>
-        <div class="section-title">library</div>
+        <div class="section-title">библиотека</div>
         <div class="saved-toolbar">
-          <select id="partnerFilter" class="saved-select" aria-label="Filter saved samples by partner" onchange="refreshSamples()">
-            <option value="">all partners</option>
-            <option value="unassigned">— no partner —</option>
+          <select id="partnerFilter" class="saved-select" aria-label="Фильтр сохранённых запросов по партнёру" onchange="refreshSamples()">
+            <option value="">все партнёры</option>
+            <option value="unassigned">— без партнёра —</option>
           </select>
-          <button onclick="openPartnerModal()" class="saved-act-btn" title="Manage partners">
-            + partner
+          <button onclick="openPartnerModal()" class="saved-act-btn" title="Управлять партнёрами">
+            + партнёр
           </button>
         </div>
         <div class="saved-list" id="savedList">
-          <div class="saved-empty">No saved samples yet</div>
+          <div class="saved-empty">Сохранённых запросов пока нет</div>
         </div>
         <div
           class="section-title"
@@ -1443,7 +1444,7 @@
             type="button"
             onclick="clearHistory()"
             class="saved-act-btn"
-            title="Clear local history"
+            title="Очистить локальную историю"
             style="font-size:11px"
           >
             clear
@@ -1458,7 +1459,7 @@
               padding: var(--space-5);
             "
           >
-            History empty — paste a request to get started
+            История пустая — вставь запрос чтобы начать
           </div>
         </div>
       </aside>
@@ -1483,21 +1484,21 @@
         <div class="tab-content active" id="tInspector">
           <div class="slot-grid" id="slotGrid">
             <div class="empty-hint" style="grid-column: 1/-1">
-              Paste BidRequest on the left — imp[] slots will show here
+              Вставь BidRequest слева — здесь появятся слоты imp[]
             </div>
           </div>
         </div>
         <div class="tab-content" id="tValidation">
-          <div class="empty-hint">Validation findings appear here after analysis</div>
+          <div class="empty-hint">Результаты валидации появятся здесь после анализа</div>
         </div>
         <div class="tab-content" id="tCross">
           <div class="empty-hint">
-            Crosscheck request↔response (id match · floor · bcat · native assets · format) — both sides required
+            Сверка request↔response (id match · floor · bcat · native assets · format) — нужны обе стороны
           </div>
         </div>
         <div class="tab-content" id="tCategories">
           <div class="empty-hint">
-            Decoded IAB categories from cat[] / bcat[] / pcat[] — appear when codes are present in payload
+            Декодированные IAB-категории из cat[] / bcat[] / pcat[] — появятся когда коды есть в payload
           </div>
         </div>
         <div class="tab-content" id="tRef">
@@ -1509,7 +1510,7 @@
       <aside class="sidebar-right">
         <div class="section-title">ad preview</div>
         <div class="preview-container" id="creativePreview">
-          <div class="preview-placeholder">waiting for adm — paste BidResponse</div>
+          <div class="preview-placeholder">ожидается adm — вставь BidResponse</div>
         </div>
         <div class="section-title" style="margin-top: var(--space-2)">placement stats</div>
         <div class="quick-stats" id="quickStats">
@@ -1536,17 +1537,17 @@
     <!-- ── Footer ── -->
     <footer class="app-footer">
       <div style="display: flex; align-items: center; gap: var(--space-3)">
-        <span id="stEntity" style="color: var(--text); font-weight: 500">ready</span>
+        <span id="stEntity" style="color: var(--text); font-weight: 500">готов</span>
         <span style="color: var(--text-dim)">·</span>
         <span style="color: var(--text-dim)"
           >engine <span id="engineVer" style="color: var(--text)">v8.0.0</span></span
         >
         <span style="color: var(--text-dim)">·</span>
-        <span style="color: var(--text-dim)" title="Supported specs">openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast 4.x</span>
+        <span style="color: var(--text-dim)" title="Поддерживаемые спецификации">openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast 4.x</span>
       </div>
       <div style="display: flex; align-items: center; gap: 6px">
         <span class="status-dot online" id="statusDot"></span>
-        <span id="statusText" style="color: var(--text-muted)">online</span>
+        <span id="statusText" style="color: var(--text-muted)">онлайн</span>
       </div>
     </footer>
 

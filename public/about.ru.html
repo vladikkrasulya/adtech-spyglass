@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Spyglass — как им пользоваться · документация</title>
+  <meta name="description" content="Документация Spyglass: что умеет OpenRTB-инспектор (oRTB 2.5/2.6/3.0, native, VAST), что не делает, какие данные обрабатывает локально, что хранит на сервере (zero-knowledge шифрование) и как читать вывод validation/crosscheck.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://spyglass.kyivtech.com.ua/ru/about">
+  <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/about">
+  <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about">
+  <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about">
+  <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Kyiv Tech">
+  <meta property="og:title" content="Spyglass — как им пользоваться">
+  <meta property="og:description" content="Документация OpenRTB-инспектора: что умеет, что не делает, какие данные использует, что хранит.">
+  <meta property="og:url" content="https://spyglass.kyivtech.com.ua/ru/about">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="uk_UA">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Spyglass — как им пользоваться">
+  <meta name="twitter:description" content="Документация Spyglass — публичного OpenRTB-инспектора.">
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Spyglass — как им пользоваться",
+      "description": "Документация Spyglass OpenRTB-инспектора.",
+      "url": "https://spyglass.kyivtech.com.ua/ru/about",
+      "inLanguage": "ru",
+      "isPartOf": {
+        "@type": "WebApplication",
+        "name": "Spyglass · OpenRTB Inspector",
+        "url": "https://spyglass.kyivtech.com.ua/"
+      }
+    }
+  </script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFCC00'/%3E%3Ctext x='50%25' y='65%25' text-anchor='middle' font-family='Onest,sans-serif' font-size='20' font-weight='700' fill='%23181818'%3EK%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="/design-system.css?v=10">
+  <script>(function(){try{var K='kt-theme';var mq=matchMedia('(prefers-color-scheme: dark)');function get(){try{return localStorage.getItem(K);}catch(e){return null;}}function set(v){try{v===null?localStorage.removeItem(K):localStorage.setItem(K,v);}catch(e){}}function eff(){var s=get();return (s==='light'||s==='dark')?s:(mq.matches?'dark':'light');}function apply(){document.documentElement.setAttribute('data-theme',eff());var b=document.querySelector('.kt-theme-toggle');if(b){var s=get();b.textContent=s===null?'◐':(s==='dark'?'☀':'☾');b.title=s===null?'тема: авто · клик → светлая':(s==='light'?'тема: светлая · клик → тёмная':'тема: тёмная · клик → авто');}}apply();if(mq.addEventListener)mq.addEventListener('change',apply);else if(mq.addListener)mq.addListener(apply);function inject(){if(document.querySelector('.kt-theme-toggle'))return;var b=document.createElement('button');b.className='kt-theme-toggle';b.type='button';b.setAttribute('aria-label','Переключить тему');b.addEventListener('click',function(){var s=get();set(s===null?'light':s==='light'?'dark':null);apply();});document.body.appendChild(b);apply();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();}catch(e){}})();</script>
+  <script>(function(){try{var LANG='ru';document.documentElement.setAttribute('data-lang',LANG);try{localStorage.setItem('kt-lang',LANG);}catch(e){}}catch(e){}})();</script>
+  <style>
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: var(--fs-base); line-height: 1.6; margin: 0; }
+    .doc-prose { max-width: 70ch; }
+    .doc-prose h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 var(--space-4); }
+    .doc-prose h2 { font-size: clamp(22px, 3.5vw, 30px); margin: var(--space-7) 0 var(--space-3); letter-spacing: -0.01em; }
+    .doc-prose h3 { font-size: var(--fs-lg); margin: var(--space-5) 0 var(--space-2); }
+    .doc-prose p { color: var(--text-muted); margin: 0 0 var(--space-4); }
+    .doc-prose strong { color: var(--text); }
+    .doc-prose ul { padding-left: var(--space-5); margin: 0 0 var(--space-4); }
+    .doc-prose li { color: var(--text-muted); margin: var(--space-1) 0; }
+    .doc-prose li strong { color: var(--text); }
+    .doc-prose code { font-family: var(--font-mono); font-size: 0.92em; background: var(--surface); padding: 1px 6px; border-radius: var(--r-sm); border: 1px solid var(--border); }
+    .doc-prose pre { background: var(--surface-ink); color: var(--text-inv); padding: var(--space-4) var(--space-5); border-radius: var(--r-md); overflow-x: auto; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55; margin: 0 0 var(--space-4); }
+    .doc-prose pre code { background: transparent; border: 0; padding: 0; color: inherit; }
+    .doc-prose a { color: var(--text); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .doc-prose a:hover { color: var(--accent-strong); }
+    .doc-prose hr { border: 0; border-top: 1px solid var(--border); margin: var(--space-7) 0; }
+    .doc-prose blockquote { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border-left: 3px solid var(--accent); background: var(--accent-soft); color: var(--text); border-radius: 0 var(--r-md) var(--r-md) 0; }
+
+    .doc-table { width: 100%; border-collapse: collapse; margin: 0 0 var(--space-5); font-size: var(--fs-sm); }
+    .doc-table th, .doc-table td { text-align: left; padding: var(--space-3); border-bottom: 1px solid var(--border); vertical-align: top; }
+    .doc-table th { font-family: var(--font-mono); font-size: var(--fs-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); font-weight: 500; border-bottom: 1px solid var(--border-strong); }
+    .doc-table td:first-child { font-weight: 600; color: var(--text); }
+    .doc-table .ok { color: var(--success); }
+    .doc-table .pending { color: var(--text-dim); }
+
+    .pill-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-4); }
+    /* 3-locale dropdown — same family as index pages, scoped to top-nav. */
+    .kt-lang-menu { position: relative; display: inline-flex; }
+    .kt-lang-menu summary { list-style: none; cursor: pointer; user-select: none; }
+    .kt-lang-menu summary::-webkit-details-marker { display: none; }
+    .kt-lang-menu summary.kt-lang-toggle {
+      height: 32px; min-width: 56px; padding: 0 var(--space-3);
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--r-pill);
+      font-family: var(--font-mono); font-size: var(--fs-mono);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      position: static; width: auto;
+    }
+    .kt-lang-menu summary.kt-lang-toggle:hover { border-color: var(--text-dim); }
+    .kt-lang-menu .kt-lang-caret { font-size: 9px; opacity: 0.55; }
+    .kt-lang-menu[open] summary.kt-lang-toggle { border-color: var(--text-dim); }
+    .kt-lang-menu-list {
+      position: absolute; top: calc(100% + 4px); right: 0;
+      min-width: 200px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--r-md);
+      box-shadow: var(--shadow-md); padding: 4px 0; z-index: 100;
+    }
+    .kt-lang-menu-list a {
+      display: block; padding: 8px var(--space-4); color: var(--text);
+      text-decoration: none; font-family: var(--font-mono);
+      font-size: var(--fs-sm); letter-spacing: 0;
+    }
+    .kt-lang-menu-list a:hover { background: var(--bg-2); }
+    .kt-lang-menu-list a[aria-current="true"] {
+      background: var(--accent-soft); font-weight: 600;
+    }
+
+  </style>
+</head>
+<body>
+
+<header class="kt-topnav">
+  <div class="kt-container kt-topnav-inner">
+    <a href="/ru/" class="kt-brand">
+      <span class="kt-brand-spark">K</span>
+      <span>spyglass · docs</span>
+    </a>
+    <nav class="kt-topnav-links">
+      <a href="#use">Что умеет</a>
+      <a href="#wont">Что не делает</a>
+      <a href="#data">Данные</a>
+      <a href="#privacy">Приватность</a>
+      <a href="#example">Пример</a>
+    </nav>
+    <details class="kt-lang-menu">
+      <summary class="kt-lang-toggle" title="язык: Русский"><span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span></summary>
+      <div class="kt-lang-menu-list" role="menu">
+        <a href="/about" role="menuitem" lang="en">EN · English</a>
+        <a href="/uk/about" role="menuitem" lang="uk">UK · Українська</a>
+        <a href="/ru/about" role="menuitem" lang="ru" aria-current="true">RU · Русский</a>
+      </div>
+    </details>
+    <a href="/ru/" class="btn btn-ghost btn-sm">← Spyglass</a>
+  </div>
+</header>
+
+<section class="kt-section" style="padding-top: var(--space-7);">
+  <div class="kt-container">
+    <div class="doc-prose">
+
+      <span class="eyebrow">docs · v8.0.0</span>
+      <h1 style="margin-top: var(--space-3);">Spyglass — как им пользоваться</h1>
+      <p style="font-size: var(--fs-lg); color: var(--text);">
+        Приватный инспектор OpenRTB-трафика. Вставь JSON, получи разбор:
+        правильно ли сформирован запрос/ответ, какие поля обязательные,
+        проходит ли crosscheck request↔response, с какой версией oRTB имеешь дело,
+        что говорит спецификация IAB по конкретному пункту.
+      </p>
+      <p>
+        Self-hosted на собственном железе в Киеве. Без рекламы, без трекеров, без
+        передачи ваших данных третьим сторонам.
+      </p>
+
+      <hr>
+
+      <h2 id="use">Что Spyglass умеет</h2>
+
+      <h3>Разбор BidRequest / BidResponse</h3>
+      <ul>
+        <li><strong>Валидация структуры</strong> — обязательные поля, типы, форматы (<code>imp[]</code> непустой, <code>id</code> строка, <code>tmax</code> число, <code>cur[]</code> ISO-4217)</li>
+        <li><strong>Поддержка типов рекламы</strong> — banner, video, native (1.1 + 1.2), audio. VAST-протоколы в <code>video.protocols</code>, app vs site, rewarded (<code>imp.rwdd</code>)</li>
+        <li><strong>Crosscheck request↔response</strong> — <code>bid.impid</code> → <code>imp.id</code> match, формат креатива совпадает с <code>imp.banner/video</code>, цена ≥ <code>bidfloor</code>, размер креатива совпадает с <code>imp.banner.format[]</code></li>
+        <li><strong>Native crosscheck</strong> — сверяет asset-id из запроса с asset-id из ответа, ловит пропущенные/лишние asset-ы, невалидный JSON в <code>adm</code></li>
+      </ul>
+
+      <h3>Detect &amp; inform</h3>
+      <ul>
+        <li><strong>Авто-детект версии</strong> — анализирует сигнатурные поля (<code>imp.rwdd</code>, <code>device.sua</code>, <code>regs.gpp_sid</code>, <code>source.schain</code>) и определяет, oRTB 2.5 / 2.6 baseline / 2.6-202211 / 2.6-202309 / 3.0 это. Возвращает <code>confidence</code> и список найденных сигналов.</li>
+        <li><strong>Spec deep-links</strong> — каждая находка имеет ссылку на конкретный параграф IAB-спецификации (<code>§3.2.10</code>, <code>§5.4</code>)</li>
+        <li><strong>Severity levels</strong> — error / warning / info. UI подсвечивает иконкой.</li>
+      </ul>
+
+      <h3>Vendor overlays</h3>
+      <ul>
+        <li><strong>IAB</strong> (по умолчанию) — чистая IAB-спецификация без расширений.</li>
+        <li><strong>Vendor overlays</strong> — опциональные overlay-правила для конкретных SSP/DSP (их <code>ext.*</code>, custom-макросы, специфичные ограничения). Активируются через <code>?dialect=&lt;vendor&gt;</code> query-параметр. Публичный UI остаётся generic.</li>
+      </ul>
+
+      <h3>Ad preview</h3>
+      <p>
+        Если в <code>bid.adm</code> есть HTML-креатив — Spyglass рендерит его в
+        sandboxed iframe (<code>sandbox="allow-scripts"</code>, без
+        <code>allow-same-origin</code>). Видишь как выглядит, без риска для
+        своей сессии.
+      </p>
+
+      <h3>Личное пространство (с аккаунтом)</h3>
+      <ul>
+        <li><strong>Сохранение образцов</strong> — реальные запросы/ответы с заметками, группировкой по партнёрам</li>
+        <li><strong>Партнёры</strong> — каталог SSP/DSP/AdNetwork с которыми работаешь</li>
+        <li><strong>Zero-knowledge шифрование</strong> — всё что сохраняется, шифруется в твоём браузере ключом, производным от твоего пароля. <strong>Сервер не может расшифровать твои образцы</strong> даже если захочет. Есть recovery key для случая забытого пароля — без него доступ потерян навсегда.</li>
+      </ul>
+
+      <hr>
+
+      <h2 id="wont">Что Spyglass <strong>не делает</strong></h2>
+      <table class="doc-table">
+        <thead><tr><th>Ограничение</th><th>Почему</th></tr></thead>
+        <tbody>
+          <tr><td>Не делает реальные bid-ы</td><td>Это инспектор JSON, не RTB-клиент. Не подключается ни к одному exchange.</td></tr>
+          <tr><td>Не выполняет макросы (<code>${AUCTION_PRICE}</code>) в runtime</td><td>Проверяем только статически — валидный ли макрос, правильно ли записан.</td></tr>
+          <tr><td>Не показывает реальный рендер креативов от третьих сторон</td><td>iframe-preview только локальный <code>adm</code>, без VAST-плеера и без external-tag fetching.</td></tr>
+          <tr><td>Не проверяет полную oRTB 2.6 enforcement</td><td>Текущий baseline — 2.5 + детект 2.6 сигналов. Strict 2.6 валидация — Phase 2.</td></tr>
+          <tr><td>Не сохраняет образцы если ты не залогинен</td><td>Аноним — всё живёт только во вкладке браузера; reload — и пусто.</td></tr>
+          <tr><td>Не логирует IP/UA на <code>/api/analyze</code></td><td>Без auth-а — минимальный след (CF Tunnel access-log, не наш бекенд).</td></tr>
+          <tr><td>Не оптимизирует bid strategy / eCPM / yield</td><td>Это инспектор, не yield manager.</td></tr>
+          <tr><td>Не парсит TCF/GPP consent strings</td><td>Запланирована отдельная вкладка в <code>kyivtech.com.ua/tools/</code>.</td></tr>
+          <tr><td>Не валидирует <code>ads.txt</code> / <code>sellers.json</code></td><td>Отдельный тул, не смешан в oRTB-инспектор.</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2 id="data">Какие данные Spyglass использует для анализа</h2>
+
+      <h3>Локально (in-process, на нашем сервере)</h3>
+      <ol>
+        <li><strong>Твой JSON</strong> — всё что ты вставляешь в <code>BID REQUEST</code> / <code>BID RESPONSE</code>. Парсится, валидируется.</li>
+        <li><strong>IAB OpenRTB 2.5 / 2.6 / 3.0 specs</strong> — bundled markdown, используется для генерации <code>specRef</code>-ссылок</li>
+        <li><strong>Native 1.1 / 1.2 specs</strong> — bundled, используется для asset-валидации</li>
+        <li><strong>VAST 4.x protocol metadata</strong> — используется для <code>video.protocols</code> валидации</li>
+        <li><strong><code>spec-refs.json</code></strong> — map finding-id → IAB spec anchor</li>
+        <li><strong><code>messages/{uk,en}.json</code></strong> — локализованные сообщения о находках</li>
+        <li><strong>Vendor dialect overlays</strong> (only with <code>?dialect=&lt;vendor&gt;</code>) — bundled, без вызовов vendor-API</li>
+      </ol>
+
+      <h3>НЕ используется</h3>
+      <ul>
+        <li>❌ Никаких third-party API запросов во время анализа</li>
+        <li>❌ Никакого browser-fingerprinting / tracking pixels</li>
+        <li>❌ Никаких cookies для анонимных пользователей (только session-cookie после login)</li>
+        <li>❌ Никаких external CDN — всё self-hosted</li>
+        <li>❌ Никакой analytics (Google, Mixpanel, и т.д.)</li>
+      </ul>
+
+      <h3>Flow анализа</h3>
+      <pre><code>[твой JSON]
+    ↓
+parseJSON → validate(structure) → detectВерсия → crosscheck
+    ↓
+findings[]: { id, level, path, params, msg, specRef }
+    ↓
+сервер форматирует локализованный текст и возвращает 200 JSON</code></pre>
+      <p>
+        Всё делается <strong>синхронно в одном Node.js процессе</strong>,
+        без БД-доступа, без external-fetch, без передачи наружу.
+      </p>
+
+      <hr>
+
+      <h2 id="privacy">Что хранится на сервере</h2>
+
+      <h3>Анонимные посетители</h3>
+      <p>
+        <strong>Ничего.</strong> <code>/api/analyze</code> не пишет в БД,
+        не логирует payload, не сохраняет историю вызовов. Cloudflare Tunnel перед нами
+        фиксирует сам факт запроса (IP, путь, статус) — это стандартный
+        access-log, не наш бекенд.
+      </p>
+
+      <h3>Зарегистрированные пользователи</h3>
+      <table class="doc-table">
+        <thead><tr><th>Что</th><th>Как</th></tr></thead>
+        <tbody>
+          <tr><td>email + password hash</td><td>bcrypt, 12 rounds</td></tr>
+          <tr><td>Сессия</td><td>in-memory (TTL 30 дней). Restart сервера — все вылогинились</td></tr>
+          <tr><td>Сохранение образцов (<code>bid_req</code>, <code>bid_res</code>)</td><td><strong>AES-GCM ciphertext</strong>. Сервер видит байты, но не может расшифровать.</td></tr>
+          <tr><td>KDF salt + wrapped DEK + IVs</td><td>Да. Бесполезно для атакера без твоего пароля.</td></tr>
+          <tr><td>Notes / metadata образца</td><td>То же шифрование</td></tr>
+          <tr><td>Партнёры (label)</td><td>То же шифрование</td></tr>
+          <tr><td><code>email_verified_at</code></td><td>timestamp (только после verify-email)</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Реализация: пароль на клиенте → PBKDF2 600k SHA-256 → KEK → разворачивает
+        сохранённый DEK → DEK шифрует контент. <strong>Сервер не видит пароля
+        и не может получить DEK.</strong> При смене пароля DEK перепаковывается
+        (не перегенерируется), чтобы не потерять доступ к старым образцам.
+      </p>
+
+      <hr>
+
+      <h2>Как читать результат</h2>
+      <p>Каждая находка (<code>finding</code>) выглядит так:</p>
+      <pre><code>{
+  "id": "imp.banner.size_required",
+  "level": "error",
+  "path": "imp[0].banner",
+  "params": { "num": 1 },
+  "msg": "imp[1] banner: нужно указать w+h или format[]",
+  "specRef": "https://iabtechlab.com/...#322"
+}</code></pre>
+
+      <ul>
+        <li><strong><code>level</code></strong> — <code>error</code> (нарушение обязательного правила) / <code>warning</code> (подозрительно, не запрещено) / <code>info</code> (заметка)</li>
+        <li><strong><code>path</code></strong> — JSON-path до проблемного поля в твоём payload</li>
+        <li><strong><code>msg</code></strong> — человеческий текст, локализованный</li>
+        <li><strong><code>specRef</code></strong> — прямая ссылка на параграф IAB-спецификации</li>
+      </ul>
+
+      <p><strong>Общий статус:</strong></p>
+      <ul>
+        <li><code>errors</code> — есть хотя бы один <code>level: error</code></li>
+        <li><code>warnings</code> — только warnings/info, но не clean</li>
+        <li><code>clean</code> — ничего не найдено</li>
+      </ul>
+
+      <hr>
+
+      <h2 id="example">Быстрый пример</h2>
+      <p>Вставь в поле <strong>BID REQUEST</strong>:</p>
+      <pre><code>{
+  "id": "test-001",
+  "imp": [
+    { "id": "1", "banner": { "w": 300, "h": 250 }, "bidfloor": 0.5 }
+  ],
+  "site": { "id": "publisher-abc", "domain": "example.com" },
+  "device": { "ua": "Mozilla/5.0", "ip": "1.2.3.4" }
+}</code></pre>
+      <p>Нажми <strong>analyze stream</strong> (или <code>Ctrl+Enter</code>) — увидишь detected version <code>2.5</code>, несколько warnings (нет <code>at</code>, <code>tmax</code>, <code>cur</code>), spec-refs к IAB §3.2.1, §3.2.4.</p>
+
+      <p>Добавь в <strong>BID RESPONSE</strong>:</p>
+      <pre><code>{
+  "id": "test-001",
+  "seatbid": [
+    { "bid": [
+      { "id": "b1", "impid": "1", "price": 1.5,
+        "adm": "&lt;html&gt;creative&lt;/html&gt;",
+        "adomain": ["example.com"], "w": 300, "h": 250 }
+    ]}
+  ],
+  "cur": "USD"
+}</code></pre>
+      <p>Теперь crosscheck активен — увидишь <code>impid → imp.id</code> match, match размеров, проверку <code>price &gt; bidfloor</code> и ad preview в нижней правой карточке (sandboxed).</p>
+
+      <hr>
+
+      <h2>Поддерживаемые версии</h2>
+      <table class="doc-table">
+        <thead><tr><th>Тип</th><th>Версия</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td>OpenRTB</td><td>2.5</td><td class="ok">Validation + detection</td></tr>
+          <tr><td>OpenRTB</td><td>2.6 baseline</td><td class="ok">Detection (rwdd, sua, gpp_sid)</td></tr>
+          <tr><td>OpenRTB</td><td>2.6-202211 / 2.6-202309</td><td class="ok">Detection. Strict — Phase 2</td></tr>
+          <tr><td>OpenRTB</td><td>3.0</td><td class="ok">Detection (envelope <code>openrtb.ver</code>)</td></tr>
+          <tr><td>Native</td><td>1.1 / 1.2</td><td class="ok">Validation + asset matching</td></tr>
+          <tr><td>VAST</td><td>2 / 3 / 4.x</td><td class="ok"><code>video.protocols</code> 2-12</td></tr>
+          <tr><td>Dialect</td><td>IAB</td><td class="ok">default</td></tr>
+          <tr><td>Dialect</td><td>Vendor overlays</td><td class="ok">опционально, через <code>?dialect=&lt;vendor&gt;</code></td></tr>
+          <tr><td>Locale</td><td>EN</td><td class="ok">Поддерживается</td></tr>
+          <tr><td>Locale</td><td>UK 🇺🇦</td><td class="ok">Поддерживается</td></tr>
+        </tbody>
+      </table>
+
+      <hr>
+
+      <h2>Вопросы + контакт</h2>
+      <p>
+        Bug, feature request, «почему не работает» —
+        <a href="mailto:hi@kyivtech.com.ua">hi@kyivtech.com.ua</a>.
+      </p>
+      <p>
+        Spyglass — это не коммерческий продукт. Это open-tooling, помогающий
+        разбираться с OpenRTB честно и прозрачно. Если что-то полезно — пользуйся.
+        Если нашёл баг — напиши, исправлю.
+      </p>
+
+      <p style="margin-top: var(--space-8); padding-top: var(--space-5); border-top: 1px solid var(--border); color: var(--text-dim); font-size: var(--fs-sm);">
+        v8.0.0 · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast 4.x ·
+        <a href="/" style="color: var(--text-dim);">↗ Spyglass</a> ·
+        <a href="https://kyivtech.com.ua/" style="color: var(--text-dim);">kyivtech.com.ua</a>
+      </p>
+
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
