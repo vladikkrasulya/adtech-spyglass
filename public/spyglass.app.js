@@ -99,9 +99,16 @@
   // Used to pass ?locale=… to /api/analyze so the server resolves finding
   // messages in the user's chosen language.
   function activeLocale() {
+    // Source-of-truth: <html lang> (kept in sync by the seamless lang
+    // switch). Falls back to localStorage, then 'uk'. RU was previously
+    // collapsed to UK here, which made /api/analyze return Ukrainian
+    // findings even on the /ru/ surface.
     try {
+      var fromHtml = document.documentElement.getAttribute('lang');
+      if (fromHtml === 'uk' || fromHtml === 'en' || fromHtml === 'ru') return fromHtml;
       var v = localStorage.getItem('kt-lang');
-      return v === 'uk' || v === 'en' ? v : 'uk';
+      if (v === 'uk' || v === 'en' || v === 'ru') return v;
+      return 'uk';
     } catch (e) {
       return 'uk';
     }
