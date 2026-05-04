@@ -47,6 +47,7 @@
       'toast.partner_name_required': 'Введи назву партнера',
       'toast.added': 'Додано · {name}',
       'toast.nothing_to_save': 'Нічого зберігати — обидва поля порожні',
+      'toast.bundle_downloaded': 'Завантажено · {name}',
 
       // ── confirm() dialogs ─────────────────────────────────
       'confirm.recovery_save':
@@ -228,6 +229,7 @@
       'toast.partner_name_required': 'Enter a partner name',
       'toast.added': 'Added · {name}',
       'toast.nothing_to_save': 'Nothing to save — both fields are empty',
+      'toast.bundle_downloaded': 'Downloaded · {name}',
 
       // ── confirm() dialogs ─────────────────────────────────
       'confirm.recovery_save':
@@ -409,6 +411,7 @@
       'toast.partner_name_required': 'Введи название партнёра',
       'toast.added': 'Добавлено · {name}',
       'toast.nothing_to_save': 'Нечего сохранять — оба поля пусты',
+      'toast.bundle_downloaded': 'Скачано · {name}',
       'confirm.recovery_save':
         'Ты точно сохранил recovery key? Без него невозможно восстановить данные если забудешь пароль.',
       'confirm.delete_sample': 'Удалить этот запрос из библиотеки?',

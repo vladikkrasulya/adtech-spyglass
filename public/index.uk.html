@@ -1014,6 +1014,11 @@
         color: var(--text);
         border-color: var(--accent);
       }
+      .format-bar-actions {
+        margin-left: auto;
+        display: flex;
+        gap: var(--space-2);
+      }
       .tab-bar {
         display: flex;
         gap: 0;
@@ -1763,6 +1768,16 @@
           <span class="format-pill format-pill-status" id="formatPillStatus"></span>
           <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
           <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
+          <div class="format-bar-actions">
+            <button
+              class="btn btn-ghost btn-sm"
+              id="downloadBundleBtn"
+              onclick="downloadBundle()"
+              title="Завантажити JSON-бандл (запит + відповідь + знахідки) — щоб переслати або прикріпити до тікета"
+            >
+              ⤓ завантажити
+            </button>
+          </div>
         </div>
         <div class="tab-bar">
           <button class="tab-btn active" onclick="switchTab(this, 'tInspector')">
@@ -1865,9 +1880,10 @@
 
     <div id="modalRoot"></div>
     <script src="/spyglass-crypto.js?v=1"></script>
-    <script src="/i18n.js?v=9"></script>
+    <script src="/i18n.js?v=10"></script>
     <script src="/lang-switch.js?v=1"></script>
-    <script src="/spyglass.app.js?v=27"></script>
+    <script src="/spyglass.app.js?v=28"></script>
     <script src="/shortcuts.js?v=1"></script>
+    <script src="/export.js?v=1"></script>
   </body>
 </html>

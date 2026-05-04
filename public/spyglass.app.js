@@ -812,6 +812,13 @@
           $('stEntity').innerText = entity + ' · ' + humanStatus(validation.status);
           $('stEntity').dataset.status = validation.status || '';
           updateFormatBar(validation, (j.meta && j.meta.dialect) || null);
+          // Stash latest analysis for the JSON-bundle export (export.js).
+          window.__spyglassLast = {
+            validation: validation,
+            crosscheck: cross,
+            meta: j.meta || null,
+            at: new Date().toISOString(),
+          };
         }
       } catch (e) {
         console.warn('Backend unavailable:', e);
