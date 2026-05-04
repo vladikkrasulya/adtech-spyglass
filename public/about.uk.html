@@ -448,6 +448,54 @@
             виглядає, без ризику для своєї сесії.
           </p>
 
+          <h3>Behavior tab — детекція click-skim</h3>
+          <p>
+            Перед тим як HTML креативу почне парситись, Spyglass ін'єктить у iframe маленький
+            instrumentation-probe. Probe огортає <code>window.open</code>, сетери
+            <code>location</code> (<code>assign</code> / <code>replace</code> / <code>href=</code>),
+            <code>HTMLElement.click()</code>, інлайн-сетери <code>onmouseover</code> /
+            <code>onmouseenter</code> / <code>onclick</code> та кожен <code>addEventListener</code>.
+            Він відстежує яка DOM-подія зараз диспатчиться.
+          </p>
+          <p>
+            Якщо API навігації спрацьовує <em>під час</em> події <code>mouseover</code> /
+            <code>mouseenter</code> / <code>mousemove</code> — це
+            <strong>підозра на click-skim</strong>: креатив намагається сімулювати клік без того щоб
+            користувач реально клікнув. Якщо взагалі немає події в стеку (наприклад redirect через
+            <code>setTimeout</code>) — це <strong>авто-навігація без gesture</strong>. Справжні
+            <code>click</code> / <code>pointerdown</code> / <code>mousedown</code> /
+            <code>touchstart</code> події проходять без позначок.
+          </p>
+          <p>
+            Знахідки з'являються у вкладці <strong>Behavior</strong> поряд з Validation / Crosscheck
+            / Categories — з URL призначення, методом виклику (<code>window.open</code>,
+            <code>location.href=</code>, …) та подією-тригером. Sandbox і так блокує саму навігацію;
+            probe робить сам <em>факт спроби</em>
+            видимим, щоб його можна було прикріпити до bug-тікета.
+          </p>
+
+          <h3>Шеринг та ергономіка</h3>
+          <ul>
+            <li>
+              <strong>Посилання</strong> — копіює self-contained URL виду
+              <code>spyglass.kyivtech.com.ua/?#req=…&amp;res=…</code>. Payload deflate-стиснутий +
+              base64url-закодований у hash-фрагменті URL, який
+              <strong>ніколи не доходить до сервера</strong> (zero-knowledge на рівні самої URL).
+              Відкриваєш посилання — обидва поля автоматично заповнюються та аналіз
+              перезапускається.
+            </li>
+            <li>
+              <strong>Завантажити бандл</strong> — пакує запит + відповідь + знахідки + crosscheck в
+              один JSON-файл (<code>spyglass-{дата}-{6-hex}.json</code>) щоб прикріпити до тікета чи
+              кинути в чат без жонглювання двома великими блобами.
+            </li>
+            <li>
+              <strong>Гарячі клавіші</strong> — <code>?</code> показує довідку,
+              <code>Ctrl+Enter</code> запускає аналіз, <code>Ctrl+S</code> зберігає в бібліотеку
+              (потрібен акаунт), <code>Esc</code> закриває будь-яку модалку.
+            </li>
+          </ul>
+
           <h3>Особистий простір (з акаунтом)</h3>
           <ul>
             <li>

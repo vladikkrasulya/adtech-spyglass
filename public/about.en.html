@@ -444,6 +444,53 @@
             see how it looks, with no risk to your session.
           </p>
 
+          <h3>Behavior tab — click-skim detection</h3>
+          <p>
+            Before the creative HTML parses, Spyglass injects a small instrumentation probe into the
+            iframe. The probe wraps <code>window.open</code>, the <code>location</code> setters
+            (<code>assign</code> / <code>replace</code> / <code>href=</code>),
+            <code>HTMLElement.click()</code>, the inline <code>onmouseover</code> /
+            <code>onmouseenter</code> / <code>onclick</code> setters and every
+            <code>addEventListener</code>. It tracks which DOM event is currently dispatching.
+          </p>
+          <p>
+            When a navigation API fires <em>during</em> a <code>mouseover</code> /
+            <code>mouseenter</code> / <code>mousemove</code> event, that's a
+            <strong>click-skim suspect</strong> — the creative is trying to fake a click without the
+            user actually clicking. With no event in flight at all (e.g. a
+            <code>setTimeout</code>-driven redirect), it's flagged as
+            <strong>auto-navigate</strong>. Genuine <code>click</code> / <code>pointerdown</code> /
+            <code>mousedown</code> / <code>touchstart</code> events pass through quietly.
+          </p>
+          <p>
+            Findings appear in the <strong>Behavior</strong> tab next to Validation / Crosscheck /
+            Categories, with the destination URL, the calling method (<code>window.open</code>,
+            <code>location.href=</code>, …) and the triggering event. The sandbox already blocks the
+            navigation itself; the probe makes the <em>attempt</em> visible so it can be attached to
+            a bug ticket.
+          </p>
+
+          <h3>Sharing &amp; ergonomics</h3>
+          <ul>
+            <li>
+              <strong>Share link</strong> — copies a self-contained URL like
+              <code>spyglass.kyivtech.com.ua/?#req=…&amp;res=…</code>. The payload is
+              deflate-compressed + base64url-encoded into the URL hash fragment, which
+              <strong>never reaches the server</strong> (zero-knowledge by URL design). Opening the
+              link auto-populates both panes and re-runs the analysis.
+            </li>
+            <li>
+              <strong>Download bundle</strong> — packages request + response + findings + crosscheck
+              into a single JSON file (<code>spyglass-{date}-{6-hex}.json</code>) for attaching to a
+              bug ticket or pasting into chat without juggling two large blobs.
+            </li>
+            <li>
+              <strong>Keyboard shortcuts</strong> — <code>?</code> shows the cheat sheet,
+              <code>Ctrl+Enter</code> runs analysis, <code>Ctrl+S</code> saves to the library
+              (auth-gated), <code>Esc</code> closes any modal.
+            </li>
+          </ul>
+
           <h3>Personal workspace (with an account)</h3>
           <ul>
             <li>

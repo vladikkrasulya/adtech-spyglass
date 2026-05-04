@@ -449,6 +449,53 @@
             выглядит, без риска для своей сессии.
           </p>
 
+          <h3>Behavior tab — детекция click-skim</h3>
+          <p>
+            Перед тем как HTML креатива начнёт парситься, Spyglass инжектит в iframe небольшой
+            instrumentation-probe. Probe оборачивает <code>window.open</code>, сеттеры
+            <code>location</code> (<code>assign</code> / <code>replace</code> / <code>href=</code>),
+            <code>HTMLElement.click()</code>, инлайн-сеттеры <code>onmouseover</code> /
+            <code>onmouseenter</code> / <code>onclick</code> и каждый <code>addEventListener</code>.
+            Он отслеживает какое DOM-событие сейчас диспатчится.
+          </p>
+          <p>
+            Если API навигации срабатывает <em>во время</em> события <code>mouseover</code> /
+            <code>mouseenter</code> / <code>mousemove</code> — это
+            <strong>подозрение на click-skim</strong>: креатив пытается симулировать клик без того
+            чтобы пользователь реально кликнул. Если в стеке вообще нет события (например redirect
+            через <code>setTimeout</code>) — это <strong>авто-навигация без gesture</strong>.
+            Настоящие <code>click</code> / <code>pointerdown</code> / <code>mousedown</code> /
+            <code>touchstart</code> события проходят без пометок.
+          </p>
+          <p>
+            Находки появляются во вкладке <strong>Behavior</strong> рядом с Validation / Crosscheck
+            / Categories — с URL назначения, методом вызова (<code>window.open</code>,
+            <code>location.href=</code>, …) и событием-триггером. Sandbox и так блокирует саму
+            навигацию; probe делает сам <em>факт попытки</em>
+            видимым, чтобы его можно было прикрепить к bug-тикету.
+          </p>
+
+          <h3>Шеринг и эргономика</h3>
+          <ul>
+            <li>
+              <strong>Ссылка</strong> — копирует self-contained URL вида
+              <code>spyglass.kyivtech.com.ua/?#req=…&amp;res=…</code>. Payload deflate-сжатый +
+              base64url-закодированный в hash-фрагменте URL, который
+              <strong>никогда не доходит до сервера</strong> (zero-knowledge на уровне самой URL).
+              Открываешь ссылку — оба поля автоматически заполняются и анализ перезапускается.
+            </li>
+            <li>
+              <strong>Скачать бандл</strong> — пакует запрос + ответ + находки + crosscheck в один
+              JSON-файл (<code>spyglass-{дата}-{6-hex}.json</code>) чтобы прикрепить к тикету или
+              кинуть в чат без жонглирования двумя большими блобами.
+            </li>
+            <li>
+              <strong>Горячие клавиши</strong> — <code>?</code> показывает справку,
+              <code>Ctrl+Enter</code> запускает анализ, <code>Ctrl+S</code> сохраняет в библиотеку
+              (нужен аккаунт), <code>Esc</code> закрывает любую модалку.
+            </li>
+          </ul>
+
           <h3>Личное пространство (с аккаунтом)</h3>
           <ul>
             <li>
