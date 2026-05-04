@@ -68,6 +68,7 @@ function decodeCategories(codes) {
  */
 function extractAllCategories(payload) {
   if (!payload || typeof payload !== 'object') return {};
+  /** @type {Record<string, Array<{ code: string, label: string | null }>>} */
   const out = {};
   function take(path, arr) {
     if (Array.isArray(arr) && arr.length) out[path] = decodeCategories(arr);
