@@ -930,9 +930,6 @@
             meta: j.meta || null,
             at: new Date().toISOString(),
           };
-          // Fold the input panes — frees vertical space for the result tabs.
-          // User clicks a header to expand back if they need to edit.
-          collapseInputs();
         }
       } catch (e) {
         console.warn('Backend unavailable:', e);
@@ -2675,8 +2672,7 @@
   // Sidebar visibility toggles. Click ◀ in the tab-bar to hide the left
   // sidebar (summary/library/history); click ▶ at the right end to hide
   // the ad-preview sidebar. State persists in localStorage so refreshes
-  // keep the user's choice. Used together they collapse to a full-width
-  // workbench for inspecting big payloads.
+  // keep the user's choice.
   const SB_HIDDEN_KEYS = { left: 'spy-sb-left-hidden', right: 'spy-sb-right-hidden' };
   function arrowFor(side, hidden) {
     if (side === 'left') return hidden ? '▶' : '◀';
@@ -2691,7 +2687,7 @@
       /* private mode */
     }
     const btn = document.getElementById(
-      side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
+      side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight'
     );
     if (btn) btn.textContent = arrowFor(side, isHidden);
   }
@@ -2706,44 +2702,12 @@
       }
       if (saved === '1') document.body.classList.add(cls);
       const btn = document.getElementById(
-        side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
+        side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight'
       );
       if (btn) btn.textContent = arrowFor(side, document.body.classList.contains(cls));
     });
   }
   window.toggleSidebar = toggleSidebar;
-
-  // After a successful analyze, fold the BID REQUEST / BID RESPONSE panes
-  // into a thin strip (just the headers) so the inspector tabs below get
-  // more vertical room. Click any collapsed card to expand the whole
-  // section back. The class is on `.input-section` so both cards toggle
-  // together — independent collapse per pane would be confusing.
-  function collapseInputs() {
-    const sec = document.querySelector('.input-section');
-    if (sec) sec.classList.add('collapsed');
-  }
-  function expandInputs() {
-    const sec = document.querySelector('.input-section');
-    if (sec) sec.classList.remove('collapsed');
-  }
-  function setupInputCollapse() {
-    document.querySelectorAll('.input-section .input-card').forEach((card) => {
-      card.addEventListener('click', (e) => {
-        // Buttons inside the card header keep their own click — don't expand.
-        if (e.target && e.target.closest('button')) return;
-        const sec = card.closest('.input-section');
-        if (sec && sec.classList.contains('collapsed')) {
-          expandInputs();
-          // After expand, focus the textarea inside the clicked card so the
-          // user can immediately edit.
-          const ta = card.querySelector('textarea');
-          if (ta) setTimeout(() => ta.focus(), 0);
-        }
-      });
-    });
-  }
-  window.collapseInputs = collapseInputs;
-  window.expandInputs = expandInputs;
 
   // Left-sidebar accordion: only one section (summary | library | history)
   // open at a time. Click the section-title to expand it; clicking buttons
@@ -2772,7 +2736,6 @@
     updateCharCount('bidReq');
     updateCharCount('bidRes');
     setupSidebarAccordion();
-    setupInputCollapse();
     setupSidebarToggles();
 
     // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
