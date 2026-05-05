@@ -254,9 +254,12 @@
       applyThemeTooltipI18n();
 
       // Fires kt:lang-change for subscribers (inspector re-runs analysis,
-      // re-renders history sidebar, etc.). No-ops on surfaces without
-      // listeners.
-      window.dispatchEvent(new CustomEvent('kt:lang-change', { detail: { lang: newLang } }));
+      // re-renders history sidebar, refreshes textarea placeholders +
+      // empty-state text inside preserved tab panes, etc.). The parsed
+      // `doc` is passed so subscribers can read attributes/innerHTML from
+      // the freshly-loaded locale without a duplicate fetch. No-ops on
+      // surfaces without listeners.
+      window.dispatchEvent(new CustomEvent('kt:lang-change', { detail: { lang: newLang, doc } }));
     } catch (e) {
       console.warn('Seamless lang switch failed, falling back to navigation:', e);
       window.location.href = targetUrl;

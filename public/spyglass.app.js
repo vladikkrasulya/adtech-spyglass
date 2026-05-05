@@ -18,6 +18,7 @@ import {
   severityFromFindings,
   severityFromCrosschecks,
 } from './core/utils.js';
+import { on } from './core/events.js';
 
 (function () {
   'use strict';
@@ -114,13 +115,54 @@ import {
     return '/api/analyze?locale=' + encodeURIComponent(activeLocale());
   }
 
-  // When the toggle changes, re-run analysis if there's a request to
-  // analyse — gives instant visual feedback that EN labels appeared.
-  // Pass current inputs as a `fromHist`-shaped object so runAnalysis treats
-  // it as a re-run (skips spinner + history push + completion toast). Without
-  // this every lang toggle was creating a duplicate history entry.
-  window.addEventListener('kt:lang-change', function () {
-    // Re-render the dynamic chrome that holds translated strings. Toasts
+  // When the toggle changes (kt:lang-change fired by lang-switch.js),
+  // patch the bits the morph deliberately skips:
+  //   - <textarea>/<input> placeholders (LANG_SKIP_TAGS)
+  //   - empty-state text inside preserved tab panes (LANG_PRESERVE)
+  // Then re-render history + samples and re-run analysis if payload exists,
+  // so all dynamic chrome lands in the new locale immediately.
+  //
+  // Subscribed via on() from /core/events.js — same window event under the
+  // hood, just signals that this is part of the modular core contract.
+  on('kt:lang-change', function (e) {
+    const detail = e && e.detail;
+    const doc = detail && detail.doc;
+
+    // 1) Refresh placeholders. Lang-switch skips TEXTAREA/INPUT by tag.
+    if (doc) {
+      ['bidReq', 'bidRes', 'simPrice'].forEach(function (id) {
+        const cur = document.getElementById(id);
+        const fresh = doc.getElementById(id);
+        if (!cur || !fresh) return;
+        const ph = fresh.getAttribute('placeholder');
+        if (ph != null) cur.setAttribute('placeholder', ph);
+      });
+
+      // 2) Refresh empty-state text inside preserved tab panes — but only
+      //    if the pane is still untouched. Detect by matching child shape
+      //    with the freshly-loaded pane: same count, same tagName/className
+      //    per index. If analysed content is present (different shape),
+      //    leave alone — runAnalysis below will repaint in the new locale.
+      ['tInspector', 'tValidation', 'tCross', 'tCategories', 'tBehavior'].forEach(function (id) {
+        const cur = document.getElementById(id);
+        const fresh = doc.getElementById(id);
+        if (!cur || !fresh) return;
+        if (cur.children.length !== fresh.children.length) return;
+        let untouched = true;
+        for (let i = 0; i < cur.children.length; i++) {
+          if (
+            cur.children[i].tagName !== fresh.children[i].tagName ||
+            cur.children[i].className !== fresh.children[i].className
+          ) {
+            untouched = false;
+            break;
+          }
+        }
+        if (untouched) cur.innerHTML = fresh.innerHTML;
+      });
+    }
+
+    // 3) Re-render the dynamic chrome that holds translated strings. Toasts
     // use t() at fire time so they're auto-correct; modals stay stale until
     // closed (acceptable — modal flicker on toggle would be worse UX).
     try {
@@ -129,6 +171,9 @@ import {
     } catch (_) {
       /* render functions may not be defined yet during init */
     }
+
+    // 4) Re-run analysis if there's a payload — repaints decoded findings
+    // / crosscheck / categories in the new locale.
     if (typeof window.runAnalysis !== 'function') return;
     try {
       const req = document.getElementById('bidReq').value;
