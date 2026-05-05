@@ -61,11 +61,14 @@ module.exports = [
     },
   },
 
-  // Browser-side (UI)
+  // Browser-side (UI). sourceType: module since 2026-05-05 — spyglass.app.js
+  // and /core/* use native ES imports. Existing IIFE-wrapped files (i18n.js,
+  // lang-switch.js, share.js, etc.) parse fine under module-mode too: they
+  // don't rely on top-level `this` (always wrapped in IIFE).
   {
     files: ['public/**/*.js'],
     languageOptions: {
-      sourceType: 'script',
+      sourceType: 'module',
       globals: {
         ...globals.browser,
       },

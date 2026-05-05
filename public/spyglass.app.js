@@ -5,62 +5,27 @@
    - Diff: deep diff between request and response
    - Vendor reference tab: pasteable templates + macros + field map
      (hidden by default; revealed only with ?dialect=<vendor>)
+
+   Loaded as <script type="module"> since 2026-05-05; technical
+   utilities live in /core/utils.js + /core/events.js (Phase A of
+   the modular-architecture migration).
    ============================================================ */
+import {
+  $,
+  escapeHtml,
+  toast,
+  setTabBadge,
+  severityFromFindings,
+  severityFromCrosschecks,
+} from './core/utils.js';
+
 (function () {
   'use strict';
 
-  // ── Utilities ─────────────────────────────────────────────────
-  const $ = (id) => document.getElementById(id);
-  const escapeHtml = (s) => {
-    if (s == null) return '';
-    const d = document.createElement('div');
-    d.appendChild(document.createTextNode(String(s)));
-    return d.innerHTML;
-  };
-
-  // ── Tab badge severity helpers ─────────────────────────────────
-  // setTabBadge sets text + severity class on an inspector-tab badge. All
-  // severity classes are stripped before the new one is added so toggling
-  // between specimens never leaves stale state.
-  // severityFromFindings reduces a request/response findings[] to the worst
-  // class (error > warning > info; empty = 'ok' clean).
-  // severityFromCrosschecks uses the CROSS_LEVELS vocabulary (ok/warn/crit).
-  function setTabBadge(id, opts) {
-    const el = $(id);
-    if (!el) return;
-    const o = opts || {};
-    if (o.text !== undefined) el.textContent = String(o.text);
-    el.classList.remove('danger', 'warn', 'info', 'ok');
-    if (o.severity) el.classList.add(o.severity);
-  }
-  function severityFromFindings(findings) {
-    if (!Array.isArray(findings)) return null;
-    if (findings.length === 0) return 'ok';
-    if (findings.some((f) => f.level === 'error' || f.level === 'danger')) return 'danger';
-    if (findings.some((f) => f.level === 'warning' || f.level === 'warn')) return 'warn';
-    if (findings.some((f) => f.level === 'info')) return 'info';
-    return null;
-  }
-  function severityFromCrosschecks(crosschecks) {
-    if (!Array.isArray(crosschecks) || crosschecks.length === 0) return null;
-    if (crosschecks.some((c) => c.level === 'crit')) return 'danger';
-    if (crosschecks.some((c) => c.level === 'warn')) return 'warn';
-    return 'ok';
-  }
-
-  function toast(msg, type) {
-    const c = $('toastContainer');
-    if (!c) return; // boundary fired before DOM ready — silent skip
-    const t = document.createElement('div');
-    t.className = 'toast ' + (type || 'success');
-    t.innerHTML = (type === 'error' ? '⚠ ' : '✓ ') + escapeHtml(msg);
-    c.appendChild(t);
-    setTimeout(() => {
-      t.style.opacity = '0';
-      t.style.transition = 'opacity 0.3s';
-      setTimeout(() => t.remove(), 300);
-    }, 2500);
-  }
+  // Utilities ($/escapeHtml/toast) and tab-badge helpers (setTabBadge,
+  // severityFromFindings, severityFromCrosschecks) imported above from
+  // /core/utils.js. Behaviour identical to the previous inline copies
+  // — this file no longer redefines them.
 
   // ── Global error boundary ──────────────────────────────────────
   // One bug in a handler shouldn't kill the page. Catch synchronous errors
