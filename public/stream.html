@@ -1,29 +1,112 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>Spyglass Stream — live preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/design-system.css" />
     <style>
-      /* Phase 1 Step 1.4 — minimal preview chrome.
-         Inline + dark-only on purpose: not coupled to design-system.css yet,
-         design polish + light theme + i18n parity land in Step 1.5+. */
+      /* ── Palette 1 (Monolith Indigo) — pinned for stream surface ──────────
+         Inherited from redesign-lab. Tokens are an override on top of the
+         design-system.css :root above, replacing only colour roles. Spacing,
+         typography, primitives stay from design-system. */
       :root {
-        color-scheme: dark;
-        --bg: #0b0d14;
-        --surface: #12151f;
-        --surface-2: #181c28;
-        --border: rgba(255, 255, 255, 0.08);
-        --text: #e6e9f2;
-        --text-dim: #5c6479;
-        --accent: #7c8cff;
-        --success: #16a34a;
-        --warn: #f59e0b;
-        --danger: #dc2626;
-        --mono: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
-        --sans: -apple-system, system-ui, 'Segoe UI', sans-serif;
+        --bg: #f7f8fa;
+        --bg-2: #eef0f4;
+        --surface: #ffffff;
+        --surface-ink: #0f1525;
+        --surface-ink-2: #1a2138;
+        --text: #0f1525;
+        --text-muted: #515a6e;
+        --text-dim: #8a93a6;
+        --text-inv: #fafafa;
+        --text-on-accent: #ffffff;
+        --border: rgba(15, 21, 37, 0.08);
+        --border-strong: rgba(15, 21, 37, 0.16);
+        --accent: #3e63dd;
+        --accent-hover: #5573e5;
+        --accent-soft: rgba(62, 99, 221, 0.1);
+        --accent-ink: #0f1525;
+        --accent-secondary: #5e6ad2;
       }
+      [data-theme='dark'] {
+        --bg: #0b0d14;
+        --bg-2: #12151f;
+        --surface: #12151f;
+        --surface-ink: #181c28;
+        --surface-ink-2: #232838;
+        --text: #e6e9f2;
+        --text-muted: #9098ad;
+        --text-dim: #5c6479;
+        --text-inv: #0b0d14;
+        --text-on-accent: #ffffff;
+        --border: rgba(255, 255, 255, 0.06);
+        --border-strong: rgba(255, 255, 255, 0.12);
+        --accent: #7c8cff;
+        --accent-hover: #9aa5ff;
+        --accent-soft: rgba(124, 140, 255, 0.14);
+        --accent-ink: #e6e9f2;
+        --accent-secondary: #5e6ad2;
+      }
+
+      /* ── Bottom-anchored glow (Gemini-style, two corners) ─────────────── */
+      body {
+        background: transparent !important;
+        position: relative;
+      }
+      body::before,
+      body::after {
+        content: '';
+        position: fixed;
+        bottom: 0;
+        width: 60vw;
+        height: 55vh;
+        pointer-events: none;
+        z-index: -1;
+      }
+      body::before {
+        left: -10vw;
+      }
+      body::after {
+        right: -10vw;
+      }
+      :root body::before {
+        background: radial-gradient(
+          ellipse at bottom left,
+          rgba(62, 99, 221, 0.05),
+          transparent 65%
+        );
+      }
+      :root body::after {
+        background: radial-gradient(
+          ellipse at bottom right,
+          rgba(94, 106, 210, 0.04),
+          transparent 70%
+        );
+      }
+      [data-theme='dark'] body::before {
+        background: radial-gradient(
+          ellipse at bottom left,
+          rgba(124, 140, 255, 0.22),
+          transparent 65%
+        );
+      }
+      [data-theme='dark'] body::after {
+        background: radial-gradient(
+          ellipse at bottom right,
+          rgba(94, 106, 210, 0.16),
+          transparent 70%
+        );
+      }
+
+      /* ── Layout ────────────────────────────────────────────────────────── */
       * {
         box-sizing: border-box;
       }
@@ -33,87 +116,145 @@
         margin: 0;
       }
       body {
-        font-family: var(--sans);
-        background: var(--bg);
+        font-family: var(--font-body, 'Onest', system-ui, sans-serif);
         color: var(--text);
         display: grid;
         grid-template-rows: auto 1fr;
-        grid-template-columns: minmax(420px, 2fr) 3fr;
+        grid-template-columns: minmax(440px, 2fr) 3fr;
         grid-template-areas: 'header header' 'feed detail';
         height: 100vh;
+        overflow: hidden;
       }
-      header {
+
+      /* ── Header ──────────────────────────────────────────────────────── */
+      .app-header {
         grid-area: header;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 10px 16px;
+        gap: var(--space-4, 16px);
+        padding: var(--space-3, 12px) var(--space-5, 24px);
         background: var(--surface);
         border-bottom: 1px solid var(--border);
-        font-family: var(--mono);
-        font-size: 12px;
       }
-      header .title {
-        font-weight: 600;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        opacity: 0.85;
-      }
-      header .status {
+      .brand {
         display: flex;
-        gap: 14px;
         align-items: center;
-        font-size: 11px;
-        opacity: 0.7;
+        gap: var(--space-3, 12px);
       }
-      header .dot {
+      .brand-spark {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--text-on-accent);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .brand-name {
+        font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
+      .brand-mode {
+        font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        padding: 3px 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        margin-left: var(--space-2, 8px);
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3, 12px);
+        font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        font-size: 11px;
+      }
+      .counter {
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .conn-status {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        color: var(--text-muted);
+      }
+      .dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
         background: var(--text-dim);
+        transition: background 0.2s ease;
       }
-      header .dot.connected {
-        background: var(--success);
-        box-shadow: 0 0 8px rgba(22, 163, 74, 0.5);
+      .dot.connected {
+        background: #16a34a;
+        box-shadow: 0 0 8px rgba(22, 163, 74, 0.4);
       }
-      header .dot.connecting {
-        background: var(--warn);
+      .dot.connecting {
+        background: #f59e0b;
       }
-      header .dot.error {
-        background: var(--danger);
+      .dot.error {
+        background: #dc2626;
       }
-      header .counter {
-        font-variant-numeric: tabular-nums;
+      .theme-toggle {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: border-color 0.15s ease;
+      }
+      .theme-toggle:hover {
+        border-color: var(--text-dim);
       }
 
+      /* ── Feed ────────────────────────────────────────────────────────── */
       .feed {
         grid-area: feed;
         overflow-y: auto;
         border-right: 1px solid var(--border);
-        font-family: var(--mono);
+        font-family: var(--font-mono, 'JetBrains Mono', monospace);
         font-size: 12px;
       }
-      .feed .empty {
-        padding: 24px 16px;
+      .feed-empty {
+        padding: var(--space-6, 32px) var(--space-4, 16px);
         color: var(--text-dim);
         font-style: italic;
+        font-family: var(--font-body);
       }
       .row {
         display: grid;
-        grid-template-columns: 92px 64px 1fr;
-        gap: 12px;
-        padding: 8px 16px;
+        grid-template-columns: 92px 60px 1fr;
+        gap: var(--space-3, 12px);
+        padding: 10px var(--space-4, 16px);
         border-bottom: 1px solid var(--border);
         cursor: pointer;
         transition: background 0.1s ease;
+        align-items: center;
       }
       .row:hover {
-        background: rgba(124, 140, 255, 0.05);
+        background: var(--accent-soft);
       }
       .row.selected {
-        background: rgba(124, 140, 255, 0.1);
+        background: var(--accent-soft);
         border-left: 2px solid var(--accent);
-        padding-left: 14px;
+        padding-left: calc(var(--space-4, 16px) - 2px);
       }
       .row .ts {
         color: var(--text-dim);
@@ -123,7 +264,7 @@
         text-transform: uppercase;
         font-size: 10px;
         letter-spacing: 0.08em;
-        align-self: center;
+        font-weight: 600;
       }
       .row .ctx {
         color: var(--text);
@@ -132,53 +273,241 @@
         text-overflow: ellipsis;
       }
 
+      /* ── Detail pane ──────────────────────────────────────────────────── */
       .detail {
         grid-area: detail;
-        overflow: auto;
-        padding: 16px;
-        font-family: var(--mono);
-        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
-      .detail .placeholder {
+      .detail-tabs {
+        display: flex;
+        gap: 0;
+        padding: 0 var(--space-4, 16px);
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+      }
+      .tab {
+        background: transparent;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        color: var(--text-muted);
+        font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 14px 16px 12px;
+        cursor: pointer;
+        transition: color 0.15s ease, border-color 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tab:hover:not(.active):not(:disabled) {
+        color: var(--text);
+      }
+      .tab.active {
+        color: var(--text);
+        border-bottom-color: var(--accent);
+      }
+      .tab:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .tab .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 9px;
+        background: var(--surface-ink);
+        color: var(--text-inv);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0;
+      }
+      .tab .badge.danger {
+        background: #dc2626;
+        color: #fff;
+      }
+      .tab .badge.warn {
+        background: #f59e0b;
+        color: #18181b;
+      }
+
+      .detail-body {
+        flex: 1;
+        overflow: auto;
+        padding: var(--space-5, 24px);
+        font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .placeholder {
         color: var(--text-dim);
-        padding: 32px;
+        padding: var(--space-7, 48px) var(--space-5, 24px);
         text-align: center;
         font-style: italic;
+        font-family: var(--font-body);
       }
-      .detail .meta {
+      .loading {
         color: var(--text-dim);
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--border);
-        margin-bottom: 12px;
+        padding: var(--space-5, 24px);
+        font-family: var(--font-body);
+      }
+
+      /* Decoded view: label-value pairs */
+      .decoded {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: var(--space-3, 12px) var(--space-4, 16px);
+      }
+      .decoded dt {
+        color: var(--text-dim);
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        margin: 0;
+        padding-top: 2px;
+      }
+      .decoded dd {
+        margin: 0;
+        color: var(--text);
+        word-break: break-word;
+      }
+      .decoded dd .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        background: var(--accent-soft);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 11px;
+        margin-right: 4px;
+        margin-bottom: 4px;
+      }
+
+      /* Validation list */
+      .findings {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3, 12px);
+      }
+      .finding {
+        display: grid;
+        grid-template-columns: 16px 1fr;
+        gap: var(--space-3, 12px);
+        padding: var(--space-3, 12px);
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+      }
+      .finding-level {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-top: 6px;
+        background: var(--text-dim);
+      }
+      .finding-level.danger {
+        background: #dc2626;
+      }
+      .finding-level.warn {
+        background: #f59e0b;
+      }
+      .finding-level.info {
+        background: #3b82f6;
+      }
+      .finding-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .finding-id {
         font-size: 10px;
         letter-spacing: 0.06em;
         text-transform: uppercase;
+        color: var(--text-dim);
       }
-      .detail pre {
+      .finding-msg {
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .finding-path {
+        font-size: 11px;
+        color: var(--accent-secondary);
+      }
+      .findings-clean {
+        color: var(--text-dim);
+        padding: var(--space-5, 24px);
+        text-align: center;
+        font-family: var(--font-body);
+        font-style: italic;
+      }
+
+      /* Raw view */
+      .raw pre {
         margin: 0;
         white-space: pre-wrap;
         word-break: break-word;
-        line-height: 1.55;
         color: var(--text);
+      }
+
+      .meta-line {
+        color: var(--text-dim);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding-bottom: var(--space-3, 12px);
+        margin-bottom: var(--space-4, 16px);
+        border-bottom: 1px solid var(--border);
       }
     </style>
   </head>
   <body>
-    <header>
-      <div class="title">Spyglass Stream · live preview</div>
-      <div class="status">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-spark">K</span>
+        <span class="brand-name">spyglass · stream</span>
+        <span class="brand-mode">live preview</span>
+      </div>
+      <div class="header-actions">
         <span class="counter" id="counter">0 specimens</span>
-        <span class="dot" id="dot"></span>
-        <span id="state">connecting…</span>
+        <span class="conn-status">
+          <span class="dot" id="dot"></span>
+          <span id="state">connecting…</span>
+        </span>
+        <button
+          class="theme-toggle"
+          id="themeToggle"
+          type="button"
+          aria-label="Toggle theme"
+          title="Toggle light/dark"
+        >
+          ◐
+        </button>
       </div>
     </header>
 
     <main class="feed" id="feed">
-      <div class="empty">waiting for first event…</div>
+      <div class="feed-empty">waiting for first event…</div>
     </main>
 
-    <aside class="detail" id="detail">
-      <div class="placeholder">click any row to inspect specimen JSON</div>
+    <aside class="detail">
+      <div class="detail-tabs" role="tablist">
+        <button class="tab active" data-tab="decoded" role="tab" disabled>Decoded</button>
+        <button class="tab" data-tab="validation" role="tab" disabled>
+          Validation <span class="badge" id="badgeValidation" hidden>0</span>
+        </button>
+        <button class="tab" data-tab="raw" role="tab" disabled>Raw JSON</button>
+      </div>
+      <div class="detail-body" id="detailBody">
+        <div class="placeholder">click any row to inspect specimen</div>
+      </div>
     </aside>
 
     <script>
@@ -186,23 +515,52 @@
         'use strict';
 
         const feedEl = document.getElementById('feed');
-        const detailEl = document.getElementById('detail');
+        const detailBody = document.getElementById('detailBody');
         const counterEl = document.getElementById('counter');
         const dotEl = document.getElementById('dot');
         const stateEl = document.getElementById('state');
+        const tabs = Array.from(document.querySelectorAll('.tab'));
+        const badgeValidation = document.getElementById('badgeValidation');
+        const themeToggle = document.getElementById('themeToggle');
 
-        // Match server-side ring buffer max — keeps DOM bounded.
         const MAX_ROWS = 100;
         let received = 0;
         let firstEvent = true;
         let selectedRow = null;
+        let currentTab = 'decoded';
+        // Cache analyze results per envelope id so tab switching is instant
+        const analyzeCache = new Map();
+        let activeEnvelope = null;
+        let activeAnalysis = null;
 
+        // ── Theme persistence ──────────────────────────────────────────────
+        const THEME_KEY = 'kt-theme';
+        try {
+          const saved = localStorage.getItem(THEME_KEY);
+          if (saved === 'light' || saved === 'dark') {
+            document.documentElement.setAttribute('data-theme', saved);
+          }
+        } catch (e) {
+          /* localStorage may be blocked in private mode */
+        }
+        themeToggle.addEventListener('click', () => {
+          const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+          const next = cur === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          try {
+            localStorage.setItem(THEME_KEY, next);
+          } catch (e) {
+            /* ignore */
+          }
+        });
+
+        // ── Connection state ──────────────────────────────────────────────
         function setState(state) {
           dotEl.className = 'dot ' + state;
           stateEl.textContent = state;
         }
 
-        // Format detection — simple branch on imp[0]'s media subtype.
+        // ── Specimen helpers ──────────────────────────────────────────────
         function fmtFrom(specimen) {
           const imp0 = specimen.imp && specimen.imp[0];
           if (!imp0) return '?';
@@ -212,14 +570,11 @@
           if (imp0.audio) return 'audio';
           return '?';
         }
-
-        // Context line — site domain or app bundle, whichever is present.
         function ctxFrom(specimen) {
           if (specimen.site) return 'site=' + (specimen.site.domain || '?');
           if (specimen.app) return 'app=' + (specimen.app.bundle || '?');
           return 'ctx=?';
         }
-
         function timeStr(ms) {
           const d = new Date(ms);
           return (
@@ -229,65 +584,251 @@
           );
         }
 
+        // ── Row construction ──────────────────────────────────────────────
         function appendRow(envelope) {
           if (firstEvent) {
             feedEl.innerHTML = '';
             firstEvent = false;
           }
-
           const row = document.createElement('div');
           row.className = 'row';
-
           const tsSpan = document.createElement('span');
           tsSpan.className = 'ts';
           tsSpan.textContent = timeStr(envelope.emittedAt);
-
           const fmtSpan = document.createElement('span');
           fmtSpan.className = 'fmt';
           fmtSpan.textContent = fmtFrom(envelope.specimen);
-
           const ctxSpan = document.createElement('span');
           ctxSpan.className = 'ctx';
           ctxSpan.textContent = ctxFrom(envelope.specimen);
-
-          row.appendChild(tsSpan);
-          row.appendChild(fmtSpan);
-          row.appendChild(ctxSpan);
-
+          row.append(tsSpan, fmtSpan, ctxSpan);
           row.addEventListener('click', () => selectRow(row, envelope));
 
-          // Newest at top — read like a console log.
           feedEl.insertBefore(row, feedEl.firstChild);
-
-          // Trim oldest beyond MAX_ROWS. Bounded DOM ≈ bounded memory.
           while (feedEl.children.length > MAX_ROWS) {
             feedEl.removeChild(feedEl.lastChild);
           }
-
           received++;
           counterEl.textContent = received + ' specimen' + (received === 1 ? '' : 's');
         }
 
+        // ── Row selection + analyze ───────────────────────────────────────
         function selectRow(row, envelope) {
           if (selectedRow) selectedRow.classList.remove('selected');
           row.classList.add('selected');
           selectedRow = row;
+          activeEnvelope = envelope;
+          tabs.forEach((t) => (t.disabled = false));
 
-          const meta = document.createElement('div');
-          meta.className = 'meta';
-          meta.textContent =
-            envelope.source + ' · emitted ' + new Date(envelope.emittedAt).toISOString();
+          // Show loading state on whichever tab is currently visible
+          renderDetail({ loading: true });
 
-          const pre = document.createElement('pre');
-          pre.textContent = JSON.stringify(envelope.specimen, null, 2);
-
-          detailEl.innerHTML = '';
-          detailEl.appendChild(meta);
-          detailEl.appendChild(pre);
+          const cacheKey = envelope.specimen.id;
+          if (analyzeCache.has(cacheKey)) {
+            activeAnalysis = analyzeCache.get(cacheKey);
+            renderDetail({});
+            return;
+          }
+          analyzeSpecimen(envelope.specimen)
+            .then((result) => {
+              analyzeCache.set(cacheKey, result);
+              if (activeEnvelope === envelope) {
+                activeAnalysis = result;
+                renderDetail({});
+              }
+            })
+            .catch((err) => {
+              console.warn('[stream] analyze failed', err);
+              if (activeEnvelope === envelope) {
+                activeAnalysis = { error: err.message || 'analyze failed' };
+                renderDetail({});
+              }
+            });
         }
 
-        // EventSource auto-reconnects with back-off on its own; we just
-        // surface the connection state via the dot.
+        async function analyzeSpecimen(specimen) {
+          const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bidReq: specimen }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || 'HTTP ' + res.status);
+          }
+          return res.json();
+        }
+
+        // ── Tabs ──────────────────────────────────────────────────────────
+        tabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            if (tab.disabled) return;
+            tabs.forEach((t) => t.classList.toggle('active', t === tab));
+            currentTab = tab.dataset.tab;
+            renderDetail({});
+          });
+        });
+
+        // ── Detail rendering ─────────────────────────────────────────────
+        function renderDetail(opts) {
+          const { loading } = opts || {};
+          if (loading || !activeAnalysis) {
+            detailBody.innerHTML = '<div class="loading">analyzing…</div>';
+            return;
+          }
+          if (activeAnalysis.error) {
+            detailBody.innerHTML =
+              '<div class="placeholder" style="color: #dc2626">' +
+              escapeHtml(activeAnalysis.error) +
+              '</div>';
+            return;
+          }
+          // Update validation badge regardless of which tab is visible
+          updateValidationBadge();
+
+          if (currentTab === 'decoded') return renderDecoded();
+          if (currentTab === 'validation') return renderValidation();
+          if (currentTab === 'raw') return renderRaw();
+        }
+
+        function updateValidationBadge() {
+          const findings = (activeAnalysis.validation && activeAnalysis.validation.findings) || [];
+          const danger = findings.filter((f) => f.level === 'error' || f.level === 'danger').length;
+          const warn = findings.filter((f) => f.level === 'warning' || f.level === 'warn').length;
+          const total = findings.length;
+          if (total === 0) {
+            badgeValidation.hidden = true;
+            return;
+          }
+          badgeValidation.hidden = false;
+          badgeValidation.textContent = total;
+          badgeValidation.className = 'badge';
+          if (danger > 0) badgeValidation.classList.add('danger');
+          else if (warn > 0) badgeValidation.classList.add('warn');
+        }
+
+        function renderDecoded() {
+          const sp = activeEnvelope.specimen;
+          const v = activeAnalysis.validation || {};
+          const ver = v.version || {};
+          const fmt = fmtFrom(sp);
+          const imp0 = (sp.imp && sp.imp[0]) || {};
+          const banner = imp0.banner || {};
+          const video = imp0.video || {};
+          const ctx = sp.site || sp.app || {};
+          const pub = ctx.publisher || {};
+          const geo = (sp.device && sp.device.geo) || {};
+
+          const meta =
+            '<div class="meta-line">' +
+            escapeHtml(activeEnvelope.source) +
+            ' · emitted ' +
+            new Date(activeEnvelope.emittedAt).toISOString() +
+            '</div>';
+
+          const rows = [];
+          rows.push(['Type', v.type || '?']);
+          rows.push([
+            'Version',
+            ver.version
+              ? ver.version + ' <span class="finding-id">conf ' + ver.confidence + '</span>'
+              : '?',
+          ]);
+          rows.push(['Status', v.status || '?']);
+          rows.push(['Format', '<span class="pill">' + fmt + '</span>']);
+          if (banner.format && banner.format.length) {
+            rows.push([
+              'Banner sizes',
+              banner.format.map((f) => `<span class="pill">${f.w}×${f.h}</span>`).join(''),
+            ]);
+          } else if (banner.w && banner.h) {
+            rows.push(['Banner size', `<span class="pill">${banner.w}×${banner.h}</span>`]);
+          }
+          if (video.w && video.h) {
+            rows.push(['Video size', `<span class="pill">${video.w}×${video.h}</span>`]);
+            if (video.maxduration) {
+              rows.push(['Video duration', `${video.minduration || 0}–${video.maxduration}s`]);
+            }
+          }
+          rows.push(['Context', sp.site ? 'site' : sp.app ? 'app' : '?']);
+          rows.push(['Domain / Bundle', escapeHtml(ctx.domain || ctx.bundle || '?')]);
+          if (pub.name) rows.push(['Publisher', escapeHtml(pub.name)]);
+          if (geo.country) {
+            rows.push([
+              'Geo',
+              [geo.country, geo.region, geo.city].filter(Boolean).map(escapeHtml).join(' · '),
+            ]);
+          }
+          if (imp0.bidfloor != null) {
+            rows.push([
+              'Bid floor',
+              imp0.bidfloor + ' ' + (imp0.bidfloorcur || '<em>(no cur)</em>'),
+            ]);
+          }
+          rows.push(['Request id', escapeHtml(sp.id || '?')]);
+
+          detailBody.innerHTML =
+            meta +
+            '<dl class="decoded">' +
+            rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') +
+            '</dl>';
+        }
+
+        function renderValidation() {
+          const findings = (activeAnalysis.validation && activeAnalysis.validation.findings) || [];
+          if (findings.length === 0) {
+            detailBody.innerHTML =
+              '<div class="findings-clean">no validation findings — specimen is clean ✓</div>';
+            return;
+          }
+          const html = findings
+            .map((f) => {
+              const lvl = (f.level || 'info').toLowerCase();
+              const lvlClass =
+                lvl === 'error' || lvl === 'danger'
+                  ? 'danger'
+                  : lvl === 'warning' || lvl === 'warn'
+                    ? 'warn'
+                    : 'info';
+              return (
+                '<div class="finding">' +
+                `<div class="finding-level ${lvlClass}"></div>` +
+                '<div class="finding-body">' +
+                `<div class="finding-id">${escapeHtml(f.id || '')}</div>` +
+                `<div class="finding-msg">${escapeHtml(f.msg || '')}</div>` +
+                (f.path ? `<div class="finding-path">${escapeHtml(f.path)}</div>` : '') +
+                '</div>' +
+                '</div>'
+              );
+            })
+            .join('');
+          detailBody.innerHTML = '<div class="findings">' + html + '</div>';
+        }
+
+        function renderRaw() {
+          const meta =
+            '<div class="meta-line">' +
+            escapeHtml(activeEnvelope.source) +
+            ' · emitted ' +
+            new Date(activeEnvelope.emittedAt).toISOString() +
+            '</div>';
+          detailBody.innerHTML =
+            meta +
+            '<div class="raw"><pre>' +
+            escapeHtml(JSON.stringify(activeEnvelope.specimen, null, 2)) +
+            '</pre></div>';
+        }
+
+        function escapeHtml(s) {
+          if (s == null) return '';
+          return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        }
+
+        // ── SSE wiring ────────────────────────────────────────────────────
         setState('connecting');
         const es = new EventSource('/api/v1/stream');
         es.addEventListener('open', () => setState('connected'));
