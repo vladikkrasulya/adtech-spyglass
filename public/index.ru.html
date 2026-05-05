@@ -1844,7 +1844,7 @@
     <section class="input-section">
       <div class="input-card">
         <div class="input-card-header">
-          <span class="input-card-title">bid request</span>
+          <span class="input-card-title">запрос</span>
           <div class="input-card-actions">
             <span class="char-count" id="reqCount">0</span>
             <span class="json-badge empty" id="reqBadge">пусто</span>
@@ -1869,7 +1869,7 @@
       </div>
       <div class="input-card">
         <div class="input-card-header">
-          <span class="input-card-title">bid response</span>
+          <span class="input-card-title">ответ</span>
           <div class="input-card-actions">
             <span class="char-count" id="resCount">0</span>
             <span class="json-badge empty" id="resBadge">пусто</span>
@@ -1898,7 +1898,7 @@
     <main class="main-grid">
       <!-- Left sidebar -->
       <aside class="sidebar-left">
-        <div class="section-title">summary</div>
+        <div class="section-title">сводка</div>
         <div class="metric-card">
           <div class="metric-label">winning bid</div>
           <div class="metric-value" id="mPrice">$0.00</div>
@@ -1944,7 +1944,7 @@
             gap: var(--space-2);
           "
         >
-          <span>history</span>
+          <span>история</span>
           <button
             type="button"
             onclick="clearHistory()"
@@ -1952,7 +1952,7 @@
             title="Очистить локальную историю"
             style="font-size: 11px"
           >
-            clear
+            очистить
           </button>
         </div>
         <div class="history-list" id="hList">
@@ -2013,23 +2013,23 @@
             ◀
           </button>
           <button class="tab-btn active" onclick="switchTab(this, 'tInspector')">
-            inspector <span class="tab-badge" id="inspectorBadge">0</span>
+            инспектор <span class="tab-badge" id="inspectorBadge">0</span>
           </button>
           <button class="tab-btn" onclick="switchTab(this, 'tValidation')">
-            validation <span class="tab-badge" id="validationBadge">0</span>
+            валидация <span class="tab-badge" id="validationBadge">0</span>
           </button>
           <button class="tab-btn" onclick="switchTab(this, 'tCross')">
-            crosscheck <span class="tab-badge" id="crossBadge">0</span>
+            сверка <span class="tab-badge" id="crossBadge">0</span>
           </button>
           <button class="tab-btn" onclick="switchTab(this, 'tCategories')">
-            categories <span class="tab-badge" id="categoriesBadge">0</span>
+            категории <span class="tab-badge" id="categoriesBadge">0</span>
           </button>
           <button
             class="tab-btn"
             onclick="switchTab(this, 'tBehavior')"
             title="Попытки click-skim и авто-навигации, перехваченные в iframe креатива"
           >
-            behavior <span class="tab-badge" id="behaviorBadge">0</span>
+            поведение <span class="tab-badge" id="behaviorBadge">0</span>
           </button>
           <button class="tab-btn" id="kadamRefTab" onclick="switchTab(this, 'tRef')" hidden>
             vendor ref
@@ -2077,19 +2077,19 @@
 
       <!-- Right sidebar -->
       <aside class="sidebar-right">
-        <div class="section-title">ad preview</div>
+        <div class="section-title">превью рекламы</div>
         <div class="preview-container" id="creativePreview">
           <div class="preview-placeholder">ожидается adm — вставь BidResponse</div>
         </div>
-        <div class="section-title" style="margin-top: var(--space-2)">placement stats</div>
+        <div class="section-title" style="margin-top: var(--space-2)">статистика слотов</div>
         <div class="quick-stats" id="quickStats">
           <div class="stat-box">
             <div class="stat-value">0</div>
-            <div class="stat-label">banners</div>
+            <div class="stat-label">баннеры</div>
           </div>
           <div class="stat-box">
             <div class="stat-value">0</div>
-            <div class="stat-label">videos</div>
+            <div class="stat-label">видео</div>
           </div>
           <div class="stat-box">
             <div class="stat-value">0</div>

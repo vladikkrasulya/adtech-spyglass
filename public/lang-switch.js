@@ -33,30 +33,50 @@
   // Selectors whose contents are dynamic / user-state — never morph these.
   // Most are inspector-specific; on surfaces that don't have them (e.g.
   // /about) the matches just return false and the morph proceeds normally.
+  //
+  // Synced with current spyglass.app.js DOM 2026-05-05. Previous list had
+  // 11 stale IDs (#historyList, #libList, #partnersList, #savedSamplesList,
+  // #partnerOptions, #tCrosscheck, #tSlots, #tSummary, #tRaw, #crosscheckBadge,
+  // #slotsBadge) that no longer matched anything — meaning the morph was
+  // walking through dynamic regions and aborting on child-count mismatch
+  // (e.g. 50 history rows in current DOM vs 1 in fetched-locale doc),
+  // which silently broke text translation for sibling subtrees.
   const LANG_PRESERVE = [
+    // User-editable inputs (preserve their value/state across lang swaps)
     '#bidReq',
     '#bidRes',
     '#simPrice',
+    '#bidReqChars',
+    '#bidResChars',
+    // Auth + status chrome (re-rendered via kt:lang-change handler in app)
     '#authWidget',
     '#stEntity',
     '#statusText',
     '#statusDot',
+    // Tab badges (counts populated by analyze; .danger/.warn/.info classes
+    // applied by setTabBadge — should not be reset by morph)
     '#inspectorBadge',
-    '#crosscheckBadge',
-    '#slotsBadge',
+    '#validationBadge',
+    '#categoriesBadge',
+    '#behaviorBadge',
+    '#crossBadge',
+    // Format / status pills near the top of inspector
     '#formatBar',
+    // Tab content panes — populated dynamically by analyze() / runAnalysis().
+    // Empty-state hints inside them stay in the loaded-page locale until
+    // analyze fires; that's an accepted tradeoff (fix would require a
+    // kt:lang-change listener that re-renders empty state).
     '#tInspector',
-    '#tCrosscheck',
-    '#tSlots',
-    '#tSummary',
-    '#tRaw',
-    '#historyList',
-    '#libList',
-    '#partnersList',
-    '#savedSamplesList',
-    '#partnerOptions',
-    '#bidReqChars',
-    '#bidResChars',
+    '#tValidation',
+    '#tCross',
+    '#tCategories',
+    '#tBehavior',
+    '#tRef',
+    // Persisted lists driven by localStorage (history) and signed-in API
+    // (saved samples). Counts diverge between sessions — must not morph.
+    '#hList',
+    '#savedList',
+    // Modal + toast surfaces — rendered on the fly with locale at fire-time
     '#modalRoot',
     '.toast-container',
     '#toastRoot',
