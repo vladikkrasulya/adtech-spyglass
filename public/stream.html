@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Spyglass Stream — live preview</title>
+    <style>
+      /* Phase 1 Step 1.4 — minimal preview chrome.
+         Inline + dark-only on purpose: not coupled to design-system.css yet,
+         design polish + light theme + i18n parity land in Step 1.5+. */
+      :root {
+        color-scheme: dark;
+        --bg: #0b0d14;
+        --surface: #12151f;
+        --surface-2: #181c28;
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #e6e9f2;
+        --text-dim: #5c6479;
+        --accent: #7c8cff;
+        --success: #16a34a;
+        --warn: #f59e0b;
+        --danger: #dc2626;
+        --mono: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+        --sans: -apple-system, system-ui, 'Segoe UI', sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--text);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        grid-template-columns: minmax(420px, 2fr) 3fr;
+        grid-template-areas: 'header header' 'feed detail';
+        height: 100vh;
+      }
+      header {
+        grid-area: header;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      header .title {
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        opacity: 0.85;
+      }
+      header .status {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        font-size: 11px;
+        opacity: 0.7;
+      }
+      header .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-dim);
+      }
+      header .dot.connected {
+        background: var(--success);
+        box-shadow: 0 0 8px rgba(22, 163, 74, 0.5);
+      }
+      header .dot.connecting {
+        background: var(--warn);
+      }
+      header .dot.error {
+        background: var(--danger);
+      }
+      header .counter {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .feed {
+        grid-area: feed;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .feed .empty {
+        padding: 24px 16px;
+        color: var(--text-dim);
+        font-style: italic;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 92px 64px 1fr;
+        gap: 12px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: background 0.1s ease;
+      }
+      .row:hover {
+        background: rgba(124, 140, 255, 0.05);
+      }
+      .row.selected {
+        background: rgba(124, 140, 255, 0.1);
+        border-left: 2px solid var(--accent);
+        padding-left: 14px;
+      }
+      .row .ts {
+        color: var(--text-dim);
+      }
+      .row .fmt {
+        color: var(--accent);
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        align-self: center;
+      }
+      .row .ctx {
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .detail {
+        grid-area: detail;
+        overflow: auto;
+        padding: 16px;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .detail .placeholder {
+        color: var(--text-dim);
+        padding: 32px;
+        text-align: center;
+        font-style: italic;
+      }
+      .detail .meta {
+        color: var(--text-dim);
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 12px;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .detail pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.55;
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="title">Spyglass Stream · live preview</div>
+      <div class="status">
+        <span class="counter" id="counter">0 specimens</span>
+        <span class="dot" id="dot"></span>
+        <span id="state">connecting…</span>
+      </div>
+    </header>
+
+    <main class="feed" id="feed">
+      <div class="empty">waiting for first event…</div>
+    </main>
+
+    <aside class="detail" id="detail">
+      <div class="placeholder">click any row to inspect specimen JSON</div>
+    </aside>
+
+    <script>
+      (function () {
+        'use strict';
+
+        const feedEl = document.getElementById('feed');
+        const detailEl = document.getElementById('detail');
+        const counterEl = document.getElementById('counter');
+        const dotEl = document.getElementById('dot');
+        const stateEl = document.getElementById('state');
+
+        // Match server-side ring buffer max — keeps DOM bounded.
+        const MAX_ROWS = 100;
+        let received = 0;
+        let firstEvent = true;
+        let selectedRow = null;
+
+        function setState(state) {
+          dotEl.className = 'dot ' + state;
+          stateEl.textContent = state;
+        }
+
+        // Format detection — simple branch on imp[0]'s media subtype.
+        function fmtFrom(specimen) {
+          const imp0 = specimen.imp && specimen.imp[0];
+          if (!imp0) return '?';
+          if (imp0.banner) return 'banner';
+          if (imp0.video) return 'video';
+          if (imp0.native) return 'native';
+          if (imp0.audio) return 'audio';
+          return '?';
+        }
+
+        // Context line — site domain or app bundle, whichever is present.
+        function ctxFrom(specimen) {
+          if (specimen.site) return 'site=' + (specimen.site.domain || '?');
+          if (specimen.app) return 'app=' + (specimen.app.bundle || '?');
+          return 'ctx=?';
+        }
+
+        function timeStr(ms) {
+          const d = new Date(ms);
+          return (
+            d.toLocaleTimeString('en-US', { hour12: false }) +
+            '.' +
+            String(d.getMilliseconds()).padStart(3, '0')
+          );
+        }
+
+        function appendRow(envelope) {
+          if (firstEvent) {
+            feedEl.innerHTML = '';
+            firstEvent = false;
+          }
+
+          const row = document.createElement('div');
+          row.className = 'row';
+
+          const tsSpan = document.createElement('span');
+          tsSpan.className = 'ts';
+          tsSpan.textContent = timeStr(envelope.emittedAt);
+
+          const fmtSpan = document.createElement('span');
+          fmtSpan.className = 'fmt';
+          fmtSpan.textContent = fmtFrom(envelope.specimen);
+
+          const ctxSpan = document.createElement('span');
+          ctxSpan.className = 'ctx';
+          ctxSpan.textContent = ctxFrom(envelope.specimen);
+
+          row.appendChild(tsSpan);
+          row.appendChild(fmtSpan);
+          row.appendChild(ctxSpan);
+
+          row.addEventListener('click', () => selectRow(row, envelope));
+
+          // Newest at top — read like a console log.
+          feedEl.insertBefore(row, feedEl.firstChild);
+
+          // Trim oldest beyond MAX_ROWS. Bounded DOM ≈ bounded memory.
+          while (feedEl.children.length > MAX_ROWS) {
+            feedEl.removeChild(feedEl.lastChild);
+          }
+
+          received++;
+          counterEl.textContent = received + ' specimen' + (received === 1 ? '' : 's');
+        }
+
+        function selectRow(row, envelope) {
+          if (selectedRow) selectedRow.classList.remove('selected');
+          row.classList.add('selected');
+          selectedRow = row;
+
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          meta.textContent =
+            envelope.source + ' · emitted ' + new Date(envelope.emittedAt).toISOString();
+
+          const pre = document.createElement('pre');
+          pre.textContent = JSON.stringify(envelope.specimen, null, 2);
+
+          detailEl.innerHTML = '';
+          detailEl.appendChild(meta);
+          detailEl.appendChild(pre);
+        }
+
+        // EventSource auto-reconnects with back-off on its own; we just
+        // surface the connection state via the dot.
+        setState('connecting');
+        const es = new EventSource('/api/v1/stream');
+        es.addEventListener('open', () => setState('connected'));
+        es.addEventListener('error', () => setState('error'));
+        es.addEventListener('message', (ev) => {
+          let envelope;
+          try {
+            envelope = JSON.parse(ev.data);
+          } catch (e) {
+            console.warn('bad SSE frame', ev.data);
+            return;
+          }
+          appendRow(envelope);
+        });
+      })();
+    </script>
+  </body>
+</html>
