@@ -18,6 +18,36 @@
     return d.innerHTML;
   };
 
+  // ── Tab badge severity helpers ─────────────────────────────────
+  // setTabBadge sets text + severity class on an inspector-tab badge. All
+  // severity classes are stripped before the new one is added so toggling
+  // between specimens never leaves stale state.
+  // severityFromFindings reduces a request/response findings[] to the worst
+  // class (error > warning > info; empty = 'ok' clean).
+  // severityFromCrosschecks uses the CROSS_LEVELS vocabulary (ok/warn/crit).
+  function setTabBadge(id, opts) {
+    const el = $(id);
+    if (!el) return;
+    const o = opts || {};
+    if (o.text !== undefined) el.textContent = String(o.text);
+    el.classList.remove('danger', 'warn', 'info', 'ok');
+    if (o.severity) el.classList.add(o.severity);
+  }
+  function severityFromFindings(findings) {
+    if (!Array.isArray(findings)) return null;
+    if (findings.length === 0) return 'ok';
+    if (findings.some((f) => f.level === 'error' || f.level === 'danger')) return 'danger';
+    if (findings.some((f) => f.level === 'warning' || f.level === 'warn')) return 'warn';
+    if (findings.some((f) => f.level === 'info')) return 'info';
+    return null;
+  }
+  function severityFromCrosschecks(crosschecks) {
+    if (!Array.isArray(crosschecks) || crosschecks.length === 0) return null;
+    if (crosschecks.some((c) => c.level === 'crit')) return 'danger';
+    if (crosschecks.some((c) => c.level === 'warn')) return 'warn';
+    return 'ok';
+  }
+
   function toast(msg, type) {
     const c = $('toastContainer');
     if (!c) return; // boundary fired before DOM ready — silent skip
@@ -966,7 +996,10 @@
         );
       })();
       if (validation && findings && findings.length) {
-        $('validationBadge').textContent = findings.length;
+        setTabBadge('validationBadge', {
+          text: findings.length,
+          severity: severityFromFindings(findings),
+        });
         valEl.innerHTML =
           '<div class="mono-label" style="margin-bottom:var(--space-3)">' +
           escapeHtml(validation.type) +
@@ -1006,7 +1039,7 @@
             })
             .join('');
       } else if (validation) {
-        $('validationBadge').textContent = '✓';
+        setTabBadge('validationBadge', { text: '✓', severity: 'ok' });
         // Clean state — still surface the detected oRTB version so the user
         // knows which spec the inspector validated against. Was hidden before.
         valEl.innerHTML =
@@ -1021,7 +1054,7 @@
           escapeHtml(validation.type) +
           ' валідний</div>';
       } else {
-        $('validationBadge').textContent = '—';
+        setTabBadge('validationBadge', { text: '—', severity: null });
       }
 
       // Crosscheck tab — semantic verdict on req ↔ res alignment
@@ -1029,7 +1062,10 @@
       if (Array.isArray(cross) && cross.length) {
         const crit = cross.filter((c) => c.level === 'crit').length;
         const warn = cross.filter((c) => c.level === 'warn').length;
-        $('crossBadge').textContent = crit + warn ? `${crit + warn}` : '✓';
+        setTabBadge('crossBadge', {
+          text: crit + warn ? `${crit + warn}` : '✓',
+          severity: severityFromCrosschecks(cross),
+        });
         const summaryRow =
           crit || warn
             ? `<div class="mono-label" style="margin-bottom:var(--space-3)">${crit} критичних · ${warn} попереджень · ${cross.length - crit - warn} ok</div>`
@@ -1054,11 +1090,11 @@
             })
             .join('');
       } else if (cross) {
-        $('crossBadge').textContent = '—';
+        setTabBadge('crossBadge', { text: '—', severity: null });
         crossEl.innerHTML =
           '<div class="empty-hint">Для звірки потрібен ще BidResponse у правому полі</div>';
       } else {
-        $('crossBadge').textContent = '—';
+        setTabBadge('crossBadge', { text: '—', severity: null });
       }
 
       // History — push to the in-memory ring + persist to localStorage so

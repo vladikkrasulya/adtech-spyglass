@@ -1268,6 +1268,15 @@
         background: var(--accent);
         color: var(--text-on-accent);
       }
+      /* Severity-aware badges. .tab-btn .tab-badge.X has the same
+         specificity (0,0,3,0) as .tab-btn.active .tab-badge — source order
+         wins on tie, so severity colour overrides generic active-indigo
+         and the status reads at-a-glance regardless of which tab is
+         selected. */
+      .tab-btn .tab-badge.danger { background: var(--danger);        color: var(--text-inv); }
+      .tab-btn .tab-badge.warn   { background: var(--warning);       color: var(--surface-ink); }
+      .tab-btn .tab-badge.info   { background: var(--accent-soft);   color: var(--accent); }
+      .tab-btn .tab-badge.ok     { background: rgba(22,163,74,0.15); color: var(--success); }
       .tab-content {
         flex: 1;
         overflow-y: auto;
