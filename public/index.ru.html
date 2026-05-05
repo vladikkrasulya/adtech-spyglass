@@ -172,6 +172,95 @@
     </script>
     <style>
       /* ============================================================
+   REDESIGN — Palette 1 (Monolith Indigo) override · 2026-05-05
+   Inherited from /design-system.css; replaces colour roles only.
+   Spacing, typography, primitives stay from design-system.
+   ============================================================ */
+      :root {
+        --bg:              #F7F8FA;
+        --bg-2:            #EEF0F4;
+        --surface:         #FFFFFF;
+        --surface-ink:     #0F1525;
+        --surface-ink-2:   #1A2138;
+        --text:            #0F1525;
+        --text-muted:      #515A6E;
+        --text-dim:        #8A93A6;
+        --text-inv:        #FAFAFA;
+        --text-on-accent:  #FFFFFF;
+        --border:          rgba(15,21,37,0.08);
+        --border-strong:   rgba(15,21,37,0.16);
+        --accent:          #3E63DD;
+        --accent-hover:    #5573E5;
+        --accent-soft:     rgba(62,99,221,0.10);
+        --accent-ink:      #0F1525;
+        --accent-secondary:#5E6AD2;
+        --selection-bg:    rgba(62,99,221,0.30);
+      }
+      [data-theme="dark"] {
+        --bg:              #0B0D14;
+        --bg-2:            #12151F;
+        --surface:         #12151F;
+        --surface-ink:     #181C28;
+        --surface-ink-2:   #232838;
+        --text:            #E6E9F2;
+        --text-muted:      #9098AD;
+        --text-dim:        #5C6479;
+        --text-inv:        #0B0D14;
+        --text-on-accent:  #FFFFFF;
+        --border:          rgba(255,255,255,0.06);
+        --border-strong:   rgba(255,255,255,0.12);
+        --accent:          #7C8CFF;
+        --accent-hover:    #9AA5FF;
+        --accent-soft:     rgba(124,140,255,0.14);
+        --accent-ink:      #E6E9F2;
+        --accent-secondary:#5E6AD2;
+        --selection-bg:    rgba(124,140,255,0.35);
+      }
+
+      /* Bottom-anchored glow (Gemini-style, two corners). z-index:-1 sits
+         behind body content; body is transparent so html bg shows through. */
+      body { background: transparent !important; position: relative; }
+      body::before, body::after {
+        content: ""; position: fixed; bottom: 0; width: 60vw; height: 55vh;
+        pointer-events: none; z-index: -1;
+      }
+      body::before { left: -10vw; }
+      body::after  { right: -10vw; }
+      :root body::before {
+        background: radial-gradient(ellipse at bottom left, rgba(62,99,221,0.05), transparent 65%);
+      }
+      :root body::after {
+        background: radial-gradient(ellipse at bottom right, rgba(94,106,210,0.04), transparent 70%);
+      }
+      [data-theme="dark"] body::before {
+        background: radial-gradient(ellipse at bottom left, rgba(124,140,255,0.22), transparent 65%);
+      }
+      [data-theme="dark"] body::after {
+        background: radial-gradient(ellipse at bottom right, rgba(94,106,210,0.16), transparent 70%);
+      }
+
+      /* Scrollbars — palette-aligned in BOTH themes. Width identical across
+         themes (10px) so theme toggle never reflows content. */
+      * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+      *::-webkit-scrollbar { width: 10px; height: 10px; }
+      *::-webkit-scrollbar-track { background: transparent; }
+      *::-webkit-scrollbar-thumb {
+        background: var(--border-strong);
+        border-radius: 6px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+      }
+      *::-webkit-scrollbar-thumb:hover {
+        background: var(--text-dim);
+        background-clip: content-box;
+      }
+      *::-webkit-scrollbar-corner { background: transparent; }
+
+      /* Text selection — accent-tinted, contrast-preserved. */
+      ::selection    { background: var(--selection-bg); color: var(--text); }
+      ::-moz-selection { background: var(--selection-bg); color: var(--text); }
+
+      /* ============================================================
    Spyglass v8 — re-skinned on kyivtech-portal design-system.
    Layout: workbench (header / inputs / 3-col main / footer).
    All chrome derives from design-system.css tokens.
@@ -1604,7 +1693,7 @@
       /* ── Toast ── */
       .toast-container {
         position: fixed;
-        top: 70px;
+        bottom: var(--space-4);
         right: var(--space-4);
         z-index: 100;
         display: flex;
