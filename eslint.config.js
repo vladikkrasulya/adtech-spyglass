@@ -42,6 +42,7 @@ module.exports = [
       'email.js',
       'validator/**/*.js',
       'scripts/**/*.js',
+      'samples/**/*.js',
     ],
     languageOptions: {
       globals: {
