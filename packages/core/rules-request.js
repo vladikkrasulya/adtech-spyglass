@@ -25,8 +25,21 @@ function validateRequest(req, ctx) {
   }
   if (!req.site && !req.app) findings.push(F('request.no_site_or_app', LEVELS.ERROR, 'site/app'));
 
-  if (req.at != null && req.at !== 1 && req.at !== 2) {
+  // at is required per oRTB §3.2.1. Missing or non-numeric → error.
+  // Present-but-wrong-value (3, 4, "first", …) → at_invalid warning below.
+  if (req.at == null || typeof req.at !== 'number') {
+    findings.push(F('request.at_required', LEVELS.ERROR, 'at'));
+  } else if (req.at !== 1 && req.at !== 2) {
     findings.push(F('request.at_invalid', LEVELS.WARNING, 'at', { at: req.at }));
+  }
+
+  // GDPR consent — if regs.ext.gdpr=1, user.ext.consent must be a non-empty
+  // TCF v2 string. EU exchanges drop the bid without it.
+  if (req.regs && req.regs.ext && req.regs.ext.gdpr === 1) {
+    const consent = req.user && req.user.ext && req.user.ext.consent;
+    if (!isStr(consent) || !consent.trim()) {
+      findings.push(F('regs.gdpr_consent_missing', LEVELS.WARNING, 'regs.ext.gdpr'));
+    }
   }
 
   // ── Device ───────────────────────────────────────────────────────────────
@@ -279,6 +292,13 @@ function validateImp(imp, i) {
   if (!isStr(imp.id)) findings.push(F('imp.id_required', LEVELS.ERROR, `${p}.id`, { num }));
   if (imp.bidfloor != null && !isNum(imp.bidfloor)) {
     findings.push(F('imp.bidfloor_invalid', LEVELS.WARNING, `${p}.bidfloor`, { num }));
+  }
+  // bidfloor without bidfloorcur — currency defaults vary by exchange. Per
+  // oRTB §3.2.4, always pair them. Only fires for positive numeric floors.
+  if (isNum(imp.bidfloor) && imp.bidfloor > 0) {
+    if (!isStr(imp.bidfloorcur) || !imp.bidfloorcur.trim()) {
+      findings.push(F('imp.bidfloorcur_missing', LEVELS.WARNING, `${p}.bidfloor`, { num }));
+    }
   }
 
   const hasFormat = !!(imp.banner || imp.video || imp.native || imp.audio);

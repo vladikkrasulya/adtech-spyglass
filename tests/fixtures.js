@@ -10,14 +10,18 @@
  */
 
 // A near-minimal valid 2.5-shaped BidRequest. Banner slot, no extras.
+// Includes `at` + `bidfloorcur` so the new strict rules added in 2026-05-05
+// (request.at_required, imp.bidfloorcur_missing) leave it clean.
 // Returns `any` so tests can freely mutate / delete fields without TS narrowing.
 /** @returns {any} */
 const validRequest = () => ({
   id: 'req-1',
+  at: 2,
   imp: [
     {
       id: 'imp-1',
       bidfloor: 0.1,
+      bidfloorcur: 'USD',
       banner: { w: 300, h: 250 },
     },
   ],

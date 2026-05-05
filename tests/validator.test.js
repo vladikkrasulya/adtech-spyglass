@@ -162,6 +162,87 @@ test('invalid user.gender is warning with gender param', () => {
   assert.equal(f.params.gender, 'X');
 });
 
+// ── New strict rules (2026-05-05): at, bidfloorcur, GDPR consent ────────
+
+test('missing at is error "request.at_required"', () => {
+  const req = validRequest();
+  delete req.at;
+  const { findings, status } = validate(req);
+  const f = findById(findings, 'request.at_required');
+  assert.ok(f, 'expected request.at_required finding');
+  assert.equal(f.level, 'error');
+  assert.equal(f.path, 'at');
+  assert.equal(status, 'errors');
+  // at_invalid must NOT also fire when at is missing — separate rules.
+  assert.equal(findById(findings, 'request.at_invalid'), undefined);
+});
+
+test('non-numeric at (string "1") is error "request.at_required"', () => {
+  const req = validRequest();
+  req.at = '1';
+  const { findings } = validate(req);
+  assert.ok(findById(findings, 'request.at_required'));
+  // at_invalid must NOT fire — typeof check upstream prevents double-flag.
+  assert.equal(findById(findings, 'request.at_invalid'), undefined);
+});
+
+test('at = 3 is warning "request.at_invalid", not at_required', () => {
+  const req = validRequest();
+  req.at = 3;
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'request.at_required'), undefined);
+  const f = findById(findings, 'request.at_invalid');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.params.at, 3);
+});
+
+test('positive bidfloor without bidfloorcur is warning "imp.bidfloorcur_missing"', () => {
+  const req = validRequest();
+  delete req.imp[0].bidfloorcur;
+  const { findings } = validate(req);
+  const f = findById(findings, 'imp.bidfloorcur_missing');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'imp[0].bidfloor');
+  assert.equal(f.params.num, 1);
+});
+
+test('bidfloor = 0 with no bidfloorcur is OK (rule gates on > 0)', () => {
+  const req = validRequest();
+  req.imp[0].bidfloor = 0;
+  delete req.imp[0].bidfloorcur;
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'imp.bidfloorcur_missing'), undefined);
+});
+
+test('GDPR=1 without user.ext.consent is warning "regs.gdpr_consent_missing"', () => {
+  const req = validRequest();
+  req.regs = { ext: { gdpr: 1 } };
+  // user.ext.consent absent
+  const { findings } = validate(req);
+  const f = findById(findings, 'regs.gdpr_consent_missing');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'regs.ext.gdpr');
+});
+
+test('GDPR=1 with non-empty user.ext.consent is OK', () => {
+  const req = validRequest();
+  req.regs = { ext: { gdpr: 1 } };
+  req.user = { ext: { consent: 'CO_well_formed_TCF_string_xxx' } };
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'regs.gdpr_consent_missing'), undefined);
+});
+
+test('GDPR=0 produces no consent finding regardless of user.ext.consent', () => {
+  const req = validRequest();
+  req.regs = { ext: { gdpr: 0 } };
+  // No consent at all — shouldn't matter when GDPR is opted out.
+  const { findings } = validate(req);
+  assert.equal(findById(findings, 'regs.gdpr_consent_missing'), undefined);
+});
+
 // ── Dialect: IAB default does NOT emit Kadam-isms ────────────────────────
 
 test('IAB dialect ignores ext.bsection (no kadam-* findings)', () => {
