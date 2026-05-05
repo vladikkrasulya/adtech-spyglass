@@ -46,6 +46,7 @@ const {
   listDialects,
   extractAllCategories,
 } = require('@kyivtech/spyglass-core');
+const SyntheticGenerator = require('./samples/synthetic-generator');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -818,6 +819,84 @@ function handleHealth(req, res) {
   sendJson(res, status, body);
 }
 
+// ── /api/v1/stream — public RTB observability feed (Phase 1 Step 1.2) ──────
+//
+// Synthetic-only for now; real-traffic ingest is gated on Risk B in
+// docs/stream-platform-pivot-2026-05-05.md (Kadam legal/management approval).
+// Pipeline: SyntheticGenerator → in-process ring buffer → SSE subscribers.
+//
+// Buffer is FIFO Array (Array.shift() at small N is fine). Replay window
+// gives a fresh subscriber recent context immediately; live subscription
+// covers everything after. Heartbeat keeps Cloudflare/proxies from killing
+// idle SSE connections.
+
+const STREAM_BUFFER_MAX = 100;
+const STREAM_REPLAY_MAX = 50;
+const STREAM_RATE_MS = Number(process.env.SYNTHETIC_RATE_MS) || 1000;
+const STREAM_HEARTBEAT_MS = 15_000;
+
+const streamBuffer = [];
+function streamBufferPush(envelope) {
+  streamBuffer.push(envelope);
+  if (streamBuffer.length > STREAM_BUFFER_MAX) streamBuffer.shift();
+}
+
+const streamGenerator = new SyntheticGenerator({
+  corpusDir: path.join(__dirname, 'samples'),
+  intervalMs: STREAM_RATE_MS,
+});
+streamGenerator.loadCorpus();
+// Each SSE subscriber attaches its own listener; default cap of 10 would
+// limit concurrent viewers. 0 = unlimited (in-process pub/sub is the whole
+// point). Per-IP cap will land separately as a connection limiter.
+streamGenerator.setMaxListeners(0);
+streamGenerator.on('specimen', streamBufferPush);
+streamGenerator.on('error', (err) => console.error('[stream]', err));
+streamGenerator.start();
+console.log(
+  '[stream] generator running: ' +
+    STREAM_RATE_MS +
+    'ms cadence, ' +
+    streamGenerator.corpus.length +
+    ' samples, buffer=' +
+    STREAM_BUFFER_MAX,
+);
+
+function handleStream(req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-store',
+    Connection: 'keep-alive',
+    // Nginx/CF buffering would batch SSE frames and break realtime. Disable.
+    'X-Accel-Buffering': 'no',
+  });
+  res.write(': ok\n\n'); // initial comment flushes headers, opens stream
+
+  // Replay last N for context. Snapshot via slice — avoids race if buffer
+  // mutates mid-iteration.
+  const replay = streamBuffer.slice(-STREAM_REPLAY_MAX);
+  for (const envelope of replay) {
+    res.write('data: ' + JSON.stringify(envelope) + '\n\n');
+  }
+
+  const onSpecimen = (envelope) => {
+    res.write('data: ' + JSON.stringify(envelope) + '\n\n');
+  };
+  streamGenerator.on('specimen', onSpecimen);
+
+  const heartbeat = setInterval(() => res.write(': hb\n\n'), STREAM_HEARTBEAT_MS);
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    streamGenerator.off('specimen', onSpecimen);
+    clearInterval(heartbeat);
+  };
+  req.on('close', cleanup);
+  req.on('error', cleanup);
+}
+
 // ── HTTP dispatch ────────────────────────────────────────────────────────────
 
 // Baseline hardening headers applied to every response. The portal proxy
@@ -849,6 +928,7 @@ const server = http.createServer((req, res) => {
 
   try {
     if (pathname === '/api/health' && req.method === 'GET') return handleHealth(req, res);
+    if (pathname === '/api/v1/stream' && req.method === 'GET') return handleStream(req, res);
     if (pathname === '/api/analyze' && req.method === 'POST')
       return handleAnalyze(req, res, parsed);
     if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);
@@ -877,6 +957,7 @@ server.listen(PORT, '0.0.0.0', () => {
 
 const shutdown = (signal) => {
   console.log('[' + signal + '] shutting down');
+  streamGenerator.stop();
   auth.shutdown();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 5000).unref();
