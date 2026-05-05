@@ -1,0 +1,78 @@
+{
+  "id": "smp-banner-001-1741123456789",
+  "at": 2,
+  "tmax": 120,
+  "cur": ["USD"],
+  "imp": [
+    {
+      "id": "1",
+      "tagid": "/123456/leaderboard",
+      "bidfloor": 0.50,
+      "bidfloorcur": "USD",
+      "secure": 1,
+      "exp": 300,
+      "banner": {
+        "w": 300,
+        "h": 250,
+        "format": [
+          { "w": 300, "h": 250 },
+          { "w": 300, "h": 600 }
+        ],
+        "pos": 1,
+        "btype": [4],
+        "battr": [13, 14],
+        "api": [3, 5],
+        "mimes": ["image/jpeg", "image/png", "image/gif"]
+      }
+    }
+  ],
+  "site": {
+    "id": "102855",
+    "name": "Example Tech News",
+    "domain": "example-news.com",
+    "cat": ["IAB19-6"],
+    "page": "https://example-news.com/article/openrtb-explained",
+    "ref": "https://www.google.com/",
+    "publisher": {
+      "id": "8953",
+      "name": "Example Publishing Inc",
+      "cat": ["IAB19"],
+      "domain": "example-news.com"
+    }
+  },
+  "device": {
+    "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
+    "ip": "192.0.2.42",
+    "devicetype": 2,
+    "make": "Apple",
+    "model": "Macintosh",
+    "os": "macOS",
+    "osv": "10.15.7",
+    "language": "en",
+    "carrier": "WIFI",
+    "connectiontype": 2,
+    "geo": {
+      "country": "USA",
+      "region": "NY",
+      "city": "New York",
+      "type": 2
+    }
+  },
+  "user": {
+    "id": "synthetic-user-87654321"
+  },
+  "source": {
+    "fd": 0,
+    "tid": "smp-banner-001-1741123456789"
+  },
+  "regs": {
+    "coppa": 0,
+    "ext": {
+      "gdpr": 0,
+      "us_privacy": "1YNN"
+    }
+  },
+  "ext": {
+    "openrtb_version": "2.6"
+  }
+}

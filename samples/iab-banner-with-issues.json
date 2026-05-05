@@ -1,0 +1,49 @@
+{
+  "id": "smp-issues-001-1741123512384",
+  "tmax": 120,
+  "imp": [
+    {
+      "id": "1",
+      "tagid": "/123456/sidebar",
+      "bidfloor": 0.30,
+      "secure": 1,
+      "banner": {
+        "w": 300,
+        "h": 600,
+        "pos": 3
+      }
+    }
+  ],
+  "site": {
+    "id": "102855",
+    "name": "Example DE Publisher",
+    "domain": "example.de",
+    "page": "https://example.de/sport/news",
+    "publisher": {
+      "id": "8953",
+      "name": "Example DE Publisher GmbH"
+    }
+  },
+  "device": {
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "ip": "192.0.2.99",
+    "devicetype": 2,
+    "geo": {
+      "country": "DEU",
+      "region": "BE",
+      "city": "Berlin",
+      "type": 2
+    }
+  },
+  "user": {
+    "id": "synthetic-user-44556677"
+  },
+  "regs": {
+    "ext": {
+      "gdpr": 1
+    }
+  },
+  "ext": {
+    "openrtb_version": "2.6"
+  }
+}
