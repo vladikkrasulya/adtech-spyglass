@@ -1743,6 +1743,7 @@
     </style>
   </head>
   <body class="workbench">
+    <div id="app-root">
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- ── Header ── -->
@@ -2136,10 +2137,25 @@
     </footer>
 
     <div id="modalRoot"></div>
+    </div><!-- /#app-root -->
     <script src="/spyglass-crypto.js?v=1"></script>
     <script src="/i18n.js?v=13"></script>
     <script src="/lang-switch.js?v=1"></script>
-    <script type="module" src="/spyglass.app.js?v=30"></script>
+    <script type="module">
+      // Inspector module boot — Phase C-1.
+      // The inspector binds to existing markup inside #app-root (see body
+      // above). Registry handles ctx + cleanup; module wraps the legacy
+      // mountInspector() in /spyglass.app.js until Phase C-2 moves the
+      // implementation into /modules/inspector/.
+      import inspectorModule from '/modules/inspector/index.js';
+      import { register, activate } from '/core/registry.js';
+      register(inspectorModule);
+      try {
+        await activate('inspector', document.getElementById('app-root'));
+      } catch (err) {
+        console.error('[shell] inspector mount failed', err);
+      }
+    </script>
     <script src="/shortcuts.js?v=1"></script>
     <script src="/export.js?v=1"></script>
     <script src="/share.js?v=2"></script>

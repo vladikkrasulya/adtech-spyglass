@@ -6,9 +6,18 @@
    - Vendor reference tab: pasteable templates + macros + field map
      (hidden by default; revealed only with ?dialect=<vendor>)
 
-   Loaded as <script type="module"> since 2026-05-05; technical
-   utilities live in /core/utils.js + /core/events.js (Phase A of
-   the modular-architecture migration).
+   Phase C-1 (2026-05-06): the IIFE was converted into the exported
+   `mountInspector(root, ctx)` function so /modules/inspector/index.js
+   can wrap it under the registry contract. Globals previously
+   exposed for inline onclick handlers + cross-script cooperation
+   (share.js, shortcuts.js, export.js, embed.js) are still attached
+   on window during mount, but a single ctx.addCleanup at the bottom
+   sweeps them on unmount — no leaks past deactivate().
+
+   The kt:lang-change subscriber (added 2026-05-05) now goes through
+   ctx.on() so its unsubscribe is registered with the cleanup queue.
+   The 2 boundary listeners (error / unhandledrejection) use
+   ctx.signal so they detach with the rest.
    ============================================================ */
 import {
   $,
@@ -17,10 +26,9 @@ import {
   setTabBadge,
   severityFromFindings,
   severityFromCrosschecks,
-} from './core/utils.js';
-import { on } from './core/events.js';
+} from '/core/utils.js';
 
-(function () {
+export async function mountInspector(root, ctx) {
   'use strict';
 
   // Utilities ($/escapeHtml/toast) and tab-badge helpers (setTabBadge,
@@ -32,17 +40,27 @@ import { on } from './core/events.js';
   // One bug in a handler shouldn't kill the page. Catch synchronous errors
   // and unhandled promise rejections, log them, and surface a toast so the
   // user sees that something went wrong (instead of a silent dead button).
-  window.addEventListener('error', (e) => {
-    // Resource-load errors (img/script 404) come through here too — skip.
-    if (!e.error) return;
-    console.error('[spyglass:error]', e.error);
-    toast('Внутрішня помилка інтерфейсу: ' + (e.error.message || 'unknown'), 'error');
-  });
-  window.addEventListener('unhandledrejection', (e) => {
-    console.error('[spyglass:unhandledrejection]', e.reason);
-    const msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
-    toast('Невловлений збій: ' + msg, 'error');
-  });
+  // Both listeners use ctx.signal so they auto-detach on unmount; otherwise
+  // they would survive deactivate() and double-fire if the module re-mounts.
+  window.addEventListener(
+    'error',
+    (e) => {
+      // Resource-load errors (img/script 404) come through here too — skip.
+      if (!e.error) return;
+      console.error('[spyglass:error]', e.error);
+      toast('Внутрішня помилка інтерфейсу: ' + (e.error.message || 'unknown'), 'error');
+    },
+    { signal: ctx.signal },
+  );
+  window.addEventListener(
+    'unhandledrejection',
+    (e) => {
+      console.error('[spyglass:unhandledrejection]', e.reason);
+      const msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+      toast('Невловлений збій: ' + msg, 'error');
+    },
+    { signal: ctx.signal },
+  );
 
   window.utils = {
     format(id) {
@@ -124,7 +142,7 @@ import { on } from './core/events.js';
   //
   // Subscribed via on() from /core/events.js — same window event under the
   // hood, just signals that this is part of the modular core contract.
-  on('kt:lang-change', function (e) {
+  ctx.addCleanup(ctx.on('kt:lang-change', function (e) {
     const detail = e && e.detail;
     const doc = detail && detail.doc;
 
@@ -186,7 +204,7 @@ import { on } from './core/events.js';
     } catch (e) {
       /* silent — user may not have a payload yet */
     }
-  });
+  }));
 
   // IAB Content Taxonomy decoder render. Reads the `meta.categories` map
   // from /api/analyze (path → [{code,label}]) and lays it out as a
@@ -2843,6 +2861,44 @@ import { on } from './core/events.js';
 
   // Seamless language switch was extracted to /public/lang-switch.js so
   // the about pages (which don't load this file) can share the morph
-  // machinery. The kt:lang-change listener at line ~118 above is the
+  // machinery. The kt:lang-change listener at line ~145 above is the
   // inspector-specific subscriber that re-runs analysis on lang change.
-})();
+
+  // ── Globals sweep on unmount ───────────────────────────────────
+  // Inline onclick="…" handlers in index.{en,uk,ru}.html still call
+  // window.X (Phase C-1 keeps that contract). External scripts also
+  // depend on a few of these (share.js → window.runAnalysis,
+  // shortcuts.js → window.openSaveModal, export.js → window.__spyglassLast,
+  // creative-probe.js iframe → window.renderBehaviorTab via postMessage).
+  //
+  // On unmount the registry calls our addCleanup. We delete every name
+  // we attached so the next mount or another module starts clean — no
+  // stale references lingering on window past deactivate().
+  ctx.addCleanup(() => {
+    const exposed = [
+      // utilities + tab/input chrome
+      'utils', 'switchTab', 'clearInput', 'handleKeydown', 'updateCharCount',
+      'closeModal', 'toggleSidebar',
+      // analysis + history
+      'runAnalysis', 'loadFromHistory', 'deleteHistoryItem', 'peekHistoryItem',
+      'clearHistory', 'historyStore', 'humanStatus',
+      // behaviour tab + kadam dialect
+      'renderBehaviorTab', '_kadam',
+      // auth flows
+      'openUnlockModal', 'doUnlock', 'openAuthModal', 'doLogin', 'doRegister',
+      'closeRecoveryKeyModal', 'copyRecoveryKey', 'signOut',
+      'openForgotPasswordModal', 'doForgotPassword',
+      'openResetPasswordModal', 'updateResetModeUI', 'doResetPassword',
+      'requestVerifyEmail',
+      // save / partner / sample / embed
+      'openSaveModal', 'confirmSave', 'loadSample', 'deleteSample',
+      'editSample', 'confirmEdit', 'openPartnerModal', 'confirmAddPartner',
+      'deletePartner', 'refreshSamples',
+      // ephemeral state
+      '__spyglassLast', '__spyglassBehavior',
+    ];
+    for (const name of exposed) {
+      try { delete window[name]; } catch (_) { /* non-configurable, ignore */ }
+    }
+  });
+}
