@@ -3060,16 +3060,84 @@ export async function mountInspector(root, ctx) {
   // sidebar (summary/library/history); click ▶ at the right end to hide
   // the ad-preview sidebar. State persists in localStorage so refreshes
   // keep the user's choice.
+  //
+  // 2026-05-06 hotfix — defensive bugfix for "iframe disappeared" P0
+  // (root cause was localStorage.spy-sb-right-hidden=1 from a forgotten
+  // earlier toggle, leaving users unable to find the preview pane). We
+  // keep the persistence (deliberate hides should survive refreshes)
+  // but add a health-check at mount that reclaims the panel for users
+  // who almost certainly aren't using a hidden state on purpose anymore.
   const SB_HIDDEN_KEYS = { left: 'spy-sb-left-hidden', right: 'spy-sb-right-hidden' };
+  const SB_HIDDEN_TS_KEYS = { left: 'spy-sb-left-hidden-ts', right: 'spy-sb-right-hidden-ts' };
+  // 7 days. A user actively using a hidden-panel layout re-toggles often
+  // enough that the timestamp stays fresh; one-off forgetting decays.
+  const SB_STALE_MS = 7 * 24 * 60 * 60 * 1000;
+
   function arrowFor(side, hidden) {
     if (side === 'left') return hidden ? '▶' : '◀';
     return hidden ? '◀' : '▶';
   }
+
+  // Health-check on a saved 'hidden' preference. Returns one of:
+  //   'respect'  — apply the preference (user deliberately hid this panel
+  //                recently; layout is theirs)
+  //   'override' — don't apply this mount, but keep localStorage. The
+  //                current task wants the panel visible (e.g. bidRes is
+  //                staged for the right-sidebar preview pane); their
+  //                long-term preference may still be valid.
+  //   'expire'   — don't apply AND clear localStorage. The preference is
+  //                older than SB_STALE_MS and the user is on a desktop
+  //                viewport — almost certainly forgotten state. Clearing
+  //                prevents the next refresh from re-trapping them.
+  //
+  // Why a tiered verdict instead of a binary force-show: a deliberate
+  // "I work in JSON-only mode" user shouldn't be auto-undone. They get
+  // 'respect' even on cold starts because their toggle timestamp stays
+  // fresh through regular use. Only forgotten or clearly-conflicting
+  // hides are reclaimed.
+  function checkSidebarHealth(side) {
+    let savedAt = 0;
+    try {
+      savedAt = parseInt(localStorage.getItem(SB_HIDDEN_TS_KEYS[side]) || '0', 10);
+    } catch (e) {
+      /* private mode → savedAt stays 0, no timestamp = legacy hide before
+         this hotfix shipped → treat as fresh, won't expire on first visit */
+    }
+
+    // Override 1 (right-sidebar only) — context: the right pane hosts the
+    // ad-preview iframe. If a bidRes payload is currently staged in the
+    // editor (typed, pasted, or hydrated from history / share-link / saved
+    // sample), the user is about to need the preview. A hidden panel here
+    // would silently swallow the rendered creative. Show it; don't touch
+    // their saved preference.
+    if (side === 'right') {
+      const resEl = document.getElementById('bidRes');
+      if (resEl && resEl.value && resEl.value.trim()) return 'override';
+    }
+
+    // Override 2 (staleness) — desktop only. Hide preferences older than
+    // SB_STALE_MS came from a session the user has likely forgotten about.
+    // We skip narrow viewports (<1280px) where responsive media queries
+    // dominate the sidebar layout anyway and the hidden class is mostly
+    // moot. Pre-hotfix hides have no timestamp (savedAt === 0) and are
+    // grandfathered in as 'respect' — we don't retroactively expire
+    // existing saved preferences.
+    if (savedAt > 0 && window.innerWidth >= 1280) {
+      if (Date.now() - savedAt > SB_STALE_MS) return 'expire';
+    }
+
+    return 'respect';
+  }
+
   function toggleSidebar(side) {
     const cls = 'sb-' + side + '-hidden';
     const isHidden = document.body.classList.toggle(cls);
     try {
+      // Refresh both flag AND timestamp on every toggle. Active users keep
+      // their 'recent' status across the SB_STALE_MS window naturally;
+      // forgotten state ages out without further action.
       localStorage.setItem(SB_HIDDEN_KEYS[side], isHidden ? '1' : '0');
+      localStorage.setItem(SB_HIDDEN_TS_KEYS[side], String(Date.now()));
     } catch (e) {
       /* private mode */
     }
@@ -3078,6 +3146,7 @@ export async function mountInspector(root, ctx) {
     );
     if (btn) btn.textContent = arrowFor(side, isHidden);
   }
+
   function setupSidebarToggles() {
     ['left', 'right'].forEach((side) => {
       const cls = 'sb-' + side + '-hidden';
@@ -3087,14 +3156,54 @@ export async function mountInspector(root, ctx) {
       } catch (e) {
         saved = null;
       }
-      if (saved === '1') document.body.classList.add(cls);
+
+      if (saved === '1') {
+        const verdict = checkSidebarHealth(side);
+        if (verdict === 'respect') {
+          document.body.classList.add(cls);
+        } else if (verdict === 'expire') {
+          // Stale preference — sync localStorage so the user lands in a
+          // clean default on next visit instead of re-checking every time.
+          try {
+            localStorage.removeItem(SB_HIDDEN_KEYS[side]);
+            localStorage.removeItem(SB_HIDDEN_TS_KEYS[side]);
+          } catch (e) {
+            /* */
+          }
+        }
+        // 'override' — leave class off, leave localStorage intact (one-time
+        // contextual override; long-term preference is still saved).
+      }
+
       const btn = document.getElementById(
         side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
       );
       if (btn) btn.textContent = arrowFor(side, document.body.classList.contains(cls));
     });
   }
+
+  // Reset Layout — escape hatch from any persisted sidebar state. Wipes
+  // both flags + both timestamps and shows both panels. Bound to a small
+  // ↺ button in the footer (template) and to a 'reset-layout' data-action.
+  function resetLayout() {
+    ['left', 'right'].forEach((side) => {
+      document.body.classList.remove('sb-' + side + '-hidden');
+      try {
+        localStorage.removeItem(SB_HIDDEN_KEYS[side]);
+        localStorage.removeItem(SB_HIDDEN_TS_KEYS[side]);
+      } catch (e) {
+        /* */
+      }
+      const btn = document.getElementById(
+        side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
+      );
+      if (btn) btn.textContent = arrowFor(side, false);
+    });
+    toast(t('toast.layout.reset'));
+  }
+
   window.toggleSidebar = toggleSidebar;
+  window.resetLayout = resetLayout;
 
   // ── Init ──────────────────────────────────────────────────────
   // Phase C-2: mount() guarantees the template DOM is injected before
@@ -3231,6 +3340,8 @@ export async function mountInspector(root, ctx) {
           // — layout —
           case 'toggle-sidebar':
             return toggleSidebar(el.dataset.side);
+          case 'reset-layout':
+            return resetLayout();
           case 'switch-tab':
             return window.switchTab(el, el.dataset.target);
 
@@ -3413,6 +3524,7 @@ export async function mountInspector(root, ctx) {
       'updateCharCount',
       'closeModal',
       'toggleSidebar',
+      'resetLayout',
       // analysis + history (loadFromHistory/peekHistoryItem/deleteHistoryItem
       // are now local — driven by delegated handler on #hList)
       'runAnalysis',
