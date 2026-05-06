@@ -2993,78 +2993,107 @@ export async function mountInspector(root, ctx) {
     // Render any history that was persisted from a prior session.
     renderHistory();
 
-    // ── Delegated event handlers (Cabinet Refactor Etap 1) ─────────
-    // History + saved-samples lists rebuild their innerHTML on every
-    // render, so per-row addEventListener would leak handlers. Listen
-    // once on the static parent and dispatch by data-action — the
-    // {signal: ctx.signal} option detaches automatically on unmount.
-    const hList = $('hList');
-    if (hList) {
-      const onHistoryActivate = (ev, target) => {
-        const action = target.dataset.action;
-        const idx = Number(target.dataset.idx);
-        if (Number.isNaN(idx)) return;
-        if (action === 'history-load') {
-          ev.preventDefault();
-          loadFromHistory(idx);
-        } else if (action === 'history-peek') {
-          ev.preventDefault();
-          ev.stopPropagation();
-          peekHistoryItem(idx);
-        } else if (action === 'history-delete') {
-          ev.preventDefault();
-          ev.stopPropagation();
-          deleteHistoryItem(idx);
-        }
-      };
-      hList.addEventListener(
-        'click',
-        (ev) => {
-          const target = ev.target.closest('[data-action]');
-          if (target && hList.contains(target)) onHistoryActivate(ev, target);
-        },
-        { signal: ctx.signal },
-      );
-      hList.addEventListener(
-        'keydown',
-        (ev) => {
-          if (ev.key !== 'Enter' && ev.key !== ' ') return;
-          const target = ev.target.closest('[data-action="history-load"]');
-          if (target && hList.contains(target)) onHistoryActivate(ev, target);
-        },
-        { signal: ctx.signal },
-      );
-    }
+    // ── Central event dispatcher (Cabinet Refactor Etap 2) ─────────
+    // Single root-level handler dispatches every data-action click
+    // anywhere inside the inspector mount tree. Replaces:
+    //   - 87 inline onclick="…" handlers across index.{en,uk,ru}.html
+    //   - per-list scoped dispatchers from Etap 1 (#hList, #savedList)
+    // {signal: ctx.signal} auto-detaches on module unmount.
+    const root = document.getElementById('app-root') || document.body;
 
-    const savedList = $('savedList');
-    if (savedList) {
-      savedList.addEventListener(
-        'click',
-        (ev) => {
-          const target = ev.target.closest('[data-action]');
-          if (!target || !savedList.contains(target)) return;
-          const action = target.dataset.action;
-          if (action === 'open-auth') {
-            return window.openAuthModal(target.dataset.mode || 'login');
-          }
-          if (action === 'open-unlock') {
+    root.addEventListener(
+      'click',
+      (ev) => {
+        const el = ev.target.closest('[data-action]');
+        if (!el || !root.contains(el)) return;
+        const action = el.dataset.action;
+        switch (action) {
+          // — top bar / chrome —
+          case 'analyze':
+            return runAnalysis();
+          case 'save-sample':
+            return window.openSaveModal && window.openSaveModal();
+          case 'verify-email':
+            return window.requestVerifyEmail && window.requestVerifyEmail();
+          case 'signout':
+            return window.signOut && window.signOut();
+          case 'open-auth':
+            return window.openAuthModal(el.dataset.mode || 'login');
+          case 'open-unlock':
             return window.openUnlockModal();
-          }
-          const id = Number(target.dataset.id);
-          if (Number.isNaN(id)) return;
-          if (action === 'sample-load') {
-            loadSample(id);
-          } else if (action === 'sample-edit') {
+          case 'open-partners':
+            return window.openPartnerModal && window.openPartnerModal();
+          case 'open-embed':
+            return window.openEmbedModal && window.openEmbedModal();
+          case 'share-link':
+            return window.copyShareLink && window.copyShareLink();
+          case 'download-bundle':
+            return window.downloadBundle && window.downloadBundle();
+
+          // — editor controls —
+          case 'clear-input':
+            return window.clearInput(el.dataset.target);
+          case 'format-json':
+            return window.utils.format(el.dataset.target);
+          case 'copy-text':
+            return window.utils.copy(el.dataset.target);
+
+          // — layout —
+          case 'toggle-sidebar':
+            return toggleSidebar(el.dataset.side);
+          case 'switch-tab':
+            return window.switchTab(el, el.dataset.target);
+
+          // — history list (merged from Etap 1 #hList scoped dispatcher) —
+          case 'history-load':
+            ev.preventDefault();
+            return loadFromHistory(Number(el.dataset.idx));
+          case 'history-peek':
             ev.stopPropagation();
-            editSample(id);
-          } else if (action === 'sample-delete') {
+            return peekHistoryItem(Number(el.dataset.idx));
+          case 'history-delete':
             ev.stopPropagation();
-            deleteSample(id);
-          }
-        },
-        { signal: ctx.signal },
-      );
-    }
+            return deleteHistoryItem(Number(el.dataset.idx));
+          case 'clear-history':
+            return window.clearHistory && window.clearHistory();
+
+          // — saved samples (merged from Etap 1 #savedList scoped dispatcher) —
+          case 'sample-load':
+            return loadSample(Number(el.dataset.id));
+          case 'sample-edit':
+            ev.stopPropagation();
+            return editSample(Number(el.dataset.id));
+          case 'sample-delete':
+            ev.stopPropagation();
+            return deleteSample(Number(el.dataset.id));
+        }
+      },
+      { signal: ctx.signal },
+    );
+
+    // Keyboard activation for history rows. Click is covered above;
+    // keydown stays scoped to data-action="history-load" so we don't
+    // intercept the Ctrl+Enter shortcut bound on textareas below.
+    root.addEventListener(
+      'keydown',
+      (ev) => {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        const el = ev.target.closest('[data-action="history-load"]');
+        if (!el || !root.contains(el)) return;
+        ev.preventDefault();
+        loadFromHistory(Number(el.dataset.idx));
+      },
+      { signal: ctx.signal },
+    );
+
+    // Direct bindings for non-click events on stable nodes (replace
+    // oninput/onkeydown attrs that lived on the textareas in HTML).
+    ['bidReq', 'bidRes'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => updateCharCount(id), { signal: ctx.signal });
+      el.addEventListener('keydown', window.handleKeydown, { signal: ctx.signal });
+    });
 
     await bootAuth();
     await refreshPartners();

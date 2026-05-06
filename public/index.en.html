@@ -1768,7 +1768,7 @@
       "
     >
       <span>Verify your email address — it improves account security.</span>
-      <button class="btn btn-ghost btn-sm" onclick="requestVerifyEmail()">send email</button>
+      <button class="btn btn-ghost btn-sm" data-action="verify-email">send email</button>
     </div>
     <header class="app-header">
       <div class="kt-brand">
@@ -1792,13 +1792,13 @@
           docs ↗
         </a>
         <button
-          onclick="openSaveModal()"
+          data-action="save-sample"
           class="btn btn-ghost btn-sm"
           title="Save current request/response to library"
         >
           save
         </button>
-        <button onclick="runAnalysis()" class="btn btn-primary btn-sm" id="analyzeBtn">
+        <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">
           analyze stream
         </button>
         <!-- Language + theme toggles. Buttons live in the header so users can
@@ -1821,7 +1821,8 @@
           <button
             id="authSignInBtn"
             class="btn btn-ghost btn-sm"
-            onclick="openAuthModal('login')"
+            data-action="open-auth"
+            data-mode="login"
             style="display: none"
           >
             sign in
@@ -1840,7 +1841,7 @@
                 white-space: nowrap;
               "
             ></span>
-            <button class="btn btn-ghost btn-sm" onclick="signOut()">sign out</button>
+            <button class="btn btn-ghost btn-sm" data-action="signout">sign out</button>
           </span>
         </div>
       </div>
@@ -1854,13 +1855,13 @@
           <div class="input-card-actions">
             <span class="char-count" id="reqCount">0</span>
             <span class="json-badge empty" id="reqBadge">empty</span>
-            <button onclick="clearInput('bidReq')" class="btn-icon" title="Clear field">
+            <button data-action="clear-input" data-target="bidReq" class="btn-icon" title="Clear field">
               clear
             </button>
-            <button onclick="utils.format('bidReq')" class="btn-icon" title="Format JSON">
+            <button data-action="format-json" data-target="bidReq" class="btn-icon" title="Format JSON">
               format
             </button>
-            <button onclick="utils.copy('bidReq')" class="btn-icon" title="Copy to clipboard">
+            <button data-action="copy-text" data-target="bidReq" class="btn-icon" title="Copy to clipboard">
               copy
             </button>
           </div>
@@ -1869,8 +1870,6 @@
           id="bidReq"
           class="json-input"
           placeholder="Paste oRTB BidRequest JSON here.&#10;&#10;Hint: Ctrl+Enter to run analysis."
-          oninput="updateCharCount('bidReq')"
-          onkeydown="handleKeydown(event)"
         ></textarea>
       </div>
       <div class="input-card">
@@ -1879,13 +1878,13 @@
           <div class="input-card-actions">
             <span class="char-count" id="resCount">0</span>
             <span class="json-badge empty" id="resBadge">empty</span>
-            <button onclick="clearInput('bidRes')" class="btn-icon" title="Clear field">
+            <button data-action="clear-input" data-target="bidRes" class="btn-icon" title="Clear field">
               clear
             </button>
-            <button onclick="utils.format('bidRes')" class="btn-icon" title="Format JSON">
+            <button data-action="format-json" data-target="bidRes" class="btn-icon" title="Format JSON">
               format
             </button>
-            <button onclick="utils.copy('bidRes')" class="btn-icon" title="Copy to clipboard">
+            <button data-action="copy-text" data-target="bidRes" class="btn-icon" title="Copy to clipboard">
               copy
             </button>
           </div>
@@ -1894,8 +1893,6 @@
           id="bidRes"
           class="json-input"
           placeholder="Paste oRTB BidResponse JSON (optional)."
-          oninput="updateCharCount('bidRes')"
-          onkeydown="handleKeydown(event)"
         ></textarea>
       </div>
     </section>
@@ -1929,12 +1926,11 @@
             id="partnerFilter"
             class="saved-select"
             aria-label="Filter saved samples by partner"
-            onchange="refreshSamples()"
           >
             <option value="">all partners</option>
             <option value="unassigned">— no partner —</option>
           </select>
-          <button onclick="openPartnerModal()" class="saved-act-btn" title="Manage partners">
+          <button data-action="open-partners" class="saved-act-btn" title="Manage partners">
             + partner
           </button>
         </div>
@@ -1953,7 +1949,7 @@
           <span>history</span>
           <button
             type="button"
-            onclick="clearHistory()"
+            data-action="clear-history"
             class="saved-act-btn"
             title="Clear local history"
             style="font-size: 11px"
@@ -1986,7 +1982,7 @@
             <button
               class="btn btn-ghost btn-sm"
               id="embedBtn"
-              onclick="openEmbedModal()"
+              data-action="open-embed"
               title="Get an iframe snippet to embed this view in a blog, Notion or doc"
             >
               embed
@@ -1994,7 +1990,7 @@
             <button
               class="btn btn-ghost btn-sm"
               id="shareLinkBtn"
-              onclick="copyShareLink()"
+              data-action="share-link"
               title="Copy a permalink — payload is encoded in the URL fragment, never reaches the server"
             >
               share link
@@ -2002,7 +1998,7 @@
             <button
               class="btn btn-ghost btn-sm"
               id="downloadBundleBtn"
-              onclick="downloadBundle()"
+              data-action="download-bundle"
               title="Download a JSON bundle (request + response + findings) for sharing or attaching to a bug ticket"
             >
               download
@@ -2013,37 +2009,40 @@
           <button
             class="sb-toggle left"
             id="toggleSidebarLeft"
-            onclick="toggleSidebar('left')"
+            data-action="toggle-sidebar"
+            data-side="left"
             title="Toggle left sidebar (summary / library / history)"
           >
             ◀
           </button>
-          <button class="tab-btn active" onclick="switchTab(this, 'tInspector')">
+          <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
             inspector <span class="tab-badge" id="inspectorBadge">0</span>
           </button>
-          <button class="tab-btn" onclick="switchTab(this, 'tValidation')">
+          <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
             validation <span class="tab-badge" id="validationBadge">0</span>
           </button>
-          <button class="tab-btn" onclick="switchTab(this, 'tCross')">
+          <button class="tab-btn" data-action="switch-tab" data-target="tCross">
             crosscheck <span class="tab-badge" id="crossBadge">0</span>
           </button>
-          <button class="tab-btn" onclick="switchTab(this, 'tCategories')">
+          <button class="tab-btn" data-action="switch-tab" data-target="tCategories">
             categories <span class="tab-badge" id="categoriesBadge">0</span>
           </button>
           <button
             class="tab-btn"
-            onclick="switchTab(this, 'tBehavior')"
+            data-action="switch-tab"
+            data-target="tBehavior"
             title="Click-skim and auto-navigate attempts captured from the creative iframe"
           >
             behavior <span class="tab-badge" id="behaviorBadge">0</span>
           </button>
-          <button class="tab-btn" id="kadamRefTab" onclick="switchTab(this, 'tRef')" hidden>
+          <button class="tab-btn" id="kadamRefTab" data-action="switch-tab" data-target="tRef" hidden>
             vendor ref
           </button>
           <button
             class="sb-toggle right"
             id="toggleSidebarRight"
-            onclick="toggleSidebar('right')"
+            data-action="toggle-sidebar"
+            data-side="right"
             title="Toggle right sidebar (ad preview / placement stats)"
           >
             ▶

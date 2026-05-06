@@ -1762,7 +1762,7 @@
       "
     >
       <span>Підтверди свою email-адресу — це покращує захист акаунту.</span>
-      <button class="btn btn-ghost btn-sm" onclick="requestVerifyEmail()">надіслати лист</button>
+      <button class="btn btn-ghost btn-sm" data-action="verify-email">надіслати лист</button>
     </div>
     <header class="app-header">
       <div class="kt-brand">
@@ -1786,13 +1786,13 @@
           docs ↗
         </a>
         <button
-          onclick="openSaveModal()"
+          data-action="save-sample"
           class="btn btn-ghost btn-sm"
           title="Save current request/response to library"
         >
           save
         </button>
-        <button onclick="runAnalysis()" class="btn btn-primary btn-sm" id="analyzeBtn">
+        <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">
           analyze stream
         </button>
         <!-- Language + theme toggles. Buttons live in the header so users can
@@ -1815,7 +1815,8 @@
           <button
             id="authSignInBtn"
             class="btn btn-ghost btn-sm"
-            onclick="openAuthModal('login')"
+            data-action="open-auth"
+            data-mode="login"
             style="display: none"
           >
             sign in
@@ -1834,7 +1835,7 @@
                 white-space: nowrap;
               "
             ></span>
-            <button class="btn btn-ghost btn-sm" onclick="signOut()">sign out</button>
+            <button class="btn btn-ghost btn-sm" data-action="signout">sign out</button>
           </span>
         </div>
       </div>
@@ -1848,13 +1849,13 @@
           <div class="input-card-actions">
             <span class="char-count" id="reqCount">0</span>
             <span class="json-badge empty" id="reqBadge">порожньо</span>
-            <button onclick="clearInput('bidReq')" class="btn-icon" title="Очистити поле">
+            <button data-action="clear-input" data-target="bidReq" class="btn-icon" title="Очистити поле">
               очистити
             </button>
-            <button onclick="utils.format('bidReq')" class="btn-icon" title="Відформатувати JSON">
+            <button data-action="format-json" data-target="bidReq" class="btn-icon" title="Відформатувати JSON">
               формат
             </button>
-            <button onclick="utils.copy('bidReq')" class="btn-icon" title="Скопіювати в буфер">
+            <button data-action="copy-text" data-target="bidReq" class="btn-icon" title="Скопіювати в буфер">
               копія
             </button>
           </div>
@@ -1863,8 +1864,6 @@
           id="bidReq"
           class="json-input"
           placeholder="Встав сюди oRTB BidRequest JSON.&#10;&#10;Підказка: Ctrl+Enter — запустити аналіз."
-          oninput="updateCharCount('bidReq')"
-          onkeydown="handleKeydown(event)"
         ></textarea>
       </div>
       <div class="input-card">
@@ -1873,13 +1872,13 @@
           <div class="input-card-actions">
             <span class="char-count" id="resCount">0</span>
             <span class="json-badge empty" id="resBadge">порожньо</span>
-            <button onclick="clearInput('bidRes')" class="btn-icon" title="Очистити поле">
+            <button data-action="clear-input" data-target="bidRes" class="btn-icon" title="Очистити поле">
               очистити
             </button>
-            <button onclick="utils.format('bidRes')" class="btn-icon" title="Відформатувати JSON">
+            <button data-action="format-json" data-target="bidRes" class="btn-icon" title="Відформатувати JSON">
               формат
             </button>
-            <button onclick="utils.copy('bidRes')" class="btn-icon" title="Скопіювати в буфер">
+            <button data-action="copy-text" data-target="bidRes" class="btn-icon" title="Скопіювати в буфер">
               копія
             </button>
           </div>
@@ -1888,8 +1887,6 @@
           id="bidRes"
           class="json-input"
           placeholder="Встав oRTB BidResponse JSON (необовʼязково)."
-          oninput="updateCharCount('bidRes')"
-          onkeydown="handleKeydown(event)"
         ></textarea>
       </div>
     </section>
@@ -1923,12 +1920,11 @@
             id="partnerFilter"
             class="saved-select"
             aria-label="Фільтр збережених запитів за партнером"
-            onchange="refreshSamples()"
           >
             <option value="">усі партнери</option>
             <option value="unassigned">— без партнера —</option>
           </select>
-          <button onclick="openPartnerModal()" class="saved-act-btn" title="Керувати партнерами">
+          <button data-action="open-partners" class="saved-act-btn" title="Керувати партнерами">
             + партнер
           </button>
         </div>
@@ -1947,7 +1943,7 @@
           <span>історія</span>
           <button
             type="button"
-            onclick="clearHistory()"
+            data-action="clear-history"
             class="saved-act-btn"
             title="Очистити локальну історію"
             style="font-size: 11px"
@@ -1980,7 +1976,7 @@
             <button
               class="btn btn-ghost btn-sm"
               id="embedBtn"
-              onclick="openEmbedModal()"
+              data-action="open-embed"
               title="Отримати iframe-сніпет щоб вставити цей вид у блог, Notion або документ"
             >
               embed
@@ -1988,7 +1984,7 @@
             <button
               class="btn btn-ghost btn-sm"
               id="shareLinkBtn"
-              onclick="copyShareLink()"
+              data-action="share-link"
               title="Скопіювати permalink — payload закодовано у URL-фрагменті, на сервер ніколи не потрапляє"
             >
               посилання
@@ -1996,7 +1992,7 @@
             <button
               class="btn btn-ghost btn-sm"
               id="downloadBundleBtn"
-              onclick="downloadBundle()"
+              data-action="download-bundle"
               title="Завантажити JSON-бандл (запит + відповідь + знахідки) — щоб переслати або прикріпити до тікета"
             >
               завантажити
@@ -2007,37 +2003,40 @@
           <button
             class="sb-toggle left"
             id="toggleSidebarLeft"
-            onclick="toggleSidebar('left')"
+            data-action="toggle-sidebar"
+            data-side="left"
             title="Перемкнути ліву панель (підсумок / бібліотека / історія)"
           >
             ◀
           </button>
-          <button class="tab-btn active" onclick="switchTab(this, 'tInspector')">
+          <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
             інспектор <span class="tab-badge" id="inspectorBadge">0</span>
           </button>
-          <button class="tab-btn" onclick="switchTab(this, 'tValidation')">
+          <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
             валідація <span class="tab-badge" id="validationBadge">0</span>
           </button>
-          <button class="tab-btn" onclick="switchTab(this, 'tCross')">
+          <button class="tab-btn" data-action="switch-tab" data-target="tCross">
             звірка <span class="tab-badge" id="crossBadge">0</span>
           </button>
-          <button class="tab-btn" onclick="switchTab(this, 'tCategories')">
+          <button class="tab-btn" data-action="switch-tab" data-target="tCategories">
             категорії <span class="tab-badge" id="categoriesBadge">0</span>
           </button>
           <button
             class="tab-btn"
-            onclick="switchTab(this, 'tBehavior')"
+            data-action="switch-tab"
+            data-target="tBehavior"
             title="Спроби click-skim та авто-навігації, перехоплені у iframe креативу"
           >
             поведінка <span class="tab-badge" id="behaviorBadge">0</span>
           </button>
-          <button class="tab-btn" id="kadamRefTab" onclick="switchTab(this, 'tRef')" hidden>
+          <button class="tab-btn" id="kadamRefTab" data-action="switch-tab" data-target="tRef" hidden>
             vendor ref
           </button>
           <button
             class="sb-toggle right"
             id="toggleSidebarRight"
-            onclick="toggleSidebar('right')"
+            data-action="toggle-sidebar"
+            data-side="right"
             title="Перемкнути праву панель (ad preview / placement stats)"
           >
             ▶
