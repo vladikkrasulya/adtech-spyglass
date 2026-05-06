@@ -557,6 +557,9 @@ export async function mountInspector(root, ctx) {
           location_set: t('behavior.kind.location_set'),
           programmatic_click: t('behavior.kind.programmatic_click'),
           invisible_overlay_click: t('behavior.kind.invisible_overlay_click'),
+          center_synth_click: t('behavior.kind.center_synth_click'),
+          click_burst: t('behavior.kind.click_burst'),
+          phantom_click: t('behavior.kind.phantom_click'),
         },
         locale: activeLocale(),
       });

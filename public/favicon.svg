@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Kyivtech Spyglass">
+  <!-- Monolith Indigo branding (palette tokens: --accent #3e63dd, --text-on-accent #ffffff).
+       Replaces the legacy yellow/black "K" data-URI favicon (#FFCC00 / #181818) that
+       persisted after the 2026-05-05 redesign. The "K" wordmark is the umbrella
+       Kyivtech identity — Spyglass inherits it as a sub-property. -->
+  <rect width="32" height="32" rx="8" fill="#3e63dd"/>
+  <text x="50%" y="65%"
+        text-anchor="middle"
+        font-family="Onest, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif"
+        font-size="20"
+        font-weight="700"
+        fill="#ffffff">K</text>
+</svg>

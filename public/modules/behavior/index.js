@@ -42,8 +42,17 @@
   }
 
   function severityForKind(kind) {
-    if (kind === 'click_skim_suspect' || kind === 'invisible_overlay_click') return 'danger';
-    if (kind === 'auto_navigate') return 'warning';
+    // ERROR-tier patterns: clear fraud signal, no plausible legitimate cause.
+    if (
+      kind === 'click_skim_suspect' ||
+      kind === 'invisible_overlay_click' ||
+      kind === 'center_synth_click' ||
+      kind === 'click_burst'
+    ) {
+      return 'danger';
+    }
+    // WARNING-tier patterns: suspicious but with rare legitimate edge cases.
+    if (kind === 'auto_navigate' || kind === 'phantom_click') return 'warning';
     return 'info';
   }
 

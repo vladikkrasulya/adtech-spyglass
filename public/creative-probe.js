@@ -18,6 +18,13 @@
      - HTMLElement.prototype.click (programmatic click)
      - document click (capture phase) — geometry + opacity inspection
        for invisible-overlay click traps (Phase 1 Behavior heuristic)
+     - document mousemove + touchstart (capture phase) — input-entropy
+       counters used by the Phase 2 click analyser for phantom-click
+       detection
+     - document click (second capture-phase listener) — bot-pattern
+       analysis: center-synth, click-burst, phantom-click (Phase 2
+       Behavior heuristics; kept separate from the Phase 1 listener
+       so the overlay logic stays untouched)
 
    Detection lineage:
      activeEventStack tracks the chain of DOM events currently
@@ -79,6 +86,19 @@
   // Stack of currently-dispatching event types. `addEventListener` and
   // on-property hooks push/pop around the listener invocation.
   const activeEventStack = [];
+
+  // Phase 2 (bot detection) — input-entropy counters + click-burst ring.
+  // Populated by capture-phase listeners on mousemove/touchstart so the
+  // click handler can decide phantom / center-synth / burst classification.
+  // Counters are cumulative across the probe's lifetime (== one creative);
+  // a fresh probe instance on each setAdPreview means clean state.
+  let _mousemoveCount = 0;
+  let _touchStartCount = 0;
+  const _clickTimestamps = [];
+  let _burstActive = false;
+  const CLICK_BURST_WINDOW_MS = 200;
+  const CLICK_BURST_THRESHOLD = 3;
+  const CENTER_TOLERANCE_PX = 0.5;
 
   function send(payload) {
     try {
@@ -341,6 +361,137 @@
           });
         } catch (err) {
           /* per-click measurement failure — ignore so we keep observing */
+        }
+      },
+      true,
+    );
+  } catch (e) {
+    /* listener install failed — non-fatal */
+  }
+
+  // 8) Input-entropy counters (Phase 2). Capture-phase listeners
+  //    increment closure-scope counters that the bot-pattern click
+  //    analyser (hook 9 below) reads. We don't measure trajectory here
+  //    — just "did the user move OR tap at all?". Trajectory entropy
+  //    (path-too-clean detection) is a Phase 3 candidate.
+  try {
+    document.addEventListener(
+      'mousemove',
+      function () {
+        _mousemoveCount++;
+      },
+      true,
+    );
+  } catch (e) {
+    /* */
+  }
+
+  try {
+    document.addEventListener(
+      'touchstart',
+      function () {
+        _touchStartCount++;
+      },
+      true,
+    );
+  } catch (e) {
+    /* */
+  }
+
+  // 9) Bot-pattern click analysis (Phase 2 Behavior heuristic).
+  //    Separate capture-phase listener from hook 7 so the existing
+  //    invisible-overlay logic stays untouched. Each detection has its
+  //    own try/catch — a measurement throw in one channel does not
+  //    block the others.
+  //
+  //    9.A center_synth_click — clientX/Y within CENTER_TOLERANCE_PX
+  //         of target's geometric center AND event.isTrusted === false.
+  //         Canonical pixelbot signature: scripts read center via
+  //         getBoundingClientRect and dispatch a click there. Synthesized
+  //         clicks cannot get isTrusted=true outside WebDriver / CDP,
+  //         and a sandboxed creative has access to neither.
+  //    9.B click_burst        — 3+ clicks within CLICK_BURST_WINDOW_MS
+  //         (200ms). Emitted ONCE per burst sequence (transition from
+  //         <3 to ≥3 in window) so we don't flood the timeline with one
+  //         event per click in the burst.
+  //    9.C phantom_click      — click fired while BOTH entropy counters
+  //         are still 0 (no mousemove AND no touchstart since probe init).
+  //         Synthetic input typical of headless / pixelbots that dispatch
+  //         clicks without an input gesture.
+  try {
+    document.addEventListener(
+      'click',
+      function (e) {
+        const now = Date.now();
+
+        // 9.A center-synth detection
+        try {
+          const t = e && e.target;
+          if (t && typeof t.getBoundingClientRect === 'function') {
+            const rect = t.getBoundingClientRect();
+            // Skip degenerate targets (1×1 hit-areas trivially "centered").
+            if (rect.width > 4 && rect.height > 4) {
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              const dx = (e.clientX || 0) - cx;
+              const dy = (e.clientY || 0) - cy;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < CENTER_TOLERANCE_PX && e.isTrusted === false) {
+                send({
+                  kind: 'center_synth_click',
+                  method: 'click',
+                  url: '',
+                  trigger: 'click',
+                  tagName: t.tagName || '',
+                  centerDistancePx: Number(dist.toFixed(3)),
+                  isTrusted: false,
+                });
+              }
+            }
+          }
+        } catch (err) {
+          /* center detection failed — continue with other checks */
+        }
+
+        // 9.B click-burst (sliding window)
+        try {
+          _clickTimestamps.push(now);
+          while (_clickTimestamps.length > 0 && now - _clickTimestamps[0] > CLICK_BURST_WINDOW_MS) {
+            _clickTimestamps.shift();
+          }
+          if (_clickTimestamps.length >= CLICK_BURST_THRESHOLD) {
+            if (!_burstActive) {
+              _burstActive = true;
+              send({
+                kind: 'click_burst',
+                method: 'click',
+                url: '',
+                trigger: 'click',
+                clickCount: _clickTimestamps.length,
+                windowMs: CLICK_BURST_WINDOW_MS,
+              });
+            }
+          } else {
+            _burstActive = false;
+          }
+        } catch (err) {
+          /* burst detection failed */
+        }
+
+        // 9.C phantom-click (zero entropy)
+        try {
+          if (_mousemoveCount === 0 && _touchStartCount === 0) {
+            send({
+              kind: 'phantom_click',
+              method: 'click',
+              url: '',
+              trigger: 'click',
+              tagName: (e && e.target && e.target.tagName) || '',
+              isTrusted: !!(e && e.isTrusted),
+            });
+          }
+        } catch (err) {
+          /* phantom detection failed */
         }
       },
       true,

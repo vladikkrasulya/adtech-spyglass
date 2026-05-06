@@ -25,7 +25,7 @@
     <meta property="og:url" content="https://spyglass.kyivtech.com.ua/uk/about" />
     <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:locale" content="uk_UA" />
-    <meta property="og:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
+    <meta property="og:image" content="https://spyglass.kyivtech.com.ua/preview-indigo.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
@@ -39,7 +39,7 @@
       name="twitter:description"
       content="Документація Spyglass — публічного OpenRTB-інспектора."
     />
-    <meta name="twitter:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
+    <meta name="twitter:image" content="https://spyglass.kyivtech.com.ua/preview-indigo.png" />
 
     <script type="application/ld+json">
       {
@@ -56,10 +56,7 @@
         }
       }
     </script>
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23FFCC00'/%3E%3Ctext x='50%25' y='65%25' text-anchor='middle' font-family='Onest,sans-serif' font-size='20' font-weight='700' fill='%23181818'%3EK%3C/text%3E%3C/svg%3E"
-    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -131,51 +128,59 @@
    No glow on docs surfaces (long reading text — would distract).
    ============================================================ */
       :root {
-        --bg:              #F7F8FA;
-        --bg-2:            #EEF0F4;
-        --surface:         #FFFFFF;
-        --surface-ink:     #0F1525;
-        --surface-ink-2:   #1A2138;
-        --text:            #0F1525;
-        --text-muted:      #515A6E;
-        --text-dim:        #8A93A6;
-        --text-inv:        #FAFAFA;
-        --text-on-accent:  #FFFFFF;
-        --border:          rgba(15,21,37,0.08);
-        --border-strong:   rgba(15,21,37,0.16);
-        --accent:          #3E63DD;
-        --accent-hover:    #5573E5;
-        --accent-soft:     rgba(62,99,221,0.10);
-        --accent-ink:      #0F1525;
-        --accent-secondary:#5E6AD2;
-        --selection-bg:    rgba(62,99,221,0.30);
+        --bg: #f7f8fa;
+        --bg-2: #eef0f4;
+        --surface: #ffffff;
+        --surface-ink: #0f1525;
+        --surface-ink-2: #1a2138;
+        --text: #0f1525;
+        --text-muted: #515a6e;
+        --text-dim: #8a93a6;
+        --text-inv: #fafafa;
+        --text-on-accent: #ffffff;
+        --border: rgba(15, 21, 37, 0.08);
+        --border-strong: rgba(15, 21, 37, 0.16);
+        --accent: #3e63dd;
+        --accent-hover: #5573e5;
+        --accent-soft: rgba(62, 99, 221, 0.1);
+        --accent-ink: #0f1525;
+        --accent-secondary: #5e6ad2;
+        --selection-bg: rgba(62, 99, 221, 0.3);
       }
-      [data-theme="dark"] {
-        --bg:              #0B0D14;
-        --bg-2:            #12151F;
-        --surface:         #12151F;
-        --surface-ink:     #181C28;
-        --surface-ink-2:   #232838;
-        --text:            #E6E9F2;
-        --text-muted:      #9098AD;
-        --text-dim:        #5C6479;
-        --text-inv:        #0B0D14;
-        --text-on-accent:  #FFFFFF;
-        --border:          rgba(255,255,255,0.06);
-        --border-strong:   rgba(255,255,255,0.12);
-        --accent:          #7C8CFF;
-        --accent-hover:    #9AA5FF;
-        --accent-soft:     rgba(124,140,255,0.14);
-        --accent-ink:      #E6E9F2;
-        --accent-secondary:#5E6AD2;
-        --selection-bg:    rgba(124,140,255,0.35);
+      [data-theme='dark'] {
+        --bg: #0b0d14;
+        --bg-2: #12151f;
+        --surface: #12151f;
+        --surface-ink: #181c28;
+        --surface-ink-2: #232838;
+        --text: #e6e9f2;
+        --text-muted: #9098ad;
+        --text-dim: #5c6479;
+        --text-inv: #0b0d14;
+        --text-on-accent: #ffffff;
+        --border: rgba(255, 255, 255, 0.06);
+        --border-strong: rgba(255, 255, 255, 0.12);
+        --accent: #7c8cff;
+        --accent-hover: #9aa5ff;
+        --accent-soft: rgba(124, 140, 255, 0.14);
+        --accent-ink: #e6e9f2;
+        --accent-secondary: #5e6ad2;
+        --selection-bg: rgba(124, 140, 255, 0.35);
       }
 
       /* Scrollbars — palette-aligned in BOTH themes. Width identical across
          themes (10px) so theme toggle never reflows content. */
-      * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
-      *::-webkit-scrollbar { width: 10px; height: 10px; }
-      *::-webkit-scrollbar-track { background: transparent; }
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-strong) transparent;
+      }
+      *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      *::-webkit-scrollbar-track {
+        background: transparent;
+      }
       *::-webkit-scrollbar-thumb {
         background: var(--border-strong);
         border-radius: 6px;
@@ -186,11 +191,19 @@
         background: var(--text-dim);
         background-clip: content-box;
       }
-      *::-webkit-scrollbar-corner { background: transparent; }
+      *::-webkit-scrollbar-corner {
+        background: transparent;
+      }
 
       /* Text selection — accent-tinted, contrast-preserved. */
-      ::selection    { background: var(--selection-bg); color: var(--text); }
-      ::-moz-selection { background: var(--selection-bg); color: var(--text); }
+      ::selection {
+        background: var(--selection-bg);
+        color: var(--text);
+      }
+      ::-moz-selection {
+        background: var(--selection-bg);
+        color: var(--text);
+      }
 
       body {
         background: var(--bg);

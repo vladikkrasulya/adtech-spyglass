@@ -1,20 +1,14 @@
 'use strict';
 
 /**
- * Rule registry for behavior analysis. Each rule is a pure function:
+ * Misclick / UX-abuse rules.
  *
- *   rule(events, ctx) → Finding[] | null
- *
- * Append to module.exports to register. Order is meaningful only insofar
- * as findings appear in the same order in the output — composition is
- * concatenative, no rule reads another rule's output.
- *
- * Phase 1 ships a single rule (invisible_overlay_click). The architecture
- * scales to misclick / bot-pattern / malicious-ad rule families per the
- * Behavior R&D doc; they slot in here without changes to analyze.js.
+ * Family scope: detections for click traps and dark-pattern UI in the
+ * creative — not bot heuristics (those live in bot-patterns.js). The
+ * probe captures the runtime signal; rules here promote it to findings.
  */
 
-const { LEVELS, makeFinding } = require('../findings');
+const { LEVELS, makeFinding } = require('../../findings');
 
 /**
  * behavior.trap.invisible_overlay
