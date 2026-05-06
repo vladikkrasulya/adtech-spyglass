@@ -164,17 +164,18 @@
   }
 
   function bootShare() {
-    // setTimeout 0 yields to other DOMContentLoaded listeners (spyglass.app.js
-    // sets up renderHistory + bootAuth in the same event), so the panes are
-    // wired before we populate them.
+    // setTimeout 0 yields to any sibling kt:inspector-ready listeners
+    // (so renderHistory + bootAuth land first), then populate panes.
     setTimeout(loadFromHash, 0);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootShare);
-  } else {
-    bootShare();
-  }
+  // Phase C-2: inspector template is now fetched + injected by the
+  // module's mount(). #bidReq / #bidRes don't exist at DOMContentLoaded
+  // any more — wait for the inspector module to signal readiness.
+  // { once: true } is intentional: a remount in the same page would
+  // re-emit the event, but loadFromHash is idempotent + URL-driven, so
+  // re-running it adds no value.
+  window.addEventListener('kt:inspector-ready', bootShare, { once: true });
 
   window.copyShareLink = copyShareLink;
   // Exposed so embed.js can build URLs without duplicating the

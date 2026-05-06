@@ -5,10 +5,23 @@
    event-name conventions in one place once feature modules land.
 
    Established names already in use:
-     kt:lang-change   — fired by lang-switch.js after seamless swap.
-                         detail: { lang: 'en'|'uk'|'ru' }
-     kt:theme-change  — (planned) fired when ◐ button toggles.
-                         detail: { theme: 'light'|'dark' }
+     kt:lang-change      — fired by lang-switch.js after seamless swap.
+                            detail: { lang: 'en'|'uk'|'ru' }
+     kt:theme-change     — (planned) fired when ◐ button toggles.
+                            detail: { theme: 'light'|'dark' }
+     kt:registry-mount   — fired by registry after a module successfully
+                            mounts. detail: { id }
+     kt:registry-unmount — fired by registry after a module unmounts.
+                            detail: { id }
+     kt:inspector-ready  — fired by inspector module's mount() after the
+                            locale template has been injected into
+                            #app-root and legacy mountInspector() has
+                            wired its handlers. Allows classic <script>
+                            files (share.js, embed.js, shortcuts.js,
+                            export.js) that bind to inspector-owned DOM
+                            (#bidReq, #bidRes, #modalRoot…) to wait for
+                            DOM availability without coupling to the
+                            now-async mount() lifecycle. detail: { lang }
 
    Future names (Phase B+):
      kt:specimen-share   — module A → module B; payload: { specimen, source }

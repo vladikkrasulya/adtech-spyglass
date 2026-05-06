@@ -2945,7 +2945,12 @@ export async function mountInspector(root, ctx) {
   window.toggleSidebar = toggleSidebar;
 
   // ── Init ──────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', async () => {
+  // Phase C-2: mount() guarantees the template DOM is injected before
+  // calling mountInspector(), and the call itself is awaited inside
+  // an async module mount() — which can run AFTER DOMContentLoaded
+  // has already fired. Listening for DOMContentLoaded here would
+  // silently never trigger. So we just run the init body inline.
+  {
     renderReference();
     updateCharCount('bidReq');
     updateCharCount('bidRes');
@@ -3210,7 +3215,7 @@ export async function mountInspector(root, ctx) {
       toast(msg, 'error');
       history.replaceState({}, '', location.pathname);
     }
-  });
+  }
   window.refreshSamples = refreshSamples;
 
   // Seamless language switch was extracted to /public/lang-switch.js so
