@@ -23,7 +23,14 @@ module.exports = [
     },
     rules: {
       // Style is Prettier's job; we keep ESLint focused on correctness.
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       'no-console': 'off', // server.js logs to console intentionally
       eqeqeq: ['error', 'smart'],
       'prefer-const': 'warn',

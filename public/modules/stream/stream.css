@@ -1,0 +1,359 @@
+/* ============================================================
+   public/modules/stream/stream.css
+
+   Module-scoped under #app-root. The shell mounts this <link> via
+   ctx.addCleanup() in stream/index.js, so it's only present while
+   the stream module is active. When the user navigates to another
+   module the shell's deactivate() removes it — no style bleed.
+   ============================================================ */
+
+/* Layout — owned by the module's root container, not body. */
+#app-root {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(440px, 2fr) 3fr;
+  grid-template-areas: 'header header' 'feed detail';
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+#app-root .app-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4, 16px);
+  padding: var(--space-3, 12px) var(--space-5, 24px);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+#app-root .brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+}
+#app-root .brand-spark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-weight: 700;
+  font-size: 13px;
+}
+#app-root .brand-name {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+#app-root .brand-mode {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-left: var(--space-2, 8px);
+}
+#app-root .header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+}
+#app-root .counter {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+#app-root .conn-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  color: var(--text-muted);
+}
+#app-root .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: background 0.2s ease;
+}
+#app-root .dot.connected {
+  background: #16a34a;
+  box-shadow: 0 0 8px rgba(22, 163, 74, 0.4);
+}
+#app-root .dot.connecting {
+  background: #f59e0b;
+}
+#app-root .dot.error {
+  background: #dc2626;
+}
+#app-root .theme-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: border-color 0.15s ease;
+}
+#app-root .theme-toggle:hover {
+  border-color: var(--text-dim);
+}
+
+/* ── Feed ────────────────────────────────────────────────────────── */
+#app-root .feed {
+  grid-area: feed;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+}
+#app-root .feed-empty {
+  padding: var(--space-6, 32px) var(--space-4, 16px);
+  color: var(--text-dim);
+  font-style: italic;
+  font-family: var(--font-body);
+}
+#app-root .row {
+  display: grid;
+  grid-template-columns: 92px 60px 1fr;
+  gap: var(--space-3, 12px);
+  padding: 10px var(--space-4, 16px);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s ease;
+  align-items: center;
+}
+#app-root .row:hover {
+  background: var(--accent-soft);
+}
+#app-root .row.selected {
+  background: var(--accent-soft);
+  border-left: 2px solid var(--accent);
+  padding-left: calc(var(--space-4, 16px) - 2px);
+}
+#app-root .row .ts {
+  color: var(--text-dim);
+}
+#app-root .row .fmt {
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+#app-root .row .ctx {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Detail pane ──────────────────────────────────────────────────── */
+#app-root .detail {
+  grid-area: detail;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#app-root .detail-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 var(--space-4, 16px);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+#app-root .tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px 16px 12px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+#app-root .tab:hover:not(.active):not(:disabled) {
+  color: var(--text);
+}
+#app-root .tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+#app-root .tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+#app-root .tab .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--surface-ink);
+  color: var(--text-inv);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+#app-root .tab .badge.danger {
+  background: #dc2626;
+  color: #fff;
+}
+#app-root .tab .badge.warn {
+  background: #f59e0b;
+  color: #18181b;
+}
+
+#app-root .detail-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-5, 24px);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  line-height: 1.55;
+}
+#app-root .placeholder {
+  color: var(--text-dim);
+  padding: var(--space-7, 48px) var(--space-5, 24px);
+  text-align: center;
+  font-style: italic;
+  font-family: var(--font-body);
+}
+#app-root .loading {
+  color: var(--text-dim);
+  padding: var(--space-5, 24px);
+  font-family: var(--font-body);
+}
+
+/* Decoded view: label-value pairs */
+#app-root .decoded {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-3, 12px) var(--space-4, 16px);
+}
+#app-root .decoded dt {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  margin: 0;
+  padding-top: 2px;
+}
+#app-root .decoded dd {
+  margin: 0;
+  color: var(--text);
+  word-break: break-word;
+}
+#app-root .decoded dd .pill {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+/* Validation list */
+#app-root .findings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+}
+#app-root .finding {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: var(--space-3, 12px);
+  padding: var(--space-3, 12px);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+#app-root .finding-level {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 6px;
+  background: var(--text-dim);
+}
+#app-root .finding-level.danger {
+  background: #dc2626;
+}
+#app-root .finding-level.warn {
+  background: #f59e0b;
+}
+#app-root .finding-level.info {
+  background: #3b82f6;
+}
+#app-root .finding-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#app-root .finding-id {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+#app-root .finding-msg {
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+}
+#app-root .finding-path {
+  font-size: 11px;
+  color: var(--accent-secondary);
+}
+#app-root .findings-clean {
+  color: var(--text-dim);
+  padding: var(--space-5, 24px);
+  text-align: center;
+  font-family: var(--font-body);
+  font-style: italic;
+}
+
+/* Raw view */
+#app-root .raw pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+#app-root .meta-line {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding-bottom: var(--space-3, 12px);
+  margin-bottom: var(--space-4, 16px);
+  border-bottom: 1px solid var(--border);
+}

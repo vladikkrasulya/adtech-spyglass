@@ -1,0 +1,46 @@
+<!--
+  Stream module template — fetched by mount() and injected into #app-root.
+  Owns its full chrome (header, feed, detail) inside the root container.
+  Future shared chrome (lang/theme toggle in a global header) will move
+  to the shell when a second module lands.
+-->
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-spark">K</span>
+    <span class="brand-name">spyglass · stream</span>
+    <span class="brand-mode">live preview</span>
+  </div>
+  <div class="header-actions">
+    <span class="counter" id="counter">0 specimens</span>
+    <span class="conn-status">
+      <span class="dot" id="dot"></span>
+      <span id="state">connecting…</span>
+    </span>
+    <button
+      class="theme-toggle"
+      id="themeToggle"
+      type="button"
+      aria-label="Toggle theme"
+      title="Toggle light/dark"
+    >
+      ◐
+    </button>
+  </div>
+</header>
+
+<main class="feed" id="feed">
+  <div class="feed-empty">waiting for first event…</div>
+</main>
+
+<aside class="detail">
+  <div class="detail-tabs" role="tablist">
+    <button class="tab active" data-tab="decoded" role="tab" disabled>Decoded</button>
+    <button class="tab" data-tab="validation" role="tab" disabled>
+      Validation <span class="badge" id="badgeValidation" hidden>0</span>
+    </button>
+    <button class="tab" data-tab="raw" role="tab" disabled>Raw JSON</button>
+  </div>
+  <div class="detail-body" id="detailBody">
+    <div class="placeholder">click any row to inspect specimen</div>
+  </div>
+</aside>
