@@ -159,6 +159,62 @@ function autoNavigateEvent(opts) {
   );
 }
 
+// Phase 4 — heavy-ad + frozen-thread helpers.
+function heavyAdCpuEvent(opts) {
+  return Object.assign(
+    {
+      type: 'spyglass-probe',
+      v: 1,
+      ts: Date.now(),
+      kind: 'heavy_ad_cpu',
+      method: 'longtask',
+      url: '',
+      trigger: 'no-event',
+      cumulativeMs: 5200,
+      windowMs: 4100,
+      breachedThreshold: 'window',
+    },
+    opts || {},
+  );
+}
+
+function heavyAdNetworkEvent(opts) {
+  return Object.assign(
+    {
+      type: 'spyglass-probe',
+      v: 1,
+      ts: Date.now(),
+      kind: 'heavy_ad_network',
+      method: 'resource-timing',
+      url: '',
+      trigger: 'no-event',
+      cumulativeBytes: 5 * 1024 * 1024,
+      resourceCount: 42,
+    },
+    opts || {},
+  );
+}
+
+function frozenThreadEvent(opts) {
+  // The parent watchdog injects this synthetic event directly into
+  // __spyglassBehavior.events when the heartbeat lag crosses the
+  // FROZEN_THRESHOLD_MS bar. Same shape as a probe event, distinct
+  // `type` tag (`spyglass-probe-watchdog`) for source attribution.
+  return Object.assign(
+    {
+      type: 'spyglass-probe-watchdog',
+      v: 1,
+      ts: Date.now(),
+      kind: 'frozen_thread',
+      method: 'parent-watchdog',
+      url: '',
+      trigger: 'no-event',
+      msSinceLastHeartbeat: 4200,
+    },
+    opts || {},
+  );
+}
+
 test('analyze() — empty event list yields clean status, no findings', () => {
   const r = analyze([]);
   assert.equal(r.status, 'clean');
@@ -464,6 +520,106 @@ test('analyze() — malicious findings carry decorated msg + nullable specRef', 
     assert.notEqual(f.msg, '[' + f.id + ']');
     assert.ok('specRef' in f);
   }
+});
+
+// ── Phase 4 (heavy-ad + frozen-thread) rules ────────────────────────────────
+
+test('analyze() — heavy_ad_cpu (window threshold) → behavior.malicious.heavy_ad_cpu ERROR', () => {
+  const r = analyze([heavyAdCpuEvent({ breachedThreshold: 'window', windowMs: 4100 })]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.heavy_ad_cpu');
+  assert.equal(r.findings[0].level, 'error');
+  assert.equal(r.findings[0].params.breachedThreshold, 'window');
+  assert.equal(r.findings[0].params.windowSec, '4.1');
+  assert.equal(r.status, 'errors');
+});
+
+test('analyze() — heavy_ad_cpu (total threshold) carries cumulative seconds', () => {
+  const r = analyze([
+    heavyAdCpuEvent({ breachedThreshold: 'total', cumulativeMs: 61500, windowMs: 1200 }),
+  ]);
+  assert.equal(r.findings[0].params.breachedThreshold, 'total');
+  assert.equal(r.findings[0].params.cumulativeSec, '61.5');
+});
+
+test('analyze() — heavy_ad_network → ERROR with MB-formatted params', () => {
+  const r = analyze([heavyAdNetworkEvent({ cumulativeBytes: 6 * 1024 * 1024, resourceCount: 73 })]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.heavy_ad_network');
+  assert.equal(r.findings[0].level, 'error');
+  assert.equal(r.findings[0].params.cumulativeMb, '6.00');
+  assert.equal(r.findings[0].params.resourceCount, 73);
+});
+
+test('analyze() — frozen_thread (parent-watchdog injected) → ERROR', () => {
+  // Engine doesn't care that this event came from the parent watchdog
+  // rather than the probe — the kind tag is enough.
+  const r = analyze([frozenThreadEvent({ msSinceLastHeartbeat: 5800 })]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.frozen_thread');
+  assert.equal(r.findings[0].level, 'error');
+  assert.equal(r.findings[0].params.msSinceLastHeartbeat, 5800);
+  assert.equal(r.findings[0].params.secSinceLastHeartbeat, '5.8');
+});
+
+test('analyze() — heavy_ad_cpu fires at most once even if probe re-emits (defensive)', () => {
+  // Probe dedup (_heavyCpuAlerted flag) should prevent duplicate emits,
+  // but if it ever did, each event becomes a finding — engine shouldn't
+  // collapse them silently. Test asserts the engine's 1-to-1 promotion.
+  const r = analyze([heavyAdCpuEvent(), heavyAdCpuEvent({ cumulativeMs: 7200 })]);
+  assert.equal(r.findings.length, 2);
+  assert.equal(r.findings[0].id, 'behavior.malicious.heavy_ad_cpu');
+  assert.equal(r.findings[1].id, 'behavior.malicious.heavy_ad_cpu');
+});
+
+test('analyze() — Phase 1+2+3+4 full stack composes without rule conflicts', () => {
+  // Maximally hostile creative: invisible overlay + bot click on it +
+  // frame-bust + auto-redirect + heavy CPU + heavy network + frozen
+  // thread. Every rule fires independently, every finding stacks.
+  const r = analyze([
+    probeReady(),
+    invisibleOverlayClickEvent(),
+    centerSynthClickEvent(),
+    frameBustAnchorEvent({ withinGestureGrace: false }),
+    frameBustFormEvent(),
+    autoNavigateEvent({ withinGestureGrace: false }),
+    heavyAdCpuEvent(),
+    heavyAdNetworkEvent(),
+    frozenThreadEvent(),
+  ]);
+  const ids = r.findings.map((f) => f.id);
+  assert.ok(ids.includes('behavior.trap.invisible_overlay'));
+  assert.ok(ids.includes('behavior.bot.center_synth'));
+  assert.ok(ids.includes('behavior.malicious.frame_bust_anchor'));
+  assert.ok(ids.includes('behavior.malicious.frame_bust_form'));
+  assert.ok(ids.includes('behavior.malicious.auto_redirect'));
+  assert.ok(ids.includes('behavior.malicious.heavy_ad_cpu'));
+  assert.ok(ids.includes('behavior.malicious.heavy_ad_network'));
+  assert.ok(ids.includes('behavior.malicious.frozen_thread'));
+  assert.equal(r.status, 'errors');
+});
+
+test('analyze() — Phase 4 findings carry decorated msg + nullable specRef', () => {
+  const r = analyze([heavyAdCpuEvent(), heavyAdNetworkEvent(), frozenThreadEvent()]);
+  for (const f of r.findings) {
+    assert.equal(typeof f.msg, 'string');
+    assert.notEqual(f.msg, '');
+    assert.notEqual(f.msg, '[' + f.id + ']');
+    assert.ok('specRef' in f);
+  }
+});
+
+test('analyze() — heavy_ad_cpu with missing numeric params defaults gracefully', () => {
+  // Older probes might emit the event without all metadata; engine must
+  // produce a finding with sensible defaults rather than NaN/undefined.
+  const ev = heavyAdCpuEvent();
+  delete ev.cumulativeMs;
+  delete ev.windowMs;
+  const r = analyze([ev]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].params.cumulativeMs, 0);
+  assert.equal(r.findings[0].params.cumulativeSec, '0.0');
+  assert.equal(r.findings[0].params.windowSec, '0.0');
 });
 
 test('analyze() — center_synth event with missing distancePx defaults to "0.00"', () => {

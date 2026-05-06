@@ -385,6 +385,62 @@ export async function mountInspector(root, ctx) {
   // and native preview branches don't get a probe → null guard rejects
   // their events too).
   let _currentProbedIframe = null;
+
+  // Phase 4 — frozen-thread watchdog. The probe sends a 1Hz heartbeat
+  // (creative-probe.js hook 15); the parent receiver below updates
+  // _lastHeartbeatAt on every probe message it accepts. _watchdogTimer
+  // ticks WATCHDOG_INTERVAL_MS and, if lag exceeds FROZEN_THRESHOLD_MS,
+  // injects a synthetic kind:'frozen_thread' event into
+  // __spyglassBehavior.events — bypassing postMessage because a frozen
+  // iframe can't send messages itself. Engine then promotes that event
+  // to a behavior.malicious.frozen_thread finding (ERROR).
+  //
+  // Lifetime: timer starts lazily on first probe message (so we don't
+  // run the watchdog before the iframe has even loaded), resets on
+  // every new setAdPreview call, and clears on module unmount.
+  const FROZEN_THRESHOLD_MS = 3500; // ≥3 missed 1Hz heartbeats with margin
+  const WATCHDOG_INTERVAL_MS = 1000;
+  let _lastHeartbeatAt = 0;
+  let _frozenAlerted = false;
+  let _watchdogTimer = null;
+
+  function stopWatchdog() {
+    if (_watchdogTimer) {
+      clearInterval(_watchdogTimer);
+      _watchdogTimer = null;
+    }
+    _lastHeartbeatAt = 0;
+    _frozenAlerted = false;
+  }
+
+  function startWatchdog() {
+    if (_watchdogTimer) return;
+    _watchdogTimer = setInterval(function () {
+      // Bail if no probed iframe is mounted (preview was reset between
+      // ticks). _lastHeartbeatAt = 0 means we've never seen liveness yet
+      // — don't start counting until the probe has at least sent
+      // probe_ready, otherwise we'd false-fire on every blank-iframe gap.
+      if (!_currentProbedIframe || !_lastHeartbeatAt || _frozenAlerted) return;
+      const lag = Date.now() - _lastHeartbeatAt;
+      if (lag <= FROZEN_THRESHOLD_MS) return;
+      _frozenAlerted = true;
+      const evt = {
+        type: 'spyglass-probe-watchdog',
+        v: 1,
+        ts: Date.now(),
+        kind: 'frozen_thread',
+        method: 'parent-watchdog',
+        url: '',
+        trigger: 'no-event',
+        msSinceLastHeartbeat: lag,
+      };
+      if (!window.__spyglassBehavior) {
+        window.__spyglassBehavior = { events: [], startedAt: Date.now() };
+      }
+      window.__spyglassBehavior.events.push(evt);
+      renderBehaviorTab();
+    }, WATCHDOG_INTERVAL_MS);
+  }
   function loadProbeSource() {
     if (_probeSourcePromise) return _probeSourcePromise;
     _probeSourcePromise = fetch('/creative-probe.js')
@@ -419,6 +475,11 @@ export async function mountInspector(root, ctx) {
     // VAST + native + empty-adm branches never reassign it, and we don't
     // want stale messages from a torn-down iframe to slip through.
     _currentProbedIframe = null;
+    // Watchdog must reset alongside the iframe ref: a torn-down iframe
+    // shouldn't keep ticking a stale heartbeat-clock from the previous
+    // creative, and the new probe will lazy-start a fresh watchdog when
+    // it sends probe_ready.
+    stopWatchdog();
     // New creative → fresh behaviour log. Old findings would otherwise leak
     // across previews and produce confusing per-tab counts.
     resetBehavior();
@@ -562,6 +623,9 @@ export async function mountInspector(root, ctx) {
           phantom_click: t('behavior.kind.phantom_click'),
           frame_bust_anchor: t('behavior.kind.frame_bust_anchor'),
           frame_bust_form: t('behavior.kind.frame_bust_form'),
+          heavy_ad_cpu: t('behavior.kind.heavy_ad_cpu'),
+          heavy_ad_network: t('behavior.kind.heavy_ad_network'),
+          frozen_thread: t('behavior.kind.frozen_thread'),
         },
         locale: activeLocale(),
       });
@@ -3050,6 +3114,16 @@ export async function mountInspector(root, ctx) {
       // probed iframe. Drops events when no iframe is active (VAST/native
       // previews, between-creative gap) and from any unrelated frame.
       if (!_currentProbedIframe || e.source !== _currentProbedIframe.contentWindow) return;
+      // Phase 4 watchdog liveness: every accepted probe message resets
+      // the freeze timer. Heartbeats (kind:'heartbeat') are 1Hz pings
+      // sent purely for this purpose — they update liveness but DON'T
+      // pollute the user-visible events timeline. Other event kinds
+      // also count as liveness (more activity = more recent proof of
+      // a working JS thread).
+      _lastHeartbeatAt = Date.now();
+      _frozenAlerted = false;
+      if (!_watchdogTimer) startWatchdog();
+      if (d.kind === 'heartbeat') return;
       if (!window.__spyglassBehavior) {
         window.__spyglassBehavior = { events: [], startedAt: Date.now() };
       }
@@ -3352,5 +3426,10 @@ export async function mountInspector(root, ctx) {
     // the user isn't asked to unlock twice in one tab. DEK lifetime is
     // tied to the cookie session + sessionStorage scope, not to the
     // inspector module mount lifetime.
+
+    // Phase 4: stop the freeze watchdog so the next mount starts clean
+    // (otherwise a setInterval would keep ticking against a stale
+    // _currentProbedIframe reference).
+    stopWatchdog();
   });
 }

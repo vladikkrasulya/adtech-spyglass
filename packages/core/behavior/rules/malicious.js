@@ -1,16 +1,22 @@
 'use strict';
 
 /**
- * Malicious-ad rules — Phase 3 of the Behavior epic.
+ * Malicious-ad rules — Phase 3 + Phase 4 of the Behavior epic.
  *
- * Detects aggressive in-creative behaviour that escapes the iframe or
- * navigates the user without a real gesture lineage. The probe captures
- * the runtime signal (anchor target=_top click, form.submit with
- * target=_top, navigation API call with no recent gesture); rules here
- * promote each event to a finding with severity decided by the
- * navContext metadata that the probe attached at observation time.
+ * Phase 3 (navigation attacks): detects iframe-escape and gestureless
+ * redirects. The probe captures the runtime signal (anchor target=_top
+ * click, form.submit with target=_top, navigation API call with no
+ * recent gesture); rules here promote each event to a finding with
+ * severity decided by the navContext metadata.
  *
- * Phase 3 ships four patterns:
+ * Phase 4 (resource attacks + thread freeze): the probe's
+ * PerformanceObserver hooks emit `heavy_ad_cpu` (Chrome HAI thresholds:
+ * 60s cumulative OR 4s in 30s window) and `heavy_ad_network` (IAB 4MB
+ * cap). The parent's watchdog injects synthetic `frozen_thread` events
+ * when the iframe stops sending heartbeats — the only way to detect a
+ * freeze, since a frozen probe can't send postMessages itself.
+ *
+ * Findings emitted:
  *   - frame_bust_anchor → behavior.malicious.frame_bust_anchor
  *       severity ERROR if no gesture lineage, WARNING if within grace
  *       (some banners legitimately link out via target=_top — bad
@@ -18,19 +24,23 @@
  *   - frame_bust_form  → behavior.malicious.frame_bust_form (always ERROR)
  *   - auto_navigate (no gesture)  → behavior.malicious.auto_redirect (ERROR)
  *   - auto_navigate (within grace) → behavior.malicious.late_redirect (WARNING)
+ *   - heavy_ad_cpu     → behavior.malicious.heavy_ad_cpu (ERROR)
+ *   - heavy_ad_network → behavior.malicious.heavy_ad_network (ERROR)
+ *   - frozen_thread    → behavior.malicious.frozen_thread (ERROR)
  *
  * The auto_redirect / late_redirect split is the key Phase 3 signal:
  * cloaking creatives chain `click → setTimeout(() => location.href = X, 800)`
  * to dodge naive "no event in stack" classifiers — withinGestureGrace
  * catches that.
  *
- * What's NOT in this rule family (Phase 4 candidates):
- *   - Heavy ads (CPU/network/memory) — separate subsystem,
- *     PerformanceObserver + watchdog ping/pong required.
- *   - Crypto miners — subset of heavy-ads.
- *   - window.top read-trap — write attempts already covered by
- *     Phase 0 Location.* hooks; reads in our sandbox throw
- *     SecurityError natively, no probe interception needed.
+ * What's NOT in this rule family:
+ *   - performance.memory tracking — non-standard (Chrome only) and
+ *     prone to false positives, deliberately skipped per Phase 4 scope.
+ *   - Crypto miner heuristics (Worker / WebAssembly fingerprinting) —
+ *     would belong here when shipped; not in scope yet.
+ *   - window.top read-trap — write attempts already covered by Phase 0
+ *     Location.* hooks; reads in our sandbox throw SecurityError
+ *     natively, no probe interception needed.
  */
 
 const { LEVELS, makeFinding } = require('../../findings');
@@ -168,4 +178,115 @@ function lateRedirect(events) {
   return out;
 }
 
-module.exports = [frameBustAnchor, frameBustForm, autoRedirect, lateRedirect];
+/**
+ * behavior.malicious.heavy_ad_cpu
+ *
+ * Probe's PerformanceObserver(longtask) accumulated enough main-thread
+ * blocking time to breach Chrome's Heavy Ad Intervention thresholds:
+ *   - cumulative ≥ 60s   (HAI hard cap, `breachedThreshold='total'`)
+ *   - 30s window ≥ 4s    (HAI soft cap, `breachedThreshold='window'`)
+ *
+ * Probe emits this event ONCE per creative (dedup via _heavyCpuAlerted
+ * flag), so a single event = a single finding. Severity ERROR — there
+ * is no legitimate banner that needs that much CPU; this is either a
+ * miner, a runaway loop, or aggressive animation/tracking.
+ */
+function heavyAdCpu(events) {
+  const out = [];
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (!ev || ev.kind !== 'heavy_ad_cpu') continue;
+
+    const cumulativeMs = typeof ev.cumulativeMs === 'number' ? ev.cumulativeMs : 0;
+    const windowMs = typeof ev.windowMs === 'number' ? ev.windowMs : 0;
+
+    out.push(
+      makeFinding('behavior.malicious.heavy_ad_cpu', LEVELS.ERROR, '', {
+        breachedThreshold: String(ev.breachedThreshold || 'unknown'),
+        cumulativeMs: cumulativeMs,
+        cumulativeSec: (cumulativeMs / 1000).toFixed(1),
+        windowMs: windowMs,
+        windowSec: (windowMs / 1000).toFixed(1),
+        eventIndex: i,
+      }),
+    );
+  }
+  return out;
+}
+
+/**
+ * behavior.malicious.heavy_ad_network
+ *
+ * Cumulative bytes loaded across the creative's sub-resources crossed
+ * IAB's 4MB display-ad cap (also Chrome's HAI network threshold).
+ * `transferSize` is preferred but falls back to `decodedBodySize` when
+ * the resource is CORS-blocked without Timing-Allow-Origin (slight
+ * overcount, acceptable at this scale).
+ *
+ * Severity ERROR — banner creatives over 4MB are fundamentally broken
+ * regardless of intent: they wreck mobile data plans and slow LCP.
+ */
+function heavyAdNetwork(events) {
+  const out = [];
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (!ev || ev.kind !== 'heavy_ad_network') continue;
+
+    const bytes = typeof ev.cumulativeBytes === 'number' ? ev.cumulativeBytes : 0;
+
+    out.push(
+      makeFinding('behavior.malicious.heavy_ad_network', LEVELS.ERROR, '', {
+        cumulativeBytes: bytes,
+        cumulativeMb: (bytes / (1024 * 1024)).toFixed(2),
+        resourceCount: typeof ev.resourceCount === 'number' ? ev.resourceCount : 0,
+        eventIndex: i,
+      }),
+    );
+  }
+  return out;
+}
+
+/**
+ * behavior.malicious.frozen_thread
+ *
+ * Synthesized BY THE PARENT (not the probe — a frozen probe can't
+ * send postMessages). The parent watchdog in spyglass.app.js injects a
+ * `kind:'frozen_thread'` event into __spyglassBehavior.events when the
+ * heartbeat lag exceeds FROZEN_THRESHOLD_MS (default 3.5s). This rule
+ * promotes the synthetic event to a finding the same way it would for
+ * any probe-emitted event — engine doesn't need to know who the source
+ * was, the kind tag is enough.
+ *
+ * Severity ERROR. A creative that hangs the JS thread for >3 seconds
+ * is broken (or hostile) regardless of intent.
+ */
+function frozenThread(events) {
+  const out = [];
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (!ev || ev.kind !== 'frozen_thread') continue;
+
+    out.push(
+      makeFinding('behavior.malicious.frozen_thread', LEVELS.ERROR, '', {
+        msSinceLastHeartbeat:
+          typeof ev.msSinceLastHeartbeat === 'number' ? ev.msSinceLastHeartbeat : 0,
+        secSinceLastHeartbeat: (
+          (typeof ev.msSinceLastHeartbeat === 'number' ? ev.msSinceLastHeartbeat : 0) / 1000
+        ).toFixed(1),
+        method: String(ev.method || 'parent-watchdog'),
+        eventIndex: i,
+      }),
+    );
+  }
+  return out;
+}
+
+module.exports = [
+  frameBustAnchor,
+  frameBustForm,
+  autoRedirect,
+  lateRedirect,
+  heavyAdCpu,
+  heavyAdNetwork,
+  frozenThread,
+];

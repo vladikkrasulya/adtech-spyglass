@@ -31,6 +31,15 @@
        / _parent frame-bust intent detection (Phase 3)
      - HTMLFormElement.prototype.submit + document submit-event capture
        — form-based frame-bust via target=_top / _parent (Phase 3)
+     - PerformanceObserver(longtask) — accumulates main-thread blocking
+       time; emits heavy_ad_cpu when Chrome Heavy Ad Intervention
+       thresholds breached (Phase 4)
+     - PerformanceObserver(resource) — sums transferSize / decodedBodySize
+       across sub-resources; emits heavy_ad_network at IAB 4MB cap
+       (Phase 4)
+     - setInterval heartbeat — 1Hz liveness signal so the parent
+       watchdog can detect a frozen iframe thread that can no longer
+       send postMessages itself (Phase 4)
 
    Detection lineage:
      activeEventStack tracks the chain of DOM events currently
@@ -115,6 +124,27 @@
   let _lastGestureAt = 0; // 0 = no gesture observed yet
   const GESTURE_GRACE_MS = 500;
   const USER_GESTURE_TYPES = ['mousedown', 'touchstart', 'pointerdown', 'keydown'];
+
+  // Phase 4 (heavy ads + freeze watchdog).
+  // CPU thresholds mirror Chrome Heavy Ad Intervention (60s cumulative OR
+  // 4s within any 30s window of `longtask` PerformanceObserver entries).
+  // Network threshold mirrors IAB display ad weight cap (4MB across all
+  // sub-resources). Heartbeat lets the parent watchdog detect a frozen
+  // thread — see modules/behavior + spyglass.app.js receiver for the
+  // parent half of this protocol.
+  const HEAVY_CPU_TOTAL_MS = 60000;
+  const HEAVY_CPU_WINDOW_MS = 30000;
+  const HEAVY_CPU_WINDOW_THRESHOLD_MS = 4000;
+  const HEAVY_NETWORK_BYTES = 4 * 1024 * 1024;
+  const HEARTBEAT_INTERVAL_MS = 1000;
+
+  let _longTaskTotalMs = 0;
+  const _longTaskRing = []; // [{ts, dur}, …] trimmed to HEAVY_CPU_WINDOW_MS
+  let _heavyCpuAlerted = false;
+
+  let _networkBytesTotal = 0;
+  let _networkResourceCount = 0;
+  let _heavyNetworkAlerted = false;
 
   function send(payload) {
     try {
@@ -681,6 +711,118 @@
       },
       true,
     );
+  } catch (e) {
+    /* */
+  }
+
+  // 13) Heavy-ad CPU detection (Phase 4). PerformanceObserver listens for
+  //     `longtask` entries (any task >50ms blocking the main thread) and
+  //     accumulates duration both cumulatively and within a 30s sliding
+  //     window. Emits `heavy_ad_cpu` ONCE per creative when EITHER
+  //     threshold first breaches:
+  //       - cumulative ≥ HEAVY_CPU_TOTAL_MS (60s) — Chrome HAI hard cap
+  //       - window ≥ HEAVY_CPU_WINDOW_THRESHOLD_MS (4s in 30s) — HAI soft cap
+  //     `_heavyCpuAlerted` flag dedupes; never re-fires for the same
+  //     creative even if usage keeps climbing.
+  try {
+    if (typeof PerformanceObserver !== 'undefined') {
+      const cpuObserver = new PerformanceObserver(function (list) {
+        try {
+          const entries = list.getEntries();
+          const now = Date.now();
+          for (let i = 0; i < entries.length; i++) {
+            const dur = entries[i].duration || 0;
+            _longTaskTotalMs += dur;
+            _longTaskRing.push({ ts: now, dur: dur });
+          }
+          while (_longTaskRing.length && now - _longTaskRing[0].ts > HEAVY_CPU_WINDOW_MS) {
+            _longTaskRing.shift();
+          }
+          if (_heavyCpuAlerted) return;
+          let windowMs = 0;
+          for (let i = 0; i < _longTaskRing.length; i++) windowMs += _longTaskRing[i].dur;
+          let breached = null;
+          if (_longTaskTotalMs >= HEAVY_CPU_TOTAL_MS) breached = 'total';
+          else if (windowMs >= HEAVY_CPU_WINDOW_THRESHOLD_MS) breached = 'window';
+          if (breached) {
+            _heavyCpuAlerted = true;
+            send({
+              kind: 'heavy_ad_cpu',
+              method: 'longtask',
+              url: '',
+              trigger: 'no-event',
+              cumulativeMs: Math.round(_longTaskTotalMs),
+              windowMs: Math.round(windowMs),
+              breachedThreshold: breached,
+            });
+          }
+        } catch (err) {
+          /* */
+        }
+      });
+      cpuObserver.observe({ entryTypes: ['longtask'] });
+    }
+  } catch (e) {
+    /* longtask unsupported (older Safari, some WebViews) — no-op */
+  }
+
+  // 14) Heavy-ad network detection (Phase 4). PerformanceObserver(resource)
+  //     accumulates wire-byte usage across every sub-resource the creative
+  //     loads (img, script, fetch, XHR, etc.). When transferSize is 0 due
+  //     to CORS gating without Timing-Allow-Origin, fall back to
+  //     decodedBodySize so we still get a signal — slight overcount, but
+  //     the threshold is generous (4MB) and false positives at that scale
+  //     are unlikely. Emits `heavy_ad_network` once per creative.
+  try {
+    if (typeof PerformanceObserver !== 'undefined') {
+      const netObserver = new PerformanceObserver(function (list) {
+        try {
+          const entries = list.getEntries();
+          for (let i = 0; i < entries.length; i++) {
+            const ent = entries[i];
+            const sz = ent.transferSize || ent.decodedBodySize || 0;
+            _networkBytesTotal += sz;
+            _networkResourceCount++;
+          }
+          if (!_heavyNetworkAlerted && _networkBytesTotal >= HEAVY_NETWORK_BYTES) {
+            _heavyNetworkAlerted = true;
+            send({
+              kind: 'heavy_ad_network',
+              method: 'resource-timing',
+              url: '',
+              trigger: 'no-event',
+              cumulativeBytes: _networkBytesTotal,
+              resourceCount: _networkResourceCount,
+            });
+          }
+        } catch (err) {
+          /* */
+        }
+      });
+      netObserver.observe({ entryTypes: ['resource'] });
+    }
+  } catch (e) {
+    /* resource entry type unsupported — no-op */
+  }
+
+  // 15) Heartbeat (Phase 4). 1Hz liveness ping the parent watchdog uses
+  //     to detect a frozen thread. The probe itself can't observe its
+  //     own freeze (an infinite loop blocks both setInterval AND
+  //     postMessage), so this signal exists *for the parent* — a missed
+  //     heartbeat is the only available evidence that the iframe's JS
+  //     thread is no longer servicing tasks. Parent half lives in
+  //     spyglass.app.js's message receiver: it updates _lastHeartbeatAt
+  //     on every probe message (heartbeat or otherwise), and a setInterval
+  //     watchdog injects a synthetic kind:'frozen_thread' event into
+  //     __spyglassBehavior.events when lag exceeds FROZEN_THRESHOLD_MS.
+  try {
+    setInterval(function () {
+      try {
+        send({ kind: 'heartbeat', method: 'heartbeat', url: '', trigger: 'no-event' });
+      } catch (err) {
+        /* */
+      }
+    }, HEARTBEAT_INTERVAL_MS);
   } catch (e) {
     /* */
   }

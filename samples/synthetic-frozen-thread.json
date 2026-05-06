@@ -1,0 +1,25 @@
+{
+  "_note": "Synthetic fraud BidResponse — frozen JS thread. The adm renders a visible banner AND fires while(true){} 200ms after load. The probe sends one heartbeat at probe_ready, then the thread blocks indefinitely — no further heartbeats reach the parent. The parent watchdog (spyglass.app.js, FROZEN_THRESHOLD_MS=3500) detects the absence after 3.5s and injects a synthetic kind:'frozen_thread' event into __spyglassBehavior.events; engine promotes it to behavior.malicious.frozen_thread (ERROR). This is the only Phase 4 vector that REQUIRES a parent-side detection — a frozen probe cannot self-report.",
+  "id": "bid-response-frozen-thread-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "synthetic-bad-actor",
+      "bid": [
+        {
+          "id": "bid-frozen-thread-001",
+          "impid": "1",
+          "price": 1.5,
+          "adid": "creative-frozen-thread-001",
+          "adomain": ["bad-actor.example"],
+          "cid": "campaign-frozen-thread-001",
+          "crid": "creative-frozen-thread-001",
+          "w": 300,
+          "h": 250,
+          "cat": ["IAB1"],
+          "adm": "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>banner</title><style>html,body{margin:0;padding:0;height:100%;font-family:sans-serif}.banner{width:300px;height:250px;background:linear-gradient(135deg,#3e63dd,#7c8cff);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;text-align:center}</style></head><body><div class=\"banner\">Loading deal...</div><script>setTimeout(function(){while(true){}},200);</script></body></html>"
+        }
+      ]
+    }
+  ]
+}

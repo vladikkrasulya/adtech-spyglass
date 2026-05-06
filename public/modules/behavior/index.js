@@ -48,7 +48,10 @@
       kind === 'invisible_overlay_click' ||
       kind === 'center_synth_click' ||
       kind === 'click_burst' ||
-      kind === 'frame_bust_form'
+      kind === 'frame_bust_form' ||
+      kind === 'heavy_ad_cpu' ||
+      kind === 'heavy_ad_network' ||
+      kind === 'frozen_thread'
     ) {
       return 'danger';
     }

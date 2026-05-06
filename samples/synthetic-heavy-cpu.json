@@ -1,0 +1,25 @@
+{
+  "_note": "Synthetic fraud BidResponse — heavy CPU usage. The adm renders a visible banner AND chains setTimeout(blockingChunk, 0) where each chunk busy-loops for 120ms. This generates a stream of `longtask` PerformanceObserver entries (>50ms = longtask threshold). Cumulative blocking crosses the 4s-in-30s Chrome HAI window threshold within ~35 chunks (~5 seconds wall-clock). Probe hook 13 (PerformanceObserver longtask) accumulates duration; engine emits behavior.malicious.heavy_ad_cpu (ERROR) once breachedThreshold='window' fires. The setTimeout(_, 0) yield between chunks is critical — without it the thread freezes and we'd hit the watchdog instead.",
+  "id": "bid-response-heavy-cpu-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "synthetic-bad-actor",
+      "bid": [
+        {
+          "id": "bid-heavy-cpu-001",
+          "impid": "1",
+          "price": 1.5,
+          "adid": "creative-heavy-cpu-001",
+          "adomain": ["bad-actor.example"],
+          "cid": "campaign-heavy-cpu-001",
+          "crid": "creative-heavy-cpu-001",
+          "w": 300,
+          "h": 250,
+          "cat": ["IAB1"],
+          "adm": "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>banner</title><style>html,body{margin:0;padding:0;height:100%;font-family:sans-serif}.banner{width:300px;height:250px;background:linear-gradient(135deg,#3e63dd,#7c8cff);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;text-align:center}</style></head><body><div class=\"banner\">Premium offer<br>One moment...</div><script>(function(){function chunk(){var s=Date.now();while(Date.now()-s<120){}setTimeout(chunk,0);}chunk();})();</script></body></html>"
+        }
+      ]
+    }
+  ]
+}
