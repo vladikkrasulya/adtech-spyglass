@@ -655,20 +655,16 @@ export async function mountInspector(root, ctx) {
         return (
           '<div class="history-item' +
           activeCls +
-          '" tabindex="0" onclick="loadFromHistory(' +
+          '" tabindex="0" data-action="history-load" data-idx="' +
           i +
-          ')" onkeydown="if(event.key===\'Enter\'){event.preventDefault();loadFromHistory(' +
+          '">' +
+          '<div class="history-actions">' +
+          '<button class="history-act-btn" data-action="history-peek" data-idx="' +
           i +
-          ')}">' +
-          // Hover-revealed actions. Stop propagation so clicking × or 👁
-          // doesn't also trigger the row\'s loadFromHistory.
-          '<div class="history-actions" onclick="event.stopPropagation()">' +
-          '<button class="history-act-btn" onclick="peekHistoryItem(' +
+          '" title="Переглянути без завантаження">👁</button>' +
+          '<button class="history-act-btn danger" data-action="history-delete" data-idx="' +
           i +
-          ')" title="Переглянути без завантаження">👁</button>' +
-          '<button class="history-act-btn danger" onclick="deleteHistoryItem(' +
-          i +
-          ')" title="Видалити з історії">×</button>' +
+          '" title="Видалити з історії">×</button>' +
           '</div>' +
           '<div class="history-title">' +
           escapeHtml(e.title) +
@@ -693,7 +689,7 @@ export async function mountInspector(root, ctx) {
   // confusing because they had no copy of the JSON to tweak. JS `.value`
   // assignment doesn't fire input events (per HTML spec), so `_isDirty`
   // stays false — no false-positive clobber-protection on next load.
-  window.loadFromHistory = function (idx) {
+  function loadFromHistory(idx) {
     const entry = historyStore[idx];
     if (!entry) return;
     $('bidReq').value = entry.req || '';
@@ -705,10 +701,10 @@ export async function mountInspector(root, ctx) {
     runAnalysis(entry);
     renderHistory(); // re-render to update the active-highlight
     toast(t('toast.loaded', { title: entry.title || 'історія' }), 'success');
-  };
+  }
   // Per-item delete from history. Cheap because historyStore is in-memory
   // + localStorage persist; no server roundtrip.
-  window.deleteHistoryItem = function (idx) {
+  function deleteHistoryItem(idx) {
     if (!historyStore[idx]) return;
     historyStore.splice(idx, 1);
     // Active-index stays consistent: if we deleted the active one, drop the
@@ -717,11 +713,11 @@ export async function mountInspector(root, ctx) {
     else if (idx < _currentHistoryIdx) _currentHistoryIdx--;
     persistHistory();
     renderHistory();
-  };
+  }
   // Peek modal: show the request/response JSON for an entry without
   // clobbering the editor. Read-only — for "did I save the right one
   // earlier?" lookups.
-  window.peekHistoryItem = function (idx) {
+  function peekHistoryItem(idx) {
     const e = historyStore[idx];
     if (!e) return;
     $('modalRoot').innerHTML =
@@ -757,13 +753,18 @@ export async function mountInspector(root, ctx) {
       '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
       t('btn.close') +
       '</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="closeModal();loadFromHistory(' +
-      idx +
-      ')">' +
+      '<button id="peekLoadBtn" class="btn btn-primary btn-sm">' +
       t('btn.load_to_editor') +
       '</button>' +
       '</div></div></div>';
-  };
+    const peekLoadBtn = $('peekLoadBtn');
+    if (peekLoadBtn) {
+      peekLoadBtn.addEventListener('click', () => {
+        closeModal();
+        loadFromHistory(idx);
+      });
+    }
+  }
   window.clearHistory = function () {
     if (!historyStore.length) return;
     if (!confirm(t('confirm.clear_history'))) return;
@@ -1554,6 +1555,44 @@ export async function mountInspector(root, ctx) {
   let _currentUser = null;
   let _sessionDEK = null;
 
+  // sessionStorage scope: per-tab, dies on tab close. XSS that can
+  // read sessionStorage already has full DEK access via _sessionDEK
+  // in module scope — same threat surface, no new vector. Buys F5
+  // survival; doesn't survive tab close (matches DEK-in-memory model).
+  const DEK_STORAGE_KEY = 'kt-dek-v1';
+
+  async function persistDEK(dekKey) {
+    if (!dekKey) return;
+    try {
+      const b64 = await SpyglassCrypto.serializeDEK(dekKey);
+      sessionStorage.setItem(DEK_STORAGE_KEY, b64);
+    } catch (e) {
+      // exportKey('raw') fails if the key wasn't created with
+      // extractable=true. Soft-fail so F5 falls back to unlock prompt
+      // instead of breaking the active session.
+      console.warn('[spyglass] DEK persist failed:', e && e.message);
+    }
+  }
+
+  async function loadPersistedDEK() {
+    try {
+      const b64 = sessionStorage.getItem(DEK_STORAGE_KEY);
+      if (!b64) return null;
+      return await SpyglassCrypto.deserializeDEK(b64);
+    } catch {
+      sessionStorage.removeItem(DEK_STORAGE_KEY);
+      return null;
+    }
+  }
+
+  function clearPersistedDEK() {
+    try {
+      sessionStorage.removeItem(DEK_STORAGE_KEY);
+    } catch (_) {
+      /* sessionStorage may be blocked by Safari private mode — ignore */
+    }
+  }
+
   async function api(method, url, body) {
     const init = {
       method,
@@ -1596,17 +1635,30 @@ export async function mountInspector(root, ctx) {
     try {
       const j = await api('GET', 'api/auth/me');
       _currentUser = j.user || null;
-      // At page-reload, cookie keeps the user logged in, but the in-memory
-      // DEK is gone (and storing it would defeat the threat model). If the
-      // user has crypto state set up but no DEK in this tab, we'll prompt
-      // for password to unlock — but only after the page renders, so the
-      // user sees the auth widget first and isn't slammed with a modal.
-      _sessionDEK = null;
-      _pendingUnlock = !!(j.user && j.encryption);
+      // F5 survival: cookie keeps the user logged in, and sessionStorage
+      // (this tab only) holds the DEK from the last unlock. If both are
+      // alive, restore silently — no "Sign in to unlock" prompt. If the
+      // cookie is alive but sessionStorage is empty (different tab, or
+      // the DEK was cleared), surface the unlock CTA in the saved-list.
+      if (j.user && j.encryption) {
+        const restored = await loadPersistedDEK();
+        if (restored) {
+          _sessionDEK = restored;
+          _pendingUnlock = false;
+        } else {
+          _sessionDEK = null;
+          _pendingUnlock = true;
+        }
+      } else {
+        _sessionDEK = null;
+        _pendingUnlock = false;
+        clearPersistedDEK();
+      }
     } catch {
       _currentUser = null;
       _sessionDEK = null;
       _pendingUnlock = false;
+      clearPersistedDEK();
     }
     renderAuthWidget();
     renderVerifyBanner();
@@ -1665,7 +1717,10 @@ export async function mountInspector(root, ctx) {
         errEl.textContent = t('unlock.err.no_crypto');
         return;
       }
-      _sessionDEK = await SpyglassCrypto.openWithPassword(password, me.encryption);
+      _sessionDEK = await SpyglassCrypto.openWithPassword(password, me.encryption, {
+        extractable: true,
+      });
+      await persistDEK(_sessionDEK);
       _pendingUnlock = false;
       closeModal();
       toast(t('toast.library_unlocked'), 'success');
@@ -1751,7 +1806,10 @@ export async function mountInspector(root, ctx) {
       //   - Existing pre-Phase-7 user with no crypto state yet → bootstrap
       //     now (we have the password in hand). Show recovery key.
       if (j.encryption) {
-        _sessionDEK = await SpyglassCrypto.openWithPassword(password, j.encryption);
+        _sessionDEK = await SpyglassCrypto.openWithPassword(password, j.encryption, {
+          extractable: true,
+        });
+        await persistDEK(_sessionDEK);
       } else {
         await bootstrapNewCrypto(password);
       }
@@ -1773,9 +1831,14 @@ export async function mountInspector(root, ctx) {
     try {
       const j = await api('POST', 'api/auth/register', { email, password });
       _currentUser = j.user;
+      // Snapshot history-presence BEFORE bootstrap modal opens.
+      // closeRecoveryKeyModal checks this flag and chains the
+      // import-history modal once recovery key is acknowledged.
+      _pendingHistoryMerge = historyStore.length > 0;
       await bootstrapNewCrypto(password); // brand-new user → always bootstrap
       renderAuthWidget();
-      closeModal();
+      // Don't closeModal() — bootstrapNewCrypto opened the recovery
+      // modal; closing here would dismiss it before user saves the key.
       toast(t('toast.account_created', { email: j.user.email }), 'success');
       await refreshPartners();
       refreshSamples();
@@ -1783,15 +1846,17 @@ export async function mountInspector(root, ctx) {
       errEl.textContent = humanAuthError(e);
     }
   };
+  let _pendingHistoryMerge = false;
 
   // Generates DEK + recovery key, wraps DEK with both password-KEK and
   // recovery-KEK in the browser, persists the opaque state to the server,
   // shows the recovery key to the user once. Caller must already hold the
   // user's plaintext password (passed in here, never stored anywhere).
   async function bootstrapNewCrypto(password) {
-    const result = await SpyglassCrypto.bootstrap(password);
+    const result = await SpyglassCrypto.bootstrap(password, { extractable: true });
     await api('POST', 'api/auth/setup-encryption', result.state);
     _sessionDEK = result.dekKey;
+    await persistDEK(_sessionDEK);
     showRecoveryKeyModal(result.recoveryKey);
   }
 
@@ -1804,6 +1869,15 @@ export async function mountInspector(root, ctx) {
     if (!confirm(t('confirm.recovery_save'))) return;
     _recoveryKeyModalActive = false;
     closeModal();
+    // Chain history-merge prompt only after the user has explicitly
+    // acknowledged saving the recovery key — otherwise the merge modal
+    // would obscure it before they had a chance to copy.
+    if (_pendingHistoryMerge) {
+      _pendingHistoryMerge = false;
+      // queueMicrotask defers paint past the current modal close so
+      // the next modal opens cleanly (no "flash of two backdrops").
+      queueMicrotask(() => openHistoryMergeModal());
+    }
   };
 
   function showRecoveryKeyModal(recoveryKey) {
@@ -1857,6 +1931,94 @@ export async function mountInspector(root, ctx) {
       .catch(() => toast(t('toast.copy_failed_select'), 'error'));
   };
 
+  // ── History merge (post-register import prompt) ──────────────
+  // Triggered by closeRecoveryKeyModal when historyStore has entries.
+  // Encrypt + POST each local entry into the user's library serially —
+  // sequential keeps the event loop responsive and gives honest progress.
+  function openHistoryMergeModal() {
+    const count = historyStore.length;
+    if (!count) return;
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-card">' +
+      '<div class="modal-title">' +
+      t('merge.title') +
+      '</div>' +
+      '<div style="font-size:var(--fs-sm);line-height:1.5;margin-bottom:var(--space-3);color:var(--text)">' +
+      t('merge.body', { count }) +
+      '</div>' +
+      '<div id="mergeProgress" style="font-size:var(--fs-sm);color:var(--text-dim);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
+      '<div class="modal-actions" style="justify-content:space-between">' +
+      '<button class="btn btn-ghost btn-sm" data-action="merge-skip">' +
+      t('merge.btn.skip') +
+      '</button>' +
+      '<button id="mergeConfirmBtn" class="btn btn-primary btn-sm" data-action="merge-import">' +
+      t('merge.btn.import', { count }) +
+      '</button>' +
+      '</div></div></div>';
+    // Local listener — the modal teardown clears innerHTML so the
+    // listener detaches automatically with the orphaned DOM nodes.
+    $('modalRoot').addEventListener('click', (ev) => {
+      const target = ev.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
+      if (action === 'merge-skip') return closeModal();
+      if (action === 'merge-import') return runHistoryMerge();
+    });
+  }
+
+  async function runHistoryMerge() {
+    if (!_sessionDEK) {
+      toast(t('toast.crypto_session_lost'), 'error');
+      return;
+    }
+    // Snapshot so concurrent renderHistory mutations don't desync indexing.
+    const entries = historyStore.slice();
+    const total = entries.length;
+    const progressEl = $('mergeProgress');
+    const confirmBtn = $('mergeConfirmBtn');
+    const skipBtn = $('modalRoot').querySelector('[data-action="merge-skip"]');
+    if (confirmBtn) confirmBtn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;
+
+    let imported = 0;
+    let failed = 0;
+    for (let i = 0; i < entries.length; i++) {
+      if (progressEl) {
+        progressEl.textContent = t('merge.progress', { i: i + 1, total });
+      }
+      const e = entries[i];
+      try {
+        const encReq = await SpyglassCrypto.encryptBlob(_sessionDEK, e.req || '');
+        const encRes = await SpyglassCrypto.encryptBlob(_sessionDEK, e.res || '');
+        await api('POST', 'api/samples', {
+          title: e.title || 'imported sample',
+          partner_id: null,
+          notes: '',
+          status: e.status || '',
+          bid_req: encReq.ct,
+          req_iv: encReq.iv,
+          bid_res: encRes.ct,
+          res_iv: encRes.iv,
+        });
+        imported++;
+      } catch (err) {
+        failed++;
+        console.warn('[history-merge] entry', i, 'failed:', err && err.message);
+      }
+    }
+
+    closeModal();
+    if (failed === 0) {
+      toast(t('toast.merge_done', { count: imported }), 'success');
+    } else if (imported === 0) {
+      toast(t('toast.merge_failed', { failed }), 'error');
+    } else {
+      toast(t('toast.merge_partial', { imported, failed }), 'warning');
+    }
+    refreshSamples();
+  }
+
   window.signOut = async function () {
     try {
       await api('POST', 'api/auth/logout');
@@ -1866,6 +2028,7 @@ export async function mountInspector(root, ctx) {
     _currentUser = null;
     _partnerCache = [];
     _sessionDEK = null; // wipe DEK from memory on logout
+    clearPersistedDEK(); // wipe DEK from sessionStorage too
     _currentSampleId = null;
     _currentSampleMeta = null;
     _isDirty = false;
@@ -2132,13 +2295,17 @@ export async function mountInspector(root, ctx) {
         body.new_dek_wrapped = wrapped.ct;
         body.new_dek_iv = wrapped.iv;
         // Keep DEK live so user is unlocked immediately after reset.
-        _sessionDEK = await SpyglassCrypto.importDEK(dekBytes);
+        _sessionDEK = await SpyglassCrypto.importDEK(dekBytes, { extractable: true });
+        await persistDEK(_sessionDEK);
       }
       const resp = await api('POST', 'api/auth/reset-password', body);
       _currentUser = resp.user;
       _resetCtx = null;
       _pendingUnlock = mode === 'wipe'; // wipe needs fresh bootstrap on next save
-      if (mode === 'wipe') _sessionDEK = null;
+      if (mode === 'wipe') {
+        _sessionDEK = null;
+        clearPersistedDEK();
+      }
       history.replaceState({}, '', location.pathname);
       closeModal();
       renderAuthWidget();
@@ -2244,7 +2411,7 @@ export async function mountInspector(root, ctx) {
       el.innerHTML =
         '<div class="anon-cta">' +
         t('sample.anon_cta') +
-        '<br><button class="btn btn-primary btn-sm" onclick="openAuthModal(\'login\')">' +
+        '<br><button class="btn btn-primary btn-sm" data-action="open-auth" data-mode="login">' +
         t('sample.btn.signin') +
         '</button></div>';
       return;
@@ -2254,7 +2421,7 @@ export async function mountInspector(root, ctx) {
       el.innerHTML =
         '<div class="anon-cta">' +
         t('sample.unlock_cta') +
-        '<br><button class="btn btn-primary btn-sm" onclick="openUnlockModal()">' +
+        '<br><button class="btn btn-primary btn-sm" data-action="open-unlock">' +
         t('sample.btn.unlock') +
         '</button></div>';
       return;
@@ -2289,16 +2456,16 @@ export async function mountInspector(root, ctx) {
           if (s.res_len) pieces.push('res ~' + plainKb(s.res_len) + 'k');
           if (s.status) pieces.push(escapeHtml(humanStatus(s.status)));
           return (
-            '<div class="saved-item" onclick="loadSample(' +
+            '<div class="saved-item" data-action="sample-load" data-id="' +
             s.id +
-            ')">' +
-            '<div class="saved-item-actions" onclick="event.stopPropagation()">' +
-            '<button class="saved-act-btn" onclick="editSample(' +
+            '">' +
+            '<div class="saved-item-actions">' +
+            '<button class="saved-act-btn" data-action="sample-edit" data-id="' +
             s.id +
-            ')" title="Перейменувати / змінити партнера">edit</button>' +
-            '<button class="saved-act-btn danger" onclick="deleteSample(' +
+            '" title="Перейменувати / змінити партнера">edit</button>' +
+            '<button class="saved-act-btn danger" data-action="sample-delete" data-id="' +
             s.id +
-            ')" title="Видалити">×</button>' +
+            '" title="Видалити">×</button>' +
             '</div>' +
             '<div class="saved-item-title">' +
             escapeHtml(s.title) +
@@ -2522,7 +2689,7 @@ export async function mountInspector(root, ctx) {
     }
   };
 
-  window.loadSample = async function (id) {
+  async function loadSample(id) {
     if (!_sessionDEK) {
       toast(t('toast.crypto_session_lost'), 'error');
       return;
@@ -2558,9 +2725,9 @@ export async function mountInspector(root, ctx) {
       console.error('[loadSample]', e);
       toast(t('toast.decrypt_failed'), 'error');
     }
-  };
+  }
 
-  window.deleteSample = async function (id) {
+  async function deleteSample(id) {
     if (!confirm(t('confirm.delete_sample'))) return;
     try {
       await api('DELETE', 'api/samples/' + id);
@@ -2575,9 +2742,9 @@ export async function mountInspector(root, ctx) {
     } catch (e) {
       toast(t('toast.delete_failed', { error: e.message }), 'error');
     }
-  };
+  }
 
-  window.editSample = async function (id) {
+  async function editSample(id) {
     try {
       const j = await api('GET', 'api/samples/' + id);
       const s = j.sample;
@@ -2621,7 +2788,7 @@ export async function mountInspector(root, ctx) {
     } catch (e) {
       toast(e.message, 'error');
     }
-  };
+  }
 
   window.confirmEdit = async function (id) {
     const title = $('mTitle').value.trim() || 'sample';
@@ -2826,6 +2993,79 @@ export async function mountInspector(root, ctx) {
     // Render any history that was persisted from a prior session.
     renderHistory();
 
+    // ── Delegated event handlers (Cabinet Refactor Etap 1) ─────────
+    // History + saved-samples lists rebuild their innerHTML on every
+    // render, so per-row addEventListener would leak handlers. Listen
+    // once on the static parent and dispatch by data-action — the
+    // {signal: ctx.signal} option detaches automatically on unmount.
+    const hList = $('hList');
+    if (hList) {
+      const onHistoryActivate = (ev, target) => {
+        const action = target.dataset.action;
+        const idx = Number(target.dataset.idx);
+        if (Number.isNaN(idx)) return;
+        if (action === 'history-load') {
+          ev.preventDefault();
+          loadFromHistory(idx);
+        } else if (action === 'history-peek') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          peekHistoryItem(idx);
+        } else if (action === 'history-delete') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          deleteHistoryItem(idx);
+        }
+      };
+      hList.addEventListener(
+        'click',
+        (ev) => {
+          const target = ev.target.closest('[data-action]');
+          if (target && hList.contains(target)) onHistoryActivate(ev, target);
+        },
+        { signal: ctx.signal },
+      );
+      hList.addEventListener(
+        'keydown',
+        (ev) => {
+          if (ev.key !== 'Enter' && ev.key !== ' ') return;
+          const target = ev.target.closest('[data-action="history-load"]');
+          if (target && hList.contains(target)) onHistoryActivate(ev, target);
+        },
+        { signal: ctx.signal },
+      );
+    }
+
+    const savedList = $('savedList');
+    if (savedList) {
+      savedList.addEventListener(
+        'click',
+        (ev) => {
+          const target = ev.target.closest('[data-action]');
+          if (!target || !savedList.contains(target)) return;
+          const action = target.dataset.action;
+          if (action === 'open-auth') {
+            return window.openAuthModal(target.dataset.mode || 'login');
+          }
+          if (action === 'open-unlock') {
+            return window.openUnlockModal();
+          }
+          const id = Number(target.dataset.id);
+          if (Number.isNaN(id)) return;
+          if (action === 'sample-load') {
+            loadSample(id);
+          } else if (action === 'sample-edit') {
+            ev.stopPropagation();
+            editSample(id);
+          } else if (action === 'sample-delete') {
+            ev.stopPropagation();
+            deleteSample(id);
+          }
+        },
+        { signal: ctx.signal },
+      );
+    }
+
     await bootAuth();
     await refreshPartners();
     refreshSamples();
@@ -2879,9 +3119,9 @@ export async function mountInspector(root, ctx) {
       // utilities + tab/input chrome
       'utils', 'switchTab', 'clearInput', 'handleKeydown', 'updateCharCount',
       'closeModal', 'toggleSidebar',
-      // analysis + history
-      'runAnalysis', 'loadFromHistory', 'deleteHistoryItem', 'peekHistoryItem',
-      'clearHistory', 'historyStore', 'humanStatus',
+      // analysis + history (loadFromHistory/peekHistoryItem/deleteHistoryItem
+      // are now local — driven by delegated handler on #hList)
+      'runAnalysis', 'clearHistory', 'historyStore', 'humanStatus',
       // behaviour tab + kadam dialect
       'renderBehaviorTab', '_kadam',
       // auth flows
@@ -2890,15 +3130,21 @@ export async function mountInspector(root, ctx) {
       'openForgotPasswordModal', 'doForgotPassword',
       'openResetPasswordModal', 'updateResetModeUI', 'doResetPassword',
       'requestVerifyEmail',
-      // save / partner / sample / embed
-      'openSaveModal', 'confirmSave', 'loadSample', 'deleteSample',
-      'editSample', 'confirmEdit', 'openPartnerModal', 'confirmAddPartner',
-      'deletePartner', 'refreshSamples',
+      // save / partner / sample / embed (loadSample/editSample/deleteSample
+      // are now local — driven by delegated handler on #savedList)
+      'openSaveModal', 'confirmSave', 'confirmEdit',
+      'openPartnerModal', 'confirmAddPartner', 'deletePartner', 'refreshSamples',
       // ephemeral state
       '__spyglassLast', '__spyglassBehavior',
     ];
     for (const name of exposed) {
       try { delete window[name]; } catch (_) { /* non-configurable, ignore */ }
     }
+    // NOTE: we deliberately do NOT clearPersistedDEK() here. Module
+    // unmount fires when the user switches modules (inspector → stream
+    // → inspector), and we want the DEK to survive that round-trip so
+    // the user isn't asked to unlock twice in one tab. DEK lifetime is
+    // tied to the cookie session + sessionStorage scope, not to the
+    // inspector module mount lifetime.
   });
 }

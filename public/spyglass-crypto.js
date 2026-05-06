@@ -90,11 +90,33 @@
   }
 
   // ── Import a raw DEK (32 bytes) as an AES-GCM CryptoKey ────────────
-  async function importDEK(dekBytes) {
-    return crypto.subtle.importKey('raw', dekBytes, { name: 'AES-GCM', length: KEY_BITS }, false, [
-      'encrypt',
-      'decrypt',
-    ]);
+  // opts.extractable=true is required if the caller wants to later
+  // exportKey('raw') the key (e.g. to mirror it into sessionStorage so
+  // F5 doesn't force a re-unlock — see /core docs and the kt-dek-v1
+  // sessionStorage contract in spyglass.app.js). Default stays false,
+  // matching the original threat model where XSS can OPERATE the key
+  // but cannot dump its raw bytes.
+  async function importDEK(dekBytes, opts) {
+    const extractable = !!(opts && opts.extractable);
+    return crypto.subtle.importKey(
+      'raw',
+      dekBytes,
+      { name: 'AES-GCM', length: KEY_BITS },
+      extractable,
+      ['encrypt', 'decrypt'],
+    );
+  }
+
+  // ── Serialize / deserialize a DEK to/from a base64 string ──────────
+  // Only callable on extractable=true keys. Used for sessionStorage
+  // persistence of the unlock state across F5 within the same tab.
+  async function serializeDEK(dekKey) {
+    const raw = await crypto.subtle.exportKey('raw', dekKey);
+    return bytesToB64(new Uint8Array(raw));
+  }
+  async function deserializeDEK(b64) {
+    const bytes = b64ToBytes(b64);
+    return importDEK(bytes, { extractable: true });
   }
 
   // ── Encrypt / decrypt arbitrary string blobs with the DEK ──────────
@@ -120,7 +142,9 @@
   // Generates DEK + recovery key, wraps DEK twice (with password-KEK and
   // recovery-KEK), returns everything ready to POST to the server plus
   // the recovery key (hex) and the live DEK CryptoKey for the session.
-  async function bootstrap(password) {
+  // opts.extractable forwards to importDEK — pass true if the caller
+  // plans to mirror the key into sessionStorage for F5 survival.
+  async function bootstrap(password, opts) {
     const dek = crypto.getRandomValues(new Uint8Array(DEK_BYTES));
     const recovery = crypto.getRandomValues(new Uint8Array(RECOVERY_BYTES));
     const recoveryHex = bytesToHex(recovery);
@@ -134,7 +158,7 @@
     const wrappedPw = await wrapBytes(kekPw, dek);
     const wrappedRk = await wrapBytes(kekRk, dek);
 
-    const dekKey = await importDEK(dek);
+    const dekKey = await importDEK(dek, opts);
     return {
       // server-side state to persist
       state: {
@@ -153,19 +177,19 @@
   }
 
   // ── High-level: open an existing crypto state with the user's password ─
-  async function openWithPassword(password, state) {
+  async function openWithPassword(password, state, opts) {
     const salt = b64ToBytes(state.kdf_salt);
     const kek = await deriveKEK(password, salt);
     const dekBytes = await unwrapBytes(kek, state.dek_iv, state.dek_wrapped);
-    return importDEK(dekBytes);
+    return importDEK(dekBytes, opts);
   }
 
   // ── High-level: open with recovery key (forgot-password flow) ──────
-  async function openWithRecoveryKey(recoveryKeyHex, state) {
+  async function openWithRecoveryKey(recoveryKeyHex, state, opts) {
     const salt = b64ToBytes(state.recovery_salt);
     const kek = await deriveKEK(recoveryKeyHex, salt);
     const dekBytes = await unwrapBytes(kek, state.recovery_dek_iv, state.recovery_dek_wrapped);
-    return importDEK(dekBytes);
+    return importDEK(dekBytes, opts);
   }
 
   // Public surface
@@ -179,6 +203,8 @@
     bootstrap,
     openWithPassword,
     openWithRecoveryKey,
+    serializeDEK,
+    deserializeDEK,
     // helpers exposed for tests / debugging
     _bytesToB64: bytesToB64,
     _b64ToBytes: b64ToBytes,

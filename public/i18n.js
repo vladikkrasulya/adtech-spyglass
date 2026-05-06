@@ -162,6 +162,17 @@
       'recovery.body':
         'Це <b>єдиний</b> спосіб відновити доступ до твоєї бібліотеки якщо забудеш пароль. Я (оператор сервера) не маю його і не зможу відновити твої дані без нього. Запиши його у password-manager або на папері.',
 
+      // ── history merge (post-register import prompt) ───────
+      'merge.title': 'Перенести історію в бібліотеку?',
+      'merge.body':
+        'У тебе є {count} записів у локальній історії. Перенести їх у твою зашифровану бібліотеку? Локальна історія залишиться доступною — це лише копіювання у архів.',
+      'merge.btn.skip': 'не зараз',
+      'merge.btn.import': 'перенести {count}',
+      'merge.progress': 'переношу {i} / {total}…',
+      'toast.merge_done': 'Перенесено {count} записів',
+      'toast.merge_partial': 'Перенесено {imported}, не вдалося {failed}',
+      'toast.merge_failed': 'Не вдалося перенести жодного запису ({failed})',
+
       // ── save / edit sample modal ──────────────────────────
       'sample.label.title': 'назва',
       'sample.label.partner': 'партнер',
@@ -372,6 +383,17 @@
       'recovery.body':
         'This is the <b>only</b> way to recover access to your library if you forget your password. I (the operator) don’t hold it and can’t recover your data without it. Save it in a password manager or on paper.',
 
+      // ── history merge (post-register import prompt) ───────
+      'merge.title': 'Move history to your library?',
+      'merge.body':
+        'You have {count} entries in local history. Copy them into your encrypted library? Local history stays available — this only mirrors entries into the archive.',
+      'merge.btn.skip': 'not now',
+      'merge.btn.import': 'import {count}',
+      'merge.progress': 'importing {i} / {total}…',
+      'toast.merge_done': 'Imported {count} entries',
+      'toast.merge_partial': 'Imported {imported}, failed {failed}',
+      'toast.merge_failed': 'No entries imported ({failed} failed)',
+
       // ── save / edit sample modal ──────────────────────────
       'sample.label.title': 'title',
       'sample.label.partner': 'partner',
@@ -561,6 +583,18 @@
       'unlock.err.wrong_password': 'Неверный пароль',
       'recovery.body':
         'Это <b>единственный</b> способ восстановить доступ к твоей библиотеке если забудешь пароль. Я (оператор сервера) не имею его и не смогу восстановить твои данные без него. Запиши его в password-manager или на бумаге.',
+
+      // ── history merge (post-register import prompt) ───────
+      'merge.title': 'Перенести историю в библиотеку?',
+      'merge.body':
+        'У тебя {count} записей в локальной истории. Перенести их в твою зашифрованную библиотеку? Локальная история останется доступной — это только копирование в архив.',
+      'merge.btn.skip': 'не сейчас',
+      'merge.btn.import': 'перенести {count}',
+      'merge.progress': 'переношу {i} / {total}…',
+      'toast.merge_done': 'Перенесено {count} записей',
+      'toast.merge_partial': 'Перенесено {imported}, не удалось {failed}',
+      'toast.merge_failed': 'Не удалось перенести ни одной записи ({failed})',
+
       'sample.label.title': 'название',
       'sample.label.partner': 'партнёр',
       'sample.label.notes': 'заметки (необязательно)',
