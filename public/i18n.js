@@ -119,6 +119,9 @@
       'behavior.kind.location_set': 'зміна location',
       'behavior.kind.programmatic_click': 'програмний клік',
       'behavior.kind.navigation': 'навігація',
+      'behavior.kind.invisible_overlay_click': 'клік по невидимій пастці',
+      'behavior.heading.findings': 'Знайдено загроз',
+      'behavior.heading.timeline': 'Хронологія подій',
 
       // ── empty / placeholder hints ─────────────────────────
       'empty.partners': 'Партнерів ще немає',
@@ -340,6 +343,9 @@
       'behavior.kind.location_set': 'location change',
       'behavior.kind.programmatic_click': 'programmatic click',
       'behavior.kind.navigation': 'navigation',
+      'behavior.kind.invisible_overlay_click': 'invisible-overlay click',
+      'behavior.heading.findings': 'Threats detected',
+      'behavior.heading.timeline': 'Event timeline',
 
       // ── empty / placeholder hints ─────────────────────────
       'empty.partners': 'No partners yet',
@@ -553,6 +559,9 @@
       'behavior.kind.location_set': 'смена location',
       'behavior.kind.programmatic_click': 'программный клик',
       'behavior.kind.navigation': 'навигация',
+      'behavior.kind.invisible_overlay_click': 'клик по невидимой ловушке',
+      'behavior.heading.findings': 'Найдено угроз',
+      'behavior.heading.timeline': 'Хронология событий',
       'empty.partners': 'Партнёров пока нет',
       'empty.samples': 'Сохранённых запросов пока нет',
       'status.errors': 'критические ошибки',

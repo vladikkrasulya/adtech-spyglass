@@ -142,69 +142,71 @@ export async function mountInspector(root, ctx) {
   //
   // Subscribed via on() from /core/events.js — same window event under the
   // hood, just signals that this is part of the modular core contract.
-  ctx.addCleanup(ctx.on('kt:lang-change', function (e) {
-    const detail = e && e.detail;
-    const doc = detail && detail.doc;
+  ctx.addCleanup(
+    ctx.on('kt:lang-change', function (e) {
+      const detail = e && e.detail;
+      const doc = detail && detail.doc;
 
-    // 1) Refresh placeholders. Lang-switch skips TEXTAREA/INPUT by tag.
-    if (doc) {
-      ['bidReq', 'bidRes', 'simPrice'].forEach(function (id) {
-        const cur = document.getElementById(id);
-        const fresh = doc.getElementById(id);
-        if (!cur || !fresh) return;
-        const ph = fresh.getAttribute('placeholder');
-        if (ph != null) cur.setAttribute('placeholder', ph);
-      });
+      // 1) Refresh placeholders. Lang-switch skips TEXTAREA/INPUT by tag.
+      if (doc) {
+        ['bidReq', 'bidRes', 'simPrice'].forEach(function (id) {
+          const cur = document.getElementById(id);
+          const fresh = doc.getElementById(id);
+          if (!cur || !fresh) return;
+          const ph = fresh.getAttribute('placeholder');
+          if (ph != null) cur.setAttribute('placeholder', ph);
+        });
 
-      // 2) Refresh empty-state text inside preserved tab panes — but only
-      //    if the pane is still untouched. Detect by matching child shape
-      //    with the freshly-loaded pane: same count, same tagName/className
-      //    per index. If analysed content is present (different shape),
-      //    leave alone — runAnalysis below will repaint in the new locale.
-      ['tInspector', 'tValidation', 'tCross', 'tCategories', 'tBehavior'].forEach(function (id) {
-        const cur = document.getElementById(id);
-        const fresh = doc.getElementById(id);
-        if (!cur || !fresh) return;
-        if (cur.children.length !== fresh.children.length) return;
-        let untouched = true;
-        for (let i = 0; i < cur.children.length; i++) {
-          if (
-            cur.children[i].tagName !== fresh.children[i].tagName ||
-            cur.children[i].className !== fresh.children[i].className
-          ) {
-            untouched = false;
-            break;
+        // 2) Refresh empty-state text inside preserved tab panes — but only
+        //    if the pane is still untouched. Detect by matching child shape
+        //    with the freshly-loaded pane: same count, same tagName/className
+        //    per index. If analysed content is present (different shape),
+        //    leave alone — runAnalysis below will repaint in the new locale.
+        ['tInspector', 'tValidation', 'tCross', 'tCategories', 'tBehavior'].forEach(function (id) {
+          const cur = document.getElementById(id);
+          const fresh = doc.getElementById(id);
+          if (!cur || !fresh) return;
+          if (cur.children.length !== fresh.children.length) return;
+          let untouched = true;
+          for (let i = 0; i < cur.children.length; i++) {
+            if (
+              cur.children[i].tagName !== fresh.children[i].tagName ||
+              cur.children[i].className !== fresh.children[i].className
+            ) {
+              untouched = false;
+              break;
+            }
           }
-        }
-        if (untouched) cur.innerHTML = fresh.innerHTML;
-      });
-    }
+          if (untouched) cur.innerHTML = fresh.innerHTML;
+        });
+      }
 
-    // 3) Re-render the dynamic chrome that holds translated strings. Toasts
-    // use t() at fire time so they're auto-correct; modals stay stale until
-    // closed (acceptable — modal flicker on toggle would be worse UX).
-    try {
-      if (typeof renderHistory === 'function') renderHistory();
-      if (typeof refreshSamples === 'function') refreshSamples();
-    } catch (_) {
-      /* render functions may not be defined yet during init */
-    }
+      // 3) Re-render the dynamic chrome that holds translated strings. Toasts
+      // use t() at fire time so they're auto-correct; modals stay stale until
+      // closed (acceptable — modal flicker on toggle would be worse UX).
+      try {
+        if (typeof renderHistory === 'function') renderHistory();
+        if (typeof refreshSamples === 'function') refreshSamples();
+      } catch (_) {
+        /* render functions may not be defined yet during init */
+      }
 
-    // 4) Re-run analysis if there's a payload — repaints decoded findings
-    // / crosscheck / categories in the new locale.
-    if (typeof window.runAnalysis !== 'function') return;
-    try {
-      const req = document.getElementById('bidReq').value;
-      const res = document.getElementById('bidRes').value;
-      // Re-run when either pane has content — JsonFeed payloads (ExoClick,
-      // RichAds, Zeropark) live in bidRes only, so gating on req-presence
-      // would skip the lang-change re-render for that whole branch.
-      if (!req && !res) return;
-      window.runAnalysis({ req: req, res: res });
-    } catch (e) {
-      /* silent — user may not have a payload yet */
-    }
-  }));
+      // 4) Re-run analysis if there's a payload — repaints decoded findings
+      // / crosscheck / categories in the new locale.
+      if (typeof window.runAnalysis !== 'function') return;
+      try {
+        const req = document.getElementById('bidReq').value;
+        const res = document.getElementById('bidRes').value;
+        // Re-run when either pane has content — JsonFeed payloads (ExoClick,
+        // RichAds, Zeropark) live in bidRes only, so gating on req-presence
+        // would skip the lang-change re-render for that whole branch.
+        if (!req && !res) return;
+        window.runAnalysis({ req: req, res: res });
+      } catch (e) {
+        /* silent — user may not have a payload yet */
+      }
+    }),
+  );
 
   // IAB Content Taxonomy decoder render. Reads the `meta.categories` map
   // from /api/analyze (path → [{code,label}]) and lays it out as a
@@ -373,6 +375,16 @@ export async function mountInspector(root, ctx) {
   // origin loading external `<script src>`. Prefetch fires on DOMReady.
   let _probeSource = null;
   let _probeSourcePromise = null;
+
+  // Reference to the iframe currently hosting the probed creative. Used
+  // by the postMessage receiver (further below) to verify event.source —
+  // any other frame on the page (other ad slots, GTM, third-party widgets)
+  // could otherwise send forged `spyglass-probe` messages and poison
+  // __spyglassBehavior.events. Cleared on every new preview; set only
+  // when the banner-iframe branch actually mounts a probed iframe (VAST
+  // and native preview branches don't get a probe → null guard rejects
+  // their events too).
+  let _currentProbedIframe = null;
   function loadProbeSource() {
     if (_probeSourcePromise) return _probeSourcePromise;
     _probeSourcePromise = fetch('/creative-probe.js')
@@ -403,6 +415,10 @@ export async function mountInspector(root, ctx) {
   function setAdPreview(adm, simPrice, dims) {
     const el = $('creativePreview');
     el.innerHTML = '';
+    // Drop the previous probed iframe ref before any branch runs — the
+    // VAST + native + empty-adm branches never reassign it, and we don't
+    // want stale messages from a torn-down iframe to slip through.
+    _currentProbedIframe = null;
     // New creative → fresh behaviour log. Old findings would otherwise leak
     // across previews and produce confusing per-tab counts.
     resetBehavior();
@@ -457,6 +473,11 @@ export async function mountInspector(root, ctx) {
     const iframe = document.createElement('iframe');
     iframe.setAttribute('sandbox', 'allow-scripts');
     iframe.srcdoc = buildProbedSrcdoc(resolved);
+    // Pin THIS iframe as the only legitimate probe source. The receiver
+    // below rejects every postMessage whose `event.source` doesn't match
+    // this contentWindow — so even on a page with multiple iframes, only
+    // our just-mounted creative can populate __spyglassBehavior.events.
+    _currentProbedIframe = iframe;
     if (dims && dims.w > 0 && dims.h > 0) {
       // Skip .preview-iframe class — its `width: 100%` rule is winning the
       // cascade in this flex container even against inline declarations
@@ -516,6 +537,31 @@ export async function mountInspector(root, ctx) {
     // probe_ready is an internal signal, not user-visible.
     const events = all.filter((e) => e.kind !== 'probe_ready');
     badge.textContent = events.length;
+    // Phase 1 Behavior epic: delegate body render to the Behavior module
+    // (public/modules/behavior/index.js) when it's loaded. The module
+    // posts events to /api/analyze-behavior and renders findings above
+    // the raw event timeline. Fallback below remains for boot-order
+    // resilience — if the module script hasn't parsed yet, we still
+    // render the timeline so the tab isn't blank.
+    if (window.SpyglassBehavior && typeof window.SpyglassBehavior.render === 'function') {
+      window.SpyglassBehavior.render(tab, all, {
+        emptyMessage: t('behavior.empty'),
+        findingsHeading: t('behavior.heading.findings'),
+        timelineHeading: t('behavior.heading.timeline'),
+        triggerLabel: t('behavior.label.trigger'),
+        kindLabels: {
+          click_skim_suspect: t('behavior.kind.click_skim_suspect'),
+          auto_navigate: t('behavior.kind.auto_navigate'),
+          window_open: t('behavior.kind.window_open'),
+          navigation: t('behavior.kind.navigation'),
+          location_set: t('behavior.kind.location_set'),
+          programmatic_click: t('behavior.kind.programmatic_click'),
+          invisible_overlay_click: t('behavior.kind.invisible_overlay_click'),
+        },
+        locale: activeLocale(),
+      });
+      return;
+    }
     if (!events.length) {
       tab.innerHTML = '<div class="empty-hint">' + escapeHtml(t('behavior.empty')) + '</div>';
       return;
@@ -2987,11 +3033,18 @@ export async function mountInspector(root, ctx) {
     loadProbeSource();
 
     // Receive postMessage events from the in-iframe creative probe.
-    // Origin will be 'null' for sandboxed iframes (opaque origin) — we
-    // identify our messages by the type tag instead.
+    // Origin will be 'null' for sandboxed iframes (opaque origin), so we
+    // can't filter on origin. We pin to the contentWindow reference of
+    // the iframe we just mounted (set inside setAdPreview) and reject
+    // anything else. Without this any frame on the page could fabricate
+    // `spyglass-probe` events and poison the analysis pipeline.
     window.addEventListener('message', (e) => {
       const d = e.data;
       if (!d || d.type !== 'spyglass-probe') return;
+      // Spoof-protection: only accept messages from the currently-mounted
+      // probed iframe. Drops events when no iframe is active (VAST/native
+      // previews, between-creative gap) and from any unrelated frame.
+      if (!_currentProbedIframe || e.source !== _currentProbedIframe.contentWindow) return;
       if (!window.__spyglassBehavior) {
         window.__spyglassBehavior = { events: [], startedAt: Date.now() };
       }
@@ -3237,28 +3290,56 @@ export async function mountInspector(root, ctx) {
   ctx.addCleanup(() => {
     const exposed = [
       // utilities + tab/input chrome
-      'utils', 'switchTab', 'clearInput', 'handleKeydown', 'updateCharCount',
-      'closeModal', 'toggleSidebar',
+      'utils',
+      'switchTab',
+      'clearInput',
+      'handleKeydown',
+      'updateCharCount',
+      'closeModal',
+      'toggleSidebar',
       // analysis + history (loadFromHistory/peekHistoryItem/deleteHistoryItem
       // are now local — driven by delegated handler on #hList)
-      'runAnalysis', 'clearHistory', 'historyStore', 'humanStatus',
+      'runAnalysis',
+      'clearHistory',
+      'historyStore',
+      'humanStatus',
       // behaviour tab + kadam dialect
-      'renderBehaviorTab', '_kadam',
+      'renderBehaviorTab',
+      '_kadam',
       // auth flows
-      'openUnlockModal', 'doUnlock', 'openAuthModal', 'doLogin', 'doRegister',
-      'closeRecoveryKeyModal', 'copyRecoveryKey', 'signOut',
-      'openForgotPasswordModal', 'doForgotPassword',
-      'openResetPasswordModal', 'updateResetModeUI', 'doResetPassword',
+      'openUnlockModal',
+      'doUnlock',
+      'openAuthModal',
+      'doLogin',
+      'doRegister',
+      'closeRecoveryKeyModal',
+      'copyRecoveryKey',
+      'signOut',
+      'openForgotPasswordModal',
+      'doForgotPassword',
+      'openResetPasswordModal',
+      'updateResetModeUI',
+      'doResetPassword',
       'requestVerifyEmail',
       // save / partner / sample / embed (loadSample/editSample/deleteSample
       // are now local — driven by delegated handler on #savedList)
-      'openSaveModal', 'confirmSave', 'confirmEdit',
-      'openPartnerModal', 'confirmAddPartner', 'deletePartner', 'refreshSamples',
+      'openSaveModal',
+      'confirmSave',
+      'confirmEdit',
+      'openPartnerModal',
+      'confirmAddPartner',
+      'deletePartner',
+      'refreshSamples',
       // ephemeral state
-      '__spyglassLast', '__spyglassBehavior',
+      '__spyglassLast',
+      '__spyglassBehavior',
     ];
     for (const name of exposed) {
-      try { delete window[name]; } catch (_) { /* non-configurable, ignore */ }
+      try {
+        delete window[name];
+      } catch (_) {
+        /* non-configurable, ignore */
+      }
     }
     // NOTE: we deliberately do NOT clearPersistedDEK() here. Module
     // unmount fires when the user switches modules (inspector → stream

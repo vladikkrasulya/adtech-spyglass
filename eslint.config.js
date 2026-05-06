@@ -39,7 +39,7 @@ module.exports = [
     },
   },
 
-  // Server-side (Node) — server.js, db.js, auth.js, validator/**
+  // Server-side (Node) — server.js, db.js, auth.js, packages/core/**
   {
     files: [
       'server.js',
@@ -48,6 +48,7 @@ module.exports = [
       'tokens.js',
       'email.js',
       'validator/**/*.js',
+      'packages/**/*.js',
       'scripts/**/*.js',
       'samples/**/*.js',
     ],

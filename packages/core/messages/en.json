@@ -98,5 +98,7 @@
   "crosscheck.auction.summary": "Auction summary: {totalBids} bids · {bidsAboveFloor} clear floor · {impsFilled}/{impsTotal} slots filled.",
 
   "imp.non_standard_format": "Detected non-IAB format `{format}` at path `{path}`. Not in canonical oRTB — vendor-specific (pop / clickunder / pushunder / push).",
-  "info.adkernel.routed": "Traffic is routed through AdKernel (alias `{alias}` at `{signal}`). AdKernel is a white-label engine powering 49+ alias networks (Waardex, Monetix, Denakop, Türk Telekom, Display.io, …). Wire format is standard oRTB 2.5 — tenant is identified by `host` + `zoneId`."
+  "info.adkernel.routed": "Traffic is routed through AdKernel (alias `{alias}` at `{signal}`). AdKernel is a white-label engine powering 49+ alias networks (Waardex, Monetix, Denakop, Türk Telekom, Display.io, …). Wire format is standard oRTB 2.5 — tenant is identified by `host` + `zoneId`.",
+
+  "behavior.trap.invisible_overlay": "Click landed on a transparent <{tagName}> covering {coverage} of the viewport (opacity {opacity}, bg-alpha {bgAlpha}). This is a click-skim trap — an invisible overlay above the creative captures incidental clicks. No legitimate creative ships this."
 }

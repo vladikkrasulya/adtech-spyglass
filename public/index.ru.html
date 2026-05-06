@@ -190,73 +190,110 @@
    Spacing, typography, primitives stay from design-system.
    ============================================================ */
       :root {
-        --bg:              #F7F8FA;
-        --bg-2:            #EEF0F4;
-        --surface:         #FFFFFF;
-        --surface-ink:     #0F1525;
-        --surface-ink-2:   #1A2138;
-        --text:            #0F1525;
-        --text-muted:      #515A6E;
-        --text-dim:        #8A93A6;
-        --text-inv:        #FAFAFA;
-        --text-on-accent:  #FFFFFF;
-        --border:          rgba(15,21,37,0.08);
-        --border-strong:   rgba(15,21,37,0.16);
-        --accent:          #3E63DD;
-        --accent-hover:    #5573E5;
-        --accent-soft:     rgba(62,99,221,0.10);
-        --accent-ink:      #0F1525;
-        --accent-secondary:#5E6AD2;
-        --selection-bg:    rgba(62,99,221,0.30);
+        --bg: #f7f8fa;
+        --bg-2: #eef0f4;
+        --surface: #ffffff;
+        --surface-ink: #0f1525;
+        --surface-ink-2: #1a2138;
+        --text: #0f1525;
+        --text-muted: #515a6e;
+        --text-dim: #8a93a6;
+        --text-inv: #fafafa;
+        --text-on-accent: #ffffff;
+        --border: rgba(15, 21, 37, 0.08);
+        --border-strong: rgba(15, 21, 37, 0.16);
+        --accent: #3e63dd;
+        --accent-hover: #5573e5;
+        --accent-soft: rgba(62, 99, 221, 0.1);
+        --accent-ink: #0f1525;
+        --accent-secondary: #5e6ad2;
+        --selection-bg: rgba(62, 99, 221, 0.3);
       }
-      [data-theme="dark"] {
-        --bg:              #0B0D14;
-        --bg-2:            #12151F;
-        --surface:         #12151F;
-        --surface-ink:     #181C28;
-        --surface-ink-2:   #232838;
-        --text:            #E6E9F2;
-        --text-muted:      #9098AD;
-        --text-dim:        #5C6479;
-        --text-inv:        #0B0D14;
-        --text-on-accent:  #FFFFFF;
-        --border:          rgba(255,255,255,0.06);
-        --border-strong:   rgba(255,255,255,0.12);
-        --accent:          #7C8CFF;
-        --accent-hover:    #9AA5FF;
-        --accent-soft:     rgba(124,140,255,0.14);
-        --accent-ink:      #E6E9F2;
-        --accent-secondary:#5E6AD2;
-        --selection-bg:    rgba(124,140,255,0.35);
+      [data-theme='dark'] {
+        --bg: #0b0d14;
+        --bg-2: #12151f;
+        --surface: #12151f;
+        --surface-ink: #181c28;
+        --surface-ink-2: #232838;
+        --text: #e6e9f2;
+        --text-muted: #9098ad;
+        --text-dim: #5c6479;
+        --text-inv: #0b0d14;
+        --text-on-accent: #ffffff;
+        --border: rgba(255, 255, 255, 0.06);
+        --border-strong: rgba(255, 255, 255, 0.12);
+        --accent: #7c8cff;
+        --accent-hover: #9aa5ff;
+        --accent-soft: rgba(124, 140, 255, 0.14);
+        --accent-ink: #e6e9f2;
+        --accent-secondary: #5e6ad2;
+        --selection-bg: rgba(124, 140, 255, 0.35);
       }
 
       /* Bottom-anchored glow (Gemini-style, two corners). z-index:-1 sits
          behind body content; body is transparent so html bg shows through. */
-      body { background: transparent !important; position: relative; }
-      body::before, body::after {
-        content: ""; position: fixed; bottom: 0; width: 60vw; height: 55vh;
-        pointer-events: none; z-index: -1;
+      body {
+        background: transparent !important;
+        position: relative;
       }
-      body::before { left: -10vw; }
-      body::after  { right: -10vw; }
+      body::before,
+      body::after {
+        content: '';
+        position: fixed;
+        bottom: 0;
+        width: 60vw;
+        height: 55vh;
+        pointer-events: none;
+        z-index: -1;
+      }
+      body::before {
+        left: -10vw;
+      }
+      body::after {
+        right: -10vw;
+      }
       :root body::before {
-        background: radial-gradient(ellipse at bottom left, rgba(62,99,221,0.05), transparent 65%);
+        background: radial-gradient(
+          ellipse at bottom left,
+          rgba(62, 99, 221, 0.05),
+          transparent 65%
+        );
       }
       :root body::after {
-        background: radial-gradient(ellipse at bottom right, rgba(94,106,210,0.04), transparent 70%);
+        background: radial-gradient(
+          ellipse at bottom right,
+          rgba(94, 106, 210, 0.04),
+          transparent 70%
+        );
       }
-      [data-theme="dark"] body::before {
-        background: radial-gradient(ellipse at bottom left, rgba(124,140,255,0.22), transparent 65%);
+      [data-theme='dark'] body::before {
+        background: radial-gradient(
+          ellipse at bottom left,
+          rgba(124, 140, 255, 0.22),
+          transparent 65%
+        );
       }
-      [data-theme="dark"] body::after {
-        background: radial-gradient(ellipse at bottom right, rgba(94,106,210,0.16), transparent 70%);
+      [data-theme='dark'] body::after {
+        background: radial-gradient(
+          ellipse at bottom right,
+          rgba(94, 106, 210, 0.16),
+          transparent 70%
+        );
       }
 
       /* Scrollbars — palette-aligned in BOTH themes. Width identical across
          themes (10px) so theme toggle never reflows content. */
-      * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
-      *::-webkit-scrollbar { width: 10px; height: 10px; }
-      *::-webkit-scrollbar-track { background: transparent; }
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-strong) transparent;
+      }
+      *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      *::-webkit-scrollbar-track {
+        background: transparent;
+      }
       *::-webkit-scrollbar-thumb {
         background: var(--border-strong);
         border-radius: 6px;
@@ -267,10 +304,15 @@
         background: var(--text-dim);
         background-clip: content-box;
       }
-      *::-webkit-scrollbar-corner { background: transparent; }
+      *::-webkit-scrollbar-corner {
+        background: transparent;
+      }
 
       /* Text selection — accent-tinted, contrast-preserved. */
-      ::selection    { background: var(--selection-bg); color: var(--text); }
+      ::selection {
+        background: var(--selection-bg);
+        color: var(--text);
+      }
     </style>
   </head>
   <body>
@@ -281,7 +323,7 @@
          items inside the injected template are direct grid children. -->
     <div id="app-root" class="workbench"></div>
     <script src="/spyglass-crypto.js?v=1"></script>
-    <script src="/i18n.js?v=13"></script>
+    <script src="/i18n.js?v=14"></script>
     <script src="/lang-switch.js?v=1"></script>
     <script type="module">
       // Inspector module boot (Phase C-2/C-3 — the module fetches its
@@ -302,5 +344,6 @@
     <script src="/export.js?v=1"></script>
     <script src="/share.js?v=3"></script>
     <script src="/embed.js?v=1"></script>
+    <script src="/modules/behavior/index.js?v=1"></script>
   </body>
 </html>

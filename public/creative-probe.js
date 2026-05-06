@@ -16,6 +16,8 @@
        pointerover|pointerenter} setters (inline `onmouseover="…"`
        creatives bypass addEventListener)
      - HTMLElement.prototype.click (programmatic click)
+     - document click (capture phase) — geometry + opacity inspection
+       for invisible-overlay click traps (Phase 1 Behavior heuristic)
 
    Detection lineage:
      activeEventStack tracks the chain of DOM events currently
@@ -253,6 +255,98 @@
     };
   } catch (e) {
     /* */
+  }
+
+  // 7) Invisible overlay click detection — Phase 1 Behavior heuristic.
+  //    Goal: catch the click-skim primitive where a creative ships a
+  //    full-screen transparent element above the visible content to
+  //    intercept any click on the page.
+  //
+  //    On every captured click we measure the target's bounding rect
+  //    against the iframe viewport AND inspect computed opacity +
+  //    background alpha. A click on an element that
+  //      - covers > 50% of viewport AND
+  //      - has opacity < 0.05 OR transparent background-color (no image)
+  //    has no legitimate creative use case and is reported as
+  //    `invisible_overlay_click`. The packages/core/behavior engine
+  //    promotes each such event to a behavior.trap.invisible_overlay
+  //    finding (severity: error).
+  //
+  //    Capture phase: we run BEFORE author-attached handlers so even if
+  //    the creative stops propagation we still observe the target.
+  //    Probe-internal try/catch keeps a measurement throw from breaking
+  //    other probe channels.
+  try {
+    document.addEventListener(
+      'click',
+      function (e) {
+        try {
+          const t = e && e.target;
+          if (!t || typeof t.getBoundingClientRect !== 'function') return;
+
+          const rect = t.getBoundingClientRect();
+          const vw =
+            window.innerWidth ||
+            (document.documentElement && document.documentElement.clientWidth) ||
+            0;
+          const vh =
+            window.innerHeight ||
+            (document.documentElement && document.documentElement.clientHeight) ||
+            0;
+          if (!vw || !vh) return;
+
+          const w = Math.max(0, rect.width);
+          const h = Math.max(0, rect.height);
+          const area = w * h;
+          const viewport = vw * vh;
+          const ratio = area / viewport;
+          // Skip small elements early — a 30×30 hidden close button is
+          // also "invisible" but it's not a coverage trap. The trap
+          // signature is `large + invisible`.
+          if (ratio < 0.5) return;
+
+          const style = window.getComputedStyle(t);
+          const opacityRaw = parseFloat(style.opacity);
+          const opacity = isNaN(opacityRaw) ? 1 : opacityRaw;
+
+          // backgroundColor is browser-normalized to rgb()/rgba()/transparent.
+          // Pull the alpha component; default to 1 for opaque rgb().
+          const bg = String(style.backgroundColor || '');
+          let bgAlpha = 1;
+          if (bg === 'transparent' || bg === '') {
+            bgAlpha = 0;
+          } else {
+            const m = bg.match(/^rgba?\(([^)]+)\)$/);
+            if (m) {
+              const parts = m[1].split(',');
+              if (parts.length === 4) {
+                const a = parseFloat(parts[3]);
+                bgAlpha = isNaN(a) ? 1 : a;
+              }
+            }
+          }
+          const noBgImage = !style.backgroundImage || style.backgroundImage === 'none';
+          const isInvisible = opacity < 0.05 || (bgAlpha < 0.05 && noBgImage);
+          if (!isInvisible) return;
+
+          send({
+            kind: 'invisible_overlay_click',
+            method: 'click',
+            url: '',
+            trigger: 'click',
+            tagName: t.tagName || '',
+            coverageRatio: Number(ratio.toFixed(3)),
+            opacity: Number(opacity.toFixed(3)),
+            bgAlpha: Number(bgAlpha.toFixed(3)),
+          });
+        } catch (err) {
+          /* per-click measurement failure — ignore so we keep observing */
+        }
+      },
+      true,
+    );
+  } catch (e) {
+    /* listener install failed — non-fatal */
   }
 
   send({ kind: 'probe_ready', method: 'init', url: '', trigger: 'no-event' });

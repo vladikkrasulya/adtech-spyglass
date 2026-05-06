@@ -46,6 +46,7 @@ const {
   listDialects,
   extractAllCategories,
 } = require('@kyivtech/spyglass-core');
+const { analyze: analyzeBehavior } = require('@kyivtech/spyglass-core/behavior');
 const SyntheticGenerator = require('./samples/synthetic-generator');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -701,6 +702,44 @@ function handleAnalyze(req, res, parsed) {
     .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
 }
 
+// ── /api/analyze-behavior ──────────────────────────────────────────────────
+// Runs the behavior engine over an array of probe events captured by the
+// in-iframe creative-probe.js. Stateless, mirrors /api/analyze envelope:
+// findings are decorated (msg + specRef) by the engine itself, so server
+// just pipes them through.
+//
+// Why server-side at all: keeps a single analysis source of truth across
+// browser preview AND future Stream-pivot specimen-archive replay (Node).
+// Client posts events on every Behavior-tab render; debouncing happens
+// in the UI module.
+
+function handleAnalyzeBehavior(req, res, parsed) {
+  if (!analyzeLimiter(auth.clientIp(req))) {
+    return sendError(
+      res,
+      429,
+      'rate_limited',
+      `Too many analyze calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
+    );
+  }
+  const locale = resolveLocale(parsed);
+  readJson(req)
+    .then(({ events }) => {
+      if (!Array.isArray(events)) {
+        return sendError(res, 400, 'invalid_input', 'events array is required');
+      }
+      const r = analyzeBehavior(events, { locale });
+      sendJson(res, 200, {
+        success: true,
+        findings: r.findings,
+        status: r.status,
+        eventCount: r.eventCount,
+        meta: { locale },
+      });
+    })
+    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+}
+
 // ── Per-user CRUD: partners + samples (auth-required) ──────────────────────
 
 function handleApi(req, res, parsed, user) {
@@ -931,6 +970,8 @@ const server = http.createServer((req, res) => {
     if (pathname === '/api/v1/stream' && req.method === 'GET') return handleStream(req, res);
     if (pathname === '/api/analyze' && req.method === 'POST')
       return handleAnalyze(req, res, parsed);
+    if (pathname === '/api/analyze-behavior' && req.method === 'POST')
+      return handleAnalyzeBehavior(req, res, parsed);
     if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);
     if (pathname.startsWith('/api/auth/')) {
       if (handleAuthRoute(req, res, parsed) !== false) return;
