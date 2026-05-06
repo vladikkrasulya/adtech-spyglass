@@ -123,27 +123,49 @@
           if (mq.addEventListener) mq.addEventListener('change', apply);
           else if (mq.addListener) mq.addListener(apply);
           function inject() {
-            var b = document.querySelector('.kt-theme-toggle');
-            if (!b) {
-              b = document.createElement('button');
+            var btns = document.querySelectorAll('.kt-theme-toggle');
+            // If a "real" (in-template) button now exists, demote any
+            // floating fallback we may have created earlier so the user
+            // only ever sees one toggle. Inspector template arrives async
+            // via mount() and fires kt:inspector-ready → this re-runs.
+            var hasReal = Array.prototype.some.call(btns, function (b) {
+              return b.dataset.fallback !== '1';
+            });
+            if (hasReal) {
+              Array.prototype.forEach.call(btns, function (b) {
+                if (b.dataset.fallback === '1') b.remove();
+              });
+              btns = document.querySelectorAll('.kt-theme-toggle');
+            }
+            if (!btns.length) {
+              // Fallback for surfaces without their own theme toggle in
+              // markup (e.g. /about). Tagged data-fallback so a later
+              // inject() pass can demote it if a real one arrives.
+              var b = document.createElement('button');
               b.className = 'kt-theme-toggle';
               b.type = 'button';
+              b.dataset.fallback = '1';
               b.setAttribute('aria-label', 'Toggle theme');
               document.body.appendChild(b);
+              btns = [b];
             }
-            if (!b.dataset.themeBound) {
+            Array.prototype.forEach.call(btns, function (b) {
+              if (b.dataset.themeBound) return;
               b.addEventListener('click', function () {
                 var s = get();
                 set(s === null ? 'light' : s === 'light' ? 'dark' : null);
                 apply();
               });
               b.dataset.themeBound = '1';
-            }
+            });
             apply();
           }
           if (document.readyState === 'loading')
             document.addEventListener('DOMContentLoaded', inject);
           else inject();
+          // Re-run when inspector module finishes injecting its template
+          // — that's when the in-header .kt-theme-toggle button appears.
+          window.addEventListener('kt:inspector-ready', inject);
         } catch (e) {}
       })();
     </script>
@@ -260,11 +282,13 @@
       ::-moz-selection { background: var(--selection-bg); color: var(--text); }
     </style>
   </head>
-  <body class="workbench">
+  <body>
     <!-- Inspector module owns its own template + CSS — see
          /modules/inspector/{index.js,template.${lang}.html,inspector.css}.
-         Shell provides only base tokens (above) + the mount root. -->
-    <div id="app-root"></div>
+         Shell provides only base tokens (above) + the mount root.
+         The .workbench grid sits ON #app-root (not body) so the grid
+         items inside the injected template are direct grid children. -->
+    <div id="app-root" class="workbench"></div>
     <script src="/spyglass-crypto.js?v=1"></script>
     <script src="/i18n.js?v=13"></script>
     <script src="/lang-switch.js?v=1"></script>

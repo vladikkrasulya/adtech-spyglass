@@ -869,7 +869,7 @@
         grid-template-columns: 1fr 320px;
         height: 100vh;
       }
-      [data-embed='1'] body.workbench {
+      [data-embed='1'] .workbench {
         display: block;
       }
       [data-embed='1'] .embed-footer {
