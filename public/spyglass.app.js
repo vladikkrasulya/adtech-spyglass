@@ -721,7 +721,7 @@ export async function mountInspector(root, ctx) {
     const e = historyStore[idx];
     if (!e) return;
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card" style="max-width:720px;width:90vw">' +
       '<div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">' +
       '<span>' +
@@ -750,7 +750,7 @@ export async function mountInspector(root, ctx) {
         : '') +
       '</div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
       t('btn.close') +
       '</button>' +
       '<button id="peekLoadBtn" class="btn btn-primary btn-sm">' +
@@ -1450,7 +1450,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Native (web/in-page)</span>
-            <button class="ref-paste-btn" onclick='_kadam.pasteIntoReq(_kadam.KADAM.templates.requestNative)'>paste → request</button>
+            <button class="ref-paste-btn" data-action="kadam-paste-req" data-template="requestNative">paste → request</button>
           </div>
           <div class="ref-card-desc">Standard Kadam Native 1.1 with subage hints, geo, user, ext.bsection/btags blocking.</div>
           <pre class="ref-code">${escapeHtml(reqNativeJson)}</pre>
@@ -1458,7 +1458,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Push (subscription)</span>
-            <button class="ref-paste-btn" onclick='_kadam.pasteIntoReq(_kadam.KADAM.templates.requestPush)'>paste → request</button>
+            <button class="ref-paste-btn" data-action="kadam-paste-req" data-template="requestPush">paste → request</button>
           </div>
           <div class="ref-card-desc">Push impression with imp.ext.subage, subage0, subage_dt, subage_ts — required to maximize buyout.</div>
           <pre class="ref-code">${escapeHtml(reqPushJson)}</pre>
@@ -1470,7 +1470,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Native bid response</span>
-            <button class="ref-paste-btn" onclick='_kadam.pasteIntoRes(_kadam.KADAM.templates.responseNative)'>paste → response</button>
+            <button class="ref-paste-btn" data-action="kadam-paste-res" data-template="responseNative">paste → response</button>
           </div>
           <div class="ref-card-desc">Bid + nurl/burl/lurl with macros + Native 1.1 adm with assets matching the request.</div>
           <pre class="ref-code">${escapeHtml(resNativeJson)}</pre>
@@ -1482,7 +1482,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Feed request URL</span>
-            <button class="ref-paste-btn" onclick="_kadam.pasteString('bidReq', _kadam.KADAM.templates.feedRequestUrl)">paste → request box</button>
+            <button class="ref-paste-btn" data-action="kadam-paste-string" data-target="bidReq" data-template="feedRequestUrl">paste → request box</button>
           </div>
           <div class="ref-card-desc">Kadam Feed expects a GET with parameters; SSP issues sid + skey per ad format.</div>
           <pre class="ref-code">${escapeHtml(T.feedRequestUrl)}</pre>
@@ -1491,7 +1491,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Feed response — push (JSON array)</span>
-            <button class="ref-paste-btn" onclick='_kadam.pasteIntoRes(_kadam.KADAM.templates.feedResponsePush)'>paste → response</button>
+            <button class="ref-paste-btn" data-action="kadam-paste-res" data-template="feedResponsePush">paste → response</button>
           </div>
           <pre class="ref-code">${escapeHtml(feedPushJson)}</pre>
           ${tableHtml(['field', 'type', 'description'], KADAM.pushResponseFields)}
@@ -1499,7 +1499,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Feed response — clickunder</span>
-            <button class="ref-paste-btn" onclick='_kadam.pasteIntoRes(_kadam.KADAM.templates.feedResponseClickunder)'>paste → response</button>
+            <button class="ref-paste-btn" data-action="kadam-paste-res" data-template="feedResponseClickunder">paste → response</button>
           </div>
           <pre class="ref-code">${escapeHtml(feedCuJson)}</pre>
         </div>
@@ -1673,7 +1673,7 @@ export async function mountInspector(root, ctx) {
       return window.openAuthModal('login');
     }
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card">' +
       '<div class="modal-title">' +
       t('modal.unlock.title') +
@@ -1685,14 +1685,14 @@ export async function mountInspector(root, ctx) {
       t('auth.label.password') +
       '</label><input id="unlockPwInput" type="password" autocomplete="current-password"></div>' +
       '<div id="unlockError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
-      '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" onclick="event.preventDefault();closeModal();openForgotPasswordModal()" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
+      '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" data-action="open-forgot" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
       t('auth.forgot_password') +
       '</a></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="signOut();closeModal()">' +
+      '<button class="btn btn-ghost btn-sm" data-action="signout">' +
       t('btn.signout_instead') +
       '</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="doUnlock()">' +
+      '<button class="btn btn-primary btn-sm" data-action="do-unlock">' +
       t('btn.unlock') +
       '</button>' +
       '</div></div></div>';
@@ -1737,7 +1737,7 @@ export async function mountInspector(root, ctx) {
     const prevEmail = $('authEmailInput')?.value || '';
     const prevPassword = $('authPasswordInput')?.value || '';
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card">' +
       '<div class="modal-title">' +
       t(isReg ? 'auth.register.title' : 'auth.login.title') +
@@ -1753,21 +1753,21 @@ export async function mountInspector(root, ctx) {
       '<div id="authError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
       (isReg
         ? ''
-        : '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" onclick="event.preventDefault();openForgotPasswordModal()" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
+        : '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" data-action="open-forgot" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
           t('auth.forgot_password') +
           '</a></div>') +
       '<div class="modal-actions" style="justify-content:space-between">' +
-      '<button class="btn btn-ghost btn-sm" onclick="' +
-      (isReg ? "openAuthModal('login')" : "openAuthModal('register')") +
+      '<button class="btn btn-ghost btn-sm" data-action="open-auth" data-mode="' +
+      (isReg ? 'login' : 'register') +
       '">' +
       t(isReg ? 'auth.switch_to_login' : 'auth.switch_to_register') +
       '</button>' +
       '<div style="display:flex;gap:var(--space-2)">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
       t('btn.cancel') +
       '</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="' +
-      (isReg ? 'doRegister()' : 'doLogin()') +
+      '<button class="btn btn-primary btn-sm" data-action="do-auth" data-mode="' +
+      (isReg ? 'register' : 'login') +
       '">' +
       t(isReg ? 'auth.btn.register' : 'auth.btn.login') +
       '</button>' +
@@ -1865,9 +1865,11 @@ export async function mountInspector(root, ctx) {
   // Without this, an accidental Esc or button-misclick lost the key forever
   // (single-show by design — the server stores only the wrap, not the key).
   let _recoveryKeyModalActive = false;
+  let _currentRecoveryKey = null;
   window.closeRecoveryKeyModal = function () {
     if (!confirm(t('confirm.recovery_save'))) return;
     _recoveryKeyModalActive = false;
+    _currentRecoveryKey = null;
     closeModal();
     // Chain history-merge prompt only after the user has explicitly
     // acknowledged saving the recovery key — otherwise the merge modal
@@ -1886,7 +1888,7 @@ export async function mountInspector(root, ctx) {
     const grouped = (String(recoveryKey || '').match(/.{1,4}/g) || []).join('-');
     _recoveryKeyModalActive = true;
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeRecoveryKeyModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close-recovery">' +
       '<div class="modal-card" style="max-width:520px">' +
       '<div class="modal-title">' +
       t('modal.recovery.title') +
@@ -1898,16 +1900,18 @@ export async function mountInspector(root, ctx) {
       escapeHtml(grouped) +
       '</div>' +
       '<div class="modal-actions" style="justify-content:space-between">' +
-      '<button id="rkCopyBtn" class="btn btn-ghost btn-sm" onclick="copyRecoveryKey(\'' +
-      escapeHtml(recoveryKey) +
-      '\')">' +
+      '<button id="rkCopyBtn" class="btn btn-ghost btn-sm" data-action="copy-recovery">' +
       t('btn.copy') +
       '</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="closeRecoveryKeyModal()">' +
+      '<button class="btn btn-primary btn-sm" data-action="close-recovery">' +
       t('btn.recovery_saved') +
       '</button>' +
       '</div>' +
       '</div></div>';
+    // Capture key in module scope so the dispatcher can call
+    // copyRecoveryKey(key) without embedding the secret in a DOM
+    // attribute. Cleared by closeRecoveryKeyModal().
+    _currentRecoveryKey = recoveryKey;
   }
 
   window.copyRecoveryKey = function (key) {
@@ -1939,7 +1943,7 @@ export async function mountInspector(root, ctx) {
     const count = historyStore.length;
     if (!count) return;
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card">' +
       '<div class="modal-title">' +
       t('merge.title') +
@@ -2041,7 +2045,7 @@ export async function mountInspector(root, ctx) {
 
   window.openForgotPasswordModal = function () {
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card">' +
       '<div class="modal-title">' +
       t('modal.password_reset.title') +
@@ -2054,10 +2058,10 @@ export async function mountInspector(root, ctx) {
       '</label><input id="forgotEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
       '<div id="forgotMessage" style="font-size:var(--fs-sm);color:var(--text-dim);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="openAuthModal(\'login\')">' +
+      '<button class="btn btn-ghost btn-sm" data-action="open-auth" data-mode="login">' +
       t('forgot.btn.back_to_login') +
       '</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="doForgotPassword()">' +
+      '<button class="btn btn-primary btn-sm" data-action="do-forgot">' +
       t('forgot.btn.send') +
       '</button>' +
       '</div></div></div>';
@@ -2128,7 +2132,7 @@ export async function mountInspector(root, ctx) {
       t('reset.mode.' + key + '_hint') +
       '</span></span></label>';
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card" style="max-width:520px">' +
       '<div class="modal-title">' +
       t('modal.password_reset.title') +
@@ -2148,10 +2152,10 @@ export async function mountInspector(root, ctx) {
       '<input id="resetNewPwInput" type="password" autocomplete="new-password"></div>' +
       '<div id="resetError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal();history.replaceState({},\'\',location.pathname)">' +
+      '<button class="btn btn-ghost btn-sm" data-action="reset-cancel">' +
       t('btn.cancel') +
       '</button>' +
-      '<button id="resetPrimaryBtn" class="btn btn-primary btn-sm" onclick="doResetPassword()">' +
+      '<button id="resetPrimaryBtn" class="btn btn-primary btn-sm" data-action="do-reset">' +
       t('reset.btn.reset') +
       '</button>' +
       '</div></div></div>';
@@ -2586,16 +2590,16 @@ export async function mountInspector(root, ctx) {
       ? t('modal.save_sample.update_title', { id: _currentSampleId })
       : t('modal.save_sample.title');
     const primaryBtn =
-      '<button class="btn btn-primary btn-sm" onclick="confirmSave()">' +
+      '<button class="btn btn-primary btn-sm" data-action="confirm-save">' +
       t(updating ? 'btn.update' : 'btn.save') +
       '</button>';
     const secondaryBtn = updating
-      ? '<button class="btn btn-ghost btn-sm" onclick="confirmSave({asNew:true})">' +
+      ? '<button class="btn btn-ghost btn-sm" data-action="confirm-save" data-as-new="1">' +
         t('btn.save_as_new') +
         '</button>'
       : '';
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card">' +
       '<div class="modal-title">' +
       escapeHtml(headerText) +
@@ -2616,7 +2620,7 @@ export async function mountInspector(root, ctx) {
       escapeHtml(presetNotes) +
       '</textarea></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
       t('btn.cancel') +
       '</button>' +
       secondaryBtn +
@@ -2749,7 +2753,7 @@ export async function mountInspector(root, ctx) {
       const j = await api('GET', 'api/samples/' + id);
       const s = j.sample;
       $('modalRoot').innerHTML =
-        '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
         '<div class="modal-card">' +
         '<div class="modal-title">' +
         t('modal.edit_sample.title') +
@@ -2770,12 +2774,12 @@ export async function mountInspector(root, ctx) {
         escapeHtml(s.notes || '') +
         '</textarea></div>' +
         '<div class="modal-actions">' +
-        '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+        '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
         t('btn.cancel') +
         '</button>' +
-        '<button class="btn btn-primary btn-sm" onclick="confirmEdit(' +
+        '<button class="btn btn-primary btn-sm" data-action="confirm-edit" data-id="' +
         s.id +
-        ')">' +
+        '">' +
         t('btn.save') +
         '</button>' +
         '</div>' +
@@ -2819,9 +2823,9 @@ export async function mountInspector(root, ctx) {
         (p) =>
           '<div class="saved-item" style="cursor:default">' +
           '<div class="saved-item-actions" style="opacity:1">' +
-          '<button class="saved-act-btn danger" onclick="deletePartner(' +
+          '<button class="saved-act-btn danger" data-action="delete-partner" data-id="' +
           p.id +
-          ')" title="Видалити">×</button>' +
+          '" title="Видалити">×</button>' +
           '</div>' +
           '<div class="saved-item-title">' +
           escapeHtml(p.name) +
@@ -2836,7 +2840,7 @@ export async function mountInspector(root, ctx) {
 
   window.openPartnerModal = function () {
     $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">' +
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card">' +
       '<div class="modal-title">' +
       t('modal.partners.title') +
@@ -2850,10 +2854,10 @@ export async function mountInspector(root, ctx) {
       escapeHtml(t('partner.placeholder')) +
       '"></div>' +
       '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeModal()">' +
+      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
       t('btn.close') +
       '</button>' +
-      '<button class="btn btn-primary btn-sm" onclick="confirmAddPartner()">' +
+      '<button class="btn btn-primary btn-sm" data-action="confirm-add-partner">' +
       t('btn.add') +
       '</button>' +
       '</div>' +
@@ -2993,11 +2997,17 @@ export async function mountInspector(root, ctx) {
     // Render any history that was persisted from a prior session.
     renderHistory();
 
-    // ── Central event dispatcher (Cabinet Refactor Etap 2) ─────────
+    // ── Central event dispatcher (Cabinet Refactor Etap 2 + 3) ─────
     // Single root-level handler dispatches every data-action click
-    // anywhere inside the inspector mount tree. Replaces:
+    // anywhere inside the inspector mount tree, including dynamic
+    // modals rendered into #modalRoot (which sits inside #app-root,
+    // so clicks bubble here naturally — no separate listener needed).
+    // Replaces:
     //   - 87 inline onclick="…" handlers across index.{en,uk,ru}.html
     //   - per-list scoped dispatchers from Etap 1 (#hList, #savedList)
+    //   - 39 inline onclick="…" handlers inside JS-generated modal
+    //     templates (auth, unlock, recovery, forgot, reset, save,
+    //     edit-sample, partner, kadam-reference)
     // {signal: ctx.signal} auto-detaches on module unmount.
     const root = document.getElementById('app-root') || document.body;
 
@@ -3006,6 +3016,9 @@ export async function mountInspector(root, ctx) {
       (ev) => {
         const el = ev.target.closest('[data-action]');
         if (!el || !root.contains(el)) return;
+        // Anchor actions need preventDefault so the href="#" doesn't
+        // append # to the URL and trigger a back-button trap.
+        if (el.tagName === 'A') ev.preventDefault();
         const action = el.dataset.action;
         switch (action) {
           // — top bar / chrome —
@@ -3016,6 +3029,9 @@ export async function mountInspector(root, ctx) {
           case 'verify-email':
             return window.requestVerifyEmail && window.requestVerifyEmail();
           case 'signout':
+            // Used by header button (no modal) AND unlock-modal escape
+            // route. closeModal() is a no-op if no modal is open.
+            closeModal();
             return window.signOut && window.signOut();
           case 'open-auth':
             return window.openAuthModal(el.dataset.mode || 'login');
@@ -3066,6 +3082,75 @@ export async function mountInspector(root, ctx) {
           case 'sample-delete':
             ev.stopPropagation();
             return deleteSample(Number(el.dataset.id));
+
+          // — modals (Etap 3 — generic close paths) —
+          case 'modal-backdrop-close':
+            // Only fire when the click is directly on the backdrop,
+            // not on a child element (otherwise clicks inside the
+            // modal card would close it).
+            if (ev.target === el) closeModal();
+            return;
+          case 'modal-backdrop-close-recovery':
+            if (ev.target === el) window.closeRecoveryKeyModal();
+            return;
+          case 'modal-close':
+            return closeModal();
+          case 'close-recovery':
+            return window.closeRecoveryKeyModal();
+          case 'reset-cancel':
+            // Cancel reset-password modal: close + strip ?reset=
+            // query so a refresh doesn't re-trigger the same flow.
+            closeModal();
+            history.replaceState({}, '', location.pathname);
+            return;
+
+          // — modals (Etap 3 — auth/unlock/recovery/reset action verbs) —
+          case 'do-auth':
+            return el.dataset.mode === 'register'
+              ? window.doRegister && window.doRegister()
+              : window.doLogin && window.doLogin();
+          case 'do-unlock':
+            return window.doUnlock && window.doUnlock();
+          case 'do-forgot':
+            return window.doForgotPassword && window.doForgotPassword();
+          case 'do-reset':
+            return window.doResetPassword && window.doResetPassword();
+          case 'open-forgot':
+            return window.openForgotPasswordModal && window.openForgotPasswordModal();
+          case 'copy-recovery':
+            // Key lives in module-scope closure (_currentRecoveryKey),
+            // not in a DOM attribute — keeps the secret out of inspector.
+            return window.copyRecoveryKey && window.copyRecoveryKey(_currentRecoveryKey);
+
+          // — modals (Etap 3 — sample / partner CRUD verbs) —
+          case 'confirm-save':
+            return window.confirmSave({ asNew: el.dataset.asNew === '1' });
+          case 'confirm-edit':
+            return window.confirmEdit(Number(el.dataset.id));
+          case 'confirm-add-partner':
+            return window.confirmAddPartner && window.confirmAddPartner();
+          case 'delete-partner':
+            return window.deletePartner && window.deletePartner(Number(el.dataset.id));
+
+          // — Kadam reference templates (paste-from-docs buttons) —
+          case 'kadam-paste-req':
+            return (
+              window._kadam &&
+              window._kadam.pasteIntoReq(window._kadam.KADAM.templates[el.dataset.template])
+            );
+          case 'kadam-paste-res':
+            return (
+              window._kadam &&
+              window._kadam.pasteIntoRes(window._kadam.KADAM.templates[el.dataset.template])
+            );
+          case 'kadam-paste-string':
+            return (
+              window._kadam &&
+              window._kadam.pasteString(
+                el.dataset.target,
+                window._kadam.KADAM.templates[el.dataset.template],
+              )
+            );
         }
       },
       { signal: ctx.signal },
@@ -3134,11 +3219,12 @@ export async function mountInspector(root, ctx) {
   // inspector-specific subscriber that re-runs analysis on lang change.
 
   // ── Globals sweep on unmount ───────────────────────────────────
-  // Inline onclick="…" handlers in index.{en,uk,ru}.html still call
-  // window.X (Phase C-1 keeps that contract). External scripts also
-  // depend on a few of these (share.js → window.runAnalysis,
-  // shortcuts.js → window.openSaveModal, export.js → window.__spyglassLast,
-  // creative-probe.js iframe → window.renderBehaviorTab via postMessage).
+  // After Etap 2 + Etap 3, no inline onclick="" remains in HTML or
+  // JS-generated modals — every interaction routes through the
+  // central data-action dispatcher above. window.X is preserved
+  // only for external script callers (share.js → runAnalysis,
+  // shortcuts.js → openSaveModal, export.js → __spyglassLast,
+  // creative-probe.js iframe → renderBehaviorTab via postMessage).
   //
   // On unmount the registry calls our addCleanup. We delete every name
   // we attached so the next mount or another module starts clean — no
