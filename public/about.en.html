@@ -447,7 +447,7 @@
     <section class="kt-section" style="padding-top: var(--space-7)">
       <div class="kt-container">
         <div class="doc-prose">
-          <span class="eyebrow">docs · v8.0.0</span>
+          <span class="eyebrow">docs · v9.0.0</span>
           <h1 style="margin-top: var(--space-3)">Spyglass — how to use it</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             A private inspector for OpenRTB traffic. Paste JSON, get a breakdown: whether the
@@ -523,30 +523,15 @@
             see how it looks, with no risk to your session.
           </p>
 
-          <h3>Behavior tab — click-skim detection</h3>
+          <h3>Behavior tab — in-creative fraud detection</h3>
           <p>
-            Before the creative HTML parses, Spyglass injects a small instrumentation probe into the
-            iframe. The probe wraps <code>window.open</code>, the <code>location</code> setters
-            (<code>assign</code> / <code>replace</code> / <code>href=</code>),
-            <code>HTMLElement.click()</code>, the inline <code>onmouseover</code> /
-            <code>onmouseenter</code> / <code>onclick</code> setters and every
-            <code>addEventListener</code>. It tracks which DOM event is currently dispatching.
-          </p>
-          <p>
-            When a navigation API fires <em>during</em> a <code>mouseover</code> /
-            <code>mouseenter</code> / <code>mousemove</code> event, that's a
-            <strong>click-skim suspect</strong> — the creative is trying to fake a click without the
-            user actually clicking. With no event in flight at all (e.g. a
-            <code>setTimeout</code>-driven redirect), it's flagged as
-            <strong>auto-navigate</strong>. Genuine <code>click</code> / <code>pointerdown</code> /
-            <code>mousedown</code> / <code>touchstart</code> events pass through quietly.
-          </p>
-          <p>
-            Findings appear in the <strong>Behavior</strong> tab next to Validation / Crosscheck /
-            Categories, with the destination URL, the calling method (<code>window.open</code>,
-            <code>location.href=</code>, …) and the triggering event. The sandbox already blocks the
-            navigation itself; the probe makes the <em>attempt</em> visible so it can be attached to
-            a bug ticket.
+            Spyglass renders every creative in a sandboxed iframe with an instrumentation probe
+            inside. The probe catches 11 patterns of suspicious behaviour — from invisible click
+            traps to main-thread freezes — and the <strong>Behavior</strong> tab next to Validation
+            / Crosscheck shows structured findings with severity and destination URL. Architecture
+            deep-dive in the
+            <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a> section
+            below.
           </p>
 
           <h3>Sharing &amp; ergonomics</h3>
@@ -584,6 +569,153 @@
               a recovery key for the lost-password case — without it, access is gone forever.
             </li>
           </ul>
+
+          <hr />
+
+          <h2 id="behavior">Behavior Analysis &amp; Anti-Fraud</h2>
+          <p style="font-size: var(--fs-lg); color: var(--text)">
+            JSON validation answers the question
+            <em>"is the request/response well-formed?"</em>. The Behavior engine answers a
+            fundamentally different one:
+            <em>"what does this creative actually do in the user's browser?"</em>. It's the second
+            layer — runtime analysis of the rendered HTML/JS that you can't see from payload
+            inspection alone.
+          </p>
+
+          <h3>How it works</h3>
+          <p>
+            Spyglass renders the creative in a sandboxed iframe with
+            <code>sandbox="allow-scripts"</code> — no <code>allow-same-origin</code>, no
+            <code>allow-top-navigation</code>, no <code>allow-popups</code>. That's enough to
+            <em>block</em> most malicious actions. But blocking ≠ visibility: a creative trying to
+            fraud against a locked-down sandbox simply stays silent — the user never sees that
+            anything was wrong.
+          </p>
+          <p>
+            So before the creative HTML parses, a <strong>creative-probe</strong> runs in the iframe
+            (~830 lines of JavaScript, 15 instrumentation hooks). The probe wraps navigation APIs
+            (<code>window.open</code>, <code>Location.assign / replace / href=</code>), programmatic
+            clicks (<code>HTMLElement.click</code>, <code>HTMLFormElement.submit</code>), event
+            listeners, plus a <code>PerformanceObserver(longtask)</code>, a
+            <code>PerformanceObserver(resource)</code>, and a 1Hz heartbeat. Every suspicious action
+            — <code>postMessage</code> to the parent at the moment of detection.
+          </p>
+          <p>
+            The probe also <strong>measures real element geometry</strong> via
+            <code>getBoundingClientRect()</code> + <code>getComputedStyle()</code> at click time —
+            that's how it detects invisible overlay traps (opacity &lt; 0.05 on an element covering
+            &gt; 50% of viewport), close buttons that are too small (&lt; 44×44 IAB minimum), and
+            pixel-perfect synthetic clicks from pixelbots.
+          </p>
+          <p>
+            The parent window runs these events through the <strong>engine</strong> in
+            <code>packages/core/behavior/</code> — a pure-data function that matches patterns and
+            emits structured findings with severity (error / warning / info), destination URL, and
+            metadata (gesture lineage, threshold breached, etc.). Engine is browser- and-Node
+            compatible: it runs in the browser via <code>/api/analyze-behavior</code>
+            and on the server for archive replay.
+          </p>
+
+          <h3>Four detection vectors</h3>
+
+          <h4>1. Misclick traps</h4>
+          <p>
+            The creative mounts an invisible element (opacity=0, transparent background) covering
+            the full viewport above visible content. Any user click lands NOT where they intended —
+            in the trap, which logs the click as a conversion or redirects to a landing page. The
+            probe measures the click target's bounding rect and computed style: if the rect covers
+            &gt; 50% of viewport AND opacity &lt; 0.05 →
+            <code>behavior.trap.invisible_overlay</code> (severity ERROR).
+          </p>
+
+          <h4>2. Bot patterns</h4>
+          <p>
+            Pixelbot scripts read button centers via <code>getBoundingClientRect()</code> and
+            dispatch <code>click</code> events at that exact coordinate — but
+            <code>event.isTrusted</code> on a synthesized click is always
+            <code>false</code> (setting it to <code>true</code> requires WebDriver / CDP, which a
+            sandboxed creative has no access to). The probe catches three patterns:
+          </p>
+          <ul>
+            <li>
+              <strong>center-synth</strong> — distance &lt; 0.5px from center + isTrusted=false
+              (<code>behavior.bot.center_synth</code>, ERROR)
+            </li>
+            <li>
+              <strong>click-burst</strong> — 3+ clicks within a 200ms sliding window
+              (<code>behavior.bot.click_burst</code>, ERROR — humans don't tap that fast)
+            </li>
+            <li>
+              <strong>phantom-click</strong> — a click with zero preceding <code>mousemove</code> or
+              <code>touchstart</code> since the creative loaded
+              (<code>behavior.bot.phantom_click</code>, WARNING — typical of headless browsers)
+            </li>
+          </ul>
+
+          <h4>3. Malicious ads — frame busting &amp; auto-redirects</h4>
+          <p>
+            The trickiest vector: the creative tries to escape the sandboxed iframe up to the top
+            frame. Via <code>&lt;a target="_top"&gt;</code> anchors,
+            <code>&lt;form target="_top"&gt;</code> submission, or <code>setTimeout</code>-driven
+            auto-redirect. The sandbox blocks the actual navigation (no
+            <code>allow-top-navigation</code>), but the probe sees the <em>attempt</em>. The engine
+            tracks user-gesture lineage via <code>navigator.userActivation</code> + a manual
+            <code>_lastGestureAt</code>
+            snapshot and splits into four sub-patterns:
+          </p>
+          <ul>
+            <li>
+              <strong>frame_bust_anchor</strong> — click on <code>&lt;a target="_top"&gt;</code>;
+              ERROR without gesture lineage, WARNING within the 500ms gesture-grace
+            </li>
+            <li>
+              <strong>frame_bust_form</strong> — form submit with <code>target="_top"</code>; always
+              ERROR (forms with top-level navigation have no legitimate use in a banner)
+            </li>
+            <li>
+              <strong>auto_redirect</strong> — navigation with an empty event-stack and no recent
+              gesture (ERROR)
+            </li>
+            <li>
+              <strong>late_redirect</strong> — gesture happened, but navigation fired
+              <code>setTimeout</code> &gt; 500ms later (WARNING — classic cloaking: user clicked
+              something visible, then setTimeout ran the real navigation outside the gesture
+              lineage)
+            </li>
+          </ul>
+
+          <h4>4. Heavy ads</h4>
+          <p>
+            Creatives that block the main thread excessively or pull megabytes of resources. The
+            probe uses <code>PerformanceObserver(longtask)</code> to accumulate CPU blocking time
+            and <code>PerformanceObserver(resource)</code> for transferSize. Thresholds mirror
+            Chrome Heavy Ad Intervention:
+          </p>
+          <ul>
+            <li>
+              <strong>heavy_ad_cpu</strong> — &gt; 60s cumulative blocking OR &gt; 4s in any 30s
+              sliding window (ERROR)
+            </li>
+            <li>
+              <strong>heavy_ad_network</strong> — &gt; 4 MB cumulative sub-resources (ERROR; IAB
+              display-ad weight cap)
+            </li>
+            <li>
+              <strong>frozen_thread</strong> — separate mechanism via the <em>parent watchdog</em>:
+              the probe sends a 1Hz heartbeat, the parent monitors lag — if &gt; 3.5s without a
+              signal, a synthetic event is injected (a frozen probe can't report its own freeze — an
+              infinite loop blocks both <code>setInterval</code> and <code>postMessage</code>, so
+              detection has to live outside the iframe). ERROR.
+            </li>
+          </ul>
+
+          <p style="color: var(--text-muted); font-size: var(--fs-sm); margin-top: var(--space-5)">
+            All of this runs client-side, zero backend load. The engine in
+            <code>packages/core/behavior/</code> is pure-data; findings render in the
+            <strong>Behavior</strong> tab alongside Validation / Crosscheck. The sandbox blocks the
+            fraud action itself; we make the <em>attempt</em> visible — so you can attach it to a
+            bug ticket and go back to the creative supplier with a screenshot.
+          </p>
 
           <hr />
 

@@ -450,7 +450,7 @@
     <section class="kt-section" style="padding-top: var(--space-7)">
       <div class="kt-container">
         <div class="doc-prose">
-          <span class="eyebrow">docs · v8.0.0</span>
+          <span class="eyebrow">docs · v9.0.0</span>
           <h1 style="margin-top: var(--space-3)">Spyglass — як ним користуватись</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             Приватний інспектор OpenRTB-трафіку. Вставив JSON, отримав розбір: чи правильно
@@ -527,30 +527,14 @@
             виглядає, без ризику для своєї сесії.
           </p>
 
-          <h3>Behavior tab — детекція click-skim</h3>
+          <h3>Behavior tab — детекція fraud у креативі</h3>
           <p>
-            Перед тим як HTML креативу почне парситись, Spyglass ін'єктить у iframe маленький
-            instrumentation-probe. Probe огортає <code>window.open</code>, сетери
-            <code>location</code> (<code>assign</code> / <code>replace</code> / <code>href=</code>),
-            <code>HTMLElement.click()</code>, інлайн-сетери <code>onmouseover</code> /
-            <code>onmouseenter</code> / <code>onclick</code> та кожен <code>addEventListener</code>.
-            Він відстежує яка DOM-подія зараз диспатчиться.
-          </p>
-          <p>
-            Якщо API навігації спрацьовує <em>під час</em> події <code>mouseover</code> /
-            <code>mouseenter</code> / <code>mousemove</code> — це
-            <strong>підозра на click-skim</strong>: креатив намагається сімулювати клік без того щоб
-            користувач реально клікнув. Якщо взагалі немає події в стеку (наприклад redirect через
-            <code>setTimeout</code>) — це <strong>авто-навігація без gesture</strong>. Справжні
-            <code>click</code> / <code>pointerdown</code> / <code>mousedown</code> /
-            <code>touchstart</code> події проходять без позначок.
-          </p>
-          <p>
-            Знахідки з'являються у вкладці <strong>Behavior</strong> поряд з Validation / Crosscheck
-            / Categories — з URL призначення, методом виклику (<code>window.open</code>,
-            <code>location.href=</code>, …) та подією-тригером. Sandbox і так блокує саму навігацію;
-            probe робить сам <em>факт спроби</em>
-            видимим, щоб його можна було прикріпити до bug-тікета.
+            Spyglass рендерить кожен креатив у sandboxed iframe з instrumentation-probe-ом
+            всередині. Probe ловить 11 типів підозрілої поведінки — від невидимих клік-пасток до
+            зависання головного потоку — і вкладка <strong>Behavior</strong> поряд з Validation /
+            Crosscheck показує structured findings із severity та URL призначення. Деталі
+            архітектури — у розділі
+            <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a> нижче.
           </p>
 
           <h3>Шеринг та ергономіка</h3>
@@ -589,6 +573,150 @@
               забутому паролі є recovery key — без нього доступ втрачено назавжди.
             </li>
           </ul>
+
+          <hr />
+
+          <h2 id="behavior">Behavior Analysis &amp; Anti-Fraud</h2>
+          <p style="font-size: var(--fs-lg); color: var(--text)">
+            JSON-валідація відповідає на питання
+            <em>«чи правильно сформовано запит/відповідь?»</em>. Behavior-двигун відповідає на
+            принципово інше: <em>«а що цей креатив реально робить у браузері користувача?»</em>. Це
+            другий шар — runtime-аналіз поведінки HTML/JS, який не видно зі звичайного аналізу
+            payload-у.
+          </p>
+
+          <h3>Як це працює</h3>
+          <p>
+            Spyglass рендерить креатив у sandboxed iframe з
+            <code>sandbox="allow-scripts"</code> — без <code>allow-same-origin</code>, без
+            <code>allow-top-navigation</code>, без <code>allow-popups</code>. Цього достатньо щоб
+            <em>заблокувати</em> більшість зловмисних дій. Але блокування ≠ видимість: креатив, який
+            намагається виконати fraud, проти заблокованого sandbox-а просто мовчить — користувач не
+            бачить що щось було не так.
+          </p>
+          <p>
+            Тому перед HTML креативу в iframe-у запускається <strong>creative-probe</strong> (~830
+            рядків JavaScript, 15 instrumentation hooks). Probe огортає навігаційні API
+            (<code>window.open</code>, <code>Location.assign / replace / href=</code>), програмні
+            кліки (<code>HTMLElement.click</code>, <code>HTMLFormElement.submit</code>),
+            прослуховувачі подій, плюс підключає <code>PerformanceObserver(longtask)</code>,
+            <code>PerformanceObserver(resource)</code> та 1Hz heartbeat. Кожна підозріла дія у
+            момент виявлення — <code>postMessage</code> до батьківського вікна.
+          </p>
+          <p>
+            Probe також <strong>вимірює реальні розміри елементів</strong> через
+            <code>getBoundingClientRect()</code> + <code>getComputedStyle()</code> у момент кліку —
+            це дає змогу детектити невидимі шари-пастки (opacity &lt; 0.05 на елементі, що покриває
+            &gt; 50% viewport-у), занадто малі close-кнопки (&lt; 44×44 IAB) та центровані
+            синтетичні кліки від pixelbot-ів.
+          </p>
+          <p>
+            Батьківське вікно проганяє події через <strong>engine</strong> у
+            <code>packages/core/behavior/</code> — pure-data функцію, яка матчить шаблони і видає
+            structured findings із severity (error / warning / info), URL призначення, метаданими
+            (gesture lineage, threshold breached, тощо). Engine browser-and-Node compatible:
+            запускається у браузері через <code>/api/analyze-behavior</code> і на сервері для replay
+            архівних специменів.
+          </p>
+
+          <h3>Чотири вектори захисту</h3>
+
+          <h4>1. Misclick traps (Клік-пастки)</h4>
+          <p>
+            Креатив монтує невидимий елемент (opacity=0, transparent background) розміром на весь
+            viewport, поверх видимого контенту. Будь-який клік користувача потрапляє НЕ туди де він
+            збирався — а в пастку, яка реєструє клік як подію конверсії або редиректить на лендінг.
+            Probe вимірює geometry таргета та computed style: якщо bounding rect покриває &gt; 50%
+            viewport-у і opacity &lt; 0.05 →
+            <code>behavior.trap.invisible_overlay</code> (severity ERROR).
+          </p>
+
+          <h4>2. Bot Patterns (Боти)</h4>
+          <p>
+            Pixelbot-скрипти зчитують центр кнопки через <code>getBoundingClientRect()</code> і
+            диспатчать <code>click</code> у точно цю координату — але <code>event.isTrusted</code> у
+            синтезованому кліку завжди <code>false</code> (виставити <code>true</code> можна тільки
+            через WebDriver / CDP, до яких креатив у sandbox-і не має доступу). Probe ловить три
+            патерни:
+          </p>
+          <ul>
+            <li>
+              <strong>center-synth</strong> — відстань &lt; 0.5px від центра + isTrusted=false
+              (<code>behavior.bot.center_synth</code>, ERROR)
+            </li>
+            <li>
+              <strong>click-burst</strong> — 3+ кліків у 200мс sliding-window-і
+              (<code>behavior.bot.click_burst</code>, ERROR — людина так не клацає)
+            </li>
+            <li>
+              <strong>phantom-click</strong> — клік без жодного попереднього
+              <code>mousemove</code> чи <code>touchstart</code> з моменту завантаження креативу
+              (<code>behavior.bot.phantom_click</code>, WARNING — типово для headless-браузерів)
+            </li>
+          </ul>
+
+          <h4>3. Malicious Ads — Frame Busting &amp; Auto-Redirects</h4>
+          <p>
+            Найпідступніший вектор: креатив намагається вирватися з sandboxed iframe-у на top frame.
+            Через <code>&lt;a target="_top"&gt;</code> анкори,
+            <code>&lt;form target="_top"&gt;</code> сабміт або auto-redirect через
+            <code>setTimeout</code>. Sandbox блокує саму навігацію (немає
+            <code>allow-top-navigation</code>), але probe бачить <em>спробу</em>. Engine трекає
+            user-gesture лінейность через <code>navigator.userActivation</code> + ручний
+            <code>_lastGestureAt</code> snapshot і розрізняє чотири підпатерни:
+          </p>
+          <ul>
+            <li>
+              <strong>frame_bust_anchor</strong> — клік на <code>&lt;a target="_top"&gt;</code>;
+              ERROR без gesture lineage, WARNING якщо в межах 500мс gesture-grace
+            </li>
+            <li>
+              <strong>frame_bust_form</strong> — submit форми з <code>target="_top"</code>; завжди
+              ERROR (форми у банері з top-навігацією не мають легітимного use case-у)
+            </li>
+            <li>
+              <strong>auto_redirect</strong> — навігація з порожнім event-stack-ом і без recent
+              gesture (ERROR)
+            </li>
+            <li>
+              <strong>late_redirect</strong> — gesture був, але навігація через
+              <code>setTimeout</code> &gt; 500мс пізніше (WARNING — класичний клоакінг: користувач
+              клацнув щось видиме, потім setTimeout провів реальну навігацію поза gesture-lineage)
+            </li>
+          </ul>
+
+          <h4>4. Heavy Ads (Зажерливі креативи)</h4>
+          <p>
+            Креатив, який блокує main thread надмірно або тягне мегабайти. Probe використовує
+            <code>PerformanceObserver(longtask)</code> для акумуляції CPU-часу і
+            <code>PerformanceObserver(resource)</code> для transferSize. Пороги мирорять Chrome
+            Heavy Ad Intervention:
+          </p>
+          <ul>
+            <li>
+              <strong>heavy_ad_cpu</strong> — &gt; 60с cumulative blocking АБО &gt; 4с у будь-якому
+              30-секундному вікні (ERROR)
+            </li>
+            <li>
+              <strong>heavy_ad_network</strong> — &gt; 4 MB сабресурсів cumulative (ERROR; IAB
+              display-ad weight cap)
+            </li>
+            <li>
+              <strong>frozen_thread</strong> — окремий механізм через <em>parent watchdog</em>:
+              probe шле 1Hz heartbeat, parent моніторить лаг — якщо &gt; 3.5с без сигналу,
+              генерується синтетична подія (probe не може репортити власне зависання — нескінченний
+              цикл блокує і <code>setInterval</code> і <code>postMessage</code>, тому детекція
+              повинна жити поза iframe-ом). ERROR.
+            </li>
+          </ul>
+
+          <p style="color: var(--text-muted); font-size: var(--fs-sm); margin-top: var(--space-5)">
+            Все це працює client-side, нуль навантаження на бекенд. Engine у
+            <code>packages/core/behavior/</code> — pure-data функція; знахідки рендеряться у вкладці
+            <strong>Behavior</strong> поряд з Validation / Crosscheck. Sandbox блокує саму
+            fraud-дію; ми робимо <em>факт спроби</em> видимим — щоб ти міг прикріпити до bug-тікета
+            і повернутися до постачальника креативу зі screenshot-ом.
+          </p>
 
           <hr />
 
