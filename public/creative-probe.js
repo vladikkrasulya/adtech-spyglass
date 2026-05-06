@@ -25,6 +25,12 @@
        analysis: center-synth, click-burst, phantom-click (Phase 2
        Behavior heuristics; kept separate from the Phase 1 listener
        so the overlay logic stays untouched)
+     - document mousedown / touchstart / pointerdown / keydown (capture
+       phase) — gesture timestamp tracker for navContext() (Phase 3)
+     - document click (third capture-phase listener) — anchor target=_top
+       / _parent frame-bust intent detection (Phase 3)
+     - HTMLFormElement.prototype.submit + document submit-event capture
+       — form-based frame-bust via target=_top / _parent (Phase 3)
 
    Detection lineage:
      activeEventStack tracks the chain of DOM events currently
@@ -100,6 +106,16 @@
   const CLICK_BURST_THRESHOLD = 3;
   const CENTER_TOLERANCE_PX = 0.5;
 
+  // Phase 3 (malicious-ads) — gesture timing for auto-redirect classification.
+  // Capture-phase listeners on the user-input events below update _lastGestureAt;
+  // the navigation hooks (window.open / Location.* / anchor click / form.submit)
+  // read it via navContext() to decide whether the navigation has any
+  // user-gesture lineage, even when navigator.userActivation API is missing
+  // (older browsers / certain WebViews).
+  let _lastGestureAt = 0; // 0 = no gesture observed yet
+  const GESTURE_GRACE_MS = 500;
+  const USER_GESTURE_TYPES = ['mousedown', 'touchstart', 'pointerdown', 'keydown'];
+
   function send(payload) {
     try {
       const msg = Object.assign(
@@ -120,14 +136,43 @@
     return { trigger: top, kind: null };
   }
 
+  // Phase 3 — snapshot input-trust signals at the moment of a navigation
+  // attempt. Returned by reference into every nav-event payload so the
+  // engine has full classification metadata: it can split `auto_navigate`
+  // events into `auto_redirect` (no recent gesture, ERROR) vs `late_redirect`
+  // (gesture happened <GESTURE_GRACE_MS ago, WARNING — classic setTimeout
+  // cloaking) without re-deriving timing on its own.
+  function navContext() {
+    let isActive = false;
+    let hasBeenActive = false;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.userActivation) {
+        isActive = !!navigator.userActivation.isActive;
+        hasBeenActive = !!navigator.userActivation.hasBeenActive;
+      }
+    } catch (e) {
+      /* feature missing — falls through to gesture-time heuristic */
+    }
+    const msSinceGesture = _lastGestureAt ? Date.now() - _lastGestureAt : -1;
+    return {
+      userActivationActive: isActive,
+      userActivationEverActive: hasBeenActive,
+      msSinceGesture: msSinceGesture, // -1 = never any gesture
+      withinGestureGrace: msSinceGesture >= 0 && msSinceGesture <= GESTURE_GRACE_MS,
+    };
+  }
+
   function reportNavigation(method, url, extra) {
     const c = classifyTrigger();
-    const payload = {
-      kind: c.kind || 'navigation',
-      method: method,
-      url: String(url == null ? '' : url),
-      trigger: c.trigger,
-    };
+    const payload = Object.assign(
+      {
+        kind: c.kind || 'navigation',
+        method: method,
+        url: String(url == null ? '' : url),
+        trigger: c.trigger,
+      },
+      navContext(),
+    );
     if (extra) {
       for (const k in extra) payload[k] = extra[k];
     }
@@ -498,6 +543,146 @@
     );
   } catch (e) {
     /* listener install failed — non-fatal */
+  }
+
+  // 10) User-gesture timestamp tracker (Phase 3). Capture-phase listeners
+  //     update _lastGestureAt on every input that browsers count as a
+  //     trust-anchor for navigation. navContext() reads this so the
+  //     auto-redirect rule has a robust signal even when
+  //     navigator.userActivation isn't available (older browsers, some
+  //     WebViews). Capture phase so we win over author-attached handlers
+  //     that might stopPropagation.
+  USER_GESTURE_TYPES.forEach(function (gtype) {
+    try {
+      document.addEventListener(
+        gtype,
+        function () {
+          _lastGestureAt = Date.now();
+        },
+        true,
+      );
+    } catch (e) {
+      /* */
+    }
+  });
+
+  // 11) Anchor frame-bust intent detection (Phase 3). HTML-only frame
+  //     escape via <a target="_top|_parent" href="..."> bypasses the
+  //     window.open / Location.* hooks entirely — the browser invokes
+  //     the top-frame nav code path directly. We catch the *intent* by
+  //     inspecting click events on anchor descendants in capture phase.
+  //     The sandbox iframe (no allow-top-navigation) blocks the actual
+  //     navigation, but the attempt is what we report.
+  //
+  //     Severity is delegated to the engine: an anchor click fired
+  //     within GESTURE_GRACE_MS of a real gesture is suspicious-but-
+  //     possibly-legitimate (some banners do link out via _top); one
+  //     fired without any gesture lineage is unambiguous frame-bust.
+  try {
+    document.addEventListener(
+      'click',
+      function (e) {
+        try {
+          const t = e && e.target;
+          if (!t || typeof t.closest !== 'function') return;
+          const a = t.closest('a[target]');
+          if (!a) return;
+          const target = String(a.getAttribute('target') || '').toLowerCase();
+          if (target !== '_top' && target !== '_parent') return;
+          send(
+            Object.assign(
+              {
+                kind: 'frame_bust_anchor',
+                method: 'a[target=' + target + '].click',
+                url: String(a.getAttribute('href') || a.href || ''),
+                trigger: 'click',
+                tagName: 'A',
+                target: target,
+                isTrusted: !!(e && e.isTrusted),
+              },
+              navContext(),
+            ),
+          );
+        } catch (err) {
+          /* */
+        }
+      },
+      true,
+    );
+  } catch (e) {
+    /* */
+  }
+
+  // 12) Form-based frame-bust (Phase 3). Two paths to cover:
+  //     12.A HTMLFormElement.prototype.submit — programmatic call.
+  //          Override the prototype to inspect the form's `target`
+  //          before delegating.
+  //     12.B 'submit' event in capture phase — declarative form
+  //          submission via Enter / type=submit button.
+  //     Both paths emit `frame_bust_form` only when target ∈ {_top,
+  //     _parent}. The engine treats every such event as ERROR — forms
+  //     with target=_top inside a banner creative have no legitimate
+  //     use case (unlike anchors, which sometimes do link out).
+  try {
+    const origSubmit = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function () {
+      try {
+        const target = String(this.target || this.getAttribute('target') || '').toLowerCase();
+        if (target === '_top' || target === '_parent') {
+          send(
+            Object.assign(
+              {
+                kind: 'frame_bust_form',
+                method: 'form.submit',
+                url: String(this.action || this.getAttribute('action') || ''),
+                trigger: 'no-event',
+                tagName: 'FORM',
+                target: target,
+              },
+              navContext(),
+            ),
+          );
+        }
+      } catch (e) {
+        /* measurement failed — still delegate to native */
+      }
+      return origSubmit.apply(this, arguments);
+    };
+  } catch (e) {
+    /* */
+  }
+
+  try {
+    document.addEventListener(
+      'submit',
+      function (e) {
+        try {
+          const f = e && e.target;
+          if (!f || f.tagName !== 'FORM') return;
+          const target = String(f.target || f.getAttribute('target') || '').toLowerCase();
+          if (target !== '_top' && target !== '_parent') return;
+          send(
+            Object.assign(
+              {
+                kind: 'frame_bust_form',
+                method: 'submit-event',
+                url: String(f.action || f.getAttribute('action') || ''),
+                trigger: 'submit',
+                tagName: 'FORM',
+                target: target,
+                isTrusted: !!(e && e.isTrusted),
+              },
+              navContext(),
+            ),
+          );
+        } catch (err) {
+          /* */
+        }
+      },
+      true,
+    );
+  } catch (e) {
+    /* */
   }
 
   send({ kind: 'probe_ready', method: 'init', url: '', trigger: 'no-event' });

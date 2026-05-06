@@ -98,5 +98,10 @@
 
   "behavior.bot.center_synth": "Клік синтезований скриптом: координати точно в центрі <{tagName}> (відстань {distancePx}px) і event.isTrusted = false. Реальний користувач не клікає в pixel-perfect центр, а ізольований креатив не має доступу до WebDriver/CDP, щоб виставити isTrusted = true. Класична ознака pixelbot-у.",
   "behavior.bot.click_burst": "Серія з {clickCount} кліків за {windowMs}мс. Людина не клацає так швидко на одній цілі — це автоматизована атака на CTA або трекер.",
-  "behavior.bot.phantom_click": "Клік на <{tagName}> (isTrusted={isTrusted}) без жодного попереднього mousemove чи touchstart з моменту завантаження креативу. Або користувач клацнув без єдиного руху (рідко, але буває коли курсор уже стояв над iframe), або це синтетичний клік від headless-браузера/пікселбота."
+  "behavior.bot.phantom_click": "Клік на <{tagName}> (isTrusted={isTrusted}) без жодного попереднього mousemove чи touchstart з моменту завантаження креативу. Або користувач клацнув без єдиного руху (рідко, але буває коли курсор уже стояв над iframe), або це синтетичний клік від headless-браузера/пікселбота.",
+
+  "behavior.malicious.frame_bust_anchor": "Клік по <a target=\"{target}\" href=\"{url}\"> — спроба вирватися з iframe-у через top-level навігацію. Грейс жесту: {withinGestureGrace} (msSinceGesture={msSinceGesture}). Деякі легітимні банери дійсно лінкують через _top, але без попереднього user gesture-у це класичний frame-bust.",
+  "behavior.malicious.frame_bust_form": "Submit форми з target=\"{target}\" → {url} (метод: {method}). Форми всередині banner-креативу з target=_top не мають жодного легітимного use case-у — це або credential phishing, або top-frame redirect замаскований під щось інше.",
+  "behavior.malicious.auto_redirect": "Авто-навігація без user gesture-у: {method} → {url}. msSinceGesture={msSinceGesture}, userActivationEverActive={userActivationEverActive}. Креатив намагається перенести користувача без його дії — sandbox блокує саму навігацію, але намір зафіксовано.",
+  "behavior.malicious.late_redirect": "Відкладений редирект: {method} → {url} зафіксовано через {msSinceGesture}мс після останнього жесту, але вже з порожнім event-stack-ом. Класичний патерн клоакінгу — користувач клацнув щось видиме, потім setTimeout провів реальну навігацію поза gesture-lineage."
 }

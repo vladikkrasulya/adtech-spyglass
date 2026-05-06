@@ -10,10 +10,12 @@
  *
  * Phase 1 — misclick (UX traps, dark patterns)
  * Phase 2 — bot-patterns (scripted input, headless tells)
- * Phase 3+ — malicious (heavy ads, frame-bust, miners) — TBD
+ * Phase 3 — malicious (frame-bust + auto-redirect classification)
+ * Phase 4+ — heavy-ads (CPU/network/freeze) — TBD
  */
 
 const misclick = require('./misclick');
 const botPatterns = require('./bot-patterns');
+const malicious = require('./malicious');
 
-module.exports = [...misclick, ...botPatterns];
+module.exports = [...misclick, ...botPatterns, ...malicious];

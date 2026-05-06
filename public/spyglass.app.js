@@ -560,6 +560,8 @@ export async function mountInspector(root, ctx) {
           center_synth_click: t('behavior.kind.center_synth_click'),
           click_burst: t('behavior.kind.click_burst'),
           phantom_click: t('behavior.kind.phantom_click'),
+          frame_bust_anchor: t('behavior.kind.frame_bust_anchor'),
+          frame_bust_form: t('behavior.kind.frame_bust_form'),
         },
         locale: activeLocale(),
       });

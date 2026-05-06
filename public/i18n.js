@@ -123,6 +123,8 @@
       'behavior.kind.center_synth_click': 'центрований синтетичний клік',
       'behavior.kind.click_burst': 'серія кліків (бот)',
       'behavior.kind.phantom_click': 'phantom-клік (без gesture)',
+      'behavior.kind.frame_bust_anchor': 'frame-bust через <a target=_top>',
+      'behavior.kind.frame_bust_form': 'frame-bust через <form target=_top>',
       'behavior.heading.findings': 'Знайдено загроз',
       'behavior.heading.timeline': 'Хронологія подій',
 
@@ -350,6 +352,8 @@
       'behavior.kind.center_synth_click': 'center-point synthetic click',
       'behavior.kind.click_burst': 'click burst (bot)',
       'behavior.kind.phantom_click': 'phantom click (no gesture)',
+      'behavior.kind.frame_bust_anchor': 'frame-bust via <a target=_top>',
+      'behavior.kind.frame_bust_form': 'frame-bust via <form target=_top>',
       'behavior.heading.findings': 'Threats detected',
       'behavior.heading.timeline': 'Event timeline',
 
@@ -569,6 +573,8 @@
       'behavior.kind.center_synth_click': 'центрированный синтетический клик',
       'behavior.kind.click_burst': 'серия кликов (бот)',
       'behavior.kind.phantom_click': 'phantom-клик (без gesture)',
+      'behavior.kind.frame_bust_anchor': 'frame-bust через <a target=_top>',
+      'behavior.kind.frame_bust_form': 'frame-bust через <form target=_top>',
       'behavior.heading.findings': 'Найдено угроз',
       'behavior.heading.timeline': 'Хронология событий',
       'empty.partners': 'Партнёров пока нет',

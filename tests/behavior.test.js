@@ -91,6 +91,74 @@ function phantomClickEvent(opts) {
   );
 }
 
+// Phase 3 — malicious-ad helpers. navContext metadata is what the probe
+// attaches via the new navContext() helper; tests model the engine's
+// reading of that metadata.
+function frameBustAnchorEvent(opts) {
+  return Object.assign(
+    {
+      type: 'spyglass-probe',
+      v: 1,
+      ts: Date.now(),
+      kind: 'frame_bust_anchor',
+      method: 'a[target=_top].click',
+      url: 'https://attacker.example/landing',
+      trigger: 'click',
+      tagName: 'A',
+      target: '_top',
+      isTrusted: false,
+      // navContext defaults — caller overrides as needed
+      userActivationActive: false,
+      userActivationEverActive: false,
+      msSinceGesture: -1,
+      withinGestureGrace: false,
+    },
+    opts || {},
+  );
+}
+
+function frameBustFormEvent(opts) {
+  return Object.assign(
+    {
+      type: 'spyglass-probe',
+      v: 1,
+      ts: Date.now(),
+      kind: 'frame_bust_form',
+      method: 'form.submit',
+      url: 'https://attacker.example/landing',
+      trigger: 'no-event',
+      tagName: 'FORM',
+      target: '_top',
+      userActivationActive: false,
+      userActivationEverActive: false,
+      msSinceGesture: -1,
+      withinGestureGrace: false,
+    },
+    opts || {},
+  );
+}
+
+function autoNavigateEvent(opts) {
+  // The probe emits this kind from reportNavigation when activeEventStack
+  // is empty. Phase 3 refinement attaches navContext metadata.
+  return Object.assign(
+    {
+      type: 'spyglass-probe',
+      v: 1,
+      ts: Date.now(),
+      kind: 'auto_navigate',
+      method: 'location.href=',
+      url: 'https://attacker.example/landing',
+      trigger: 'no-event',
+      userActivationActive: false,
+      userActivationEverActive: false,
+      msSinceGesture: -1,
+      withinGestureGrace: false,
+    },
+    opts || {},
+  );
+}
+
 test('analyze() — empty event list yields clean status, no findings', () => {
   const r = analyze([]);
   assert.equal(r.status, 'clean');
@@ -264,6 +332,132 @@ test('analyze() — bot patterns and overlay trap coexist in same analysis', () 
 
 test('analyze() — bot findings carry decorated msg + nullable specRef', () => {
   const r = analyze([centerSynthClickEvent(), clickBurstEvent(), phantomClickEvent()]);
+  for (const f of r.findings) {
+    assert.equal(typeof f.msg, 'string');
+    assert.notEqual(f.msg, '');
+    assert.notEqual(f.msg, '[' + f.id + ']');
+    assert.ok('specRef' in f);
+  }
+});
+
+// ── Phase 3 (malicious-ad) rules ────────────────────────────────────────────
+
+test('analyze() — frame_bust_anchor without gesture → ERROR', () => {
+  const r = analyze([frameBustAnchorEvent({ withinGestureGrace: false, msSinceGesture: -1 })]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.frame_bust_anchor');
+  assert.equal(r.findings[0].level, 'error');
+  assert.equal(r.findings[0].params.withinGestureGrace, false);
+  assert.equal(r.findings[0].params.target, '_top');
+});
+
+test('analyze() — frame_bust_anchor within gesture grace → WARNING', () => {
+  // The "click banner → real anchor → target=_top" pattern (poor practice
+  // but legitimate) — engine downgrades severity when gesture lineage exists.
+  const r = analyze([frameBustAnchorEvent({ withinGestureGrace: true, msSinceGesture: 120 })]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.frame_bust_anchor');
+  assert.equal(r.findings[0].level, 'warning');
+  assert.equal(r.findings[0].params.msSinceGesture, 120);
+});
+
+test('analyze() — frame_bust_form is always ERROR regardless of gesture', () => {
+  // No legitimate ad creative ships a form with target=_top — the rule
+  // does not split severity on gesture grace.
+  const inGrace = analyze([frameBustFormEvent({ withinGestureGrace: true, msSinceGesture: 50 })]);
+  const noGrace = analyze([frameBustFormEvent({ withinGestureGrace: false, msSinceGesture: -1 })]);
+  assert.equal(inGrace.findings[0].level, 'error');
+  assert.equal(noGrace.findings[0].level, 'error');
+  assert.equal(inGrace.findings[0].id, 'behavior.malicious.frame_bust_form');
+});
+
+test('analyze() — auto_navigate without gesture → behavior.malicious.auto_redirect ERROR', () => {
+  const r = analyze([autoNavigateEvent({ withinGestureGrace: false, msSinceGesture: -1 })]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.auto_redirect');
+  assert.equal(r.findings[0].level, 'error');
+  assert.equal(r.status, 'errors');
+});
+
+test('analyze() — auto_navigate within gesture grace → behavior.malicious.late_redirect WARNING', () => {
+  // Cloaking pattern: user clicked something visible, setTimeout fired
+  // the real navigation outside the gesture lineage. Probe still emits
+  // kind=auto_navigate (empty event-stack at nav time), but withinGestureGrace
+  // is true because a recent gesture happened.
+  const r = analyze([autoNavigateEvent({ withinGestureGrace: true, msSinceGesture: 350 })]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.late_redirect');
+  assert.equal(r.findings[0].level, 'warning');
+  assert.equal(r.findings[0].params.msSinceGesture, 350);
+});
+
+test('analyze() — auto_navigate produces exactly ONE of auto/late, not both', () => {
+  // Mutual exclusion: a single nav event must classify into one rule.
+  const noGrace = analyze([autoNavigateEvent({ withinGestureGrace: false })]);
+  const inGrace = analyze([autoNavigateEvent({ withinGestureGrace: true, msSinceGesture: 100 })]);
+  assert.equal(noGrace.findings.length, 1);
+  assert.equal(inGrace.findings.length, 1);
+  assert.notEqual(noGrace.findings[0].id, inGrace.findings[0].id);
+});
+
+test('analyze() — Phase 3 events without navContext metadata are treated as no-grace (defensive)', () => {
+  // Older probes (pre-Phase-3) don't attach withinGestureGrace. The
+  // engine must still classify — defaulting to ERROR for missing-grace
+  // is safer than silent skip.
+  const ev = autoNavigateEvent();
+  delete ev.withinGestureGrace;
+  delete ev.msSinceGesture;
+  const r = analyze([ev]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.auto_redirect');
+  assert.equal(r.findings[0].level, 'error');
+});
+
+test('analyze() — non-auto_navigate kinds (window_open with gesture) do NOT trigger auto/late rules', () => {
+  // window_open with a real click in stack is a normal user-driven flow.
+  // The auto/late rules only fire on kind === 'auto_navigate' (empty stack).
+  const ev = {
+    type: 'spyglass-probe',
+    kind: 'window_open',
+    method: 'window.open',
+    url: 'https://example.com',
+    trigger: 'click',
+    withinGestureGrace: false, // even with no grace, this isn't auto_navigate
+  };
+  const r = analyze([ev]);
+  assert.equal(r.findings.length, 0);
+  assert.equal(r.status, 'clean');
+});
+
+test('analyze() — Phase 1+2+3 rules compose: trap + bot + frame-bust in one stream', () => {
+  // The full stack: an invisible overlay creative also runs a pixelbot
+  // synthetic click and tries to frame-bust on top. Every rule fires
+  // independently and findings stack in event order.
+  const r = analyze([
+    probeReady(),
+    invisibleOverlayClickEvent(),
+    centerSynthClickEvent(),
+    frameBustAnchorEvent({ withinGestureGrace: false }),
+    frameBustFormEvent(),
+    autoNavigateEvent({ withinGestureGrace: false }),
+  ]);
+  const ids = r.findings.map((f) => f.id);
+  assert.ok(ids.includes('behavior.trap.invisible_overlay'));
+  assert.ok(ids.includes('behavior.bot.center_synth'));
+  assert.ok(ids.includes('behavior.malicious.frame_bust_anchor'));
+  assert.ok(ids.includes('behavior.malicious.frame_bust_form'));
+  assert.ok(ids.includes('behavior.malicious.auto_redirect'));
+  assert.equal(r.status, 'errors');
+});
+
+test('analyze() — malicious findings carry decorated msg + nullable specRef', () => {
+  const r = analyze([
+    frameBustAnchorEvent({ withinGestureGrace: false }),
+    frameBustFormEvent(),
+    autoNavigateEvent({ withinGestureGrace: false }),
+    autoNavigateEvent({ withinGestureGrace: true, msSinceGesture: 200 }),
+  ]);
+  assert.equal(r.findings.length, 4);
   for (const f of r.findings) {
     assert.equal(typeof f.msg, 'string');
     assert.notEqual(f.msg, '');

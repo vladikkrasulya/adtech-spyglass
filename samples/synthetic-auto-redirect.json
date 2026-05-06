@@ -1,0 +1,25 @@
+{
+  "_note": "Synthetic fraud BidResponse — auto-redirect without user gesture. The adm renders a visible banner AND fires a setTimeout-driven location.href change 100ms after load. Probe hooks 2/3 (Location.href setter override) catch the assignment; classifyTrigger sees an empty event-stack so kind=auto_navigate. navContext attaches msSinceGesture=-1 (no gesture observed yet) and withinGestureGrace=false. Engine's autoRedirect rule promotes to behavior.malicious.auto_redirect (ERROR). Sandbox blocks the actual nav, but the intent is recorded.",
+  "id": "bid-response-auto-redirect-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "synthetic-bad-actor",
+      "bid": [
+        {
+          "id": "bid-auto-redirect-001",
+          "impid": "1",
+          "price": 1.5,
+          "adid": "creative-auto-redirect-001",
+          "adomain": ["bad-actor.example"],
+          "cid": "campaign-auto-redirect-001",
+          "crid": "creative-auto-redirect-001",
+          "w": 300,
+          "h": 250,
+          "cat": ["IAB1"],
+          "adm": "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>banner</title><style>html,body{margin:0;padding:0;height:100%;font-family:sans-serif}.banner{width:300px;height:250px;background:linear-gradient(135deg,#3e63dd,#7c8cff);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;text-align:center}</style></head><body><div class=\"banner\">Sale ends today<br>Don't miss it</div><script>setTimeout(function(){location.href='https://attacker.example/landing';},100);</script></body></html>"
+        }
+      ]
+    }
+  ]
+}

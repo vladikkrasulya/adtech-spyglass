@@ -104,5 +104,10 @@
 
   "behavior.bot.center_synth": "Click is script-synthesized: clientX/Y land at the geometric center of <{tagName}> (distance {distancePx}px) AND event.isTrusted = false. Real users don't hit pixel-perfect centers, and an isolated creative can't get isTrusted=true without WebDriver/CDP access. Canonical pixelbot signature.",
   "behavior.bot.click_burst": "{clickCount} clicks fired within {windowMs}ms on a single target. Humans don't tap that fast — looks like automated CTA / tracker abuse.",
-  "behavior.bot.phantom_click": "Click on <{tagName}> (isTrusted={isTrusted}) fired with zero mousemove and zero touchstart since the creative loaded. Either the user clicked with no intervening motion (rare — happens if the cursor already sat over the iframe) or it's a synthetic click from a headless browser / pixelbot."
+  "behavior.bot.phantom_click": "Click on <{tagName}> (isTrusted={isTrusted}) fired with zero mousemove and zero touchstart since the creative loaded. Either the user clicked with no intervening motion (rare — happens if the cursor already sat over the iframe) or it's a synthetic click from a headless browser / pixelbot.",
+
+  "behavior.malicious.frame_bust_anchor": "Click on <a target=\"{target}\" href=\"{url}\"> — attempt to escape the iframe via top-level navigation. Gesture grace: {withinGestureGrace} (msSinceGesture={msSinceGesture}). Some legitimate banners do link out via _top, but without a preceding user gesture this is a textbook frame-bust.",
+  "behavior.malicious.frame_bust_form": "Form submission with target=\"{target}\" → {url} (method: {method}). Forms inside a banner creative with target=_top have no legitimate use — this is either credential phishing or a top-frame redirect dressed up as something else.",
+  "behavior.malicious.auto_redirect": "Auto-navigation without a user gesture: {method} → {url}. msSinceGesture={msSinceGesture}, userActivationEverActive={userActivationEverActive}. The creative is trying to navigate the user without input — the sandbox blocks the actual navigation, but the intent is recorded.",
+  "behavior.malicious.late_redirect": "Delayed redirect: {method} → {url} fired {msSinceGesture}ms after the last gesture, but with an empty event-stack. Classic cloaking pattern — user clicked something visible, then setTimeout ran the real navigation outside the gesture lineage."
 }
