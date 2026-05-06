@@ -44,13 +44,20 @@ export function toast(msg, type) {
    available, falls back to the key itself. Lets module-scoped code
    import a stable `t` identifier even before i18n.js becomes a real
    module. Once it does, this re-export point goes away cleanly. */
-export const t = (...args) =>
-  typeof window.t === 'function' ? window.t(...args) : args[0];
+export const t = (...args) => (typeof window.t === 'function' ? window.t(...args) : args[0]);
 
 /* ── Tab badge severity (Phase B helpers, also extracted) ──────────
    setTabBadge mutates text + severity class on an inspector-tab badge.
    All four severity classes are stripped before the new one is added
-   so toggling between specimens never leaves stale state. */
+   so toggling between specimens never leaves stale state.
+
+   Manifesto rule 3 (state drives surface presence): when the badge
+   has nothing to show ('' or '0'), hide it via the [hidden] attribute
+   so the empty inspector chrome doesn't read as "0 0 0 0 0" — it just
+   reads as a clean tab bar. Meaningful text ('✓', '!', '5', '—')
+   passes through and shows the badge. Caller doesn't need to think
+   about visibility — it follows the value.
+*/
 export function setTabBadge(id, opts) {
   const el = $(id);
   if (!el) return;
@@ -58,6 +65,8 @@ export function setTabBadge(id, opts) {
   if (o.text !== undefined) el.textContent = String(o.text);
   el.classList.remove('danger', 'warn', 'info', 'ok');
   if (o.severity) el.classList.add(o.severity);
+  const txt = (el.textContent || '').trim();
+  el.hidden = txt === '' || txt === '0';
 }
 
 /* Reduce a request/response findings[] to the worst severity class.

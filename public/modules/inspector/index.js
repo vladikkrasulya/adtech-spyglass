@@ -28,7 +28,7 @@
 
 import { mountInspector } from '/spyglass.app.js';
 
-const ASSET_VERSION = '1';
+const ASSET_VERSION = '2';
 
 async function loadStylesheet(href) {
   const link = document.createElement('link');
@@ -39,11 +39,7 @@ async function loadStylesheet(href) {
   // listener also resolves so a 404 doesn't hang the module forever — we
   // log instead.
   await new Promise((resolve) => {
-    link.addEventListener(
-      'load',
-      () => resolve(),
-      { once: true },
-    );
+    link.addEventListener('load', () => resolve(), { once: true });
     link.addEventListener(
       'error',
       () => {
@@ -84,9 +80,7 @@ export default {
   async mount(root, ctx) {
     // 1. Component CSS — append + await + register cleanup so the
     //    next mount starts from a clean head.
-    const cssLink = await loadStylesheet(
-      `/modules/inspector/inspector.css?v=${ASSET_VERSION}`,
-    );
+    const cssLink = await loadStylesheet(`/modules/inspector/inspector.css?v=${ASSET_VERSION}`);
     ctx.addCleanup(() => cssLink.remove());
 
     // 2. Fetch the locale-matched template, with EN fallback so an

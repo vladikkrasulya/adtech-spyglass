@@ -217,7 +217,7 @@ export async function mountInspector(root, ctx) {
     if (!el) return;
     const paths = Object.keys(catsByPath || {});
     const total = paths.reduce((n, p) => n + catsByPath[p].length, 0);
-    if (badge) badge.textContent = total ? String(total) : '0';
+    setTabBadge('categoriesBadge', { text: total ? String(total) : '' });
     if (!paths.length) {
       el.innerHTML =
         '<div class="empty-hint">' +
@@ -323,7 +323,44 @@ export async function mountInspector(root, ctx) {
     const len = el.value.length;
     count.textContent = len > 0 ? (len > 999 ? (len / 1000).toFixed(1) + 'k' : len) : '0';
     count.className = 'char-count' + (len > 50000 ? ' warn' : '');
+    // Manifesto rule 3: hide the char-count when the editor is empty.
+    // '0' adds noise to the empty state (the "0 порожньо" pair reads as
+    // duplicate "nothing here" markers). The json-badge below already
+    // says 'порожньо' / 'empty' more readably.
+    count.hidden = len === 0;
     updateJsonBadge(id);
+    refreshEmptyStateChrome();
+  }
+
+  // Manifesto rule 3 enforcer — hides chrome elements that have no data
+  // to display in the current state. Called from updateCharCount on every
+  // editor change (input / clear / format / paste) so visibility tracks
+  // payload presence in real time. Tab badges hide themselves via
+  // setTabBadge() in utils.js; this function covers the sidebar.
+  //
+  //   - "summary" section title  → hidden when both editors are empty
+  //   - "winning bid" metric     → hidden until there's a bidRes
+  //                                (the price is meaningless without one)
+  //   - OS/GEO/device/connection → hidden until there's a bidReq
+  //                                (those rows come from the request payload)
+  //
+  // The library + history sections in the same sidebar stay visible
+  // regardless — they reflect saved state, not the current analysis.
+  function refreshEmptyStateChrome() {
+    const reqEl = $('bidReq');
+    const resEl = $('bidRes');
+    const hasReq = !!(reqEl && reqEl.value && reqEl.value.trim());
+    const hasRes = !!(resEl && resEl.value && resEl.value.trim());
+    const isAllEmpty = !hasReq && !hasRes;
+
+    const summaryTitle = document.querySelector('[data-section="summary-title"]');
+    if (summaryTitle) summaryTitle.hidden = isAllEmpty;
+
+    const winningBidCard = document.querySelector('[data-section="winning-bid"]');
+    if (winningBidCard) winningBidCard.hidden = !hasRes;
+
+    const mInfo = $('mInfo');
+    if (mInfo) mInfo.hidden = !hasReq;
   }
 
   function updateJsonBadge(id) {
@@ -597,7 +634,7 @@ export async function mountInspector(root, ctx) {
     const all = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
     // probe_ready is an internal signal, not user-visible.
     const events = all.filter((e) => e.kind !== 'probe_ready');
-    badge.textContent = events.length;
+    setTabBadge('behaviorBadge', { text: events.length || '' });
     // Phase 1 Behavior epic: delegate body render to the Behavior module
     // (public/modules/behavior/index.js) when it's loaded. The module
     // posts events to /api/analyze-behavior and renders findings above
@@ -1072,7 +1109,7 @@ export async function mountInspector(root, ctx) {
         statBox(counts.video, 'videos') +
         statBox(counts.native, 'native') +
         statBox(counts.audio, 'audio');
-      $('inspectorBadge').textContent = imps.length;
+      setTabBadge('inspectorBadge', { text: imps.length || '' });
 
       // Backend analysis (validation + semantic crosscheck)
       let validation = null,

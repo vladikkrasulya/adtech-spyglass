@@ -1,393 +1,419 @@
-    <div class="toast-container" id="toastContainer"></div>
+<div class="toast-container" id="toastContainer"></div>
 
-    <!-- ── Header ── -->
-    <!-- Phase 8: unverified-email banner. Shown only when logged-in user has NULL email_verified_at. -->
-    <div
-      id="verifyBanner"
-      style="
-        display: none;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-3);
-        padding: var(--space-2) var(--space-3);
-        background: rgba(255, 180, 60, 0.12);
-        border-bottom: 1px solid rgba(255, 180, 60, 0.4);
-        font-size: var(--fs-sm);
-      "
+<!-- ── Header ── -->
+<!-- Phase 8: unverified-email banner. Shown only when logged-in user has NULL email_verified_at. -->
+<div
+  id="verifyBanner"
+  style="
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(255, 180, 60, 0.12);
+    border-bottom: 1px solid rgba(255, 180, 60, 0.4);
+    font-size: var(--fs-sm);
+  "
+>
+  <span>Подтверди свой email — это улучшает защиту аккаунта.</span>
+  <button class="btn btn-ghost btn-sm" data-action="verify-email">отправить письмо</button>
+</div>
+<header class="app-header">
+  <div class="kt-brand">
+    <span class="kt-brand-spark">K</span>
+    <span>spyglass · openrtb inspector</span>
+    <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
+      >v9.0.0</span
     >
-      <span>Подтверди свой email — это улучшает защиту аккаунта.</span>
-      <button class="btn btn-ghost btn-sm" data-action="verify-email">отправить письмо</button>
+  </div>
+  <div class="app-header-actions">
+    <div class="sim-price-wrap">
+      <label for="simPrice">sim price</label>
+      <input id="simPrice" type="text" placeholder="1.50" />
     </div>
-    <header class="app-header">
-      <div class="kt-brand">
-        <span class="kt-brand-spark">K</span>
-        <span>spyglass · openrtb inspector</span>
-        <span class="mono-label hide-sm" style="margin-left: var(--space-2)">v8.0.0</span>
-      </div>
-      <div class="app-header-actions">
-        <div class="sim-price-wrap">
-          <label for="simPrice">sim price</label>
-          <input id="simPrice" type="text" placeholder="1.50" />
-        </div>
-        <a
-          href="/ru/about"
-          target="_blank"
-          rel="noopener"
-          class="btn btn-ghost btn-sm"
-          title="Как пользоваться · что Spyglass умеет и не умеет"
-          style="text-decoration: none"
-        >
-          docs ↗
-        </a>
-        <button
-          data-action="save-sample"
-          class="btn btn-ghost btn-sm"
-          title="Save current request/response to library"
-        >
-          save
-        </button>
-        <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">
-          analyze stream
-        </button>
-        <!-- Language + theme toggles. Buttons live in the header so users can
+    <a
+      href="/ru/about"
+      target="_blank"
+      rel="noopener"
+      class="btn btn-ghost btn-sm"
+      title="Как пользоваться · что Spyglass умеет и не умеет"
+      style="text-decoration: none"
+    >
+      docs ↗
+    </a>
+    <button
+      data-action="save-sample"
+      class="btn btn-ghost btn-sm"
+      title="Save current request/response to library"
+    >
+      save
+    </button>
+    <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">analyze</button>
+    <!-- Language + theme toggles. Buttons live in the header so users can
              see at a glance which locale/theme is active. The IIFEs in <head>
              detect these existing buttons and bind their handlers (rather
              than appending floating fixed-position fallbacks). -->
-        <details class="kt-lang-menu">
-          <summary class="kt-lang-toggle" title="язык: Русский">
-            <span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span>
-          </summary>
-          <div class="kt-lang-menu-list" role="menu">
-            <a href="/" role="menuitem" lang="en">EN · English</a>
-            <a href="/uk/" role="menuitem" lang="uk">UK · Українська</a>
-            <a href="/ru/" role="menuitem" lang="ru" aria-current="true">RU · Русский</a>
-          </div>
-        </details>
-        <button class="kt-theme-toggle" type="button" aria-label="Toggle theme">◐</button>
-        <!-- Auth widget — switches between sign-in button and email/logout based on /api/auth/me -->
-        <div id="authWidget" class="auth-widget" aria-live="polite">
-          <button
-            id="authSignInBtn"
-            class="btn btn-ghost btn-sm"
-            data-action="open-auth"
-            data-mode="login"
-            style="display: none"
-          >
-            sign in
-          </button>
-          <span id="authUserBlock" style="display: none; align-items: center; gap: var(--space-2)">
-            <span
-              id="authEmail"
-              class="mono-label hide-sm"
-              style="
-                color: var(--text);
-                text-transform: none;
-                letter-spacing: 0;
-                max-width: 180px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              "
-            ></span>
-            <button class="btn btn-ghost btn-sm" data-action="signout">sign out</button>
-          </span>
-        </div>
+    <details class="kt-lang-menu">
+      <summary class="kt-lang-toggle" title="язык: Русский">
+        <span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span>
+      </summary>
+      <div class="kt-lang-menu-list" role="menu">
+        <a href="/" role="menuitem" lang="en">EN · English</a>
+        <a href="/uk/" role="menuitem" lang="uk">UK · Українська</a>
+        <a href="/ru/" role="menuitem" lang="ru" aria-current="true">RU · Русский</a>
       </div>
-    </header>
-
-    <!-- ── Inputs ── -->
-    <section class="input-section">
-      <div class="input-card">
-        <div class="input-card-header">
-          <span class="input-card-title">запрос</span>
-          <div class="input-card-actions">
-            <span class="char-count" id="reqCount">0</span>
-            <span class="json-badge empty" id="reqBadge">пусто</span>
-            <button data-action="clear-input" data-target="bidReq" class="btn-icon" title="Очистить поле">
-              очистить
-            </button>
-            <button data-action="format-json" data-target="bidReq" class="btn-icon" title="Отформатировать JSON">
-              формат
-            </button>
-            <button data-action="copy-text" data-target="bidReq" class="btn-icon" title="Скопировать в буфер">
-              копия
-            </button>
-          </div>
-        </div>
-        <textarea
-          id="bidReq"
-          class="json-input"
-          placeholder="Вставь сюда oRTB BidRequest JSON.&#10;&#10;Подсказка: Ctrl+Enter — запустить анализ."
-        ></textarea>
-      </div>
-      <div class="input-card">
-        <div class="input-card-header">
-          <span class="input-card-title">ответ</span>
-          <div class="input-card-actions">
-            <span class="char-count" id="resCount">0</span>
-            <span class="json-badge empty" id="resBadge">пусто</span>
-            <button data-action="clear-input" data-target="bidRes" class="btn-icon" title="Очистить поле">
-              очистить
-            </button>
-            <button data-action="format-json" data-target="bidRes" class="btn-icon" title="Отформатировать JSON">
-              формат
-            </button>
-            <button data-action="copy-text" data-target="bidRes" class="btn-icon" title="Скопировать в буфер">
-              копия
-            </button>
-          </div>
-        </div>
-        <textarea
-          id="bidRes"
-          class="json-input"
-          placeholder="Вставь oRTB BidResponse JSON (необязательно)."
-        ></textarea>
-      </div>
-    </section>
-
-    <!-- ── Main grid ── -->
-    <main class="main-grid">
-      <!-- Left sidebar -->
-      <aside class="sidebar-left">
-        <div class="section-title">сводка</div>
-        <div class="metric-card">
-          <div class="metric-label">winning bid</div>
-          <div class="metric-value" id="mPrice">$0.00</div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 0" id="mInfo">
-          <div class="info-row">
-            <span class="info-key">os</span><span class="info-val">—</span>
-          </div>
-          <div class="info-row">
-            <span class="info-key">geo</span><span class="info-val">—</span>
-          </div>
-          <div class="info-row">
-            <span class="info-key">device</span><span class="info-val">—</span>
-          </div>
-          <div class="info-row">
-            <span class="info-key">connection</span><span class="info-val">—</span>
-          </div>
-        </div>
-        <div class="section-title">библиотека</div>
-        <div class="saved-toolbar">
-          <select
-            id="partnerFilter"
-            class="saved-select"
-            aria-label="Фильтр сохранённых запросов по партнёру"
-          >
-            <option value="">все партнёры</option>
-            <option value="unassigned">— без партнёра —</option>
-          </select>
-          <button data-action="open-partners" class="saved-act-btn" title="Управлять партнёрами">
-            + партнёр
-          </button>
-        </div>
-        <div class="saved-list" id="savedList">
-          <div class="saved-empty">Сохранённых запросов пока нет</div>
-        </div>
-        <div
-          class="section-title"
+    </details>
+    <button class="kt-theme-toggle" type="button" aria-label="Toggle theme">◐</button>
+    <!-- Auth widget — switches between sign-in button and email/logout based on /api/auth/me -->
+    <div id="authWidget" class="auth-widget" aria-live="polite">
+      <button
+        id="authSignInBtn"
+        class="btn btn-ghost btn-sm"
+        data-action="open-auth"
+        data-mode="login"
+        style="display: none"
+      >
+        sign in
+      </button>
+      <span id="authUserBlock" style="display: none; align-items: center; gap: var(--space-2)">
+        <span
+          id="authEmail"
+          class="mono-label hide-sm"
           style="
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: var(--space-2);
+            color: var(--text);
+            text-transform: none;
+            letter-spacing: 0;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           "
-        >
-          <span>история</span>
-          <button
-            type="button"
-            data-action="clear-history"
-            class="saved-act-btn"
-            title="Очистить локальную историю"
-            style="font-size: 11px"
-          >
-            очистить
-          </button>
-        </div>
-        <div class="history-list" id="hList">
-          <div
-            style="
-              color: var(--text-dim);
-              font-size: var(--fs-sm);
-              text-align: center;
-              padding: var(--space-5);
-            "
-          >
-            История пустая — вставь запрос чтобы начать
-          </div>
-        </div>
-      </aside>
-
-      <!-- Center panel -->
-      <div class="center-panel">
-        <div class="format-bar" id="formatBar" hidden>
-          <span class="format-pill format-pill-type" id="formatPillType"></span>
-          <span class="format-pill format-pill-status" id="formatPillStatus"></span>
-          <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
-          <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
-          <div class="format-bar-actions">
-            <button
-              class="btn btn-ghost btn-sm"
-              id="embedBtn"
-              data-action="open-embed"
-              title="Получить iframe-сниппет чтобы вставить этот вид в блог, Notion или документ"
-            >
-              embed
-            </button>
-            <button
-              class="btn btn-ghost btn-sm"
-              id="shareLinkBtn"
-              data-action="share-link"
-              title="Скопировать permalink — payload закодирован в URL-фрагменте, на сервер не попадает"
-            >
-              ссылка
-            </button>
-            <button
-              class="btn btn-ghost btn-sm"
-              id="downloadBundleBtn"
-              data-action="download-bundle"
-              title="Скачать JSON-бандл (запрос + ответ + находки) — для пересылки или прикрепления к тикету"
-            >
-              скачать
-            </button>
-          </div>
-        </div>
-        <div class="tab-bar">
-          <button
-            class="sb-toggle left"
-            id="toggleSidebarLeft"
-            data-action="toggle-sidebar"
-            data-side="left"
-            title="Переключить левую панель (сводка / библиотека / история)"
-          >
-            ◀
-          </button>
-          <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
-            инспектор <span class="tab-badge" id="inspectorBadge">0</span>
-          </button>
-          <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
-            валидация <span class="tab-badge" id="validationBadge">0</span>
-          </button>
-          <button class="tab-btn" data-action="switch-tab" data-target="tCross">
-            сверка <span class="tab-badge" id="crossBadge">0</span>
-          </button>
-          <button class="tab-btn" data-action="switch-tab" data-target="tCategories">
-            категории <span class="tab-badge" id="categoriesBadge">0</span>
-          </button>
-          <button
-            class="tab-btn"
-            data-action="switch-tab"
-            data-target="tBehavior"
-            title="Попытки click-skim и авто-навигации, перехваченные в iframe креатива"
-          >
-            поведение <span class="tab-badge" id="behaviorBadge">0</span>
-          </button>
-          <button class="tab-btn" id="kadamRefTab" data-action="switch-tab" data-target="tRef" hidden>
-            vendor ref
-          </button>
-          <button
-            class="sb-toggle right"
-            id="toggleSidebarRight"
-            data-action="toggle-sidebar"
-            data-side="right"
-            title="Переключить правую панель (ad preview / placement stats)"
-          >
-            ▶
-          </button>
-        </div>
-        <div class="tab-content active" id="tInspector">
-          <div class="slot-grid" id="slotGrid">
-            <div class="empty-hint" style="grid-column: 1/-1">
-              Вставь BidRequest слева — здесь появятся слоты imp[]
-            </div>
-          </div>
-        </div>
-        <div class="tab-content" id="tValidation">
-          <div class="empty-hint">Результаты валидации появятся здесь после анализа</div>
-        </div>
-        <div class="tab-content" id="tCross">
-          <div class="empty-hint">
-            Сверка request↔response (id match · floor · bcat · native assets · format) — нужны обе
-            стороны
-          </div>
-        </div>
-        <div class="tab-content" id="tCategories">
-          <div class="empty-hint">
-            Декодированные IAB-категории из cat[] / bcat[] / pcat[] — появятся когда коды есть в
-            payload
-          </div>
-        </div>
-        <div class="tab-content" id="tBehavior">
-          <div class="empty-hint">
-            Отрендерь креатив справа — здесь появятся попытки click-skim и авто-навигации.
-          </div>
-        </div>
-        <div class="tab-content" id="tRef">
-          <!-- Filled at load time by renderReference() -->
-        </div>
-      </div>
-
-      <!-- Right sidebar -->
-      <aside class="sidebar-right">
-        <div class="section-title">превью рекламы</div>
-        <div class="preview-container" id="creativePreview">
-          <div class="preview-placeholder">ожидается adm — вставь BidResponse</div>
-        </div>
-        <div class="section-title" style="margin-top: var(--space-2)">статистика слотов</div>
-        <div class="quick-stats" id="quickStats">
-          <div class="stat-box">
-            <div class="stat-value">0</div>
-            <div class="stat-label">баннеры</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">0</div>
-            <div class="stat-label">видео</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">0</div>
-            <div class="stat-label">native</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">0</div>
-            <div class="stat-label">audio</div>
-          </div>
-        </div>
-      </aside>
-    </main>
-
-    <!-- Embed-mode footer — only shown when ?embed=1 strips the regular footer. -->
-    <div class="embed-footer">
-      <span>powered by</span>
-      <a href="/ru/" target="_blank" rel="noopener">spyglass · openrtb inspector ↗</a>
+        ></span>
+        <button class="btn btn-ghost btn-sm" data-action="signout">sign out</button>
+      </span>
     </div>
+  </div>
+</header>
 
-    <!-- ── Footer ── -->
-    <footer class="app-footer">
-      <div style="display: flex; align-items: center; gap: var(--space-3)">
-        <span id="stEntity" style="color: var(--text); font-weight: 500">готов</span>
-        <span style="color: var(--text-dim)">·</span>
-        <span style="color: var(--text-dim)"
-          >engine <span id="engineVer" style="color: var(--text)">v8.0.0</span></span
+<!-- ── Inputs ── -->
+<section class="input-section">
+  <div class="input-card">
+    <div class="input-card-header">
+      <span class="input-card-title">запрос</span>
+      <div class="input-card-actions">
+        <span class="char-count" id="reqCount">0</span>
+        <span class="json-badge empty" id="reqBadge">пусто</span>
+        <button
+          data-action="clear-input"
+          data-target="bidReq"
+          class="btn-icon"
+          title="Очистить поле"
         >
-        <span style="color: var(--text-dim)">·</span>
-        <span style="color: var(--text-dim)" title="Поддерживаемые спецификации"
-          >openrtb 2.5/2.6/3.0 · native 1.x · vast 4.x · jsonfeed</span
+          очистить
+        </button>
+        <button
+          data-action="format-json"
+          data-target="bidReq"
+          class="btn-icon"
+          title="Отформатировать JSON"
         >
-        <span style="color: var(--text-dim)">·</span>
-        <a
-          href="https://github.com/vladikkrasulya/adtech-spyglass"
-          target="_blank"
-          rel="noopener"
-          style="color: var(--text-dim); text-decoration: none"
-          title="Исходники на GitHub"
-          >открытый код ↗</a
+          формат
+        </button>
+        <button
+          data-action="copy-text"
+          data-target="bidReq"
+          class="btn-icon"
+          title="Скопировать в буфер"
         >
+          копия
+        </button>
       </div>
-      <div style="display: flex; align-items: center; gap: 6px">
-        <span class="status-dot online" id="statusDot"></span>
-        <span id="statusText" style="color: var(--text-muted)">онлайн</span>
+    </div>
+    <textarea
+      id="bidReq"
+      class="json-input"
+      placeholder="Вставь сюда oRTB BidRequest JSON.&#10;&#10;Подсказка: Ctrl+Enter — запустить анализ."
+    ></textarea>
+  </div>
+  <div class="input-card">
+    <div class="input-card-header">
+      <span class="input-card-title">ответ</span>
+      <div class="input-card-actions">
+        <span class="char-count" id="resCount">0</span>
+        <span class="json-badge empty" id="resBadge">пусто</span>
+        <button
+          data-action="clear-input"
+          data-target="bidRes"
+          class="btn-icon"
+          title="Очистить поле"
+        >
+          очистить
+        </button>
+        <button
+          data-action="format-json"
+          data-target="bidRes"
+          class="btn-icon"
+          title="Отформатировать JSON"
+        >
+          формат
+        </button>
+        <button
+          data-action="copy-text"
+          data-target="bidRes"
+          class="btn-icon"
+          title="Скопировать в буфер"
+        >
+          копия
+        </button>
       </div>
-    </footer>
+    </div>
+    <textarea
+      id="bidRes"
+      class="json-input"
+      placeholder="Вставь oRTB BidResponse JSON (необязательно)."
+    ></textarea>
+  </div>
+</section>
 
-    <div id="modalRoot"></div>
+<!-- ── Main grid ── -->
+<main class="main-grid">
+  <!-- Left sidebar -->
+  <aside class="sidebar-left">
+    <div class="section-title" data-section="summary-title">сводка</div>
+    <div class="metric-card" data-section="winning-bid">
+      <div class="metric-label">winning bid</div>
+      <div class="metric-value" id="mPrice">$0.00</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 0" id="mInfo">
+      <div class="info-row"><span class="info-key">os</span><span class="info-val">—</span></div>
+      <div class="info-row"><span class="info-key">geo</span><span class="info-val">—</span></div>
+      <div class="info-row">
+        <span class="info-key">device</span><span class="info-val">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">connection</span><span class="info-val">—</span>
+      </div>
+    </div>
+    <div class="section-title">библиотека</div>
+    <div class="saved-toolbar">
+      <select
+        id="partnerFilter"
+        class="saved-select"
+        aria-label="Фильтр сохранённых запросов по партнёру"
+      >
+        <option value="">все партнёры</option>
+        <option value="unassigned">— без партнёра —</option>
+      </select>
+      <button data-action="open-partners" class="saved-act-btn" title="Управлять партнёрами">
+        + партнёр
+      </button>
+    </div>
+    <div class="saved-list" id="savedList">
+      <div class="saved-empty">Сохранённых запросов пока нет</div>
+    </div>
+    <div
+      class="section-title"
+      style="
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-2);
+      "
+    >
+      <span>история</span>
+      <button
+        type="button"
+        data-action="clear-history"
+        class="saved-act-btn"
+        title="Очистить локальную историю"
+        style="font-size: 11px"
+      >
+        очистить
+      </button>
+    </div>
+    <div class="history-list" id="hList">
+      <div
+        style="
+          color: var(--text-dim);
+          font-size: var(--fs-sm);
+          text-align: center;
+          padding: var(--space-5);
+        "
+      >
+        История пустая — вставь запрос чтобы начать
+      </div>
+    </div>
+  </aside>
+
+  <!-- Center panel -->
+  <div class="center-panel">
+    <div class="format-bar" id="formatBar" hidden>
+      <span class="format-pill format-pill-type" id="formatPillType"></span>
+      <span class="format-pill format-pill-status" id="formatPillStatus"></span>
+      <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
+      <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
+      <div class="format-bar-actions">
+        <button
+          class="btn btn-ghost btn-sm"
+          id="embedBtn"
+          data-action="open-embed"
+          title="Получить iframe-сниппет чтобы вставить этот вид в блог, Notion или документ"
+        >
+          embed
+        </button>
+        <button
+          class="btn btn-ghost btn-sm"
+          id="shareLinkBtn"
+          data-action="share-link"
+          title="Скопировать permalink — payload закодирован в URL-фрагменте, на сервер не попадает"
+        >
+          ссылка
+        </button>
+        <button
+          class="btn btn-ghost btn-sm"
+          id="downloadBundleBtn"
+          data-action="download-bundle"
+          title="Скачать JSON-бандл (запрос + ответ + находки) — для пересылки или прикрепления к тикету"
+        >
+          скачать
+        </button>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <button
+        class="sb-toggle left"
+        id="toggleSidebarLeft"
+        data-action="toggle-sidebar"
+        data-side="left"
+        title="Переключить левую панель (сводка / библиотека / история)"
+      >
+        ◀
+      </button>
+      <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
+        инспектор <span class="tab-badge" id="inspectorBadge" hidden></span>
+      </button>
+      <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
+        валидация <span class="tab-badge" id="validationBadge" hidden></span>
+      </button>
+      <button class="tab-btn" data-action="switch-tab" data-target="tCross">
+        сверка <span class="tab-badge" id="crossBadge" hidden></span>
+      </button>
+      <button class="tab-btn" data-action="switch-tab" data-target="tCategories">
+        категории <span class="tab-badge" id="categoriesBadge" hidden></span>
+      </button>
+      <button
+        class="tab-btn"
+        data-action="switch-tab"
+        data-target="tBehavior"
+        title="Попытки click-skim и авто-навигации, перехваченные в iframe креатива"
+      >
+        поведение <span class="tab-badge" id="behaviorBadge" hidden></span>
+      </button>
+      <button class="tab-btn" id="kadamRefTab" data-action="switch-tab" data-target="tRef" hidden>
+        vendor ref
+      </button>
+      <button
+        class="sb-toggle right"
+        id="toggleSidebarRight"
+        data-action="toggle-sidebar"
+        data-side="right"
+        title="Переключить правую панель (ad preview / placement stats)"
+      >
+        ▶
+      </button>
+    </div>
+    <div class="tab-content active" id="tInspector">
+      <div class="slot-grid" id="slotGrid">
+        <div class="empty-hint" style="grid-column: 1/-1">
+          Вставь BidRequest слева — здесь появятся слоты imp[]
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="tValidation">
+      <div class="empty-hint">Результаты валидации появятся здесь после анализа</div>
+    </div>
+    <div class="tab-content" id="tCross">
+      <div class="empty-hint">
+        Сверка request↔response (id match · floor · bcat · native assets · format) — нужны обе
+        стороны
+      </div>
+    </div>
+    <div class="tab-content" id="tCategories">
+      <div class="empty-hint">
+        Декодированные IAB-категории из cat[] / bcat[] / pcat[] — появятся когда коды есть в payload
+      </div>
+    </div>
+    <div class="tab-content" id="tBehavior">
+      <div class="empty-hint">
+        Отрендерь креатив справа — здесь появятся попытки click-skim и авто-навигации.
+      </div>
+    </div>
+    <div class="tab-content" id="tRef">
+      <!-- Filled at load time by renderReference() -->
+    </div>
+  </div>
+
+  <!-- Right sidebar -->
+  <aside class="sidebar-right">
+    <div class="section-title">превью рекламы</div>
+    <div class="preview-container" id="creativePreview">
+      <div class="preview-placeholder">ожидается adm — вставь BidResponse</div>
+    </div>
+    <div class="section-title" style="margin-top: var(--space-2)">статистика слотов</div>
+    <div class="quick-stats" id="quickStats">
+      <div class="stat-box">
+        <div class="stat-value">0</div>
+        <div class="stat-label">баннеры</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">0</div>
+        <div class="stat-label">видео</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">0</div>
+        <div class="stat-label">native</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">0</div>
+        <div class="stat-label">audio</div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- Embed-mode footer — only shown when ?embed=1 strips the regular footer. -->
+<div class="embed-footer">
+  <span>powered by</span>
+  <a href="/ru/" target="_blank" rel="noopener">spyglass · openrtb inspector ↗</a>
+</div>
+
+<!-- ── Footer ── -->
+<footer class="app-footer">
+  <div style="display: flex; align-items: center; gap: var(--space-3)">
+    <span id="stEntity" style="color: var(--text); font-weight: 500">готов</span>
+    <span style="color: var(--text-dim)">·</span>
+    <span style="color: var(--text-dim)"
+      >engine
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.0.0</span></span
+    >
+    <span style="color: var(--text-dim)">·</span>
+    <span style="color: var(--text-dim)" title="Поддерживаемые спецификации"
+      >openrtb 2.5/2.6/3.0 · native 1.x · vast 4.x · jsonfeed</span
+    >
+    <span style="color: var(--text-dim)">·</span>
+    <a
+      href="https://github.com/vladikkrasulya/adtech-spyglass"
+      target="_blank"
+      rel="noopener"
+      style="color: var(--text-dim); text-decoration: none"
+      title="Исходники на GitHub"
+      >открытый код ↗</a
+    >
+  </div>
+  <div style="display: flex; align-items: center; gap: 6px">
+    <span class="status-dot online" id="statusDot"></span>
+    <span id="statusText" style="color: var(--text-muted)">онлайн</span>
+  </div>
+</footer>
+
+<div id="modalRoot"></div>

@@ -111,7 +111,7 @@
 
       // ── behavior tab (creative-probe) ─────────────────────
       'behavior.empty':
-        'Відрендер креатив справа — тут зʼявляться спроби click-skim та авто-навігації.',
+        'Відрендер креатив справа — Behavior-двигун аналізує спроби клік-джекінгу, бот-патерни, маніпуляції з фреймами та важкі креативи.',
       'behavior.label.trigger': 'тригер',
       'behavior.kind.click_skim_suspect': 'підозра на click-skim',
       'behavior.kind.auto_navigate': 'авто-навігація без gesture',
@@ -343,7 +343,7 @@
 
       // ── behavior tab (creative-probe) ─────────────────────
       'behavior.empty':
-        'Render a creative on the right to see what it actually does — click-skim and auto-navigate attempts surface here.',
+        'Render a creative on the right — the Behavior engine analyses click-jacking attempts, bot patterns, frame manipulations, and heavy ads.',
       'behavior.label.trigger': 'trigger',
       'behavior.kind.click_skim_suspect': 'click-skim suspect',
       'behavior.kind.auto_navigate': 'auto-navigate (no gesture)',
@@ -567,7 +567,7 @@
       'shortcuts.row.save': 'Сохранить в библиотеку',
       'shortcuts.row.close': 'Закрыть модалку',
       'behavior.empty':
-        'Отрендерь креатив справа — здесь появятся попытки click-skim и авто-навигации.',
+        'Отрендерь креатив справа — Behavior-движок анализирует попытки клик-джекинга, бот-паттерны, манипуляции с фреймами и тяжёлые креативы.',
       'behavior.label.trigger': 'триггер',
       'behavior.kind.click_skim_suspect': 'подозрение на click-skim',
       'behavior.kind.auto_navigate': 'авто-навигация без gesture',
