@@ -264,6 +264,52 @@
     return { total, byBucket };
   }
 
+  // ── Phase 7b: co-occurrence ──────────────────────────────────────
+
+  /**
+   * Build sorted-pair key from two paths so (a,b) and (b,a) collide
+   * into the same record. Sorted alphabetically ensures stability.
+   */
+  function coKey(bucket, a, b) {
+    const [pA, pB] = a < b ? [a, b] : [b, a];
+    return bucket + '::' + pA + '::' + pB;
+  }
+
+  /**
+   * Persist co-occurrence pair. Same decay+increment shape as
+   * recordOne, but keyed by (bucket, sortedPair).
+   */
+  async function recordCoOccurrence(bucket, pathA, pathB) {
+    const storage = window.SpyglassIntelStorage;
+    if (!storage) return;
+    const [a, b] = pathA < pathB ? [pathA, pathB] : [pathB, pathA];
+    const key = coKey(bucket, a, b);
+    const now = Date.now();
+    let prev;
+    try {
+      prev = await storage.getCoOccurrence(key);
+    } catch (e) {
+      prev = null;
+    }
+    const decayedScore = prev
+      ? applyDecay(prev.decayedScore || 0, prev.lastSeenAt || 0, now) + 1
+      : 1;
+    const next = {
+      key,
+      bucket,
+      pathA: a,
+      pathB: b,
+      count: prev && prev.count ? prev.count + 1 : 1,
+      decayedScore,
+      lastSeenAt: now,
+    };
+    try {
+      await storage.putCoOccurrence(next);
+    } catch (e) {
+      console.warn('[spyglass-intel] putCoOccurrence failed', e);
+    }
+  }
+
   /**
    * Persist a single field-observation. Reads existing record (if any),
    * applies decay, increments score, writes back.
@@ -327,6 +373,23 @@
       // Cap at 256 fields per observe to bound worst-case payloads.
       const slice = fields.slice(0, 256);
       await Promise.all(slice.map((f) => recordOne(bucket, f.path, f.type, f.valueShape)));
+
+      // Phase 7b: co-occurrence. For each unique pair of distinct paths
+      // observed in this bid, increment the pair counter. De-dup paths
+      // first because the walker can emit the same path twice (e.g.
+      // imp[0].ext.foo and imp[1].ext.foo both collapse to imp.ext.foo).
+      const uniquePaths = Array.from(new Set(slice.map((f) => f.path)));
+      const pairs = [];
+      for (let i = 0; i < uniquePaths.length; i++) {
+        for (let j = i + 1; j < uniquePaths.length; j++) {
+          pairs.push([uniquePaths[i], uniquePaths[j]]);
+        }
+      }
+      // Cap at 512 pairs per observe — N=32 fields → C(32,2)=496 pairs,
+      // realistic worst-case.
+      const pairSlice = pairs.slice(0, 512);
+      await Promise.all(pairSlice.map(([a, b]) => recordCoOccurrence(bucket, a, b)));
+
       scheduleBannerRefresh();
     } catch (e) {
       console.warn('[spyglass-intel] observe failed', e);

@@ -1,0 +1,535 @@
+/* ============================================================
+   public/modules/intel/builder.js — Dialect Builder modal.
+
+   Phase 7b. Activated by clicking the bottom-right Discovery chip 🧬.
+   Surfaces the field-observation index + cluster suggestions, lets the
+   user pick fields with checkboxes, name the dialect, and persist it
+   to IndexedDB. The runtime in temp-runtime.js then applies the
+   resulting spec on every analyze.
+
+   UX rules (per Phase 7 R&D doc):
+     - Show clusters at the top — pre-cooked candidates the user can
+       accept with one click. ALL boxes start UNCHECKED so the user
+       has to make an affirmative selection before "Create" enables.
+     - Below clusters, the full field list grouped by bucket. Each row
+       shows path, occurrence count, decayed score, charClass hint.
+     - Required-vs-optional toggle is per-field (radio buttons). For
+       7b foundation we default everything to required: false; the
+       user explicitly upgrades to required.
+     - Cancel = no persist. Create = persist + auto-activate as the
+       current dialect (so the user sees findings on their next
+       analyze without an extra step).
+
+   What this module deliberately does NOT do for 7b:
+     - Edit existing temp dialects (manage list lives in 7c)
+     - Configure claimsBid (security-sensitive, needs explicit warning UI)
+     - Per-field charClass / length constraints (UI complexity)
+   ============================================================ */
+(function () {
+  'use strict';
+
+  if (window.SpyglassIntelBuilder) return;
+
+  // ── Inlined pure-helper shims (KEEP IN SYNC: packages/core/intel/*) ──
+
+  const MS_PER_HOUR = 3600 * 1000;
+  function applyDecay(prev, lastSeenAt, now) {
+    if (typeof prev !== 'number' || !Number.isFinite(prev) || prev <= 0) return 0;
+    if (typeof lastSeenAt !== 'number' || lastSeenAt <= 0) return prev;
+    const elapsed = now - lastSeenAt;
+    if (elapsed <= 0) return prev;
+    const halfLives = elapsed / MS_PER_HOUR / 24;
+    if (halfLives >= 30) return 0;
+    return prev * Math.pow(0.5, halfLives);
+  }
+
+  // Trimmed cluster detector (same algorithm as packages/core/intel/cluster.js)
+  function detectClusters(observations, coOccurrences, opts) {
+    const o = opts || {};
+    const now = typeof o.now === 'number' ? o.now : Date.now();
+    const minFieldScore = o.minFieldScore != null ? o.minFieldScore : 5;
+    const minCo = o.minCoOccurrence != null ? o.minCoOccurrence : 3;
+    const obs = (observations || []).filter((r) => !o.bucket || r.bucket === o.bucket);
+    const co = (coOccurrences || []).filter((r) => !o.bucket || r.bucket === o.bucket);
+    const fieldScores = new Map();
+    for (const r of obs) {
+      const decayed = applyDecay(r.decayedScore || 0, r.lastSeenAt || 0, now);
+      if (decayed > 0) fieldScores.set(r.path, decayed);
+    }
+    const adjacency = new Map();
+    for (const c of co) {
+      const decayed = applyDecay(
+        c.decayedScore != null ? c.decayedScore : c.count || 0,
+        c.lastSeenAt || 0,
+        now,
+      );
+      if (decayed < minCo) continue;
+      pushMap(adjacency, c.pathA, { partner: c.pathB, weight: decayed });
+      pushMap(adjacency, c.pathB, { partner: c.pathA, weight: decayed });
+    }
+    const anchors = Array.from(fieldScores.entries())
+      .filter(([, score]) => score >= minFieldScore)
+      .sort((a, b) => b[1] - a[1])
+      .map(([path]) => path);
+    const clusters = [];
+    const seenSig = new Set();
+    for (const anchor of anchors) {
+      const partners = (adjacency.get(anchor) || [])
+        .filter(
+          ({ partner }) => fieldScores.has(partner) && fieldScores.get(partner) >= minFieldScore,
+        )
+        .sort((a, b) => b.weight - a.weight)
+        .slice(0, 7)
+        .map((p) => p.partner);
+      if (partners.length < 2) continue;
+      const fields = [anchor, ...partners].sort();
+      const sig = fields.join('|');
+      if (seenSig.has(sig)) continue;
+      seenSig.add(sig);
+      let totalCount = 0;
+      for (const f of fields) totalCount += fieldScores.get(f) || 0;
+      clusters.push({ anchorPath: anchor, fields, totalCount: Number(totalCount.toFixed(2)) });
+    }
+    clusters.sort((a, b) => b.totalCount - a.totalCount);
+    return clusters;
+  }
+  function pushMap(map, key, value) {
+    let arr = map.get(key);
+    if (!arr) {
+      arr = [];
+      map.set(key, arr);
+    }
+    arr.push(value);
+  }
+
+  // ── DOM ──────────────────────────────────────────────────────────
+
+  let _root = null;
+  let _stylesInjected = false;
+  // Field state in the open modal: path → boolean (checked).
+  let _selection = new Map();
+
+  function injectStyles() {
+    if (_stylesInjected) return;
+    _stylesInjected = true;
+    const css = [
+      '.spyglass-intel-modal-bg{',
+      '  position:fixed;inset:0;z-index:9500;',
+      '  background:rgba(0,0,0,0.5);',
+      '  display:flex;align-items:center;justify-content:center;',
+      '  padding:20px;',
+      '}',
+      '.spyglass-intel-modal-bg[hidden]{display:none}',
+      '.spyglass-intel-modal{',
+      '  background:var(--surface, #fff);',
+      '  color:var(--text, #1a1a1a);',
+      '  border-radius:10px;',
+      '  border:1px solid var(--border, #e0e0e0);',
+      '  width:min(720px, 100%);max-height:80vh;',
+      '  display:flex;flex-direction:column;',
+      '  box-shadow:0 10px 40px rgba(0,0,0,0.25);',
+      '  font:13px/1.45 var(--font-body, system-ui, sans-serif);',
+      '}',
+      '.spyglass-intel-modal__header{',
+      '  padding:16px 20px;',
+      '  border-bottom:1px solid var(--border, #e0e0e0);',
+      '  display:flex;align-items:center;gap:10px;',
+      '}',
+      '.spyglass-intel-modal__title{font-weight:600;font-size:14px;flex:1}',
+      '.spyglass-intel-modal__close{',
+      '  background:transparent;border:none;cursor:pointer;',
+      '  font-size:20px;line-height:1;color:var(--text-dim, #999);',
+      '  padding:4px 8px;border-radius:4px;',
+      '}',
+      '.spyglass-intel-modal__close:hover{background:var(--bg-2, #f3f3f3);color:var(--text)}',
+      '.spyglass-intel-modal__body{padding:16px 20px;overflow-y:auto;flex:1}',
+      '.spyglass-intel-modal__field{',
+      '  display:block;font-size:12px;color:var(--text-muted, #666);',
+      '  margin-bottom:6px;',
+      '}',
+      '.spyglass-intel-modal__name-input{',
+      '  width:100%;padding:6px 10px;font:13px var(--font-body, system-ui, sans-serif);',
+      '  background:var(--surface);border:1px solid var(--border, #e0e0e0);',
+      '  border-radius:4px;color:var(--text);',
+      '  margin-bottom:14px;',
+      '}',
+      '.spyglass-intel-modal__name-input:focus{outline:none;border-color:var(--accent, #ffc83d)}',
+      '.spyglass-intel-modal__section-title{',
+      '  font:11px/1 var(--font-mono, ui-monospace, monospace);',
+      '  letter-spacing:.05em;text-transform:uppercase;',
+      '  color:var(--text-dim, #999);',
+      '  margin:16px 0 8px;',
+      '}',
+      '.spyglass-intel-cluster{',
+      '  background:var(--bg-2, #f8f8f8);',
+      '  border:1px solid var(--border, #e0e0e0);',
+      '  border-radius:6px;padding:10px 12px;margin-bottom:8px;',
+      '}',
+      '.spyglass-intel-cluster__head{',
+      '  display:flex;align-items:center;gap:8px;',
+      '  font-size:11px;color:var(--text-muted, #666);',
+      '  margin-bottom:6px;',
+      '}',
+      '.spyglass-intel-cluster__use-btn{',
+      '  background:var(--accent, #ffc83d);color:var(--text);',
+      '  border:none;border-radius:3px;padding:3px 8px;',
+      '  font:11px var(--font-body);cursor:pointer;',
+      '  margin-left:auto;',
+      '}',
+      '.spyglass-intel-cluster__fields{',
+      '  font:11px var(--font-mono, ui-monospace, monospace);',
+      '  color:var(--text);',
+      '  display:flex;flex-wrap:wrap;gap:6px;',
+      '}',
+      '.spyglass-intel-cluster__fields span{',
+      '  background:var(--surface);padding:2px 6px;border-radius:3px;',
+      '  border:1px solid var(--border);',
+      '}',
+      '.spyglass-intel-fieldlist{display:flex;flex-direction:column;gap:4px}',
+      '.spyglass-intel-fieldlist__row{',
+      '  display:flex;align-items:center;gap:10px;',
+      '  padding:6px 8px;border-radius:4px;',
+      '  font:12px/1.3 var(--font-body);',
+      '}',
+      '.spyglass-intel-fieldlist__row:hover{background:var(--bg-2, #f8f8f8)}',
+      '.spyglass-intel-fieldlist__row input[type=checkbox]{flex-shrink:0;margin:0;cursor:pointer}',
+      '.spyglass-intel-fieldlist__path{',
+      '  font:12px var(--font-mono, ui-monospace, monospace);',
+      '  color:var(--text);flex:1;min-width:0;',
+      '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
+      '}',
+      '.spyglass-intel-fieldlist__meta{',
+      '  font:10px var(--font-mono);color:var(--text-dim);flex-shrink:0;',
+      '}',
+      '.spyglass-intel-modal__footer{',
+      '  padding:12px 20px;border-top:1px solid var(--border, #e0e0e0);',
+      '  display:flex;justify-content:flex-end;gap:8px;align-items:center;',
+      '}',
+      '.spyglass-intel-modal__footer-info{',
+      '  font:11px var(--font-mono);color:var(--text-dim);',
+      '  margin-right:auto;',
+      '}',
+      '.spyglass-intel-modal__btn{',
+      '  padding:6px 14px;font:13px var(--font-body);',
+      '  border-radius:4px;cursor:pointer;',
+      '  border:1px solid var(--border, #e0e0e0);',
+      '  background:var(--surface);color:var(--text);',
+      '}',
+      '.spyglass-intel-modal__btn:hover{background:var(--bg-2)}',
+      '.spyglass-intel-modal__btn--primary{',
+      '  background:var(--accent, #ffc83d);border-color:var(--accent);',
+      '  color:var(--text);font-weight:600;',
+      '}',
+      '.spyglass-intel-modal__btn--primary:disabled{',
+      '  opacity:0.5;cursor:not-allowed;',
+      '}',
+      '.spyglass-intel-modal__empty{',
+      '  text-align:center;padding:30px;',
+      '  color:var(--text-dim);font-size:12px;',
+      '}',
+    ].join('');
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  function ensureRoot() {
+    if (_root && document.body.contains(_root)) return _root;
+    injectStyles();
+    _root = document.createElement('div');
+    _root.className = 'spyglass-intel-modal-bg';
+    _root.id = 'spyglassIntelBuilder';
+    _root.hidden = true;
+    _root.innerHTML = [
+      '<div class="spyglass-intel-modal" role="dialog" aria-modal="true" aria-labelledby="spyglassIntelBuilderTitle">',
+      '  <div class="spyglass-intel-modal__header">',
+      '    <span aria-hidden="true">🧬</span>',
+      '    <span class="spyglass-intel-modal__title" id="spyglassIntelBuilderTitle"></span>',
+      '    <button class="spyglass-intel-modal__close" aria-label="Close" data-builder-close>×</button>',
+      '  </div>',
+      '  <div class="spyglass-intel-modal__body" data-builder-body></div>',
+      '  <div class="spyglass-intel-modal__footer">',
+      '    <span class="spyglass-intel-modal__footer-info" data-builder-info></span>',
+      '    <button class="spyglass-intel-modal__btn" data-builder-cancel></button>',
+      '    <button class="spyglass-intel-modal__btn spyglass-intel-modal__btn--primary" data-builder-create disabled></button>',
+      '  </div>',
+      '</div>',
+    ].join('');
+    document.body.appendChild(_root);
+    // Backdrop click closes modal
+    _root.addEventListener('click', (ev) => {
+      if (ev.target === _root) close();
+    });
+    _root.querySelector('[data-builder-close]').addEventListener('click', close);
+    _root.querySelector('[data-builder-cancel]').addEventListener('click', close);
+    _root.querySelector('[data-builder-create]').addEventListener('click', create);
+    document.addEventListener('keydown', (ev) => {
+      if (!_root.hidden && ev.key === 'Escape') close();
+    });
+    return _root;
+  }
+
+  function localised() {
+    const lang = (document.documentElement.lang || 'en').slice(0, 2);
+    if (lang === 'uk') {
+      return {
+        title: 'Конструктор тимчасового діалекту',
+        nameLabel: 'Назва діалекту',
+        namePlaceholder: 'наприклад, Kadam Custom',
+        clustersHeading: 'Знайдені кластери',
+        fieldsHeading: 'Усі знайдені поля',
+        empty: 'Поки що немає достатньо даних. Запусти аналіз кількох запитів.',
+        useCluster: 'Використати',
+        cancel: 'Скасувати',
+        create: 'Створити тимчасовий діалект',
+        info: (n) => n + ' полів обрано',
+      };
+    }
+    if (lang === 'ru') {
+      return {
+        title: 'Конструктор временного диалекта',
+        nameLabel: 'Название диалекта',
+        namePlaceholder: 'например, Kadam Custom',
+        clustersHeading: 'Обнаруженные кластеры',
+        fieldsHeading: 'Все обнаруженные поля',
+        empty: 'Пока недостаточно данных. Запусти анализ нескольких запросов.',
+        useCluster: 'Использовать',
+        cancel: 'Отмена',
+        create: 'Создать временный диалект',
+        info: (n) => n + ' полей выбрано',
+      };
+    }
+    return {
+      title: 'Temporary Dialect Builder',
+      nameLabel: 'Dialect name',
+      namePlaceholder: 'e.g. Kadam Custom',
+      clustersHeading: 'Suggested clusters',
+      fieldsHeading: 'All discovered fields',
+      empty: 'Not enough data yet. Run analyze on a few requests first.',
+      useCluster: 'Use cluster',
+      cancel: 'Cancel',
+      create: 'Create temporary dialect',
+      info: (n) => n + ' fields selected',
+    };
+  }
+
+  async function open() {
+    ensureRoot();
+    const t = localised();
+    _root.querySelector('#spyglassIntelBuilderTitle').textContent = t.title;
+    _root.querySelector('[data-builder-cancel]').textContent = t.cancel;
+    _root.querySelector('[data-builder-create]').textContent = t.create;
+    _root.hidden = false;
+    _selection = new Map();
+    await render();
+  }
+
+  function close() {
+    if (_root) _root.hidden = true;
+  }
+
+  async function render() {
+    const storage = window.SpyglassIntelStorage;
+    if (!storage) return;
+    const t = localised();
+    const observations = await storage.listObservations();
+    const coOccurrences = await storage.listCoOccurrences();
+    const clusters = detectClusters(observations, coOccurrences);
+
+    const body = _root.querySelector('[data-builder-body]');
+
+    if (!observations || !observations.length) {
+      body.innerHTML = '<div class="spyglass-intel-modal__empty">' + escapeHtml(t.empty) + '</div>';
+      _root.querySelector('[data-builder-create]').disabled = true;
+      _root.querySelector('[data-builder-info]').textContent = '';
+      return;
+    }
+
+    const parts = [];
+
+    // Name input
+    parts.push(
+      '<label class="spyglass-intel-modal__field">' + escapeHtml(t.nameLabel) + '</label>',
+      '<input type="text" class="spyglass-intel-modal__name-input" data-builder-name placeholder="' +
+        escapeHtml(t.namePlaceholder) +
+        '">',
+    );
+
+    // Cluster suggestions
+    if (clusters.length > 0) {
+      parts.push(
+        '<div class="spyglass-intel-modal__section-title">' +
+          escapeHtml(t.clustersHeading) +
+          '</div>',
+      );
+      for (const cl of clusters.slice(0, 5)) {
+        parts.push(
+          '<div class="spyglass-intel-cluster">',
+          '  <div class="spyglass-intel-cluster__head">',
+          '    <span>' +
+            cl.fields.length +
+            ' fields · score ' +
+            cl.totalCount.toFixed(0) +
+            '</span>',
+          '    <button class="spyglass-intel-cluster__use-btn" data-cluster-pick="' +
+            escapeAttr(cl.fields.join('|')) +
+            '">' +
+            escapeHtml(t.useCluster) +
+            '</button>',
+          '  </div>',
+          '  <div class="spyglass-intel-cluster__fields">',
+          ...cl.fields.map((f) => '<span>' + escapeHtml(f) + '</span>'),
+          '  </div>',
+          '</div>',
+        );
+      }
+    }
+
+    // All fields
+    parts.push(
+      '<div class="spyglass-intel-modal__section-title">' +
+        escapeHtml(t.fieldsHeading) +
+        ' (' +
+        observations.length +
+        ')</div>',
+      '<div class="spyglass-intel-fieldlist" data-fieldlist>',
+    );
+    // Sort by decayed score, descending.
+    const now = Date.now();
+    const sorted = observations.slice().sort((a, b) => {
+      const sa = applyDecay(a.decayedScore || 0, a.lastSeenAt || 0, now);
+      const sb = applyDecay(b.decayedScore || 0, b.lastSeenAt || 0, now);
+      return sb - sa;
+    });
+    for (const r of sorted) {
+      const decayed = applyDecay(r.decayedScore || 0, r.lastSeenAt || 0, now);
+      const charClass = (r.valueShape && r.valueShape.charClass) || r.type || '?';
+      parts.push(
+        '<label class="spyglass-intel-fieldlist__row">',
+        '  <input type="checkbox" data-field-toggle="' +
+          escapeAttr(r.path) +
+          '" data-bucket="' +
+          escapeAttr(r.bucket) +
+          '">',
+        '  <span class="spyglass-intel-fieldlist__path">' + escapeHtml(r.path) + '</span>',
+        '  <span class="spyglass-intel-fieldlist__meta">[' +
+          escapeHtml(r.bucket) +
+          '] ' +
+          escapeHtml(charClass) +
+          ' · ' +
+          decayed.toFixed(1) +
+          '× · ' +
+          (r.count || 0) +
+          ' total</span>',
+        '</label>',
+      );
+    }
+    parts.push('</div>');
+
+    body.innerHTML = parts.join('');
+
+    // Wire up per-row checkboxes
+    body.querySelectorAll('[data-field-toggle]').forEach((el) => {
+      el.addEventListener('change', (ev) => {
+        const path = ev.target.getAttribute('data-field-toggle');
+        if (ev.target.checked) {
+          _selection.set(path, ev.target.getAttribute('data-bucket'));
+        } else {
+          _selection.delete(path);
+        }
+        updateFooter();
+      });
+    });
+
+    // Wire up cluster "Use" buttons
+    body.querySelectorAll('[data-cluster-pick]').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const fields = btn.getAttribute('data-cluster-pick').split('|');
+        for (const path of fields) {
+          const cb = body.querySelector('[data-field-toggle="' + cssEscape(path) + '"]');
+          if (cb && !cb.checked) {
+            cb.checked = true;
+            cb.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      });
+    });
+
+    updateFooter();
+  }
+
+  function updateFooter() {
+    const t = localised();
+    const info = _root.querySelector('[data-builder-info]');
+    const create = _root.querySelector('[data-builder-create]');
+    info.textContent = t.info(_selection.size);
+    create.disabled = _selection.size === 0;
+  }
+
+  async function create() {
+    const storage = window.SpyglassIntelStorage;
+    if (!storage || _selection.size === 0) return;
+    const nameInput = _root.querySelector('[data-builder-name]');
+    const name =
+      (nameInput && nameInput.value && nameInput.value.trim()) ||
+      'Custom ' + new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+    // Pick the most-frequent bucket among selected fields as the
+    // dialect's primary bucket.
+    const buckets = Array.from(_selection.values());
+    const bucketCount = buckets.reduce((acc, b) => {
+      acc[b] = (acc[b] || 0) + 1;
+      return acc;
+    }, {});
+    const domainBucket =
+      Object.keys(bucketCount).sort((a, b) => bucketCount[b] - bucketCount[a])[0] || 'all';
+
+    const id =
+      'temp:' +
+      (typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+
+    const spec = {
+      id,
+      name,
+      domainBucket,
+      fields: Array.from(_selection.keys()).map((path) => ({ path, required: false })),
+      parentDialect: 'iab',
+      createdAt: Date.now(),
+      validUntil: Date.now() + 30 * 86400000, // 30 days
+    };
+    try {
+      await storage.putTempDialect(spec);
+    } catch (e) {
+      console.warn('[spyglass-intel] putTempDialect failed', e);
+      return;
+    }
+    // Activate the new dialect immediately + sync UI selector.
+    if (window.SpyglassIntel && typeof window.SpyglassIntel.activate === 'function') {
+      window.SpyglassIntel.activate(id);
+    }
+    close();
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function escapeAttr(s) {
+    return escapeHtml(s);
+  }
+  function cssEscape(s) {
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(s);
+    return String(s).replace(/[^a-zA-Z0-9_-]/g, (m) => '\\' + m);
+  }
+
+  window.SpyglassIntelBuilder = { open, close };
+})();

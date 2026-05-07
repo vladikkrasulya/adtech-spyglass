@@ -32,9 +32,11 @@
   if (window.SpyglassIntelStorage) return;
 
   const DB_NAME = 'spyglass_intel_v1';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2; // 7b: + co_occurrence + temporary_dialects
   const STORE_OBSERVATIONS = 'field_observations';
   const STORE_META = 'discovery_meta';
+  const STORE_COOCCURRENCE = 'co_occurrence';
+  const STORE_TEMP_DIALECTS = 'temporary_dialects';
 
   let _dbPromise = null;
 
@@ -57,6 +59,16 @@
         }
         if (!db.objectStoreNames.contains(STORE_META)) {
           db.createObjectStore(STORE_META, { keyPath: 'name' });
+        }
+        // Phase 7b stores. Schema upgrade is additive; no data
+        // migration needed for existing 7a databases.
+        if (!db.objectStoreNames.contains(STORE_COOCCURRENCE)) {
+          const os = db.createObjectStore(STORE_COOCCURRENCE, { keyPath: 'key' });
+          os.createIndex('bucket', 'bucket', { unique: false });
+          os.createIndex('lastSeenAt', 'lastSeenAt', { unique: false });
+        }
+        if (!db.objectStoreNames.contains(STORE_TEMP_DIALECTS)) {
+          db.createObjectStore(STORE_TEMP_DIALECTS, { keyPath: 'id' });
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -116,11 +128,65 @@
 
   async function clearAll() {
     const db = await openDb();
-    const tx = db.transaction([STORE_OBSERVATIONS, STORE_META], 'readwrite');
+    const tx = db.transaction(
+      [STORE_OBSERVATIONS, STORE_META, STORE_COOCCURRENCE, STORE_TEMP_DIALECTS],
+      'readwrite',
+    );
     await Promise.all([
       promisify(tx.objectStore(STORE_OBSERVATIONS).clear()),
       promisify(tx.objectStore(STORE_META).clear()),
+      promisify(tx.objectStore(STORE_COOCCURRENCE).clear()),
+      promisify(tx.objectStore(STORE_TEMP_DIALECTS).clear()),
     ]);
+  }
+
+  // ── Phase 7b: co-occurrence ───────────────────────────────────────
+
+  async function getCoOccurrence(key) {
+    const db = await openDb();
+    const tx = db.transaction(STORE_COOCCURRENCE, 'readonly');
+    return promisify(tx.objectStore(STORE_COOCCURRENCE).get(key));
+  }
+
+  async function putCoOccurrence(record) {
+    const db = await openDb();
+    const tx = db.transaction(STORE_COOCCURRENCE, 'readwrite');
+    return promisify(tx.objectStore(STORE_COOCCURRENCE).put(record));
+  }
+
+  async function listCoOccurrences(opts) {
+    const o = opts || {};
+    const db = await openDb();
+    const tx = db.transaction(STORE_COOCCURRENCE, 'readonly');
+    const store = tx.objectStore(STORE_COOCCURRENCE);
+    if (o.bucket) return promisify(store.index('bucket').getAll(o.bucket));
+    return promisify(store.getAll());
+  }
+
+  // ── Phase 7b: temporary dialects ──────────────────────────────────
+
+  async function getTempDialect(id) {
+    const db = await openDb();
+    const tx = db.transaction(STORE_TEMP_DIALECTS, 'readonly');
+    return promisify(tx.objectStore(STORE_TEMP_DIALECTS).get(id));
+  }
+
+  async function putTempDialect(spec) {
+    const db = await openDb();
+    const tx = db.transaction(STORE_TEMP_DIALECTS, 'readwrite');
+    return promisify(tx.objectStore(STORE_TEMP_DIALECTS).put(spec));
+  }
+
+  async function deleteTempDialect(id) {
+    const db = await openDb();
+    const tx = db.transaction(STORE_TEMP_DIALECTS, 'readwrite');
+    return promisify(tx.objectStore(STORE_TEMP_DIALECTS).delete(id));
+  }
+
+  async function listTempDialects() {
+    const db = await openDb();
+    const tx = db.transaction(STORE_TEMP_DIALECTS, 'readonly');
+    return promisify(tx.objectStore(STORE_TEMP_DIALECTS).getAll());
   }
 
   window.SpyglassIntelStorage = {
@@ -133,5 +199,13 @@
     getMeta,
     setMeta,
     clearAll,
+    // Phase 7b
+    getCoOccurrence,
+    putCoOccurrence,
+    listCoOccurrences,
+    getTempDialect,
+    putTempDialect,
+    deleteTempDialect,
+    listTempDialects,
   };
 })();

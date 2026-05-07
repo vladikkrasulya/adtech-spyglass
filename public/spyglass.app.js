@@ -161,12 +161,15 @@ export async function mountInspector(root, ctx) {
   }
   function analyzeUrl() {
     // Absolute path — relative would resolve against pathname (e.g. /uk/),
-    // breaking API access from non-root locales.
+    // breaking API access from non-root locales. serverSideDialect()
+    // collapses temp dialects to their IAB parent so the server runs the
+    // canonical ruleset; the temp-dialect findings are merged client-side
+    // by SpyglassIntel.applyToFindings() after the response lands.
     return (
       '/api/analyze?locale=' +
       encodeURIComponent(activeLocale()) +
       '&dialect=' +
-      encodeURIComponent(activeDialect())
+      encodeURIComponent(serverSideDialect())
     );
   }
 
@@ -183,25 +186,55 @@ export async function mountInspector(root, ctx) {
   const DIALECT_STORAGE_KEY = 'spyglass_dialect_v1';
   const KNOWN_DIALECTS = new Set(['iab', 'kadam', 'kadam-inpage-push']);
 
+  function isTempDialect(value) {
+    return typeof value === 'string' && value.startsWith('temp:');
+  }
+
   function activeDialect() {
     try {
       const qp = new URLSearchParams(location.search);
       const fromUrl = qp.get('dialect');
-      if (fromUrl && KNOWN_DIALECTS.has(fromUrl)) return fromUrl;
+      if (fromUrl && (KNOWN_DIALECTS.has(fromUrl) || isTempDialect(fromUrl))) return fromUrl;
       const fromStorage = localStorage.getItem(DIALECT_STORAGE_KEY);
-      if (fromStorage && KNOWN_DIALECTS.has(fromStorage)) return fromStorage;
+      if (fromStorage && (KNOWN_DIALECTS.has(fromStorage) || isTempDialect(fromStorage))) {
+        return fromStorage;
+      }
     } catch (e) {
       /* private mode / SSR */
     }
     return 'iab';
   }
 
+  // Phase 7b: when a temp dialect is active, the server doesn't know
+  // about it (server validate() only sees IAB+Kadam variants). Send the
+  // parent dialect server-side; the temp-dialect overlay is applied
+  // client-side after analyze().
+  function serverSideDialect() {
+    const d = activeDialect();
+    return isTempDialect(d) ? 'iab' : d;
+  }
+
   function setActiveDialect(dialect) {
-    if (!KNOWN_DIALECTS.has(dialect)) return;
+    if (!KNOWN_DIALECTS.has(dialect) && !isTempDialect(dialect)) return;
     try {
       localStorage.setItem(DIALECT_STORAGE_KEY, dialect);
     } catch (e) {
       /* storage quota / private mode — best effort, the URL reflects state */
+    }
+    // Notify the intel module so its activeSpec cache invalidates and
+    // applyToFindings reaches for the right spec on the next analyze.
+    if (
+      isTempDialect(dialect) &&
+      window.SpyglassIntel &&
+      typeof window.SpyglassIntel.activate === 'function'
+    ) {
+      window.SpyglassIntel.activate(dialect);
+    } else if (
+      !isTempDialect(dialect) &&
+      window.SpyglassIntel &&
+      typeof window.SpyglassIntel.activate === 'function'
+    ) {
+      window.SpyglassIntel.activate(null);
     }
     // Keep the URL in sync for the current tab so a refresh and a
     // shared-link copy both surface the active dialect, but ONLY when
@@ -1322,6 +1355,24 @@ export async function mountInspector(root, ctx) {
           $('stEntity').innerText = entity + ' · ' + humanStatus(validation.status);
           $('stEntity').dataset.status = validation.status || '';
           updateFormatBar(validation, (j.meta && j.meta.dialect) || null);
+          // Phase 7b — apply active temporary dialect (if any) to the
+          // server's findings BEFORE rendering. The temp-dialect runtime
+          // walks (req, res) against the spec, emits findings in engine
+          // shape, pushes them onto validation.findings, and re-rolls the
+          // status if any new ERROR appeared. No-op when no temp dialect
+          // is active.
+          if (
+            window.SpyglassIntel &&
+            typeof window.SpyglassIntel.applyToFindings === 'function' &&
+            isTempDialect(activeDialect())
+          ) {
+            try {
+              await window.SpyglassIntel.applyToFindings({ req, res }, validation);
+            } catch (e) {
+              /* defensive — never block the analyze flow */
+            }
+          }
+
           // Stash latest analysis for the JSON-bundle export (export.js).
           window.__spyglassLast = {
             validation: validation,
@@ -3705,6 +3756,61 @@ export async function mountInspector(root, ctx) {
     // even on first paint without waiting for a manual interaction.
     const initialDialect = activeDialect();
     const dialectSel = $('dialectSelector');
+
+    // Phase 7b: append <option>s for every temporary dialect the user
+    // has saved in IndexedDB. Re-runs on `spyglass:intel-dialect-changed`
+    // (fired when builder creates a new dialect) so the dropdown stays
+    // current without a page reload.
+    async function repaintDialectOptions() {
+      if (!dialectSel || !window.SpyglassIntel) return;
+      // Strip prior temp options — keep the first three built-ins.
+      const built = ['iab', 'kadam', 'kadam-inpage-push'];
+      Array.from(dialectSel.options)
+        .filter((o) => !built.includes(o.value))
+        .forEach((o) => o.remove());
+      let temps = [];
+      try {
+        temps = await window.SpyglassIntel.listTempDialects();
+      } catch (e) {
+        /* */
+      }
+      for (const spec of temps || []) {
+        const opt = document.createElement('option');
+        opt.value = spec.id;
+        opt.textContent = '✦ ' + (spec.name || 'Custom');
+        dialectSel.appendChild(opt);
+      }
+      // Re-set the value AFTER appending — otherwise a temp-dialect
+      // initial value gets lost when its option doesn't exist yet.
+      dialectSel.value = activeDialect();
+      updateCustomDialectIndicator();
+    }
+    repaintDialectOptions();
+    window.addEventListener('spyglass:intel-dialect-changed', repaintDialectOptions);
+
+    // Phase 7b: header indicator — small badge that surfaces "this is a
+    // user-built dialect, not a stock one". The format-bar already shows
+    // the active dialect; this just adds a leading "✦ custom" tag so
+    // it's visually distinct in the chrome.
+    function updateCustomDialectIndicator() {
+      const pill = $('formatPillDialect');
+      const sel = $('dialectSelector');
+      if (!pill || !sel) return;
+      const cur = activeDialect();
+      if (isTempDialect(cur)) {
+        const opt = Array.from(sel.options).find((o) => o.value === cur);
+        const label = opt ? opt.textContent : '✦ custom';
+        pill.textContent = label + ' (temp)';
+        pill.title = 'Active temporary dialect — auto-applied client-side. Edit via the 🧬 chip.';
+        pill.hidden = false;
+      } else if (cur && cur !== 'iab') {
+        pill.textContent = '+ ' + cur;
+        pill.title = 'Active dialect overlay: ' + cur;
+        pill.hidden = false;
+      } else {
+        pill.hidden = true;
+      }
+    }
     if (dialectSel) dialectSel.value = initialDialect;
 
     // Phase 8 URL params: ?reset=token | ?verified=1 | ?verify_error=...

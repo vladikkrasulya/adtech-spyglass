@@ -89,7 +89,7 @@
     _root.hidden = true;
     _root.innerHTML = [
       '<span class="spyglass-intel-chip__icon" aria-hidden="true">🧬</span>',
-      '<div class="spyglass-intel-chip__body">',
+      '<div class="spyglass-intel-chip__body" data-intel-open style="cursor:pointer">',
       '  <div class="spyglass-intel-chip__title" data-intel-title></div>',
       '  <div class="spyglass-intel-chip__sub" data-intel-sub></div>',
       '</div>',
@@ -97,6 +97,14 @@
     ].join('');
     document.body.appendChild(_root);
     _root.querySelector('[data-intel-close]').addEventListener('click', dismiss);
+    // Phase 7b: clicking the body opens the Dialect Builder modal.
+    // Stops propagation so it doesn't also trigger the dismiss button.
+    _root.querySelector('[data-intel-open]').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (window.SpyglassIntelBuilder && typeof window.SpyglassIntelBuilder.open === 'function') {
+        window.SpyglassIntelBuilder.open();
+      }
+    });
     return _root;
   }
 

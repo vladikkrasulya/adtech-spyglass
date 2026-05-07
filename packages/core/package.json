@@ -1,6 +1,6 @@
 {
   "name": "@kyivtech/spyglass-core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "OpenRTB inspector engine — version detection, IAB-spec validation, semantic crosscheck. Pure JavaScript, runs in Node and the browser.",
   "license": "MIT",
   "main": "index.js",

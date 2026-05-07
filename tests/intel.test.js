@@ -323,3 +323,165 @@ test('isLearnable — behavior.static.* ERROR blocks (obfuscation/miner/XSS)', (
   assert.equal(r.allow, false);
   assert.match(r.reason, /static-error/);
 });
+
+// ── Phase 7b: cluster detection ───────────────────────────────────────
+
+const {
+  detectClusters,
+  applyTempDialect,
+  resolvePath,
+  generateTempDialectId,
+  isTempDialectId,
+} = require('@kyivtech/spyglass-core/intel');
+
+function obs(path, score, lastSeenAt) {
+  return {
+    key: 'push::' + path,
+    bucket: 'push',
+    path,
+    decayedScore: score,
+    lastSeenAt: lastSeenAt || Date.now(),
+  };
+}
+function co(pathA, pathB, weight, lastSeenAt) {
+  return {
+    key: 'push::' + pathA + '::' + pathB,
+    bucket: 'push',
+    pathA,
+    pathB,
+    decayedScore: weight,
+    count: weight,
+    lastSeenAt: lastSeenAt || Date.now(),
+  };
+}
+
+test('detectClusters — 3 fields that always co-occur form one cluster', () => {
+  const observations = [
+    obs('req.imp.ext.subage', 30),
+    obs('req.imp.ext.subage_dt', 30),
+    obs('req.site.ext.idzone', 30),
+  ];
+  const coOccurrences = [
+    co('req.imp.ext.subage', 'req.imp.ext.subage_dt', 30),
+    co('req.imp.ext.subage', 'req.site.ext.idzone', 30),
+    co('req.imp.ext.subage_dt', 'req.site.ext.idzone', 30),
+  ];
+  const clusters = detectClusters(observations, coOccurrences);
+  assert.equal(clusters.length, 1, 'one cluster (deduped)');
+  assert.equal(clusters[0].fields.length, 3);
+});
+
+test('detectClusters — fields below MIN_FIELD_SCORE are excluded', () => {
+  const observations = [
+    obs('req.imp.ext.strong_a', 30),
+    obs('req.imp.ext.strong_b', 30),
+    obs('req.imp.ext.weak', 1),
+  ];
+  const coOccurrences = [
+    co('req.imp.ext.strong_a', 'req.imp.ext.strong_b', 30),
+    co('req.imp.ext.strong_a', 'req.imp.ext.weak', 30),
+  ];
+  const clusters = detectClusters(observations, coOccurrences);
+  assert.equal(clusters.length, 0, 'no cluster — only 2 strong fields');
+});
+
+test('detectClusters — co-occurrence below MIN_COOCCURRENCE is ignored', () => {
+  const observations = [
+    obs('req.imp.ext.a', 30),
+    obs('req.imp.ext.b', 30),
+    obs('req.imp.ext.c', 30),
+  ];
+  const coOccurrences = [
+    co('req.imp.ext.a', 'req.imp.ext.b', 1),
+    co('req.imp.ext.a', 'req.imp.ext.c', 1),
+  ];
+  const clusters = detectClusters(observations, coOccurrences);
+  assert.equal(clusters.length, 0, 'weak co-occurrence → no cluster');
+});
+
+test('detectClusters — empty inputs return empty array', () => {
+  assert.deepEqual(detectClusters([], []), []);
+  assert.deepEqual(detectClusters(null, null), []);
+});
+
+// ── Phase 7b: temp dialect runtime ────────────────────────────────────
+
+test('resolvePath — walks req.imp[*].ext.subage to first occurrence', () => {
+  const pair = {
+    req: {
+      imp: [
+        { id: '1', ext: { subage: 7 } },
+        { id: '2', ext: { subage: 14 } },
+      ],
+    },
+    res: {},
+  };
+  assert.equal(resolvePath(pair, 'req.imp.ext.subage'), 7);
+});
+
+test('resolvePath — walks res.seatbid.bid.ext.kadam_macro', () => {
+  const pair = {
+    req: {},
+    res: { seatbid: [{ bid: [{ id: 'b1', ext: { kadam_macro: '${PRICE}' } }] }] },
+  };
+  assert.equal(resolvePath(pair, 'res.seatbid.bid.ext.kadam_macro'), '${PRICE}');
+});
+
+test('resolvePath — returns undefined for missing path', () => {
+  const pair = { req: { imp: [{ id: '1' }] }, res: {} };
+  assert.equal(resolvePath(pair, 'req.imp.ext.subage'), undefined);
+});
+
+test('applyTempDialect — required field present → no findings', () => {
+  const spec = { name: 'Test', fields: [{ path: 'req.imp.ext.subage', required: true }] };
+  const findings = applyTempDialect(spec, { req: { imp: [{ ext: { subage: 7 } }] }, res: {} });
+  assert.equal(findings.length, 0);
+});
+
+test('applyTempDialect — required field missing → ERROR finding', () => {
+  const spec = { name: 'Test', fields: [{ path: 'req.imp.ext.subage', required: true }] };
+  const findings = applyTempDialect(spec, { req: { imp: [{ id: '1' }] }, res: {} });
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].id, 'temp.field_required');
+  assert.equal(findings[0].level, 'error');
+  assert.match(findings[0].msg, /Test/);
+});
+
+test('applyTempDialect — wrong type → WARNING finding', () => {
+  const spec = {
+    name: 'Test',
+    fields: [{ path: 'req.imp.ext.subage', expectedType: 'number' }],
+  };
+  const findings = applyTempDialect(spec, {
+    req: { imp: [{ ext: { subage: '7' } }] },
+    res: {},
+  });
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].id, 'temp.field_wrong_type');
+  assert.equal(findings[0].level, 'warning');
+});
+
+test('applyTempDialect — expired dialect emits INFO but rules still apply', () => {
+  const spec = {
+    name: 'Old Custom',
+    validUntil: Date.now() - 86400 * 1000,
+    fields: [{ path: 'req.imp.ext.subage', required: true }],
+  };
+  const findings = applyTempDialect(spec, { req: { imp: [{ id: '1' }] }, res: {} });
+  const ids = findings.map((f) => f.id);
+  assert.ok(ids.includes('temp.dialect_expired'));
+  assert.ok(ids.includes('temp.field_required'));
+});
+
+test('applyTempDialect — empty spec / no fields → no findings', () => {
+  assert.deepEqual(applyTempDialect({}, { req: {}, res: {} }), []);
+  assert.deepEqual(applyTempDialect({ fields: [] }, { req: {}, res: {} }), []);
+  assert.deepEqual(applyTempDialect(null, { req: {}, res: {} }), []);
+});
+
+test('generateTempDialectId — produces stable temp:* prefix', () => {
+  const id = generateTempDialectId();
+  assert.ok(id.startsWith('temp:'));
+  assert.ok(isTempDialectId(id));
+  assert.ok(!isTempDialectId('iab'));
+});
