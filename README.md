@@ -23,6 +23,11 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
 - **OpenRTB**: oRTB 2.5 / 2.6 / 3.0 detection + validation. Auto-detect the
   version from field signatures (`imp.rwdd`, `device.sua`, `regs.gpp`, …) and
   surface findings with deep-links to the IAB spec paragraph.
+- **Format detection** (Phase 10): a third axis alongside type + version —
+  classifies the payload as banner / video / audio / native / push / pops /
+  inpage and tags runtime context (web / inapp / ctv / dooh) and creative
+  protocol (vast-2/3/4 / daast). Surfaces colour-coded chips in the summary
+  panel.
 - **Crosscheck**: request↔response sanity (`bid.impid` → `imp.id` match,
   creative format matches `imp.banner/video`, price ≥ `bidfloor`, native
   asset-id match, …).
@@ -31,9 +36,62 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
 - **IAB Content Taxonomy 1.0** category decoding from `cat[]` / `bcat[]` /
   `pcat[]`.
 - **Vendor dialect overlays** — opt-in extra rules for specific SSPs/DSPs via
-  `?dialect=<vendor>` (currently `kadam`).
-- **Ad preview** — renders `bid.adm` HTML in a sandboxed iframe
-  (`sandbox="allow-scripts"`, no `allow-same-origin`).
+  `?dialect=<vendor>` (currently `kadam`, `kadam-inpage-push`). Authors can
+  also build **temporary client-side dialects** from discovered fields via
+  the in-UI Dialect Builder — these stay local and never leave the browser.
+- **Ad preview** — renders `bid.adm` HTML, native JSON cards, and VAST
+  fragments in a sandboxed iframe (`sandbox="allow-scripts"`, no
+  `allow-same-origin`). Native bids are synthesized into a stand-alone HTML
+  card so behavior probes see clicks the same way they would on a banner.
+- **Behavior probe** (Phase 5/6): an in-iframe instrumentation bundle hooks
+  `addEventListener` / `Location.href` / permission APIs and reports back
+  via `postMessage`. Engine flags misclick traps, frozen threads, permission
+  abuse, miner / obfuscation / XSS patterns, and entropy outliers. Capped at
+  500 events per session (rolling window) to keep parent-tab memory bounded
+  during long monitoring runs.
+
+## Spyglass Intelligence (Discovery + Local AI)
+
+Phase 7a–7c built an **opt-in, browser-local discovery layer** that watches
+for unknown vendor extension fields under `*.ext.*` and clusters them by
+co-occurrence into candidate dialects. Everything runs **inside the user's
+browser** (IndexedDB) — payload values never leave the tab. Highlights:
+
+- **Discovery walker** — descent capped at depth 4 with a strict PII
+  denylist (`buyeruid`, `ifa`, `idfa`, `ip`, `consent`, `gpp`, `geo.lat`,
+  `user.id`, …). Only field paths + character-class shapes are kept; values
+  are dropped before persistence.
+- **Co-occurrence clustering** — anchored exploration with a minimum
+  field-score and minimum co-occurrence threshold so we surface clusters
+  that are real, not "everything seen everywhere".
+- **Dialect Builder** — modal that lets users review a suggested cluster,
+  pick fields, and turn it into a temporary dialect overlay applied to
+  validation findings client-side.
+- **Local LLM bridge** (Phase 7c, **opt-in**): a self-hosted Ollama instance
+  (default model `gemma3:4b`) provides cluster naming + per-field purpose
+  hints. The LLM call is fail-open: if Ollama is unreachable, the AI
+  affordances quietly hide and the rest of Spyglass continues unaffected.
+  See [LLM_SETUP.md](./LLM_SETUP.md) for deployment.
+- **Knowledge Base** (Phase 10): a curated set of OpenRTB / JsonFeed
+  reference fixtures under [packages/core/knowledge_base/](./packages/core/knowledge_base/).
+  Used for two things — `format-detect` self-tests and **few-shot context**
+  for the local LLM (so cluster names are grounded in real-market vocabulary
+  rather than priors). License-clean ingestion plan in
+  [SOURCES.md](./packages/core/knowledge_base/SOURCES.md).
+
+The privacy posture is consistent across the whole stack: **no
+bid-stream payload values leave the user's browser** unless the user is
+logged in and explicitly saves a sample (in which case they're encrypted
+end-to-end before transmission).
+
+## Safe Public Mode
+
+When the URL contains `?demo=safe` (used for the public landing strip and
+shareable links), Spyglass renders ad creatives behind a CSS blur filter
+and masks domains in the summary panel. The validator still runs at full
+fidelity; only the visual surfaces change. This lets us screenshot the
+tool in marketing material without leaking real-publisher branding from
+test payloads.
 
 ## Zero-knowledge encryption
 
@@ -60,10 +118,16 @@ The container bind-mounts:
   design system (this is an artefact of how I deploy it — replace the path
   with your own design-system.css source if you fork)
 - `/srv/DATA/AppData/adtech-spyglass` for persistent SQLite
+- `./intel-llm.js` (live-edit of the LLM bridge without container rebuild)
 
 The `public/design-system.css` file in this repo is an **empty placeholder** —
 Docker requires the bind-mount target to exist. At runtime the real file from
 the path above is served on top.
+
+**Optional: Local AI**. Discovery cluster naming + per-field purpose hints
+require a local Ollama instance reachable on the `ollama_default` Docker
+network. See [LLM_SETUP.md](./LLM_SETUP.md) for the full setup. Spyglass
+runs cleanly without it — AI affordances hide on first 503.
 
 ## Layout
 
@@ -77,6 +141,8 @@ email.js                  Resend HTTPS API wrapper
 packages/core/            validator core (browser + server-side compatible)
   index.js                public API surface — validate(), crosscheck()
   detect.js               type + oRTB version autodetection
+  format-detect.js        format detection (banner/video/audio/native/push/…)
+  knowledge-base.js       fixture loader + few-shot helper for the LLM
   rules-request.js        oRTB BidRequest rules
   rules-response.js       oRTB BidResponse rules
   rules-feed.js           JsonFeed rules — Kadam/ExoClick/RichAds/Zeropark
@@ -84,7 +150,15 @@ packages/core/            validator core (browser + server-side compatible)
   categories.js           IAB Content Taxonomy decoder
   dialects/iab.js         IAB-canonical baseline (default)
   dialects/kadam.js       Kadam oRTB-extension overlay
+  dialects/kadam-inpage-push.js   Kadam in-page push overlay
+  intel/walker.js         discovery walker with PII denylist
+  intel/cluster.js        co-occurrence clustering
+  intel/temp-dialect.js   client-side temporary dialect runtime
+  knowledge_base/         curated reference fixtures (oRTB 2.5/2.6 + JsonFeed)
   messages/{uk,en,ru}.json  localised finding messages
+behavior/                 in-iframe creative-probe scanner + engine
+
+intel-llm.js              server-side LLM bridge (Ollama)
 
 public/index.{en,uk,ru}.html   UI per locale (EN at /, others under /uk/, /ru/)
 public/about.{en,uk,ru}.html   docs per locale
@@ -100,7 +174,9 @@ Dockerfile                multi-stage alpine + node + better-sqlite3 build
 ## Tests
 
 ```bash
-npm test          # 124+ unit tests (validator + crosscheck + auth + tokens)
+npm test          # 309 tests at v9.8.2 — validator, crosscheck, auth,
+                  # tokens, behavior engine, intel walker/cluster/LLM,
+                  # format detection, knowledge-base round-trip
 ```
 
 ## Configuration

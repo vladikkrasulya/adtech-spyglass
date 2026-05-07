@@ -572,6 +572,28 @@ export async function mountInspector(root, ctx) {
   let _frozenAlerted = false;
   let _watchdogTimer = null;
 
+  // Phase 9b/freeze hardening (P0.2 audit): rolling-window cap on the
+  // behavior-events buffer. A misbehaving creative can pump events at
+  // 100s/sec; without a cap, leaving the tab open for hours grows the
+  // array linearly until OOM. 500 is generous (>10× what the engine
+  // will ever score on a single render) and keeps the parent-tab
+  // memory bounded at ~200KB. The engine truncates internally on
+  // wire-send; this cap is purely about parent-tab memory hygiene.
+  const BEHAVIOR_EVENTS_MAX = 500;
+  function pushBehaviorEvent(evt) {
+    if (!window.__spyglassBehavior) {
+      window.__spyglassBehavior = { events: [], startedAt: Date.now() };
+    }
+    const list = window.__spyglassBehavior.events;
+    list.push(evt);
+    if (list.length > BEHAVIOR_EVENTS_MAX) {
+      // Drop oldest. .splice keeps the same array reference so any
+      // outside code still holding `events` (e.g. an in-flight
+      // fetchAnalysis snapshot) sees consistent state.
+      list.splice(0, list.length - BEHAVIOR_EVENTS_MAX);
+    }
+  }
+
   function stopWatchdog() {
     if (_watchdogTimer) {
       clearInterval(_watchdogTimer);
@@ -602,10 +624,7 @@ export async function mountInspector(root, ctx) {
         trigger: 'no-event',
         msSinceLastHeartbeat: lag,
       };
-      if (!window.__spyglassBehavior) {
-        window.__spyglassBehavior = { events: [], startedAt: Date.now() };
-      }
-      window.__spyglassBehavior.events.push(evt);
+      pushBehaviorEvent(evt);
       renderBehaviorTab();
     }, WATCHDOG_INTERVAL_MS);
   }
@@ -3695,10 +3714,7 @@ export async function mountInspector(root, ctx) {
       _frozenAlerted = false;
       if (!_watchdogTimer) startWatchdog();
       if (d.kind === 'heartbeat') return;
-      if (!window.__spyglassBehavior) {
-        window.__spyglassBehavior = { events: [], startedAt: Date.now() };
-      }
-      window.__spyglassBehavior.events.push(d);
+      pushBehaviorEvent(d);
       renderBehaviorTab();
     });
 

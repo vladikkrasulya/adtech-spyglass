@@ -488,6 +488,19 @@ function handleAuthRoute(req, res, parsed) {
   // Public — body shape depends on `mode`. See spyglass_phase_8_plan.md and
   // spyglass_crypto_architecture.md (wrap-rotation gotcha) for context.
   if (pathname === '/api/auth/reset-password' && method === 'POST') {
+    // Phase 9b/freeze (audit P0.1): per-IP cap to keep bcrypt.compare in
+    // mode='rotate' from being a brute-force endpoint for the user's old
+    // password. Reset tokens are short-lived but reusable until expiry,
+    // so a held token + spamming /reset-password could try thousands of
+    // old-password guesses without this limiter.
+    if (!auth.checkResetPasswordLimit(req)) {
+      return sendError(
+        res,
+        429,
+        'rate_limited',
+        'Too many reset attempts. Try again in 15 minutes.',
+      );
+    }
     return readJson(req)
       .then(async (b) => {
         let payload;

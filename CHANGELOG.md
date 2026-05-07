@@ -6,7 +6,201 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
-### Phase 7 (full) — Zero-knowledge encryption for saved samples
+### v9.8.2 — Pre-freeze hardening (Phase 9b/audit follow-up)
+
+**Final sprint before development freeze.** Closes the two P0 risks
+flagged by the 360° pre-freeze audit. Production stays live; only new
+feature work pauses.
+
+- **P0.1 — `/api/auth/reset-password` rate-limit**. The mode='rotate'
+  branch calls `bcrypt.compare(oldPassword, ...)`; without a per-IP
+  cap, a held reset token (15-min TTL) was a brute-force gateway for
+  the user's old password. New `resetPasswordLimiter` (5 / 15 min /
+  IP) matches the `/forgot-password` tier. Login (10/15min/IP +
+  8/15min/email), register (5/hour/IP), and forgot-password
+  (5/15min/IP) limiters were already in place — audit had missed
+  them; this sprint closes the actual gap.
+- **P0.2 — Behavior events ring buffer**. `__spyglassBehavior.events`
+  was an unbounded array; a misbehaving creative pumping events at
+  100s/sec could grow parent-tab memory linearly until OOM. New
+  `pushBehaviorEvent(evt)` helper enforces a 500-event rolling
+  window via `splice(0, length - MAX)`. Engine still truncates on
+  wire-send; this is purely about parent-tab memory hygiene during
+  long monitoring runs.
+
+### Phase 10b — UI Format Badge + LLM Few-Shot Wiring (v9.8.0)
+
+- `/api/analyze` now returns `meta.format = { formats, contexts,
+protocols, tags, confidence }` computed as the union of
+  `detectFormat(bidReq)` ∪ `detectFormat(bidRes)`.
+- Three colour-coded chip families render in the left summary
+  sidebar: blue (format), green (context), amber (protocol). Hidden
+  while `confidence === 0`.
+- Frontend builder pulls the detected format off
+  `window.__spyglassLast.meta` and threads it through
+  `SpyglassIntel.suggestName(bucket, fields, format)`. The cache
+  key now includes format so the same field set under different
+  hints resolves to different suggestions.
+- Server `/api/intel/suggest-name` calls
+  `kb.fewShotForFormat(format, { limit: 2 })` and threads the
+  anonymised field-name lists into `intelLlm.suggestName(...,
+{ fewShot })`. Prompt builder gained a "Reference examples from
+  canonical RTB streams" block when fewShot is non-empty.
+- Graceful fallback: unknown / missing format → empty fewShot →
+  prompt collapses to original Phase 7c zero-shot form.
+
+### Phase 10 — Knowledge Base + Format Detector (v9.7.0)
+
+- New axis `detectFormat()` alongside `detectType()` /
+  `detectVersion()`. Pure-data heuristics, runs in browser AND Node.
+  Tags banner / video / audio / native / push / pops / inpage,
+  context (web / inapp / ctv / dooh), and protocol family (vast-2/3/4
+  / daast). Uses `imp.video.protocols`, `seatbid.bid.mtype`, and
+  string-substring VAST sniffing on `bid.adm`.
+- `packages/core/knowledge_base/` — curated fixtures organized by
+  spec × side × format. Ships 11 hand-synthesized seeds covering
+  banner/video/audio/native/inapp/dooh/ctv-rewarded/banner-response
+  - push/pops/inpage. `manifest.json` indexes provenance.
+    `SOURCES.md` documents the license-clean ingestion playbook for
+    Phase 10c automation (Prebid.js, IAB markdown, vendor docs).
+- `knowledge-base.js` (Node-only loader) exposes `listSamples`,
+  `loadSample`, `fewShotForFormat` with anonymised field-name
+  extraction. Path-traversal guard on file reads.
+- KB round-trip test: every shipped sample is detected as its
+  declared format, or the build breaks. 20 new tests; total 302/302.
+
+### Phase 9 — Generic public branding + responsive ad preview (v9.6.x)
+
+- "Standard IAB (oRTB 2.5)" replaces vendor-namespaced default in
+  the dialect dropdown across 3 templates.
+- "+ partner" → "+ Custom Dialect" wired to the Phase 7b Dialect
+  Builder modal (`data-action="open-builder"`). Partner management
+  now reachable only via console (`openPartnerModal()`).
+- Ad preview shifted from JS `transform: scale` math to CSS
+  `aspect-ratio` + `max-width: 100%` driven by `--bid-w` /
+  `--bid-h` custom properties. VAST defaults to 640×360, native
+  to 320×260. Empty state collapses to a thin `.preview-empty` strip.
+
+### Phase 9b — Sidebar cleanup, auth trigger, URL sanitization (v9.8.1)
+
+- Sidebar login block removed: the saved-list no longer renders an
+  anon-CTA + sign-in button. Header sign-in button is the single
+  global auth entry point. Frees ~80px of vertical sidebar real
+  estate.
+- Summary chrome (winning-bid card + os/geo/device/connection rows
+  - section title) collapsed by default; revealed by
+    `refreshEmptyStateChrome()` on first paint when the editors carry
+    data. `mInfo` gained `hidden` in all three templates.
+- Save → Auth toast: when an anonymous user clicks "save", a
+  `'toast.signin_to_save'` notification fires before the auth modal
+  opens, in 3 locales. Toast is non-blocking.
+- URL sanitization for temp dialects: `?dialect=temp:<uuid>` is no
+  longer written to the URL. Both `iab` (default) AND any
+  `temp:*` value strip the param entirely. Named dialects
+  (`kadam`, `kadam-inpage-push`) still serialise. localStorage
+  tracks the author's active temp dialect locally.
+
+### Phase 8 — UX/UI overhaul (v9.5.x)
+
+- Visual hierarchy: typography step-down for admin-density
+  surfaces; `section-title--sub` modifier for nested sections;
+  collapsible cards for bidReq / bidRes editors with summary bars
+  showing the bid id when collapsed.
+- Safe demo mode: `?demo=safe` blurs creatives via CSS filter and
+  masks domain text in the summary, so screenshots and shareable
+  links don't leak real-publisher branding from test payloads.
+- Clickable JSONPath: validation findings link to the exact AST
+  position; clicking scrolls and highlights the corresponding
+  textarea selection range.
+- Email verification banner + reset-password flow (with
+  zero-knowledge wrap rotation in mode='rotate' / mode='recover').
+
+### Phase 7c — Local LLM integration (v9.4.0)
+
+- Self-hosted Ollama bridge (`intel-llm.js`) for two narrow tasks:
+  cluster naming + per-field purpose detection. Default model
+  `gemma3:4b` (~7 GB on disk, 16 GB RAM headroom on i7-7700-class
+  hardware). Acoustic budget validated under stress: ~3 min/day at
+  realistic usage tier.
+- Hard timeout: 30s `AbortController` keeps a hung Ollama from
+  piling up requests. `format: 'json'` constrains gemma3 output to
+  parseable JSON.
+- Cache: `intel_llm_cache` IndexedDB store keyed by
+  `cacheKey(['suggest-name', bucket, format, ...sortedFields])`
+  with 30-day TTL — same field set never burns a second LLM call.
+- Server endpoints `/api/intel/suggest-name` and
+  `/api/intel/field-purpose` rate-limited at 30/min/IP. 503 on
+  Ollama-unavailable; frontend latches `_llmUnavailable` and hides
+  AI affordances quietly. **No values from the bid stream ever
+  enter the prompt — only field paths, char-class hints, and
+  bucket names.**
+- Docker network: Spyglass attaches to the external `ollama_default`
+  network. Configured via `OLLAMA_URL` / `OLLAMA_MODEL` env. See
+  [LLM_SETUP.md](./LLM_SETUP.md).
+
+### Phase 7b — Co-occurrence clustering + Dialect Builder (v9.3.0)
+
+- Anchored clustering with `MIN_FIELD_SCORE=5`,
+  `MIN_COOCCURRENCE=3`, `MAX_CLUSTER_SIZE=8`. Replaces the naive
+  "everything-with-everything" connected-components approach so
+  surfaced clusters are real signals, not coincidence.
+- Dialect Builder modal: review suggested cluster, pick fields by
+  checkbox, name and save. Phase 7c adds a 🤖 Suggest button that
+  fills the name from the local LLM (graceful 503 hide).
+- Temporary dialect runtime: `applyTempDialect(req, res, dialect)`
+  walks logical paths through arrays, emits findings in the engine
+  shape, pushes them onto `validation.findings`, and re-rolls
+  `validation.status` if any new ERROR appeared.
+- IndexedDB schema bump v2 → v3 (additive): adds `co_occurrence`,
+  `temporary_dialects`, `intel_llm_cache` stores. Existing v1/v2
+  data preserved.
+
+### Phase 7a — Discovery foundation (v9.2.0)
+
+- Browser-local IndexedDB observer (`spyglass_intel_v1`) watching
+  `*.ext.*` subtrees on every analyze. Walker capped at depth 4
+  with a `PII_TOKENS` denylist (`buyeruid`, `ifa`, `idfa`, `ip`,
+  `ipv6`, `consent`, `gpp`, `gpp_sid`, `geo.lat`, `geo.lon`,
+  `user.id`, …) plus a regex denylist (`/.*consent.*/i`).
+- `field_observations` store keyed by `{bucket}::{path}`. Tracks
+  count + first/last seen + decayed score (24h half-life:
+  `score(t) = score(t0) * 0.5^((t-t0)/halfLife)`).
+- Discovery banner surfaces the first time a previously-unseen
+  cluster reaches the threshold; user opts in to the full
+  Discovery flow from there.
+- Privacy posture documented: **no values from the bid stream are
+  persisted, only paths and char-class shapes**.
+
+### Phase 6 — Static payload analysis (creative content)
+
+- `behavior/rules/static.js`: regex pattern banks for obfuscation
+  (eval-base64, hex-string concatenation), miner signatures
+  (CoinHive, CryptoLoot, Coinimp), XSS markers (`document.write`
+  with concatenation, on-handler in attribute), Shannon entropy
+  outliers in the adm body. Adm sent to
+  `/api/analyze-behavior` is capped at 64 KB on the wire (engine
+  truncates internally to 100 KB).
+
+### Phase 5 — Permission abuse detection
+
+- 6 new probe hooks: `Notification.requestPermission`, `navigator.
+geolocation.getCurrentPosition` / `watchPosition`,
+  `navigator.mediaDevices.getUserMedia`, `Clipboard.writeText`,
+  `navigator.bluetooth.requestDevice`, generic
+  `Permissions.query`. Engine flags any permission request inside
+  an ad iframe as a `behavior.permission.<api>` finding.
+
+### Phase C / synthetic native rendering / button flash
+
+- `renderNativeToHtml(native)` synthesises a stand-alone HTML card
+  (sandboxed iframe, all CSS inline) from a `bid.native` object so
+  Behavior probes can observe the click as a navigation event —
+  previously native preview was DOM-injected into the parent and
+  bypassed instrumentation entirely.
+- Button feedback: clear / format / copy actions flash a
+  text-swap (`'cleared'` / `'formatted'` / `'copied'`) for 1.5s
+  to confirm the action without a toast. Defensive against
+  re-entry: `_flashTimers` map per-button.
 
 The library moves from "operator can read everything in SQLite" to a **zero-knowledge** model: I (server operator) hold only opaque ciphertext and a per-user wrapped key. Without the user's password I cannot decrypt their `bid_req` / `bid_res` payloads even with full DB access.
 

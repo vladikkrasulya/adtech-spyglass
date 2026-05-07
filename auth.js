@@ -298,6 +298,18 @@ function createAuth({ Users, logger }) {
     return forgotPasswordLimiter(clientIp(req));
   }
 
+  // Phase 9b/freeze hardening (audit P0.1 correction): /reset-password
+  // in mode='rotate' calls bcrypt.compare(oldPassword, ...) — that's a
+  // brute-force gateway for the OLD password as long as the attacker
+  // holds a valid 15-min reset token (which they could obtain by, say,
+  // having stolen email access for a moment, or by social engineering).
+  // 5/15min/IP matches the /forgot-password tier. Reset tokens still
+  // expire by their HMAC TTL on top of this — defense in depth.
+  const resetPasswordLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
+  function checkResetPasswordLimit(req) {
+    return resetPasswordLimiter(clientIp(req));
+  }
+
   function shutdown() {
     clearInterval(sweepTimer);
     sessions.clear();
@@ -315,6 +327,7 @@ function createAuth({ Users, logger }) {
     verifyPassword,
     invalidateUserSessions,
     checkForgotPasswordLimit,
+    checkResetPasswordLimit,
     clientIp, // exposed so other handlers (e.g. /api/analyze rate-limit) reuse the same loopback-XFF logic
     shutdown,
   };
