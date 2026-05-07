@@ -1051,7 +1051,24 @@ export async function mountInspector(root, ctx) {
     try {
       const req = reqVal ? JSON.parse(reqVal) : {};
       const res = resVal ? JSON.parse(resVal) : {};
-      const simP = $('simPrice').value || '1.50';
+      // Auto-fill SIM PRICE from the actual auction signals so the value
+      // shown reflects the bid being analysed, not a stale placeholder.
+      // Priority: winning bid.price (the SSP would substitute this into
+      // ${AUCTION_PRICE}) → imp[0].bidfloor (lower bound for what a bid
+      // would have to clear) → 0.00 (nothing to anchor against).
+      // The user can still type over the field after analysis; the next
+      // runAnalysis call re-derives.
+      const simPriceEl = $('simPrice');
+      const seatbidAuto = res.seatbid && res.seatbid[0];
+      const bidAuto = seatbidAuto && seatbidAuto.bid && seatbidAuto.bid[0];
+      let autoPrice = null;
+      if (bidAuto && typeof bidAuto.price === 'number') {
+        autoPrice = bidAuto.price;
+      } else if (req.imp && req.imp[0] && typeof req.imp[0].bidfloor === 'number') {
+        autoPrice = req.imp[0].bidfloor;
+      }
+      simPriceEl.value = autoPrice != null ? Number(autoPrice).toFixed(2) : '0.00';
+      const simP = simPriceEl.value || '0.00';
 
       if (!fromHist) {
         if (reqVal) $('bidReq').value = JSON.stringify(req, null, 2);
