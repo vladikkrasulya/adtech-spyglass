@@ -53,6 +53,7 @@
       'toast.partner_name_required': 'Введи назву партнера',
       'toast.added': 'Додано · {name}',
       'toast.nothing_to_save': 'Нічого зберігати — обидва поля порожні',
+      'toast.signin_to_save': 'Увійдіть, щоб зберігати запити в особисту бібліотеку',
       'toast.bundle_downloaded': 'Завантажено · {name}',
       'toast.share_link_copied':
         'Посилання скопійовано — payload зашитий у URL-фрагменті, на сервер не потрапляє',
@@ -299,6 +300,7 @@
       'toast.partner_name_required': 'Enter a partner name',
       'toast.added': 'Added · {name}',
       'toast.nothing_to_save': 'Nothing to save — both fields are empty',
+      'toast.signin_to_save': 'Sign in to save samples to your personal library',
       'toast.bundle_downloaded': 'Downloaded · {name}',
       'toast.share_link_copied':
         'Link copied — payload is embedded in the URL fragment, never reaches the server',
@@ -545,6 +547,7 @@
       'toast.partner_name_required': 'Введи название партнёра',
       'toast.added': 'Добавлено · {name}',
       'toast.nothing_to_save': 'Нечего сохранять — оба поля пусты',
+      'toast.signin_to_save': 'Войди, чтобы сохранять запросы в личную библиотеку',
       'toast.bundle_downloaded': 'Скачано · {name}',
       'toast.share_link_copied':
         'Ссылка скопирована — payload встроен в URL-фрагмент, на сервер не попадает',

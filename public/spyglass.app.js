@@ -237,13 +237,23 @@ export async function mountInspector(root, ctx) {
       window.SpyglassIntel.activate(null);
     }
     // Keep the URL in sync for the current tab so a refresh and a
-    // shared-link copy both surface the active dialect, but ONLY when
-    // the user is on the default value already (avoid clobbering an
-    // intentional ?dialect=… the user typed). For non-default dialects
-    // we always write the param so the URL is shareable.
+    // shared-link copy both surface the active dialect, but ONLY for
+    // dialects that mean something to a recipient. Phase 9b tightens
+    // this to two rules:
+    //   - 'iab' is the default — drop ?dialect= entirely so the URL is
+    //     clean for the most common case.
+    //   - Temp dialects (`temp:<uuid>`) live only in the author's
+    //     IndexedDB; sharing the link surfaces the UUID to a recipient
+    //     who has no record of it, so we strip them too. The recipient
+    //     would have fallen back to the parent dialect anyway, but the
+    //     bare UUID looked alarming. Author's own tab still keeps the
+    //     temp dialect active via localStorage, so this is purely a
+    //     URL-display fix.
+    //   - Everything else (kadam, kadam-inpage-push, future named
+    //     dialects) is shareable — we write it.
     try {
       const url = new URL(location.href);
-      if (dialect === 'iab') {
+      if (dialect === 'iab' || isTempDialect(dialect)) {
         url.searchParams.delete('dialect');
       } else {
         url.searchParams.set('dialect', dialect);
@@ -2975,15 +2985,12 @@ export async function mountInspector(root, ctx) {
   async function refreshSamples() {
     const el = $('savedList');
     if (!_currentUser) {
-      // Phase 8 visual hierarchy: secondary (outline) variant of the
-      // login CTA so it doesn't compete with the primary "Analyze"
-      // button in the header. Same data-action/data-mode wiring.
-      el.innerHTML =
-        '<div class="anon-cta">' +
-        t('sample.anon_cta') +
-        '<br><button class="btn btn-secondary btn-sm" data-action="open-auth" data-mode="login">' +
-        t('sample.btn.signin') +
-        '</button></div>';
+      // Phase 9b: the sidebar no longer carries its own auth CTA — the
+      // header sign-in button is the single global entry point. Anonymous
+      // users see the same neutral empty-state as logged-in users with
+      // no saved items. The save-flow auth gate (openSaveModal) is what
+      // surfaces the "sign in to save" prompt at the right moment.
+      el.innerHTML = '<div class="saved-empty">' + t('empty.samples') + '</div>';
       return;
     }
     // Logged-in but DEK is gone (page reload): surface unlock CTA.
@@ -3115,7 +3122,11 @@ export async function mountInspector(root, ctx) {
 
   window.openSaveModal = function () {
     if (!_currentUser) {
-      // Auth-gate: open sign-in modal directly (no double-toast over the modal).
+      // Phase 9b auth-gate: surface an explanatory toast BEFORE opening
+      // the auth modal so guests understand WHY they're being redirected
+      // (previously the modal opened silently and felt like a non-sequitur).
+      // Toast is non-blocking; auth modal still takes focus immediately.
+      toast(t('toast.signin_to_save'), 'info');
       window.openAuthModal('login');
       return;
     }
@@ -3938,6 +3949,15 @@ export async function mountInspector(root, ctx) {
     await bootAuth();
     await refreshPartners();
     refreshSamples();
+
+    // Phase 9b: collapse the summary chrome (winning-bid card + os/geo/
+    // device/connection rows + section title) on first paint when the
+    // editors are still empty. Without this initial sweep, the four "—"
+    // placeholder rows show right after mount and only collapse on the
+    // first user keystroke. refreshEmptyStateChrome reads bidReq/bidRes
+    // values, so an empty boot collapses, a hydrated boot (history nav)
+    // reveals.
+    refreshEmptyStateChrome();
 
     // Sync the dialect selector with the resolved active dialect.
     // activeDialect() reads ?dialect=… first, then localStorage; sync the
