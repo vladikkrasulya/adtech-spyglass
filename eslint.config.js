@@ -47,6 +47,7 @@ module.exports = [
       'auth.js',
       'tokens.js',
       'email.js',
+      'intel-llm.js',
       'validator/**/*.js',
       'packages/**/*.js',
       'scripts/**/*.js',

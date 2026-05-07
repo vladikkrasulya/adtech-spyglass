@@ -8,6 +8,14 @@ services:
       # Phase 8: NODE_ENV, RESEND_API_KEY, EMAIL_FROM, EMAIL_TOKEN_SECRET,
       # PUBLIC_BASE_URL. File is gitignored; .env.example documents the keys.
       - .env
+    environment:
+      # Phase 7c — Spyglass Intelligence bridge. The ollama service lives
+      # on the `ollama_default` network (managed by /srv/DATA/Stacks/ollama/);
+      # we attach below so DNS-by-name resolution (`http://ollama:11434`)
+      # works. OLLAMA_MODEL is the gemma3:4b that's already cached on disk
+      # — set to a different tag if you pulled a smaller model.
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=gemma3:4b
     ports:
       - '127.0.0.1:8090:3000'
     volumes:
@@ -22,8 +30,19 @@ services:
       # tweak required a full image rebuild, slowing iteration to minutes.
       # :ro because nothing in the container should write to it.
       - ./packages:/app/packages:ro
+      # intel-llm.js — Phase 7c LLM bridge. Bind-mounted same as packages
+      # so prompt edits take effect on `compose restart` without rebuild.
+      - ./intel-llm.js:/app/intel-llm.js:ro
       # Persistent SQLite store (partners + saved bid samples).
       - /srv/DATA/AppData/adtech-spyglass:/data
+    networks:
+      # Default per-stack network for the Spyglass container itself.
+      - default
+      # Phase 7c cross-stack join: lets `http://ollama:11434` resolve to
+      # the ollama container managed by the separate /srv/DATA/Stacks/ollama
+      # compose project. external:true means we ATTACH to its network
+      # rather than try to manage it.
+      - ollama_default
     restart: always
     healthcheck:
       # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).
@@ -33,3 +52,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+
+networks:
+  default:
+  ollama_default:
+    external: true

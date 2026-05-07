@@ -747,6 +747,103 @@ function handleAnalyzeBehavior(req, res, parsed) {
     .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
 }
 
+// ── /api/intel/* — Phase 7c LLM intelligence ───────────────────────────────
+// Two narrow endpoints (cluster naming + per-field purpose hint) that bridge
+// to a locally-hosted Ollama instance via http://ollama:11434. Both are
+// fire-on-user-gesture only — no automatic discovery — so the rate limit is
+// modest (30/min/IP) and there's no caching server-side; the browser caches
+// in IndexedDB for 30 days.
+//
+// Both endpoints fail open: when Ollama is unreachable the frontend silently
+// hides the AI affordances (per Phase 7 R&D doc graceful-degradation rule).
+// We log unavailability at warn-level so an admin can see the pattern but
+// don't surface user-facing errors.
+
+const intelLlm = require('./intel-llm');
+const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
+const INTEL_WINDOW_MS = 60_000;
+
+function makeIntelLimiter() {
+  const buckets = new Map();
+  setInterval(() => {
+    const cutoff = Date.now() - INTEL_WINDOW_MS;
+    for (const [k, list] of buckets) {
+      const fresh = list.filter((t) => t > cutoff);
+      if (fresh.length === 0) buckets.delete(k);
+      else buckets.set(k, fresh);
+    }
+  }, INTEL_WINDOW_MS).unref();
+  return (key) => {
+    const now = Date.now();
+    const cutoff = now - INTEL_WINDOW_MS;
+    const list = (buckets.get(key) || []).filter((t) => t > cutoff);
+    if (list.length >= INTEL_MAX_PER_WINDOW) return false;
+    list.push(now);
+    buckets.set(key, list);
+    return true;
+  };
+}
+const intelLimiter = makeIntelLimiter();
+
+function handleIntelSuggestName(req, res) {
+  if (!intelLimiter(auth.clientIp(req))) {
+    return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
+  }
+  readJson(req)
+    .then(async ({ bucket, fields }) => {
+      if (!Array.isArray(fields) || fields.length === 0) {
+        return sendError(res, 400, 'invalid_input', 'fields[] is required');
+      }
+      // Sanitise: paths must be strings, cap count to bound prompt size.
+      const cleanFields = fields
+        .filter((f) => typeof f === 'string' && f.length > 0 && f.length < 200)
+        .slice(0, 50);
+      if (cleanFields.length === 0) {
+        return sendError(res, 400, 'invalid_input', 'no usable fields');
+      }
+      try {
+        const suggestion = await intelLlm.suggestName(bucket, cleanFields);
+        if (!suggestion) {
+          return sendError(res, 502, 'unparseable', 'LLM returned an unusable suggestion');
+        }
+        sendJson(res, 200, { success: true, suggestion });
+      } catch (e) {
+        if (e instanceof intelLlm.OllamaUnavailable) {
+          console.warn('[intel] Ollama unavailable:', e.message);
+          return sendError(res, 503, 'ollama_unavailable', e.message);
+        }
+        throw e;
+      }
+    })
+    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+}
+
+function handleIntelFieldPurpose(req, res) {
+  if (!intelLimiter(auth.clientIp(req))) {
+    return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
+  }
+  readJson(req)
+    .then(async ({ path, charClass, bucket }) => {
+      if (typeof path !== 'string' || path.length === 0 || path.length > 200) {
+        return sendError(res, 400, 'invalid_input', 'path is required (≤200 chars)');
+      }
+      try {
+        const purpose = await intelLlm.fieldPurpose(path, charClass, bucket);
+        if (!purpose) {
+          return sendError(res, 502, 'unparseable', 'LLM returned an unusable suggestion');
+        }
+        sendJson(res, 200, { success: true, purpose });
+      } catch (e) {
+        if (e instanceof intelLlm.OllamaUnavailable) {
+          console.warn('[intel] Ollama unavailable:', e.message);
+          return sendError(res, 503, 'ollama_unavailable', e.message);
+        }
+        throw e;
+      }
+    })
+    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+}
+
 // ── Per-user CRUD: partners + samples (auth-required) ──────────────────────
 
 function handleApi(req, res, parsed, user) {
@@ -979,6 +1076,10 @@ const server = http.createServer((req, res) => {
       return handleAnalyze(req, res, parsed);
     if (pathname === '/api/analyze-behavior' && req.method === 'POST')
       return handleAnalyzeBehavior(req, res, parsed);
+    if (pathname === '/api/intel/suggest-name' && req.method === 'POST')
+      return handleIntelSuggestName(req, res);
+    if (pathname === '/api/intel/field-purpose' && req.method === 'POST')
+      return handleIntelFieldPurpose(req, res);
     if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);
     if (pathname.startsWith('/api/auth/')) {
       if (handleAuthRoute(req, res, parsed) !== false) return;

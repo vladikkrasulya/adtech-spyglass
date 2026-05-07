@@ -147,13 +147,27 @@
       '  display:block;font-size:12px;color:var(--text-muted, #666);',
       '  margin-bottom:6px;',
       '}',
+      '.spyglass-intel-modal__name-row{',
+      '  display:flex;gap:8px;align-items:center;margin-bottom:14px;',
+      '}',
       '.spyglass-intel-modal__name-input{',
-      '  width:100%;padding:6px 10px;font:13px var(--font-body, system-ui, sans-serif);',
+      '  flex:1;padding:6px 10px;font:13px var(--font-body, system-ui, sans-serif);',
       '  background:var(--surface);border:1px solid var(--border, #e0e0e0);',
       '  border-radius:4px;color:var(--text);',
-      '  margin-bottom:14px;',
       '}',
       '.spyglass-intel-modal__name-input:focus{outline:none;border-color:var(--accent, #ffc83d)}',
+      '.spyglass-intel-modal__suggest-btn{',
+      '  flex-shrink:0;padding:6px 12px;font:12px var(--font-body, system-ui, sans-serif);',
+      '  background:var(--bg-2, #f8f8f8);color:var(--text);',
+      '  border:1px solid var(--border, #e0e0e0);border-radius:4px;cursor:pointer;',
+      '  white-space:nowrap;',
+      '}',
+      '.spyglass-intel-modal__suggest-btn:hover{',
+      '  background:var(--accent-soft, #fff4d4);border-color:var(--accent, #ffc83d);',
+      '}',
+      '.spyglass-intel-modal__suggest-btn:disabled{',
+      '  opacity:0.6;cursor:wait;',
+      '}',
       '.spyglass-intel-modal__section-title{',
       '  font:11px/1 var(--font-mono, ui-monospace, monospace);',
       '  letter-spacing:.05em;text-transform:uppercase;',
@@ -283,6 +297,9 @@
         cancel: 'Скасувати',
         create: 'Створити тимчасовий діалект',
         info: (n) => n + ' полів обрано',
+        suggestName: 'Запропонувати',
+        suggestNameTooltip: 'Запропонувати назву через локальну LLM',
+        suggesting: 'Думаю…',
       };
     }
     if (lang === 'ru') {
@@ -297,6 +314,9 @@
         cancel: 'Отмена',
         create: 'Создать временный диалект',
         info: (n) => n + ' полей выбрано',
+        suggestName: 'Предложить',
+        suggestNameTooltip: 'Предложить название через локальную LLM',
+        suggesting: 'Думаю…',
       };
     }
     return {
@@ -310,6 +330,9 @@
       cancel: 'Cancel',
       create: 'Create temporary dialect',
       info: (n) => n + ' fields selected',
+      suggestName: 'Suggest',
+      suggestNameTooltip: 'Suggest a name with the local LLM',
+      suggesting: 'Thinking…',
     };
   }
 
@@ -347,12 +370,23 @@
 
     const parts = [];
 
-    // Name input
+    // Name input + 🤖 Suggest button (Phase 7c — LLM-backed naming).
+    // Button is wired here but auto-hides if Ollama is unavailable
+    // (graceful degradation per Phase 7 R&D). The label-row layout
+    // keeps name + button on the same line so the input doesn't shift
+    // when the button appears/disappears.
     parts.push(
       '<label class="spyglass-intel-modal__field">' + escapeHtml(t.nameLabel) + '</label>',
-      '<input type="text" class="spyglass-intel-modal__name-input" data-builder-name placeholder="' +
+      '<div class="spyglass-intel-modal__name-row">',
+      '  <input type="text" class="spyglass-intel-modal__name-input" data-builder-name placeholder="' +
         escapeHtml(t.namePlaceholder) +
         '">',
+      '  <button class="spyglass-intel-modal__suggest-btn" data-suggest-name title="' +
+        escapeHtml(t.suggestNameTooltip || 'Suggest name with local LLM') +
+        '">🤖 ' +
+        escapeHtml(t.suggestName || 'Suggest') +
+        '</button>',
+      '</div>',
     );
 
     // Cluster suggestions
@@ -454,6 +488,91 @@
           }
         }
       });
+    });
+
+    // Phase 7c: 🤖 Suggest button. Pulls cluster-naming suggestion from
+    // local Ollama, fills the name input. Hides itself on the first
+    // 503 (server-side Ollama unavailable) so users don't keep
+    // hammering a non-responsive endpoint.
+    const suggestBtn = body.querySelector('[data-suggest-name]');
+    if (suggestBtn) {
+      // Hide proactively if a previous /api/intel call already hit 503.
+      if (window.SpyglassIntel && !window.SpyglassIntel.isLlmAvailable()) {
+        suggestBtn.style.display = 'none';
+      }
+      suggestBtn.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        if (_selection.size === 0) return; // nothing to suggest from
+        const nameInput = body.querySelector('[data-builder-name]');
+        const original = suggestBtn.textContent;
+        suggestBtn.disabled = true;
+        suggestBtn.textContent = t.suggesting;
+        // Bucket = most-frequent among selected fields (mirrors create()).
+        const bucketCount = Array.from(_selection.values()).reduce((acc, b) => {
+          acc[b] = (acc[b] || 0) + 1;
+          return acc;
+        }, {});
+        const bucket =
+          Object.keys(bucketCount).sort((a, b) => bucketCount[b] - bucketCount[a])[0] || 'display';
+        const fields = Array.from(_selection.keys());
+        let suggestion = null;
+        try {
+          if (window.SpyglassIntel) {
+            suggestion = await window.SpyglassIntel.suggestName(bucket, fields);
+          }
+        } catch (e) {
+          /* swallow — graceful degradation */
+        }
+        suggestBtn.textContent = original;
+        suggestBtn.disabled = false;
+        if (suggestion && suggestion.name && nameInput) {
+          nameInput.value = suggestion.name;
+          if (suggestion.description) {
+            nameInput.title = suggestion.description; // tooltip with full description
+          }
+        } else if (window.SpyglassIntel && !window.SpyglassIntel.isLlmAvailable()) {
+          // 503 latched: hide the button quietly. No toast, no alarm.
+          suggestBtn.style.display = 'none';
+        }
+      });
+    }
+
+    // Phase 7c: per-field purpose hint on hover. Lazy fetch — only
+    // fires on first hover for a path; result populates the row's
+    // tooltip via title attribute. Cached for 30 days client-side
+    // (storage layer), so a hover storm doesn't burn LLM calls.
+    body.querySelectorAll('[data-field-toggle]').forEach((cb) => {
+      const row = cb.closest('.spyglass-intel-fieldlist__row');
+      if (!row) return;
+      let purposeFetched = false;
+      const onEnter = async () => {
+        if (purposeFetched) return;
+        purposeFetched = true; // mark BEFORE fetch so re-entry doesn't double-fire
+        if (!window.SpyglassIntel || !window.SpyglassIntel.isLlmAvailable()) return;
+        const path = cb.getAttribute('data-field-toggle');
+        const bucket = cb.getAttribute('data-bucket');
+        try {
+          const r = await window.SpyglassIntel.fieldPurpose(path, '', bucket);
+          if (r && r.purpose) {
+            const meta = row.querySelector('.spyglass-intel-fieldlist__meta');
+            if (meta) {
+              const ai = ' · 🤖 ' + r.purpose + (r.confidence === 'low' ? '?' : '');
+              if (!meta.dataset.aiAdded) {
+                meta.textContent = meta.textContent + ai;
+                meta.dataset.aiAdded = '1';
+              }
+              row.title =
+                'AI-suggested purpose: ' + r.purpose + ' (confidence: ' + r.confidence + ')';
+            }
+          }
+        } catch (e) {
+          /* graceful */
+        }
+      };
+      // mouseenter (not mouseover) = single fire per row enter, not per
+      // child element. Pointerenter would also work; mouseenter is the
+      // older spec but identical for this use case.
+      row.addEventListener('mouseenter', onEnter, { once: true });
     });
 
     updateFooter();

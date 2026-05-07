@@ -32,11 +32,12 @@
   if (window.SpyglassIntelStorage) return;
 
   const DB_NAME = 'spyglass_intel_v1';
-  const DB_VERSION = 2; // 7b: + co_occurrence + temporary_dialects
+  const DB_VERSION = 3; // 7c: + intel_llm_cache
   const STORE_OBSERVATIONS = 'field_observations';
   const STORE_META = 'discovery_meta';
   const STORE_COOCCURRENCE = 'co_occurrence';
   const STORE_TEMP_DIALECTS = 'temporary_dialects';
+  const STORE_LLM_CACHE = 'intel_llm_cache';
 
   let _dbPromise = null;
 
@@ -69,6 +70,15 @@
         }
         if (!db.objectStoreNames.contains(STORE_TEMP_DIALECTS)) {
           db.createObjectStore(STORE_TEMP_DIALECTS, { keyPath: 'id' });
+        }
+        // Phase 7c: LLM-suggestion cache. Keyed by deterministic hash
+        // of (kind + path + bucket) so the same field never burns a
+        // second LLM call within the TTL window. expiresAt index lets
+        // future cleanup pass evict expired rows in one cursor scan.
+        if (!db.objectStoreNames.contains(STORE_LLM_CACHE)) {
+          const os = db.createObjectStore(STORE_LLM_CACHE, { keyPath: 'key' });
+          os.createIndex('expiresAt', 'expiresAt', { unique: false });
+          os.createIndex('kind', 'kind', { unique: false });
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -129,7 +139,7 @@
   async function clearAll() {
     const db = await openDb();
     const tx = db.transaction(
-      [STORE_OBSERVATIONS, STORE_META, STORE_COOCCURRENCE, STORE_TEMP_DIALECTS],
+      [STORE_OBSERVATIONS, STORE_META, STORE_COOCCURRENCE, STORE_TEMP_DIALECTS, STORE_LLM_CACHE],
       'readwrite',
     );
     await Promise.all([
@@ -137,6 +147,7 @@
       promisify(tx.objectStore(STORE_META).clear()),
       promisify(tx.objectStore(STORE_COOCCURRENCE).clear()),
       promisify(tx.objectStore(STORE_TEMP_DIALECTS).clear()),
+      promisify(tx.objectStore(STORE_LLM_CACHE).clear()),
     ]);
   }
 
@@ -189,6 +200,34 @@
     return promisify(tx.objectStore(STORE_TEMP_DIALECTS).getAll());
   }
 
+  // ── Phase 7c: LLM cache ───────────────────────────────────────────
+
+  async function getLlmCache(key) {
+    const db = await openDb();
+    const tx = db.transaction(STORE_LLM_CACHE, 'readonly');
+    const r = await promisify(tx.objectStore(STORE_LLM_CACHE).get(key));
+    if (!r) return null;
+    if (r.expiresAt && r.expiresAt < Date.now()) {
+      // Stale — let the next putLlmCache() overwrite. Don't bother
+      // deleting eagerly; cleanup is a future maintenance pass.
+      return null;
+    }
+    return r.value;
+  }
+
+  async function putLlmCache(key, value, ttlMs) {
+    const db = await openDb();
+    const tx = db.transaction(STORE_LLM_CACHE, 'readwrite');
+    return promisify(
+      tx.objectStore(STORE_LLM_CACHE).put({
+        key,
+        value,
+        kind: (value && value.kind) || 'unknown',
+        expiresAt: Date.now() + (ttlMs || 30 * 86400 * 1000),
+      }),
+    );
+  }
+
   window.SpyglassIntelStorage = {
     DB_NAME,
     DB_VERSION,
@@ -207,5 +246,8 @@
     putTempDialect,
     deleteTempDialect,
     listTempDialects,
+    // Phase 7c
+    getLlmCache,
+    putLlmCache,
   };
 })();

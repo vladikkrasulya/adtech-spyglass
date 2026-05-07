@@ -210,6 +210,134 @@
     return validation;
   }
 
+  // ── Phase 7c: LLM client ─────────────────────────────────────────
+
+  // 503 from server (Ollama unavailable) flips this latch ON for the
+  // current page session. UI hides AI affordances while it's set so
+  // users don't repeatedly trigger ~30s-timeouts. Cleared on a
+  // page reload — no exponential backoff state machine for now;
+  // if the server comes back, refresh.
+  let _llmUnavailable = false;
+  function isLlmAvailable() {
+    return !_llmUnavailable;
+  }
+
+  // Stable cache key. Hash with djb2 → unsigned 32-bit hex so keys
+  // don't grow with path length and IDB lookups stay fast.
+  function cacheKey(parts) {
+    const s = parts.join('||');
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return 'k_' + (h >>> 0).toString(16);
+  }
+
+  async function fetchJson(url, body) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 35000);
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      const j = await r.json().catch(() => null);
+      if (r.status === 503) {
+        _llmUnavailable = true;
+        try {
+          window.dispatchEvent(new CustomEvent('spyglass:intel-llm-unavailable'));
+        } catch (e) {
+          /* */
+        }
+        return { ok: false, status: 503, body: j };
+      }
+      if (!r.ok) return { ok: false, status: r.status, body: j };
+      return { ok: true, status: r.status, body: j };
+    } catch (e) {
+      _llmUnavailable = true;
+      return { ok: false, status: 0, body: null };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Suggest a snake_case name for a cluster of fields. Cached locally
+   * for 30 days (fields are stable; renaming the same cluster
+   * shouldn't burn LLM calls). Returns null on any failure path so
+   * the UI can hide the suggestion silently.
+   */
+  async function suggestName(bucket, fields) {
+    if (_llmUnavailable) return null;
+    const sortedFields = (fields || []).slice().sort();
+    const key = cacheKey(['suggest-name', bucket || '', ...sortedFields]);
+    if (window.SpyglassIntelStorage) {
+      try {
+        const cached = await window.SpyglassIntelStorage.getLlmCache(key);
+        if (cached && cached.kind === 'name') return cached;
+      } catch (e) {
+        /* cache miss is fine */
+      }
+    }
+    const r = await fetchJson('/api/intel/suggest-name', {
+      bucket: bucket || 'display',
+      fields: sortedFields,
+    });
+    if (!r.ok || !r.body || !r.body.success || !r.body.suggestion) return null;
+    const out = {
+      kind: 'name',
+      name: r.body.suggestion.name,
+      description: r.body.suggestion.description,
+      cachedAt: Date.now(),
+    };
+    if (window.SpyglassIntelStorage) {
+      try {
+        await window.SpyglassIntelStorage.putLlmCache(key, out);
+      } catch (e) {
+        /* */
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Suggest a single-purpose label for one field. Hover-fired in the
+   * builder; aggressive 30-day cache means a path discovered once
+   * never burns a second LLM call.
+   */
+  async function fieldPurpose(path, charClass, bucket) {
+    if (_llmUnavailable) return null;
+    const key = cacheKey(['field-purpose', path || '', charClass || '', bucket || '']);
+    if (window.SpyglassIntelStorage) {
+      try {
+        const cached = await window.SpyglassIntelStorage.getLlmCache(key);
+        if (cached && cached.kind === 'purpose') return cached;
+      } catch (e) {
+        /* */
+      }
+    }
+    const r = await fetchJson('/api/intel/field-purpose', {
+      path,
+      charClass: charClass || 'unknown',
+      bucket: bucket || 'display',
+    });
+    if (!r.ok || !r.body || !r.body.success || !r.body.purpose) return null;
+    const out = {
+      kind: 'purpose',
+      purpose: r.body.purpose.purpose,
+      confidence: r.body.purpose.confidence,
+      cachedAt: Date.now(),
+    };
+    if (window.SpyglassIntelStorage) {
+      try {
+        await window.SpyglassIntelStorage.putLlmCache(key, out);
+      } catch (e) {
+        /* */
+      }
+    }
+    return out;
+  }
+
   window.SpyglassIntel = {
     /**
      * Observe a (payload, validation) pair. No-ops when discovery is
@@ -240,5 +368,9 @@
     listTempDialects: listTempDialects,
     getActiveSpec: getActiveSpec,
     applyToFindings: applyToFindings,
+    // Phase 7c — LLM
+    suggestName: suggestName,
+    fieldPurpose: fieldPurpose,
+    isLlmAvailable: isLlmAvailable,
   };
 })();

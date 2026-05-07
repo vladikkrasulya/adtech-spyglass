@@ -485,3 +485,114 @@ test('generateTempDialectId — produces stable temp:* prefix', () => {
   assert.ok(isTempDialectId(id));
   assert.ok(!isTempDialectId('iab'));
 });
+
+// ── Phase 7c: LLM bridge (prompt building + output validation) ───────
+
+const intelLlm = require('../intel-llm');
+
+test('buildSuggestNamePrompt — includes bucket and field list', () => {
+  const p = intelLlm.buildSuggestNamePrompt('push', ['req.imp.ext.subage', 'bid.ext.kadam_macro']);
+  assert.match(p, /Bucket: push/);
+  assert.match(p, /req\.imp\.ext\.subage/);
+  assert.match(p, /bid\.ext\.kadam_macro/);
+  // The "STRICT JSON only" instruction may wrap across lines in the
+  // prompt template — match across whitespace.
+  assert.match(p, /STRICT[\s\S]*JSON only/);
+});
+
+test('buildSuggestNamePrompt — sanitises non-ASCII bucket / paths', () => {
+  // Defense in depth — paths in production come from the walker which
+  // already filters non-ASCII, but the prompt builder strips again.
+  // Use \u escapes so the linter doesn't flag invisible chars in source.
+  const rtlOverride = '\u202e'; // RTL override
+  const zeroWidth = '\u200b'; // zero-width space
+  const p = intelLlm.buildSuggestNamePrompt('push' + rtlOverride, ['req.ext.foo' + zeroWidth]);
+  assert.ok(!p.includes(rtlOverride), 'bucket must not contain RTL override');
+  assert.ok(!p.includes(zeroWidth), 'path must not contain zero-width space');
+});
+
+test('buildFieldPurposePrompt — includes path / charClass / bucket', () => {
+  const p = intelLlm.buildFieldPurposePrompt('bid.ext.icon', 'url', 'push');
+  assert.match(p, /Field path: bid\.ext\.icon/);
+  assert.match(p, /Char class: url/);
+  assert.match(p, /Bucket: push/);
+});
+
+test('validateNameSuggestion — accepts well-formed snake_case', () => {
+  const r = intelLlm.validateNameSuggestion({
+    name: 'kadam_push',
+    description: 'Kadam push subscription traffic',
+  });
+  assert.deepEqual(r, { name: 'kadam_push', description: 'Kadam push subscription traffic' });
+});
+
+test('validateNameSuggestion — coerces hyphens / spaces to underscores', () => {
+  const r = intelLlm.validateNameSuggestion({ name: 'Kadam-Push Custom', description: 'X' });
+  assert.equal(r.name, 'kadam_push_custom');
+});
+
+test('validateNameSuggestion — rejects non-string / empty / starting digit', () => {
+  assert.equal(intelLlm.validateNameSuggestion(null), null);
+  assert.equal(intelLlm.validateNameSuggestion({ name: 42 }), null);
+  assert.equal(intelLlm.validateNameSuggestion({ name: '' }), null);
+  assert.equal(intelLlm.validateNameSuggestion({ name: '1starts_with_digit' }), null);
+});
+
+test('validateNameSuggestion — caps name length at 30 chars', () => {
+  const r = intelLlm.validateNameSuggestion({
+    name: 'a'.repeat(50),
+    description: 'X',
+  });
+  assert.equal(r, null, 'name beyond 30 chars must reject');
+});
+
+test('validatePurposeSuggestion — accepts known purpose with confidence', () => {
+  const r = intelLlm.validatePurposeSuggestion({ purpose: 'click_url', confidence: 'high' });
+  assert.deepEqual(r, { purpose: 'click_url', confidence: 'high' });
+});
+
+test('validatePurposeSuggestion — rejects unknown purpose', () => {
+  assert.equal(
+    intelLlm.validatePurposeSuggestion({ purpose: 'made_up_thing', confidence: 'high' }),
+    null,
+  );
+});
+
+test('validatePurposeSuggestion — defaults confidence to medium', () => {
+  const r = intelLlm.validatePurposeSuggestion({ purpose: 'click_url' });
+  assert.equal(r.confidence, 'medium');
+});
+
+test('validatePurposeSuggestion — null / wrong shape returns null', () => {
+  assert.equal(intelLlm.validatePurposeSuggestion(null), null);
+  assert.equal(intelLlm.validatePurposeSuggestion({ purpose: 42 }), null);
+  assert.equal(intelLlm.validatePurposeSuggestion({}), null);
+});
+
+test('extractStructured — strips ```json fences', () => {
+  const r = intelLlm.extractStructured({
+    response: '```json\n{"name": "test", "description": "x"}\n```',
+  });
+  assert.deepEqual(r, { name: 'test', description: 'x' });
+});
+
+test('extractStructured — finds JSON inside trailing prose', () => {
+  const r = intelLlm.extractStructured({
+    response: 'Sure! Here you go: {"purpose":"click_url","confidence":"high"}. Hope that helps.',
+  });
+  assert.deepEqual(r, { purpose: 'click_url', confidence: 'high' });
+});
+
+test('extractStructured — returns null on garbage', () => {
+  assert.equal(intelLlm.extractStructured({ response: 'I cannot help with that.' }), null);
+  assert.equal(intelLlm.extractStructured({ response: '' }), null);
+  assert.equal(intelLlm.extractStructured(null), null);
+  assert.equal(intelLlm.extractStructured({}), null);
+});
+
+test('ALLOWED_PURPOSES — covers the canonical AdTech taxonomy', () => {
+  const required = ['click_url', 'image_url', 'icon_url', 'tracker_pixel', 'title', 'unknown'];
+  for (const p of required) {
+    assert.ok(intelLlm.ALLOWED_PURPOSES.has(p), 'missing canonical purpose: ' + p);
+  }
+});
