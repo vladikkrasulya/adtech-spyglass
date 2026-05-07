@@ -5,6 +5,7 @@ Phased plan for evolving the current single-container app into the architecture 
 The phases are **sequential where they share substrate** (you can't do the public/private split before the validator core is extracted) and **parallelizable where they don't** (i18n and theme can land any time after Phase 1).
 
 **Status legend** (added 2026-05-04 to track real progress against the original phase plan):
+
 - ✅ DONE — shipped in production
 - 🟢 MOSTLY DONE — main scope shipped; minor follow-ups remain
 - 🔄 IN PROGRESS — actively being worked on
@@ -94,7 +95,7 @@ The validator engine becomes a public npm package. This is the trust play and th
 
 > Decision 2026-05-04: **NOT splitting** the surface to a separate `rtb.kyivtech.com.ua` domain. The public-demo experience already works without an account on `spyglass.kyivtech.com.ua/` — login only unlocks Save/Library/Partners. Real-world adoption confirmed (senior engineer at user's workplace used it for SSP 3027 click-without-click investigation 2026-05-04). Cost of split (2 deployments, 2 DNS, 2 CF Tunnel routes, 2 build configs) > benefit. The single-domain decision is in [memory `spyglass_no_public_split.md`](../../home/vk/.claude/projects/-home-vk/memory/spyglass_no_public_split.md).
 >
-> What of Phase 5 *was* worth doing happened anyway: anonymous use works, SEO landing exists (`/about` + index pages with hreflang + sitemap), privacy copy is live, og:image for socials shipped (commit `7a606ea`).
+> What of Phase 5 _was_ worth doing happened anyway: anonymous use works, SEO landing exists (`/about` + index pages with hreflang + sitemap), privacy copy is live, og:image for socials shipped (commit `7a606ea`).
 
 The public surface comes online.
 

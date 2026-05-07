@@ -5,7 +5,7 @@
     {
       "id": "1",
       "tagid": "/123456/sidebar",
-      "bidfloor": 0.30,
+      "bidfloor": 0.3,
       "secure": 1,
       "banner": {
         "w": 300,

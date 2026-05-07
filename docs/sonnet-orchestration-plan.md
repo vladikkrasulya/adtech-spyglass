@@ -14,25 +14,29 @@ Each agent is a markdown file with frontmatter + system prompt. Template:
 ---
 name: spyglass-<role>
 description: <when to use, ~12 words>
-tools: Read, Edit, Bash       # restrict per role
-model: sonnet                  # default; bump to opus only when role demands
+tools: Read, Edit, Bash # restrict per role
+model: sonnet # default; bump to opus only when role demands
 ---
 
 You are a Spyglass <role>. Repo root: /srv/DATA/Stacks/adtech-spyglass.
 
 ## Strict constraints
+
 - Vanilla JS only, no frameworks (working rule)
 - 3 locales (uk/en/ru) stay in sync where applicable
 - Never push without my explicit approval
 - Stop on doubt — don't guess; report and ask
 
 ## What you do
+
 - <one or two specific responsibilities>
 
 ## Escalate to Opus (parent) if
+
 - <conditions where Sonnet's reasoning is insufficient>
 
 ## Verify before reporting done
+
 - npm test passes 141/141 (or current baseline)
 - npm run lint exits 0 errors (warnings ok)
 - git diff is sane and minimal
@@ -41,22 +45,22 @@ You are a Spyglass <role>. Repo root: /srv/DATA/Stacks/adtech-spyglass.
 
 The 10 agents to create, in order (easiest → hardest):
 
-| # | name | tools | one-line role |
-|---|---|---|---|
-| 1 | spyglass-prober | Read, Grep, Bash | Read-only investigator: "where is X defined / used?" |
-| 2 | spyglass-deps-updater | Read, Bash | npm update minor/patch + verify tests; revert on fail |
-| 3 | spyglass-i18n-translator | Read, Edit, Bash | Add/translate i18n keys × 3 locales; never touch logic |
-| 4 | spyglass-doc-writer | Read, Edit, Write | Update /about + ROADMAP + README in 3 locales |
-| 5 | spyglass-css-cleaner | Read, Edit | CSS dedup + format fixes; JS off-limits |
-| 6 | spyglass-tech-debt-resolver | Read, Edit, Write, Bash | Pick ONE item from tech-debt audit; surgical fix |
-| 7 | spyglass-security-reviewer | Read, Grep, Bash | READ-ONLY audit: XSS/CSRF/injection sniffing |
-| 8 | spyglass-test-writer | Read, Edit, Write, Bash | Add test fixtures + assertions following existing patterns |
-| 9 | spyglass-validator-rule-author | Read, Edit, Write, Bash | New rules in packages/core/rules-*.js |
-| 10 | spyglass-uxqa-tester | Bash, mcp__playwright__* | Functional smoke-tests on prod via Playwright |
+| #   | name                           | tools                     | one-line role                                              |
+| --- | ------------------------------ | ------------------------- | ---------------------------------------------------------- |
+| 1   | spyglass-prober                | Read, Grep, Bash          | Read-only investigator: "where is X defined / used?"       |
+| 2   | spyglass-deps-updater          | Read, Bash                | npm update minor/patch + verify tests; revert on fail      |
+| 3   | spyglass-i18n-translator       | Read, Edit, Bash          | Add/translate i18n keys × 3 locales; never touch logic     |
+| 4   | spyglass-doc-writer            | Read, Edit, Write         | Update /about + ROADMAP + README in 3 locales              |
+| 5   | spyglass-css-cleaner           | Read, Edit                | CSS dedup + format fixes; JS off-limits                    |
+| 6   | spyglass-tech-debt-resolver    | Read, Edit, Write, Bash   | Pick ONE item from tech-debt audit; surgical fix           |
+| 7   | spyglass-security-reviewer     | Read, Grep, Bash          | READ-ONLY audit: XSS/CSRF/injection sniffing               |
+| 8   | spyglass-test-writer           | Read, Edit, Write, Bash   | Add test fixtures + assertions following existing patterns |
+| 9   | spyglass-validator-rule-author | Read, Edit, Write, Bash   | New rules in packages/core/rules-\*.js                     |
+| 10  | spyglass-uxqa-tester           | Bash, mcp**playwright**\* | Functional smoke-tests on prod via Playwright              |
 
 ### Step B — Validate fleet with one read-only smoke task
 
-Spawn `spyglass-prober` with: *"Find every place where the i18n.js key 'btn.close' is referenced. Report file:line for each. Don't change anything."*
+Spawn `spyglass-prober` with: _"Find every place where the i18n.js key 'btn.close' is referenced. Report file:line for each. Don't change anything."_
 
 Expected: 5-10 lines of references. Tests our agent wiring without risk.
 

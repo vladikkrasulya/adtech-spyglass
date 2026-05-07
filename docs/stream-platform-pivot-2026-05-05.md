@@ -29,6 +29,7 @@ Existing competitors (IAB OpenRTB Validator, Postman SSP collections) are form-i
 **Phase 1 decision:** start on synthetic + open-source corpora. Real-traffic ingest gated on Risk B clearance. Anonymization middleware built and tested against synthetic before any real flow is wired.
 
 Synthetic corpus sources for Phase 1:
+
 - IAB OpenRTB 2.5 / 2.6 / 3.0 reference examples (public, on iabtechlab GitHub)
 - IAB JsonFeed examples
 - VAST 4.x samples (IAB)
@@ -38,6 +39,7 @@ Synthetic corpus sources for Phase 1:
 ## Architecture (anchored to actual stack)
 
 **Stack reality check** (per project conventions):
+
 - vanilla `node:http` server, no Next.js
 - `better-sqlite3` (embedded), no PostgreSQL
 - vanilla JS frontend, no bundler
@@ -60,12 +62,14 @@ Synthetic corpus sources for Phase 1:
 No Redis, no PostgreSQL. Ring buffer in same Node process. **If/when scale demands** → introduce Redis sidecar (separate compose service); migration is contained because the API surface (SSE endpoint) doesn't change.
 
 **Specimen storage (Phase 1):**
+
 - Hash = `sha256(canonical-json(specimen)).slice(0, 12)`
 - SQLite cache: `(hash, specimen_json, created_at, last_accessed_at)`
 - TTL: 90 days from `last_accessed_at`
 - Separate from existing `samples` table (which is user-saved encrypted)
 
 **Patterns + directory (Phase 2+):**
+
 - Patterns: hourly/daily aggregation jobs over the ring-buffer-archived specimens (separate SQLite table for time-bucketed counts)
 - Directory: static pages per partner, content authored or extracted from samples (one-time research → docs)
 
@@ -78,6 +82,7 @@ Default landing. Live ring-buffer playback, sampling-aware. First impression of 
 **Empty state of stream is impossible by construction** — synthetic generator always emits. If generator is down, show explicit "stream paused — generator offline" not zero-counters.
 
 **Components:**
+
 - Header: live counter `~X req/sec sampled · Y% of source` (synthetic in Phase 1)
 - Filter rail: format / partner / severity / version / geo (each reflected in URL `?format=banner&partner=smaato`)
 - Stream rows: timestamp, partner badge, format pill, validation-finding count, click → `/r/{hash}`
@@ -91,6 +96,7 @@ Single specimen deep-dive. The current Spyglass UI as a permalink-able detail pa
 **This is the existing inspector** moved under a stable URL. Its tabs (Inspector / Validation / Crosscheck / Categories / Behavior / AD PREVIEW) are second-level views of the SAME specimen, not separate top-level pages.
 
 **Components retained from current code:**
+
 - Decoded request fields with hover-spec-references
 - Validation findings (severity, message, IAB spec link)
 - Crosscheck panel (auto-shows if specimen has both req and res)
@@ -100,6 +106,7 @@ Single specimen deep-dive. The current Spyglass UI as a permalink-able detail pa
 - Share-link button (already shipped — fragment-encoded permalink) — extend to also produce `/r/{hash}` short-link
 
 **New for stream-context:**
+
 - Breadcrumb: "← Stream / smaato banner / 2026-05-05 14:32:11"
 - "Back to stream with this filter" button
 - "Find similar specimens" link (Phase 3 — uses Patterns aggregation)
@@ -183,6 +190,7 @@ Honest dates. Each milestone closes with a working surface, not a half-built one
 ### Month 5: Real-traffic gate (conditional)
 
 **IF Kadam legal approval clears:**
+
 - Production ingest endpoint behind auth: `POST /api/v1/ingest` (only Kadam-signed source)
 - Anonymization middleware activated on real flow (already battle-tested on synthetic)
 - Sampling controls: 0.01% / 0.1% / 1% configurable per source
@@ -191,6 +199,7 @@ Honest dates. Each milestone closes with a working surface, not a half-built one
 - Public landing copy updated: "live RTB traffic from N integrations"
 
 **IF NOT (default assumption):**
+
 - Expand synthetic corpus 5×
 - Add second synthetic source (e.g., synthesized JsonFeed traffic)
 - Public landing stays "synthetic + open-source samples · representative of real RTB structure"
@@ -211,6 +220,7 @@ Order matters. Each step is shippable.
 ### Week 1
 
 **Step 1.1 — synthetic generator (3 days)**
+
 - New file: `samples/synthetic-generator.js` in repo root
 - Pulls base samples from `samples/iab/`, `samples/opensource/` directories
 - Mutation engine: vary `imp[].id`, `device.geo.country`, `request.id`, timestamp
@@ -218,6 +228,7 @@ Order matters. Each step is shippable.
 - Tests: corpus loads, mutation preserves schema validity, rate is configurable
 
 **Step 1.2 — ring buffer + SSE endpoint (2 days)**
+
 - `server.js`: add `/api/v1/stream` route (SSE: `text/event-stream`)
 - In-memory `RingBuffer` class, `MAX_ITEMS = 5000`
 - Subscribers join, replay last 50 items, then receive new
@@ -225,6 +236,7 @@ Order matters. Each step is shippable.
 - Tests: anonymization is exhaustive (PII-fuzz test), ring buffer behaves under load
 
 **Step 1.3 — specimen permalink (1 day)**
+
 - Route: `GET /r/{hash}` → renders `index.{locale}.html` with `data-specimen-hash` attr
 - Frontend reads attr, fetches `/api/v1/specimen/{hash}`, hydrates UI
 - New SQLite table: `cached_specimens (hash TEXT PK, json TEXT, created_at, last_accessed)`
@@ -234,6 +246,7 @@ Order matters. Each step is shippable.
 ### Week 2
 
 **Step 1.4 — Stream frontend surface (4 days)**
+
 - New page: `public/stream.{en,uk,ru}.html` (3-locale parity)
 - Connects to SSE endpoint, appends rows
 - Each row: timestamp, partner-badge (extracted from `site.publisher.name` or `app.publisher.name`), format-pill (banner / video / native — derived from `imp[].banner | video | native`), finding-count (lazy-validated)
@@ -242,6 +255,7 @@ Order matters. Each step is shippable.
 - Tests: SSE reconnect on disconnect, pause works, virtual scroll handles 1k+ rows
 
 **Step 1.5 — Demote current UI to /playground (1 day)**
+
 - Server route: `/` → `stream.{locale}.html` (was `index.{locale}.html`)
 - New route: `/playground` → existing `index.{locale}.html`
 - Header nav updated: "stream" + "playground" + "docs" + "sign in"
@@ -249,6 +263,7 @@ Order matters. Each step is shippable.
 - Tests: smoke that all existing inspector flows still work under `/playground`
 
 **Step 1.6 — Phase 1 close (final day)**
+
 - Documentation: README updated, `docs/architecture-stream.md` written
 - Smoke test pass: 141+ existing tests still pass, ~20-30 new tests added
 - Manual QA: each route renders in 3 locales

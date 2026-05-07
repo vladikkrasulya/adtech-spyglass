@@ -912,23 +912,21 @@
   //     Inspect constraints to record sub-kind (camera / mic / both)
   //     so the engine + UI can distinguish camera-grab from mic-grab.
   try {
-    if (
-      navigator.mediaDevices &&
-      typeof navigator.mediaDevices.getUserMedia === 'function'
-    ) {
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
       const origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
       navigator.mediaDevices.getUserMedia = function (constraints) {
         let mediaSubKind = '';
         try {
           const wantsVideo = !!(constraints && constraints.video);
           const wantsAudio = !!(constraints && constraints.audio);
-          mediaSubKind = wantsVideo && wantsAudio
-            ? 'camera+mic'
-            : wantsVideo
-            ? 'camera'
-            : wantsAudio
-            ? 'mic'
-            : '';
+          mediaSubKind =
+            wantsVideo && wantsAudio
+              ? 'camera+mic'
+              : wantsVideo
+                ? 'camera'
+                : wantsAudio
+                  ? 'mic'
+                  : '';
         } catch (e) {
           /* */
         }
@@ -1008,10 +1006,7 @@
   //     pattern we want flagged: no banner has any business installing
   //     a worker on the visiting domain.
   try {
-    if (
-      navigator.serviceWorker &&
-      typeof navigator.serviceWorker.register === 'function'
-    ) {
+    if (navigator.serviceWorker && typeof navigator.serviceWorker.register === 'function') {
       const origSWReg = navigator.serviceWorker.register.bind(navigator.serviceWorker);
       navigator.serviceWorker.register = function (scriptURL, options) {
         permissionHookSend('serviceWorker', 'navigator.serviceWorker.register', {

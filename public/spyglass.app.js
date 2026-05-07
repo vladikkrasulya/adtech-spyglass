@@ -816,13 +816,9 @@ export async function mountInspector(root, ctx) {
       escapeHtml(link) +
       '" rel="noopener noreferrer">' +
       '<div class="label">native · synthetic render</div>' +
-      (img
-        ? '<div class="hero"><img src="' + escapeHtml(img) + '" alt=""></div>'
-        : '') +
+      (img ? '<div class="hero"><img src="' + escapeHtml(img) + '" alt=""></div>' : '') +
       '<div class="row">' +
-      (icon
-        ? '<img class="icon" src="' + escapeHtml(icon) + '" alt="">'
-        : '') +
+      (icon ? '<img class="icon" src="' + escapeHtml(icon) + '" alt="">' : '') +
       '<div class="body">' +
       (title
         ? '<div class="t">' + escapeHtml(title) + '</div>'

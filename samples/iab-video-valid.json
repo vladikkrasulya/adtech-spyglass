@@ -7,7 +7,7 @@
     {
       "id": "1",
       "tagid": "preroll-mobile-001",
-      "bidfloor": 1.50,
+      "bidfloor": 1.5,
       "bidfloorcur": "USD",
       "secure": 1,
       "instl": 0,

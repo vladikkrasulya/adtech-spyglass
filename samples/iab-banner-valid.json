@@ -7,7 +7,7 @@
     {
       "id": "1",
       "tagid": "/123456/leaderboard",
-      "bidfloor": 0.50,
+      "bidfloor": 0.5,
       "bidfloorcur": "USD",
       "secure": 1,
       "exp": 300,

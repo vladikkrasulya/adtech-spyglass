@@ -660,9 +660,7 @@ test('analyze() — center_synth event with missing distancePx defaults to "0.00
 // ── Phase 5 (permission abuse) rules ────────────────────────────────────────
 
 test('analyze() — permission_abuse without gesture → ERROR', () => {
-  const r = analyze([
-    permissionAbuseEvent({ withinGestureGrace: false, msSinceGesture: -1 }),
-  ]);
+  const r = analyze([permissionAbuseEvent({ withinGestureGrace: false, msSinceGesture: -1 })]);
   assert.equal(r.findings.length, 1);
   assert.equal(r.findings[0].id, 'behavior.malicious.permission_abuse');
   assert.equal(r.findings[0].level, 'error');
@@ -671,9 +669,7 @@ test('analyze() — permission_abuse without gesture → ERROR', () => {
 });
 
 test('analyze() — permission_abuse within gesture grace → WARNING', () => {
-  const r = analyze([
-    permissionAbuseEvent({ withinGestureGrace: true, msSinceGesture: 200 }),
-  ]);
+  const r = analyze([permissionAbuseEvent({ withinGestureGrace: true, msSinceGesture: 200 })]);
   assert.equal(r.findings.length, 1);
   assert.equal(r.findings[0].id, 'behavior.malicious.permission_abuse');
   assert.equal(r.findings[0].level, 'warning');

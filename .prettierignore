@@ -5,3 +5,8 @@ dist/
 build/
 coverage/
 package-lock.json
+
+# LLM agent prompts — Prettier reflow can break carefully tuned context
+# (paragraph boundaries, fenced-block ordering, leading whitespace inside
+# examples). These are not source code; leave them alone.
+.claude/agents/*.md

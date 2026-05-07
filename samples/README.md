@@ -6,11 +6,11 @@ These samples are **not** copied verbatim from anywhere — they are constructed
 
 ## Files in this directory
 
-| File | Format | oRTB version | Status | Purpose |
-|---|---|---|---|---|
-| `iab-banner-valid.json` | display banner (300×250 + 300×600) | 2.6 | clean, all required fields | baseline well-formed example |
-| `iab-video-valid.json` | VAST preroll (mobile app) | 2.6 | clean, all required fields | baseline well-formed video/app example |
-| `iab-banner-with-issues.json` | display banner (300×600) | 2.6 | deliberate spec violations | demonstrates 3 typical findings the validator catches |
+| File                          | Format                             | oRTB version | Status                     | Purpose                                               |
+| ----------------------------- | ---------------------------------- | ------------ | -------------------------- | ----------------------------------------------------- |
+| `iab-banner-valid.json`       | display banner (300×250 + 300×600) | 2.6          | clean, all required fields | baseline well-formed example                          |
+| `iab-video-valid.json`        | VAST preroll (mobile app)          | 2.6          | clean, all required fields | baseline well-formed video/app example                |
+| `iab-banner-with-issues.json` | display banner (300×600)           | 2.6          | deliberate spec violations | demonstrates 3 typical findings the validator catches |
 
 ## Issues encoded in `iab-banner-with-issues.json`
 
@@ -21,6 +21,7 @@ Constructed to surface real-world findings without piling on trivia:
 3. **`regs.ext.gdpr=1` without `user.consent`** — GDPR opt-in flag set, but no TCF consent string provided. Compliance-relevant. Geography (`device.geo.country = DEU`) makes this pointed.
 
 Additional secondary signals likely flagged by validator:
+
 - Missing `source.tid` (recommended in 2.5+, required by some partners)
 - Missing `cur` array on root (defaults to `USD` but should be explicit)
 - Banner uses legacy `w/h` instead of `format[]` array (deprecated 2.6 pattern)
@@ -28,12 +29,14 @@ Additional secondary signals likely flagged by validator:
 ## How these are used
 
 Phase 1 (Step 1.1, see `docs/stream-platform-pivot-2026-05-05.md`):
+
 - `samples/synthetic-generator.js` will load these files at startup
 - Apply controlled mutations (vary `id`, `imp[].id`, `device.geo`, timestamp) to generate variants
 - Emit a stream of variants via in-process EventEmitter
 - Each emitted variant becomes a row in the public `/stream` view
 
 Phase 2+:
+
 - More samples to be added under `samples/iab/` (organized by spec version) and `samples/opensource/` (community fixtures)
 - This README updated with index per addition
 
