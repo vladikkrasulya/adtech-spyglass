@@ -984,6 +984,45 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--text);
   border-color: var(--accent);
 }
+/* Interactive dialect picker. Native <select> styled to match the
+   surrounding format pills — yellow accent border, monospace label,
+   inherits the format-bar theme tokens so light/dark modes both look
+   consistent. The native chevron is replaced with an inline SVG so the
+   control reads as part of the pill row rather than a generic OS form
+   widget. */
+.format-pill-select {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  padding: 3px 22px 3px 10px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  transition:
+    border-color var(--t-fast),
+    background-color var(--t-fast);
+}
+.format-pill-select:hover {
+  background-color: var(--accent-soft);
+  border-color: var(--accent);
+}
+.format-pill-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.format-pill-select option {
+  background: var(--surface);
+  color: var(--text);
+}
 .format-bar-actions {
   margin-left: auto;
   display: flex;

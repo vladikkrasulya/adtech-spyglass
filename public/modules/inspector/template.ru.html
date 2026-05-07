@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.1.0</span
+      >v9.2.0</span
     >
   </div>
   <div class="app-header-actions">
@@ -253,6 +253,16 @@
       <span class="format-pill format-pill-type" id="formatPillType"></span>
       <span class="format-pill format-pill-status" id="formatPillStatus"></span>
       <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
+      <select
+        class="format-pill format-pill-select"
+        id="dialectSelector"
+        data-action="change-dialect"
+        title="Переключатель диалекта валидации — меняет правила, которые engine применяет к payload"
+      >
+        <option value="iab">Standard IAB</option>
+        <option value="kadam">Kadam · RTB</option>
+        <option value="kadam-inpage-push">Kadam · In-Page Push</option>
+      </select>
       <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
       <div class="format-bar-actions">
         <button
@@ -396,7 +406,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.1.0</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.2.0</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Поддерживаемые спецификации"

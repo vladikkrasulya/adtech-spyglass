@@ -40,7 +40,17 @@ function validateResponse(res, ctx) {
         findings.push(F('response.bid.price_required', LEVELS.ERROR, `${bp}.price`, params));
       }
       if (!isStr(b.adm) && !isStr(b.nurl)) {
-        findings.push(F('response.bid.payload_missing', LEVELS.WARNING, `${bp}.adm`, params));
+        // Vendor dialects can declare that they "claim" bids of a custom
+        // shape (e.g. Kadam In-Page Push carries the creative in
+        // bid.ext.{title,image,url} instead of adm/nurl). When a dialect
+        // claims the bid, skip the IAB payload-missing rule — the dialect's
+        // own validateResponse will assert the correct shape and we'd
+        // otherwise drown the real findings in noise. Default IAB dialect
+        // exposes no claimsBid → check always fires.
+        const claimed = dialect && typeof dialect.claimsBid === 'function' && dialect.claimsBid(b);
+        if (!claimed) {
+          findings.push(F('response.bid.payload_missing', LEVELS.WARNING, `${bp}.adm`, params));
+        }
       }
       if (!Array.isArray(b.adomain) || !b.adomain.length) {
         findings.push(F('response.bid.adomain_missing', LEVELS.WARNING, `${bp}.adomain`, params));

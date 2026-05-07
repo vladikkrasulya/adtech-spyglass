@@ -30,9 +30,14 @@ const { resolve, listLocales, FALLBACK_LOCALE } = require('./messages');
 
 const dialectIab = require('./dialects/iab');
 const dialectKadam = require('./dialects/kadam');
+const dialectKadamInPagePush = require('./dialects/kadam-inpage-push');
 const specRefs = require('./spec-refs.json');
 
-const DIALECTS = { iab: dialectIab, kadam: dialectKadam };
+const DIALECTS = {
+  iab: dialectIab,
+  kadam: dialectKadam,
+  'kadam-inpage-push': dialectKadamInPagePush,
+};
 const DEFAULT_DIALECT = 'iab';
 
 /**

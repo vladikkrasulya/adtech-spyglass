@@ -162,7 +162,63 @@ export async function mountInspector(root, ctx) {
   function analyzeUrl() {
     // Absolute path — relative would resolve against pathname (e.g. /uk/),
     // breaking API access from non-root locales.
-    return '/api/analyze?locale=' + encodeURIComponent(activeLocale());
+    return (
+      '/api/analyze?locale=' +
+      encodeURIComponent(activeLocale()) +
+      '&dialect=' +
+      encodeURIComponent(activeDialect())
+    );
+  }
+
+  // ── Dialect state ─────────────────────────────────────────────
+  // The validation engine accepts ?dialect=<name> to layer vendor-specific
+  // rules (Kadam RTB, Kadam In-Page Push) over the IAB baseline. The
+  // active dialect needs to survive page reloads (so users on a Kadam
+  // workflow don't reset every session) and be shareable via URL (so a
+  // bug report can carry the dialect context). Resolution priority:
+  //   1. ?dialect=… in the URL — highest, lets shared links override the
+  //      user's saved choice without permanent persistence
+  //   2. localStorage — survives reloads
+  //   3. 'iab' — safe default
+  const DIALECT_STORAGE_KEY = 'spyglass_dialect_v1';
+  const KNOWN_DIALECTS = new Set(['iab', 'kadam', 'kadam-inpage-push']);
+
+  function activeDialect() {
+    try {
+      const qp = new URLSearchParams(location.search);
+      const fromUrl = qp.get('dialect');
+      if (fromUrl && KNOWN_DIALECTS.has(fromUrl)) return fromUrl;
+      const fromStorage = localStorage.getItem(DIALECT_STORAGE_KEY);
+      if (fromStorage && KNOWN_DIALECTS.has(fromStorage)) return fromStorage;
+    } catch (e) {
+      /* private mode / SSR */
+    }
+    return 'iab';
+  }
+
+  function setActiveDialect(dialect) {
+    if (!KNOWN_DIALECTS.has(dialect)) return;
+    try {
+      localStorage.setItem(DIALECT_STORAGE_KEY, dialect);
+    } catch (e) {
+      /* storage quota / private mode — best effort, the URL reflects state */
+    }
+    // Keep the URL in sync for the current tab so a refresh and a
+    // shared-link copy both surface the active dialect, but ONLY when
+    // the user is on the default value already (avoid clobbering an
+    // intentional ?dialect=… the user typed). For non-default dialects
+    // we always write the param so the URL is shareable.
+    try {
+      const url = new URL(location.href);
+      if (dialect === 'iab') {
+        url.searchParams.delete('dialect');
+      } else {
+        url.searchParams.set('dialect', dialect);
+      }
+      history.replaceState({}, '', url.toString());
+    } catch (e) {
+      /* */
+    }
   }
 
   // When the toggle changes (kt:lang-change fired by lang-switch.js),
@@ -3588,6 +3644,31 @@ export async function mountInspector(root, ctx) {
       { signal: ctx.signal },
     );
 
+    // Change-event dispatcher for <select data-action="…"> controls.
+    // The click-dispatcher above doesn't fire on dropdown value changes,
+    // so we mirror it here for the small set of select-based actions.
+    // Currently:
+    //   - change-dialect — toolbar dialect picker; persists choice and
+    //     re-runs analysis so findings reflect the new ruleset
+    //     immediately (no extra "click analyze" step needed).
+    root.addEventListener(
+      'change',
+      (ev) => {
+        const el = ev.target.closest('[data-action]');
+        if (!el || !root.contains(el)) return;
+        const action = el.dataset.action;
+        if (action === 'change-dialect') {
+          setActiveDialect(el.value);
+          // Re-run analysis if the editors hold a payload — engine output
+          // is dialect-sensitive (e.g. Kadam In-Page Push suppresses the
+          // IAB payload_missing rule), so the user expects findings to
+          // refresh in place. No-op when the editors are empty.
+          if ($('bidReq').value || $('bidRes').value) runAnalysis();
+        }
+      },
+      { signal: ctx.signal },
+    );
+
     // Direct bindings for non-click events on stable nodes (replace
     // oninput/onkeydown attrs that lived on the textareas in HTML).
     ['bidReq', 'bidRes'].forEach((id) => {
@@ -3600,12 +3681,23 @@ export async function mountInspector(root, ctx) {
     await bootAuth();
     await refreshPartners();
     refreshSamples();
+
+    // Sync the dialect selector with the resolved active dialect.
+    // activeDialect() reads ?dialect=… first, then localStorage; sync the
+    // <select> so the UI reflects the engine's actual choice. Do this
+    // BEFORE the qp checks below — URL-driven dialect should take effect
+    // even on first paint without waiting for a manual interaction.
+    const initialDialect = activeDialect();
+    const dialectSel = $('dialectSelector');
+    if (dialectSel) dialectSel.value = initialDialect;
+
     // Phase 8 URL params: ?reset=token | ?verified=1 | ?verify_error=...
     const qp = new URLSearchParams(location.search);
     // Vendor-specific reference tab is hidden by default — only revealed when
-    // the user explicitly opts into a vendor dialect via ?dialect=<name>.
-    // Keeps the public landing strictly oRTB-generic.
-    if (qp.get('dialect') && qp.get('dialect') !== 'iab') {
+    // the user explicitly opts into a vendor dialect via ?dialect=<name>
+    // OR when the persisted dialect is non-IAB (so a power user who
+    // switched once doesn't lose the reference tab on next visit).
+    if (initialDialect !== 'iab') {
       const tab = document.getElementById('kadamRefTab');
       if (tab) tab.hidden = false;
     }
