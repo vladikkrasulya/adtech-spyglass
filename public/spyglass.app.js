@@ -1461,6 +1461,11 @@ export async function mountInspector(root, ctx) {
           // tab regardless of validation status. Empty object means no
           // category fields present in the payload.
           renderCategories((j.meta && j.meta.categories) || {});
+          // Phase 10b — third detection axis. Server returns
+          // meta.format = { formats, contexts, protocols, tags, confidence }.
+          // Painted into the left-sidebar "Підсумок" panel as colour-coded
+          // chips. Hidden gracefully when nothing was detected.
+          paintFormatSummary((j.meta && j.meta.format) || null);
           // Show humanised status to the user; stash raw canonical status
           // ('errors'/'warnings'/'clean'/'invalid') on a data-attribute so
           // confirmSave can read it without parsing localised text.
@@ -1697,6 +1702,40 @@ export async function mountInspector(root, ctx) {
       escapeHtml(v) +
       '</span></div>'
     );
+  }
+
+  // Phase 10b — paint the third detection axis (FORMAT / CONTEXT /
+  // PROTOCOL) into the summary sidebar. Hidden by default; revealed
+  // only when the analyze response carried a confidence-1 detection.
+  // Three chip variants are colour-coded so users can scan formats
+  // (banner/video/…) vs runtime context (web/inapp/ctv/…) vs creative
+  // protocol (vast-3/4 / daast) at a glance.
+  function paintFormatSummary(detected) {
+    const wrap = document.getElementById('mFormat');
+    const chips = document.getElementById('mFormatChips');
+    if (!wrap || !chips) return;
+    if (!detected || !detected.confidence) {
+      wrap.hidden = true;
+      chips.innerHTML = '';
+      return;
+    }
+    const parts = [];
+    for (const f of detected.formats || []) {
+      parts.push('<span class="format-chip format-chip--format">' + escapeHtml(f) + '</span>');
+    }
+    for (const c of detected.contexts || []) {
+      parts.push('<span class="format-chip format-chip--context">' + escapeHtml(c) + '</span>');
+    }
+    for (const p of detected.protocols || []) {
+      parts.push('<span class="format-chip format-chip--protocol">' + escapeHtml(p) + '</span>');
+    }
+    if (parts.length === 0) {
+      wrap.hidden = true;
+      chips.innerHTML = '';
+      return;
+    }
+    chips.innerHTML = parts.join(' ');
+    wrap.hidden = false;
   }
   function statBox(value, label) {
     return (

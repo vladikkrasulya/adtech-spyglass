@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.7.0</span
+      >v9.8.0</span
     >
   </div>
   <div class="app-header-actions">
@@ -209,6 +209,10 @@
     <div class="metric-card" data-section="winning-bid">
       <div class="metric-label">winning bid</div>
       <div class="metric-value" id="mPrice">$0.00</div>
+    </div>
+    <div class="format-summary" id="mFormat" hidden>
+      <div class="format-summary__label">формат</div>
+      <div class="format-summary__chips" id="mFormatChips"></div>
     </div>
     <div style="display: flex; flex-direction: column; gap: 0" id="mInfo">
       <div class="info-row"><span class="info-key">os</span><span class="info-val">—</span></div>
@@ -441,7 +445,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.7.0</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.8.0</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Поддерживаемые спецификации"

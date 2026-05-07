@@ -45,8 +45,10 @@ const {
   listLocales,
   listDialects,
   extractAllCategories,
+  detectFormat,
 } = require('@kyivtech/spyglass-core');
 const { analyze: analyzeBehavior } = require('@kyivtech/spyglass-core/behavior');
+const knowledgeBase = require('@kyivtech/spyglass-core/knowledge-base');
 const SyntheticGenerator = require('./samples/synthetic-generator');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -620,6 +622,32 @@ function handleProxy(req, res) {
     .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
 }
 
+// Merge two detectFormat() results (request side + response side) into
+// a single, de-duplicated tag set. Returns the canonical empty shape if
+// both inputs are null — never null, so the frontend can render
+// unconditionally.
+function unionFormat(a, b) {
+  const formats = new Set();
+  const contexts = new Set();
+  const protocols = new Set();
+  for (const r of [a, b]) {
+    if (!r) continue;
+    for (const f of r.formats || []) formats.add(f);
+    for (const c of r.contexts || []) contexts.add(c);
+    for (const p of r.protocols || []) protocols.add(p);
+  }
+  const fmts = Array.from(formats);
+  const ctxs = Array.from(contexts);
+  const prots = Array.from(protocols);
+  return {
+    formats: fmts,
+    contexts: ctxs,
+    protocols: prots,
+    tags: [...fmts, ...ctxs, ...prots],
+    confidence: fmts.length + ctxs.length + prots.length > 0 ? 1 : 0,
+  };
+}
+
 // ── /api/analyze ────────────────────────────────────────────────────────────
 
 function handleAnalyze(req, res, parsed) {
@@ -692,11 +720,21 @@ function handleAnalyze(req, res, parsed) {
       if (hasReq) Object.assign(categories, extractAllCategories(bidReq));
       if (hasRes) Object.assign(categories, extractAllCategories(bidRes));
 
+      // Phase 10b — third detection axis (banner/video/audio/native/push/…
+      // + web/inapp/ctv/dooh + vast-N/daast). Compute on whichever payloads
+      // were sent and union the results; the request side carries
+      // imp[].banner|video|audio|native + context, the response side
+      // carries mtype + adm sniffing. A null/empty `format` is a valid
+      // outcome — the frontend gates rendering on `confidence`.
+      const formatReq = hasReq ? detectFormat(bidReq) : null;
+      const formatRes = hasRes ? detectFormat(bidRes) : null;
+      const format = unionFormat(formatReq, formatRes);
+
       sendJson(res, 200, {
         success: true,
         validation,
         crosscheck: cross,
-        meta: { locale, dialect, categories },
+        meta: { locale, dialect, categories, format },
       });
     })
     .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
@@ -790,7 +828,7 @@ function handleIntelSuggestName(req, res) {
     return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
   }
   readJson(req)
-    .then(async ({ bucket, fields }) => {
+    .then(async ({ bucket, fields, format }) => {
       if (!Array.isArray(fields) || fields.length === 0) {
         return sendError(res, 400, 'invalid_input', 'fields[] is required');
       }
@@ -801,8 +839,23 @@ function handleIntelSuggestName(req, res) {
       if (cleanFields.length === 0) {
         return sendError(res, 400, 'invalid_input', 'no usable fields');
       }
+      // Phase 10b — few-shot context: when the caller passes a recognised
+      // format ("banner" / "video" / "push" / …) we look up 1–2 shipped KB
+      // samples for that format and pass their anonymized field-name lists
+      // to the LLM. When the format is unknown / missing / yields no KB
+      // hits, fewShot is an empty array and the call degrades to Phase 7c
+      // zero-shot behaviour silently.
+      const cleanFormat = typeof format === 'string' ? format.replace(/[^a-z0-9-]/gi, '') : '';
+      let fewShot = [];
+      if (cleanFormat) {
+        try {
+          fewShot = knowledgeBase.fewShotForFormat(cleanFormat, { limit: 2 });
+        } catch (e) {
+          fewShot = [];
+        }
+      }
       try {
-        const suggestion = await intelLlm.suggestName(bucket, cleanFields);
+        const suggestion = await intelLlm.suggestName(bucket, cleanFields, { fewShot });
         if (!suggestion) {
           return sendError(res, 502, 'unparseable', 'LLM returned an unusable suggestion');
         }

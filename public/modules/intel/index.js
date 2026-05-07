@@ -267,10 +267,15 @@
    * shouldn't burn LLM calls). Returns null on any failure path so
    * the UI can hide the suggestion silently.
    */
-  async function suggestName(bucket, fields) {
+  async function suggestName(bucket, fields, format) {
     if (_llmUnavailable) return null;
     const sortedFields = (fields || []).slice().sort();
-    const key = cacheKey(['suggest-name', bucket || '', ...sortedFields]);
+    // Phase 10b — `format` is part of the cache key. The same field set
+    // can map to different suggestions when the LLM has different KB
+    // few-shot context (e.g. "[clickurl, image, title]" gets a more
+    // confident name when format is known to be 'push' than zero-shot).
+    const cleanFormat = typeof format === 'string' ? format : '';
+    const key = cacheKey(['suggest-name', bucket || '', cleanFormat, ...sortedFields]);
     if (window.SpyglassIntelStorage) {
       try {
         const cached = await window.SpyglassIntelStorage.getLlmCache(key);
@@ -282,6 +287,7 @@
     const r = await fetchJson('/api/intel/suggest-name', {
       bucket: bucket || 'display',
       fields: sortedFields,
+      format: cleanFormat,
     });
     if (!r.ok || !r.body || !r.body.success || !r.body.suggestion) return null;
     const out = {

@@ -515,10 +515,25 @@
         const bucket =
           Object.keys(bucketCount).sort((a, b) => bucketCount[b] - bucketCount[a])[0] || 'display';
         const fields = Array.from(_selection.keys());
+        // Phase 10b — fish the detected format off the last /api/analyze
+        // run so the LLM gets KB few-shot context grounded in the actual
+        // payload kind. Falls through to '' (zero-shot) when there is no
+        // analysis cached yet, when meta.format is missing, or when the
+        // detector returned no formats — graceful by design.
+        let detectedFormat = '';
+        try {
+          const last = window.__spyglassLast;
+          const fmt = last && last.meta && last.meta.format;
+          if (fmt && Array.isArray(fmt.formats) && fmt.formats.length > 0) {
+            detectedFormat = String(fmt.formats[0]);
+          }
+        } catch (e) {
+          /* defensive — never block the suggest flow */
+        }
         let suggestion = null;
         try {
           if (window.SpyglassIntel) {
-            suggestion = await window.SpyglassIntel.suggestName(bucket, fields);
+            suggestion = await window.SpyglassIntel.suggestName(bucket, fields, detectedFormat);
           }
         } catch (e) {
           /* swallow — graceful degradation */

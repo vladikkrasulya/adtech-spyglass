@@ -727,6 +727,60 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border-bottom: 1px solid var(--border);
   font-size: var(--fs-sm);
 }
+
+/* Phase 10b — format / context / protocol detection chips. Lives in the
+   left summary sidebar between the winning-bid card and the os/geo info
+   rows. Hidden until /api/analyze meta.format reports confidence > 0.
+   Three colour-coded variants give an at-a-glance read of WHAT (format),
+   WHERE (context), and HOW (protocol). */
+.format-summary {
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.format-summary__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: var(--space-2);
+}
+.format-summary__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.format-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--r-sm, 4px);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text);
+  white-space: nowrap;
+}
+.format-chip--format {
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.08);
+}
+.format-chip--context {
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.08);
+}
+.format-chip--protocol {
+  border-color: rgba(234, 179, 8, 0.5);
+  color: #facc15;
+  background: rgba(234, 179, 8, 0.08);
+}
 .info-row:last-child {
   border-bottom: none;
 }

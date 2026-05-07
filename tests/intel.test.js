@@ -511,6 +511,81 @@ test('buildSuggestNamePrompt — sanitises non-ASCII bucket / paths', () => {
   assert.ok(!p.includes(zeroWidth), 'path must not contain zero-width space');
 });
 
+// ── Phase 10b: KB few-shot context injection ───────────────────────
+
+test('buildSuggestNamePrompt — Phase 10b few-shot block omitted when absent', () => {
+  const p = intelLlm.buildSuggestNamePrompt('push', ['ext.foo']);
+  assert.ok(!p.includes('Reference examples'));
+  assert.match(p, /Bucket: push/);
+});
+
+test('buildSuggestNamePrompt — Phase 10b few-shot block emitted when supplied', () => {
+  const p = intelLlm.buildSuggestNamePrompt('push', ['ext.subage', 'clickurl', 'image'], {
+    fewShot: [
+      { format: 'push', fields: ['clickurl', 'image', 'title', 'icon'] },
+      { format: 'push', fields: ['click_url', 'image_url', 'name'] },
+    ],
+  });
+  assert.match(p, /Reference examples/);
+  assert.match(p, /push — clickurl, image, title, icon/);
+  assert.match(p, /push — click_url, image_url, name/);
+  // Original bucket + fields still present after the few-shot block.
+  assert.match(p, /Bucket: push/);
+  assert.match(p, /ext\.subage/);
+});
+
+test('buildSuggestNamePrompt — Phase 10b drops malformed few-shot entries', () => {
+  const p = intelLlm.buildSuggestNamePrompt('display', ['ext.x'], {
+    fewShot: [
+      { format: 'banner', fields: ['format', 'w', 'h'] },
+      null,
+      { format: '', fields: ['x'] },
+      { format: 'video', fields: [] },
+      { format: 'audio', fields: ['mimes'] },
+    ],
+  });
+  assert.match(p, /banner — format, w, h/);
+  assert.match(p, /audio — mimes/);
+});
+
+test('buildSuggestNamePrompt — Phase 10b graceful with empty fewShot array', () => {
+  const p = intelLlm.buildSuggestNamePrompt('display', ['ext.foo'], { fewShot: [] });
+  assert.ok(!p.includes('Reference examples'));
+});
+
+test('buildSuggestNamePrompt — Phase 10b sanitises example field names', () => {
+  const rtl = '‮';
+  const p = intelLlm.buildSuggestNamePrompt('push', ['ext.foo'], {
+    fewShot: [{ format: 'push', fields: ['clickurl' + rtl, 'image'] }],
+  });
+  assert.ok(!p.includes(rtl));
+  assert.match(p, /clickurl, image/);
+});
+
+test('Phase 10b end-to-end: KB.fewShotForFormat → buildSuggestNamePrompt grounds prompt', () => {
+  const kb = require('../packages/core/knowledge-base');
+  const examples = kb.fewShotForFormat('push', { limit: 2 });
+  assert.ok(examples.length >= 1, 'KB has at least one push sample');
+  const p = intelLlm.buildSuggestNamePrompt(
+    'push',
+    ['ext.subscription_age', 'clickurl', 'image', 'title'],
+    { fewShot: examples },
+  );
+  assert.match(p, /Reference examples/);
+  // The shipped Kadam push sample exposes title/image/clickurl-class fields,
+  // which should land in the prompt verbatim.
+  assert.match(p, /push — /);
+  assert.match(p, /title/);
+});
+
+test('Phase 10b end-to-end: unknown format yields no few-shot, prompt collapses to zero-shot', () => {
+  const kb = require('../packages/core/knowledge-base');
+  const examples = kb.fewShotForFormat('this-format-does-not-exist');
+  assert.deepEqual(examples, []);
+  const p = intelLlm.buildSuggestNamePrompt('display', ['ext.foo'], { fewShot: examples });
+  assert.ok(!p.includes('Reference examples'));
+});
+
 test('buildFieldPurposePrompt — includes path / charClass / bucket', () => {
   const p = intelLlm.buildFieldPurposePrompt('bid.ext.icon', 'url', 'push');
   assert.match(p, /Field path: bid\.ext\.icon/);

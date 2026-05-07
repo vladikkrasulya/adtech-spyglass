@@ -150,7 +150,31 @@ function sanitisePath(p) {
     .slice(0, 120);
 }
 
-function buildSuggestNamePrompt(bucket, fields) {
+/**
+ * Sanitise a few-shot example for prompt injection. Examples come
+ * from the curated `knowledge_base` (source of truth is local disk),
+ * but we still strip non-ASCII and cap each field name as defense
+ * in depth — a future ingestion script could land bad entries and
+ * we don't want them to steer the model.
+ */
+function sanitiseExample(ex) {
+  if (!ex || typeof ex !== 'object') return null;
+  const format = String(ex.format || '')
+    .replace(/[^a-z0-9-]/gi, '')
+    .slice(0, 24);
+  if (!format) return null;
+  const fields = Array.isArray(ex.fields)
+    ? ex.fields
+        .map((f) => sanitisePath(f))
+        .filter((f) => f.length > 0)
+        .slice(0, 12)
+    : [];
+  if (fields.length === 0) return null;
+  return { format, fields };
+}
+
+function buildSuggestNamePrompt(bucket, fields, opts) {
+  const o = opts || {};
   const safeBucket = String(bucket || 'display')
     .replace(/[^a-z]/gi, '')
     .slice(0, 16);
@@ -158,19 +182,45 @@ function buildSuggestNamePrompt(bucket, fields) {
     .slice(0, 50)
     .map((f) => '  - ' + sanitisePath(f))
     .join('\n');
-  return [
+
+  // Phase 10b — Few-Shot context. When the caller supplies anonymized
+  // examples from the knowledge base, we include 1–2 reference rows so
+  // the model can ground its naming choice in real-format vocabulary
+  // rather than priors. Examples carry only field NAMES — never values.
+  // When no examples are supplied, the prompt collapses to the original
+  // Phase 7c zero-shot form (graceful fallback).
+  const fewShot = Array.isArray(o.fewShot)
+    ? o.fewShot.map(sanitiseExample).filter((x) => x != null)
+    : [];
+
+  const lines = [
     'You are an AdTech taxonomy expert. Given these field paths from a clean RTB',
     'bid stream, suggest a short snake_case dialect name and a one-sentence',
     'description of what kind of inventory the dialect represents. Output STRICT',
     'JSON only — no prose, no markdown fences.',
     '',
-    'Bucket: ' + safeBucket,
-    'Fields:',
-    fieldList,
-    '',
-    'Output schema:',
+  ];
+
+  if (fewShot.length > 0) {
+    lines.push('Reference examples from canonical RTB streams (FORMAT — typical fields):');
+    for (const ex of fewShot) {
+      lines.push('  ' + ex.format + ' — ' + ex.fields.join(', '));
+    }
+    lines.push('');
+    lines.push('Now name the NEW cluster below. Stay grounded in real-market vocabulary.');
+    lines.push('');
+  }
+
+  lines.push('Bucket: ' + safeBucket);
+  lines.push('Fields:');
+  lines.push(fieldList);
+  lines.push('');
+  lines.push('Output schema:');
+  lines.push(
     '{"name": "<snake_case, max 30 chars>", "description": "<one sentence, max 120 chars>"}',
-  ].join('\n');
+  );
+
+  return lines.join('\n');
 }
 
 function buildFieldPurposePrompt(path, charClass, bucket) {
@@ -241,8 +291,8 @@ function validatePurposeSuggestion(obj) {
 
 // ── Public API ───────────────────────────────────────────────────
 
-async function suggestName(bucket, fields) {
-  const prompt = buildSuggestNamePrompt(bucket, fields);
+async function suggestName(bucket, fields, opts) {
+  const prompt = buildSuggestNamePrompt(bucket, fields, opts);
   const resp = await callOllama(prompt, { numPredict: 120, temperature: 0.2 });
   const parsed = extractStructured(resp);
   return validateNameSuggestion(parsed);
