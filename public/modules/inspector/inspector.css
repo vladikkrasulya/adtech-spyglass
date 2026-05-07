@@ -367,8 +367,151 @@ body {
   font-size: var(--fs-mono);
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
   color: var(--text-dim);
+}
+
+/* Phase 8: collapsible JSON panels. After analyze, user can hide the
+   textarea body to free vertical space for findings. The "summary"
+   bar shows a one-line preview (payload id) so the panel still has
+   identity at a glance. Toggle button lives in the input-card-actions
+   row and rotates its caret on collapse. */
+.input-card.is-collapsed .json-input,
+.input-card.is-collapsed .input-card-summary {
+  /* default: textarea visible, summary hidden */
+}
+.input-card .input-card-summary {
+  display: none;
+}
+.input-card.is-collapsed .json-input {
+  display: none;
+}
+.input-card.is-collapsed .input-card-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.input-card-summary__label {
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.input-card-summary__id {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-collapse-toggle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color var(--t-fast);
+  user-select: none;
+}
+.btn-collapse-toggle:hover {
+  color: var(--text);
+}
+.btn-collapse-toggle .caret {
+  display: inline-block;
+  transition: transform 150ms ease;
+}
+.input-card.is-collapsed .btn-collapse-toggle .caret {
+  transform: rotate(-90deg);
+}
+
+/* Phase 8: safe demo mode — blur the iframe creative until the user
+   explicitly clicks "Show creative". Protects against accidental NSFW
+   content reveal during screenshots / pair-debugging / live demos.
+   Per-creative state: every setAdPreview re-applies the blur. */
+.preview-safe {
+  position: relative;
+}
+.preview-safe iframe,
+.preview-safe img {
+  filter: blur(22px);
+  transition: filter 200ms ease;
+}
+.preview-safe.is-revealed iframe,
+.preview-safe.is-revealed img {
+  filter: none;
+}
+.preview-safe-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+.preview-safe.is-revealed .preview-safe-overlay {
+  display: none;
+}
+.preview-safe-overlay__btn {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.preview-safe-overlay__btn:hover {
+  background: var(--accent-soft);
+}
+
+/* Phase 8: secondary login CTA in the left sidebar — outline-only so
+   it doesn't compete with the primary "Analyze" button in the header. */
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.btn-secondary:hover {
+  background: var(--bg-2);
+  border-color: var(--text-dim);
+}
+
+/* Phase 8: clickable JSONPath in findings. Inherits the validation-item
+   muted styling but flags affordance with underline-on-hover + cursor.
+   Kept subtle — power-user feature, shouldn't shout for attention. */
+.finding-path {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: 2px;
+}
+.finding-path:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .input-card-actions {
   display: flex;
@@ -529,13 +672,27 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border-left: 1px solid var(--border);
   background: var(--bg);
 }
+/* Phase 8: visual hierarchy — L1 zones (request, response, summary,
+   preview) keep the bold uppercase eyebrow with a wider tracking; L2
+   sub-sections (library, history, slot stats) get a softer
+   sentence-case treatment so the eye can immediately distinguish
+   "this is a major area of the screen" from "this is a list inside
+   that area". */
 .section-title {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
   color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
+}
+.section-title--sub {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* Hero metric card on left side. */

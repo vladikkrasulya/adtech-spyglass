@@ -635,9 +635,96 @@ export async function mountInspector(root, ctx) {
   // so the prefix is sufficient.
   const ADM_TRANSPORT_LIMIT = 64 * 1024;
 
+  // ── Phase 8: helpers ─────────────────────────────────────────────
+
+  // Paint the per-card summary bar that shows when the input panel is
+  // collapsed. The summary lives inside the input-card and is visible
+  // only when the parent has .is-collapsed; this just keeps the data
+  // fresh so the user sees identity at a glance without expanding.
+  function paintCardSummary(cardId, value) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    const el = card.querySelector('[data-summary-id]');
+    if (el) el.textContent = String(value || '—');
+  }
+
+  // Domain masking for History list — protects users from accidentally
+  // showing adult/casino domains during demos, screenshots, or
+  // pair-debugging. Matches a small allow-list of high-sensitivity
+  // tokens; everything else passes through unchanged. Format:
+  // `pornhub.com` → `***hub.com`. SLDs ≤3 chars get fully masked.
+  const MASK_PATTERNS =
+    /(porn|xxx|adult|nude|sex(?!ton)|casino|gambl|poker|slot(?!s?\.)|bet(?!a)|wager)/i;
+  function maskDomain(domain) {
+    if (!domain || typeof domain !== 'string') return domain;
+    if (!MASK_PATTERNS.test(domain)) return domain;
+    const parts = domain.split('.');
+    if (parts.length < 2) return '***';
+    const sld = parts[parts.length - 2];
+    const tld = parts[parts.length - 1];
+    if (sld.length <= 3) return '***.' + tld;
+    return '***' + sld.slice(-3) + '.' + tld;
+  }
+
+  // Phase 8: clickable JSONPath in findings — best-effort scroll-to.
+  // Picks the LAST property name in the path (e.g. `seatbid[0].bid[0].impid`
+  // → 'impid'), searches the textarea for `"impid"`, focuses + scrolls
+  // to that line. Won't disambiguate when the same key appears multiple
+  // times (we hit the FIRST occurrence) — adequate for "basic mechanism"
+  // per Phase 8 brief; precise multi-occurrence resolution is a future
+  // enhancement that requires JSON-AST source-mapping.
+  function jsonPathToTextarea(path) {
+    if (!path) return null;
+    // Path side: response paths begin with `seatbid` / `bid` / `cur`;
+    // request paths begin with `imp` / `site` / `app` / `device` /
+    // `user` / `regs` / `source` / `cur` (ambiguous — bias to req when
+    // unknown).
+    if (/\b(?:seatbid|bidid|nbr)\b/.test(path)) return 'bidRes';
+    return 'bidReq';
+  }
+  function scrollToPath(path) {
+    const targetId = jsonPathToTextarea(path);
+    if (!targetId) return;
+    // Auto-expand the panel if it was collapsed.
+    const cardId = targetId === 'bidReq' ? 'cardReq' : 'cardRes';
+    const card = document.getElementById(cardId);
+    if (card && card.classList.contains('is-collapsed')) {
+      card.classList.remove('is-collapsed');
+    }
+    const ta = document.getElementById(targetId);
+    if (!ta) return;
+    // Pick the last identifier-shaped segment from the path.
+    const m = path.match(/([a-zA-Z_][a-zA-Z0-9_]*)(?:\[\d+\])?$/);
+    const key = m && m[1];
+    if (!key) return;
+    const needle = '"' + key + '"';
+    const idx = ta.value.indexOf(needle);
+    if (idx < 0) return;
+    ta.focus();
+    try {
+      ta.setSelectionRange(idx, idx + needle.length);
+    } catch (e) {
+      /* */
+    }
+    // setSelectionRange doesn't reliably scroll the textarea into view —
+    // approximate with line-height arithmetic. Off by a couple of lines
+    // is fine; the highlighted selection draws the eye anyway.
+    const before = ta.value.slice(0, idx);
+    const linesAbove = (before.match(/\n/g) || []).length;
+    const lh = parseFloat(getComputedStyle(ta).lineHeight) || 16;
+    ta.scrollTop = Math.max(0, linesAbove * lh - 60);
+  }
+
   function setAdPreview(adm, simPrice, dims) {
     const el = $('creativePreview');
     el.innerHTML = '';
+    // Phase 8: re-apply safe-demo blur on every new creative. The user
+    // explicitly reveals each creative; we don't carry the reveal state
+    // across impressions because that would defeat the screenshot-safety
+    // guarantee (one accidental reveal would leak into every subsequent
+    // analyze until reload).
+    const safeWrap = document.getElementById('creativePreviewSafe');
+    if (safeWrap) safeWrap.classList.remove('is-revealed');
     // Drop the previous probed iframe ref before any branch runs — the
     // VAST + native + empty-adm branches never reassign it, and we don't
     // want stale messages from a torn-down iframe to slip through.
@@ -1011,7 +1098,12 @@ export async function mountInspector(root, ctx) {
           '" title="Видалити з історії">×</button>' +
           '</div>' +
           '<div class="history-title">' +
-          escapeHtml(e.title) +
+          // Phase 8: domain-mask sensitive sources so the History list
+          // is safe to show in screenshots / pair-debugging / live
+          // demos. Adult and casino-shaped tokens get masked
+          // (porn / xxx / adult / casino / poker / slot / bet / etc.);
+          // everything else passes through.
+          escapeHtml(maskDomain(e.title)) +
           '</div>' +
           '<div class="history-meta">' +
           '<span>' +
@@ -1218,6 +1310,13 @@ export async function mountInspector(root, ctx) {
         }
       }
       setAdPreview(adm, simP, previewDims);
+
+      // Phase 8: paint summary-bar IDs so the collapsed-card state shows
+      // identity. req.id / res.id are the canonical oRTB BidRequest /
+      // BidResponse identifiers; if missing, fall back to a placeholder
+      // so the bar still has shape.
+      paintCardSummary('cardReq', (req && req.id) || '—');
+      paintCardSummary('cardRes', (res && res.id) || '—');
 
       // Inspector tab — slot cards
       const imps = req.imp || [];
@@ -1454,6 +1553,10 @@ export async function mountInspector(root, ctx) {
                   escapeHtml(f.specRef) +
                   '" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px;text-decoration:none" title="OpenRTB spec reference">spec ↗</a>'
                 : '';
+              // Phase 8: JSONPath becomes a button — click expands the
+              // collapsed JSON panel (if any) and scrolls the textarea
+              // to the relevant key. Keep the visual density: just a
+              // muted underline-on-hover, no big affordance.
               return (
                 '<div class="validation-item ' +
                 cls +
@@ -1464,9 +1567,11 @@ export async function mountInspector(root, ctx) {
                 '<span>' +
                 escapeHtml(f.msg) +
                 (f.path
-                  ? ' <span style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px">[' +
+                  ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
                     escapeHtml(f.path) +
-                    ']</span>'
+                    '" title="Jump to this path in the JSON">[' +
+                    escapeHtml(f.path) +
+                    ']</button>'
                   : '') +
                 specLink +
                 '</span>' +
@@ -2819,10 +2924,13 @@ export async function mountInspector(root, ctx) {
   async function refreshSamples() {
     const el = $('savedList');
     if (!_currentUser) {
+      // Phase 8 visual hierarchy: secondary (outline) variant of the
+      // login CTA so it doesn't compete with the primary "Analyze"
+      // button in the header. Same data-action/data-mode wiring.
       el.innerHTML =
         '<div class="anon-cta">' +
         t('sample.anon_cta') +
-        '<br><button class="btn btn-primary btn-sm" data-action="open-auth" data-mode="login">' +
+        '<br><button class="btn btn-secondary btn-sm" data-action="open-auth" data-mode="login">' +
         t('sample.btn.signin') +
         '</button></div>';
       return;
@@ -3591,6 +3699,27 @@ export async function mountInspector(root, ctx) {
             return window.utils.format(el.dataset.target, el);
           case 'copy-text':
             return window.utils.copy(el.dataset.target, el);
+
+          // — Phase 8: collapsible JSON panels + safe-mode preview —
+          case 'toggle-card': {
+            const card = document.getElementById(el.dataset.target);
+            if (card) card.classList.toggle('is-collapsed');
+            return;
+          }
+          case 'reveal-creative': {
+            // Click anywhere on the overlay reveals; the inner button
+            // bubbles up here too. setAdPreview re-applies blur on
+            // every new creative so the reveal is per-impression.
+            const safe = document.getElementById('creativePreviewSafe');
+            if (safe) safe.classList.add('is-revealed');
+            return;
+          }
+          case 'goto-path': {
+            // Phase 8: clickable finding path. Auto-expands the
+            // collapsed JSON panel and scrolls to the matching key.
+            scrollToPath(el.dataset.jsonpath);
+            return;
+          }
 
           // — layout —
           case 'toggle-sidebar':

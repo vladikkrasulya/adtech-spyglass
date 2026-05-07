@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.5.0</span
+      >v9.6.0</span
     >
   </div>
   <div class="app-header-actions">
@@ -97,7 +97,7 @@
 
 <!-- ── Inputs ── -->
 <section class="input-section">
-  <div class="input-card">
+  <div class="input-card" id="cardReq">
     <div class="input-card-header">
       <span class="input-card-title">bid request</span>
       <div class="input-card-actions">
@@ -117,6 +117,14 @@
         >
           copy
         </button>
+        <button
+          data-action="toggle-card"
+          data-target="cardReq"
+          class="btn-collapse-toggle"
+          title="Collapse / expand panel"
+        >
+          <span class="caret">▾</span>
+        </button>
       </div>
     </div>
     <textarea
@@ -124,8 +132,12 @@
       class="json-input"
       placeholder="Paste oRTB BidRequest JSON here.&#10;&#10;Hint: Ctrl+Enter to run analysis."
     ></textarea>
+    <div class="input-card-summary" data-card-summary="cardReq">
+      <span class="input-card-summary__label">id</span>
+      <span class="input-card-summary__id" data-summary-id>—</span>
+    </div>
   </div>
-  <div class="input-card">
+  <div class="input-card" id="cardRes">
     <div class="input-card-header">
       <span class="input-card-title">bid response</span>
       <div class="input-card-actions">
@@ -145,6 +157,14 @@
         >
           copy
         </button>
+        <button
+          data-action="toggle-card"
+          data-target="cardRes"
+          class="btn-collapse-toggle"
+          title="Collapse / expand panel"
+        >
+          <span class="caret">▾</span>
+        </button>
       </div>
     </div>
     <textarea
@@ -152,6 +172,10 @@
       class="json-input"
       placeholder="Paste oRTB BidResponse JSON (optional)."
     ></textarea>
+    <div class="input-card-summary" data-card-summary="cardRes">
+      <span class="input-card-summary__label">id</span>
+      <span class="input-card-summary__id" data-summary-id>—</span>
+    </div>
   </div>
 </section>
 
@@ -174,7 +198,7 @@
         <span class="info-key">connection</span><span class="info-val">—</span>
       </div>
     </div>
-    <div class="section-title">library</div>
+    <div class="section-title section-title--sub">Library</div>
     <div class="saved-toolbar">
       <select id="partnerFilter" class="saved-select" aria-label="Filter saved samples by partner">
         <option value="">all partners</option>
@@ -188,7 +212,7 @@
       <div class="saved-empty">No saved samples yet</div>
     </div>
     <div
-      class="section-title"
+      class="section-title section-title--sub"
       style="
         display: flex;
         align-items: center;
@@ -196,7 +220,7 @@
         gap: var(--space-2);
       "
     >
-      <span>history</span>
+      <span>History</span>
       <button
         type="button"
         data-action="clear-history"
@@ -344,10 +368,17 @@
   <!-- Right sidebar -->
   <aside class="sidebar-right">
     <div class="section-title">ad preview</div>
-    <div class="preview-container" id="creativePreview">
-      <div class="preview-placeholder">waiting for adm — paste BidResponse</div>
+    <div class="preview-safe" id="creativePreviewSafe">
+      <div class="preview-container" id="creativePreview">
+        <div class="preview-placeholder">waiting for adm — paste BidResponse</div>
+      </div>
+      <div class="preview-safe-overlay" data-action="reveal-creative" role="button" tabindex="0">
+        <button type="button" class="preview-safe-overlay__btn">Show creative</button>
+      </div>
     </div>
-    <div class="section-title" style="margin-top: var(--space-2)">placement stats</div>
+    <div class="section-title section-title--sub" style="margin-top: var(--space-3)">
+      Placement stats
+    </div>
     <div class="quick-stats" id="quickStats">
       <div class="stat-box">
         <div class="stat-value">0</div>
@@ -382,7 +413,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.5.0</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.6.0</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Supported specs"

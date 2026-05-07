@@ -24,7 +24,7 @@
   'use strict';
 
   // ⚠ Single source of truth — bump this on a release.
-  const VERSION = 'v9.5.0';
+  const VERSION = 'v9.6.0';
 
   window.SpyglassVersion = VERSION;
 
