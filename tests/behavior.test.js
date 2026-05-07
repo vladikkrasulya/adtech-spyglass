@@ -731,3 +731,142 @@ test('analyze() — Phase 5 finding carries decorated msg + nullable specRef', (
   assert.notEqual(f.msg, '[' + f.id + ']');
   assert.ok('specRef' in f);
 });
+
+// ── Phase 6 (static / payload analysis) rules ──────────────────────────────
+
+const { scanCreative, shannonEntropy } = require('@kyivtech/spyglass-core/behavior/rules/static');
+
+test('shannonEntropy — empty / falsy input returns 0', () => {
+  assert.equal(shannonEntropy(''), 0);
+  assert.equal(shannonEntropy(null), 0);
+  assert.equal(shannonEntropy(undefined), 0);
+});
+
+test('shannonEntropy — uniform distribution maximizes entropy', () => {
+  // 4 distinct chars equally distributed → log2(4) = 2 bits/char.
+  const h = shannonEntropy('abcdabcdabcd');
+  assert.ok(Math.abs(h - 2.0) < 0.0001, 'expected ~2.0, got ' + h);
+});
+
+test('shannonEntropy — single repeated char has zero entropy', () => {
+  // No information when every position is the same — H = 0.
+  assert.equal(shannonEntropy('aaaaaaaaaa'), 0);
+});
+
+test('scanCreative — defensive on bad input', () => {
+  assert.deepEqual(scanCreative(''), []);
+  assert.deepEqual(scanCreative(null), []);
+  assert.deepEqual(scanCreative(undefined), []);
+  assert.deepEqual(scanCreative(42), []);
+});
+
+test('scanCreative — eval(atob(…)) → static_obfuscation event', () => {
+  const adm = '<script>eval(atob("Y29uc29sZS5sb2coIm1hbHdhcmUiKQ=="))</script>';
+  const events = scanCreative(adm);
+  const obf = events.filter((e) => e.kind === 'static_obfuscation');
+  assert.equal(obf.length, 1);
+  assert.equal(obf[0].method, 'eval_atob');
+});
+
+test('scanCreative — Dean Edwards packer signature', () => {
+  const adm = 'eval(function(p,a,c,k,e,d){return "packed"})';
+  const events = scanCreative(adm);
+  const obf = events.filter((e) => e.kind === 'static_obfuscation');
+  assert.ok(obf.some((e) => e.method === 'packer'));
+});
+
+test('scanCreative — coinhive miner signature', () => {
+  const adm = '<script src="https://coinhive.com/lib/coinhive.min.js"></script>';
+  const events = scanCreative(adm);
+  const miner = events.filter((e) => e.kind === 'static_miner');
+  assert.ok(miner.some((e) => e.method === 'coinhive'));
+});
+
+test('scanCreative — document.write(decodeURIComponent) → static_xss_marker', () => {
+  const adm = 'document.write(decodeURIComponent("%3Cscript%3E…"))';
+  const events = scanCreative(adm);
+  const xss = events.filter((e) => e.kind === 'static_xss_marker');
+  assert.equal(xss.length, 1);
+  assert.equal(xss[0].method, 'docwrite_decode');
+});
+
+test('scanCreative — high-entropy base64 blob ≥ 500 chars', () => {
+  // Generate a uniformly-distributed 600-char base64 blob (entropy ~6 bits/char).
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let blob = '';
+  for (let i = 0; i < 600; i++) blob += alphabet[i % alphabet.length];
+  const adm = '<script>const x="' + blob + '"</script>';
+  const events = scanCreative(adm);
+  const ent = events.filter((e) => e.kind === 'static_high_entropy');
+  assert.equal(ent.length, 1);
+  assert.equal(ent[0].blobLength, 600);
+  assert.ok(ent[0].blobEntropy >= 4.5, 'entropy should clear threshold');
+  assert.ok(typeof ent[0].blobPreview === 'string' && ent[0].blobPreview.length <= 40);
+});
+
+test('scanCreative — short base64 (<500 chars) is NOT flagged', () => {
+  // Cache-buster strings, short base64-ish IDs shouldn't trigger entropy rule.
+  const adm = '<img src="data:image/png;base64,iVBORw0KGgoAAAANS' + 'xyz'.repeat(100) + '">';
+  const events = scanCreative(adm);
+  // Even though the run is long-ish, a single repeated 'xyz' has low entropy.
+  const ent = events.filter((e) => e.kind === 'static_high_entropy');
+  // ~5 distinct chars repeated → entropy ~2.3, below the 4.5 threshold.
+  assert.equal(ent.length, 0);
+});
+
+test('analyze() — opts.adm with eval(atob) → behavior.static.obfuscation ERROR', () => {
+  const adm = 'eval(atob("aGFja2Vk"))';
+  const r = analyze([], { adm });
+  const ids = r.findings.map((f) => f.id);
+  assert.ok(ids.includes('behavior.static.obfuscation'));
+  const obf = r.findings.find((f) => f.id === 'behavior.static.obfuscation');
+  assert.equal(obf.level, 'error');
+  assert.equal(obf.params.pattern, 'eval_atob');
+});
+
+test('analyze() — opts.adm with miner ref → behavior.static.miner_signature ERROR', () => {
+  const adm = '<script>CoinHive.Anonymous("siteKey").start()</script>';
+  const r = analyze([], { adm });
+  const ids = r.findings.map((f) => f.id);
+  assert.ok(ids.includes('behavior.static.miner_signature'));
+  const m = r.findings.find((f) => f.id === 'behavior.static.miner_signature');
+  assert.equal(m.level, 'error');
+  assert.equal(m.params.signature, 'coinhive');
+});
+
+test('analyze() — opts.adm with high-entropy blob → behavior.static.high_entropy_blob WARNING', () => {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let blob = '';
+  for (let i = 0; i < 600; i++) blob += alphabet[i % alphabet.length];
+  const r = analyze([], { adm: blob });
+  const f = r.findings.find((f) => f.id === 'behavior.static.high_entropy_blob');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+});
+
+test('analyze() — eventCount excludes static synthetic events', () => {
+  // Static events shouldn't inflate the Behavior-tab badge — they're scan
+  // signals, not user-visible runtime activity.
+  const adm = 'eval(atob("aGFja2Vk"))';
+  const r = analyze([], { adm });
+  // No probe events passed in → eventCount must be 0 even though scanCreative
+  // emitted a static_obfuscation event under the hood.
+  assert.equal(r.eventCount, 0);
+});
+
+test('analyze() — without opts.adm, Phase 6 pipeline is a no-op (back-compat)', () => {
+  // Pre-Phase-6 callers that pass only events still get the runtime-only
+  // pipeline; no static rules can fire because no scan ran.
+  const r = analyze([probeReady()]);
+  const ids = r.findings.map((f) => f.id);
+  assert.ok(!ids.some((id) => id.startsWith('behavior.static.')));
+});
+
+test('analyze() — Phase 6 findings carry decorated msg + nullable specRef', () => {
+  const r = analyze([], { adm: 'eval(atob("xx"))' });
+  const f = r.findings[0];
+  assert.equal(typeof f.msg, 'string');
+  assert.notEqual(f.msg, '');
+  assert.notEqual(f.msg, '[' + f.id + ']');
+  assert.ok('specRef' in f);
+});

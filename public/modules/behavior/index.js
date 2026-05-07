@@ -157,12 +157,25 @@
   }
 
   function fetchAnalysis(events, locale) {
+    // Phase 6: piggy-back the current creative's adm so the engine can
+    // run static-payload scans (obfuscation, miners, XSS markers, entropy).
+    // setAdPreview parks a (truncated) copy on __spyglassBehavior so we
+    // don't have to wire a new function-arg pipeline through the parent.
+    // Empty string when no preview is mounted — engine treats that as
+    // "skip static analysis" and runs runtime-only rules.
+    let adm = '';
+    try {
+      const ctx = window.__spyglassBehavior;
+      if (ctx && typeof ctx.creative_adm === 'string') adm = ctx.creative_adm;
+    } catch (e) {
+      /* noop */
+    }
     return fetch(
       '/api/analyze-behavior' + (locale ? '?locale=' + encodeURIComponent(locale) : ''),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ events: events }),
+        body: JSON.stringify({ events: events, adm: adm }),
       },
     )
       .then(function (r) {

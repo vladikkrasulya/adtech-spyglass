@@ -724,11 +724,18 @@ function handleAnalyzeBehavior(req, res, parsed) {
   }
   const locale = resolveLocale(parsed);
   readJson(req)
-    .then(({ events }) => {
+    .then(({ events, adm }) => {
       if (!Array.isArray(events)) {
         return sendError(res, 400, 'invalid_input', 'events array is required');
       }
-      const r = analyzeBehavior(events, { locale });
+      // Phase 6: optional `adm` field carries the raw creative string for
+      // static-payload analysis (obfuscation/miner/XSS pattern matching +
+      // entropy). Engine treats it as opt-in; callers that omit it get
+      // the pre-Phase-6 runtime-only pipeline.
+      const r = analyzeBehavior(events, {
+        locale,
+        adm: typeof adm === 'string' ? adm : '',
+      });
       sendJson(res, 200, {
         success: true,
         findings: r.findings,

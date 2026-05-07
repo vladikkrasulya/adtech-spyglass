@@ -17,5 +17,6 @@
 const misclick = require('./misclick');
 const botPatterns = require('./bot-patterns');
 const malicious = require('./malicious');
+const staticAnalysis = require('./static');
 
-module.exports = [...misclick, ...botPatterns, ...malicious];
+module.exports = [...misclick, ...botPatterns, ...malicious, ...staticAnalysis];

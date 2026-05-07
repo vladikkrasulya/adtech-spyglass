@@ -23,10 +23,11 @@ const { rollupStatus } = require('../findings');
 const { resolve, FALLBACK_LOCALE } = require('../messages');
 const specRefs = require('../spec-refs.json');
 const RULES = require('./rules');
+const { scanCreative } = require('./rules/static');
 
 /**
  * @param {Array<object>} events  raw probe events
- * @param {{ locale?: string }} [opts]
+ * @param {{ locale?: string, adm?: string }} [opts]
  * @returns {{ findings: Array, status: string, eventCount: number }}
  */
 function analyze(events, opts) {
@@ -34,11 +35,24 @@ function analyze(events, opts) {
   const evs = Array.isArray(events) ? events : [];
   const locale = o.locale || FALLBACK_LOCALE;
 
+  // Phase 6 — synthesize static-analysis events from the raw creative
+  // (HTML/JS adm, or stringified native JSON). Concat into a separate
+  // `enrichedEvs` so eventCount below stays based on the original probe
+  // events: static events are *scan signals*, not runtime activity, and
+  // shouldn't inflate the Behavior-tab badge. Backwards-compatible —
+  // callers that don't pass opts.adm get the pre-Phase-6 pipeline
+  // unchanged.
+  let enrichedEvs = evs;
+  if (typeof o.adm === 'string' && o.adm.length > 0) {
+    const staticEvents = scanCreative(o.adm);
+    if (staticEvents.length) enrichedEvs = evs.concat(staticEvents);
+  }
+
   let raw = [];
   for (let i = 0; i < RULES.length; i++) {
     const rule = RULES[i];
     try {
-      const out = rule(evs);
+      const out = rule(enrichedEvs);
       if (out && out.length) raw = raw.concat(out);
     } catch (e) {
       // A buggy rule shouldn't take down the whole analysis. Log and

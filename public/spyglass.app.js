@@ -537,6 +537,15 @@ export async function mountInspector(root, ctx) {
     renderBehaviorTab();
   }
 
+  // Phase 6 — cap the adm copy that gets posted alongside probe events to
+  // /api/analyze-behavior. The engine's scanner truncates internally to
+  // 100 KB, but we cap the wire payload to 64 KB to keep round-trips fast
+  // and avoid re-sending the full creative on every Behavior-tab render
+  // (a banner adm can be 200KB+ when it embeds base64 sprites). Pattern
+  // matches always fire in the head of the creative (loader / decoder),
+  // so the prefix is sufficient.
+  const ADM_TRANSPORT_LIMIT = 64 * 1024;
+
   function setAdPreview(adm, simPrice, dims) {
     const el = $('creativePreview');
     el.innerHTML = '';
@@ -556,6 +565,18 @@ export async function mountInspector(root, ctx) {
       el.innerHTML =
         '<div class="preview-placeholder">' + escapeHtml(t('preview.no_adm')) + '</div>';
       return;
+    }
+    // Phase 6: park the creative source on __spyglassBehavior so that
+    // modules/behavior/index.js can include it in the /api/analyze-behavior
+    // POST body. Truncated to ADM_TRANSPORT_LIMIT — the engine's scanner
+    // truncates internally too, but bounding wire size keeps the per-render
+    // round-trip fast (Behavior tab re-fetches on every probe event).
+    try {
+      const admStr = String(adm);
+      window.__spyglassBehavior.creative_adm =
+        admStr.length > ADM_TRANSPORT_LIMIT ? admStr.slice(0, ADM_TRANSPORT_LIMIT) : admStr;
+    } catch (e) {
+      /* defensive — shouldn't fail, but the rest of preview must run */
     }
     // Resolve known macros so the preview reflects an actual rendered impression.
     const resolved = String(adm)
@@ -715,6 +736,10 @@ export async function mountInspector(root, ctx) {
           heavy_ad_network: t('behavior.kind.heavy_ad_network'),
           frozen_thread: t('behavior.kind.frozen_thread'),
           permission_abuse: t('behavior.kind.permission_abuse'),
+          static_obfuscation: t('behavior.kind.static_obfuscation'),
+          static_miner: t('behavior.kind.static_miner'),
+          static_xss_marker: t('behavior.kind.static_xss_marker'),
+          static_high_entropy: t('behavior.kind.static_high_entropy'),
         },
         locale: activeLocale(),
       });
