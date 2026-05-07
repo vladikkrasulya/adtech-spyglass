@@ -40,6 +40,13 @@
      - setInterval heartbeat — 1Hz liveness signal so the parent
        watchdog can detect a frozen iframe thread that can no longer
        send postMessages itself (Phase 4)
+     - Notification.requestPermission (Phase 5)
+     - navigator.geolocation.getCurrentPosition + watchPosition (Phase 5)
+     - navigator.mediaDevices.getUserMedia (camera/mic) (Phase 5)
+     - navigator.permissions.query (fingerprinting / permission probing) (Phase 5)
+     - Element.prototype.requestFullscreen + legacy webkit/moz/ms variants
+       (Phase 5)
+     - navigator.serviceWorker.register (persistent push vehicle) (Phase 5)
 
    Detection lineage:
      activeEventStack tracks the chain of DOM events currently
@@ -823,6 +830,200 @@
         /* */
       }
     }, HEARTBEAT_INTERVAL_MS);
+  } catch (e) {
+    /* */
+  }
+
+  // ── Phase 5 — Permission Abuse hooks ─────────────────────────────
+  // System-permission-gated APIs are categorically inappropriate for
+  // banner / native creatives: a creative has no legitimate reason to
+  // ask for push, geolocation, camera, or fullscreen. The sandbox
+  // (allow-scripts only) generally denies these requests at the browser
+  // level — but, like with navigation, the *attempt* is the signal.
+  //
+  // Each wrapper snapshots navContext() at call time so the engine can
+  // split severity by gesture lineage (no gesture = ERROR / malware,
+  // with gesture = WARNING / dark pattern). Same try/catch-per-hook
+  // discipline as Phase 0-4 so a missing API on one platform doesn't
+  // kill the rest.
+  function permissionHookSend(apiKind, method, extra) {
+    const payload = {
+      kind: 'permission_abuse',
+      apiKind: apiKind,
+      method: method,
+      url: '',
+      trigger: classifyTrigger().trigger,
+    };
+    if (extra) {
+      for (const k in extra) {
+        if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k];
+      }
+    }
+    send(Object.assign(payload, navContext()));
+  }
+
+  // 16) Notification.requestPermission — push prompt, the canonical
+  //     adware-spam vector. Even sandboxed iframes can call it (the API
+  //     resolves to 'denied' in the sandbox), and the call itself is
+  //     what we surface.
+  try {
+    if (window.Notification && typeof window.Notification.requestPermission === 'function') {
+      const origNotifReq = window.Notification.requestPermission.bind(window.Notification);
+      window.Notification.requestPermission = function (callback) {
+        permissionHookSend('notification', 'Notification.requestPermission');
+        try {
+          return origNotifReq(callback);
+        } catch (e) {
+          return Promise.resolve('denied');
+        }
+      };
+    }
+  } catch (e) {
+    /* */
+  }
+
+  // 17) navigator.geolocation — getCurrentPosition + watchPosition.
+  //     watchPosition is an oft-overlooked second entry point that
+  //     malware uses for continuous-location tracking; we wrap both.
+  try {
+    if (navigator.geolocation) {
+      ['getCurrentPosition', 'watchPosition'].forEach(function (m) {
+        try {
+          const orig = navigator.geolocation[m];
+          if (typeof orig !== 'function') return;
+          navigator.geolocation[m] = function () {
+            permissionHookSend('geolocation', 'navigator.geolocation.' + m);
+            try {
+              return orig.apply(navigator.geolocation, arguments);
+            } catch (e) {
+              /* sandbox / permission denied */
+            }
+          };
+        } catch (e) {
+          /* */
+        }
+      });
+    }
+  } catch (e) {
+    /* */
+  }
+
+  // 18) navigator.mediaDevices.getUserMedia — camera / microphone.
+  //     Inspect constraints to record sub-kind (camera / mic / both)
+  //     so the engine + UI can distinguish camera-grab from mic-grab.
+  try {
+    if (
+      navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === 'function'
+    ) {
+      const origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = function (constraints) {
+        let mediaSubKind = '';
+        try {
+          const wantsVideo = !!(constraints && constraints.video);
+          const wantsAudio = !!(constraints && constraints.audio);
+          mediaSubKind = wantsVideo && wantsAudio
+            ? 'camera+mic'
+            : wantsVideo
+            ? 'camera'
+            : wantsAudio
+            ? 'mic'
+            : '';
+        } catch (e) {
+          /* */
+        }
+        permissionHookSend('getUserMedia', 'navigator.mediaDevices.getUserMedia', {
+          mediaSubKind: mediaSubKind,
+        });
+        try {
+          return origGUM(constraints);
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      };
+    }
+  } catch (e) {
+    /* */
+  }
+
+  // 19) navigator.permissions.query — does NOT prompt, but it's the
+  //     fingerprinting + nag-dismissal probe ("is push already granted?
+  //     if so, prompt; if denied, give up; if prompt, harass the user").
+  //     A creative invoking this is doing reconnaissance, not work.
+  try {
+    if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+      const origPermQuery = navigator.permissions.query.bind(navigator.permissions);
+      navigator.permissions.query = function (descriptor) {
+        let permName = '';
+        try {
+          permName = descriptor && descriptor.name ? String(descriptor.name) : '';
+        } catch (e) {
+          /* */
+        }
+        permissionHookSend('permissions.query', 'navigator.permissions.query', {
+          mediaSubKind: permName,
+        });
+        try {
+          return origPermQuery(descriptor);
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      };
+    }
+  } catch (e) {
+    /* */
+  }
+
+  // 20) Element.requestFullscreen + legacy vendor variants. Fullscreen
+  //     escape is a classic clickjacking primer — the creative goes
+  //     fullscreen on a "hover" or after a synthetic gesture, then
+  //     overlays its own UI. Browsers gate this on userActivation so
+  //     gestureless calls are auto-denied, but the attempt is the tell.
+  [
+    'requestFullscreen',
+    'webkitRequestFullscreen',
+    'mozRequestFullScreen',
+    'msRequestFullscreen',
+  ].forEach(function (m) {
+    try {
+      const orig = Element.prototype[m];
+      if (typeof orig !== 'function') return;
+      Element.prototype[m] = function () {
+        permissionHookSend('fullscreen', 'Element.' + m);
+        try {
+          return orig.apply(this, arguments);
+        } catch (e) {
+          /* sandbox / activation denied */
+        }
+      };
+    } catch (e) {
+      /* */
+    }
+  });
+
+  // 21) navigator.serviceWorker.register — persistent-push vehicle.
+  //     A registered SW outlives the iframe and can fire push
+  //     notifications indefinitely. Sandbox without allow-same-origin
+  //     denies registration outright, but the *attempt* is exactly the
+  //     pattern we want flagged: no banner has any business installing
+  //     a worker on the visiting domain.
+  try {
+    if (
+      navigator.serviceWorker &&
+      typeof navigator.serviceWorker.register === 'function'
+    ) {
+      const origSWReg = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+      navigator.serviceWorker.register = function (scriptURL, options) {
+        permissionHookSend('serviceWorker', 'navigator.serviceWorker.register', {
+          url: String(scriptURL || ''),
+        });
+        try {
+          return origSWReg(scriptURL, options);
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      };
+    }
   } catch (e) {
     /* */
   }

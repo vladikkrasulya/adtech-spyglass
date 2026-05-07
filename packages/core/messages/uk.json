@@ -107,5 +107,7 @@
 
   "behavior.malicious.heavy_ad_cpu": "Креатив пробив CPU-поріг Chrome Heavy Ad Intervention ({breachedThreshold}): сумарно {cumulativeSec}с блокування, у поточному 30с-вікні {windowSec}с. Пороги: 60с cumulative або 4с у 30с-вікні. Жоден легітимний банер стільки CPU не потребує — це або майнер, або runaway loop, або агресивна анімація/трекінг.",
   "behavior.malicious.heavy_ad_network": "Креатив завантажив {cumulativeMb} MB ({cumulativeBytes} байт) через {resourceCount} ресурсів — поріг IAB/Chrome 4 MB пробитий. Banner-креатив > 4 MB ламає мобільний трафік і знищує LCP незалежно від наміру.",
-  "behavior.malicious.frozen_thread": "Креатив завис: parent watchdog не отримує heartbeat від probe вже {secSinceLastHeartbeat}с (поріг 3.5с). JS-потік iframe-у заблокований — нескінченний цикл, синхронний XHR або баг у скрипті. Метод детекції: {method}."
+  "behavior.malicious.frozen_thread": "Креатив завис: parent watchdog не отримує heartbeat від probe вже {secSinceLastHeartbeat}с (поріг 3.5с). JS-потік iframe-у заблокований — нескінченний цикл, синхронний XHR або баг у скрипті. Метод детекції: {method}.",
+
+  "behavior.malicious.permission_abuse": "Креатив викликав {method} (apiKind={apiKind}, mediaSubKind={mediaSubKind}). withinGestureGrace={withinGestureGrace}, msSinceGesture={msSinceGesture}. У банер-креатива немає легітимної причини просити push / geolocation / камеру / fullscreen / SW-доступ — без gesture lineage це малвар/спам; навіть із жестом креатив піджеком тулить системний prompt на клік, який юзер для цього не передбачав."
 }

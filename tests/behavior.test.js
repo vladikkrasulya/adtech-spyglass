@@ -215,6 +215,30 @@ function frozenThreadEvent(opts) {
   );
 }
 
+// Phase 5 — permission-abuse helper. Probe wraps every system-permission
+// API and emits this kind with navContext metadata; engine splits severity
+// on withinGestureGrace.
+function permissionAbuseEvent(opts) {
+  return Object.assign(
+    {
+      type: 'spyglass-probe',
+      v: 1,
+      ts: Date.now(),
+      kind: 'permission_abuse',
+      apiKind: 'notification',
+      method: 'Notification.requestPermission',
+      url: '',
+      trigger: 'no-event',
+      mediaSubKind: '',
+      userActivationActive: false,
+      userActivationEverActive: false,
+      msSinceGesture: -1,
+      withinGestureGrace: false,
+    },
+    opts || {},
+  );
+}
+
 test('analyze() — empty event list yields clean status, no findings', () => {
   const r = analyze([]);
   assert.equal(r.status, 'clean');
@@ -631,4 +655,81 @@ test('analyze() — center_synth event with missing distancePx defaults to "0.00
   const r = analyze([ev]);
   assert.equal(r.findings.length, 1);
   assert.equal(r.findings[0].params.distancePx, '0.00');
+});
+
+// ── Phase 5 (permission abuse) rules ────────────────────────────────────────
+
+test('analyze() — permission_abuse without gesture → ERROR', () => {
+  const r = analyze([
+    permissionAbuseEvent({ withinGestureGrace: false, msSinceGesture: -1 }),
+  ]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.permission_abuse');
+  assert.equal(r.findings[0].level, 'error');
+  assert.equal(r.findings[0].params.apiKind, 'notification');
+  assert.equal(r.findings[0].params.withinGestureGrace, false);
+});
+
+test('analyze() — permission_abuse within gesture grace → WARNING', () => {
+  const r = analyze([
+    permissionAbuseEvent({ withinGestureGrace: true, msSinceGesture: 200 }),
+  ]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.permission_abuse');
+  assert.equal(r.findings[0].level, 'warning');
+  assert.equal(r.findings[0].params.msSinceGesture, 200);
+});
+
+test('analyze() — permission_abuse without navContext defaults to ERROR (defensive)', () => {
+  // Pre-Phase-5 archived events may lack the gesture metadata. Engine
+  // must still classify them — defaulting to ERROR is the safe choice.
+  const ev = permissionAbuseEvent();
+  delete ev.withinGestureGrace;
+  delete ev.msSinceGesture;
+  const r = analyze([ev]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.malicious.permission_abuse');
+  assert.equal(r.findings[0].level, 'error');
+});
+
+test('analyze() — multiple permission_abuse events produce one finding each', () => {
+  // Same creative requesting push + geo + camera should surface the full
+  // pattern, not collapse into a single finding. Severity tracks each
+  // event's own gesture context independently.
+  const r = analyze([
+    permissionAbuseEvent({ apiKind: 'notification', withinGestureGrace: false }),
+    permissionAbuseEvent({
+      apiKind: 'geolocation',
+      method: 'navigator.geolocation.getCurrentPosition',
+      withinGestureGrace: true,
+      msSinceGesture: 80,
+    }),
+    permissionAbuseEvent({
+      apiKind: 'getUserMedia',
+      method: 'navigator.mediaDevices.getUserMedia',
+      mediaSubKind: 'camera+mic',
+      withinGestureGrace: false,
+    }),
+  ]);
+  assert.equal(r.findings.length, 3);
+  const apiKinds = r.findings.map((f) => f.params.apiKind).sort();
+  assert.deepEqual(apiKinds, ['geolocation', 'getUserMedia', 'notification']);
+  // Severity per event: notification = error, geo = warning, gUM = error
+  const byApi = Object.fromEntries(r.findings.map((f) => [f.params.apiKind, f.level]));
+  assert.equal(byApi.notification, 'error');
+  assert.equal(byApi.geolocation, 'warning');
+  assert.equal(byApi.getUserMedia, 'error');
+  assert.equal(
+    r.findings.find((f) => f.params.apiKind === 'getUserMedia').params.mediaSubKind,
+    'camera+mic',
+  );
+});
+
+test('analyze() — Phase 5 finding carries decorated msg + nullable specRef', () => {
+  const r = analyze([permissionAbuseEvent({ withinGestureGrace: false })]);
+  const f = r.findings[0];
+  assert.equal(typeof f.msg, 'string');
+  assert.notEqual(f.msg, '');
+  assert.notEqual(f.msg, '[' + f.id + ']');
+  assert.ok('specRef' in f);
 });

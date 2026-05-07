@@ -27,6 +27,11 @@
  *   - heavy_ad_cpu     → behavior.malicious.heavy_ad_cpu (ERROR)
  *   - heavy_ad_network → behavior.malicious.heavy_ad_network (ERROR)
  *   - frozen_thread    → behavior.malicious.frozen_thread (ERROR)
+ *   - permission_abuse → behavior.malicious.permission_abuse
+ *       severity ERROR if no gesture lineage (malware/spam),
+ *       WARNING if within gesture grace (UX dark pattern; banner
+ *       creatives have no legitimate cause to request system perms,
+ *       but a real click reduces the certainty)
  *
  * The auto_redirect / late_redirect split is the key Phase 3 signal:
  * cloaking creatives chain `click → setTimeout(() => location.href = X, 800)`
@@ -281,6 +286,55 @@ function frozenThread(events) {
   return out;
 }
 
+/**
+ * behavior.malicious.permission_abuse
+ *
+ * Phase 5. The probe wraps every system-permission-gated API
+ * (Notification.requestPermission, geolocation, getUserMedia,
+ * permissions.query, requestFullscreen, serviceWorker.register) and
+ * emits a permission_abuse event for each call, with navContext metadata.
+ *
+ * Severity splits on gesture lineage:
+ *   - withinGestureGrace !== true → ERROR (no recent gesture; categorical
+ *     malware/spam — the creative is asking for system permissions while
+ *     the user hasn't interacted at all, or pre-Phase-5 probe lacks
+ *     metadata, in which case defensive default = ERROR)
+ *   - withinGestureGrace === true → WARNING (request piggy-backed on a
+ *     recent click; technically the legitimate path for the API, but
+ *     no banner creative has cause to ask, so it surfaces for review
+ *     instead of silently passing)
+ *
+ * One finding per emitted event. Multiple permission requests across
+ * different APIs each produce their own finding so analysts see the
+ * full surface (push + geo + camera from a single creative is a strong
+ * pattern signal).
+ */
+function permissionAbuse(events) {
+  const out = [];
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (!ev || ev.kind !== 'permission_abuse') continue;
+
+    const inGrace = ev.withinGestureGrace === true;
+    out.push(
+      makeFinding(
+        'behavior.malicious.permission_abuse',
+        inGrace ? LEVELS.WARNING : LEVELS.ERROR,
+        '',
+        {
+          apiKind: String(ev.apiKind || 'unknown'),
+          method: String(ev.method || ''),
+          mediaSubKind: ev.mediaSubKind ? String(ev.mediaSubKind) : '',
+          withinGestureGrace: inGrace,
+          msSinceGesture: typeof ev.msSinceGesture === 'number' ? ev.msSinceGesture : -1,
+          eventIndex: i,
+        },
+      ),
+    );
+  }
+  return out;
+}
+
 module.exports = [
   frameBustAnchor,
   frameBustForm,
@@ -289,4 +343,5 @@ module.exports = [
   heavyAdCpu,
   heavyAdNetwork,
   frozenThread,
+  permissionAbuse,
 ];

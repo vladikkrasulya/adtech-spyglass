@@ -113,5 +113,7 @@
 
   "behavior.malicious.heavy_ad_cpu": "Creative breached Chrome Heavy Ad Intervention CPU thresholds ({breachedThreshold}): {cumulativeSec}s cumulative blocking, {windowSec}s in the current 30s window. Limits: 60s cumulative or 4s in any 30s window. No legitimate banner needs that much CPU — likely a miner, runaway loop, or aggressive animation/tracking.",
   "behavior.malicious.heavy_ad_network": "Creative loaded {cumulativeMb} MB ({cumulativeBytes} bytes) across {resourceCount} resources — IAB/Chrome 4 MB cap breached. Banner creatives over 4 MB break mobile data plans and ruin LCP regardless of intent.",
-  "behavior.malicious.frozen_thread": "Creative is frozen: the parent watchdog has not received a probe heartbeat for {secSinceLastHeartbeat}s (threshold 3.5s). The iframe's JS thread is blocked — infinite loop, sync XHR, or a script bug. Detection method: {method}."
+  "behavior.malicious.frozen_thread": "Creative is frozen: the parent watchdog has not received a probe heartbeat for {secSinceLastHeartbeat}s (threshold 3.5s). The iframe's JS thread is blocked — infinite loop, sync XHR, or a script bug. Detection method: {method}.",
+
+  "behavior.malicious.permission_abuse": "Creative invoked {method} (apiKind={apiKind}, mediaSubKind={mediaSubKind}). withinGestureGrace={withinGestureGrace}, msSinceGesture={msSinceGesture}. No banner has a legitimate reason to request push / geolocation / camera / fullscreen / SW permissions — without gesture lineage this is malware/spam; even with a gesture the creative is piggy-backing a system prompt onto a click the user didn't intend for that purpose."
 }

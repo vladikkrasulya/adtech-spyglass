@@ -129,6 +129,7 @@
       'behavior.kind.heavy_ad_cpu': 'heavy ad: CPU поріг пробитий',
       'behavior.kind.heavy_ad_network': 'heavy ad: > 4 MB сабресурсів',
       'behavior.kind.frozen_thread': 'iframe завис (watchdog)',
+      'behavior.kind.permission_abuse': 'запит системного дозволу',
       'behavior.heading.findings': 'Знайдено загроз',
       'behavior.heading.timeline': 'Хронологія подій',
 
@@ -362,6 +363,7 @@
       'behavior.kind.heavy_ad_cpu': 'heavy ad: CPU threshold breached',
       'behavior.kind.heavy_ad_network': 'heavy ad: > 4 MB sub-resources',
       'behavior.kind.frozen_thread': 'iframe frozen (watchdog)',
+      'behavior.kind.permission_abuse': 'system permission request',
       'behavior.heading.findings': 'Threats detected',
       'behavior.heading.timeline': 'Event timeline',
 
@@ -587,6 +589,7 @@
       'behavior.kind.heavy_ad_cpu': 'heavy ad: CPU порог пробит',
       'behavior.kind.heavy_ad_network': 'heavy ad: > 4 MB сабресурсов',
       'behavior.kind.frozen_thread': 'iframe завис (watchdog)',
+      'behavior.kind.permission_abuse': 'запрос системного разрешения',
       'behavior.heading.findings': 'Найдено угроз',
       'behavior.heading.timeline': 'Хронология событий',
       'empty.partners': 'Партнёров пока нет',

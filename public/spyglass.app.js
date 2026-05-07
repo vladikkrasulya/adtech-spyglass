@@ -682,6 +682,7 @@ export async function mountInspector(root, ctx) {
           heavy_ad_cpu: t('behavior.kind.heavy_ad_cpu'),
           heavy_ad_network: t('behavior.kind.heavy_ad_network'),
           frozen_thread: t('behavior.kind.frozen_thread'),
+          permission_abuse: t('behavior.kind.permission_abuse'),
         },
         locale: activeLocale(),
       });
