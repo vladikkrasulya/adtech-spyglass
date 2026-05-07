@@ -33,13 +33,12 @@ function analyze(events, opts) {
   const o = opts || {};
   const evs = Array.isArray(events) ? events : [];
   const locale = o.locale || FALLBACK_LOCALE;
-  const ctx = { locale };
 
   let raw = [];
   for (let i = 0; i < RULES.length; i++) {
     const rule = RULES[i];
     try {
-      const out = rule(evs, ctx);
+      const out = rule(evs);
       if (out && out.length) raw = raw.concat(out);
     } catch (e) {
       // A buggy rule shouldn't take down the whole analysis. Log and

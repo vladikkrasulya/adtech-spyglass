@@ -251,6 +251,8 @@ test('analyze() — non-array input is treated as empty (defensive)', () => {
   // specimens predate the events column. Engine must not throw.
   assert.doesNotThrow(() => analyze(null));
   assert.doesNotThrow(() => analyze(undefined));
+  // @ts-expect-error — intentionally passing a non-array to verify the
+  // Array.isArray() guard. tsc can't narrow this without a runtime check.
   assert.doesNotThrow(() => analyze({ not: 'an array' }));
   const r = analyze(null);
   assert.equal(r.status, 'clean');
