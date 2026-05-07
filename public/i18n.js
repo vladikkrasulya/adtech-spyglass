@@ -696,6 +696,13 @@
   I18N.ru['badge.invalid'] = 'невалидный';
   I18N.ru['history.empty'] = 'История пустая — вставь запрос чтобы начать';
 
+  // Ad-preview empty hint — was hardcoded UK in spyglass.app.js setAdPreview;
+  // 2026-05-06 i18n hotfix surfaced it as a leak when EN/RU users saw "у
+  // відповіді немає adm/nurl" instead of their locale.
+  I18N.en['preview.no_adm'] = 'No adm/nurl in response';
+  I18N.uk['preview.no_adm'] = 'У відповіді немає adm/nurl';
+  I18N.ru['preview.no_adm'] = 'В ответе нет adm/nurl';
+
   // Locale source of truth: <html lang="…"> (set server-side per /uk/ or
   // /en/ route by the inline IIFE in each HTML file). localStorage is only
   // read as a fallback for surfaces that haven't set the attribute yet.

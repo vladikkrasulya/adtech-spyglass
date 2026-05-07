@@ -521,7 +521,8 @@ export async function mountInspector(root, ctx) {
     // across previews and produce confusing per-tab counts.
     resetBehavior();
     if (!adm) {
-      el.innerHTML = '<div class="preview-placeholder">у відповіді немає adm/nurl</div>';
+      el.innerHTML =
+        '<div class="preview-placeholder">' + escapeHtml(t('preview.no_adm')) + '</div>';
       return;
     }
     // Resolve known macros so the preview reflects an actual rendered impression.

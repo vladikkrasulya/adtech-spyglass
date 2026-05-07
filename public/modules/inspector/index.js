@@ -28,7 +28,7 @@
 
 import { mountInspector } from '/spyglass.app.js';
 
-const ASSET_VERSION = '3';
+const ASSET_VERSION = '4';
 
 async function loadStylesheet(href) {
   const link = document.createElement('link');
