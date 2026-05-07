@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.6.1</span
+      >v9.6.2</span
     >
   </div>
   <div class="app-header-actions">
@@ -230,8 +230,12 @@
         <option value="">усі партнери</option>
         <option value="unassigned">— без партнера —</option>
       </select>
-      <button data-action="open-partners" class="saved-act-btn" title="Керувати партнерами">
-        + партнер
+      <button
+        data-action="open-builder"
+        class="saved-act-btn"
+        title="Створити кастомний діалект з виявлених полів"
+      >
+        + кастомний діалект
       </button>
     </div>
     <div class="saved-list" id="savedList">
@@ -283,7 +287,7 @@
         data-action="change-dialect"
         title="Перемикач діалекту валідації — змінює правила, які engine застосовує до payload-у"
       >
-        <option value="iab">Standard IAB</option>
+        <option value="iab">Standard IAB (oRTB 2.5)</option>
         <option value="kadam">Kadam · RTB</option>
         <option value="kadam-inpage-push">Kadam · In-Page Push</option>
       </select>
@@ -440,7 +444,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.6.1</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.6.2</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Підтримувані специфікації"

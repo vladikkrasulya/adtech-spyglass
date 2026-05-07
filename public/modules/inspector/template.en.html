@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.6.1</span
+      >v9.6.2</span
     >
   </div>
   <div class="app-header-actions">
@@ -204,8 +204,12 @@
         <option value="">all partners</option>
         <option value="unassigned">— no partner —</option>
       </select>
-      <button data-action="open-partners" class="saved-act-btn" title="Manage partners">
-        + partner
+      <button
+        data-action="open-builder"
+        class="saved-act-btn"
+        title="Build a custom dialect from discovered fields"
+      >
+        + custom dialect
       </button>
     </div>
     <div class="saved-list" id="savedList">
@@ -257,7 +261,7 @@
         data-action="change-dialect"
         title="Validation-dialect switch — changes the rule set the engine applies to the payload"
       >
-        <option value="iab">Standard IAB</option>
+        <option value="iab">Standard IAB (oRTB 2.5)</option>
         <option value="kadam">Kadam · RTB</option>
         <option value="kadam-inpage-push">Kadam · In-Page Push</option>
       </select>
@@ -413,7 +417,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.6.1</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.6.2</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Supported specs"

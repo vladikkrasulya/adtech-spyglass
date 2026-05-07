@@ -1599,8 +1599,27 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 
 /* ── Right sidebar (preview + quick stats) ── */
+
+/* Phase 9: responsive ad preview. The wrapper sizes itself to the bid's
+   native dimensions when JS sets the --bid-w / --bid-h custom props,
+   with max-width:100% so it fits the sidebar even for wide banners
+   (728×90, 970×250). When dims aren't known, falls back to a sensible
+   default. Empty state collapses to a thin strip — no wasted vertical
+   real estate when there's no creative to show. */
+.preview-safe {
+  position: relative;
+  width: 100%;
+}
+.preview-safe[data-has-creative='1'] {
+  width: min(calc(var(--bid-w, 300) * 1px), 100%);
+  aspect-ratio: var(--bid-w, 300) / var(--bid-h, 250);
+  max-height: 60vh;
+  margin-left: auto;
+  margin-right: auto;
+}
 .preview-container {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
@@ -1610,11 +1629,32 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   justify-content: center;
   min-height: 0;
 }
+/* Default fallback height when no dims provided — keeps the container
+   visible without committing to a specific aspect ratio. */
+.preview-safe:not([data-has-creative]) .preview-container,
+.preview-safe[data-has-creative='0'] .preview-container {
+  /* Empty / unknown-dims state: tight, doesn't dominate the column */
+  min-height: auto;
+}
 .preview-placeholder {
   text-align: center;
   color: var(--text-dim);
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
+}
+.preview-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-2);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-sm);
+  width: 100%;
+  box-sizing: border-box;
 }
 .preview-iframe {
   width: 100%;

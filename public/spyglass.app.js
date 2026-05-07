@@ -725,6 +725,22 @@ export async function mountInspector(root, ctx) {
     // analyze until reload).
     const safeWrap = document.getElementById('creativePreviewSafe');
     if (safeWrap) safeWrap.classList.remove('is-revealed');
+    // Phase 9: responsive sizing helper. Sets --bid-w/--bid-h CSS vars
+    // on .preview-safe so the wrapper sizes via aspect-ratio, with
+    // max-width:100% fit. data-has-creative drives the empty-state
+    // collapse — no creative = thin strip, no wasted vertical space.
+    const setDims = (w, h) => {
+      if (!safeWrap) return;
+      if (w && h && w > 0 && h > 0) {
+        safeWrap.style.setProperty('--bid-w', String(w));
+        safeWrap.style.setProperty('--bid-h', String(h));
+        safeWrap.dataset.hasCreative = '1';
+      } else {
+        safeWrap.style.removeProperty('--bid-w');
+        safeWrap.style.removeProperty('--bid-h');
+        safeWrap.dataset.hasCreative = '0';
+      }
+    };
     // Drop the previous probed iframe ref before any branch runs — the
     // VAST + native + empty-adm branches never reassign it, and we don't
     // want stale messages from a torn-down iframe to slip through.
@@ -738,8 +754,11 @@ export async function mountInspector(root, ctx) {
     // across previews and produce confusing per-tab counts.
     resetBehavior();
     if (!adm) {
-      el.innerHTML =
-        '<div class="preview-placeholder">' + escapeHtml(t('preview.no_adm')) + '</div>';
+      // Phase 9: empty state collapses to a thin strip — preview-empty
+      // takes its content height (~32px) instead of inheriting a tall
+      // .preview-container. Frees vertical space for findings.
+      el.innerHTML = '<div class="preview-empty">' + escapeHtml(t('preview.no_adm')) + '</div>';
+      setDims(0, 0);
       return;
     }
     // Phase 6: park the creative source on __spyglassBehavior so that
@@ -778,6 +797,8 @@ export async function mountInspector(root, ctx) {
           <pre style="white-space:pre-wrap;word-break:break-word;margin:0;color:var(--text)">${escapeHtml(display)}</pre>
           ${note}
         </div>`;
+      // VAST is text-content; size to a generic 16:9 video frame.
+      setDims(640, 360);
       return;
     }
 
@@ -798,6 +819,10 @@ export async function mountInspector(root, ctx) {
           iframe.setAttribute('sandbox', 'allow-scripts');
           iframe.style.cssText = 'border:none;background:#fff;width:100%;height:100%';
           iframe.srcdoc = buildProbedSrcdoc(renderNativeToHtml(j.native));
+          // Native ads vary wildly in shape; the synthetic render is a
+          // typical card layout that fits 320×260 reasonably. Caller can
+          // override later via dims if request specified them.
+          setDims(dims && dims.w ? dims.w : 320, dims && dims.h ? dims.h : 260);
           _currentProbedIframe = iframe;
           el.appendChild(iframe);
           return;
@@ -824,33 +849,21 @@ export async function mountInspector(root, ctx) {
     // this contentWindow — so even on a page with multiple iframes, only
     // our just-mounted creative can populate __spyglassBehavior.events.
     _currentProbedIframe = iframe;
+    // Phase 9: responsive sizing replaces the JS scale-to-fit math.
+    // .preview-safe sizes itself via aspect-ratio + max-width:100% from
+    // the --bid-w / --bid-h CSS vars; the iframe just fills its parent.
+    // Cleaner than transform:scale (which broke clickable regions for
+    // creatives that did their own internal hit-testing).
+    iframe.style.cssText = 'border:none;background:#fff;width:100%;height:100%;display:block;';
     if (dims && dims.w > 0 && dims.h > 0) {
-      // Skip .preview-iframe class — its `width: 100%` rule is winning the
-      // cascade in this flex container even against inline declarations
-      // (cause unclear, possibly UA-specific). Pure inline keeps things
-      // predictable for the scale-to-fit math below.
-      iframe.style.cssText =
-        'border:none;background:#fff;flex:none;transform-origin:center center;' +
-        'width:' +
-        dims.w +
-        'px;height:' +
-        dims.h +
-        'px;';
-      el.appendChild(iframe);
-      // Compute scale after layout so we read the *current* container size.
-      requestAnimationFrame(() => {
-        const cw = el.clientWidth;
-        const ch = el.clientHeight;
-        // Width-based scale always applies; height factor only when measurable
-        // (some flex layouts can briefly report 0 on first paint).
-        const scaleW = cw > 0 ? cw / dims.w : 1;
-        const scaleH = ch > 0 ? ch / dims.h : 1;
-        const scale = Math.min(1, scaleW, scaleH);
-        iframe.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
-      });
+      setDims(dims.w, dims.h);
     } else {
-      el.appendChild(iframe);
+      // Unknown dims fallback: tag as has-creative=1 with default 300×250
+      // ratio so the preview at least has a non-zero footprint. The
+      // creative still renders 100% width inside its iframe.
+      setDims(300, 250);
     }
+    el.appendChild(iframe);
   }
 
   // ── Creative-probe receiver ──────────────────────────────────
@@ -3684,6 +3697,16 @@ export async function mountInspector(root, ctx) {
             return window.openUnlockModal();
           case 'open-partners':
             return window.openPartnerModal && window.openPartnerModal();
+          case 'open-builder':
+            // Phase 9: Dialect Builder is the new public-facing entry
+            // point (replaces the Kadam-branded partner button on the
+            // sidebar). Falls back gracefully when the intel module
+            // isn't loaded (embed mode, private browsing).
+            return (
+              window.SpyglassIntelBuilder &&
+              typeof window.SpyglassIntelBuilder.open === 'function' &&
+              window.SpyglassIntelBuilder.open()
+            );
           case 'open-embed':
             return window.openEmbedModal && window.openEmbedModal();
           case 'share-link':
