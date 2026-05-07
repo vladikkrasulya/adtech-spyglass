@@ -552,12 +552,25 @@ export async function mountInspector(root, ctx) {
       return;
     }
 
-    // 2) Native JSON → render as native-ad mockup (title + img + description).
+    // 2) Native JSON → synthesize a standalone HTML card and pipe it through
+    //    the probe identically to banner adm. Without this, clicks on the
+    //    rendered native were invisible to the Behavior engine (the previous
+    //    implementation injected the card directly into the parent DOM and
+    //    never mounted a probed iframe). The card uses a plain <a href>
+    //    without target=_top: a click attempts iframe-self navigation, which
+    //    the probe's Location.href setter hook captures as a `navigation`
+    //    event — same tracking signal as a banner adm without the
+    //    frame_bust_anchor false-positive label.
     if (trimmed.startsWith('{')) {
       try {
         const j = JSON.parse(trimmed);
         if (j && j.native && Array.isArray(j.native.assets)) {
-          el.innerHTML = renderNativePreview(j.native);
+          const iframe = document.createElement('iframe');
+          iframe.setAttribute('sandbox', 'allow-scripts');
+          iframe.style.cssText = 'border:none;background:#fff;width:100%;height:100%';
+          iframe.srcdoc = buildProbedSrcdoc(renderNativeToHtml(j.native));
+          _currentProbedIframe = iframe;
+          el.appendChild(iframe);
           return;
         }
       } catch {
@@ -716,10 +729,11 @@ export async function mountInspector(root, ctx) {
 
   // Render a Native 1.1 response as a card mockup so the user sees what the
   // creative will look like, not raw JSON.
-  function renderNativePreview(native) {
+  function renderNativeToHtml(native) {
     // Asset id semantics aren't fixed in the spec — most SSPs follow IAB
     // conventions: 1=title, 2=icon/image, 3=desc/sponsored. We pick by
-    // structural cues (asset.title / asset.img / asset.data).
+    // structural cues (asset.title / asset.img / asset.data) since IDs are
+    // routinely miswired in the wild.
     let title = null,
       img = null,
       icon = null,
@@ -739,21 +753,50 @@ export async function mountInspector(root, ctx) {
         else if (sponsored == null) sponsored = a.data.value;
       }
     }
-    const link = native.link && native.link.url;
-    return `
-      <div style="padding:var(--space-4);width:100%;height:100%;display:flex;flex-direction:column;gap:var(--space-3);overflow:auto">
-        <div class="mono-label">native · 1.1 mockup</div>
-        ${img ? `<div style="width:100%;border-radius:var(--r-sm);overflow:hidden;background:var(--bg-2);max-height:140px"><img src="${escapeHtml(img)}" style="width:100%;height:100%;object-fit:cover;display:block" alt=""></div>` : ''}
-        <div style="display:flex;gap:var(--space-3);align-items:flex-start">
-          ${icon ? `<img src="${escapeHtml(icon)}" style="width:44px;height:44px;border-radius:var(--r-sm);object-fit:cover;flex-shrink:0;background:var(--bg-2)" alt="">` : ''}
-          <div style="flex:1;min-width:0">
-            ${title ? `<div style="font-weight:600;font-size:var(--fs-sm);color:var(--text);line-height:1.35;margin-bottom:4px">${escapeHtml(title)}</div>` : '<div style="color:var(--text-dim);font-size:var(--fs-sm)">No title asset</div>'}
-            ${desc ? `<div style="font-size:11.5px;color:var(--text-muted);line-height:1.45">${escapeHtml(desc)}</div>` : ''}
-            ${sponsored ? `<div class="mono-label" style="margin-top:6px">${escapeHtml(sponsored)}</div>` : ''}
-          </div>
-        </div>
-        ${link ? `<div class="mono-label" style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">→ ${escapeHtml(link)}</div>` : ''}
-      </div>`;
+    const link = (native.link && native.link.url) || '#';
+
+    // Self-contained: the iframe's sandboxed document doesn't inherit
+    // /design-system.css, so every style ships inline. No target attribute
+    // on the anchor — see setAdPreview comment for the rationale.
+    return (
+      '<!doctype html><html><head><meta charset="utf-8"><style>' +
+      "html,body{margin:0;padding:0;background:#fff;color:#1a1a1a;font:13px/1.4 system-ui,-apple-system,'Segoe UI',sans-serif}" +
+      'a.card{display:block;text-decoration:none;color:inherit;padding:12px;box-sizing:border-box;height:100%;overflow:auto}' +
+      '.label{font:10px/1 ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:#888;margin-bottom:8px}' +
+      '.hero{width:100%;max-height:140px;border-radius:4px;overflow:hidden;background:#f3f3f3;margin-bottom:10px}' +
+      '.hero img{width:100%;height:100%;object-fit:cover;display:block}' +
+      '.row{display:flex;gap:10px;align-items:flex-start}' +
+      '.icon{width:44px;height:44px;border-radius:4px;object-fit:cover;flex-shrink:0;background:#f3f3f3}' +
+      '.body{flex:1;min-width:0}' +
+      '.t{font-weight:600;font-size:13px;line-height:1.35;margin-bottom:4px}' +
+      '.t.muted{color:#888;font-weight:400}' +
+      '.d{font-size:11.5px;color:#555;line-height:1.45}' +
+      '.s{font:10px/1 ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:#888;margin-top:6px}' +
+      '.u{font:10px/1.3 ui-monospace,monospace;color:#888;margin-top:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '</style></head><body>' +
+      '<a class="card" href="' +
+      escapeHtml(link) +
+      '" rel="noopener noreferrer">' +
+      '<div class="label">native · synthetic render</div>' +
+      (img
+        ? '<div class="hero"><img src="' + escapeHtml(img) + '" alt=""></div>'
+        : '') +
+      '<div class="row">' +
+      (icon
+        ? '<img class="icon" src="' + escapeHtml(icon) + '" alt="">'
+        : '') +
+      '<div class="body">' +
+      (title
+        ? '<div class="t">' + escapeHtml(title) + '</div>'
+        : '<div class="t muted">No title asset</div>') +
+      (desc ? '<div class="d">' + escapeHtml(desc) + '</div>' : '') +
+      (sponsored ? '<div class="s">' + escapeHtml(sponsored) + '</div>' : '') +
+      '</div></div>' +
+      (native.link && native.link.url
+        ? '<div class="u">→ ' + escapeHtml(native.link.url) + '</div>'
+        : '') +
+      '</a></body></html>'
+    );
   }
 
   // ── Analysis ──────────────────────────────────────────────────
@@ -975,9 +1018,15 @@ export async function mountInspector(root, ctx) {
         infoRow('connection', dev.connectiontype || '—');
 
       // Ad preview + winning bid price
-      const adm = findAdm(res);
+      let adm = findAdm(res);
       const seatbid = res.seatbid ? res.seatbid[0] : null;
       const bid = seatbid && seatbid.bid ? seatbid.bid[0] : {};
+      // oRTB 2.6+ structured native: bid.native is the object form
+      // ({assets, link, ...}) instead of a JSON-encoded adm string. Wrap it
+      // so the JSON-native branch in setAdPreview picks it up unchanged.
+      if (!adm && bid && bid.native && Array.isArray(bid.native.assets)) {
+        adm = JSON.stringify({ native: bid.native });
+      }
       $('mPrice').innerText = adm
         ? bid.price
           ? '$' + Number(bid.price).toFixed(2)
