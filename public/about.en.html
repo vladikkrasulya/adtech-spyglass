@@ -532,6 +532,131 @@
             </li>
           </ul>
 
+          <h3>Supported ad formats</h3>
+          <p>
+            Spyglass detects the payload's ad format and renders colour-coded chips (blue — format,
+            green — context, amber — protocol) in the left summary panel:
+          </p>
+          <ul>
+            <li>
+              <strong>Banner</strong> (display) — desktop and mobile, multi-size
+              <code>banner.format[]</code>, MRAID API
+            </li>
+            <li>
+              <strong>Video</strong> — instream / outstream, VAST 2 / 3 / 4 (including wrappers),
+              CTV (Connected TV), rewarded
+            </li>
+            <li>
+              <strong>Native</strong> — IAB Native 1.1 + 1.2, asset-id crosscheck (title, image,
+              icon, sponsored, body)
+            </li>
+            <li><strong>Audio</strong> — DAAST + VAST-audio, podcast inventory</li>
+            <li><strong>In-App</strong> — mobile bundles, MRAID, OMID</li>
+            <li>
+              <strong>DOOH</strong> (Digital Out-of-Home) — billboards, transit, qty.multiplier
+            </li>
+            <li>
+              <strong>JsonFeed</strong> — push notifications, popunders, in-page widgets (Kadam,
+              ExoClick, RichAds, Zeropark style)
+            </li>
+          </ul>
+
+          <h3>Spyglass Intelligence — local AI assistant</h3>
+          <p>
+            If the Spyglass admin has wired up a local
+            <a href="https://github.com/ollama/ollama" target="_blank" rel="noopener">Ollama</a>
+            instance with the <code>gemma3:4b</code> model, you get an AI helper that
+            <strong>names new field clusters</strong> in Discovery mode and explains the purpose of
+            individual <code>ext.*</code> fields. Everything runs
+            <strong>on the same machine as Spyglass</strong>, never the public internet:
+          </p>
+          <ul>
+            <li>
+              <strong>100% local</strong> — the model lives in a Docker container next to Spyglass.
+              No token ever leaves the LAN.
+            </li>
+            <li>
+              <strong>Field paths only</strong> — bid <em>values</em> never enter the prompt. Only
+              field names and char-class hints (in addition to the PII filter).
+            </li>
+            <li>
+              <strong>On-demand</strong> — the AI does not analyse anything automatically. Click the
+              🤖 Suggest button in the Dialect Builder and you get an answer. Don't click — nothing
+              happens.
+            </li>
+            <li>
+              <strong>Knowledge Base as context</strong> — the model receives 1-2 reference field
+              examples from our embedded format library (push, banner, native…) so cluster names
+              land grounded in real-AdTech vocabulary, not priors.
+            </li>
+            <li>
+              <strong>Fail-open</strong> — if Ollama is offline or breaks, the AI buttons hide
+              quietly. The rest of Spyglass works as before. Without AI you only lose auto-naming of
+              clusters; everything else continues.
+            </li>
+          </ul>
+
+          <h3>Safe Demo Mode — blur for screenshots</h3>
+          <p>Append <code>?demo=safe</code> to the URL and Spyglass:</p>
+          <ul>
+            <li>Applies CSS blur to the creative preview pane (silhouette visible, content not)</li>
+            <li>
+              Masks domain names in the summary panel (<code>***rt.com</code> instead of the real
+              domain)
+            </li>
+            <li>
+              Doesn't touch validation — the engine works at 100%; only the visual layer hides
+            </li>
+          </ul>
+          <p>
+            Useful for documentation screenshots, client decks, or when you need to show the tool
+            without exposing specific advertising partners — particularly relevant for adult /
+            casino / gambling traffic where even a logo silhouette is a leak.
+          </p>
+
+          <hr />
+
+          <h2 id="layers">How the analysis works — three layers</h2>
+          <p style="font-size: var(--fs-lg); color: var(--text)">
+            Spyglass looks at your payload from three angles at once. Each layer answers its own
+            question; together they give the full picture.
+          </p>
+
+          <h3>Layer 1 — Static (schema)</h3>
+          <p>
+            <em>"Is this JSON well-formed?"</em> We parse the payload, validate against the IAB spec
+            (oRTB 2.5 / 2.6 / 3.0, Native 1.x, VAST protocols), check required fields, types,
+            formats. Output is a list of findings with severity (error / warning / info), a JSON
+            path to the offending location, and a deep-link to the relevant IAB doc paragraph. This
+            is the fastest layer — milliseconds on pure-JS rules, no side-effecting calls.
+          </p>
+
+          <h3>Layer 2 — Behavior (sandbox iframe)</h3>
+          <p>
+            <em>"What does this creative actually do in the browser?"</em> We render
+            <code>bid.adm</code> in a sandboxed iframe (<code>sandbox="allow-scripts"</code>,
+            without <code>allow-same-origin</code>) with an instrumentation probe inside. The probe
+            catches suspicious behaviour: invisible click-traps, frame-bust attempts, frozen-thread
+            heartbeats, permission abuse (<code>Notification</code>, geolocation,
+            <code>getUserMedia</code>), miner signatures in code, click-skim probes (fake click
+            events that anticipate the user's real click). The engine produces structured findings —
+            same shape as Static, plus severity and destination URL. Details in the
+            <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a> section.
+          </p>
+
+          <h3>Layer 3 — Knowledge Base (embedded encyclopedia)</h3>
+          <p>
+            <em>"Have I seen this format before?"</em> Inside
+            <code>packages/core/knowledge_base/</code> we keep a curated collection of canonical
+            oRTB / JsonFeed payloads — banner / video / audio / native / push / pops / inpage /
+            inapp / dooh / ctv. The format-detect engine tags your payload against this base (a VAST
+            banner inside an Android InApp slot is a typical example), and those tags serve two
+            purposes at once: they render as chips in the UI, and they get injected into the local
+            LLM's prompt as few-shot context, so the AI answers in real-market vocabulary rather
+            than priors. The base is license-clean (synthesised samples + Apache-2.0 / MIT material
+            from Prebid.js and IAB), without any real bid-stream content.
+          </p>
+
           <hr />
 
           <h2 id="behavior">Behavior Analysis &amp; Anti-Fraud</h2>
@@ -693,6 +818,28 @@
               <tr>
                 <td>Doesn't make real bids</td>
                 <td>It's a JSON inspector, not an RTB client. No exchange connections.</td>
+              </tr>
+              <tr>
+                <td>Doesn't auto-fix JSON</td>
+                <td>
+                  We point at errors + link to the spec paragraph, but don't edit your payload.
+                  Fixing the JSON is your job.
+                </td>
+              </tr>
+              <tr>
+                <td>Doesn't analyse video / image pixels</td>
+                <td>
+                  The sandboxed iframe catches HTML/JS behaviour (clicks, redirects, permission
+                  requests, malware patterns). What the picture or video frame actually shows — out
+                  of scope.
+                </td>
+              </tr>
+              <tr>
+                <td>AI doesn't guess unknown-field logic without your command</td>
+                <td>
+                  Suggest only fires when you click 🤖 in the Dialect Builder. No background
+                  analysis, no "AI knows best" — you control every call.
+                </td>
               </tr>
               <tr>
                 <td>Doesn't expand macros (<code>${AUCTION_PRICE}</code>) at runtime</td>

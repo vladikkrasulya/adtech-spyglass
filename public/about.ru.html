@@ -536,6 +536,128 @@
             </li>
           </ul>
 
+          <h3>Поддерживаемые форматы рекламы</h3>
+          <p>
+            Spyglass распознаёт формат payload-а и рисует цветные chip-ы (синий — формат, зелёный —
+            контекст, янтарный — протокол) в левой панели сводки:
+          </p>
+          <ul>
+            <li>
+              <strong>Banner</strong> (display) — desktop и mobile, multi-size
+              <code>banner.format[]</code>, MRAID API
+            </li>
+            <li>
+              <strong>Video</strong> — instream / outstream, VAST 2 / 3 / 4 (включая wrapper-ы), CTV
+              (Connected TV), rewarded
+            </li>
+            <li>
+              <strong>Native</strong> — IAB Native 1.1 + 1.2, asset-id crosscheck (title, image,
+              icon, sponsored, body)
+            </li>
+            <li><strong>Audio</strong> — DAAST + VAST-audio, podcast inventory</li>
+            <li><strong>In-App</strong> — мобильные bundles, MRAID, OMID</li>
+            <li>
+              <strong>DOOH</strong> (Digital Out-of-Home) — billboards, transit, qty.multiplier
+            </li>
+            <li>
+              <strong>JsonFeed</strong> — push-нотификации, popunders, in-page widgets (Kadam,
+              ExoClick, RichAds, Zeropark стили)
+            </li>
+          </ul>
+
+          <h3>Spyglass Intelligence — локальный AI-ассистент</h3>
+          <p>
+            Если админ Spyglass подключил локальный
+            <a href="https://github.com/ollama/ollama" target="_blank" rel="noopener">Ollama</a>
+            с моделью <code>gemma3:4b</code> — ты получаешь AI-помощника, который умеет
+            <strong>называть кластеры новых полей</strong> в Discovery-режиме и пояснять назначение
+            отдельных <code>ext.*</code>-полей. Всё работает
+            <strong>на той же машине, что Spyglass</strong>, без публичного интернета:
+          </p>
+          <ul>
+            <li>
+              <strong>100% локально</strong> — модель крутится в Docker-контейнере рядом со
+              Spyglass. Ни один токен не покидает LAN.
+            </li>
+            <li>
+              <strong>Только пути полей</strong> — в промпт никогда не попадают <em>значения</em> из
+              твоего bid-а. Передаются только имена полей и char-class подсказки (плюс PII-фильтр).
+            </li>
+            <li>
+              <strong>On-demand</strong> — AI не анализирует ничего автоматически. Нажимаешь «🤖
+              Suggest» в Dialect Builder — получаешь ответ. Не нажимаешь — ничего не происходит.
+            </li>
+            <li>
+              <strong>Knowledge Base как контекст</strong> — модель получает 1-2 эталонных примера
+              полей из нашей встроенной базы формата (push, banner, native…), чтобы имена кластеров
+              были заземлены на реальный AdTech-словарь, а не на приоры.
+            </li>
+            <li>
+              <strong>Fail-open</strong> — если Ollama выключен или сломался, AI-кнопки тихо
+              прячутся. Остальной Spyglass работает как обычно. Без AI теряешь только
+              авто-именование кластеров — всё остальное работает.
+            </li>
+          </ul>
+
+          <h3>Safe Demo Mode — блюр для скриншотов</h3>
+          <p>Добавляешь <code>?demo=safe</code> к URL — и Spyglass:</p>
+          <ul>
+            <li>Накладывает CSS-blur на окно превью креатива (виден силуэт, не виден контент)</li>
+            <li>
+              Маскирует доменные имена в summary-панели (<code>***rt.com</code> вместо реального
+              домена)
+            </li>
+            <li>Не трогает валидацию — движок работает на 100%, прячется только визуальный слой</li>
+          </ul>
+          <p>
+            Удобно для скриншотов в документацию, презентаций клиентам, или когда нужно показать
+            тулз без раскрытия конкретных адверт-партнёров — особенно актуально для adult / casino /
+            gambling трафика, где даже силуэт логотипа это утечка.
+          </p>
+
+          <hr />
+
+          <h2 id="layers">Как работает анализ — три слоя</h2>
+          <p style="font-size: var(--fs-lg); color: var(--text)">
+            Spyglass смотрит на твой payload одновременно с трёх ракурсов. Каждый слой отвечает на
+            свой вопрос; вместе они дают полную картину.
+          </p>
+
+          <h3>Слой 1 — Static (схема)</h3>
+          <p>
+            <em>«Правильно ли сформирован JSON?»</em> Парсим payload, валидируем против IAB-спеки
+            (oRTB 2.5 / 2.6 / 3.0, Native 1.x, VAST-протоколы), проверяем обязательные поля, типы,
+            форматы. Результат — список находок с severity (error / warning / info), JSON-path до
+            места ошибки и deep-link на конкретный параграф IAB-документации. Это самый быстрый слой
+            — миллисекунды на pure-JS правилах, без побочных вызовов.
+          </p>
+
+          <h3>Слой 2 — Behavior (sandbox iframe)</h3>
+          <p>
+            <em>«А что этот креатив реально делает в браузере?»</em> Рендерим <code>bid.adm</code> в
+            sandboxed iframe (<code>sandbox="allow-scripts"</code>, без
+            <code>allow-same-origin</code>) с instrumentation-probe-ом внутри. Probe ловит
+            подозрительное поведение: invisible click-traps, frame-bust attempts, frozen-thread
+            heartbeat-ы, permission abuse (<code>Notification</code>, geolocation,
+            <code>getUserMedia</code>), miner-сигнатуры в коде, click-skim probe-ы (фейковые
+            клик-события, опережающие реальный клик пользователя). Engine выдаёт structured findings
+            — тот же шейп, что Static, плюс severity и URL назначения. Детали — в разделе
+            <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a
+            >.
+          </p>
+
+          <h3>Слой 3 — Knowledge Base (встроенная энциклопедия)</h3>
+          <p>
+            <em>«Я уже видел такой формат?»</em> В <code>packages/core/knowledge_base/</code>
+            лежит курируемая коллекция эталонных oRTB / JsonFeed payload-ов — banner / video / audio
+            / native / push / pops / inpage / inapp / dooh / ctv. Format-detect-движок тегирует твой
+            payload по этой базе (баннер VAST в InApp на Android — типичный пример), и эти теги
+            служат двум целям одновременно: они рендерятся как chip-ы в UI, и они подкидываются в
+            промпт локального LLM как few-shot context, чтобы AI отвечал словарём реального рынка, а
+            не приоров. База license-clean (синтезированные семплы + Apache-2.0 / MIT из Prebid.js и
+            IAB), без каких-либо реальных bid-стримов.
+          </p>
+
           <hr />
 
           <h2 id="behavior">Behavior Analysis &amp; Anti-Fraud</h2>
@@ -694,6 +816,27 @@
               <tr>
                 <td>Не делает реальные bid-ы</td>
                 <td>Это инспектор JSON, не RTB-клиент. Не подключается ни к одному exchange.</td>
+              </tr>
+              <tr>
+                <td>Не исправляем JSON автоматически</td>
+                <td>
+                  Мы указываем на ошибки + ссылку на параграф спецификации, но payload не
+                  редактируем. JSON-fix — твоя зона ответственности.
+                </td>
+              </tr>
+              <tr>
+                <td>Не анализируем сами пиксели видео / картинок</td>
+                <td>
+                  Sandbox-iframe ловит HTML/JS-поведение (клики, redirect, permission requests,
+                  малвер-паттерны). Что изображает сама картинка или видеокадр — не смотрим.
+                </td>
+              </tr>
+              <tr>
+                <td>AI не угадывает логику неизвестных полей без твоей команды</td>
+                <td>
+                  Suggest срабатывает только на нажатие 🤖 в Dialect Builder. Никакого
+                  background-анализа, никакого «AI knows best» — ты контролируешь каждый вызов.
+                </td>
               </tr>
               <tr>
                 <td>Не выполняет макросы (<code>${AUCTION_PRICE}</code>) в runtime</td>
