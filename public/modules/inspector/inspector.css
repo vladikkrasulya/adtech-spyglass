@@ -451,6 +451,16 @@ textarea.json-input::placeholder {
   border-color: var(--text-dim);
   color: var(--text);
 }
+/* Action confirmation: green outline + label for ~1.5s after a
+   successful clear / format / copy. JS in spyglass.app.js toggles
+   .btn-icon--ok via flashButtonStatus(). Override :hover so the
+   colour persists even if the cursor is still on the button. */
+.btn-icon--ok,
+.btn-icon--ok:hover {
+  background: var(--surface);
+  border-color: var(--success);
+  color: var(--success);
+}
 
 /* ── Main 3-column grid ── */
 .main-grid {

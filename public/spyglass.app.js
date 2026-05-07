@@ -62,18 +62,49 @@ export async function mountInspector(root, ctx) {
     { signal: ctx.signal },
   );
 
+  // Action-button feedback: temporarily swap a button's label to a
+  // localized status (e.g. "скопійовано") for 1.5s after a successful
+  // action, then restore. The previous UX gave no in-button confirmation
+  // for clear/format and only a small corner toast for copy — easy to
+  // miss when the cursor sits on the button itself.
+  //
+  // Re-clicks debounce: a pending restore is cancelled and the new
+  // status takes over. Without this, a fast double-click would race the
+  // first restore against the second flash and leave a stale label.
+  // WeakMap keyed by the button element so multiple buttons flash
+  // independently; map entries auto-collect when buttons leave the DOM.
+  const _flashTimers = new WeakMap();
+  function flashButtonStatus(btn, key) {
+    if (!btn) return;
+    const prev = _flashTimers.get(btn);
+    if (prev) {
+      clearTimeout(prev.timeout);
+      btn.textContent = prev.original;
+    }
+    const original = (btn.textContent || '').trim();
+    btn.textContent = t(key);
+    btn.classList.add('btn-icon--ok');
+    const timeout = setTimeout(function () {
+      btn.textContent = original;
+      btn.classList.remove('btn-icon--ok');
+      _flashTimers.delete(btn);
+    }, 1500);
+    _flashTimers.set(btn, { timeout, original });
+  }
+
   window.utils = {
-    format(id) {
+    format(id, btn) {
       try {
         const el = $(id);
         el.value = JSON.stringify(JSON.parse(el.value), null, 2);
         updateCharCount(id);
         updateJsonBadge(id);
+        flashButtonStatus(btn, 'button.status.formatted');
       } catch (e) {
         toast(t('toast.invalid_json', { error: e.message }), 'error');
       }
     },
-    copy(id) {
+    copy(id, btn) {
       const el = $(id);
       if (!el.value) {
         toast(t('toast.empty_field_copy'), 'error');
@@ -81,7 +112,7 @@ export async function mountInspector(root, ctx) {
       }
       navigator.clipboard
         .writeText(el.value)
-        .then(() => toast(t('toast.copied'), 'success'))
+        .then(() => flashButtonStatus(btn, 'button.status.copied'))
         .catch(() => toast(t('toast.copy_failed'), 'error'));
     },
   };
@@ -93,13 +124,14 @@ export async function mountInspector(root, ctx) {
     $(targetId).classList.add('active');
   };
 
-  window.clearInput = function (id) {
+  window.clearInput = function (id, btn) {
     $(id).value = '';
     updateCharCount(id);
     // Clear → drop the loaded-sample anchor so the next save starts fresh.
     _currentSampleId = null;
     _currentSampleMeta = null;
     _isDirty = false;
+    flashButtonStatus(btn, 'button.status.cleared');
   };
 
   window.handleKeydown = function (e) {
@@ -3393,11 +3425,11 @@ export async function mountInspector(root, ctx) {
 
           // — editor controls —
           case 'clear-input':
-            return window.clearInput(el.dataset.target);
+            return window.clearInput(el.dataset.target, el);
           case 'format-json':
-            return window.utils.format(el.dataset.target);
+            return window.utils.format(el.dataset.target, el);
           case 'copy-text':
-            return window.utils.copy(el.dataset.target);
+            return window.utils.copy(el.dataset.target, el);
 
           // — layout —
           case 'toggle-sidebar':

@@ -12,6 +12,11 @@
 
   const I18N = {
     uk: {
+      // ── action-button flash statuses (post-success label swap) ──
+      'button.status.copied': 'скопійовано',
+      'button.status.formatted': 'відформатовано',
+      'button.status.cleared': 'очищено',
+
       // ── toasts ─────────────────────────────────────────────
       'toast.copied': 'Скопійовано',
       'toast.copy_failed': 'Не вдалося скопіювати',
@@ -248,6 +253,11 @@
     },
 
     en: {
+      // ── action-button flash statuses (post-success label swap) ──
+      'button.status.copied': 'copied',
+      'button.status.formatted': 'formatted',
+      'button.status.cleared': 'cleared',
+
       // ── toasts ─────────────────────────────────────────────
       'toast.copied': 'Copied',
       'toast.copy_failed': 'Couldn’t copy',
@@ -485,6 +495,11 @@
       'badge.invalid': 'invalid',
     },
     ru: {
+      // ── action-button flash statuses (post-success label swap) ──
+      'button.status.copied': 'скопировано',
+      'button.status.formatted': 'отформатировано',
+      'button.status.cleared': 'очищено',
+
       'toast.copied': 'Скопировано',
       'toast.copy_failed': 'Не удалось скопировать',
       'toast.copy_failed_select': 'Не удалось скопировать — выдели мышью',
