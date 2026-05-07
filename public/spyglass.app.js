@@ -573,8 +573,13 @@ export async function mountInspector(root, ctx) {
           el.appendChild(iframe);
           return;
         }
-      } catch {
-        /* fall through to iframe */
+      } catch (err) {
+        // Surface the failure: a silent catch here means a blank iframe AND
+        // no probe → watchdog spams frozen_thread with no diagnostic trail.
+        // Logging lets us see ReferenceErrors / parse failures / asset shape
+        // mismatches immediately. Falls through to the banner-iframe branch
+        // below so the user still sees *something* (even if just raw JSON).
+        console.error('[spyglass] native render failed, falling back to banner branch', err);
       }
     }
 
@@ -1017,15 +1022,21 @@ export async function mountInspector(root, ctx) {
         infoRow('device', dev.devicetype || dev.model || '—') +
         infoRow('connection', dev.connectiontype || '—');
 
-      // Ad preview + winning bid price
-      let adm = findAdm(res);
+      // Ad preview + winning bid price.
+      // Priority order matters: structured bid.native (oRTB 2.6+) wins over
+      // findAdm's recursive walk, because findAdm short-circuits on `nurl`
+      // (impression-tracker beacon, often HTTP-only and useless to render)
+      // and would never reach the actual creative when both fields coexist.
+      // P0-bug post-c6f9611: SSPs that ship `bid.nurl + bid.native` together
+      // were rendering the nurl pixel into the banner branch → blank iframe
+      // (mixed-content) and zero behavior signal. Wrap bid.native first.
       const seatbid = res.seatbid ? res.seatbid[0] : null;
       const bid = seatbid && seatbid.bid ? seatbid.bid[0] : {};
-      // oRTB 2.6+ structured native: bid.native is the object form
-      // ({assets, link, ...}) instead of a JSON-encoded adm string. Wrap it
-      // so the JSON-native branch in setAdPreview picks it up unchanged.
-      if (!adm && bid && bid.native && Array.isArray(bid.native.assets)) {
+      let adm;
+      if (bid && bid.native && Array.isArray(bid.native.assets)) {
         adm = JSON.stringify({ native: bid.native });
+      } else {
+        adm = findAdm(res);
       }
       $('mPrice').innerText = adm
         ? bid.price
