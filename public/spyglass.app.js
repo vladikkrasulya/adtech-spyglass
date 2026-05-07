@@ -1329,6 +1329,22 @@ export async function mountInspector(root, ctx) {
             meta: j.meta || null,
             at: new Date().toISOString(),
           };
+
+          // Phase 7a — Spyglass Intelligence side-channel observer.
+          // Fire-and-forget: observe() walks ext-fields of req+res into
+          // the local IndexedDB index, gated by validation status. Errors
+          // are swallowed inside the module; analyze flow is unaffected.
+          // Discovery is disabled cleanly when the script tag isn't
+          // loaded (e.g. in /embed view) — the global guard makes this
+          // a one-line no-op there.
+          if (window.SpyglassIntel && typeof window.SpyglassIntel.observe === 'function') {
+            try {
+              window.SpyglassIntel.observe(req, validation);
+              window.SpyglassIntel.observe(res, validation);
+            } catch (e) {
+              /* observe() is already defensive; this is belt-and-braces */
+            }
+          }
         }
       } catch (e) {
         console.warn('Backend unavailable:', e);

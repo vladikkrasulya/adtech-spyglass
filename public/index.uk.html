@@ -260,5 +260,14 @@
     <script src="/share.js?v=3"></script>
     <script src="/embed.js?v=1"></script>
     <script src="/modules/behavior/index.js?v=4"></script>
+    <!-- Phase 7a — Spyglass Intelligence (Discovery Mode). Loads in order:
+         storage → banner → observer → entry. All four expose IIFE-scoped
+         globals (SpyglassIntelStorage / SpyglassIntelBanner /
+         SpyglassIntelObserver / SpyglassIntel) and are no-ops when
+         IndexedDB is unavailable (private mode etc.). -->
+    <script src="/modules/intel/storage.js?v=1"></script>
+    <script src="/modules/intel/banner.js?v=1"></script>
+    <script src="/modules/intel/observer.js?v=1"></script>
+    <script src="/modules/intel/index.js?v=1"></script>
   </body>
 </html>
