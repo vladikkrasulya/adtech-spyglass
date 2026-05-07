@@ -1,0 +1,36 @@
+{
+  "id": "kb-ortb25-audio-001",
+  "at": 2,
+  "tmax": 200,
+  "imp": [
+    {
+      "id": "1",
+      "bidfloor": 2.5,
+      "bidfloorcur": "USD",
+      "secure": 1,
+      "audio": {
+        "mimes": ["audio/mp4", "audio/mpeg"],
+        "minduration": 10,
+        "maxduration": 60,
+        "protocols": [9, 10],
+        "startdelay": 0,
+        "feed": 3,
+        "stitched": 0,
+        "delivery": [3]
+      }
+    }
+  ],
+  "site": {
+    "id": "podcast-1",
+    "domain": "podcast.example",
+    "cat": ["IAB1-1"]
+  },
+  "device": {
+    "ua": "PodcastPlayer/4.2",
+    "ip": "203.0.113.5",
+    "geo": { "country": "USA" },
+    "language": "en",
+    "devicetype": 1
+  },
+  "cur": ["USD"]
+}

@@ -1,0 +1,128 @@
+{
+  "_comment": "Index of every knowledge_base sample. Bump _version on schema changes. New samples: append an entry, do not reorder. Format-detect/few-shot loaders read this file.",
+  "_version": 1,
+  "_updated": "2026-05-07",
+  "samples": [
+    {
+      "id": "kb-ortb25-banner-001",
+      "spec": "ortb-2.5",
+      "side": "request",
+      "format": "banner",
+      "tags": ["display", "300x250", "300x600", "web"],
+      "file": "ortb-2.5/request/banner/iab-display-300x250.json",
+      "source": "synthesized from IAB OpenRTB 2.5 §3.2.6 + §3.2.7",
+      "license": "MIT (Spyglass)",
+      "description": "Minimal display banner request, multi-size (300x250 + 300x600), web context"
+    },
+    {
+      "id": "kb-ortb25-video-001",
+      "spec": "ortb-2.5",
+      "side": "request",
+      "format": "video",
+      "tags": ["instream", "vast-2", "vast-3", "linear", "skippable"],
+      "file": "ortb-2.5/request/video/instream-vast.json",
+      "source": "synthesized from IAB OpenRTB 2.5 §3.2.7 (Video)",
+      "license": "MIT (Spyglass)",
+      "description": "In-stream linear video, VAST 2/3, skippable, 640x480"
+    },
+    {
+      "id": "kb-ortb25-native-001",
+      "spec": "ortb-2.5",
+      "side": "request",
+      "format": "native",
+      "tags": ["native-1.2", "feed-card", "title-image-data"],
+      "file": "ortb-2.5/request/native/native-card.json",
+      "source": "synthesized from IAB OpenRTB Native 1.2 spec",
+      "license": "MIT (Spyglass)",
+      "description": "Native 1.2 feed card with title + main image + body asset"
+    },
+    {
+      "id": "kb-ortb25-inapp-banner-001",
+      "spec": "ortb-2.5",
+      "side": "request",
+      "format": "banner",
+      "tags": ["inapp", "mobile", "android", "320x50", "mraid"],
+      "file": "ortb-2.5/request/inapp/banner-mobile.json",
+      "source": "synthesized from IAB OpenRTB 2.5 §3.2.14 (App)",
+      "license": "MIT (Spyglass)",
+      "description": "Mobile in-app banner, 320x50 with 300x250 fallback, MRAID-capable"
+    },
+    {
+      "id": "kb-ortb25-audio-001",
+      "spec": "ortb-2.5",
+      "side": "request",
+      "format": "audio",
+      "tags": ["audio", "podcast", "daast"],
+      "file": "ortb-2.5/request/audio/audio-podcast.json",
+      "source": "synthesized from IAB OpenRTB 2.5 §3.2.8 (Audio)",
+      "license": "MIT (Spyglass)",
+      "description": "Audio ad slot for podcast inventory, DAAST protocols"
+    },
+    {
+      "id": "kb-ortb26-ctv-001",
+      "spec": "ortb-2.6",
+      "side": "request",
+      "format": "video",
+      "tags": ["ctv", "rewarded", "vast-4", "rwdd", "sua", "gpp"],
+      "file": "ortb-2.6/request/video/ctv-rewarded.json",
+      "source": "synthesized from IAB OpenRTB 2.6 §3.2.4 (rwdd) + §3.2.18 (sua)",
+      "license": "MIT (Spyglass)",
+      "description": "CTV rewarded video on Roku, VAST 4 protocols, SUA + GPP"
+    },
+    {
+      "id": "kb-ortb26-dooh-001",
+      "spec": "ortb-2.6",
+      "side": "request",
+      "format": "video",
+      "tags": ["dooh", "billboard", "qty"],
+      "file": "ortb-2.6/request/dooh/billboard-roadside.json",
+      "source": "synthesized from IAB OpenRTB 2.6 §3.2.16 (DOOH) + §3.2.5 (Qty)",
+      "license": "MIT (Spyglass)",
+      "description": "DOOH billboard with qty.multiplier audience expansion"
+    },
+    {
+      "id": "kb-ortb26-resp-banner-001",
+      "spec": "ortb-2.6",
+      "side": "response",
+      "format": "banner",
+      "tags": ["mtype", "cattax", "300x250", "html-adm"],
+      "file": "ortb-2.6/response/banner/mtype-banner.json",
+      "source": "synthesized from IAB OpenRTB 2.6 §5.30 (mtype)",
+      "license": "MIT (Spyglass)",
+      "description": "Banner BidResponse with mtype=1 + cattax=6 + HTML adm"
+    },
+    {
+      "id": "kb-jsonfeed-push-001",
+      "spec": "jsonfeed",
+      "side": "response",
+      "format": "push",
+      "tags": ["push", "kadam-style", "title-image-clickurl"],
+      "file": "jsonfeed/push/kadam-push.json",
+      "source": "synthesized to match canonical Kadam push feed shape",
+      "license": "MIT (Spyglass)",
+      "description": "Kadam-style push notification material (single-item array)"
+    },
+    {
+      "id": "kb-jsonfeed-pops-001",
+      "spec": "jsonfeed",
+      "side": "response",
+      "format": "pops",
+      "tags": ["popunder", "redirecturl"],
+      "file": "jsonfeed/pops/popunder.json",
+      "source": "synthesized from common popunder feed shape (Zeropark-class)",
+      "license": "MIT (Spyglass)",
+      "description": "Popunder redirect-only payload, no creative"
+    },
+    {
+      "id": "kb-jsonfeed-inpage-001",
+      "spec": "jsonfeed",
+      "side": "response",
+      "format": "inpage",
+      "tags": ["inpage", "widget", "native-card"],
+      "file": "jsonfeed/inpage/inpage-card.json",
+      "source": "synthesized to match in-page recommendation widget shape",
+      "license": "MIT (Spyglass)",
+      "description": "In-page native widget card (zone + widget IDs)"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "id": "kb-ortb26-ctv-001",
+  "at": 2,
+  "tmax": 250,
+  "imp": [
+    {
+      "id": "1",
+      "rwdd": 1,
+      "bidfloor": 5.0,
+      "bidfloorcur": "USD",
+      "secure": 1,
+      "video": {
+        "mimes": ["video/mp4"],
+        "minduration": 15,
+        "maxduration": 30,
+        "protocols": [7, 8, 9, 10],
+        "w": 1920,
+        "h": 1080,
+        "linearity": 1,
+        "plcmt": 1,
+        "api": [7]
+      }
+    }
+  ],
+  "app": {
+    "id": "ctv-app-1",
+    "name": "ExampleCTV",
+    "bundle": "tv.example.ctv",
+    "cat": ["IAB1"],
+    "cattax": 6,
+    "publisher": { "id": "pub-ctv-1" }
+  },
+  "device": {
+    "ua": "Roku/12345",
+    "ip": "203.0.113.10",
+    "geo": { "country": "USA" },
+    "devicetype": 3,
+    "make": "Roku",
+    "model": "Ultra",
+    "os": "Roku OS",
+    "osv": "12.5",
+    "sua": {
+      "browsers": [],
+      "platform": { "brand": "Roku OS", "version": ["12", "5"] },
+      "model": "Ultra"
+    }
+  },
+  "regs": {
+    "gpp": "DBABMA~CPXxRfAPXxRfAAfKABENB-CgAAAAAAAAAAYgAAAAAAAA",
+    "gpp_sid": [7]
+  },
+  "cur": ["USD"]
+}

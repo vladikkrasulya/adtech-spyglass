@@ -1,0 +1,27 @@
+{
+  "id": "kb-ortb26-resp-banner-001",
+  "bidid": "bid-resp-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "exampledsp",
+      "bid": [
+        {
+          "id": "1",
+          "impid": "1",
+          "price": 1.85,
+          "adid": "creative-001",
+          "mtype": 1,
+          "cid": "campaign-001",
+          "crid": "creative-001",
+          "adomain": ["advertiser.example"],
+          "cattax": 6,
+          "cat": ["IAB3"],
+          "w": 300,
+          "h": 250,
+          "adm": "<div><a href=\"https://click.example/c/1\"><img src=\"https://cdn.example/banner.jpg\" width=\"300\" height=\"250\" alt=\"banner\"/></a></div>"
+        }
+      ]
+    }
+  ]
+}

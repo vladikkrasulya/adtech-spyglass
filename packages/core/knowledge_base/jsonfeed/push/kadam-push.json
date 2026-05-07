@@ -1,0 +1,19 @@
+[
+  {
+    "id": "push-001",
+    "title": "Limited offer — 30% off premium plan",
+    "text": "Get the deal before it expires today.",
+    "image": "https://cdn.example/push/img-001.jpg",
+    "icon": "https://cdn.example/push/icon-001.png",
+    "clickurl": "https://click.example/c/push-001",
+    "impurl": "https://imp.example/i/push-001",
+    "advertiser": "advertiser.example",
+    "price": 0.012,
+    "currency": "USD",
+    "ext": {
+      "format": "push",
+      "campaign_id": "camp-42",
+      "subscription_age": 7
+    }
+  }
+]

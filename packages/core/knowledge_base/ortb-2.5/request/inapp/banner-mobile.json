@@ -1,0 +1,47 @@
+{
+  "id": "kb-ortb25-inapp-banner-001",
+  "at": 2,
+  "tmax": 100,
+  "imp": [
+    {
+      "id": "1",
+      "bidfloor": 0.2,
+      "bidfloorcur": "USD",
+      "secure": 1,
+      "displaymanager": "GoogleMobileAds",
+      "displaymanagerver": "10.0.0",
+      "banner": {
+        "format": [
+          { "w": 320, "h": 50 },
+          { "w": 300, "h": 250 }
+        ],
+        "w": 320,
+        "h": 50,
+        "pos": 7,
+        "api": [3, 5]
+      }
+    }
+  ],
+  "app": {
+    "id": "app-1",
+    "name": "ExampleGame",
+    "bundle": "com.example.game",
+    "ver": "2.4.1",
+    "cat": ["IAB9"],
+    "storeurl": "https://play.google.com/store/apps/details?id=com.example.game",
+    "publisher": { "id": "pub-app-1" }
+  },
+  "device": {
+    "ua": "Mozilla/5.0 (Linux; Android 13)",
+    "ip": "203.0.113.4",
+    "geo": { "country": "POL" },
+    "language": "pl",
+    "devicetype": 4,
+    "make": "Google",
+    "model": "Pixel 7",
+    "os": "Android",
+    "osv": "13",
+    "connectiontype": 6
+  },
+  "cur": ["USD"]
+}

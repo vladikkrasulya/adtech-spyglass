@@ -1,0 +1,39 @@
+{
+  "id": "kb-ortb25-banner-001",
+  "at": 2,
+  "tmax": 120,
+  "imp": [
+    {
+      "id": "1",
+      "bidfloor": 0.1,
+      "bidfloorcur": "USD",
+      "secure": 1,
+      "banner": {
+        "format": [
+          { "w": 300, "h": 250 },
+          { "w": 300, "h": 600 }
+        ],
+        "w": 300,
+        "h": 250,
+        "pos": 1,
+        "mimes": ["image/jpeg", "image/png", "image/gif"]
+      }
+    }
+  ],
+  "site": {
+    "id": "site-1",
+    "domain": "example.com",
+    "page": "https://example.com/article/42",
+    "cat": ["IAB1"],
+    "publisher": { "id": "pub-1", "domain": "example.com" }
+  },
+  "device": {
+    "ua": "Mozilla/5.0 (X11; Linux x86_64)",
+    "ip": "203.0.113.1",
+    "geo": { "country": "USA" },
+    "language": "en",
+    "devicetype": 2
+  },
+  "user": { "id": "user-anon-1" },
+  "cur": ["USD"]
+}

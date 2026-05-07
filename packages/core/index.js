@@ -21,6 +21,7 @@
  */
 
 const { detectType, detectVersion, TYPES, VERSIONS } = require('./detect');
+const { detectFormat, FORMATS, CONTEXTS, PROTOCOLS } = require('./format-detect');
 const { validateRequest } = require('./rules-request');
 const { validateResponse } = require('./rules-response');
 const { validateFeedResponse } = require('./rules-feed');
@@ -125,6 +126,7 @@ module.exports = {
   crosscheck,
   detectType,
   detectVersion,
+  detectFormat,
   listDialects,
   listLocales,
   // IAB Content Taxonomy lookup — bundled English labels.
@@ -134,6 +136,9 @@ module.exports = {
   // re-exports for advanced usage / testing
   TYPES,
   VERSIONS,
+  FORMATS,
+  CONTEXTS,
+  PROTOCOLS,
   LEVELS,
   CROSS_LEVELS,
   nativeAssetCrosscheck,

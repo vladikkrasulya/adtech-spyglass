@@ -1,0 +1,40 @@
+{
+  "id": "kb-ortb25-video-001",
+  "at": 2,
+  "tmax": 200,
+  "imp": [
+    {
+      "id": "1",
+      "bidfloor": 1.5,
+      "bidfloorcur": "USD",
+      "secure": 1,
+      "video": {
+        "mimes": ["video/mp4", "application/javascript"],
+        "minduration": 5,
+        "maxduration": 30,
+        "protocols": [2, 3, 5, 6],
+        "w": 640,
+        "h": 480,
+        "startdelay": 0,
+        "placement": 1,
+        "linearity": 1,
+        "skip": 1,
+        "playbackmethod": [1, 2],
+        "api": [1, 2]
+      }
+    }
+  ],
+  "site": {
+    "id": "video-site-1",
+    "domain": "videostream.example",
+    "cat": ["IAB17"]
+  },
+  "device": {
+    "ua": "Mozilla/5.0",
+    "ip": "203.0.113.2",
+    "geo": { "country": "DEU" },
+    "language": "de",
+    "devicetype": 2
+  },
+  "cur": ["USD"]
+}

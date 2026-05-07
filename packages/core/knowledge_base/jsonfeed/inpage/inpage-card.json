@@ -1,0 +1,19 @@
+[
+  {
+    "id": "inpage-001",
+    "title": "Recommended for you",
+    "text": "How to choose the right tool for your stack",
+    "image": "https://cdn.example/inpage/img-001.jpg",
+    "icon": "https://cdn.example/inpage/icon-001.png",
+    "clickurl": "https://click.example/c/inpage-001",
+    "impurl": "https://imp.example/i/inpage-001",
+    "advertiser": "publisher-net.example",
+    "price": 0.004,
+    "currency": "USD",
+    "ext": {
+      "format": "inpage",
+      "widget_id": "widget-12",
+      "zone_id": "zone-3"
+    }
+  }
+]

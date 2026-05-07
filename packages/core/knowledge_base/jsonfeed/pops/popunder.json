@@ -1,0 +1,10 @@
+{
+  "id": "pop-001",
+  "redirecturl": "https://lp.example/lander?utm=pop-001",
+  "bid": 0.0008,
+  "currency": "USD",
+  "ext": {
+    "format": "popunder",
+    "campaign_id": "camp-pop-7"
+  }
+}
