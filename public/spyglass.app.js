@@ -1591,9 +1591,8 @@ export async function mountInspector(root, ctx) {
           versionPill +
           '</div>' +
           '<div style="text-align:center;padding:var(--space-7);color:var(--success);font-weight:500;">' +
-          'Усі перевірки пройдено — ' +
-          escapeHtml(validation.type) +
-          ' валідний</div>';
+          escapeHtml(t('validation.all_passed', { type: validation.type })) +
+          '</div>';
       } else {
         setTabBadge('validationBadge', { text: '—', severity: null });
       }

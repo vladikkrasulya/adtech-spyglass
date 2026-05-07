@@ -152,6 +152,7 @@
       'status.clean': 'чисто',
       'status.invalid': 'невалідний payload',
       'status.local': 'локально',
+      'validation.all_passed': 'Усі перевірки пройдено — {type} валідний',
 
       // ── theme toggle tooltips ─────────────────────────────
       'theme.tooltip.auto': 'тема: авто · клік → світла',
@@ -395,6 +396,7 @@
       'status.clean': 'clean',
       'status.invalid': 'invalid payload',
       'status.local': 'local',
+      'validation.all_passed': 'All checks passed — {type} is valid',
 
       // ── theme toggle tooltips ─────────────────────────────
       'theme.tooltip.auto': 'theme: auto · click → light',
@@ -626,6 +628,7 @@
       'status.clean': 'чисто',
       'status.invalid': 'невалидный payload',
       'status.local': 'локально',
+      'validation.all_passed': 'Все проверки пройдены — {type} валиден',
       'theme.tooltip.auto': 'тема: авто · клик → светлая',
       'theme.tooltip.light': 'тема: светлая · клик → тёмная',
       'theme.tooltip.dark': 'тема: тёмная · клик → авто',
