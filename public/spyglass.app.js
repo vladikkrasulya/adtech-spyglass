@@ -2432,6 +2432,12 @@ export async function mountInspector(root, ctx) {
       // Don't closeModal() — bootstrapNewCrypto opened the recovery
       // modal; closing here would dismiss it before user saves the key.
       toast(t('toast.account_created', { email: j.user.email }), 'success');
+      // Server attempts the verify email synchronously; if delivery failed
+      // (Resend down, domain unverified, etc.) surface a warning so the
+      // user knows to retry from the banner instead of waiting forever.
+      if (j.email_sent === false) {
+        toast(t('toast.account_created_email_failed'), 'error');
+      }
       await refreshPartners();
       refreshSamples();
     } catch (e) {
@@ -2916,11 +2922,18 @@ export async function mountInspector(root, ctx) {
 
   window.requestVerifyEmail = async function () {
     try {
-      await api('POST', 'api/auth/verify-email/request');
-      toast(
-        t('toast.verify_email_sent', { email: (_currentUser && _currentUser.email) || '' }),
-        'success',
-      );
+      const j = await api('POST', 'api/auth/verify-email/request');
+      // Server returns 200 even when delivery fails (Cloudflare edge would
+      // otherwise swallow a 5xx body). Inspect the flag to surface the
+      // truth instead of always celebrating.
+      if (j && j.email_sent === false) {
+        toast(t('toast.send_failed', { error: j.email_error || '' }), 'error');
+      } else {
+        toast(
+          t('toast.verify_email_sent', { email: (_currentUser && _currentUser.email) || '' }),
+          'success',
+        );
+      }
     } catch (e) {
       toast(t('toast.send_failed', { error: e.message || '' }), 'error');
     }

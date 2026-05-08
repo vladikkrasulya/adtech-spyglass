@@ -310,10 +310,11 @@ function handleAuthRoute(req, res, parsed) {
       .then(async ({ email, password }) => {
         const user = await auth.register({ email, password }, req);
         auth.createSession(req, res, user);
-        sendJson(res, 200, { success: true, user: publicUser(user) });
-        // Fire-and-forget: don't block the register response on email send.
-        // Failures are logged; user will see "unverified" banner regardless
-        // and can re-trigger via /api/auth/verify-email/request.
+        // Send verify email synchronously so we can surface failure to the
+        // client. Registration itself stays successful regardless — the user
+        // can retry via /api/auth/verify-email/request from the banner.
+        let emailSent = false;
+        let emailError = null;
         try {
           const tok = signToken({
             purpose: 'verify',
@@ -321,12 +322,18 @@ function handleAuthRoute(req, res, parsed) {
             email: user.email,
             expirySeconds: VERIFY_TOKEN_TTL,
           });
-          sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).catch((err) =>
-            console.error('[register] verify email send failed:', err.message),
-          );
+          const result = await sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl());
+          emailSent = !result || !result.dev; // dev-mode short-circuit doesn't actually deliver
         } catch (err) {
-          console.error('[register] verify token sign failed:', err.message);
+          emailError = err.message;
+          console.error('[register] verify email send failed:', err.message);
         }
+        sendJson(res, 200, {
+          success: true,
+          user: publicUser(user),
+          email_sent: emailSent,
+          email_error: emailError,
+        });
       })
       .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
   }
@@ -379,24 +386,36 @@ function handleAuthRoute(req, res, parsed) {
 
   // ── Phase 8 — email verification + password reset ──────────────────────
 
-  // Re-send verify email for the currently logged-in user.
+  // Re-send verify email for the currently logged-in user. Awaits the send
+  // so the UI can show "couldn't send" rather than a fake success toast.
   if (pathname === '/api/auth/verify-email/request' && method === 'POST') {
     const user = auth.getCurrentUser(req);
     if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
+    let tok;
     try {
-      const tok = signToken({
+      tok = signToken({
         purpose: 'verify',
         user_id: user.id,
         email: user.email,
         expirySeconds: VERIFY_TOKEN_TTL,
       });
-      sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).catch((err) =>
-        console.error('[verify-email/request] send failed:', err.message),
-      );
-      return sendJson(res, 200, { success: true });
     } catch (err) {
       return sendError(res, 500, 'verify_email_failed', err.message);
     }
+    // Return 200 with `email_sent: false` rather than 5xx — Cloudflare's
+    // edge intercepts 5xx and serves its own branded HTML error page,
+    // which makes the JSON unreachable from the browser.
+    return sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).then(
+      () => sendJson(res, 200, { success: true, email_sent: true }),
+      (sendErr) => {
+        console.error('[verify-email/request] send failed:', sendErr.message);
+        sendJson(res, 200, {
+          success: true,
+          email_sent: false,
+          email_error: 'Email provider error — try again in a few minutes.',
+        });
+      },
+    );
   }
 
   // GET because user clicks a link from their email. Browser does GET, we

@@ -149,7 +149,10 @@ async function sendTemplate(user, tpl, link) {
  * @param {string} [baseUrl] override PUBLIC_BASE_URL
  */
 async function sendVerifyEmail(user, token, baseUrl) {
-  const link = `${getBaseUrl(baseUrl)}/?verify=${encodeURIComponent(token)}`;
+  // Server route: GET /api/auth/verify-email/confirm — 302-redirects with
+  // ?verified=1 / ?verify_error=. Front-end has NO handler for `/?verify=`,
+  // so any other URL shape would land on the home page silently.
+  const link = `${getBaseUrl(baseUrl)}/api/auth/verify-email/confirm?token=${encodeURIComponent(token)}`;
   return sendTemplate(user, verifyTemplate(user, link), link);
 }
 

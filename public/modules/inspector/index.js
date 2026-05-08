@@ -26,9 +26,9 @@
    ============================================================ */
 'use strict';
 
-import { mountInspector } from '/spyglass.app.js';
+import { mountInspector } from '/spyglass.app.js?v=6';
 
-const ASSET_VERSION = '5';
+const ASSET_VERSION = '6';
 
 async function loadStylesheet(href) {
   const link = document.createElement('link');

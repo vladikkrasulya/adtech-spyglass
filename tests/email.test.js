@@ -83,7 +83,9 @@ test('dev-mode short-circuits and does not call https', async () => {
           await email.sendVerifyEmail({ email: 'a@b.com' }, 'fake-token')
         );
         assert.equal(result.dev, true);
-        assert.ok(result.link.includes('verify=fake-token'));
+        // Link must hit the server confirm endpoint — front-end has no
+        // handler for /?verify= so the previous URL was a dead link.
+        assert.ok(result.link.includes('/api/auth/verify-email/confirm?token=fake-token'));
         assert.equal(mock.observed.opts, null, 'https.request must not be called in dev mode');
       },
     );
@@ -148,7 +150,7 @@ test('prod-mode posts to api.resend.com/emails with Bearer + JSON body', async (
   }
 });
 
-test('verify email URL uses ?verify= and is properly URL-encoded', async () => {
+test('verify email URL targets the confirm endpoint with URL-encoded token', async () => {
   const mock = mockHttps();
   try {
     await withEnv(
@@ -159,8 +161,13 @@ test('verify email URL uses ?verify= and is properly URL-encoded', async () => {
       async () => {
         await email.sendVerifyEmail({ email: 'verify@example.com' }, 'token+with/special=chars');
         const parsed = JSON.parse(mock.observed.body);
-        // encodeURIComponent should escape +, /, =
-        assert.ok(parsed.html.includes('?verify=token%2Bwith%2Fspecial%3Dchars'));
+        // encodeURIComponent escapes +, /, =. The link must hit the server's
+        // GET /api/auth/verify-email/confirm — front-end has no /?verify= handler.
+        assert.ok(
+          parsed.html.includes(
+            '/api/auth/verify-email/confirm?token=token%2Bwith%2Fspecial%3Dchars',
+          ),
+        );
       },
     );
   } finally {

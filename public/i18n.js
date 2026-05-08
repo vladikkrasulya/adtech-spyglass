@@ -49,6 +49,8 @@
       'toast.email_verified': 'Email підтверджено ✓',
       'toast.verify_email_sent': 'Лист підтвердження відправлено на {email}',
       'toast.send_failed': 'Не вдалося відправити: {error}',
+      'toast.account_created_email_failed':
+        'Акаунт створено, але лист не пройшов — натисни «надіслати» у банері пізніше',
       'toast.password_reset': 'Пароль скинуто. Ти увійшов(ла).',
       'toast.partner_name_required': 'Введи назву партнера',
       'toast.added': 'Додано · {name}',
@@ -296,6 +298,8 @@
       'toast.email_verified': 'Email verified ✓',
       'toast.verify_email_sent': 'Verification email sent to {email}',
       'toast.send_failed': 'Send failed: {error}',
+      'toast.account_created_email_failed':
+        'Account created, but the verify email didn’t send — use “send” in the banner later',
       'toast.password_reset': 'Password reset. You’re signed in.',
       'toast.partner_name_required': 'Enter a partner name',
       'toast.added': 'Added · {name}',
@@ -543,6 +547,8 @@
       'toast.email_verified': 'Email подтверждён ✓',
       'toast.verify_email_sent': 'Письмо подтверждения отправлено на {email}',
       'toast.send_failed': 'Не удалось отправить: {error}',
+      'toast.account_created_email_failed':
+        'Аккаунт создан, но письмо не отправлено — нажми «отправить» в баннере позже',
       'toast.password_reset': 'Пароль сброшен. Ты вошёл(ла).',
       'toast.partner_name_required': 'Введи название партнёра',
       'toast.added': 'Добавлено · {name}',
