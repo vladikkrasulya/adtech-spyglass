@@ -43,6 +43,9 @@ services:
       # compose project. external:true means we ATTACH to its network
       # rather than try to manage it.
       - ollama_default
+      # Phase C-2 — n8n reaches /api/admin/stats here for the morning brief.
+      # `kt-shared` is the cross-stack hub net used by the rest of the stack.
+      - kt-shared
     restart: always
     healthcheck:
       # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).
@@ -56,4 +59,6 @@ services:
 networks:
   default:
   ollama_default:
+    external: true
+  kt-shared:
     external: true

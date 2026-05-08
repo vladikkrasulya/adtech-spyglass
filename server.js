@@ -1093,6 +1093,49 @@ function handleApi(req, res, parsed, user) {
   return false;
 }
 
+// ── /api/admin/stats — bearer-token operational stats ──────────────────────
+// For internal callers (the n8n morning-brief workflow, future ops scripts).
+// Auth = ADMIN_STATS_TOKEN env. Returns aggregate counts + 24h activity.
+function handleAdminStats(req, res) {
+  const expected = process.env.ADMIN_STATS_TOKEN;
+  if (!expected) {
+    return sendError(res, 503, 'admin_stats_disabled', 'ADMIN_STATS_TOKEN not configured');
+  }
+  const auth_h = req.headers['authorization'] || '';
+  const provided = auth_h.startsWith('Bearer ') ? auth_h.slice(7) : '';
+  if (!provided || provided !== expected) {
+    return sendError(res, 401, 'unauthorized', 'Bearer token required');
+  }
+  try {
+    const dayAgoMs = Date.now() - 24 * 3600 * 1000;
+    const samples_total = db.prepare('SELECT COUNT(*) AS n FROM samples').get().n;
+    const samples_24h = db
+      .prepare('SELECT COUNT(*) AS n FROM samples WHERE created_at > ?')
+      .get(dayAgoMs).n;
+    const partners_total = db.prepare('SELECT COUNT(*) AS n FROM partners').get().n;
+    const users_total = Users.count();
+    const verified_users = db
+      .prepare('SELECT COUNT(*) AS n FROM users WHERE email_verified_at IS NOT NULL')
+      .get().n;
+    sendJson(res, 200, {
+      success: true,
+      generated_at: Date.now(),
+      uptime_sec: Math.round(process.uptime()),
+      sessions: auth.activeSessionCount(),
+      counts: {
+        users_total,
+        verified_users,
+        partners_total,
+        samples_total,
+        samples_24h,
+      },
+    });
+  } catch (e) {
+    console.error('[admin/stats]', e.message);
+    sendError(res, 500, 'stats_failed', e.message);
+  }
+}
+
 // ── /api/health ─────────────────────────────────────────────────────────────
 
 function handleHealth(req, res) {
@@ -1231,6 +1274,7 @@ const server = http.createServer((req, res) => {
 
   try {
     if (pathname === '/api/health' && req.method === 'GET') return handleHealth(req, res);
+    if (pathname === '/api/admin/stats' && req.method === 'GET') return handleAdminStats(req, res);
     if (pathname === '/api/v1/stream' && req.method === 'GET') return handleStream(req, res);
     if (pathname === '/api/analyze' && req.method === 'POST')
       return handleAnalyze(req, res, parsed);
