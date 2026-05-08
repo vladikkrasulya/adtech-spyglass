@@ -3003,17 +3003,19 @@ export async function mountInspector(root, ctx) {
 
   async function refreshSamples() {
     const el = $('savedList');
+    const wrap = $('libraryWrap');
     if (!_currentUser) {
-      // Phase 9b: the sidebar no longer carries its own auth CTA — the
-      // header sign-in button is the single global entry point. Anonymous
-      // users see the same neutral empty-state as logged-in users with
-      // no saved items. The save-flow auth gate (openSaveModal) is what
-      // surfaces the "sign in to save" prompt at the right moment.
-      el.innerHTML = '<div class="saved-empty">' + t('empty.samples') + '</div>';
+      // Anonymous: hide the whole Library block — save action lives in
+      // the bid-request toolbar; signing in surfaces the section once
+      // there are samples to show.
+      if (wrap) wrap.hidden = true;
+      el.innerHTML = '';
       return;
     }
-    // Logged-in but DEK is gone (page reload): surface unlock CTA.
+    // Logged-in but DEK is gone (page reload): surface unlock CTA inside
+    // the Library wrapper so the user sees something actionable.
     if (_pendingUnlock && !_sessionDEK) {
+      if (wrap) wrap.hidden = false;
       el.innerHTML =
         '<div class="anon-cta">' +
         t('sample.unlock_cta') +
@@ -3029,9 +3031,16 @@ export async function mountInspector(root, ctx) {
       const j = await api('GET', 'api/samples' + qs);
       const list = j.samples || [];
       if (!list.length) {
-        el.innerHTML = '<div class="saved-empty">' + t('empty.samples') + '</div>';
+        // No saved samples — keep the wrapper visible only when the user
+        // is filtering by a specific partner (so they can switch back to
+        // "all partners"); otherwise hide the section entirely.
+        if (wrap) wrap.hidden = !v;
+        el.innerHTML = v
+          ? '<div class="saved-empty">' + t('empty.samples') + '</div>'
+          : '';
         return;
       }
+      if (wrap) wrap.hidden = false;
       const partnerName = (id) => {
         if (id == null) return t('sample.partner_unassigned');
         const p = _partnerCache.find((x) => x.id === id);

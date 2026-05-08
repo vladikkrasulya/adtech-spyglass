@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.8.2</span
+      >v9.8.3</span
     >
   </div>
   <div class="app-header-actions">
@@ -41,13 +41,6 @@
     >
       доки ↗
     </a>
-    <button
-      data-action="save-sample"
-      class="btn btn-ghost btn-sm"
-      title="Зберегти поточний запит/відповідь у бібліотеку"
-    >
-      зберегти
-    </button>
     <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">
       аналізувати
     </button>
@@ -105,6 +98,13 @@
       <div class="input-card-actions">
         <span class="char-count" id="reqCount">0</span>
         <span class="json-badge empty" id="reqBadge">порожньо</span>
+        <button
+          data-action="save-sample"
+          class="btn-icon"
+          title="Зберегти поточний запит/відповідь у бібліотеку"
+        >
+          зберегти
+        </button>
         <button
           data-action="clear-input"
           data-target="bidReq"
@@ -224,26 +224,19 @@
         <span class="info-key">connection</span><span class="info-val">—</span>
       </div>
     </div>
-    <div class="section-title section-title--sub">Бібліотека</div>
-    <div class="saved-toolbar">
-      <select
-        id="partnerFilter"
-        class="saved-select"
-        aria-label="Фільтр збережених запитів за партнером"
-      >
-        <option value="">усі партнери</option>
-        <option value="unassigned">— без партнера —</option>
-      </select>
-      <button
-        data-action="open-builder"
-        class="saved-act-btn"
-        title="Створити кастомний діалект з виявлених полів"
-      >
-        + кастомний діалект
-      </button>
-    </div>
-    <div class="saved-list" id="savedList">
-      <div class="saved-empty">Збережених запитів ще немає</div>
+    <div id="libraryWrap" hidden>
+      <div class="section-title section-title--sub">Бібліотека</div>
+      <div class="saved-toolbar">
+        <select
+          id="partnerFilter"
+          class="saved-select"
+          aria-label="Фільтр збережених запитів за партнером"
+        >
+          <option value="">усі партнери</option>
+          <option value="unassigned">— без партнера —</option>
+        </select>
+      </div>
+      <div class="saved-list" id="savedList"></div>
     </div>
     <div
       class="section-title section-title--sub"
@@ -448,7 +441,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.8.2</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.8.3</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Підтримувані специфікації"
@@ -463,6 +456,15 @@
       title="Сирці на GitHub"
       >відкритий код ↗</a
     >
+    <span style="color: var(--text-dim)">·</span>
+    <button
+      type="button"
+      data-action="open-builder"
+      class="btn-icon footer-chip-btn"
+      title="Створити кастомний діалект з виявлених полів"
+    >
+      🧬 кастомний діалект
+    </button>
     <span style="color: var(--text-dim)">·</span>
     <button
       type="button"

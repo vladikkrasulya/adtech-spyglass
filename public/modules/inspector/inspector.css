@@ -604,6 +604,21 @@ textarea.json-input::placeholder {
   border-color: var(--success);
   color: var(--success);
 }
+/* Footer chip button — flat, text-dim, same visual rhythm as the
+   `reset layout` button next to it. Used for the 🧬 custom-dialect
+   shortcut and any future footer-level actions. */
+.btn-icon.footer-chip-btn {
+  background: transparent;
+  border: 0;
+  padding: 0 var(--space-1);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+}
+.btn-icon.footer-chip-btn:hover {
+  background: transparent;
+  color: var(--text);
+}
 
 /* ── Main 3-column grid ── */
 .main-grid {

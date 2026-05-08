@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.8.2</span
+      >v9.8.3</span
     >
   </div>
   <div class="app-header-actions">
@@ -41,13 +41,6 @@
     >
       docs ↗
     </a>
-    <button
-      data-action="save-sample"
-      class="btn btn-ghost btn-sm"
-      title="Save current request/response to library"
-    >
-      save
-    </button>
     <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">analyze</button>
     <!-- Language + theme toggles. Buttons live in the header so users can
              see at a glance which locale/theme is active. The IIFEs in <head>
@@ -103,6 +96,13 @@
       <div class="input-card-actions">
         <span class="char-count" id="reqCount">0</span>
         <span class="json-badge empty" id="reqBadge">empty</span>
+        <button
+          data-action="save-sample"
+          class="btn-icon"
+          title="Save current request/response to library"
+        >
+          save
+        </button>
         <button data-action="clear-input" data-target="bidReq" class="btn-icon" title="Clear field">
           clear
         </button>
@@ -202,22 +202,19 @@
         <span class="info-key">connection</span><span class="info-val">—</span>
       </div>
     </div>
-    <div class="section-title section-title--sub">Library</div>
-    <div class="saved-toolbar">
-      <select id="partnerFilter" class="saved-select" aria-label="Filter saved samples by partner">
-        <option value="">all partners</option>
-        <option value="unassigned">— no partner —</option>
-      </select>
-      <button
-        data-action="open-builder"
-        class="saved-act-btn"
-        title="Build a custom dialect from discovered fields"
-      >
-        + custom dialect
-      </button>
-    </div>
-    <div class="saved-list" id="savedList">
-      <div class="saved-empty">No saved samples yet</div>
+    <div id="libraryWrap" hidden>
+      <div class="section-title section-title--sub">Library</div>
+      <div class="saved-toolbar">
+        <select
+          id="partnerFilter"
+          class="saved-select"
+          aria-label="Filter saved samples by partner"
+        >
+          <option value="">all partners</option>
+          <option value="unassigned">— no partner —</option>
+        </select>
+      </div>
+      <div class="saved-list" id="savedList"></div>
     </div>
     <div
       class="section-title section-title--sub"
@@ -421,7 +418,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.8.2</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.8.3</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Supported specs"
@@ -436,6 +433,15 @@
       title="View source on GitHub"
       >open source ↗</a
     >
+    <span style="color: var(--text-dim)">·</span>
+    <button
+      type="button"
+      data-action="open-builder"
+      class="btn-icon footer-chip-btn"
+      title="Build a custom dialect from discovered fields"
+    >
+      🧬 custom dialect
+    </button>
     <span style="color: var(--text-dim)">·</span>
     <button
       type="button"
