@@ -926,6 +926,58 @@ function handleIntelSuggestName(req, res) {
     .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
 }
 
+// Phase C-1 — partner inference for the save-modal. Caller is the
+// in-app save flow: sends the raw bid_req / bid_res JSON strings and
+// expects a short vendor brand name + confidence. Auth-gated because
+// only signed-in users save samples; the payload is theirs already.
+function handleIntelSuggestPartner(req, res) {
+  if (!intelLimiter(auth.clientIp(req))) {
+    return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
+  }
+  if (!auth.getCurrentUser(req)) {
+    return sendError(res, 401, 'unauthorized', 'Sign in first');
+  }
+  readJson(req)
+    .then(async ({ bid_req, bid_res }) => {
+      // Strict caps so a noisy payload can't blow up our prompt budget.
+      const MAX_BYTES = 250_000;
+      let parsedReq = null;
+      let parsedRes = null;
+      try {
+        if (typeof bid_req === 'string' && bid_req.length > 0 && bid_req.length < MAX_BYTES) {
+          parsedReq = JSON.parse(bid_req);
+        }
+      } catch (_e) {
+        parsedReq = null;
+      }
+      try {
+        if (typeof bid_res === 'string' && bid_res.length > 0 && bid_res.length < MAX_BYTES) {
+          parsedRes = JSON.parse(bid_res);
+        }
+      } catch (_e) {
+        parsedRes = null;
+      }
+      if (!parsedReq && !parsedRes) {
+        return sendError(res, 400, 'invalid_input', 'bid_req and/or bid_res JSON required');
+      }
+      try {
+        const suggestion = await intelLlm.suggestPartner(parsedReq, parsedRes);
+        if (!suggestion) {
+          // Not an error — just no confident vendor signal in the payload.
+          return sendJson(res, 200, { success: true, suggestion: null });
+        }
+        sendJson(res, 200, { success: true, suggestion });
+      } catch (e) {
+        if (e instanceof intelLlm.OllamaUnavailable) {
+          console.warn('[intel] Ollama unavailable:', e.message);
+          return sendError(res, 503, 'ollama_unavailable', e.message);
+        }
+        throw e;
+      }
+    })
+    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+}
+
 function handleIntelFieldPurpose(req, res) {
   if (!intelLimiter(auth.clientIp(req))) {
     return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
@@ -1186,6 +1238,8 @@ const server = http.createServer((req, res) => {
       return handleAnalyzeBehavior(req, res, parsed);
     if (pathname === '/api/intel/suggest-name' && req.method === 'POST')
       return handleIntelSuggestName(req, res);
+    if (pathname === '/api/intel/suggest-partner' && req.method === 'POST')
+      return handleIntelSuggestPartner(req, res);
     if (pathname === '/api/intel/field-purpose' && req.method === 'POST')
       return handleIntelFieldPurpose(req, res);
     if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);

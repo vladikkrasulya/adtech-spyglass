@@ -289,6 +289,93 @@ function validatePurposeSuggestion(obj) {
   return { purpose, confidence };
 }
 
+// ── Partner inference (Phase C-1) ────────────────────────────────
+
+// Walk a parsed JSON tree, collect distinct domains from URL-shaped
+// strings + explicit domain fields. Caller passes payloadObj (already
+// JSON.parse'd) and a maxLen cap.
+function extractPartnerHints(payloadObj, maxLen) {
+  const cap = Math.max(1, maxLen || 30);
+  const out = new Set();
+  // Common adtech fields where a vendor brand surfaces. URL parsing is
+  // intentionally loose — we're extracting hints, not validating links.
+  const URL_RE = /https?:\/\/([a-z0-9-]+(?:\.[a-z0-9-]+)+)/gi;
+
+  function addDomain(d) {
+    if (!d || typeof d !== 'string') return;
+    const norm = d.toLowerCase().replace(/^www\./, '').trim();
+    if (norm && norm.length < 80) out.add(norm);
+  }
+
+  function visit(node, depth) {
+    if (depth > 8 || out.size >= cap) return;
+    if (node == null) return;
+    if (typeof node === 'string') {
+      // Pull every URL out of the string and harvest its host.
+      let m;
+      URL_RE.lastIndex = 0;
+      while ((m = URL_RE.exec(node)) !== null) {
+        addDomain(m[1]);
+        if (out.size >= cap) return;
+      }
+      return;
+    }
+    if (Array.isArray(node)) {
+      for (const v of node) {
+        visit(v, depth + 1);
+        if (out.size >= cap) return;
+      }
+      return;
+    }
+    if (typeof node === 'object') {
+      for (const [k, v] of Object.entries(node)) {
+        // Explicit domain-bearing fields (oRTB conventions).
+        if (
+          (k === 'domain' || k === 'bundle' || k === 'cdomain' || k === 'storeurl') &&
+          typeof v === 'string'
+        ) {
+          addDomain(v);
+        }
+        visit(v, depth + 1);
+        if (out.size >= cap) return;
+      }
+    }
+  }
+
+  visit(payloadObj, 0);
+  return Array.from(out);
+}
+
+function buildPartnerHintPrompt(domains) {
+  return [
+    'You are an adtech vendor identifier. Given a list of domains',
+    'extracted from a bid payload, name the most likely SSP / DSP /',
+    'ad-network the payload originated from. Use the SHORT brand name',
+    "(1-3 words) as it appears in industry reporting. If you can't tell",
+    "or domains look generic (just publisher sites), return 'unknown'.",
+    '',
+    'Domains:',
+    ...domains.slice(0, 30).map((d) => '  - ' + d),
+    '',
+    'Output STRICT JSON, no commentary, no markdown:',
+    '{"name": "<vendor short name OR \\"unknown\\">", "confidence": "high"|"medium"|"low"}',
+  ].join('\n');
+}
+
+const PARTNER_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,38}$/;
+
+function validatePartnerSuggestion(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+  const raw = typeof obj.name === 'string' ? obj.name.trim() : '';
+  if (!raw || raw.toLowerCase() === 'unknown') return null;
+  if (!PARTNER_NAME_RE.test(raw)) return null;
+  const confidence =
+    obj.confidence === 'high' || obj.confidence === 'medium' || obj.confidence === 'low'
+      ? obj.confidence
+      : 'medium';
+  return { name: raw, confidence };
+}
+
 // ── Public API ───────────────────────────────────────────────────
 
 async function suggestName(bucket, fields, opts) {
@@ -305,17 +392,46 @@ async function fieldPurpose(path, charClass, bucket) {
   return validatePurposeSuggestion(parsed);
 }
 
+/**
+ * Infer a partner / vendor name from a parsed bid payload (request +/-
+ * response). The caller passes pre-parsed JSON; we only walk the tree
+ * for URL-shaped strings and known domain fields, never the bid VALUES.
+ *
+ * @param {object} parsedReq — JSON.parse'd BidRequest, may be null
+ * @param {object} parsedRes — JSON.parse'd BidResponse, may be null
+ * @returns {Promise<{name: string, confidence: 'high'|'medium'|'low', hint_domains: string[]} | null>}
+ */
+async function suggestPartner(parsedReq, parsedRes) {
+  const hints = new Set();
+  for (const obj of [parsedReq, parsedRes]) {
+    if (!obj) continue;
+    for (const d of extractPartnerHints(obj, 25)) hints.add(d);
+  }
+  const domains = Array.from(hints);
+  if (domains.length === 0) return null;
+  const prompt = buildPartnerHintPrompt(domains);
+  const resp = await callOllama(prompt, { numPredict: 60, temperature: 0.1 });
+  const parsed = extractStructured(resp);
+  const validated = validatePartnerSuggestion(parsed);
+  if (!validated) return null;
+  return { ...validated, hint_domains: domains.slice(0, 10) };
+}
+
 module.exports = {
   suggestName,
   fieldPurpose,
+  suggestPartner,
   OllamaUnavailable,
   // Exposed for tests / inspection:
   callOllama,
   extractStructured,
   buildSuggestNamePrompt,
   buildFieldPurposePrompt,
+  buildPartnerHintPrompt,
+  extractPartnerHints,
   validateNameSuggestion,
   validatePurposeSuggestion,
+  validatePartnerSuggestion,
   ALLOWED_PURPOSES,
   OLLAMA_URL,
   OLLAMA_MODEL,

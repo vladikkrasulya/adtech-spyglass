@@ -3231,7 +3231,11 @@ export async function mountInspector(root, ctx) {
       t('sample.label.partner') +
       '</label><select id="mPartner">' +
       partnerOptionsHtml(presetPartner) +
-      '</select></div>' +
+      '</select>' +
+      // Phase C-1: live partner-inference banner. Populated async by
+      // suggestPartnerForSave() once the save modal is mounted.
+      '<div id="mPartnerHint" class="modal-hint" hidden></div>' +
+      '</div>' +
       '<div class="modal-row"><label>' +
       t('sample.label.notes') +
       '</label><textarea id="mNotes">' +
@@ -3249,7 +3253,90 @@ export async function mountInspector(root, ctx) {
     setTimeout(() => {
       $('mTitle').focus();
       wireEnterSubmit('mTitle', () => window.confirmSave());
+      // Phase C-1: kick off partner inference in the background. Result
+      // (or absence of result) populates #mPartnerHint without blocking
+      // the user — they can submit immediately, suggestion just upgrades
+      // the UX when it lands. Skip on update flow where partner is set.
+      if (!presetPartner) suggestPartnerForSave();
     }, 0);
+  };
+
+  // Phase C-1: ask gemma to identify the SSP / vendor based on the
+  // current bid_req / bid_res contents. Privacy-safe: payload stays on
+  // the local Ollama, never reaches a cloud LLM. Banner offers two paths:
+  // pick an existing partner with the same name, OR create + select a
+  // new one. Failures (no signal, Ollama down) silently leave the banner
+  // hidden — never disrupt the save flow.
+  async function suggestPartnerForSave() {
+    const banner = $('mPartnerHint');
+    if (!banner) return;
+    const bid_req = $('bidReq').value || '';
+    const bid_res = $('bidRes').value || '';
+    if (!bid_req.trim() && !bid_res.trim()) return;
+    let j;
+    try {
+      j = await api('POST', 'api/intel/suggest-partner', { bid_req, bid_res });
+    } catch (_e) {
+      return; // Ollama unavailable, rate limit, etc. — silent fallback.
+    }
+    if (!j || !j.suggestion || !j.suggestion.name) return;
+    const name = j.suggestion.name;
+    const conf = j.suggestion.confidence || 'medium';
+    // Match against existing partners (case-insensitive).
+    const existing = _partnerCache.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    let actionBtn;
+    if (existing) {
+      actionBtn =
+        '<button class="btn btn-ghost btn-sm" data-action="hint-pick-partner" data-id="' +
+        existing.id +
+        '">' +
+        t('hint.partner.use_existing') +
+        '</button>';
+    } else {
+      actionBtn =
+        '<button class="btn btn-ghost btn-sm" data-action="hint-create-partner" data-name="' +
+        escapeHtml(name) +
+        '">' +
+        t('hint.partner.create_new') +
+        '</button>';
+    }
+    banner.innerHTML =
+      '<span class="hint-icon" aria-hidden="true">💡</span>' +
+      '<span class="hint-text">' +
+      t('hint.partner.suggestion', { name: escapeHtml(name), conf }) +
+      '</span>' +
+      actionBtn;
+    banner.dataset.confidence = conf;
+    banner.hidden = false;
+  }
+  // Expose for the central dispatcher (data-action handlers below).
+  window._spy_pickPartner = function (id) {
+    const sel = $('mPartner');
+    if (sel) sel.value = String(id);
+    const banner = $('mPartnerHint');
+    if (banner) banner.hidden = true;
+  };
+  window._spy_createPartner = async function (name) {
+    try {
+      await api('POST', 'api/partners', { name });
+      // Refresh cache + dropdown.
+      const j = await api('GET', 'api/partners');
+      _partnerCache = j.partners || [];
+      const created = _partnerCache.find(
+        (p) => p.name.toLowerCase() === name.toLowerCase(),
+      );
+      const sel = $('mPartner');
+      if (sel) {
+        sel.innerHTML = partnerOptionsHtml(created ? created.id : null);
+      }
+      const banner = $('mPartnerHint');
+      if (banner) banner.hidden = true;
+      toast(t('toast.partner_created', { name }), 'success');
+    } catch (e) {
+      toast(t('toast.send_failed', { error: e.message || '' }), 'error');
+    }
   };
 
   window.confirmSave = async function (opts) {
@@ -3795,6 +3882,11 @@ export async function mountInspector(root, ctx) {
               typeof window.SpyglassIntelBuilder.open === 'function' &&
               window.SpyglassIntelBuilder.open()
             );
+          // Phase C-1 — partner-inference banner in save modal.
+          case 'hint-pick-partner':
+            return window._spy_pickPartner && window._spy_pickPartner(el.dataset.id);
+          case 'hint-create-partner':
+            return window._spy_createPartner && window._spy_createPartner(el.dataset.name);
           case 'open-embed':
             return window.openEmbedModal && window.openEmbedModal();
           case 'share-link':

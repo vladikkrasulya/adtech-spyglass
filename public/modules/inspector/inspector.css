@@ -1108,6 +1108,33 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   justify-content: flex-end;
   margin-top: var(--space-3);
 }
+/* Phase C-1 — gemma-inferred partner suggestion banner inside the
+   save modal. Soft accent panel; never blocks user input. */
+.modal-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft, rgba(255, 200, 60, 0.12));
+  border: 1px solid var(--accent, #ffc83d);
+  font-size: 12px;
+  color: var(--text);
+}
+.modal-hint[hidden] {
+  display: none;
+}
+.modal-hint .hint-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.modal-hint .hint-text {
+  flex: 1;
+}
+.modal-hint .btn {
+  flex-shrink: 0;
+}
 
 /* ── Center panel (tabs + content) ── */
 .center-panel {
