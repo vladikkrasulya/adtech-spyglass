@@ -672,13 +672,36 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   flex-direction: column;
   gap: var(--space-4);
   min-height: 0;
-  /* Internal scroll when total content exceeds available height. Safe
-           because history-list and the ad-preview container have explicit
-           min/max-height bounds, so they no longer collapse to 0px when the
-           container becomes scrollable (flex:1 alone would collapse here). */
+  /* Single scroll surface for the sidebar — nested scrolls (sidebar +
+           history-list) used to fight each other. ad-preview and history-list
+           both flex into the remaining space without their own overflow:auto. */
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.sidebar-left::-webkit-scrollbar,
+.sidebar-right::-webkit-scrollbar {
+  width: 8px;
+}
+.sidebar-left::-webkit-scrollbar-track,
+.sidebar-right::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-left::-webkit-scrollbar-thumb,
+.sidebar-right::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+.sidebar-left:hover::-webkit-scrollbar-thumb,
+.sidebar-right:hover::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+.sidebar-left::-webkit-scrollbar-thumb:hover,
+.sidebar-right::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
 }
 .sidebar-left {
   border-right: 1px solid var(--border);
@@ -813,16 +836,16 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   font-variant-numeric: tabular-nums;
 }
 
-/* History list */
+/* History list — single scroll container.
+   Previously the sidebar AND the history-list both had overflow:auto,
+   creating nested scroll regions that fought each other. Now the
+   sidebar (`.sidebar-left`) is the only scrollable surface; the
+   history-list flexes to fill remaining space without its own scroll.
+   `min-height: 180px` keeps the section visible even on very tall
+   summary blocks. */
 .history-list {
   flex: 1 1 auto;
-  /* Guarantee a usable minimum so the section is functional even when
-           the sidebar is space-starved (1470×956 MacBooks etc.) — without
-           this, flex:1 can collapse to 0px when other fixed children fill
-           the column. The list scrolls internally past min-height. */
   min-height: 180px;
-  max-height: 40vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
