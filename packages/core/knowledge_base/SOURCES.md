@@ -49,8 +49,8 @@ public reference material. This document is the playbook.
 ### Tier 4 — JsonFeed CIS networks (per `spyglass_jsonfeed_research.md`)
 
 Documented vendors with public-facing API docs (4/12 from the 2026-05-04
-research): Kadam, Adsterra-style push, RichAds, ExoClick. Samples
-should match what the existing `rules-feed.js` already detects.
+research): four CIS push/pop networks. Samples should match what the
+existing `rules-feed.js` already detects.
 
 ## Ingestion plan
 

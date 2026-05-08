@@ -31,7 +31,7 @@ You **never** modify the public UI (spyglass.app.js, HTML, CSS) — that auto-re
 ## Existing rules to study
 - `rules-request.js` — oRTB BidRequest checks (imp[], device, app, site, regs, source)
 - `rules-response.js` — oRTB BidResponse checks (seatbid[], bid[].adm/nurl, price ≥ floor, …)
-- `rules-feed.js` — JsonFeed adtech (Kadam, ExoClick, RichAds, Zeropark)
+- `rules-feed.js` — JsonFeed adtech (vendor-specific shapes)
 - `crosscheck.js` — request↔response semantic checks
 - `categories.js` — IAB Content Taxonomy decoding
 

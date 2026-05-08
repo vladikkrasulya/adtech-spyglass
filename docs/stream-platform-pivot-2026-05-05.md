@@ -24,7 +24,7 @@ Existing competitors (IAB OpenRTB Validator, Postman SSP collections) are form-i
 
 ## What's gating real traffic
 
-**Risk B (commercial sensitivity, identified 2026-05-05):** streaming Kadam's RTBS traffic publicly requires explicit legal/management approval at owner's employer. Approval not yet obtained — long process.
+**Risk B (commercial sensitivity, identified 2026-05-05):** streaming the employer's RTBS traffic publicly requires explicit legal/management approval. Approval not yet obtained — long process.
 
 **Phase 1 decision:** start on synthetic + open-source corpora. Real-traffic ingest gated on Risk B clearance. Anonymization middleware built and tested against synthetic before any real flow is wired.
 
@@ -189,9 +189,9 @@ Honest dates. Each milestone closes with a working surface, not a half-built one
 
 ### Month 5: Real-traffic gate (conditional)
 
-**IF Kadam legal approval clears:**
+**IF employer's legal approval clears:**
 
-- Production ingest endpoint behind auth: `POST /api/v1/ingest` (only Kadam-signed source)
+- Production ingest endpoint behind auth: `POST /api/v1/ingest` (only employer-signed source)
 - Anonymization middleware activated on real flow (already battle-tested on synthetic)
 - Sampling controls: 0.01% / 0.1% / 1% configurable per source
 - Opt-out registry: publishers/SSPs can request domain redaction (manual review queue)
@@ -286,7 +286,7 @@ Order matters. Each step is shippable.
 
 - Login / auth changes: keep existing
 - Encryption layer changes: keep existing zero-knowledge crypto for /playground saved samples
-- Real Kadam traffic: gated on Risk B
+- Real production traffic: gated on Risk B
 - Patterns aggregation: Phase 2
 - Directory pages: Phase 2
 - API v1 spec: Phase 4

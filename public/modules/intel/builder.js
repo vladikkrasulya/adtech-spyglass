@@ -295,7 +295,7 @@
       return {
         title: 'Конструктор тимчасового діалекту',
         nameLabel: 'Назва діалекту',
-        namePlaceholder: 'наприклад, Kadam Custom',
+        namePlaceholder: 'наприклад, SSP-Custom',
         clustersHeading: 'Знайдені кластери',
         fieldsHeading: 'Усі знайдені поля',
         empty: 'Поки що немає достатньо даних. Запусти аналіз кількох запитів.',
@@ -312,7 +312,7 @@
       return {
         title: 'Конструктор временного диалекта',
         nameLabel: 'Название диалекта',
-        namePlaceholder: 'например, Kadam Custom',
+        namePlaceholder: 'например, SSP-Custom',
         clustersHeading: 'Обнаруженные кластеры',
         fieldsHeading: 'Все обнаруженные поля',
         empty: 'Пока недостаточно данных. Запусти анализ нескольких запросов.',
@@ -328,7 +328,7 @@
     return {
       title: 'Temporary Dialect Builder',
       nameLabel: 'Dialect name',
-      namePlaceholder: 'e.g. Kadam Custom',
+      namePlaceholder: 'e.g. SSP-Custom',
       clustersHeading: 'Suggested clusters',
       fieldsHeading: 'All discovered fields',
       empty: 'Not enough data yet. Run analyze on a few requests first.',

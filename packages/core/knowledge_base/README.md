@@ -8,7 +8,7 @@ spec version, side, and ad format.
 Spyglass already ships TYPE detection (`detectType` → request/response/feed)
 and VERSION detection (`detectVersion` → 2.5 / 2.6 / 3.0). What was missing
 is FORMAT detection — answering "is this a banner, a VAST in-stream video,
-an audio podcast slot, a native card, a CTV reward video, a Kadam push?"
+an audio podcast slot, a native card, a CTV reward video, a vendor push feed?"
 
 The Knowledge Base is the data layer that supports two derived features:
 
@@ -38,7 +38,7 @@ knowledge_base/
 │   ├── request/{banner,video,audio,native,inapp,dooh}/
 │   └── response/{banner,video,audio,native,inapp,dooh}/
 └── jsonfeed/
-    ├── push/                       # Kadam-style push notification feed
+    ├── push/                       # vendor-style push notification feed
     ├── pops/                       # popunder / clickunder
     └── inpage/                     # in-page native widget
 ```

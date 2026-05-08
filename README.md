@@ -31,12 +31,13 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
 - **Crosscheck**: request↔response sanity (`bid.impid` → `imp.id` match,
   creative format matches `imp.banner/video`, price ≥ `bidfloor`, native
   asset-id match, …).
-- **JsonFeed (CIS adtech)**: validation for non-RTB push/pop feeds — Kadam
-  push + clickunder, ExoClick `rtb.php`, RichAds telegram-bid, Zeropark.
+- **JsonFeed**: validation for non-RTB push/pop feeds — vendor-specific
+  push, clickunder, single-bid shapes.
 - **IAB Content Taxonomy 1.0** category decoding from `cat[]` / `bcat[]` /
   `pcat[]`.
 - **Vendor dialect overlays** — opt-in extra rules for specific SSPs/DSPs via
-  `?dialect=<vendor>` (currently `kadam`, `kadam-inpage-push`). Authors can
+  `?dialect=<vendor>` (a couple of vendor-specific overlays ship by default).
+  Authors can
   also build **temporary client-side dialects** from discovered fields via
   the in-UI Dialect Builder — these stay local and never leave the browser.
 - **Ad preview** — renders `bid.adm` HTML, native JSON cards, and VAST
@@ -145,12 +146,12 @@ packages/core/            validator core (browser + server-side compatible)
   knowledge-base.js       fixture loader + few-shot helper for the LLM
   rules-request.js        oRTB BidRequest rules
   rules-response.js       oRTB BidResponse rules
-  rules-feed.js           JsonFeed rules — Kadam/ExoClick/RichAds/Zeropark
+  rules-feed.js           JsonFeed rules (vendor-specific shapes)
   crosscheck.js           request↔response semantic checks
   categories.js           IAB Content Taxonomy decoder
   dialects/iab.js         IAB-canonical baseline (default)
-  dialects/kadam.js       Kadam oRTB-extension overlay
-  dialects/kadam-inpage-push.js   Kadam in-page push overlay
+  dialects/kadam.js       Vendor oRTB-extension overlay
+  dialects/kadam-inpage-push.js   Vendor in-page push overlay
   intel/walker.js         discovery walker with PII denylist
   intel/cluster.js        co-occurrence clustering
   intel/temp-dialect.js   client-side temporary dialect runtime

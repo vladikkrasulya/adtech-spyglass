@@ -26,7 +26,7 @@
 | Console panel (verdict / errors)                             | Validation tab + Inspector tab + Crosscheck tab + Categories tab + Vendor ref tab             | Spyglass has 5 verdict surfaces vs JSFiddle's 1; richer than JSFiddle                                                                                  |
 | Format pill / language indicator                             | Format pill bar (oRTB version, dialect, status)                                               | Spyglass equivalent is more informative                                                                                                                |
 | Editor with line numbers + syntax                            | `<textarea>` paste targets + format/clear/copy buttons                                        | Spyglass deliberately avoids a full editor — paste-driven workflow is correct for the domain                                                           |
-| Boilerplate templates ("Tailwind Checkboxes", "React + JSX") | Sample loader via partner selector + JsonFeed Phase 1 (ExoClick / RichAds / Zeropark / Kadam) | Already adopted; the partner picker IS Spyglass's boilerplate menu                                                                                     |
+| Boilerplate templates ("Tailwind Checkboxes", "React + JSX") | Sample loader via partner selector + JsonFeed Phase 1 (vendor-specific feeds)                | Already adopted; the partner picker IS Spyglass's boilerplate menu                                                                                     |
 | Editor in 3-locale / i18n                                    | UK / EN / RU at separate URLs (`/`, `/uk/`, `/ru/`)                                           | JSFiddle has a single English UI with broken `translation missing: en.editor.settings.indent_with_spaces` strings — Spyglass actually does i18n better |
 | Public/anonymous use without login                           | Anonymous use works, no account required                                                      | Already the default                                                                                                                                    |
 | Authenticated library                                        | Encrypted library (zero-knowledge AES-GCM), KEK/DEK                                           | Spyglass is **stronger** than JSFiddle here — JSFiddle has plaintext server-side storage                                                               |
@@ -209,7 +209,7 @@ JSFiddle does not have a JSON tidy-up; this is a Spyglass-native need.
 **JSFiddle pattern:**
 Right rail shows boilerplate templates: Tailwind Checkboxes, jQuery, React, Preact, TypeScript, CoffeeScript, SCSS, Bootstrap, PostCSS. One click loads a pre-filled fiddle.
 
-**Status in Spyglass:** ✓ Partial — partner selector + JsonFeed Phase 1 (Kadam, ExoClick, RichAds, Zeropark) loads samples.
+**Status in Spyglass:** ✓ Partial — partner selector + JsonFeed Phase 1 (vendor-specific feeds) loads samples.
 
 **Worth-adopting refinement:**
 

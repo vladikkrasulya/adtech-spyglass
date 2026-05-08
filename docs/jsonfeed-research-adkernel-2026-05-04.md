@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-AdKernel is a **white-label adtech engine**, not a destination network. It does **not publish a public dev portal** (`docs.adkernel.com` / `wiki.adkernel.com` do not resolve). The de-facto public spec is the **Prebid adapter source** (Prebid.js + Prebid Server), referenced from AdKernel's own marketing. Wire format is **standard OpenRTB 2.5 over HTTPS POST, gzipped, with a per-tenant host and `?zone={zoneId}` query param** — there is no AdKernel-specific JsonFeed envelope. Each tenant (49 Prebid aliases) shows up as a different `host`; the body is vanilla oRTB. **Implication for Spyglass:** AdKernel is _not_ a separate dialect like Kadam/Zeropark — it's "oRTB 2.5 + host/zoneId macros." One preset covers all 49 tenants for free.
+AdKernel is a **white-label adtech engine**, not a destination network. It does **not publish a public dev portal** (`docs.adkernel.com` / `wiki.adkernel.com` do not resolve). The de-facto public spec is the **Prebid adapter source** (Prebid.js + Prebid Server), referenced from AdKernel's own marketing. Wire format is **standard OpenRTB 2.5 over HTTPS POST, gzipped, with a per-tenant host and `?zone={zoneId}` query param** — there is no AdKernel-specific JsonFeed envelope. Each tenant (49 Prebid aliases) shows up as a different `host`; the body is vanilla oRTB. **Implication for Spyglass:** AdKernel is _not_ a separate dialect like the vendor-specific JSON feeds we already cover — it's "oRTB 2.5 + host/zoneId macros." One preset covers all 49 tenants for free.
 
 ## 1. Doc URL
 
@@ -110,7 +110,7 @@ Key fields: `seatbid[]` **must have exactly 1 entry** (server adapter rejects ot
 | **Push / pop / onclick** | no (not oRTB media) | **yes** (undocumented JSON) |
 | Search / shopping        | —                   | yes (XML)                   |
 
-## 4. Detection signatures (vs Kadam/ExoClick/RichAds/Zeropark)
+## 4. Detection signatures (vs vendor JSON feeds)
 
 1. **Path `…/hb?zone=<int>&v=<x.y>`** — AdKernel-specific URL convention.
 2. **`x-openrtb-version: 2.5`** header (consistent — never 2.6).

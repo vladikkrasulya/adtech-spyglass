@@ -409,7 +409,7 @@
     <section class="kt-section" style="padding-top: var(--space-7)">
       <div class="kt-container">
         <div class="doc-prose">
-          <span class="eyebrow">docs · v9.8.6</span>
+          <span class="eyebrow">docs · v9.8.7</span>
           <h1 style="margin-top: var(--space-3)">Spyglass — how to use it</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             A private inspector for OpenRTB traffic. Paste JSON, get a breakdown: whether the
@@ -556,8 +556,8 @@
               <strong>DOOH</strong> (Digital Out-of-Home) — billboards, transit, qty.multiplier
             </li>
             <li>
-              <strong>JsonFeed</strong> — push notifications, popunders, in-page widgets (Kadam,
-              ExoClick, RichAds, Zeropark style)
+              <strong>JsonFeed</strong> — push notifications, popunders, in-page widgets
+              (vendor-specific JSON feed shapes)
             </li>
           </ul>
 
@@ -1173,13 +1173,9 @@ server formats localised text and returns 200 JSON</code></pre>
               >
             </li>
             <li>
-              <strong>Kadam feed (push + clickunder)</strong> —
-              <a
-                href="https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP"
-                target="_blank"
-                rel="noopener"
-                >wiki.kadam.net — OpenRTB / Feed Integration SSP</a
-              >
+              <strong>Vendor JSON feed (push + clickunder)</strong> — single-bid push array or
+              <code>{result: {listing: [...]}}</code> clickunder wrapper. Shape varies by vendor;
+              Spyglass infers it from the response root.
             </li>
             <li>
               <strong>ExoClick proprietary RTB</strong> —
@@ -1242,7 +1238,7 @@ server formats localised text and returns 200 JSON</code></pre>
               font-size: var(--fs-sm);
             "
           >
-            <span data-spyglass-version>v9.8.6</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
+            <span data-spyglass-version>v9.8.7</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
             4.x · <a href="/" style="color: var(--text-dim)">↗ Spyglass</a> ·
             <a href="https://kyivtech.com.ua/" style="color: var(--text-dim)">kyivtech.com.ua</a>
           </p>

@@ -30,7 +30,7 @@ The phases are **sequential where they share substrate** (you can't do the publi
 The single goal: turn the current monolithic `server.js` into a layered codebase the rest of the roadmap can build on.
 
 - **Extract `validator/` directory** inside the spyglass repo. Move `validateRequest`, `validateResponse`, `validateFeedResponse`, `validateORTB`, `crosscheck`, `nativeAssetCrosscheck` out of `server.js` into modules. Pure JS, no Node-only APIs.
-- **Strip Kadam-isms from default path.** Move `ext.bsection`, `ext.btags`, `ext.subage`, `site.ext.idzone` rules into `dialects/kadam.js`. Default dialect becomes `iab`.
+- **Strip vendor-isms from default path.** Move `ext.bsection`, `ext.btags`, `ext.subage`, `site.ext.idzone` rules into the vendor dialect overlay. Default dialect becomes `iab`.
 - **Findings refactor.** Replace inline strings with `{ id, params, level, path, messageKey }`. Build a localization map `messages.uk.json` keyed by id; wire server response to resolve keys → localized strings using request locale (UI passes `?locale=uk` for now).
 - **Spec-ref table.** Add `specRefs.js` mapping finding IDs → IAB markdown anchors. Every finding emits `specRef`.
 - **Smoke tests** (Node `assert`, no framework yet): paste 5 known-good and 5 known-broken oRTB samples in `/tests/fixtures/`, validate against expected findings.
@@ -163,11 +163,11 @@ Things that have to be true before we open the public demo, even if individual p
 
 Decisions made during this planning session:
 
-- **Pivot to IAB OpenRTB 2.6+ as the canonical validator base.** Kadam-isms become an opt-in dialect. (See [memory: spyglass_spec_direction.md](../../.claude/projects/-home-vk/memory/spyglass_spec_direction.md).)
+- **Pivot to IAB OpenRTB 2.6+ as the canonical validator base.** Vendor-specific extensions become opt-in dialects. (See [memory: spyglass_spec_direction.md](../../.claude/projects/-home-vk/memory/spyglass_spec_direction.md).)
 - **OpenRTB 3.0 support is detect-and-label only**, no validation. Adoption is essentially zero — IAB back-ported wanted bits into 2.6. Revisit if a major SSP ships 3.0.
 - **Public demo runs validator client-side**, not via a hosted endpoint. Privacy plus zero hosting cost.
 - **`@spyglass/core` ships as npm package** — open source, MIT or Apache-2.0 (decided before publish).
-- **Wedge market: CIS/EE push & pop SSPs** — Kadam, PropellerAds, Adsterra, MGID. Localization + dialect overlays = no competition. Then mainstream programmatic.
+- **Wedge market: CIS/EE push & pop SSPs.** Localization + dialect overlays = no competition. Then mainstream programmatic.
 - **Two themes only** (light + dark). No "auto" pseudo-mode in the picker; OS preference is the load-time default.
 - **Three locales for v1**: UK, EN, RU.
 - **2026-05-04 — Phase 5 (public/private domain split) REJECTED.** Anonymous validation already works on the single domain `spyglass.kyivtech.com.ua/`. Login is opt-in for Save/Library/Partners only. Real-world adoption confirmed (senior engineer used the existing single-domain inspector to debug an SSP 3027 click-without-click complaint). Cost > benefit. Dev-environment split (`dev-spyglass.kyivtech.com.ua`) is a **separate idea** — not decided either way; revisit when a specific risky migration warrants side-by-side. See [memory: spyglass_no_public_split.md](../../.claude/projects/-home-vk/memory/spyglass_no_public_split.md).

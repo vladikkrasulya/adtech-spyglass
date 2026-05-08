@@ -356,10 +356,10 @@ Required to be logged in (returns 401 with uniform error envelope when anonymous
   - `validator/detect.js` — payload type detection (Phase 2 will add version detection).
   - `validator/rules-request.js` — IAB BidRequest rules.
   - `validator/rules-response.js` — IAB BidResponse rules.
-  - `validator/rules-feed.js` — Kadam feed format (push + clickunder).
+  - `validator/rules-feed.js` — vendor JSON-feed format (push + clickunder).
   - `validator/crosscheck.js` — semantic req↔res crosscheck + native asset compare.
   - `validator/dialects/iab.js` — base dialect (currently empty hooks).
-  - `validator/dialects/kadam.js` — Kadam-specific extras (`ext.bsection`, `subage`, macros, push detection).
+  - `validator/dialects/kadam.js` — vendor-specific extras (`ext.bsection`, `subage`, macros, push detection).
   - `validator/spec-refs.json` — finding-id → IAB markdown anchor map.
   - `validator/messages/{uk,en}.json` + `index.js` — locale resolver with `{var}` interpolation.
 
@@ -369,11 +369,11 @@ Required to be logged in (returns 401 with uniform error envelope when anonymous
 - Top-level `status` values are now `'clean' | 'warnings' | 'errors' | 'invalid'` (was `'Healthy' | 'Critical' | 'Invalid'`).
 - API response payload uses `validation.findings[]` (was `validation.errors[]`).
 
-#### Dialect split — IAB default, Kadam opt-in
+#### Dialect split — IAB default, vendor overlays opt-in
 
-- Default dialect is now `iab` — payloads validate strictly against the OpenRTB spec without Kadam-specific rules.
-- `?dialect=kadam` query param activates the Kadam overlay (push detection, `subage`, `ext.bsection`/`btags`, macro support check).
-- Future dialects (PropellerAds, Adsterra, MGID …) add via the same overlay pattern.
+- Default dialect is now `iab` — payloads validate strictly against the OpenRTB spec without vendor-specific rules.
+- `?dialect=<vendor>` query param activates a vendor overlay (push detection, `subage`, `ext.bsection`/`btags`, macro support check).
+- Future dialects add via the same overlay pattern.
 
 #### API surface
 
@@ -415,7 +415,7 @@ Required to be logged in (returns 401 with uniform error envelope when anonymous
 
 ### Fixed
 
-- `detectType` for plain Kadam Feed push arrays — array shape was previously short-circuited as "unknown" before reaching the array check.
+- `detectType` for plain JSON-feed push arrays — array shape was previously short-circuited as "unknown" before reaching the array check.
 - `detectType` no longer requires `obj.id` to recognize a BidRequest/BidResponse, so the validator's "missing id" finding can actually fire.
 
 ## [Pre-0.x] — 2026-04-30 baseline
@@ -425,6 +425,6 @@ Initial git import of the v8 monolith. Single-container application:
 - Express HTTP server, REST API
 - SQLite-backed partner + sample library (`better-sqlite3`)
 - Vanilla-JS UI on the kyivtech-portal design system
-- Kadam-aware validator (Ukrainian copy, baked-in dialect rules)
+- Vendor-aware validator (Ukrainian copy, baked-in dialect rules)
 - Bind-mounted design-system.css from kyivtech-portal for shared tokens
 - Reachable behind kyivtech-portal admin auth at `/spyglass-proxy/`

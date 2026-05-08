@@ -15,7 +15,7 @@ A snapshot of what's actually live on `spyglass.kyivtech.com.ua`. Anything below
 - **Validator core in `packages/core/`** — extracted from `server.js`, used by both the Node server and (planned) the browser. Pure JS, no Node-only APIs. 209 unit tests pass. Phase 1 ✅, Phase 4 🟢 (npm publish pending).
 - **3 locales** (`/`, `/uk/`, `/ru/`) with **seamless DOM-morph language switch** (no full reload, preserves analysis state). About pages parallel: `/about`, `/uk/about`, `/ru/about`. SEO via hreflang + sitemap.
 - **Anonymous-first UX**: paste-and-validate works without login. Login is opt-in for the encrypted library (zero-knowledge AES-GCM-256, PBKDF2 600k, recovery key) + partner profiles.
-- **JsonFeed validators** for non-RTB CIS adtech: Kadam push + clickunder, ExoClick `rtb.php`, RichAds, Zeropark.
+- **JsonFeed validators** for non-RTB CIS adtech: vendor-specific push, clickunder, single-bid shapes.
 - **AdKernel routing detection** as info-level finding (49+ alias networks share the same wire format).
 - **Format-pill bar** in inspector — surfaces type / status / oRTB version / dialect at a glance.
 - **Operations**: SQLite daily backup (cron, gzipped, 30-day rotation, restore drill verified), per-IP rate-limiting (60/min on analyze, 10/15min on login, 5/hour on register), HttpOnly+SameSite+Secure cookies, full `npm run ci` green (format/lint/typecheck/tests).
@@ -40,7 +40,7 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 **Spyglass fills that gap.** Three distinguishing capabilities:
 
 1. **Human-readable, localized errors with fix hints.** "Banner slot 2 has no height — OpenRTB 2.6 §3.2.10 requires `h` when using `format[]` with absolute pixels. Add `h: 250` or use the `wmin/wmax/hmin/hmax` ranges." In Ukrainian, Russian, English.
-2. **Strict IAB OpenRTB 2.6 + errata** as the source of truth, with **per-partner dialect overlays** (Kadam, PropellerAds, Adsterra, MGID …) layered on top — never as the default. Auto-detect the OpenRTB version from payload signals.
+2. **Strict IAB OpenRTB 2.6 + errata** as the source of truth, with **per-partner dialect overlays** layered on top — never as the default. Auto-detect the OpenRTB version from payload signals.
 3. **Semantic crosscheck** beyond schema: `bid.impid` ↔ `imp.id` resolution, `price` vs `bidfloor`, `bcat`/`badv`/`battr` enforcement, Native asset-id back-reference, VAST detection in `bid.adm`, auction summary.
 
 **Positioning** (validated by competitive research):
@@ -48,7 +48,7 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 - **Free public demo** — paste-and-validate, no auth, no storage. Showcase tier. Drives organic discovery.
 - **Authenticated workspace** — saved samples per partner, history, dialects, team features. Behind login.
 - **Open-source validator core** (`@spyglass/core` on npm) — solves the trust gap (engineers won't paste real bid traffic into a black box) and replaces the dead `openrtb-validator` package.
-- **Niche wedge:** CIS/EE push and pop SSPs first (Kadam, PropellerAds, Adsterra, MGID, RTB House) — localization plus dialect overlays = no competition. Then mainstream programmatic.
+- **Niche wedge:** CIS/EE push and pop SSPs first — localization plus dialect overlays = no competition. Then mainstream programmatic.
 
 ---
 
@@ -171,12 +171,12 @@ The OpenRTB spec is full of "should" and "recommended". Treating those as errors
 
 Each dialect is an **additive layer** (not a replacement) over the IAB base. A dialect file declares:
 
-- additional fields it expects (e.g. Kadam: `imp.ext.subage`, `imp.ext.bsection`, `imp.ext.btags`, `site.ext.idzone`)
+- additional fields it expects (e.g. `imp.ext.subage`, `imp.ext.bsection`, `imp.ext.btags`, `site.ext.idzone`)
 - field-presence rules conditional on shape (e.g. "if `site.ext.idzone` matches `/push|sub/i`, treat as push and require `subage`")
-- known-supported macros / unsupported macros (e.g. Kadam supports only `${AUCTION_PRICE/CURRENCY/LOSS}`)
+- known-supported macros / unsupported macros (e.g. only `${AUCTION_PRICE/CURRENCY/LOSS}` substituted by some vendors)
 - specific recommended values
 
-Dialects ship in `/dialects/{name}.js` next to the core. The current Kadam validator code becomes `@spyglass/dialect-kadam` — separate from the core. New dialects (PropellerAds, Adsterra, MGID, Galaksion) follow the same pattern.
+Dialects ship in `/dialects/{name}.js` next to the core. Each vendor-specific overlay can become its own `@spyglass/dialect-<name>` package — separate from the core. New dialects follow the same pattern.
 
 ### 3.6 Spec deep-links
 

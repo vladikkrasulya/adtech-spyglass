@@ -22,7 +22,7 @@ const { isObj } = require('./helpers');
 const TYPES = {
   ORTB_REQUEST: 'oRTB BidRequest',
   ORTB_RESPONSE: 'oRTB BidResponse',
-  KADAM_FEED: 'Kadam Feed Response',
+  KADAM_FEED: 'Vendor Feed Response',
   JSON_FEED: 'JSON Feed 1.1',
   UNKNOWN: 'unknown',
 };

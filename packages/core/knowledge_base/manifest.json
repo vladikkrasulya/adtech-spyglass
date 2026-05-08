@@ -96,11 +96,11 @@
       "spec": "jsonfeed",
       "side": "response",
       "format": "push",
-      "tags": ["push", "kadam-style", "title-image-clickurl"],
+      "tags": ["push", "vendor-style", "title-image-clickurl"],
       "file": "jsonfeed/push/kadam-push.json",
-      "source": "synthesized to match canonical Kadam push feed shape",
+      "source": "synthesized to match a canonical vendor push feed shape",
       "license": "MIT (Spyglass)",
-      "description": "Kadam-style push notification material (single-item array)"
+      "description": "Vendor-style push notification material (single-item array)"
     },
     {
       "id": "kb-jsonfeed-pops-001",

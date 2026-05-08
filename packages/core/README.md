@@ -52,16 +52,16 @@ const detection = detectVersion(bidRequest);
 
 ### `validate(payload, opts?)`
 
-Validates a `BidRequest`, `BidResponse`, or Kadam Feed payload. Auto-detects type and version. Returns:
+Validates a `BidRequest`, `BidResponse`, or vendor JSON-feed payload. Auto-detects type and version. Returns:
 
-- `type` — `'oRTB BidRequest' | 'oRTB BidResponse' | 'Kadam Feed Response (push)' | …`
+- `type` — `'oRTB BidRequest' | 'oRTB BidResponse' | 'JSON-feed Response (push)' | …`
 - `version` — `{ version, confidence, signals[] }`
 - `status` — rollup: `'clean' | 'warnings' | 'errors' | 'invalid'`
 - `findings[]` — list of `{ id, level, path, params, specRef, msg }`
 
 Options:
 
-- `dialect` — `'iab'` (default, strict OpenRTB spec) or `'kadam'` (adds Kadam-specific rules)
+- `dialect` — `'iab'` (default, strict OpenRTB spec) or a vendor overlay (adds vendor-specific rules)
 - `locale` — `'uk'` (default), `'en'`
 
 ### `crosscheck(req, res, opts?)`
@@ -82,10 +82,10 @@ Enumerate supported dialect overlays / locales.
 
 ## Dialects
 
-The default `iab` dialect validates strictly against the IAB OpenRTB 2.6 spec. Vendor-specific extensions (e.g. Kadam.net's `ext.bsection` / `ext.btags` / `ext.subage` for push traffic, or unsupported macros in `bid.adm`) live in opt-in dialect overlays:
+The default `iab` dialect validates strictly against the IAB OpenRTB 2.6 spec. Vendor-specific extensions (e.g. `ext.bsection` / `ext.btags` / `ext.subage` for push traffic, or unsupported macros in `bid.adm`) live in opt-in dialect overlays:
 
 - `iab` — base, no extras
-- `kadam` — Kadam.net push/pop dialect
+- vendor overlays — push/pop dialects (one ships in-tree as a reference)
 
 Add a new dialect by dropping a file in `dialects/`:
 
