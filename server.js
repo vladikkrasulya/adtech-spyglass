@@ -39,6 +39,7 @@ const { Users, Partners, Samples, db } = require('./db');
 const { createAuth } = require('./auth');
 const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
+const { notifyAdmin, escapeHtml: notifyEscape } = require('./notify');
 const {
   validate,
   crosscheck,
@@ -97,11 +98,21 @@ function getPublicBaseUrl() {
 const auth = createAuth({ Users });
 
 // ── Process-level safety net ────────────────────────────────────────────────
+// Throttled per-tag so a tight crash loop doesn't burn through Telegram's
+// 30-msg/sec limit; the alert will fire once, then logs cover the rest.
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err && err.stack ? err.stack : err);
+  notifyAdmin(
+    `Uncaught exception\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
+    { tag: 'uncaught-exception', level: 'error' },
+  );
 });
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
+  notifyAdmin(
+    `Unhandled rejection\n<pre>${notifyEscape(String((reason && reason.stack) || reason).slice(0, 800))}</pre>`,
+    { tag: 'unhandled-rejection', level: 'error' },
+  );
 });
 
 // ── Static file serving ─────────────────────────────────────────────────────
@@ -327,6 +338,10 @@ function handleAuthRoute(req, res, parsed) {
         } catch (err) {
           emailError = err.message;
           console.error('[register] verify email send failed:', err.message);
+          notifyAdmin(
+            `Verify email send failed for new user <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
+            { tag: 'email-send-fail', level: 'error' },
+          );
         }
         sendJson(res, 200, {
           success: true,
@@ -409,6 +424,10 @@ function handleAuthRoute(req, res, parsed) {
       () => sendJson(res, 200, { success: true, email_sent: true }),
       (sendErr) => {
         console.error('[verify-email/request] send failed:', sendErr.message);
+        notifyAdmin(
+          `Verify-email resend failed for <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(sendErr.message.slice(0, 500))}</pre>`,
+          { tag: 'email-send-fail', level: 'error' },
+        );
         sendJson(res, 200, {
           success: true,
           email_sent: false,
@@ -463,9 +482,13 @@ function handleAuthRoute(req, res, parsed) {
                 email: u.email,
                 expirySeconds: RESET_TOKEN_TTL,
               });
-              sendResetEmail({ email: u.email }, tok, getPublicBaseUrl()).catch((err) =>
-                console.error('[forgot-password] send failed:', err.message),
-              );
+              sendResetEmail({ email: u.email }, tok, getPublicBaseUrl()).catch((err) => {
+                console.error('[forgot-password] send failed:', err.message);
+                notifyAdmin(
+                  `Reset-password email failed for <code>${notifyEscape(u.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
+                  { tag: 'email-send-fail', level: 'error' },
+                );
+              });
             } catch (err) {
               console.error('[forgot-password] sign failed:', err.message);
             }
@@ -1181,6 +1204,10 @@ const server = http.createServer((req, res) => {
     return serveStaticFile(req, res);
   } catch (err) {
     console.error('[handler error]', err && err.stack ? err.stack : err);
+    notifyAdmin(
+      `<b>500 on</b> <code>${notifyEscape(req.method + ' ' + req.url)}</code>\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
+      { tag: 'handler-500', level: 'error' },
+    );
     return sendError(res, 500, 'internal_error', 'Internal server error');
   }
 });
