@@ -622,9 +622,24 @@
         try {
           const t = e && e.target;
           if (!t || typeof t.closest !== 'function') return;
-          const a = t.closest('a[target]');
+          // Two routes to a frame-bust anchor:
+          //   (1) explicit per-anchor `<a target="_top">`
+          //   (2) page-wide `<base target="_top">` + a plain `<a href>`
+          // The second one bypassed pre-v0.20.0 detection entirely. Now we
+          // resolve target by combining the anchor's own attribute and the
+          // first <base> element's target — same precedence the browser
+          // itself uses (anchor wins, base falls back).
+          const a = t.closest('a[href]');
           if (!a) return;
-          const target = String(a.getAttribute('target') || '').toLowerCase();
+          let target = String(a.getAttribute('target') || '').toLowerCase();
+          if (!target) {
+            try {
+              const baseEl = document.querySelector('base[target]');
+              if (baseEl) target = String(baseEl.getAttribute('target') || '').toLowerCase();
+            } catch (_e) {
+              /* defensive — querySelector should never throw, but locked-down sandboxes are weird */
+            }
+          }
           if (target !== '_top' && target !== '_parent') return;
           send(
             Object.assign(

@@ -48,7 +48,7 @@ export async function mountInspector(root, ctx) {
       // Resource-load errors (img/script 404) come through here too — skip.
       if (!e.error) return;
       console.error('[spyglass:error]', e.error);
-      toast('Внутрішня помилка інтерфейсу: ' + (e.error.message || 'unknown'), 'error');
+      toast(t('toast.internal_ui_error', { error: e.error.message || 'unknown' }), 'error');
     },
     { signal: ctx.signal },
   );
@@ -57,7 +57,7 @@ export async function mountInspector(root, ctx) {
     (e) => {
       console.error('[spyglass:unhandledrejection]', e.reason);
       const msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
-      toast('Невловлений збій: ' + msg, 'error');
+      toast(t('toast.uncaught_error', { error: msg }), 'error');
     },
     { signal: ctx.signal },
   );
@@ -351,9 +351,7 @@ export async function mountInspector(root, ctx) {
     setTabBadge('categoriesBadge', { text: total ? String(total) : '' });
     if (!paths.length) {
       el.innerHTML =
-        '<div class="empty-hint">' +
-        'Жодних IAB-категорій у payload (cat[] / bcat[] / pcat[] порожні)' +
-        '</div>';
+        '<div class="empty-hint">' + escapeHtml(t('empty.no_iab_categories')) + '</div>';
       return;
     }
     el.innerHTML = paths
@@ -566,7 +564,13 @@ export async function mountInspector(root, ctx) {
   // Lifetime: timer starts lazily on first probe message (so we don't
   // run the watchdog before the iframe has even loaded), resets on
   // every new setAdPreview call, and clears on module unmount.
-  const FROZEN_THRESHOLD_MS = 3500; // ≥3 missed 1Hz heartbeats with margin
+  // Bumped 3500 → 6000 in v0.24.0 after audit found false-positives on
+  // legitimate heavy-compute creatives (image processing, wasm decode,
+  // physics sims) that briefly block the JS thread for 2-3s. ≥5 missed
+  // heartbeats with margin — still catches genuine `while(true){}` and
+  // similar deadlocks within ~6s, just stops mistaking heavy-but-recovering
+  // creatives for malicious freezes. Real fraud freezes don't recover.
+  const FROZEN_THRESHOLD_MS = 6000;
   const WATCHDOG_INTERVAL_MS = 1000;
   let _lastHeartbeatAt = 0;
   let _frozenAlerted = false;
@@ -813,7 +817,10 @@ export async function mountInspector(root, ctx) {
     //    video here (no VAST player + sandbox-allow-scripts is too narrow).
     //    8000 chars is generous for modern VAST 4.x with multiple wrappers;
     //    surface a "trimmed" hint when we hit it so the user isn't surprised.
-    if (/^<\?xml|<VAST/i.test(trimmed)) {
+    //    NOTE: regex must stay in lockstep with `isVastShape` in
+    //    packages/core/format-detect.js — anchored at start, accepts
+    //    `<?xml` declaration or bare `<VAST`.
+    if (/^(<\?xml|<VAST)/i.test(trimmed)) {
       const VAST_MAX = 8000;
       const truncated = trimmed.length > VAST_MAX;
       const display = truncated ? trimmed.slice(0, VAST_MAX) : trimmed;
@@ -1081,6 +1088,10 @@ export async function mountInspector(root, ctx) {
   // a refresh doesn't lose state. Cap at HISTORY_MAX entries to keep the
   // localStorage footprint bounded (each entry can be up to ~2MB raw if user
   // pastes a huge payload — the cap is the only soft limit we have).
+  // The `_v1` suffix on the key IS the schema version. If we ever change
+  // the entry shape incompatibly, bump to `_v2` and the v1 data is
+  // ignored. Within the v1 schema, individual entries are validated on
+  // load so a single corrupted row doesn't poison the whole list.
   const HISTORY_KEY = 'spyglass_history_v1';
   const HISTORY_MAX = 50;
   const historyStore = (() => {
@@ -1088,7 +1099,21 @@ export async function mountInspector(root, ctx) {
       const saved = localStorage.getItem(HISTORY_KEY);
       if (!saved) return [];
       const arr = JSON.parse(saved);
-      return Array.isArray(arr) ? arr.slice(0, HISTORY_MAX) : [];
+      if (!Array.isArray(arr)) return [];
+      // Drop entries that don't even have the required fields. Anything
+      // not an object, missing a timestamp, or lacking both req+res
+      // payloads is a corruption artifact (incomplete write, manual
+      // tinkering, schema drift) — skip it rather than crash later
+      // accessors.
+      return arr
+        .filter(
+          (e) =>
+            e &&
+            typeof e === 'object' &&
+            typeof e.ts === 'number' &&
+            (typeof e.req === 'string' || typeof e.res === 'string'),
+        )
+        .slice(0, HISTORY_MAX);
     } catch {
       return [];
     }
@@ -1100,6 +1125,9 @@ export async function mountInspector(root, ctx) {
       // QuotaExceeded — drop oldest half until it fits, or give up gracefully.
       try {
         historyStore.length = Math.floor(historyStore.length / 2);
+        // Clamp the active-entry pointer so we don't render a phantom
+        // selection at an index that no longer exists.
+        if (_currentHistoryIdx >= historyStore.length) _currentHistoryIdx = -1;
         localStorage.setItem(HISTORY_KEY, JSON.stringify(historyStore));
       } catch {
         /* persistence is best-effort; in-memory store keeps working */
@@ -1110,6 +1138,38 @@ export async function mountInspector(root, ctx) {
   // highlight it). Set on every loadFromHistory + reset to 0 (top of stack)
   // after a fresh analysis. -1 = nothing in editor matches any entry.
   let _currentHistoryIdx = -1;
+
+  // Cross-tab history sync. When tab A analyses a request and persists
+  // to localStorage, the `storage` event fires in OTHER tabs of the
+  // same origin. Catch it, refresh our in-memory mirror, re-render the
+  // sidebar — without this, tab B kept showing stale history until F5.
+  // Skip same-key writes from this tab (event.key is null when caller
+  // is the originator's storage.setItem? no — actually the event fires
+  // ONLY in other tabs, never the originating one. Safe to mutate).
+  window.addEventListener('storage', (e) => {
+    if (e.key !== HISTORY_KEY) return;
+    try {
+      const raw = e.newValue ? JSON.parse(e.newValue) : [];
+      historyStore.length = 0;
+      if (Array.isArray(raw)) {
+        for (const entry of raw.slice(0, HISTORY_MAX)) {
+          if (
+            entry &&
+            typeof entry === 'object' &&
+            typeof entry.ts === 'number' &&
+            (typeof entry.req === 'string' || typeof entry.res === 'string')
+          ) {
+            historyStore.push(entry);
+          }
+        }
+      }
+      // Active-entry pointer may have shifted; clamp.
+      if (_currentHistoryIdx >= historyStore.length) _currentHistoryIdx = -1;
+      if (typeof renderHistory === 'function') renderHistory();
+    } catch (_e) {
+      /* parse error → leave in-memory store as-is */
+    }
+  });
 
   function renderHistory() {
     const list = $('hList');
@@ -1134,10 +1194,10 @@ export async function mountInspector(root, ctx) {
           '<div class="history-actions">' +
           '<button class="history-act-btn" data-action="history-peek" data-idx="' +
           i +
-          '" title="Переглянути без завантаження">👁</button>' +
+          '" title="' + escapeHtml(t('tooltip.peek_no_load')) + '">👁</button>' +
           '<button class="history-act-btn danger" data-action="history-delete" data-idx="' +
           i +
-          '" title="Видалити з історії">×</button>' +
+          '" title="' + escapeHtml(t('tooltip.history_delete')) + '">×</button>' +
           '</div>' +
           '<div class="history-title">' +
           // Phase 8: domain-mask sensitive sources so the History list
@@ -1178,7 +1238,7 @@ export async function mountInspector(root, ctx) {
     _isDirty = false;
     runAnalysis(entry);
     renderHistory(); // re-render to update the active-highlight
-    toast(t('toast.loaded', { title: entry.title || 'історія' }), 'success');
+    toast(t('toast.loaded', { title: entry.title || t('fallback.history_entry') }), 'success');
   }
   // Per-item delete from history. Cheap because historyStore is in-memory
   // + localStorage persist; no server roundtrip.
@@ -1203,7 +1263,7 @@ export async function mountInspector(root, ctx) {
       '<div class="modal-card" style="max-width:720px;width:90vw">' +
       '<div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">' +
       '<span>' +
-      escapeHtml(e.title || 'історія') +
+      escapeHtml(e.title || t('fallback.history_entry')) +
       ' · ' +
       escapeHtml(e.time || '') +
       '</span>' +
@@ -1253,7 +1313,13 @@ export async function mountInspector(root, ctx) {
     toast(t('toast.history_cleared'), 'success');
   };
 
+  // Monotonic counter so a slow analyze can't render its findings on top
+  // of a faster one fired afterward. Each call increments + captures.
+  // Stale completions are dropped silently.
+  let _analyzeReqSeq = 0;
+
   window.runAnalysis = async function (fromHist) {
+    const myReqId = ++_analyzeReqSeq;
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
     const resVal = fromHist ? fromHist.res : $('bidRes').value;
     // Backend supports request-only, response-only, or both. JsonFeed-format
@@ -1306,7 +1372,7 @@ export async function mountInspector(root, ctx) {
         // Fallback when neither site.domain nor app.bundle is set — used to
         // be the inscrutable "local-stream"; "локальний запит" reads as a
         // human label and matches surrounding UI strings.
-        'локальний запит';
+        t('fallback.local_request');
 
       // Summary info rows (left sidebar)
       const dev = req.device || {};
@@ -1457,7 +1523,7 @@ export async function mountInspector(root, ctx) {
               );
             })
             .join('')
-        : '<div class="empty-hint" style="grid-column:1/-1">У запиті немає imp[] — слоти не знайдено</div>';
+        : '<div class="empty-hint" style="grid-column:1/-1">' + escapeHtml(t('empty.no_imp_slots')) + '</div>';
 
       // Quick stats (right sidebar)
       const counts = {
@@ -1482,7 +1548,31 @@ export async function mountInspector(root, ctx) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bidReq: req, bidRes: res }),
         });
-        const j = await r.json();
+        const j = await r.json().catch(() => ({}));
+        // Drop stale: a newer analyze started while we were waiting. Don't
+        // overwrite the UI with our (outdated) findings.
+        if (myReqId !== _analyzeReqSeq) return;
+        // Surface server-side errors (4xx/5xx) explicitly. Pre-v0.20.0 we
+        // only handled NETWORK failures via the catch below — structured
+        // server errors (rate-limit, empty-payload, invalid-JSON) returned
+        // {success:false} and silently fell through the if-branch below,
+        // leaving the user staring at a stale UI with no toast.
+        if (!r.ok || j.success === false) {
+          const code = j && j.code;
+          const errMsg = (j && j.error) || ('HTTP ' + r.status);
+          if (r.status === 429) {
+            toast(t('toast.error_generic', { error: errMsg }), 'error');
+          } else if (code === 'empty_payload') {
+            toast(t('toast.nothing_to_analyze'), 'info');
+          } else {
+            toast(t('toast.error_generic', { error: errMsg }), 'error');
+          }
+          $('stEntity').innerText = entity + ' · ' + t('status.local');
+          $('stEntity').dataset.status = '';
+          $('statusDot').className = 'status-dot error';
+          $('statusText').textContent = errMsg;
+          return;
+        }
         if (j.success) {
           validation = j.validation;
           cross = j.crosscheck;
@@ -1545,7 +1635,7 @@ export async function mountInspector(root, ctx) {
         }
       } catch (e) {
         console.warn('Backend unavailable:', e);
-        $('stEntity').innerText = entity + ' · локально';
+        $('stEntity').innerText = entity + ' · ' + t('status.local');
         $('stEntity').dataset.status = ''; // backend unreachable — no canonical status
         $('statusDot').className = 'status-dot error';
         $('statusText').textContent = 'backend offline';
@@ -1560,6 +1650,12 @@ export async function mountInspector(root, ctx) {
       const versionPill = (() => {
         const v = validation && validation.version;
         if (!v || !v.version || v.version === 'unknown') return '';
+        // detectVersion always returns SOMETHING (defaults to 2.5/0.3
+        // confidence for shapes with no markers), but if the payload
+        // failed type detection ("unknown_type" finding) the version
+        // is meaningless — don't surface a fake "2.5 (?)" pill that
+        // suggests we identified the spec.
+        if (!validation.type || validation.type === 'unknown') return '';
         const cf = v.confidence;
         // ≈ for partial-confidence (≥0.5), ? for low. Was bare ~ / ? which
         // disappeared visually next to the version string.
@@ -1655,8 +1751,8 @@ export async function mountInspector(root, ctx) {
         });
         const summaryRow =
           crit || warn
-            ? `<div class="mono-label" style="margin-bottom:var(--space-3)">${crit} критичних · ${warn} попереджень · ${cross.length - crit - warn} ok</div>`
-            : `<div class="mono-label" style="color:var(--success);margin-bottom:var(--space-3)">Усі ${cross.length} звірок пройдено</div>`;
+            ? `<div class="mono-label" style="margin-bottom:var(--space-3)">${escapeHtml(t('crosscheck.summary', { crit, warn, ok: cross.length - crit - warn }))}</div>`
+            : `<div class="mono-label" style="color:var(--success);margin-bottom:var(--space-3)">${escapeHtml(t('crosscheck.all_passed', { count: cross.length }))}</div>`;
         crossEl.innerHTML =
           summaryRow +
           cross
@@ -1679,7 +1775,7 @@ export async function mountInspector(root, ctx) {
       } else if (cross) {
         setTabBadge('crossBadge', { text: '—', severity: null });
         crossEl.innerHTML =
-          '<div class="empty-hint">Для звірки потрібен ще BidResponse у правому полі</div>';
+          '<div class="empty-hint">' + escapeHtml(t('crosscheck.need_response')) + '</div>';
       } else {
         setTabBadge('crossBadge', { text: '—', severity: null });
       }
@@ -1985,17 +2081,17 @@ export async function mountInspector(root, ctx) {
   function pasteIntoReq(json) {
     $('bidReq').value = JSON.stringify(json, null, 2);
     updateCharCount('bidReq');
-    toast('Шаблон вставлено у BidRequest', 'success');
+    toast(t('toast.template_inserted_req'), 'success');
   }
   function pasteIntoRes(json) {
     $('bidRes').value = JSON.stringify(json, null, 2);
     updateCharCount('bidRes');
-    toast('Шаблон вставлено у BidResponse', 'success');
+    toast(t('toast.template_inserted_res'), 'success');
   }
   function pasteString(target, str) {
     $(target).value = str;
     updateCharCount(target);
-    toast('Шаблон вставлено', 'success');
+    toast(t('toast.template_inserted'), 'success');
   }
   // Expose for inline onclicks
   window._kadam = { pasteIntoReq, pasteIntoRes, pasteString, KADAM };
@@ -2227,6 +2323,35 @@ export async function mountInspector(root, ctx) {
     try {
       const j = await api('GET', 'api/auth/me');
       _currentUser = j.user || null;
+      // Locale stickiness: if the user has a server-stored
+      // preferred_locale that differs from the URL we're on, soft-
+      // redirect to the right localized path. Catches:
+      //   - returning user on a different device (no localStorage)
+      //   - bookmark to bare URL (/, /about, /account)
+      //   - first login redirected back to /
+      // We only fire on the canonical landing routes (/, /uk, /ru,
+      // /about, /uk/about, /ru/about, /account, /uk/account, /ru/account)
+      // and only when the preference is set and mismatches.
+      try {
+        if (j.user && j.user.preferred_locale) {
+          const want = j.user.preferred_locale;
+          const path = location.pathname.replace(/\/$/, '') || '/';
+          const here = path.startsWith('/uk') ? 'uk' : path.startsWith('/ru') ? 'ru' : 'en';
+          if (want !== here) {
+            // Build the equivalent path in the wanted locale.
+            const enPart = path.replace(/^\/(uk|ru)/, '') || '/';
+            const target =
+              want === 'en' ? enPart : '/' + want + (enPart === '/' ? '' : enPart);
+            // Only landing pages (avoid touching deep app paths).
+            if (['/', '/about', '/account'].includes(enPart) && target !== path) {
+              location.replace(target);
+              return; // boot continues on the new page
+            }
+          }
+        }
+      } catch (_e) {
+        /* never block boot on a redirect heuristic */
+      }
       // F5 survival: cookie keeps the user logged in, and sessionStorage
       // (this tab only) holds the DEK from the last unlock. If both are
       // alive, restore silently — no "Sign in to unlock" prompt. If the
@@ -2464,10 +2589,37 @@ export async function mountInspector(root, ctx) {
   // (single-show by design — the server stores only the wrap, not the key).
   let _recoveryKeyModalActive = false;
   let _currentRecoveryKey = null;
+  // Pre-v0.24.0 the recovery key was stored only in this in-memory variable
+  // and on screen — close the tab before saving and the key was gone forever
+  // (server only stores the *wrap*, never the key bytes). Now we mirror it
+  // to sessionStorage so an accidental F5 / tab-restore brings it back.
+  // sessionStorage is per-tab + auto-cleared on tab close, same threat
+  // surface as the DEK we already keep there.
+  const RECOVERY_PENDING_KEY = 'spyglass_recovery_pending_v1';
+  function persistPendingRecovery(key) {
+    try {
+      sessionStorage.setItem(RECOVERY_PENDING_KEY, String(key || ''));
+    } catch (_e) {
+      /* storage disabled — modal still works in-memory for this session */
+    }
+  }
+  function clearPendingRecovery() {
+    try {
+      sessionStorage.removeItem(RECOVERY_PENDING_KEY);
+    } catch (_e) {}
+  }
+  function readPendingRecovery() {
+    try {
+      return sessionStorage.getItem(RECOVERY_PENDING_KEY) || null;
+    } catch (_e) {
+      return null;
+    }
+  }
   window.closeRecoveryKeyModal = function () {
     if (!confirm(t('confirm.recovery_save'))) return;
     _recoveryKeyModalActive = false;
     _currentRecoveryKey = null;
+    clearPendingRecovery();
     closeModal();
     // Chain history-merge prompt only after the user has explicitly
     // acknowledged saving the recovery key — otherwise the merge modal
@@ -2485,6 +2637,10 @@ export async function mountInspector(root, ctx) {
     // (shouldn't happen, but guards against null.join() crash).
     const grouped = (String(recoveryKey || '').match(/.{1,4}/g) || []).join('-');
     _recoveryKeyModalActive = true;
+    _currentRecoveryKey = recoveryKey;
+    // Mirror to sessionStorage so an accidental F5 doesn't lose the key
+    // forever. Cleared on explicit "I saved it" acknowledgment.
+    persistPendingRecovery(recoveryKey);
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" data-action="modal-backdrop-close-recovery">' +
       '<div class="modal-card" style="max-width:520px">' +
@@ -2585,6 +2741,12 @@ export async function mountInspector(root, ctx) {
 
     let imported = 0;
     let failed = 0;
+    // Remove successfully-imported entries from historyStore as we go so
+    // a mid-merge tab close doesn't leave the user re-importing the same
+    // 10 entries on next visit (would create duplicates server-side
+    // since there's no idempotency key). Entries that fail mid-batch
+    // stay in history so the user can retry later.
+    const remaining = entries.slice();
     for (let i = 0; i < entries.length; i++) {
       if (progressEl) {
         progressEl.textContent = t('merge.progress', { i: i + 1, total });
@@ -2604,11 +2766,22 @@ export async function mountInspector(root, ctx) {
           res_iv: encRes.iv,
         });
         imported++;
+        // Remove from working copy on success.
+        const idx = remaining.indexOf(e);
+        if (idx !== -1) remaining.splice(idx, 1);
+        // Sync historyStore + persist after each success — bounds the
+        // damage from a tab-close to whatever was in flight at that
+        // moment.
+        historyStore.length = 0;
+        for (const r of remaining) historyStore.push(r);
+        persistHistory();
       } catch (err) {
         failed++;
         console.warn('[history-merge] entry', i, 'failed:', err && err.message);
       }
     }
+    // Final repaint of the sidebar after batch completion.
+    if (typeof renderHistory === 'function') renderHistory();
 
     closeModal();
     if (failed === 0) {
@@ -2915,7 +3088,7 @@ export async function mountInspector(root, ctx) {
       refreshSamples();
       toast(t('toast.password_reset'), 'success');
     } catch (e) {
-      errEl.textContent = e.message || 'Помилка';
+      errEl.textContent = e.message || t('error.generic');
     }
   };
   let _resetCtx = null;
@@ -2966,11 +3139,12 @@ export async function mountInspector(root, ctx) {
     if (s === 'warnings') return t('status.warnings');
     if (s === 'clean') return t('status.clean');
     if (s === 'invalid') return t('status.invalid');
-    // Backward compat with the pre-Phase-1 server (transitional)
-    if (s === 'Critical') return 'критичні помилки';
-    if (s === 'Healthy') return 'без критичних помилок';
-    if (s === 'Invalid') return 'невалідний payload';
-    if (s === 'Valid') return 'валідно';
+    // Backward compat with the pre-Phase-1 server (transitional). Map legacy
+    // capitalized labels onto the same i18n keys as the modern lowercase set.
+    if (s === 'Critical') return t('status.errors');
+    if (s === 'Healthy') return t('status.clean');
+    if (s === 'Invalid') return t('status.invalid');
+    if (s === 'Valid') return t('status.clean');
     return s || '';
   }
   window.humanStatus = humanStatus;
@@ -3010,7 +3184,7 @@ export async function mountInspector(root, ctx) {
         renderAuthWidget();
         return;
       }
-      toast('Не вдалося завантажити список партнерів: ' + e.message, 'error');
+      toast(t('toast.partners_load_failed', { error: e.message }), 'error');
     }
   }
 
@@ -3057,7 +3231,7 @@ export async function mountInspector(root, ctx) {
       const partnerName = (id) => {
         if (id == null) return t('sample.partner_unassigned');
         const p = _partnerCache.find((x) => x.id === id);
-        return p ? p.name : 'партнер #' + id;
+        return p ? p.name : t('fallback.partner_id', { id });
       };
       // Stored req_len/res_len are length(ciphertext_base64). The original
       // JSON byte count ≈ ciphertext_bytes − 16 (AES-GCM auth tag). Base64
@@ -3080,10 +3254,10 @@ export async function mountInspector(root, ctx) {
             '<div class="saved-item-actions">' +
             '<button class="saved-act-btn" data-action="sample-edit" data-id="' +
             s.id +
-            '" title="Перейменувати / змінити партнера">edit</button>' +
+            '" title="' + escapeHtml(t('tooltip.partner_edit')) + '">edit</button>' +
             '<button class="saved-act-btn danger" data-action="sample-delete" data-id="' +
             s.id +
-            '" title="Видалити">×</button>' +
+            '" title="' + escapeHtml(t('tooltip.delete')) + '">×</button>' +
             '</div>' +
             '<div class="saved-item-title">' +
             escapeHtml(s.title) +
@@ -3105,7 +3279,7 @@ export async function mountInspector(root, ctx) {
         refreshSamples(); // re-render anonymous state
         return;
       }
-      toast('Не вдалося завантажити запити: ' + e.message, 'error');
+      toast(t('toast.samples_load_failed', { error: e.message }), 'error');
     }
   }
 
@@ -3142,6 +3316,11 @@ export async function mountInspector(root, ctx) {
   }
 
   function partnerOptionsHtml(selectedId) {
+    // Coerce to Number for the equality check — JSON.parse may surface
+    // partner_id as a string (depending on serializer chain), and strict
+    // === would silently fail to mark the right option as selected.
+    // Result: edit modal opens with "no partner" instead of the assigned one.
+    const wantId = selectedId == null ? null : Number(selectedId);
     return (
       '<option value="">' +
       t('sample.partner_none') +
@@ -3152,7 +3331,7 @@ export async function mountInspector(root, ctx) {
             '<option value="' +
             p.id +
             '"' +
-            (p.id === selectedId ? ' selected' : '') +
+            (wantId !== null && Number(p.id) === wantId ? ' selected' : '') +
             '>' +
             escapeHtml(p.name) +
             '</option>',
@@ -3346,9 +3525,18 @@ export async function mountInspector(root, ctx) {
     }
     const asNew = !!(opts && opts.asNew);
     const updating = !asNew && !!_currentSampleId;
-    const title = $('mTitle').value.trim() || 'sample';
+    let title = $('mTitle').value.trim() || 'sample';
     const partnerId = $('mPartner').value || null;
     const notes = $('mNotes').value.trim();
+    // "Save as new" forks the current sample. If the user didn't tweak the
+    // title, auto-suffix "(copy)" so the new row is distinguishable in the
+    // library list. Without this, identical titles + same partner produced
+    // visually-indistinguishable duplicates and "where's my new save?"
+    // confusion. Keep the partner preset (fast iteration) — title disambig
+    // is the one signal that says "this is a fork".
+    if (asNew && _currentSampleMeta && title === (_currentSampleMeta.title || '').trim()) {
+      title = title + ' (copy)';
+    }
     const bid_req = $('bidReq').value || '';
     const bid_res = $('bidRes').value || '';
     // Status from the most recent analysis. Stored on a data-attribute by
@@ -3394,6 +3582,14 @@ export async function mountInspector(root, ctx) {
       closeModal();
       refreshSamples();
     } catch (e) {
+      // Special case: the picker showed a partner that another tab just
+      // deleted. Refresh the partner cache so the picker doesn't keep
+      // offering the dead row, and tell the user specifically.
+      if (e.code === 'partner_not_found') {
+        toast(t('toast.partner_gone'), 'error');
+        try { await refreshPartners(); } catch (_) { /* swallow */ }
+        return;
+      }
       toast(t('toast.save_failed', { error: e.message }), 'error');
     }
   };
@@ -3431,8 +3627,44 @@ export async function mountInspector(root, ctx) {
     } catch (e) {
       // Most common cause: tampered ciphertext or wrong DEK (e.g. cookie
       // outlived the in-memory DEK after a page reload without re-login).
+      // AES-GCM doesn't tell us *which* (tamper vs key mismatch are
+      // indistinguishable by design). The actionable hint is "log out and
+      // back in" — fixes both legitimate causes (rotated DEK, stale
+      // session DEK reference). Don't echo the raw exception name —
+      // 'OperationError' is meaningless to non-cryptographers.
       console.error('[loadSample]', e);
-      toast(t('toast.decrypt_failed'), 'error');
+      toast(t('toast.decrypt_failed_with_hint'), 'error');
+    }
+  }
+
+  // 🎲 demo example — pulls one synthetic specimen from /api/v1/sample
+  // and pre-fills both editors. First-time visitor onboarding: the empty
+  // Playground was bouncing people who didn't know what to paste. Now
+  // the dice menu gives them random or specific attack patterns.
+  // Optional `type` selects a specific specimen (e.g. 'clean-banner',
+  // 'frame-bust-form'); omitted = random.
+  async function loadDemoSample(type) {
+    const hasContent = ($('bidReq').value || '').trim() || ($('bidRes').value || '').trim();
+    if (_isDirty && hasContent) {
+      if (!confirm(t('confirm.clobber_load'))) return;
+    }
+    try {
+      const url = '/api/v1/sample' + (type ? '?type=' + encodeURIComponent(type) : '');
+      const j = await fetch(url).then((r) => r.json());
+      if (!j || !j.success) throw new Error(j && j.error ? j.error : 'unexpected');
+      $('bidReq').value = JSON.stringify(j.bid_request, null, 2);
+      $('bidRes').value = JSON.stringify(j.bid_response, null, 2);
+      updateCharCount('bidReq');
+      updateCharCount('bidRes');
+      _currentSampleId = null;
+      _currentSampleMeta = null;
+      _isDirty = false;
+      toast('🎲 ' + j.label, 'success');
+      // Auto-close the dropdown after pick.
+      document.querySelectorAll('.kt-example-menu[open]').forEach((d) => d.removeAttribute('open'));
+    } catch (e) {
+      console.error('[loadDemoSample]', e);
+      toast(t('toast.sample_load_failed'), 'error');
     }
   }
 
@@ -3530,7 +3762,7 @@ export async function mountInspector(root, ctx) {
           '<div class="saved-item-actions" style="opacity:1">' +
           '<button class="saved-act-btn danger" data-action="delete-partner" data-id="' +
           p.id +
-          '" title="Видалити">×</button>' +
+          '" title="' + escapeHtml(t('tooltip.delete')) + '">×</button>' +
           '</div>' +
           '<div class="saved-item-title">' +
           escapeHtml(p.name) +
@@ -3595,7 +3827,21 @@ export async function mountInspector(root, ctx) {
   };
 
   window.deletePartner = async function (id) {
-    if (!confirm(t('confirm.delete_partner'))) return;
+    // Fetch count first so the user sees how many samples are about to
+    // become unassigned. Cheap (single COUNT query). Falls back to the
+    // generic confirm if the count endpoint blips.
+    let count = null;
+    try {
+      const r = await api('GET', 'api/partners/' + id + '/samples-count');
+      count = (r && typeof r.count === 'number') ? r.count : null;
+    } catch (_e) {
+      /* fall back to generic confirm */
+    }
+    const message =
+      count != null && count > 0
+        ? t('confirm.delete_partner_with_count', { count })
+        : t('confirm.delete_partner');
+    if (!confirm(message)) return;
     try {
       await api('DELETE', 'api/partners/' + id);
       await refreshPartners();
@@ -3944,6 +4190,14 @@ export async function mountInspector(root, ctx) {
           case 'clear-history':
             return window.clearHistory && window.clearHistory();
 
+          // 🎲 demo onboarding: pull one synthetic example. data-type filters
+          // to a specific specimen ('clean-banner', 'frame-bust-form', …);
+          // omitted = random. Triggered only from inner menu buttons; the
+          // outer <summary> just toggles the dropdown (default <details>
+          // behavior, no data-action on it).
+          case 'load-demo':
+            return loadDemoSample(el.dataset.type || undefined);
+
           // — saved samples (merged from Etap 1 #savedList scoped dispatcher) —
           case 'sample-load':
             return loadSample(Number(el.dataset.id));
@@ -4079,6 +4333,45 @@ export async function mountInspector(root, ctx) {
     await bootAuth();
     await refreshPartners();
     refreshSamples();
+
+    // F5-survival for the recovery-key modal: if a key was on screen but
+    // user reloaded before clicking "I saved it", re-show the modal with
+    // the same key. sessionStorage is per-tab so this doesn't survive a
+    // full close — single accidental refresh is the realistic scenario.
+    try {
+      if (_currentUser) {
+        const pending = readPendingRecovery();
+        if (pending) {
+          // queueMicrotask so the inspector template has a moment to mount
+          // (showRecoveryKeyModal writes into #modalRoot which is shell-level).
+          queueMicrotask(() => showRecoveryKeyModal(pending));
+        }
+      } else {
+        // User isn't authed anymore — no point keeping a stale key.
+        clearPendingRecovery();
+      }
+    } catch (_e) { /* defensive */ }
+
+    // Deep-link from the cabinet's "Manage partners" button: /?open=partners
+    // → open the partner-management modal once we're authed and the cache is
+    // populated. URL is cleaned so a refresh doesn't re-trigger.
+    try {
+      const params = new URLSearchParams(location.search);
+      if (params.get('open') === 'partners' && _currentUser) {
+        if (typeof window.openPartnerModal === 'function') {
+          window.openPartnerModal();
+        }
+        params.delete('open');
+        const cleanQ = params.toString();
+        history.replaceState(
+          null,
+          '',
+          location.pathname + (cleanQ ? '?' + cleanQ : '') + location.hash,
+        );
+      }
+    } catch (_e) {
+      /* defensive — never block boot on a deep-link helper */
+    }
 
     // Phase 9b: collapse the summary chrome (winning-bid card + os/geo/
     // device/connection rows + section title) on first paint when the
