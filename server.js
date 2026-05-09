@@ -35,7 +35,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { Users, Partners, Samples, db } = require('./db');
+const { Users, Partners, Samples, AnalyzeLog, Sessions, db } = require('./db');
 const { createAuth } = require('./auth');
 const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
@@ -69,7 +69,7 @@ const ANALYZE_MAX_PER_WINDOW = 60; // 60 analyse calls/min/IP — generous human
 // Tiny per-IP analyze limiter using same shape as auth.makeLimiter
 // (but kept inline because exporting a single helper across two files
 // would be more boilerplate than it saves).
-function makeAnalyzeLimiter() {
+function makeAnalyzeLimiter(maxPerWindow) {
   const buckets = new Map();
   setInterval(() => {
     const cutoff = Date.now() - ANALYZE_WINDOW_MS;
@@ -83,19 +83,24 @@ function makeAnalyzeLimiter() {
     const now = Date.now();
     const cutoff = now - ANALYZE_WINDOW_MS;
     const list = (buckets.get(key) || []).filter((t) => t > cutoff);
-    if (list.length >= ANALYZE_MAX_PER_WINDOW) return false;
+    if (list.length >= maxPerWindow) return false;
     list.push(now);
     buckets.set(key, list);
     return true;
   };
 }
-const analyzeLimiter = makeAnalyzeLimiter();
+const analyzeLimiter = makeAnalyzeLimiter(ANALYZE_MAX_PER_WINDOW);
+// /api/analyze-behavior is more attractive to fuzzers (anonymous, takes
+// arbitrary event arrays). Tighter cap. Real users — even with a
+// 1Hz heartbeat from the probe + UI debounce — never exceed ~3/min.
+const BEHAVIOR_MAX_PER_WINDOW = 20;
+const behaviorLimiter = makeAnalyzeLimiter(BEHAVIOR_MAX_PER_WINDOW);
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || 'http://localhost:' + PORT;
 }
 
-const auth = createAuth({ Users });
+const auth = createAuth({ Users, Sessions });
 
 // ── Process-level safety net ────────────────────────────────────────────────
 // Throttled per-tag so a tight crash loop doesn't burn through Telegram's
@@ -140,19 +145,75 @@ const CONTENT_TYPES = {
 // briefly leaked while the prefix-style was deployed (a few hours window).
 // /index.html and /about.html are legacy paths from the pre-i18n single-file
 // layout — same 301 treatment.
+// Set the `kt-lang` cookie (1 year, SameSite=Lax). Plain cookie — NOT
+// HttpOnly so JS can read it for fast first-paint locale decisions.
+// Used by the language menu (anon path) and by /api/auth/preferences
+// (authed path mirror). Server reads it in resolveLocaleRoute() below
+// to redirect bare URLs to the user's preferred locale.
+function setLocaleCookie(req, res, locale) {
+  const parts = [
+    `kt-lang=${encodeURIComponent(locale)}`,
+    'Path=/',
+    'SameSite=Lax',
+    'Max-Age=31536000', // 1 year
+  ];
+  // Be defensive — req.connection / x-forwarded-proto detection mirrors auth.js
+  const proto = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0].trim();
+  const isHttps =
+    (req.connection && req.connection.encrypted) || proto === 'https';
+  if (isHttps) parts.push('Secure');
+  // Append rather than overwrite so other Set-Cookie headers (session
+  // cookie set in the same response) aren't clobbered.
+  const existing = res.getHeader('Set-Cookie');
+  const cookieValue = parts.join('; ');
+  if (Array.isArray(existing)) {
+    res.setHeader('Set-Cookie', existing.concat([cookieValue]));
+  } else if (existing) {
+    res.setHeader('Set-Cookie', [existing, cookieValue]);
+  } else {
+    res.setHeader('Set-Cookie', cookieValue);
+  }
+}
+
+function readLocaleCookie(req) {
+  const cookie = req.headers.cookie || '';
+  for (const part of cookie.split(';')) {
+    const [k, v] = part.trim().split('=');
+    if (k === 'kt-lang') {
+      const decoded = decodeURIComponent(v || '').trim();
+      if (decoded === 'en' || decoded === 'uk' || decoded === 'ru') return decoded;
+    }
+  }
+  return null;
+}
+
 function resolveLocaleRoute(reqUrl) {
   const u = reqUrl.replace(/\/$/, '');
+  // "/" stays the Playground (the canonical entry — what Google indexed,
+  // what the operator's brand pointed at for years). Stream is reachable
+  // via "/stream" as a secondary surface. Briefly tried Stream-as-default
+  // 2026-05-09 — reverted same day per operator preference.
   if (u === '' || u === '/index.html') {
     return u === '' ? { file: '/index.en.html' } : { redirect: '/' };
   }
+  if (u === '/stream') return { file: '/stream.html' };
+  if (u === '/stream.html') return { redirect: '/stream' };
+  // /playground was a brief alias during the failed pivot — keep the
+  // 301 so any stray bookmarks land at /.
+  if (u === '/playground' || u === '/playground.html') return { redirect: '/' };
   if (u === '/about') return { file: '/about.en.html' };
   if (u === '/about.html') return { redirect: '/about' };
+  if (u === '/account') return { file: '/account.en.html' };
+  if (u === '/account.html') return { redirect: '/account' };
   if (u === '/en') return { redirect: '/' };
   if (u === '/en/about') return { redirect: '/about' };
+  if (u === '/en/account') return { redirect: '/account' };
   if (u === '/uk') return { file: '/index.uk.html' };
   if (u === '/uk/about') return { file: '/about.uk.html' };
+  if (u === '/uk/account') return { file: '/account.uk.html' };
   if (u === '/ru') return { file: '/index.ru.html' };
   if (u === '/ru/about') return { file: '/about.ru.html' };
+  if (u === '/ru/account') return { file: '/account.ru.html' };
   return null;
 }
 
@@ -193,8 +254,34 @@ function rewriteAssetVersions(html) {
   });
 }
 
+// Locale-aware "bare URL" set — when the user lands on one of these AND
+// has a kt-lang cookie pointing to a non-EN locale, we 302-redirect to
+// the localized path. EN is the canonical (no-prefix) locale; UK / RU
+// live under /uk/ and /ru/. Out-of-scope URLs (assets, /api/, deep app
+// paths) are NEVER redirected — only these "front door" landing pages.
+const LOCALE_REDIRECT_TABLE = {
+  '/': { uk: '/uk', ru: '/ru' },
+  '/about': { uk: '/uk/about', ru: '/ru/about' },
+  '/account': { uk: '/uk/account', ru: '/ru/account' },
+};
+
 function serveStaticFile(req, res) {
   const reqPath = req.url.split('?')[0];
+
+  // Cookie-driven locale redirect for bare landing URLs. Only fires when
+  // the cookie says non-EN AND the user is on a known landing path. Has
+  // to happen BEFORE resolveLocaleRoute resolves '/' → /index.en.html.
+  const norm = reqPath.replace(/\/$/, '') || '/';
+  const cookieLocale = readLocaleCookie(req);
+  if (cookieLocale && LOCALE_REDIRECT_TABLE[norm] && LOCALE_REDIRECT_TABLE[norm][cookieLocale]) {
+    res.writeHead(302, {
+      Location: LOCALE_REDIRECT_TABLE[norm][cookieLocale],
+      'Cache-Control': 'no-cache',
+      Vary: 'Cookie',
+    });
+    res.end();
+    return;
+  }
 
   const route = resolveLocaleRoute(reqPath);
   if (route && route.redirect) {
@@ -259,10 +346,26 @@ function sendJson(res, code, payload) {
   res.end(JSON.stringify(payload));
 }
 
+// 5xx → TG admin alert (per-code + path throttled inside notifyAdmin).
+// 4xx stays silent (client errors aren't actionable for the operator).
+// Was: only uncaughtException/unhandledRejection paged, so handler-level
+// 5xx (ollama unavailable, stats_failed, upstream_error, etc.) silently
+// rotted in logs. Wired 2026-05-09.
 function sendError(res, status, code, error, detail) {
   const body = { success: false, error, code };
   if (detail !== undefined) body.detail = detail;
   sendJson(res, status, body);
+  if (status >= 500 && status < 600) {
+    try {
+      const path = (res.req && res.req.url ? res.req.url.split('?')[0] : '?').slice(0, 80);
+      notifyAdmin(
+        `🔴 <b>Spyglass ${status}</b> <code>${notifyEscape(code)}</code>\n` +
+        `path <code>${notifyEscape(path)}</code>\n` +
+        (detail ? `<pre>${notifyEscape(String(detail).slice(0, 400))}</pre>` : ''),
+        { tag: `5xx:${code}` },
+      );
+    } catch (_e) { /* never let alerting break the response */ }
+  }
 }
 
 function makeError(code, msg) {
@@ -278,6 +381,10 @@ function publicUser(u) {
     email: u.email,
     created_at: u.created_at,
     email_verified_at: u.email_verified_at != null ? u.email_verified_at : null,
+    // Locale preference for cross-device language stickiness. NULL means
+    // the user hasn't picked one yet — client falls back to localStorage
+    // / URL / 'en' default.
+    preferred_locale: u.preferred_locale || null,
   };
 }
 
@@ -287,7 +394,16 @@ function publicUser(u) {
 // `setup-encryption` yet — clients use that to render the bootstrap UI.
 function publicEncryption(cs) {
   if (!cs || !cs.kdf_salt) return null;
-  return { kdf_salt: cs.kdf_salt, dek_wrapped: cs.dek_wrapped, dek_iv: cs.dek_iv };
+  return {
+    kdf_salt: cs.kdf_salt,
+    dek_wrapped: cs.dek_wrapped,
+    dek_iv: cs.dek_iv,
+    // Recovery setup status (boolean only — never expose the wrapped DEK
+    // bytes themselves; those aren't needed in the browser unless user
+    // is mid-reset). Lets the personal cabinet show "recovery key set
+    // up: yes / no" without an extra endpoint.
+    recovery_configured: !!(cs.recovery_dek_wrapped && cs.recovery_salt),
+  };
 }
 
 function resolveLocale(parsed) {
@@ -369,6 +485,31 @@ function handleAuthRoute(req, res, parsed) {
     return sendJson(res, 200, { success: true });
   }
 
+  // Per-user preferences. Currently just `locale` — the language the user
+  // wants the site rendered in. Stored on the user row (cross-device) +
+  // mirrored as `kt-lang` cookie (cross-tab + anon). Picking a locale via
+  // the lang menu calls this when the user is logged in; anonymous users
+  // get cookie-only.
+  //
+  // Body: { locale: 'en' | 'uk' | 'ru' }. Returns the saved value.
+  if (pathname === '/api/auth/preferences' && method === 'POST') {
+    const user = auth.getCurrentUser(req);
+    if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
+    return readJson(req)
+      .then((b) => {
+        const want = String((b && b.locale) || '').trim();
+        if (!['en', 'uk', 'ru'].includes(want)) {
+          return sendError(res, 400, 'bad_locale', 'locale must be en | uk | ru');
+        }
+        Users.setPreferredLocale(user.id, want);
+        // Mirror to cookie so the next bare-URL hit gets server-side
+        // redirect to the right locale (see resolveLocaleRoute).
+        setLocaleCookie(req, res, want);
+        return sendJson(res, 200, { success: true, locale: want });
+      })
+      .catch((e) => sendError(res, 400, 'bad_request', e.message));
+  }
+
   // Bootstrap or rotate the per-user crypto state. Body is opaque to the
   // server — it just stores what the client computed in the browser.
   // Required: { kdf_salt, dek_wrapped, dek_iv,
@@ -377,6 +518,22 @@ function handleAuthRoute(req, res, parsed) {
     const user = auth.getCurrentUser(req);
     if (!user) {
       return sendError(res, 401, 'unauthorized', 'Sign in first');
+    }
+    // Replay/overwrite protection. The endpoint is meant for the
+    // first-time bootstrap right after register; once the user has a
+    // crypto state, password-rotation lives behind the reset-password
+    // flow (which also handles re-wrapping). A second call to
+    // setup-encryption on an already-bootstrapped account is either a
+    // bug (client retrying after a partial failure) or a hostile attempt
+    // to swap the wrapped DEK. Reject it.
+    const existingState = Users.getCryptoState(user.id);
+    if (existingState && existingState.kdf_salt) {
+      return sendError(
+        res,
+        409,
+        'crypto_already_setup',
+        'Encryption is already bootstrapped for this account. Use reset-password to rotate.',
+      );
     }
     return readJson(req)
       .then((b) => {
@@ -406,6 +563,14 @@ function handleAuthRoute(req, res, parsed) {
   if (pathname === '/api/auth/verify-email/request' && method === 'POST') {
     const user = auth.getCurrentUser(req);
     if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
+    if (!auth.checkVerifyEmailLimit(req)) {
+      return sendError(
+        res,
+        429,
+        'rate_limited',
+        'Too many verify-email requests. Try again later (limit: 5/hour/IP).',
+      );
+    }
     let tok;
     try {
       tok = signToken({
@@ -504,6 +669,14 @@ function handleAuthRoute(req, res, parsed) {
   // DEK locally and re-wrap under a new KEK before POSTing to /reset-password.
   // Same-token-as-proof: no separate auth needed.
   if (pathname === '/api/auth/reset-password/state' && method === 'POST') {
+    if (!auth.checkResetStateLimit(req)) {
+      return sendError(
+        res,
+        429,
+        'rate_limited',
+        'Too many state lookups. Try again shortly (limit: 10/15min/IP).',
+      );
+    }
     return readJson(req)
       .then((b) => {
         let payload;
@@ -717,9 +890,19 @@ function handleAnalyze(req, res, parsed) {
   const locale = resolveLocale(parsed);
   const dialect = resolveDialect(parsed);
   readJson(req)
-    .then(({ bidReq, bidRes }) => {
+    .then((body) => {
+      const { bidReq, bidRes } = body || {};
       const hasReq = bidReq && typeof bidReq === 'object' && Object.keys(bidReq).length > 0;
       const hasRes = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0;
+
+      // Optional `opts.disabledRules`: forwarded to validate() / crosscheck()
+      // for per-call rule suppression. Accepts string[] of exact ids or
+      // trailing-`*` prefixes (e.g. ['imp.*', 'regs.coppa_pii_present']).
+      // See packages/core/README.md → "API stability contract".
+      const rawDisabled = body && body.opts && body.opts.disabledRules;
+      const disabledRules = Array.isArray(rawDisabled)
+        ? rawDisabled.filter((r) => typeof r === 'string' && r.length).slice(0, 100)
+        : undefined;
 
       // Empty payload is now an explicit 400 instead of a synthetic
       // "unknown_type" finding masquerading as a real validation error.
@@ -737,9 +920,9 @@ function handleAnalyze(req, res, parsed) {
       // that masked perfectly valid response findings.
       let validation;
       if (hasReq) {
-        validation = validate(bidReq, { locale, dialect });
+        validation = validate(bidReq, { locale, dialect, disabledRules });
         if (hasRes) {
-          const resValidation = validate(bidRes, { locale, dialect });
+          const resValidation = validate(bidRes, { locale, dialect, disabledRules });
           if (resValidation.findings && resValidation.findings.length) {
             validation.findings = validation.findings.concat(
               resValidation.findings.map((f) =>
@@ -750,7 +933,7 @@ function handleAnalyze(req, res, parsed) {
         }
       } else {
         // Response-only path. Validate bidRes and prefix findings for clarity.
-        validation = validate(bidRes, { locale, dialect });
+        validation = validate(bidRes, { locale, dialect, disabledRules });
         validation.findings = validation.findings.map((f) =>
           Object.assign({}, f, { msg: '[response] ' + f.msg }),
         );
@@ -766,7 +949,8 @@ function handleAnalyze(req, res, parsed) {
           ? 'warnings'
           : 'clean';
 
-      const cross = hasReq && hasRes ? crosscheck(bidReq, bidRes, { locale }) : [];
+      const cross =
+        hasReq && hasRes ? crosscheck(bidReq, bidRes, { locale, dialect, disabledRules }) : [];
 
       // Decode IAB Content Taxonomy codes (cat / bcat / pcat / sectioncat
       // / pagecat / bid.cat) into English labels so the frontend can render
@@ -785,6 +969,40 @@ function handleAnalyze(req, res, parsed) {
       const formatRes = hasRes ? detectFormat(bidRes) : null;
       const format = unionFormat(formatReq, formatRes);
 
+      // Per-user usage tracking — METADATA only, never the payload bodies.
+      // Skipped for anonymous calls (no user_id). The personal cabinet's
+      // Insights section reads aggregates back via /api/account/insights.
+      try {
+        const currentUser = auth.getCurrentUser(req);
+        if (currentUser && currentUser.id) {
+          const findings = (validation && validation.findings) || [];
+          const errs = findings.filter((f) => f.level === 'error').length;
+          const warns = findings.filter((f) => f.level === 'warning').length;
+          const fmt =
+            format && format.formats && format.formats.length
+              ? format.formats.length === 1
+                ? format.formats[0]
+                : 'multi'
+              : null;
+          AnalyzeLog.record({
+            userId: currentUser.id,
+            payloadType: hasReq && hasRes ? 'both' : hasReq ? 'request' : 'response',
+            version:
+              validation && validation.version && validation.version.version
+                ? validation.version.version
+                : null,
+            status: validation && validation.status ? validation.status : 'unknown',
+            format: fmt,
+            findingCount: findings.length,
+            errorCount: errs,
+            warningCount: warns,
+          });
+        }
+      } catch (e) {
+        // Tracking failure must never break the response. Log + continue.
+        console.error('[analyze-log] record failed:', e.message);
+      }
+
       sendJson(res, 200, {
         success: true,
         validation,
@@ -793,6 +1011,23 @@ function handleAnalyze(req, res, parsed) {
       });
     })
     .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
+}
+
+// ── /api/account/insights ──────────────────────────────────────────────────
+// Personal cabinet aggregates. Auth-gated; anonymous → 401. Returns the
+// shape AnalyzeLog.insights() produces — see db.js for fields.
+function handleAccountInsights(req, res) {
+  const user = auth.getCurrentUser(req);
+  if (!user) {
+    return sendError(res, 401, 'auth_required', 'Sign in to view account insights');
+  }
+  try {
+    const data = AnalyzeLog.insights(user.id);
+    sendJson(res, 200, { success: true, insights: data });
+  } catch (e) {
+    console.error('[account/insights] failed:', e.message);
+    sendError(res, 500, 'insights_failed', e.message);
+  }
 }
 
 // ── /api/analyze-behavior ──────────────────────────────────────────────────
@@ -807,12 +1042,12 @@ function handleAnalyze(req, res, parsed) {
 // in the UI module.
 
 function handleAnalyzeBehavior(req, res, parsed) {
-  if (!analyzeLimiter(auth.clientIp(req))) {
+  if (!behaviorLimiter(auth.clientIp(req))) {
     return sendError(
       res,
       429,
       'rate_limited',
-      `Too many analyze calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
+      `Too many behavior-analyze calls. Try again shortly (limit: ${BEHAVIOR_MAX_PER_WINDOW}/min/IP).`,
     );
   }
   const locale = resolveLocale(parsed);
@@ -1043,6 +1278,14 @@ function handleApi(req, res, parsed, user) {
       ? sendJson(res, 200, { success: true })
       : sendError(res, 404, 'not_found', 'Partner not found');
   }
+  // GET /api/partners/:id/samples-count — used by the delete-partner
+  // confirm dialog to surface "X samples will become unassigned" before
+  // the user confirms. Cheap (indexed COUNT). Auth-scoped to the user.
+  const mCount = pathname.match(/^\/api\/partners\/(\d+)\/samples-count$/);
+  if (mCount && method === 'GET') {
+    const count = Partners.countSamples({ id: Number(mCount[1]), userId });
+    return sendJson(res, 200, { success: true, count });
+  }
 
   // ── samples ─────────────────────────────────────────────────────────────
   if (pathname === '/api/samples' && method === 'GET') {
@@ -1243,6 +1486,129 @@ function handleStream(req, res) {
   req.on('error', cleanup);
 }
 
+// ── /api/v1/sample — one synthetic example for the Playground "🎲 приклад" ─
+// First-time-visitor onboarding: empty Playground is intimidating, "what do
+// I paste here?" is the bounce signal. This endpoint returns a complete
+// BidRequest+BidResponse pair pulled from the synthetic corpus so the
+// "🎲 приклад" button can pre-fill both editors with real-looking JSON.
+// The corpus is BidResponse-only on disk; we synthesize a minimally valid
+// matching BidRequest (impid + size + site stub) so crosscheck has something
+// to work with.
+function handleSample(req, res) {
+  try {
+    const dir = path.join(__dirname, 'samples');
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith('synthetic-') && f.endsWith('.json'));
+    if (!files.length) return sendError(res, 503, 'no_samples', 'Sample corpus is empty');
+    // Optional ?type=<slug> picks a specific specimen (e.g. type=clean-banner,
+    // type=frame-bust-form). Slug is matched against the filename minus the
+    // 'synthetic-' prefix and '.json' suffix. Anything unmatched falls back
+    // to random — keeps the URL forgiving for bookmarks / typos.
+    const url = new URL(req.url, 'http://x');
+    const wanted = (url.searchParams.get('type') || '').trim();
+    let pick = null;
+    if (wanted) {
+      const match = files.find((f) => f === 'synthetic-' + wanted + '.json');
+      if (match) pick = match;
+    }
+    if (!pick) pick = files[Math.floor(Math.random() * files.length)];
+    const sample = JSON.parse(fs.readFileSync(path.join(dir, pick), 'utf8'));
+    const note = sample._note;
+    const label = pick.replace(/^synthetic-/, '').replace(/\.json$/, '').replace(/-/g, ' ');
+
+    // Sample shape autodetect:
+    //   - has `seatbid` → it IS a BidResponse; synthesize a matching 2.x
+    //     BidRequest from the first bid (today's path, used by every
+    //     creative-attack specimen)
+    //   - has `openrtb` OR top-level `item[]` OR top-level `imp[]` → it
+    //     IS a BidRequest; load it directly into the request editor and
+    //     leave the response editor empty (used by 3.0 samples + future
+    //     request-only specimens)
+    const isPlainObj = (x) => x != null && typeof x === 'object' && !Array.isArray(x);
+    // Three discriminators:
+    //   1. legacy 2.x BidResponse — has top-level `seatbid[]`
+    //   2. oRTB 3.0 BidResponse — has `openrtb.response{}` envelope
+    //   3. BidRequest (2.x or 3.0) — has imp[] / item[] / openrtb.request{}
+    //      OR `openrtb` envelope without `response` (broken 3.0 request)
+    const is2xResponse = Array.isArray(sample.seatbid);
+    const is30Response =
+      isPlainObj(sample.openrtb) && isPlainObj(sample.openrtb.response);
+    const isBidResponse = is2xResponse || is30Response;
+    const isBidRequest =
+      !isBidResponse &&
+      (isPlainObj(sample.openrtb) || Array.isArray(sample.item) || Array.isArray(sample.imp));
+    const cleanSample = Object.assign({}, sample);
+    delete cleanSample._note;
+
+    if (isBidRequest) {
+      sendJson(res, 200, {
+        success: true,
+        label,
+        _note: note,
+        bid_request: cleanSample,
+        bid_response: {},
+      });
+      return;
+    }
+
+    if (is30Response) {
+      // 3.0 BidResponse — load into the response editor, leave request
+      // editor empty (no synthesized 2.x request would make sense here).
+      sendJson(res, 200, {
+        success: true,
+        label,
+        _note: note,
+        bid_request: {},
+        bid_response: cleanSample,
+      });
+      return;
+    }
+
+    // Default: treat as BidResponse and synthesize a minimal 2.x request.
+    const firstBid =
+      (sample.seatbid && sample.seatbid[0] && sample.seatbid[0].bid && sample.seatbid[0].bid[0]) || {};
+    const request = {
+      id: 'demo-' + String(sample.id || 'sample').slice(0, 40),
+      imp: [
+        {
+          id: firstBid.impid || '1',
+          banner: {
+            w: firstBid.w || 300,
+            h: firstBid.h || 250,
+          },
+          bidfloor: 0.1,
+          bidfloorcur: 'USD',
+        },
+      ],
+      site: {
+        id: 'demo-site',
+        domain: 'example.com',
+        page: 'https://example.com/demo',
+        cat: ['IAB1'],
+      },
+      device: {
+        ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        ip: '203.0.113.42',
+        devicetype: 2,
+      },
+      user: { id: 'demo-user' },
+      at: 2,
+      tmax: 200,
+      cur: ['USD'],
+    };
+    sendJson(res, 200, {
+      success: true,
+      label,
+      _note: note,
+      bid_request: request,
+      bid_response: cleanSample,
+    });
+  } catch (e) {
+    sendError(res, 500, 'sample_failed', e.message);
+  }
+}
+
 // ── HTTP dispatch ────────────────────────────────────────────────────────────
 
 // Baseline hardening headers applied to every response. The portal proxy
@@ -1276,10 +1642,13 @@ const server = http.createServer((req, res) => {
     if (pathname === '/api/health' && req.method === 'GET') return handleHealth(req, res);
     if (pathname === '/api/admin/stats' && req.method === 'GET') return handleAdminStats(req, res);
     if (pathname === '/api/v1/stream' && req.method === 'GET') return handleStream(req, res);
+    if (pathname === '/api/v1/sample' && req.method === 'GET') return handleSample(req, res);
     if (pathname === '/api/analyze' && req.method === 'POST')
       return handleAnalyze(req, res, parsed);
     if (pathname === '/api/analyze-behavior' && req.method === 'POST')
       return handleAnalyzeBehavior(req, res, parsed);
+    if (pathname === '/api/account/insights' && req.method === 'GET')
+      return handleAccountInsights(req, res);
     if (pathname === '/api/intel/suggest-name' && req.method === 'POST')
       return handleIntelSuggestName(req, res);
     if (pathname === '/api/intel/suggest-partner' && req.method === 'POST')

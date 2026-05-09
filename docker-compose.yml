@@ -33,6 +33,11 @@ services:
       # intel-llm.js — Phase 7c LLM bridge. Bind-mounted same as packages
       # so prompt edits take effect on `compose restart` without rebuild.
       - ./intel-llm.js:/app/intel-llm.js:ro
+      # Synthetic specimen corpus. `/api/v1/sample` reads this directory
+      # at request time; bind-mounting means new sample files appear
+      # without `compose up --build`. Was baked-in until 2026-05-09 — see
+      # docs/ARCHMAP.md §4 for the trap that motivated this.
+      - ./samples:/app/samples:ro
       # Persistent SQLite store (partners + saved bid samples).
       - /srv/DATA/AppData/adtech-spyglass:/data
     networks:

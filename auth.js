@@ -1,12 +1,16 @@
 'use strict';
 
 /**
- * Email/password auth with in-memory sessions.
+ * Email/password auth with persistent sessions (since v0.18.0).
  *
- * Sessions live in process memory — wipe on container restart by design
- * (limits stolen-cookie window, also keeps the auth path tiny). Phase 7+
- * may move them to a `sessions` table when persistent login becomes a
- * real ask.
+ * Sessions live in BOTH:
+ *   - in-process Map (hot read path — every request hits this)
+ *   - SQLite `sessions` table (survives container restart; before this
+ *     change every `compose up --build` kicked all logged-in users out
+ *     even though their cookie was still valid for 30 days)
+ *
+ * Writes are write-through: createSession + destroySession update both
+ * sides. On boot we load all non-expired sessions from DB into the Map.
  *
  * Cookie:
  *   spy_session = <64-char hex token>
@@ -51,12 +55,36 @@ function makeLimiter({ windowMs, max }) {
 }
 
 /**
- * @param {{ Users: any, logger?: any }} deps
+ * @param {{ Users: any, Sessions?: any, logger?: any }} deps
  */
-function createAuth({ Users, logger }) {
+function createAuth({ Users, Sessions, logger }) {
   const log = logger || console;
   /** @type {Map<string, { userId: number, expiresAt: number, ip: string, ua: string }>} */
   const sessions = new Map();
+
+  // Boot-time hydration: pull all non-expired sessions from DB into the
+  // Map so request handlers (which only check the Map) recognise tokens
+  // that survive a restart. Cheap — typical row count is single-digits
+  // to low hundreds even for active products. Sessions param is optional
+  // for tests that exercise auth without a DB.
+  if (Sessions) {
+    try {
+      Sessions.pruneExpired();
+      const rows = Sessions.loadActive();
+      for (const r of rows) {
+        sessions.set(r.token, {
+          userId: r.userId,
+          expiresAt: r.expiresAt,
+          ip: r.ip || '',
+          ua: r.ua || '',
+        });
+      }
+      log.info &&
+        log.info({ loaded: rows.length }, 'sessions hydrated from DB');
+    } catch (e) {
+      log.error && log.error({ err: e.message }, 'session hydration failed');
+    }
+  }
 
   // Pre-computed real bcrypt hash used as a stand-in when login is attempted
   // for a non-existent email. A literal "looks-like-bcrypt" string short-
@@ -65,7 +93,7 @@ function createAuth({ Users, logger }) {
   // compare path identical to the real-user path.
   const TIMING_DUMMY_HASH = bcrypt.hashSync('timing-dummy', BCRYPT_ROUNDS);
 
-  // Periodic sweep of expired sessions
+  // Periodic sweep of expired sessions — Map + DB.
   const sweepTimer = setInterval(() => {
     const now = Date.now();
     let removed = 0;
@@ -73,6 +101,13 @@ function createAuth({ Users, logger }) {
       if (s.expiresAt < now) {
         sessions.delete(t);
         removed++;
+      }
+    }
+    if (Sessions) {
+      try {
+        Sessions.pruneExpired();
+      } catch (e) {
+        log.error && log.error({ err: e.message }, 'session DB sweep failed');
       }
     }
     if (removed) log.info && log.info({ removed, remaining: sessions.size }, 'session sweep');
@@ -147,19 +182,33 @@ function createAuth({ Users, logger }) {
 
   function createSession(req, res, user) {
     const token = newToken();
-    sessions.set(token, {
-      userId: user.id,
-      expiresAt: Date.now() + SESSION_TTL_MS,
-      ip: clientIp(req),
-      ua: (req.headers['user-agent'] || '').slice(0, 200),
-    });
+    const expiresAt = Date.now() + SESSION_TTL_MS;
+    const ip = clientIp(req);
+    const ua = (req.headers['user-agent'] || '').slice(0, 200);
+    sessions.set(token, { userId: user.id, expiresAt, ip, ua });
+    if (Sessions) {
+      try {
+        Sessions.create({ token, userId: user.id, expiresAt, ip, ua });
+      } catch (e) {
+        log.error && log.error({ err: e.message }, 'session DB write failed');
+      }
+    }
     setSessionCookie(req, res, token);
     log.info && log.info({ userId: user.id, sessions: sessions.size }, 'session created');
   }
 
   function destroySession(req, res) {
     const token = getCookieToken(req);
-    if (token) sessions.delete(token);
+    if (token) {
+      sessions.delete(token);
+      if (Sessions) {
+        try {
+          Sessions.destroy(token);
+        } catch (e) {
+          log.error && log.error({ err: e.message }, 'session DB delete failed');
+        }
+      }
+    }
     const parts = [`${COOKIE_NAME}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
     if (isHttps(req)) parts.push('Secure');
     res.setHeader('Set-Cookie', parts.join('; '));
@@ -274,9 +323,14 @@ function createAuth({ Users, logger }) {
   }
 
   /**
-   * Drop all in-memory sessions belonging to a user. Used on password reset
-   * so previously-stolen cookies stop working immediately. Returns count
-   * removed.
+   * Drop ALL sessions belonging to a user — Map AND DB. Used on password
+   * reset so previously-stolen cookies stop working immediately, even
+   * across container restarts.
+   *
+   * Pre-v0.20.0 this only cleared the in-memory Map; sessions persisted
+   * in DB would re-hydrate on next boot and stolen cookies would silently
+   * revive. Now we wipe both halves write-through.
+   *
    * @param {number} userId
    */
   function invalidateUserSessions(userId) {
@@ -285,6 +339,13 @@ function createAuth({ Users, logger }) {
       if (s.userId === userId) {
         sessions.delete(t);
         removed++;
+      }
+    }
+    if (Sessions) {
+      try {
+        Sessions.destroyForUser(userId);
+      } catch (e) {
+        log.error && log.error({ err: e.message }, 'session DB invalidate failed');
       }
     }
     return removed;
@@ -310,6 +371,22 @@ function createAuth({ Users, logger }) {
     return resetPasswordLimiter(clientIp(req));
   }
 
+  // /reset-password/state lookup. Same window as the password endpoints
+  // — without this an attacker holding a reset token could probe the
+  // token's crypto state response unboundedly.
+  const resetStateLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 10 });
+  function checkResetStateLimit(req) {
+    return resetStateLimiter(clientIp(req));
+  }
+
+  // /verify-email/request — auth-gated already, but we cap so a logged-in
+  // attacker (or just a frustrated user) can't spam Resend with verify
+  // emails. Emails cost real $ and burn quota.
+  const verifyEmailLimiter = makeLimiter({ windowMs: 60 * 60 * 1000, max: 5 });
+  function checkVerifyEmailLimit(req) {
+    return verifyEmailLimiter(clientIp(req));
+  }
+
   function shutdown() {
     clearInterval(sweepTimer);
     sessions.clear();
@@ -328,6 +405,8 @@ function createAuth({ Users, logger }) {
     invalidateUserSessions,
     checkForgotPasswordLimit,
     checkResetPasswordLimit,
+    checkResetStateLimit,
+    checkVerifyEmailLimit,
     clientIp, // exposed so other handlers (e.g. /api/analyze rate-limit) reuse the same loopback-XFF logic
     shutdown,
   };
