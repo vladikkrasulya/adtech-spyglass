@@ -760,6 +760,205 @@
   I18N.uk['preview.no_adm'] = 'У відповіді немає adm/nurl';
   I18N.ru['preview.no_adm'] = 'В ответе нет adm/nurl';
 
+  // ── Tier-2 i18n batch (2026-05-09 v0.15.0) ──
+  // 21 strings that were still hardcoded UK in spyglass.app.js after the
+  // original Tier-1 cut. Captured by `grep -nE "[А-Яа-яЇїІіЄєҐґ]" public/spyglass.app.js`
+  // — closes the i18n debt bucket from spyglass_i18n_debt memory.
+  const tier2 = {
+    'toast.internal_ui_error': {
+      en: 'Internal UI error: {error}',
+      uk: 'Внутрішня помилка інтерфейсу: {error}',
+      ru: 'Внутренняя ошибка интерфейса: {error}',
+    },
+    'toast.uncaught_error': {
+      en: 'Uncaught error: {error}',
+      uk: 'Невловлений збій: {error}',
+      ru: 'Необработанный сбой: {error}',
+    },
+    'toast.template_inserted_req': {
+      en: 'Template inserted into BidRequest',
+      uk: 'Шаблон вставлено у BidRequest',
+      ru: 'Шаблон вставлен в BidRequest',
+    },
+    'toast.template_inserted_res': {
+      en: 'Template inserted into BidResponse',
+      uk: 'Шаблон вставлено у BidResponse',
+      ru: 'Шаблон вставлен в BidResponse',
+    },
+    'toast.template_inserted': {
+      en: 'Template inserted',
+      uk: 'Шаблон вставлено',
+      ru: 'Шаблон вставлен',
+    },
+    'toast.partners_load_failed': {
+      en: 'Failed to load partners: {error}',
+      uk: 'Не вдалося завантажити список партнерів: {error}',
+      ru: 'Не удалось загрузить список партнёров: {error}',
+    },
+    'toast.samples_load_failed': {
+      en: 'Failed to load samples: {error}',
+      uk: 'Не вдалося завантажити запити: {error}',
+      ru: 'Не удалось загрузить запросы: {error}',
+    },
+    'toast.sample_load_failed': {
+      en: "Couldn't load example",
+      uk: 'Не вдалось завантажити приклад',
+      ru: 'Не удалось загрузить пример',
+    },
+    'error.generic': {
+      en: 'Error',
+      uk: 'Помилка',
+      ru: 'Ошибка',
+    },
+    'tooltip.peek_no_load': {
+      en: 'Peek without loading',
+      uk: 'Переглянути без завантаження',
+      ru: 'Посмотреть без загрузки',
+    },
+    'tooltip.history_delete': {
+      en: 'Remove from history',
+      uk: 'Видалити з історії',
+      ru: 'Удалить из истории',
+    },
+    'tooltip.partner_edit': {
+      en: 'Rename / change partner',
+      uk: 'Перейменувати / змінити партнера',
+      ru: 'Переименовать / изменить партнёра',
+    },
+    'tooltip.delete': {
+      en: 'Delete',
+      uk: 'Видалити',
+      ru: 'Удалить',
+    },
+    'fallback.history_entry': {
+      en: 'history',
+      uk: 'історія',
+      ru: 'история',
+    },
+    'fallback.local_request': {
+      en: 'local request',
+      uk: 'локальний запит',
+      ru: 'локальный запрос',
+    },
+    'fallback.partner_id': {
+      en: 'partner #{id}',
+      uk: 'партнер #{id}',
+      ru: 'партнёр #{id}',
+    },
+    'empty.no_imp_slots': {
+      en: 'Request has no imp[] — no slots found',
+      uk: 'У запиті немає imp[] — слоти не знайдено',
+      ru: 'В запросе нет imp[] — слоты не найдены',
+    },
+    'empty.no_iab_categories': {
+      en: 'No IAB categories in payload (cat[] / bcat[] / pcat[] empty)',
+      uk: 'Жодних IAB-категорій у payload (cat[] / bcat[] / pcat[] порожні)',
+      ru: 'Никаких IAB-категорий в payload (cat[] / bcat[] / pcat[] пустые)',
+    },
+    'crosscheck.summary': {
+      en: '{crit} critical · {warn} warnings · {ok} ok',
+      uk: '{crit} критичних · {warn} попереджень · {ok} ok',
+      ru: '{crit} критичных · {warn} предупреждений · {ok} ok',
+    },
+    'crosscheck.all_passed': {
+      en: 'All {count} crosschecks passed',
+      uk: 'Усі {count} звірок пройдено',
+      ru: 'Все {count} сверок пройдены',
+    },
+    'crosscheck.need_response': {
+      en: 'Crosscheck needs a BidResponse in the right pane',
+      uk: 'Для звірки потрібен ще BidResponse у правому полі',
+      ru: 'Для сверки нужен BidResponse в правом поле',
+    },
+  };
+  for (const key of Object.keys(tier2)) {
+    I18N.en[key] = tier2[key].en;
+    I18N.uk[key] = tier2[key].uk;
+    I18N.ru[key] = tier2[key].ru;
+  }
+
+  // ── Cabinet keys (2026-05-09 v0.17.0) — used by /account/*.html.
+  // Static text lives in the per-locale account.{en,uk,ru}.html files;
+  // dynamic strings (pills, empty states, status mix) live here.
+  // Tier-3 i18n batch (2026-05-09 v0.19.0) — added during the partner-CRUD
+  // audit fix bundle. New string was needed when delete-partner confirm
+  // got the sample-count parameter.
+  const tier3 = {
+    'confirm.delete_partner_with_count': {
+      en: 'Delete this partner? {count} sample(s) currently assigned to it will become "no partner" (they are NOT deleted).',
+      uk: 'Видалити цього партнера? {count} запит(ів) що зараз йому привʼязані стануть "без партнера" (записи НЕ видаляються).',
+      ru: 'Удалить этого партнёра? {count} запрос(ов), которые сейчас к нему привязаны, станут "без партнёра" (записи НЕ удаляются).',
+    },
+    'toast.partner_gone': {
+      en: 'The partner you picked was deleted in another tab. Picker refreshed — pick again.',
+      uk: 'Партнера, якого ти обрав(ла), видалили у іншій вкладці. Список оновлено — обери ще раз.',
+      ru: 'Партнёра, которого ты выбрал(а), удалили в другой вкладке. Список обновлён — выбери заново.',
+    },
+    // 2026-05-09 v0.23.0 — replaces the old generic 'toast.decrypt_failed'
+    // text in loadSample(). Adds an actionable hint instead of a raw
+    // crypto error name nobody understands.
+    'toast.decrypt_failed_with_hint': {
+      en: "Couldn't decrypt this sample. Most likely your session expired — sign out and back in to refresh.",
+      uk: 'Не вдалось розшифрувати цей запит. Найімовірніше сесія застаріла — вийди й увійди ще раз.',
+      ru: 'Не удалось расшифровать этот запрос. Скорее всего сессия истекла — выйди и войди заново.',
+    },
+  };
+  for (const key of Object.keys(tier3)) {
+    I18N.en[key] = tier3[key].en;
+    I18N.uk[key] = tier3[key].uk;
+    I18N.ru[key] = tier3[key].ru;
+  }
+
+  const cab = {
+    'cabinet.pill.verified': { en: 'verified ✓', uk: 'підтверджено ✓', ru: 'подтверждён ✓' },
+    'cabinet.pill.not_verified': {
+      en: 'not verified',
+      uk: 'не підтверджено',
+      ru: 'не подтверждён',
+    },
+    'cabinet.pill.enabled': { en: 'enabled', uk: 'увімкнено', ru: 'включено' },
+    'cabinet.pill.configured': { en: 'configured', uk: 'налаштовано', ru: 'настроен' },
+    'cabinet.pill.not_configured': {
+      en: 'not configured',
+      uk: 'не налаштовано',
+      ru: 'не настроен',
+    },
+    'cabinet.pill.encrypted': { en: 'encrypted', uk: 'зашифровано', ru: 'зашифровано' },
+    'cabinet.pill.plain': { en: 'plain', uk: 'plain', ru: 'plain' },
+    'cabinet.pill.items': { en: '{n} items', uk: '{n} записів', ru: '{n} записей' },
+    'cabinet.pill.empty': { en: 'empty', uk: 'порожньо', ru: 'пусто' },
+    'cabinet.recent.empty': {
+      en: 'No saved samples yet — go to Spyglass and save your first bid.',
+      uk: 'Збережених запитів ще немає — перейди у Spyglass і збережи перший bid.',
+      ru: 'Сохранённых запросов ещё нет — перейди в Spyglass и сохрани первый bid.',
+    },
+    'cabinet.recent.loading': { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
+    'cabinet.untitled': { en: '(untitled)', uk: '(без назви)', ru: '(без названия)' },
+    'cabinet.no_analyses': {
+      en: '— (no analyses yet)',
+      uk: '— (ще не було аналізів)',
+      ru: '— (ещё не было анализов)',
+    },
+    'cabinet.status.clean_pct': { en: 'clean {pct}%', uk: 'чисто {pct}%', ru: 'чисто {pct}%' },
+    'cabinet.status.warn_pct': { en: 'warn {pct}%', uk: 'warn {pct}%', ru: 'warn {pct}%' },
+    'cabinet.status.err_pct': { en: 'err {pct}%', uk: 'err {pct}%', ru: 'err {pct}%' },
+    'cabinet.heatmap.tooltip': {
+      en: '{date}: {n} analyses',
+      uk: '{date}: {n} аналізів',
+      ru: '{date}: {n} анализов',
+    },
+    'cabinet.heatmap.empty': {
+      en: 'No activity in the last 30 days yet — run an analysis to see your dots fill in.',
+      uk: 'За останні 30 днів ще нічого — запусти аналіз щоб побачити свої клітинки.',
+      ru: 'За последние 30 дней ещё ничего — запусти анализ чтобы увидеть свои клетки.',
+    },
+  };
+  for (const key of Object.keys(cab)) {
+    I18N.en[key] = cab[key].en;
+    I18N.uk[key] = cab[key].uk;
+    I18N.ru[key] = cab[key].ru;
+  }
+
   // Locale source of truth: <html lang="…"> (set server-side per /uk/ or
   // /en/ route by the inline IIFE in each HTML file). localStorage is only
   // read as a fallback for surfaces that haven't set the attribute yet.

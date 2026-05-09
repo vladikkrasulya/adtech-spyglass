@@ -240,6 +240,30 @@
       } catch (_) {
         /* ignore quota/disabled */
       }
+      // Persist locale choice across reloads + tabs + bare URLs:
+      //   1. Cookie kt-lang (server reads it for / → /uk/ redirects)
+      //   2. /api/auth/preferences when logged in (cross-device)
+      try {
+        const isHttps = location.protocol === 'https:';
+        document.cookie =
+          'kt-lang=' +
+          encodeURIComponent(newLang) +
+          '; Path=/; Max-Age=31536000; SameSite=Lax' +
+          (isHttps ? '; Secure' : '');
+      } catch (_) {
+        /* cookie disabled — anon browser stays on URL/localStorage */
+      }
+      // Best-effort POST. Auth-gated on the server (401 if anon) — we
+      // don't block the lang swap on the result. Network failure is
+      // also fine: cookie + localStorage already carried the choice.
+      fetch('/api/auth/preferences', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ locale: newLang }),
+      }).catch(() => {
+        /* non-fatal — anon or network blip */
+      });
 
       if (push) history.pushState({ lang: newLang }, '', targetUrl);
 
@@ -266,12 +290,52 @@
     }
   }
 
+  // Map current pathname into the equivalent path under another locale.
+  //   /                  + uk → /uk
+  //   /about             + uk → /uk/about
+  //   /uk/account        + ru → /ru/account
+  //   /uk/about          + en → /about
+  // Unknown deep paths fall back to the locale root (`/`, `/uk`, `/ru`)
+  // so we don't link to a 404.
+  const KNOWN_LANDINGS = ['/', '/about', '/account', '/stream'];
+  function localizePath(currentPath, targetLang) {
+    const cur = (currentPath || '/').replace(/\/$/, '') || '/';
+    let canonical = cur;
+    if (cur.startsWith('/uk')) canonical = cur.slice(3) || '/';
+    else if (cur.startsWith('/ru')) canonical = cur.slice(3) || '/';
+    if (!KNOWN_LANDINGS.includes(canonical)) {
+      // Deep path under a section we don't know about → just go to the
+      // locale root rather than guess at a translation.
+      return targetLang === 'en' ? '/' : '/' + targetLang;
+    }
+    if (targetLang === 'en') return canonical;
+    if (canonical === '/') return '/' + targetLang;
+    return '/' + targetLang + canonical;
+  }
+
+  // Rewrite each lang menu <a href> to point at the equivalent of the
+  // CURRENT page rather than the locale root. Pre-fix this was static
+  // `/uk/` `/ru/` `/` regardless of where you were — clicking UK from
+  // /about lost docs context. Now the menu links track location.
+  function refreshLangLinkHrefs() {
+    document.querySelectorAll('.kt-lang-menu-list a').forEach((a) => {
+      const lang = (a.getAttribute('lang') || '').toLowerCase();
+      if (!lang) return;
+      const target = localizePath(location.pathname, lang);
+      a.setAttribute('href', target);
+    });
+  }
+
   function bindLangLinks() {
+    refreshLangLinkHrefs();
     document.querySelectorAll('.kt-lang-menu-list a').forEach((a) => {
       if (a.dataset.langSwapBound) return;
       a.dataset.langSwapBound = '1';
       a.addEventListener('click', (e) => {
-        const href = a.getAttribute('href');
+        // Re-resolve at click-time too, in case pathname shifted via
+        // pushState since the last refresh.
+        const lang = (a.getAttribute('lang') || '').toLowerCase();
+        const href = lang ? localizePath(location.pathname, lang) : a.getAttribute('href');
         if (!href || /^https?:/i.test(href)) return;
         e.preventDefault();
         switchLang(href);

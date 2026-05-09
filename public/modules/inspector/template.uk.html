@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.8.8</span
+      >v0.24.0</span
     >
   </div>
   <div class="app-header-actions">
@@ -31,6 +31,67 @@
       <label for="simPrice">sim price</label>
       <input id="simPrice" type="text" placeholder="0.00" />
     </div>
+    <details class="kt-example-menu">
+      <summary
+        class="btn btn-ghost btn-sm"
+        title="Завантажити синтетичний приклад — клікни щоб розгорнути і обрати випадковий або конкретний шаблон атаки."
+      >
+        🎲 приклад ▾
+      </summary>
+      <div class="example-menu-list" role="menu">
+        <button data-action="load-demo" role="menuitem">🎲 випадковий</button>
+        <div class="menu-divider"></div>
+        <span class="menu-label">контроль</span>
+        <button data-action="load-demo" data-type="clean-banner" role="menuitem">
+          ✓ чистий банер (нуль findings)
+        </button>
+        <div class="menu-divider"></div>
+        <span class="menu-label">шаблони атак</span>
+        <button data-action="load-demo" data-type="frame-bust-form" role="menuitem">
+          🪞 frame-bust (форма)
+        </button>
+        <button data-action="load-demo" data-type="frame-bust-anchor" role="menuitem">
+          🪞 frame-bust (anchor)
+        </button>
+        <button data-action="load-demo" data-type="frozen-thread" role="menuitem">
+          🧊 заморожена вкладка
+        </button>
+        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">
+          🔥 heavy CPU
+        </button>
+        <button data-action="load-demo" data-type="trap-invisible-overlay" role="menuitem">
+          🪤 невидимий overlay
+        </button>
+        <button data-action="load-demo" data-type="auto-redirect" role="menuitem">
+          ↪️ авто-редирект
+        </button>
+        <div class="menu-divider"></div>
+        <span class="menu-label">VAST (відео)</span>
+        <button data-action="load-demo" data-type="vast-clean-inline" role="menuitem">
+          📺 чистий VAST 4.2 InLine
+        </button>
+        <button data-action="load-demo" data-type="vast-broken-inline" role="menuitem">
+          📺 зламаний VAST (3 ERROR)
+        </button>
+        <button data-action="load-demo" data-type="vast-insecure-wrapper" role="menuitem">
+          📺 VAST Wrapper з http://
+        </button>
+        <button data-action="load-demo" data-type="vast-vpaid-deprecated" role="menuitem">
+          📺 VAST VPAID (deprecated)
+        </button>
+        <div class="menu-divider"></div>
+        <span class="menu-label">oRTB 3.0</span>
+        <button data-action="load-demo" data-type="ortb30-clean" role="menuitem">
+          🆕 чистий 3.0 BidRequest
+        </button>
+        <button data-action="load-demo" data-type="ortb30-broken-envelope" role="menuitem">
+          🆕 зламаний 3.0 BidRequest
+        </button>
+        <button data-action="load-demo" data-type="ortb30-clean-response" role="menuitem">
+          🆕 чистий 3.0 BidResponse
+        </button>
+      </div>
+    </details>
     <a
       href="/uk/about"
       target="_blank"
@@ -84,6 +145,7 @@
             white-space: nowrap;
           "
         ></span>
+        <a href="/uk/account" class="btn btn-ghost btn-sm" title="Особистий кабінет — профіль, бібліотека, активність, налаштування">кабінет</a>
         <button class="btn btn-ghost btn-sm" data-action="signout">sign out</button>
       </span>
     </div>
@@ -441,7 +503,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.8.8</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v0.24.0</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Підтримувані специфікації"

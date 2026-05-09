@@ -70,6 +70,20 @@
   font-family: var(--font-mono, 'JetBrains Mono', monospace);
   font-size: 11px;
 }
+#app-root .surface-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+#app-root .surface-link:hover {
+  color: var(--accent);
+  border-color: var(--accent-soft);
+  background: var(--accent-soft);
+}
 #app-root .counter {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;

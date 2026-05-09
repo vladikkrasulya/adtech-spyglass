@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v9.8.8</span
+      >v0.24.0</span
     >
   </div>
   <div class="app-header-actions">
@@ -31,6 +31,67 @@
       <label for="simPrice">sim price</label>
       <input id="simPrice" type="text" placeholder="0.00" />
     </div>
+    <details class="kt-example-menu">
+      <summary
+        class="btn btn-ghost btn-sm"
+        title="Load a synthetic example — click to expand and pick random or a specific attack pattern."
+      >
+        🎲 example ▾
+      </summary>
+      <div class="example-menu-list" role="menu">
+        <button data-action="load-demo" role="menuitem">🎲 random</button>
+        <div class="menu-divider"></div>
+        <span class="menu-label">control</span>
+        <button data-action="load-demo" data-type="clean-banner" role="menuitem">
+          ✓ clean banner (no findings)
+        </button>
+        <div class="menu-divider"></div>
+        <span class="menu-label">attack patterns</span>
+        <button data-action="load-demo" data-type="frame-bust-form" role="menuitem">
+          🪞 frame-bust (form)
+        </button>
+        <button data-action="load-demo" data-type="frame-bust-anchor" role="menuitem">
+          🪞 frame-bust (anchor)
+        </button>
+        <button data-action="load-demo" data-type="frozen-thread" role="menuitem">
+          🧊 frozen thread
+        </button>
+        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">
+          🔥 heavy CPU
+        </button>
+        <button data-action="load-demo" data-type="trap-invisible-overlay" role="menuitem">
+          🪤 invisible overlay
+        </button>
+        <button data-action="load-demo" data-type="auto-redirect" role="menuitem">
+          ↪️ auto-redirect
+        </button>
+        <div class="menu-divider"></div>
+        <span class="menu-label">VAST (video)</span>
+        <button data-action="load-demo" data-type="vast-clean-inline" role="menuitem">
+          📺 clean VAST 4.2 InLine
+        </button>
+        <button data-action="load-demo" data-type="vast-broken-inline" role="menuitem">
+          📺 broken VAST (3 ERRORs)
+        </button>
+        <button data-action="load-demo" data-type="vast-insecure-wrapper" role="menuitem">
+          📺 VAST Wrapper with http://
+        </button>
+        <button data-action="load-demo" data-type="vast-vpaid-deprecated" role="menuitem">
+          📺 VAST VPAID (deprecated)
+        </button>
+        <div class="menu-divider"></div>
+        <span class="menu-label">oRTB 3.0</span>
+        <button data-action="load-demo" data-type="ortb30-clean" role="menuitem">
+          🆕 clean 3.0 BidRequest
+        </button>
+        <button data-action="load-demo" data-type="ortb30-broken-envelope" role="menuitem">
+          🆕 broken 3.0 BidRequest
+        </button>
+        <button data-action="load-demo" data-type="ortb30-clean-response" role="menuitem">
+          🆕 clean 3.0 BidResponse
+        </button>
+      </div>
+    </details>
     <a
       href="/about"
       target="_blank"
@@ -82,6 +143,7 @@
             white-space: nowrap;
           "
         ></span>
+        <a href="/account" class="btn btn-ghost btn-sm" title="Personal cabinet — profile, library, activity, preferences">account</a>
         <button class="btn btn-ghost btn-sm" data-action="signout">sign out</button>
       </span>
     </div>
@@ -418,7 +480,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v9.8.8</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v0.24.0</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Supported specs"

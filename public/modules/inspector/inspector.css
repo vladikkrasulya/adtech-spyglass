@@ -275,6 +275,65 @@ body {
   font-weight: 600;
 }
 
+/* Example dropdown — first-time-visitor onboarding. Same details/summary
+   pattern as kt-lang-menu but styled to blend with btn-ghost-sm so it
+   sits inline with the toolbar. Each menu item is a button with
+   data-action="load-demo" + optional data-type. */
+.kt-example-menu {
+  position: relative;
+  display: inline-flex;
+}
+.kt-example-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.kt-example-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.kt-example-menu .example-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 240px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  padding: 4px 0;
+  z-index: 100;
+}
+.kt-example-menu .example-menu-list button {
+  display: block;
+  width: 100%;
+  padding: 8px var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kt-example-menu .example-menu-list button:hover {
+  background: var(--bg-2);
+}
+.kt-example-menu .example-menu-list .menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+.kt-example-menu .example-menu-list .menu-label {
+  display: block;
+  padding: 6px var(--space-4) 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
 .auth-widget {
   display: flex;
   align-items: center;
