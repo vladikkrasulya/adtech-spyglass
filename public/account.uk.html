@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Spyglass — акаунт · персональний кабінет</title>
+    <meta
+      name="description"
+      content="Твій акаунт Spyglass: профіль, статистика бібліотеки, шифрування, аналітика користування. Zero-knowledge — твої дані зашифровані твоїм паролем, оператор не може їх прочитати."
+    />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="canonical" href="https://spyglass.kyivtech.com.ua/uk/account" />
+    <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/account" />
+    <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/account" />
+    <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/account" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    />
+    <link rel="stylesheet" href="/design-system.css?v=10" />
+    <script>
+      (function () {
+        try {
+          var K = 'kt-theme';
+          var mq = matchMedia('(prefers-color-scheme: dark)');
+          function get() {
+            try { return localStorage.getItem(K); } catch (e) { return null; }
+          }
+          function eff() {
+            var s = get();
+            return s === 'light' || s === 'dark' ? s : mq.matches ? 'dark' : 'light';
+          }
+          function apply() { document.documentElement.setAttribute('data-theme', eff()); }
+          apply();
+          if (mq.addEventListener) mq.addEventListener('change', apply);
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      (function () {
+        try {
+          document.documentElement.setAttribute('data-lang', 'uk');
+          localStorage.setItem('kt-lang', 'uk');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: var(--fs-base); line-height: 1.6; margin: 0; min-height: 100vh; }
+      .cab-container { max-width: 880px; margin: 0 auto; padding: var(--space-7) var(--space-5) var(--space-9); }
+      .cab-card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-5); margin-bottom: var(--space-5); }
+      .cab-card h2 { margin: 0 0 var(--space-3); font-size: var(--fs-xl); font-weight: 600; }
+      .cab-card .lead { margin: 0 0 var(--space-3); color: var(--text-muted); }
+      .cab-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px dashed var(--border); }
+      .cab-row:last-child { border-bottom: none; }
+      .cab-row .label { color: var(--text-muted); font-size: var(--fs-sm); }
+      .cab-row .value { font-family: var(--font-mono); font-size: var(--fs-sm); display: flex; gap: var(--space-2); align-items: center; }
+      .cab-pill { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-mono); }
+      .cab-pill.ok { background: var(--success-bg); color: var(--success); }
+      .cab-pill.warn { background: var(--warning-bg); color: var(--warning); }
+      .cab-pill.muted { background: var(--bg-elev-2); color: var(--text-muted); }
+      .cab-pill.danger { background: var(--danger-bg); color: var(--danger); }
+      .cab-list { list-style: none; padding: 0; margin: 0; }
+      .cab-list li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px dashed var(--border); }
+      .cab-list li:last-child { border-bottom: none; }
+      .cab-empty { color: var(--text-muted); font-style: italic; padding: var(--space-3) 0; }
+      .cab-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-4); }
+      .cab-danger { border-color: var(--danger); }
+      .cab-danger h2 { color: var(--danger); }
+      .cab-gate { text-align: center; padding: var(--space-9) var(--space-5); }
+      .cab-gate h1 { margin: 0 0 var(--space-3); }
+      .cab-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); margin-top: var(--space-3); }
+      .cab-stat { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-3); text-align: center; }
+      .cab-stat .num { font-size: var(--fs-2xl); font-weight: 700; font-family: var(--font-mono); }
+      .cab-stat .lbl { font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+      .cab-bar { display: flex; height: 6px; border-radius: var(--radius-pill); overflow: hidden; background: var(--bg-elev-2); margin-top: var(--space-1); }
+      .cab-bar > span { display: block; }
+      .cab-bar .seg-clean { background: var(--success); }
+      .cab-bar .seg-warn { background: var(--warning); }
+      .cab-bar .seg-err { background: var(--danger); }
+      .cab-bar .seg-other { background: var(--border-strong); }
+      .cab-radio-group { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+      .cab-radio { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: var(--fs-sm); background: var(--bg); transition: all 0.15s; user-select: none; }
+      .cab-radio:hover { border-color: var(--border-strong); }
+      .cab-radio.active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+      .heatmap { display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; }
+      .heatmap .cell { aspect-ratio: 1; background: var(--bg-elev-2); border-radius: 2px; min-width: 12px; }
+      .heatmap .cell.l1 { background: color-mix(in srgb, var(--accent) 20%, var(--bg-elev-2)); }
+      .heatmap .cell.l2 { background: color-mix(in srgb, var(--accent) 50%, var(--bg-elev-2)); }
+      .heatmap .cell.l3 { background: color-mix(in srgb, var(--accent) 80%, var(--bg-elev-2)); }
+      .heatmap .cell.l4 { background: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <header class="kt-topnav">
+      <div class="kt-container kt-topnav-inner">
+        <a href="/uk" class="kt-brand">
+          <span class="kt-brand-spark">K</span>
+          <span>spyglass · акаунт</span>
+          <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
+            >v0.24.0</span
+          >
+        </a>
+        <details class="kt-lang-menu">
+          <summary class="kt-lang-toggle" title="мова: українська">
+            <span class="kt-lang-current">UK</span><span class="kt-lang-caret">▾</span>
+          </summary>
+          <div class="kt-lang-menu-list" role="menu">
+            <a href="/account" role="menuitem" lang="en">EN · English</a>
+            <a href="/uk/account" role="menuitem" lang="uk" aria-current="true">UK · Українська</a>
+            <a href="/ru/account" role="menuitem" lang="ru">RU · Русский</a>
+          </div>
+        </details>
+        <button class="kt-theme-toggle" type="button" aria-label="Перемкнути тему">◐</button>
+        <a href="/uk" class="btn btn-ghost btn-sm">← Spyglass</a>
+      </div>
+    </header>
+
+    <main class="cab-container">
+      <div id="cabGate" class="cab-gate" style="display: none">
+        <h1>Увійди щоб переглянути акаунт</h1>
+        <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto var(--space-5)">
+          Персональний кабінет показує збережені запити, партнерів, стан шифрування,
+          аналітику та налаштування. Увійди або створи акаунт щоб продовжити.
+        </p>
+        <div class="cab-actions" style="justify-content: center">
+          <a href="/uk" class="btn btn-primary">← Перейти до Spyglass і увійти</a>
+        </div>
+      </div>
+
+      <div id="cabBody" style="display: none">
+        <section class="cab-card">
+          <h2>Профіль</h2>
+          <div class="cab-row">
+            <span class="label">Email</span>
+            <span class="value" id="profEmail">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Email підтверджено</span>
+            <span class="value" id="profVerified">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">З нами з</span>
+            <span class="value" id="profSince">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Шифрування</span>
+            <span class="value" id="profCrypto">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Recovery key</span>
+            <span class="value" id="profRecovery">—</span>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Бібліотека</h2>
+          <p class="lead">
+            Твої zero-knowledge зашифровані bid samples + партнери. Оператор (сервер) не може їх
+            прочитати — лише твій пароль (або recovery key) розблоковує.
+          </p>
+          <div class="cab-stats">
+            <div class="cab-stat">
+              <div class="num" id="statSamples">—</div>
+              <div class="lbl">Збережені запити</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="statPartners">—</div>
+              <div class="lbl">Партнери</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="statEncrypted">—</div>
+              <div class="lbl">Зашифровані</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="statAssigned">—</div>
+              <div class="lbl">Привʼязані до партнера</div>
+            </div>
+          </div>
+          <div class="cab-actions">
+            <a href="/uk" class="btn btn-secondary btn-sm">← Відкрити бібліотеку у Spyglass</a>
+            <a href="/uk?open=partners" class="btn btn-ghost btn-sm">Керувати партнерами</a>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Активність</h2>
+          <p class="lead">
+            Записується коли запускаєш «Аналізувати». Зберігаються лише метадані — ніколи тіла
+            запитів. Деталі у секції
+            <a href="#privacy" data-action="scroll-to-privacy">приватності</a> нижче.
+          </p>
+          <div class="cab-stats">
+            <div class="cab-stat">
+              <div class="num" id="usageTotal">—</div>
+              <div class="lbl">Всього аналізів</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="usageLast7">—</div>
+              <div class="lbl">Останні 7 днів</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="usageLast30">—</div>
+              <div class="lbl">Останні 30 днів</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="usageFindings">—</div>
+              <div class="lbl">Знайдено findings</div>
+            </div>
+          </div>
+          <div class="cab-row">
+            <span class="label">Перший аналіз</span>
+            <span class="value" id="usageFirst">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Останній аналіз</span>
+            <span class="value" id="usageLast">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Розподіл статусів</span>
+            <span class="value" id="usageStatusMix">—</span>
+          </div>
+          <div class="cab-bar" id="usageStatusBar" style="display: none">
+            <span class="seg-clean" id="barClean"></span>
+            <span class="seg-warn" id="barWarn"></span>
+            <span class="seg-err" id="barErr"></span>
+            <span class="seg-other" id="barOther"></span>
+          </div>
+          <div class="cab-row">
+            <span class="label">oRTB версії</span>
+            <span class="value" id="usageVersions">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Формати</span>
+            <span class="value" id="usageFormats">—</span>
+          </div>
+          <div class="cab-row" style="display: block">
+            <span class="label">Активність по днях (останні 30)</span>
+            <div id="usageHeatmap" class="heatmap" style="margin-top: var(--space-2)">—</div>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Інсайти бібліотеки</h2>
+          <p class="lead">
+            Метадані збережених samples — те що видно без розшифровки (статус, partner-id, дати).
+            Інсайти по контенту (топ finding ids тощо) живуть у основному застосунку де
+            бібліотека розблокована.
+          </p>
+          <div class="cab-row">
+            <span class="label">Розподіл статусів збережених</span>
+            <span class="value" id="insightStatusValue">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Топ партнери</span>
+            <span class="value" id="insightTopPartners">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Перший збережений</span>
+            <span class="value" id="insightFirst">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Останній збережений</span>
+            <span class="value" id="insightLast">—</span>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Останні запити</h2>
+          <ul id="recentList" class="cab-list">
+            <li class="cab-empty" id="recentEmpty">Завантаження…</li>
+          </ul>
+        </section>
+
+        <section class="cab-card">
+          <h2>Налаштування</h2>
+          <p class="lead">
+            Лише в браузері — залишаються на цьому пристрої. Сервер не зберігає налаштування
+            (без cross-device синхронізації).
+          </p>
+          <div class="cab-row">
+            <span class="label">Тема</span>
+            <span class="value">
+              <div class="cab-radio-group" id="prefTheme">
+                <span class="cab-radio" data-theme="auto">авто</span>
+                <span class="cab-radio" data-theme="light">світла</span>
+                <span class="cab-radio" data-theme="dark">темна</span>
+              </div>
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Локаль findings за замовчуванням</span>
+            <span class="value">
+              <div class="cab-radio-group" id="prefLocale">
+                <span class="cab-radio" data-locale="en">EN</span>
+                <span class="cab-radio" data-locale="uk">UK</span>
+                <span class="cab-radio" data-locale="ru">RU</span>
+              </div>
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Діалект за замовчуванням</span>
+            <span class="value">
+              <div class="cab-radio-group" id="prefDialect">
+                <span class="cab-radio" data-dialect="iab">IAB strict</span>
+                <span class="cab-radio" data-dialect="kadam">Kadam</span>
+              </div>
+            </span>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Шифрування і відновлення</h2>
+          <p class="lead">
+            Бібліотека зашифрована ключем що деривується з твого пароля. Recovery key (32-символьний
+            hex) показували один раз при реєстрації — тримай його у password manager. Якщо втратиш
+            обидва — бібліотеку можна лише стерти, не відновити.
+          </p>
+          <div class="cab-row">
+            <span class="label">Змінити пароль</span>
+            <span class="value">
+              <button class="btn btn-ghost btn-sm" data-action="forgot-password">
+                Скинути через email
+              </button>
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Забув recovery key?</span>
+            <span class="value">
+              <a href="/uk" class="btn btn-ghost btn-sm">Вийти і скинути</a>
+            </span>
+          </div>
+        </section>
+
+        <section class="cab-card" id="privacy">
+          <h2>Що відстежується, а що ні</h2>
+          <p class="lead">
+            Spyglass — zero-knowledge для payload'ів. Статистика «Активність» у кабінеті береться з
+            маленького per-user логу що зберігає ЛИШЕ метадані нижче. Тіла bid request і bid
+            response НІКОЛИ не зберігаються до цього логу — вони лише проходять через валідатор,
+            findings виходять, тіла відкидаються.
+          </p>
+          <div class="cab-row">
+            <span class="label">Зберігається</span>
+            <span class="value" style="text-align: right; max-width: 60%">
+              timestamp · oRTB версія · статус (clean/warnings/errors) · формат
+              (banner/video/native/...) · кількість findings (errors / warnings / total)
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Не зберігається</span>
+            <span class="value" style="text-align: right; max-width: 60%">
+              тіла payload · ID окремих findings · IP · user-agent · ідентифікатор партнера ·
+              timestamps з точністю меншою за день у агрегатах
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Анонімні дзвінки</span>
+            <span class="value">не логуються</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Видалення акаунту</span>
+            <span class="value">лог видаляється каскадно (foreign key)</span>
+          </div>
+        </section>
+
+        <section class="cab-card cab-danger">
+          <h2>Дії з акаунтом</h2>
+          <p class="lead">
+            Sign out очищує session cookie і блокує бібліотеку. Щоб повністю видалити акаунт,
+            пиши на <a href="mailto:hi@kyivtech.com.ua">hi@kyivtech.com.ua</a> — автоматичне
+            видалення свідомо не виставлено наразі (рідкісне, незворотнє, легко випадково
+            клікнути).
+          </p>
+          <div class="cab-actions">
+            <button class="btn btn-secondary btn-sm" data-action="signout">Вийти</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="/lang-switch.js?v=1"></script>
+    <script src="/version.js?v=1"></script>
+    <script src="/i18n.js?v=1"></script>
+    <script src="/account.js?v=2"></script>
+  </body>
+</html>

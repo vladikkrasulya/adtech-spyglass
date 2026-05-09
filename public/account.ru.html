@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Spyglass — аккаунт · персональный кабинет</title>
+    <meta
+      name="description"
+      content="Твой аккаунт Spyglass: профиль, статистика библиотеки, шифрование, аналитика использования. Zero-knowledge — твои данные зашифрованы твоим паролем, оператор не может их прочитать."
+    />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="canonical" href="https://spyglass.kyivtech.com.ua/ru/account" />
+    <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/account" />
+    <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/account" />
+    <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/account" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    />
+    <link rel="stylesheet" href="/design-system.css?v=10" />
+    <script>
+      (function () {
+        try {
+          var K = 'kt-theme';
+          var mq = matchMedia('(prefers-color-scheme: dark)');
+          function get() {
+            try { return localStorage.getItem(K); } catch (e) { return null; }
+          }
+          function eff() {
+            var s = get();
+            return s === 'light' || s === 'dark' ? s : mq.matches ? 'dark' : 'light';
+          }
+          function apply() { document.documentElement.setAttribute('data-theme', eff()); }
+          apply();
+          if (mq.addEventListener) mq.addEventListener('change', apply);
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      (function () {
+        try {
+          document.documentElement.setAttribute('data-lang', 'ru');
+          localStorage.setItem('kt-lang', 'ru');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: var(--fs-base); line-height: 1.6; margin: 0; min-height: 100vh; }
+      .cab-container { max-width: 880px; margin: 0 auto; padding: var(--space-7) var(--space-5) var(--space-9); }
+      .cab-card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-5); margin-bottom: var(--space-5); }
+      .cab-card h2 { margin: 0 0 var(--space-3); font-size: var(--fs-xl); font-weight: 600; }
+      .cab-card .lead { margin: 0 0 var(--space-3); color: var(--text-muted); }
+      .cab-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px dashed var(--border); }
+      .cab-row:last-child { border-bottom: none; }
+      .cab-row .label { color: var(--text-muted); font-size: var(--fs-sm); }
+      .cab-row .value { font-family: var(--font-mono); font-size: var(--fs-sm); display: flex; gap: var(--space-2); align-items: center; }
+      .cab-pill { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--font-mono); }
+      .cab-pill.ok { background: var(--success-bg); color: var(--success); }
+      .cab-pill.warn { background: var(--warning-bg); color: var(--warning); }
+      .cab-pill.muted { background: var(--bg-elev-2); color: var(--text-muted); }
+      .cab-pill.danger { background: var(--danger-bg); color: var(--danger); }
+      .cab-list { list-style: none; padding: 0; margin: 0; }
+      .cab-list li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px dashed var(--border); }
+      .cab-list li:last-child { border-bottom: none; }
+      .cab-empty { color: var(--text-muted); font-style: italic; padding: var(--space-3) 0; }
+      .cab-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-4); }
+      .cab-danger { border-color: var(--danger); }
+      .cab-danger h2 { color: var(--danger); }
+      .cab-gate { text-align: center; padding: var(--space-9) var(--space-5); }
+      .cab-gate h1 { margin: 0 0 var(--space-3); }
+      .cab-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); margin-top: var(--space-3); }
+      .cab-stat { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-3); text-align: center; }
+      .cab-stat .num { font-size: var(--fs-2xl); font-weight: 700; font-family: var(--font-mono); }
+      .cab-stat .lbl { font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+      .cab-bar { display: flex; height: 6px; border-radius: var(--radius-pill); overflow: hidden; background: var(--bg-elev-2); margin-top: var(--space-1); }
+      .cab-bar > span { display: block; }
+      .cab-bar .seg-clean { background: var(--success); }
+      .cab-bar .seg-warn { background: var(--warning); }
+      .cab-bar .seg-err { background: var(--danger); }
+      .cab-bar .seg-other { background: var(--border-strong); }
+      .cab-radio-group { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+      .cab-radio { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: var(--fs-sm); background: var(--bg); transition: all 0.15s; user-select: none; }
+      .cab-radio:hover { border-color: var(--border-strong); }
+      .cab-radio.active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+      .heatmap { display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; }
+      .heatmap .cell { aspect-ratio: 1; background: var(--bg-elev-2); border-radius: 2px; min-width: 12px; }
+      .heatmap .cell.l1 { background: color-mix(in srgb, var(--accent) 20%, var(--bg-elev-2)); }
+      .heatmap .cell.l2 { background: color-mix(in srgb, var(--accent) 50%, var(--bg-elev-2)); }
+      .heatmap .cell.l3 { background: color-mix(in srgb, var(--accent) 80%, var(--bg-elev-2)); }
+      .heatmap .cell.l4 { background: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <header class="kt-topnav">
+      <div class="kt-container kt-topnav-inner">
+        <a href="/ru" class="kt-brand">
+          <span class="kt-brand-spark">K</span>
+          <span>spyglass · аккаунт</span>
+          <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
+            >v0.24.0</span
+          >
+        </a>
+        <details class="kt-lang-menu">
+          <summary class="kt-lang-toggle" title="язык: Русский">
+            <span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span>
+          </summary>
+          <div class="kt-lang-menu-list" role="menu">
+            <a href="/account" role="menuitem" lang="en">EN · English</a>
+            <a href="/uk/account" role="menuitem" lang="uk">UK · Українська</a>
+            <a href="/ru/account" role="menuitem" lang="ru" aria-current="true">RU · Русский</a>
+          </div>
+        </details>
+        <button class="kt-theme-toggle" type="button" aria-label="Переключить тему">◐</button>
+        <a href="/ru" class="btn btn-ghost btn-sm">← Spyglass</a>
+      </div>
+    </header>
+
+    <main class="cab-container">
+      <div id="cabGate" class="cab-gate" style="display: none">
+        <h1>Войди чтобы посмотреть аккаунт</h1>
+        <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto var(--space-5)">
+          Персональный кабинет показывает сохранённые запросы, партнёров, состояние шифрования,
+          аналитику и настройки. Войди или создай аккаунт чтобы продолжить.
+        </p>
+        <div class="cab-actions" style="justify-content: center">
+          <a href="/ru" class="btn btn-primary">← Перейти в Spyglass и войти</a>
+        </div>
+      </div>
+
+      <div id="cabBody" style="display: none">
+        <section class="cab-card">
+          <h2>Профиль</h2>
+          <div class="cab-row">
+            <span class="label">Email</span>
+            <span class="value" id="profEmail">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Email подтверждён</span>
+            <span class="value" id="profVerified">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">С нами с</span>
+            <span class="value" id="profSince">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Шифрование</span>
+            <span class="value" id="profCrypto">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Recovery key</span>
+            <span class="value" id="profRecovery">—</span>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Библиотека</h2>
+          <p class="lead">
+            Твои zero-knowledge зашифрованные bid samples + партнёры. Оператор (сервер) не может
+            их прочитать — только твой пароль (или recovery key) разблокирует.
+          </p>
+          <div class="cab-stats">
+            <div class="cab-stat">
+              <div class="num" id="statSamples">—</div>
+              <div class="lbl">Сохранённые запросы</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="statPartners">—</div>
+              <div class="lbl">Партнёры</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="statEncrypted">—</div>
+              <div class="lbl">Зашифрованные</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="statAssigned">—</div>
+              <div class="lbl">Привязаны к партнёру</div>
+            </div>
+          </div>
+          <div class="cab-actions">
+            <a href="/ru" class="btn btn-secondary btn-sm">← Открыть библиотеку в Spyglass</a>
+            <a href="/ru?open=partners" class="btn btn-ghost btn-sm">Управлять партнёрами</a>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Активность</h2>
+          <p class="lead">
+            Записывается когда запускаешь «Анализировать». Сохраняются только метаданные — никогда
+            тела запросов. Детали в секции
+            <a href="#privacy" data-action="scroll-to-privacy">приватности</a> ниже.
+          </p>
+          <div class="cab-stats">
+            <div class="cab-stat">
+              <div class="num" id="usageTotal">—</div>
+              <div class="lbl">Всего анализов</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="usageLast7">—</div>
+              <div class="lbl">Последние 7 дней</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="usageLast30">—</div>
+              <div class="lbl">Последние 30 дней</div>
+            </div>
+            <div class="cab-stat">
+              <div class="num" id="usageFindings">—</div>
+              <div class="lbl">Найдено findings</div>
+            </div>
+          </div>
+          <div class="cab-row">
+            <span class="label">Первый анализ</span>
+            <span class="value" id="usageFirst">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Последний анализ</span>
+            <span class="value" id="usageLast">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Распределение статусов</span>
+            <span class="value" id="usageStatusMix">—</span>
+          </div>
+          <div class="cab-bar" id="usageStatusBar" style="display: none">
+            <span class="seg-clean" id="barClean"></span>
+            <span class="seg-warn" id="barWarn"></span>
+            <span class="seg-err" id="barErr"></span>
+            <span class="seg-other" id="barOther"></span>
+          </div>
+          <div class="cab-row">
+            <span class="label">oRTB версии</span>
+            <span class="value" id="usageVersions">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Форматы</span>
+            <span class="value" id="usageFormats">—</span>
+          </div>
+          <div class="cab-row" style="display: block">
+            <span class="label">Активность по дням (последние 30)</span>
+            <div id="usageHeatmap" class="heatmap" style="margin-top: var(--space-2)">—</div>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Инсайты библиотеки</h2>
+          <p class="lead">
+            Метаданные сохранённых samples — то что видно без расшифровки (статус, partner-id,
+            даты). Инсайты по контенту (топ finding ids и т.д.) живут в основном приложении где
+            библиотека разблокирована.
+          </p>
+          <div class="cab-row">
+            <span class="label">Распределение статусов сохранённых</span>
+            <span class="value" id="insightStatusValue">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Топ партнёры</span>
+            <span class="value" id="insightTopPartners">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Первый сохранённый</span>
+            <span class="value" id="insightFirst">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Последний сохранённый</span>
+            <span class="value" id="insightLast">—</span>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Последние запросы</h2>
+          <ul id="recentList" class="cab-list">
+            <li class="cab-empty" id="recentEmpty">Загрузка…</li>
+          </ul>
+        </section>
+
+        <section class="cab-card">
+          <h2>Настройки</h2>
+          <p class="lead">
+            Только в браузере — остаются на этом устройстве. Сервер не сохраняет настройки
+            (без cross-device синхронизации).
+          </p>
+          <div class="cab-row">
+            <span class="label">Тема</span>
+            <span class="value">
+              <div class="cab-radio-group" id="prefTheme">
+                <span class="cab-radio" data-theme="auto">авто</span>
+                <span class="cab-radio" data-theme="light">светлая</span>
+                <span class="cab-radio" data-theme="dark">тёмная</span>
+              </div>
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Локаль findings по умолчанию</span>
+            <span class="value">
+              <div class="cab-radio-group" id="prefLocale">
+                <span class="cab-radio" data-locale="en">EN</span>
+                <span class="cab-radio" data-locale="uk">UK</span>
+                <span class="cab-radio" data-locale="ru">RU</span>
+              </div>
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Диалект по умолчанию</span>
+            <span class="value">
+              <div class="cab-radio-group" id="prefDialect">
+                <span class="cab-radio" data-dialect="iab">IAB strict</span>
+                <span class="cab-radio" data-dialect="kadam">Kadam</span>
+              </div>
+            </span>
+          </div>
+        </section>
+
+        <section class="cab-card">
+          <h2>Шифрование и восстановление</h2>
+          <p class="lead">
+            Библиотека зашифрована ключом, деривируемым из твоего пароля. Recovery key
+            (32-символьный hex) показывали один раз при регистрации — храни его в password
+            manager. Если потеряешь оба — библиотеку можно только стереть, не восстановить.
+          </p>
+          <div class="cab-row">
+            <span class="label">Сменить пароль</span>
+            <span class="value">
+              <button class="btn btn-ghost btn-sm" data-action="forgot-password">
+                Сбросить через email
+              </button>
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Забыл recovery key?</span>
+            <span class="value">
+              <a href="/ru" class="btn btn-ghost btn-sm">Выйти и сбросить</a>
+            </span>
+          </div>
+        </section>
+
+        <section class="cab-card" id="privacy">
+          <h2>Что отслеживается, а что нет</h2>
+          <p class="lead">
+            Spyglass — zero-knowledge для payload'ов. Статистика «Активность» в кабинете берётся
+            из маленького per-user лога, который сохраняет ТОЛЬКО метаданные ниже. Тела bid request
+            и bid response НИКОГДА не сохраняются в этот лог — они только проходят через
+            валидатор, findings выходят, тела отбрасываются.
+          </p>
+          <div class="cab-row">
+            <span class="label">Сохраняется</span>
+            <span class="value" style="text-align: right; max-width: 60%">
+              timestamp · oRTB версия · статус (clean/warnings/errors) · формат
+              (banner/video/native/...) · количество findings (errors / warnings / total)
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Не сохраняется</span>
+            <span class="value" style="text-align: right; max-width: 60%">
+              тела payload · ID отдельных findings · IP · user-agent · идентификатор партнёра ·
+              timestamps с точностью меньше дня в агрегатах
+            </span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Анонимные вызовы</span>
+            <span class="value">не логируются</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Удаление аккаунта</span>
+            <span class="value">лог удаляется каскадно (foreign key)</span>
+          </div>
+        </section>
+
+        <section class="cab-card cab-danger">
+          <h2>Действия с аккаунтом</h2>
+          <p class="lead">
+            Sign out очищает session cookie и блокирует библиотеку. Чтобы полностью удалить
+            аккаунт, пиши на <a href="mailto:hi@kyivtech.com.ua">hi@kyivtech.com.ua</a> —
+            автоматическое удаление сознательно не выставлено пока (редкое, необратимое, легко
+            случайно кликнуть).
+          </p>
+          <div class="cab-actions">
+            <button class="btn btn-secondary btn-sm" data-action="signout">Выйти</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="/lang-switch.js?v=1"></script>
+    <script src="/version.js?v=1"></script>
+    <script src="/i18n.js?v=1"></script>
+    <script src="/account.js?v=2"></script>
+  </body>
+</html>

@@ -1,0 +1,459 @@
+/* ============================================================
+   account.js — personal cabinet controller.
+
+   Lightweight: no app-level deps (lang-switch, version, i18n
+   load before this script). Purpose: fetch /api/auth/me, gate
+   anon vs authed; if authed, populate profile + samples count
+   + partners count + recent samples list.
+
+   Encrypted samples remain encrypted on this page — the cabinet
+   does NOT decrypt them. Decryption happens in the main app
+   (which has the unlock modal + DEK in memory). The cabinet is
+   a metadata view: it tells the user what's there, not the
+   contents.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const T = (k, p) => (typeof window.t === 'function' ? window.t(k, p) : k);
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function pill(kind, label) {
+    return '<span class="cab-pill ' + kind + '">' + escapeHtml(label) + '</span>';
+  }
+
+  function fmtDate(s) {
+    if (s == null || s === '') return '—';
+    try {
+      // Accept either ISO string or unix-ms number (the analyze_log returns ms).
+      const d = typeof s === 'number' ? new Date(s) : new Date(s);
+      if (isNaN(d.getTime())) return '—';
+      return d.toISOString().slice(0, 10);
+    } catch (_e) {
+      return '—';
+    }
+  }
+
+  // "{key}={n}" pairs joined into a compact one-line summary, sorted by n DESC.
+  // Used for byVersion / byFormat / byStatus aggregates.
+  function distLine(obj, opts) {
+    const o = opts || {};
+    const entries = Object.entries(obj || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, o.max || 6);
+    if (!entries.length) return '—';
+    return entries.map(([k, n]) => escapeHtml(k) + '·' + n).join(' / ');
+  }
+
+  async function api(path, opts) {
+    const r = await fetch(path, opts || {});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  async function loadMe() {
+    try {
+      const r = await api('/api/auth/me');
+      return r.user ? { user: r.user, encryption: r.encryption } : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  async function loadSamples() {
+    try {
+      const r = await api('/api/samples');
+      return Array.isArray(r) ? r : r.samples || [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  async function loadPartners() {
+    try {
+      const r = await api('/api/partners');
+      return Array.isArray(r) ? r : r.partners || [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  async function loadInsights() {
+    try {
+      const r = await api('/api/account/insights');
+      return r && r.insights ? r.insights : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function showGate() {
+    $('cabGate').style.display = '';
+    $('cabBody').style.display = 'none';
+  }
+
+  function showBody() {
+    $('cabGate').style.display = 'none';
+    $('cabBody').style.display = '';
+  }
+
+  function setProfile(me) {
+    const u = me.user;
+    $('profEmail').textContent = u.email || '—';
+    if (u.email_verified_at) {
+      $('profVerified').innerHTML = pill('ok', T('cabinet.pill.verified'));
+    } else {
+      $('profVerified').innerHTML = pill('warn', T('cabinet.pill.not_verified'));
+    }
+    const since = $('profSince');
+    if (since) since.textContent = u.created_at ? fmtDate(u.created_at) : '—';
+    if (me.encryption && me.encryption.dek_wrapped) {
+      $('profCrypto').innerHTML = pill('ok', T('cabinet.pill.enabled'));
+    } else {
+      $('profCrypto').innerHTML = pill('muted', 'not configured');
+    }
+    const recovery = $('profRecovery');
+    if (recovery) {
+      if (me.encryption && me.encryption.recovery_configured) {
+        recovery.innerHTML = pill('ok', T('cabinet.pill.configured'));
+      } else if (me.encryption) {
+        recovery.innerHTML = pill('warn', T('cabinet.pill.not_configured'));
+      } else {
+        recovery.innerHTML = pill('muted', '—');
+      }
+    }
+  }
+
+  function setRecent(samples) {
+    const ul = $('recentList');
+    if (!samples.length) {
+      ul.innerHTML =
+        '<li class="cab-empty">' + escapeHtml(T('cabinet.recent.empty')) + '</li>';
+      return;
+    }
+    // Sort by created_at desc, take first 10
+    const sorted = samples
+      .slice()
+      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+      .slice(0, 10);
+    ul.innerHTML = sorted
+      .map((s) => {
+        const enc = s.is_encrypted
+          ? pill('ok', T('cabinet.pill.encrypted'))
+          : pill('muted', T('cabinet.pill.plain'));
+        return (
+          '<li>' +
+          '<div style="display:flex;flex-direction:column;gap:2px;min-width:0">' +
+          '<span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+          escapeHtml(s.title || T('cabinet.untitled')) +
+          '</span>' +
+          '<span style="font-size:var(--fs-xs);color:var(--text-muted);font-family:var(--font-mono)">#' +
+          escapeHtml(s.id) +
+          ' · ' +
+          fmtDate(s.created_at) +
+          '</span>' +
+          '</div>' +
+          '<span>' +
+          enc +
+          '</span>' +
+          '</li>'
+        );
+      })
+      .join('');
+  }
+
+  function setUsage(insights) {
+    if (!insights) {
+      // /api/account/insights failed or empty — keep dashes; don't crash.
+      return;
+    }
+    $('usageTotal').textContent = insights.total || 0;
+    $('usageLast7').textContent = insights.last7 || 0;
+    $('usageLast30').textContent = insights.last30 || 0;
+    $('usageFindings').textContent = (insights.sums && insights.sums.findings) || 0;
+    $('usageFirst').textContent = fmtDate(insights.first_at);
+    $('usageLast').textContent = fmtDate(insights.last_at);
+
+    // Status mix as a colored bar + textual summary.
+    const bs = insights.byStatus || {};
+    const total = insights.total || 0;
+    if (total > 0) {
+      const clean = bs.clean || 0;
+      const warns = bs.warnings || 0;
+      const errs = bs.errors || 0;
+      const other = total - clean - warns - errs;
+      // Three-way Math.round can sum to 99% or 101%. Compute the first
+      // three normally and force the last segment to absorb any rounding
+      // delta so the bar always fills exactly 100%.
+      const pctC = Math.round((clean / total) * 100);
+      const pctW = Math.round((warns / total) * 100);
+      const pctE = Math.round((errs / total) * 100);
+      const pctO = Math.max(0, 100 - pctC - pctW - pctE);
+      $('usageStatusMix').innerHTML =
+        pill('ok', T('cabinet.status.clean_pct', { pct: pctC })) +
+        ' ' +
+        pill('warn', T('cabinet.status.warn_pct', { pct: pctW })) +
+        ' ' +
+        pill('danger', T('cabinet.status.err_pct', { pct: pctE }));
+      const bar = $('usageStatusBar');
+      bar.style.display = '';
+      $('barClean').style.width = pctC + '%';
+      $('barWarn').style.width = pctW + '%';
+      $('barErr').style.width = pctE + '%';
+      $('barOther').style.width = pctO + '%';
+    } else {
+      $('usageStatusMix').textContent = T('cabinet.no_analyses');
+    }
+
+    $('usageVersions').innerHTML = distLine(insights.byVersion);
+    $('usageFormats').innerHTML = distLine(insights.byFormat);
+
+    // 30-day heatmap. Build a 30-cell grid keyed by date.
+    const heatmap = $('usageHeatmap');
+    if (!heatmap) return;
+    // Empty state: show a friendly hint instead of 30 grey squares so a
+    // brand-new user understands the heatmap will populate over time.
+    if (!insights.last30) {
+      heatmap.classList.add('heatmap--empty');
+      heatmap.style.display = 'block';
+      heatmap.style.fontStyle = 'italic';
+      heatmap.style.color = 'var(--text-muted)';
+      heatmap.style.fontSize = 'var(--fs-sm)';
+      heatmap.textContent = T('cabinet.heatmap.empty');
+      return;
+    }
+    // Make sure styles are reset if we previously showed the empty hint.
+    heatmap.classList.remove('heatmap--empty');
+    heatmap.style.display = '';
+    heatmap.style.fontStyle = '';
+    heatmap.style.color = '';
+    heatmap.style.fontSize = '';
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const cells = [];
+    const activity = insights.activity || [];
+    const byDate = activity.reduce((acc, a) => {
+      acc[a.date] = a.n;
+      return acc;
+    }, {});
+    const max = activity.reduce((m, a) => Math.max(m, a.n), 0) || 1;
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+      const iso = d.toISOString().slice(0, 10);
+      const n = byDate[iso] || 0;
+      let level = 0;
+      if (n > 0) {
+        const ratio = n / max;
+        if (ratio > 0.75) level = 4;
+        else if (ratio > 0.5) level = 3;
+        else if (ratio > 0.25) level = 2;
+        else level = 1;
+      }
+      cells.push(
+        '<div class="cell ' +
+          (level ? 'l' + level : '') +
+          '" title="' +
+          escapeHtml(T('cabinet.heatmap.tooltip', { date: iso, n })) +
+          '"></div>',
+      );
+    }
+    heatmap.innerHTML = cells.join('');
+  }
+
+  function setLibraryInsights(samples, partners) {
+    // Status distribution from saved-sample status field (clean/warnings/errors).
+    const byStatus = samples.reduce((acc, s) => {
+      const k = s.status || 'unknown';
+      acc[k] = (acc[k] || 0) + 1;
+      return acc;
+    }, {});
+    $('insightStatusValue').innerHTML = distLine(byStatus);
+
+    // Top 3 partners by sample count.
+    const partnerCount = {};
+    for (const s of samples) {
+      const pid = s.partner_id;
+      if (pid != null) partnerCount[pid] = (partnerCount[pid] || 0) + 1;
+    }
+    const partnerName = (id) => {
+      const p = partners.find((x) => x.id === id);
+      return p ? p.name : 'partner #' + id;
+    };
+    const topPartners = Object.entries(partnerCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([id, n]) => escapeHtml(partnerName(Number(id))) + '·' + n);
+    $('insightTopPartners').innerHTML = topPartners.length ? topPartners.join(' / ') : '—';
+
+    // Date range of saved samples.
+    if (samples.length) {
+      const sorted = samples
+        .slice()
+        .sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+      $('insightFirst').textContent = fmtDate(sorted[0].created_at);
+      $('insightLast').textContent = fmtDate(sorted[sorted.length - 1].created_at);
+    } else {
+      $('insightFirst').textContent = '—';
+      $('insightLast').textContent = '—';
+    }
+  }
+
+  // Preferences (localStorage-only). Read on init, click-to-toggle.
+  function setupPreferences() {
+    function setRadio(group, key, fallback, applyFn) {
+      const root = $(group);
+      if (!root) return;
+      let current = null;
+      try {
+        current = localStorage.getItem(key);
+      } catch (_e) {}
+      if (!current) current = fallback;
+      const apply = (val) => {
+        root.querySelectorAll('.cab-radio').forEach((el) => {
+          el.classList.toggle('active', el.dataset[group.replace('pref', '').toLowerCase()] === val);
+        });
+        if (applyFn) applyFn(val);
+      };
+      apply(current);
+      root.addEventListener('click', (ev) => {
+        const r = ev.target.closest('.cab-radio');
+        if (!r) return;
+        const dataKey = group.replace('pref', '').toLowerCase();
+        const val = r.dataset[dataKey];
+        if (!val) return;
+        try {
+          localStorage.setItem(key, val);
+        } catch (_e) {}
+        apply(val);
+      });
+    }
+    // Theme: kt-theme is what the inline IIFE in head reads.
+    setRadio('prefTheme', 'kt-theme', 'auto', (val) => {
+      try {
+        if (val === 'auto') localStorage.removeItem('kt-theme');
+        else localStorage.setItem('kt-theme', val);
+        // Also mirror to data-theme so live preview updates without reload.
+        const eff = val === 'auto'
+          ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : val;
+        document.documentElement.setAttribute('data-theme', eff);
+      } catch (_e) {}
+    });
+    // Findings locale = the SAME `kt-lang` key the main app + i18n.js read.
+    // Picking here behaves like picking from the lang menu — write cookie
+    // + localStorage + (auth-only) POST preferences for cross-device.
+    // Previously this wrote to `kt-default-findings-locale` which no
+    // consumer ever read (dead-code preference).
+    setRadio('prefLocale', 'kt-lang', 'en', (val) => {
+      const currentLang = document.documentElement.getAttribute('data-lang') || 'en';
+      // Pre-v0.24.0 the picker only wrote cookie + localStorage + POSTed
+      // preferences but the page itself stayed in the old locale — user saw
+      // their pick "store" but no UI feedback. Now: navigate to the
+      // localized cabinet path (the lang-switch.js seamless morph would
+      // also work, but cabinet has its own bootstrap that's simpler to
+      // re-run via a real navigation).
+      try {
+        const isHttps = location.protocol === 'https:';
+        document.cookie =
+          'kt-lang=' +
+          encodeURIComponent(val) +
+          '; Path=/; Max-Age=31536000; SameSite=Lax' +
+          (isHttps ? '; Secure' : '');
+      } catch (_e) {}
+      // Best-effort cross-device persistence — auth-gated on server side.
+      fetch('/api/auth/preferences', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ locale: val }),
+      }).catch(() => {});
+      // Trigger reload only if locale actually changed.
+      if (val !== currentLang) {
+        const target = val === 'en' ? '/account' : '/' + val + '/account';
+        location.href = target;
+      }
+    });
+    // Dialect = the SAME `spyglass_dialect_v1` key the main app reads.
+    // Previously this wrote to `kt-default-dialect` which the main app
+    // never consulted (dead-code preference).
+    setRadio('prefDialect', 'spyglass_dialect_v1', 'iab', null);
+  }
+
+  async function signOut() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (_e) {
+      /* swallow */
+    }
+    location.href = '/';
+  }
+
+  async function init() {
+    const me = await loadMe();
+    if (!me) {
+      showGate();
+      return;
+    }
+    showBody();
+    setProfile(me);
+    setupPreferences();
+    // Profile is fast — render immediately. The four data calls below are
+    // independent; run them in parallel and let each panel render as data
+    // arrives.
+    const [samples, partners, insights] = await Promise.all([
+      loadSamples(),
+      loadPartners(),
+      loadInsights(),
+    ]);
+    // Compute encrypted/assigned counts from sample metadata.
+    const encryptedCount = samples.filter((s) => s.is_encrypted).length;
+    const assignedCount = samples.filter((s) => s.partner_id != null).length;
+    // Defensive guards — Profile + Library cards may be in display:none until
+    // setProfile() flipped showBody(). querySelector returning null on a
+    // missing id (e.g. stale localized HTML) used to crash the entire init,
+    // leaving Activity/Insights/Recent silently blank with a console error.
+    // Now each setter probes the element first and skips quietly if absent.
+    const setText = (id, val) => {
+      const el = $(id);
+      if (el) el.textContent = val;
+    };
+    setText('statSamples', samples.length);
+    setText('statPartners', partners.length);
+    setText('statEncrypted', encryptedCount);
+    setText('statAssigned', assignedCount);
+    setRecent(samples);
+    setLibraryInsights(samples, partners);
+    setUsage(insights);
+  }
+
+  // Action delegation
+  document.addEventListener('click', (ev) => {
+    const t = ev.target.closest('[data-action]');
+    if (!t) return;
+    const action = t.dataset.action;
+    if (action === 'signout') {
+      ev.preventDefault();
+      signOut();
+    } else if (action === 'forgot-password') {
+      ev.preventDefault();
+      // Send the user back to the main app and trigger forgot-password modal.
+      // The /?reset=1 hint can be handled by the main app on load. For now,
+      // simplest: just open the home page where the auth widget lives.
+      location.href = '/?forgot=1';
+    }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
