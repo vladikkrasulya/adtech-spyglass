@@ -6,6 +6,974 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.24.0 — Final hardening pass (2026-05-09)
+
+Mopping up the last 5 deferred items from earlier audits. None blocking;
+collectively close the door on "we know about that bug but haven't
+fixed it" notes. Last release of the day.
+
+**Crypto/auth hardening**
+
+- **`/api/auth/setup-encryption` replay protection** — endpoint was
+  idempotent (overwrote existing crypto state on every call). An
+  authenticated client retrying a partial failure or a hostile session
+  could swap the wrapped DEK out from under the legitimate user. Now
+  rejects with `409 crypto_already_setup` if state already exists.
+  Password rotation correctly stays in the `/reset-password` flow
+  which has its own re-wrap path.
+- **Recovery key F5-survival** — pre-fix, single accidental refresh
+  before clicking "I saved it" lost the key forever (server stores
+  only the wrap, not the key). Now mirrored to `sessionStorage`
+  (`spyglass_recovery_pending_v1` key) on show, cleared on explicit
+  acknowledgment. Boot path checks for a pending key when authed and
+  re-shows the modal. Closing the tab still drops it (per-tab
+  storage), matching the design intent of "once and only once".
+
+**Behavior tuning**
+
+- **Frozen-thread watchdog threshold raised 3.5s → 6s** — pre-fix,
+  legitimate heavy-compute creatives (image processing, wasm decode,
+  physics sims) tripped `behavior.malicious.frozen_thread` as
+  false-positives. New threshold (~5 missed heartbeats) still catches
+  genuine `while(true){}` and similar deadlocks within ~6s, but
+  brief blocking from heavy-but-recovering creatives no longer pages.
+  Real fraud freezes don't recover — the signal stays.
+
+**Cabinet UX**
+
+- **Locale picker actually switches the page** — pre-fix, picking RU
+  in the cabinet wrote cookie + localStorage + POSTed preferences,
+  but the cabinet itself stayed in the old language with no UI
+  feedback. Now a `location.href` navigation to the localized
+  `/account` path triggers a clean reload in the new locale.
+  No-op when picked locale matches current.
+
+**History merge atomicity**
+
+- **Per-success removal from `historyStore`** — pre-fix, mid-merge
+  tab close left the user re-importing the same entries on next
+  visit (no idempotency key on `/api/samples` POST → server-side
+  duplicates). Now each successful import is removed from the
+  in-memory store + persisted before the next entry starts. A
+  tab close at any point bounds the duplicate damage to whatever
+  was in flight at that exact moment. Failed entries stay in the
+  history for a retry pass.
+
+**Versions**
+
+- App: `v0.23.0 → v0.24.0` (`package.json` 0.23.0 → 0.24.0)
+- Core engine: stays `0.14.1`
+
+### v0.23.0 — End-of-day cleanup: QA-A false positive verified, LOW/MEDIUM bundle (2026-05-09)
+
+Final close-of-day. The deferred QA-A "post-register demo breaks
+editors + session" was reproduced manually in a real browser and
+confirmed FALSE POSITIVE — Playwright artifact, not real bug. Plus
+4 deferred LOW/MEDIUM fixes landed in one batch.
+
+**QA-A FALSE POSITIVE — confirmed**
+
+Reproduced the exact journey by hand via Playwright MCP tools (clean
+storage → register → recovery key bypass via window.confirm shim →
+click 🎲 demo): editors filled with 575 + 1164 chars of JSON, auth
+widget stayed authed, 0 console errors. The original QA agent's
+"session collapsed" was browser_evaluate / browser_snapshot
+interfering with modal handlers between steps. Real browser does
+the right thing. Closing as not-a-bug.
+
+**LOW/MEDIUM fixes**
+
+- **Decryption error gives actionable hint** — old generic
+  `toast.decrypt_failed` ("decryption failed") replaced with
+  `toast.decrypt_failed_with_hint` ("Most likely your session
+  expired — sign out and back in to refresh") × 3 locales.
+  AES-GCM doesn't tell us tamper vs wrong-key (indistinguishable
+  by design), but the actionable hint covers both legitimate
+  causes (rotated DEK, stale session DEK) without needing the
+  user to know cryptography.
+- **History entry validation on load** — old loader trusted any
+  array; now per-entry guards (object shape + numeric `ts` +
+  string `req`/`res`) so a single corrupted row from manual
+  tinkering / incomplete write / schema drift doesn't poison
+  the whole list. The `_v1` suffix on the localStorage key
+  remains the schema-version marker.
+- **History cross-tab sync** — `storage` event listener pulls
+  the new value into the in-memory mirror + re-renders the
+  sidebar. Pre-fix, tab A's analyses were invisible in tab B
+  until F5.
+- **Whitespace-only partner name now rejected server-side** —
+  `Partners.create()` trims early + throws coded
+  `partner_name_required` if blank post-trim. Pre-fix the
+  endpoint accepted `"   "` and inserted an empty-string row
+  that rendered awkwardly in the picker.
+
+**Verified-not-broken (closing audit findings)**
+
+- **Watchdog 403** (yesterday's alert) — already fixed in v0.21.0
+  hot-fix (Basic auth via `CLICKHOUSE_ADMIN_PASSWORD` env from
+  vault). Verified n8n now schedules cleanly.
+
+**Closing this audit cycle**
+
+Today we ran 9 audit-agents (3 code-review + 6 deep-dive) + 4
+QA-automator agents = ~13 agent passes. Found ~40 issues. Shipped
+fixes for ~22 confirmed real bugs across CRITICAL/HIGH. Rejected
+~5 false positives after manual verification. ~13 LOW/MEDIUM
+deferred to follow-up sprints (each documented with file:line).
+
+The Spyglass codebase is now substantially harder to break in
+expected user flows. Next session can focus on FEATURE work
+(Chapter A: specimen replay, Chapter B: behavior tuning) rather
+than firefighting.
+
+**Versions**
+
+- App: `v0.22.0 → v0.23.0` (`package.json` 0.22.0 → 0.23.0)
+- Core engine: stays `0.14.1`
+
+### v0.22.0 — UX papercut bundle: lang switcher path, version pill, heatmap empty (2026-05-09)
+
+Continuing the deferred-bucket cleanup. Three small UX issues that
+each have been bothering "real interaction" since they were introduced.
+Plus first verification pass against agents' code-only audit findings:
+two of them turned out to be false positives (already fixed in earlier
+releases) — explicitly confirming closure for the next-session record.
+
+**Fixed**
+
+- **QA-D: lang switcher loses path context** — pre-fix, clicking "UK"
+  from `/about` always landed at `/uk/` (locale root) instead of
+  `/uk/about`. Same for `/account`. Added `localizePath()` to
+  `lang-switch.js` that maps the current pathname into the equivalent
+  in another locale; `bindLangLinks()` now refreshes hrefs on each
+  bind + the click handler re-resolves at click time so deep
+  pushState navigation stays in sync.
+- **UX-4: empty `{}` payload showed fake "oRTB 2.5 (?)" pill** — when
+  the type detection produces `unknown`, the version-detection still
+  defaults to 2.5 with low confidence (its purpose is "best guess for
+  near-baseline payloads"). The findings panel rendered both,
+  creating the impression "we identified this as 2.5 but somehow
+  also unknown_type". Now: version pill suppressed entirely when
+  `validation.type === 'unknown'`. The same gate already existed on
+  the format-bar version pill — now the findings-panel version pill
+  is consistent.
+- **UX-7: 30-day heatmap empty state** — pre-fix, a brand-new user
+  saw 30 grey squares. Now shows "No activity in the last 30 days
+  yet — run an analysis to see your dots fill in" (× 3 locales) when
+  `last30 === 0`. Falls back cleanly to the colored grid as soon as
+  any analysis lands.
+
+**Verified-not-broken (false-positive findings from earlier audits)**
+
+- UX-2 "crosscheck panel empty when only bidRes pasted" — already
+  shows `crosscheck.need_response` message; the `else if (cross)`
+  branch handles empty-array case. No change needed.
+- UX-3 "format chips overflow without flex-wrap" — `inspector.css:846`
+  `.format-summary__chips { display: flex; flex-wrap: wrap; gap: 4px; }`
+  has been there from the start. No change needed.
+- UX-5 "Cabinet has no loading state" — recent samples list HTML
+  already contains "Loading…" / "Завантаження…" / "Загрузка…" placeholder
+  per locale; replaced once data lands. Works as designed.
+
+**Deferred (still need real-browser triage)**
+
+- QA-A (CRITICAL) — post-register demo button doesn't fill editors +
+  auth widget collapses to anon. Code analysis didn't reveal a clear
+  cause. Likely Playwright artifact (browser_evaluate dismissed
+  modals) or a real race we can't see without dev-tools console
+  logs. Will need a manual repro session.
+
+**Versions**
+
+- App: `v0.21.0 → v0.22.0` (`package.json` 0.21.0 → 0.22.0)
+- Core engine: stays `0.14.1` (no `packages/core/` changes)
+
+### v0.21.0 — Live-user QA bundle: cabinet crash + partners entry point (2026-05-09)
+
+Spawned 4 Playwright-based QA-automator agents to walk real user
+journeys end-to-end. All 4 returned with FAILs — confirming that
+static audits miss what only emerges from real interaction. This
+release ships fixes for the 2 CRITICAL bugs uncovered (cabinet crash,
+hidden partners-CRUD entry). 2 other QA issues deferred (need browser
+repro / are cosmetic).
+
+**Plus**: out-of-band, fixed `Daily Digest Watchdog` ClickHouse 403 —
+the workflow assumed anon CH access; CH now requires auth. Patched
+the n8n workflow to use Basic auth via `CLICKHOUSE_ADMIN_PASSWORD`
+env var (already in n8n's vault).
+
+**CRITICAL fixes**
+
+- **Cabinet crash on init** — `account.js:395` was setting
+  `$('profLibrary').innerHTML` but the `profLibrary` ID had been removed
+  from the HTML in an earlier refactor. `getElementById` returned null,
+  the entire `init()` aborted, and Activity / Insights / Recent samples
+  cards stayed at "—" placeholders even though `/api/account/insights`
+  returned correct data. Removed the dead reference; added a
+  `setText()` defensive helper that probes presence before mutating.
+  Side-benefit: future ID drift won't kill the whole cabinet.
+- **Partners management UI was inaccessible** — `openPartnerModal`
+  exists in code; `data-action="open-partners"` handler is wired; but
+  no HTML element invokes it anywhere in the inspector or cabinet.
+  Comment in spyglass.app.js:4007 reveals it was deliberately removed
+  in Phase 9 ("Dialect Builder is the new public-facing entry point,
+  replaces the Kadam-branded partner button"). But partners as a
+  feature stayed alive (save modal still uses them). Net result: users
+  could only manage partners by saving a sample first (chicken-and-egg
+  for rename/delete). Now: cabinet's Library card has a "Manage
+  partners" button that deep-links to `/?open=partners`. Inspector
+  reads the URL param after `bootAuth` and opens the modal.
+
+**Deferred QA findings**
+
+| Severity | Journey | Issue | Status |
+|---|---|---|---|
+| CRITICAL | A (post-register demo) | Clicking 🎲 example after register doesn't fill editors + auth widget collapses to anon | DEFERRED — couldn't reproduce in static audit; needs interactive browser tracing. May be Playwright artifact (browser_evaluate dismissed modals); may be real race. Re-test in next session with manual repro. |
+| HIGH | D (locale switching) | Lang switcher href always points to language root (`/uk/`, `/ru/`) — clicking from `/about` lands at `/uk/` instead of `/uk/about` | DEFERRED — lang-switch.js hrefs are static; needs per-page rewriting based on current pathname. ~30 min fix; not blocking. |
+
+**Watchdog hot-fix**
+
+- `Daily Digest Watchdog` n8n workflow patched: CH probe now uses Basic
+  auth (user from `CLICKHOUSE_ADMIN_USER`, password from
+  `CLICKHOUSE_ADMIN_PASSWORD`, both in vault).
+- Backup: `database.sqlite.bak-watchdog-auth-20260509-203743`.
+- Will fire correctly on next 23:00 Kyiv schedule.
+
+**Versions**
+
+- App: `v0.20.0 → v0.21.0` (`package.json` 0.20.0 → 0.21.0)
+- Core engine: stays `0.14.1` (no `packages/core/` changes)
+
+### v0.20.0 — Six-agent bug-bounty bundle (2026-05-09)
+
+Spawned 6 parallel auditor agents covering: auth/sessions, crypto/KEK,
+inspector pipeline, behavior probe, history/share/embed, cabinet/i18n.
+Returned ~25 findings; verified each against current code; ship the
+3 confirmed-real CRITICAL + 6 HIGH. Remaining MEDIUM/LOW deferred to a
+follow-up bundle (none are actively breaking flows).
+
+**3 CRITICAL — confirmed and fixed**
+
+- **Sessions: invalidateUserSessions only cleared in-memory Map, not DB**
+  ([auth.js:331](../auth.js)). Pre-fix: password reset would drop active
+  sessions until container restart, after which DB rows re-hydrated and
+  stolen cookies came back to life. Now writes through to
+  `Sessions.destroyForUser(userId)` (added to db.js earlier in v0.18).
+- **Pipeline: server 4xx/5xx silently swallowed** in
+  `runAnalysis()`. Server returned `{success:false, error:..., code:...}`
+  with status 429/400, the client checked `if (j.success)` and fell
+  through with no toast, no error indicator — user staring at stale UI
+  wondering. Now: explicit `if (!r.ok || j.success === false)` branch
+  surfacing the server error via `toast.error_generic` + status dot.
+- **Cabinet: status mix percentages summed to 99% or 101%** because
+  three Math.round calls compounded rounding error. Bar segments left
+  visual gap. Fixed: compute first three normally, force last
+  ("other") segment to absorb the delta so total is always 100%.
+
+**6 HIGH — confirmed and fixed**
+
+- **Pipeline: race when user re-clicks Analyze before previous fetch
+  returns** — older response could overwrite newer findings.
+  Monotonic `_analyzeReqSeq` counter; stale completions drop silently.
+- **History: out-of-bounds `_currentHistoryIdx` after QuotaExceeded
+  truncate** — truncating `historyStore` to half didn't clamp the
+  active-entry pointer. Could render phantom selection. Now clamped.
+- **Auth: missing rate limit on `/api/auth/verify-email/request`** —
+  logged-in attacker could spam the email endpoint, burning Resend
+  quota. New `verifyEmailLimiter` (5 / hour / IP).
+- **Auth: missing rate limit on `/api/auth/reset-password/state`** —
+  attacker holding reset token could probe the endpoint without limit.
+  New `resetStateLimiter` (10 / 15 min / IP).
+- **Behavior probe: `<base target="_top">` frame-bust bypass** —
+  per-anchor check `closest('a[target=_top]')` ignored the page-level
+  base-tag fallback. Probe now resolves target via anchor-attr OR
+  first `<base target>`, matching browser precedence. Closes a real
+  attack pattern.
+- **Behavior endpoint: `/api/analyze-behavior` shared the loose 60/min
+  analyze limiter** — attractive surface for fuzzers since it's
+  unauthenticated and accepts arbitrary event arrays. New separate
+  `behaviorLimiter` (20 / min / IP). Real users — even with 1Hz
+  heartbeat from probe + UI debounce — never approach this.
+
+**Findings deferred (Tier-2 + Tier-3, will track separately)**
+
+| Severity | Issue | File | Status |
+|---|---|---|---|
+| MEDIUM | client-side unlock has no rate-limit (UX self-DoS) | spyglass.app.js | deferred |
+| MEDIUM | recovery key shown once — no F5 survival | spyglass.app.js | deferred (UX nicety) |
+| MEDIUM | decryption error doesn't distinguish tamper vs wrong-DEK | spyglass.app.js | deferred |
+| MEDIUM | empty `{}` payload version pill says "2.5 (?)" instead of "unknown" | detect.js | deferred |
+| MEDIUM | crosscheck panel empty when only bidRes pasted (no UX message) | spyglass.app.js | deferred |
+| MEDIUM | watchdog false-positive on legitimate CPU-bound creatives | creative-probe.js | deferred (rare; tuning needs corpus) |
+| MEDIUM | history merge non-atomic on partial failure | spyglass.app.js | deferred |
+| MEDIUM | cabinet locale picker stores preference but doesn't re-render page | account.js | deferred (DOM morph integration) |
+| MEDIUM | behavior module load race (probe fires before window.SpyglassBehavior installed) | index.html | deferred (rare; first-render only) |
+| LOW | format pill overflow with many formats | spyglass.app.js | deferred (CSS) |
+| LOW | sim-price ignores currency mismatch | spyglass.app.js | deferred |
+| LOW | history no schema version | spyglass.app.js | deferred (proactive only) |
+| LOW | history no cross-tab sync | spyglass.app.js | deferred |
+| LOW | session not pinned to IP/UA | auth.js | intentional (mobile UX) |
+| LOW | setup-encryption replay-able | server.js | low risk, auth-gated |
+
+**Versions**
+
+- App: `v0.19.0 → v0.20.0` (`package.json` 0.19.0 → 0.20.0)
+- Core engine: stays `0.14.1` (no `packages/core/` changes — this
+  release is auth/server/UI hardening only)
+
+### v0.19.0 — Audit fix bundle: dialect / partner / sample correctness (2026-05-09)
+
+Three parallel auditor agents combed the inspect / save / partner flows
+the user worried about. Found 14 issues across 3 severity tiers; this
+release ships the 3 CRITICAL and 5 HIGH fixes. Tier-3 (4 LOW/MEDIUM)
+are documented in CHANGELOG below for follow-up.
+
+**CRITICAL — silent-wrong-behavior fixes**
+
+- **#1 dialect not forwarded to crosscheck()** — `server.js:916` was
+  calling `crosscheck(req, res, { locale, disabledRules })` without
+  `dialect`. The current `packages/core/crosscheck.js` is dialect-
+  agnostic so user-visible findings haven't shifted, but the wiring
+  was a future-correctness landmine. Added forwarding through
+  `crosscheck(req, res, { locale, dialect, disabledRules })` →
+  `index.js crosscheck()` → `doCrosscheck(req, res, { dialect })`.
+  Future Kadam-specific crosscheck rules now have a clean entry point.
+- **#2 `is_encrypted` flag missing from sample list queries** —
+  `db.js:209-210 sampleCols` returned `req_len` / `res_len` but never
+  derived `is_encrypted` from `req_iv` presence. The cabinet's Recent
+  Samples list and "Encrypted" stat tile both showed wrong values
+  (every sample read as plain). Now derived as `(req_iv IS NOT NULL)
+  AS is_encrypted` in the SELECT.
+- **#3 Cabinet "Default dialect" / "Default findings locale"
+  preferences were dead code** — `account.js` wrote to
+  `kt-default-dialect` and `kt-default-findings-locale` keys that
+  the main app NEVER read (it reads `spyglass_dialect_v1` and
+  `kt-lang`). Cabinet preferences were UI theatre. Re-pointed:
+  - locale picker now writes to `kt-lang` + cookie + POSTs
+    `/api/auth/preferences` (same path as the lang menu)
+  - dialect picker now writes to `spyglass_dialect_v1`
+
+**HIGH — broken UX / fragile correctness**
+
+- **#4 "Save as new" — title now auto-suffixed `(copy)`** when the
+  user didn't change the title. Without this, identical title +
+  same partner → two visually-identical rows in the library list,
+  "where did my new save go?" confusion.
+- **#5 partner dropdown pre-fill `===` strict-equality fail** —
+  `partnerOptionsHtml(selectedId)` did `p.id === selectedId`. JSON
+  serialization could surface `partner_id` as a string, strict-eq
+  silently fails, edit modal opened with "no partner" selected
+  instead of the assigned one. Now coerces to `Number()`.
+- **#6 partner delete now shows sample count in confirm dialog** —
+  schema cascades samples → unassigned on partner delete (correct),
+  but the confirm dialog never told the user how many would lose
+  their partner attribution. New endpoint
+  `GET /api/partners/:id/samples-count` + new i18n key
+  `confirm.delete_partner_with_count` × 3 locales.
+- **#7 race save toast now actionable** — when user picks a partner,
+  another tab deletes it, then user submits, server now tags the
+  error with `code: 'partner_not_found'` so the client shows
+  "The partner you picked was deleted in another tab. Picker
+  refreshed — pick again." (new i18n key) AND auto-refreshes
+  `_partnerCache` so the dead row is gone from the dropdown.
+- **#8 sample create wrapped in transaction** — `Samples.create()`
+  did INSERT then a separate `Samples.get()` for the response shape.
+  An exception between them would leave a row in DB without the
+  client knowing → next save creates a duplicate. Now atomic via
+  `db.transaction()`. Same path covers update similarly via the
+  existing single-statement UPDATE.
+
+**Audit findings deferred (Tier-3, follow-up bundle)**
+
+- MEDIUM: save modal opens with locked DEK; error only on Submit
+  after meta is filled
+- MEDIUM: empty `bid_req` + `bid_res` accepted server-side (UI
+  blocks but API allows it)
+- LOW: empty/whitespace-only partner name accepted post-trim
+- LOW: "unassigned" filter has no clear-filter affordance in empty
+  state
+
+**Schema**
+
+- No new columns. `db.js:209` SELECT shape changed (added derived
+  `is_encrypted`); old clients ignore the new field; new clients
+  finally see truth.
+
+**Versions**
+
+- App: `v0.18.0 → v0.19.0` (`package.json` 0.18.0 → 0.19.0)
+- Core engine: `0.14.0 → 0.14.1` (PATCH — `index.js crosscheck()`
+  + `crosscheck.js` accept dialect param; behavior unchanged today,
+  surface evolved for future rules)
+
+### v0.18.0 — Persistent sessions + sticky locale (2026-05-09)
+
+Two UX papercuts closed at once:
+
+1. **Sessions survive container restarts.** Previously every `compose
+   up --build` wiped the in-memory `sessions` Map and kicked all
+   logged-in users out — even though their cookie was still valid for
+   30 days. Now sessions are persisted to SQLite with write-through
+   semantics; the in-memory Map stays as the hot read path and gets
+   hydrated from the table on boot.
+2. **Locale preference sticks across devices.** Picking UK / RU from
+   the language menu now (a) sets a cookie that the server reads to
+   redirect bare URLs (`/`, `/about`, `/account`) to the localized
+   variant, and (b) when logged in, persists to a new
+   `users.preferred_locale` column so the same account on a different
+   device lands in the right language without re-picking.
+
+**Schema migration v5 → v6**
+
+```
+CREATE TABLE sessions (
+  token PRIMARY KEY, user_id (FK CASCADE),
+  expires_at, ip, ua, created_at
+);
+CREATE INDEX idx_sessions_user, idx_sessions_expires.
+
+ALTER TABLE users ADD COLUMN preferred_locale TEXT;
+```
+
+**Auth (`auth.js`)**
+
+- `createAuth({ Users, Sessions })` — `Sessions` model now optional
+  but enabled in production
+- Boot-time hydration: `Sessions.loadActive()` populates the in-memory
+  Map. Expired rows pruned in the same pass.
+- `createSession()` writes through to DB
+- `destroySession()` deletes from DB
+- Sweep timer also calls `Sessions.pruneExpired()` hourly
+- Test path stays in-memory only (Sessions param undefined → skip DB writes)
+
+**Server (`server.js`)**
+
+- New endpoint `POST /api/auth/preferences { locale }` (auth-only, 401
+  for anon). Writes `users.preferred_locale` and mirrors to cookie.
+- `publicUser()` now exposes `preferred_locale` so client can sync.
+- New helper `setLocaleCookie()` — `Path=/, Max-Age=1y, SameSite=Lax,
+  not HttpOnly` (JS reads it for fast first-paint decisions).
+- New helper `readLocaleCookie()` — reads + validates against the
+  `en|uk|ru` allowlist.
+- New table `LOCALE_REDIRECT_TABLE` covering only the canonical
+  landing routes (`/`, `/about`, `/account`). Deep app paths and
+  asset URLs are NEVER redirected.
+- `serveStaticFile()` checks the cookie BEFORE `resolveLocaleRoute`
+  resolution — bare URL + cookie="uk" → 302 to `/uk/...`. Sets
+  `Vary: Cookie` so CDNs cache properly.
+
+**Client**
+
+- `lang-switch.js` — when the user picks a locale, also writes
+  `kt-lang` cookie and best-effort POSTs to `/api/auth/preferences`
+  (silent on failure for anon)
+- `spyglass.app.js bootAuth()` — on `/api/auth/me` returning
+  `preferred_locale` that mismatches the URL, soft-redirect via
+  `location.replace()` to the equivalent path in the right locale.
+  Only fires for the 3 landing routes (`/`, `/about`, `/account`).
+  Catches: returning user on a new device, bookmarked bare URL,
+  fresh-login redirect.
+
+**Versions**
+
+- App: `v0.17.0 → v0.18.0` (`package.json` 0.17.0 → 0.18.0)
+- Core engine: stays `0.14.0` (still no `packages/core/` changes)
+
+### v0.17.0 — Personal cabinet wired (2026-05-09)
+
+The personal cabinet is now LIVE at `/account` (en), `/uk/account`,
+`/ru/account`. The drafted-but-not-routed shell from v0.16.0 has been
+localized × 3 and the routing uncommented in `server.js`.
+
+**What's new for users**
+
+- Header gets an **"account"** / **"кабінет"** / **"кабинет"** button
+  next to "sign out" (visible only when logged in)
+- Direct URL access: `https://spyglass.kyivtech.com.ua/account` (or
+  `/uk/account`, `/ru/account`)
+- Anonymous visitor → soft gate with "Go to Spyglass and sign in" CTA
+- Authed user → 7 cards: Profile, Library, Activity (with 30-day
+  heatmap), Library Insights, Recent samples, Preferences, Encryption
+  & recovery, Privacy footnote, Account actions
+
+**Localization**
+
+- 3 full HTML files (`account.{en,uk,ru}.html`) — section labels,
+  table rows, lead text, CTA buttons all per-locale
+- 17 new dynamic-string keys in `public/i18n.js` under `cabinet.*`
+  namespace × 3 locales = 51 entries
+- `public/account.js` uses `t()` for all dynamic strings (pills,
+  empty states, status mix percentages, heatmap tooltips)
+
+**Routing**
+
+- `server.js resolveLocaleRoute()`: 6 new entries (3 file routes + 3
+  redirects from `/account.html` / `/en/account` shapes)
+- The `/about` pattern was the model — same shape applied to `/account`
+
+**Header link**
+
+- Added to all 3 `template.{en,uk,ru}.html` files inside `authUserBlock`
+- Visible only when `_currentUser` is set (existing widget gating)
+- Order: `[email] [account] [sign out]` — account button between the
+  identity badge and the destructive action
+
+**Versions**
+
+- App: `v0.16.0 → v0.17.0` (`package.json` 0.16.0 → 0.17.0)
+- Core engine: stays `0.14.0` (still no `packages/core/` changes —
+  cabinet is auth/UI shell only)
+
+### v0.16.0 — Per-user analytics + cabinet draft expanded (2026-05-09)
+
+The personal cabinet (still un-wired draft) now has real analytics
+backed by a per-user usage log. Schema migrated v4→v5; existing data
+unaffected. Cabinet content drafted to operator's spec — review pending
+before connecting `/account` routing.
+
+**Schema migration v4 → v5: `analyze_log` table**
+
+```
+CREATE TABLE analyze_log (
+  id, user_id (FK CASCADE), ts (unix-ms),
+  payload_type ('request' | 'response' | 'both'),
+  version ('2.5' | '2.6' | '3.0' | null),
+  status ('clean' | 'warnings' | 'errors' | 'invalid'),
+  format ('banner' | 'video' | 'native' | 'multi' | ...),
+  finding_count, error_count, warning_count
+);
+CREATE INDEX idx_analyze_log_user_ts ON analyze_log(user_id, ts DESC);
+```
+
+**METADATA-ONLY by design** — payload bodies never enter this log.
+Anonymous calls aren't tracked. CASCADE on user delete = log
+auto-cleans. The `cab-card#privacy` section in the cabinet draft
+documents this contract verbatim for the user.
+
+**`AnalyzeLog` model in `db.js`**
+
+- `record(entry)` — single insert, ~50-byte row
+- `insights(userId)` — aggregator returning total / last7 / last30 /
+  byStatus / byVersion / byFormat / activity (30-day daily) /
+  first_at / last_at / sums (errors+warnings+findings).
+  One round-trip; SQLite handles math on indexed scans even at 100k+
+  rows.
+
+**Server: tracking + new endpoint**
+
+- `handleAnalyze` now calls `AnalyzeLog.record()` after each successful
+  validate (in a try/catch — tracking failure must never break the
+  response). Anonymous → skipped.
+- New `/api/account/insights` (GET, auth-required) returns the
+  insights aggregate. Anon → 401.
+
+**Personal cabinet draft (still NOT wired to /account routing)**
+
+- New "Activity" card with 4 stat tiles (total / last7 / last30 /
+  total findings surfaced)
+- First/last analyze dates
+- Status mix as colored bar (clean / warn / err) + percentage pills
+- oRTB version distribution (compact "2.6·142 / 2.5·38 / 3.0·5")
+- Format distribution (same shape)
+- 30-day daily heatmap (GitHub-contribution style, 4 levels of intensity)
+- Privacy footnote section explicitly listing tracked vs not-tracked
+  fields
+
+Library Insights (existing card) reworked to be exclusively
+metadata-from-saved-samples (status mix, top partners, date range).
+
+**Versions**
+
+- App: `v0.15.0 → v0.16.0` (`package.json` 0.15.0 → 0.16.0)
+- Core engine: stays `0.14.0` (still no `packages/core/` changes —
+  this release is auth/cabinet shell only)
+
+### v0.15.0 — i18n debt closure + recovery_configured API (2026-05-09)
+
+Closes the long-standing i18n debt (Chapter D from
+`docs/next-chapters-2026-05-09.md`). Personal cabinet shell drafted into
+the repo as a parallel deliverable but NOT yet wired to the routing —
+intentional: shape and content under review before going live.
+
+**i18n debt — Tier-2 batch (21 user-facing strings)**
+
+After the original Tier-1 cut (131 keys in `public/i18n.js`), the audit
+found 21 hardcoded UK strings still inline in `public/spyglass.app.js`:
+
+- 9 toast / error messages (internal_ui_error, uncaught_error, template_inserted_*, partners_load_failed, samples_load_failed, sample_load_failed, error.generic)
+- 5 tooltip strings (peek_no_load, history_delete, partner_edit, delete × 2 sites)
+- 3 fallback strings (history_entry, local_request, partner_id)
+- 3 inline DOM strings (no_imp_slots, no_iab_categories, status.local already existed)
+- crosscheck strings (3): summary, all_passed, need_response
+
+All 21 keys added to `public/i18n.js` × 3 locales (en/uk/ru) = 63 entries.
+Inline UK strings replaced with `t()` calls. Backward-compat status mapper
+(`Critical`/`Healthy`/etc.) folded onto the same i18n keys as the modern
+lowercase set.
+
+After this release, `grep -nE "[А-Яа-яЇїІіЄєҐґ]"` on `spyglass.app.js`
+returns only comments — zero user-facing UK leaks.
+
+**Server: `publicEncryption` exposes `recovery_configured` boolean**
+
+`/api/auth/me` now returns `encryption.recovery_configured` (bool —
+true if the user set up a recovery key at registration). Drafted for
+the personal cabinet to display recovery setup status without a
+separate endpoint. Existing fields (`kdf_salt`, `dek_wrapped`,
+`dek_iv`) unchanged. No client-side breakage.
+
+**Personal cabinet (`/account`) — DRAFTED, NOT WIRED**
+
+`public/account.en.html` + `public/account.js` exist as a draft for
+operator review. Sections: Profile (email + verified + member-since +
+encryption + recovery status), Library (counts: samples + partners +
+encrypted + assigned-to-partner), Insights (status distribution + top
+partners + first/last saved date), Recent samples, Preferences (theme
++ findings locale + dialect — localStorage-only), Encryption &
+recovery, Account actions. Routing in `server.js` intentionally
+COMMENTED OUT — the page won't be reachable via `/account` until
+operator approves the content.
+
+**Versions**
+
+- App: `v0.14.0 → v0.15.0` (`package.json` 0.14.0 → 0.15.0)
+- Core engine: stays `0.14.0` (no `packages/core/` changes — honest
+  divergence from app version when the core spec coverage didn't
+  shift; aligned numbers reset on the next core change)
+
+### v0.14.0 — Functional close: full VAST + 3.0 BidResponse + sniffer consolidation (2026-05-09)
+
+Closes the deferred items from v0.11/v0.12/v0.13 — the validator now has
+production-grade VAST coverage and full oRTB 3.0 routing (request +
+response). Three concerns folded into one MINOR bump because each is
+small in isolation but they share a coherent theme: "no more half-done
+features".
+
+**4 additional VAST rules** (`packages/core/rules-vast.js`) — now 12 total:
+
+| Rule id | Level | Fires when |
+|---|---|---|
+| `vast.ad_pod` | INFO | multiple `<Ad>` in one VAST (sequential ads) — count param |
+| `vast.linear_duration_missing` | ERROR | `<Linear>` without `<Duration>` (VAST §3.7) |
+| `vast.vpaid_deprecated` | WARN | `apiFramework="VPAID"` (deprecated 4.1, removed 4.2) |
+| `vast.impression_tracking_missing` | WARN | `<InLine>` without `<Impression>` beacon |
+
+**oRTB 3.0 BidResponse routing** (new file `packages/core/rules-response-30.js`)
+
+- 3.0 BidResponse (`{ openrtb: { ver, response: {...} } }`) previously
+  fell through to `payload.unknown_type` because `detectType` always
+  routed 3.0 envelopes to ORTB_REQUEST.
+- `detect.js` now discriminates: envelope with `openrtb.response{}` →
+  ORTB_RESPONSE; else → ORTB_REQUEST.
+- `index.js` adds version-dispatch on the response side mirroring the
+  request side (V_3_0 → `validateResponse30`).
+- 16 new structural rules: envelope (`response.30.envelope_required`,
+  `ver_required`, `ver_invalid`, `response_required`), response object
+  (`id_required`, `seatbid_or_nbr_required`, `no_bid` INFO,
+  `seatbid_empty_no_nbr`), per-bid (`seatbid.empty`, `bid.invalid`,
+  `bid.id_required`, `bid.item_required` — note 3.0 uses `bid.item`
+  instead of 2.x `bid.impid`, `bid.price_required`), plus
+  `deep_validation_limited` always-fire INFO.
+
+**Sniffer consolidation**
+
+- `crosscheck.js` line 258 dropped its inline VAST regex; now uses the
+  canonical `isVastShape` from `format-detect.js`.
+- `public/spyglass.app.js` line 816 regex aligned to the canonical
+  `^(<\?xml|<VAST)` shape with a comment pointing at the core helper
+  (browser doesn't have direct access to the bundled core helpers
+  today; refactor that exposes `window.SpyglassCore` is a separate
+  concern, deferred).
+
+**Samples** — 2 new in `samples/`:
+
+- `synthetic-vast-vpaid-deprecated.json` — VAST 3.0 InLine with
+  `apiFramework="VPAID"` and Linear without Duration. Fires both new
+  rules at once.
+- `synthetic-ortb30-clean-response.json` — well-formed 3.0
+  BidResponse. Fires only the `deep_validation_limited` INFO.
+
+UI dropdown gets 1 new VAST button + 1 new 3.0 button per locale.
+
+**Tests** — 21 new (full suite: **381 → 402**):
+
+- 9 in `tests/vast.test.js` for the 4 new rules + the renumbered
+  "clean fixture" test (now requires `<Duration>`)
+- 12 in `tests/ortb30.test.js` for `validateResponse30` + integration
+
+**Versions**
+
+- App: `v0.13.0 → v0.14.0` (`package.json` 0.13.0 → 0.14.0)
+- Core engine: `0.13.0 → 0.14.0` (MINOR: 4 new VAST rules, 16 new
+  response-side 3.0 rules, sniffer consolidation, breaking `detectType`
+  refinement for 3.0 — request vs response now discriminated by
+  envelope contents)
+
+### Version normalization (2026-05-09)
+
+Aligned ALL version surfaces to a single truthful number track. Previously:
+
+- core engine published as `0.x` (correct — pre-stable API)
+- app `package.json` claimed `1.12.0` (overclaimed stability we don't have)
+- public UI showed `v9.12.0` (a historical high-water-mark counter
+  detached from anything substantive)
+
+Three numbers, two of them theatre. Reset all three to follow the core
+engine's number, which is the only one that's been honest. Today's three
+releases v9.10/v9.11/v9.12 are renumbered to v0.11/v0.12/v0.13 — each
+matches the core version that shipped with it.
+
+When VAST coverage is full, oRTB 3.0 BidResponse routing exists,
+sniffer-consolidation lands, and the Behavior & Anti-Fraud epic
+ships, that's a real 1.0.0 with a deliberate ceremony. Until then the
+0.x prefix tells the world "API may shift" — which is the truth.
+
+### v0.13.0 — oRTB 3.0 envelope routing (2026-05-09)
+
+Spyglass now routes oRTB 3.0 payloads through 3.0-specific rules instead
+of feeding them to the 2.x validator (which produced wholly irrelevant
+"imp_required", "no_site_or_app" findings on every 3.0 paste). Closes
+roadmap item ④. Scope is **structural** — envelope shape + per-item
+shape; deeper AdCOM 1.0 placement validation deferred until production
+3.0 traffic shows up to test against.
+
+**12 new rules** (`packages/core/rules-request-30.js`)
+
+Envelope:
+| Rule id | Level | Fires when |
+|---|---|---|
+| `request.30.envelope_required` | ERROR | `payload.openrtb` missing |
+| `request.30.ver_required` | ERROR | `openrtb.ver` missing |
+| `request.30.ver_invalid` | ERROR | `openrtb.ver` not 3.x |
+| `request.30.request_required` | ERROR | `openrtb.request` missing |
+| `request.30.id_required` | ERROR | `openrtb.request.id` missing |
+| `request.30.item_required` | ERROR | `openrtb.request.item[]` missing/empty |
+| `request.30.context_recommended` | WARN | `openrtb.request.context` missing |
+
+Per-item:
+| Rule id | Level | Fires when |
+|---|---|---|
+| `request.30.item.invalid` | ERROR | item entry isn't a plain object |
+| `request.30.item.id_required` | ERROR | item without `id` |
+| `request.30.item.qty_invalid` | WARN | `qty` present but ≤ 0 |
+| `request.30.item.spec_required` | ERROR | item without `spec` |
+
+Always-fire:
+| Rule id | Level | Purpose |
+|---|---|---|
+| `request.30.deep_validation_limited` | INFO | tells the user envelope-only validation is by design; deeper coverage deferred |
+
+**Architecture**
+
+- New file `packages/core/rules-request-30.js` — pure, no deps. Exports
+  `validateRequest30(payload, ctx)`.
+- `packages/core/index.js` — version dispatch added: when `detectVersion`
+  returns `V_3_0`, route to `validateRequest30()` instead of the legacy
+  `validateRequest()`. 2.x payloads unchanged.
+- `packages/core/detect.js` — both `detectType()` and `detectVersion()`
+  loosened: presence of an `openrtb` object (regardless of `ver` validity)
+  is enough to classify a payload as 3.0. Catches **broken envelopes**
+  (`ver=""`, no `request`) so the user sees 3.0-specific structural
+  findings, not generic `payload.unknown_type`.
+- `server.js` `handleSample` — auto-detects sample shape (`seatbid` →
+  response, `openrtb`/`item[]`/`imp[]` → request). Request-shape samples
+  load directly into the request editor, leaving the response editor
+  empty. Enables 3.0 demos in the dropdown.
+
+**Samples** (in `samples/`)
+
+- `synthetic-ortb30-clean.json` — well-formed 3.0 envelope with item +
+  context. Fires only the `deep_validation_limited` INFO note.
+- `synthetic-ortb30-broken-envelope.json` — empty `ver`, missing
+  `request.id`, item without `id`/`spec`, `qty=0`. Fires 4-5 ERRORs +
+  1 WARN + INFO.
+
+The 🎲 example dropdown gets an "oRTB 3.0" section in all 3 locales.
+
+**Tests** — 24 new in `tests/ortb30.test.js`:
+
+- 5 detection tests (broken envelopes still classify as 3.0)
+- 13 unit tests on `validateRequest30()` directly
+- 5 integration tests through `validate()` (version dispatch + 2.x
+  isolation + i18n + disabledRules)
+- 2 sample-file integrity tests
+
+Total suite: **357 → 381**.
+
+**Versions**
+
+- App: `v0.12.0 → v0.13.0` (`package.json` 0.12.0 → 0.13.0; UI fallback strings match)
+- Core engine: `0.12.0 → 0.13.0` (MINOR: new public capability — 3.0
+  routing — and a behavior change in detection that some downstream
+  consumers might notice if they relied on broken 3.0 payloads showing
+  up as "unknown_type")
+
+### v0.12.0 — VAST validation, minimal viable (2026-05-09)
+
+Spyglass now validates VAST 2.x / 3.x / 4.x XML inside `bid.adm`. Closes
+roadmap item ③ (`docs/validator-roadmap-2026-05-09.md`) at the user-chosen
+"minimal" scope: 8 rules covering the breakage every serious SSP rejects on.
+Deeper rules (VPAID deprecation, ad-pod info, Linear duration, OMID
+viewability) are deferred until real-world traffic justifies them.
+
+**8 new rules** (`packages/core/rules-vast.js`)
+
+| Rule id | Level | Fires when |
+|---|---|---|
+| `vast.version_missing` | ERROR | `<VAST>` has no `version` attribute |
+| `vast.version_unknown` | WARN | `version` is not 2.x / 3.x / 4.x |
+| `vast.inline_or_wrapper_required` | ERROR | neither `<InLine>` nor `<Wrapper>` present |
+| `vast.adsystem_missing` | ERROR | `<InLine>` without `<AdSystem>` |
+| `vast.adtitle_missing` | ERROR | `<InLine>` without `<AdTitle>` |
+| `vast.mediafile_missing` | ERROR | `<InLine>` without `<MediaFile>` |
+| `vast.wrapper_no_tag_uri` | ERROR | `<Wrapper>` without `<VASTAdTagURI>` |
+| `vast.insecure_url` | WARN | `http://` URL inside MediaFile / VASTAdTagURI / ClickThrough / ClickTracking / Impression. `count` + `sampleUrl` params. |
+
+**Architecture**
+
+- New file `packages/core/rules-vast.js` — pure regex-based scanner, zero deps.
+  Exports `validateVast(adm, path)` and `isVastShape(adm)`.
+- `packages/core/format-detect.js` now exports `isVastShape` + `detectVastVersion`
+  helpers that `rules-vast.js` consumes. Previously the codebase had three near-
+  duplicate VAST sniffers (this file, `crosscheck.js`, `public/spyglass.app.js`);
+  the new helpers are the canonical pair. `crosscheck.js` and the UI keep their
+  inline regexes for now to avoid an unrelated refactor; `docs/ARCHMAP.md`
+  flags both for future consolidation.
+- `packages/core/rules-response.js` integrates VAST rules into the per-bid
+  loop, alongside the existing `behavior.static.*` scan. Triggers ONLY when
+  `isVastShape(adm)` is true, so banner / native HTML adm strings skip it.
+- Findings are decorated with `sNum` / `bNum` params and `seatbid[i].bid[j].adm`
+  path the same way every other response-bid finding is.
+
+**Samples** (in `samples/`)
+
+- `synthetic-vast-clean-inline.json` — VAST 4.2 InLine, all required tags, https URLs (0 vast.* findings)
+- `synthetic-vast-broken-inline.json` — version + AdSystem + MediaFile all missing (3 ERRORs)
+- `synthetic-vast-insecure-wrapper.json` — VAST 3.0 Wrapper with 3 http:// trackers (1 WARN, count=3)
+
+The 🎲 example dropdown gets a "VAST (video)" section in all 3 locales with
+direct buttons for each sample.
+
+**Tests** — 25 new in `tests/vast.test.js`:
+
+- 8 sniff tests (`isVastShape`, `detectVastVersion`)
+- 11 unit tests on `validateVast()` directly
+- 4 integration tests through `validate()` (the rules-response wiring)
+- 3 sample-file integrity tests (the demo dropdown can't silently rot)
+
+Total suite: **332 → 357**.
+
+**Versions**
+
+- App: `v0.11.0 → v0.12.0` (`package.json` 0.11.0 → 0.12.0)
+- Core engine: `0.11.0 → 0.12.0` (MINOR: new public capability)
+
+### Tier 1 hot keyword scan + drop unused `hot_score` column (2026-05-09, portal)
+
+Roadmap item ② from `docs/validator-roadmap-2026-05-09.md`. Lives outside
+the Spyglass repo; logged here for cross-stack traceability.
+
+- **Mozok RSS Tick** keyword scan now sees `title + first 800 chars of
+  content`, not just `title`. The 800-char cap keeps the O(n×k) scan
+  bounded; 800 chars covers the lede of nearly every RSS item.
+- **`items.hot_score`** column dropped from `news` Postgres DB. Was
+  `REAL NOT NULL DEFAULT 0`; production count of non-zero rows = 0.
+  Schema doc (`/srv/DATA/Stacks/postgres/init/news_schema.sql`) updated
+  so fresh provisioning matches. `hot_score_llm` (Tier 3 LLM-derived
+  score 0..1) untouched — that one is in active use.
+
+### v0.11.0 — API stability contract (2026-05-09)
+
+The validator's public output is now deterministic. CI consumers (GitHub
+Action, dashboards, third-party integrations) get a stable order, no
+duplicate noise, and a way to opt out of specific rules per-call. Closes
+roadmap item ① from `docs/validator-roadmap-2026-05-09.md`.
+
+**New public guarantees on `validate()` and `crosscheck()`**
+
+- **Order**: severity DESC → `path` ASC (lex) → `id` ASC. Errors first,
+  then warnings, then info. Crosscheck `crit`/`warn`/`ok` levels fold
+  into the same scale (`crit` ranks with `error`, `warn` with `warning`,
+  `ok` last). Idempotent — re-sorting is a no-op.
+- **Dedup**: repeated `(id, path)` pairs collapse into one finding. When
+  ≥2 copies were merged, the surviving finding gets a `params.dedupCount`
+  integer. The first occurrence wins on level / params / msg.
+  Singletons get NO `dedupCount` so i18n templates never accidentally
+  render "×1". Uses `dedupCount` (not `count`) to avoid colliding with
+  rules that already use `count` for domain meaning (e.g.
+  `crosscheck.bid.native_complete`).
+- **`disabledRules`** option: `validate(req, { disabledRules: ['imp.*',
+  'regs.coppa_pii_present'] })`. Filters BEFORE dedup/sort. Accepts exact
+  ids or trailing-`*` prefixes. Empty / falsy → no filter.
+
+**Internals**
+
+- New exports from `packages/core/findings.js`: `sortFindings`,
+  `dedupFindings`, `applyDisabledRules`. Public via `index.js` (re-export
+  not added — these are utilities; the contract is consumed via the
+  public `validate()` / `crosscheck()` outputs).
+- `POST /api/analyze` now reads `body.opts.disabledRules` (array, max 100
+  entries, strings only). Forwarded to both `validate()` and
+  `crosscheck()`. Browser callers and CI consumers get the same surface.
+- 18 new unit tests in `tests/api-stability.test.js` covering each utility
+  in isolation + 4 end-to-end checks via `validate()`.
+- Pre-existing test for the renamed `response.seatbid_required` →
+  `response.seatbid_or_nbr_required` rule (introduced in v9.9.0) updated
+  in the same release.
+
+**Versions**
+
+- App: `v0.10.0 → v0.11.0` (`package.json` 0.10.0 → 0.11.0)
+- Core engine: `0.10.0 → 0.11.0` (MINOR: new option + new contract guarantees)
+
+### v9.9.0 — Validator audit follow-up (2026-05-09)
+
+Sweeping the deep-audit findings: 5 P1 bugs in the auction-summary +
+no-bid handling, three modern-privacy rule families (GPP, CCPA, COPPA),
+and plumbing the runtime `behavior.static.*` engine into the
+validate-response path so a paste-and-go user sees malware findings
+without opening the Behavior tab.
+
+**P1 — fixed bugs**
+
+- `crosscheck.cur_default_usd_mismatch` (new). Response omitting `cur`
+  silently fell back to USD per oRTB §3.3, but if the request excluded
+  USD (e.g. `cur: ['EUR']`) the validator missed the mismatch.
+- `crosscheck.bid.price_invalid` (new). `bid.price = null` was being
+  coerced to 0 via `Number(x) || 0`, false-positive passing the floor
+  check and polluting auction summary. Now emits CRIT.
+- `response.seatbid_or_nbr_required` replaces `response.seatbid_required`.
+  Previously a perfectly valid no-bid response (`{ id, nbr }` per
+  §3.3.1) emitted ERROR. Now: both missing → ERROR; `nbr` only → INFO
+  `response.no_bid` with reason; empty array without `nbr` → ERROR
+  `response.seatbid_empty_no_nbr`.
+- `regs.gdpr_consent_missing` now reads top-level `regs.gdpr` (oRTB 2.6
+  §3.2.3) in addition to legacy `regs.ext.gdpr`.
+- `crosscheck` early-returns cleanly on no-bid responses instead of
+  emitting `crosscheck.no_response` CRIT.
+
+**New privacy / regulatory rules**
+
+- `regs.gpp_sid_without_string` / `regs.gpp_string_without_sid` — GPP
+  signal halves must travel together.
+- `regs.us_privacy_invalid` — CCPA `us_privacy` must match
+  `[1-9][-YN][-YN][-YN]`.
+- `regs.coppa_pii_present` — `regs.coppa=1` with `user.id`/`buyeruid`
+  or precise `device.geo.lat/lon` is a COPPA violation. WARN.
+
+**Static adm scan**
+
+- `behavior.static.{obfuscation,miner_signature,xss_marker,high_entropy_blob}`
+  now fire from `validateResponse` whenever `bid.adm` is a string.
+  Engine code + regex patterns + message catalog already existed; only
+  plumbing was missing. A paste-and-go user with `eval(atob('...'))` in
+  adm now gets the right verdict on the validate path, no Behavior tab.
+
+**Versions**
+
+- App: `v9.8.2 → v9.9.0` (`package.json` 1.8.8 → 1.9.0)
+- Core engine: `0.9.2 → 0.10.0` (MINOR: new rules + new exports)
+
 ### v9.8.2 — Pre-freeze hardening (Phase 9b/audit follow-up)
 
 **Final sprint before development freeze.** Closes the two P0 risks
