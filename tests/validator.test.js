@@ -311,12 +311,12 @@ test('valid BidResponse passes', () => {
   assert.equal(byLevel(result.findings, 'error').length, 0);
 });
 
-test('BidResponse missing seatbid is error "response.seatbid_required"', () => {
+test('BidResponse missing seatbid AND nbr is error "response.seatbid_or_nbr_required"', () => {
   const res = validResponse();
   delete res.seatbid;
   const { findings, status } = validate(res);
   assert.equal(status, 'errors');
-  assert.ok(findById(findings, 'response.seatbid_required'));
+  assert.ok(findById(findings, 'response.seatbid_or_nbr_required'));
 });
 
 test('bid without price is error "response.bid.price_required"', () => {

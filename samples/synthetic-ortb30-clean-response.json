@@ -1,0 +1,26 @@
+{
+  "_note": "Clean oRTB 3.0 BidResponse — well-formed envelope { openrtb: { ver:'3.0', response: {...} } } with one seatbid carrying one bid. Each bid has id, item (the request item.id reference), and price. Validator should emit only the response.30.deep_validation_limited INFO note. The 3.0 control case for responses.",
+  "openrtb": {
+    "ver": "3.0",
+    "response": {
+      "id": "ortb30-resp-001",
+      "bidid": "bidid-ortb30-001",
+      "cur": "USD",
+      "seatbid": [
+        {
+          "seat": "trusted-dsp",
+          "bid": [
+            {
+              "id": "bid-30-001",
+              "item": "1",
+              "price": 4.5,
+              "media": {
+                "type": "video"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

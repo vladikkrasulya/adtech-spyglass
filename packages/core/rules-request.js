@@ -33,12 +33,70 @@ function validateRequest(req, ctx) {
     findings.push(F('request.at_invalid', LEVELS.WARNING, 'at', { at: req.at }));
   }
 
-  // GDPR consent — if regs.ext.gdpr=1, user.ext.consent must be a non-empty
-  // TCF v2 string. EU exchanges drop the bid without it.
-  if (req.regs && req.regs.ext && req.regs.ext.gdpr === 1) {
+  // GDPR consent — oRTB 2.5 placed it at `regs.ext.gdpr=1`; oRTB 2.6 §3.2.3
+  // promoted it to top-level `regs.gdpr=1`. Modern EU exchanges send the
+  // 2.6 form; accept either so validation stays honest across versions.
+  // When set, `user.ext.consent` must be a non-empty TCF v2 string — EU
+  // exchanges drop the bid without it.
+  const gdprTopLevel = req.regs && req.regs.gdpr === 1;
+  const gdprLegacy = req.regs && req.regs.ext && req.regs.ext.gdpr === 1;
+  if (gdprTopLevel || gdprLegacy) {
     const consent = req.user && req.user.ext && req.user.ext.consent;
     if (!isStr(consent) || !consent.trim()) {
-      findings.push(F('regs.gdpr_consent_missing', LEVELS.WARNING, 'regs.ext.gdpr'));
+      findings.push(
+        F(
+          'regs.gdpr_consent_missing',
+          LEVELS.WARNING,
+          gdprTopLevel ? 'regs.gdpr' : 'regs.ext.gdpr',
+        ),
+      );
+    }
+  }
+
+  // GPP / CCPA / COPPA — modern privacy framework rules. We surface the
+  // INFO-level signals so users can see at a glance whether their request
+  // talks to the right region's regulators. ERROR levels are deliberate:
+  // CCPA `us_privacy` is an opaque 4-char string; if present and clearly
+  // malformed, that *will* break SSP-side validation.
+
+  // GPP (Global Privacy Platform) — oRTB 2.6 §3.2.3 added `regs.gpp` +
+  // `regs.gpp_sid`. If GPP is signaled (gpp_sid present), gpp consent
+  // string should be too. Inverse is also useful: gpp string without sids
+  // is meaningless.
+  if (req.regs) {
+    const hasGppSid = Array.isArray(req.regs.gpp_sid) && req.regs.gpp_sid.length;
+    const hasGppStr = isStr(req.regs.gpp) && req.regs.gpp.trim();
+    if (hasGppSid && !hasGppStr) {
+      findings.push(F('regs.gpp_sid_without_string', LEVELS.WARNING, 'regs.gpp'));
+    } else if (hasGppStr && !hasGppSid) {
+      findings.push(F('regs.gpp_string_without_sid', LEVELS.WARNING, 'regs.gpp_sid'));
+    }
+  }
+
+  // CCPA `us_privacy` — IAB MSPA spec: 4-char string `<spec_version><opt_out_notice><opt_out><lspa_covered>`,
+  // each char is `-`, `Y`, `N`, or (for spec_version) `1`. Anything else
+  // is malformed and SSPs will reject.
+  const usp = req.regs && req.regs.ext && req.regs.ext.us_privacy;
+  if (usp != null) {
+    if (!isStr(usp) || !/^[1-9][-YN][-YN][-YN]$/i.test(usp)) {
+      findings.push(F('regs.us_privacy_invalid', LEVELS.WARNING, 'regs.ext.us_privacy', { usp: String(usp) }));
+    }
+  }
+
+  // COPPA — `regs.coppa=1` means the user is a child under 13. When set,
+  // most exchanges require non-PII (no precise geo, no device.dnt, no
+  // user.id/buyeruid). We surface the inconsistency.
+  if (req.regs && req.regs.coppa === 1) {
+    const userObj = req.user || {};
+    const hasUid = isStr(userObj.id) || isStr(userObj.buyeruid);
+    const hasGeo = req.device && req.device.geo && (req.device.geo.lat != null || req.device.geo.lon != null);
+    if (hasUid || hasGeo) {
+      findings.push(
+        F('regs.coppa_pii_present', LEVELS.WARNING, 'regs.coppa', {
+          hasUid: String(hasUid),
+          hasGeo: String(hasGeo),
+        }),
+      );
     }
   }
 

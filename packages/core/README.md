@@ -62,7 +62,18 @@ Validates a `BidRequest`, `BidResponse`, or vendor JSON-feed payload. Auto-detec
 Options:
 
 - `dialect` — `'iab'` (default, strict OpenRTB spec) or a vendor overlay (adds vendor-specific rules)
-- `locale` — `'uk'` (default), `'en'`
+- `locale` — `'uk'` (default), `'en'`, `'ru'`
+- `disabledRules` — `string[]` of finding ids to suppress; supports trailing `*` prefix (e.g. `['imp.bidfloorcur_missing', 'regs.*']`)
+
+### API stability contract (since 0.11.0)
+
+`validate()` and `crosscheck()` guarantee a deterministic findings array:
+
+1. **Order**: severity descending → `path` ascending (lex) → `id` ascending. Errors first, then warnings, then info. Crosscheck `crit`/`warn`/`ok` levels fold into the same scale (`crit`≡`error`, `warn`≡`warning`, `ok` last).
+2. **Dedup**: repeated `(id, path)` pairs collapse into one finding. When 2+ copies were merged, the surviving finding gets a `params.dedupCount` integer. The first occurrence wins on level / params / msg. The new key is `dedupCount` (not `count`) to avoid colliding with rules that already use `count` for domain meaning.
+3. **disabledRules**: `validate(req, { disabledRules: ['regs.*'] })` filters before dedup/sort. Accepts exact ids or trailing-`*` prefixes. Empty / falsy → no filter.
+
+CI consumers can rely on this exact ordering — they don't need to re-sort.
 
 ### `crosscheck(req, res, opts?)`
 

@@ -1,0 +1,20 @@
+{
+  "_note": "VAST 3.0 InLine declaring apiFramework=\"VPAID\". VPAID was deprecated in VAST 4.1 and REMOVED in 4.2 — most modern SSPs flag it as legacy/risk. Validator should emit: vast.vpaid_deprecated WARN. Plus version is 3.0 (still supported), so no version_unknown. Plus a Linear without Duration → vast.linear_duration_missing ERROR. Useful to demo two of the new rules.",
+  "id": "bid-response-vast-vpaid-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "legacy-dsp",
+      "bid": [
+        {
+          "id": "bid-vast-vpaid-001",
+          "impid": "1",
+          "price": 3.0,
+          "adomain": ["legacy-brand.example"],
+          "mtype": 2,
+          "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"><Ad id=\"vast-vpaid-001\"><InLine><AdSystem>Legacy DSP</AdSystem><AdTitle><![CDATA[VPAID demo creative]]></AdTitle><Impression><![CDATA[https://imp.legacy-dsp.example/i?id=001]]></Impression><Creatives><Creative id=\"c-001\"><Linear><MediaFiles><MediaFile delivery=\"progressive\" type=\"application/javascript\" apiFramework=\"VPAID\" width=\"640\" height=\"360\"><![CDATA[https://cdn.legacy-dsp.example/vpaid.js]]></MediaFile></MediaFiles><VideoClicks><ClickThrough><![CDATA[https://legacy-brand.example/promo]]></ClickThrough></VideoClicks></Linear></Creative></Creatives></InLine></Ad></VAST>"
+        }
+      ]
+    }
+  ]
+}

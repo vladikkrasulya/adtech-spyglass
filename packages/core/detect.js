@@ -141,9 +141,21 @@ function detectType(obj) {
   if (Array.isArray(obj)) return TYPES.KADAM_FEED;
   if (!isObj(obj)) return TYPES.UNKNOWN;
 
-  // 3.0 envelope check (the only structurally-distinct shape)
-  if (Array.isArray(obj.item) || (obj.openrtb && obj.openrtb.ver === '3.0')) {
-    return TYPES.ORTB_REQUEST; // we still treat as request; version detection labels it 3.0
+  // 3.0 envelope check (the only structurally-distinct shape).
+  // Detect on PRESENCE of `openrtb` object (regardless of ver value) —
+  // a broken envelope is still a 3.0 attempt; we want 3.0-specific
+  // findings, not generic "unknown_type".
+  //
+  // Discriminate request vs response by which child the envelope carries:
+  //   openrtb.request → BidRequest  (or openrtb.openrtb_request via legacy)
+  //   openrtb.response → BidResponse
+  // If the envelope has neither (broken), default to REQUEST so the user
+  // gets the request-side rules (request.30.request_required will fire).
+  if (Array.isArray(obj.item) || isObj(obj.openrtb)) {
+    if (isObj(obj.openrtb) && isObj(obj.openrtb.response)) {
+      return TYPES.ORTB_RESPONSE;
+    }
+    return TYPES.ORTB_REQUEST;
   }
 
   // Structural markers — the canonical array decides the type.
@@ -185,11 +197,15 @@ function detectVersion(payload) {
   /** @type {any} */
   const p = payload;
 
-  // 3.0 — distinct top-level shape
-  if (Array.isArray(p.item) || (p.openrtb && p.openrtb.ver === '3.0')) {
+  // 3.0 — distinct top-level shape. Same loosened detection as
+  // detectType() above: presence of `openrtb` object OR top-level
+  // `item[]` is enough. Catches broken envelopes (ver="" / no
+  // request) so the user sees 3.0-specific structural findings
+  // instead of "looks like 2.5 with low confidence".
+  if (Array.isArray(p.item) || isObj(p.openrtb)) {
     const signals = [];
     if (Array.isArray(p.item)) signals.push('item[]');
-    if (p.openrtb) signals.push('openrtb.ver');
+    if (isObj(p.openrtb)) signals.push('openrtb');
     return { version: VERSIONS.V_3_0, confidence: 1, signals };
   }
 

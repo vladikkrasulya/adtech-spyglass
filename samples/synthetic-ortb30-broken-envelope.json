@@ -1,0 +1,14 @@
+{
+  "_note": "Broken oRTB 3.0 BidRequest — envelope present but required fields are missing or wrong: openrtb.ver is empty, openrtb.request.id is missing, item[0].id is missing, item[0].spec is missing, no context. Validator should emit ~5 ERRORs + 1 WARN + the deep_validation_limited INFO note. Useful to demonstrate every per-item rule firing in one paste.",
+  "openrtb": {
+    "ver": "",
+    "request": {
+      "tmax": 200,
+      "item": [
+        {
+          "qty": 0
+        }
+      ]
+    }
+  }
+}

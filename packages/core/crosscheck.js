@@ -12,16 +12,30 @@
 
 const { isObj } = require('./helpers');
 const { CROSS_LEVELS, makeCross } = require('./findings');
+const { isVastShape } = require('./format-detect');
 
 const C = makeCross;
 
-function crosscheck(req, res) {
+function crosscheck(req, res, _ctx) {
+  // _ctx.dialect is reserved for future dialect-aware crosscheck rules
+  // (e.g. Kadam-specific bid.ext.bsection expectations). Today the rules
+  // here are spec-agnostic; the param is accepted to keep the call shape
+  // stable.
   const out = [];
 
   if (!isObj(req) || !Array.isArray(req.imp)) {
     return [C('crosscheck.no_request', false, CROSS_LEVELS.CRIT, 'req')];
   }
-  if (!isObj(res) || !Array.isArray(res.seatbid) || !res.seatbid.length) {
+  if (!isObj(res)) {
+    return [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
+  }
+  // No-bid response (oRTB §3.3.1: just `id` + `nbr` reason code) is a valid
+  // shape; crosscheck has nothing to do. rules-response surfaces the INFO
+  // finding for the no-bid case so users still see *why* there's no bid.
+  if (typeof res.nbr === 'number' && (!Array.isArray(res.seatbid) || !res.seatbid.length)) {
+    return [];
+  }
+  if (!Array.isArray(res.seatbid) || !res.seatbid.length) {
     return [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
   }
 
@@ -38,6 +52,10 @@ function crosscheck(req, res) {
   }
 
   // 2. currency
+  // Per oRTB §3.3: response without `cur` defaults to USD. If the request
+  // explicitly excludes USD, that default-fallback is a real mismatch — the
+  // bid would settle in a currency the exchange refuses. Easy to miss when
+  // the response is silent about it; surface explicitly.
   const reqCur = Array.isArray(req.cur) ? req.cur : ['USD'];
   if (res.cur && !reqCur.includes(res.cur)) {
     out.push(
@@ -48,6 +66,12 @@ function crosscheck(req, res) {
     );
   } else if (res.cur) {
     out.push(C('crosscheck.cur_allowed', true, CROSS_LEVELS.OK, 'cur', { cur: res.cur }));
+  } else if (Array.isArray(req.cur) && req.cur.length && !req.cur.includes('USD')) {
+    out.push(
+      C('crosscheck.cur_default_usd_mismatch', false, CROSS_LEVELS.WARN, 'cur', {
+        allowed: JSON.stringify(reqCur),
+      }),
+    );
   }
 
   // index imp by id for O(1) bid.impid resolution
@@ -88,24 +112,41 @@ function crosscheck(req, res) {
       );
 
       // 3b. price vs floor
+      // bid.price is REQUIRED per oRTB §3.2.5. Number(null|undefined|"abc")
+      // collapses to NaN, then `|| 0` would silently make a broken bid LOOK
+      // like 0 — which then false-positive passes a 0-floor and pollutes
+      // bidsAboveFloor + topPrice. Surface invalid prices as their own CRIT
+      // finding and skip the floor compare. bcat/badv/sizes still run.
       const floor = Number(imp.bidfloor) || 0;
-      const price = Number(bid.price) || 0;
-      const priceParams = {
-        ...baseParams,
-        price: price.toFixed(4),
-        floor: floor.toFixed(4),
-      };
-      if (price >= floor) {
-        bidsAboveFloor++;
+      const priceRaw = bid.price;
+      const priceIsValid =
+        priceRaw !== null && priceRaw !== undefined && Number.isFinite(Number(priceRaw));
+      if (!priceIsValid) {
         out.push(
-          C('crosscheck.bid.above_floor', true, CROSS_LEVELS.OK, `${bp}.price`, priceParams),
+          C('crosscheck.bid.price_invalid', false, CROSS_LEVELS.CRIT, `${bp}.price`, {
+            ...baseParams,
+            raw: priceRaw === undefined ? 'undefined' : JSON.stringify(priceRaw),
+          }),
         );
-        const cur = winningByImp.get(bid.impid) || 0;
-        if (price > cur) winningByImp.set(bid.impid, price);
       } else {
-        out.push(
-          C('crosscheck.bid.below_floor', false, CROSS_LEVELS.CRIT, `${bp}.price`, priceParams),
-        );
+        const price = Number(priceRaw);
+        const priceParams = {
+          ...baseParams,
+          price: price.toFixed(4),
+          floor: floor.toFixed(4),
+        };
+        if (price >= floor) {
+          bidsAboveFloor++;
+          out.push(
+            C('crosscheck.bid.above_floor', true, CROSS_LEVELS.OK, `${bp}.price`, priceParams),
+          );
+          const cur = winningByImp.get(bid.impid) || 0;
+          if (price > cur) winningByImp.set(bid.impid, price);
+        } else {
+          out.push(
+            C('crosscheck.bid.below_floor', false, CROSS_LEVELS.CRIT, `${bp}.price`, priceParams),
+          );
+        }
       }
 
       // 3c. bcat
@@ -217,9 +258,10 @@ function crosscheck(req, res) {
         }
       }
 
-      // 3g. video VAST
+      // 3g. video VAST. Sniff via the canonical helper so this file and
+      //     rules-vast.js share the same anchored regex.
       if (imp.video && bid.adm) {
-        const isVast = /^\s*<\?xml|<VAST/i.test(String(bid.adm).trim());
+        const isVast = isVastShape(String(bid.adm));
         out.push(
           C(
             isVast ? 'crosscheck.bid.video_vast' : 'crosscheck.bid.video_not_vast',

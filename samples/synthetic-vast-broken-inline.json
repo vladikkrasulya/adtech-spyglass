@@ -1,0 +1,20 @@
+{
+  "_note": "Broken VAST InLine — missing version attribute on <VAST>, missing <AdSystem>, missing <MediaFile>. Validator should emit: vast.version_missing (ERROR), vast.adsystem_missing (ERROR), vast.mediafile_missing (ERROR). Useful for showing all 3 InLine integrity rules firing in one paste.",
+  "id": "bid-response-vast-broken-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "broken-dsp",
+      "bid": [
+        {
+          "id": "bid-vast-broken-001",
+          "impid": "1",
+          "price": 2.0,
+          "adomain": ["broken-brand.example"],
+          "mtype": 2,
+          "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST><Ad id=\"vast-broken-001\"><InLine><AdTitle><![CDATA[No system, no media]]></AdTitle><Impression><![CDATA[https://imp.broken-dsp.example/i?id=001]]></Impression></InLine></Ad></VAST>"
+        }
+      ]
+    }
+  ]
+}

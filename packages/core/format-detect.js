@@ -89,6 +89,27 @@ function isObj(x) {
 }
 
 /**
+ * Tiny VAST helpers — exported so rule files share one anchored regex
+ * instead of each inventing their own. The previous codebase had three
+ * subtly different sniffers (this file, crosscheck.js, the UI). All
+ * future code SHOULD reuse these.
+ *
+ * `isVastShape` is anchored at start (allowing whitespace) so a string
+ * mentioning `<VAST` deep inside HTML doesn't false-positive. `detect`
+ * returns the major.minor string from the version attribute, or null.
+ */
+function isVastShape(s) {
+  if (typeof s !== 'string') return false;
+  return /^\s*(<\?xml|<VAST)/i.test(s);
+}
+
+function detectVastVersion(s) {
+  if (typeof s !== 'string') return null;
+  const m = s.match(/<VAST\b[^>]*\sversion\s*=\s*["'](\d+(?:\.\d+)?)["']/i);
+  return m ? m[1] : null;
+}
+
+/**
  * Single-object JSON-feed signatures. The Kadam-style push and the
  * Zeropark-style popunder have unique enough shapes that one or two
  * keys discriminate them. Inpage is a soft heuristic — the canonical
@@ -203,4 +224,4 @@ function detectFormat(payload) {
   };
 }
 
-module.exports = { detectFormat, FORMATS, CONTEXTS, PROTOCOLS };
+module.exports = { detectFormat, isVastShape, detectVastVersion, FORMATS, CONTEXTS, PROTOCOLS };

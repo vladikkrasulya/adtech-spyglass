@@ -1,0 +1,20 @@
+{
+  "_note": "VAST 3.0 Wrapper with VASTAdTagURI present (so wrapper_no_tag_uri does NOT fire) but with three insecure http:// URLs in trackers. Validator should emit: vast.insecure_url WARN with count=3. Demonstrates the mixed-content rule on real wrapper traffic.",
+  "id": "bid-response-vast-insecure-wrapper-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "legacy-ssp",
+      "bid": [
+        {
+          "id": "bid-vast-insecure-wrapper-001",
+          "impid": "1",
+          "price": 1.8,
+          "adomain": ["legacy-brand.example"],
+          "mtype": 2,
+          "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"><Ad id=\"vast-wrap-001\"><Wrapper><AdSystem>Legacy SSP</AdSystem><VASTAdTagURI><![CDATA[http://wrap.legacy-ssp.example/vast?campaign=001]]></VASTAdTagURI><Impression><![CDATA[http://track.legacy-ssp.example/i?id=001]]></Impression><Creatives><Creative><Linear><VideoClicks><ClickTracking><![CDATA[http://click.legacy-ssp.example/c?id=001]]></ClickTracking></VideoClicks></Linear></Creative></Creatives></Wrapper></Ad></VAST>"
+        }
+      ]
+    }
+  ]
+}

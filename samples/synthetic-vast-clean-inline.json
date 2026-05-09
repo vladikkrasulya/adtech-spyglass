@@ -1,0 +1,24 @@
+{
+  "_note": "Clean VAST 4.2 InLine. Valid BidResponse with a well-formed video creative. All required VAST elements present (version, AdSystem, AdTitle, MediaFile, Impression, ClickThrough). All URLs are https. Validator should emit 0 vast.* findings. Use as the video-side control case alongside synthetic-clean-banner.json.",
+  "id": "bid-response-vast-clean-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "trusted-dsp",
+      "bid": [
+        {
+          "id": "bid-vast-clean-001",
+          "impid": "1",
+          "price": 4.5,
+          "adid": "creative-vast-clean-001",
+          "adomain": ["legitimate-brand.example"],
+          "cid": "campaign-video-spring-2026",
+          "crid": "creative-vast-clean-001",
+          "cat": ["IAB1"],
+          "mtype": 2,
+          "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.2\"><Ad id=\"vast-clean-001\"><InLine><AdSystem version=\"1.0\">Trusted DSP</AdSystem><AdTitle><![CDATA[Spring sale 30% off]]></AdTitle><Impression><![CDATA[https://imp.trusted-dsp.example/i?id=001]]></Impression><Creatives><Creative id=\"creative-vast-clean-001\"><Linear><Duration>00:00:15</Duration><MediaFiles><MediaFile delivery=\"progressive\" type=\"video/mp4\" width=\"640\" height=\"360\" bitrate=\"800\"><![CDATA[https://cdn.trusted-dsp.example/creative/spring-sale-15s.mp4]]></MediaFile></MediaFiles><VideoClicks><ClickThrough><![CDATA[https://legitimate-brand.example/promo?utm_source=video]]></ClickThrough><ClickTracking><![CDATA[https://track.trusted-dsp.example/c?id=001]]></ClickTracking></VideoClicks></Linear></Creative></Creatives></InLine></Ad></VAST>"
+        }
+      ]
+    }
+  ]
+}
