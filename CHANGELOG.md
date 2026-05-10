@@ -6,6 +6,73 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.36.0 — Docs catch-up + perf polish (2026-05-10)
+
+Two parallel agents audited (a) site performance and (b) /about
+docs. Triaged with verification per `feedback_audit_false_positives.md`.
+Net: 1 verified perf win + 4 verified docs gaps + new feature
+documentation across 3 locales.
+
+**Perf — `runAnalysis` AbortController**
+
+- Pre-fix the `_analyzeReqSeq` counter prevented stale responses from
+  overwriting the UI but the actual fetch still ran to completion,
+  wasting server CPU and the user's bandwidth on results we'd discard.
+  Now each `runAnalysis()` aborts the previous in-flight fetch on the
+  wire. AbortError caught and silenced (it's expected when a newer
+  request supersedes an older one — no toast, no console noise).
+
+**Docs — stale facts fixed (UK)**
+
+- `about.uk.html` locale-support table: "EN locale: Phase 3 (en.json
+  — stub)" → "EN: Підтримується" + new "RU: Підтримується" row.
+- "Що Spyglass не робить" table: removed "Не підтримує English UI"
+  row (English about + UI shipped in v0.32).
+- "messages/uk.json — 71 локалізована повідомлення" →
+  "messages/{uk,en,ru}.json — локалізовані повідомлення".
+- `about.ru.html`: Cyrillic typo `detectВерсия` (mid-word
+  English/Cyrillic mix) → `detectVersion`.
+- `about.en.html`: `messages/{uk,en}.json` → `messages/{uk,en,ru}.json`.
+
+**Docs — new section "Що нового · 2026-05-10" × 3 locales**
+
+Single section near the top of each /about page, with 8 subsections
+covering today's shipped features:
+
+1. 🪞 Mirror generator + best-practice mode + diff view + share permalink
+2. 📡 Live RTB stream UI
+3. 👁 Finding details panel (path / value / severity / spec)
+4. 🛡 Behavior corpus + Confusion matrix
+5. 🤖 Bid simulator (gemma 3-strategy)
+6. 📦 Specimen replay endpoint (`POST /api/v1/replay`)
+7. 👤 Cabinet redesign (7 sections + sticky sidebar + scroll-spy)
+8. Localization shipping (EN + RU first-class)
+
+Topnav of each /about page also gets a new "Що нового / What's new
+/ Что нового" link to jump straight to the section. Authored
+natively in each locale, not machine-translated.
+
+**Audit triage notes** (false positives NOT fixed):
+
+- "i18n.js 92KB monolithic — split per locale" — would need a build
+  step the project doesn't have; brotli gets it to ~15KB on wire.
+- "inspector.css 60KB — PurgeCSS" — same constraint; runtime parse
+  is ~5ms on warm cache.
+- "Live modal 60FPS dropped at 50 events/sec" — synthetic stream is
+  1Hz (`STREAM_RATE_MS=1000`), agent assumed unrealistic rate.
+- "Asset version hash on every render" — already cached at
+  `server.js:229`.
+- "8 new full-section content × 3 locales" was the agent's
+  recommendation; we shipped 1 condensed "What's new" section per
+  locale instead — covers all 8 features readably without doubling
+  the doc length.
+
+463/463 tests still green. Lockstep MINOR bump 0.35.0 → 0.36.0 +
+cache-bust ?v=18→19 (inspector). Smoke at /uk/about: 7 nav items,
+new section renders, 0 console errors.
+
+NOT pushed — local commit awaits user review.
+
 ### v0.35.0 — Bug-bounty patch round (2026-05-10)
 
 5 parallel audit agents (server / validator / client / new-sprints /

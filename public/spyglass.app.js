@@ -1414,9 +1414,20 @@ export async function mountInspector(root, ctx) {
   // of a faster one fired afterward. Each call increments + captures.
   // Stale completions are dropped silently.
   let _analyzeReqSeq = 0;
+  // AbortController for the in-flight analyze fetch. Pre-fix the seq
+  // counter (`_analyzeReqSeq`) only prevented STALE responses from
+  // overwriting the UI — the actual fetch still ran to completion,
+  // wasting server CPU and the user's bandwidth on results we'd discard.
+  // With AbortController, mashing "analyze" or fast-typing into the
+  // textareas cancels the previous fetch on the wire.
+  let _analyzeAbort = null;
 
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
+    if (_analyzeAbort) {
+      try { _analyzeAbort.abort(); } catch (_) { /* idempotent */ }
+    }
+    _analyzeAbort = typeof AbortController === 'function' ? new AbortController() : null;
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
     const resVal = fromHist ? fromHist.res : $('bidRes').value;
     // Backend supports request-only, response-only, or both. JsonFeed-format
@@ -1649,6 +1660,7 @@ export async function mountInspector(root, ctx) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bidReq: req, bidRes: res }),
+          signal: _analyzeAbort ? _analyzeAbort.signal : undefined,
         });
         const j = await r.json().catch(() => ({}));
         // Drop stale: a newer analyze started while we were waiting. Don't
@@ -1924,6 +1936,12 @@ export async function mountInspector(root, ctx) {
           );
       }
     } catch (e) {
+      // AbortError fires when a newer analyze starts before this one
+      // returns. That's expected behavior — we cancelled it on purpose;
+      // no toast, no console noise.
+      if (e && e.name === 'AbortError') {
+        return;
+      }
       toast(t('toast.error_generic', { error: e.message }), 'error');
       console.error('Analysis error:', e);
     } finally {
