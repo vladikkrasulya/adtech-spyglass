@@ -100,7 +100,11 @@ function isObj(x) {
  */
 function isVastShape(s) {
   if (typeof s !== 'string') return false;
-  return /^\s*(<\?xml|<VAST)/i.test(s);
+  // Anchor on `<VAST` directly, OR `<?xml` prefix immediately followed by
+  // `<VAST` (allowing the XML declaration). Pre-fix any `<?xml` prefix
+  // matched, which false-positive'd on SVG / other XML-shaped creatives
+  // (audit 2026-05-10 finding B-12). Now only an actual VAST root passes.
+  return /^\s*(?:<\?xml[^?]*\?>\s*)?<VAST\b/i.test(s);
 }
 
 function detectVastVersion(s) {

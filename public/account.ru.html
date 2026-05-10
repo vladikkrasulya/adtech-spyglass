@@ -120,35 +120,7 @@
       .matrix-mid { background:rgba(217,119,6,0.05); }
       .matrix-bad { background:rgba(220,38,38,0.05); }
       .matrix-empty { padding:var(--space-3); color:var(--text-muted); font-size:var(--fs-sm); text-align:center; }
-      .corpus-counts { display:flex; gap:var(--space-3); flex-wrap:wrap; font-family:var(--font-mono); font-size:var(--fs-sm); color:var(--text-muted); margin-bottom:var(--space-3); }
-      .corpus-count strong { color:var(--text); }
-      .corpus-count-fraud { color:#dc2626; }
-      .corpus-count-legit { color:#2ea043; }
-      .corpus-count-amb { color:#d97706; }
-      .corpus-list { display:flex; flex-direction:column; gap:6px; }
-      .corpus-row { display:grid; grid-template-columns:120px 180px 1fr auto; gap:8px; align-items:center; padding:var(--space-2) var(--space-3); border:1px solid var(--border); border-radius:var(--radius-sm,4px); font-family:var(--font-mono); font-size:var(--fs-sm); }
-      .corpus-label-pill { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; text-align:center; }
-      .corpus-label-fraud { background:rgba(220,38,38,0.12); color:#dc2626; }
-      .corpus-label-legitimate { background:rgba(46,160,67,0.12); color:#2ea043; }
-      .corpus-label-ambiguous { background:rgba(217,119,6,0.12); color:#d97706; }
-      .corpus-meta { color:var(--text-muted); font-size:11px; }
-      .corpus-source { color:var(--text-muted); font-size:10px; }
-      .corpus-notes { color:var(--text); font-size:11px; padding-left:8px; border-left:1px solid var(--border); }
-      .corpus-empty { padding:var(--space-3); color:var(--text-muted); font-size:var(--fs-sm); text-align:center; }
-      .corpus-delete-btn { font-size:14px; padding:2px 8px; }
-      .matrix-summary { display:flex; gap:var(--space-3); flex-wrap:wrap; font-family:var(--font-mono); font-size:var(--fs-sm); color:var(--text-muted); margin-bottom:var(--space-3); }
-      .matrix-summary strong { color:var(--text); }
-      .matrix-table { display:flex; flex-direction:column; gap:0; font-family:var(--font-mono); font-size:11px; border:1px solid var(--border); border-radius:var(--radius-sm,4px); overflow:hidden; }
-      .matrix-row { display:grid; grid-template-columns:minmax(0,2.5fr) repeat(7, minmax(0,1fr)); gap:6px; padding:6px 10px; border-bottom:1px solid var(--border); align-items:center; }
-      .matrix-row:last-child { border-bottom:0; }
-      .matrix-head { background:var(--bg-elev-2); font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; font-size:10px; }
-      .matrix-id { color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .matrix-num { text-align:right; color:var(--text); }
-      .matrix-f1 { font-weight:600; }
-      .matrix-good { background:rgba(46,160,67,0.05); }
-      .matrix-mid { background:rgba(217,119,6,0.05); }
-      .matrix-bad { background:rgba(220,38,38,0.05); }
-      .matrix-empty { padding:var(--space-3); color:var(--text-muted); font-size:var(--fs-sm); text-align:center; }
+      
       /* Cabinet 7-section layout (since 0.31.0) */
       .cab-layout { display:grid; grid-template-columns:220px 1fr; gap:var(--space-5); align-items:start; max-width:1100px; }
       .cab-container { max-width:1180px !important; }
@@ -212,10 +184,10 @@
             <a href="#profile" class="cab-nav-item is-active"><span class="cab-nav-icon">👤</span>Профиль</a>
             <a href="#library" class="cab-nav-item"><span class="cab-nav-icon">📚</span>Библиотека</a>
             <a href="#activity" class="cab-nav-item"><span class="cab-nav-icon">📊</span>Активность</a>
-            <a href="#corpus" class="cab-nav-item"><span class="cab-nav-icon">🛡</span>Behavior corpus</a>
+            <a href="#corpus" class="cab-nav-item"><span class="cab-nav-icon">🛡</span>Корпус поведения</a>
             <a href="#preferences" class="cab-nav-item"><span class="cab-nav-icon">⚙</span>Настройки</a>
             <a href="#security" class="cab-nav-item"><span class="cab-nav-icon">🔐</span>Безопасность</a>
-            <a href="#danger" class="cab-nav-item"><span class="cab-nav-icon">⚠</span>Danger zone</a>
+            <a href="#danger" class="cab-nav-item"><span class="cab-nav-icon">⚠</span>Опасная зона</a>
           </nav>
         </aside>
 
@@ -401,7 +373,7 @@
 
         <section id="corpus" class="cab-section">
         <section class="cab-card" id="cabCorpus">
-          <h2>Behavior corpus</h2>
+          <h2>Корпус поведения</h2>
           <p class="lead">
             Сохранённые event-streams с behavior-вкладки, помеченные как легитимные /
             мошеннические / неоднозначные. Confusion matrix ниже считает precision/recall
@@ -508,6 +480,6 @@
     <script src="/lang-switch.js?v=1"></script>
     <script src="/version.js?v=1"></script>
     <script src="/i18n.js?v=29"></script>
-    <script src="/account.js?v=4"></script>
+    <script src="/account.js?v=5"></script>
   </body>
 </html>

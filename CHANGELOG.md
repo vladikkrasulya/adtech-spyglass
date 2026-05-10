@@ -6,6 +6,79 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.35.0 — Bug-bounty patch round (2026-05-10)
+
+5 parallel audit agents (server / validator / client / new-sprints /
+i18n+cabinet) returned ~125 findings. Triaged with `Read`/grep
+verification per `feedback_audit_false_positives.md`; ~20% false
+positive rate (notably "missing 15 cabinet keys" — agent didn't see
+the merge loop at i18n.js:1274; "getJsonAtPath falsy trap" — code
+already uses === undefined correctly). Six verified bugs fixed:
+
+**Cabinet — hardcoded English in non-EN locales**
+
+- `account.uk.html` and `account.ru.html` had "Behavior corpus" and
+  "Danger zone" hardcoded English in the sidebar nav AND section
+  h2s, breaking locale consistency. Now: UK "Корпус поведінки" /
+  "Небезпечна зона", RU "Корпус поведения" / "Опасная зона".
+- UK confusion matrix h2 also slightly tidied: "precision и recall"
+  → "precision і recall".
+
+**Cabinet — duplicate CSS block**
+
+- All 3 cabinet HTML files had `corpus-*` + `matrix-*` CSS defined
+  twice — once during the v0.29 / v0.30 builds, then again during
+  v0.31 layout pass. ~1.9KB × 3 = ~5.7KB wasted bytes per page load.
+  Second occurrence removed by Python script.
+
+**Cabinet — aria-current sync (a11y)**
+
+- Scroll-spy in `account.js` toggled `.is-active` class but never
+  updated `aria-current` attribute. Screen readers stayed on stale
+  section after user scrolled. WCAG 2.1 AA #4.1.3 violation. Now
+  `setActive()` writes `aria-current="true"` on match and removes
+  on others.
+
+**Validator — `isVastShape` SVG false-positive**
+
+- Regex `/^\s*(<\?xml|<VAST)/i` matched any `<?xml`-prefixed string
+  including SVG creatives, which would then incorrectly drop into
+  `validateVast` and emit "version_missing" / "inline_or_wrapper_
+  required" findings. Tightened to require an actual `<VAST` tag,
+  with optional XML declaration prefix: `/^\s*(?:<\?xml[^?]*\?>\s*)?
+  <VAST\b/i`. SVG and other XML-shaped creatives no longer
+  misclassified.
+
+**Crosscheck — `Math.max(0, ...arr)` stack overflow on large bid arrays**
+
+- Spread operator pushes each array element as a function argument.
+  Browsers / V8 cap argument count around 65k; responses with 10k+
+  bids would `RangeError`. Replaced with `for...of` loop tracking
+  max manually. No spec change, just a more robust impl.
+
+**Behavior — `injectCorpusBar` re-rendered on every probe heartbeat**
+
+- The corpus-save bar was removed and re-injected on every probe
+  heartbeat (~10×/sec under active probe). Caused layout thrash and
+  occasional flash. Now stamps `data-event-count` on the bar; if
+  re-render arrives with the same count, the existing bar stays.
+
+**False positives** (NOT fixed — agents wrong):
+
+- "getJsonAtPath falsy trap (0/false treated as missing)" —
+  `=== undefined` already handles falsy correctly (Agent C-1, C-9).
+- "15 missing cabinet i18n keys" — keys exist via the `cab` merge
+  loop at `i18n.js:1274-1278` that distributes per-locale values
+  into `I18N.{en,uk,ru}` (Agent E-1).
+- Several CRITICAL "auth bypass" claims around mass-assignment in
+  Partners CRUD — verified `db.js` validates fields explicitly.
+- Multiple race-condition / stack-overflow claims that require
+  unrealistic load to trigger.
+
+**Verify**: 463/463 tests still green. Cabinet `/uk/account` shows
+all 7 sidebar items + 11 h2s in the matching locale; aria-current
+flips correctly with scroll position.
+
 ### v0.34.0 — Bid simulator demo (gemma 3-strategy, 2026-05-10)
 
 The AI-bridge graduates from cluster-naming and field-purpose to a

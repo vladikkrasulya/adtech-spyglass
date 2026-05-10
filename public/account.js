@@ -637,7 +637,13 @@
     if (!sections.length || !navItems.length) return;
     const setActive = (id) => {
       navItems.forEach((n) => {
-        n.classList.toggle('is-active', n.getAttribute('href') === '#' + id);
+        const matches = n.getAttribute('href') === '#' + id;
+        n.classList.toggle('is-active', matches);
+        // a11y: keep aria-current in sync with .is-active so screen readers
+        // announce the right section as the user scrolls. Pre-fix only the
+        // visual class updated.
+        if (matches) n.setAttribute('aria-current', 'true');
+        else n.removeAttribute('aria-current');
       });
     };
     const obs = new IntersectionObserver(

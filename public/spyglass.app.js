@@ -1024,13 +1024,18 @@ export async function mountInspector(root, ctx) {
   function injectCorpusBar(tab, events) {
     if (!tab || !events || !events.length) return;
     if (!_currentUser) return;
-    // Strip any prior bar before re-injecting (renderBehaviorTab is called
-    // on every probe heartbeat).
+    // Renderer fires on every probe heartbeat. Reuse the existing bar if
+    // event count hasn't changed; only update / re-create when the count
+    // actually changed. Pre-fix removed+re-injected the bar 10×/sec under
+    // active probes, causing layout thrash.
     const existing = tab.querySelector('.kt-corpus-bar');
+    if (existing && existing.dataset.eventCount === String(events.length)) {
+      return;
+    }
     if (existing) existing.remove();
     const eventCount = events.length;
     const bar =
-      '<div class="kt-corpus-bar">' +
+      '<div class="kt-corpus-bar" data-event-count="' + eventCount + '">' +
       '<span class="kt-corpus-bar-label">' +
       escapeHtml(t('corpus.bar.label', { count: eventCount })) + '</span>' +
       '<button class="btn btn-ghost btn-sm" data-action="open-corpus-save">' +

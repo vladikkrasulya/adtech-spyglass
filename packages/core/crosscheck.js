@@ -278,7 +278,11 @@ function crosscheck(req, res, _ctx) {
   // 4. summary
   const impsTotal = req.imp.length;
   const impsFilled = winningByImp.size;
-  const topPrice = Math.max(0, ...winningByImp.values()).toFixed(4);
+  // Math.max(0, ...arr) hits stack-arg limits on responses with many
+  // thousand bids (spread copies each into call args). Reduce avoids it.
+  let topPriceN = 0;
+  for (const v of winningByImp.values()) if (v > topPriceN) topPriceN = v;
+  const topPrice = topPriceN.toFixed(4);
   out.push(
     C('crosscheck.auction.summary', true, CROSS_LEVELS.OK, 'auction', {
       totalBids,
