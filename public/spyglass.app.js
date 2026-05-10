@@ -1050,85 +1050,6 @@ export async function mountInspector(root, ctx) {
   }
   window.injectCorpusBar = injectCorpusBar;
 
-  // Modal: pick a label, optional notes, save current behavior events as
-  // a corpus entry. POSTs to /api/behavior/corpus.
-  window.openCorpusSaveModal = function () {
-    if (!_currentUser) {
-      toast(t('toast.signin_to_save'), 'info');
-      window.openAuthModal('login');
-      return;
-    }
-    const events = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
-    const usable = events.filter((e) => e.kind !== 'probe_ready');
-    if (!usable.length) {
-      toast(t('toast.corpus_no_events'), 'error');
-      return;
-    }
-    const sourceSampleId = window._currentSampleId || null;
-    void sourceSampleId; // captured below via closure when confirmCorpusSave runs
-
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card">' +
-      '<div class="modal-title">' +
-      escapeHtml(t('modal.corpus_save.title')) +
-      '</div>' +
-      '<div class="modal-row"><div class="kt-corpus-summary">' +
-      escapeHtml(t('modal.corpus_save.summary', { count: usable.length })) +
-      '</div></div>' +
-      '<div class="modal-row"><label>' +
-      escapeHtml(t('modal.corpus_save.label')) +
-      '</label>' +
-      '<div class="kt-corpus-labels">' +
-      '<label><input type="radio" name="corpusLabel" value="legitimate"> ' +
-      escapeHtml(t('modal.corpus_save.label.legitimate')) +
-      '</label>' +
-      '<label><input type="radio" name="corpusLabel" value="fraud" checked> ' +
-      escapeHtml(t('modal.corpus_save.label.fraud')) +
-      '</label>' +
-      '<label><input type="radio" name="corpusLabel" value="ambiguous"> ' +
-      escapeHtml(t('modal.corpus_save.label.ambiguous')) +
-      '</label>' +
-      '</div></div>' +
-      '<div class="modal-row"><label>' +
-      escapeHtml(t('modal.corpus_save.notes')) +
-      '</label>' +
-      '<textarea id="corpusNotes" rows="3" placeholder="' +
-      escapeHtml(t('modal.corpus_save.notes_placeholder')) +
-      '"></textarea></div>' +
-      '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.cancel') +
-      '</button>' +
-      '<button class="btn btn-primary btn-sm" data-action="confirm-corpus-save">' +
-      escapeHtml(t('btn.save')) +
-      '</button>' +
-      '</div></div></div>';
-  };
-
-  window.confirmCorpusSave = async function () {
-    const events = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
-    const usable = events.filter((e) => e.kind !== 'probe_ready');
-    const labelEl = document.querySelector('input[name="corpusLabel"]:checked');
-    const label = labelEl ? labelEl.value : 'fraud';
-    const notes = ($('corpusNotes')?.value || '').trim();
-    const sourceSampleId = window._currentSampleId || null;
-
-    try {
-      const r = await fetch('/api/behavior/corpus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ events: usable, label, notes, sourceSampleId }),
-      });
-      const j = await r.json();
-      if (!j.success) throw new Error(j.error || 'corpus_save_failed');
-      closeModal();
-      toast(t('toast.corpus_saved', { count: usable.length, label }), 'success');
-    } catch (e) {
-      toast(t('toast.corpus_save_failed', { error: e.message }), 'error');
-    }
-  };
-
   // Render a Native 1.1 response as a card mockup so the user sees what the
   // creative will look like, not raw JSON.
   function renderNativeToHtml(native) {
@@ -3523,6 +3444,12 @@ export async function mountInspector(root, ctx) {
     }
   }
 
+  // Exposed for the lazy-loaded partners module (modules/partners/index.js).
+  // The module renders the partners list + add/delete actions; it needs
+  // to read+invalidate the cache that refreshPartners owns.
+  window.refreshPartners = refreshPartners;
+  window.getPartners = () => _partnerCache;
+
   async function refreshSamples() {
     const el = $('savedList');
     const wrap = $('libraryWrap');
@@ -4105,108 +4032,6 @@ export async function mountInspector(root, ctx) {
     }
   };
 
-  function partnerListHtml() {
-    if (!_partnerCache.length) return '<div class="saved-empty">' + t('empty.partners') + '</div>';
-    return _partnerCache
-      .map(
-        (p) =>
-          '<div class="saved-item" style="cursor:default">' +
-          '<div class="saved-item-actions" style="opacity:1">' +
-          '<button class="saved-act-btn danger" data-action="delete-partner" data-id="' +
-          p.id +
-          '" title="' +
-          escapeHtml(t('tooltip.delete')) +
-          '">×</button>' +
-          '</div>' +
-          '<div class="saved-item-title">' +
-          escapeHtml(p.name) +
-          '</div>' +
-          '<div class="saved-item-meta"><span>slug · ' +
-          escapeHtml(p.slug) +
-          '</span></div>' +
-          '</div>',
-      )
-      .join('');
-  }
-
-  window.openPartnerModal = function () {
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card">' +
-      '<div class="modal-title">' +
-      t('modal.partners.title') +
-      '</div>' +
-      '<div id="pList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:var(--space-3);max-height:240px;overflow-y:auto">' +
-      partnerListHtml() +
-      '</div>' +
-      '<div class="modal-row"><label>' +
-      t('partner.label.add_new') +
-      '</label><input id="pName" type="text" placeholder="' +
-      escapeHtml(t('partner.placeholder')) +
-      '"></div>' +
-      '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.close') +
-      '</button>' +
-      '<button class="btn btn-primary btn-sm" data-action="confirm-add-partner">' +
-      t('btn.add') +
-      '</button>' +
-      '</div>' +
-      '</div>' +
-      '</div>';
-    setTimeout(() => {
-      $('pName').focus();
-      wireEnterSubmit('pName', () => window.confirmAddPartner());
-    }, 0);
-  };
-
-  window.confirmAddPartner = async function () {
-    const name = $('pName').value.trim();
-    if (!name) {
-      toast(t('toast.partner_name_required'), 'error');
-      $('pName').focus();
-      return;
-    }
-    try {
-      await api('POST', 'api/partners', { name });
-      await refreshPartners();
-      $('pList').innerHTML = partnerListHtml();
-      $('pName').value = '';
-      $('pName').focus();
-      toast(t('toast.added', { name }), 'success');
-      refreshSamples();
-    } catch (e) {
-      toast(t('toast.partner_add_failed', { error: e.message }), 'error');
-    }
-  };
-
-  window.deletePartner = async function (id) {
-    // Fetch count first so the user sees how many samples are about to
-    // become unassigned. Cheap (single COUNT query). Falls back to the
-    // generic confirm if the count endpoint blips.
-    let count = null;
-    try {
-      const r = await api('GET', 'api/partners/' + id + '/samples-count');
-      count = r && typeof r.count === 'number' ? r.count : null;
-    } catch (_e) {
-      /* fall back to generic confirm */
-    }
-    const message =
-      count != null && count > 0
-        ? t('confirm.delete_partner_with_count', { count })
-        : t('confirm.delete_partner');
-    if (!confirm(message)) return;
-    try {
-      await api('DELETE', 'api/partners/' + id);
-      await refreshPartners();
-      $('pList').innerHTML = partnerListHtml();
-      toast(t('toast.partner_deleted'), 'success');
-      refreshSamples();
-    } catch (e) {
-      toast(t('toast.partner_delete_failed', { error: e.message }), 'error');
-    }
-  };
-
   window.closeModal = closeModal;
 
   // Sidebar visibility toggles. Click ◀ in the tab-bar to hide the left
@@ -4496,8 +4321,34 @@ export async function mountInspector(root, ctx) {
             })();
             return;
           }
-          case 'open-corpus-save':
-            return window.openCorpusSaveModal && window.openCorpusSaveModal();
+          case 'open-corpus-save': {
+            // Auth-gate BEFORE lazy-loading — guests can't save corpus,
+            // no point fetching the module for them.
+            if (!_currentUser) {
+              toast(t('toast.signin_to_save'), 'info');
+              window.openAuthModal && window.openAuthModal('login');
+              return;
+            }
+            if (typeof window.openCorpusSaveModal === 'function') {
+              return window.openCorpusSaveModal();
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/corpus-save/i18n.js'),
+                  import('/modules/corpus-save/index.js'),
+                ]);
+                window.openCorpusSaveModal();
+              } catch (err) {
+                console.error('[corpus-save] lazy import failed:', err);
+                toast(
+                  t('toast.error_generic', { error: 'corpus-save module load failed' }),
+                  'error',
+                );
+              }
+            })();
+            return;
+          }
           case 'confirm-corpus-save':
             return window.confirmCorpusSave && window.confirmCorpusSave();
           case 'corpus-delete': {
@@ -4620,8 +4471,25 @@ export async function mountInspector(root, ctx) {
             return window.openAuthModal(el.dataset.mode || 'login');
           case 'open-unlock':
             return window.openUnlockModal();
-          case 'open-partners':
-            return window.openPartnerModal && window.openPartnerModal();
+          case 'open-partners': {
+            // Lazy-load the partners module on first click.
+            if (typeof window.openPartnerModal === 'function') {
+              return window.openPartnerModal();
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/partners/i18n.js'),
+                  import('/modules/partners/index.js'),
+                ]);
+                window.openPartnerModal();
+              } catch (err) {
+                console.error('[partners] lazy import failed:', err);
+                toast(t('toast.error_generic', { error: 'partners module load failed' }), 'error');
+              }
+            })();
+            return;
+          }
           case 'open-builder':
             // Phase 9: Dialect Builder is the new public-facing entry
             // point (replaces the Kadam-branded partner button on the
@@ -4909,8 +4777,23 @@ export async function mountInspector(root, ctx) {
     try {
       const params = new URLSearchParams(location.search);
       if (params.get('open') === 'partners' && _currentUser) {
+        // Partners is a lazy module — synthesize a click on the same
+        // dispatcher case so the deep-link goes through the same lazy
+        // import path as the topnav button. Avoids racing the cache.
         if (typeof window.openPartnerModal === 'function') {
           window.openPartnerModal();
+        } else {
+          (async () => {
+            try {
+              await Promise.all([
+                import('/modules/partners/i18n.js'),
+                import('/modules/partners/index.js'),
+              ]);
+              window.openPartnerModal();
+            } catch (err) {
+              console.error('[partners] deep-link lazy import failed:', err);
+            }
+          })();
         }
         params.delete('open');
         const cleanQ = params.toString();

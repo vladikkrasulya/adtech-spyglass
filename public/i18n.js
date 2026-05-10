@@ -40,9 +40,6 @@
       'toast.delete_failed': 'Не вдалося видалити: {error}',
       'toast.crypto_session_lost': 'Сесія шифрування не активна — увійди в акаунт ще раз',
       'toast.decrypt_failed': 'Не вдалося розшифрувати — увійди в акаунт ще раз',
-      'toast.partner_add_failed': 'Не вдалося додати партнера: {error}',
-      'toast.partner_deleted': 'Партнера видалено',
-      'toast.partner_delete_failed': 'Не вдалося видалити партнера: {error}',
       'toast.library_unlocked': 'Бібліотеку розблоковано',
       'toast.hello': 'Привіт, {email}',
       'toast.account_created': 'Акаунт створено, {email}',
@@ -54,7 +51,6 @@
       'toast.account_created_email_failed':
         'Акаунт створено, але лист не пройшов — натисни «надіслати» у банері пізніше',
       'toast.password_reset': 'Пароль скинуто. Ти увійшов(ла).',
-      'toast.partner_name_required': 'Введи назву партнера',
       'toast.added': 'Додано · {name}',
       'toast.nothing_to_save': 'Нічого зберігати — обидва поля порожні',
       'toast.signin_to_save': 'Увійдіть, щоб зберігати запити в особисту бібліотеку',
@@ -74,8 +70,6 @@
       'confirm.recovery_save':
         'Ти точно зберіг recovery key? Без нього неможливо відновити дані якщо забудеш пароль.',
       'confirm.delete_sample': 'Видалити цей запит з бібліотеки?',
-      'confirm.delete_partner':
-        'Видалити цього партнера? Запити що були з ним повʼязані стануть "без партнера" (не видаляються).',
       'confirm.clear_history':
         'Очистити всю історію? Збережені у бібліотеці записи не зачіпаються.',
       'confirm.clobber_load':
@@ -86,7 +80,6 @@
       'modal.recovery.title': '⚠ recovery key — збережи зараз',
       'modal.password_reset.title': 'скидання паролю',
       'modal.edit_sample.title': 'редагувати запит',
-      'modal.partners.title': 'партнери',
       'modal.save_sample.title': 'зберегти запит',
       'modal.save_sample.update_title': 'оновити запис · #{id}',
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
@@ -114,19 +107,6 @@
       'corpus.label.legitimate': 'легітимно',
       'corpus.label.fraud': 'шахрайство',
       'corpus.label.ambiguous': 'неоднозначно',
-      'modal.corpus_save.title': 'зберегти behavior як corpus',
-      'modal.corpus_save.summary':
-        'Поточний probe має {count} події. Збережемо їх з міткою для подальшого аналізу.',
-      'modal.corpus_save.label': 'Як класифікувати',
-      'modal.corpus_save.label.legitimate': 'легітимно — реальний користувач',
-      'modal.corpus_save.label.fraud': 'шахрайство — бот / фейкова активність',
-      'modal.corpus_save.label.ambiguous': 'неоднозначно — потребує review',
-      'modal.corpus_save.notes': 'Нотатки (опційно)',
-      'modal.corpus_save.notes_placeholder':
-        'Що тригернуло цю мітку, що варто запамʼятати на майбутнє…',
-      'toast.corpus_saved': 'Збережено в corpus · {count} events як «{label}»',
-      'toast.corpus_save_failed': 'Не вдалось зберегти: {error}',
-      'toast.corpus_no_events': 'Запусти probe — без подій нема що зберігати',
       'toast.corpus_deleted': 'Запис видалено',
       'toast.corpus_delete_failed': 'Не вдалось видалити: {error}',
       'confirm.corpus_delete': 'Видалити цей запис corpus? Це незворотно.',
@@ -205,7 +185,6 @@
       'behavior.heading.timeline': 'Хронологія подій',
 
       // ── empty / placeholder hints ─────────────────────────
-      'empty.partners': 'Партнерів ще немає',
       'empty.samples': 'Збережених запитів ще немає',
 
       // ── status pills ──────────────────────────────────────
@@ -278,8 +257,6 @@
       'sample.btn.unlock': 'розблокувати',
 
       // ── partner modal ─────────────────────────────────────
-      'partner.label.add_new': 'додати нового',
-      'partner.placeholder': 'наприклад MyVendor, BidMachine',
 
       // ── forgot password ───────────────────────────────────
       'forgot.subtitle': 'введи email — пришлемо посилання для скидання паролю (діє 15 хв).',
@@ -353,9 +330,6 @@
       'toast.delete_failed': 'Delete failed: {error}',
       'toast.crypto_session_lost': 'Encryption session lost — sign in again',
       'toast.decrypt_failed': 'Decryption failed — sign in again',
-      'toast.partner_add_failed': 'Couldn’t add partner: {error}',
-      'toast.partner_deleted': 'Partner deleted',
-      'toast.partner_delete_failed': 'Couldn’t delete partner: {error}',
       'toast.library_unlocked': 'Library unlocked',
       'toast.hello': 'Hi, {email}',
       'toast.account_created': 'Account created, {email}',
@@ -367,7 +341,6 @@
       'toast.account_created_email_failed':
         'Account created, but the verify email didn’t send — use “send” in the banner later',
       'toast.password_reset': 'Password reset. You’re signed in.',
-      'toast.partner_name_required': 'Enter a partner name',
       'toast.added': 'Added · {name}',
       'toast.nothing_to_save': 'Nothing to save — both fields are empty',
       'toast.signin_to_save': 'Sign in to save samples to your personal library',
@@ -387,8 +360,6 @@
       'confirm.recovery_save':
         'Did you really save your recovery key? You can’t recover data without it if you forget your password.',
       'confirm.delete_sample': 'Delete this sample from the library?',
-      'confirm.delete_partner':
-        'Delete this partner? Linked samples become "no partner" (they’re not deleted).',
       'confirm.clear_history': 'Clear the whole history? Saved-library entries are unaffected.',
       'confirm.clobber_load': 'Current edits aren’t saved. Load this and discard them?',
 
@@ -397,7 +368,6 @@
       'modal.recovery.title': '⚠ recovery key — save now',
       'modal.password_reset.title': 'reset password',
       'modal.edit_sample.title': 'edit sample',
-      'modal.partners.title': 'partners',
       'modal.save_sample.title': 'save sample',
       'modal.save_sample.update_title': 'update sample · #{id}',
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
@@ -427,19 +397,6 @@
       'corpus.label.legitimate': 'legitimate',
       'corpus.label.fraud': 'fraud',
       'corpus.label.ambiguous': 'ambiguous',
-      'modal.corpus_save.title': 'save behavior as corpus',
-      'modal.corpus_save.summary':
-        'Current probe has {count} events. Save them with a label for later analysis.',
-      'modal.corpus_save.label': 'Classify as',
-      'modal.corpus_save.label.legitimate': 'legitimate — real user',
-      'modal.corpus_save.label.fraud': 'fraud — bot / fake activity',
-      'modal.corpus_save.label.ambiguous': 'ambiguous — needs review',
-      'modal.corpus_save.notes': 'Notes (optional)',
-      'modal.corpus_save.notes_placeholder':
-        'What triggered this label, anything worth remembering for later…',
-      'toast.corpus_saved': 'Saved to corpus · {count} events as "{label}"',
-      'toast.corpus_save_failed': 'Save failed: {error}',
-      'toast.corpus_no_events': 'Run a probe first — nothing to save without events',
       'toast.corpus_deleted': 'Entry deleted',
       'toast.corpus_delete_failed': 'Delete failed: {error}',
       'confirm.corpus_delete': 'Delete this corpus entry? This cannot be undone.',
@@ -518,7 +475,6 @@
       'behavior.heading.timeline': 'Event timeline',
 
       // ── empty / placeholder hints ─────────────────────────
-      'empty.partners': 'No partners yet',
       'empty.samples': 'No saved samples yet',
 
       // ── status pills ──────────────────────────────────────
@@ -591,8 +547,6 @@
       'sample.btn.unlock': 'unlock',
 
       // ── partner modal ─────────────────────────────────────
-      'partner.label.add_new': 'add new',
-      'partner.placeholder': 'e.g. MyVendor, BidMachine',
 
       // ── forgot password ───────────────────────────────────
       'forgot.subtitle': 'Enter your email — we’ll send a reset link (valid for 15 min).',
@@ -668,9 +622,6 @@
       'toast.delete_failed': 'Не удалось удалить: {error}',
       'toast.crypto_session_lost': 'Сессия шифрования не активна — войди в аккаунт ещё раз',
       'toast.decrypt_failed': 'Не удалось расшифровать — войди в аккаунт ещё раз',
-      'toast.partner_add_failed': 'Не удалось добавить партнёра: {error}',
-      'toast.partner_deleted': 'Партнёр удалён',
-      'toast.partner_delete_failed': 'Не удалось удалить партнёра: {error}',
       'toast.library_unlocked': 'Библиотека разблокирована',
       'toast.hello': 'Привет, {email}',
       'toast.account_created': 'Аккаунт создан, {email}',
@@ -682,7 +633,6 @@
       'toast.account_created_email_failed':
         'Аккаунт создан, но письмо не отправлено — нажми «отправить» в баннере позже',
       'toast.password_reset': 'Пароль сброшен. Ты вошёл(ла).',
-      'toast.partner_name_required': 'Введи название партнёра',
       'toast.added': 'Добавлено · {name}',
       'toast.nothing_to_save': 'Нечего сохранять — оба поля пусты',
       'toast.signin_to_save': 'Войди, чтобы сохранять запросы в личную библиотеку',
@@ -698,8 +648,6 @@
       'confirm.recovery_save':
         'Ты точно сохранил recovery key? Без него невозможно восстановить данные если забудешь пароль.',
       'confirm.delete_sample': 'Удалить этот запрос из библиотеки?',
-      'confirm.delete_partner':
-        'Удалить этого партнёра? Запросы, которые с ним были связаны, станут "без партнёра" (не удаляются).',
       'confirm.clear_history':
         'Очистить всю историю? Сохранённые в библиотеке записи не затрагиваются.',
       'confirm.clobber_load':
@@ -708,7 +656,6 @@
       'modal.recovery.title': '⚠ recovery key — сохрани сейчас',
       'modal.password_reset.title': 'сброс пароля',
       'modal.edit_sample.title': 'редактировать запрос',
-      'modal.partners.title': 'партнёры',
       'modal.save_sample.title': 'сохранить запрос',
       'modal.save_sample.update_title': 'обновить запись · #{id}',
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
@@ -737,19 +684,6 @@
       'corpus.label.legitimate': 'легитимно',
       'corpus.label.fraud': 'мошенничество',
       'corpus.label.ambiguous': 'неоднозначно',
-      'modal.corpus_save.title': 'сохранить behavior как corpus',
-      'modal.corpus_save.summary':
-        'Текущий probe имеет {count} событий. Сохраним их с меткой для дальнейшего анализа.',
-      'modal.corpus_save.label': 'Как классифицировать',
-      'modal.corpus_save.label.legitimate': 'легитимно — реальный пользователь',
-      'modal.corpus_save.label.fraud': 'мошенничество — бот / фейковая активность',
-      'modal.corpus_save.label.ambiguous': 'неоднозначно — требует review',
-      'modal.corpus_save.notes': 'Заметки (опционально)',
-      'modal.corpus_save.notes_placeholder':
-        'Что триггернуло эту метку, что стоит запомнить на будущее…',
-      'toast.corpus_saved': 'Сохранено в corpus · {count} events как «{label}»',
-      'toast.corpus_save_failed': 'Не удалось сохранить: {error}',
-      'toast.corpus_no_events': 'Запусти probe — без событий нечего сохранять',
       'toast.corpus_deleted': 'Запись удалена',
       'toast.corpus_delete_failed': 'Не удалось удалить: {error}',
       'confirm.corpus_delete': 'Удалить эту запись corpus? Это необратимо.',
@@ -820,7 +754,6 @@
       'behavior.kind.static_high_entropy': 'статика: base64 high-entropy blob',
       'behavior.heading.findings': 'Найдено угроз',
       'behavior.heading.timeline': 'Хронология событий',
-      'empty.partners': 'Партнёров пока нет',
       'empty.samples': 'Сохранённых запросов пока нет',
       'status.errors': 'критические ошибки',
       'status.warnings': 'предупреждения',
@@ -880,8 +813,6 @@
       'sample.unlock_cta': 'Библиотека зашифрована. Введи пароль чтобы разблокировать.',
       'sample.btn.signin': 'войти или создать аккаунт',
       'sample.btn.unlock': 'разблокировать',
-      'partner.label.add_new': 'добавить нового',
-      'partner.placeholder': 'например MyVendor, BidMachine',
       'forgot.subtitle': 'введи email — пришлём ссылку для сброса пароля (действует 15 мин).',
       'forgot.btn.back_to_login': 'назад ко входу',
       'forgot.btn.send': 'отправить',
@@ -1064,11 +995,7 @@
   // audit fix bundle. New string was needed when delete-partner confirm
   // got the sample-count parameter.
   const tier3 = {
-    'confirm.delete_partner_with_count': {
-      en: 'Delete this partner? {count} sample(s) currently assigned to it will become "no partner" (they are NOT deleted).',
-      uk: 'Видалити цього партнера? {count} запит(ів) що зараз йому привʼязані стануть "без партнера" (записи НЕ видаляються).',
-      ru: 'Удалить этого партнёра? {count} запрос(ов), которые сейчас к нему привязаны, станут "без партнёра" (записи НЕ удаляются).',
-    },
+    // confirm.delete_partner_with_count moved to modules/partners/i18n.js
     'toast.partner_gone': {
       en: 'The partner you picked was deleted in another tab. Picker refreshed — pick again.',
       uk: 'Партнера, якого ти обрав(ла), видалили у іншій вкладці. Список оновлено — обери ще раз.',
