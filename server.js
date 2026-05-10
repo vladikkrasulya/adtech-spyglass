@@ -40,6 +40,10 @@ const { createAuth } = require('./auth');
 const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
 const { notifyAdmin, escapeHtml: notifyEscape } = require('./notify');
+const httpLib = require('./lib/http');
+httpLib.init({ notifyAdmin, notifyEscape });
+const { readJson, sendJson, sendError, makeError, MAX_BODY_BYTES } = httpLib;
+const { Router } = require('./lib/router');
 const {
   validate,
   crosscheck,
@@ -63,7 +67,8 @@ const VERIFY_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 days
 const RESET_TOKEN_TTL = 15 * 60; // 15 min
 
 // Limits and rates. Centralised so tuning doesn't require grepping the file.
-const MAX_BODY_BYTES = 2 * 1024 * 1024; // 2 MB — covers the largest realistic oRTB payload by ~10x
+// MAX_BODY_BYTES + readJson/sendJson/sendError/makeError moved to lib/http.js.
+// Re-exported above via destructuring so legacy call sites keep working.
 const ANALYZE_WINDOW_MS = 60 * 1000;
 const ANALYZE_MAX_PER_WINDOW = 60; // 60 analyse calls/min/IP — generous human use, tight enough vs CPU-bound DoS
 
@@ -397,62 +402,8 @@ function serveStaticFile(req, res) {
 }
 
 // ── HTTP helpers ────────────────────────────────────────────────────────────
-
-function readJson(req) {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', (c) => {
-      body += c;
-      if (body.length > MAX_BODY_BYTES) {
-        reject(makeError('payload_too_large', 'Payload exceeds 2MB limit'));
-        req.destroy();
-      }
-    });
-    req.on('end', () => {
-      try {
-        resolve(body ? JSON.parse(body) : {});
-      } catch (e) {
-        reject(makeError('invalid_json', 'Body is not valid JSON: ' + e.message));
-      }
-    });
-    req.on('error', reject);
-  });
-}
-
-function sendJson(res, code, payload) {
-  res.writeHead(code, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(payload));
-}
-
-// 5xx → TG admin alert (per-code + path throttled inside notifyAdmin).
-// 4xx stays silent (client errors aren't actionable for the operator).
-// Was: only uncaughtException/unhandledRejection paged, so handler-level
-// 5xx (ollama unavailable, stats_failed, upstream_error, etc.) silently
-// rotted in logs. Wired 2026-05-09.
-function sendError(res, status, code, error, detail) {
-  const body = { success: false, error, code };
-  if (detail !== undefined) body.detail = detail;
-  sendJson(res, status, body);
-  if (status >= 500 && status < 600) {
-    try {
-      const path = (res.req && res.req.url ? res.req.url.split('?')[0] : '?').slice(0, 80);
-      notifyAdmin(
-        `🔴 <b>Spyglass ${status}</b> <code>${notifyEscape(code)}</code>\n` +
-          `path <code>${notifyEscape(path)}</code>\n` +
-          (detail ? `<pre>${notifyEscape(String(detail).slice(0, 400))}</pre>` : ''),
-        { tag: `5xx:${code}` },
-      );
-    } catch (_e) {
-      /* never let alerting break the response */
-    }
-  }
-}
-
-function makeError(code, msg) {
-  const e = /** @type {Error & {code?: string}} */ (new Error(msg));
-  e.code = code;
-  return e;
-}
+// Moved to lib/http.js (and re-required above). Kept this comment as a
+// pointer for archaeology: pre-2026-05-10 these lived inline here.
 
 function publicUser(u) {
   if (!u) return null;
