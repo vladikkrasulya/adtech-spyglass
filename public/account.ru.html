@@ -152,14 +152,14 @@
       /* Cabinet 7-section layout (since 0.31.0) */
       .cab-layout { display:grid; grid-template-columns:220px 1fr; gap:var(--space-5); align-items:start; max-width:1100px; }
       .cab-container { max-width:1180px !important; }
-      .cab-sidebar { position:sticky; top:var(--space-5); align-self:start; }
+      .cab-sidebar { position:sticky; top:80px; align-self:start; }
       .cab-nav { display:flex; flex-direction:column; gap:2px; padding:var(--space-3); background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius-md); }
       .cab-nav-item { padding:var(--space-2) var(--space-3); border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:var(--fs-sm); transition:background 0.1s, color 0.1s; display:flex; align-items:center; gap:8px; cursor:pointer; }
       .cab-nav-item:hover { background:var(--bg-elev-2); color:var(--text); }
       .cab-nav-item.is-active { background:var(--accent-bg, rgba(255,204,0,0.15)); color:var(--accent, #181818); font-weight:500; }
       .cab-nav-icon { font-size:14px; flex-shrink:0; width:18px; text-align:center; }
       .cab-content { min-width:0; }
-      .cab-section { scroll-margin-top:var(--space-5); }
+      .cab-section { scroll-margin-top:80px; }
       .cab-section + .cab-section { margin-top:var(--space-7); }
       @media (max-width: 880px) {
         .cab-layout { grid-template-columns:1fr; }
