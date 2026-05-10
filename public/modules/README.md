@@ -1,9 +1,43 @@
-# Spyglass modules
+# Spyglass frontend modules
 
-Each tool (mirror, live, simulate, replay, corpus, share, …) is its own
-module. A module is a folder. Add the folder, register it, the tool
-exists. Delete the folder, unregister, the tool is gone — without
-touching anything else. Same idea as design-system tokens, but for code.
+Each user-facing tool is its own folder under `public/modules/`. Add
+the folder, wire it in the shell (or the lazy stub in the dispatcher),
+the tool exists. Delete the folder, unregister, the tool is gone —
+without touching anything else. Same idea as design-system tokens, but
+for code.
+
+> Backend has a parallel layout under `modules/` (note: no `public/`
+> prefix) — same one-folder-per-tool rule applied to server-side
+> handlers. See `docs/ARCHMAP.md` §0 for the full map.
+
+## Inventory (as of 2026-05-10)
+
+**Eager** (boot-loaded via `<script>` tag — needed at first paint):
+
+- `share/` — fragment-encoded permalinks
+- `embed/` — iframe-embed snippet generator
+- `shortcuts/` — keyboard cheatsheet
+
+**Lazy** (loaded on first dispatcher click via `await import()`):
+
+- `mirror/` — canonical-counterpart generator
+- `live/` — SSE-driven live stream
+- `simulate/` — gemma 3-strategy DSP demo
+- `corpus-save/` — labelled behavior corpus capture
+- `partners/` — partner CRUD modal
+- `auth/` — login + register
+- `unlock/` — re-derive DEK from password
+- `recovery/` — one-time recovery-key display
+- `password-reset/` — forgot/reset flow (rotate / recover / wipe)
+- `save-sample/` — encrypted sample save + partner-suggest banner
+- `edit-sample/` — sample metadata edit
+
+**Plus pre-modularization folders** (not following the same shape yet):
+
+- `inspector/` — workbench template + mount lifecycle (loaded via
+  `<script type="module">` from each shell)
+- `intel/` — banner/builder/observer/storage/index split
+- `behavior/` — runtime behavior analyzer
 
 ## Layout
 

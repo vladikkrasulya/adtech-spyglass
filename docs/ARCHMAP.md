@@ -8,7 +8,59 @@ shifts a connection.
 > **Never trust this doc 100%** — verify with grep. But if a grep result
 > contradicts the map, fix the map.
 
-Last touched: 2026-05-09 (initial creation, end of API stability sprint).
+Last touched: 2026-05-10 (after the full modularization closure —
+14 frontend + 14 backend modules, `server.js` 2033 → 868 LOC, both
+sides of the app now folder-per-tool).
+
+---
+
+## 0. Module layout (the big picture as of 2026-05-10)
+
+```
+modules/                      backend handler folders (require'd by server.js)
+├── account/ admin/ analyze/  one file each: handler.js exporting either a plain
+│   auth/ corpus/ health/      `{id, routes}` or a `createXxxModule(deps)` factory
+│   intel/ mirror/ partners/   that returns the same shape. Routes registered with
+│   proxy/ replay/ sample/     lib/router.js at boot.
+│   samples/ stream/
+│
+lib/
+├── router.js                  pattern-based dispatcher (exact / `:id` / trailing-*)
+├── http.js                    readJson, sendJson, sendError, makeError
+├── replay.js                  DI'd bulk-pipeline engine (consumed by modules/replay)
+└── corpus-matrix.js           confusion matrix runner (consumed by modules/corpus)
+
+public/modules/                frontend tool folders (loaded eager via <script>
+├── share/ embed/ shortcuts/   in shell, or lazy via `await import()` from the
+├── mirror/ live/ simulate/    dispatcher in public/spyglass.app.js)
+│   corpus-save/ partners/     each folder has index.js + i18n.js + README.md.
+│   auth/ unlock/ recovery/    Crypto goes through window.SpyglassSession facade
+│   password-reset/            so DEK never leaves the spyglass.app.js closure.
+│   save-sample/ edit-sample/
+├── inspector/                 workbench template + mount lifecycle
+├── intel/ behavior/           pre-modularization split (banner/builder/observer/…)
+└── README.md                  module contract: folder layout, lifecycle, comms
+
+server.js                      ~868 LOC shell. Reads top-level deps, builds the
+                                Router, registers all 14 backend modules, runs the
+                                static-file fallback, owns the auth + crypto
+                                closure that backend modules access via DI.
+
+public/spyglass.app.js         ~4467 LOC inspector shell. Dispatcher routes
+                                `data-action="..."` clicks to module lazy stubs.
+                                window.SpyglassSession exposes encryptBlob /
+                                decryptBlob / bootstrap / openFromPassword
+                                without leaking the DEK bytes.
+```
+
+**Rule of thumb when fixing a bug**:
+
+1. Front-end UI broken → look in `public/modules/<tool>/` first.
+2. Back-end API broken → look in `modules/<tool>/handler.js` first.
+3. Both → start from the front-end module; back-end route name is right
+   there in the `fetch(...)` call.
+4. Auth or crypto → `server.js` IIFE owns `_sessionDEK` + auth lifecycle.
+   `window.SpyglassSession` facade is the docs.
 
 ---
 
@@ -281,7 +333,10 @@ label?}`. Empty samples skip with `reason: 'empty_sample'`.
 | `lib/replay.js`          | `tests/replay.test.js` (16 cases — input validation, pipeline routing, status rollup, severity counts, topFindings, maxSamples cap, label echo)                              |
 | Any new message key      | manually check 3 locales (`messages/{en,uk,ru}.json`) — there's no test that enforces this; _yet_                                                                            |
 
-**Total suite**: 456 tests (as of 2026-05-10 v0.33.0). Run `node --test tests/` from repo root, ~8s.
+**Total suite**: 469 tests (as of 2026-05-10 post-modularization). Run
+`node --test tests/` from repo root, ~8s. The extra 13 cases (vs 456)
+came in with `lib/router.js` (6) + later patches around the auth/intel
+modules during the backend migration.
 
 ---
 
@@ -299,12 +354,17 @@ label?}`. Empty samples skip with `reason: 'empty_sample'`.
 **Baked into image** (requires `docker compose up -d --build`):
 
 - `server.js` ← BIG TRAP. Edit it → must rebuild.
+- `lib/` ← same trap. Router / http / replay / corpus-matrix all
+  baked in; touch them → rebuild.
+- `modules/` ← also baked. Adding a new backend module (or editing
+  an existing handler) needs a rebuild before it goes live.
 - `tests/` (not consumed at runtime, but worth knowing)
 - `Dockerfile`-installed deps
 - Anything else not in the bind-mount list above
 
-> If you edit `server.js`, you MUST `compose up -d --build`.
-> `compose restart` won't pick it up.
+> If you edit ANY non-`public/` file, you MUST `compose up -d --build`.
+> `compose restart` won't pick it up. The pre-push hook runs CI but
+> doesn't rebuild — the container is your responsibility.
 
 ### 2.2 Public exposure
 
