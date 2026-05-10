@@ -13,7 +13,7 @@
     <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/account" />
     <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/account" />
     <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/account" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -120,6 +120,53 @@
       .matrix-mid { background:rgba(217,119,6,0.05); }
       .matrix-bad { background:rgba(220,38,38,0.05); }
       .matrix-empty { padding:var(--space-3); color:var(--text-muted); font-size:var(--fs-sm); text-align:center; }
+      .corpus-counts { display:flex; gap:var(--space-3); flex-wrap:wrap; font-family:var(--font-mono); font-size:var(--fs-sm); color:var(--text-muted); margin-bottom:var(--space-3); }
+      .corpus-count strong { color:var(--text); }
+      .corpus-count-fraud { color:#dc2626; }
+      .corpus-count-legit { color:#2ea043; }
+      .corpus-count-amb { color:#d97706; }
+      .corpus-list { display:flex; flex-direction:column; gap:6px; }
+      .corpus-row { display:grid; grid-template-columns:120px 180px 1fr auto; gap:8px; align-items:center; padding:var(--space-2) var(--space-3); border:1px solid var(--border); border-radius:var(--radius-sm,4px); font-family:var(--font-mono); font-size:var(--fs-sm); }
+      .corpus-label-pill { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; text-align:center; }
+      .corpus-label-fraud { background:rgba(220,38,38,0.12); color:#dc2626; }
+      .corpus-label-legitimate { background:rgba(46,160,67,0.12); color:#2ea043; }
+      .corpus-label-ambiguous { background:rgba(217,119,6,0.12); color:#d97706; }
+      .corpus-meta { color:var(--text-muted); font-size:11px; }
+      .corpus-source { color:var(--text-muted); font-size:10px; }
+      .corpus-notes { color:var(--text); font-size:11px; padding-left:8px; border-left:1px solid var(--border); }
+      .corpus-empty { padding:var(--space-3); color:var(--text-muted); font-size:var(--fs-sm); text-align:center; }
+      .corpus-delete-btn { font-size:14px; padding:2px 8px; }
+      .matrix-summary { display:flex; gap:var(--space-3); flex-wrap:wrap; font-family:var(--font-mono); font-size:var(--fs-sm); color:var(--text-muted); margin-bottom:var(--space-3); }
+      .matrix-summary strong { color:var(--text); }
+      .matrix-table { display:flex; flex-direction:column; gap:0; font-family:var(--font-mono); font-size:11px; border:1px solid var(--border); border-radius:var(--radius-sm,4px); overflow:hidden; }
+      .matrix-row { display:grid; grid-template-columns:minmax(0,2.5fr) repeat(7, minmax(0,1fr)); gap:6px; padding:6px 10px; border-bottom:1px solid var(--border); align-items:center; }
+      .matrix-row:last-child { border-bottom:0; }
+      .matrix-head { background:var(--bg-elev-2); font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; font-size:10px; }
+      .matrix-id { color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .matrix-num { text-align:right; color:var(--text); }
+      .matrix-f1 { font-weight:600; }
+      .matrix-good { background:rgba(46,160,67,0.05); }
+      .matrix-mid { background:rgba(217,119,6,0.05); }
+      .matrix-bad { background:rgba(220,38,38,0.05); }
+      .matrix-empty { padding:var(--space-3); color:var(--text-muted); font-size:var(--fs-sm); text-align:center; }
+      /* Cabinet 7-section layout (since 0.31.0) */
+      .cab-layout { display:grid; grid-template-columns:220px 1fr; gap:var(--space-5); align-items:start; max-width:1100px; }
+      .cab-container { max-width:1180px !important; }
+      .cab-sidebar { position:sticky; top:var(--space-5); align-self:start; }
+      .cab-nav { display:flex; flex-direction:column; gap:2px; padding:var(--space-3); background:var(--bg-elev); border:1px solid var(--border); border-radius:var(--radius-md); }
+      .cab-nav-item { padding:var(--space-2) var(--space-3); border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:var(--fs-sm); transition:background 0.1s, color 0.1s; display:flex; align-items:center; gap:8px; cursor:pointer; }
+      .cab-nav-item:hover { background:var(--bg-elev-2); color:var(--text); }
+      .cab-nav-item.is-active { background:var(--accent-bg, rgba(255,204,0,0.15)); color:var(--accent, #181818); font-weight:500; }
+      .cab-nav-icon { font-size:14px; flex-shrink:0; width:18px; text-align:center; }
+      .cab-content { min-width:0; }
+      .cab-section { scroll-margin-top:var(--space-5); }
+      .cab-section + .cab-section { margin-top:var(--space-7); }
+      @media (max-width: 880px) {
+        .cab-layout { grid-template-columns:1fr; }
+        .cab-sidebar { position:static; }
+        .cab-nav { flex-direction:row; overflow-x:auto; gap:var(--space-1); padding:var(--space-2); }
+        .cab-nav-item { white-space:nowrap; flex-shrink:0; }
+      }
     </style>
   </head>
   <body>
@@ -161,8 +208,22 @@
       </div>
 
       <!-- Authenticated content -->
-      <div id="cabBody" style="display: none">
-        <!-- Profile card -->
+      <div id="cabBody" class="cab-layout" style="display: none">
+        <aside class="cab-sidebar">
+          <nav class="cab-nav" id="cabNav" aria-label="Cabinet navigation">
+            <a href="#profile" class="cab-nav-item is-active"><span class="cab-nav-icon">👤</span>Profile</a>
+            <a href="#library" class="cab-nav-item"><span class="cab-nav-icon">📚</span>Library</a>
+            <a href="#activity" class="cab-nav-item"><span class="cab-nav-icon">📊</span>Activity</a>
+            <a href="#corpus" class="cab-nav-item"><span class="cab-nav-icon">🛡</span>Behavior corpus</a>
+            <a href="#preferences" class="cab-nav-item"><span class="cab-nav-icon">⚙</span>Preferences</a>
+            <a href="#security" class="cab-nav-item"><span class="cab-nav-icon">🔐</span>Security</a>
+            <a href="#danger" class="cab-nav-item"><span class="cab-nav-icon">⚠</span>Danger zone</a>
+          </nav>
+        </aside>
+
+        <div class="cab-content">
+
+        <section id="profile" class="cab-section">
         <section class="cab-card">
           <h2>Profile</h2>
           <div class="cab-row">
@@ -186,8 +247,9 @@
             <span class="value" id="profRecovery">—</span>
           </div>
         </section>
+        </section>
 
-        <!-- Library card -->
+        <section id="library" class="cab-section">
         <section class="cab-card">
           <h2>Library</h2>
           <p class="lead">
@@ -217,8 +279,38 @@
             <a href="/?open=partners" class="btn btn-ghost btn-sm">Manage partners</a>
           </div>
         </section>
+        <section class="cab-card">
+          <h2>Library insights</h2>
+          <p class="lead">
+            Aggregates from saved-sample metadata you can see without decrypting payloads.
+            Decrypted-content insights live in the main app where the library is unlocked.
+          </p>
+          <div class="cab-row">
+            <span class="label">Saved-status distribution</span>
+            <span class="value" id="insightStatusValue">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Top partners</span>
+            <span class="value" id="insightTopPartners">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">First saved</span>
+            <span class="value" id="insightFirst">—</span>
+          </div>
+          <div class="cab-row">
+            <span class="label">Last saved</span>
+            <span class="value" id="insightLast">—</span>
+          </div>
+        </section>
+        <section class="cab-card">
+          <h2>Recent samples</h2>
+          <ul id="recentList" class="cab-list">
+            <li class="cab-empty" id="recentEmpty">Loading…</li>
+          </ul>
+        </section>
+        </section>
 
-        <!-- Activity & Usage card (real analytics from analyze_log) -->
+        <section id="activity" class="cab-section">
         <section class="cab-card">
           <h2>Activity</h2>
           <p class="lead">
@@ -276,41 +368,40 @@
             <div id="usageHeatmap" class="heatmap" style="margin-top: var(--space-2)">—</div>
           </div>
         </section>
-
-        <!-- Library Insights card (metadata-only — no decryption) -->
-        <section class="cab-card">
-          <h2>Library insights</h2>
+        <section class="cab-card" id="privacy">
+          <h2>What's tracked, what isn't</h2>
           <p class="lead">
-            Aggregates from saved-sample metadata you can see without decrypting payloads.
-            Decrypted-content insights live in the main app where the library is unlocked.
+            Spyglass is zero-knowledge for payloads. The cabinet's "Activity" stats come from a
+            small per-user log that records ONLY the metadata below. The bid request and bid
+            response bodies are NEVER persisted to that log — they only enter the validator,
+            findings come out, the bodies are discarded.
           </p>
           <div class="cab-row">
-            <span class="label">Saved-status distribution</span>
-            <span class="value" id="insightStatusValue">—</span>
+            <span class="label">Tracked</span>
+            <span class="value" style="text-align: right; max-width: 60%">
+              timestamp · oRTB version · status (clean/warnings/errors) · format
+              (banner/video/native/...) · finding counts (errors / warnings / total)
+            </span>
           </div>
           <div class="cab-row">
-            <span class="label">Top partners</span>
-            <span class="value" id="insightTopPartners">—</span>
+            <span class="label">Not tracked</span>
+            <span class="value" style="text-align: right; max-width: 60%">
+              payload bodies · individual finding ids · IP · user-agent · partner identity ·
+              timestamps below day-resolution in aggregates
+            </span>
           </div>
           <div class="cab-row">
-            <span class="label">First saved</span>
-            <span class="value" id="insightFirst">—</span>
+            <span class="label">Anonymous calls</span>
+            <span class="value">not logged</span>
           </div>
           <div class="cab-row">
-            <span class="label">Last saved</span>
-            <span class="value" id="insightLast">—</span>
+            <span class="label">Account deletion</span>
+            <span class="value">log is cascade-deleted (foreign key)</span>
           </div>
         </section>
-
-        <!-- Recent samples card -->
-        <section class="cab-card">
-          <h2>Recent samples</h2>
-          <ul id="recentList" class="cab-list">
-            <li class="cab-empty" id="recentEmpty">Loading…</li>
-          </ul>
         </section>
 
-        <!-- Behavior corpus card -->
+        <section id="corpus" class="cab-section">
         <section class="cab-card" id="cabCorpus">
           <h2>Behavior corpus</h2>
           <p class="lead">
@@ -321,7 +412,6 @@
           <div id="corpusCounts" class="corpus-counts"></div>
           <div id="corpusList" class="corpus-list"></div>
         </section>
-
         <section class="cab-card" id="cabMatrix">
           <h2>Confusion matrix · precision / recall</h2>
           <p class="lead">
@@ -333,8 +423,9 @@
           <div id="matrixSummary" class="matrix-summary"></div>
           <div id="matrixTable" class="matrix-table"></div>
         </section>
+        </section>
 
-        <!-- Preferences card (browser-side only — localStorage) -->
+        <section id="preferences" class="cab-section">
         <section class="cab-card">
           <h2>Preferences</h2>
           <p class="lead">
@@ -371,8 +462,9 @@
             </span>
           </div>
         </section>
+        </section>
 
-        <!-- Encryption & Recovery card -->
+        <section id="security" class="cab-section">
         <section class="cab-card">
           <h2>Encryption &amp; recovery</h2>
           <p class="lead">
@@ -395,41 +487,9 @@
             </span>
           </div>
         </section>
-
-        <!-- Privacy footnote -->
-        <section class="cab-card" id="privacy">
-          <h2>What's tracked, what isn't</h2>
-          <p class="lead">
-            Spyglass is zero-knowledge for payloads. The cabinet's "Activity" stats come from a
-            small per-user log that records ONLY the metadata below. The bid request and bid
-            response bodies are NEVER persisted to that log — they only enter the validator,
-            findings come out, the bodies are discarded.
-          </p>
-          <div class="cab-row">
-            <span class="label">Tracked</span>
-            <span class="value" style="text-align: right; max-width: 60%">
-              timestamp · oRTB version · status (clean/warnings/errors) · format
-              (banner/video/native/...) · finding counts (errors / warnings / total)
-            </span>
-          </div>
-          <div class="cab-row">
-            <span class="label">Not tracked</span>
-            <span class="value" style="text-align: right; max-width: 60%">
-              payload bodies · individual finding ids · IP · user-agent · partner identity ·
-              timestamps below day-resolution in aggregates
-            </span>
-          </div>
-          <div class="cab-row">
-            <span class="label">Anonymous calls</span>
-            <span class="value">not logged</span>
-          </div>
-          <div class="cab-row">
-            <span class="label">Account deletion</span>
-            <span class="value">log is cascade-deleted (foreign key)</span>
-          </div>
         </section>
 
-        <!-- Account actions -->
+        <section id="danger" class="cab-section">
         <section class="cab-card cab-danger">
           <h2>Account actions</h2>
           <p class="lead">
@@ -442,12 +502,14 @@
             <button class="btn btn-secondary btn-sm" data-action="signout">Sign out</button>
           </div>
         </section>
+        </section>
+        </div>
       </div>
     </main>
 
     <script src="/lang-switch.js?v=1"></script>
     <script src="/version.js?v=1"></script>
     <script src="/i18n.js?v=28"></script>
-    <script src="/account.js?v=3"></script>
+    <script src="/account.js?v=4"></script>
   </body>
 </html>

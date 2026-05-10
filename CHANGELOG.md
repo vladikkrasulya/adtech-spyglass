@@ -6,6 +6,66 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.31.0 — Cabinet redesign: sidebar nav + scroll-spy (2026-05-10)
+
+The cabinet was an 11-card vertical wall. Now it's a 7-section
+workspace with a sticky left sidebar, anchor links, and scroll-spy
+active state. URL hash updates on click and on scroll so a deep
+link to `/uk/account#corpus` lands you straight in the corpus view.
+
+**7 sections**
+
+| # | Section | Cards |
+|---|---|---|
+| 1 | 👤 Профіль | Profile |
+| 2 | 📚 Бібліотека | Library stats · Insights · Recent samples |
+| 3 | 📊 Активність | Heatmap+stats · Privacy footnote |
+| 4 | 🛡 Behavior corpus | Corpus list · Confusion matrix |
+| 5 | ⚙ Налаштування | Theme · Locale · Dialect |
+| 6 | 🔐 Безпека | Encryption & Recovery |
+| 7 | ⚠ Danger zone | Account actions |
+
+**Layout**
+
+- 220px sticky sidebar + 1fr content, gap 24px. Container max-width
+  bumped to 1180px so the sidebar doesn't squeeze cards.
+- Mobile (≤880px) collapses to a horizontal tab-chip bar at the top —
+  scrollable, sticky to nothing, just a navigator. CSS-only switch.
+- Each `<section>` gets `scroll-margin-top` so anchor jumps don't
+  hide the heading under the sticky sidebar's shadow.
+
+**Scroll-spy**
+
+- IntersectionObserver with `rootMargin: '-20% 0px -70% 0px'` —
+  section becomes "active" once its top crosses 20% from viewport
+  top. Felt right for a tall cabinet with mid-screen reading focus.
+- Click on a sidebar link → preventDefault → smooth-scroll →
+  history.replaceState(`#section`). Native anchor would've worked
+  for navigation but we want hash + smooth scroll + active update
+  in one go.
+- Initial hash honored on load (deep-link from share / refresh).
+
+**Restructuring**
+
+- Cards reordered so each section's children are adjacent. Done via
+  one-shot Python script that parsed h2 tags and rewrote `<section
+  class="cab-card">` blocks under `<section id="X" class="cab-section">`
+  wrappers. Same script ran across uk/en/ru with locale-specific h2
+  lookups — kept verbose translations honest.
+
+**Favicon**
+
+- Bumped `?v=3` → `?v=4` across all HTML shells. Server-side SVG
+  was always served correctly; user-side browser cached a stale
+  null/404 from earlier build cycles. Cache-bust forces re-fetch.
+
+**Verify**
+
+- Real-browser smoke at 1470×956: sidebar 220px + content 856px,
+  cabBody display flips on auth, scroll-spy correctly highlights
+  the section in view, click on `#preferences` smooth-scrolls and
+  updates URL hash, 0 console errors.
+
 ### v0.30.0 — Confusion matrix runner (Chapter B v1, 2026-05-10)
 
 The corpus we shipped in v0.29.0 finally has a consumer. Click "оновити"

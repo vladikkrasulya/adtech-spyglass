@@ -625,6 +625,70 @@
     }
   });
 
+  // Scroll-spy: highlight active sidebar item as the user scrolls past
+  // each section. IntersectionObserver fires when a section enters the
+  // configured rootMargin band; we toggle .is-active on its corresponding
+  // nav link. rootMargin '-20% 0px -70% 0px' means a section becomes
+  // active when its top crosses 20% from the viewport top — felt right
+  // for a tall cabinet where users dwell on the visible-mid region.
+  function bindScrollSpy() {
+    const sections = document.querySelectorAll('.cab-section');
+    const navItems = document.querySelectorAll('.cab-nav-item');
+    if (!sections.length || !navItems.length) return;
+    const setActive = (id) => {
+      navItems.forEach((n) => {
+        n.classList.toggle('is-active', n.getAttribute('href') === '#' + id);
+      });
+    };
+    const obs = new IntersectionObserver(
+      (entries) => {
+        // Pick the topmost-intersecting section as the active one. This
+        // avoids flicker when the user scrolls fast and multiple sections
+        // briefly intersect at once.
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length) setActive(visible[0].target.id);
+      },
+      { rootMargin: '-20% 0px -70% 0px', threshold: 0 },
+    );
+    sections.forEach((s) => obs.observe(s));
+
+    // Click on a nav link → smooth-scroll to the target. Native href="#id"
+    // already navigates; we just make it smooth + update URL hash for share.
+    navItems.forEach((n) => {
+      n.addEventListener('click', (ev) => {
+        const id = (n.getAttribute('href') || '').replace('#', '');
+        const target = document.getElementById(id);
+        if (!target) return;
+        ev.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', '#' + id);
+        setActive(id);
+      });
+    });
+
+    // Honor an initial hash (deep-link from share / refresh).
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const target = document.getElementById(id);
+      if (target) {
+        // Defer to next frame so layout has settled.
+        requestAnimationFrame(() => {
+          target.scrollIntoView({ behavior: 'instant', block: 'start' });
+          setActive(id);
+        });
+      }
+    }
+  }
+  // Bind after init so cabBody is visible (sidebar lives inside cabBody and
+  // is hidden until showBody flips display).
+  const _origInit = init;
+  init = async function () {
+    await _origInit.apply(this, arguments);
+    bindScrollSpy();
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
