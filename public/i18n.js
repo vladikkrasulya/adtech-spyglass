@@ -90,17 +90,7 @@
       'modal.save_sample.title': 'зберегти запит',
       'modal.save_sample.update_title': 'оновити запис · #{id}',
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
-      'modal.live.title': 'live · потік RTB-зразків',
-      'modal.live.connecting': '· підключаюсь…',
-      'modal.live.connected': '· live',
-      'modal.live.paused': '· пауза',
-      'modal.live.connection_lost': '· звʼязок втрачено',
-      'modal.live.pause': '⏸ пауза',
-      'modal.live.resume': '▶ продовжити',
-      'modal.live.empty': 'чекаємо першого зразка…',
-      'modal.live.hint': 'Клік по рядку — завантажити зразок у відповідне поле та закрити вікно.',
-      'toast.live_loaded': 'Зразок завантажено · можна аналізувати',
-      'toast.live_load_failed': 'Не вдалось розпарсити зразок',
+      // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'Шлях у JSON',
       'finding.detail.value_at_path': 'Поточне значення',
       'finding.detail.value_missing': 'Поле відсутнє у вставленому JSON (тому й знахідка).',
@@ -162,20 +152,7 @@
       'builder.suggest_name_tooltip': 'Запропонувати назву через локальну LLM',
       'builder.suggesting': 'Думаю…',
       'banner.new_patterns': 'Виявлено {n} нових патернів полів',
-      'modal.simbids.title': '🤖 симуляція 3 DSP-стратегій',
-      'modal.simbids.hint':
-        'Локальна gemma3:4b симулює як три типи DSP відповіли б на твій запит. Тільки метадані запиту (формат, розмір, гео, floor) — bid VALUES не передаємо в LLM.',
-      'modal.simbids.loading': 'gemma думає… (3 паралельні prompts, ~10s)',
-      'modal.simbids.ollama_down':
-        'Ollama недоступна. AI-bridge падає тихо — попроси адміна перевірити контейнер.',
-      'modal.simbids.bid': '✓ ставить',
-      'modal.simbids.pass': '✗ пропускає',
-      'modal.simbids.strat.aggressive': 'aggressive · max scale',
-      'modal.simbids.strat.conservative': 'conservative · ROAS guard',
-      'modal.simbids.strat.quality': 'quality · premium only',
-      'toast.simbids_no_request': 'Встав BidRequest у ліве поле',
-      'toast.simbids_invalid_json': 'Не вдалось розпарсити BidRequest JSON',
-      'toast.simbids_failed': 'Симуляція впала: {error}',
+      // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
 
       // ── modal common labels + buttons ─────────────────────
       'btn.cancel': 'скасувати',
@@ -424,18 +401,7 @@
       'modal.save_sample.title': 'save sample',
       'modal.save_sample.update_title': 'update sample · #{id}',
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
-      'modal.live.title': 'live · RTB sample stream',
-      'modal.live.connecting': '· connecting…',
-      'modal.live.connected': '· live',
-      'modal.live.paused': '· paused',
-      'modal.live.connection_lost': '· connection lost',
-      'modal.live.pause': '⏸ pause',
-      'modal.live.resume': '▶ resume',
-      'modal.live.empty': 'waiting for the first sample…',
-      'modal.live.hint':
-        'Click a row to load that sample into the matching editor and close the modal.',
-      'toast.live_loaded': 'Sample loaded · ready to analyze',
-      'toast.live_load_failed': 'Could not parse the sample',
+      // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'JSON path',
       'finding.detail.value_at_path': 'Current value',
       'finding.detail.value_missing':
@@ -499,20 +465,7 @@
       'builder.suggest_name_tooltip': 'Suggest a name with the local LLM',
       'builder.suggesting': 'Thinking…',
       'banner.new_patterns': '{n} new field patterns detected',
-      'modal.simbids.title': '🤖 simulate 3 DSP strategies',
-      'modal.simbids.hint':
-        'Local gemma3:4b simulates how three DSP types would respond to your request. Metadata only (format, size, geo, floor) — bid VALUES never reach the LLM.',
-      'modal.simbids.loading': 'gemma is thinking… (3 parallel prompts, ~10s)',
-      'modal.simbids.ollama_down':
-        'Ollama unavailable. AI bridge fails quietly — ask the admin to check the container.',
-      'modal.simbids.bid': '✓ bids',
-      'modal.simbids.pass': '✗ passes',
-      'modal.simbids.strat.aggressive': 'aggressive · max scale',
-      'modal.simbids.strat.conservative': 'conservative · ROAS guard',
-      'modal.simbids.strat.quality': 'quality · premium only',
-      'toast.simbids_no_request': 'Paste a BidRequest in the left pane',
-      'toast.simbids_invalid_json': 'Could not parse BidRequest JSON',
-      'toast.simbids_failed': 'Simulation failed: {error}',
+      // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
 
       // ── modal common labels + buttons ─────────────────────
       'btn.cancel': 'cancel',
@@ -759,18 +712,7 @@
       'modal.save_sample.title': 'сохранить запрос',
       'modal.save_sample.update_title': 'обновить запись · #{id}',
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
-      'modal.live.title': 'live · поток RTB-образцов',
-      'modal.live.connecting': '· подключаюсь…',
-      'modal.live.connected': '· live',
-      'modal.live.paused': '· пауза',
-      'modal.live.connection_lost': '· связь потеряна',
-      'modal.live.pause': '⏸ пауза',
-      'modal.live.resume': '▶ продолжить',
-      'modal.live.empty': 'ждём первый образец…',
-      'modal.live.hint':
-        'Клик по строке — загрузить образец в соответствующее поле и закрыть окно.',
-      'toast.live_loaded': 'Образец загружен · можно анализировать',
-      'toast.live_load_failed': 'Не удалось распарсить образец',
+      // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'Путь в JSON',
       'finding.detail.value_at_path': 'Текущее значение',
       'finding.detail.value_missing':
@@ -833,20 +775,7 @@
       'builder.suggest_name_tooltip': 'Предложить название через локальную LLM',
       'builder.suggesting': 'Думаю…',
       'banner.new_patterns': 'Обнаружено {n} новых паттернов полей',
-      'modal.simbids.title': '🤖 симуляция 3 DSP-стратегий',
-      'modal.simbids.hint':
-        'Локальная gemma3:4b симулирует как три типа DSP ответили бы на твой запрос. Только метаданные (формат, размер, гео, floor) — bid VALUES не передаются в LLM.',
-      'modal.simbids.loading': 'gemma думает… (3 параллельных prompts, ~10s)',
-      'modal.simbids.ollama_down':
-        'Ollama недоступна. AI-bridge падает тихо — попроси админа проверить контейнер.',
-      'modal.simbids.bid': '✓ ставит',
-      'modal.simbids.pass': '✗ пропускает',
-      'modal.simbids.strat.aggressive': 'aggressive · max scale',
-      'modal.simbids.strat.conservative': 'conservative · ROAS guard',
-      'modal.simbids.strat.quality': 'quality · premium only',
-      'toast.simbids_no_request': 'Вставь BidRequest в левое поле',
-      'toast.simbids_invalid_json': 'Не удалось распарсить BidRequest JSON',
-      'toast.simbids_failed': 'Симуляция упала: {error}',
+      // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
       'btn.cancel': 'отмена',
       'btn.save': 'сохранить',
       'btn.update': 'обновить',

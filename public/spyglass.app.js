@@ -3777,288 +3777,13 @@ export async function mountInspector(root, ctx) {
     }, 0);
   };
 
-  // ── Live stream modal ────────────────────────────────────────────────
-  // Subscribes to /api/v1/stream (SSE) and renders incoming envelopes as
-  // a tail-mode list. Newest rows enter at the top, list capped at 50
-  // (matching server REPLAY_MAX). Click a row → load specimen into bidReq
-  // and close. Pause/resume toggles whether new envelopes append to DOM
-  // (the EventSource stays connected; pause is a UI gate, not a network
-  // gate — keeping the connection avoids reconnect lag on resume).
-  // Bid simulator modal — POSTs the parsed BidRequest to
-  // /api/intel/simulate-bids and renders 3 strategies (aggressive /
-  // conservative / quality) side-by-side. Each strategy gets bid yes/no,
-  // price, and a one-sentence rationale. Best run with a non-trivial
-  // request loaded in bidReq.
-  window.openSimBidsModal = async function () {
-    const reqVal = ($('bidReq').value || '').trim();
-    if (!reqVal) {
-      toast(t('toast.simbids_no_request'), 'error');
-      return;
-    }
-    let parsed;
-    try {
-      parsed = JSON.parse(reqVal);
-    } catch (e) {
-      toast(t('toast.simbids_invalid_json'), 'error');
-      return;
-    }
-
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card modal-card-wide">' +
-      '<div class="modal-title">' +
-      escapeHtml(t('modal.simbids.title')) +
-      '</div>' +
-      '<div class="modal-row"><div class="kt-mirror-loading"><span class="spinner"></span> ' +
-      escapeHtml(t('modal.simbids.loading')) +
-      '</div></div>' +
-      '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.cancel') +
-      '</button></div></div></div>';
-
-    let results;
-    try {
-      const r = await fetch('/api/intel/simulate-bids', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bid_req: JSON.stringify(parsed) }),
-      });
-      const j = await r.json();
-      if (!j.success) {
-        const msg =
-          j.code === 'ollama_unavailable'
-            ? t('modal.simbids.ollama_down')
-            : j.error || 'simulation_failed';
-        $('modalRoot').innerHTML =
-          '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-          '<div class="modal-card">' +
-          '<div class="modal-title">' +
-          escapeHtml(t('modal.simbids.title')) +
-          '</div>' +
-          '<div class="modal-row"><div class="finding finding-error">' +
-          escapeHtml(msg) +
-          '</div></div>' +
-          '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-          t('btn.close') +
-          '</button></div></div></div>';
-        return;
-      }
-      results = j.strategies;
-    } catch (e) {
-      toast(t('toast.simbids_failed', { error: e.message }), 'error');
-      return;
-    }
-
-    const rows = results
-      .map((s) => {
-        const cls = s.bid ? 'sim-bid-yes' : 'sim-bid-no';
-        const priceStr = s.bid && s.price != null ? '$' + Number(s.price).toFixed(3) : '—';
-        return (
-          '<div class="sim-strategy ' +
-          cls +
-          '">' +
-          '<div class="sim-strategy-head">' +
-          '<span class="sim-strategy-label">' +
-          escapeHtml(t('modal.simbids.strat.' + s.strategy)) +
-          '</span>' +
-          '<span class="sim-strategy-verdict">' +
-          (s.bid ? t('modal.simbids.bid') : t('modal.simbids.pass')) +
-          '</span>' +
-          '<span class="sim-strategy-price">' +
-          escapeHtml(priceStr) +
-          '</span>' +
-          '</div>' +
-          '<div class="sim-strategy-reason">' +
-          escapeHtml(s.reason || '') +
-          '</div>' +
-          '</div>'
-        );
-      })
-      .join('');
-
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card modal-card-wide">' +
-      '<div class="modal-title">' +
-      escapeHtml(t('modal.simbids.title')) +
-      '</div>' +
-      '<div class="modal-row"><div class="sim-hint">' +
-      escapeHtml(t('modal.simbids.hint')) +
-      '</div></div>' +
-      '<div class="modal-row"><div class="sim-strategies">' +
-      rows +
-      '</div></div>' +
-      '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.close') +
-      '</button></div></div></div>';
-  };
-
-  window.openLiveModal = function () {
-    const STREAM_MAX_ROWS = 50;
-    let paused = false;
-    // Specimens kept in a JS map keyed by monotonic id rather than crammed
-    // into a data-* attribute. utils.escapeHtml uses text-node serialisation
-    // which escapes &<> but not " — putting raw JSON in data-specimen would
-    // close the attribute on the first internal quote.
-    const specimens = new Map();
-    let rowSeq = 0;
-
-    function rowHtml(env) {
-      const time = new Date(env.emittedAt || Date.now()).toLocaleTimeString('uk-UA', {
-        hour12: false,
-      });
-      const source = String(env.source || '?');
-      const spec = env.specimen || {};
-      const id = ++rowSeq;
-      specimens.set(id, spec);
-      // quick shape detection — request has imp[], response has seatbid[]
-      const isReq = Array.isArray(spec.imp);
-      const kind = isReq ? 'req' : Array.isArray(spec.seatbid) ? 'res' : '?';
-      // optional banner-size hint
-      let sizeHint = '';
-      if (isReq && spec.imp[0] && spec.imp[0].banner) {
-        const b = spec.imp[0].banner;
-        if (b.w && b.h) sizeHint = `${b.w}×${b.h}`;
-        else if (Array.isArray(b.format) && b.format[0])
-          sizeHint = `${b.format[0].w}×${b.format[0].h}`;
-      }
-      return (
-        '<div class="kt-live-row" data-action="live-load" data-row-id="' +
-        id +
-        '" data-kind="' +
-        kind +
-        '">' +
-        '<span class="kt-live-time">' +
-        escapeHtml(time) +
-        '</span>' +
-        '<span class="kt-live-kind kt-live-kind-' +
-        kind +
-        '">' +
-        kind +
-        '</span>' +
-        '<span class="kt-live-source">' +
-        escapeHtml(source) +
-        '</span>' +
-        (sizeHint ? '<span class="kt-live-size">' + escapeHtml(sizeHint) + '</span>' : '') +
-        '</div>'
-      );
-    }
-    // Expose the lookup so the dispatcher's 'live-load' case can resolve
-    // a row id to its specimen (cleaned up on tearDownLive).
-    window.__spyglassLiveSpecimens = specimens;
-
-    function renderShell() {
-      $('modalRoot').innerHTML =
-        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-        '<div class="modal-card modal-card-wide kt-live-card">' +
-        '<div class="modal-title">' +
-        escapeHtml(t('modal.live.title')) +
-        ' <span class="kt-live-status" id="mLiveStatus">' +
-        escapeHtml(t('modal.live.connecting')) +
-        '</span></div>' +
-        '<div class="modal-row kt-live-controls">' +
-        '<button class="btn btn-ghost btn-sm" id="mLivePauseBtn" data-action="live-pause">' +
-        escapeHtml(t('modal.live.pause')) +
-        '</button>' +
-        '<span class="kt-live-hint">' +
-        escapeHtml(t('modal.live.hint')) +
-        '</span>' +
-        '</div>' +
-        '<div class="kt-live-list" id="mLiveList"><div class="kt-live-empty">' +
-        escapeHtml(t('modal.live.empty')) +
-        '</div></div>' +
-        '<div class="modal-actions">' +
-        '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-        t('btn.close') +
-        '</button></div>' +
-        '</div></div>';
-    }
-
-    renderShell();
-
-    let es;
-    try {
-      es = new EventSource('/api/v1/stream');
-    } catch (e) {
-      const status = $('mLiveStatus');
-      if (status) status.textContent = '✗ ' + e.message;
-      return;
-    }
-
-    es.addEventListener('open', () => {
-      const status = $('mLiveStatus');
-      if (status) {
-        status.textContent = t('modal.live.connected');
-        status.classList.add('kt-live-status-on');
-      }
-    });
-
-    es.addEventListener('error', () => {
-      const status = $('mLiveStatus');
-      if (status) {
-        status.textContent = t('modal.live.connection_lost');
-        status.classList.remove('kt-live-status-on');
-      }
-    });
-
-    es.addEventListener('message', (ev) => {
-      if (paused) return;
-      let env;
-      try {
-        env = JSON.parse(ev.data);
-      } catch {
-        return;
-      }
-      const list = $('mLiveList');
-      if (!list) return;
-      const empty = list.querySelector('.kt-live-empty');
-      if (empty) empty.remove();
-      list.insertAdjacentHTML('afterbegin', rowHtml(env));
-      // trim oldest beyond cap; also drop their specimens from the map.
-      const rows = list.querySelectorAll('.kt-live-row');
-      for (let i = STREAM_MAX_ROWS; i < rows.length; i++) {
-        const droppedId = Number(rows[i].dataset.rowId);
-        if (droppedId) specimens.delete(droppedId);
-        rows[i].remove();
-      }
-    });
-
-    // Close hook — cleanup. Patched onto closeModal so any close path
-    // (Esc, backdrop, button, follow-up modal) tears down the stream.
-    const origClose = window.closeModal;
-    let teardown = false;
-    function tearDownLive() {
-      if (teardown) return;
-      teardown = true;
-      try {
-        es.close();
-      } catch {
-        /* idempotent */
-      }
-      specimens.clear();
-      window.closeModal = origClose;
-      window.__spyglassLivePauseToggle = null;
-      window.__spyglassLiveSpecimens = null;
-    }
-    window.closeModal = function () {
-      tearDownLive();
-      return origClose.apply(this, arguments);
-    };
-
-    // Pause/resume toggle exposed for the dispatcher.
-    window.__spyglassLivePauseToggle = () => {
-      paused = !paused;
-      const btn = $('mLivePauseBtn');
-      const status = $('mLiveStatus');
-      if (btn) btn.textContent = paused ? t('modal.live.resume') : t('modal.live.pause');
-      if (status) {
-        status.textContent = paused ? t('modal.live.paused') : t('modal.live.connected');
-        status.classList.toggle('kt-live-status-on', !paused);
-      }
-    };
-  };
+  // ── Live + Simulate modals — MOVED to modules/{live,simulate}/ (lazy) ──
+  // Both fetch on first click of their topnav buttons (`case 'live'`
+  // and `case 'sim-bids'` in the dispatcher below). Pre-migration this
+  // block held openLiveModal (~164 LOC, EventSource + tail list) and
+  // openSimBidsModal (~105 LOC, gemma 3-strategy DSP demo). Together
+  // they used to add ~280 LOC + 23 i18n keys × 3 locales to the initial
+  // bundle. Now they're lazy — only loaded for users who click.
 
   // ── Mirror modal — MOVED to modules/mirror/ (lazy-loaded) ────────────
   // The implementation lives in /modules/mirror/index.js and is fetched
@@ -4732,10 +4457,45 @@ export async function mountInspector(root, ctx) {
           // — top bar / chrome —
           case 'analyze':
             return runAnalysis();
-          case 'live':
-            return window.openLiveModal && window.openLiveModal();
-          case 'sim-bids':
-            return window.openSimBidsModal && window.openSimBidsModal();
+          case 'live': {
+            // Lazy-load the live module on first click. Subsequent
+            // clicks hit the browser's ES module cache for free.
+            if (typeof window.openLiveModal === 'function') {
+              return window.openLiveModal();
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/live/i18n.js'),
+                  import('/modules/live/index.js'),
+                ]);
+                window.openLiveModal();
+              } catch (err) {
+                console.error('[live] lazy import failed:', err);
+                toast(t('toast.error_generic', { error: 'live module load failed' }), 'error');
+              }
+            })();
+            return;
+          }
+          case 'sim-bids': {
+            // Lazy-load the simulate module on first click.
+            if (typeof window.openSimBidsModal === 'function') {
+              return window.openSimBidsModal();
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/simulate/i18n.js'),
+                  import('/modules/simulate/index.js'),
+                ]);
+                window.openSimBidsModal();
+              } catch (err) {
+                console.error('[simulate] lazy import failed:', err);
+                toast(t('toast.error_generic', { error: 'simulate module load failed' }), 'error');
+              }
+            })();
+            return;
+          }
           case 'open-corpus-save':
             return window.openCorpusSaveModal && window.openCorpusSaveModal();
           case 'confirm-corpus-save':
