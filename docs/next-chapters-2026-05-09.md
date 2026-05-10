@@ -15,12 +15,12 @@ The canonical brief is in `MEMORY.md`. The architecture map is in
 ## Where we are
 
 **Mature surface**:
-- Validator: oRTB 2.5/2.6 schema + 3.0 envelope (req + resp), 5 dialects
+- Validator: oRTB 2.5/2.6 schema + 3.0 envelope (req + resp), 3 oRTB dialects (iab / kadam / kadam-inpage-push) + 4 JsonFeed handlers (kadam / exoclick / richads / zeropark)
 - VAST: 12 rules (8 envelope + 4 quality)
-- Behavior: 12 detection patterns across misclick / bot-patterns /
+- Behavior: 16 detection patterns across misclick / bot-patterns /
   malicious / static creative scan
 - API stability: deterministic order, dedup, disabledRules option
-- 402 tests, 3 locales (en/uk/ru), public site through CF tunnel
+- 463 tests (count refreshed 2026-05-10), 3 locales (en/uk/ru), public site through CF tunnel
 - LLM bridge (Spyglass Intel) using gemma3:4b on Ollama
 
 **Where it's still 0.x**:
@@ -71,7 +71,7 @@ flagged that real-world precision/recall isn't characterized.
 1. **Capture pipeline**: button on the inspector "Save current event
    stream as labelled corpus entry". Tagged by user (legitimate /
    fraud / ambiguous). Stored in samples DB.
-2. **Confusion matrix doc**: every Friday run all 12 detection patterns
+2. **Confusion matrix doc**: every Friday run all 16 detection patterns
    over the corpus, log false-positive / false-negative rates per id.
 3. **Patterns deferred from epic memory**:
    - `behavior.bot.center_pixel_perfect` (isTrusted=true, dist<1px)

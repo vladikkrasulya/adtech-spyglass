@@ -212,7 +212,8 @@ does NOT false-positive.
   list with delete. Refreshes via `window.refreshCorpus()` after
   delete without full re-init.
 - **Consumer (deferred)**: confusion-matrix runner that replays
-  corpus entries through all 12 detection patterns and reports
+  corpus entries through all 16 detection patterns (12 runtime +
+  4 static creative scan) and reports
   precision/recall per id. Schema + listing in place; runner is the
   next Chapter B sprint.
 

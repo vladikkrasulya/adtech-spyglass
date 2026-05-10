@@ -586,12 +586,6 @@
     }
   }
 
-  function escapeHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = String(s == null ? '' : s);
-    return d.innerHTML;
-  }
-
   // Action delegation
   document.addEventListener('click', (ev) => {
     const t = ev.target.closest('[data-action]');

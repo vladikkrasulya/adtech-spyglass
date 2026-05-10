@@ -6,6 +6,85 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.36.1 — Overlap + reality audit fixes (2026-05-10)
+
+Two parallel audit agents (functional overlap + claims-vs-reality)
+returned ~30 findings between them. Triaged with verification per
+`feedback_audit_false_positives.md`. Filtered ~25 borderline /
+false-positive cases; applied 5 verified fixes.
+
+**Fix — `escapeHtml` deduplicated in `account.js`**
+
+- account.js declared `escapeHtml` TWICE (lines 21 + 589). Function-
+  declaration hoisting meant the SECOND one (DOM-textContent based)
+  shadowed the first (regex-based) — and the DOM version is *less*
+  safe (it doesn't escape `"`, which matters for HTML-attribute
+  context). Latent XSS risk when user data lands in attributes.
+- Removed second declaration; first one (with `&<>"` coverage) wins.
+
+**Fix — `#layers` section now navigable**
+
+- All 3 about pages have `<h2 id="layers">` (the "Three layers of
+  analysis" section) but no nav link pointed at it. Added "Як
+  працює / How it works / Как работает" link to the topnav between
+  "Що вміє" and "Чого не робить" in all 3 locales.
+
+**Fix — stale counts in roadmap docs**
+
+- `docs/next-chapters-2026-05-09.md`:
+  - "12 detection patterns" → "16 detection patterns" (verified by
+    counting unique `behavior.*` keys in `messages/en.json`: 12
+    runtime + 4 static creative scan = 16).
+  - "5 dialects" → "3 oRTB dialects (iab / kadam / kadam-inpage-push)
+    + 4 JsonFeed handlers (kadam / exoclick / richads / zeropark)"
+    (the "5" was wrong both ways — 3 oRTB or 7 if counting JsonFeed).
+  - "402 tests" → "463 tests" (count refreshed 2026-05-10).
+- `docs/ARCHMAP.md` corpus-matrix consumer description: "all 12
+  detection patterns" → "all 16 detection patterns (12 runtime +
+  4 static creative scan)".
+
+**Word cleanup — replaced "шипнули" everywhere**
+
+User feedback: «слово шипнули, не піде, якось шляпно звучить.
+Запушили, викатили, зробили, впровадили, але точно не шипнули».
+Replaced in `about.uk.html` ("шипнули → викатили", "шипнуті →
+викочені") and `about.ru.html` ("шипнули → выкатили", "шипнуты →
+выкачены"). Saved feedback memory at `feedback_word_shipnuly.md`
+so future sessions don't repeat the slang.
+
+**Triage skipped (NOT fixed — borderline / risky):**
+
+- `escapeHtml` defined in `embed.js`, `shortcuts.js` — each is a
+  self-contained IIFE without ES module imports. Adding imports
+  would change the script type, breaking other things. Acceptable
+  duplication for IIFE-script modules; refactor only if migrating
+  to ES modules.
+- Modal boilerplate × 4 (save / mirror / live / simbids) — agent
+  flagged the repetition. Real but refactor risk > value; all 4
+  modals work, would need careful test pass to consolidate.
+- Rate limiter factory × 2 — purely cosmetic; the 2 implementations
+  diverge in window size + max threshold. Extracting a factory
+  would save ~30 LOC.
+- "Version divergence app vs core" (0.36.x vs 0.16.x) — intentional
+  per CHANGELOG; documented as deliberate ("honest divergence when
+  core spec coverage didn't shift").
+
+**False positives** (agents wrong):
+
+- "5 escapeHtml definitions, all should import from /core/utils.js"
+  — verified: `core/utils.js` is an ES module imported by
+  `spyglass.app.js`; the others are classic `<script>` IIFEs that
+  *cannot* import. Honest minimal fix dropped 1 dup, kept the rest.
+- "/api/v1/sample vs /api/v1/stream" — different delivery semantics
+  (one-shot static vs continuous SSE), not duplication.
+- "Behavior corpus vs sample corpus" — different purposes (user-
+  labelled DB rows vs static fixtures), not duplication.
+
+463/463 tests still green. Lockstep PATCH bump 0.36.0 → 0.36.1 +
+cache-bust account.js ?v=5→6.
+
+NOT pushed — local commit awaits user review.
+
 ### v0.36.0 — Docs catch-up + perf polish (2026-05-10)
 
 Two parallel agents audited (a) site performance and (b) /about
