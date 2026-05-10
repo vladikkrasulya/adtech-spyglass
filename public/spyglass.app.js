@@ -2474,250 +2474,91 @@ export async function mountInspector(root, ctx) {
   }
   let _pendingUnlock = false;
 
-  // Show a minimal modal that takes only the password — lets a user with a
-  // live cookie session re-derive the DEK without going through the full
-  // login dance. Used after page-reload.
-  window.openUnlockModal = function () {
-    if (!_currentUser) {
-      return window.openAuthModal('login');
-    }
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card">' +
-      '<div class="modal-title">' +
-      t('modal.unlock.title') +
-      '</div>' +
-      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
-      t('unlock.subtitle', { email: escapeHtml(_currentUser.email) }) +
-      '</div>' +
-      '<div class="modal-row"><label>' +
-      t('auth.label.password') +
-      '</label><input id="unlockPwInput" type="password" autocomplete="current-password"></div>' +
-      '<div id="unlockError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
-      '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" data-action="open-forgot" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
-      t('auth.forgot_password') +
-      '</a></div>' +
-      '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" data-action="signout">' +
-      t('btn.signout_instead') +
-      '</button>' +
-      '<button class="btn btn-primary btn-sm" data-action="do-unlock">' +
-      t('btn.unlock') +
-      '</button>' +
-      '</div></div></div>';
-    setTimeout(() => $('unlockPwInput').focus(), 0);
-    $('unlockPwInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        window.doUnlock();
-      }
-    });
-  };
+  // The unlock modal (re-derive DEK from password against the live
+  // cookie session) lives in /modules/unlock/. The dispatcher's
+  // 'open-unlock' case lazy-loads it on first use; 'do-unlock' fires
+  // after the modal is already on screen, by which point
+  // window.openUnlockModal + window.doUnlock are wired up.
 
-  window.doUnlock = async function () {
-    const password = $('unlockPwInput').value;
-    const errEl = $('unlockError');
-    errEl.textContent = '';
-    try {
-      // Re-fetch crypto state via /api/auth/me (it's already stable across
-      // calls). Then derive KEK + unwrap DEK.
-      const me = await api('GET', 'api/auth/me');
-      if (!me.encryption) {
-        errEl.textContent = t('unlock.err.no_crypto');
-        return;
-      }
-      _sessionDEK = await SpyglassCrypto.openWithPassword(password, me.encryption, {
-        extractable: true,
-      });
-      await persistDEK(_sessionDEK);
-      _pendingUnlock = false;
-      closeModal();
-      toast(t('toast.library_unlocked'), 'success');
-      refreshSamples();
-    } catch {
-      errEl.textContent = t('unlock.err.wrong_password');
-    }
-  };
-
-  window.openAuthModal = function (mode) {
-    const isReg = mode === 'register';
-    // Preserve any email/password the user already typed before switching
-    // login ↔ register so the field doesn't reset on every toggle.
-    const prevEmail = $('authEmailInput')?.value || '';
-    const prevPassword = $('authPasswordInput')?.value || '';
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card">' +
-      '<div class="modal-title">' +
-      t(isReg ? 'auth.register.title' : 'auth.login.title') +
-      '</div>' +
-      '<div class="modal-row"><label>' +
-      t('auth.label.email') +
-      '</label><input id="authEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
-      '<div class="modal-row"><label>' +
-      t(isReg ? 'auth.label.password_hint' : 'auth.label.password') +
-      '</label><input id="authPasswordInput" type="password" autocomplete="' +
-      (isReg ? 'new-password' : 'current-password') +
-      '"></div>' +
-      '<div id="authError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
-      (isReg
-        ? ''
-        : '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" data-action="open-forgot" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
-          t('auth.forgot_password') +
-          '</a></div>') +
-      '<div class="modal-actions" style="justify-content:space-between">' +
-      '<button class="btn btn-ghost btn-sm" data-action="open-auth" data-mode="' +
-      (isReg ? 'login' : 'register') +
-      '">' +
-      t(isReg ? 'auth.switch_to_login' : 'auth.switch_to_register') +
-      '</button>' +
-      '<div style="display:flex;gap:var(--space-2)">' +
-      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.cancel') +
-      '</button>' +
-      '<button class="btn btn-primary btn-sm" data-action="do-auth" data-mode="' +
-      (isReg ? 'register' : 'login') +
-      '">' +
-      t(isReg ? 'auth.btn.register' : 'auth.btn.login') +
-      '</button>' +
-      '</div></div></div></div>';
-    setTimeout(() => {
-      // Restore prior values from previous mode (preserved across switches).
-      // Don't auto-focus password if it was empty — focus email first.
-      if (prevEmail) $('authEmailInput').value = prevEmail;
-      if (prevPassword) $('authPasswordInput').value = prevPassword;
-      const focusTarget = prevEmail && !prevPassword ? 'authPasswordInput' : 'authEmailInput';
-      $(focusTarget).focus();
-    }, 0);
-    // Submit on Enter
-    const submit = isReg ? () => window.doRegister() : () => window.doLogin();
-    ['authEmailInput', 'authPasswordInput'].forEach((id) => {
-      $(id).addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          submit();
-        }
-      });
-    });
-  };
-
-  window.doLogin = async function () {
-    const email = $('authEmailInput').value.trim();
-    const password = $('authPasswordInput').value;
-    const errEl = $('authError');
-    errEl.textContent = '';
-    try {
-      const j = await api('POST', 'api/auth/login', { email, password });
-      _currentUser = j.user;
-      // Resolve session DEK. Two paths:
-      //   - Existing user with crypto already set up → derive KEK from
-      //     password, unwrap DEK, keep in memory for this session.
-      //   - Existing pre-Phase-7 user with no crypto state yet → bootstrap
-      //     now (we have the password in hand). Show recovery key.
-      if (j.encryption) {
-        _sessionDEK = await SpyglassCrypto.openWithPassword(password, j.encryption, {
-          extractable: true,
-        });
-        await persistDEK(_sessionDEK);
-      } else {
-        await bootstrapNewCrypto(password);
-      }
-      renderAuthWidget();
-      closeModal();
-      toast(t('toast.hello', { email: j.user.email }), 'success');
-      await refreshPartners();
-      refreshSamples();
-    } catch (e) {
-      errEl.textContent = humanAuthError(e);
-    }
-  };
-
-  window.doRegister = async function () {
-    const email = $('authEmailInput').value.trim();
-    const password = $('authPasswordInput').value;
-    const errEl = $('authError');
-    errEl.textContent = '';
-    try {
-      const j = await api('POST', 'api/auth/register', { email, password });
-      _currentUser = j.user;
-      // Snapshot history-presence BEFORE bootstrap modal opens.
-      // closeRecoveryKeyModal checks this flag and chains the
-      // import-history modal once recovery key is acknowledged.
-      _pendingHistoryMerge = historyStore.length > 0;
-      await bootstrapNewCrypto(password); // brand-new user → always bootstrap
-      renderAuthWidget();
-      // Don't closeModal() — bootstrapNewCrypto opened the recovery
-      // modal; closing here would dismiss it before user saves the key.
-      toast(t('toast.account_created', { email: j.user.email }), 'success');
-      // Server attempts the verify email synchronously; if delivery failed
-      // (Resend down, domain unverified, etc.) surface a warning so the
-      // user knows to retry from the banner instead of waiting forever.
-      if (j.email_sent === false) {
-        toast(t('toast.account_created_email_failed'), 'error');
-      }
-      await refreshPartners();
-      refreshSamples();
-    } catch (e) {
-      errEl.textContent = humanAuthError(e);
-    }
-  };
+  // ── Auth modal: lazy-loaded module ──────────────────────────
+  // openAuthModal / doLogin / doRegister live in /modules/auth/.
+  // The dispatcher case 'open-auth' calls lazyOpenAuth() (below)
+  // which lazy-imports the module then invokes window.openAuthModal(mode).
+  // doLogin / doRegister are reached only after the modal is on screen,
+  // by which point the module is loaded and its window.* assignments ran.
+  //
+  // The module talks to this closure via window.SpyglassSession
+  // (the facade defined further down) — DEK + _currentUser stay
+  // here. Two non-facade hooks the module consumes:
+  //   - window.snapshotPendingHistoryMerge — sets the closure-private
+  //     _pendingHistoryMerge flag (mirrors historyStore.length > 0
+  //     at call time) before the recovery modal opens, so
+  //     closeRecoveryKeyModal can chain the import-history prompt
+  //     once the key is acknowledged.
+  //   - window.openRecoveryKeyModalLazy — already exposed below for
+  //     the F5-survival path; the auth module reuses it for the
+  //     register-flow + legacy pre-Phase-7-bootstrap-on-login.
   let _pendingHistoryMerge = false;
 
-  // Generates DEK + recovery key, wraps DEK with both password-KEK and
-  // recovery-KEK in the browser, persists the opaque state to the server,
-  // shows the recovery key to the user once. Caller must already hold the
-  // user's plaintext password (passed in here, never stored anywhere).
-  async function bootstrapNewCrypto(password) {
-    const result = await SpyglassCrypto.bootstrap(password, { extractable: true });
-    await api('POST', 'api/auth/setup-encryption', result.state);
-    _sessionDEK = result.dekKey;
-    await persistDEK(_sessionDEK);
-    showRecoveryKeyModal(result.recoveryKey);
-  }
+  window.snapshotPendingHistoryMerge = function () {
+    _pendingHistoryMerge = historyStore.length > 0;
+  };
 
-  // Recovery-key modal close goes through this gate so Esc + backdrop +
-  // explicit button all share the same "did you really save it?" confirm.
-  // Without this, an accidental Esc or button-misclick lost the key forever
-  // (single-show by design — the server stores only the wrap, not the key).
-  let _recoveryKeyModalActive = false;
-  let _currentRecoveryKey = null;
-  // Pre-v0.24.0 the recovery key was stored only in this in-memory variable
-  // and on screen — close the tab before saving and the key was gone forever
-  // (server only stores the *wrap*, never the key bytes). Now we mirror it
-  // to sessionStorage so an accidental F5 / tab-restore brings it back.
-  // sessionStorage is per-tab + auto-cleared on tab close, same threat
-  // surface as the DEK we already keep there.
+  // Lazy-loader for the auth module. Used by dispatcher case
+  // 'open-auth' (header button + auth-modal mode-toggle), the
+  // openSaveModal guest gate, the open-corpus-save guest gate, and
+  // the open-unlock guest fallback. All of those used to call
+  // window.openAuthModal directly; now they go through this helper
+  // so the module is fetched on demand.
+  async function lazyOpenAuth(mode) {
+    if (typeof window.openAuthModal === 'function') {
+      return window.openAuthModal(mode);
+    }
+    try {
+      await Promise.all([import('/modules/auth/i18n.js'), import('/modules/auth/index.js')]);
+      window.openAuthModal(mode);
+    } catch (err) {
+      console.error('[auth] lazy import failed:', err);
+      toast(t('toast.error_generic', { error: 'auth module load failed' }), 'error');
+    }
+  }
+  // Exposed for sibling lazy modules (save-sample, future ones) that
+  // need to redirect guests to the auth modal — they reach for
+  // window.openAuthModal first (synchronous best-case if auth was
+  // already activated this session) and fall back to this when it's
+  // not yet defined. See modules/save-sample/index.js openSaveModal
+  // guest gate for the migrated call pattern.
+  window.lazyOpenAuth = lazyOpenAuth;
+
+  // ── Recovery-key modal: lazy-loaded module ──────────────────
+  // The full implementation (modal HTML, copy handler, confirm-gated
+  // close, sessionStorage persistence) lives in /modules/recovery/.
+  // It's loaded on demand because it's only needed:
+  //   - immediately after register (one path: bootstrapNewCrypto)
+  //   - on F5-survival re-show (one path: bootAuth post-init below)
+  // — never during normal use of the tool.
+  //
+  // Single-show invariant: server stores the *wrap* of the DEK under
+  // the recovery key, never the key bytes themselves. Lose the modal
+  // without saving the key and the only path back into the library
+  // (if the password is forgotten) is gone. That's why close goes
+  // through a "did you really save it?" confirm gate inside the
+  // module — Esc + backdrop + explicit button all share the gate.
+  //
+  // sessionStorage key duplicated here so the boot path can do a
+  // cheap synchronous check without paying the import cost in the
+  // 99.99% case where nothing is pending. Module owns the same
+  // constant; both must agree.
   const RECOVERY_PENDING_KEY = 'spyglass_recovery_pending_v1';
-  function persistPendingRecovery(key) {
-    try {
-      sessionStorage.setItem(RECOVERY_PENDING_KEY, String(key || ''));
-    } catch (_e) {
-      /* storage disabled — modal still works in-memory for this session */
-    }
-  }
-  function clearPendingRecovery() {
-    try {
-      sessionStorage.removeItem(RECOVERY_PENDING_KEY);
-    } catch (_e) {
-      /* sessionStorage unavailable — non-fatal */
-    }
-  }
-  function readPendingRecovery() {
-    try {
-      return sessionStorage.getItem(RECOVERY_PENDING_KEY) || null;
-    } catch (_e) {
-      return null;
-    }
-  }
-  window.closeRecoveryKeyModal = function () {
-    if (!confirm(t('confirm.recovery_save'))) return;
-    _recoveryKeyModalActive = false;
-    _currentRecoveryKey = null;
-    clearPendingRecovery();
-    closeModal();
-    // Chain history-merge prompt only after the user has explicitly
-    // acknowledged saving the recovery key — otherwise the merge modal
-    // would obscure it before they had a chance to copy.
+
+  // Shell hook: module calls this after the user clicks "I saved it"
+  // (post-confirm). We clear #modalRoot here (instead of inside the
+  // module) so the module doesn't have to know about the global
+  // modalRoot ID, and we chain the history-merge prompt only after
+  // the user has explicitly acknowledged — otherwise the merge modal
+  // would obscure the key before they had a chance to copy.
+  window.__spyglassRecoveryClosed = function () {
+    $('modalRoot').innerHTML = '';
     if (_pendingHistoryMerge) {
       _pendingHistoryMerge = false;
       // queueMicrotask defers paint past the current modal close so
@@ -2726,62 +2567,21 @@ export async function mountInspector(root, ctx) {
     }
   };
 
-  function showRecoveryKeyModal(recoveryKey) {
-    // Defensive null-guard on match() — if recoveryKey is somehow empty
-    // (shouldn't happen, but guards against null.join() crash).
-    const grouped = (String(recoveryKey || '').match(/.{1,4}/g) || []).join('-');
-    _recoveryKeyModalActive = true;
-    _currentRecoveryKey = recoveryKey;
-    // Mirror to sessionStorage so an accidental F5 doesn't lose the key
-    // forever. Cleared on explicit "I saved it" acknowledgment.
-    persistPendingRecovery(recoveryKey);
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close-recovery">' +
-      '<div class="modal-card" style="max-width:520px">' +
-      '<div class="modal-title">' +
-      t('modal.recovery.title') +
-      '</div>' +
-      '<div style="font-size:var(--fs-sm);line-height:1.5;margin-bottom:var(--space-3);color:var(--text)">' +
-      t('recovery.body') +
-      '</div>' +
-      '<div style="background:var(--bg-2);padding:var(--space-3);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:14px;letter-spacing:0.05em;text-align:center;margin-bottom:var(--space-3);user-select:all;word-break:break-all">' +
-      escapeHtml(grouped) +
-      '</div>' +
-      '<div class="modal-actions" style="justify-content:space-between">' +
-      '<button id="rkCopyBtn" class="btn btn-ghost btn-sm" data-action="copy-recovery">' +
-      t('btn.copy') +
-      '</button>' +
-      '<button class="btn btn-primary btn-sm" data-action="close-recovery">' +
-      t('btn.recovery_saved') +
-      '</button>' +
-      '</div>' +
-      '</div></div>';
-    // Capture key in module scope so the dispatcher can call
-    // copyRecoveryKey(key) without embedding the secret in a DOM
-    // attribute. Cleared by closeRecoveryKeyModal().
-    _currentRecoveryKey = recoveryKey;
+  async function openRecoveryKeyModalLazy(recoveryKey) {
+    if (typeof window.showRecoveryKeyModal === 'function') {
+      return window.showRecoveryKeyModal(recoveryKey);
+    }
+    try {
+      await Promise.all([
+        import('/modules/recovery/i18n.js'),
+        import('/modules/recovery/index.js'),
+      ]);
+      window.showRecoveryKeyModal(recoveryKey);
+    } catch (err) {
+      console.error('[recovery] lazy import failed:', err);
+      toast(t('toast.error_generic', { error: 'recovery module load failed' }), 'error');
+    }
   }
-
-  window.copyRecoveryKey = function (key) {
-    const btn = $('rkCopyBtn');
-    const flashSuccess = () => {
-      if (!btn) return;
-      const orig = btn.textContent;
-      btn.textContent = t('btn.copied');
-      btn.disabled = true;
-      setTimeout(() => {
-        btn.textContent = orig;
-        btn.disabled = false;
-      }, 1800);
-    };
-    navigator.clipboard
-      .writeText(key)
-      .then(() => {
-        flashSuccess();
-        toast(t('toast.recovery_key_copied'), 'success');
-      })
-      .catch(() => toast(t('toast.copy_failed_select'), 'error'));
-  };
 
   // ── History merge (post-register import prompt) ──────────────
   // Triggered by closeRecoveryKeyModal when historyStore has entries.
@@ -2907,285 +2707,16 @@ export async function mountInspector(root, ctx) {
   };
 
   // ── Phase 8: forgot/reset password + email verification ──────────────
-
-  window.openForgotPasswordModal = function () {
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card">' +
-      '<div class="modal-title">' +
-      t('modal.password_reset.title') +
-      '</div>' +
-      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
-      t('forgot.subtitle') +
-      '</div>' +
-      '<div class="modal-row"><label>' +
-      t('auth.label.email') +
-      '</label><input id="forgotEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
-      '<div id="forgotMessage" style="font-size:var(--fs-sm);color:var(--text-dim);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
-      '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" data-action="open-auth" data-mode="login">' +
-      t('forgot.btn.back_to_login') +
-      '</button>' +
-      '<button class="btn btn-primary btn-sm" data-action="do-forgot">' +
-      t('forgot.btn.send') +
-      '</button>' +
-      '</div></div></div>';
-    setTimeout(() => $('forgotEmailInput').focus(), 0);
-    $('forgotEmailInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        window.doForgotPassword();
-      }
-    });
-  };
-
-  window.doForgotPassword = async function () {
-    const email = $('forgotEmailInput').value.trim();
-    const msgEl = $('forgotMessage');
-    if (!email) {
-      msgEl.style.color = 'var(--danger)';
-      msgEl.textContent = t('forgot.email_required');
-      return;
-    }
-    // Client-side email shape check — mirrors auth.js EMAIL_RE on server.
-    // Without it, "asdf" hits the API, server returns 200 (anti-enumeration),
-    // UI showed misleading "лист відправлено" for an obviously-bad address.
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      msgEl.style.color = 'var(--danger)';
-      msgEl.textContent = t('forgot.invalid_email');
-      return;
-    }
-    msgEl.style.color = 'var(--text-dim)';
-    msgEl.textContent = t('forgot.sending');
-    try {
-      await api('POST', 'api/auth/forgot-password', { email });
-      msgEl.style.color = 'var(--success, green)';
-      msgEl.textContent = t('forgot.sent');
-    } catch (e) {
-      msgEl.style.color = 'var(--danger)';
-      msgEl.textContent = e.message || t('toast.error_generic', { error: '' });
-    }
-  };
-
-  window.openResetPasswordModal = async function (token) {
-    // Fetch crypto state (proves token is valid via server) before showing UI.
-    let stateRes;
-    try {
-      stateRes = await api('POST', 'api/auth/reset-password/state', { token });
-    } catch (e) {
-      toast(t('reset.err.link_invalid', { error: e.message || '' }), 'error');
-      // Strip ?reset= from URL so refresh doesn't re-trigger.
-      history.replaceState({}, '', location.pathname);
-      return;
-    }
-    const enc = stateRes.encryption;
-    const email = stateRes.email;
-    _resetCtx = { token, encryption: enc, email };
-
-    const radioBox = (val, key, hintColor) =>
-      '<label style="display:flex;align-items:flex-start;gap:var(--space-2);cursor:pointer;padding:var(--space-2);border:1px solid var(--border);border-radius:4px;margin-bottom:var(--space-2)">' +
-      '<input type="radio" name="resetMode" value="' +
-      val +
-      '"' +
-      (val === 'rotate' ? ' checked' : '') +
-      ' onchange="updateResetModeUI()" style="margin-top:3px">' +
-      '<span><b>' +
-      t('reset.mode.' + key) +
-      '</b><br><span style="font-size:var(--fs-sm);color:' +
-      hintColor +
-      '">' +
-      t('reset.mode.' + key + '_hint') +
-      '</span></span></label>';
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card" style="max-width:520px">' +
-      '<div class="modal-title">' +
-      t('modal.password_reset.title') +
-      '</div>' +
-      '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
-      escapeHtml(email) +
-      '</div>' +
-      '<div class="modal-row" style="display:block">' +
-      radioBox('rotate', 'rotate', 'var(--text-dim)') +
-      radioBox('recover', 'recover', 'var(--text-dim)') +
-      radioBox('wipe', 'wipe', 'var(--danger)') +
-      '</div>' +
-      '<div id="resetModeFields"></div>' +
-      '<div class="modal-row"><label>' +
-      t('reset.label.new_password') +
-      '</label>' +
-      '<input id="resetNewPwInput" type="password" autocomplete="new-password"></div>' +
-      '<div id="resetError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
-      '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" data-action="reset-cancel">' +
-      t('btn.cancel') +
-      '</button>' +
-      '<button id="resetPrimaryBtn" class="btn btn-primary btn-sm" data-action="do-reset">' +
-      t('reset.btn.reset') +
-      '</button>' +
-      '</div></div></div>';
-    window.updateResetModeUI();
-    // Auto-focus the first input visible in the default mode (rotate → oldPw).
-    setTimeout(() => $('resetOldPwInput')?.focus(), 0);
-  };
-
-  window.updateResetModeUI = function () {
-    const mode = document.querySelector('input[name="resetMode"]:checked').value;
-    const f = $('resetModeFields');
-    // Preserve any values the user typed in the previous mode so toggling
-    // radios doesn't wipe their input.
-    const prev = {
-      old: $('resetOldPwInput')?.value || '',
-      recovery: $('resetRecoveryInput')?.value || '',
-      wipeConfirm: $('resetWipeConfirm')?.checked || false,
-    };
-    if (mode === 'rotate') {
-      f.innerHTML =
-        '<div class="modal-row"><label>' +
-        t('reset.label.old_password') +
-        '</label>' +
-        '<input id="resetOldPwInput" type="password" autocomplete="current-password" value="' +
-        escapeHtml(prev.old) +
-        '"></div>';
-      setTimeout(() => $('resetOldPwInput')?.focus(), 0);
-    } else if (mode === 'recover') {
-      f.innerHTML =
-        '<div class="modal-row"><label>' +
-        t('reset.label.recovery') +
-        '</label>' +
-        '<input id="resetRecoveryInput" type="text" autocomplete="off" placeholder="xxxx-xxxx-xxxx-xxxx-..." style="font-family:monospace" value="' +
-        escapeHtml(prev.recovery) +
-        '"></div>';
-      setTimeout(() => $('resetRecoveryInput')?.focus(), 0);
-    } else {
-      f.innerHTML =
-        '<div style="background:rgba(220,40,40,.08);border:1px solid var(--danger);padding:var(--space-2);border-radius:4px;margin-bottom:var(--space-3);font-size:var(--fs-sm)">' +
-        t('reset.wipe_warn') +
-        '<label style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-2);cursor:pointer">' +
-        '<input type="checkbox" id="resetWipeConfirm"' +
-        (prev.wipeConfirm ? ' checked' : '') +
-        '> ' +
-        t('reset.wipe_confirm') +
-        '</label>' +
-        '</div>';
-    }
-    // Primary button label matches the destructive intent in wipe mode.
-    const btn = $('resetPrimaryBtn');
-    if (btn) {
-      btn.textContent = t(mode === 'wipe' ? 'reset.btn.wipe_reset' : 'reset.btn.reset');
-      btn.classList.toggle('danger', mode === 'wipe');
-    }
-  };
-
-  window.doResetPassword = async function () {
-    const mode = document.querySelector('input[name="resetMode"]:checked').value;
-    const newPassword = $('resetNewPwInput').value;
-    const errEl = $('resetError');
-    errEl.textContent = '';
-    if (newPassword.length < 8) {
-      errEl.textContent = t('reset.err.short_password');
-      return;
-    }
-    const ctx = _resetCtx;
-    if (!ctx) {
-      errEl.textContent = t('reset.err.session_lost');
-      return;
-    }
-    try {
-      let body;
-      if (mode === 'wipe') {
-        if (!$('resetWipeConfirm').checked) {
-          errEl.textContent = t('reset.err.wipe_unconfirmed');
-          return;
-        }
-        body = { token: ctx.token, mode: 'wipe', newPassword };
-      } else {
-        // rotate / recover: unwrap DEK locally, re-wrap under new KEK.
-        if (!ctx.encryption) {
-          errEl.textContent = t('reset.err.no_state');
-          return;
-        }
-        let dekBytes;
-        if (mode === 'rotate') {
-          const oldPassword = $('resetOldPwInput').value;
-          if (!oldPassword) {
-            errEl.textContent = t('reset.err.old_required');
-            return;
-          }
-          const oldSalt = SpyglassCrypto._b64ToBytes(ctx.encryption.kdf_salt);
-          const oldKEK = await SpyglassCrypto.deriveKEK(oldPassword, oldSalt);
-          try {
-            dekBytes = await SpyglassCrypto.unwrapBytes(
-              oldKEK,
-              ctx.encryption.dek_iv,
-              ctx.encryption.dek_wrapped,
-            );
-          } catch {
-            errEl.textContent = t('reset.err.old_wrong');
-            return;
-          }
-          body = {
-            token: ctx.token,
-            mode: 'rotate',
-            oldPassword,
-            newPassword,
-          };
-        } else {
-          const recovery = $('resetRecoveryInput')
-            .value.replace(/[^0-9a-fA-F]/g, '')
-            .toLowerCase();
-          if (recovery.length !== 32) {
-            errEl.textContent = t('reset.err.recovery_format');
-            return;
-          }
-          const recSalt = SpyglassCrypto._b64ToBytes(ctx.encryption.recovery_salt);
-          const recKEK = await SpyglassCrypto.deriveKEK(recovery, recSalt);
-          try {
-            dekBytes = await SpyglassCrypto.unwrapBytes(
-              recKEK,
-              ctx.encryption.recovery_dek_iv,
-              ctx.encryption.recovery_dek_wrapped,
-            );
-          } catch {
-            errEl.textContent = t('reset.err.recovery_wrong');
-            return;
-          }
-          body = {
-            token: ctx.token,
-            mode: 'recover',
-            newPassword,
-          };
-        }
-        // Re-wrap DEK under new KEK (common for rotate + recover).
-        const newSalt = crypto.getRandomValues(new Uint8Array(16));
-        const newKEK = await SpyglassCrypto.deriveKEK(newPassword, newSalt);
-        const wrapped = await SpyglassCrypto.wrapBytes(newKEK, dekBytes);
-        body.new_kdf_salt = SpyglassCrypto._bytesToB64(newSalt);
-        body.new_dek_wrapped = wrapped.ct;
-        body.new_dek_iv = wrapped.iv;
-        // Keep DEK live so user is unlocked immediately after reset.
-        _sessionDEK = await SpyglassCrypto.importDEK(dekBytes, { extractable: true });
-        await persistDEK(_sessionDEK);
-      }
-      const resp = await api('POST', 'api/auth/reset-password', body);
-      _currentUser = resp.user;
-      _resetCtx = null;
-      _pendingUnlock = mode === 'wipe'; // wipe needs fresh bootstrap on next save
-      if (mode === 'wipe') {
-        _sessionDEK = null;
-        clearPersistedDEK();
-      }
-      history.replaceState({}, '', location.pathname);
-      closeModal();
-      renderAuthWidget();
-      renderVerifyBanner();
-      refreshSamples();
-      toast(t('toast.password_reset'), 'success');
-    } catch (e) {
-      errEl.textContent = e.message || t('error.generic');
-    }
-  };
-  let _resetCtx = null;
+  // The forgot/reset password flow lives in /modules/password-reset/
+  // (lazy-loaded). Triggers:
+  //   - 'open-forgot' data-action          → window.openForgotPasswordFlow
+  //   - ?reset=<token> URL boot detection  → window.openPasswordResetFlow
+  // The dispatcher cases below handle lazy-import-on-first-use.
+  // The shell's closeModal() reads window.__spyglassResetActive to know
+  // when to strip ?reset= from the URL on Esc/backdrop close. The DEK
+  // installed after a successful reset goes through
+  // SpyglassSession.importDEKFromBytes() — raw DEK bytes never touch
+  // the shell scope.
 
   window.requestVerifyEmail = async function () {
     try {
@@ -3214,16 +2745,6 @@ export async function mountInspector(root, ctx) {
     } else {
       banner.style.display = 'none';
     }
-  }
-
-  function humanAuthError(e) {
-    const code = e.code || '';
-    if (code === 'invalid_email') return t('auth.err.invalid_email');
-    if (code === 'weak_password') return t('auth.err.weak_password');
-    if (code === 'email_taken') return t('auth.err.email_taken');
-    if (code === 'invalid_credentials') return t('auth.err.invalid_creds');
-    if (code === 'rate_limited') return t('auth.err.rate_limited');
-    return e.message || t('toast.error_generic', { error: '' }).replace(/[:\s]+$/, '');
   }
 
   // ── Finding-detail expand ────────────────────────────────────────────
@@ -3549,17 +3070,26 @@ export async function mountInspector(root, ctx) {
 
   function closeModal() {
     // Recovery-key modal has special "really?" gate — route Esc/backdrop
-    // closures through it instead of the silent close path.
-    if (_recoveryKeyModalActive) {
+    // closures through it instead of the silent close path. The flag +
+    // the close fn live in /modules/recovery/ (lazy-loaded). When the
+    // module isn't loaded the flag is undefined → falsy → normal close.
+    if (
+      typeof window.isRecoveryKeyModalActive === 'function' &&
+      window.isRecoveryKeyModalActive()
+    ) {
       window.closeRecoveryKeyModal();
       return;
     }
     $('modalRoot').innerHTML = '';
     // If the user closes the reset-password modal via Esc or backdrop click
     // (rather than the cancel button), still strip the `?reset=...` query
-    // so a refresh doesn't silently re-trigger the same flow.
-    if (_resetCtx && new URLSearchParams(location.search).has('reset')) {
-      _resetCtx = null;
+    // so a refresh doesn't silently re-trigger the same flow. The flag is
+    // owned by /modules/password-reset/ — undefined when the module isn't
+    // loaded → falsy → normal close.
+    if (window.__spyglassResetActive && new URLSearchParams(location.search).has('reset')) {
+      if (typeof window.cancelPasswordReset === 'function') {
+        window.cancelPasswordReset();
+      }
       history.replaceState({}, '', location.pathname);
     }
   }
@@ -3698,107 +3228,27 @@ export async function mountInspector(root, ctx) {
       _sessionDEK = await SpyglassCrypto.importDEK(dekBytes, { extractable: true });
       await persistDEK(_sessionDEK);
     },
+    clearDEK() {
+      // Wipe just the DEK (in-memory + persisted) without touching the
+      // user record. Used by the wipe branch of password-reset, where
+      // the user remains signed in but the encrypted blobs are gone
+      // server-side and a fresh bootstrap is required on next save.
+      _sessionDEK = null;
+      clearPersistedDEK();
+    },
+    setPendingUnlock(v) {
+      _pendingUnlock = !!v;
+    },
+    renderVerifyBanner: () => renderVerifyBanner(),
   };
 
-  window.openSaveModal = function () {
-    if (!_currentUser) {
-      // Phase 9b auth-gate: surface an explanatory toast BEFORE opening
-      // the auth modal so guests understand WHY they're being redirected
-      // (previously the modal opened silently and felt like a non-sequitur).
-      // Toast is non-blocking; auth modal still takes focus immediately.
-      toast(t('toast.signin_to_save'), 'info');
-      window.openAuthModal('login');
-      return;
-    }
-    const reqVal = $('bidReq').value || '';
-    const resVal = $('bidRes').value || '';
-    if (!reqVal.trim() && !resVal.trim()) {
-      toast(t('toast.nothing_to_save'), 'error');
-      return;
-    }
-    // Updating an existing record? Pre-fill from loaded meta so user
-    // doesn't lose title/partner/notes by accident.
-    const updating = !!_currentSampleId && !!_currentSampleMeta;
-    let title;
-    let presetPartner;
-    let presetNotes;
-    if (updating) {
-      title = _currentSampleMeta.title || 'sample';
-      presetPartner = _currentSampleMeta.partner_id;
-      presetNotes = _currentSampleMeta.notes || '';
-    } else {
-      title = (() => {
-        try {
-          const j = JSON.parse(reqVal);
-          return j.id || j.site?.domain || j.app?.bundle || 'sample';
-        } catch {
-          return 'sample';
-        }
-      })();
-      // Don't seed the save-modal partner picker from the library filter.
-      // Old behaviour silently coerced every new save to whatever partner
-      // the user had set as the library filter — confusing and the source
-      // of "all my samples ended up under partner X" reports. Default to
-      // unassigned; let the user pick explicitly in the modal.
-      presetPartner = null;
-      presetNotes = '';
-    }
-    const headerText = updating
-      ? t('modal.save_sample.update_title', { id: _currentSampleId })
-      : t('modal.save_sample.title');
-    const primaryBtn =
-      '<button class="btn btn-primary btn-sm" data-action="confirm-save">' +
-      t(updating ? 'btn.update' : 'btn.save') +
-      '</button>';
-    const secondaryBtn = updating
-      ? '<button class="btn btn-ghost btn-sm" data-action="confirm-save" data-as-new="1">' +
-        t('btn.save_as_new') +
-        '</button>'
-      : '';
-    $('modalRoot').innerHTML =
-      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-      '<div class="modal-card">' +
-      '<div class="modal-title">' +
-      escapeHtml(headerText) +
-      '</div>' +
-      '<div class="modal-row"><label>' +
-      t('sample.label.title') +
-      '</label><input id="mTitle" type="text" value="' +
-      escapeHtml(String(title)) +
-      '"></div>' +
-      '<div class="modal-row"><label>' +
-      t('sample.label.partner') +
-      '</label><select id="mPartner">' +
-      partnerOptionsHtml(presetPartner) +
-      '</select>' +
-      // Phase C-1: live partner-inference banner. Populated async by
-      // suggestPartnerForSave() once the save modal is mounted.
-      '<div id="mPartnerHint" class="modal-hint" hidden></div>' +
-      '</div>' +
-      '<div class="modal-row"><label>' +
-      t('sample.label.notes') +
-      '</label><textarea id="mNotes">' +
-      escapeHtml(presetNotes) +
-      '</textarea></div>' +
-      '<div class="modal-actions">' +
-      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.cancel') +
-      '</button>' +
-      secondaryBtn +
-      primaryBtn +
-      '</div>' +
-      '</div>' +
-      '</div>';
-    setTimeout(() => {
-      $('mTitle').focus();
-      wireEnterSubmit('mTitle', () => window.confirmSave());
-      // Phase C-1: kick off partner inference in the background. Result
-      // (or absence of result) populates #mPartnerHint without blocking
-      // the user — they can submit immediately, suggestion just upgrades
-      // the UX when it lands. Skip on update flow where partner is set.
-      if (!presetPartner) suggestPartnerForSave();
-    }, 0);
-  };
+  // ── Save-sample modal — MOVED to modules/save-sample/ (lazy) ─────────
+  // openSaveModal + suggestPartnerForSave + _spy_pickPartner +
+  // _spy_createPartner + confirmSave (≈265 LOC) now live in
+  // /modules/save-sample/index.js and are fetched on first click of
+  // the "💾 зберегти" button (case 'save-sample' in the dispatcher
+  // below). State + crypto access goes through the SpyglassSession
+  // facade — no closure-private references in the module.
 
   // ── Live + Simulate modals — MOVED to modules/{live,simulate}/ (lazy) ──
   // Both fetch on first click of their topnav buttons (`case 'live'`
@@ -3815,160 +3265,6 @@ export async function mountInspector(root, ctx) {
   // diffJsonForMirror + truncate (≈220 LOC); they're now ES-imported
   // helpers inside the module. ~25KB stays out of the initial JS
   // bundle until a user actually opens mirror.
-  // Phase C-1: ask gemma to identify the SSP / vendor based on the
-  // current bid_req / bid_res contents. Privacy-safe: payload stays on
-  // the local Ollama, never reaches a cloud LLM. Banner offers two paths:
-  // pick an existing partner with the same name, OR create + select a
-  // new one. Failures (no signal, Ollama down) silently leave the banner
-  // hidden — never disrupt the save flow.
-  async function suggestPartnerForSave() {
-    const banner = $('mPartnerHint');
-    if (!banner) return;
-    const bid_req = $('bidReq').value || '';
-    const bid_res = $('bidRes').value || '';
-    if (!bid_req.trim() && !bid_res.trim()) return;
-    let j;
-    try {
-      j = await api('POST', 'api/intel/suggest-partner', { bid_req, bid_res });
-    } catch (_e) {
-      return; // Ollama unavailable, rate limit, etc. — silent fallback.
-    }
-    if (!j || !j.suggestion || !j.suggestion.name) return;
-    const name = j.suggestion.name;
-    const conf = j.suggestion.confidence || 'medium';
-    // Match against existing partners (case-insensitive).
-    const existing = _partnerCache.find((p) => p.name.toLowerCase() === name.toLowerCase());
-    let actionBtn;
-    if (existing) {
-      actionBtn =
-        '<button class="btn btn-ghost btn-sm" data-action="hint-pick-partner" data-id="' +
-        existing.id +
-        '">' +
-        t('hint.partner.use_existing') +
-        '</button>';
-    } else {
-      actionBtn =
-        '<button class="btn btn-ghost btn-sm" data-action="hint-create-partner" data-name="' +
-        escapeHtml(name) +
-        '">' +
-        t('hint.partner.create_new') +
-        '</button>';
-    }
-    banner.innerHTML =
-      '<span class="hint-icon" aria-hidden="true">💡</span>' +
-      '<span class="hint-text">' +
-      t('hint.partner.suggestion', { name: escapeHtml(name), conf }) +
-      '</span>' +
-      actionBtn;
-    banner.dataset.confidence = conf;
-    banner.hidden = false;
-  }
-  // Expose for the central dispatcher (data-action handlers below).
-  window._spy_pickPartner = function (id) {
-    const sel = $('mPartner');
-    if (sel) sel.value = String(id);
-    const banner = $('mPartnerHint');
-    if (banner) banner.hidden = true;
-  };
-  window._spy_createPartner = async function (name) {
-    try {
-      await api('POST', 'api/partners', { name });
-      // Refresh cache + dropdown.
-      const j = await api('GET', 'api/partners');
-      _partnerCache = j.partners || [];
-      const created = _partnerCache.find((p) => p.name.toLowerCase() === name.toLowerCase());
-      const sel = $('mPartner');
-      if (sel) {
-        sel.innerHTML = partnerOptionsHtml(created ? created.id : null);
-      }
-      const banner = $('mPartnerHint');
-      if (banner) banner.hidden = true;
-      toast(t('toast.partner_created', { name }), 'success');
-    } catch (e) {
-      toast(t('toast.send_failed', { error: e.message || '' }), 'error');
-    }
-  };
-
-  window.confirmSave = async function (opts) {
-    if (!_sessionDEK) {
-      toast(t('toast.crypto_session_lost'), 'error');
-      return;
-    }
-    const asNew = !!(opts && opts.asNew);
-    const updating = !asNew && !!_currentSampleId;
-    let title = $('mTitle').value.trim() || 'sample';
-    const partnerId = $('mPartner').value || null;
-    const notes = $('mNotes').value.trim();
-    // "Save as new" forks the current sample. If the user didn't tweak the
-    // title, auto-suffix "(copy)" so the new row is distinguishable in the
-    // library list. Without this, identical titles + same partner produced
-    // visually-indistinguishable duplicates and "where's my new save?"
-    // confusion. Keep the partner preset (fast iteration) — title disambig
-    // is the one signal that says "this is a fork".
-    if (asNew && _currentSampleMeta && title === (_currentSampleMeta.title || '').trim()) {
-      title = title + ' (copy)';
-    }
-    const bid_req = $('bidReq').value || '';
-    const bid_res = $('bidRes').value || '';
-    // Status from the most recent analysis. Stored on a data-attribute by
-    // the analyzer so localised text in `innerText` doesn't break this read.
-    const status = ($('stEntity')?.dataset.status || '').trim();
-    try {
-      // Encrypt blobs locally before POSTing. Server stores opaque ciphertext.
-      const encReq = await SpyglassCrypto.encryptBlob(_sessionDEK, bid_req);
-      const encRes = await SpyglassCrypto.encryptBlob(_sessionDEK, bid_res);
-      const payload = {
-        partner_id: partnerId ? Number(partnerId) : null,
-        title,
-        bid_req: encReq.ct,
-        bid_res: encRes.ct,
-        req_iv: encReq.iv,
-        res_iv: encRes.iv,
-        status,
-        notes,
-      };
-      let saved;
-      if (updating) {
-        saved = await api('PATCH', 'api/samples/' + _currentSampleId, payload);
-        toast(t('toast.updated', { title }), 'success');
-      } else {
-        saved = await api('POST', 'api/samples', payload);
-        // After save-as-new (or first save), track the new id so subsequent
-        // saves keep updating instead of duplicating.
-        if (saved && saved.sample) {
-          _currentSampleId = saved.sample.id;
-          _currentSampleMeta = {
-            title,
-            partner_id: payload.partner_id,
-            notes,
-          };
-        }
-        toast(t('toast.saved', { title }), 'success');
-      }
-      // Bring the cached meta in sync with whatever the user just wrote.
-      if (updating) {
-        _currentSampleMeta = { title, partner_id: payload.partner_id, notes };
-      }
-      _isDirty = false;
-      closeModal();
-      refreshSamples();
-    } catch (e) {
-      // Special case: the picker showed a partner that another tab just
-      // deleted. Refresh the partner cache so the picker doesn't keep
-      // offering the dead row, and tell the user specifically.
-      if (e.code === 'partner_not_found') {
-        toast(t('toast.partner_gone'), 'error');
-        try {
-          await refreshPartners();
-        } catch (_) {
-          /* swallow */
-        }
-        return;
-      }
-      toast(t('toast.save_failed', { error: e.message }), 'error');
-    }
-  };
-
   async function loadSample(id) {
     if (!_sessionDEK) {
       toast(t('toast.crypto_session_lost'), 'error');
@@ -4060,73 +3356,10 @@ export async function mountInspector(root, ctx) {
     }
   }
 
-  async function editSample(id) {
-    try {
-      const j = await api('GET', 'api/samples/' + id);
-      const s = j.sample;
-      $('modalRoot').innerHTML =
-        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-        '<div class="modal-card">' +
-        '<div class="modal-title">' +
-        t('modal.edit_sample.title') +
-        '</div>' +
-        '<div class="modal-row"><label>' +
-        t('sample.label.title') +
-        '</label><input id="mTitle" type="text" value="' +
-        escapeHtml(s.title) +
-        '"></div>' +
-        '<div class="modal-row"><label>' +
-        t('sample.label.partner') +
-        '</label><select id="mPartner">' +
-        partnerOptionsHtml(s.partner_id) +
-        '</select></div>' +
-        '<div class="modal-row"><label>' +
-        t('sample.label.notes_short') +
-        '</label><textarea id="mNotes">' +
-        escapeHtml(s.notes || '') +
-        '</textarea></div>' +
-        '<div class="modal-actions">' +
-        '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-        t('btn.cancel') +
-        '</button>' +
-        '<button class="btn btn-primary btn-sm" data-action="confirm-edit" data-id="' +
-        s.id +
-        '">' +
-        t('btn.save') +
-        '</button>' +
-        '</div>' +
-        '</div>' +
-        '</div>';
-      setTimeout(() => {
-        $('mTitle').focus();
-        wireEnterSubmit('mTitle', () => window.confirmEdit(s.id));
-      }, 0);
-    } catch (e) {
-      toast(e.message, 'error');
-    }
-  }
-
-  window.confirmEdit = async function (id) {
-    const title = $('mTitle').value.trim() || 'sample';
-    const partnerId = $('mPartner').value || null;
-    const notes = $('mNotes').value.trim();
-    try {
-      await api('PATCH', 'api/samples/' + id, {
-        title,
-        partner_id: partnerId ? Number(partnerId) : null,
-        notes,
-      });
-      // Keep the loaded-meta in sync if the user just edited the same record.
-      if (_currentSampleId === id && _currentSampleMeta) {
-        _currentSampleMeta = { title, partner_id: partnerId ? Number(partnerId) : null, notes };
-      }
-      closeModal();
-      toast(t('toast.saved', { title }), 'success');
-      refreshSamples();
-    } catch (e) {
-      toast(t('toast.save_changes_failed', { error: e.message }), 'error');
-    }
-  };
+  // editSample + confirmEdit migrated to /modules/edit-sample/ on
+  // 2026-05-10. Lazy-loaded by the 'sample-edit' dispatcher case;
+  // 'confirm-edit' calls window.confirmEdit which the module
+  // self-registers on first load.
 
   window.closeModal = closeModal;
 
@@ -4422,7 +3655,7 @@ export async function mountInspector(root, ctx) {
             // no point fetching the module for them.
             if (!_currentUser) {
               toast(t('toast.signin_to_save'), 'info');
-              window.openAuthModal && window.openAuthModal('login');
+              lazyOpenAuth('login');
               return;
             }
             if (typeof window.openCorpusSaveModal === 'function') {
@@ -4554,8 +3787,32 @@ export async function mountInspector(root, ctx) {
             })();
             return;
           }
-          case 'save-sample':
-            return window.openSaveModal && window.openSaveModal();
+          case 'save-sample': {
+            // Lazy-load the save-sample module on first click. Subsequent
+            // clicks hit the browser's ES module cache for free. The
+            // auth-gate lives INSIDE openSaveModal (it shows an explanatory
+            // toast + opens the auth modal for guests) — we still pay the
+            // module fetch for guests, but it's tiny and rare.
+            if (typeof window.openSaveModal === 'function') {
+              return window.openSaveModal();
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/save-sample/i18n.js'),
+                  import('/modules/save-sample/index.js'),
+                ]);
+                window.openSaveModal();
+              } catch (err) {
+                console.error('[save-sample] lazy import failed:', err);
+                toast(
+                  t('toast.error_generic', { error: 'save-sample module load failed' }),
+                  'error',
+                );
+              }
+            })();
+            return;
+          }
           case 'verify-email':
             return window.requestVerifyEmail && window.requestVerifyEmail();
           case 'signout':
@@ -4564,9 +3821,36 @@ export async function mountInspector(root, ctx) {
             closeModal();
             return window.signOut && window.signOut();
           case 'open-auth':
-            return window.openAuthModal(el.dataset.mode || 'login');
-          case 'open-unlock':
-            return window.openUnlockModal();
+            // Auth is a lazy module since 2026-05-10. lazyOpenAuth
+            // imports /modules/auth/ on first activation, then re-
+            // dispatches to window.openAuthModal(mode). Subsequent
+            // clicks hit the synchronous-best-case branch (module
+            // already loaded → direct call).
+            return lazyOpenAuth(el.dataset.mode || 'login');
+          case 'open-unlock': {
+            // Guests: short-circuit to auth modal — no point fetching
+            // the unlock module if there's no cookie session to
+            // re-derive against.
+            if (!_currentUser) {
+              return lazyOpenAuth('login');
+            }
+            if (typeof window.openUnlockModal === 'function') {
+              return window.openUnlockModal();
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/unlock/i18n.js'),
+                  import('/modules/unlock/index.js'),
+                ]);
+                window.openUnlockModal();
+              } catch (err) {
+                console.error('[unlock] lazy import failed:', err);
+                toast(t('toast.error_generic', { error: 'unlock module load failed' }), 'error');
+              }
+            })();
+            return;
+          }
           case 'open-partners': {
             // Lazy-load the partners module on first click.
             if (typeof window.openPartnerModal === 'function') {
@@ -4669,9 +3953,30 @@ export async function mountInspector(root, ctx) {
           // — saved samples (merged from Etap 1 #savedList scoped dispatcher) —
           case 'sample-load':
             return loadSample(Number(el.dataset.id));
-          case 'sample-edit':
+          case 'sample-edit': {
             ev.stopPropagation();
-            return editSample(Number(el.dataset.id));
+            // Lazy-load the edit-sample module on first click.
+            const editId = Number(el.dataset.id);
+            if (typeof window.editSample === 'function') {
+              return window.editSample(editId);
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/edit-sample/i18n.js'),
+                  import('/modules/edit-sample/index.js'),
+                ]);
+                window.editSample(editId);
+              } catch (err) {
+                console.error('[edit-sample] lazy import failed:', err);
+                toast(
+                  t('toast.error_generic', { error: 'edit-sample module load failed' }),
+                  'error',
+                );
+              }
+            })();
+            return;
+          }
           case 'sample-delete':
             ev.stopPropagation();
             return deleteSample(Number(el.dataset.id));
@@ -4692,7 +3997,11 @@ export async function mountInspector(root, ctx) {
             return window.closeRecoveryKeyModal();
           case 'reset-cancel':
             // Cancel reset-password modal: close + strip ?reset=
-            // query so a refresh doesn't re-trigger the same flow.
+            // query + clear in-flight ctx in /modules/password-reset/
+            // so a refresh doesn't re-trigger the same flow.
+            if (typeof window.cancelPasswordReset === 'function') {
+              window.cancelPasswordReset();
+            }
             closeModal();
             history.replaceState({}, '', location.pathname);
             return;
@@ -4705,15 +4014,43 @@ export async function mountInspector(root, ctx) {
           case 'do-unlock':
             return window.doUnlock && window.doUnlock();
           case 'do-forgot':
+            // /modules/password-reset/ is already loaded at this point
+            // (the modal is on screen, which means open-forgot ran the
+            // lazy-import). doForgotPassword is on window from the
+            // module's self-registration.
             return window.doForgotPassword && window.doForgotPassword();
           case 'do-reset':
+            // Same: /modules/password-reset/ already loaded (URL boot
+            // or open-forgot path). doResetPassword is on window.
             return window.doResetPassword && window.doResetPassword();
-          case 'open-forgot':
-            return window.openForgotPasswordModal && window.openForgotPasswordModal();
+          case 'open-forgot': {
+            // Lazy-load /modules/password-reset/ on first click of the
+            // "forgot password?" link in login or unlock modals.
+            if (typeof window.openForgotPasswordFlow === 'function') {
+              return window.openForgotPasswordFlow();
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/password-reset/i18n.js'),
+                  import('/modules/password-reset/index.js'),
+                ]);
+                window.openForgotPasswordFlow();
+              } catch (err) {
+                console.error('[password-reset] lazy import failed:', err);
+                toast(
+                  t('toast.error_generic', { error: 'password-reset module load failed' }),
+                  'error',
+                );
+              }
+            })();
+            return;
+          }
           case 'copy-recovery':
-            // Key lives in module-scope closure (_currentRecoveryKey),
-            // not in a DOM attribute — keeps the secret out of inspector.
-            return window.copyRecoveryKey && window.copyRecoveryKey(_currentRecoveryKey);
+            // Key lives in /modules/recovery/'s closure — never on
+            // window, never in a DOM attribute. The module's
+            // copyRecoveryKey() pulls it from its own scope.
+            return window.copyRecoveryKey && window.copyRecoveryKey();
 
           // — modals (Etap 3 — sample / partner CRUD verbs) —
           case 'confirm-save':
@@ -4851,17 +4188,31 @@ export async function mountInspector(root, ctx) {
     // user reloaded before clicking "I saved it", re-show the modal with
     // the same key. sessionStorage is per-tab so this doesn't survive a
     // full close — single accidental refresh is the realistic scenario.
+    //
+    // Inline sessionStorage read (instead of importing the recovery
+    // module) so we don't pay the import cost in the 99.99% case where
+    // nothing is pending. RECOVERY_PENDING_KEY constant is duplicated
+    // in /modules/recovery/index.js; both must agree.
     try {
+      let pending = null;
+      try {
+        pending = sessionStorage.getItem(RECOVERY_PENDING_KEY);
+      } catch (_e) {
+        /* sessionStorage unavailable — non-fatal, no F5 survival */
+      }
       if (_currentUser) {
-        const pending = readPendingRecovery();
         if (pending) {
           // queueMicrotask so the inspector template has a moment to mount
-          // (showRecoveryKeyModal writes into #modalRoot which is shell-level).
-          queueMicrotask(() => showRecoveryKeyModal(pending));
+          // (the module writes into #modalRoot which is shell-level).
+          queueMicrotask(() => openRecoveryKeyModalLazy(pending));
         }
-      } else {
+      } else if (pending) {
         // User isn't authed anymore — no point keeping a stale key.
-        clearPendingRecovery();
+        try {
+          sessionStorage.removeItem(RECOVERY_PENDING_KEY);
+        } catch (_e) {
+          /* sessionStorage unavailable — non-fatal */
+        }
       }
     } catch (_e) {
       /* defensive */
@@ -4987,7 +4338,26 @@ export async function mountInspector(root, ctx) {
       if (tab) tab.hidden = false;
     }
     if (qp.get('reset')) {
-      window.openResetPasswordModal(qp.get('reset'));
+      // Lazy-load /modules/password-reset/ on URL boot trigger. The
+      // module self-registers window.openPasswordResetFlow, which we
+      // then call with the token. Subsequent triggers (none expected
+      // — token is single-use) hit the ES module cache.
+      const token = qp.get('reset');
+      (async () => {
+        try {
+          await Promise.all([
+            import('/modules/password-reset/i18n.js'),
+            import('/modules/password-reset/index.js'),
+          ]);
+          window.openPasswordResetFlow(token);
+        } catch (err) {
+          console.error('[password-reset] lazy import failed:', err);
+          toast(t('toast.error_generic', { error: 'password-reset module load failed' }), 'error');
+          // Strip the URL so a refresh doesn't re-attempt the same
+          // failing import in a loop.
+          history.replaceState({}, '', location.pathname);
+        }
+      })();
     } else if (qp.get('verified') === '1') {
       toast(t('toast.email_verified'), 'success');
       history.replaceState({}, '', location.pathname);
@@ -5044,24 +4414,28 @@ export async function mountInspector(root, ctx) {
       'renderBehaviorTab',
       '_kadam',
       // auth flows
-      'openUnlockModal',
-      'doUnlock',
+      // openUnlockModal + doUnlock live in /modules/unlock/ (lazy);
+      // managed by the module loader, not by this sweep.
       'openAuthModal',
       'doLogin',
       'doRegister',
-      'closeRecoveryKeyModal',
-      'copyRecoveryKey',
+      // showRecoveryKeyModal + closeRecoveryKeyModal + copyRecoveryKey
+      // + isRecoveryKeyModalActive live in /modules/recovery/ (lazy);
+      // managed by the module loader, not by this sweep. Same for the
+      // shell hook __spyglassRecoveryClosed which we install above.
+      '__spyglassRecoveryClosed',
       'signOut',
-      'openForgotPasswordModal',
-      'doForgotPassword',
-      'openResetPasswordModal',
-      'updateResetModeUI',
-      'doResetPassword',
+      // openForgotPasswordFlow + openPasswordResetFlow + doForgotPassword
+      // + doResetPassword + updateResetModeUI + cancelPasswordReset live
+      // in /modules/password-reset/ (lazy); managed by the module loader,
+      // not by this sweep. Same for window.__spyglassResetActive.
       'requestVerifyEmail',
-      // save / partner / sample / embed (loadSample/editSample/deleteSample
-      // are now local — driven by delegated handler on #savedList)
+      // save / partner / sample / embed (loadSample/deleteSample are
+      // local — driven by delegated handler on #savedList; editSample
+      // is lazy-registered by /modules/edit-sample/ so it lives here)
       'openSaveModal',
       'confirmSave',
+      'editSample',
       'confirmEdit',
       'openPartnerModal',
       'confirmAddPartner',

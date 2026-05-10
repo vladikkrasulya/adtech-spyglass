@@ -31,7 +31,7 @@
       'toast.nothing_to_analyze': 'Нічого аналізувати — обидва поля порожні',
       // toast.nothing_to_mirror + toast.mirror_* keys live in modules/mirror/i18n.js
       'toast.error_generic': 'Помилка: {error}',
-      'toast.recovery_key_copied': 'Recovery key скопійовано',
+      // toast.recovery_key_copied lives in modules/recovery/i18n.js
       'toast.saved': 'Збережено · {title}',
       'toast.updated': 'Оновлено · {title}',
       'toast.save_failed': 'Не вдалося зберегти: {error}',
@@ -40,17 +40,15 @@
       'toast.delete_failed': 'Не вдалося видалити: {error}',
       'toast.crypto_session_lost': 'Сесія шифрування не активна — увійди в акаунт ще раз',
       'toast.decrypt_failed': 'Не вдалося розшифрувати — увійди в акаунт ще раз',
-      'toast.library_unlocked': 'Бібліотеку розблоковано',
-      'toast.hello': 'Привіт, {email}',
-      'toast.account_created': 'Акаунт створено, {email}',
+      // toast.library_unlocked → /modules/unlock/i18n.js
+      // toast.hello + toast.account_created + toast.account_created_email_failed
+      //   → /modules/auth/i18n.js
       'toast.signed_out': 'Ви вийшли з акаунту',
       'toast.analysis_complete': 'Аналіз завершено · {status}',
       'toast.email_verified': 'Email підтверджено ✓',
       'toast.verify_email_sent': 'Лист підтвердження відправлено на {email}',
       'toast.send_failed': 'Не вдалося відправити: {error}',
-      'toast.account_created_email_failed':
-        'Акаунт створено, але лист не пройшов — натисни «надіслати» у банері пізніше',
-      'toast.password_reset': 'Пароль скинуто. Ти увійшов(ла).',
+      // toast.password_reset lives in modules/password-reset/i18n.js (lazy)
       'toast.added': 'Додано · {name}',
       'toast.nothing_to_save': 'Нічого зберігати — обидва поля порожні',
       'toast.signin_to_save': 'Увійдіть, щоб зберігати запити в особисту бібліотеку',
@@ -60,8 +58,7 @@
       // ── embed modal ───────────────────────────────────────
 
       // ── confirm() dialogs ─────────────────────────────────
-      'confirm.recovery_save':
-        'Ти точно зберіг recovery key? Без нього неможливо відновити дані якщо забудеш пароль.',
+      // confirm.recovery_save lives in modules/recovery/i18n.js
       'confirm.delete_sample': 'Видалити цей запит з бібліотеки?',
       'confirm.clear_history':
         'Очистити всю історію? Збережені у бібліотеці записи не зачіпаються.',
@@ -69,12 +66,11 @@
         'Поточні зміни не збережено. Завантажити цей запит і відкинути зміни?',
 
       // ── modal titles ──────────────────────────────────────
-      'modal.unlock.title': 'розблокувати бібліотеку',
-      'modal.recovery.title': '⚠ recovery key — збережи зараз',
-      'modal.password_reset.title': 'скидання паролю',
+      // modal.unlock.title → /modules/unlock/i18n.js
+      // modal.recovery.title → /modules/recovery/i18n.js
+      // modal.password_reset.title → /modules/password-reset/i18n.js
       'modal.edit_sample.title': 'редагувати запит',
-      'modal.save_sample.title': 'зберегти запит',
-      'modal.save_sample.update_title': 'оновити запис · #{id}',
+      // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
       // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'Шлях у JSON',
@@ -134,9 +130,8 @@
       'btn.save_as_new': 'зберегти як новий',
       'btn.copy': 'копіювати',
       'btn.copied': 'скопійовано ✓',
-      'btn.recovery_saved': 'я зберіг',
-      'btn.unlock': 'розблокувати',
-      'btn.signout_instead': 'вийти замість цього',
+      // btn.recovery_saved → /modules/recovery/i18n.js
+      // btn.unlock + btn.signout_instead → /modules/unlock/i18n.js
       'btn.signout': 'вийти',
       'btn.add': 'додати',
       'btn.close': 'закрити',
@@ -188,30 +183,21 @@
       'theme.tooltip.dark': 'тема: темна · клік → авто',
 
       // ── auth modal ────────────────────────────────────────
-      'auth.login.title': 'увійти',
-      'auth.register.title': 'створити акаунт',
+      // Most keys moved to /modules/auth/i18n.js. Three labels stay
+      // here because they're shared with sibling modals (unlock,
+      // forgot/reset password): auth.label.email, auth.label.password,
+      // auth.forgot_password.
       'auth.label.email': 'email',
       'auth.label.password': 'пароль',
-      'auth.label.password_hint': 'пароль (мінімум 8 символів)',
-      'auth.btn.login': 'увійти',
-      'auth.btn.register': 'створити',
-      'auth.switch_to_login': 'вже є акаунт? увійти',
-      'auth.switch_to_register': 'немає акаунту? створити',
       'auth.forgot_password': 'забув пароль?',
-      'auth.err.invalid_email': 'Невалідний email',
-      'auth.err.weak_password': 'Пароль має бути хоча б 8 символів',
-      'auth.err.email_taken': 'Цей email вже зареєстровано',
-      'auth.err.invalid_creds': 'Невірний email або пароль',
-      'auth.err.rate_limited': 'Забагато спроб — спробуй пізніше',
 
       // ── unlock modal ──────────────────────────────────────
-      'unlock.subtitle': '{email} · введи пароль щоб розшифрувати збережені запити',
-      'unlock.err.no_crypto': 'Шифрування не налаштовано — спробуй увійти спочатку',
-      'unlock.err.wrong_password': 'Невірний пароль',
+      // unlock.subtitle + unlock.err.* → /modules/unlock/i18n.js
 
       // ── recovery-key modal ────────────────────────────────
-      'recovery.body':
-        'Це <b>єдиний</b> спосіб відновити доступ до твоєї бібліотеки якщо забудеш пароль. Я (оператор сервера) не маю його і не зможу відновити твої дані без нього. Запиши його у password-manager або на папері.',
+      // recovery.body lives in modules/recovery/i18n.js (with its
+      // siblings modal.recovery.title / btn.recovery_saved /
+      // toast.recovery_key_copied / confirm.recovery_save).
 
       // ── history merge (post-register import prompt) ───────
       'merge.title': 'Перенести історію в бібліотеку?',
@@ -245,40 +231,10 @@
 
       // ── partner modal ─────────────────────────────────────
 
-      // ── forgot password ───────────────────────────────────
-      'forgot.subtitle': 'введи email — пришлемо посилання для скидання паролю (діє 15 хв).',
-      'forgot.btn.back_to_login': 'назад до входу',
-      'forgot.btn.send': 'надіслати',
-      'forgot.sending': 'Відправляємо…',
-      'forgot.sent': 'Якщо такий email існує, лист відправлено. Перевір пошту (і спам).',
-      'forgot.email_required': 'Введи email',
-      'forgot.invalid_email': 'Це не схоже на email — перевір введене значення',
-
-      // ── reset password ────────────────────────────────────
-      'reset.mode.rotate': 'Я памʼятаю поточний пароль',
-      'reset.mode.rotate_hint': 'Бібліотека збережеться. Просто ротуємо пароль.',
-      'reset.mode.recover': 'У мене є recovery key',
-      'reset.mode.recover_hint':
-        '32-символьний ключ, який показували при реєстрації. Бібліотека збережеться.',
-      'reset.mode.wipe': 'Я втратив обидва — стерти все',
-      'reset.mode.wipe_hint': 'Усі збережені запити та партнери будуть видалені.',
-      'reset.label.new_password': 'новий пароль (мін. 8 символів)',
-      'reset.label.old_password': 'поточний пароль',
-      'reset.label.recovery': 'recovery key (32 символи)',
-      'reset.wipe_warn':
-        '<b>Це знищить всі ваші збережені запити та партнерів.</b> Зашифровані дані не можна відновити без паролю чи recovery key.',
-      'reset.wipe_confirm': 'Я розумію і приймаю втрату даних',
-      'reset.btn.reset': 'скинути пароль',
-      'reset.btn.wipe_reset': 'стерти й скинути',
-      'reset.err.short_password': 'Новий пароль має бути хоча б 8 символів',
-      'reset.err.session_lost': 'Сесія скидання втрачена — відкрий посилання заново',
-      'reset.err.wipe_unconfirmed': 'Підтверди, що приймаєш втрату даних',
-      'reset.err.no_state': 'Немає стану шифрування — використай "стерти все"',
-      'reset.err.old_required': 'Введи поточний пароль',
-      'reset.err.old_wrong': 'Невірний поточний пароль',
-      'reset.err.recovery_format': 'Recovery key має бути 32 hex символи',
-      'reset.err.recovery_wrong': 'Невірний recovery key',
-      'reset.err.link_invalid': 'Посилання недійсне або застаріле: {error}',
+      // forgot.* + reset.* keys live in modules/password-reset/i18n.js
+      // (lazy). Three exceptions stay here because they're used by the
+      // shell-level ?verify_error= boot path, NOT by the password-reset
+      // modal:
       'reset.err.link_expired': 'Посилання застаріло — запитай нове',
       'reset.err.link_tampered': 'Посилання пошкоджено',
       'reset.err.verify_failed': 'Не вдалося підтвердити email',
@@ -308,7 +264,7 @@
       'toast.nothing_to_analyze': 'Nothing to analyze — both fields are empty',
       // toast.nothing_to_mirror + toast.mirror_* keys live in modules/mirror/i18n.js
       'toast.error_generic': 'Error: {error}',
-      'toast.recovery_key_copied': 'Recovery key copied',
+      // toast.recovery_key_copied lives in modules/recovery/i18n.js
       'toast.saved': 'Saved · {title}',
       'toast.updated': 'Updated · {title}',
       'toast.save_failed': 'Save failed: {error}',
@@ -317,17 +273,15 @@
       'toast.delete_failed': 'Delete failed: {error}',
       'toast.crypto_session_lost': 'Encryption session lost — sign in again',
       'toast.decrypt_failed': 'Decryption failed — sign in again',
-      'toast.library_unlocked': 'Library unlocked',
-      'toast.hello': 'Hi, {email}',
-      'toast.account_created': 'Account created, {email}',
+      // toast.library_unlocked → /modules/unlock/i18n.js
+      // toast.hello + toast.account_created + toast.account_created_email_failed
+      //   → /modules/auth/i18n.js
       'toast.signed_out': 'Signed out',
       'toast.analysis_complete': 'Analysis complete · {status}',
       'toast.email_verified': 'Email verified ✓',
       'toast.verify_email_sent': 'Verification email sent to {email}',
       'toast.send_failed': 'Send failed: {error}',
-      'toast.account_created_email_failed':
-        'Account created, but the verify email didn’t send — use “send” in the banner later',
-      'toast.password_reset': 'Password reset. You’re signed in.',
+      // toast.password_reset lives in modules/password-reset/i18n.js (lazy)
       'toast.added': 'Added · {name}',
       'toast.nothing_to_save': 'Nothing to save — both fields are empty',
       'toast.signin_to_save': 'Sign in to save samples to your personal library',
@@ -337,19 +291,17 @@
       // ── embed modal ───────────────────────────────────────
 
       // ── confirm() dialogs ─────────────────────────────────
-      'confirm.recovery_save':
-        'Did you really save your recovery key? You can’t recover data without it if you forget your password.',
+      // confirm.recovery_save lives in modules/recovery/i18n.js
       'confirm.delete_sample': 'Delete this sample from the library?',
       'confirm.clear_history': 'Clear the whole history? Saved-library entries are unaffected.',
       'confirm.clobber_load': 'Current edits aren’t saved. Load this and discard them?',
 
       // ── modal titles ──────────────────────────────────────
-      'modal.unlock.title': 'unlock library',
-      'modal.recovery.title': '⚠ recovery key — save now',
-      'modal.password_reset.title': 'reset password',
+      // modal.unlock.title → /modules/unlock/i18n.js
+      // modal.recovery.title → /modules/recovery/i18n.js
+      // modal.password_reset.title → /modules/password-reset/i18n.js
       'modal.edit_sample.title': 'edit sample',
-      'modal.save_sample.title': 'save sample',
-      'modal.save_sample.update_title': 'update sample · #{id}',
+      // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
       // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'JSON path',
@@ -411,9 +363,8 @@
       'btn.save_as_new': 'save as new',
       'btn.copy': 'copy',
       'btn.copied': 'copied ✓',
-      'btn.recovery_saved': 'I saved it',
-      'btn.unlock': 'unlock',
-      'btn.signout_instead': 'sign out instead',
+      // btn.recovery_saved → /modules/recovery/i18n.js
+      // btn.unlock + btn.signout_instead → /modules/unlock/i18n.js
       'btn.signout': 'sign out',
       'btn.add': 'add',
       'btn.close': 'close',
@@ -465,30 +416,21 @@
       'theme.tooltip.dark': 'theme: dark · click → auto',
 
       // ── auth modal ────────────────────────────────────────
-      'auth.login.title': 'sign in',
-      'auth.register.title': 'create account',
+      // Most keys moved to /modules/auth/i18n.js. Three labels stay
+      // here because they're shared with sibling modals (unlock,
+      // forgot/reset password): auth.label.email, auth.label.password,
+      // auth.forgot_password.
       'auth.label.email': 'email',
       'auth.label.password': 'password',
-      'auth.label.password_hint': 'password (min. 8 chars)',
-      'auth.btn.login': 'sign in',
-      'auth.btn.register': 'create',
-      'auth.switch_to_login': 'have an account? sign in',
-      'auth.switch_to_register': 'no account? create one',
       'auth.forgot_password': 'forgot password?',
-      'auth.err.invalid_email': 'Invalid email',
-      'auth.err.weak_password': 'Password must be at least 8 chars',
-      'auth.err.email_taken': 'This email is already registered',
-      'auth.err.invalid_creds': 'Wrong email or password',
-      'auth.err.rate_limited': 'Too many attempts — try again later',
 
       // ── unlock modal ──────────────────────────────────────
-      'unlock.subtitle': '{email} · enter your password to decrypt saved samples',
-      'unlock.err.no_crypto': 'Encryption not set up — sign in first',
-      'unlock.err.wrong_password': 'Wrong password',
+      // unlock.subtitle + unlock.err.* → /modules/unlock/i18n.js
 
       // ── recovery-key modal ────────────────────────────────
-      'recovery.body':
-        'This is the <b>only</b> way to recover access to your library if you forget your password. I (the operator) don’t hold it and can’t recover your data without it. Save it in a password manager or on paper.',
+      // recovery.body lives in modules/recovery/i18n.js (with its
+      // siblings modal.recovery.title / btn.recovery_saved /
+      // toast.recovery_key_copied / confirm.recovery_save).
 
       // ── history merge (post-register import prompt) ───────
       'merge.title': 'Move history to your library?',
@@ -522,39 +464,9 @@
 
       // ── partner modal ─────────────────────────────────────
 
-      // ── forgot password ───────────────────────────────────
-      'forgot.subtitle': 'Enter your email — we’ll send a reset link (valid for 15 min).',
-      'forgot.btn.back_to_login': 'back to sign in',
-      'forgot.btn.send': 'send',
-      'forgot.sending': 'Sending…',
-      'forgot.sent': 'If this email exists, a link was sent. Check your inbox (and spam).',
-      'forgot.email_required': 'Enter an email',
-      'forgot.invalid_email': 'Doesn’t look like an email — check the value',
-
-      // ── reset password ────────────────────────────────────
-      'reset.mode.rotate': 'I remember my current password',
-      'reset.mode.rotate_hint': 'Library is preserved. We just rotate the password.',
-      'reset.mode.recover': 'I have my recovery key',
-      'reset.mode.recover_hint': '32-char key shown at registration. Library is preserved.',
-      'reset.mode.wipe': 'I lost both — wipe everything',
-      'reset.mode.wipe_hint': 'All saved samples and partners will be deleted.',
-      'reset.label.new_password': 'new password (min. 8 chars)',
-      'reset.label.old_password': 'current password',
-      'reset.label.recovery': 'recovery key (32 chars)',
-      'reset.wipe_warn':
-        '<b>This will destroy all your saved samples and partners.</b> Encrypted data cannot be recovered without password or recovery key.',
-      'reset.wipe_confirm': 'I understand and accept the data loss',
-      'reset.btn.reset': 'reset password',
-      'reset.btn.wipe_reset': 'wipe and reset',
-      'reset.err.short_password': 'New password must be at least 8 chars',
-      'reset.err.session_lost': 'Reset session lost — open the link again',
-      'reset.err.wipe_unconfirmed': 'Confirm that you accept the data loss',
-      'reset.err.no_state': 'No encryption state — use "wipe everything"',
-      'reset.err.old_required': 'Enter your current password',
-      'reset.err.old_wrong': 'Wrong current password',
-      'reset.err.recovery_format': 'Recovery key must be 32 hex chars',
-      'reset.err.recovery_wrong': 'Wrong recovery key',
-      'reset.err.link_invalid': 'Link is invalid or expired: {error}',
+      // forgot.* + reset.* keys live in modules/password-reset/i18n.js
+      // (lazy). Three exceptions stay here for the shell-level
+      // ?verify_error= boot path:
       'reset.err.link_expired': 'Link expired — request a new one',
       'reset.err.link_tampered': 'Link is tampered',
       'reset.err.verify_failed': 'Couldn’t verify email',
@@ -587,7 +499,7 @@
       'toast.nothing_to_analyze': 'Нечего анализировать — оба поля пусты',
       // toast.nothing_to_mirror + toast.mirror_* keys live in modules/mirror/i18n.js
       'toast.error_generic': 'Ошибка: {error}',
-      'toast.recovery_key_copied': 'Recovery key скопирован',
+      // toast.recovery_key_copied lives in modules/recovery/i18n.js
       'toast.saved': 'Сохранено · {title}',
       'toast.updated': 'Обновлено · {title}',
       'toast.save_failed': 'Не удалось сохранить: {error}',
@@ -596,35 +508,31 @@
       'toast.delete_failed': 'Не удалось удалить: {error}',
       'toast.crypto_session_lost': 'Сессия шифрования не активна — войди в аккаунт ещё раз',
       'toast.decrypt_failed': 'Не удалось расшифровать — войди в аккаунт ещё раз',
-      'toast.library_unlocked': 'Библиотека разблокирована',
-      'toast.hello': 'Привет, {email}',
-      'toast.account_created': 'Аккаунт создан, {email}',
+      // toast.library_unlocked → /modules/unlock/i18n.js
+      // toast.hello + toast.account_created + toast.account_created_email_failed
+      //   → /modules/auth/i18n.js
       'toast.signed_out': 'Вы вышли из аккаунта',
       'toast.analysis_complete': 'Анализ завершён · {status}',
       'toast.email_verified': 'Email подтверждён ✓',
       'toast.verify_email_sent': 'Письмо подтверждения отправлено на {email}',
       'toast.send_failed': 'Не удалось отправить: {error}',
-      'toast.account_created_email_failed':
-        'Аккаунт создан, но письмо не отправлено — нажми «отправить» в баннере позже',
-      'toast.password_reset': 'Пароль сброшен. Ты вошёл(ла).',
+      // toast.password_reset lives in modules/password-reset/i18n.js (lazy)
       'toast.added': 'Добавлено · {name}',
       'toast.nothing_to_save': 'Нечего сохранять — оба поля пусты',
       'toast.signin_to_save': 'Войди, чтобы сохранять запросы в личную библиотеку',
       'toast.bundle_downloaded': 'Скачано · {name}',
       // toast.share_* keys live in modules/share/i18n.js (registered at boot)
-      'confirm.recovery_save':
-        'Ты точно сохранил recovery key? Без него невозможно восстановить данные если забудешь пароль.',
+      // confirm.recovery_save lives in modules/recovery/i18n.js
       'confirm.delete_sample': 'Удалить этот запрос из библиотеки?',
       'confirm.clear_history':
         'Очистить всю историю? Сохранённые в библиотеке записи не затрагиваются.',
       'confirm.clobber_load':
         'Текущие изменения не сохранены. Загрузить этот запрос и отбросить изменения?',
-      'modal.unlock.title': 'разблокировать библиотеку',
-      'modal.recovery.title': '⚠ recovery key — сохрани сейчас',
-      'modal.password_reset.title': 'сброс пароля',
+      // modal.unlock.title → /modules/unlock/i18n.js
+      // modal.recovery.title → /modules/recovery/i18n.js
+      // modal.password_reset.title → /modules/password-reset/i18n.js
       'modal.edit_sample.title': 'редактировать запрос',
-      'modal.save_sample.title': 'сохранить запрос',
-      'modal.save_sample.update_title': 'обновить запись · #{id}',
+      // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
       // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'Путь в JSON',
@@ -683,9 +591,8 @@
       'btn.save_as_new': 'сохранить как новый',
       'btn.copy': 'копировать',
       'btn.copied': 'скопировано ✓',
-      'btn.recovery_saved': 'я сохранил',
-      'btn.unlock': 'разблокировать',
-      'btn.signout_instead': 'выйти вместо этого',
+      // btn.recovery_saved → /modules/recovery/i18n.js
+      // btn.unlock + btn.signout_instead → /modules/unlock/i18n.js
       'btn.signout': 'выйти',
       'btn.add': 'добавить',
       'btn.close': 'закрыть',
@@ -725,26 +632,18 @@
       'theme.tooltip.auto': 'тема: авто · клик → светлая',
       'theme.tooltip.light': 'тема: светлая · клик → тёмная',
       'theme.tooltip.dark': 'тема: тёмная · клик → авто',
-      'auth.login.title': 'войти',
-      'auth.register.title': 'создать аккаунт',
+      // ── auth modal ────────────────────────────────────────
+      // Most keys moved to /modules/auth/i18n.js. Three labels stay
+      // here because they're shared with sibling modals (unlock,
+      // forgot/reset password): auth.label.email, auth.label.password,
+      // auth.forgot_password.
       'auth.label.email': 'email',
       'auth.label.password': 'пароль',
-      'auth.label.password_hint': 'пароль (минимум 8 символов)',
-      'auth.btn.login': 'войти',
-      'auth.btn.register': 'создать',
-      'auth.switch_to_login': 'уже есть аккаунт? войти',
-      'auth.switch_to_register': 'нет аккаунта? создать',
       'auth.forgot_password': 'забыл пароль?',
-      'auth.err.invalid_email': 'Невалидный email',
-      'auth.err.weak_password': 'Пароль должен быть минимум 8 символов',
-      'auth.err.email_taken': 'Этот email уже зарегистрирован',
-      'auth.err.invalid_creds': 'Неверный email или пароль',
-      'auth.err.rate_limited': 'Слишком много попыток — попробуй позже',
-      'unlock.subtitle': '{email} · введи пароль чтобы расшифровать сохранённые запросы',
-      'unlock.err.no_crypto': 'Шифрование не настроено — попробуй сначала войти',
-      'unlock.err.wrong_password': 'Неверный пароль',
-      'recovery.body':
-        'Это <b>единственный</b> способ восстановить доступ к твоей библиотеке если забудешь пароль. Я (оператор сервера) не имею его и не смогу восстановить твои данные без него. Запиши его в password-manager или на бумаге.',
+      // unlock.subtitle + unlock.err.* → /modules/unlock/i18n.js
+      // recovery.body lives in modules/recovery/i18n.js (with siblings
+      // modal.recovery.title / btn.recovery_saved /
+      // toast.recovery_key_copied / confirm.recovery_save).
 
       // ── history merge (post-register import prompt) ───────
       'merge.title': 'Перенести историю в библиотеку?',
@@ -774,37 +673,9 @@
       'sample.unlock_cta': 'Библиотека зашифрована. Введи пароль чтобы разблокировать.',
       'sample.btn.signin': 'войти или создать аккаунт',
       'sample.btn.unlock': 'разблокировать',
-      'forgot.subtitle': 'введи email — пришлём ссылку для сброса пароля (действует 15 мин).',
-      'forgot.btn.back_to_login': 'назад ко входу',
-      'forgot.btn.send': 'отправить',
-      'forgot.sending': 'Отправляем…',
-      'forgot.sent': 'Если такой email существует, письмо отправлено. Проверь почту (и спам).',
-      'forgot.email_required': 'Введи email',
-      'forgot.invalid_email': 'Это не похоже на email — проверь введённое значение',
-      'reset.mode.rotate': 'Я помню текущий пароль',
-      'reset.mode.rotate_hint': 'Библиотека сохранится. Просто ротируем пароль.',
-      'reset.mode.recover': 'У меня есть recovery key',
-      'reset.mode.recover_hint':
-        '32-символьный ключ, который показывали при регистрации. Библиотека сохранится.',
-      'reset.mode.wipe': 'Я потерял оба — стереть всё',
-      'reset.mode.wipe_hint': 'Все сохранённые запросы и партнёры будут удалены.',
-      'reset.label.new_password': 'новый пароль (мин. 8 символов)',
-      'reset.label.old_password': 'текущий пароль',
-      'reset.label.recovery': 'recovery key (32 символа)',
-      'reset.wipe_warn':
-        '<b>Это уничтожит все ваши сохранённые запросы и партнёров.</b> Зашифрованные данные нельзя восстановить без пароля или recovery key.',
-      'reset.wipe_confirm': 'Я понимаю и принимаю потерю данных',
-      'reset.btn.reset': 'сбросить пароль',
-      'reset.btn.wipe_reset': 'стереть и сбросить',
-      'reset.err.short_password': 'Новый пароль должен быть минимум 8 символов',
-      'reset.err.session_lost': 'Сессия сброса потеряна — открой ссылку заново',
-      'reset.err.wipe_unconfirmed': 'Подтверди, что принимаешь потерю данных',
-      'reset.err.no_state': 'Нет состояния шифрования — используй "стереть всё"',
-      'reset.err.old_required': 'Введи текущий пароль',
-      'reset.err.old_wrong': 'Неверный текущий пароль',
-      'reset.err.recovery_format': 'Recovery key должен быть 32 hex символа',
-      'reset.err.recovery_wrong': 'Неверный recovery key',
-      'reset.err.link_invalid': 'Ссылка недействительна или устарела: {error}',
+      // forgot.* + reset.* keys live in modules/password-reset/i18n.js
+      // (lazy). Three exceptions stay here for the shell-level
+      // ?verify_error= boot path:
       'reset.err.link_expired': 'Ссылка устарела — запроси новую',
       'reset.err.link_tampered': 'Ссылка повреждена',
       'reset.err.verify_failed': 'Не удалось подтвердить email',
