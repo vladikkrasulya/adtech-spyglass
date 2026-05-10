@@ -6,6 +6,47 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.29.2 — Lang switch on inspector pages was broken (2026-05-10)
+
+Two-bug stack reported by user: clicking any locale in the language
+menu kept the page Ukrainian. Took an extended trace to find both.
+
+**Bug A — handler never bound**
+
+`bindLangLinks()` ran on `DOMContentLoaded`, but the inspector mounts
+its template ASYNC (`mountInspector` fetches template and injects
+into `#app-root`). At DOMContentLoaded time `.kt-lang-menu-list a`
+elements don't exist yet, so the click handler was never attached.
+Browser followed the bare `href` directly. Fixed by also binding on
+`kt:inspector-ready` (the event the inspector module emits once
+template is in DOM) — same pattern share.js already uses.
+
+**Bug B — server bounce, even after handler binds**
+
+Once the handler bound, `switchLang(targetUrl)` did `fetch(targetUrl,
+{ credentials: 'same-origin' })` carrying the OLD `kt-lang` cookie.
+The server's locale-redirect table 302's `/` → `/uk` for any UK-cookie
+user, so the fetch came back with UK content instead of EN. JS then
+morphed an already-UK page with UK content — visible result: lang
+switch did nothing. Fixed by deriving `newLangFromUrl` from the
+target URL and writing the cookie BEFORE the fetch, so the server
+reads the new locale and serves the matching file.
+
+**Bug C — even with fresh content, morph aborts**
+
+The fetched HTML carries an EMPTY `#app-root` (server-side template),
+while the live DOM has the FULLY-MOUNTED workbench (post-async-mount).
+`langMorph` aborts on the resulting child-count mismatch at the top
+level, leaving the page in the previous locale. Fixed by detecting
+`#app-root.workbench` and falling back to a full `location.assign()`
+navigation in that case — the new page boots its own module mount in
+the correct locale, no morph game required. Lightweight surfaces
+(/about) without `.workbench` continue using the in-place morph.
+
+**Smoke-tested all six transitions**: UK↔EN ✓, UK↔RU ✓, EN↔RU ✓.
+0 console errors. Cookie persists across the navigation; on return
+visit the user lands in the locale they last picked.
+
 ### v0.29.1 — Polish bonus (2026-05-10)
 
 Two small wins after v0.29.0 corpus shipped — done in the same

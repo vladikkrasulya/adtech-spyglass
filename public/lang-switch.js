@@ -223,6 +223,57 @@
       /* don't block the swap on modal-close failure */
     }
 
+    // Derive newLang from targetUrl (/, /uk, /uk/about, /ru/account, …)
+    // so the cookie write that PRE-EMPTS the fetch carries the right value.
+    // Pre-fix the fetch went out with the OLD cookie; server's
+    // LOCALE_REDIRECT_TABLE then bounced /  → /uk for a UK-cookie user, and
+    // the JS got UK content back, leaving the page Ukrainian regardless of
+    // which lang the user clicked. Setting the cookie BEFORE the fetch
+    // means the server reads the new locale and serves the correct file.
+    const newLangFromUrl =
+      (targetUrl.match(/^\/(uk|ru)(?:\/|$)/) || [])[1] || 'en';
+    try {
+      const isHttps = location.protocol === 'https:';
+      document.cookie =
+        'kt-lang=' +
+        encodeURIComponent(newLangFromUrl) +
+        '; Path=/; Max-Age=31536000; SameSite=Lax' +
+        (isHttps ? '; Secure' : '');
+    } catch (_) {
+      /* cookie disabled — fetch may still bounce; we'll fall through */
+    }
+
+    // Inspector pages mount their template ASYNC (modules/inspector/index.js
+    // injects markup AFTER the shell loads). The fetched server HTML carries
+    // an EMPTY #app-root, while the live DOM has the fully-injected
+    // workbench. langMorph aborts on child-count mismatch at the top level,
+    // leaving the page Ukrainian after a UK→EN click. Cookie is set; just
+    // do a full navigation — the new page boots its own module mount in
+    // the right locale, no morph game required.
+    //
+    // Lightweight surfaces (/about, future static pages) don't have
+    // #app-root.workbench and continue using the in-place morph.
+    const hasMountedWorkbench = !!document.querySelector('#app-root.workbench');
+    if (hasMountedWorkbench) {
+      // Best-effort POST so cross-device preference updates before we leave.
+      // .catch is needed even though we navigate — the request kicks off
+      // before navigation tears down the page; if it fails it fails.
+      try {
+        fetch('/api/auth/preferences', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ locale: newLangFromUrl }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch (_) { /* ignore */ }
+      try {
+        localStorage.setItem('kt-lang', newLangFromUrl);
+      } catch (_) { /* ignore */ }
+      location.assign(targetUrl);
+      return;
+    }
+
     try {
       const res = await fetch(targetUrl, { credentials: 'same-origin' });
       if (!res.ok) throw new Error('fetch failed: ' + res.status);
@@ -352,6 +403,22 @@
     bindLangLinks();
     bindThemeTooltipI18n();
   }
+
+  // Phase C-2: inspector template loads ASYNC after DOMContentLoaded
+  // (mountInspector fetches template.${lang}.html and injects). The lang
+  // menu lives inside that template, so DOMContentLoaded fires BEFORE the
+  // menu DOM exists. Pre-fix this left lang links unbound — the browser
+  // followed the href directly, server redirected via kt-lang cookie,
+  // and the page snapped back to the previous locale. Re-bind once the
+  // inspector signals readiness.
+  window.addEventListener(
+    'kt:inspector-ready',
+    () => {
+      bindLangLinks();
+      bindThemeTooltipI18n();
+    },
+    { once: true },
+  );
 
   // Browser back/forward — re-morph without pushing a new history entry.
   window.addEventListener('popstate', (e) => {
