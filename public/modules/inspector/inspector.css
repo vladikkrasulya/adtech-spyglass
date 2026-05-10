@@ -1832,6 +1832,112 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   margin-top: 1px;
 }
 
+/* Finding-detail expander — wraps each validation-item in a <details>
+   so users can drill in for the spec quote, the value at path, and a
+   plain-language severity meaning. Closed state mimics the original
+   .validation-item flex row exactly so this rollout is invisible to
+   anyone who doesn't click. */
+.finding-detail {
+  display: block;
+  padding: 0;
+}
+.finding-detail > summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  list-style: none;
+  cursor: pointer;
+}
+.finding-detail > summary::-webkit-details-marker {
+  display: none;
+}
+.finding-detail > summary::marker {
+  content: '';
+}
+.finding-detail .validation-text {
+  flex: 1;
+  min-width: 0;
+}
+.finding-detail-toggle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim, var(--text));
+  transition: transform 0.15s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.finding-detail[open] .finding-detail-toggle {
+  transform: rotate(180deg);
+}
+.finding-detail-body {
+  padding: var(--space-2) var(--space-3) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.finding-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.finding-detail-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim, var(--text));
+}
+.finding-detail-path,
+.finding-detail-id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  align-self: flex-start;
+  word-break: break-all;
+}
+.finding-detail-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 8px;
+  margin: 0;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.finding-detail-value-missing {
+  font-size: 12px;
+  color: var(--text-dim, var(--text));
+  font-style: italic;
+}
+.finding-detail-severity {
+  font-size: 12px;
+  color: var(--text);
+}
+.finding-detail-severity strong {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.finding-detail-spec {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  word-break: break-all;
+}
+
 /* Behavior tab — section dividers (findings list / event timeline).
          Phase 1 module rendered them as plain divs with no styling, which
          left "Знайдено загроз" and "Хронологія подій" visually identical

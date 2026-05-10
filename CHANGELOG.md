@@ -6,6 +6,80 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.28.0 — Finding details panel (2026-05-10)
+
+Every validator finding becomes self-explanatory. Click the chevron
+on any finding row, panel expands inline showing path / your value
+at that path / severity meaning / spec link. No need to remember
+"what does request.at_required mean" or "where exactly is that
+field missing in my JSON".
+
+**The expand**
+
+- Each finding row in the validation list is now wrapped in
+  `<details class="finding-detail">`. Closed state mimics the prior
+  flat row exactly, so the rollout is invisible to anyone who
+  doesn't click. Chevron `▾` rotates to `▴` when open.
+- Native `<details>` gives free keyboard support (Enter/Space) and
+  ARIA semantics; lazy-rendered via a `toggle`-event listener at
+  capture so we don't pay the build cost for findings nobody opens.
+
+**The body**
+
+Five rows per finding when expanded:
+1. **JSON path** — copy-friendly code chip (`imp[0].banner.w` etc.).
+2. **Current value** — extracted from the parsed bidReq/bidRes via
+   a path-walker (`getJsonAtPath`), pretty-printed in a fixed-height
+   pre. When the field is absent (which is exactly why required-field
+   findings fire), shows "Поле відсутнє у вставленому JSON (тому й
+   знахідка)" instead of nothing.
+3. **Severity** — error / warning / info label + plain-language
+   consequence: "Біржі відхилять запит" / "Толерують, але fill
+   знизиться" / "Best-practice примітка".
+4. **Spec reference** — full spec URL as a prominent link (existed
+   only as a tiny "spec ↗" before; now front-and-centre).
+5. **Rule id** — the canonical id like `request.at_required` for
+   anyone debugging via API or referencing in a bug report.
+
+**Path resolution**
+
+`window.__spyglassLast` now also stashes `req` and `res` (the parsed
+inputs) so the detail panel can resolve a finding's path back to the
+user's actual value. Path-walker handles dotted keys and array
+indices: `seatbid[0].bid[1].price`, `regs.gpp_sid` etc.
+
+**Outside-click closer scope tightened**
+
+The v0.26.1 outside-click handler closed any `details[open]` whose
+subtree didn't contain the click target. Would have closed
+finding-details too. Scope narrowed to `.kt-example-menu[open],
+.kt-lang-menu[open]` — popover-style menus only. Content
+disclosures stay open until the user folds them.
+
+**Bonus fix — `analyze stream` ghost label**
+
+Pre-existing tech debt: the `runAnalysis` finally block restored
+`analyzeBtn.innerHTML = 'analyze stream'` regardless of locale, so
+once a user analyzed something the button was stuck in English on
+Ukrainian/Russian pages (and was wrong copy anyway — it's not a
+"stream" feature). Now captures the original innerHTML before the
+spinner and restores that, plus uses a new
+`button.status.analyzing` i18n key for the spinner caption.
+
+**i18n**
+
+- 12 new strings × 3 locales: 5 detail labels (path / value /
+  severity / spec / rule_id) + value-missing copy + 3 severity
+  meanings + analyzing caption.
+
+Smoke-tested via Playwright MCP: broken request with
+`{ banner: { w: 300 } }` produced 8 findings; expanding the
+`imp.banner.size_required` finding correctly shows path
+`imp[0].banner` and current value `{ "w": 300 }`; analyze button
+remains "аналізувати" (uk) after analysis instead of switching to
+"analyze stream"; tab title "⚠ 6 errors". 423/423 tests, 0 console
+errors.
+
 ### v0.27.0 — Live stream UI (2026-05-10)
 
 The SSE endpoint `/api/v1/stream` has been emitting synthetic RTB

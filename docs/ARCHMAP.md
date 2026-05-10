@@ -174,6 +174,24 @@ does NOT false-positive.
   / `__spyglassLiveSpecimens` are nulled afterwards so there's no
   reference to the closed stream.
 
+### 1.3.4 Finding-detail expand panel (since 0.28.0)
+
+- Each finding rendered by the validation tab is wrapped in a native
+  `<details class="finding-detail">`. Summary mirrors the original
+  one-line row (icon + msg + path button + spec link); body is lazy-
+  rendered on first open via a toggle-event listener at capture.
+- Body shows: JSON path · user's value at path · severity meaning
+  (error/warning/info → consequence copy) · spec URL · canonical
+  rule id.
+- **Path resolution**: `window.__spyglassLast` stashes the parsed
+  `req` and `res`. `getJsonAtPath(obj, path)` walks paths like
+  `imp[0].banner.w` or `seatbid[0].bid[1].price`. Returns
+  `undefined` for absent paths (which is the legit case for
+  `*_required` rules — UI surfaces a "field absent" message).
+- **Outside-click closer scope**: tightened to
+  `.kt-example-menu[open], .kt-lang-menu[open]` so opening a finding
+  detail doesn't get auto-closed by clicking elsewhere on the page.
+
 ### 1.4 Consumers
 
 | Consumer | File | What it uses |

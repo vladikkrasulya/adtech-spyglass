@@ -1332,8 +1332,13 @@ export async function mountInspector(root, ctx) {
     }
 
     const analyzeBtn = $('analyzeBtn');
+    // Capture the locale-appropriate label BEFORE swapping for the spinner
+    // so the finally block can restore it. The pre-fix code restored a
+    // hardcoded English string ("analyze stream") which left the button
+    // mistranslated until the next page load.
+    const analyzeBtnOriginal = analyzeBtn.innerHTML;
     if (!fromHist) {
-      analyzeBtn.innerHTML = '<span class="spinner"></span> analyzing…';
+      analyzeBtn.innerHTML = '<span class="spinner"></span> ' + t('button.status.analyzing');
       analyzeBtn.disabled = true;
     }
 
@@ -1614,11 +1619,16 @@ export async function mountInspector(root, ctx) {
             }
           }
 
-          // Stash latest analysis for the JSON-bundle export (export.js).
+          // Stash latest analysis for the JSON-bundle export (export.js)
+          // AND for finding-detail panel value extraction. `req`/`res` are
+          // the parsed inputs, kept here so the panel can resolve a
+          // finding's path back to the actual user-pasted value.
           window.__spyglassLast = {
             validation: validation,
             crosscheck: cross,
             meta: j.meta || null,
+            req: req,
+            res: res,
             at: new Date().toISOString(),
           };
 
@@ -1701,29 +1711,34 @@ export async function mountInspector(root, ctx) {
                   escapeHtml(f.specRef) +
                   '" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px;text-decoration:none" title="OpenRTB spec reference">spec ↗</a>'
                 : '';
-              // Phase 8: JSONPath becomes a button — click expands the
-              // collapsed JSON panel (if any) and scrolls the textarea
-              // to the relevant key. Keep the visual density: just a
-              // muted underline-on-hover, no big affordance.
+              const pathBtn = f.path
+                ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
+                  escapeHtml(f.path) +
+                  '" title="Jump to this path in the JSON">[' +
+                  escapeHtml(f.path) +
+                  ']</button>'
+                : '';
+              // Finding-detail expand. Wrap the row in <details> so the
+              // native disclosure widget gives us free keyboard support and
+              // ARIA semantics. The summary is the original one-line view;
+              // the body (rendered lazily by buildFindingDetail on first
+              // open) shows path, the user's value at that path, severity
+              // meaning, and spec link.
               return (
-                '<div class="validation-item ' +
-                cls +
-                '">' +
-                '<span class="validation-icon">' +
-                ic +
+                '<details class="validation-item ' + cls +
+                ' finding-detail" data-finding-id="' + escapeHtml(f.id || '') +
+                '" data-finding-path="' + escapeHtml(f.path || '') +
+                '" data-finding-level="' + escapeHtml(lvl || '') +
+                '" data-finding-spec="' + escapeHtml(f.specRef || '') + '">' +
+                '<summary>' +
+                '<span class="validation-icon">' + ic + '</span>' +
+                '<span class="validation-text">' +
+                escapeHtml(f.msg) + pathBtn + specLink +
                 '</span>' +
-                '<span>' +
-                escapeHtml(f.msg) +
-                (f.path
-                  ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
-                    escapeHtml(f.path) +
-                    '" title="Jump to this path in the JSON">[' +
-                    escapeHtml(f.path) +
-                    ']</button>'
-                  : '') +
-                specLink +
-                '</span>' +
-                '</div>'
+                '<span class="finding-detail-toggle" aria-hidden="true">▾</span>' +
+                '</summary>' +
+                '<div class="finding-detail-body" data-detail-rendered="0"></div>' +
+                '</details>'
               );
             })
             .join('');
@@ -1816,7 +1831,7 @@ export async function mountInspector(root, ctx) {
       console.error('Analysis error:', e);
     } finally {
       if (!fromHist) {
-        analyzeBtn.innerHTML = 'analyze stream';
+        analyzeBtn.innerHTML = analyzeBtnOriginal;
         analyzeBtn.disabled = false;
       }
     }
@@ -3135,6 +3150,127 @@ export async function mountInspector(root, ctx) {
     if (code === 'invalid_credentials') return t('auth.err.invalid_creds');
     if (code === 'rate_limited') return t('auth.err.rate_limited');
     return e.message || t('toast.error_generic', { error: '' }).replace(/[:\s]+$/, '');
+  }
+
+  // ── Finding-detail expand ────────────────────────────────────────────
+  // Walk a Spyglass-style JSON path ('imp[0].banner.w', 'seatbid[1].bid[0]
+  // .price', 'regs.gdpr_consent') against the parsed bidReq/bidRes object
+  // and return the value at that path. Returns undefined if the path
+  // can't be resolved.
+  function getJsonAtPath(obj, path) {
+    if (obj == null || !path) return undefined;
+    let cur = obj;
+    const parts = path.split('.');
+    for (const part of parts) {
+      if (cur == null) return undefined;
+      const m = part.match(/^([^[]*)((?:\[\d+\])*)$/);
+      if (!m) return undefined;
+      const key = m[1];
+      if (key) {
+        if (typeof cur !== 'object') return undefined;
+        cur = cur[key];
+      }
+      const idxStr = m[2];
+      if (idxStr) {
+        const indices = idxStr.match(/\d+/g) || [];
+        for (const idx of indices) {
+          if (cur == null || !Array.isArray(cur)) return undefined;
+          cur = cur[Number(idx)];
+        }
+      }
+    }
+    return cur;
+  }
+  window.getJsonAtPath = getJsonAtPath;
+
+  // Resolve a finding's path to its actual value in the user's pasted
+  // JSON. Tries bidReq first (most paths live there), falls back to
+  // bidRes for response-side findings (`response.*`, `seatbid*`).
+  function resolveFindingValue(path, findingId) {
+    const last = window.__spyglassLast;
+    if (!last) return { found: false };
+    const isResponseSide =
+      (findingId && /^response\b|^crosscheck\.bid\b/.test(findingId)) ||
+      /^seatbid\b/.test(path);
+    const primary = isResponseSide ? last.res : last.req;
+    const secondary = isResponseSide ? last.req : last.res;
+    let v = getJsonAtPath(primary, path);
+    if (v === undefined) v = getJsonAtPath(secondary, path);
+    return v === undefined ? { found: false } : { found: true, value: v };
+  }
+
+  function severityCopy(level) {
+    if (level === 'error' || level === 'danger')
+      return { label: t('finding.severity.error.label'), text: t('finding.severity.error.text') };
+    if (level === 'warning')
+      return { label: t('finding.severity.warning.label'), text: t('finding.severity.warning.text') };
+    if (level === 'info')
+      return { label: t('finding.severity.info.label'), text: t('finding.severity.info.text') };
+    return { label: level || '?', text: '' };
+  }
+
+  function buildFindingDetailHtml(ds) {
+    const path = ds.findingPath || '';
+    const id = ds.findingId || '';
+    const level = ds.findingLevel || '';
+    const spec = ds.findingSpec || '';
+
+    const sev = severityCopy(level);
+    let valueBlock;
+    if (path) {
+      const r = resolveFindingValue(path, id);
+      if (r.found) {
+        const v = r.value;
+        const formatted = typeof v === 'object'
+          ? JSON.stringify(v, null, 2)
+          : JSON.stringify(v);
+        valueBlock =
+          '<div class="finding-detail-row"><span class="finding-detail-label">' +
+          escapeHtml(t('finding.detail.value_at_path')) + '</span>' +
+          '<pre class="finding-detail-value">' + escapeHtml(formatted) + '</pre>' +
+          '</div>';
+      } else {
+        valueBlock =
+          '<div class="finding-detail-row"><span class="finding-detail-label">' +
+          escapeHtml(t('finding.detail.value_at_path')) + '</span>' +
+          '<div class="finding-detail-value-missing">' +
+          escapeHtml(t('finding.detail.value_missing')) + '</div></div>';
+      }
+    } else {
+      valueBlock = '';
+    }
+
+    const pathBlock = path
+      ? '<div class="finding-detail-row"><span class="finding-detail-label">' +
+        escapeHtml(t('finding.detail.path')) + '</span>' +
+        '<code class="finding-detail-path">' + escapeHtml(path) + '</code>' +
+        '</div>'
+      : '';
+
+    const sevBlock =
+      '<div class="finding-detail-row"><span class="finding-detail-label">' +
+      escapeHtml(t('finding.detail.severity')) + '</span>' +
+      '<div class="finding-detail-severity">' +
+      '<strong>' + escapeHtml(sev.label) + '</strong> · ' +
+      escapeHtml(sev.text) +
+      '</div></div>';
+
+    const specBlock = spec
+      ? '<div class="finding-detail-row"><span class="finding-detail-label">' +
+        escapeHtml(t('finding.detail.spec')) + '</span>' +
+        '<a class="finding-detail-spec" href="' + escapeHtml(spec) +
+        '" target="_blank" rel="noopener noreferrer">' + escapeHtml(spec) + ' ↗</a>' +
+        '</div>'
+      : '';
+
+    const idBlock = id
+      ? '<div class="finding-detail-row"><span class="finding-detail-label">' +
+        escapeHtml(t('finding.detail.rule_id')) + '</span>' +
+        '<code class="finding-detail-id">' + escapeHtml(id) + '</code>' +
+        '</div>'
+      : '';
+
+    return pathBlock + valueBlock + sevBlock + specBlock + idBlock;
   }
 
   // ── Tab-title status ─────────────────────────────────────────────────
@@ -4787,21 +4923,40 @@ export async function mountInspector(root, ctx) {
       el.addEventListener('keydown', window.handleKeydown, { signal: ctx.signal });
     });
 
-    // Close any open <details> dropdown (sample picker, lang switcher) when
+    // Close any open <details> popover (sample picker, lang switcher) when
     // the user clicks outside of it. Native <details> stays open until you
     // click its <summary> again, which surprises users who expect popover
-    // semantics. One document-level handler covers all current and future
-    // .kt-*-menu details groups.
+    // semantics. Scoped to the .kt-example-menu / .kt-lang-menu classes so
+    // it doesn't interfere with content disclosures (e.g. .finding-detail
+    // expanders) which SHOULD stay open until the user folds them.
     document.addEventListener(
       'click',
       (ev) => {
-        const opened = document.querySelectorAll('details[open]');
+        const opened = document.querySelectorAll('.kt-example-menu[open], .kt-lang-menu[open]');
         if (!opened.length) return;
         opened.forEach((d) => {
           if (!d.contains(ev.target)) d.removeAttribute('open');
         });
       },
       { signal: ctx.signal },
+    );
+
+    // Lazy-render finding-detail bodies on first toggle-open. Native
+    // <details> emits a 'toggle' event when open state changes; we listen
+    // on the validation list root and walk events bubbling from finding-
+    // detail elements. data-detail-rendered guards the one-shot render.
+    root.addEventListener(
+      'toggle',
+      (ev) => {
+        const d = ev.target;
+        if (!d || !d.classList || !d.classList.contains('finding-detail')) return;
+        if (!d.open) return;
+        const body = d.querySelector('.finding-detail-body');
+        if (!body || body.dataset.detailRendered === '1') return;
+        body.innerHTML = buildFindingDetailHtml(d.dataset);
+        body.dataset.detailRendered = '1';
+      },
+      { capture: true, signal: ctx.signal },
     );
 
     await bootAuth();
