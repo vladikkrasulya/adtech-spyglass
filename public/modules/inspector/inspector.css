@@ -1376,6 +1376,59 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--text-dim, var(--text));
   white-space: nowrap;
 }
+
+/* Bid simulator modal — 3 strategies side by side, color-coded by bid/pass */
+.sim-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim, var(--text));
+}
+.sim-strategies {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sim-strategy {
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 4px);
+  padding: 10px 12px;
+  background: var(--bg-2);
+}
+.sim-bid-yes {
+  border-left: 3px solid #2ea043;
+  background: rgba(46, 160, 67, 0.05);
+}
+.sim-bid-no {
+  border-left: 3px solid var(--border-strong, #94a3b8);
+  background: rgba(148, 163, 184, 0.04);
+  opacity: 0.85;
+}
+.sim-strategy-head {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.sim-strategy-label {
+  color: var(--text);
+  font-weight: 600;
+}
+.sim-strategy-verdict {
+  font-size: 11px;
+  color: var(--text-dim, var(--text));
+}
+.sim-strategy-price {
+  color: var(--text);
+  font-weight: 600;
+}
+.sim-strategy-reason {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .modal-title {
   font-family: var(--font-mono);
   font-size: 11px;

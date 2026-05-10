@@ -671,3 +671,97 @@ test('ALLOWED_PURPOSES — covers the canonical AdTech taxonomy', () => {
     assert.ok(intelLlm.ALLOWED_PURPOSES.has(p), 'missing canonical purpose: ' + p);
   }
 });
+
+// ─── bid simulator ───────────────────────────────────────────────────────
+
+test('summarizeRequestForSim: extracts metadata, never values', () => {
+  const sum = intelLlm.summarizeRequestForSim({
+    id: 'req-1',
+    at: 2,
+    cur: ['EUR'],
+    imp: [
+      { id: 'imp-1', bidfloor: 0.1, banner: { w: 300, h: 250 } },
+      { id: 'imp-2', bidfloor: 0.5, video: { mimes: ['video/mp4'] } },
+    ],
+    site: { domain: 'example.com' },
+    device: { devicetype: 1, geo: { country: 'USA' } },
+  });
+  assert.equal(sum.impCount, 2);
+  assert.deepEqual(sum.formats.sort(), ['banner', 'video']);
+  assert.deepEqual(sum.sizes, ['300x250']);
+  assert.equal(sum.avgFloor, 0.3);
+  assert.equal(sum.currency, 'EUR');
+  assert.equal(sum.geoCountry, 'USA');
+  assert.equal(sum.surface, 'site');
+  assert.equal(sum.appBundleOrDomain, 'example.com');
+  assert.equal(sum.deviceType, 1);
+  assert.equal(sum.auctionType, 2);
+});
+
+test('validateBidSim: clean valid bid passes through', () => {
+  const r = intelLlm.validateBidSim(
+    { bid: true, price: 0.42, reason: 'good fit on 300x250 banner with brand-safe domain' },
+    { key: 'aggressive', label: 'aggressive' },
+  );
+  assert.equal(r.bid, true);
+  assert.equal(r.price, 0.42);
+  assert.match(r.reason, /good fit/);
+});
+
+test('validateBidSim: rejects bid=true with bad price → falls to bid=false', () => {
+  const r = intelLlm.validateBidSim(
+    { bid: true, price: -1, reason: 'whatever' },
+    { key: 'q', label: 'quality' },
+  );
+  assert.equal(r.bid, false);
+  assert.equal(r.price, null);
+  assert.equal(r.reason, 'price_invalid');
+});
+
+test('validateBidSim: bid=false legit pass-through', () => {
+  const r = intelLlm.validateBidSim(
+    { bid: false, price: null, reason: 'floor too high for our ROAS' },
+    { key: 'c', label: 'conservative' },
+  );
+  assert.equal(r.bid, false);
+  assert.equal(r.price, null);
+  assert.match(r.reason, /floor/);
+});
+
+test('validateBidSim: truncates >200-char reason with ellipsis', () => {
+  const longReason = 'x'.repeat(300);
+  const r = intelLlm.validateBidSim(
+    { bid: false, price: null, reason: longReason },
+    { key: 'c', label: 'c' },
+  );
+  assert.ok(r.reason.length <= 200);
+  assert.ok(r.reason.endsWith('…'));
+});
+
+test('validateBidSim: garbage input → unparseable', () => {
+  assert.equal(intelLlm.validateBidSim(null, {}).reason, 'unparseable');
+  assert.equal(intelLlm.validateBidSim('string', {}).reason, 'unparseable');
+});
+
+test('buildBidSimPrompt: contains strategy hint + metadata, no bid values', () => {
+  const p = intelLlm.buildBidSimPrompt(
+    {
+      impCount: 1,
+      formats: ['banner'],
+      sizes: ['300x250'],
+      avgFloor: 0.1,
+      currency: 'USD',
+      geoCountry: 'USA',
+      surface: 'site',
+      appBundleOrDomain: 'example.com',
+      deviceType: 1,
+      auctionType: 2,
+    },
+    { label: 'aggressive', hint: 'You bid hard' },
+  );
+  assert.match(p, /aggressive/);
+  assert.match(p, /You bid hard/);
+  assert.match(p, /300x250/);
+  assert.match(p, /USA/);
+  assert.match(p, /example\.com/);
+});

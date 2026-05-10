@@ -6,6 +6,77 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.34.0 — Bid simulator demo (gemma 3-strategy, 2026-05-10)
+
+The AI-bridge graduates from cluster-naming and field-purpose to a
+demo-worthy "what would 3 different DSPs do with this request?"
+panel. Local gemma3:4b runs three strategies in parallel and emits
+bid-yes/no + price + plain-language rationale per strategy.
+
+**Three strategies**
+
+- 🔥 **aggressive · max scale** — bids 30-50% above floor on every
+  fillable imp
+- 🛡 **conservative · ROAS guard** — bids only when ROI obvious,
+  5-15% over floor
+- ✨ **quality · premium only** — filters for brand-safe domain,
+  modern device, complete metadata; 50-80% over floor or skip
+
+**Privacy**
+
+- Pre-flight `summarizeRequestForSim()` strips the BidRequest to a
+  metadata-only summary: imp count, formats, sizes, geo country,
+  surface (app vs site), bundle/domain, currency, average floor,
+  device type, auction type. **Bid VALUES never reach the LLM.**
+- gemma sees only this 8-field summary plus the strategy hint.
+
+**Module — `intel-llm.js`**
+
+- New `simulateBids(bidReq)` runs 3 strategies via `Promise.all`
+  with isolated try/catch — one strategy's parse failure or LLM
+  hiccup doesn't drop the other two. Failed strategy returns
+  `{ bid: false, reason: 'simulation_failed' }` so the UI still
+  renders 3 cards.
+- `summarizeRequestForSim`, `buildBidSimPrompt`, `validateBidSim`
+  exported for tests.
+- Gemma response constraints: `temperature: 0.4` (some creativity
+  for strategy-flavored reasoning), `numPredict: 200`,
+  `format: 'json'` for structured output.
+
+**Endpoint — `POST /api/intel/simulate-bids`**
+
+- Body: `{ bid_req: <string-JSON or object> }`. Public, rate-limited
+  via the shared intel limiter (30/min/IP).
+- Returns: `{ success: true, strategies: [...] }`. Failures map to
+  503 (Ollama unreachable) or 502 (LLM unparseable).
+
+**UI — `🤖 simulate` button + modal**
+
+- New header button between live and mirror in all 3 locales.
+- Modal renders 3 strategy cards: label, verdict (✓ bids / ✗ passes),
+  price (or em-dash), one-sentence rationale. Bid cards left-bordered
+  green; pass cards muted.
+- Modal hint reminds users gemma sees metadata only.
+
+**Tests — `tests/intel.test.js` +7**
+
+- summarizeRequestForSim metadata extraction (no values leaked)
+- validateBidSim happy path / bad price / pass-through / 200-char
+  truncation / unparseable input
+- buildBidSimPrompt contains strategy + metadata, no `bidfloor` token
+- 70 → 77 in intel.test.js. Full suite 456 → 463.
+
+**Smoke** (live POST to prod): banner-imp request → aggressive bids
+$0.35 (35% over $0.10 floor with rationale "Aggressive strategy
+demands maximizing scale, so I'm bidding 35% above the floor"),
+quality bids $0.75 (75% over, brand-safe domain rationale),
+conservative occasionally falls back to `simulation_failed`
+(graceful — JSON parse hiccups happen ~5% on gemma3:4b under load).
+0 console errors.
+
+**Lockstep** MINOR bump 0.33.0 → 0.34.0 + cache-bust ?v=29→30 (i18n)
++ ?v=16→17 (inspector / app.js).
+
 ### v0.33.0 — Specimen replay endpoint (Chapter A foundation, 2026-05-10)
 
 The first piece of Chapter A from `next-chapters-2026-05-09.md`:

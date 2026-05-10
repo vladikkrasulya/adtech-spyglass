@@ -417,10 +417,153 @@ async function suggestPartner(parsedReq, parsedRes) {
   return { ...validated, hint_domains: domains.slice(0, 10) };
 }
 
+/**
+ * Simulate three DSP bidding strategies for a given BidRequest. Each
+ * strategy gets its own prompt that asks gemma to (a) decide whether to
+ * bid, (b) at what price, (c) why — in plain language. Output is a
+ * compact array we render as a "what would 3 different DSPs do?" panel.
+ *
+ * Privacy posture: we strip the request to a metadata-only summary
+ * (slot count, formats, sizes, geo country, app vs site, currency,
+ * floor) before prompting. Bid VALUES never reach the LLM.
+ *
+ * @param {object} bidReq — parsed BidRequest
+ * @returns {Promise<Array<{strategy:string, label:string, bid:boolean,
+ *                          price:number|null, reason:string}>>}
+ */
+async function simulateBids(bidReq) {
+  if (!bidReq || typeof bidReq !== 'object') return null;
+  const summary = summarizeRequestForSim(bidReq);
+  // Three strategies, runs in parallel. Each call is isolated so a
+  // single timeout / parse failure doesn't drop the whole batch.
+  const strategies = [
+    {
+      key: 'aggressive',
+      label: 'aggressive',
+      hint: 'You bid hard on every impression you can fill. Push price 30-50% above floor. Goal: max scale.',
+    },
+    {
+      key: 'conservative',
+      label: 'conservative',
+      hint: 'You only bid when ROI is obvious. Bid 5-15% above floor when shape fits, abstain otherwise. Goal: protect ROAS.',
+    },
+    {
+      key: 'quality',
+      label: 'quality',
+      hint: 'You filter for premium inventory: brand-safe domain, modern device, complete metadata. Bid 50-80% above floor when those align, skip otherwise.',
+    },
+  ];
+
+  const results = await Promise.all(
+    strategies.map(async (s) => {
+      try {
+        const prompt = buildBidSimPrompt(summary, s);
+        const resp = await callOllama(prompt, { numPredict: 200, temperature: 0.4 });
+        const parsed = extractStructured(resp);
+        const v = validateBidSim(parsed, s);
+        return { strategy: s.key, label: s.label, ...v };
+      } catch (e) {
+        // One strategy fails → other two still ship. Caller can render
+        // the available ones with a "1 of 3 strategies failed" note.
+        return {
+          strategy: s.key,
+          label: s.label,
+          bid: false,
+          price: null,
+          reason: 'simulation_failed',
+        };
+      }
+    }),
+  );
+  return results;
+}
+
+function summarizeRequestForSim(req) {
+  const imps = Array.isArray(req.imp) ? req.imp : [];
+  const formats = new Set();
+  const sizes = new Set();
+  let totalFloor = 0;
+  let floorCount = 0;
+  for (const imp of imps) {
+    if (!imp) continue;
+    if (imp.banner) {
+      formats.add('banner');
+      const b = imp.banner;
+      if (b.w && b.h) sizes.add(`${b.w}x${b.h}`);
+      if (Array.isArray(b.format))
+        for (const f of b.format) if (f.w && f.h) sizes.add(`${f.w}x${f.h}`);
+    }
+    if (imp.video) formats.add('video');
+    if (imp.native) formats.add('native');
+    if (imp.audio) formats.add('audio');
+    if (typeof imp.bidfloor === 'number') {
+      totalFloor += imp.bidfloor;
+      floorCount++;
+    }
+  }
+  const avgFloor = floorCount ? totalFloor / floorCount : 0;
+  const dev = req.device || {};
+  return {
+    impCount: imps.length,
+    formats: Array.from(formats),
+    sizes: Array.from(sizes).slice(0, 5),
+    avgFloor: Number(avgFloor.toFixed(3)),
+    currency: (Array.isArray(req.cur) && req.cur[0]) || 'USD',
+    geoCountry: (dev.geo && dev.geo.country) || 'unknown',
+    surface: req.app ? 'app' : req.site ? 'site' : 'unknown',
+    appBundleOrDomain:
+      (req.site && req.site.domain) || (req.app && req.app.bundle) || null,
+    deviceType: dev.devicetype || null,
+    auctionType: req.at || null,
+  };
+}
+
+function buildBidSimPrompt(summary, strategy) {
+  return `You are a DSP bidder running the "${strategy.label}" strategy.
+${strategy.hint}
+
+BidRequest summary (metadata only, no personally identifiable data):
+- imp_count: ${summary.impCount}
+- formats: ${summary.formats.join(', ') || 'none'}
+- sizes: ${summary.sizes.join(', ') || 'unspecified'}
+- avg_floor: ${summary.avgFloor} ${summary.currency}
+- geo: ${summary.geoCountry}
+- surface: ${summary.surface}${summary.appBundleOrDomain ? ' (' + summary.appBundleOrDomain + ')' : ''}
+- device_type: ${summary.deviceType || 'unspecified'}
+- auction_type: ${summary.auctionType || 'unspecified'}
+
+Decide whether to bid and at what price. Respond with ONLY this JSON:
+{"bid": true|false, "price": <number or null>, "reason": "<one sentence why>"}
+
+Rules:
+- price is in ${summary.currency} per impression, must be a positive number when bid=true
+- price must be >= avg_floor when bid=true (otherwise the bid won't clear)
+- reason is at most 140 characters, in English, no emojis
+- if abstaining, set bid=false and price=null and explain in reason`;
+}
+
+function validateBidSim(parsed, strategy) {
+  if (!parsed || typeof parsed !== 'object') {
+    return { bid: false, price: null, reason: 'unparseable' };
+  }
+  const bid = parsed.bid === true;
+  let price = null;
+  if (bid && typeof parsed.price === 'number' && parsed.price > 0 && Number.isFinite(parsed.price)) {
+    price = Number(parsed.price.toFixed(3));
+  } else if (bid) {
+    return { bid: false, price: null, reason: 'price_invalid' };
+  }
+  let reason = typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
+  if (reason.length > 200) reason = reason.slice(0, 197) + '…';
+  if (!reason) reason = bid ? 'bid' : 'pass';
+  return { bid, price, reason };
+}
+
 module.exports = {
   suggestName,
   fieldPurpose,
   suggestPartner,
+  simulateBids,
   OllamaUnavailable,
   // Exposed for tests / inspection:
   callOllama,
@@ -432,6 +575,9 @@ module.exports = {
   validateNameSuggestion,
   validatePurposeSuggestion,
   validatePartnerSuggestion,
+  validateBidSim,
+  buildBidSimPrompt,
+  summarizeRequestForSim,
   ALLOWED_PURPOSES,
   OLLAMA_URL,
   OLLAMA_MODEL,

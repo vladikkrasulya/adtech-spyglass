@@ -1432,6 +1432,54 @@ function handleIntelFieldPurpose(req, res) {
     .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
 }
 
+// ── /api/intel/simulate-bids — Bid simulator demo ─────────────────────────
+//
+// Given a parsed BidRequest, fan out 3 strategies (aggressive /
+// conservative / quality) to gemma3:4b in parallel. Each strategy gets a
+// metadata-only summary (no bid VALUES) and decides bid yes/no, price,
+// and a one-sentence rationale. Demonstrates the AI-bridge as more than
+// just naming/classification — it's also useful for "what would
+// different bidders do?" intuition.
+//
+// Public — no auth — to match other intel endpoints. Rate-limited to
+// 30/min/IP via the shared intelLimiter. Heavy: 3 LLM calls per request.
+function handleIntelSimulateBids(req, res) {
+  if (!intelLimiter(auth.clientIp(req))) {
+    return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
+  }
+  readJson(req)
+    .then(async ({ bid_req }) => {
+      let parsed = null;
+      const MAX_BYTES = 250_000;
+      try {
+        if (typeof bid_req === 'string' && bid_req.length > 0 && bid_req.length < MAX_BYTES) {
+          parsed = JSON.parse(bid_req);
+        } else if (bid_req && typeof bid_req === 'object') {
+          parsed = bid_req;
+        }
+      } catch (_e) {
+        parsed = null;
+      }
+      if (!parsed) {
+        return sendError(res, 400, 'invalid_input', 'bid_req JSON required');
+      }
+      try {
+        const results = await intelLlm.simulateBids(parsed);
+        if (!results) {
+          return sendError(res, 400, 'invalid_input', 'bid_req must be an object');
+        }
+        sendJson(res, 200, { success: true, strategies: results });
+      } catch (e) {
+        if (e instanceof intelLlm.OllamaUnavailable) {
+          console.warn('[intel] Ollama unavailable:', e.message);
+          return sendError(res, 503, 'ollama_unavailable', e.message);
+        }
+        throw e;
+      }
+    })
+    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
+}
+
 // ── Per-user CRUD: partners + samples (auth-required) ──────────────────────
 
 function handleApi(req, res, parsed, user) {
@@ -1854,6 +1902,8 @@ const server = http.createServer((req, res) => {
       return handleIntelSuggestPartner(req, res);
     if (pathname === '/api/intel/field-purpose' && req.method === 'POST')
       return handleIntelFieldPurpose(req, res);
+    if (pathname === '/api/intel/simulate-bids' && req.method === 'POST')
+      return handleIntelSimulateBids(req, res);
     if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);
     if (pathname.startsWith('/api/auth/')) {
       if (handleAuthRoute(req, res, parsed) !== false) return;
