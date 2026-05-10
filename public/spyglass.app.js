@@ -3990,6 +3990,10 @@ export async function mountInspector(root, ctx) {
         '<button class="btn btn-ghost btn-sm" data-action="modal-close">' + t('btn.close') + '</button>' +
         '<button class="btn btn-ghost btn-sm" data-action="mirror-copy">' +
         escapeHtml(t('modal.mirror.btn_copy')) + '</button>' +
+        (typeof window.buildShareUrl === 'function'
+          ? '<button class="btn btn-ghost btn-sm" data-action="mirror-share">' +
+            escapeHtml(t('modal.mirror.btn_share')) + '</button>'
+          : '') +
         '<button class="btn btn-primary btn-sm" data-action="mirror-load" data-target="' +
         targetField + '">' + escapeHtml(t('modal.mirror.btn_load')) + '</button>' +
         '</div>' +
@@ -4795,6 +4799,31 @@ export async function mountInspector(root, ctx) {
             if (typeof window.__spyglassMirrorRefetch === 'function') {
               window.__spyglassMirrorRefetch(newMode);
             }
+            return;
+          }
+          case 'mirror-share': {
+            const out = $('mMirrorOutput');
+            if (!out || typeof window.buildShareUrl !== 'function') return;
+            // Pair the mirror output with the user's source pane so the
+            // recipient gets BOTH halves and can run analysis immediately.
+            // Direction is inferred from which source pane was non-empty
+            // when openMirrorModal ran — recover via the mirror-load
+            // button's data-target (the EMPTY pane that gets the output).
+            const loadBtn = document.querySelector('[data-action="mirror-load"]');
+            const target = loadBtn ? loadBtn.dataset.target : 'bidRes';
+            const source = target === 'bidRes' ? 'bidReq' : 'bidRes';
+            const sourceText = $(source) ? $(source).value : '';
+            const reqText = target === 'bidRes' ? sourceText : out.value;
+            const resText = target === 'bidRes' ? out.value : sourceText;
+            (async () => {
+              try {
+                const url = await window.buildShareUrl(reqText, resText);
+                await navigator.clipboard.writeText(url);
+                toast(t('toast.mirror_share_copied'), 'success');
+              } catch (e) {
+                toast(t('toast.mirror_share_failed', { error: e.message }), 'error');
+              }
+            })();
             return;
           }
           case 'save-sample':

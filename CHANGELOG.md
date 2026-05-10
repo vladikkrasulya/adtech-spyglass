@@ -6,6 +6,31 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.29.1 — Polish bonus (2026-05-10)
+
+Two small wins after v0.29.0 corpus shipped — done in the same
+autonomous run.
+
+**Empty-state hint in the textareas**
+
+- `bidReq` placeholder used to be a single tip line. Now a 7-line
+  hint mentions the three fastest paths to start: 🎲 example
+  dropdown, 📡 live stream, M (mirror). 3 locales.
+- `bidRes` placeholder mentions that pasting both panes unlocks the
+  diff view in the mirror modal.
+
+**Mirror result → share permalink**
+
+- New "🔗 share-лінк з парою" button in the mirror modal (next to
+  "copy" and "load into other editor"). Click bundles the user's
+  source pane + the generated counterpart into a fragment-encoded
+  permalink (reuses existing `window.buildShareUrl` from share.js)
+  and copies it to clipboard.
+- Recipient opens the link, both panes populate, validation auto-
+  runs. Useful for "look what spyglass thinks about my RTB" links
+  in Telegram / Slack / email.
+- 3 locales for the button + 2 toasts.
+
 ### v0.29.0 — Behavior corpus capture (Chapter B foundation, 2026-05-10)
 
 First piece of Chapter B (Behavior v2 — real corpus + tuning) from

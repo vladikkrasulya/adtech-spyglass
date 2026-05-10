@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v0.29.0</span
+      >v0.29.1</span
     >
   </div>
   <div class="app-header-actions">
@@ -210,7 +210,7 @@
     <textarea
       id="bidReq"
       class="json-input"
-      placeholder="Вставь сюда oRTB BidRequest JSON.&#10;&#10;Подсказка: Ctrl+Enter — запустить анализ."
+      placeholder="Вставь сюда oRTB BidRequest JSON.&#10;&#10;Или сверху:&#10;  🎲 пример ▾ — синтетический образец одним кликом&#10;  📡 live — живой поток RTB&#10;  M — зеркало (как должно выглядеть правильно)&#10;&#10;Подсказка: Ctrl+Enter — запустить анализ."
     ></textarea>
     <div class="input-card-summary" data-card-summary="cardReq">
       <span class="input-card-summary__label">id</span>
@@ -260,7 +260,7 @@
     <textarea
       id="bidRes"
       class="json-input"
-      placeholder="Вставь oRTB BidResponse JSON (необязательно)."
+      placeholder="Вставь oRTB BidResponse JSON (необязательно).&#10;&#10;Если вставишь и запрос, и ответ — нажми M; модалка покажет diff: твоя версия vs каноническая."
     ></textarea>
     <div class="input-card-summary" data-card-summary="cardRes">
       <span class="input-card-summary__label">id</span>
@@ -506,7 +506,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v0.29.0</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v0.29.1</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Поддерживаемые спецификации"
