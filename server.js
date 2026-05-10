@@ -562,381 +562,37 @@ router.register(createAccountModule({ auth, AnalyzeLog }));
 router.register(createAdminModule({ db, Users, auth }));
 router.register(createProxyModule({ auth }));
 
+// Wave 3 modules (auth bundle, library, stream)
+const { createAuthRoutesModule } = require('./modules/auth/handler');
+const { createPartnersModule } = require('./modules/partners/handler');
+const { createSamplesModule } = require('./modules/samples/handler');
+const { createStreamModule } = require('./modules/stream/handler');
+router.register(
+  createAuthRoutesModule({
+    auth,
+    Users,
+    signToken,
+    verifyToken,
+    TokenError,
+    sendVerifyEmail,
+    sendResetEmail,
+    notifyAdmin,
+    notifyEscape,
+    publicUser,
+    publicEncryption,
+    getPublicBaseUrl,
+    setLocaleCookie,
+    VERIFY_TOKEN_TTL,
+    RESET_TOKEN_TTL,
+  }),
+);
+router.register(createPartnersModule({ auth, Partners }));
+router.register(createSamplesModule({ auth, Samples }));
+// stream module registered after streamGenerator + streamBuffer are
+// instantiated lower in the file — see the second router.register() block
+// near line ~1180.
+
 // ── Auth routes ─────────────────────────────────────────────────────────────
-
-function handleAuthRoute(req, res, parsed) {
-  const { pathname } = parsed;
-  const method = req.method;
-
-  if (pathname === '/api/auth/me' && method === 'GET') {
-    const user = auth.getCurrentUser(req);
-    if (!user) return sendJson(res, 200, { success: true, user: null, encryption: null });
-    // Surface crypto state so the client can derive KEK and unwrap DEK.
-    const encryption = publicEncryption(Users.getCryptoState(user.id));
-    return sendJson(res, 200, { success: true, user: publicUser(user), encryption });
-  }
-
-  if (pathname === '/api/auth/register' && method === 'POST') {
-    return readJson(req)
-      .then(async ({ email, password }) => {
-        const user = await auth.register({ email, password }, req);
-        auth.createSession(req, res, user);
-        // Send verify email synchronously so we can surface failure to the
-        // client. Registration itself stays successful regardless — the user
-        // can retry via /api/auth/verify-email/request from the banner.
-        let emailSent = false;
-        let emailError = null;
-        try {
-          const tok = signToken({
-            purpose: 'verify',
-            user_id: user.id,
-            email: user.email,
-            expirySeconds: VERIFY_TOKEN_TTL,
-          });
-          const result = await sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl());
-          // dev-mode short-circuit returns { dev: true, link } and doesn't actually deliver
-          emailSent = !result || !('dev' in result) || !result.dev;
-        } catch (err) {
-          emailError = err.message;
-          console.error('[register] verify email send failed:', err.message);
-          notifyAdmin(
-            `Verify email send failed for new user <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
-            { tag: 'email-send-fail', level: 'error' },
-          );
-        }
-        sendJson(res, 200, {
-          success: true,
-          user: publicUser(user),
-          email_sent: emailSent,
-          email_error: emailError,
-        });
-      })
-      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
-  }
-
-  if (pathname === '/api/auth/login' && method === 'POST') {
-    return readJson(req)
-      .then(async ({ email, password }) => {
-        const user = await auth.login({ email, password }, req);
-        auth.createSession(req, res, user);
-        const encryption = publicEncryption(Users.getCryptoState(user.id));
-        sendJson(res, 200, { success: true, user: publicUser(user), encryption });
-      })
-      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
-  }
-
-  if (pathname === '/api/auth/logout' && method === 'POST') {
-    auth.destroySession(req, res);
-    return sendJson(res, 200, { success: true });
-  }
-
-  // Per-user preferences. Currently just `locale` — the language the user
-  // wants the site rendered in. Stored on the user row (cross-device) +
-  // mirrored as `kt-lang` cookie (cross-tab + anon). Picking a locale via
-  // the lang menu calls this when the user is logged in; anonymous users
-  // get cookie-only.
-  //
-  // Body: { locale: 'en' | 'uk' | 'ru' }. Returns the saved value.
-  if (pathname === '/api/auth/preferences' && method === 'POST') {
-    const user = auth.getCurrentUser(req);
-    if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
-    return readJson(req)
-      .then((b) => {
-        const want = String((b && b.locale) || '').trim();
-        if (!['en', 'uk', 'ru'].includes(want)) {
-          return sendError(res, 400, 'bad_locale', 'locale must be en | uk | ru');
-        }
-        Users.setPreferredLocale(user.id, want);
-        // Mirror to cookie so the next bare-URL hit gets server-side
-        // redirect to the right locale (see resolveLocaleRoute).
-        setLocaleCookie(req, res, want);
-        return sendJson(res, 200, { success: true, locale: want });
-      })
-      .catch((e) => sendError(res, 400, 'bad_request', e.message));
-  }
-
-  // Bootstrap or rotate the per-user crypto state. Body is opaque to the
-  // server — it just stores what the client computed in the browser.
-  // Required: { kdf_salt, dek_wrapped, dek_iv,
-  //             recovery_salt, recovery_dek_wrapped, recovery_dek_iv }.
-  if (pathname === '/api/auth/setup-encryption' && method === 'POST') {
-    const user = auth.getCurrentUser(req);
-    if (!user) {
-      return sendError(res, 401, 'unauthorized', 'Sign in first');
-    }
-    // Replay/overwrite protection. The endpoint is meant for the
-    // first-time bootstrap right after register; once the user has a
-    // crypto state, password-rotation lives behind the reset-password
-    // flow (which also handles re-wrapping). A second call to
-    // setup-encryption on an already-bootstrapped account is either a
-    // bug (client retrying after a partial failure) or a hostile attempt
-    // to swap the wrapped DEK. Reject it.
-    const existingState = Users.getCryptoState(user.id);
-    if (existingState && existingState.kdf_salt) {
-      return sendError(
-        res,
-        409,
-        'crypto_already_setup',
-        'Encryption is already bootstrapped for this account. Use reset-password to rotate.',
-      );
-    }
-    return readJson(req)
-      .then((b) => {
-        const required = [
-          'kdf_salt',
-          'dek_wrapped',
-          'dek_iv',
-          'recovery_salt',
-          'recovery_dek_wrapped',
-          'recovery_dek_iv',
-        ];
-        for (const k of required) {
-          if (typeof b[k] !== 'string' || !b[k].length) {
-            return sendError(res, 400, 'invalid_state', `Missing field: ${k}`);
-          }
-        }
-        Users.setCryptoState(user.id, b);
-        sendJson(res, 200, { success: true });
-      })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-  }
-
-  // ── Phase 8 — email verification + password reset ──────────────────────
-
-  // Re-send verify email for the currently logged-in user. Awaits the send
-  // so the UI can show "couldn't send" rather than a fake success toast.
-  if (pathname === '/api/auth/verify-email/request' && method === 'POST') {
-    const user = auth.getCurrentUser(req);
-    if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
-    if (!auth.checkVerifyEmailLimit(req)) {
-      return sendError(
-        res,
-        429,
-        'rate_limited',
-        'Too many verify-email requests. Try again later (limit: 5/hour/IP).',
-      );
-    }
-    let tok;
-    try {
-      tok = signToken({
-        purpose: 'verify',
-        user_id: user.id,
-        email: user.email,
-        expirySeconds: VERIFY_TOKEN_TTL,
-      });
-    } catch (err) {
-      return sendError(res, 500, 'verify_email_failed', err.message);
-    }
-    // Return 200 with `email_sent: false` rather than 5xx — Cloudflare's
-    // edge intercepts 5xx and serves its own branded HTML error page,
-    // which makes the JSON unreachable from the browser.
-    return sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).then(
-      () => sendJson(res, 200, { success: true, email_sent: true }),
-      (sendErr) => {
-        console.error('[verify-email/request] send failed:', sendErr.message);
-        notifyAdmin(
-          `Verify-email resend failed for <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(sendErr.message.slice(0, 500))}</pre>`,
-          { tag: 'email-send-fail', level: 'error' },
-        );
-        sendJson(res, 200, {
-          success: true,
-          email_sent: false,
-          email_error: 'Email provider error — try again in a few minutes.',
-        });
-      },
-    );
-  }
-
-  // GET because user clicks a link from their email. Browser does GET, we
-  // 302-redirect to / with a status param the UI reads to show a banner.
-  if (pathname === '/api/auth/verify-email/confirm' && method === 'GET') {
-    const tok = parsed.searchParams.get('token');
-    const base = getPublicBaseUrl();
-    if (!tok) {
-      res.writeHead(302, { Location: `${base}/?verify_error=missing` });
-      return res.end();
-    }
-    try {
-      const payload = verifyToken(tok, 'verify');
-      const u = Users.get(payload.user_id);
-      if (!u || u.email !== payload.email) {
-        // Email rotated since token was issued, or user gone.
-        res.writeHead(302, { Location: `${base}/?verify_error=stale` });
-        return res.end();
-      }
-      Users.markEmailVerified(payload.user_id);
-      res.writeHead(302, { Location: `${base}/?verified=1` });
-      return res.end();
-    } catch (err) {
-      const code = err instanceof TokenError ? err.code : 'invalid';
-      res.writeHead(302, { Location: `${base}/?verify_error=${encodeURIComponent(code)}` });
-      return res.end();
-    }
-  }
-
-  // Public — always returns 200 (don't leak which emails exist).
-  if (pathname === '/api/auth/forgot-password' && method === 'POST') {
-    return readJson(req)
-      .then(async ({ email }) => {
-        // Rate-limit silently: success response either way, but stop floods.
-        if (!auth.checkForgotPasswordLimit(req)) {
-          return sendJson(res, 200, { success: true });
-        }
-        if (typeof email === 'string' && email.trim()) {
-          const u = Users.getByEmail(email);
-          if (u) {
-            try {
-              const tok = signToken({
-                purpose: 'reset',
-                user_id: u.id,
-                email: u.email,
-                expirySeconds: RESET_TOKEN_TTL,
-              });
-              sendResetEmail({ email: u.email }, tok, getPublicBaseUrl()).catch((err) => {
-                console.error('[forgot-password] send failed:', err.message);
-                notifyAdmin(
-                  `Reset-password email failed for <code>${notifyEscape(u.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
-                  { tag: 'email-send-fail', level: 'error' },
-                );
-              });
-            } catch (err) {
-              console.error('[forgot-password] sign failed:', err.message);
-            }
-          }
-        }
-        return sendJson(res, 200, { success: true });
-      })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-  }
-
-  // Used by the reset-password UI: with a valid reset token (proof of email
-  // ownership), client fetches the user's crypto state so it can unwrap the
-  // DEK locally and re-wrap under a new KEK before POSTing to /reset-password.
-  // Same-token-as-proof: no separate auth needed.
-  if (pathname === '/api/auth/reset-password/state' && method === 'POST') {
-    if (!auth.checkResetStateLimit(req)) {
-      return sendError(
-        res,
-        429,
-        'rate_limited',
-        'Too many state lookups. Try again shortly (limit: 10/15min/IP).',
-      );
-    }
-    return readJson(req)
-      .then((b) => {
-        let payload;
-        try {
-          payload = verifyToken(b.token, 'reset');
-        } catch (err) {
-          const code = err instanceof TokenError ? err.code : 'invalid_token';
-          return sendError(res, 400, code, 'Reset link is invalid or expired');
-        }
-        const u = Users.get(payload.user_id);
-        if (!u || u.email !== payload.email) {
-          return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
-        }
-        const cs = Users.getCryptoState(payload.user_id);
-        return sendJson(res, 200, {
-          success: true,
-          email: u.email,
-          encryption: cs && cs.kdf_salt ? cs : null,
-        });
-      })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-  }
-
-  // Public — body shape depends on `mode`. See spyglass_phase_8_plan.md and
-  // spyglass_crypto_architecture.md (wrap-rotation gotcha) for context.
-  if (pathname === '/api/auth/reset-password' && method === 'POST') {
-    // Phase 9b/freeze (audit P0.1): per-IP cap to keep bcrypt.compare in
-    // mode='rotate' from being a brute-force endpoint for the user's old
-    // password. Reset tokens are short-lived but reusable until expiry,
-    // so a held token + spamming /reset-password could try thousands of
-    // old-password guesses without this limiter.
-    if (!auth.checkResetPasswordLimit(req)) {
-      return sendError(
-        res,
-        429,
-        'rate_limited',
-        'Too many reset attempts. Try again in 15 minutes.',
-      );
-    }
-    return readJson(req)
-      .then(async (b) => {
-        let payload;
-        try {
-          payload = verifyToken(b.token, 'reset');
-        } catch (err) {
-          const code = err instanceof TokenError ? err.code : 'invalid_token';
-          return sendError(res, 400, code, 'Reset link is invalid or expired');
-        }
-        const u = Users.get(payload.user_id);
-        if (!u || u.email !== payload.email) {
-          return sendError(res, 400, 'stale_token', 'Reset link is no longer valid');
-        }
-        if (typeof b.newPassword !== 'string') {
-          return sendError(res, 400, 'invalid_request', 'newPassword required');
-        }
-
-        const mode = b.mode;
-        if (mode === 'rotate') {
-          // Browser unwrapped DEK using OLD password, re-wrapped under NEW KEK.
-          // Server verifies old password as proof, then stores new wrap.
-          const fullUser = Users.getByEmail(payload.email);
-          const ok = await auth.verifyPassword(b.oldPassword, fullUser.password_hash);
-          if (!ok) return sendError(res, 401, 'invalid_credentials', 'Wrong current password');
-          const required = ['new_kdf_salt', 'new_dek_wrapped', 'new_dek_iv'];
-          for (const k of required) {
-            if (typeof b[k] !== 'string' || !b[k].length) {
-              return sendError(res, 400, 'invalid_state', `Missing field: ${k}`);
-            }
-          }
-          const newHash = await auth.hashPassword(b.newPassword);
-          Users.updatePassword(payload.user_id, newHash);
-          Users.setPasswordCryptoState(payload.user_id, {
-            kdf_salt: b.new_kdf_salt,
-            dek_wrapped: b.new_dek_wrapped,
-            dek_iv: b.new_dek_iv,
-          });
-        } else if (mode === 'recover') {
-          // Browser unwrapped DEK using recovery key, re-wrapped under new KEK.
-          // No password proof needed (recovery key WAS the proof).
-          const required = ['new_kdf_salt', 'new_dek_wrapped', 'new_dek_iv'];
-          for (const k of required) {
-            if (typeof b[k] !== 'string' || !b[k].length) {
-              return sendError(res, 400, 'invalid_state', `Missing field: ${k}`);
-            }
-          }
-          const newHash = await auth.hashPassword(b.newPassword);
-          Users.updatePassword(payload.user_id, newHash);
-          Users.setPasswordCryptoState(payload.user_id, {
-            kdf_salt: b.new_kdf_salt,
-            dek_wrapped: b.new_dek_wrapped,
-            dek_iv: b.new_dek_iv,
-          });
-        } else if (mode === 'wipe') {
-          // Lost both password AND recovery key. User accepts data loss.
-          const newHash = await auth.hashPassword(b.newPassword);
-          Users.updatePassword(payload.user_id, newHash);
-          Users.clearCryptoState(payload.user_id);
-          Users.wipeUserData(payload.user_id);
-        } else {
-          return sendError(res, 400, 'invalid_mode', `Unknown reset mode: ${mode}`);
-        }
-
-        // Drop all old sessions, mint a new one. Old cookies (if stolen)
-        // stop working immediately.
-        auth.invalidateUserSessions(payload.user_id);
-        const fresh = Users.get(payload.user_id);
-        auth.createSession(req, res, fresh);
-        const encryption = publicEncryption(Users.getCryptoState(payload.user_id));
-        return sendJson(res, 200, { success: true, user: publicUser(fresh), encryption });
-      })
-      .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
-  }
-
-  return false;
-}
 
 // ── /api/proxy (allow-listed test harness, session-gated) ──────────────────
 //
@@ -1064,101 +720,6 @@ function unionFormat(a, b) {
 
 // ── Per-user CRUD: partners + samples (auth-required) ──────────────────────
 
-function handleApi(req, res, parsed, user) {
-  const { pathname, searchParams } = parsed;
-  const method = req.method;
-  const userId = user.id;
-
-  // ── partners ────────────────────────────────────────────────────────────
-  if (pathname === '/api/partners' && method === 'GET') {
-    return sendJson(res, 200, { success: true, partners: Partners.list({ userId }) });
-  }
-  if (pathname === '/api/partners' && method === 'POST') {
-    return readJson(req)
-      .then((b) => {
-        if (!b.name || !String(b.name).trim()) {
-          return sendError(res, 400, 'name_required', 'Partner name is required');
-        }
-        const p = Partners.create({ userId, ...b });
-        sendJson(res, 200, { success: true, partner: p });
-      })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-  }
-  let m = pathname.match(/^\/api\/partners\/(\d+)$/);
-  if (m && method === 'PATCH') {
-    const id = Number(m[1]);
-    return readJson(req)
-      .then((b) => {
-        const p = Partners.update({ id, userId, ...b });
-        if (!p) return sendError(res, 404, 'not_found', 'Partner not found');
-        sendJson(res, 200, { success: true, partner: p });
-      })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-  }
-  if (m && method === 'DELETE') {
-    const ok = Partners.delete({ id: Number(m[1]), userId });
-    return ok
-      ? sendJson(res, 200, { success: true })
-      : sendError(res, 404, 'not_found', 'Partner not found');
-  }
-  // GET /api/partners/:id/samples-count — used by the delete-partner
-  // confirm dialog to surface "X samples will become unassigned" before
-  // the user confirms. Cheap (indexed COUNT). Auth-scoped to the user.
-  const mCount = pathname.match(/^\/api\/partners\/(\d+)\/samples-count$/);
-  if (mCount && method === 'GET') {
-    const count = Partners.countSamples({ id: Number(mCount[1]), userId });
-    return sendJson(res, 200, { success: true, count });
-  }
-
-  // ── samples ─────────────────────────────────────────────────────────────
-  if (pathname === '/api/samples' && method === 'GET') {
-    const pid = searchParams.get('partner_id');
-    /** @type {number | 'unassigned' | undefined} */
-    let partnerId;
-    if (pid === 'unassigned') partnerId = 'unassigned';
-    else if (pid != null && pid !== '') partnerId = Number(pid);
-    return sendJson(res, 200, {
-      success: true,
-      samples: Samples.list({ userId, partnerId }),
-    });
-  }
-  if (pathname === '/api/samples' && method === 'POST') {
-    return readJson(req)
-      .then((b) => {
-        if (!b.title || !String(b.title).trim()) {
-          return sendError(res, 400, 'title_required', 'Sample title is required');
-        }
-        const s = Samples.create({ userId, ...b });
-        sendJson(res, 200, { success: true, sample: s });
-      })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-  }
-  m = pathname.match(/^\/api\/samples\/(\d+)$/);
-  if (m && method === 'GET') {
-    const s = Samples.get({ id: Number(m[1]), userId });
-    if (!s) return sendError(res, 404, 'not_found', 'Sample not found');
-    return sendJson(res, 200, { success: true, sample: s });
-  }
-  if (m && method === 'PATCH') {
-    const id = Number(m[1]);
-    return readJson(req)
-      .then((b) => {
-        const s = Samples.update({ id, userId, ...b });
-        if (!s) return sendError(res, 404, 'not_found', 'Sample not found');
-        sendJson(res, 200, { success: true, sample: s });
-      })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-  }
-  if (m && method === 'DELETE') {
-    const ok = Samples.delete({ id: Number(m[1]), userId });
-    return ok
-      ? sendJson(res, 200, { success: true })
-      : sendError(res, 404, 'not_found', 'Sample not found');
-  }
-
-  return false;
-}
-
 // ── /api/admin/stats — bearer-token operational stats ──────────────────────
 // For internal callers (the n8n morning-brief workflow, future ops scripts).
 // Auth = ADMIN_STATS_TOKEN env. Returns aggregate counts + 24h activity.
@@ -1201,6 +762,16 @@ streamGenerator.setMaxListeners(0);
 streamGenerator.on('specimen', streamBufferPush);
 streamGenerator.on('error', (err) => console.error('[stream]', err));
 streamGenerator.start();
+
+// Stream module registers here — needs streamGenerator + streamBuffer in scope.
+router.register(
+  createStreamModule({
+    streamGenerator,
+    streamBuffer,
+    STREAM_REPLAY_MAX,
+    STREAM_HEARTBEAT_MS,
+  }),
+);
 console.log(
   '[stream] generator running: ' +
     STREAM_RATE_MS +
@@ -1209,41 +780,6 @@ console.log(
     ' samples, buffer=' +
     STREAM_BUFFER_MAX,
 );
-
-function handleStream(req, res) {
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-store',
-    Connection: 'keep-alive',
-    // Nginx/CF buffering would batch SSE frames and break realtime. Disable.
-    'X-Accel-Buffering': 'no',
-  });
-  res.write(': ok\n\n'); // initial comment flushes headers, opens stream
-
-  // Replay last N for context. Snapshot via slice — avoids race if buffer
-  // mutates mid-iteration.
-  const replay = streamBuffer.slice(-STREAM_REPLAY_MAX);
-  for (const envelope of replay) {
-    res.write('data: ' + JSON.stringify(envelope) + '\n\n');
-  }
-
-  const onSpecimen = (envelope) => {
-    res.write('data: ' + JSON.stringify(envelope) + '\n\n');
-  };
-  streamGenerator.on('specimen', onSpecimen);
-
-  const heartbeat = setInterval(() => res.write(': hb\n\n'), STREAM_HEARTBEAT_MS);
-
-  let cleaned = false;
-  const cleanup = () => {
-    if (cleaned) return;
-    cleaned = true;
-    streamGenerator.off('specimen', onSpecimen);
-    clearInterval(heartbeat);
-  };
-  req.on('close', cleanup);
-  req.on('error', cleanup);
-}
 
 // ── /api/v1/sample — one synthetic example for the Playground "🎲 приклад" ─
 // First-time-visitor onboarding: empty Playground is intimidating, "what do
@@ -1304,19 +840,8 @@ const server = http.createServer((req, res) => {
     // Wave-1 + wave-2 routes (/api/health, /api/v1/{sample,mirror,replay},
     // /api/analyze*, /api/account/insights, /api/admin/stats, /api/proxy,
     // /api/intel/*, /api/behavior/corpus*) all routed via Router above.
-    if (pathname === '/api/v1/stream' && req.method === 'GET') return handleStream(req, res);
-    if (pathname.startsWith('/api/auth/')) {
-      if (handleAuthRoute(req, res, parsed) !== false) return;
-      return sendError(res, 405, 'method_not_allowed', 'Method not allowed for this resource');
-    }
-    if (pathname.startsWith('/api/partners') || pathname.startsWith('/api/samples')) {
-      const user = auth.getCurrentUser(req);
-      if (!user) {
-        return sendError(res, 401, 'unauthorized', 'Sign in to access your library');
-      }
-      if (handleApi(req, res, parsed, user) !== false) return;
-      return sendError(res, 405, 'method_not_allowed', 'Method not allowed for this resource');
-    }
+    // All /api/* routes (stream, auth bundle, library) now flow through the
+    // Router above. Unmatched paths fall through to static file serving.
     return serveStaticFile(req, res);
   } catch (err) {
     console.error('[handler error]', err && err.stack ? err.stack : err);
