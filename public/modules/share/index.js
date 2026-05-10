@@ -1,5 +1,5 @@
 /* ============================================================
-   Spyglass fragment-encoded permalink.
+   modules/share/index.js — Spyglass fragment-encoded permalink.
 
    Encodes the current BidRequest / BidResponse panes into a hash
    fragment URL so that the link, when opened, restores both panes
@@ -20,6 +20,14 @@
 
    On page load: if the hash carries `req=` or `res=`, decode and
    populate the panes, then call window.runAnalysis().
+
+   Exposed window.* (consumed by other modules):
+     - window.copyShareLink()       — wired to topnav share button
+     - window.buildShareUrl(req,res) — used by mirror module to build
+                                        permalinks for the canonical pair
+     - window.spyglassShareSupported() — feature-detect for embed.js
+
+   Listens for: kt:inspector-ready (workbench DOM mounted async).
    ============================================================ */
 (function () {
   'use strict';
@@ -169,17 +177,17 @@
     setTimeout(loadFromHash, 0);
   }
 
-  // Phase C-2: inspector template is now fetched + injected by the
-  // module's mount(). #bidReq / #bidRes don't exist at DOMContentLoaded
-  // any more — wait for the inspector module to signal readiness.
+  // Inspector template is fetched + injected by the inspector module's
+  // mount(). #bidReq / #bidRes don't exist at DOMContentLoaded any more
+  // — wait for the inspector module to signal readiness.
   // { once: true } is intentional: a remount in the same page would
   // re-emit the event, but loadFromHash is idempotent + URL-driven, so
   // re-running it adds no value.
   window.addEventListener('kt:inspector-ready', bootShare, { once: true });
 
   window.copyShareLink = copyShareLink;
-  // Exposed so embed.js can build URLs without duplicating the
-  // compress + base64url pipeline.
+  // Exposed so embed.js + mirror module can build URLs without
+  // duplicating the compress + base64url pipeline.
   window.buildShareUrl = buildShareUrl;
   window.spyglassShareSupported = hasCompressionStream;
 })();

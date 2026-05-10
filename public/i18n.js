@@ -63,16 +63,7 @@
       'toast.nothing_to_save': 'Нічого зберігати — обидва поля порожні',
       'toast.signin_to_save': 'Увійдіть, щоб зберігати запити в особисту бібліотеку',
       'toast.bundle_downloaded': 'Завантажено · {name}',
-      'toast.share_link_copied':
-        'Посилання скопійовано — payload зашитий у URL-фрагменті, на сервер не потрапляє',
-      'toast.share_link_loaded': 'Завантажено зі share-посилання',
-      'toast.share_link_invalid': 'Не вдалося розпакувати share-посилання: {error}',
-      'toast.share_link_failed': 'Не вдалося згенерувати посилання: {error}',
-      'toast.share_link_too_long':
-        'Payload завеликий для share-посилання ({size} символів). Спробуй "завантажити" — JSON-бандл як файл.',
-      'toast.share_unsupported':
-        'Браузер не підтримує стиснення для share-посилань — використай "завантажити".',
-      'toast.share_link_manual_copy': 'Скопіюй це посилання вручну (буфер обміну заблоковано):',
+      // toast.share_* keys live in modules/share/i18n.js (registered at boot)
 
       // ── embed modal ───────────────────────────────────────
       'embed.title': 'Вбудувати в інший сайт',
@@ -423,16 +414,7 @@
       'toast.nothing_to_save': 'Nothing to save — both fields are empty',
       'toast.signin_to_save': 'Sign in to save samples to your personal library',
       'toast.bundle_downloaded': 'Downloaded · {name}',
-      'toast.share_link_copied':
-        'Link copied — payload is embedded in the URL fragment, never reaches the server',
-      'toast.share_link_loaded': 'Loaded from share link',
-      'toast.share_link_invalid': "Couldn't decode share link: {error}",
-      'toast.share_link_failed': "Couldn't build share link: {error}",
-      'toast.share_link_too_long':
-        'Payload too large for a share link ({size} chars). Try "download" instead — JSON bundle as a file.',
-      'toast.share_unsupported':
-        'Browser doesn\'t support share-link compression — use "download".',
-      'toast.share_link_manual_copy': 'Copy this link manually (clipboard blocked):',
+      // toast.share_* keys live in modules/share/i18n.js (registered at boot)
 
       // ── embed modal ───────────────────────────────────────
       'embed.title': 'Embed in another site',
@@ -783,16 +765,7 @@
       'toast.nothing_to_save': 'Нечего сохранять — оба поля пусты',
       'toast.signin_to_save': 'Войди, чтобы сохранять запросы в личную библиотеку',
       'toast.bundle_downloaded': 'Скачано · {name}',
-      'toast.share_link_copied':
-        'Ссылка скопирована — payload встроен в URL-фрагмент, на сервер не попадает',
-      'toast.share_link_loaded': 'Загружено из share-ссылки',
-      'toast.share_link_invalid': 'Не удалось декодировать share-ссылку: {error}',
-      'toast.share_link_failed': 'Не удалось сгенерировать ссылку: {error}',
-      'toast.share_link_too_long':
-        'Payload слишком большой для share-ссылки ({size} символов). Попробуй "скачать" — JSON-бандл файлом.',
-      'toast.share_unsupported':
-        'Браузер не поддерживает сжатие для share-ссылок — используй "скачать".',
-      'toast.share_link_manual_copy': 'Скопируй ссылку вручную (буфер обмена заблокирован):',
+      // toast.share_* keys live in modules/share/i18n.js (registered at boot)
       'embed.title': 'Встроить в другой сайт',
       'embed.body':
         'Вставь этот сниппет в блог, Notion или документ — и он покажет интерактивный Spyglass с текущим bid. Payload зашит в hash-фрагменте URL — на сервер не идёт.',
@@ -1276,6 +1249,27 @@
     I18N.uk[key] = cab[key].uk;
     I18N.ru[key] = cab[key].ru;
   }
+
+  // ── Per-module i18n registration ──────────────────────────────
+  // Modules push their key tables into window.kt_i18n_modules BEFORE
+  // /i18n.js loads (they run as <script> tags earlier in the shell);
+  // we drain that queue here. Late-loaded modules call
+  // window.registerI18nModule(spec) directly. Spec shape:
+  //   { id: 'share', keys: { 'toast.share_link_copied': { uk, en, ru }, … } }
+  function mergeModuleI18n(m) {
+    if (!m || !m.keys) return;
+    const keys = m.keys;
+    for (const key in keys) {
+      const v = keys[key] || {};
+      if (typeof v.uk === 'string') I18N.uk[key] = v.uk;
+      if (typeof v.en === 'string') I18N.en[key] = v.en;
+      if (typeof v.ru === 'string') I18N.ru[key] = v.ru;
+    }
+  }
+  const queued = Array.isArray(window.kt_i18n_modules) ? window.kt_i18n_modules : [];
+  queued.forEach(mergeModuleI18n);
+  window.kt_i18n_modules = []; // sentinel — further pushes ignored
+  window.registerI18nModule = mergeModuleI18n;
 
   // Locale source of truth: <html lang="…"> (set server-side per /uk/ or
   // /en/ route by the inline IIFE in each HTML file). localStorage is only
