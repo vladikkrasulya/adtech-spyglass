@@ -111,7 +111,12 @@ function validate(payload, opts) {
     findings = r.findings;
     resolvedType = r.type;
   } else if (t === TYPES.JSON_FEED) {
-    return finalize({ type: TYPES.JSON_FEED, version, findings: [] }, 'clean', locale, disabledRules);
+    return finalize(
+      { type: TYPES.JSON_FEED, version, findings: [] },
+      'clean',
+      locale,
+      disabledRules,
+    );
   } else {
     findings = [makeFinding('payload.unknown_type', LEVELS.ERROR, '')];
   }

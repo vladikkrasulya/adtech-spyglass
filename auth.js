@@ -79,8 +79,7 @@ function createAuth({ Users, Sessions, logger }) {
           ua: r.ua || '',
         });
       }
-      log.info &&
-        log.info({ loaded: rows.length }, 'sessions hydrated from DB');
+      log.info && log.info({ loaded: rows.length }, 'sessions hydrated from DB');
     } catch (e) {
       log.error && log.error({ err: e.message }, 'session hydration failed');
     }

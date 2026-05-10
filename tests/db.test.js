@@ -257,7 +257,10 @@ test('users: wipeUserData deletes samples + partners but keeps the user row', ()
 // ── BehaviorCorpus ────────────────────────────────────────────────────────
 
 test('corpus: create + listForUser, scoped per user', () => {
-  const events = [{ kind: 'click', t: 100 }, { kind: 'heartbeat', t: 200 }];
+  const events = [
+    { kind: 'click', t: 100 },
+    { kind: 'heartbeat', t: 200 },
+  ];
   const r = BehaviorCorpus.create({
     userId: userA.id,
     label: 'fraud',
@@ -267,20 +270,29 @@ test('corpus: create + listForUser, scoped per user', () => {
   assert.ok(r.id > 0, 'should return new id');
 
   const listed = BehaviorCorpus.listForUser(userA.id);
-  assert.ok(listed.find((e) => e.id === r.id), 'visible to userA');
+  assert.ok(
+    listed.find((e) => e.id === r.id),
+    'visible to userA',
+  );
   assert.equal(listed.find((e) => e.id === r.id).label, 'fraud');
   assert.equal(listed.find((e) => e.id === r.id).eventCount, 2);
 
   // not visible to userB
   const otherList = BehaviorCorpus.listForUser(userB.id);
-  assert.equal(otherList.find((e) => e.id === r.id), undefined);
+  assert.equal(
+    otherList.find((e) => e.id === r.id),
+    undefined,
+  );
 });
 
 test('corpus: rejects invalid label', () => {
   assert.throws(
-    () => BehaviorCorpus.create({
-      userId: userA.id, label: 'spam', events: [{ x: 1 }],
-    }),
+    () =>
+      BehaviorCorpus.create({
+        userId: userA.id,
+        label: 'spam',
+        events: [{ x: 1 }],
+      }),
     /label_invalid/,
   );
 });

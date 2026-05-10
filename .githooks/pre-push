@@ -1,0 +1,29 @@
+#!/bin/bash
+# Pre-push hook: runs the same checks GitHub CI runs.
+# Catches red CI before it ever lands. Bypass with `git push --no-verify`
+# if you really need to (but you almost never do).
+#
+# Enable once per clone: `git config core.hooksPath .githooks`
+
+set -e
+
+# Skip if we're on a branch that doesn't go to main (e.g. local-only).
+# Push to forks / experimental branches doesn't need the full check.
+remote="$1"
+url="$2"
+branch=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$branch" != "main" ]; then
+  echo "[pre-push] non-main branch ($branch) — skipping CI checks"
+  exit 0
+fi
+
+echo "[pre-push] running format:check + lint + typecheck + tests…"
+echo "           same as GitHub CI. ~10s. --no-verify to skip."
+echo
+
+# Run the unified ci script. Fails fast on first error.
+npm run ci
+
+echo
+echo "[pre-push] all green — pushing."

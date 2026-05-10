@@ -230,8 +230,7 @@
     // the JS got UK content back, leaving the page Ukrainian regardless of
     // which lang the user clicked. Setting the cookie BEFORE the fetch
     // means the server reads the new locale and serves the correct file.
-    const newLangFromUrl =
-      (targetUrl.match(/^\/(uk|ru)(?:\/|$)/) || [])[1] || 'en';
+    const newLangFromUrl = (targetUrl.match(/^\/(uk|ru)(?:\/|$)/) || [])[1] || 'en';
     try {
       const isHttps = location.protocol === 'https:';
       document.cookie =
@@ -266,10 +265,14 @@
           body: JSON.stringify({ locale: newLangFromUrl }),
           keepalive: true,
         }).catch(() => {});
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
       try {
         localStorage.setItem('kt-lang', newLangFromUrl);
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
       location.assign(targetUrl);
       return;
     }

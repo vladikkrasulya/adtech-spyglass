@@ -32,7 +32,7 @@ const DEFAULT_UA = 'Mozilla/5.0 (compatible; Spyglass-Mirror/1.0)';
 const DEFAULT_LANG = 'en';
 const DEFAULT_TMAX = 500;
 
-const PRICE_BUMP = 0.10; // bid.price = floor + PRICE_BUMP, always above
+const PRICE_BUMP = 0.1; // bid.price = floor + PRICE_BUMP, always above
 const FLOOR_FROM_PRICE_RATIO = 0.5; // when going response→request
 
 /**
@@ -46,6 +46,7 @@ const FLOOR_FROM_PRICE_RATIO = 0.5; // when going response→request
  *   inputType: string,
  *   output: object|null,
  *   notes: Array<{id:string, params:object}>,
+ *   mode?: string,            // present on ok=true returns
  *   selfTest: {
  *     validate: { status:string, errorCount:number, warningCount:number },
  *     crosscheck: { critCount:number, warnCount:number, okCount:number }
@@ -249,9 +250,7 @@ function vastTemplate(video) {
     '    <InLine>',
     `      <AdSystem>Spyglass Mirror</AdSystem>`,
     '      <AdTitle>Mirror Demo Ad</AdTitle>',
-    '      <Impression><![CDATA[https://' +
-      DEFAULT_ADV_DOMAIN +
-      '/imp]]></Impression>',
+    '      <Impression><![CDATA[https://' + DEFAULT_ADV_DOMAIN + '/imp]]></Impression>',
     '      <Creatives>',
     '        <Creative id="mirror-creative-1">',
     '          <Linear>',
@@ -272,9 +271,7 @@ function nativeAdmFromRequest(impNative) {
   let parsed;
   try {
     parsed =
-      typeof impNative.request === 'string'
-        ? JSON.parse(impNative.request)
-        : impNative.request;
+      typeof impNative.request === 'string' ? JSON.parse(impNative.request) : impNative.request;
   } catch {
     return null;
   }
@@ -388,7 +385,7 @@ function requestFromResponse(res, notes) {
 
 function inferImpFromBid(bid, impId, cur, notes) {
   const priceNum = Number(bid.price);
-  const safePrice = Number.isFinite(priceNum) && priceNum > 0 ? priceNum : 0.10;
+  const safePrice = Number.isFinite(priceNum) && priceNum > 0 ? priceNum : 0.1;
   // Floor at 50% of bid so the mirror request would always accept its own
   // partner response. Floor of 0 is allowed but boring; halving keeps it
   // realistic for read-as-example use.
@@ -550,9 +547,7 @@ function enrichRequestBestPractice(out, _res, notes) {
     out.source.ext.schain = {
       ver: '1.0',
       complete: 1,
-      nodes: [
-        { asi: 'mirror-ssp.example', sid: 'pub-1', hp: 1 },
-      ],
+      nodes: [{ asi: 'mirror-ssp.example', sid: 'pub-1', hp: 1 }],
     };
   }
   // Regulatory: GDPR + GPP signals so EU bidders don't refuse on principle

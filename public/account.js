@@ -135,8 +135,7 @@
   function setRecent(samples) {
     const ul = $('recentList');
     if (!samples.length) {
-      ul.innerHTML =
-        '<li class="cab-empty">' + escapeHtml(T('cabinet.recent.empty')) + '</li>';
+      ul.innerHTML = '<li class="cab-empty">' + escapeHtml(T('cabinet.recent.empty')) + '</li>';
       return;
     }
     // Sort by created_at desc, take first 10
@@ -295,9 +294,7 @@
 
     // Date range of saved samples.
     if (samples.length) {
-      const sorted = samples
-        .slice()
-        .sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+      const sorted = samples.slice().sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
       $('insightFirst').textContent = fmtDate(sorted[0].created_at);
       $('insightLast').textContent = fmtDate(sorted[sorted.length - 1].created_at);
     } else {
@@ -314,11 +311,16 @@
       let current = null;
       try {
         current = localStorage.getItem(key);
-      } catch (_e) {}
+      } catch (_e) {
+        /* localStorage unavailable — non-fatal */
+      }
       if (!current) current = fallback;
       const apply = (val) => {
         root.querySelectorAll('.cab-radio').forEach((el) => {
-          el.classList.toggle('active', el.dataset[group.replace('pref', '').toLowerCase()] === val);
+          el.classList.toggle(
+            'active',
+            el.dataset[group.replace('pref', '').toLowerCase()] === val,
+          );
         });
         if (applyFn) applyFn(val);
       };
@@ -331,7 +333,9 @@
         if (!val) return;
         try {
           localStorage.setItem(key, val);
-        } catch (_e) {}
+        } catch (_e) {
+          /* localStorage unavailable — non-fatal */
+        }
         apply(val);
       });
     }
@@ -341,11 +345,16 @@
         if (val === 'auto') localStorage.removeItem('kt-theme');
         else localStorage.setItem('kt-theme', val);
         // Also mirror to data-theme so live preview updates without reload.
-        const eff = val === 'auto'
-          ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-          : val;
+        const eff =
+          val === 'auto'
+            ? matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : val;
         document.documentElement.setAttribute('data-theme', eff);
-      } catch (_e) {}
+      } catch (_e) {
+        /* localStorage unavailable — non-fatal */
+      }
     });
     // Findings locale = the SAME `kt-lang` key the main app + i18n.js read.
     // Picking here behaves like picking from the lang menu — write cookie
@@ -367,7 +376,9 @@
           encodeURIComponent(val) +
           '; Path=/; Max-Age=31536000; SameSite=Lax' +
           (isHttps ? '; Secure' : '');
-      } catch (_e) {}
+      } catch (_e) {
+        /* localStorage unavailable — non-fatal */
+      }
       // Best-effort cross-device persistence — auth-gated on server side.
       fetch('/api/auth/preferences', {
         method: 'POST',
@@ -477,50 +488,89 @@
     if (!matrix || !matrix.totals || matrix.totals.fraud + matrix.totals.legitimate === 0) {
       if (summaryEl) summaryEl.innerHTML = '';
       if (tableEl) {
-        tableEl.innerHTML =
-          '<div class="matrix-empty">' + T('matrix.empty') + '</div>';
+        tableEl.innerHTML = '<div class="matrix-empty">' + T('matrix.empty') + '</div>';
       }
       return;
     }
 
     if (summaryEl) {
       summaryEl.innerHTML =
-        '<span><strong>' + matrix.totals.fraud + '</strong> ' + T('corpus.label.fraud') + '</span>' +
-        ' · <span><strong>' + matrix.totals.legitimate + '</strong> ' + T('corpus.label.legitimate') + '</span>' +
-        ' · <span>' + matrix.totals.patterns + ' ' + T('matrix.summary.patterns') + '</span>';
+        '<span><strong>' +
+        matrix.totals.fraud +
+        '</strong> ' +
+        T('corpus.label.fraud') +
+        '</span>' +
+        ' · <span><strong>' +
+        matrix.totals.legitimate +
+        '</strong> ' +
+        T('corpus.label.legitimate') +
+        '</span>' +
+        ' · <span>' +
+        matrix.totals.patterns +
+        ' ' +
+        T('matrix.summary.patterns') +
+        '</span>';
     }
 
     if (tableEl) {
       if (!matrix.patterns || matrix.patterns.length === 0) {
-        tableEl.innerHTML =
-          '<div class="matrix-empty">' + T('matrix.no_patterns') + '</div>';
+        tableEl.innerHTML = '<div class="matrix-empty">' + T('matrix.no_patterns') + '</div>';
         return;
       }
       const header =
         '<div class="matrix-row matrix-head">' +
-        '<span class="matrix-cell matrix-id">' + T('matrix.col.pattern') + '</span>' +
+        '<span class="matrix-cell matrix-id">' +
+        T('matrix.col.pattern') +
+        '</span>' +
         '<span class="matrix-cell matrix-num" title="True Positive">TP</span>' +
         '<span class="matrix-cell matrix-num" title="False Positive">FP</span>' +
         '<span class="matrix-cell matrix-num" title="False Negative">FN</span>' +
         '<span class="matrix-cell matrix-num" title="True Negative">TN</span>' +
-        '<span class="matrix-cell matrix-num">' + T('matrix.col.precision') + '</span>' +
-        '<span class="matrix-cell matrix-num">' + T('matrix.col.recall') + '</span>' +
+        '<span class="matrix-cell matrix-num">' +
+        T('matrix.col.precision') +
+        '</span>' +
+        '<span class="matrix-cell matrix-num">' +
+        T('matrix.col.recall') +
+        '</span>' +
         '<span class="matrix-cell matrix-num">F1</span>' +
         '</div>';
-      const rows = matrix.patterns.map((p) => {
-        const cls = colorClassForPrecision(p.precision);
-        return '<div class="matrix-row ' + cls + '">' +
-          '<span class="matrix-cell matrix-id" title="' + escapeHtml(p.id) + '">' +
-          escapeHtml(p.id) + '</span>' +
-          '<span class="matrix-cell matrix-num">' + p.tp + '</span>' +
-          '<span class="matrix-cell matrix-num">' + p.fp + '</span>' +
-          '<span class="matrix-cell matrix-num">' + p.fn + '</span>' +
-          '<span class="matrix-cell matrix-num">' + p.tn + '</span>' +
-          '<span class="matrix-cell matrix-num">' + fmtPct(p.precision) + '</span>' +
-          '<span class="matrix-cell matrix-num">' + fmtPct(p.recall) + '</span>' +
-          '<span class="matrix-cell matrix-num matrix-f1">' + fmtPct(p.f1) + '</span>' +
-          '</div>';
-      }).join('');
+      const rows = matrix.patterns
+        .map((p) => {
+          const cls = colorClassForPrecision(p.precision);
+          return (
+            '<div class="matrix-row ' +
+            cls +
+            '">' +
+            '<span class="matrix-cell matrix-id" title="' +
+            escapeHtml(p.id) +
+            '">' +
+            escapeHtml(p.id) +
+            '</span>' +
+            '<span class="matrix-cell matrix-num">' +
+            p.tp +
+            '</span>' +
+            '<span class="matrix-cell matrix-num">' +
+            p.fp +
+            '</span>' +
+            '<span class="matrix-cell matrix-num">' +
+            p.fn +
+            '</span>' +
+            '<span class="matrix-cell matrix-num">' +
+            p.tn +
+            '</span>' +
+            '<span class="matrix-cell matrix-num">' +
+            fmtPct(p.precision) +
+            '</span>' +
+            '<span class="matrix-cell matrix-num">' +
+            fmtPct(p.recall) +
+            '</span>' +
+            '<span class="matrix-cell matrix-num matrix-f1">' +
+            fmtPct(p.f1) +
+            '</span>' +
+            '</div>'
+          );
+        })
+        .join('');
       tableEl.innerHTML = header + rows;
     }
   }
@@ -531,7 +581,9 @@
   async function loadCorpus() {
     try {
       const r = await api('/api/behavior/corpus');
-      return r && r.entries ? { entries: r.entries, counts: r.counts } : { entries: [], counts: { total: 0 } };
+      return r && r.entries
+        ? { entries: r.entries, counts: r.counts }
+        : { entries: [], counts: { total: 0 } };
     } catch (_e) {
       return { entries: [], counts: { total: 0 } };
     }
@@ -549,14 +601,26 @@
     if (summaryEl) {
       summaryEl.innerHTML =
         '<span class="corpus-count corpus-count-total">' +
-          '<strong>' + fmt(counts.total) + '</strong> ' +
-          T('corpus.cabinet.total') + '</span>' +
+        '<strong>' +
+        fmt(counts.total) +
+        '</strong> ' +
+        T('corpus.cabinet.total') +
+        '</span>' +
         ' · <span class="corpus-count corpus-count-fraud">' +
-          fmt(counts.fraud) + ' ' + T('corpus.label.fraud') + '</span>' +
+        fmt(counts.fraud) +
+        ' ' +
+        T('corpus.label.fraud') +
+        '</span>' +
         ' · <span class="corpus-count corpus-count-legit">' +
-          fmt(counts.legitimate) + ' ' + T('corpus.label.legitimate') + '</span>' +
+        fmt(counts.legitimate) +
+        ' ' +
+        T('corpus.label.legitimate') +
+        '</span>' +
         ' · <span class="corpus-count corpus-count-amb">' +
-          fmt(counts.ambiguous) + ' ' + T('corpus.label.ambiguous') + '</span>';
+        fmt(counts.ambiguous) +
+        ' ' +
+        T('corpus.label.ambiguous') +
+        '</span>';
     }
 
     const list = $('corpusList');
@@ -564,24 +628,39 @@
       if (!entries.length) {
         list.innerHTML = '<div class="corpus-empty">' + T('corpus.cabinet.empty') + '</div>';
       } else {
-        list.innerHTML = entries.map((e) => {
-          const labelClass = 'corpus-label-' + e.label;
-          const dt = e.createdAt ? fmtDate(e.createdAt) : '—';
-          const sourceTag = e.sourceSampleId
-            ? '<span class="corpus-source">↳ sample #' + e.sourceSampleId + '</span>'
-            : '';
-          const notes = e.notes
-            ? '<span class="corpus-notes">' + escapeHtml(e.notes) + '</span>'
-            : '';
-          return '<div class="corpus-row">' +
-            '<span class="corpus-label-pill ' + labelClass + '">' +
-            T('corpus.label.' + e.label) + '</span>' +
-            '<span class="corpus-meta">' + dt + ' · ' +
-            (e.eventCount || 0) + ' events</span>' +
-            sourceTag + notes +
-            '<button class="btn btn-ghost btn-sm corpus-delete-btn" data-action="corpus-delete" data-corpus-id="' + e.id + '" title="' + T('corpus.cabinet.delete_title') + '">×</button>' +
-            '</div>';
-        }).join('');
+        list.innerHTML = entries
+          .map((e) => {
+            const labelClass = 'corpus-label-' + e.label;
+            const dt = e.createdAt ? fmtDate(e.createdAt) : '—';
+            const sourceTag = e.sourceSampleId
+              ? '<span class="corpus-source">↳ sample #' + e.sourceSampleId + '</span>'
+              : '';
+            const notes = e.notes
+              ? '<span class="corpus-notes">' + escapeHtml(e.notes) + '</span>'
+              : '';
+            return (
+              '<div class="corpus-row">' +
+              '<span class="corpus-label-pill ' +
+              labelClass +
+              '">' +
+              T('corpus.label.' + e.label) +
+              '</span>' +
+              '<span class="corpus-meta">' +
+              dt +
+              ' · ' +
+              (e.eventCount || 0) +
+              ' events</span>' +
+              sourceTag +
+              notes +
+              '<button class="btn btn-ghost btn-sm corpus-delete-btn" data-action="corpus-delete" data-corpus-id="' +
+              e.id +
+              '" title="' +
+              T('corpus.cabinet.delete_title') +
+              '">×</button>' +
+              '</div>'
+            );
+          })
+          .join('');
       }
     }
   }
@@ -684,6 +763,7 @@
   // Bind after init so cabBody is visible (sidebar lives inside cabBody and
   // is hidden until showBody flips display).
   const _origInit = init;
+  // eslint-disable-next-line no-func-assign -- intentional decorator pattern: wrap init() to also bind scroll-spy after the original init runs
   init = async function () {
     await _origInit.apply(this, arguments);
     bindScrollSpy();

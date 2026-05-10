@@ -95,10 +95,7 @@ function postToTelegram(text) {
 }
 
 function escapeHtml(s) {
-  return String(s).replace(
-    /[&<>]/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c],
-  );
+  return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 }
 
 /**

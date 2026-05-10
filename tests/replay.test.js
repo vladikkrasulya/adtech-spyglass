@@ -9,24 +9,29 @@ const { replay } = require('../lib/replay');
 
 function makeDeps(overrides = {}) {
   return {
-    validate: overrides.validate || ((p) => ({
-      type: 'oRTB BidRequest',
-      version: '2.5',
-      status: 'clean',
-      findings: [],
-    })),
+    validate:
+      overrides.validate ||
+      ((p) => ({
+        type: 'oRTB BidRequest',
+        version: '2.5',
+        status: 'clean',
+        findings: [],
+      })),
     crosscheck: overrides.crosscheck || (() => []),
-    analyzeBehavior: overrides.analyzeBehavior || (() => ({
-      findings: [],
-      status: 'clean',
-      eventCount: 0,
-    })),
+    analyzeBehavior:
+      overrides.analyzeBehavior ||
+      (() => ({
+        findings: [],
+        status: 'clean',
+        eventCount: 0,
+      })),
   };
 }
 
 // ─── shape ────────────────────────────────────────────────────────────────
 
 test('replay: throws on non-array input', () => {
+  // @ts-expect-error -- intentionally passing wrong type to test the throw path
   assert.throws(() => replay('nope', makeDeps()), /samples_must_be_array/);
 });
 
@@ -88,6 +93,7 @@ test('replay: bidReq + bidRes runs validate twice + crosscheck once', () => {
 });
 
 test('replay: behaviorEvents runs analyzeBehavior with adm', () => {
+  /** @type {{events: any[], opts: any} | null} */
   let captured = null;
   replay(
     [{ behaviorEvents: [{ kind: 'click' }], adm: '<html>x</html>' }],
@@ -98,6 +104,7 @@ test('replay: behaviorEvents runs analyzeBehavior with adm', () => {
       },
     }),
   );
+  if (!captured) throw new Error('analyzeBehavior should have been called');
   assert.equal(captured.events.length, 1);
   assert.equal(captured.opts.adm, '<html>x</html>');
 });
@@ -135,10 +142,7 @@ test('replay: behavior errors propagate to sample status', () => {
 
 test('replay: counts errors / warnings / info / crits per sample', () => {
   const out = replay(
-    [
-      { bidReq: { id: 'a' } },
-      { bidReq: { id: 'b' }, bidRes: { id: 'b' } },
-    ],
+    [{ bidReq: { id: 'a' } }, { bidReq: { id: 'b' }, bidRes: { id: 'b' } }],
     makeDeps({
       validate: (p) => ({
         type: 'r',
@@ -168,11 +172,7 @@ test('replay: counts errors / warnings / info / crits per sample', () => {
 
 test('replay: aggregates totalFindings across all samples', () => {
   const out = replay(
-    [
-      { bidReq: { id: 'a' } },
-      { bidReq: { id: 'b' } },
-      { bidReq: { id: 'c' } },
-    ],
+    [{ bidReq: { id: 'a' } }, { bidReq: { id: 'b' } }, { bidReq: { id: 'c' } }],
     makeDeps({
       validate: () => ({
         type: 'r',
@@ -190,17 +190,15 @@ test('replay: aggregates totalFindings across all samples', () => {
 
 test('replay: topFindings sorted by frequency desc', () => {
   const out = replay(
-    [
-      { bidReq: { id: 'a' } },
-      { bidReq: { id: 'b' } },
-      { bidReq: { id: 'c' } },
-    ],
+    [{ bidReq: { id: 'a' } }, { bidReq: { id: 'b' } }, { bidReq: { id: 'c' } }],
     makeDeps({
       validate: (p) => {
         // emit different ids per sample
         const id = p.id; // 'a' / 'b' / 'c'
         return {
-          type: 'r', version: '2.5', status: 'errors',
+          type: 'r',
+          version: '2.5',
+          status: 'errors',
           findings: [
             { id: 'common.error', level: 'error' },
             { id: 'unique.' + id, level: 'error' },
@@ -216,23 +214,22 @@ test('replay: topFindings sorted by frequency desc', () => {
 });
 
 test('replay: topFindings respects topK', () => {
-  const out = replay(
-    [{ bidReq: { id: 'x' } }],
-    {
-      ...makeDeps({
-        validate: () => ({
-          type: 'r', version: '2.5', status: 'errors',
-          findings: [
-            { id: 'a', level: 'error' },
-            { id: 'b', level: 'error' },
-            { id: 'c', level: 'error' },
-            { id: 'd', level: 'error' },
-          ],
-        }),
+  const out = replay([{ bidReq: { id: 'x' } }], {
+    ...makeDeps({
+      validate: () => ({
+        type: 'r',
+        version: '2.5',
+        status: 'errors',
+        findings: [
+          { id: 'a', level: 'error' },
+          { id: 'b', level: 'error' },
+          { id: 'c', level: 'error' },
+          { id: 'd', level: 'error' },
+        ],
       }),
-      topK: 2,
-    },
-  );
+    }),
+    topK: 2,
+  });
   assert.equal(out.summary.topFindings.length, 2);
 });
 
@@ -249,8 +246,19 @@ test('replay: summary.statusCounts correctly histograms', () => {
     makeDeps({
       validate: (p) => {
         if (p.id === 'clean') return { type: 'r', version: '2.5', status: 'clean', findings: [] };
-        if (p.id === 'warn') return { type: 'r', version: '2.5', status: 'warnings', findings: [{ id: 'w', level: 'warning' }] };
-        return { type: 'r', version: '2.5', status: 'errors', findings: [{ id: 'e', level: 'error' }] };
+        if (p.id === 'warn')
+          return {
+            type: 'r',
+            version: '2.5',
+            status: 'warnings',
+            findings: [{ id: 'w', level: 'warning' }],
+          };
+        return {
+          type: 'r',
+          version: '2.5',
+          status: 'errors',
+          findings: [{ id: 'e', level: 'error' }],
+        };
       },
     }),
   );
@@ -276,9 +284,6 @@ test('replay: empty array returns clean summary', () => {
 });
 
 test('replay: label is echoed back in result', () => {
-  const out = replay(
-    [{ bidReq: { id: 'r' }, label: 'kadam-prod-2026-05-10' }],
-    makeDeps(),
-  );
+  const out = replay([{ bidReq: { id: 'r' }, label: 'kadam-prod-2026-05-10' }], makeDeps());
   assert.equal(out.results[0].label, 'kadam-prod-2026-05-10');
 });

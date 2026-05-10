@@ -429,8 +429,8 @@
 
           <h2 id="whats-new">What's new · 2026-05-10</h2>
           <p>
-            Eleven releases shipped in one day (v0.25 → v0.35). Quick tour of the new
-            surfaces — full detail in the sections below or in CHANGELOG.md.
+            Eleven releases shipped in one day (v0.25 → v0.35). Quick tour of the new surfaces —
+            full detail in the sections below or in CHANGELOG.md.
           </p>
 
           <h3>🪞 Mirror — canonical pair, one click</h3>
@@ -438,23 +438,22 @@
             Hit <strong>mirror ↔</strong> in the header (or hotkey <code>M</code>) and Spyglass
             generates the canonical counterpart of your paste. BidRequest in → minimal-valid
             BidResponse out. BidResponse in → BidRequest the response would fit. Output is
-            self-tested through the existing validate() + crosscheck() loop, so it's always
-            clean. Two modes: <em>minimal</em> (required fields only) and
-            <em>best-practice</em> (with recommended: schain, dchain, DSA, GDPR consent,
-            device.sua).
+            self-tested through the existing validate() + crosscheck() loop, so it's always clean.
+            Two modes: <em>minimal</em> (required fields only) and <em>best-practice</em> (with
+            recommended: schain, dchain, DSA, GDPR consent, device.sua).
           </p>
           <p>
-            With both panes filled, the modal also shows a <strong>diff</strong>: your version
-            vs the canonical one, colour-coded (≠ different, + canonical-only, − you-only).
-            🔗 share button generates a permalink carrying the pair — handy for SSP calls.
+            With both panes filled, the modal also shows a <strong>diff</strong>: your version vs
+            the canonical one, colour-coded (≠ different, + canonical-only, − you-only). 🔗 share
+            button generates a permalink carrying the pair — handy for SSP calls.
           </p>
 
           <h3>📡 Live RTB stream</h3>
           <p>
             <strong>📡 live</strong> button opens a modal subscribed to a synthetic RTB sample
             stream. Each row: timestamp, kind (REQ/RES), source filename, optional banner size.
-            Pause/resume button. Click a row to load that sample into the matching editor and
-            close the modal. Foundation for the upcoming Stream platform.
+            Pause/resume button. Click a row to load that sample into the matching editor and close
+            the modal. Foundation for the upcoming Stream platform.
           </p>
 
           <h3>👁 Finding details</h3>
@@ -467,50 +466,52 @@
 
           <h3>🛡 Behavior corpus + Confusion matrix</h3>
           <p>
-            On the behavior tab, <strong>💾 save as corpus</strong> appears when there are
-            probe events and you're signed in. Save the event-stream with a label
-            (<em>legitimate / fraud / ambiguous</em>) — your cabinet has a section for all
-            entries. Foundation for Chapter B (behaviour calibration).
+            On the behavior tab, <strong>💾 save as corpus</strong> appears when there are probe
+            events and you're signed in. Save the event-stream with a label (<em
+              >legitimate / fraud / ambiguous</em
+            >) — your cabinet has a section for all entries. Foundation for Chapter B (behaviour
+            calibration).
           </p>
           <p>
-            Off the corpus, the <strong>confusion matrix</strong> auto-computes precision,
-            recall, F1 for each of the 12 detectors against your own labelled data. Spot
-            low-precision patterns (red row) that need tuning, or stable ones (≥90% green).
+            Off the corpus, the <strong>confusion matrix</strong> auto-computes precision, recall,
+            F1 for each of the 12 detectors against your own labelled data. Spot low-precision
+            patterns (red row) that need tuning, or stable ones (≥90% green).
           </p>
 
           <h3>🤖 Bid simulator (gemma 3-strategy)</h3>
           <p>
             <strong>🤖 simulate</strong> button. Local gemma3:4b runs three DSP strategies:
-            <em>aggressive (max scale, +30-50% over floor)</em>, <em>conservative (ROAS
-            guard, +5-15%)</em>, <em>quality (premium only, +50-80% or skip)</em>. Privacy:
-            gemma sees only an 8-field metadata summary (formats, sizes, geo, currency, floor,
-            surface, device-type, auction-type) — bid VALUES never reach the LLM.
+            <em>aggressive (max scale, +30-50% over floor)</em>,
+            <em>conservative (ROAS guard, +5-15%)</em>,
+            <em>quality (premium only, +50-80% or skip)</em>. Privacy: gemma sees only an 8-field
+            metadata summary (formats, sizes, geo, currency, floor, surface, device-type,
+            auction-type) — bid VALUES never reach the LLM.
           </p>
 
           <h3>📦 Specimen replay endpoint</h3>
           <p>
-            <code>POST /api/v1/replay</code> accepts an array of samples, runs validate +
-            crosscheck + behavior on each, returns per-sample results plus an aggregate
-            (<code>statusCounts</code>, <code>topFindings</code>, <code>totalFindings</code>).
-            One call instead of N round-trips. Capped at 100 samples per call. Foundation for
-            CI fixture grading, archive replay, partner audit pipelines.
+            <code>POST /api/v1/replay</code> accepts an array of samples, runs validate + crosscheck
+            + behavior on each, returns per-sample results plus an aggregate
+            (<code>statusCounts</code>, <code>topFindings</code>, <code>totalFindings</code>). One
+            call instead of N round-trips. Capped at 100 samples per call. Foundation for CI fixture
+            grading, archive replay, partner audit pipelines.
           </p>
 
           <h3>👤 Cabinet — new 7-section layout</h3>
           <p>
-            Cabinet (<code>/account</code>) restructured: sticky sidebar with 7 sections —
-            Profile · Library · Activity · Behavior corpus · Preferences · Security · Danger
-            zone. Scroll-spy highlights the active section as you scroll. URL hash updates for
-            deep links: <code>/account#corpus</code> jumps straight in. Mobile (≤880px)
-            collapses the sidebar to a horizontal tab-chip bar.
+            Cabinet (<code>/account</code>) restructured: sticky sidebar with 7 sections — Profile ·
+            Library · Activity · Behavior corpus · Preferences · Security · Danger zone. Scroll-spy
+            highlights the active section as you scroll. URL hash updates for deep links:
+            <code>/account#corpus</code> jumps straight in. Mobile (≤880px) collapses the sidebar to
+            a horizontal tab-chip bar.
           </p>
 
           <h3>Localization: EN and RU now first-class</h3>
           <p>
-            English and Russian about pages shipped in v0.32 (previously stubs). The lang menu
-            in the header works on the inspector (full navigation, since the inspector mounts
-            its template async), on /about, and on /account. The <code>kt-lang</code> cookie
-            is written before the fetch so the server doesn't redirect back to the old locale.
+            English and Russian about pages shipped in v0.32 (previously stubs). The lang menu in
+            the header works on the inspector (full navigation, since the inspector mounts its
+            template async), on /about, and on /account. The <code>kt-lang</code> cookie is written
+            before the fetch so the server doesn't redirect back to the old locale.
           </p>
 
           <hr />

@@ -17,13 +17,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const {
-  validate,
-  detectType,
-  detectVersion,
-  TYPES,
-  VERSIONS,
-} = require('@kyivtech/spyglass-core');
+const { validate, detectType, detectVersion, TYPES, VERSIONS } = require('@kyivtech/spyglass-core');
 const { validateRequest30 } = require('../packages/core/rules-request-30');
 const { validateResponse30 } = require('../packages/core/rules-response-30');
 
@@ -73,20 +67,26 @@ test('validateRequest30: missing openrtb envelope → envelope_required + early 
 });
 
 test('validateRequest30: missing ver → ver_required', () => {
-  const f = validateRequest30({ openrtb: { request: { id: 'r1', item: [{ id: '1', spec: {} }], context: {} } } });
+  const f = validateRequest30({
+    openrtb: { request: { id: 'r1', item: [{ id: '1', spec: {} }], context: {} } },
+  });
   assert.ok(findById(f, 'request.30.ver_required'));
   assert.equal(findById(f, 'request.30.ver_required').level, 'error');
 });
 
 test('validateRequest30: ver = "2.5" → ver_invalid', () => {
-  const f = validateRequest30({ openrtb: { ver: '2.5', request: { id: 'r', item: [{ id: '1', spec: {} }], context: {} } } });
+  const f = validateRequest30({
+    openrtb: { ver: '2.5', request: { id: 'r', item: [{ id: '1', spec: {} }], context: {} } },
+  });
   const m = findById(f, 'request.30.ver_invalid');
   assert.ok(m);
   assert.equal(m.params.ver, '2.5');
 });
 
 test('validateRequest30: ver = "3.1" passes (any 3.x is valid)', () => {
-  const f = validateRequest30({ openrtb: { ver: '3.1', request: { id: 'r', item: [{ id: '1', spec: {} }], context: {} } } });
+  const f = validateRequest30({
+    openrtb: { ver: '3.1', request: { id: 'r', item: [{ id: '1', spec: {} }], context: {} } },
+  });
   assert.equal(findById(f, 'request.30.ver_invalid'), undefined);
 });
 
@@ -96,37 +96,52 @@ test('validateRequest30: missing openrtb.request → request_required + early re
 });
 
 test('validateRequest30: missing request.id → id_required', () => {
-  const f = validateRequest30({ openrtb: { ver: '3.0', request: { item: [{ id: '1', spec: {} }], context: {} } } });
+  const f = validateRequest30({
+    openrtb: { ver: '3.0', request: { item: [{ id: '1', spec: {} }], context: {} } },
+  });
   assert.ok(findById(f, 'request.30.id_required'));
 });
 
 test('validateRequest30: empty item[] → item_required', () => {
-  const f = validateRequest30({ openrtb: { ver: '3.0', request: { id: 'r', item: [], context: {} } } });
+  const f = validateRequest30({
+    openrtb: { ver: '3.0', request: { id: 'r', item: [], context: {} } },
+  });
   assert.ok(findById(f, 'request.30.item_required'));
 });
 
 test('validateRequest30: missing context → context_recommended WARN', () => {
-  const f = validateRequest30({ openrtb: { ver: '3.0', request: { id: 'r', item: [{ id: '1', spec: {} }] } } });
+  const f = validateRequest30({
+    openrtb: { ver: '3.0', request: { id: 'r', item: [{ id: '1', spec: {} }] } },
+  });
   const m = findById(f, 'request.30.context_recommended');
   assert.ok(m);
   assert.equal(m.level, 'warning');
 });
 
 test('validateRequest30: per-item id missing + spec missing → both fire', () => {
-  const f = validateRequest30({ openrtb: { ver: '3.0', request: { id: 'r', item: [{}], context: {} } } });
+  const f = validateRequest30({
+    openrtb: { ver: '3.0', request: { id: 'r', item: [{}], context: {} } },
+  });
   assert.ok(findById(f, 'request.30.item.id_required'));
   assert.ok(findById(f, 'request.30.item.spec_required'));
 });
 
 test('validateRequest30: item.qty = 0 → qty_invalid WARN', () => {
-  const f = validateRequest30({ openrtb: { ver: '3.0', request: { id: 'r', item: [{ id: '1', qty: 0, spec: {} }], context: {} } } });
+  const f = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: { id: 'r', item: [{ id: '1', qty: 0, spec: {} }], context: {} },
+    },
+  });
   const m = findById(f, 'request.30.item.qty_invalid');
   assert.ok(m);
   assert.equal(m.params.qty, 0);
 });
 
 test('validateRequest30: item.qty absent does NOT fire qty_invalid (defaults to 1 per spec)', () => {
-  const f = validateRequest30({ openrtb: { ver: '3.0', request: { id: 'r', item: [{ id: '1', spec: {} }], context: {} } } });
+  const f = validateRequest30({
+    openrtb: { ver: '3.0', request: { id: 'r', item: [{ id: '1', spec: {} }], context: {} } },
+  });
   assert.equal(findById(f, 'request.30.item.qty_invalid'), undefined);
 });
 
@@ -151,7 +166,12 @@ test('validateRequest30: well-formed envelope fires only deep_validation_limited
 // ─────────────────────────────────────────────────────────────────
 
 test('validate(): 3.0 payload routes to validateRequest30 (NOT to 2.x rules)', () => {
-  const r = validate({ openrtb: { ver: '3.0', request: { id: 'r1', item: [{ id: '1', spec: {} }], context: { site: { id: 's1' } } } } });
+  const r = validate({
+    openrtb: {
+      ver: '3.0',
+      request: { id: 'r1', item: [{ id: '1', spec: {} }], context: { site: { id: 's1' } } },
+    },
+  });
   // Should NOT see 2.x findings like "imp_required" or "no_site_or_app"
   assert.equal(findById(r.findings, 'request.imp_required'), undefined);
   assert.equal(findById(r.findings, 'request.no_site_or_app'), undefined);
@@ -281,7 +301,12 @@ test('validateResponse30: well-formed response fires only deep_validation_limite
 // ─────────────────────────────────────────────────────────────────
 
 test('integration: validate() routes 3.0 response to validateResponse30 (not 2.x)', () => {
-  const r = validate({ openrtb: { ver: '3.0', response: { id: 'r1', seatbid: [{ seat: 's1', bid: [{ id: 'b1', item: '1', price: 1.5 }] }] } } });
+  const r = validate({
+    openrtb: {
+      ver: '3.0',
+      response: { id: 'r1', seatbid: [{ seat: 's1', bid: [{ id: 'b1', item: '1', price: 1.5 }] }] },
+    },
+  });
   assert.equal(r.type, 'oRTB BidResponse');
   assert.equal(r.version.version, VERSIONS.V_3_0);
   // Should NOT see 2.x findings like "response.id_required" / "response.seatbid_or_nbr_required"

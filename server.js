@@ -116,7 +116,7 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
   notifyAdmin(
-    `Unhandled rejection\n<pre>${notifyEscape(String((reason && reason.stack) || reason).slice(0, 800))}</pre>`,
+    `Unhandled rejection\n<pre>${notifyEscape(String((reason instanceof Error && reason.stack) || reason).slice(0, 800))}</pre>`,
     { tag: 'unhandled-rejection', level: 'error' },
   );
 });
@@ -160,8 +160,7 @@ function setLocaleCookie(req, res, locale) {
   ];
   // Be defensive — req.connection / x-forwarded-proto detection mirrors auth.js
   const proto = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0].trim();
-  const isHttps =
-    (req.connection && req.connection.encrypted) || proto === 'https';
+  const isHttps = (req.connection && req.connection.encrypted) || proto === 'https';
   if (isHttps) parts.push('Secure');
   // Append rather than overwrite so other Set-Cookie headers (session
   // cookie set in the same response) aren't clobbered.
@@ -380,11 +379,13 @@ function sendError(res, status, code, error, detail) {
       const path = (res.req && res.req.url ? res.req.url.split('?')[0] : '?').slice(0, 80);
       notifyAdmin(
         `🔴 <b>Spyglass ${status}</b> <code>${notifyEscape(code)}</code>\n` +
-        `path <code>${notifyEscape(path)}</code>\n` +
-        (detail ? `<pre>${notifyEscape(String(detail).slice(0, 400))}</pre>` : ''),
+          `path <code>${notifyEscape(path)}</code>\n` +
+          (detail ? `<pre>${notifyEscape(String(detail).slice(0, 400))}</pre>` : ''),
         { tag: `5xx:${code}` },
       );
-    } catch (_e) { /* never let alerting break the response */ }
+    } catch (_e) {
+      /* never let alerting break the response */
+    }
   }
 }
 
@@ -470,7 +471,8 @@ function handleAuthRoute(req, res, parsed) {
             expirySeconds: VERIFY_TOKEN_TTL,
           });
           const result = await sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl());
-          emailSent = !result || !result.dev; // dev-mode short-circuit doesn't actually deliver
+          // dev-mode short-circuit returns { dev: true, link } and doesn't actually deliver
+          emailSent = !result || !('dev' in result) || !result.dev;
         } catch (err) {
           emailError = err.message;
           console.error('[register] verify email send failed:', err.message);
@@ -1108,12 +1110,20 @@ function handleBehaviorCorpus(req, res, parsed) {
         const events = body && body.events;
         const label = body && body.label;
         if (!Array.isArray(events) || !events.length) {
-          return sendError(res, 400, 'events_required',
-            'Provide an `events` array (output of behavior probe)');
+          return sendError(
+            res,
+            400,
+            'events_required',
+            'Provide an `events` array (output of behavior probe)',
+          );
         }
         if (!BehaviorCorpus.LABELS.includes(label)) {
-          return sendError(res, 400, 'label_invalid',
-            'label must be one of: legitimate, fraud, ambiguous');
+          return sendError(
+            res,
+            400,
+            'label_invalid',
+            'label must be one of: legitimate, fraud, ambiguous',
+          );
         }
         try {
           const r = BehaviorCorpus.create({
@@ -1775,7 +1785,10 @@ function handleSample(req, res) {
     if (!pick) pick = files[Math.floor(Math.random() * files.length)];
     const sample = JSON.parse(fs.readFileSync(path.join(dir, pick), 'utf8'));
     const note = sample._note;
-    const label = pick.replace(/^synthetic-/, '').replace(/\.json$/, '').replace(/-/g, ' ');
+    const label = pick
+      .replace(/^synthetic-/, '')
+      .replace(/\.json$/, '')
+      .replace(/-/g, ' ');
 
     // Sample shape autodetect:
     //   - has `seatbid` → it IS a BidResponse; synthesize a matching 2.x
@@ -1792,8 +1805,7 @@ function handleSample(req, res) {
     //   3. BidRequest (2.x or 3.0) — has imp[] / item[] / openrtb.request{}
     //      OR `openrtb` envelope without `response` (broken 3.0 request)
     const is2xResponse = Array.isArray(sample.seatbid);
-    const is30Response =
-      isPlainObj(sample.openrtb) && isPlainObj(sample.openrtb.response);
+    const is30Response = isPlainObj(sample.openrtb) && isPlainObj(sample.openrtb.response);
     const isBidResponse = is2xResponse || is30Response;
     const isBidRequest =
       !isBidResponse &&
@@ -1827,7 +1839,8 @@ function handleSample(req, res) {
 
     // Default: treat as BidResponse and synthesize a minimal 2.x request.
     const firstBid =
-      (sample.seatbid && sample.seatbid[0] && sample.seatbid[0].bid && sample.seatbid[0].bid[0]) || {};
+      (sample.seatbid && sample.seatbid[0] && sample.seatbid[0].bid && sample.seatbid[0].bid[0]) ||
+      {};
     const request = {
       id: 'demo-' + String(sample.id || 'sample').slice(0, 40),
       imp: [
@@ -1913,8 +1926,7 @@ const server = http.createServer((req, res) => {
       return handleAnalyzeBehavior(req, res, parsed);
     if (pathname === '/api/account/insights' && req.method === 'GET')
       return handleAccountInsights(req, res);
-    if (pathname.startsWith('/api/behavior/corpus'))
-      return handleBehaviorCorpus(req, res, parsed);
+    if (pathname.startsWith('/api/behavior/corpus')) return handleBehaviorCorpus(req, res, parsed);
     if (pathname === '/api/intel/suggest-name' && req.method === 'POST')
       return handleIntelSuggestName(req, res);
     if (pathname === '/api/intel/suggest-partner' && req.method === 'POST')

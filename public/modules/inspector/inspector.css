@@ -1335,8 +1335,12 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   background: var(--bg);
 }
 @keyframes kt-live-fadein {
-  from { background: rgba(217, 119, 6, 0.18); }
-  to { background: transparent; }
+  from {
+    background: rgba(217, 119, 6, 0.18);
+  }
+  to {
+    background: transparent;
+  }
 }
 .kt-live-row:hover {
   /* Override fade-in finish state on hover so the highlight wins. */

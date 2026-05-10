@@ -56,9 +56,7 @@
         <button data-action="load-demo" data-type="frozen-thread" role="menuitem">
           🧊 frozen thread
         </button>
-        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">
-          🔥 heavy CPU
-        </button>
+        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">🔥 heavy CPU</button>
         <button data-action="load-demo" data-type="trap-invisible-overlay" role="menuitem">
           🪤 invisible overlay
         </button>
@@ -102,9 +100,30 @@
     >
       docs ↗
     </a>
-    <button data-action="live" class="btn btn-ghost btn-sm" id="liveBtn" title="Open the live RTB stream — watch synthetic samples flow past in realtime">📡 live</button>
-    <button data-action="sim-bids" class="btn btn-ghost btn-sm" id="simBidsBtn" title="Simulate 3 DSP strategies (gemma) — how different bidders would respond to this request">🤖 simulate</button>
-    <button data-action="mirror" class="btn btn-ghost btn-sm" id="mirrorBtn" title="Generate the canonical counterpart of your paste">mirror ↔</button>
+    <button
+      data-action="live"
+      class="btn btn-ghost btn-sm"
+      id="liveBtn"
+      title="Open the live RTB stream — watch synthetic samples flow past in realtime"
+    >
+      📡 live
+    </button>
+    <button
+      data-action="sim-bids"
+      class="btn btn-ghost btn-sm"
+      id="simBidsBtn"
+      title="Simulate 3 DSP strategies (gemma) — how different bidders would respond to this request"
+    >
+      🤖 simulate
+    </button>
+    <button
+      data-action="mirror"
+      class="btn btn-ghost btn-sm"
+      id="mirrorBtn"
+      title="Generate the canonical counterpart of your paste"
+    >
+      mirror ↔
+    </button>
     <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">analyze</button>
     <!-- Language + theme toggles. Buttons live in the header so users can
              see at a glance which locale/theme is active. The IIFEs in <head>
@@ -146,7 +165,12 @@
             white-space: nowrap;
           "
         ></span>
-        <a href="/account" class="btn btn-ghost btn-sm" title="Personal cabinet — profile, library, activity, preferences">account</a>
+        <a
+          href="/account"
+          class="btn btn-ghost btn-sm"
+          title="Personal cabinet — profile, library, activity, preferences"
+          >account</a
+        >
         <button class="btn btn-ghost btn-sm" data-action="signout">sign out</button>
       </span>
     </div>
@@ -186,7 +210,8 @@
           data-action="toggle-card"
           data-target="cardReq"
           class="btn-collapse-toggle"
-          title="Collapse this pane — frees space when you only need the other side. Click again to expand." aria-label="Collapse / expand panel"
+          title="Collapse this pane — frees space when you only need the other side. Click again to expand."
+          aria-label="Collapse / expand panel"
         >
           <span class="caret">▾</span>
         </button>
@@ -226,7 +251,8 @@
           data-action="toggle-card"
           data-target="cardRes"
           class="btn-collapse-toggle"
-          title="Collapse this pane — frees space when you only need the other side. Click again to expand." aria-label="Collapse / expand panel"
+          title="Collapse this pane — frees space when you only need the other side. Click again to expand."
+          aria-label="Collapse / expand panel"
         >
           <span class="caret">▾</span>
         </button>

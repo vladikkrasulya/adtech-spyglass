@@ -107,7 +107,8 @@ test('validateVast: clean InLine emits 0 findings', () => {
 });
 
 test('validateVast: missing version → vast.version_missing ERROR', () => {
-  const adm = '<VAST><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle><MediaFile/></InLine></Ad></VAST>';
+  const adm =
+    '<VAST><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle><MediaFile/></InLine></Ad></VAST>';
   const f = validateVast(adm, 'adm');
   const m = findById(f, 'vast.version_missing');
   assert.ok(m);
@@ -115,7 +116,8 @@ test('validateVast: missing version → vast.version_missing ERROR', () => {
 });
 
 test('validateVast: unknown major version → vast.version_unknown WARN', () => {
-  const adm = '<VAST version="1.0"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle><MediaFile/></InLine></Ad></VAST>';
+  const adm =
+    '<VAST version="1.0"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle><MediaFile/></InLine></Ad></VAST>';
   const f = validateVast(adm, 'adm');
   const m = findById(f, 'vast.version_unknown');
   assert.ok(m);

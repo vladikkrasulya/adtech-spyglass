@@ -12,7 +12,7 @@ User reported the browser tab showing a generic globe icon despite the
 SVG favicon serving 200 OK. Three small fixes layered together:
 
 - **Explicit `width="32" height="32"` on the `<svg>` root.** The file
-  had only `viewBox`, which is enough for *most* renderers but Safari
+  had only `viewBox`, which is enough for _most_ renderers but Safari
   (and a few mobile Chromes) want intrinsic dimensions before they
   rasterize a favicon. Adding the attrs costs nothing and removes one
   failure mode.
@@ -40,7 +40,7 @@ false-positive cases; applied 5 verified fixes.
 
 - account.js declared `escapeHtml` TWICE (lines 21 + 589). Function-
   declaration hoisting meant the SECOND one (DOM-textContent based)
-  shadowed the first (regex-based) — and the DOM version is *less*
+  shadowed the first (regex-based) — and the DOM version is _less_
   safe (it doesn't escape `"`, which matters for HTML-attribute
   context). Latent XSS risk when user data lands in attributes.
 - Removed second declaration; first one (with `&<>"` coverage) wins.
@@ -59,8 +59,8 @@ false-positive cases; applied 5 verified fixes.
     counting unique `behavior.*` keys in `messages/en.json`: 12
     runtime + 4 static creative scan = 16).
   - "5 dialects" → "3 oRTB dialects (iab / kadam / kadam-inpage-push)
-    + 4 JsonFeed handlers (kadam / exoclick / richads / zeropark)"
-    (the "5" was wrong both ways — 3 oRTB or 7 if counting JsonFeed).
+    - 4 JsonFeed handlers (kadam / exoclick / richads / zeropark)"
+      (the "5" was wrong both ways — 3 oRTB or 7 if counting JsonFeed).
   - "402 tests" → "463 tests" (count refreshed 2026-05-10).
 - `docs/ARCHMAP.md` corpus-matrix consumer description: "all 12
   detection patterns" → "all 16 detection patterns (12 runtime +
@@ -97,7 +97,7 @@ so future sessions don't repeat the slang.
 - "5 escapeHtml definitions, all should import from /core/utils.js"
   — verified: `core/utils.js` is an ES module imported by
   `spyglass.app.js`; the others are classic `<script>` IIFEs that
-  *cannot* import. Honest minimal fix dropped 1 dup, kept the rest.
+  _cannot_ import. Honest minimal fix dropped 1 dup, kept the rest.
 - "/api/v1/sample vs /api/v1/stream" — different delivery semantics
   (one-shot static vs continuous SSE), not duplication.
 - "Behavior corpus vs sample corpus" — different purposes (user-
@@ -212,10 +212,10 @@ already uses === undefined correctly). Six verified bugs fixed:
 
 - Regex `/^\s*(<\?xml|<VAST)/i` matched any `<?xml`-prefixed string
   including SVG creatives, which would then incorrectly drop into
-  `validateVast` and emit "version_missing" / "inline_or_wrapper_
+  `validateVast` and emit "version*missing" / "inline_or_wrapper*
   required" findings. Tightened to require an actual `<VAST` tag,
   with optional XML declaration prefix: `/^\s*(?:<\?xml[^?]*\?>\s*)?
-  <VAST\b/i`. SVG and other XML-shaped creatives no longer
+<VAST\b/i`. SVG and other XML-shaped creatives no longer
   misclassified.
 
 **Crosscheck — `Math.max(0, ...arr)` stack overflow on large bid arrays**
@@ -317,7 +317,8 @@ conservative occasionally falls back to `simulation_failed`
 0 console errors.
 
 **Lockstep** MINOR bump 0.33.0 → 0.34.0 + cache-bust ?v=29→30 (i18n)
-+ ?v=16→17 (inspector / app.js).
+
+- ?v=16→17 (inspector / app.js).
 
 ### v0.33.0 — Specimen replay endpoint (Chapter A foundation, 2026-05-10)
 
@@ -332,15 +333,15 @@ endpoint instead of stitching N round-trips to /api/analyze + N to
 **Module — `lib/replay.js`**
 
 - `replay(samples, deps)` — pure DI, takes `validate / crosscheck /
-  analyzeBehavior` as deps. Fully testable without HTTP.
+analyzeBehavior` as deps. Fully testable without HTTP.
 - Per-sample envelope: `{ bidReq?, bidRes?, behaviorEvents?, adm?,
-  label? }`. At least one of req/res/events must be present;
+label? }`. At least one of req/res/events must be present;
   empty samples are skipped with `reason: 'empty_sample'`.
 - Per-sample result: `{ index, label, status, validation,
-  crosscheck, behavior, errorCount, warningCount, infoCount,
-  critCount }`. Status rolled up to worst across all three engines.
+crosscheck, behavior, errorCount, warningCount, infoCount,
+critCount }`. Status rolled up to worst across all three engines.
 - Summary: `{ total, accepted, skipped, statusCounts,
-  totalFindings, topFindings, locale, dialect }`. topK=10 by default
+totalFindings, topFindings, locale, dialect }`. topK=10 by default
   (clamp 1-50). Hard cap of 100 samples per call server-side.
 
 **Endpoint — `POST /api/v1/replay`**
@@ -411,15 +412,15 @@ link to `/uk/account#corpus` lands you straight in the corpus view.
 
 **7 sections**
 
-| # | Section | Cards |
-|---|---|---|
-| 1 | 👤 Профіль | Profile |
-| 2 | 📚 Бібліотека | Library stats · Insights · Recent samples |
-| 3 | 📊 Активність | Heatmap+stats · Privacy footnote |
-| 4 | 🛡 Behavior corpus | Corpus list · Confusion matrix |
-| 5 | ⚙ Налаштування | Theme · Locale · Dialect |
-| 6 | 🔐 Безпека | Encryption & Recovery |
-| 7 | ⚠ Danger zone | Account actions |
+| #   | Section            | Cards                                     |
+| --- | ------------------ | ----------------------------------------- |
+| 1   | 👤 Профіль         | Profile                                   |
+| 2   | 📚 Бібліотека      | Library stats · Insights · Recent samples |
+| 3   | 📊 Активність      | Heatmap+stats · Privacy footnote          |
+| 4   | 🛡 Behavior corpus | Corpus list · Confusion matrix            |
+| 5   | ⚙ Налаштування     | Theme · Locale · Dialect                  |
+| 6   | 🔐 Безпека         | Encryption & Recovery                     |
+| 7   | ⚠ Danger zone      | Account actions                           |
 
 **Layout**
 
@@ -445,7 +446,7 @@ link to `/uk/account#corpus` lands you straight in the corpus view.
 
 - Cards reordered so each section's children are adjacent. Done via
   one-shot Python script that parsed h2 tags and rewrote `<section
-  class="cab-card">` blocks under `<section id="X" class="cab-section">`
+class="cab-card">` blocks under `<section id="X" class="cab-section">`
   wrappers. Same script ran across uk/en/ru with locale-specific h2
   lookups — kept verbose translations honest.
 
@@ -607,7 +608,7 @@ and emit a confusion matrix (precision/recall per id).
 **Schema v7**
 
 - New table `behavior_corpus(id, user_id, label, events_json,
-  source_sample_id, notes, created_at)`. Per-user, FK CASCADE on user
+source_sample_id, notes, created_at)`. Per-user, FK CASCADE on user
   delete. Label CHECK constrains values to {legitimate, fraud,
   ambiguous}. Indexed on user_id, label, created_at DESC.
 - `events_json` capped at 1 MB per row, `notes` at 4 kB. Listing
@@ -658,15 +659,16 @@ and emit a confusion matrix (precision/recall per id).
 - 23 new strings × 3 locales: bar copy + 4 toasts + modal labels +
   cabinet labels + delete confirm.
 - Cabinet inline-style block extended with corpus pills + row grid
-  + counts strip.
+  - counts strip.
 
 **Why this lands now**
 
 Chapter B is the recommended next strategic step per
 `next-chapters-2026-05-09.md`. v0 ships storage + capture UI
-+ listing — the consumer (confusion-matrix runner over the corpus)
-is a separate follow-up. Foundation in place means future sprints
-just need to add the runner + display, no schema/UI groundwork.
+
+- listing — the consumer (confusion-matrix runner over the corpus)
+  is a separate follow-up. Foundation in place means future sprints
+  just need to add the runner + display, no schema/UI groundwork.
 
 Smoke-tested via Playwright (unauth path): cabinet `/uk/account`
 renders `cabCorpus` DOM + `corpusCounts` + `corpusList` slots;
@@ -697,6 +699,7 @@ field missing in my JSON".
 **The body**
 
 Five rows per finding when expanded:
+
 1. **JSON path** — copy-friendly code chip (`imp[0].banner.w` etc.).
 2. **Current value** — extracted from the parsed bidReq/bidRes via
    a path-walker (`getJsonAtPath`), pretty-printed in a fixed-height
@@ -790,10 +793,10 @@ shipped, but with no UI to watch it. Now there is one.
 **Behind the scenes — attribute-safe row payloads**
 
 - First take stuffed JSON-stringified specimens into `data-specimen=
-  "..."`, but `core/utils.escapeHtml` uses text-node serialisation
+"..."`, but `core/utils.escapeHtml` uses text-node serialisation
   which only escapes `&<>` (not `"`), so the first internal quote
   closed the attribute. Refactored to keep specimens in a `Map<id,
-  spec>` keyed by row sequence; row carries `data-row-id="N"` and
+spec>` keyed by row sequence; row carries `data-row-id="N"` and
   the dispatcher resolves the spec from the map. Map is cleared on
   cap-trim and on modal teardown.
 
@@ -816,10 +819,10 @@ Three issues caught on the v0.26.0 walkthrough.
 
 - Mode-toggle radios were rendering with the radio circle far from
   the text (uppercased + dim + tiny font). Root cause: `.modal-row
-  label` rule (defined later in `inspector.css`) won source-order over
+label` rule (defined later in `inspector.css`) won source-order over
   `.kt-mirror-modes label` despite same specificity, applying its
   uppercase + 10px + dim styling to my radio wrappers. `.modal-row
-  input` also added text-field padding to the radio. Fixed by
+input` also added text-field padding to the radio. Fixed by
   prefixing the rule with `.modal-row .kt-mirror-modes label` so
   the chain has higher specificity, and explicit reset on
   `input[type='radio']` (margin/padding/border/bg/width).
@@ -837,7 +840,7 @@ Three issues caught on the v0.26.0 walkthrough.
 **Fix — collapse-button tooltip clarity**
 
 - The `▾` button next to bidReq / bidRes had a terse "Згорнути /
-  розгорнути панель" title that didn't explain *why* you'd want to.
+  розгорнути панель" title that didn't explain _why_ you'd want to.
   Improved to spell out the use case ("звільнити місце, коли
   працюєш тільки з другою стороною") and added `aria-label` for the
   short version. 3 locales.
@@ -902,7 +905,7 @@ surface for "your response vs how it should look".
   Full suite 418 → 423.
 - New i18n keys: 15 modal copy strings (mode_label, mode.minimal,
   mode.best_practice, diff_label, diff_legend, diff_no_changes ×3 locales)
-  + 2 mirror notes ×3 locales + 1 shortcut row ×3 locales.
+  - 2 mirror notes ×3 locales + 1 shortcut row ×3 locales.
 
 Smoke-tested via real browser (Playwright MCP): hotkey M, modal
 opening with both editors filled, mode toggle, best-practice DSA +
@@ -914,7 +917,7 @@ post-analyze, reset on input. 0 console errors.
 
 New public surface that turns the validator inside-out: instead of only
 saying "your paste violates rules X, Y, Z", Spyglass can now generate
-the *canonical counterpart* that satisfies every rule. Paste a
+the _canonical counterpart_ that satisfies every rule. Paste a
 BidRequest → get a minimal-valid BidResponse. Paste a BidResponse →
 get a BidRequest the response would fit. Self-tested against the
 existing `validate()` + `crosscheck()` so the output is guaranteed
@@ -1199,10 +1202,10 @@ env var (already in n8n's vault).
 
 **Deferred QA findings**
 
-| Severity | Journey | Issue | Status |
-|---|---|---|---|
-| CRITICAL | A (post-register demo) | Clicking 🎲 example after register doesn't fill editors + auth widget collapses to anon | DEFERRED — couldn't reproduce in static audit; needs interactive browser tracing. May be Playwright artifact (browser_evaluate dismissed modals); may be real race. Re-test in next session with manual repro. |
-| HIGH | D (locale switching) | Lang switcher href always points to language root (`/uk/`, `/ru/`) — clicking from `/about` lands at `/uk/` instead of `/uk/about` | DEFERRED — lang-switch.js hrefs are static; needs per-page rewriting based on current pathname. ~30 min fix; not blocking. |
+| Severity | Journey                | Issue                                                                                                                              | Status                                                                                                                                                                                                         |
+| -------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CRITICAL | A (post-register demo) | Clicking 🎲 example after register doesn't fill editors + auth widget collapses to anon                                            | DEFERRED — couldn't reproduce in static audit; needs interactive browser tracing. May be Playwright artifact (browser_evaluate dismissed modals); may be real race. Re-test in next session with manual repro. |
+| HIGH     | D (locale switching)   | Lang switcher href always points to language root (`/uk/`, `/ru/`) — clicking from `/about` lands at `/uk/` instead of `/uk/about` | DEFERRED — lang-switch.js hrefs are static; needs per-page rewriting based on current pathname. ~30 min fix; not blocking.                                                                                     |
 
 **Watchdog hot-fix**
 
@@ -1270,23 +1273,23 @@ follow-up bundle (none are actively breaking flows).
 
 **Findings deferred (Tier-2 + Tier-3, will track separately)**
 
-| Severity | Issue | File | Status |
-|---|---|---|---|
-| MEDIUM | client-side unlock has no rate-limit (UX self-DoS) | spyglass.app.js | deferred |
-| MEDIUM | recovery key shown once — no F5 survival | spyglass.app.js | deferred (UX nicety) |
-| MEDIUM | decryption error doesn't distinguish tamper vs wrong-DEK | spyglass.app.js | deferred |
-| MEDIUM | empty `{}` payload version pill says "2.5 (?)" instead of "unknown" | detect.js | deferred |
-| MEDIUM | crosscheck panel empty when only bidRes pasted (no UX message) | spyglass.app.js | deferred |
-| MEDIUM | watchdog false-positive on legitimate CPU-bound creatives | creative-probe.js | deferred (rare; tuning needs corpus) |
-| MEDIUM | history merge non-atomic on partial failure | spyglass.app.js | deferred |
-| MEDIUM | cabinet locale picker stores preference but doesn't re-render page | account.js | deferred (DOM morph integration) |
-| MEDIUM | behavior module load race (probe fires before window.SpyglassBehavior installed) | index.html | deferred (rare; first-render only) |
-| LOW | format pill overflow with many formats | spyglass.app.js | deferred (CSS) |
-| LOW | sim-price ignores currency mismatch | spyglass.app.js | deferred |
-| LOW | history no schema version | spyglass.app.js | deferred (proactive only) |
-| LOW | history no cross-tab sync | spyglass.app.js | deferred |
-| LOW | session not pinned to IP/UA | auth.js | intentional (mobile UX) |
-| LOW | setup-encryption replay-able | server.js | low risk, auth-gated |
+| Severity | Issue                                                                            | File              | Status                               |
+| -------- | -------------------------------------------------------------------------------- | ----------------- | ------------------------------------ |
+| MEDIUM   | client-side unlock has no rate-limit (UX self-DoS)                               | spyglass.app.js   | deferred                             |
+| MEDIUM   | recovery key shown once — no F5 survival                                         | spyglass.app.js   | deferred (UX nicety)                 |
+| MEDIUM   | decryption error doesn't distinguish tamper vs wrong-DEK                         | spyglass.app.js   | deferred                             |
+| MEDIUM   | empty `{}` payload version pill says "2.5 (?)" instead of "unknown"              | detect.js         | deferred                             |
+| MEDIUM   | crosscheck panel empty when only bidRes pasted (no UX message)                   | spyglass.app.js   | deferred                             |
+| MEDIUM   | watchdog false-positive on legitimate CPU-bound creatives                        | creative-probe.js | deferred (rare; tuning needs corpus) |
+| MEDIUM   | history merge non-atomic on partial failure                                      | spyglass.app.js   | deferred                             |
+| MEDIUM   | cabinet locale picker stores preference but doesn't re-render page               | account.js        | deferred (DOM morph integration)     |
+| MEDIUM   | behavior module load race (probe fires before window.SpyglassBehavior installed) | index.html        | deferred (rare; first-render only)   |
+| LOW      | format pill overflow with many formats                                           | spyglass.app.js   | deferred (CSS)                       |
+| LOW      | sim-price ignores currency mismatch                                              | spyglass.app.js   | deferred                             |
+| LOW      | history no schema version                                                        | spyglass.app.js   | deferred (proactive only)            |
+| LOW      | history no cross-tab sync                                                        | spyglass.app.js   | deferred                             |
+| LOW      | session not pinned to IP/UA                                                      | auth.js           | intentional (mobile UX)              |
+| LOW      | setup-encryption replay-able                                                     | server.js         | low risk, auth-gated                 |
 
 **Versions**
 
@@ -1316,7 +1319,7 @@ are documented in CHANGELOG below for follow-up.
   derived `is_encrypted` from `req_iv` presence. The cabinet's Recent
   Samples list and "Encrypted" stat tile both showed wrong values
   (every sample read as plain). Now derived as `(req_iv IS NOT NULL)
-  AS is_encrypted` in the SELECT.
+AS is_encrypted` in the SELECT.
 - **#3 Cabinet "Default dialect" / "Default findings locale"
   preferences were dead code** — `account.js` wrote to
   `kt-default-dialect` and `kt-default-findings-locale` keys that
@@ -1376,15 +1379,15 @@ are documented in CHANGELOG below for follow-up.
 
 - App: `v0.18.0 → v0.19.0` (`package.json` 0.18.0 → 0.19.0)
 - Core engine: `0.14.0 → 0.14.1` (PATCH — `index.js crosscheck()`
-  + `crosscheck.js` accept dialect param; behavior unchanged today,
-  surface evolved for future rules)
+  - `crosscheck.js` accept dialect param; behavior unchanged today,
+    surface evolved for future rules)
 
 ### v0.18.0 — Persistent sessions + sticky locale (2026-05-09)
 
 Two UX papercuts closed at once:
 
 1. **Sessions survive container restarts.** Previously every `compose
-   up --build` wiped the in-memory `sessions` Map and kicked all
+up --build` wiped the in-memory `sessions` Map and kicked all
    logged-in users out — even though their cookie was still valid for
    30 days. Now sessions are persisted to SQLite with write-through
    semantics; the in-memory Map stays as the hot read path and gets
@@ -1425,7 +1428,7 @@ ALTER TABLE users ADD COLUMN preferred_locale TEXT;
   for anon). Writes `users.preferred_locale` and mirrors to cookie.
 - `publicUser()` now exposes `preferred_locale` so client can sync.
 - New helper `setLocaleCookie()` — `Path=/, Max-Age=1y, SameSite=Lax,
-  not HttpOnly` (JS reads it for fast first-paint decisions).
+not HttpOnly` (JS reads it for fast first-paint decisions).
 - New helper `readLocaleCookie()` — reads + validates against the
   `en|uk|ru` allowlist.
 - New table `LOCALE_REDIRECT_TABLE` covering only the canonical
@@ -1573,7 +1576,7 @@ intentional: shape and content under review before going live.
 After the original Tier-1 cut (131 keys in `public/i18n.js`), the audit
 found 21 hardcoded UK strings still inline in `public/spyglass.app.js`:
 
-- 9 toast / error messages (internal_ui_error, uncaught_error, template_inserted_*, partners_load_failed, samples_load_failed, sample_load_failed, error.generic)
+- 9 toast / error messages (internal*ui_error, uncaught_error, template_inserted*\*, partners_load_failed, samples_load_failed, sample_load_failed, error.generic)
 - 5 tooltip strings (peek_no_load, history_delete, partner_edit, delete × 2 sites)
 - 3 fallback strings (history_entry, local_request, partner_id)
 - 3 inline DOM strings (no_imp_slots, no_iab_categories, status.local already existed)
@@ -1602,10 +1605,11 @@ operator review. Sections: Profile (email + verified + member-since +
 encryption + recovery status), Library (counts: samples + partners +
 encrypted + assigned-to-partner), Insights (status distribution + top
 partners + first/last saved date), Recent samples, Preferences (theme
-+ findings locale + dialect — localStorage-only), Encryption &
-recovery, Account actions. Routing in `server.js` intentionally
-COMMENTED OUT — the page won't be reachable via `/account` until
-operator approves the content.
+
+- findings locale + dialect — localStorage-only), Encryption &
+  recovery, Account actions. Routing in `server.js` intentionally
+  COMMENTED OUT — the page won't be reachable via `/account` until
+  operator approves the content.
 
 **Versions**
 
@@ -1624,12 +1628,12 @@ features".
 
 **4 additional VAST rules** (`packages/core/rules-vast.js`) — now 12 total:
 
-| Rule id | Level | Fires when |
-|---|---|---|
-| `vast.ad_pod` | INFO | multiple `<Ad>` in one VAST (sequential ads) — count param |
-| `vast.linear_duration_missing` | ERROR | `<Linear>` without `<Duration>` (VAST §3.7) |
-| `vast.vpaid_deprecated` | WARN | `apiFramework="VPAID"` (deprecated 4.1, removed 4.2) |
-| `vast.impression_tracking_missing` | WARN | `<InLine>` without `<Impression>` beacon |
+| Rule id                            | Level | Fires when                                                 |
+| ---------------------------------- | ----- | ---------------------------------------------------------- |
+| `vast.ad_pod`                      | INFO  | multiple `<Ad>` in one VAST (sequential ads) — count param |
+| `vast.linear_duration_missing`     | ERROR | `<Linear>` without `<Duration>` (VAST §3.7)                |
+| `vast.vpaid_deprecated`            | WARN  | `apiFramework="VPAID"` (deprecated 4.1, removed 4.2)       |
+| `vast.impression_tracking_missing` | WARN  | `<InLine>` without `<Impression>` beacon                   |
 
 **oRTB 3.0 BidResponse routing** (new file `packages/core/rules-response-30.js`)
 
@@ -1791,16 +1795,16 @@ viewability) are deferred until real-world traffic justifies them.
 
 **8 new rules** (`packages/core/rules-vast.js`)
 
-| Rule id | Level | Fires when |
-|---|---|---|
-| `vast.version_missing` | ERROR | `<VAST>` has no `version` attribute |
-| `vast.version_unknown` | WARN | `version` is not 2.x / 3.x / 4.x |
-| `vast.inline_or_wrapper_required` | ERROR | neither `<InLine>` nor `<Wrapper>` present |
-| `vast.adsystem_missing` | ERROR | `<InLine>` without `<AdSystem>` |
-| `vast.adtitle_missing` | ERROR | `<InLine>` without `<AdTitle>` |
-| `vast.mediafile_missing` | ERROR | `<InLine>` without `<MediaFile>` |
-| `vast.wrapper_no_tag_uri` | ERROR | `<Wrapper>` without `<VASTAdTagURI>` |
-| `vast.insecure_url` | WARN | `http://` URL inside MediaFile / VASTAdTagURI / ClickThrough / ClickTracking / Impression. `count` + `sampleUrl` params. |
+| Rule id                           | Level | Fires when                                                                                                               |
+| --------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------ |
+| `vast.version_missing`            | ERROR | `<VAST>` has no `version` attribute                                                                                      |
+| `vast.version_unknown`            | WARN  | `version` is not 2.x / 3.x / 4.x                                                                                         |
+| `vast.inline_or_wrapper_required` | ERROR | neither `<InLine>` nor `<Wrapper>` present                                                                               |
+| `vast.adsystem_missing`           | ERROR | `<InLine>` without `<AdSystem>`                                                                                          |
+| `vast.adtitle_missing`            | ERROR | `<InLine>` without `<AdTitle>`                                                                                           |
+| `vast.mediafile_missing`          | ERROR | `<InLine>` without `<MediaFile>`                                                                                         |
+| `vast.wrapper_no_tag_uri`         | ERROR | `<Wrapper>` without `<VASTAdTagURI>`                                                                                     |
+| `vast.insecure_url`               | WARN  | `http://` URL inside MediaFile / VASTAdTagURI / ClickThrough / ClickTracking / Impression. `count` + `sampleUrl` params. |
 
 **Architecture**
 
@@ -1820,7 +1824,7 @@ viewability) are deferred until real-world traffic justifies them.
 
 **Samples** (in `samples/`)
 
-- `synthetic-vast-clean-inline.json` — VAST 4.2 InLine, all required tags, https URLs (0 vast.* findings)
+- `synthetic-vast-clean-inline.json` — VAST 4.2 InLine, all required tags, https URLs (0 vast.\* findings)
 - `synthetic-vast-broken-inline.json` — version + AdSystem + MediaFile all missing (3 ERRORs)
 - `synthetic-vast-insecure-wrapper.json` — VAST 3.0 Wrapper with 3 http:// trackers (1 WARN, count=3)
 
@@ -1847,7 +1851,7 @@ Roadmap item ② from `docs/validator-roadmap-2026-05-09.md`. Lives outside
 the Spyglass repo; logged here for cross-stack traceability.
 
 - **Mozok RSS Tick** keyword scan now sees `title + first 800 chars of
-  content`, not just `title`. The 800-char cap keeps the O(n×k) scan
+content`, not just `title`. The 800-char cap keeps the O(n×k) scan
   bounded; 800 chars covers the lede of nearly every RSS item.
 - **`items.hot_score`** column dropped from `news` Postgres DB. Was
   `REAL NOT NULL DEFAULT 0`; production count of non-zero rows = 0.
@@ -1876,7 +1880,7 @@ roadmap item ① from `docs/validator-roadmap-2026-05-09.md`.
   rules that already use `count` for domain meaning (e.g.
   `crosscheck.bid.native_complete`).
 - **`disabledRules`** option: `validate(req, { disabledRules: ['imp.*',
-  'regs.coppa_pii_present'] })`. Filters BEFORE dedup/sort. Accepts exact
+'regs.coppa_pii_present'] })`. Filters BEFORE dedup/sort. Accepts exact
   ids or trailing-`*` prefixes. Empty / falsy → no filter.
 
 **Internals**

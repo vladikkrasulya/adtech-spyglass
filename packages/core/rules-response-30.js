@@ -35,9 +35,7 @@ function validateResponse30(payload) {
   if (!isStr(env.ver)) {
     findings.push(F('response.30.ver_required', LEVELS.ERROR, 'openrtb.ver'));
   } else if (!/^3\.\d+$/.test(env.ver)) {
-    findings.push(
-      F('response.30.ver_invalid', LEVELS.ERROR, 'openrtb.ver', { ver: env.ver }),
-    );
+    findings.push(F('response.30.ver_invalid', LEVELS.ERROR, 'openrtb.ver', { ver: env.ver }));
   }
 
   if (!isObj(env.response)) {
@@ -61,13 +59,9 @@ function validateResponse30(payload) {
       F('response.30.seatbid_or_nbr_required', LEVELS.ERROR, 'openrtb.response.seatbid'),
     );
   } else if (hasNbr && (!hasSeatbid || !resp.seatbid.length)) {
-    findings.push(
-      F('response.30.no_bid', LEVELS.INFO, 'openrtb.response.nbr', { nbr: resp.nbr }),
-    );
+    findings.push(F('response.30.no_bid', LEVELS.INFO, 'openrtb.response.nbr', { nbr: resp.nbr }));
   } else if (hasSeatbid && !resp.seatbid.length) {
-    findings.push(
-      F('response.30.seatbid_empty_no_nbr', LEVELS.ERROR, 'openrtb.response.seatbid'),
-    );
+    findings.push(F('response.30.seatbid_empty_no_nbr', LEVELS.ERROR, 'openrtb.response.seatbid'));
   }
 
   // R5. Per-seatbid → per-bid structural checks (id + item ref + price).

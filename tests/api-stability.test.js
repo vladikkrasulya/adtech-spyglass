@@ -16,16 +16,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const {
-  validate,
-  LEVELS,
-} = require('@kyivtech/spyglass-core');
+const { validate, LEVELS } = require('@kyivtech/spyglass-core');
 
-const {
-  sortFindings,
-  dedupFindings,
-  applyDisabledRules,
-} = require('../packages/core/findings');
+const { sortFindings, dedupFindings, applyDisabledRules } = require('../packages/core/findings');
 
 // ─────────────────────────────────────────────────────────────────
 // sortFindings

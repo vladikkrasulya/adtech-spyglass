@@ -62,20 +62,17 @@ module.exports = { ..., sortFindings, dedupFindings };
 ```js
 function validate(payload, opts) {
   // ... existing detection + dispatch ...
-  let findings = (type === 'request')
-    ? validateRequest(payload, ctx)
-    : validateResponse(payload, ctx);
+  let findings =
+    type === 'request' ? validateRequest(payload, ctx) : validateResponse(payload, ctx);
 
   // NEW: filter by disabledRules. Accepts exact ids or '*' suffix prefix
   // patterns: ['imp.*'] disables every imp.* rule.
   if (Array.isArray(opts?.disabledRules) && opts.disabledRules.length) {
-    const exact = new Set(opts.disabledRules.filter(r => !r.endsWith('*')));
-    const prefixes = opts.disabledRules
-      .filter(r => r.endsWith('*'))
-      .map(r => r.slice(0, -1));
-    findings = findings.filter(f => {
+    const exact = new Set(opts.disabledRules.filter((r) => !r.endsWith('*')));
+    const prefixes = opts.disabledRules.filter((r) => r.endsWith('*')).map((r) => r.slice(0, -1));
+    findings = findings.filter((f) => {
       if (exact.has(f.id)) return false;
-      if (prefixes.some(p => f.id.startsWith(p))) return false;
+      if (prefixes.some((p) => f.id.startsWith(p))) return false;
       return true;
     });
   }
@@ -97,13 +94,14 @@ function validate(payload, opts) {
 (якщо тестового файлу нема — створити):
 
 1. `validate(req, { disabledRules: ['imp.bidfloorcur_missing'] })` — ніколи не повертає це id
-2. `validate(req, { disabledRules: ['regs.*'] })` — нічого з regs.*
+2. `validate(req, { disabledRules: ['regs.*'] })` — нічого з regs.\*
 3. Findings масив `[error, warning, error]` після sort = `[error, error, warning]`
 4. Findings з трьома `{id:'x', path:'p'}` колапсяться в один з `count: 3`
 
 ### Документація
 
 Оновити `packages/core/README.md`:
+
 - Додати секцію "API stability contract"
 - Описати порядок (severity DESC → path ASC → id ASC)
 - Описати dedup (`count` param появляється)
@@ -136,6 +134,7 @@ function validate(payload, opts) {
 Місцезнаходження: n8n DB, `workflow_entity` row для `mozokrsstick00`.
 
 Зміна (один рядок):
+
 ```diff
 - if (classifyHot(title)) item.hot = true;
 + const haystack = title + ' ' + (item.summary || item.content || '').slice(0, 800);
@@ -161,6 +160,7 @@ ALTER TABLE items DROP COLUMN hot_score;
 ```
 
 Перевірити перед drop:
+
 ```bash
 docker exec postgres psql -U postgres -d news -c \
   "SELECT count(*) FROM items WHERE hot_score != 0;"
@@ -168,10 +168,12 @@ docker exec postgres psql -U postgres -d news -c \
 ```
 
 Update CH replication script (`/srv/DATA/Stacks/clickhouse/scripts/replicate-news.sh`):
+
 - `hot_score` НЕ йде в SELECT (він і не йшов раніше — там `hot_score_llm`)
 - Підтвердити що `analytics.news_events` теж не має цієї колонки (немає)
 
 Update будь-які SQL queries в:
+
 - `Mozok News Daily Digest` workflow
 - Portal `services/news.js`, `services/digest.js`, `services/goodNews.js`
 - Spyglass admin stats? (ні, це інша БД)
@@ -179,7 +181,9 @@ Update будь-які SQL queries в:
 Пошуковий рядок: `grep -rn 'hot_score[^_]' /srv/DATA/Stacks/`
 
 ### Тести
+
 Після drop:
+
 ```bash
 docker exec postgres psql -U postgres -d news -c "\d items" | grep hot_score
 # Має бути порожньо
@@ -189,6 +193,7 @@ docker exec postgres psql -U postgres -d news -c "\d items" | grep hot_score
 (він не використовував `hot_score`, але всяке буває).
 
 ### SemVer
+
 Це **PATCH** для портала (1.x.y → 1.x.y+1). Spyglass не зачіпається.
 
 ---
@@ -201,6 +206,7 @@ docker exec postgres psql -U postgres -d news -c "\d items" | grep hot_score
 SSP має VAST-validator; це базовий feature який зараз відсутній.
 
 ### Що це таке
+
 VAST (Video Ad Serving Template) — XML-стандарт IAB для відео-реклами.
 Поточна версія: VAST 4.2 (2023). Production трафік: ~70% VAST 4.x,
 ~30% 3.x, decreasing 2.x.
@@ -315,7 +321,9 @@ function validateVast(adm, path) {
     while ((m = re.exec(adm)) !== null) {
       const url = (m[1] || '').trim();
       if (/^http:\/\//i.test(url)) {
-        findings.push(F('vast.insecure_url', LEVELS.WARNING, path, { tag, url: url.slice(0, 100) }));
+        findings.push(
+          F('vast.insecure_url', LEVELS.WARNING, path, { tag, url: url.slice(0, 100) }),
+        );
       }
     }
   }
@@ -348,10 +356,12 @@ const { validateVast, isVastShape } = require('./rules-vast');
 
 // In the per-bid loop, after the static scan:
 if (isStr(b.adm) && isVastShape(b.adm)) {
-  findings.push(...validateVast(b.adm, `${bp}.adm`).map(f => ({
-    ...f,
-    params: { sNum, bNum, ...f.params },
-  })));
+  findings.push(
+    ...validateVast(b.adm, `${bp}.adm`).map((f) => ({
+      ...f,
+      params: { sNum, bNum, ...f.params },
+    })),
+  );
 }
 ```
 
@@ -380,6 +390,7 @@ vast.linear_duration_missing
 ### Тести
 
 Створити 5-7 synthetic VAST samples в `samples/`:
+
 - `synthetic-vast-clean.xml` — нормальний 4.2 InLine з MediaFile, ClickThrough, Impression
 - `synthetic-vast-no-version.xml` — без `version=` атрибута
 - `synthetic-vast-wrapper.xml` — Wrapper з VASTAdTagURI
@@ -407,6 +418,7 @@ vast.linear_duration_missing
 ```
 
 ### SemVer
+
 **MINOR bump** (нова велика capability): core 0.11.0 → 0.12.0, app 1.10.0 → 1.11.0.
 
 ### Відкрите питання
@@ -419,9 +431,10 @@ vast.linear_duration_missing
   (та сама XML-структура, тільки інший top-level tag).
 
 ### Часовий бюджет
+
 - Day 1 (5h): rules-vast.js + 13 message keys × 3 локалі + spec-refs
 - Day 2 (4h): 5-7 synthetic VAST samples + UI dropdown items + tests
-- + SemVer + CHANGELOG
+- - SemVer + CHANGELOG
 
 ---
 
@@ -433,16 +446,17 @@ vast.linear_duration_missing
 shape check + INFO finding "глибока 3.0 валідація обмежена".
 
 ### Що це таке
+
 oRTB 3.0 (2018) — переробка протоколу від 2.x. Ключові зміни:
 
-| 2.x | 3.0 |
-|---|---|
+| 2.x                              | 3.0                                      |
+| -------------------------------- | ---------------------------------------- |
 | `{id, imp[], site, device, ...}` | `{openrtb: {ver:"3.0", request: {...}}}` |
-| `imp` (impression) | `item` |
-| `site/app` flat | `context: {site/app/...}` |
-| `regs` flat | `context.regs` |
-| `device` flat | `context.device` |
-| Banner/Video/Native inline | AdCOM placement spec separate |
+| `imp` (impression)               | `item`                                   |
+| `site/app` flat                  | `context: {site/app/...}`                |
+| `regs` flat                      | `context.regs`                           |
+| `device` flat                    | `context.device`                         |
+| Banner/Video/Native inline       | AdCOM placement spec separate            |
 
 Сьогодні Spyglass `index.js` route'ить 3.0 через звичайний
 `validateRequest` — який припускає 2.x shape — і нічого корисного не
@@ -578,6 +592,7 @@ response.30.deep_validation_limited
 ### Тести
 
 Створити 2-3 synthetic 3.0 samples:
+
 - `synthetic-30-clean-request.json` — валідна 3.0 структура
 - `synthetic-30-broken-envelope.json` — без `openrtb.ver`
 - `synthetic-30-empty-items.json` — `item: []`
@@ -585,6 +600,7 @@ response.30.deep_validation_limited
 ### UI dropdown
 
 Додати в example menu:
+
 ```html
 <span class="menu-label">oRTB 3.0</span>
 <button data-action="load-demo" data-type="30-clean-request">🆕 3.0 clean</button>
@@ -592,33 +608,36 @@ response.30.deep_validation_limited
 ```
 
 ### SemVer
+
 **MINOR bump** (нова версія підтримана): core 0.12.0 → 0.13.0, app 1.11.0 → 1.12.0.
 
 ### Відкрите питання
 
-- Глибока AdCOM 1.0 валідація (item.spec.placement, etc.) — ВІДКЛАСТИ. 
+- Глибока AdCOM 1.0 валідація (item.spec.placement, etc.) — ВІДКЛАСТИ.
   Сьогодні: detect + envelope + INFO note. Якщо хтось дасть реальний
   3.0 traffic для аналізу — тоді deep dive.
 
 ### Часовий бюджет
+
 1 день (8h): rules-request-30.js + rules-response-30.js + detection + 14 message keys × 3 локалі + 3 synthetic samples + UI hooks + tests + CHANGELOG.
 
 ---
 
 ## Загальна послідовність + бюджет
 
-| # | Що | Час | SemVer impact |
-|---|---|---|---|
-| 1 | API stability | 3-4 год | core 0.10→0.11 / app 1.9→1.10 |
-| 2 | Tier 1 hot + drop hot_score | 2 год | portal patch |
-| 3 | VAST validation | 1-2 дні | core 0.11→0.12 / app 1.10→1.11 |
-| 4 | oRTB 3.0 routing | 1 день | core 0.12→0.13 / app 1.11→1.12 |
+| #   | Що                          | Час     | SemVer impact                  |
+| --- | --------------------------- | ------- | ------------------------------ |
+| 1   | API stability               | 3-4 год | core 0.10→0.11 / app 1.9→1.10  |
+| 2   | Tier 1 hot + drop hot_score | 2 год   | portal patch                   |
+| 3   | VAST validation             | 1-2 дні | core 0.11→0.12 / app 1.10→1.11 |
+| 4   | oRTB 3.0 routing            | 1 день  | core 0.12→0.13 / app 1.11→1.12 |
 
 **Загалом: ~3-4 робочих дні** на повне закриття валідаторного боргу.
 
 Можна робити в один захід або розбити по сесіях. Рекомендую:
+
 - **Сесія A (3-4 год)**: №1 + №2 одним релізом 1.10.x
-- **Сесія B (1-2 дні)**: №3 окремим релізом 1.11.0  
+- **Сесія B (1-2 дні)**: №3 окремим релізом 1.11.0
 - **Сесія C (1 день)**: №4 окремим релізом 1.12.0
 
 Кожна сесія самодостатня, з тестами і CHANGELOG entry.

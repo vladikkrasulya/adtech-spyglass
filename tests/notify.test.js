@@ -112,7 +112,10 @@ test('prod-mode posts to api.telegram.org with token in path', async () => {
           parsed.text.includes('<b>tag&lt;bad&gt;</b>'),
           'tag is escaped to prevent breaking the structural HTML',
         );
-        assert.ok(parsed.text.includes('<code>world</code>'), 'message HTML passes through verbatim');
+        assert.ok(
+          parsed.text.includes('<code>world</code>'),
+          'message HTML passes through verbatim',
+        );
       },
     );
   } finally {

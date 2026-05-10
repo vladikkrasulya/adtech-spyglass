@@ -434,93 +434,92 @@
 
           <h2 id="whats-new">Что нового · 2026-05-10</h2>
           <p>
-            За один день выкатили 11 версий (v0.25 → v0.35). Краткий обзор новых
-            поверхностей — детали в соответствующих разделах ниже или в CHANGELOG.md.
+            За один день выкатили 11 версий (v0.25 → v0.35). Краткий обзор новых поверхностей —
+            детали в соответствующих разделах ниже или в CHANGELOG.md.
           </p>
 
           <h3>🪞 Зеркало (Mirror) — эталонная пара одним кликом</h3>
           <p>
             Жми <strong>зеркало ↔</strong> в шапке (или hotkey <code>M</code>) — Spyglass
             сгенерирует канонический counterpart твоего payload-а. Если вставил BidRequest —
-            получишь минимально-валидный BidResponse. Если BidResponse — сгенерирует запрос,
-            в котором этот ответ прошёл бы. Output self-tested через существующие validate()
-            + crosscheck(), поэтому всегда clean. Два режима: <em>minimal</em> (только
-            обязательные поля) и <em>best-practice</em> (с recommended: schain, dchain, DSA,
-            GDPR consent, device.sua).
+            получишь минимально-валидный BidResponse. Если BidResponse — сгенерирует запрос, в
+            котором этот ответ прошёл бы. Output self-tested через существующие validate() +
+            crosscheck(), поэтому всегда clean. Два режима: <em>minimal</em> (только обязательные
+            поля) и <em>best-practice</em> (с recommended: schain, dchain, DSA, GDPR consent,
+            device.sua).
           </p>
           <p>
             Если у тебя заполнены оба поля — модалка зеркала также показывает
-            <strong>diff</strong>: твоя версия vs каноническая, с цветовой маркировкой
-            (≠ различие, + в канонической есть, − у тебя есть лишнее). 🔗 share-кнопка
-            генерирует permalink с парой — полезно для звонков с SSP.
+            <strong>diff</strong>: твоя версия vs каноническая, с цветовой маркировкой (≠ различие,
+            + в канонической есть, − у тебя есть лишнее). 🔗 share-кнопка генерирует permalink с
+            парой — полезно для звонков с SSP.
           </p>
 
           <h3>📡 Live RTB stream</h3>
           <p>
             Кнопка <strong>📡 live</strong> открывает модалку со стримом синтетических RTB-образцов
             в реальном времени. Каждая строка: timestamp, тип (REQ/RES), источник (имя файла),
-            опционально размер баннера. Пауза/продолжить — кнопкой. Клик на строке загружает
-            образец в соответствующее поле и закрывает модалку. Foundation для будущей Stream
-            platform.
+            опционально размер баннера. Пауза/продолжить — кнопкой. Клик на строке загружает образец
+            в соответствующее поле и закрывает модалку. Foundation для будущей Stream platform.
           </p>
 
           <h3>👁 Детали находок (Finding details)</h3>
           <p>
             Каждая находка валидатора теперь имеет ▾ разворачивалку. Клик открывает панель с:
             JSON-путём, <em>твоим текущим значением</em> в этом пути (вытаскиваем из вставленного),
-            серьёзностью с человеческой расшифровкой ("error → биржи отклонят"; "warning →
-            fill-rate упадёт"; "info → best-practice"), ссылкой на спецификацию и canonical ID
-            правила.
+            серьёзностью с человеческой расшифровкой ("error → биржи отклонят"; "warning → fill-rate
+            упадёт"; "info → best-practice"), ссылкой на спецификацию и canonical ID правила.
           </p>
 
           <h3>🛡 Behavior corpus + Confusion matrix</h3>
           <p>
-            На вкладке behavior появляется <strong>💾 save as corpus</strong> когда есть
-            события probe-а и ты залогинен. Сохраняешь event-stream с меткой
-            (<em>legitimate / fraud / ambiguous</em>) — в кабинете есть секция со всеми твоими
-            entries. Foundation для Chapter B (поведенческая калибровка).
+            На вкладке behavior появляется <strong>💾 save as corpus</strong> когда есть события
+            probe-а и ты залогинен. Сохраняешь event-stream с меткой (<em
+              >legitimate / fraud / ambiguous</em
+            >) — в кабинете есть секция со всеми твоими entries. Foundation для Chapter B
+            (поведенческая калибровка).
           </p>
           <p>
-            На основе corpus-а автоматически считается <strong>confusion matrix</strong>:
-            precision, recall, F1 каждого из 12 детекторов на ТВОЁМ корпусе. Видно сразу какие
-            паттерны имеют низкую точность (красная строка) и нуждаются в tuning, какие
-            стабильно ловят фрод (зелёный ≥90%).
+            На основе corpus-а автоматически считается <strong>confusion matrix</strong>: precision,
+            recall, F1 каждого из 12 детекторов на ТВОЁМ корпусе. Видно сразу какие паттерны имеют
+            низкую точность (красная строка) и нуждаются в tuning, какие стабильно ловят фрод
+            (зелёный ≥90%).
           </p>
 
           <h3>🤖 Bid simulator (gemma 3-strategy)</h3>
           <p>
             Кнопка <strong>🤖 simulate</strong> в шапке. Локальная gemma3:4b симулирует как 3 типа
             DSP ответили бы на твой запрос: <em>aggressive (max scale, +30-50% над floor)</em>,
-            <em>conservative (ROAS guard, +5-15%)</em>, <em>quality (premium only, +50-80%
-            или skip)</em>. Privacy: gemma видит только 8 metadata-полей (формат, размер, гео,
-            currency, floor, surface, device-type, auction-type) — bid VALUES в LLM не
-            попадают.
+            <em>conservative (ROAS guard, +5-15%)</em>,
+            <em>quality (premium only, +50-80% или skip)</em>. Privacy: gemma видит только 8
+            metadata-полей (формат, размер, гео, currency, floor, surface, device-type,
+            auction-type) — bid VALUES в LLM не попадают.
           </p>
 
           <h3>📦 Specimen replay endpoint</h3>
           <p>
             <code>POST /api/v1/replay</code> принимает массив samples, прогоняет валидатор +
             crosscheck + behavior на каждом, возвращает per-sample результаты + агрегат
-            (<code>statusCounts</code>, <code>topFindings</code>, <code>totalFindings</code>).
-            Один вызов вместо N round-trips. Cap 100 samples на запрос. Foundation для
-            CI fixture-grading, archive replay, partner audit pipelines.
+            (<code>statusCounts</code>, <code>topFindings</code>, <code>totalFindings</code>). Один
+            вызов вместо N round-trips. Cap 100 samples на запрос. Foundation для CI
+            fixture-grading, archive replay, partner audit pipelines.
           </p>
 
           <h3>👤 Кабинет — новая структура с 7 разделами</h3>
           <p>
-            Cabinet (<code>/ru/account</code>) переосмыслен: боковая навигация (sticky sidebar)
-            с 7 разделами — Профиль · Библиотека · Активность · Behavior corpus · Настройки ·
-            Безопасность · Danger zone. Scroll-spy подсвечивает активную секцию при скролле.
-            URL hash обновляется для глубоких ссылок: <code>/ru/account#corpus</code> открывает
-            сразу корпус. Mobile (≤880px) — sidebar коллапсирует в горизонтальные tab-чипы.
+            Cabinet (<code>/ru/account</code>) переосмыслен: боковая навигация (sticky sidebar) с 7
+            разделами — Профиль · Библиотека · Активность · Behavior corpus · Настройки ·
+            Безопасность · Danger zone. Scroll-spy подсвечивает активную секцию при скролле. URL
+            hash обновляется для глубоких ссылок: <code>/ru/account#corpus</code> открывает сразу
+            корпус. Mobile (≤880px) — sidebar коллапсирует в горизонтальные tab-чипы.
           </p>
 
           <h3>Локализация: EN и RU теперь полноценные</h3>
           <p>
             Английская и русская про-страницы выкачены в v0.32 (раньше были stub-ы). Переключатель
-            языков в шапке работает как на главной (полная навигация вместо in-place морфа), так
-            и на /about и /account. Cookie <code>kt-lang</code> синхронизируется с выбранной
-            локалью перед fetch-ом, чтобы сервер не редиректил назад.
+            языков в шапке работает как на главной (полная навигация вместо in-place морфа), так и
+            на /about и /account. Cookie <code>kt-lang</code> синхронизируется с выбранной локалью
+            перед fetch-ом, чтобы сервер не редиректил назад.
           </p>
 
           <hr />

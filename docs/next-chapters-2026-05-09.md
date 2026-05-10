@@ -15,6 +15,7 @@ The canonical brief is in `MEMORY.md`. The architecture map is in
 ## Where we are
 
 **Mature surface**:
+
 - Validator: oRTB 2.5/2.6 schema + 3.0 envelope (req + resp), 3 oRTB dialects (iab / kadam / kadam-inpage-push) + 4 JsonFeed handlers (kadam / exoclick / richads / zeropark)
 - VAST: 12 rules (8 envelope + 4 quality)
 - Behavior: 16 detection patterns across misclick / bot-patterns /
@@ -24,6 +25,7 @@ The canonical brief is in `MEMORY.md`. The architecture map is in
 - LLM bridge (Spyglass Intel) using gemma3:4b on Ollama
 
 **Where it's still 0.x**:
+
 - AdCOM 1.0 deep validation (3.0 placement specs, bid.media)
 - i18n debt — ~30 hardcoded UK strings in `spyglass.app.js`
 - Real-world precision/recall on behavior — only synthetic corpus
@@ -42,6 +44,7 @@ are in place (samples lib, /api/v1/sample, format detection, behavior
 analyzer is browser+Node compat).
 
 **Concrete pieces**:
+
 1. **Specimen replay endpoint** — `POST /api/v1/replay { samples: [...] }`
    that runs validator + crosscheck + behavior over an array, returns a
    summary. Already a 70%-built path; needs API + tests + UI.
@@ -68,6 +71,7 @@ Behavior epic CLOSED on 2026-05-06 with synthetic samples. Memory
 flagged that real-world precision/recall isn't characterized.
 
 **Concrete pieces**:
+
 1. **Capture pipeline**: button on the inspector "Save current event
    stream as labelled corpus entry". Tagged by user (legitimate /
    fraud / ambiguous). Stored in samples DB.

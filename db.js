@@ -240,7 +240,7 @@ const partnerCols = 'id, user_id, name, slug, notes, created_at';
 // list-views (cabinet recent-samples, library list) render an "encrypted/plain"
 // pill without exposing the raw IV bytes. Older v3 samples have NULL iv → 0.
 const sampleCols =
-  "id, user_id, partner_id, title, status, notes, created_at, " +
+  'id, user_id, partner_id, title, status, notes, created_at, ' +
   'length(bid_req) AS req_len, length(bid_res) AS res_len, ' +
   '(req_iv IS NOT NULL) AS is_encrypted';
 
@@ -416,7 +416,7 @@ const Partners = {
     // client can show a precise toast.
     const trimmedName = String(name || '').trim();
     if (!trimmedName) {
-      const err = new Error('Partner name is required');
+      const err = /** @type {Error & { code: string }} */ (new Error('Partner name is required'));
       err.code = 'partner_name_required';
       throw err;
     }
@@ -512,7 +512,9 @@ const Samples = {
     if (partner_id != null) {
       const owns = Partners.get({ id: partner_id, userId });
       if (!owns) {
-        const err = new Error('Partner does not belong to this user (was it deleted?)');
+        const err = /** @type {Error & { code: string }} */ (
+          new Error('Partner does not belong to this user (was it deleted?)')
+        );
         err.code = 'partner_not_found';
         throw err;
       }
@@ -552,7 +554,9 @@ const Samples = {
     if (partner_id !== undefined && partner_id != null) {
       const owns = Partners.get({ id: partner_id, userId });
       if (!owns) {
-        const err = new Error('Partner does not belong to this user (was it deleted?)');
+        const err = /** @type {Error & { code: string }} */ (
+          new Error('Partner does not belong to this user (was it deleted?)')
+        );
         err.code = 'partner_not_found';
         throw err;
       }
@@ -653,9 +657,7 @@ const AnalyzeLog = {
       .get(userId, since30).n;
 
     const byStatus = db
-      .prepare(
-        'SELECT status, COUNT(*) AS n FROM analyze_log WHERE user_id = ? GROUP BY status',
-      )
+      .prepare('SELECT status, COUNT(*) AS n FROM analyze_log WHERE user_id = ? GROUP BY status')
       .all(userId)
       .reduce((acc, r) => ((acc[r.status] = r.n), acc), {});
 
@@ -695,9 +697,7 @@ const AnalyzeLog = {
       .map(([date, n]) => ({ date, n }));
 
     const range = db
-      .prepare(
-        'SELECT MIN(ts) AS first, MAX(ts) AS last FROM analyze_log WHERE user_id = ?',
-      )
+      .prepare('SELECT MIN(ts) AS first, MAX(ts) AS last FROM analyze_log WHERE user_id = ?')
       .get(userId);
 
     // Total error/warning counts across all analyzes (sum, not row-count).

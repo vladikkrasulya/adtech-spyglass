@@ -79,7 +79,9 @@ function validateRequest(req, ctx) {
   const usp = req.regs && req.regs.ext && req.regs.ext.us_privacy;
   if (usp != null) {
     if (!isStr(usp) || !/^[1-9][-YN][-YN][-YN]$/i.test(usp)) {
-      findings.push(F('regs.us_privacy_invalid', LEVELS.WARNING, 'regs.ext.us_privacy', { usp: String(usp) }));
+      findings.push(
+        F('regs.us_privacy_invalid', LEVELS.WARNING, 'regs.ext.us_privacy', { usp: String(usp) }),
+      );
     }
   }
 
@@ -89,7 +91,8 @@ function validateRequest(req, ctx) {
   if (req.regs && req.regs.coppa === 1) {
     const userObj = req.user || {};
     const hasUid = isStr(userObj.id) || isStr(userObj.buyeruid);
-    const hasGeo = req.device && req.device.geo && (req.device.geo.lat != null || req.device.geo.lon != null);
+    const hasGeo =
+      req.device && req.device.geo && (req.device.geo.lat != null || req.device.geo.lon != null);
     if (hasUid || hasGeo) {
       findings.push(
         F('regs.coppa_pii_present', LEVELS.WARNING, 'regs.coppa', {

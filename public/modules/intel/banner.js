@@ -150,9 +150,10 @@
     // an inline `if uk / if ru / else en` block; consolidated for parity
     // with builder.js. Hard-coded English fallback when window.t hasn't
     // loaded yet.
-    const t = typeof window !== 'undefined' && typeof window.t === 'function'
-      ? window.t
-      : (k, p) => `${(p && p.n) || ''} new field patterns detected`;
+    const t =
+      typeof window !== 'undefined' && typeof window.t === 'function'
+        ? window.t
+        : (k, p) => `${(p && p.n) || ''} new field patterns detected`;
     return t('banner.new_patterns', { n: summary.total });
   }
 

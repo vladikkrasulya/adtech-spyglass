@@ -296,9 +296,7 @@
   // surfaces) so the builder still renders something readable instead of
   // raw `[builder.title]` placeholders.
   function localised() {
-    const t = typeof window !== 'undefined' && typeof window.t === 'function'
-      ? window.t
-      : (k) => k;
+    const t = typeof window !== 'undefined' && typeof window.t === 'function' ? window.t : (k) => k;
     return {
       title: t('builder.title'),
       nameLabel: t('builder.name_label'),

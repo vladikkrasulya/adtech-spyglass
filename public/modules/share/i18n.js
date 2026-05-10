@@ -45,7 +45,7 @@
       },
       'toast.share_unsupported': {
         uk: 'Браузер не підтримує стиснення для share-посилань — використай "завантажити".',
-        en: "Browser doesn't support share-link compression — use \"download\".",
+        en: 'Browser doesn\'t support share-link compression — use "download".',
         ru: 'Браузер не поддерживает сжатие для share-ссылок — используй "скачать".',
       },
       'toast.share_link_manual_copy': {

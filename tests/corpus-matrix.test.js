@@ -76,7 +76,7 @@ test('matrix: 50% precision, 100% recall', () => {
   assert.equal(p.tn, 0);
   assert.equal(p.precision, 0.5);
   assert.equal(p.recall, 1);
-  assert.equal(p.f1, 2 * (0.5 * 1) / (0.5 + 1)); // 0.6666…
+  assert.equal(p.f1, (2 * (0.5 * 1)) / (0.5 + 1)); // 0.6666…
 });
 
 test('matrix: missed fraud → recall 0', () => {
@@ -138,8 +138,8 @@ test('matrix: dedup within one entry — same pattern fired N times counts as 1'
 test('matrix: sort order — by F1 desc, ties by TP desc, then id asc', () => {
   const deps = makeFixture([
     { id: 1, label: 'fraud', fires: ['p.a', 'p.b', 'p.c'] }, // TP all 3
-    { id: 2, label: 'fraud', fires: ['p.a', 'p.b'] },        // p.a + p.b TP again
-    { id: 3, label: 'legitimate', fires: ['p.c'] },          // p.c gets FP
+    { id: 2, label: 'fraud', fires: ['p.a', 'p.b'] }, // p.a + p.b TP again
+    { id: 3, label: 'legitimate', fires: ['p.c'] }, // p.c gets FP
   ]);
   const m = computeCorpusMatrix(deps, 1);
   // p.a: tp=2, fp=0, fn=0 → P=1, R=1, F=1
@@ -154,9 +154,7 @@ test('matrix: sort order — by F1 desc, ties by TP desc, then id asc', () => {
 });
 
 test('matrix: zero fraud entries → all recall null, no division-by-zero', () => {
-  const deps = makeFixture([
-    { id: 1, label: 'legitimate', fires: ['p.weird'] },
-  ]);
+  const deps = makeFixture([{ id: 1, label: 'legitimate', fires: ['p.weird'] }]);
   const m = computeCorpusMatrix(deps, 1);
   const p = m.patterns[0];
   assert.equal(p.precision, 0); // tp=0, fp=1 → 0/1

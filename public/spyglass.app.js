@@ -1035,11 +1035,16 @@ export async function mountInspector(root, ctx) {
     if (existing) existing.remove();
     const eventCount = events.length;
     const bar =
-      '<div class="kt-corpus-bar" data-event-count="' + eventCount + '">' +
+      '<div class="kt-corpus-bar" data-event-count="' +
+      eventCount +
+      '">' +
       '<span class="kt-corpus-bar-label">' +
-      escapeHtml(t('corpus.bar.label', { count: eventCount })) + '</span>' +
+      escapeHtml(t('corpus.bar.label', { count: eventCount })) +
+      '</span>' +
       '<button class="btn btn-ghost btn-sm" data-action="open-corpus-save">' +
-      '💾 ' + escapeHtml(t('corpus.bar.save_btn')) + '</button>' +
+      '💾 ' +
+      escapeHtml(t('corpus.bar.save_btn')) +
+      '</button>' +
       '</div>';
     tab.insertAdjacentHTML('afterbegin', bar);
   }
@@ -1065,27 +1070,39 @@ export async function mountInspector(root, ctx) {
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card">' +
-      '<div class="modal-title">' + escapeHtml(t('modal.corpus_save.title')) + '</div>' +
+      '<div class="modal-title">' +
+      escapeHtml(t('modal.corpus_save.title')) +
+      '</div>' +
       '<div class="modal-row"><div class="kt-corpus-summary">' +
       escapeHtml(t('modal.corpus_save.summary', { count: usable.length })) +
       '</div></div>' +
-      '<div class="modal-row"><label>' + escapeHtml(t('modal.corpus_save.label')) + '</label>' +
+      '<div class="modal-row"><label>' +
+      escapeHtml(t('modal.corpus_save.label')) +
+      '</label>' +
       '<div class="kt-corpus-labels">' +
       '<label><input type="radio" name="corpusLabel" value="legitimate"> ' +
-      escapeHtml(t('modal.corpus_save.label.legitimate')) + '</label>' +
+      escapeHtml(t('modal.corpus_save.label.legitimate')) +
+      '</label>' +
       '<label><input type="radio" name="corpusLabel" value="fraud" checked> ' +
-      escapeHtml(t('modal.corpus_save.label.fraud')) + '</label>' +
+      escapeHtml(t('modal.corpus_save.label.fraud')) +
+      '</label>' +
       '<label><input type="radio" name="corpusLabel" value="ambiguous"> ' +
-      escapeHtml(t('modal.corpus_save.label.ambiguous')) + '</label>' +
+      escapeHtml(t('modal.corpus_save.label.ambiguous')) +
+      '</label>' +
       '</div></div>' +
-      '<div class="modal-row"><label>' + escapeHtml(t('modal.corpus_save.notes')) + '</label>' +
+      '<div class="modal-row"><label>' +
+      escapeHtml(t('modal.corpus_save.notes')) +
+      '</label>' +
       '<textarea id="corpusNotes" rows="3" placeholder="' +
-      escapeHtml(t('modal.corpus_save.notes_placeholder')) + '"></textarea></div>' +
+      escapeHtml(t('modal.corpus_save.notes_placeholder')) +
+      '"></textarea></div>' +
       '<div class="modal-actions">' +
       '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.cancel') + '</button>' +
+      t('btn.cancel') +
+      '</button>' +
       '<button class="btn btn-primary btn-sm" data-action="confirm-corpus-save">' +
-      escapeHtml(t('btn.save')) + '</button>' +
+      escapeHtml(t('btn.save')) +
+      '</button>' +
       '</div></div></div>';
   };
 
@@ -1291,10 +1308,14 @@ export async function mountInspector(root, ctx) {
           '<div class="history-actions">' +
           '<button class="history-act-btn" data-action="history-peek" data-idx="' +
           i +
-          '" title="' + escapeHtml(t('tooltip.peek_no_load')) + '">👁</button>' +
+          '" title="' +
+          escapeHtml(t('tooltip.peek_no_load')) +
+          '">👁</button>' +
           '<button class="history-act-btn danger" data-action="history-delete" data-idx="' +
           i +
-          '" title="' + escapeHtml(t('tooltip.history_delete')) + '">×</button>' +
+          '" title="' +
+          escapeHtml(t('tooltip.history_delete')) +
+          '">×</button>' +
           '</div>' +
           '<div class="history-title">' +
           // Phase 8: domain-mask sensitive sources so the History list
@@ -1425,7 +1446,11 @@ export async function mountInspector(root, ctx) {
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
     if (_analyzeAbort) {
-      try { _analyzeAbort.abort(); } catch (_) { /* idempotent */ }
+      try {
+        _analyzeAbort.abort();
+      } catch (_) {
+        /* idempotent */
+      }
     }
     _analyzeAbort = typeof AbortController === 'function' ? new AbortController() : null;
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
@@ -1636,7 +1661,9 @@ export async function mountInspector(root, ctx) {
               );
             })
             .join('')
-        : '<div class="empty-hint" style="grid-column:1/-1">' + escapeHtml(t('empty.no_imp_slots')) + '</div>';
+        : '<div class="empty-hint" style="grid-column:1/-1">' +
+          escapeHtml(t('empty.no_imp_slots')) +
+          '</div>';
 
       // Quick stats (right sidebar)
       const counts = {
@@ -1673,7 +1700,7 @@ export async function mountInspector(root, ctx) {
         // leaving the user staring at a stale UI with no toast.
         if (!r.ok || j.success === false) {
           const code = j && j.code;
-          const errMsg = (j && j.error) || ('HTTP ' + r.status);
+          const errMsg = (j && j.error) || 'HTTP ' + r.status;
           if (r.status === 429) {
             toast(t('toast.error_generic', { error: errMsg }), 'error');
           } else if (code === 'empty_payload') {
@@ -1834,15 +1861,25 @@ export async function mountInspector(root, ctx) {
               // open) shows path, the user's value at that path, severity
               // meaning, and spec link.
               return (
-                '<details class="validation-item ' + cls +
-                ' finding-detail" data-finding-id="' + escapeHtml(f.id || '') +
-                '" data-finding-path="' + escapeHtml(f.path || '') +
-                '" data-finding-level="' + escapeHtml(lvl || '') +
-                '" data-finding-spec="' + escapeHtml(f.specRef || '') + '">' +
+                '<details class="validation-item ' +
+                cls +
+                ' finding-detail" data-finding-id="' +
+                escapeHtml(f.id || '') +
+                '" data-finding-path="' +
+                escapeHtml(f.path || '') +
+                '" data-finding-level="' +
+                escapeHtml(lvl || '') +
+                '" data-finding-spec="' +
+                escapeHtml(f.specRef || '') +
+                '">' +
                 '<summary>' +
-                '<span class="validation-icon">' + ic + '</span>' +
+                '<span class="validation-icon">' +
+                ic +
+                '</span>' +
                 '<span class="validation-text">' +
-                escapeHtml(f.msg) + pathBtn + specLink +
+                escapeHtml(f.msg) +
+                pathBtn +
+                specLink +
                 '</span>' +
                 '<span class="finding-detail-toggle" aria-hidden="true">▾</span>' +
                 '</summary>' +
@@ -2475,8 +2512,7 @@ export async function mountInspector(root, ctx) {
           if (want !== here) {
             // Build the equivalent path in the wanted locale.
             const enPart = path.replace(/^\/(uk|ru)/, '') || '/';
-            const target =
-              want === 'en' ? enPart : '/' + want + (enPart === '/' ? '' : enPart);
+            const target = want === 'en' ? enPart : '/' + want + (enPart === '/' ? '' : enPart);
             // Only landing pages (avoid touching deep app paths).
             if (['/', '/about', '/account'].includes(enPart) && target !== path) {
               location.replace(target);
@@ -2741,7 +2777,9 @@ export async function mountInspector(root, ctx) {
   function clearPendingRecovery() {
     try {
       sessionStorage.removeItem(RECOVERY_PENDING_KEY);
-    } catch (_e) {}
+    } catch (_e) {
+      /* sessionStorage unavailable — non-fatal */
+    }
   }
   function readPendingRecovery() {
     try {
@@ -3305,8 +3343,7 @@ export async function mountInspector(root, ctx) {
     const last = window.__spyglassLast;
     if (!last) return { found: false };
     const isResponseSide =
-      (findingId && /^response\b|^crosscheck\.bid\b/.test(findingId)) ||
-      /^seatbid\b/.test(path);
+      (findingId && /^response\b|^crosscheck\.bid\b/.test(findingId)) || /^seatbid\b/.test(path);
     const primary = isResponseSide ? last.res : last.req;
     const secondary = isResponseSide ? last.req : last.res;
     let v = getJsonAtPath(primary, path);
@@ -3318,7 +3355,10 @@ export async function mountInspector(root, ctx) {
     if (level === 'error' || level === 'danger')
       return { label: t('finding.severity.error.label'), text: t('finding.severity.error.text') };
     if (level === 'warning')
-      return { label: t('finding.severity.warning.label'), text: t('finding.severity.warning.text') };
+      return {
+        label: t('finding.severity.warning.label'),
+        text: t('finding.severity.warning.text'),
+      };
     if (level === 'info')
       return { label: t('finding.severity.info.label'), text: t('finding.severity.info.text') };
     return { label: level || '?', text: '' };
@@ -3336,20 +3376,23 @@ export async function mountInspector(root, ctx) {
       const r = resolveFindingValue(path, id);
       if (r.found) {
         const v = r.value;
-        const formatted = typeof v === 'object'
-          ? JSON.stringify(v, null, 2)
-          : JSON.stringify(v);
+        const formatted = typeof v === 'object' ? JSON.stringify(v, null, 2) : JSON.stringify(v);
         valueBlock =
           '<div class="finding-detail-row"><span class="finding-detail-label">' +
-          escapeHtml(t('finding.detail.value_at_path')) + '</span>' +
-          '<pre class="finding-detail-value">' + escapeHtml(formatted) + '</pre>' +
+          escapeHtml(t('finding.detail.value_at_path')) +
+          '</span>' +
+          '<pre class="finding-detail-value">' +
+          escapeHtml(formatted) +
+          '</pre>' +
           '</div>';
       } else {
         valueBlock =
           '<div class="finding-detail-row"><span class="finding-detail-label">' +
-          escapeHtml(t('finding.detail.value_at_path')) + '</span>' +
+          escapeHtml(t('finding.detail.value_at_path')) +
+          '</span>' +
           '<div class="finding-detail-value-missing">' +
-          escapeHtml(t('finding.detail.value_missing')) + '</div></div>';
+          escapeHtml(t('finding.detail.value_missing')) +
+          '</div></div>';
       }
     } else {
       valueBlock = '';
@@ -3357,31 +3400,44 @@ export async function mountInspector(root, ctx) {
 
     const pathBlock = path
       ? '<div class="finding-detail-row"><span class="finding-detail-label">' +
-        escapeHtml(t('finding.detail.path')) + '</span>' +
-        '<code class="finding-detail-path">' + escapeHtml(path) + '</code>' +
+        escapeHtml(t('finding.detail.path')) +
+        '</span>' +
+        '<code class="finding-detail-path">' +
+        escapeHtml(path) +
+        '</code>' +
         '</div>'
       : '';
 
     const sevBlock =
       '<div class="finding-detail-row"><span class="finding-detail-label">' +
-      escapeHtml(t('finding.detail.severity')) + '</span>' +
+      escapeHtml(t('finding.detail.severity')) +
+      '</span>' +
       '<div class="finding-detail-severity">' +
-      '<strong>' + escapeHtml(sev.label) + '</strong> · ' +
+      '<strong>' +
+      escapeHtml(sev.label) +
+      '</strong> · ' +
       escapeHtml(sev.text) +
       '</div></div>';
 
     const specBlock = spec
       ? '<div class="finding-detail-row"><span class="finding-detail-label">' +
-        escapeHtml(t('finding.detail.spec')) + '</span>' +
-        '<a class="finding-detail-spec" href="' + escapeHtml(spec) +
-        '" target="_blank" rel="noopener noreferrer">' + escapeHtml(spec) + ' ↗</a>' +
+        escapeHtml(t('finding.detail.spec')) +
+        '</span>' +
+        '<a class="finding-detail-spec" href="' +
+        escapeHtml(spec) +
+        '" target="_blank" rel="noopener noreferrer">' +
+        escapeHtml(spec) +
+        ' ↗</a>' +
         '</div>'
       : '';
 
     const idBlock = id
       ? '<div class="finding-detail-row"><span class="finding-detail-label">' +
-        escapeHtml(t('finding.detail.rule_id')) + '</span>' +
-        '<code class="finding-detail-id">' + escapeHtml(id) + '</code>' +
+        escapeHtml(t('finding.detail.rule_id')) +
+        '</span>' +
+        '<code class="finding-detail-id">' +
+        escapeHtml(id) +
+        '</code>' +
         '</div>'
       : '';
 
@@ -3501,9 +3557,7 @@ export async function mountInspector(root, ctx) {
         // is filtering by a specific partner (so they can switch back to
         // "all partners"); otherwise hide the section entirely.
         if (wrap) wrap.hidden = !v;
-        el.innerHTML = v
-          ? '<div class="saved-empty">' + t('empty.samples') + '</div>'
-          : '';
+        el.innerHTML = v ? '<div class="saved-empty">' + t('empty.samples') + '</div>' : '';
         return;
       }
       if (wrap) wrap.hidden = false;
@@ -3533,10 +3587,14 @@ export async function mountInspector(root, ctx) {
             '<div class="saved-item-actions">' +
             '<button class="saved-act-btn" data-action="sample-edit" data-id="' +
             s.id +
-            '" title="' + escapeHtml(t('tooltip.partner_edit')) + '">edit</button>' +
+            '" title="' +
+            escapeHtml(t('tooltip.partner_edit')) +
+            '">edit</button>' +
             '<button class="saved-act-btn danger" data-action="sample-delete" data-id="' +
             s.id +
-            '" title="' + escapeHtml(t('tooltip.delete')) + '">×</button>' +
+            '" title="' +
+            escapeHtml(t('tooltip.delete')) +
+            '">×</button>' +
             '</div>' +
             '<div class="saved-item-title">' +
             escapeHtml(s.title) +
@@ -3748,12 +3806,16 @@ export async function mountInspector(root, ctx) {
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card modal-card-wide">' +
-      '<div class="modal-title">' + escapeHtml(t('modal.simbids.title')) + '</div>' +
+      '<div class="modal-title">' +
+      escapeHtml(t('modal.simbids.title')) +
+      '</div>' +
       '<div class="modal-row"><div class="kt-mirror-loading"><span class="spinner"></span> ' +
-      escapeHtml(t('modal.simbids.loading')) + '</div></div>' +
+      escapeHtml(t('modal.simbids.loading')) +
+      '</div></div>' +
       '<div class="modal-actions">' +
       '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.cancel') + '</button></div></div></div>';
+      t('btn.cancel') +
+      '</button></div></div></div>';
 
     let results;
     try {
@@ -3764,16 +3826,22 @@ export async function mountInspector(root, ctx) {
       });
       const j = await r.json();
       if (!j.success) {
-        const msg = j.code === 'ollama_unavailable'
-          ? t('modal.simbids.ollama_down')
-          : (j.error || 'simulation_failed');
+        const msg =
+          j.code === 'ollama_unavailable'
+            ? t('modal.simbids.ollama_down')
+            : j.error || 'simulation_failed';
         $('modalRoot').innerHTML =
           '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
           '<div class="modal-card">' +
-          '<div class="modal-title">' + escapeHtml(t('modal.simbids.title')) + '</div>' +
-          '<div class="modal-row"><div class="finding finding-error">' + escapeHtml(msg) + '</div></div>' +
+          '<div class="modal-title">' +
+          escapeHtml(t('modal.simbids.title')) +
+          '</div>' +
+          '<div class="modal-row"><div class="finding finding-error">' +
+          escapeHtml(msg) +
+          '</div></div>' +
           '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-          t('btn.close') + '</button></div></div></div>';
+          t('btn.close') +
+          '</button></div></div></div>';
         return;
       }
       results = j.strategies;
@@ -3782,31 +3850,49 @@ export async function mountInspector(root, ctx) {
       return;
     }
 
-    const rows = results.map((s) => {
-      const cls = s.bid ? 'sim-bid-yes' : 'sim-bid-no';
-      const priceStr = s.bid && s.price != null ? '$' + Number(s.price).toFixed(3) : '—';
-      return '<div class="sim-strategy ' + cls + '">' +
-        '<div class="sim-strategy-head">' +
-        '<span class="sim-strategy-label">' + escapeHtml(t('modal.simbids.strat.' + s.strategy)) + '</span>' +
-        '<span class="sim-strategy-verdict">' +
-        (s.bid ? t('modal.simbids.bid') : t('modal.simbids.pass')) +
-        '</span>' +
-        '<span class="sim-strategy-price">' + escapeHtml(priceStr) + '</span>' +
-        '</div>' +
-        '<div class="sim-strategy-reason">' + escapeHtml(s.reason || '') + '</div>' +
-        '</div>';
-    }).join('');
+    const rows = results
+      .map((s) => {
+        const cls = s.bid ? 'sim-bid-yes' : 'sim-bid-no';
+        const priceStr = s.bid && s.price != null ? '$' + Number(s.price).toFixed(3) : '—';
+        return (
+          '<div class="sim-strategy ' +
+          cls +
+          '">' +
+          '<div class="sim-strategy-head">' +
+          '<span class="sim-strategy-label">' +
+          escapeHtml(t('modal.simbids.strat.' + s.strategy)) +
+          '</span>' +
+          '<span class="sim-strategy-verdict">' +
+          (s.bid ? t('modal.simbids.bid') : t('modal.simbids.pass')) +
+          '</span>' +
+          '<span class="sim-strategy-price">' +
+          escapeHtml(priceStr) +
+          '</span>' +
+          '</div>' +
+          '<div class="sim-strategy-reason">' +
+          escapeHtml(s.reason || '') +
+          '</div>' +
+          '</div>'
+        );
+      })
+      .join('');
 
     $('modalRoot').innerHTML =
       '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
       '<div class="modal-card modal-card-wide">' +
-      '<div class="modal-title">' + escapeHtml(t('modal.simbids.title')) + '</div>' +
+      '<div class="modal-title">' +
+      escapeHtml(t('modal.simbids.title')) +
+      '</div>' +
       '<div class="modal-row"><div class="sim-hint">' +
-      escapeHtml(t('modal.simbids.hint')) + '</div></div>' +
-      '<div class="modal-row"><div class="sim-strategies">' + rows + '</div></div>' +
+      escapeHtml(t('modal.simbids.hint')) +
+      '</div></div>' +
+      '<div class="modal-row"><div class="sim-strategies">' +
+      rows +
+      '</div></div>' +
       '<div class="modal-actions">' +
       '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-      t('btn.close') + '</button></div></div></div>';
+      t('btn.close') +
+      '</button></div></div></div>';
   };
 
   window.openLiveModal = function () {
@@ -3839,11 +3925,22 @@ export async function mountInspector(root, ctx) {
           sizeHint = `${b.format[0].w}×${b.format[0].h}`;
       }
       return (
-        '<div class="kt-live-row" data-action="live-load" data-row-id="' + id +
-        '" data-kind="' + kind + '">' +
-        '<span class="kt-live-time">' + escapeHtml(time) + '</span>' +
-        '<span class="kt-live-kind kt-live-kind-' + kind + '">' + kind + '</span>' +
-        '<span class="kt-live-source">' + escapeHtml(source) + '</span>' +
+        '<div class="kt-live-row" data-action="live-load" data-row-id="' +
+        id +
+        '" data-kind="' +
+        kind +
+        '">' +
+        '<span class="kt-live-time">' +
+        escapeHtml(time) +
+        '</span>' +
+        '<span class="kt-live-kind kt-live-kind-' +
+        kind +
+        '">' +
+        kind +
+        '</span>' +
+        '<span class="kt-live-source">' +
+        escapeHtml(source) +
+        '</span>' +
         (sizeHint ? '<span class="kt-live-size">' + escapeHtml(sizeHint) + '</span>' : '') +
         '</div>'
       );
@@ -3856,19 +3953,26 @@ export async function mountInspector(root, ctx) {
       $('modalRoot').innerHTML =
         '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
         '<div class="modal-card modal-card-wide kt-live-card">' +
-        '<div class="modal-title">' + escapeHtml(t('modal.live.title')) +
+        '<div class="modal-title">' +
+        escapeHtml(t('modal.live.title')) +
         ' <span class="kt-live-status" id="mLiveStatus">' +
-        escapeHtml(t('modal.live.connecting')) + '</span></div>' +
+        escapeHtml(t('modal.live.connecting')) +
+        '</span></div>' +
         '<div class="modal-row kt-live-controls">' +
         '<button class="btn btn-ghost btn-sm" id="mLivePauseBtn" data-action="live-pause">' +
-        escapeHtml(t('modal.live.pause')) + '</button>' +
-        '<span class="kt-live-hint">' + escapeHtml(t('modal.live.hint')) + '</span>' +
+        escapeHtml(t('modal.live.pause')) +
+        '</button>' +
+        '<span class="kt-live-hint">' +
+        escapeHtml(t('modal.live.hint')) +
+        '</span>' +
         '</div>' +
         '<div class="kt-live-list" id="mLiveList"><div class="kt-live-empty">' +
-        escapeHtml(t('modal.live.empty')) + '</div></div>' +
+        escapeHtml(t('modal.live.empty')) +
+        '</div></div>' +
         '<div class="modal-actions">' +
         '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-        t('btn.close') + '</button></div>' +
+        t('btn.close') +
+        '</button></div>' +
         '</div></div>';
     }
 
@@ -3902,7 +4006,11 @@ export async function mountInspector(root, ctx) {
     es.addEventListener('message', (ev) => {
       if (paused) return;
       let env;
-      try { env = JSON.parse(ev.data); } catch { return; }
+      try {
+        env = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
       const list = $('mLiveList');
       if (!list) return;
       const empty = list.querySelector('.kt-live-empty');
@@ -3924,7 +4032,11 @@ export async function mountInspector(root, ctx) {
     function tearDownLive() {
       if (teardown) return;
       teardown = true;
-      try { es.close(); } catch { /* idempotent */ }
+      try {
+        es.close();
+      } catch {
+        /* idempotent */
+      }
       specimens.clear();
       window.closeModal = origClose;
       window.__spyglassLivePauseToggle = null;
@@ -3986,11 +4098,15 @@ export async function mountInspector(root, ctx) {
       return (
         '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
         '<div class="modal-card modal-card-wide">' +
-        '<div class="modal-title">' + escapeHtml(t('modal.mirror.title')) + '</div>' +
+        '<div class="modal-title">' +
+        escapeHtml(t('modal.mirror.title')) +
+        '</div>' +
         '<div class="modal-row"><div class="kt-mirror-loading"><span class="spinner"></span> ' +
-        escapeHtml(t('modal.mirror.loading')) + '</div></div>' +
+        escapeHtml(t('modal.mirror.loading')) +
+        '</div></div>' +
         '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-        t('btn.cancel') + '</button></div></div></div>'
+        t('btn.cancel') +
+        '</button></div></div></div>'
       );
     }
 
@@ -4010,12 +4126,17 @@ export async function mountInspector(root, ctx) {
         $('modalRoot').innerHTML =
           '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
           '<div class="modal-card">' +
-          '<div class="modal-title">' + escapeHtml(t('modal.mirror.title')) + '</div>' +
+          '<div class="modal-title">' +
+          escapeHtml(t('modal.mirror.title')) +
+          '</div>' +
           '<div class="modal-row"><div class="finding finding-error">' +
-          escapeHtml(t('modal.mirror.failed')) + ': ' + escapeHtml(String(err.message)) +
+          escapeHtml(t('modal.mirror.failed')) +
+          ': ' +
+          escapeHtml(String(err.message)) +
           '</div></div>' +
           '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-          t('btn.close') + '</button></div></div></div>';
+          t('btn.close') +
+          '</button></div></div></div>';
         return;
       }
       renderResult(result);
@@ -4023,40 +4144,63 @@ export async function mountInspector(root, ctx) {
 
     function renderResult(result) {
       if (!result.ok) {
-        const noteList = (result.notes || []).map((n) =>
-          '<li>' + escapeHtml(n.msg || n.id) + '</li>').join('');
+        const noteList = (result.notes || [])
+          .map((n) => '<li>' + escapeHtml(n.msg || n.id) + '</li>')
+          .join('');
         $('modalRoot').innerHTML =
           '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
           '<div class="modal-card">' +
-          '<div class="modal-title">' + escapeHtml(t('modal.mirror.unsupported_title')) + '</div>' +
-          '<div class="modal-row"><ul class="kt-mirror-notes">' + noteList + '</ul></div>' +
+          '<div class="modal-title">' +
+          escapeHtml(t('modal.mirror.unsupported_title')) +
+          '</div>' +
+          '<div class="modal-row"><ul class="kt-mirror-notes">' +
+          noteList +
+          '</ul></div>' +
           '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-          t('btn.close') + '</button></div></div></div>';
+          t('btn.close') +
+          '</button></div></div></div>';
         return;
       }
 
-      const direction = result.direction === 'response_from_request'
-        ? t('modal.mirror.dir.response_from_request')
-        : t('modal.mirror.dir.request_from_response');
+      const direction =
+        result.direction === 'response_from_request'
+          ? t('modal.mirror.dir.response_from_request')
+          : t('modal.mirror.dir.request_from_response');
       const outputJson = JSON.stringify(result.output, null, 2);
-      const noteList = (result.notes || []).map((n) =>
-        '<li>' + escapeHtml(n.msg || n.id) + '</li>').join('');
+      const noteList = (result.notes || [])
+        .map((n) => '<li>' + escapeHtml(n.msg || n.id) + '</li>')
+        .join('');
       const st = result.selfTest || { validate: {}, crosscheck: {} };
-      const stChip = (st.validate.errorCount === 0 && st.crosscheck.critCount === 0)
-        ? '<span class="kt-chip kt-chip-ok">' + escapeHtml(t('modal.mirror.selftest.clean')) + '</span>'
-        : '<span class="kt-chip kt-chip-warn">' +
-            escapeHtml(t('modal.mirror.selftest.dirty', {
-              errors: st.validate.errorCount, crits: st.crosscheck.critCount,
-            })) + '</span>';
+      const stChip =
+        st.validate.errorCount === 0 && st.crosscheck.critCount === 0
+          ? '<span class="kt-chip kt-chip-ok">' +
+            escapeHtml(t('modal.mirror.selftest.clean')) +
+            '</span>'
+          : '<span class="kt-chip kt-chip-warn">' +
+            escapeHtml(
+              t('modal.mirror.selftest.dirty', {
+                errors: st.validate.errorCount,
+                crits: st.crosscheck.critCount,
+              }),
+            ) +
+            '</span>';
 
-      const modeChecked = (m) => currentMode === m ? ' checked' : '';
+      const modeChecked = (m) => (currentMode === m ? ' checked' : '');
       const modeRow =
-        '<div class="modal-row"><label>' + escapeHtml(t('modal.mirror.mode_label')) + '</label>' +
+        '<div class="modal-row"><label>' +
+        escapeHtml(t('modal.mirror.mode_label')) +
+        '</label>' +
         '<div class="kt-mirror-modes">' +
         '<label><input type="radio" name="mMirrorMode" value="minimal" data-action="mirror-mode-change"' +
-        modeChecked('minimal') + '> ' + escapeHtml(t('modal.mirror.mode.minimal')) + '</label>' +
+        modeChecked('minimal') +
+        '> ' +
+        escapeHtml(t('modal.mirror.mode.minimal')) +
+        '</label>' +
         '<label><input type="radio" name="mMirrorMode" value="best-practice" data-action="mirror-mode-change"' +
-        modeChecked('best-practice') + '> ' + escapeHtml(t('modal.mirror.mode.best_practice')) + '</label>' +
+        modeChecked('best-practice') +
+        '> ' +
+        escapeHtml(t('modal.mirror.mode.best_practice')) +
+        '</label>' +
         '</div></div>';
 
       let diffHtml = '';
@@ -4064,44 +4208,71 @@ export async function mountInspector(root, ctx) {
         const diffRows = diffJsonForMirror(userCounterpart, result.output);
         if (diffRows.length) {
           diffHtml =
-            '<div class="modal-row"><label>' + escapeHtml(t('modal.mirror.diff_label')) + '</label>' +
-            '<div class="kt-mirror-diff">' + diffRows.join('') + '</div>' +
+            '<div class="modal-row"><label>' +
+            escapeHtml(t('modal.mirror.diff_label')) +
+            '</label>' +
+            '<div class="kt-mirror-diff">' +
+            diffRows.join('') +
+            '</div>' +
             '<div class="kt-mirror-diff-legend">' +
             escapeHtml(t('modal.mirror.diff_legend')) +
             '</div></div>';
         } else {
           diffHtml =
-            '<div class="modal-row"><label>' + escapeHtml(t('modal.mirror.diff_label')) + '</label>' +
+            '<div class="modal-row"><label>' +
+            escapeHtml(t('modal.mirror.diff_label')) +
+            '</label>' +
             '<div class="kt-mirror-diff-empty">' +
-            escapeHtml(t('modal.mirror.diff_no_changes')) + '</div></div>';
+            escapeHtml(t('modal.mirror.diff_no_changes')) +
+            '</div></div>';
         }
       }
 
       $('modalRoot').innerHTML =
         '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
         '<div class="modal-card modal-card-wide">' +
-        '<div class="modal-title">' + escapeHtml(t('modal.mirror.title')) +
-        ' <small>· ' + escapeHtml(direction) + '</small></div>' +
-        '<div class="modal-row">' + stChip + '</div>' +
+        '<div class="modal-title">' +
+        escapeHtml(t('modal.mirror.title')) +
+        ' <small>· ' +
+        escapeHtml(direction) +
+        '</small></div>' +
+        '<div class="modal-row">' +
+        stChip +
+        '</div>' +
         modeRow +
-        '<div class="modal-row"><label>' + escapeHtml(t('modal.mirror.output_label')) + '</label>' +
-        '<textarea id="mMirrorOutput" rows="14" readonly>' + escapeHtml(outputJson) + '</textarea>' +
+        '<div class="modal-row"><label>' +
+        escapeHtml(t('modal.mirror.output_label')) +
+        '</label>' +
+        '<textarea id="mMirrorOutput" rows="14" readonly>' +
+        escapeHtml(outputJson) +
+        '</textarea>' +
         '</div>' +
         diffHtml +
         (noteList
-          ? '<div class="modal-row"><label>' + escapeHtml(t('modal.mirror.notes_label')) + '</label>' +
-            '<ul class="kt-mirror-notes">' + noteList + '</ul></div>'
+          ? '<div class="modal-row"><label>' +
+            escapeHtml(t('modal.mirror.notes_label')) +
+            '</label>' +
+            '<ul class="kt-mirror-notes">' +
+            noteList +
+            '</ul></div>'
           : '') +
         '<div class="modal-actions">' +
-        '<button class="btn btn-ghost btn-sm" data-action="modal-close">' + t('btn.close') + '</button>' +
+        '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
+        t('btn.close') +
+        '</button>' +
         '<button class="btn btn-ghost btn-sm" data-action="mirror-copy">' +
-        escapeHtml(t('modal.mirror.btn_copy')) + '</button>' +
+        escapeHtml(t('modal.mirror.btn_copy')) +
+        '</button>' +
         (typeof window.buildShareUrl === 'function'
           ? '<button class="btn btn-ghost btn-sm" data-action="mirror-share">' +
-            escapeHtml(t('modal.mirror.btn_share')) + '</button>'
+            escapeHtml(t('modal.mirror.btn_share')) +
+            '</button>'
           : '') +
         '<button class="btn btn-primary btn-sm" data-action="mirror-load" data-target="' +
-        targetField + '">' + escapeHtml(t('modal.mirror.btn_load')) + '</button>' +
+        targetField +
+        '">' +
+        escapeHtml(t('modal.mirror.btn_load')) +
+        '</button>' +
         '</div>' +
         '</div></div>';
     }
@@ -4139,32 +4310,42 @@ export async function mountInspector(root, ctx) {
         if (a === b) continue; // same — skip silently
         rows.push(
           '<div class="kt-diff-row kt-diff-changed">' +
-          '<span class="kt-diff-marker">≠</span>' +
-          '<span class="kt-diff-key">' + escapeHtml(k) + '</span>' +
-          '<span class="kt-diff-side kt-diff-yours" title="yours">' +
-          escapeHtml(truncate(a, 120)) + '</span>' +
-          '<span class="kt-diff-arrow">→</span>' +
-          '<span class="kt-diff-side kt-diff-canon" title="canonical">' +
-          escapeHtml(truncate(b, 120)) + '</span>' +
-          '</div>',
+            '<span class="kt-diff-marker">≠</span>' +
+            '<span class="kt-diff-key">' +
+            escapeHtml(k) +
+            '</span>' +
+            '<span class="kt-diff-side kt-diff-yours" title="yours">' +
+            escapeHtml(truncate(a, 120)) +
+            '</span>' +
+            '<span class="kt-diff-arrow">→</span>' +
+            '<span class="kt-diff-side kt-diff-canon" title="canonical">' +
+            escapeHtml(truncate(b, 120)) +
+            '</span>' +
+            '</div>',
         );
       } else if (inM && !inU) {
         rows.push(
           '<div class="kt-diff-row kt-diff-added">' +
-          '<span class="kt-diff-marker">+</span>' +
-          '<span class="kt-diff-key">' + escapeHtml(k) + '</span>' +
-          '<span class="kt-diff-side kt-diff-canon">' +
-          escapeHtml(truncate(JSON.stringify(m[k]), 120)) + '</span>' +
-          '</div>',
+            '<span class="kt-diff-marker">+</span>' +
+            '<span class="kt-diff-key">' +
+            escapeHtml(k) +
+            '</span>' +
+            '<span class="kt-diff-side kt-diff-canon">' +
+            escapeHtml(truncate(JSON.stringify(m[k]), 120)) +
+            '</span>' +
+            '</div>',
         );
       } else {
         rows.push(
           '<div class="kt-diff-row kt-diff-missing">' +
-          '<span class="kt-diff-marker">−</span>' +
-          '<span class="kt-diff-key">' + escapeHtml(k) + '</span>' +
-          '<span class="kt-diff-side kt-diff-yours">' +
-          escapeHtml(truncate(JSON.stringify(u[k]), 120)) + '</span>' +
-          '</div>',
+            '<span class="kt-diff-marker">−</span>' +
+            '<span class="kt-diff-key">' +
+            escapeHtml(k) +
+            '</span>' +
+            '<span class="kt-diff-side kt-diff-yours">' +
+            escapeHtml(truncate(JSON.stringify(u[k]), 120)) +
+            '</span>' +
+            '</div>',
         );
       }
     }
@@ -4196,9 +4377,7 @@ export async function mountInspector(root, ctx) {
     const name = j.suggestion.name;
     const conf = j.suggestion.confidence || 'medium';
     // Match against existing partners (case-insensitive).
-    const existing = _partnerCache.find(
-      (p) => p.name.toLowerCase() === name.toLowerCase(),
-    );
+    const existing = _partnerCache.find((p) => p.name.toLowerCase() === name.toLowerCase());
     let actionBtn;
     if (existing) {
       actionBtn =
@@ -4237,9 +4416,7 @@ export async function mountInspector(root, ctx) {
       // Refresh cache + dropdown.
       const j = await api('GET', 'api/partners');
       _partnerCache = j.partners || [];
-      const created = _partnerCache.find(
-        (p) => p.name.toLowerCase() === name.toLowerCase(),
-      );
+      const created = _partnerCache.find((p) => p.name.toLowerCase() === name.toLowerCase());
       const sel = $('mPartner');
       if (sel) {
         sel.innerHTML = partnerOptionsHtml(created ? created.id : null);
@@ -4321,7 +4498,11 @@ export async function mountInspector(root, ctx) {
       // offering the dead row, and tell the user specifically.
       if (e.code === 'partner_not_found') {
         toast(t('toast.partner_gone'), 'error');
-        try { await refreshPartners(); } catch (_) { /* swallow */ }
+        try {
+          await refreshPartners();
+        } catch (_) {
+          /* swallow */
+        }
         return;
       }
       toast(t('toast.save_failed', { error: e.message }), 'error');
@@ -4496,7 +4677,9 @@ export async function mountInspector(root, ctx) {
           '<div class="saved-item-actions" style="opacity:1">' +
           '<button class="saved-act-btn danger" data-action="delete-partner" data-id="' +
           p.id +
-          '" title="' + escapeHtml(t('tooltip.delete')) + '">×</button>' +
+          '" title="' +
+          escapeHtml(t('tooltip.delete')) +
+          '">×</button>' +
           '</div>' +
           '<div class="saved-item-title">' +
           escapeHtml(p.name) +
@@ -4567,7 +4750,7 @@ export async function mountInspector(root, ctx) {
     let count = null;
     try {
       const r = await api('GET', 'api/partners/' + id + '/samples-count');
-      count = (r && typeof r.count === 'number') ? r.count : null;
+      count = r && typeof r.count === 'number' ? r.count : null;
     } catch (_e) {
       /* fall back to generic confirm */
     }
@@ -5226,7 +5409,9 @@ export async function mountInspector(root, ctx) {
         // User isn't authed anymore — no point keeping a stale key.
         clearPendingRecovery();
       }
-    } catch (_e) { /* defensive */ }
+    } catch (_e) {
+      /* defensive */
+    }
 
     // Deep-link from the cabinet's "Manage partners" button: /?open=partners
     // → open the partner-management modal once we're authed and the cache is

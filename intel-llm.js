@@ -303,7 +303,10 @@ function extractPartnerHints(payloadObj, maxLen) {
 
   function addDomain(d) {
     if (!d || typeof d !== 'string') return;
-    const norm = d.toLowerCase().replace(/^www\./, '').trim();
+    const norm = d
+      .toLowerCase()
+      .replace(/^www\./, '')
+      .trim();
     if (norm && norm.length < 80) out.add(norm);
   }
 
@@ -511,8 +514,7 @@ function summarizeRequestForSim(req) {
     currency: (Array.isArray(req.cur) && req.cur[0]) || 'USD',
     geoCountry: (dev.geo && dev.geo.country) || 'unknown',
     surface: req.app ? 'app' : req.site ? 'site' : 'unknown',
-    appBundleOrDomain:
-      (req.site && req.site.domain) || (req.app && req.app.bundle) || null,
+    appBundleOrDomain: (req.site && req.site.domain) || (req.app && req.app.bundle) || null,
     deviceType: dev.devicetype || null,
     auctionType: req.at || null,
   };
@@ -548,7 +550,12 @@ function validateBidSim(parsed, strategy) {
   }
   const bid = parsed.bid === true;
   let price = null;
-  if (bid && typeof parsed.price === 'number' && parsed.price > 0 && Number.isFinite(parsed.price)) {
+  if (
+    bid &&
+    typeof parsed.price === 'number' &&
+    parsed.price > 0 &&
+    Number.isFinite(parsed.price)
+  ) {
     price = Number(parsed.price.toFixed(3));
   } else if (bid) {
     return { bid: false, price: null, reason: 'price_invalid' };

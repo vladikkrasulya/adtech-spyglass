@@ -32,7 +32,7 @@ Modules are loaded in the HTML shell as `<script>` tags in this order:
 1. `/i18n.js` (central) — defines `window.t()` and `window.registerI18nModule()`.
 2. `/modules/<tool>/i18n.js` — pushes keys (or registers if i18n.js already loaded).
 3. `/modules/<tool>/index.js` — wires the tool. Listens for `kt:inspector-ready`
-    if it depends on workbench DOM (#bidReq, #bidRes, …).
+   if it depends on workbench DOM (#bidReq, #bidRes, …).
 
 Module index.js MUST be wrapped in an IIFE — `'use strict'` mode, no
 globals leaked except via explicit `window.<name>` assignments at the
@@ -42,7 +42,7 @@ bottom of the file.
 
 Modules don't import each other. They communicate via:
 
-- **window.* APIs** — `window.buildShareUrl`, `window.runAnalysis`,
+- **window.\* APIs** — `window.buildShareUrl`, `window.runAnalysis`,
   `window.toast`, `window.t`. Documented in each module's README.
 - **DOM events** — `kt:inspector-ready`, `kt:locale-changed`,
   `kt:analysis-complete`. Names are `kt:` prefixed.

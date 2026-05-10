@@ -17,12 +17,7 @@ const assert = require('node:assert/strict');
 
 const { mirror, validate, crosscheck } = require('@kyivtech/spyglass-core');
 
-const {
-  validRequest,
-  validResponse,
-  nativeRequest,
-  v3Request,
-} = require('./fixtures');
+const { validRequest, validResponse, nativeRequest, v3Request } = require('./fixtures');
 
 // ─── basic shape ─────────────────────────────────────────────────────
 
@@ -171,7 +166,8 @@ test('response → request: self-test passes both validate and crosscheck', () =
 
 test('response → request: VAST adm becomes imp.video', () => {
   const res = validResponse();
-  res.seatbid[0].bid[0].adm = '<?xml version="1.0"?><VAST version="4.0"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>Y</AdTitle><Impression>http://i</Impression><Creatives><Creative><Linear><Duration>00:00:30</Duration><MediaFiles><MediaFile delivery="progressive" type="video/mp4" width="640" height="360">http://m.mp4</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>';
+  res.seatbid[0].bid[0].adm =
+    '<?xml version="1.0"?><VAST version="4.0"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>Y</AdTitle><Impression>http://i</Impression><Creatives><Creative><Linear><Duration>00:00:30</Duration><MediaFiles><MediaFile delivery="progressive" type="video/mp4" width="640" height="360">http://m.mp4</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>';
   delete res.seatbid[0].bid[0].w;
   delete res.seatbid[0].bid[0].h;
   const r = mirror(res);

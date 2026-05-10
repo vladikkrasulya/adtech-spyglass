@@ -49,9 +49,7 @@ function validateRequest30(payload, _ctx) {
   if (!isStr(env.ver)) {
     findings.push(F('request.30.ver_required', LEVELS.ERROR, 'openrtb.ver'));
   } else if (!/^3\.\d+$/.test(env.ver)) {
-    findings.push(
-      F('request.30.ver_invalid', LEVELS.ERROR, 'openrtb.ver', { ver: env.ver }),
-    );
+    findings.push(F('request.30.ver_invalid', LEVELS.ERROR, 'openrtb.ver', { ver: env.ver }));
   }
 
   // R3. request object
@@ -75,9 +73,7 @@ function validateRequest30(payload, _ctx) {
   // R6. request.context — recommended (carries site/app/device/regs/user;
   //     spec doesn't make it strictly mandatory but bidders need it)
   if (!isObj(req.context)) {
-    findings.push(
-      F('request.30.context_recommended', LEVELS.WARNING, 'openrtb.request.context'),
-    );
+    findings.push(F('request.30.context_recommended', LEVELS.WARNING, 'openrtb.request.context'));
   }
 
   // R7. Per-item validation. Each item is { id, qty?, spec }.
