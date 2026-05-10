@@ -408,11 +408,12 @@
     // Profile is fast — render immediately. The four data calls below are
     // independent; run them in parallel and let each panel render as data
     // arrives.
-    const [samples, partners, insights, corpus] = await Promise.all([
+    const [samples, partners, insights, corpus, matrix] = await Promise.all([
       loadSamples(),
       loadPartners(),
       loadInsights(),
       loadCorpus(),
+      loadMatrix(),
     ]);
     // Compute encrypted/assigned counts from sample metadata.
     const encryptedCount = samples.filter((s) => s.is_encrypted).length;
@@ -434,12 +435,97 @@
     setLibraryInsights(samples, partners);
     setUsage(insights);
     setCorpus(corpus);
+    setMatrix(matrix);
   }
 
-  // Refresh corpus card after delete (no full re-init needed).
+  // Refresh corpus card after delete (no full re-init needed). Also
+  // re-fetch matrix since deletes invalidate the precision/recall counts.
   window.refreshCorpus = async function () {
-    const corpus = await loadCorpus();
+    const [corpus, matrix] = await Promise.all([loadCorpus(), loadMatrix()]);
     setCorpus(corpus);
+    setMatrix(matrix);
+  };
+
+  async function loadMatrix() {
+    try {
+      const r = await api('/api/behavior/corpus/matrix');
+      return r && r.matrix ? r.matrix : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function fmtPct(x) {
+    if (x == null) return '—';
+    return (x * 100).toFixed(0) + '%';
+  }
+
+  function colorClassForPrecision(p) {
+    if (p == null) return 'matrix-na';
+    if (p >= 0.9) return 'matrix-good';
+    if (p >= 0.6) return 'matrix-mid';
+    return 'matrix-bad';
+  }
+
+  function setMatrix(matrix) {
+    const card = $('cabMatrix');
+    if (!card) return;
+    const T = window.t || ((k) => k);
+
+    const summaryEl = $('matrixSummary');
+    const tableEl = $('matrixTable');
+    if (!matrix || !matrix.totals || matrix.totals.fraud + matrix.totals.legitimate === 0) {
+      if (summaryEl) summaryEl.innerHTML = '';
+      if (tableEl) {
+        tableEl.innerHTML =
+          '<div class="matrix-empty">' + T('matrix.empty') + '</div>';
+      }
+      return;
+    }
+
+    if (summaryEl) {
+      summaryEl.innerHTML =
+        '<span><strong>' + matrix.totals.fraud + '</strong> ' + T('corpus.label.fraud') + '</span>' +
+        ' · <span><strong>' + matrix.totals.legitimate + '</strong> ' + T('corpus.label.legitimate') + '</span>' +
+        ' · <span>' + matrix.totals.patterns + ' ' + T('matrix.summary.patterns') + '</span>';
+    }
+
+    if (tableEl) {
+      if (!matrix.patterns || matrix.patterns.length === 0) {
+        tableEl.innerHTML =
+          '<div class="matrix-empty">' + T('matrix.no_patterns') + '</div>';
+        return;
+      }
+      const header =
+        '<div class="matrix-row matrix-head">' +
+        '<span class="matrix-cell matrix-id">' + T('matrix.col.pattern') + '</span>' +
+        '<span class="matrix-cell matrix-num" title="True Positive">TP</span>' +
+        '<span class="matrix-cell matrix-num" title="False Positive">FP</span>' +
+        '<span class="matrix-cell matrix-num" title="False Negative">FN</span>' +
+        '<span class="matrix-cell matrix-num" title="True Negative">TN</span>' +
+        '<span class="matrix-cell matrix-num">' + T('matrix.col.precision') + '</span>' +
+        '<span class="matrix-cell matrix-num">' + T('matrix.col.recall') + '</span>' +
+        '<span class="matrix-cell matrix-num">F1</span>' +
+        '</div>';
+      const rows = matrix.patterns.map((p) => {
+        const cls = colorClassForPrecision(p.precision);
+        return '<div class="matrix-row ' + cls + '">' +
+          '<span class="matrix-cell matrix-id" title="' + escapeHtml(p.id) + '">' +
+          escapeHtml(p.id) + '</span>' +
+          '<span class="matrix-cell matrix-num">' + p.tp + '</span>' +
+          '<span class="matrix-cell matrix-num">' + p.fp + '</span>' +
+          '<span class="matrix-cell matrix-num">' + p.fn + '</span>' +
+          '<span class="matrix-cell matrix-num">' + p.tn + '</span>' +
+          '<span class="matrix-cell matrix-num">' + fmtPct(p.precision) + '</span>' +
+          '<span class="matrix-cell matrix-num">' + fmtPct(p.recall) + '</span>' +
+          '<span class="matrix-cell matrix-num matrix-f1">' + fmtPct(p.f1) + '</span>' +
+          '</div>';
+      }).join('');
+      tableEl.innerHTML = header + rows;
+    }
+  }
+  window.refreshMatrix = async function () {
+    setMatrix(await loadMatrix());
   };
 
   async function loadCorpus() {
@@ -520,6 +606,22 @@
       // The /?reset=1 hint can be handled by the main app on load. For now,
       // simplest: just open the home page where the auth widget lives.
       location.href = '/?forgot=1';
+    } else if (action === 'corpus-delete') {
+      ev.preventDefault();
+      const id = Number(t.dataset.corpusId);
+      if (!id) return;
+      const T = window.t || ((k) => k);
+      if (!confirm(T('confirm.corpus_delete'))) return;
+      fetch('/api/behavior/corpus/' + id, { method: 'DELETE' })
+        .then((r) => r.json())
+        .then((j) => {
+          if (!j.success) throw new Error(j.error || 'delete_failed');
+          window.refreshCorpus && window.refreshCorpus();
+        })
+        .catch((err) => alert(T('toast.corpus_delete_failed', { error: err.message })));
+    } else if (action === 'corpus-matrix-refresh') {
+      ev.preventDefault();
+      window.refreshMatrix && window.refreshMatrix();
     }
   });
 

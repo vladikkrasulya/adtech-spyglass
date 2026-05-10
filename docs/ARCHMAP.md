@@ -216,6 +216,23 @@ does NOT false-positive.
   precision/recall per id. Schema + listing in place; runner is the
   next Chapter B sprint.
 
+### 1.3.6 Confusion-matrix runner (since 0.30.0; Chapter B v1)
+
+- **Module** `lib/corpus-matrix.js` — pure DI: takes `{BehaviorCorpus,
+  analyzeBehavior}` as deps, returns `{totals, patterns[]}`.
+  Independent of DB / HTTP, fully tested in isolation.
+- **Math**: for each pattern emitted by `behavior.analyze` over corpus
+  events, count TP/FP/FN/TN against fraud/legitimate labels. Ambiguous
+  excluded. Within-entry dedup so a noisy rule firing 3× in one entry
+  counts as 1 TP, not 3.
+- **HTTP**: `GET /api/behavior/corpus/matrix` (auth-required) calls
+  the runner with the user's corpus. On-demand; no caching.
+- **UI** lives in `/account` cabinet under the corpus card. Rows
+  colour-graded by precision, sorted by F1 desc. Refresh button
+  re-fetches without full init.
+- **Limit**: listForUser caps at 500 entries. Larger corpora would
+  need pagination + caching keyed on max(corpus.created_at).
+
 ### 1.4 Consumers
 
 | Consumer | File | What it uses |
@@ -238,9 +255,10 @@ does NOT false-positive.
 | `behavior/` | `tests/behavior.test.js` |
 | `mirror.js` | `tests/mirror.test.js` (21 cases — both directions, banner/video/native/no-bid/round-trip + best-practice mode) |
 | `BehaviorCorpus` (db.js) | `tests/db.test.js` (8 cases — create/list/scoping, label whitelist, counts, getById, destroy, FK cascade) |
+| `lib/corpus-matrix.js` | `tests/corpus-matrix.test.js` (9 cases — perfect P+R, 50% precision, missed-fraud, ambiguous-skip, within-entry dedup, sort tiebreak, divbyzero, corrupt JSON, empty corpus) |
 | Any new message key | manually check 3 locales (`messages/{en,uk,ru}.json`) — there's no test that enforces this; *yet* |
 
-**Total suite**: 431 tests (as of 2026-05-10 v0.29.0). Run `node --test tests/` from repo root, ~8s.
+**Total suite**: 440 tests (as of 2026-05-10 v0.30.0). Run `node --test tests/` from repo root, ~8s.
 
 ---
 

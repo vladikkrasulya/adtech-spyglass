@@ -168,6 +168,12 @@
       'toast.corpus_deleted': 'Запис видалено',
       'toast.corpus_delete_failed': 'Не вдалось видалити: {error}',
       'confirm.corpus_delete': 'Видалити цей запис corpus? Це незворотно.',
+      'matrix.empty': 'Поки порожньо. Збережи хоча б по одному «легітимному» і «шахрайському» зразку — і таблиця заповниться.',
+      'matrix.no_patterns': 'Жоден патерн не спрацював на твоєму корпусі. Або корпус замалий, або детектори не бачать що в подіях.',
+      'matrix.summary.patterns': 'патернів',
+      'matrix.col.pattern': 'патерн',
+      'matrix.col.precision': 'precision',
+      'matrix.col.recall': 'recall',
 
       // ── modal common labels + buttons ─────────────────────
       'btn.cancel': 'скасувати',
@@ -493,6 +499,12 @@
       'toast.corpus_deleted': 'Entry deleted',
       'toast.corpus_delete_failed': 'Delete failed: {error}',
       'confirm.corpus_delete': 'Delete this corpus entry? This cannot be undone.',
+      'matrix.empty': 'Empty for now. Save at least one "legitimate" and one "fraud" sample — the table fills in.',
+      'matrix.no_patterns': 'No pattern fired across your corpus. Either the corpus is too thin, or the detectors don\'t see anything in the events.',
+      'matrix.summary.patterns': 'patterns',
+      'matrix.col.pattern': 'pattern',
+      'matrix.col.precision': 'precision',
+      'matrix.col.recall': 'recall',
 
       // ── modal common labels + buttons ─────────────────────
       'btn.cancel': 'cancel',
@@ -816,6 +828,12 @@
       'toast.corpus_deleted': 'Запись удалена',
       'toast.corpus_delete_failed': 'Не удалось удалить: {error}',
       'confirm.corpus_delete': 'Удалить эту запись corpus? Это необратимо.',
+      'matrix.empty': 'Пока пусто. Сохрани хотя бы по одному «легитимному» и «мошенническому» образцу — таблица заполнится.',
+      'matrix.no_patterns': 'Ни один паттерн не сработал на твоём корпусе. Либо корпус мал, либо детекторы ничего не видят в событиях.',
+      'matrix.summary.patterns': 'паттернов',
+      'matrix.col.pattern': 'паттерн',
+      'matrix.col.precision': 'precision',
+      'matrix.col.recall': 'recall',
       'btn.cancel': 'отмена',
       'btn.save': 'сохранить',
       'btn.update': 'обновить',

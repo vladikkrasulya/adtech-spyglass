@@ -1039,6 +1039,10 @@ function handleAccountInsights(req, res) {
 // metadata only; full events_json is fetched via GET /:id when the
 // matrix runner replays it (next sprint).
 
+const { computeCorpusMatrix: _computeCorpusMatrix } = require('./lib/corpus-matrix');
+const computeCorpusMatrix = (userId) =>
+  _computeCorpusMatrix({ BehaviorCorpus, analyzeBehavior }, userId);
+
 function handleBehaviorCorpus(req, res, parsed) {
   const user = auth.getCurrentUser(req);
   if (!user) {
@@ -1057,6 +1061,16 @@ function handleBehaviorCorpus(req, res, parsed) {
     } catch (e) {
       console.error('[corpus/list] failed:', e.message);
       return sendError(res, 500, 'list_failed', e.message);
+    }
+  }
+
+  if (method === 'GET' && pathname === '/api/behavior/corpus/matrix') {
+    try {
+      const matrix = computeCorpusMatrix(user.id);
+      return sendJson(res, 200, { success: true, matrix });
+    } catch (e) {
+      console.error('[corpus/matrix] failed:', e.message);
+      return sendError(res, 500, 'matrix_failed', e.message);
     }
   }
 

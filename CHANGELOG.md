@@ -6,6 +6,74 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.30.0 — Confusion matrix runner (Chapter B v1, 2026-05-10)
+
+The corpus we shipped in v0.29.0 finally has a consumer. Click "оновити"
+in the new cabinet card and Spyglass tells you, on YOUR labelled corpus,
+how each of the 12 detection patterns actually performs: precision,
+recall, F1, with TP / FP / FN / TN broken out per row.
+
+**Runner — `lib/corpus-matrix.js`**
+
+- `computeCorpusMatrix({BehaviorCorpus, analyzeBehavior}, userId)` —
+  reads all corpus rows, parses events, runs `behavior.analyze` on
+  each, aggregates per finding-id.
+- For each pattern, treats it as a fraud-detector:
+  - TP — fired AND entry labelled fraud
+  - FP — fired AND entry labelled legitimate
+  - FN — didn't fire AND entry labelled fraud
+  - TN — didn't fire AND entry labelled legitimate
+  - Precision = TP / (TP+FP); Recall = TP / fraud-total; F1 harmonic
+- Ambiguous entries excluded from math (counted in totals for
+  awareness). Within-entry repeated firings of the same id collapse
+  to a single TP/FP — noise rules don't get inflated counts.
+- Sort: F1 desc → TP desc → id asc, with nulls (no recall on empty
+  fraud cohort, no precision on never-fired) last.
+- Pure DI module — no DB / network coupling. Tested standalone
+  with stub corpus + stub analyzer.
+
+**Endpoint — `GET /api/behavior/corpus/matrix`**
+
+- Auth-required, per-user. On-demand computed (no caching) — corpora
+  are small and `analyze()` is fast.
+- Returns `{ totals: {fraud, legitimate, ambiguous, patterns}, patterns: [...] }`.
+
+**Cabinet card — "Confusion matrix · precision / recall"**
+
+- New section under "Behavior corpus" in `/account` (3 locales). One
+  row per pattern with id / TP / FP / FN / TN / P / R / F1. Rows
+  colour-graded by precision: ≥90% green, ≥60% amber, <60% red.
+- "оновити" / "refresh" button refreshes without full re-init.
+- Empty state explains what to capture to fill in. "No pattern fired"
+  state catches thin-corpus or mislabelled cases.
+
+**Cabinet dispatcher hardening (bonus fix)**
+
+The `data-action="corpus-delete"` button shipped in v0.29.0 had no
+matching handler in `account.js` (it was added to `spyglass.app.js`
+but the cabinet doesn't load that). The button looked clickable but
+was a no-op on the cabinet page. Fixed in this commit — `account.js`
+dispatcher now handles `corpus-delete` and `corpus-matrix-refresh`.
+
+**Tests**
+
+- `tests/corpus-matrix.test.js` — 9 cases: perfect P+R, 50% precision,
+  missed-fraud, ambiguous-skip, within-entry dedup, sort tiebreak,
+  zero-fraud-no-divbyzero, corrupt-JSON-skip, empty-corpus.
+- 431 → 440. All green.
+
+**i18n**
+
+- 7 new strings × 3 locales (matrix headers, empty/no-patterns
+  states, summary).
+
+Smoke (Playwright unauthenticated): cabinet renders cabMatrix +
+matrixSummary + matrixTable slots; window.refreshMatrix is a
+function; endpoint correctly returns 401 to anonymous GET.
+0 console errors. Live auth-gated path needs manual verification
+(login → save 2-3 fraud + 2-3 legit corpus entries → matrix card
+populates).
+
 ### v0.29.2 — Lang switch on inspector pages was broken (2026-05-10)
 
 Two-bug stack reported by user: clicking any locale in the language
