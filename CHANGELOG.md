@@ -6,6 +6,42 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.32.0 — i18n consolidation (Chapter D, 2026-05-10)
+
+Closing the i18n debt to a single source of truth. The originally-
+estimated "~30 hardcoded UK strings in spyglass.app.js" turned out
+to already be done (Tier-2 batch in v0.15.0). What was left:
+
+- **`sign out` button** in inspector header rendered English on
+  Ukrainian/Russian pages because the text was hardcoded in three
+  template files. Fixed: each locale's template now has the
+  matching word ("вийти" / "sign out" / "выйти"). Plus a new
+  central `btn.signout` i18n key (uk/en/ru) for any future modal
+  or dynamic surface that wants the localized label.
+- **`intel/builder.js` STRINGS** — module-local 50-line dictionary
+  with three branches (uk / ru / else en) covering 14 keys.
+  Consolidated into `public/i18n.js` under `builder.*` namespace
+  (14 keys × 3 locales = 42 entries). `localised()` now reads
+  via `window.t()` with a tiny shim fallback.
+- **`intel/banner.js` localised summary** — 1 string in 3-branch
+  inline. Same pattern: moved to `banner.new_patterns` central
+  key with `{n}` interpolation.
+
+**Things deliberately left as English jargon**
+
+- `sim price` label (AdTech term, like CPM)
+- `powered by` embed footer (brand attribution)
+- `#tRef` Reference tab content (vendor docs, intentionally English)
+- `inspector/index.js` manifest title/description (already 3-locale
+  inline; pattern is fine)
+
+**Verify**: real-browser smoke on uk/en/ru — sign out button shows
+in matching locale; `t('builder.title')` returns
+"Конструктор тимчасового діалекту" / "Temporary Dialect Builder" /
+"Конструктор временного диалекта"; `t('banner.new_patterns', { n })`
+interpolates correctly. 0 console errors. 440/440 tests still green
+(no test surface change — i18n keys are a UI-layer concern).
+
 ### v0.31.0 — Cabinet redesign: sidebar nav + scroll-spy (2026-05-10)
 
 The cabinet was an 11-card vertical wall. Now it's a 7-section

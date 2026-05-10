@@ -145,12 +145,15 @@
   }
 
   function pickLocalised(summary) {
-    // Use existing i18n if available, else hard-coded English.
-    const lang = (document.documentElement.lang || 'en').slice(0, 2);
-    const n = summary.total;
-    if (lang === 'uk') return `Виявлено ${n} нових патернів полів`;
-    if (lang === 'ru') return `Обнаружено ${n} новых паттернов полей`;
-    return `Detected ${n} new field patterns`;
+    // Lookup central i18n bundle (single source of truth at /public/i18n.js
+    // under `banner.new_patterns` with {n} param). Pre-2026-05-10 this was
+    // an inline `if uk / if ru / else en` block; consolidated for parity
+    // with builder.js. Hard-coded English fallback when window.t hasn't
+    // loaded yet.
+    const t = typeof window !== 'undefined' && typeof window.t === 'function'
+      ? window.t
+      : (k, p) => `${(p && p.n) || ''} new field patterns detected`;
+    return t('banner.new_patterns', { n: summary.total });
   }
 
   function formatBucketBreakdown(byBucket) {

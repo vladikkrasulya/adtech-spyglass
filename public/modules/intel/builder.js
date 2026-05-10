@@ -289,56 +289,30 @@
     return _root;
   }
 
+  // Lookup against the central i18n bundle (window.t). Single source of
+  // truth lives in /public/i18n.js under `builder.*` keys; this used to be
+  // a 50-line inline three-locale dictionary, consolidated 2026-05-10.
+  // Falls back to a tiny shim when window.t isn't loaded (e.g. tests, embed
+  // surfaces) so the builder still renders something readable instead of
+  // raw `[builder.title]` placeholders.
   function localised() {
-    const lang = (document.documentElement.lang || 'en').slice(0, 2);
-    if (lang === 'uk') {
-      return {
-        title: 'Конструктор тимчасового діалекту',
-        nameLabel: 'Назва діалекту',
-        namePlaceholder: 'наприклад, SSP-Custom',
-        clustersHeading: 'Знайдені кластери',
-        fieldsHeading: 'Усі знайдені поля',
-        empty: 'Поки що немає достатньо даних. Запусти аналіз кількох запитів.',
-        useCluster: 'Використати',
-        cancel: 'Скасувати',
-        create: 'Створити тимчасовий діалект',
-        info: (n) => n + ' полів обрано',
-        suggestName: 'Запропонувати',
-        suggestNameTooltip: 'Запропонувати назву через локальну LLM',
-        suggesting: 'Думаю…',
-      };
-    }
-    if (lang === 'ru') {
-      return {
-        title: 'Конструктор временного диалекта',
-        nameLabel: 'Название диалекта',
-        namePlaceholder: 'например, SSP-Custom',
-        clustersHeading: 'Обнаруженные кластеры',
-        fieldsHeading: 'Все обнаруженные поля',
-        empty: 'Пока недостаточно данных. Запусти анализ нескольких запросов.',
-        useCluster: 'Использовать',
-        cancel: 'Отмена',
-        create: 'Создать временный диалект',
-        info: (n) => n + ' полей выбрано',
-        suggestName: 'Предложить',
-        suggestNameTooltip: 'Предложить название через локальную LLM',
-        suggesting: 'Думаю…',
-      };
-    }
+    const t = typeof window !== 'undefined' && typeof window.t === 'function'
+      ? window.t
+      : (k) => k;
     return {
-      title: 'Temporary Dialect Builder',
-      nameLabel: 'Dialect name',
-      namePlaceholder: 'e.g. SSP-Custom',
-      clustersHeading: 'Suggested clusters',
-      fieldsHeading: 'All discovered fields',
-      empty: 'Not enough data yet. Run analyze on a few requests first.',
-      useCluster: 'Use cluster',
-      cancel: 'Cancel',
-      create: 'Create temporary dialect',
-      info: (n) => n + ' fields selected',
-      suggestName: 'Suggest',
-      suggestNameTooltip: 'Suggest a name with the local LLM',
-      suggesting: 'Thinking…',
+      title: t('builder.title'),
+      nameLabel: t('builder.name_label'),
+      namePlaceholder: t('builder.name_placeholder'),
+      clustersHeading: t('builder.clusters_heading'),
+      fieldsHeading: t('builder.fields_heading'),
+      empty: t('builder.empty'),
+      useCluster: t('builder.use_cluster'),
+      cancel: t('builder.cancel'),
+      create: t('builder.create'),
+      info: (n) => t('builder.info', { n }),
+      suggestName: t('builder.suggest_name'),
+      suggestNameTooltip: t('builder.suggest_name_tooltip'),
+      suggesting: t('builder.suggesting'),
     };
   }
 
