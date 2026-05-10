@@ -113,6 +113,12 @@
       'modal.mirror.btn_load': 'завантажити в інше поле',
       'modal.mirror.selftest.clean': 'self-test ✓ valid + crosscheck чистий',
       'modal.mirror.selftest.dirty': 'self-test: {errors} помилок, {crits} CRIT',
+      'modal.mirror.mode_label': 'режим',
+      'modal.mirror.mode.minimal': 'мінімум · тільки обовʼязкові поля',
+      'modal.mirror.mode.best_practice': 'best-practice · з recommended (schain, dchain, DSA, GDPR)',
+      'modal.mirror.diff_label': 'diff: твоя версія vs канонічна',
+      'modal.mirror.diff_legend': '≠ розбіжність   + у канонічній є, у тебе немає   − у тебе є, в канонічній немає',
+      'modal.mirror.diff_no_changes': 'Все співпадає на верхньому рівні — твоя версія структурно еквівалентна канонічній.',
 
       // ── modal common labels + buttons ─────────────────────
       'btn.cancel': 'скасувати',
@@ -133,6 +139,7 @@
       'shortcuts.row.help': 'Показати цю довідку',
       'shortcuts.row.run': 'Запустити аналіз',
       'shortcuts.row.save': 'Зберегти в бібліотеку',
+      'shortcuts.row.mirror': 'Дзеркало запит ↔ відповідь',
       'shortcuts.row.close': 'Закрити модалку',
 
       // ── behavior tab (creative-probe) ─────────────────────
@@ -382,6 +389,12 @@
       'modal.mirror.btn_load': 'load into the other editor',
       'modal.mirror.selftest.clean': 'self-test ✓ valid + clean crosscheck',
       'modal.mirror.selftest.dirty': 'self-test: {errors} errors, {crits} CRIT',
+      'modal.mirror.mode_label': 'mode',
+      'modal.mirror.mode.minimal': 'minimal · required fields only',
+      'modal.mirror.mode.best_practice': 'best-practice · with recommended (schain, dchain, DSA, GDPR)',
+      'modal.mirror.diff_label': 'diff: your version vs canonical',
+      'modal.mirror.diff_legend': '≠ different   + canonical has, you don’t   − you have, canonical doesn’t',
+      'modal.mirror.diff_no_changes': 'Everything matches at the top level — your version is structurally equivalent to the canonical one.',
 
       // ── modal common labels + buttons ─────────────────────
       'btn.cancel': 'cancel',
@@ -402,6 +415,7 @@
       'shortcuts.row.help': 'Show this help',
       'shortcuts.row.run': 'Run analysis',
       'shortcuts.row.save': 'Save to library',
+      'shortcuts.row.mirror': 'Mirror request ↔ response',
       'shortcuts.row.close': 'Close modal',
 
       // ── behavior tab (creative-probe) ─────────────────────
@@ -649,6 +663,12 @@
       'modal.mirror.btn_load': 'загрузить в соседнее поле',
       'modal.mirror.selftest.clean': 'self-test ✓ valid + чистый crosscheck',
       'modal.mirror.selftest.dirty': 'self-test: {errors} ошибок, {crits} CRIT',
+      'modal.mirror.mode_label': 'режим',
+      'modal.mirror.mode.minimal': 'минимум · только обязательные поля',
+      'modal.mirror.mode.best_practice': 'best-practice · с recommended (schain, dchain, DSA, GDPR)',
+      'modal.mirror.diff_label': 'diff: твоя версия vs каноническая',
+      'modal.mirror.diff_legend': '≠ различие   + в канонической есть, у тебя нет   − у тебя есть, в канонической нет',
+      'modal.mirror.diff_no_changes': 'Всё совпадает на верхнем уровне — твоя версия структурно эквивалентна канонической.',
       'btn.cancel': 'отмена',
       'btn.save': 'сохранить',
       'btn.update': 'обновить',
@@ -665,6 +685,7 @@
       'shortcuts.row.help': 'Показать эту справку',
       'shortcuts.row.run': 'Запустить анализ',
       'shortcuts.row.save': 'Сохранить в библиотеку',
+      'shortcuts.row.mirror': 'Зеркало запрос ↔ ответ',
       'shortcuts.row.close': 'Закрыть модалку',
       'behavior.empty':
         'Отрендерь креатив справа — Behavior-движок анализирует попытки клик-джекинга, бот-паттерны, манипуляции с фреймами и тяжёлые креативы.',

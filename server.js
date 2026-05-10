@@ -1064,7 +1064,8 @@ function handleMirror(req, res, parsed) {
           'Provide an `input` object (BidRequest or BidResponse) in the request body',
         );
       }
-      const result = mirror(input, { locale, dialect });
+      const mode = body && body.mode === 'best-practice' ? 'best-practice' : 'minimal';
+      const result = mirror(input, { locale, dialect, mode });
       sendJson(res, 200, { success: true, result });
     })
     .catch((e) => {

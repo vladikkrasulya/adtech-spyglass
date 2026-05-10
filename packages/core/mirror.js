@@ -52,7 +52,9 @@ const FLOOR_FROM_PRICE_RATIO = 0.5; // when going response→request
  *   }|null
  * }}
  */
-function mirror(input, _opts) {
+function mirror(input, opts) {
+  const o = opts || {};
+  const mode = o.mode === 'best-practice' ? 'best-practice' : 'minimal';
   const notes = [];
 
   if (!isObj(input)) {
@@ -79,24 +81,32 @@ function mirror(input, _opts) {
   }
 
   if (t === TYPES.ORTB_REQUEST) {
-    const output = responseFromRequest(input, notes);
+    let output = responseFromRequest(input, notes);
+    if (mode === 'best-practice') {
+      output = enrichResponseBestPractice(output, input, notes);
+    }
     return {
       ok: true,
       direction: 'response_from_request',
       inputType: t,
       output,
       notes,
+      mode,
       selfTest: null, // filled in by index.js wrapper
     };
   }
   if (t === TYPES.ORTB_RESPONSE) {
-    const output = requestFromResponse(input, notes);
+    let output = requestFromResponse(input, notes);
+    if (mode === 'best-practice') {
+      output = enrichRequestBestPractice(output, input, notes);
+    }
     return {
       ok: true,
       direction: 'request_from_response',
       inputType: t,
       output,
       notes,
+      mode,
       selfTest: null,
     };
   }
@@ -487,6 +497,90 @@ function buildNativeRequestAsset(resAsset) {
     };
   }
   return { id, required: 0, data: { type: 2 } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// BEST-PRACTICE ENRICHERS — only fire when mode === 'best-practice'.
+// Add recommended-not-required IAB fields so the mirror reads as
+// "this is what a good integration looks like", not just "this is the
+// spec minimum". Keep additive only — never overwrite something the
+// minimal generator already set.
+// ─────────────────────────────────────────────────────────────────────
+
+function enrichResponseBestPractice(out, _req, notes) {
+  // Top-level: bidid (BidResponse-level identifier, distinct from bid.id)
+  if (!isStr(out.bidid)) {
+    out.bidid = 'mirror-bidid-1';
+  }
+  // Per-bid: crid/cid/cattax/lurl + DSA bidext for EU eligibility.
+  for (const sb of out.seatbid || []) {
+    if (!isObj(sb)) continue;
+    if (!isStr(sb.seat)) sb.seat = 'mirror-seat';
+    for (const b of sb.bid || []) {
+      if (!isObj(b)) continue;
+      if (!isStr(b.crid)) b.crid = `creative-${b.id || 'x'}`;
+      if (!isStr(b.cid)) b.cid = 'campaign-mirror';
+      if (b.cattax == null) b.cattax = 6; // IAB Content Taxonomy 3.0
+      if (!Array.isArray(b.cat) || !b.cat.length) b.cat = ['IAB3-1'];
+      if (!isStr(b.lurl)) b.lurl = 'https://advertiser.example/loss?reason=${AUCTION_LOSS}';
+      if (!isStr(b.nurl)) {
+        b.nurl = 'https://advertiser.example/win?price=${AUCTION_PRICE}';
+      }
+      if (b.language == null) b.language = 'en';
+      if (!isObj(b.ext)) b.ext = {};
+      // DSA Transparency (EU regulation, IAB extension since 2024)
+      if (!isObj(b.ext.dsa)) {
+        b.ext.dsa = {
+          behalf: 'advertiser.example',
+          paid: 'advertiser.example',
+          adrender: 1,
+        };
+      }
+    }
+  }
+  notes.push({ id: 'mirror.note.bestpractice_response_enriched', params: {} });
+  return out;
+}
+
+function enrichRequestBestPractice(out, _res, notes) {
+  // Source: schain (sellers.json + ads.txt enforcement)
+  if (!isObj(out.source)) out.source = {};
+  if (!isObj(out.source.ext)) out.source.ext = {};
+  if (!isObj(out.source.ext.schain)) {
+    out.source.ext.schain = {
+      ver: '1.0',
+      complete: 1,
+      nodes: [
+        { asi: 'mirror-ssp.example', sid: 'pub-1', hp: 1 },
+      ],
+    };
+  }
+  // Regulatory: GDPR + GPP signals so EU bidders don't refuse on principle
+  if (!isObj(out.regs)) out.regs = {};
+  if (out.regs.coppa == null) out.regs.coppa = 0;
+  if (!isObj(out.regs.ext)) out.regs.ext = {};
+  if (out.regs.ext.gdpr == null) out.regs.ext.gdpr = 0;
+  if (!isObj(out.user)) out.user = {};
+  if (!isObj(out.user.ext)) out.user.ext = {};
+  if (!isStr(out.user.ext.consent)) {
+    // Empty TCF consent ("CP..." TCFv2 string would be more realistic but
+    // generating one requires base64 encoding the full TCF binary; this
+    // placeholder is enough to satisfy "field is present" lint rules).
+    out.user.ext.consent = '';
+  }
+  // Device.sua (Structured User-Agent, oRTB 2.6 — strongly recommended
+  // post Chrome UA freeze)
+  if (isObj(out.device) && !isObj(out.device.sua)) {
+    out.device.sua = {
+      browsers: [{ brand: 'Chromium', version: ['122'] }],
+      platform: { brand: 'Windows', version: ['10'] },
+      mobile: 0,
+    };
+  }
+  // tmax — already set by minimal, but keep belt-and-braces.
+  if (out.tmax == null) out.tmax = 500;
+  notes.push({ id: 'mirror.note.bestpractice_request_enriched', params: {} });
+  return out;
 }
 
 module.exports = { mirror };

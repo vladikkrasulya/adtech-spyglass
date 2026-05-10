@@ -179,5 +179,7 @@
   "mirror.note.imp_native_inferred_from_adm": "Слот {num}: native у adm — згенеровано imp.native з тих самих asset id.",
   "mirror.note.imp_banner_size_from_bid": "Слот {num}: розмір банера {w}×{h} взято з bid.w/bid.h.",
   "mirror.note.imp_banner_default_size": "Слот {num}: у відповіді немає розмірів — банер 300×250 за замовчуванням.",
-  "mirror.note.no_bids_default_banner_imp": "У відповіді немає bid-ів — створено один дефолтний banner imp 300×250."
+  "mirror.note.no_bids_default_banner_imp": "У відповіді немає bid-ів — створено один дефолтний banner imp 300×250.",
+  "mirror.note.bestpractice_response_enriched": "Best-practice mode: додано crid/cid/cattax/lurl/nurl + DSA bidext (EU compliance) + bidid та seat.",
+  "mirror.note.bestpractice_request_enriched": "Best-practice mode: додано source.ext.schain (sellers.json), regs.coppa/gdpr, user.ext.consent placeholder, device.sua (Structured UA для post-Chrome-UA-freeze)."
 }

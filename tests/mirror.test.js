@@ -217,3 +217,61 @@ test('round-trip: request → mirror response → mirror back to request, both c
   assert.equal(b.selfTest.validate.errorCount, 0);
   assert.equal(b.selfTest.crosscheck.critCount, 0);
 });
+
+// ─── best-practice mode ──────────────────────────────────────────────
+
+test('best-practice mode: response carries DSA bidext, crid, cid, cattax, lurl, nurl', () => {
+  const r = mirror(validRequest(), { mode: 'best-practice' });
+  assert.equal(r.ok, true);
+  assert.equal(r.mode, 'best-practice');
+  const bid = r.output.seatbid[0].bid[0];
+  assert.ok(bid.crid, 'crid should be filled');
+  assert.ok(bid.cid, 'cid should be filled');
+  assert.equal(bid.cattax, 6);
+  assert.ok(Array.isArray(bid.cat) && bid.cat.length, 'cat should be filled');
+  assert.ok(bid.lurl);
+  assert.ok(bid.nurl);
+  assert.ok(bid.ext && bid.ext.dsa, 'DSA bidext required for EU');
+  assert.ok(r.output.bidid, 'response-level bidid');
+  assert.ok(r.output.seatbid[0].seat, 'seat string');
+  assert.equal(r.selfTest.validate.errorCount, 0);
+  assert.equal(r.selfTest.crosscheck.critCount, 0);
+});
+
+test('best-practice mode: request carries schain, regs, user.consent placeholder, device.sua', () => {
+  const r = mirror(validResponse(), { mode: 'best-practice' });
+  assert.equal(r.ok, true);
+  assert.equal(r.mode, 'best-practice');
+  const out = r.output;
+  assert.ok(out.source && out.source.ext && out.source.ext.schain, 'schain present');
+  assert.equal(out.source.ext.schain.ver, '1.0');
+  assert.ok(Array.isArray(out.source.ext.schain.nodes) && out.source.ext.schain.nodes.length);
+  assert.equal(out.regs.coppa, 0);
+  assert.ok(out.user.ext, 'user.ext present');
+  assert.ok(typeof out.user.ext.consent === 'string', 'consent placeholder');
+  assert.ok(out.device.sua, 'device.sua present');
+  assert.ok(out.device.sua.platform);
+  assert.equal(r.selfTest.validate.errorCount, 0);
+  assert.equal(r.selfTest.crosscheck.critCount, 0);
+});
+
+test('best-practice mode emits an explanatory note', () => {
+  const r1 = mirror(validRequest(), { mode: 'best-practice' });
+  assert.ok(r1.notes.some((n) => n.id === 'mirror.note.bestpractice_response_enriched'));
+  const r2 = mirror(validResponse(), { mode: 'best-practice' });
+  assert.ok(r2.notes.some((n) => n.id === 'mirror.note.bestpractice_request_enriched'));
+});
+
+test('mode defaults to minimal when omitted or invalid', () => {
+  const a = mirror(validRequest());
+  assert.equal(a.mode, 'minimal');
+  const b = mirror(validRequest(), { mode: 'gibberish' });
+  assert.equal(b.mode, 'minimal');
+});
+
+test('best-practice mode does not overwrite minimal-set fields', () => {
+  // Minimal mirror sets bid.adomain — best-practice must not clobber.
+  const r = mirror(validRequest(), { mode: 'best-practice' });
+  const bid = r.output.seatbid[0].bid[0];
+  assert.deepEqual(bid.adomain, ['advertiser.example']);
+});

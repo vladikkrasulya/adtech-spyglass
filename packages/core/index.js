@@ -187,8 +187,9 @@ function mirror(input, opts) {
   const o = opts || {};
   const locale = o.locale || FALLBACK_LOCALE;
   const dialectSlug = typeof o.dialect === 'string' ? o.dialect : DEFAULT_DIALECT;
+  const mode = o.mode === 'best-practice' ? 'best-practice' : 'minimal';
 
-  const result = doMirror(input, { mode: o.mode || 'minimal', dialect: dialectSlug });
+  const result = doMirror(input, { mode, dialect: dialectSlug });
   const decoratedNotes = (result.notes || []).map((n) => ({
     id: n.id,
     params: n.params || {},
@@ -202,6 +203,7 @@ function mirror(input, opts) {
       inputType: result.inputType,
       output: null,
       notes: decoratedNotes,
+      mode,
       selfTest: null,
     };
   }
@@ -231,6 +233,7 @@ function mirror(input, opts) {
     inputType: result.inputType,
     output: result.output,
     notes: decoratedNotes,
+    mode,
     selfTest: {
       validate: { status: validateRes.status, errorCount, warningCount },
       crosscheck: { critCount, warnCount, okCount },

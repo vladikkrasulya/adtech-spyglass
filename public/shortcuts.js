@@ -71,6 +71,7 @@
       ['?', tt('shortcuts.row.help')],
       ['Ctrl + Enter', tt('shortcuts.row.run')],
       ['Ctrl + S', tt('shortcuts.row.save')],
+      ['M', tt('shortcuts.row.mirror')],
       ['Esc', tt('shortcuts.row.close')],
     ];
     const body = rows
@@ -115,6 +116,17 @@
       e.preventDefault();
       if (typeof window.openSaveModal === 'function') {
         window.openSaveModal();
+      }
+    }
+    // Bare `m` → open mirror modal. Skipped while typing (so users can
+    // type "m" inside the JSON textarea without hijack) and while a
+    // modal is open. No modifier — feels like a tool shortcut, not OS.
+    if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (isTypingTarget(e.target)) return;
+      if (isModalOpen()) return;
+      e.preventDefault();
+      if (typeof window.openMirrorModal === 'function') {
+        window.openMirrorModal();
       }
     }
   });

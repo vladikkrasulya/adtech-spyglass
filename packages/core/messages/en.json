@@ -180,5 +180,7 @@
   "mirror.note.imp_native_inferred_from_adm": "Slot {num}: native detected in adm — emitted imp.native with the same asset ids.",
   "mirror.note.imp_banner_size_from_bid": "Slot {num}: banner size {w}×{h} taken from bid.w/bid.h.",
   "mirror.note.imp_banner_default_size": "Slot {num}: response had no size — used the 300×250 banner default.",
-  "mirror.note.no_bids_default_banner_imp": "Response has no bids — created one default 300×250 banner imp."
+  "mirror.note.no_bids_default_banner_imp": "Response has no bids — created one default 300×250 banner imp.",
+  "mirror.note.bestpractice_response_enriched": "Best-practice mode: added crid/cid/cattax/lurl/nurl + DSA bidext (EU compliance) + bidid and seat.",
+  "mirror.note.bestpractice_request_enriched": "Best-practice mode: added source.ext.schain (sellers.json), regs.coppa/gdpr, user.ext.consent placeholder, device.sua (Structured UA for the post-Chrome-UA-freeze world)."
 }
