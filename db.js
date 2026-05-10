@@ -23,7 +23,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const DATA_DIR = process.env.SPYGLASS_DATA_DIR || '/data';
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -177,6 +177,35 @@ function migrate(db, fromVersion) {
       CREATE INDEX idx_sessions_expires ON sessions(expires_at);
 
       ALTER TABLE users ADD COLUMN preferred_locale TEXT;
+    `);
+  }
+
+  // v6 → v7: behavior corpus (Chapter B foundation, 2026-05-10).
+  //
+  // Captures runtime probe event streams labelled by the user as
+  // legitimate / fraud / ambiguous so the next iteration can run all 12
+  // detection patterns over the corpus and emit a confusion matrix
+  // (precision/recall per id). This v0 only ships storage + listing;
+  // the matrix runner lands in a follow-up sprint.
+  //
+  // events_json is the same shape produced by the in-iframe
+  // creative-probe.js (heartbeat + click + nav events). source_sample_id
+  // links to a saved sample if the corpus entry was captured while one
+  // was loaded; nullable for synthetic/anonymous captures.
+  if (fromVersion < 7) {
+    db.exec(`
+      CREATE TABLE behavior_corpus (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        label TEXT NOT NULL CHECK(label IN ('legitimate','fraud','ambiguous')),
+        events_json TEXT NOT NULL,
+        source_sample_id INTEGER REFERENCES samples(id) ON DELETE SET NULL,
+        notes TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+      );
+      CREATE INDEX idx_corpus_user ON behavior_corpus(user_id);
+      CREATE INDEX idx_corpus_label ON behavior_corpus(label);
+      CREATE INDEX idx_corpus_created ON behavior_corpus(created_at DESC);
     `);
   }
 }
@@ -739,6 +768,124 @@ const Sessions = {
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────
+// Behavior corpus (Chapter B foundation)
+//
+// Per-user labelled event-stream archive. Captured on the behavior tab:
+// the user runs a probe, sees the verdict, and decides this looks like
+// real fraud / legitimate user / ambiguous edge case. Saved entries feed
+// the next sprint's confusion-matrix runner.
+//
+// Validation:
+//   - label MUST be one of {legitimate, fraud, ambiguous} (CHECK constraint
+//     in schema; we still pre-validate so the API returns a clean 400).
+//   - events_json must be a non-empty string; we don't decode or schema-
+//     check the events here — that's the consumer's job (matrix runner).
+//   - notes is freeform text, capped at 4kB to keep rows compact.
+// ─────────────────────────────────────────────────────────────────────────
+const BehaviorCorpus = {
+  LABELS: ['legitimate', 'fraud', 'ambiguous'],
+  /**
+   * @param {{
+   *   userId: number,
+   *   label: 'legitimate'|'fraud'|'ambiguous',
+   *   events: object[],
+   *   sourceSampleId?: number|null,
+   *   notes?: string
+   * }} entry
+   * @returns {{ id: number }}
+   */
+  create(entry) {
+    if (!entry || typeof entry.userId !== 'number') {
+      throw new Error('user_required');
+    }
+    if (!BehaviorCorpus.LABELS.includes(entry.label)) {
+      throw new Error('label_invalid');
+    }
+    if (!Array.isArray(entry.events) || !entry.events.length) {
+      throw new Error('events_required');
+    }
+    const json = JSON.stringify(entry.events);
+    if (json.length > 1024 * 1024) {
+      throw new Error('events_too_large'); // 1 MB cap, more than enough
+    }
+    const notes = String(entry.notes || '').slice(0, 4096);
+    const r = db
+      .prepare(
+        `INSERT INTO behavior_corpus(user_id, label, events_json, source_sample_id, notes)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.userId,
+        entry.label,
+        json,
+        entry.sourceSampleId != null ? Number(entry.sourceSampleId) : null,
+        notes,
+      );
+    return { id: Number(r.lastInsertRowid) };
+  },
+
+  /**
+   * Return entries for one user, newest first. event_count + event_bytes
+   * derived in SQL so the listing is fast regardless of corpus size.
+   */
+  listForUser(userId, opts = {}) {
+    const where = ['user_id = ?'];
+    const params = [userId];
+    if (opts.label && BehaviorCorpus.LABELS.includes(opts.label)) {
+      where.push('label = ?');
+      params.push(opts.label);
+    }
+    const limit = Math.min(Math.max(Number(opts.limit) || 100, 1), 500);
+    return db
+      .prepare(
+        `SELECT id, label, source_sample_id AS sourceSampleId, notes, created_at AS createdAt,
+                length(events_json) AS eventBytes,
+                json_array_length(events_json) AS eventCount
+         FROM behavior_corpus
+         WHERE ${where.join(' AND ')}
+         ORDER BY created_at DESC
+         LIMIT ${limit}`,
+      )
+      .all(...params);
+  },
+
+  /** Full row including the events_json blob — used for matrix replay. */
+  getById(id, userId) {
+    return db
+      .prepare(
+        `SELECT id, user_id AS userId, label, events_json AS eventsJson,
+                source_sample_id AS sourceSampleId, notes, created_at AS createdAt
+         FROM behavior_corpus
+         WHERE id = ? AND user_id = ?`,
+      )
+      .get(id, userId);
+  },
+
+  /** Counts per label for the cabinet card. */
+  countsForUser(userId) {
+    const rows = db
+      .prepare(
+        `SELECT label, COUNT(*) AS n FROM behavior_corpus
+         WHERE user_id = ? GROUP BY label`,
+      )
+      .all(userId);
+    const out = { legitimate: 0, fraud: 0, ambiguous: 0, total: 0 };
+    for (const r of rows) {
+      out[r.label] = r.n;
+      out.total += r.n;
+    }
+    return out;
+  },
+
+  destroy(id, userId) {
+    const r = db
+      .prepare('DELETE FROM behavior_corpus WHERE id = ? AND user_id = ?')
+      .run(id, userId);
+    return r.changes > 0;
+  },
+};
+
 module.exports = {
   db,
   Users,
@@ -746,6 +893,7 @@ module.exports = {
   Samples,
   AnalyzeLog,
   Sessions,
+  BehaviorCorpus,
   slugify,
   SCHEMA_VERSION,
 };

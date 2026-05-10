@@ -968,6 +968,7 @@ export async function mountInspector(root, ctx) {
         },
         locale: activeLocale(),
       });
+      injectCorpusBar(tab, events);
       return;
     }
     if (!events.length) {
@@ -1012,8 +1013,99 @@ export async function mountInspector(root, ctx) {
         );
       })
       .join('');
+    injectCorpusBar(tab, events);
   }
   window.renderBehaviorTab = renderBehaviorTab;
+
+  // Behavior corpus capture bar — appears at the top of the behavior tab
+  // when there are events AND user is authed (corpus is per-user). Renders
+  // independently of the behavior module so adding/removing it doesn't
+  // require coordinating with public/modules/behavior/index.js.
+  function injectCorpusBar(tab, events) {
+    if (!tab || !events || !events.length) return;
+    if (!_currentUser) return;
+    // Strip any prior bar before re-injecting (renderBehaviorTab is called
+    // on every probe heartbeat).
+    const existing = tab.querySelector('.kt-corpus-bar');
+    if (existing) existing.remove();
+    const eventCount = events.length;
+    const bar =
+      '<div class="kt-corpus-bar">' +
+      '<span class="kt-corpus-bar-label">' +
+      escapeHtml(t('corpus.bar.label', { count: eventCount })) + '</span>' +
+      '<button class="btn btn-ghost btn-sm" data-action="open-corpus-save">' +
+      '💾 ' + escapeHtml(t('corpus.bar.save_btn')) + '</button>' +
+      '</div>';
+    tab.insertAdjacentHTML('afterbegin', bar);
+  }
+  window.injectCorpusBar = injectCorpusBar;
+
+  // Modal: pick a label, optional notes, save current behavior events as
+  // a corpus entry. POSTs to /api/behavior/corpus.
+  window.openCorpusSaveModal = function () {
+    if (!_currentUser) {
+      toast(t('toast.signin_to_save'), 'info');
+      window.openAuthModal('login');
+      return;
+    }
+    const events = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
+    const usable = events.filter((e) => e.kind !== 'probe_ready');
+    if (!usable.length) {
+      toast(t('toast.corpus_no_events'), 'error');
+      return;
+    }
+    const sourceSampleId = window._currentSampleId || null;
+    void sourceSampleId; // captured below via closure when confirmCorpusSave runs
+
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
+      '<div class="modal-card">' +
+      '<div class="modal-title">' + escapeHtml(t('modal.corpus_save.title')) + '</div>' +
+      '<div class="modal-row"><div class="kt-corpus-summary">' +
+      escapeHtml(t('modal.corpus_save.summary', { count: usable.length })) +
+      '</div></div>' +
+      '<div class="modal-row"><label>' + escapeHtml(t('modal.corpus_save.label')) + '</label>' +
+      '<div class="kt-corpus-labels">' +
+      '<label><input type="radio" name="corpusLabel" value="legitimate"> ' +
+      escapeHtml(t('modal.corpus_save.label.legitimate')) + '</label>' +
+      '<label><input type="radio" name="corpusLabel" value="fraud" checked> ' +
+      escapeHtml(t('modal.corpus_save.label.fraud')) + '</label>' +
+      '<label><input type="radio" name="corpusLabel" value="ambiguous"> ' +
+      escapeHtml(t('modal.corpus_save.label.ambiguous')) + '</label>' +
+      '</div></div>' +
+      '<div class="modal-row"><label>' + escapeHtml(t('modal.corpus_save.notes')) + '</label>' +
+      '<textarea id="corpusNotes" rows="3" placeholder="' +
+      escapeHtml(t('modal.corpus_save.notes_placeholder')) + '"></textarea></div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
+      t('btn.cancel') + '</button>' +
+      '<button class="btn btn-primary btn-sm" data-action="confirm-corpus-save">' +
+      escapeHtml(t('btn.save')) + '</button>' +
+      '</div></div></div>';
+  };
+
+  window.confirmCorpusSave = async function () {
+    const events = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
+    const usable = events.filter((e) => e.kind !== 'probe_ready');
+    const labelEl = document.querySelector('input[name="corpusLabel"]:checked');
+    const label = labelEl ? labelEl.value : 'fraud';
+    const notes = ($('corpusNotes')?.value || '').trim();
+    const sourceSampleId = window._currentSampleId || null;
+
+    try {
+      const r = await fetch('/api/behavior/corpus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events: usable, label, notes, sourceSampleId }),
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error || 'corpus_save_failed');
+      closeModal();
+      toast(t('toast.corpus_saved', { count: usable.length, label }), 'success');
+    } catch (e) {
+      toast(t('toast.corpus_save_failed', { error: e.message }), 'error');
+    }
+  };
 
   // Render a Native 1.1 response as a card mockup so the user sees what the
   // creative will look like, not raw JSON.
@@ -4637,6 +4729,24 @@ export async function mountInspector(root, ctx) {
             return runAnalysis();
           case 'live':
             return window.openLiveModal && window.openLiveModal();
+          case 'open-corpus-save':
+            return window.openCorpusSaveModal && window.openCorpusSaveModal();
+          case 'confirm-corpus-save':
+            return window.confirmCorpusSave && window.confirmCorpusSave();
+          case 'corpus-delete': {
+            const id = Number(el.dataset.corpusId);
+            if (!id) return;
+            if (!confirm(t('confirm.corpus_delete'))) return;
+            fetch('/api/behavior/corpus/' + id, { method: 'DELETE' })
+              .then((r) => r.json())
+              .then((j) => {
+                if (!j.success) throw new Error(j.error || 'delete_failed');
+                if (window.refreshCorpus) window.refreshCorpus();
+                toast(t('toast.corpus_deleted'), 'success');
+              })
+              .catch((e) => toast(t('toast.corpus_delete_failed', { error: e.message }), 'error'));
+            return;
+          }
           case 'live-pause':
             return window.__spyglassLivePauseToggle && window.__spyglassLivePauseToggle();
           case 'live-load': {

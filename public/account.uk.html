@@ -91,6 +91,22 @@
       .heatmap .cell.l2 { background: color-mix(in srgb, var(--accent) 50%, var(--bg-elev-2)); }
       .heatmap .cell.l3 { background: color-mix(in srgb, var(--accent) 80%, var(--bg-elev-2)); }
       .heatmap .cell.l4 { background: var(--accent); }
+      .corpus-counts { display:flex; gap:var(--space-3); flex-wrap:wrap; font-family:var(--font-mono); font-size:var(--fs-sm); color:var(--text-muted); margin-bottom:var(--space-3); }
+      .corpus-count strong { color:var(--text); }
+      .corpus-count-fraud { color:#dc2626; }
+      .corpus-count-legit { color:#2ea043; }
+      .corpus-count-amb { color:#d97706; }
+      .corpus-list { display:flex; flex-direction:column; gap:6px; }
+      .corpus-row { display:grid; grid-template-columns:120px 180px 1fr auto; gap:8px; align-items:center; padding:var(--space-2) var(--space-3); border:1px solid var(--border); border-radius:var(--radius-sm,4px); font-family:var(--font-mono); font-size:var(--fs-sm); }
+      .corpus-label-pill { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; text-align:center; }
+      .corpus-label-fraud { background:rgba(220,38,38,0.12); color:#dc2626; }
+      .corpus-label-legitimate { background:rgba(46,160,67,0.12); color:#2ea043; }
+      .corpus-label-ambiguous { background:rgba(217,119,6,0.12); color:#d97706; }
+      .corpus-meta { color:var(--text-muted); font-size:11px; }
+      .corpus-source { color:var(--text-muted); font-size:10px; }
+      .corpus-notes { color:var(--text); font-size:11px; padding-left:8px; border-left:1px solid var(--border); }
+      .corpus-empty { padding:var(--space-3); color:var(--text-muted); font-size:var(--fs-sm); text-align:center; }
+      .corpus-delete-btn { font-size:14px; padding:2px 8px; }
     </style>
   </head>
   <body>
@@ -274,6 +290,16 @@
           </ul>
         </section>
 
+        <section class="cab-card" id="cabCorpus">
+          <h2>Behavior corpus</h2>
+          <p class="lead">
+            Збережені event-streams з behavior-вкладки, помічені як легітимні / шахрайські /
+            неоднозначні. Згодом використаємо для confusion matrix і калібрування детекторів.
+          </p>
+          <div id="corpusCounts" class="corpus-counts"></div>
+          <div id="corpusList" class="corpus-list"></div>
+        </section>
+
         <section class="cab-card">
           <h2>Налаштування</h2>
           <p class="lead">
@@ -383,7 +409,7 @@
 
     <script src="/lang-switch.js?v=1"></script>
     <script src="/version.js?v=1"></script>
-    <script src="/i18n.js?v=1"></script>
+    <script src="/i18n.js?v=26"></script>
     <script src="/account.js?v=2"></script>
   </body>
 </html>

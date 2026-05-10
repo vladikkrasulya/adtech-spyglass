@@ -192,6 +192,30 @@ does NOT false-positive.
   `.kt-example-menu[open], .kt-lang-menu[open]` so opening a finding
   detail doesn't get auto-closed by clicking elsewhere on the page.
 
+### 1.3.5 Behavior corpus (since 0.29.0; Chapter B v0)
+
+- **Schema v7** adds `behavior_corpus(id, user_id, label, events_json,
+  source_sample_id, notes, created_at)`. CHECK constraint on label;
+  FK CASCADE on user; indexes on user_id / label / created_at DESC.
+  `events_json` capped 1 MB; `notes` capped 4 kB.
+- **Model** `BehaviorCorpus` in `db.js`: `create / listForUser /
+  getById / countsForUser / destroy`. Listing is metadata-only
+  (event_count via `json_array_length`, event_bytes via `length()`).
+  Full events_json fetched only via getById (matrix runner consumer).
+- **API** at `/api/behavior/corpus` (auth-required, per-user):
+  POST creates · GET lists with `?label=` filter + counts · GET /:id
+  full row · DELETE /:id scoped destroy.
+- **Capture UI** lives in inspector behavior tab. `injectCorpusBar`
+  prepends a green strip when there are events AND user is authed.
+  Modal collects label (legitimate / fraud / ambiguous) + notes.
+- **Cabinet card** in `/account` (3 locales) shows totals + entry
+  list with delete. Refreshes via `window.refreshCorpus()` after
+  delete without full re-init.
+- **Consumer (deferred)**: confusion-matrix runner that replays
+  corpus entries through all 12 detection patterns and reports
+  precision/recall per id. Schema + listing in place; runner is the
+  next Chapter B sprint.
+
 ### 1.4 Consumers
 
 | Consumer | File | What it uses |
@@ -213,9 +237,10 @@ does NOT false-positive.
 | `format-detect.js` | `tests/format-detect.test.js` (~30 cases) |
 | `behavior/` | `tests/behavior.test.js` |
 | `mirror.js` | `tests/mirror.test.js` (21 cases — both directions, banner/video/native/no-bid/round-trip + best-practice mode) |
+| `BehaviorCorpus` (db.js) | `tests/db.test.js` (8 cases — create/list/scoping, label whitelist, counts, getById, destroy, FK cascade) |
 | Any new message key | manually check 3 locales (`messages/{en,uk,ru}.json`) — there's no test that enforces this; *yet* |
 
-**Total suite**: 423 tests (as of 2026-05-10 v0.26.0). Run `node --test tests/` from repo root, ~8s.
+**Total suite**: 431 tests (as of 2026-05-10 v0.29.0). Run `node --test tests/` from repo root, ~8s.
 
 ---
 

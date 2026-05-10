@@ -408,10 +408,11 @@
     // Profile is fast — render immediately. The four data calls below are
     // independent; run them in parallel and let each panel render as data
     // arrives.
-    const [samples, partners, insights] = await Promise.all([
+    const [samples, partners, insights, corpus] = await Promise.all([
       loadSamples(),
       loadPartners(),
       loadInsights(),
+      loadCorpus(),
     ]);
     // Compute encrypted/assigned counts from sample metadata.
     const encryptedCount = samples.filter((s) => s.is_encrypted).length;
@@ -432,6 +433,77 @@
     setRecent(samples);
     setLibraryInsights(samples, partners);
     setUsage(insights);
+    setCorpus(corpus);
+  }
+
+  // Refresh corpus card after delete (no full re-init needed).
+  window.refreshCorpus = async function () {
+    const corpus = await loadCorpus();
+    setCorpus(corpus);
+  };
+
+  async function loadCorpus() {
+    try {
+      const r = await api('/api/behavior/corpus');
+      return r && r.entries ? { entries: r.entries, counts: r.counts } : { entries: [], counts: { total: 0 } };
+    } catch (_e) {
+      return { entries: [], counts: { total: 0 } };
+    }
+  }
+
+  function setCorpus(data) {
+    const card = $('cabCorpus');
+    if (!card) return;
+    const counts = (data && data.counts) || { total: 0, fraud: 0, legitimate: 0, ambiguous: 0 };
+    const entries = (data && data.entries) || [];
+    const T = window.t || ((k) => k);
+    const fmt = (n) => String(n);
+
+    const summaryEl = $('corpusCounts');
+    if (summaryEl) {
+      summaryEl.innerHTML =
+        '<span class="corpus-count corpus-count-total">' +
+          '<strong>' + fmt(counts.total) + '</strong> ' +
+          T('corpus.cabinet.total') + '</span>' +
+        ' · <span class="corpus-count corpus-count-fraud">' +
+          fmt(counts.fraud) + ' ' + T('corpus.label.fraud') + '</span>' +
+        ' · <span class="corpus-count corpus-count-legit">' +
+          fmt(counts.legitimate) + ' ' + T('corpus.label.legitimate') + '</span>' +
+        ' · <span class="corpus-count corpus-count-amb">' +
+          fmt(counts.ambiguous) + ' ' + T('corpus.label.ambiguous') + '</span>';
+    }
+
+    const list = $('corpusList');
+    if (list) {
+      if (!entries.length) {
+        list.innerHTML = '<div class="corpus-empty">' + T('corpus.cabinet.empty') + '</div>';
+      } else {
+        list.innerHTML = entries.map((e) => {
+          const labelClass = 'corpus-label-' + e.label;
+          const dt = e.createdAt ? fmtDate(e.createdAt) : '—';
+          const sourceTag = e.sourceSampleId
+            ? '<span class="corpus-source">↳ sample #' + e.sourceSampleId + '</span>'
+            : '';
+          const notes = e.notes
+            ? '<span class="corpus-notes">' + escapeHtml(e.notes) + '</span>'
+            : '';
+          return '<div class="corpus-row">' +
+            '<span class="corpus-label-pill ' + labelClass + '">' +
+            T('corpus.label.' + e.label) + '</span>' +
+            '<span class="corpus-meta">' + dt + ' · ' +
+            (e.eventCount || 0) + ' events</span>' +
+            sourceTag + notes +
+            '<button class="btn btn-ghost btn-sm corpus-delete-btn" data-action="corpus-delete" data-corpus-id="' + e.id + '" title="' + T('corpus.cabinet.delete_title') + '">×</button>' +
+            '</div>';
+        }).join('');
+      }
+    }
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = String(s == null ? '' : s);
+    return d.innerHTML;
   }
 
   // Action delegation

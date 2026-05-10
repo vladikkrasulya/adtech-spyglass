@@ -35,7 +35,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { Users, Partners, Samples, AnalyzeLog, Sessions, db } = require('./db');
+const { Users, Partners, Samples, AnalyzeLog, Sessions, BehaviorCorpus, db } = require('./db');
 const { createAuth } = require('./auth');
 const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
@@ -1031,6 +1031,82 @@ function handleAccountInsights(req, res) {
   }
 }
 
+// ── /api/behavior/corpus — labelled event-stream archive (Chapter B) ───────
+//
+// Auth-gated, per-user. POST creates an entry from the events the
+// user just observed in the behavior tab. GET lists their entries,
+// optionally filtered by label. DELETE removes one. Listing returns
+// metadata only; full events_json is fetched via GET /:id when the
+// matrix runner replays it (next sprint).
+
+function handleBehaviorCorpus(req, res, parsed) {
+  const user = auth.getCurrentUser(req);
+  if (!user) {
+    return sendError(res, 401, 'auth_required', 'Sign in to use the behavior corpus');
+  }
+  const method = req.method;
+  const pathname = parsed.pathname;
+  const idMatch = pathname.match(/^\/api\/behavior\/corpus\/(\d+)$/);
+
+  if (method === 'GET' && pathname === '/api/behavior/corpus') {
+    const label = parsed.searchParams.get('label') || undefined;
+    try {
+      const entries = BehaviorCorpus.listForUser(user.id, { label });
+      const counts = BehaviorCorpus.countsForUser(user.id);
+      return sendJson(res, 200, { success: true, entries, counts });
+    } catch (e) {
+      console.error('[corpus/list] failed:', e.message);
+      return sendError(res, 500, 'list_failed', e.message);
+    }
+  }
+
+  if (method === 'GET' && idMatch) {
+    const id = Number(idMatch[1]);
+    const row = BehaviorCorpus.getById(id, user.id);
+    if (!row) return sendError(res, 404, 'not_found', 'Corpus entry not found');
+    return sendJson(res, 200, { success: true, entry: row });
+  }
+
+  if (method === 'POST' && pathname === '/api/behavior/corpus') {
+    return readJson(req)
+      .then((body) => {
+        const events = body && body.events;
+        const label = body && body.label;
+        if (!Array.isArray(events) || !events.length) {
+          return sendError(res, 400, 'events_required',
+            'Provide an `events` array (output of behavior probe)');
+        }
+        if (!BehaviorCorpus.LABELS.includes(label)) {
+          return sendError(res, 400, 'label_invalid',
+            'label must be one of: legitimate, fraud, ambiguous');
+        }
+        try {
+          const r = BehaviorCorpus.create({
+            userId: user.id,
+            label,
+            events,
+            sourceSampleId: body.sourceSampleId || null,
+            notes: body.notes || '',
+          });
+          sendJson(res, 200, { success: true, id: r.id });
+        } catch (e) {
+          console.error('[corpus/create] failed:', e.message);
+          sendError(res, 400, 'create_failed', e.message);
+        }
+      })
+      .catch((e) => sendError(res, 400, 'invalid_json', e.message));
+  }
+
+  if (method === 'DELETE' && idMatch) {
+    const id = Number(idMatch[1]);
+    const ok = BehaviorCorpus.destroy(id, user.id);
+    if (!ok) return sendError(res, 404, 'not_found', 'Corpus entry not found');
+    return sendJson(res, 200, { success: true });
+  }
+
+  return sendError(res, 405, 'method_not_allowed', 'Unsupported method/path');
+}
+
 // ── /api/v1/mirror ─────────────────────────────────────────────────────────
 // Generate a canonical counterpart of a paste:
 //   { input: BidRequest }  → { output: BidResponse, ... }
@@ -1695,6 +1771,8 @@ const server = http.createServer((req, res) => {
       return handleAnalyzeBehavior(req, res, parsed);
     if (pathname === '/api/account/insights' && req.method === 'GET')
       return handleAccountInsights(req, res);
+    if (pathname.startsWith('/api/behavior/corpus'))
+      return handleBehaviorCorpus(req, res, parsed);
     if (pathname === '/api/intel/suggest-name' && req.method === 'POST')
       return handleIntelSuggestName(req, res);
     if (pathname === '/api/intel/suggest-partner' && req.method === 'POST')

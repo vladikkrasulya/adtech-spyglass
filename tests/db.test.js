@@ -10,10 +10,10 @@ const { join } = require('node:path');
 const TMP = mkdtempSync(join(tmpdir(), 'spyglass-test-'));
 process.env.SPYGLASS_DATA_DIR = TMP;
 
-let Users, Partners, Samples;
+let Users, Partners, Samples, BehaviorCorpus;
 let userA, userB;
 before(() => {
-  ({ Users, Partners, Samples } = require('../db'));
+  ({ Users, Partners, Samples, BehaviorCorpus } = require('../db'));
   // Seed two users so scoping tests have something to compare against.
   userA = Users.create({ email: 'a@example.com', password_hash: 'x' });
   userB = Users.create({ email: 'b@example.com', password_hash: 'x' });
@@ -252,4 +252,104 @@ test('users: wipeUserData deletes samples + partners but keeps the user row', ()
   assert.equal(Samples.get({ id: s1.id, userId: u.id }), undefined);
   assert.equal(Samples.get({ id: s2.id, userId: u.id }), undefined);
   assert.equal(Partners.get({ id: p.id, userId: u.id }), undefined);
+});
+
+// ── BehaviorCorpus ────────────────────────────────────────────────────────
+
+test('corpus: create + listForUser, scoped per user', () => {
+  const events = [{ kind: 'click', t: 100 }, { kind: 'heartbeat', t: 200 }];
+  const r = BehaviorCorpus.create({
+    userId: userA.id,
+    label: 'fraud',
+    events,
+    notes: 'looks like a bot',
+  });
+  assert.ok(r.id > 0, 'should return new id');
+
+  const listed = BehaviorCorpus.listForUser(userA.id);
+  assert.ok(listed.find((e) => e.id === r.id), 'visible to userA');
+  assert.equal(listed.find((e) => e.id === r.id).label, 'fraud');
+  assert.equal(listed.find((e) => e.id === r.id).eventCount, 2);
+
+  // not visible to userB
+  const otherList = BehaviorCorpus.listForUser(userB.id);
+  assert.equal(otherList.find((e) => e.id === r.id), undefined);
+});
+
+test('corpus: rejects invalid label', () => {
+  assert.throws(
+    () => BehaviorCorpus.create({
+      userId: userA.id, label: 'spam', events: [{ x: 1 }],
+    }),
+    /label_invalid/,
+  );
+});
+
+test('corpus: rejects empty events', () => {
+  assert.throws(
+    () => BehaviorCorpus.create({ userId: userA.id, label: 'fraud', events: [] }),
+    /events_required/,
+  );
+  assert.throws(
+    () => BehaviorCorpus.create({ userId: userA.id, label: 'fraud', events: null }),
+    /events_required/,
+  );
+});
+
+test('corpus: countsForUser groups by label', () => {
+  const u = Users.create({ email: 'corpus-counts@example.com', password_hash: 'x' });
+  BehaviorCorpus.create({ userId: u.id, label: 'fraud', events: [{ x: 1 }] });
+  BehaviorCorpus.create({ userId: u.id, label: 'fraud', events: [{ x: 2 }] });
+  BehaviorCorpus.create({ userId: u.id, label: 'legitimate', events: [{ x: 3 }] });
+  const counts = BehaviorCorpus.countsForUser(u.id);
+  assert.equal(counts.fraud, 2);
+  assert.equal(counts.legitimate, 1);
+  assert.equal(counts.ambiguous, 0);
+  assert.equal(counts.total, 3);
+});
+
+test('corpus: listForUser respects label filter', () => {
+  const u = Users.create({ email: 'corpus-filter@example.com', password_hash: 'x' });
+  BehaviorCorpus.create({ userId: u.id, label: 'fraud', events: [{ a: 1 }] });
+  BehaviorCorpus.create({ userId: u.id, label: 'legitimate', events: [{ a: 2 }] });
+  BehaviorCorpus.create({ userId: u.id, label: 'ambiguous', events: [{ a: 3 }] });
+  const fraudOnly = BehaviorCorpus.listForUser(u.id, { label: 'fraud' });
+  assert.equal(fraudOnly.length, 1);
+  assert.equal(fraudOnly[0].label, 'fraud');
+});
+
+test('corpus: getById returns full events_json, scoped per user', () => {
+  const u = Users.create({ email: 'corpus-get@example.com', password_hash: 'x' });
+  const events = [{ kind: 'click', t: 50 }];
+  const r = BehaviorCorpus.create({ userId: u.id, label: 'legitimate', events });
+  const row = BehaviorCorpus.getById(r.id, u.id);
+  assert.equal(row.label, 'legitimate');
+  assert.deepEqual(JSON.parse(row.eventsJson), events);
+
+  // wrong user → no row
+  assert.equal(BehaviorCorpus.getById(r.id, userB.id), undefined);
+});
+
+test('corpus: destroy is per-user', () => {
+  const u = Users.create({ email: 'corpus-destroy@example.com', password_hash: 'x' });
+  const r = BehaviorCorpus.create({ userId: u.id, label: 'fraud', events: [{ x: 1 }] });
+  // Wrong user can't delete
+  assert.equal(BehaviorCorpus.destroy(r.id, userB.id), false);
+  assert.ok(BehaviorCorpus.getById(r.id, u.id), 'still present');
+  // Owner deletes
+  assert.equal(BehaviorCorpus.destroy(r.id, u.id), true);
+  assert.equal(BehaviorCorpus.getById(r.id, u.id), undefined);
+});
+
+test('corpus: cascades on user delete (FK ON DELETE CASCADE)', () => {
+  const u = Users.create({ email: 'corpus-cascade@example.com', password_hash: 'x' });
+  const r1 = BehaviorCorpus.create({ userId: u.id, label: 'fraud', events: [{ x: 1 }] });
+  const r2 = BehaviorCorpus.create({ userId: u.id, label: 'legitimate', events: [{ x: 2 }] });
+  Users.wipeUserData(u.id);
+  // wipeUserData doesn't delete the user row itself but our table is on
+  // user_id; sanity check current behavior. After explicit user delete:
+  const { db } = require('../db');
+  db.prepare('DELETE FROM users WHERE id = ?').run(u.id);
+  assert.equal(BehaviorCorpus.getById(r1.id, u.id), undefined);
+  assert.equal(BehaviorCorpus.getById(r2.id, u.id), undefined);
 });

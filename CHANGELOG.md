@@ -6,6 +6,86 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.29.0 — Behavior corpus capture (Chapter B foundation, 2026-05-10)
+
+First piece of Chapter B (Behavior v2 — real corpus + tuning) from
+`docs/next-chapters-2026-05-09.md`. Captures runtime probe event
+streams labelled by the user as legitimate / fraud / ambiguous so a
+follow-up sprint can run all 12 detection patterns over the corpus
+and emit a confusion matrix (precision/recall per id).
+
+**Schema v7**
+
+- New table `behavior_corpus(id, user_id, label, events_json,
+  source_sample_id, notes, created_at)`. Per-user, FK CASCADE on user
+  delete. Label CHECK constrains values to {legitimate, fraud,
+  ambiguous}. Indexed on user_id, label, created_at DESC.
+- `events_json` capped at 1 MB per row, `notes` at 4 kB. Listing
+  query derives `eventCount` via SQLite's `json_array_length` and
+  `eventBytes` via `length()` so the cabinet card shows row size
+  without sending the full payload.
+
+**API — `/api/behavior/corpus`**
+
+- `POST /api/behavior/corpus { events, label, sourceSampleId?, notes? }`
+  — auth-required, validates label whitelist + non-empty events.
+- `GET /api/behavior/corpus[?label=...]` — auth-required, returns
+  metadata-only listing + label counts (`{ entries, counts }`).
+- `GET /api/behavior/corpus/:id` — full row including `events_json`
+  for replay (matrix runner consumer in next sprint).
+- `DELETE /api/behavior/corpus/:id` — per-user scoped, 404 if not
+  yours or not found.
+
+**UI — capture bar on the behavior tab**
+
+- When the behavior tab has events AND the user is signed in, a
+  green strip appears at the top: "{N} events in this probe — save
+  them as a labelled example…" plus a "💾 save as corpus" button.
+- Click → modal with three radios (legitimate / fraud / ambiguous,
+  default fraud since that's the most common reason to capture)
+  plus a notes textarea. Saves via the new endpoint.
+
+**UI — cabinet card**
+
+- New "Behavior corpus" card in `/account` (3 locales) shows totals
+  per label and a list of entries. Each row: label pill (red/green/
+  amber), timestamp, event count, optional source sample tag,
+  notes, delete button. Empty state explains where to capture from.
+- Cabinet `init()` parallel-loads corpus alongside samples /
+  partners / insights; new `setCorpus(data)` renderer + delete
+  handler in `account.js`.
+
+**Tests**
+
+- `tests/db.test.js` grows 22 → 30: 8 new BehaviorCorpus cases —
+  create + list scoping, label whitelist enforcement, empty-events
+  rejection, label filter, full-row getById scoping, per-user
+  destroy, and FK cascade on user delete. Full suite 423 → 431,
+  all green.
+
+**i18n + CSS**
+
+- 23 new strings × 3 locales: bar copy + 4 toasts + modal labels +
+  cabinet labels + delete confirm.
+- Cabinet inline-style block extended with corpus pills + row grid
+  + counts strip.
+
+**Why this lands now**
+
+Chapter B is the recommended next strategic step per
+`next-chapters-2026-05-09.md`. v0 ships storage + capture UI
++ listing — the consumer (confusion-matrix runner over the corpus)
+is a separate follow-up. Foundation in place means future sprints
+just need to add the runner + display, no schema/UI groundwork.
+
+Smoke-tested via Playwright (unauth path): cabinet `/uk/account`
+renders `cabCorpus` DOM + `corpusCounts` + `corpusList` slots;
+window-exposed `openCorpusSaveModal`, `confirmCorpusSave`,
+`injectCorpusBar` all functions; endpoint correctly returns
+`auth_required` 401 to anonymous POST. 0 console errors.
+Live auth-gated path needs manual verification — see /account
+when signed in.
+
 ### v0.28.0 — Finding details panel (2026-05-10)
 
 Every validator finding becomes self-explanatory. Click the chevron
