@@ -44,6 +44,7 @@ const httpLib = require('./lib/http');
 httpLib.init({ notifyAdmin, notifyEscape });
 const { readJson, sendJson, sendError, makeError, MAX_BODY_BYTES } = httpLib;
 const { Router } = require('./lib/router');
+const { createHealthModule } = require('./modules/health/handler');
 const {
   validate,
   crosscheck,
@@ -107,6 +108,13 @@ function getPublicBaseUrl() {
 }
 
 const auth = createAuth({ Users, Sessions });
+
+// ── Backend module router ───────────────────────────────────────────────────
+// First-module migration: GET /api/health moved to modules/health/handler.js.
+// Subsequent migrations register here; the dispatcher in createServer checks
+// the Router first and falls through to the inline if-chain on miss.
+const router = new Router();
+router.register(createHealthModule({ db, auth, Users, sendJson }));
 
 // ── Process-level safety net ────────────────────────────────────────────────
 // Throttled per-tag so a tight crash loop doesn't burn through Telegram's
@@ -448,6 +456,39 @@ function resolveDialect(parsed) {
   if (want && listDialects().includes(want)) return want;
   return DEFAULT_DIALECT;
 }
+
+// ── Backend module registrations (wave 1: mirror, replay, sample) ───────────
+// Wired after analyzeLimiter / auth / resolveLocale / resolveDialect /
+// validate-crosscheck-mirror engine are all in scope. router itself was
+// instantiated earlier (next to health registration); we just push more
+// routes into it here.
+const { createMirrorModule } = require('./modules/mirror/handler');
+const { createReplayModule } = require('./modules/replay/handler');
+const sampleModule = require('./modules/sample/handler');
+router.register(
+  createMirrorModule({
+    analyzeLimiter,
+    auth,
+    ANALYZE_MAX_PER_WINDOW,
+    resolveLocale,
+    resolveDialect,
+    mirror,
+  }),
+);
+router.register(
+  createReplayModule({
+    analyzeLimiter,
+    auth,
+    ANALYZE_MAX_PER_WINDOW,
+    resolveLocale,
+    resolveDialect,
+    validate,
+    crosscheck,
+    analyzeBehavior,
+    replay: require('./lib/replay').replay,
+  }),
+);
+router.register(sampleModule);
 
 // ── Auth routes ─────────────────────────────────────────────────────────────
 
@@ -1179,46 +1220,6 @@ function handleBehaviorCorpus(req, res, parsed) {
 // max-samples at 100 per call so a malicious caller can't bypass with
 // one giant request.
 
-function handleReplay(req, res, parsed) {
-  if (!analyzeLimiter(auth.clientIp(req))) {
-    return sendError(
-      res,
-      429,
-      'rate_limited',
-      `Too many replay calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
-    );
-  }
-  const locale = resolveLocale(parsed);
-  const dialect = resolveDialect(parsed);
-  readJson(req)
-    .then((body) => {
-      const samples = body && body.samples;
-      if (!Array.isArray(samples)) {
-        return sendError(res, 400, 'samples_required', 'samples must be an array');
-      }
-      if (samples.length === 0) {
-        return sendError(res, 400, 'samples_empty', 'samples array is empty');
-      }
-      const opts = body && body.opts ? body.opts : {};
-      try {
-        const out = _replay(samples, {
-          validate,
-          crosscheck,
-          analyzeBehavior,
-          locale,
-          dialect,
-          topK: opts.topK,
-          maxSamples: 100, // hard cap server-side regardless of client request
-        });
-        sendJson(res, 200, { success: true, ...out });
-      } catch (e) {
-        console.error('[replay] failed:', e.message);
-        sendError(res, 400, 'replay_failed', e.message);
-      }
-    })
-    .catch((e) => sendError(res, 400, 'invalid_json', e.message));
-}
-
 // ── /api/v1/mirror ─────────────────────────────────────────────────────────
 // Generate a canonical counterpart of a paste:
 //   { input: BidRequest }  → { output: BidResponse, ... }
@@ -1229,38 +1230,6 @@ function handleReplay(req, res, parsed) {
 // Reuses the analyze rate limiter — generation is cheaper than full
 // validation but happens on the same human-paste cadence, so sharing
 // the bucket keeps fuzz-protection coherent.
-
-function handleMirror(req, res, parsed) {
-  if (!analyzeLimiter(auth.clientIp(req))) {
-    return sendError(
-      res,
-      429,
-      'rate_limited',
-      `Too many mirror calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
-    );
-  }
-  const locale = resolveLocale(parsed);
-  const dialect = resolveDialect(parsed);
-  readJson(req)
-    .then((body) => {
-      const input = body && body.input;
-      if (!input || typeof input !== 'object') {
-        return sendError(
-          res,
-          400,
-          'empty_payload',
-          'Provide an `input` object (BidRequest or BidResponse) in the request body',
-        );
-      }
-      const mode = body && body.mode === 'best-practice' ? 'best-practice' : 'minimal';
-      const result = mirror(input, { locale, dialect, mode });
-      sendJson(res, 200, { success: true, result });
-    })
-    .catch((e) => {
-      console.error('[mirror] failed:', e.message);
-      sendError(res, 400, 'invalid_json', e.message);
-    });
-}
 
 // ── /api/analyze-behavior ──────────────────────────────────────────────────
 // Runs the behavior engine over an array of probe events captured by the
@@ -1660,33 +1629,8 @@ function handleAdminStats(req, res) {
 }
 
 // ── /api/health ─────────────────────────────────────────────────────────────
-
-function handleHealth(req, res) {
-  let dbOk = false;
-  try {
-    db.prepare('SELECT 1').get();
-    dbOk = true;
-  } catch {
-    dbOk = false;
-  }
-  const status = dbOk ? 200 : 503;
-  // Anonymous callers (Docker healthcheck, Uptime Kuma, random probes) get
-  // only liveness — no pid/node-version/user-count fingerprinting. Authed
-  // sessions get the full operational view.
-  const body = {
-    success: dbOk,
-    status: dbOk ? 'ok' : 'degraded',
-    checks: { db: dbOk },
-  };
-  if (auth.getCurrentUser(req)) {
-    body.sessions = auth.activeSessionCount();
-    body.users = Users.count();
-    body.uptime = Math.round(process.uptime());
-    body.pid = process.pid;
-    body.node = process.version;
-  }
-  sendJson(res, status, body);
-}
+// Moved to modules/health/handler.js — registered with `router` near the top
+// of this file. Dispatcher calls router.dispatch() before the inline if-chain.
 
 // ── /api/v1/stream — public RTB observability feed (Phase 1 Step 1.2) ──────
 //
@@ -1774,123 +1718,6 @@ function handleStream(req, res) {
 // The corpus is BidResponse-only on disk; we synthesize a minimally valid
 // matching BidRequest (impid + size + site stub) so crosscheck has something
 // to work with.
-function handleSample(req, res) {
-  try {
-    const dir = path.join(__dirname, 'samples');
-    const files = fs
-      .readdirSync(dir)
-      .filter((f) => f.startsWith('synthetic-') && f.endsWith('.json'));
-    if (!files.length) return sendError(res, 503, 'no_samples', 'Sample corpus is empty');
-    // Optional ?type=<slug> picks a specific specimen (e.g. type=clean-banner,
-    // type=frame-bust-form). Slug is matched against the filename minus the
-    // 'synthetic-' prefix and '.json' suffix. Anything unmatched falls back
-    // to random — keeps the URL forgiving for bookmarks / typos.
-    const url = new URL(req.url, 'http://x');
-    const wanted = (url.searchParams.get('type') || '').trim();
-    let pick = null;
-    if (wanted) {
-      const match = files.find((f) => f === 'synthetic-' + wanted + '.json');
-      if (match) pick = match;
-    }
-    if (!pick) pick = files[Math.floor(Math.random() * files.length)];
-    const sample = JSON.parse(fs.readFileSync(path.join(dir, pick), 'utf8'));
-    const note = sample._note;
-    const label = pick
-      .replace(/^synthetic-/, '')
-      .replace(/\.json$/, '')
-      .replace(/-/g, ' ');
-
-    // Sample shape autodetect:
-    //   - has `seatbid` → it IS a BidResponse; synthesize a matching 2.x
-    //     BidRequest from the first bid (today's path, used by every
-    //     creative-attack specimen)
-    //   - has `openrtb` OR top-level `item[]` OR top-level `imp[]` → it
-    //     IS a BidRequest; load it directly into the request editor and
-    //     leave the response editor empty (used by 3.0 samples + future
-    //     request-only specimens)
-    const isPlainObj = (x) => x != null && typeof x === 'object' && !Array.isArray(x);
-    // Three discriminators:
-    //   1. legacy 2.x BidResponse — has top-level `seatbid[]`
-    //   2. oRTB 3.0 BidResponse — has `openrtb.response{}` envelope
-    //   3. BidRequest (2.x or 3.0) — has imp[] / item[] / openrtb.request{}
-    //      OR `openrtb` envelope without `response` (broken 3.0 request)
-    const is2xResponse = Array.isArray(sample.seatbid);
-    const is30Response = isPlainObj(sample.openrtb) && isPlainObj(sample.openrtb.response);
-    const isBidResponse = is2xResponse || is30Response;
-    const isBidRequest =
-      !isBidResponse &&
-      (isPlainObj(sample.openrtb) || Array.isArray(sample.item) || Array.isArray(sample.imp));
-    const cleanSample = Object.assign({}, sample);
-    delete cleanSample._note;
-
-    if (isBidRequest) {
-      sendJson(res, 200, {
-        success: true,
-        label,
-        _note: note,
-        bid_request: cleanSample,
-        bid_response: {},
-      });
-      return;
-    }
-
-    if (is30Response) {
-      // 3.0 BidResponse — load into the response editor, leave request
-      // editor empty (no synthesized 2.x request would make sense here).
-      sendJson(res, 200, {
-        success: true,
-        label,
-        _note: note,
-        bid_request: {},
-        bid_response: cleanSample,
-      });
-      return;
-    }
-
-    // Default: treat as BidResponse and synthesize a minimal 2.x request.
-    const firstBid =
-      (sample.seatbid && sample.seatbid[0] && sample.seatbid[0].bid && sample.seatbid[0].bid[0]) ||
-      {};
-    const request = {
-      id: 'demo-' + String(sample.id || 'sample').slice(0, 40),
-      imp: [
-        {
-          id: firstBid.impid || '1',
-          banner: {
-            w: firstBid.w || 300,
-            h: firstBid.h || 250,
-          },
-          bidfloor: 0.1,
-          bidfloorcur: 'USD',
-        },
-      ],
-      site: {
-        id: 'demo-site',
-        domain: 'example.com',
-        page: 'https://example.com/demo',
-        cat: ['IAB1'],
-      },
-      device: {
-        ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        ip: '203.0.113.42',
-        devicetype: 2,
-      },
-      user: { id: 'demo-user' },
-      at: 2,
-      tmax: 200,
-      cur: ['USD'],
-    };
-    sendJson(res, 200, {
-      success: true,
-      label,
-      _note: note,
-      bid_request: request,
-      bid_response: cleanSample,
-    });
-  } catch (e) {
-    sendError(res, 500, 'sample_failed', e.message);
-  }
-}
 
 // ── HTTP dispatch ────────────────────────────────────────────────────────────
 
@@ -1922,16 +1749,28 @@ const server = http.createServer((req, res) => {
   const { pathname } = parsed;
 
   try {
-    if (pathname === '/api/health' && req.method === 'GET') return handleHealth(req, res);
+    // Backend module router first; falls through on miss to the inline
+    // if-chain below as modules migrate over.
+    const hit = router.match(req.method, pathname);
+    if (hit) {
+      const out = hit.handler(req, res, parsed, hit.match);
+      if (out && typeof out.then === 'function') {
+        out.catch((err) => {
+          console.error('[router handler]', err && err.stack ? err.stack : err);
+          notifyAdmin(
+            `<b>500 on</b> <code>${notifyEscape(req.method + ' ' + req.url)}</code>\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
+            { tag: 'handler-500', level: 'error' },
+          );
+          if (!res.headersSent) sendError(res, 500, 'internal_error', 'Internal server error');
+        });
+      }
+      return;
+    }
     if (pathname === '/api/admin/stats' && req.method === 'GET') return handleAdminStats(req, res);
     if (pathname === '/api/v1/stream' && req.method === 'GET') return handleStream(req, res);
-    if (pathname === '/api/v1/sample' && req.method === 'GET') return handleSample(req, res);
+    // /api/v1/sample, /api/v1/mirror, /api/v1/replay routed via router (wave 1)
     if (pathname === '/api/analyze' && req.method === 'POST')
       return handleAnalyze(req, res, parsed);
-    if (pathname === '/api/v1/mirror' && req.method === 'POST')
-      return handleMirror(req, res, parsed);
-    if (pathname === '/api/v1/replay' && req.method === 'POST')
-      return handleReplay(req, res, parsed);
     if (pathname === '/api/analyze-behavior' && req.method === 'POST')
       return handleAnalyzeBehavior(req, res, parsed);
     if (pathname === '/api/account/insights' && req.method === 'GET')

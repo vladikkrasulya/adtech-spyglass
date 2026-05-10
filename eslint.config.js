@@ -53,6 +53,7 @@ module.exports = [
       'packages/**/*.js',
       'scripts/**/*.js',
       'samples/**/*.js',
+      'modules/**/*.js',
     ],
     languageOptions: {
       globals: {
