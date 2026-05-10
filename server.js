@@ -269,6 +269,25 @@ const LOCALE_REDIRECT_TABLE = {
 function serveStaticFile(req, res) {
   const reqPath = req.url.split('?')[0];
 
+  // Chrome / Slack / Discord / link-preview bots all request /favicon.ico
+  // by default regardless of the <link rel="icon"> tag. A 404 here gets
+  // cached aggressively and can override the SVG icon for the browser tab.
+  // Serve the SVG bytes under image/svg+xml — browsers sniff the magic and
+  // render it correctly, and the negative cache stops poisoning the tab.
+  if (reqPath === '/favicon.ico') {
+    try {
+      const svg = fs.readFileSync(path.join(PUBLIC_DIR, 'favicon.svg'));
+      res.writeHead(200, {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'max-age=86400',
+      });
+      res.end(svg);
+      return;
+    } catch {
+      /* fall through to normal 404 */
+    }
+  }
+
   // Cookie-driven locale redirect for bare landing URLs. Only fires when
   // the cookie says non-EN AND the user is on a known landing path. Has
   // to happen BEFORE resolveLocaleRoute resolves '/' → /index.en.html.

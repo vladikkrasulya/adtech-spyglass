@@ -6,6 +6,29 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.36.2 — Favicon resilience (2026-05-10)
+
+User reported the browser tab showing a generic globe icon despite the
+SVG favicon serving 200 OK. Three small fixes layered together:
+
+- **Explicit `width="32" height="32"` on the `<svg>` root.** The file
+  had only `viewBox`, which is enough for *most* renderers but Safari
+  (and a few mobile Chromes) want intrinsic dimensions before they
+  rasterize a favicon. Adding the attrs costs nothing and removes one
+  failure mode.
+- **`sizes="any"` on the `<link rel="icon">`.** Signals to Chrome that
+  this SVG can scale to any resolution the OS asks for — without the
+  hint, Chrome occasionally falls back to the legacy `/favicon.ico`
+  request and ignores the SVG.
+- **`/favicon.ico` route serves the SVG bytes.** Chrome / Slack /
+  Discord / link-preview bots all request `/favicon.ico` by default
+  regardless of the link tag. The 404 we returned was getting cached
+  by CF (and by browsers) and could poison the tab. Now: same SVG,
+  served under `image/svg+xml` — browsers sniff the magic and render
+  it correctly.
+- Bumped query-string from `?v=4` to `?v=5` across all 9 HTML shells
+  to force fresh fetch past any browser cache holding a stale empty.
+
 ### v0.36.1 — Overlap + reality audit fixes (2026-05-10)
 
 Two parallel audit agents (functional overlap + claims-vs-reality)
