@@ -1124,6 +1124,44 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   width: min(440px, 92vw);
   box-shadow: var(--shadow-lg);
 }
+.modal-card-wide {
+  width: min(720px, 96vw);
+}
+.kt-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.kt-chip-ok {
+  background: rgba(46, 160, 67, 0.16);
+  color: #2ea043;
+  border: 1px solid rgba(46, 160, 67, 0.4);
+}
+.kt-chip-warn {
+  background: rgba(217, 119, 6, 0.16);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+}
+.kt-mirror-notes {
+  list-style: disc;
+  padding-left: var(--space-5);
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted, var(--text));
+}
+.kt-mirror-notes li {
+  margin-bottom: 4px;
+}
+.kt-mirror-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
 .modal-title {
   font-family: var(--font-mono);
   font-size: 11px;

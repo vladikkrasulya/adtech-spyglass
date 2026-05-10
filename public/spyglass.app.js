@@ -3440,6 +3440,119 @@ export async function mountInspector(root, ctx) {
     }, 0);
   };
 
+  // Mirror modal — generate canonical counterpart of whichever editor has
+  // content. Picks bidReq if non-empty (→ generates response), else bidRes
+  // (→ generates request). Result is rendered inline; user can copy it or
+  // load it into the empty editor.
+  window.openMirrorModal = async function () {
+    const reqVal = ($('bidReq').value || '').trim();
+    const resVal = ($('bidRes').value || '').trim();
+    if (!reqVal && !resVal) {
+      toast(t('toast.nothing_to_mirror'), 'error');
+      return;
+    }
+    const sourceVal = reqVal || resVal;
+    const sourceField = reqVal ? 'bidReq' : 'bidRes';
+    const targetField = reqVal ? 'bidRes' : 'bidReq';
+
+    let parsedInput;
+    try {
+      parsedInput = JSON.parse(sourceVal);
+    } catch (e) {
+      toast(t('toast.mirror_invalid_json'), 'error');
+      return;
+    }
+
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
+      '<div class="modal-card">' +
+      '<div class="modal-title">' + escapeHtml(t('modal.mirror.title')) + '</div>' +
+      '<div class="modal-row"><div class="kt-mirror-loading"><span class="spinner"></span> ' +
+      escapeHtml(t('modal.mirror.loading')) + '</div></div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
+      t('btn.cancel') + '</button>' +
+      '</div>' +
+      '</div></div>';
+
+    let result;
+    try {
+      const r = await fetch('/api/v1/mirror', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: parsedInput }),
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error || 'mirror_failed');
+      result = j.result;
+    } catch (e) {
+      $('modalRoot').innerHTML =
+        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
+        '<div class="modal-card">' +
+        '<div class="modal-title">' + escapeHtml(t('modal.mirror.title')) + '</div>' +
+        '<div class="modal-row"><div class="finding finding-error">' +
+        escapeHtml(t('modal.mirror.failed')) + ': ' + escapeHtml(String(e.message)) +
+        '</div></div>' +
+        '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
+        t('btn.close') + '</button></div>' +
+        '</div></div>';
+      return;
+    }
+
+    if (!result.ok) {
+      const noteList = (result.notes || []).map((n) =>
+        '<li>' + escapeHtml(n.msg || n.id) + '</li>').join('');
+      $('modalRoot').innerHTML =
+        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
+        '<div class="modal-card">' +
+        '<div class="modal-title">' + escapeHtml(t('modal.mirror.unsupported_title')) + '</div>' +
+        '<div class="modal-row"><ul class="kt-mirror-notes">' + noteList + '</ul></div>' +
+        '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
+        t('btn.close') + '</button></div>' +
+        '</div></div>';
+      return;
+    }
+
+    const direction = result.direction === 'response_from_request'
+      ? t('modal.mirror.dir.response_from_request')
+      : t('modal.mirror.dir.request_from_response');
+    const outputJson = JSON.stringify(result.output, null, 2);
+    const noteList = (result.notes || []).map((n) =>
+      '<li>' + escapeHtml(n.msg || n.id) + '</li>').join('');
+    const st = result.selfTest || { validate: {}, crosscheck: {} };
+    const stChip = (st.validate.errorCount === 0 && st.crosscheck.critCount === 0)
+      ? '<span class="kt-chip kt-chip-ok">' + escapeHtml(t('modal.mirror.selftest.clean')) + '</span>'
+      : '<span class="kt-chip kt-chip-warn">' +
+          escapeHtml(t('modal.mirror.selftest.dirty', {
+            errors: st.validate.errorCount, crits: st.crosscheck.critCount,
+          })) + '</span>';
+
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
+      '<div class="modal-card modal-card-wide">' +
+      '<div class="modal-title">' + escapeHtml(t('modal.mirror.title')) +
+      ' <small>· ' + escapeHtml(direction) + '</small></div>' +
+      '<div class="modal-row">' + stChip + '</div>' +
+      '<div class="modal-row"><label>' + escapeHtml(t('modal.mirror.output_label')) + '</label>' +
+      '<textarea id="mMirrorOutput" rows="14" readonly>' + escapeHtml(outputJson) + '</textarea>' +
+      '</div>' +
+      (noteList
+        ? '<div class="modal-row"><label>' + escapeHtml(t('modal.mirror.notes_label')) + '</label>' +
+          '<ul class="kt-mirror-notes">' + noteList + '</ul></div>'
+        : '') +
+      '<div class="modal-actions">' +
+      '<button class="btn btn-ghost btn-sm" data-action="modal-close">' + t('btn.close') + '</button>' +
+      '<button class="btn btn-ghost btn-sm" data-action="mirror-copy">' +
+      escapeHtml(t('modal.mirror.btn_copy')) + '</button>' +
+      '<button class="btn btn-primary btn-sm" data-action="mirror-load" data-target="' +
+      targetField + '">' + escapeHtml(t('modal.mirror.btn_load')) + '</button>' +
+      '</div>' +
+      '</div></div>';
+    // Suppress unused-var warning while keeping variable available for future
+    // copy-back-to-source action.
+    void sourceField;
+  };
+
   // Phase C-1: ask gemma to identify the SSP / vendor based on the
   // current bid_req / bid_res contents. Privacy-safe: payload stays on
   // the local Ollama, never reaches a cloud LLM. Banner offers two paths:
@@ -4103,6 +4216,29 @@ export async function mountInspector(root, ctx) {
           // — top bar / chrome —
           case 'analyze':
             return runAnalysis();
+          case 'mirror':
+            return window.openMirrorModal && window.openMirrorModal();
+          case 'mirror-copy': {
+            const out = $('mMirrorOutput');
+            if (!out) return;
+            navigator.clipboard.writeText(out.value).then(
+              () => toast(t('toast.mirror_copied'), 'success'),
+              () => toast(t('toast.mirror_copy_failed'), 'error'),
+            );
+            return;
+          }
+          case 'mirror-load': {
+            const out = $('mMirrorOutput');
+            const target = el.dataset.target;
+            if (!out || !target) return;
+            const ta = $(target);
+            if (!ta) return;
+            ta.value = out.value;
+            updateCharCount(target);
+            closeModal();
+            toast(t('toast.mirror_loaded'), 'success');
+            return;
+          }
           case 'save-sample':
             return window.openSaveModal && window.openSaveModal();
           case 'verify-email':

@@ -43,6 +43,7 @@ const { notifyAdmin, escapeHtml: notifyEscape } = require('./notify');
 const {
   validate,
   crosscheck,
+  mirror,
   listLocales,
   listDialects,
   extractAllCategories,
@@ -1030,6 +1031,48 @@ function handleAccountInsights(req, res) {
   }
 }
 
+// ── /api/v1/mirror ─────────────────────────────────────────────────────────
+// Generate a canonical counterpart of a paste:
+//   { input: BidRequest }  → { output: BidResponse, ... }
+//   { input: BidResponse } → { output: BidRequest,  ... }
+// Self-test (validate + crosscheck against the original) is run inside
+// core's mirror() and the rolled-up counts are returned.
+//
+// Reuses the analyze rate limiter — generation is cheaper than full
+// validation but happens on the same human-paste cadence, so sharing
+// the bucket keeps fuzz-protection coherent.
+
+function handleMirror(req, res, parsed) {
+  if (!analyzeLimiter(auth.clientIp(req))) {
+    return sendError(
+      res,
+      429,
+      'rate_limited',
+      `Too many mirror calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
+    );
+  }
+  const locale = resolveLocale(parsed);
+  const dialect = resolveDialect(parsed);
+  readJson(req)
+    .then((body) => {
+      const input = body && body.input;
+      if (!input || typeof input !== 'object') {
+        return sendError(
+          res,
+          400,
+          'empty_payload',
+          'Provide an `input` object (BidRequest or BidResponse) in the request body',
+        );
+      }
+      const result = mirror(input, { locale, dialect });
+      sendJson(res, 200, { success: true, result });
+    })
+    .catch((e) => {
+      console.error('[mirror] failed:', e.message);
+      sendError(res, 400, 'invalid_json', e.message);
+    });
+}
+
 // ── /api/analyze-behavior ──────────────────────────────────────────────────
 // Runs the behavior engine over an array of probe events captured by the
 // in-iframe creative-probe.js. Stateless, mirrors /api/analyze envelope:
@@ -1645,6 +1688,8 @@ const server = http.createServer((req, res) => {
     if (pathname === '/api/v1/sample' && req.method === 'GET') return handleSample(req, res);
     if (pathname === '/api/analyze' && req.method === 'POST')
       return handleAnalyze(req, res, parsed);
+    if (pathname === '/api/v1/mirror' && req.method === 'POST')
+      return handleMirror(req, res, parsed);
     if (pathname === '/api/analyze-behavior' && req.method === 'POST')
       return handleAnalyzeBehavior(req, res, parsed);
     if (pathname === '/api/account/insights' && req.method === 'GET')

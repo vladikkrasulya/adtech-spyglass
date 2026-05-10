@@ -28,6 +28,7 @@ const { validateResponse } = require('./rules-response');
 const { validateResponse30 } = require('./rules-response-30');
 const { validateFeedResponse } = require('./rules-feed');
 const { crosscheck: doCrosscheck, nativeAssetCrosscheck } = require('./crosscheck');
+const { mirror: doMirror } = require('./mirror');
 const {
   LEVELS,
   CROSS_LEVELS,
@@ -168,11 +169,81 @@ function listDialects() {
   return Object.keys(DIALECTS);
 }
 
+/**
+ * Generate a canonical counterpart for a paste:
+ *   BidRequest  → minimal-valid BidResponse
+ *   BidResponse → minimal-valid BidRequest the response would fit
+ *
+ * The generator is rule-based; the output is then run through validate()
+ * and crosscheck() in this wrapper as a self-test, and the rolled-up
+ * counts are returned in `selfTest`. A clean self-test is the contract:
+ * if generator produces output that fails its own validator, that's a
+ * generator bug — surface it explicitly.
+ *
+ * @param {unknown} input
+ * @param {{dialect?: string, locale?: string, mode?: string}} [opts]
+ */
+function mirror(input, opts) {
+  const o = opts || {};
+  const locale = o.locale || FALLBACK_LOCALE;
+  const dialectSlug = typeof o.dialect === 'string' ? o.dialect : DEFAULT_DIALECT;
+
+  const result = doMirror(input, { mode: o.mode || 'minimal', dialect: dialectSlug });
+  const decoratedNotes = (result.notes || []).map((n) => ({
+    id: n.id,
+    params: n.params || {},
+    msg: resolve(n.id, n.params || {}, locale),
+  }));
+
+  if (!result.ok || !result.output) {
+    return {
+      ok: false,
+      direction: result.direction,
+      inputType: result.inputType,
+      output: null,
+      notes: decoratedNotes,
+      selfTest: null,
+    };
+  }
+
+  // Self-test: run output back through validate() (counterpart) +
+  // crosscheck() (input vs output).
+  const validateRes = validate(result.output, { dialect: dialectSlug, locale });
+  let req, res;
+  if (result.direction === 'response_from_request') {
+    req = input;
+    res = result.output;
+  } else {
+    req = result.output;
+    res = input;
+  }
+  const crossFindings = crosscheck(req, res, { dialect: dialectSlug, locale });
+
+  const errorCount = validateRes.findings.filter((f) => f.level === LEVELS.ERROR).length;
+  const warningCount = validateRes.findings.filter((f) => f.level === LEVELS.WARNING).length;
+  const critCount = crossFindings.filter((f) => f.level === CROSS_LEVELS.CRIT).length;
+  const warnCount = crossFindings.filter((f) => f.level === CROSS_LEVELS.WARN).length;
+  const okCount = crossFindings.filter((f) => f.level === CROSS_LEVELS.OK).length;
+
+  return {
+    ok: true,
+    direction: result.direction,
+    inputType: result.inputType,
+    output: result.output,
+    notes: decoratedNotes,
+    selfTest: {
+      validate: { status: validateRes.status, errorCount, warningCount },
+      crosscheck: { critCount, warnCount, okCount },
+    },
+  };
+}
+
 const { decodeCategory, decodeCategories, extractAllCategories } = require('./categories');
 
 module.exports = {
   validate,
   crosscheck,
+  mirror,
   detectType,
   detectVersion,
   detectFormat,
