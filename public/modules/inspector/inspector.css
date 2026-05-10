@@ -1165,19 +1165,38 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .kt-mirror-modes {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 12px;
 }
+/* Override .modal-row label (uppercase + 10px + dim, defined further down
+   in this file) which would otherwise apply to each radio's <label>
+   wrapper via descendant selectors. Bumping specificity with `.modal-row`
+   in the chain — same specificity but later in source order also works,
+   we use the explicit chain so it doesn't matter where this lives. */
+.modal-row .kt-mirror-modes label,
 .kt-mirror-modes label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 8px;
   cursor: pointer;
   font-family: var(--font-mono);
-  color: var(--text-dim, var(--text));
+  font-size: 12px;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
 }
+/* .modal-row input gives every input padding/border/bg appropriate for a
+   text field. Reset for radios so the circle stays compact and the
+   whole row isn't padded out to the modal edges. */
+.modal-row .kt-mirror-modes input[type='radio'],
 .kt-mirror-modes input[type='radio'] {
   margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  width: auto;
+  flex: 0 0 auto;
 }
 .kt-mirror-diff {
   font-family: var(--font-mono);

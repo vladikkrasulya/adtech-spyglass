@@ -6,6 +6,40 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.26.1 — UX polish from v0.26.0 review (2026-05-10)
+
+Three issues caught on the v0.26.0 walkthrough.
+
+**Fix — mirror modal radio layout**
+
+- Mode-toggle radios were rendering with the radio circle far from
+  the text (uppercased + dim + tiny font). Root cause: `.modal-row
+  label` rule (defined later in `inspector.css`) won source-order over
+  `.kt-mirror-modes label` despite same specificity, applying its
+  uppercase + 10px + dim styling to my radio wrappers. `.modal-row
+  input` also added text-field padding to the radio. Fixed by
+  prefixing the rule with `.modal-row .kt-mirror-modes label` so
+  the chain has higher specificity, and explicit reset on
+  `input[type='radio']` (margin/padding/border/bg/width).
+
+**Fix — header dropdowns staying open**
+
+- Native `<details>` doesn't close on outside click — clicking the
+  example picker, then bidRes, left the menu hanging until you
+  clicked the summary again. Surprising for popover-style menus.
+  Added one document-level click handler in `mountInspector` that
+  closes any `details[open]` whose subtree doesn't contain the click
+  target. Covers the example menu, lang switcher, and any future
+  `kt-*-menu` group.
+
+**Fix — collapse-button tooltip clarity**
+
+- The `▾` button next to bidReq / bidRes had a terse "Згорнути /
+  розгорнути панель" title that didn't explain *why* you'd want to.
+  Improved to spell out the use case ("звільнити місце, коли
+  працюєш тільки з другою стороною") and added `aria-label` for the
+  short version. 3 locales.
+
 ### v0.26.0 — Mirror++ sprint (2026-05-10)
 
 Compounding the v0.25.0 mirror release into something pedagogical:

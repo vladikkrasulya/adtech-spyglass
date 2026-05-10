@@ -4619,6 +4619,23 @@ export async function mountInspector(root, ctx) {
       el.addEventListener('keydown', window.handleKeydown, { signal: ctx.signal });
     });
 
+    // Close any open <details> dropdown (sample picker, lang switcher) when
+    // the user clicks outside of it. Native <details> stays open until you
+    // click its <summary> again, which surprises users who expect popover
+    // semantics. One document-level handler covers all current and future
+    // .kt-*-menu details groups.
+    document.addEventListener(
+      'click',
+      (ev) => {
+        const opened = document.querySelectorAll('details[open]');
+        if (!opened.length) return;
+        opened.forEach((d) => {
+          if (!d.contains(ev.target)) d.removeAttribute('open');
+        });
+      },
+      { signal: ctx.signal },
+    );
+
     await bootAuth();
     await refreshPartners();
     refreshSamples();
