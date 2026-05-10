@@ -4060,301 +4060,13 @@ export async function mountInspector(root, ctx) {
     };
   };
 
-  // ── Mirror modal ─────────────────────────────────────────────────────
-  // Two-panel rendering when both bidReq + bidRes are filled:
-  //   panel 1: generated canonical counterpart (textarea + copy/load btns)
-  //   panel 2: diff between user's real counterpart and the canonical one
-  //            — colour-coded per top-level key (changed/added/missing)
-  // Mode radio (minimal / best-practice) re-fetches the result on toggle.
-  window.openMirrorModal = async function () {
-    const reqVal = ($('bidReq').value || '').trim();
-    const resVal = ($('bidRes').value || '').trim();
-    if (!reqVal && !resVal) {
-      toast(t('toast.nothing_to_mirror'), 'error');
-      return;
-    }
-
-    let parsedReq = null;
-    let parsedRes = null;
-    try {
-      if (reqVal) parsedReq = JSON.parse(reqVal);
-      if (resVal) parsedRes = JSON.parse(resVal);
-    } catch (e) {
-      toast(t('toast.mirror_invalid_json'), 'error');
-      return;
-    }
-
-    // Source/target derivation. When both are present we mirror from
-    // bidReq → bidRes (the more common direction for "is my response
-    // shaped right?") and diff against the user's real bidRes.
-    const haveBoth = !!(parsedReq && parsedRes);
-    const sourceInput = parsedReq || parsedRes;
-    const targetField = parsedReq ? 'bidRes' : 'bidReq';
-    const userCounterpart = haveBoth ? (parsedReq ? parsedRes : parsedReq) : null;
-
-    let currentMode = 'minimal';
-
-    function loadingTemplate() {
-      return (
-        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-        '<div class="modal-card modal-card-wide">' +
-        '<div class="modal-title">' +
-        escapeHtml(t('modal.mirror.title')) +
-        '</div>' +
-        '<div class="modal-row"><div class="kt-mirror-loading"><span class="spinner"></span> ' +
-        escapeHtml(t('modal.mirror.loading')) +
-        '</div></div>' +
-        '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-        t('btn.cancel') +
-        '</button></div></div></div>'
-      );
-    }
-
-    async function fetchAndRender() {
-      $('modalRoot').innerHTML = loadingTemplate();
-      let result;
-      try {
-        const r = await fetch('/api/v1/mirror', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input: sourceInput, mode: currentMode }),
-        });
-        const j = await r.json();
-        if (!j.success) throw new Error(j.error || 'mirror_failed');
-        result = j.result;
-      } catch (err) {
-        $('modalRoot').innerHTML =
-          '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-          '<div class="modal-card">' +
-          '<div class="modal-title">' +
-          escapeHtml(t('modal.mirror.title')) +
-          '</div>' +
-          '<div class="modal-row"><div class="finding finding-error">' +
-          escapeHtml(t('modal.mirror.failed')) +
-          ': ' +
-          escapeHtml(String(err.message)) +
-          '</div></div>' +
-          '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-          t('btn.close') +
-          '</button></div></div></div>';
-        return;
-      }
-      renderResult(result);
-    }
-
-    function renderResult(result) {
-      if (!result.ok) {
-        const noteList = (result.notes || [])
-          .map((n) => '<li>' + escapeHtml(n.msg || n.id) + '</li>')
-          .join('');
-        $('modalRoot').innerHTML =
-          '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-          '<div class="modal-card">' +
-          '<div class="modal-title">' +
-          escapeHtml(t('modal.mirror.unsupported_title')) +
-          '</div>' +
-          '<div class="modal-row"><ul class="kt-mirror-notes">' +
-          noteList +
-          '</ul></div>' +
-          '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-          t('btn.close') +
-          '</button></div></div></div>';
-        return;
-      }
-
-      const direction =
-        result.direction === 'response_from_request'
-          ? t('modal.mirror.dir.response_from_request')
-          : t('modal.mirror.dir.request_from_response');
-      const outputJson = JSON.stringify(result.output, null, 2);
-      const noteList = (result.notes || [])
-        .map((n) => '<li>' + escapeHtml(n.msg || n.id) + '</li>')
-        .join('');
-      const st = result.selfTest || { validate: {}, crosscheck: {} };
-      const stChip =
-        st.validate.errorCount === 0 && st.crosscheck.critCount === 0
-          ? '<span class="kt-chip kt-chip-ok">' +
-            escapeHtml(t('modal.mirror.selftest.clean')) +
-            '</span>'
-          : '<span class="kt-chip kt-chip-warn">' +
-            escapeHtml(
-              t('modal.mirror.selftest.dirty', {
-                errors: st.validate.errorCount,
-                crits: st.crosscheck.critCount,
-              }),
-            ) +
-            '</span>';
-
-      const modeChecked = (m) => (currentMode === m ? ' checked' : '');
-      const modeRow =
-        '<div class="modal-row"><label>' +
-        escapeHtml(t('modal.mirror.mode_label')) +
-        '</label>' +
-        '<div class="kt-mirror-modes">' +
-        '<label><input type="radio" name="mMirrorMode" value="minimal" data-action="mirror-mode-change"' +
-        modeChecked('minimal') +
-        '> ' +
-        escapeHtml(t('modal.mirror.mode.minimal')) +
-        '</label>' +
-        '<label><input type="radio" name="mMirrorMode" value="best-practice" data-action="mirror-mode-change"' +
-        modeChecked('best-practice') +
-        '> ' +
-        escapeHtml(t('modal.mirror.mode.best_practice')) +
-        '</label>' +
-        '</div></div>';
-
-      let diffHtml = '';
-      if (haveBoth && userCounterpart) {
-        const diffRows = diffJsonForMirror(userCounterpart, result.output);
-        if (diffRows.length) {
-          diffHtml =
-            '<div class="modal-row"><label>' +
-            escapeHtml(t('modal.mirror.diff_label')) +
-            '</label>' +
-            '<div class="kt-mirror-diff">' +
-            diffRows.join('') +
-            '</div>' +
-            '<div class="kt-mirror-diff-legend">' +
-            escapeHtml(t('modal.mirror.diff_legend')) +
-            '</div></div>';
-        } else {
-          diffHtml =
-            '<div class="modal-row"><label>' +
-            escapeHtml(t('modal.mirror.diff_label')) +
-            '</label>' +
-            '<div class="kt-mirror-diff-empty">' +
-            escapeHtml(t('modal.mirror.diff_no_changes')) +
-            '</div></div>';
-        }
-      }
-
-      $('modalRoot').innerHTML =
-        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-        '<div class="modal-card modal-card-wide">' +
-        '<div class="modal-title">' +
-        escapeHtml(t('modal.mirror.title')) +
-        ' <small>· ' +
-        escapeHtml(direction) +
-        '</small></div>' +
-        '<div class="modal-row">' +
-        stChip +
-        '</div>' +
-        modeRow +
-        '<div class="modal-row"><label>' +
-        escapeHtml(t('modal.mirror.output_label')) +
-        '</label>' +
-        '<textarea id="mMirrorOutput" rows="14" readonly>' +
-        escapeHtml(outputJson) +
-        '</textarea>' +
-        '</div>' +
-        diffHtml +
-        (noteList
-          ? '<div class="modal-row"><label>' +
-            escapeHtml(t('modal.mirror.notes_label')) +
-            '</label>' +
-            '<ul class="kt-mirror-notes">' +
-            noteList +
-            '</ul></div>'
-          : '') +
-        '<div class="modal-actions">' +
-        '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-        t('btn.close') +
-        '</button>' +
-        '<button class="btn btn-ghost btn-sm" data-action="mirror-copy">' +
-        escapeHtml(t('modal.mirror.btn_copy')) +
-        '</button>' +
-        (typeof window.buildShareUrl === 'function'
-          ? '<button class="btn btn-ghost btn-sm" data-action="mirror-share">' +
-            escapeHtml(t('modal.mirror.btn_share')) +
-            '</button>'
-          : '') +
-        '<button class="btn btn-primary btn-sm" data-action="mirror-load" data-target="' +
-        targetField +
-        '">' +
-        escapeHtml(t('modal.mirror.btn_load')) +
-        '</button>' +
-        '</div>' +
-        '</div></div>';
-    }
-
-    // Mode change handler is dispatched through the central data-action
-    // listener (case 'mirror-mode-change' below). We expose the refetch
-    // function on a closure so the dispatcher can trigger it.
-    window.__spyglassMirrorRefetch = (newMode) => {
-      currentMode = newMode === 'best-practice' ? 'best-practice' : 'minimal';
-      fetchAndRender();
-    };
-
-    await fetchAndRender();
-  };
-
-  // ── Diff helper for mirror modal ─────────────────────────────────────
-  // Produce a compact, top-level + one-deep JSON diff between the user's
-  // counterpart and the canonical mirror output. Not a full textual diff —
-  // we treat objects as JSON-stringified leaves below depth 2 to keep the
-  // visual scan-friendly. Three change kinds: changed (≠), added by mirror
-  // (+), missing in mirror compared to user (−). Returns an array of
-  // pre-escaped HTML rows.
-  function diffJsonForMirror(userObj, mirrorObj) {
-    const rows = [];
-    const u = userObj && typeof userObj === 'object' ? userObj : {};
-    const m = mirrorObj && typeof mirrorObj === 'object' ? mirrorObj : {};
-    const keys = new Set([...Object.keys(u), ...Object.keys(m)]);
-    const sortedKeys = Array.from(keys).sort();
-    for (const k of sortedKeys) {
-      const inU = Object.prototype.hasOwnProperty.call(u, k);
-      const inM = Object.prototype.hasOwnProperty.call(m, k);
-      if (inU && inM) {
-        const a = JSON.stringify(u[k]);
-        const b = JSON.stringify(m[k]);
-        if (a === b) continue; // same — skip silently
-        rows.push(
-          '<div class="kt-diff-row kt-diff-changed">' +
-            '<span class="kt-diff-marker">≠</span>' +
-            '<span class="kt-diff-key">' +
-            escapeHtml(k) +
-            '</span>' +
-            '<span class="kt-diff-side kt-diff-yours" title="yours">' +
-            escapeHtml(truncate(a, 120)) +
-            '</span>' +
-            '<span class="kt-diff-arrow">→</span>' +
-            '<span class="kt-diff-side kt-diff-canon" title="canonical">' +
-            escapeHtml(truncate(b, 120)) +
-            '</span>' +
-            '</div>',
-        );
-      } else if (inM && !inU) {
-        rows.push(
-          '<div class="kt-diff-row kt-diff-added">' +
-            '<span class="kt-diff-marker">+</span>' +
-            '<span class="kt-diff-key">' +
-            escapeHtml(k) +
-            '</span>' +
-            '<span class="kt-diff-side kt-diff-canon">' +
-            escapeHtml(truncate(JSON.stringify(m[k]), 120)) +
-            '</span>' +
-            '</div>',
-        );
-      } else {
-        rows.push(
-          '<div class="kt-diff-row kt-diff-missing">' +
-            '<span class="kt-diff-marker">−</span>' +
-            '<span class="kt-diff-key">' +
-            escapeHtml(k) +
-            '</span>' +
-            '<span class="kt-diff-side kt-diff-yours">' +
-            escapeHtml(truncate(JSON.stringify(u[k]), 120)) +
-            '</span>' +
-            '</div>',
-        );
-      }
-    }
-    return rows;
-  }
-  function truncate(s, n) {
-    return s == null ? '' : s.length > n ? s.slice(0, n - 1) + '…' : s;
-  }
-
+  // ── Mirror modal — MOVED to modules/mirror/ (lazy-loaded) ────────────
+  // The implementation lives in /modules/mirror/index.js and is fetched
+  // on first click of the "дзеркало ↔" button (case 'mirror' in the
+  // dispatcher above). Pre-migration this block held openMirrorModal +
+  // diffJsonForMirror + truncate (≈220 LOC); they're now ES-imported
+  // helpers inside the module. ~25KB stays out of the initial JS
+  // bundle until a user actually opens mirror.
   // Phase C-1: ask gemma to identify the SSP / vendor based on the
   // current bid_req / bid_res contents. Privacy-safe: payload stays on
   // the local Ollama, never reaches a cloud LLM. Banner offers two paths:
@@ -5062,8 +4774,26 @@ export async function mountInspector(root, ctx) {
             toast(t('toast.live_loaded'), 'success');
             return;
           }
-          case 'mirror':
-            return window.openMirrorModal && window.openMirrorModal();
+          case 'mirror': {
+            // Lazy-load the mirror module on first click. Subsequent
+            // clicks hit the browser's ES module cache for free.
+            if (typeof window.openMirrorModal === 'function') {
+              return window.openMirrorModal();
+            }
+            (async () => {
+              try {
+                await Promise.all([
+                  import('/modules/mirror/i18n.js'),
+                  import('/modules/mirror/index.js'),
+                ]);
+                window.openMirrorModal();
+              } catch (err) {
+                console.error('[mirror] lazy import failed:', err);
+                toast(t('toast.error_generic', { error: 'mirror module load failed' }), 'error');
+              }
+            })();
+            return;
+          }
           case 'mirror-copy': {
             const out = $('mMirrorOutput');
             if (!out) return;

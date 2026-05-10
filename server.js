@@ -218,40 +218,93 @@ function resolveLocaleRoute(reqUrl) {
 }
 
 // ── Asset cache-bust: content-hash injection ──────────────────────────────
-// Replaces manual `?v=N` bumps in HTML with `?v=<sha1[0..7]>` of the
-// referenced file's contents. Hash is mtime-cached so each HTML render is
-// near-zero cost; the cache invalidates when a file is touched.
+// Replaces manual `?v=N` bumps with `?v=<sha1[0..7]>` of the referenced
+// file's contents. Three patterns covered:
 //
-// Why bother: Cloudflare aggressively caches static `*.js`/`*.css` and our
+//   1. `<script src="…">` and `<link href="…">` in HTML.
+//   2. ES `import x from '/path.js'` — both inline in HTML <script type=module>
+//      and inside .js files.
+//   3. Dynamic `import('/path.js')` — same contexts as #2.
+//
+// The hash is TRANSITIVE: hashing A.js means rewriting A.js (so all its
+// imports get current hashes) and then hashing the rewritten content. So
+// touching B.js (which A imports) automatically changes A's hash — no
+// manual ?v=N bumps anywhere in the codebase. Disk-content hashing is
+// reserved for terminal assets (.css, images) where there are no imports
+// to chase.
+//
+// Why bother: Cloudflare aggressively caches static `*.js`/`*.css` and the
 // `Cache-Control: no-cache` from the origin doesn't always override CDN
 // rules. A content-hash in the URL is the only bulletproof invalidation.
-const _hashCache = new Map(); // absPath → { hash, mtimeMs }
 
-function fileHash(filepath) {
+const _hashCache = new Map(); // absPath → { hash, mtimeMs } — for terminal (.css, image) only
+
+const HTML_TAG_RE = /(<(?:script|link)[^>]*?(?:src|href)=")(\/[^"?]+\.(?:js|css))(?:\?v=[^"]+)?"/g;
+// Catches `from "/x.js"` and `import("/x.js")` with optional ?v=…
+// Backtick template-literal imports are theoretically possible but rare;
+// adding them later is one more alternation if it ever matters.
+const ES_IMPORT_RE = /(\b(?:from|import\s*\()\s*['"])(\/[^'"?]+\.(?:js|css))(?:\?v=[^'"]+)?(['"])/g;
+
+function rewriteAssetVersions(content, sourceType, visited) {
+  let result = content;
+  if (sourceType === 'html') {
+    result = result.replace(HTML_TAG_RE, (match, prefix, asset) => {
+      const filepath = path.join(PUBLIC_DIR, asset);
+      const hash = fileHash(filepath, visited);
+      if (!hash) return match;
+      return `${prefix}${asset}?v=${hash}"`;
+    });
+  }
+  // ES imports — applies to both HTML inline and JS files
+  result = result.replace(ES_IMPORT_RE, (match, prefix, asset, suffix) => {
+    const filepath = path.join(PUBLIC_DIR, asset);
+    const hash = fileHash(filepath, visited);
+    if (!hash) return match;
+    return `${prefix}${asset}?v=${hash}${suffix}`;
+  });
+  return result;
+}
+
+function fileHash(filepath, visited) {
   try {
+    // Cycle protection: if we're already computing this file's hash deeper
+    // up the call stack, return a stub. ES modules don't permit cycles in
+    // practice, but defending here is cheap.
+    const v = visited || new Set();
+    if (v.has(filepath)) return 'cycle';
+    v.add(filepath);
+
+    const ext = path.extname(filepath).toLowerCase();
+    if (ext === '.js' || ext === '.html') {
+      // Transitive hash: rewrite first (which recursively hashes imports),
+      // then hash the rewritten content. Not mtime-cached because a child
+      // mtime change must invalidate this entry; tracking that explicitly
+      // is more complex than just recomputing on each request.
+      const buf = fs.readFileSync(filepath);
+      const rewritten = rewriteAssetVersions(
+        buf.toString('utf8'),
+        ext === '.html' ? 'html' : 'js',
+        v,
+      );
+      v.delete(filepath);
+      return crypto.createHash('sha1').update(rewritten).digest('hex').slice(0, 8);
+    }
+
+    // Terminal assets (.css, images, …) — disk-content hash, mtime-cached.
     const st = fs.statSync(filepath);
     const cached = _hashCache.get(filepath);
-    if (cached && cached.mtimeMs === st.mtimeMs) return cached.hash;
+    if (cached && cached.mtimeMs === st.mtimeMs) {
+      v.delete(filepath);
+      return cached.hash;
+    }
     const buf = fs.readFileSync(filepath);
     const hash = crypto.createHash('sha1').update(buf).digest('hex').slice(0, 8);
     _hashCache.set(filepath, { hash, mtimeMs: st.mtimeMs });
+    v.delete(filepath);
     return hash;
   } catch {
     return null;
   }
-}
-
-function rewriteAssetVersions(html) {
-  // Match `<script src="/foo.js">` and `<link href="/bar.css">` (with or
-  // without an existing `?v=…`). Skips external URLs (`https://…`) because
-  // the regex requires the path to start with `/`.
-  const re = /(<(?:script|link)[^>]*?(?:src|href)=")(\/[^"?]+\.(?:js|css))(?:\?v=[^"]+)?"/g;
-  return html.replace(re, (match, prefix, asset) => {
-    const filepath = path.join(PUBLIC_DIR, asset);
-    const hash = fileHash(filepath);
-    if (!hash) return match; // file missing — leave the original tag alone
-    return `${prefix}${asset}?v=${hash}"`;
-  });
 }
 
 // Locale-aware "bare URL" set — when the user lands on one of these AND
@@ -330,7 +383,13 @@ function serveStaticFile(req, res) {
     const ct = CONTENT_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
     let body = content;
     if (ct === 'text/html') {
-      body = Buffer.from(rewriteAssetVersions(content.toString('utf8')), 'utf8');
+      body = Buffer.from(rewriteAssetVersions(content.toString('utf8'), 'html'), 'utf8');
+    } else if (ct === 'application/javascript') {
+      // .js files also get rewritten so their `import …` statements pick up
+      // current content-hashes for child modules. Critical for ES module
+      // graphs: changing modules/foo/index.js must invalidate any parent
+      // that imports it, even if the parent's disk bytes haven't changed.
+      body = Buffer.from(rewriteAssetVersions(content.toString('utf8'), 'js'), 'utf8');
     }
     res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'no-cache' });
     res.end(body);
