@@ -153,6 +153,27 @@ does NOT false-positive.
   (≠ / + / − markers, colour-coded). "Load into the other editor"
   wires the generated result into the empty textarea.
 
+### 1.3.3 Live stream UI (since 0.27.0)
+
+- **SSE endpoint** `/api/v1/stream` — synthetic RTB specimens emitted at
+  ~1Hz from `samples/synthetic-generator.js`. Existed since Stream
+  Pivot foundation; UI shipped 0.27.0.
+- **Modal frontend** in `public/spyglass.app.js` (`window.openLiveModal`).
+  EventSource connect on open, captured envelopes rendered as
+  newest-on-top rows; cap of 50 (matches server replay window).
+  Pause/resume gates DOM appends without dropping the connection.
+- **Specimen storage**: rows store `data-row-id="N"` only; the spec
+  itself lives in a JS `Map<id, specimen>` keyed by row seq. Reason:
+  `core/utils.escapeHtml` uses text-node serialisation which doesn't
+  escape `"` — putting JSON in an attribute would close on the first
+  internal quote. The dispatcher's `live-load` case resolves id →
+  spec from the map. Map cleared on cap-trim and on tearDownLive.
+- **Cleanup**: closeModal is patched on open, restored on teardown.
+  Any close path (Esc / backdrop / button / follow-up modal) tears
+  down the EventSource and clears the map. `__spyglassLivePauseToggle`
+  / `__spyglassLiveSpecimens` are nulled afterwards so there's no
+  reference to the closed stream.
+
 ### 1.4 Consumers
 
 | Consumer | File | What it uses |

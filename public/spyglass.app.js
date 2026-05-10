@@ -3468,6 +3468,152 @@ export async function mountInspector(root, ctx) {
     }, 0);
   };
 
+  // ── Live stream modal ────────────────────────────────────────────────
+  // Subscribes to /api/v1/stream (SSE) and renders incoming envelopes as
+  // a tail-mode list. Newest rows enter at the top, list capped at 50
+  // (matching server REPLAY_MAX). Click a row → load specimen into bidReq
+  // and close. Pause/resume toggles whether new envelopes append to DOM
+  // (the EventSource stays connected; pause is a UI gate, not a network
+  // gate — keeping the connection avoids reconnect lag on resume).
+  window.openLiveModal = function () {
+    const STREAM_MAX_ROWS = 50;
+    let paused = false;
+    // Specimens kept in a JS map keyed by monotonic id rather than crammed
+    // into a data-* attribute. utils.escapeHtml uses text-node serialisation
+    // which escapes &<> but not " — putting raw JSON in data-specimen would
+    // close the attribute on the first internal quote.
+    const specimens = new Map();
+    let rowSeq = 0;
+
+    function rowHtml(env) {
+      const time = new Date(env.emittedAt || Date.now()).toLocaleTimeString('uk-UA', {
+        hour12: false,
+      });
+      const source = String(env.source || '?');
+      const spec = env.specimen || {};
+      const id = ++rowSeq;
+      specimens.set(id, spec);
+      // quick shape detection — request has imp[], response has seatbid[]
+      const isReq = Array.isArray(spec.imp);
+      const kind = isReq ? 'req' : Array.isArray(spec.seatbid) ? 'res' : '?';
+      // optional banner-size hint
+      let sizeHint = '';
+      if (isReq && spec.imp[0] && spec.imp[0].banner) {
+        const b = spec.imp[0].banner;
+        if (b.w && b.h) sizeHint = `${b.w}×${b.h}`;
+        else if (Array.isArray(b.format) && b.format[0])
+          sizeHint = `${b.format[0].w}×${b.format[0].h}`;
+      }
+      return (
+        '<div class="kt-live-row" data-action="live-load" data-row-id="' + id +
+        '" data-kind="' + kind + '">' +
+        '<span class="kt-live-time">' + escapeHtml(time) + '</span>' +
+        '<span class="kt-live-kind kt-live-kind-' + kind + '">' + kind + '</span>' +
+        '<span class="kt-live-source">' + escapeHtml(source) + '</span>' +
+        (sizeHint ? '<span class="kt-live-size">' + escapeHtml(sizeHint) + '</span>' : '') +
+        '</div>'
+      );
+    }
+    // Expose the lookup so the dispatcher's 'live-load' case can resolve
+    // a row id to its specimen (cleaned up on tearDownLive).
+    window.__spyglassLiveSpecimens = specimens;
+
+    function renderShell() {
+      $('modalRoot').innerHTML =
+        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
+        '<div class="modal-card modal-card-wide kt-live-card">' +
+        '<div class="modal-title">' + escapeHtml(t('modal.live.title')) +
+        ' <span class="kt-live-status" id="mLiveStatus">' +
+        escapeHtml(t('modal.live.connecting')) + '</span></div>' +
+        '<div class="modal-row kt-live-controls">' +
+        '<button class="btn btn-ghost btn-sm" id="mLivePauseBtn" data-action="live-pause">' +
+        escapeHtml(t('modal.live.pause')) + '</button>' +
+        '<span class="kt-live-hint">' + escapeHtml(t('modal.live.hint')) + '</span>' +
+        '</div>' +
+        '<div class="kt-live-list" id="mLiveList"><div class="kt-live-empty">' +
+        escapeHtml(t('modal.live.empty')) + '</div></div>' +
+        '<div class="modal-actions">' +
+        '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
+        t('btn.close') + '</button></div>' +
+        '</div></div>';
+    }
+
+    renderShell();
+
+    let es;
+    try {
+      es = new EventSource('/api/v1/stream');
+    } catch (e) {
+      const status = $('mLiveStatus');
+      if (status) status.textContent = '✗ ' + e.message;
+      return;
+    }
+
+    es.addEventListener('open', () => {
+      const status = $('mLiveStatus');
+      if (status) {
+        status.textContent = t('modal.live.connected');
+        status.classList.add('kt-live-status-on');
+      }
+    });
+
+    es.addEventListener('error', () => {
+      const status = $('mLiveStatus');
+      if (status) {
+        status.textContent = t('modal.live.connection_lost');
+        status.classList.remove('kt-live-status-on');
+      }
+    });
+
+    es.addEventListener('message', (ev) => {
+      if (paused) return;
+      let env;
+      try { env = JSON.parse(ev.data); } catch { return; }
+      const list = $('mLiveList');
+      if (!list) return;
+      const empty = list.querySelector('.kt-live-empty');
+      if (empty) empty.remove();
+      list.insertAdjacentHTML('afterbegin', rowHtml(env));
+      // trim oldest beyond cap; also drop their specimens from the map.
+      const rows = list.querySelectorAll('.kt-live-row');
+      for (let i = STREAM_MAX_ROWS; i < rows.length; i++) {
+        const droppedId = Number(rows[i].dataset.rowId);
+        if (droppedId) specimens.delete(droppedId);
+        rows[i].remove();
+      }
+    });
+
+    // Close hook — cleanup. Patched onto closeModal so any close path
+    // (Esc, backdrop, button, follow-up modal) tears down the stream.
+    const origClose = window.closeModal;
+    let teardown = false;
+    function tearDownLive() {
+      if (teardown) return;
+      teardown = true;
+      try { es.close(); } catch { /* idempotent */ }
+      specimens.clear();
+      window.closeModal = origClose;
+      window.__spyglassLivePauseToggle = null;
+      window.__spyglassLiveSpecimens = null;
+    }
+    window.closeModal = function () {
+      tearDownLive();
+      return origClose.apply(this, arguments);
+    };
+
+    // Pause/resume toggle exposed for the dispatcher.
+    window.__spyglassLivePauseToggle = () => {
+      paused = !paused;
+      const btn = $('mLivePauseBtn');
+      const status = $('mLiveStatus');
+      if (btn) btn.textContent = paused ? t('modal.live.resume') : t('modal.live.pause');
+      if (status) {
+        status.textContent = paused ? t('modal.live.paused') : t('modal.live.connected');
+        status.classList.toggle('kt-live-status-on', !paused);
+      }
+    };
+  };
+
   // ── Mirror modal ─────────────────────────────────────────────────────
   // Two-panel rendering when both bidReq + bidRes are filled:
   //   panel 1: generated canonical counterpart (textarea + copy/load btns)
@@ -4353,6 +4499,28 @@ export async function mountInspector(root, ctx) {
           // — top bar / chrome —
           case 'analyze':
             return runAnalysis();
+          case 'live':
+            return window.openLiveModal && window.openLiveModal();
+          case 'live-pause':
+            return window.__spyglassLivePauseToggle && window.__spyglassLivePauseToggle();
+          case 'live-load': {
+            const id = Number(el.dataset.rowId);
+            const map = window.__spyglassLiveSpecimens;
+            const spec = map && map.get ? map.get(id) : null;
+            if (!spec) {
+              toast(t('toast.live_load_failed'), 'error');
+              return;
+            }
+            const isReq = Array.isArray(spec.imp);
+            const target = isReq ? 'bidReq' : 'bidRes';
+            const ta = $(target);
+            if (!ta) return;
+            ta.value = JSON.stringify(spec, null, 2);
+            updateCharCount(target);
+            closeModal();
+            toast(t('toast.live_loaded'), 'success');
+            return;
+          }
           case 'mirror':
             return window.openMirrorModal && window.openMirrorModal();
           case 'mirror-copy': {

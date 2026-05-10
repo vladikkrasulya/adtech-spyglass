@@ -1274,6 +1274,108 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border: 1px solid rgba(46, 160, 67, 0.3);
   border-radius: var(--r-sm, 4px);
 }
+
+/* ── Live stream modal ───────────────────────────────────────────── */
+
+.kt-live-card {
+  width: min(720px, 96vw);
+}
+.kt-live-status {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-dim, var(--text));
+  letter-spacing: 0;
+  text-transform: none;
+  margin-left: 6px;
+}
+.kt-live-status-on {
+  color: #2ea043;
+}
+.kt-live-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+.kt-live-hint {
+  font-size: 11px;
+  color: var(--text-dim, var(--text));
+  font-family: var(--font-mono);
+}
+.kt-live-list {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 4px);
+  background: var(--bg-2);
+  height: 360px;
+  overflow-y: auto;
+  margin-bottom: var(--space-3);
+}
+.kt-live-empty {
+  padding: 16px;
+  color: var(--text-dim, var(--text));
+  text-align: center;
+}
+.kt-live-row {
+  display: grid;
+  grid-template-columns: 80px 36px 1fr auto;
+  gap: 10px;
+  padding: 6px 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+  animation: kt-live-fadein 0.25s ease-out;
+}
+.kt-live-row:last-child {
+  border-bottom: 0;
+}
+.kt-live-row:hover {
+  background: var(--bg);
+}
+@keyframes kt-live-fadein {
+  from { background: rgba(217, 119, 6, 0.18); }
+  to { background: transparent; }
+}
+.kt-live-row:hover {
+  /* Override fade-in finish state on hover so the highlight wins. */
+  animation: none;
+}
+.kt-live-time {
+  color: var(--text-dim, var(--text));
+}
+.kt-live-kind {
+  font-size: 10px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.kt-live-kind-req {
+  background: rgba(46, 160, 67, 0.15);
+  color: #2ea043;
+}
+.kt-live-kind-res {
+  background: rgba(217, 119, 6, 0.15);
+  color: #d97706;
+}
+.kt-live-kind-\? {
+  background: rgba(127, 127, 127, 0.15);
+  color: var(--text-dim, var(--text));
+}
+.kt-live-source {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kt-live-size {
+  color: var(--text-dim, var(--text));
+  white-space: nowrap;
+}
 .modal-title {
   font-family: var(--font-mono);
   font-size: 11px;

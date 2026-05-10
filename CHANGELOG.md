@@ -6,6 +6,64 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.27.0 — Live stream UI (2026-05-10)
+
+The SSE endpoint `/api/v1/stream` has been emitting synthetic RTB
+specimens at 1-second cadence since the Stream Pivot foundation
+shipped, but with no UI to watch it. Now there is one.
+
+**📡 live button + modal**
+
+- New "📡 live" button next to mirror in the inspector header.
+  Opens a modal that subscribes to `/api/v1/stream` (EventSource).
+- Newest envelopes enter at the top with a fade-in highlight.
+  Each row: timestamp · kind chip (REQ / RES / ?) · source filename ·
+  optional banner-size hint.
+- Capped at 50 rows in the DOM (matches server replay window) so the
+  list can run indefinitely without growing.
+- Status pulse: connecting / live / paused / connection lost. Green
+  dot when actively receiving.
+
+**Pause / resume**
+
+- Toggle button keeps the EventSource open but gates DOM appends.
+  Avoids reconnect lag when the user wants to read what's currently
+  on screen without losing the stream.
+
+**Click-to-load**
+
+- Click any row → loads that specimen into bidReq (or bidRes if
+  it's a response shape) and closes the modal. One click from "I
+  saw something interesting in the stream" to "let me analyze it".
+
+**Cleanup hygiene**
+
+- closeModal is patched on open and restored on tearDownLive — any
+  close path (Esc, backdrop, button, follow-up modal) closes the
+  EventSource and clears the in-memory specimens map. No leaked
+  connections after the modal goes away.
+
+**Behind the scenes — attribute-safe row payloads**
+
+- First take stuffed JSON-stringified specimens into `data-specimen=
+  "..."`, but `core/utils.escapeHtml` uses text-node serialisation
+  which only escapes `&<>` (not `"`), so the first internal quote
+  closed the attribute. Refactored to keep specimens in a `Map<id,
+  spec>` keyed by row sequence; row carries `data-row-id="N"` and
+  the dispatcher resolves the spec from the map. Map is cleared on
+  cap-trim and on modal teardown.
+
+**i18n**
+
+- 11 new strings × 3 locales: modal title / status / pause-resume /
+  empty-state hint / click-hint / 2 toasts.
+
+Smoke-tested via Playwright MCP: button opens modal, EventSource
+hits 'live' status within ~1s, ~21 rows visible after replay window;
+pause holds count constant, resume continues; click on a row fills
+bidReq with 932-char pretty-printed JSON and closes the modal;
+0 console errors.
+
 ### v0.26.1 — UX polish from v0.26.0 review (2026-05-10)
 
 Three issues caught on the v0.26.0 walkthrough.
