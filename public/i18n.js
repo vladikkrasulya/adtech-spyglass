@@ -58,13 +58,6 @@
       // toast.share_* keys live in modules/share/i18n.js (registered at boot)
 
       // ── embed modal ───────────────────────────────────────
-      'embed.title': 'Вбудувати в інший сайт',
-      'embed.body':
-        'Вставиш цей сніпет у блог, Notion або документ — і він покаже інтерактивний Spyglass з поточним bid. Payload зашитий у hash-фрагмент URL — на сервер не йде.',
-      'embed.label.height': 'Висота (px)',
-      'embed.label.snippet': 'iframe-сніпет',
-      'embed.btn.copy': 'скопіювати',
-      'embed.toast.copied': 'iframe-сніпет скопійовано',
 
       // ── confirm() dialogs ─────────────────────────────────
       'confirm.recovery_save':
@@ -150,12 +143,6 @@
       'btn.load_to_editor': 'завантажити в редактор',
 
       // ── keyboard shortcuts cheat-sheet ────────────────────
-      'shortcuts.title': 'Гарячі клавіші',
-      'shortcuts.row.help': 'Показати цю довідку',
-      'shortcuts.row.run': 'Запустити аналіз',
-      'shortcuts.row.save': 'Зберегти в бібліотеку',
-      'shortcuts.row.mirror': 'Дзеркало запит ↔ відповідь',
-      'shortcuts.row.close': 'Закрити модалку',
 
       // ── behavior tab (creative-probe) ─────────────────────
       'behavior.empty':
@@ -348,13 +335,6 @@
       // toast.share_* keys live in modules/share/i18n.js (registered at boot)
 
       // ── embed modal ───────────────────────────────────────
-      'embed.title': 'Embed in another site',
-      'embed.body':
-        'Paste this snippet into a blog, Notion or doc — it will render an interactive Spyglass view with the current bid. The payload is in the URL hash fragment — never reaches the server.',
-      'embed.label.height': 'Height (px)',
-      'embed.label.snippet': 'iframe snippet',
-      'embed.btn.copy': 'copy',
-      'embed.toast.copied': 'iframe snippet copied',
 
       // ── confirm() dialogs ─────────────────────────────────
       'confirm.recovery_save':
@@ -440,12 +420,6 @@
       'btn.load_to_editor': 'load to editor',
 
       // ── keyboard shortcuts cheat-sheet ────────────────────
-      'shortcuts.title': 'Keyboard shortcuts',
-      'shortcuts.row.help': 'Show this help',
-      'shortcuts.row.run': 'Run analysis',
-      'shortcuts.row.save': 'Save to library',
-      'shortcuts.row.mirror': 'Mirror request ↔ response',
-      'shortcuts.row.close': 'Close modal',
 
       // ── behavior tab (creative-probe) ─────────────────────
       'behavior.empty':
@@ -638,13 +612,6 @@
       'toast.signin_to_save': 'Войди, чтобы сохранять запросы в личную библиотеку',
       'toast.bundle_downloaded': 'Скачано · {name}',
       // toast.share_* keys live in modules/share/i18n.js (registered at boot)
-      'embed.title': 'Встроить в другой сайт',
-      'embed.body':
-        'Вставь этот сниппет в блог, Notion или документ — и он покажет интерактивный Spyglass с текущим bid. Payload зашит в hash-фрагменте URL — на сервер не идёт.',
-      'embed.label.height': 'Высота (px)',
-      'embed.label.snippet': 'iframe-сниппет',
-      'embed.btn.copy': 'скопировать',
-      'embed.toast.copied': 'iframe-сниппет скопирован',
       'confirm.recovery_save':
         'Ты точно сохранил recovery key? Без него невозможно восстановить данные если забудешь пароль.',
       'confirm.delete_sample': 'Удалить этот запрос из библиотеки?',
@@ -723,12 +690,6 @@
       'btn.add': 'добавить',
       'btn.close': 'закрыть',
       'btn.load_to_editor': 'загрузить в редактор',
-      'shortcuts.title': 'Горячие клавиши',
-      'shortcuts.row.help': 'Показать эту справку',
-      'shortcuts.row.run': 'Запустить анализ',
-      'shortcuts.row.save': 'Сохранить в библиотеку',
-      'shortcuts.row.mirror': 'Зеркало запрос ↔ ответ',
-      'shortcuts.row.close': 'Закрыть модалку',
       'behavior.empty':
         'Отрендерь креатив справа — Behavior-движок анализирует попытки клик-джекинга, бот-паттерны, манипуляции с фреймами и тяжёлые креативы.',
       'behavior.label.trigger': 'триггер',

@@ -266,11 +266,13 @@
     <!-- Classic <script> utilities. They wait for `kt:inspector-ready`
          (emitted by inspector mount() once template DOM is injected)
          before binding to inspector-owned elements. -->
-    <script src="/shortcuts.js?v=2"></script>
+    <script src="/modules/shortcuts/i18n.js"></script>
+    <script src="/modules/shortcuts/index.js"></script>
     <script src="/export.js?v=1"></script>
     <script src="/modules/share/i18n.js"></script>
     <script src="/modules/share/index.js"></script>
-    <script src="/embed.js?v=1"></script>
+    <script src="/modules/embed/i18n.js"></script>
+    <script src="/modules/embed/index.js"></script>
     <script src="/modules/behavior/index.js?v=4"></script>
     <!-- Phase 7a — Spyglass Intelligence (Discovery Mode). Loads in order:
          storage → banner → observer → entry. All four expose IIFE-scoped

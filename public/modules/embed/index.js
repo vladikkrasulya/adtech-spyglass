@@ -1,11 +1,11 @@
 /* ============================================================
-   Spyglass embed mode.
+   modules/embed/index.js — Spyglass embed mode.
 
    Two roles:
 
    1. PRODUCING the embed: opens a modal where the user copies an
       <iframe> snippet pointing at the current bid via the share-link
-      URL primitive (`?embed=1#req=…&res=…`). Reuses share.js's
+      URL primitive (`?embed=1#req=…&res=…`). Reuses share module's
       buildShareUrl + appends `?embed=1` so the loaded view strips
       chrome.
 
@@ -15,8 +15,8 @@
       header / input panels / left sidebar / footer / theme-toggle
       and tightens the layout for in-iframe display.
 
-   No external deps. Loads after share.js so it can call
-   window.buildShareUrl.
+   No external deps. Loaded EAGERLY (boot-time), AFTER modules/share/
+   so window.buildShareUrl is available.
    ============================================================ */
 (function () {
   'use strict';
