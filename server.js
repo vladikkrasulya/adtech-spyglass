@@ -103,6 +103,32 @@ const analyzeLimiter = makeAnalyzeLimiter(ANALYZE_MAX_PER_WINDOW);
 const BEHAVIOR_MAX_PER_WINDOW = 20;
 const behaviorLimiter = makeAnalyzeLimiter(BEHAVIOR_MAX_PER_WINDOW);
 
+// Intel (LLM-bridge) limiter — slower service, smaller per-IP allowance.
+const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
+const INTEL_WINDOW_MS = 60_000;
+function makeIntelLimiter() {
+  const buckets = new Map();
+  setInterval(() => {
+    const cutoff = Date.now() - INTEL_WINDOW_MS;
+    for (const [k, list] of buckets) {
+      const fresh = list.filter((t) => t > cutoff);
+      if (fresh.length === 0) buckets.delete(k);
+      else buckets.set(k, fresh);
+    }
+  }, INTEL_WINDOW_MS).unref();
+  return (key) => {
+    const now = Date.now();
+    const cutoff = now - INTEL_WINDOW_MS;
+    const list = (buckets.get(key) || []).filter((t) => t > cutoff);
+    if (list.length >= INTEL_MAX_PER_WINDOW) return false;
+    list.push(now);
+    buckets.set(key, list);
+    return true;
+  };
+}
+const intelLimiter = makeIntelLimiter();
+const intelLlm = require('./intel-llm');
+
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || 'http://localhost:' + PORT;
 }
@@ -457,7 +483,7 @@ function resolveDialect(parsed) {
   return DEFAULT_DIALECT;
 }
 
-// ── Backend module registrations (wave 1: mirror, replay, sample) ───────────
+// ── Backend module registrations ────────────────────────────────────────────
 // Wired after analyzeLimiter / auth / resolveLocale / resolveDialect /
 // validate-crosscheck-mirror engine are all in scope. router itself was
 // instantiated earlier (next to health registration); we just push more
@@ -465,6 +491,15 @@ function resolveDialect(parsed) {
 const { createMirrorModule } = require('./modules/mirror/handler');
 const { createReplayModule } = require('./modules/replay/handler');
 const sampleModule = require('./modules/sample/handler');
+const { createAnalyzeModule } = require('./modules/analyze/handler');
+const { createIntelModule } = require('./modules/intel/handler');
+const { createCorpusModule } = require('./modules/corpus/handler');
+const { createAccountModule } = require('./modules/account/handler');
+const { createAdminModule } = require('./modules/admin/handler');
+const { createProxyModule } = require('./modules/proxy/handler');
+// intelLlm + knowledgeBase already required at the top of the file
+const { computeCorpusMatrix: _computeCorpusMatrix } = require('./lib/corpus-matrix');
+
 router.register(
   createMirrorModule({
     analyzeLimiter,
@@ -489,6 +524,43 @@ router.register(
   }),
 );
 router.register(sampleModule);
+router.register(
+  createAnalyzeModule({
+    analyzeLimiter,
+    behaviorLimiter,
+    auth,
+    ANALYZE_MAX_PER_WINDOW,
+    BEHAVIOR_MAX_PER_WINDOW,
+    resolveLocale,
+    resolveDialect,
+    validate,
+    crosscheck,
+    analyzeBehavior,
+    extractAllCategories,
+    detectFormat,
+    unionFormat,
+    AnalyzeLog,
+  }),
+);
+router.register(
+  createIntelModule({
+    intelLimiter,
+    auth,
+    intelLlm,
+    knowledgeBase,
+  }),
+);
+router.register(
+  createCorpusModule({
+    auth,
+    BehaviorCorpus,
+    computeCorpusMatrix: (userId) =>
+      _computeCorpusMatrix({ BehaviorCorpus, analyzeBehavior }, userId),
+  }),
+);
+router.register(createAccountModule({ auth, AnalyzeLog }));
+router.register(createAdminModule({ db, Users, auth }));
+router.register(createProxyModule({ auth }));
 
 // ── Auth routes ─────────────────────────────────────────────────────────────
 
@@ -877,52 +949,6 @@ function handleAuthRoute(req, res, parsed) {
 
 const PROXY_ALLOWED_HOSTS = ['httpbin.org', 'postman-echo.com'];
 
-function handleProxy(req, res) {
-  const user = auth.getCurrentUser(req);
-  if (!user) {
-    return sendError(res, 401, 'unauthorized', 'Sign in to use the proxy harness');
-  }
-  readJson(req)
-    .then(({ url, data }) => {
-      const targetUrl = new URL(url);
-      const hostname = targetUrl.hostname;
-      const isAllowed = PROXY_ALLOWED_HOSTS.some(
-        (h) => hostname === h || hostname.endsWith('.' + h),
-      );
-      if (!isAllowed) {
-        return sendError(
-          res,
-          403,
-          'host_not_allowed',
-          'Host not allowed. Proxy is restricted to public test endpoints only.',
-          { allowedHosts: PROXY_ALLOWED_HOSTS },
-        );
-      }
-      const client = targetUrl.protocol === 'https:' ? https : http;
-      const proxyReq = client.request(
-        url,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } },
-        (proxyRes) => {
-          let resData = '';
-          proxyRes.on('data', (d) => {
-            resData += d;
-          });
-          proxyRes.on('end', () => {
-            sendJson(res, 200, {
-              success: true,
-              status: proxyRes.statusCode,
-              data: resData,
-            });
-          });
-        },
-      );
-      proxyReq.on('error', (e) => sendError(res, 502, 'upstream_error', e.message));
-      proxyReq.write(JSON.stringify(data));
-      proxyReq.end();
-    })
-    .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-}
-
 // Merge two detectFormat() results (request side + response side) into
 // a single, de-duplicated tag set. Returns the canonical empty shape if
 // both inputs are null — never null, so the frontend can render
@@ -951,157 +977,9 @@ function unionFormat(a, b) {
 
 // ── /api/analyze ────────────────────────────────────────────────────────────
 
-function handleAnalyze(req, res, parsed) {
-  if (!analyzeLimiter(auth.clientIp(req))) {
-    return sendError(
-      res,
-      429,
-      'rate_limited',
-      `Too many analyze calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
-    );
-  }
-  const locale = resolveLocale(parsed);
-  const dialect = resolveDialect(parsed);
-  readJson(req)
-    .then((body) => {
-      const { bidReq, bidRes } = body || {};
-      const hasReq = bidReq && typeof bidReq === 'object' && Object.keys(bidReq).length > 0;
-      const hasRes = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0;
-
-      // Optional `opts.disabledRules`: forwarded to validate() / crosscheck()
-      // for per-call rule suppression. Accepts string[] of exact ids or
-      // trailing-`*` prefixes (e.g. ['imp.*', 'regs.coppa_pii_present']).
-      // See packages/core/README.md → "API stability contract".
-      const rawDisabled = body && body.opts && body.opts.disabledRules;
-      const disabledRules = Array.isArray(rawDisabled)
-        ? rawDisabled.filter((r) => typeof r === 'string' && r.length).slice(0, 100)
-        : undefined;
-
-      // Empty payload is now an explicit 400 instead of a synthetic
-      // "unknown_type" finding masquerading as a real validation error.
-      if (!hasReq && !hasRes) {
-        return sendError(
-          res,
-          400,
-          'empty_payload',
-          'Provide bidReq or bidRes (or both) in the request body',
-        );
-      }
-
-      // Branch on what was actually sent — running validate({}) when only
-      // bidRes is present produced a misleading payload.unknown_type error
-      // that masked perfectly valid response findings.
-      let validation;
-      if (hasReq) {
-        validation = validate(bidReq, { locale, dialect, disabledRules });
-        if (hasRes) {
-          const resValidation = validate(bidRes, { locale, dialect, disabledRules });
-          if (resValidation.findings && resValidation.findings.length) {
-            validation.findings = validation.findings.concat(
-              resValidation.findings.map((f) =>
-                Object.assign({}, f, { msg: '[response] ' + f.msg }),
-              ),
-            );
-          }
-        }
-      } else {
-        // Response-only path. Validate bidRes and prefix findings for clarity.
-        validation = validate(bidRes, { locale, dialect, disabledRules });
-        validation.findings = validation.findings.map((f) =>
-          Object.assign({}, f, { msg: '[response] ' + f.msg }),
-        );
-      }
-
-      // Recompute status from the union — `errors` if any finding is error,
-      // else `warnings` if any warning, else `clean`. (Mirrors the core
-      // rollupStatus helper without importing it; keep in sync.)
-      const levels = new Set((validation.findings || []).map((f) => f.level));
-      validation.status = levels.has('error')
-        ? 'errors'
-        : levels.has('warning')
-          ? 'warnings'
-          : 'clean';
-
-      const cross =
-        hasReq && hasRes ? crosscheck(bidReq, bidRes, { locale, dialect, disabledRules }) : [];
-
-      // Decode IAB Content Taxonomy codes (cat / bcat / pcat / sectioncat
-      // / pagecat / bid.cat) into English labels so the frontend can render
-      // human text alongside `IAB9-11` etc. without bundling its own dict.
-      const categories = {};
-      if (hasReq) Object.assign(categories, extractAllCategories(bidReq));
-      if (hasRes) Object.assign(categories, extractAllCategories(bidRes));
-
-      // Phase 10b — third detection axis (banner/video/audio/native/push/…
-      // + web/inapp/ctv/dooh + vast-N/daast). Compute on whichever payloads
-      // were sent and union the results; the request side carries
-      // imp[].banner|video|audio|native + context, the response side
-      // carries mtype + adm sniffing. A null/empty `format` is a valid
-      // outcome — the frontend gates rendering on `confidence`.
-      const formatReq = hasReq ? detectFormat(bidReq) : null;
-      const formatRes = hasRes ? detectFormat(bidRes) : null;
-      const format = unionFormat(formatReq, formatRes);
-
-      // Per-user usage tracking — METADATA only, never the payload bodies.
-      // Skipped for anonymous calls (no user_id). The personal cabinet's
-      // Insights section reads aggregates back via /api/account/insights.
-      try {
-        const currentUser = auth.getCurrentUser(req);
-        if (currentUser && currentUser.id) {
-          const findings = (validation && validation.findings) || [];
-          const errs = findings.filter((f) => f.level === 'error').length;
-          const warns = findings.filter((f) => f.level === 'warning').length;
-          const fmt =
-            format && format.formats && format.formats.length
-              ? format.formats.length === 1
-                ? format.formats[0]
-                : 'multi'
-              : null;
-          AnalyzeLog.record({
-            userId: currentUser.id,
-            payloadType: hasReq && hasRes ? 'both' : hasReq ? 'request' : 'response',
-            version:
-              validation && validation.version && validation.version.version
-                ? validation.version.version
-                : null,
-            status: validation && validation.status ? validation.status : 'unknown',
-            format: fmt,
-            findingCount: findings.length,
-            errorCount: errs,
-            warningCount: warns,
-          });
-        }
-      } catch (e) {
-        // Tracking failure must never break the response. Log + continue.
-        console.error('[analyze-log] record failed:', e.message);
-      }
-
-      sendJson(res, 200, {
-        success: true,
-        validation,
-        crosscheck: cross,
-        meta: { locale, dialect, categories, format },
-      });
-    })
-    .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-}
-
 // ── /api/account/insights ──────────────────────────────────────────────────
 // Personal cabinet aggregates. Auth-gated; anonymous → 401. Returns the
 // shape AnalyzeLog.insights() produces — see db.js for fields.
-function handleAccountInsights(req, res) {
-  const user = auth.getCurrentUser(req);
-  if (!user) {
-    return sendError(res, 401, 'auth_required', 'Sign in to view account insights');
-  }
-  try {
-    const data = AnalyzeLog.insights(user.id);
-    sendJson(res, 200, { success: true, insights: data });
-  } catch (e) {
-    console.error('[account/insights] failed:', e.message);
-    sendError(res, 500, 'insights_failed', e.message);
-  }
-}
 
 // ── /api/behavior/corpus — labelled event-stream archive (Chapter B) ───────
 //
@@ -1111,97 +989,8 @@ function handleAccountInsights(req, res) {
 // metadata only; full events_json is fetched via GET /:id when the
 // matrix runner replays it (next sprint).
 
-const { computeCorpusMatrix: _computeCorpusMatrix } = require('./lib/corpus-matrix');
-const computeCorpusMatrix = (userId) =>
-  _computeCorpusMatrix({ BehaviorCorpus, analyzeBehavior }, userId);
-
-const { replay: _replay } = require('./lib/replay');
-
-function handleBehaviorCorpus(req, res, parsed) {
-  const user = auth.getCurrentUser(req);
-  if (!user) {
-    return sendError(res, 401, 'auth_required', 'Sign in to use the behavior corpus');
-  }
-  const method = req.method;
-  const pathname = parsed.pathname;
-  const idMatch = pathname.match(/^\/api\/behavior\/corpus\/(\d+)$/);
-
-  if (method === 'GET' && pathname === '/api/behavior/corpus') {
-    const label = parsed.searchParams.get('label') || undefined;
-    try {
-      const entries = BehaviorCorpus.listForUser(user.id, { label });
-      const counts = BehaviorCorpus.countsForUser(user.id);
-      return sendJson(res, 200, { success: true, entries, counts });
-    } catch (e) {
-      console.error('[corpus/list] failed:', e.message);
-      return sendError(res, 500, 'list_failed', e.message);
-    }
-  }
-
-  if (method === 'GET' && pathname === '/api/behavior/corpus/matrix') {
-    try {
-      const matrix = computeCorpusMatrix(user.id);
-      return sendJson(res, 200, { success: true, matrix });
-    } catch (e) {
-      console.error('[corpus/matrix] failed:', e.message);
-      return sendError(res, 500, 'matrix_failed', e.message);
-    }
-  }
-
-  if (method === 'GET' && idMatch) {
-    const id = Number(idMatch[1]);
-    const row = BehaviorCorpus.getById(id, user.id);
-    if (!row) return sendError(res, 404, 'not_found', 'Corpus entry not found');
-    return sendJson(res, 200, { success: true, entry: row });
-  }
-
-  if (method === 'POST' && pathname === '/api/behavior/corpus') {
-    return readJson(req)
-      .then((body) => {
-        const events = body && body.events;
-        const label = body && body.label;
-        if (!Array.isArray(events) || !events.length) {
-          return sendError(
-            res,
-            400,
-            'events_required',
-            'Provide an `events` array (output of behavior probe)',
-          );
-        }
-        if (!BehaviorCorpus.LABELS.includes(label)) {
-          return sendError(
-            res,
-            400,
-            'label_invalid',
-            'label must be one of: legitimate, fraud, ambiguous',
-          );
-        }
-        try {
-          const r = BehaviorCorpus.create({
-            userId: user.id,
-            label,
-            events,
-            sourceSampleId: body.sourceSampleId || null,
-            notes: body.notes || '',
-          });
-          sendJson(res, 200, { success: true, id: r.id });
-        } catch (e) {
-          console.error('[corpus/create] failed:', e.message);
-          sendError(res, 400, 'create_failed', e.message);
-        }
-      })
-      .catch((e) => sendError(res, 400, 'invalid_json', e.message));
-  }
-
-  if (method === 'DELETE' && idMatch) {
-    const id = Number(idMatch[1]);
-    const ok = BehaviorCorpus.destroy(id, user.id);
-    if (!ok) return sendError(res, 404, 'not_found', 'Corpus entry not found');
-    return sendJson(res, 200, { success: true });
-  }
-
-  return sendError(res, 405, 'method_not_allowed', 'Unsupported method/path');
-}
+// computeCorpusMatrix lookup + replay engine moved to module registrations
+// above (modules/corpus/handler.js + modules/replay/handler.js).
 
 // ── /api/v1/replay — bulk pipeline runner (Stream Pivot foundation) ───────
 //
@@ -1242,40 +1031,6 @@ function handleBehaviorCorpus(req, res, parsed) {
 // Client posts events on every Behavior-tab render; debouncing happens
 // in the UI module.
 
-function handleAnalyzeBehavior(req, res, parsed) {
-  if (!behaviorLimiter(auth.clientIp(req))) {
-    return sendError(
-      res,
-      429,
-      'rate_limited',
-      `Too many behavior-analyze calls. Try again shortly (limit: ${BEHAVIOR_MAX_PER_WINDOW}/min/IP).`,
-    );
-  }
-  const locale = resolveLocale(parsed);
-  readJson(req)
-    .then(({ events, adm }) => {
-      if (!Array.isArray(events)) {
-        return sendError(res, 400, 'invalid_input', 'events array is required');
-      }
-      // Phase 6: optional `adm` field carries the raw creative string for
-      // static-payload analysis (obfuscation/miner/XSS pattern matching +
-      // entropy). Engine treats it as opt-in; callers that omit it get
-      // the pre-Phase-6 runtime-only pipeline.
-      const r = analyzeBehavior(events, {
-        locale,
-        adm: typeof adm === 'string' ? adm : '',
-      });
-      sendJson(res, 200, {
-        success: true,
-        findings: r.findings,
-        status: r.status,
-        eventCount: r.eventCount,
-        meta: { locale },
-      });
-    })
-    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
-}
-
 // ── /api/intel/* — Phase 7c LLM intelligence ───────────────────────────────
 // Two narrow endpoints (cluster naming + per-field purpose hint) that bridge
 // to a locally-hosted Ollama instance via http://ollama:11434. Both are
@@ -1288,157 +1043,12 @@ function handleAnalyzeBehavior(req, res, parsed) {
 // We log unavailability at warn-level so an admin can see the pattern but
 // don't surface user-facing errors.
 
-const intelLlm = require('./intel-llm');
-const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
-const INTEL_WINDOW_MS = 60_000;
-
-function makeIntelLimiter() {
-  const buckets = new Map();
-  setInterval(() => {
-    const cutoff = Date.now() - INTEL_WINDOW_MS;
-    for (const [k, list] of buckets) {
-      const fresh = list.filter((t) => t > cutoff);
-      if (fresh.length === 0) buckets.delete(k);
-      else buckets.set(k, fresh);
-    }
-  }, INTEL_WINDOW_MS).unref();
-  return (key) => {
-    const now = Date.now();
-    const cutoff = now - INTEL_WINDOW_MS;
-    const list = (buckets.get(key) || []).filter((t) => t > cutoff);
-    if (list.length >= INTEL_MAX_PER_WINDOW) return false;
-    list.push(now);
-    buckets.set(key, list);
-    return true;
-  };
-}
-const intelLimiter = makeIntelLimiter();
-
-function handleIntelSuggestName(req, res) {
-  if (!intelLimiter(auth.clientIp(req))) {
-    return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
-  }
-  readJson(req)
-    .then(async ({ bucket, fields, format }) => {
-      if (!Array.isArray(fields) || fields.length === 0) {
-        return sendError(res, 400, 'invalid_input', 'fields[] is required');
-      }
-      // Sanitise: paths must be strings, cap count to bound prompt size.
-      const cleanFields = fields
-        .filter((f) => typeof f === 'string' && f.length > 0 && f.length < 200)
-        .slice(0, 50);
-      if (cleanFields.length === 0) {
-        return sendError(res, 400, 'invalid_input', 'no usable fields');
-      }
-      // Phase 10b — few-shot context: when the caller passes a recognised
-      // format ("banner" / "video" / "push" / …) we look up 1–2 shipped KB
-      // samples for that format and pass their anonymized field-name lists
-      // to the LLM. When the format is unknown / missing / yields no KB
-      // hits, fewShot is an empty array and the call degrades to Phase 7c
-      // zero-shot behaviour silently.
-      const cleanFormat = typeof format === 'string' ? format.replace(/[^a-z0-9-]/gi, '') : '';
-      let fewShot = [];
-      if (cleanFormat) {
-        try {
-          fewShot = knowledgeBase.fewShotForFormat(cleanFormat, { limit: 2 });
-        } catch (e) {
-          fewShot = [];
-        }
-      }
-      try {
-        const suggestion = await intelLlm.suggestName(bucket, cleanFields, { fewShot });
-        if (!suggestion) {
-          return sendError(res, 502, 'unparseable', 'LLM returned an unusable suggestion');
-        }
-        sendJson(res, 200, { success: true, suggestion });
-      } catch (e) {
-        if (e instanceof intelLlm.OllamaUnavailable) {
-          console.warn('[intel] Ollama unavailable:', e.message);
-          return sendError(res, 503, 'ollama_unavailable', e.message);
-        }
-        throw e;
-      }
-    })
-    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
-}
+// intel limiter + intelLlm moved up before module registrations.
 
 // Phase C-1 — partner inference for the save-modal. Caller is the
 // in-app save flow: sends the raw bid_req / bid_res JSON strings and
 // expects a short vendor brand name + confidence. Auth-gated because
 // only signed-in users save samples; the payload is theirs already.
-function handleIntelSuggestPartner(req, res) {
-  if (!intelLimiter(auth.clientIp(req))) {
-    return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
-  }
-  if (!auth.getCurrentUser(req)) {
-    return sendError(res, 401, 'unauthorized', 'Sign in first');
-  }
-  readJson(req)
-    .then(async ({ bid_req, bid_res }) => {
-      // Strict caps so a noisy payload can't blow up our prompt budget.
-      const MAX_BYTES = 250_000;
-      let parsedReq = null;
-      let parsedRes = null;
-      try {
-        if (typeof bid_req === 'string' && bid_req.length > 0 && bid_req.length < MAX_BYTES) {
-          parsedReq = JSON.parse(bid_req);
-        }
-      } catch (_e) {
-        parsedReq = null;
-      }
-      try {
-        if (typeof bid_res === 'string' && bid_res.length > 0 && bid_res.length < MAX_BYTES) {
-          parsedRes = JSON.parse(bid_res);
-        }
-      } catch (_e) {
-        parsedRes = null;
-      }
-      if (!parsedReq && !parsedRes) {
-        return sendError(res, 400, 'invalid_input', 'bid_req and/or bid_res JSON required');
-      }
-      try {
-        const suggestion = await intelLlm.suggestPartner(parsedReq, parsedRes);
-        if (!suggestion) {
-          // Not an error — just no confident vendor signal in the payload.
-          return sendJson(res, 200, { success: true, suggestion: null });
-        }
-        sendJson(res, 200, { success: true, suggestion });
-      } catch (e) {
-        if (e instanceof intelLlm.OllamaUnavailable) {
-          console.warn('[intel] Ollama unavailable:', e.message);
-          return sendError(res, 503, 'ollama_unavailable', e.message);
-        }
-        throw e;
-      }
-    })
-    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
-}
-
-function handleIntelFieldPurpose(req, res) {
-  if (!intelLimiter(auth.clientIp(req))) {
-    return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
-  }
-  readJson(req)
-    .then(async ({ path, charClass, bucket }) => {
-      if (typeof path !== 'string' || path.length === 0 || path.length > 200) {
-        return sendError(res, 400, 'invalid_input', 'path is required (≤200 chars)');
-      }
-      try {
-        const purpose = await intelLlm.fieldPurpose(path, charClass, bucket);
-        if (!purpose) {
-          return sendError(res, 502, 'unparseable', 'LLM returned an unusable suggestion');
-        }
-        sendJson(res, 200, { success: true, purpose });
-      } catch (e) {
-        if (e instanceof intelLlm.OllamaUnavailable) {
-          console.warn('[intel] Ollama unavailable:', e.message);
-          return sendError(res, 503, 'ollama_unavailable', e.message);
-        }
-        throw e;
-      }
-    })
-    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
-}
 
 // ── /api/intel/simulate-bids — Bid simulator demo ─────────────────────────
 //
@@ -1451,42 +1061,6 @@ function handleIntelFieldPurpose(req, res) {
 //
 // Public — no auth — to match other intel endpoints. Rate-limited to
 // 30/min/IP via the shared intelLimiter. Heavy: 3 LLM calls per request.
-function handleIntelSimulateBids(req, res) {
-  if (!intelLimiter(auth.clientIp(req))) {
-    return sendError(res, 429, 'rate_limited', 'Intel rate limit reached. Try again in a minute.');
-  }
-  readJson(req)
-    .then(async ({ bid_req }) => {
-      let parsed = null;
-      const MAX_BYTES = 250_000;
-      try {
-        if (typeof bid_req === 'string' && bid_req.length > 0 && bid_req.length < MAX_BYTES) {
-          parsed = JSON.parse(bid_req);
-        } else if (bid_req && typeof bid_req === 'object') {
-          parsed = bid_req;
-        }
-      } catch (_e) {
-        parsed = null;
-      }
-      if (!parsed) {
-        return sendError(res, 400, 'invalid_input', 'bid_req JSON required');
-      }
-      try {
-        const results = await intelLlm.simulateBids(parsed);
-        if (!results) {
-          return sendError(res, 400, 'invalid_input', 'bid_req must be an object');
-        }
-        sendJson(res, 200, { success: true, strategies: results });
-      } catch (e) {
-        if (e instanceof intelLlm.OllamaUnavailable) {
-          console.warn('[intel] Ollama unavailable:', e.message);
-          return sendError(res, 503, 'ollama_unavailable', e.message);
-        }
-        throw e;
-      }
-    })
-    .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
-}
 
 // ── Per-user CRUD: partners + samples (auth-required) ──────────────────────
 
@@ -1588,45 +1162,6 @@ function handleApi(req, res, parsed, user) {
 // ── /api/admin/stats — bearer-token operational stats ──────────────────────
 // For internal callers (the n8n morning-brief workflow, future ops scripts).
 // Auth = ADMIN_STATS_TOKEN env. Returns aggregate counts + 24h activity.
-function handleAdminStats(req, res) {
-  const expected = process.env.ADMIN_STATS_TOKEN;
-  if (!expected) {
-    return sendError(res, 503, 'admin_stats_disabled', 'ADMIN_STATS_TOKEN not configured');
-  }
-  const auth_h = req.headers['authorization'] || '';
-  const provided = auth_h.startsWith('Bearer ') ? auth_h.slice(7) : '';
-  if (!provided || provided !== expected) {
-    return sendError(res, 401, 'unauthorized', 'Bearer token required');
-  }
-  try {
-    const dayAgoMs = Date.now() - 24 * 3600 * 1000;
-    const samples_total = db.prepare('SELECT COUNT(*) AS n FROM samples').get().n;
-    const samples_24h = db
-      .prepare('SELECT COUNT(*) AS n FROM samples WHERE created_at > ?')
-      .get(dayAgoMs).n;
-    const partners_total = db.prepare('SELECT COUNT(*) AS n FROM partners').get().n;
-    const users_total = Users.count();
-    const verified_users = db
-      .prepare('SELECT COUNT(*) AS n FROM users WHERE email_verified_at IS NOT NULL')
-      .get().n;
-    sendJson(res, 200, {
-      success: true,
-      generated_at: Date.now(),
-      uptime_sec: Math.round(process.uptime()),
-      sessions: auth.activeSessionCount(),
-      counts: {
-        users_total,
-        verified_users,
-        partners_total,
-        samples_total,
-        samples_24h,
-      },
-    });
-  } catch (e) {
-    console.error('[admin/stats]', e.message);
-    sendError(res, 500, 'stats_failed', e.message);
-  }
-}
 
 // ── /api/health ─────────────────────────────────────────────────────────────
 // Moved to modules/health/handler.js — registered with `router` near the top
@@ -1766,25 +1301,10 @@ const server = http.createServer((req, res) => {
       }
       return;
     }
-    if (pathname === '/api/admin/stats' && req.method === 'GET') return handleAdminStats(req, res);
+    // Wave-1 + wave-2 routes (/api/health, /api/v1/{sample,mirror,replay},
+    // /api/analyze*, /api/account/insights, /api/admin/stats, /api/proxy,
+    // /api/intel/*, /api/behavior/corpus*) all routed via Router above.
     if (pathname === '/api/v1/stream' && req.method === 'GET') return handleStream(req, res);
-    // /api/v1/sample, /api/v1/mirror, /api/v1/replay routed via router (wave 1)
-    if (pathname === '/api/analyze' && req.method === 'POST')
-      return handleAnalyze(req, res, parsed);
-    if (pathname === '/api/analyze-behavior' && req.method === 'POST')
-      return handleAnalyzeBehavior(req, res, parsed);
-    if (pathname === '/api/account/insights' && req.method === 'GET')
-      return handleAccountInsights(req, res);
-    if (pathname.startsWith('/api/behavior/corpus')) return handleBehaviorCorpus(req, res, parsed);
-    if (pathname === '/api/intel/suggest-name' && req.method === 'POST')
-      return handleIntelSuggestName(req, res);
-    if (pathname === '/api/intel/suggest-partner' && req.method === 'POST')
-      return handleIntelSuggestPartner(req, res);
-    if (pathname === '/api/intel/field-purpose' && req.method === 'POST')
-      return handleIntelFieldPurpose(req, res);
-    if (pathname === '/api/intel/simulate-bids' && req.method === 'POST')
-      return handleIntelSimulateBids(req, res);
-    if (pathname === '/api/proxy' && req.method === 'POST') return handleProxy(req, res);
     if (pathname.startsWith('/api/auth/')) {
       if (handleAuthRoute(req, res, parsed) !== false) return;
       return sendError(res, 405, 'method_not_allowed', 'Method not allowed for this resource');
