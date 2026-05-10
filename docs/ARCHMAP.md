@@ -31,6 +31,7 @@ helpers.js ─┤    rules-response.js ─┼──> findings.js ──> index.j
 **Public API** (`packages/core/index.js`):
 - `validate(payload, opts?)` — schema validation per type/dialect/version
 - `crosscheck(req, res, opts?)` — semantic comparison
+- `mirror(input, opts?)` *(since 0.15.0)* — generate canonical counterpart of a paste; output is self-tested through `validate` + `crosscheck`, fail/pass counts in `result.selfTest`
 - `detectType` / `detectVersion` / `detectFormat`
 - `listDialects` / `listLocales`
 - `decodeCategory` / `decodeCategories` / `extractAllCategories`
@@ -117,6 +118,32 @@ does NOT false-positive.
   doesn't have direct access to bundled core helpers; future
   `window.SpyglassCore` exposure would let us drop the duplication).
 
+### 1.3.2 Mirror generator (since 0.15.0)
+
+- `packages/core/mirror.js` — rule-based generator that turns the
+  validator inside-out. Same rule knowledge as `rules-request.js` /
+  `rules-response.js` / `crosscheck.js`, used in reverse: instead of
+  flagging missing fields, fill them with canonical defaults.
+- Public entry: `mirror(input, opts)` in `index.js`. Wrapper runs the
+  raw generator output through `validate()` (counterpart shape) and
+  `crosscheck(req, res)` (semantic alignment). Returns rolled-up
+  `{ validate.{errorCount,warningCount}, crosscheck.{critCount,warnCount,okCount} }`
+  in `result.selfTest`. **Contract**: a successful mirror must produce
+  output with `errorCount === 0` and `critCount === 0`. Drift here is
+  a generator bug, not a user bug — surface it.
+- Per-decision `notes[]` carry stable ids (`mirror.note.*`) decorated
+  with localized `msg`. Three locales as usual.
+- 2.5/2.6 only in v0; 3.0 envelope returns
+  `mirror.note.ortb_30_not_supported` instead of half-baked output.
+  AdCOM-aware 3.0 mirror is a follow-up tied to Chapter C of
+  `next-chapters-2026-05-09.md`.
+- HTTP: `POST /api/v1/mirror`, body `{ input }`. Reuses the analyze
+  rate-limiter (60/min/IP) — generation is on the same human-paste
+  cadence so sharing the bucket keeps fuzz protection coherent.
+- UI: button + modal in inspector (3 locales), "load into the other
+  editor" wires the result back into the empty `bidReq` / `bidRes`
+  textarea so the user can immediately analyse the pair.
+
 ### 1.4 Consumers
 
 | Consumer | File | What it uses |
@@ -137,9 +164,10 @@ does NOT false-positive.
 | `crosscheck.js` | `tests/validator.test.js` (crosscheck section, ~40 cases) |
 | `format-detect.js` | `tests/format-detect.test.js` (~30 cases) |
 | `behavior/` | `tests/behavior.test.js` |
+| `mirror.js` | `tests/mirror.test.js` (16 cases — both directions, banner/video/native/no-bid/round-trip) |
 | Any new message key | manually check 3 locales (`messages/{en,uk,ru}.json`) — there's no test that enforces this; *yet* |
 
-**Total suite**: 381 tests (as of 2026-05-09 v0.13.0). Run `node --test tests/` from repo root, ~7s.
+**Total suite**: 418 tests (as of 2026-05-10 v0.25.0). Run `node --test tests/` from repo root, ~8s.
 
 ---
 

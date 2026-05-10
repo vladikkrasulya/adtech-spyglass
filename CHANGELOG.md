@@ -6,6 +6,75 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.25.0 — Mirror generator (2026-05-10)
+
+New public surface that turns the validator inside-out: instead of only
+saying "your paste violates rules X, Y, Z", Spyglass can now generate
+the *canonical counterpart* that satisfies every rule. Paste a
+BidRequest → get a minimal-valid BidResponse. Paste a BidResponse →
+get a BidRequest the response would fit. Self-tested against the
+existing `validate()` + `crosscheck()` so the output is guaranteed
+clean — if generation can't satisfy a rule, the failure is surfaced
+in the result rather than shipped as broken data.
+
+**core@0.15.0 — `mirror()` API**
+
+- `packages/core/mirror.js` — rule-based generator. 2.5/2.6 only in v0;
+  3.0 envelope returns an explicit `mirror.note.ortb_30_not_supported`
+  refusal instead of a half-baked output (Chapter C / AdCOM territory).
+- `index.js` `mirror(input, opts)` wrapper — runs the generator, then
+  pipes the output through `validate()` (counterpart shape) and
+  `crosscheck(req, res)` (semantic alignment). Returns rolled-up
+  counts in `result.selfTest` so callers see the contract was met.
+- Per-decision `notes[]` (i18n-neutral id + params, decorated with
+  localized `msg` by the wrapper). Every choice — currency inferred
+  from request, price set above floor, banner size copied, VAST template
+  emitted, native asset back-reference — is explained.
+
+**Generator coverage (request → response)**
+
+- Banner imp → `bid.{w,h,adm}` matching declared size or `format[0]`
+- Video / audio imp → VAST 4.0 InLine template with duration capped
+  to `video.maxduration`
+- Native imp → JSON adm built from declared assets (title/img/data/video
+  with matching ids)
+- Multi-imp → one bid per imp, all under one seatbid
+- Currency inherited from `req.cur[0]`, fallback USD
+- `bid.price = bidfloor + 0.10` so crosscheck's above-floor check
+  is always green
+
+**Generator coverage (response → request)**
+
+- VAST adm → `imp.video` with protocols `[3, 7]` and MP4
+- Native JSON adm → `imp.native` with the same asset ids reversed back
+  to request shape
+- Banner adm or `bid.{w,h}` → `imp.banner`
+- `imp.bidfloor = max(0.01, bid.price * 0.5)` so the synthesized
+  request would always accept its own response
+- Default site / device / geo / lang to keep envelope rules clean
+- No-bid (`{id, nbr}`) → emits a default 300×250 banner imp so the
+  output is at least structurally valid
+
+**Server**
+
+- `POST /api/v1/mirror` — accepts `{ input }`, returns the wrapper
+  result. Reuses the analyze rate-limiter (60/min/IP).
+
+**UI**
+
+- New "дзеркало ↔ / mirror ↔ / зеркало ↔" button in the inspector
+  header next to Analyze. Opens a modal showing direction, self-test
+  chip (clean / dirty), the generated JSON in a read-only textarea,
+  and the per-decision notes. Two buttons: copy to clipboard, load
+  into the empty editor.
+- 3-locale i18n (uk/en/ru) for all notes and modal copy.
+
+**Tests**
+
+- `tests/mirror.test.js` — 16 cases covering both directions, banner
+  / video / native / no-bid / multi-imp / round-trip. Full suite
+  402 → 418.
+
 ### v0.24.0 — Final hardening pass (2026-05-09)
 
 Mopping up the last 5 deferred items from earlier audits. None blocking;
