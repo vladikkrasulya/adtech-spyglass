@@ -1043,6 +1043,8 @@ const { computeCorpusMatrix: _computeCorpusMatrix } = require('./lib/corpus-matr
 const computeCorpusMatrix = (userId) =>
   _computeCorpusMatrix({ BehaviorCorpus, analyzeBehavior }, userId);
 
+const { replay: _replay } = require('./lib/replay');
+
 function handleBehaviorCorpus(req, res, parsed) {
   const user = auth.getCurrentUser(req);
   if (!user) {
@@ -1119,6 +1121,63 @@ function handleBehaviorCorpus(req, res, parsed) {
   }
 
   return sendError(res, 405, 'method_not_allowed', 'Unsupported method/path');
+}
+
+// ── /api/v1/replay — bulk pipeline runner (Stream Pivot foundation) ───────
+//
+// POST { samples: [{bidReq?, bidRes?, behaviorEvents?, adm?, label?}] }
+// → { results: [...], summary: {...} }
+//
+// Single endpoint that runs validate + crosscheck + behavior over an array
+// of slim envelopes. Replaces N round-trips to /api/analyze + N to
+// /api/analyze-behavior for any external pipeline that wants to bulk-grade
+// RTB samples (CI test fixtures, archive replay, partner audits, etc.).
+//
+// Cap: 100 samples per call (configurable up to 1000 via opts.maxSamples).
+// Reuses the analyze rate limiter — bulk calls are heavier than single
+// analyze, so we count each replay call as ~ceil(N/10) tokens via the
+// rate limiter. Simple approach: just consume one bucket slot, but cap
+// max-samples at 100 per call so a malicious caller can't bypass with
+// one giant request.
+
+function handleReplay(req, res, parsed) {
+  if (!analyzeLimiter(auth.clientIp(req))) {
+    return sendError(
+      res,
+      429,
+      'rate_limited',
+      `Too many replay calls. Try again shortly (limit: ${ANALYZE_MAX_PER_WINDOW}/min/IP).`,
+    );
+  }
+  const locale = resolveLocale(parsed);
+  const dialect = resolveDialect(parsed);
+  readJson(req)
+    .then((body) => {
+      const samples = body && body.samples;
+      if (!Array.isArray(samples)) {
+        return sendError(res, 400, 'samples_required', 'samples must be an array');
+      }
+      if (samples.length === 0) {
+        return sendError(res, 400, 'samples_empty', 'samples array is empty');
+      }
+      const opts = body && body.opts ? body.opts : {};
+      try {
+        const out = _replay(samples, {
+          validate,
+          crosscheck,
+          analyzeBehavior,
+          locale,
+          dialect,
+          topK: opts.topK,
+          maxSamples: 100, // hard cap server-side regardless of client request
+        });
+        sendJson(res, 200, { success: true, ...out });
+      } catch (e) {
+        console.error('[replay] failed:', e.message);
+        sendError(res, 400, 'replay_failed', e.message);
+      }
+    })
+    .catch((e) => sendError(res, 400, 'invalid_json', e.message));
 }
 
 // ── /api/v1/mirror ─────────────────────────────────────────────────────────
@@ -1781,6 +1840,8 @@ const server = http.createServer((req, res) => {
       return handleAnalyze(req, res, parsed);
     if (pathname === '/api/v1/mirror' && req.method === 'POST')
       return handleMirror(req, res, parsed);
+    if (pathname === '/api/v1/replay' && req.method === 'POST')
+      return handleReplay(req, res, parsed);
     if (pathname === '/api/analyze-behavior' && req.method === 'POST')
       return handleAnalyzeBehavior(req, res, parsed);
     if (pathname === '/api/account/insights' && req.method === 'GET')

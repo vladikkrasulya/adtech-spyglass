@@ -233,6 +233,24 @@ does NOT false-positive.
 - **Limit**: listForUser caps at 500 entries. Larger corpora would
   need pagination + caching keyed on max(corpus.created_at).
 
+### 1.3.7 Specimen replay endpoint (since 0.33.0; Chapter A foundation)
+
+- **Module** `lib/replay.js` — pure DI, takes
+  `{validate, crosscheck, analyzeBehavior}` as deps. Returns
+  `{results, summary}`. Independent of DB / HTTP, testable in isolation.
+- **HTTP**: `POST /api/v1/replay` accepts `{samples: [...]}`. Public
+  endpoint, no auth (matches /api/analyze). Hard cap 100 samples
+  per call server-side.
+- **Per-sample envelope**: `{bidReq?, bidRes?, behaviorEvents?, adm?,
+  label?}`. Empty samples skip with `reason: 'empty_sample'`.
+- **Status rollup**: worst across validate / crosscheck CRIT / behavior
+  errors. Severity rank: invalid > errors > warnings > clean.
+- **Summary**: total / accepted / skipped, statusCounts histogram,
+  totalFindings (errors/warnings/info/crits), topFindings (top-K
+  most frequent finding ids), locale + dialect echo.
+- **Use cases**: CI test fixtures, archive replay (Stream Pivot
+  consumer), partner audit batches, regression grading.
+
 ### 1.4 Consumers
 
 | Consumer | File | What it uses |
@@ -256,9 +274,10 @@ does NOT false-positive.
 | `mirror.js` | `tests/mirror.test.js` (21 cases — both directions, banner/video/native/no-bid/round-trip + best-practice mode) |
 | `BehaviorCorpus` (db.js) | `tests/db.test.js` (8 cases — create/list/scoping, label whitelist, counts, getById, destroy, FK cascade) |
 | `lib/corpus-matrix.js` | `tests/corpus-matrix.test.js` (9 cases — perfect P+R, 50% precision, missed-fraud, ambiguous-skip, within-entry dedup, sort tiebreak, divbyzero, corrupt JSON, empty corpus) |
+| `lib/replay.js` | `tests/replay.test.js` (16 cases — input validation, pipeline routing, status rollup, severity counts, topFindings, maxSamples cap, label echo) |
 | Any new message key | manually check 3 locales (`messages/{en,uk,ru}.json`) — there's no test that enforces this; *yet* |
 
-**Total suite**: 440 tests (as of 2026-05-10 v0.30.0). Run `node --test tests/` from repo root, ~8s.
+**Total suite**: 456 tests (as of 2026-05-10 v0.33.0). Run `node --test tests/` from repo root, ~8s.
 
 ---
 

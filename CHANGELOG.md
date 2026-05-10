@@ -6,6 +6,53 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.33.0 — Specimen replay endpoint (Chapter A foundation, 2026-05-10)
+
+The first piece of Chapter A from `next-chapters-2026-05-09.md`:
+a single-call bulk pipeline runner that takes an array of samples
+and returns per-sample results + aggregate summary. Foundation for
+the Stream Pivot platform — any external pipeline (CI test fixtures,
+specimen archive replay, partner audits, batch grading) gets one
+endpoint instead of stitching N round-trips to /api/analyze + N to
+/api/analyze-behavior.
+
+**Module — `lib/replay.js`**
+
+- `replay(samples, deps)` — pure DI, takes `validate / crosscheck /
+  analyzeBehavior` as deps. Fully testable without HTTP.
+- Per-sample envelope: `{ bidReq?, bidRes?, behaviorEvents?, adm?,
+  label? }`. At least one of req/res/events must be present;
+  empty samples are skipped with `reason: 'empty_sample'`.
+- Per-sample result: `{ index, label, status, validation,
+  crosscheck, behavior, errorCount, warningCount, infoCount,
+  critCount }`. Status rolled up to worst across all three engines.
+- Summary: `{ total, accepted, skipped, statusCounts,
+  totalFindings, topFindings, locale, dialect }`. topK=10 by default
+  (clamp 1-50). Hard cap of 100 samples per call server-side.
+
+**Endpoint — `POST /api/v1/replay`**
+
+- Body: `{ samples: [...], opts?: { topK } }`. Response:
+  `{ success: true, results, summary }`.
+- Reuses analyze rate-limiter (60/min/IP). Public — no auth — to
+  match `/api/analyze`.
+- Hard cap of 100 samples per call regardless of opts (server-side
+  belt-and-braces against malicious bulk).
+
+**Tests — `tests/replay.test.js`**
+
+- 16 cases: shape validation (non-array, empty samples, invalid
+  entries), pipeline routing (req-only / req+res / events-only /
+  adm passthrough), status rollup (validation × crosscheck ×
+  behavior worst-of), per-sample severity counts, aggregate
+  totalFindings, topFindings sort + topK, statusCounts histogram,
+  maxSamples cap, label echo, empty-array behavior.
+- Full suite 440 → 456. All green.
+
+**Smoke** (live POST to prod): single banner-imp sample returns
+`status: clean`, validation populated with type/version/findings,
+summary aggregates correctly. 0 console errors.
+
 ### v0.32.0 — i18n consolidation (Chapter D, 2026-05-10)
 
 Closing the i18n debt to a single source of truth. The originally-
