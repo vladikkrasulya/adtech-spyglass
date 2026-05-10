@@ -26,9 +26,15 @@
    ============================================================ */
 'use strict';
 
-import { mountInspector } from '/spyglass.app.js?v=19';
+// Note: ?v=… is auto-injected by server.js rewriteAssetVersions() — no manual bump needed.
+import { mountInspector } from '/spyglass.app.js';
 
-const ASSET_VERSION = '19';
+// Used for the per-locale template fetch. Not auto-rewritten (it's a
+// runtime-built URL, not a static import), so we keep a manual knob.
+// Bump when template/css change in a way that needs old browsers to
+// drop the cached version. With the new transitive-hash on .js parents,
+// this is now the ONLY manual ?v= knob in the inspector module.
+const ASSET_VERSION = '20';
 
 async function loadStylesheet(href) {
   const link = document.createElement('link');
