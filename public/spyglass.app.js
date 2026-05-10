@@ -3604,6 +3604,102 @@ export async function mountInspector(root, ctx) {
     );
   }
 
+  // ── window.SpyglassSession — facade for lazy modules ─────────────────
+  // Modules under /modules/ that need authenticated state, sample state,
+  // partner cache, HTTP helper, or crypto operations talk through this
+  // facade instead of reaching into the IIFE closure (they can't anyway —
+  // ES module boundary). The DEK never leaves this scope: callers
+  // request operations (encryptBlob, decryptBlob, openFromPassword, …)
+  // and the facade performs them internally using _sessionDEK.
+  //
+  // Why this exists: pre-Phase-A modules either had no auth-state needs
+  // (mirror, live, simulate, etc.) or got auth-gated at the dispatcher
+  // layer (corpus-save). Once we started extracting save-sample +
+  // edit-sample + auth-lifecycle modals, the closure-state coupling
+  // became unworkable without either weakening security (DEK on window)
+  // or duplicating dozens of helpers in every module. The facade is the
+  // narrow waist: ~14 methods, fully documented, single source of truth.
+  window.SpyglassSession = {
+    // ── Non-secret state ──────────────────────────────────────────────
+    get user() {
+      return _currentUser;
+    },
+    setUser(u) {
+      _currentUser = u;
+    },
+    get currentSampleId() {
+      return _currentSampleId;
+    },
+    setCurrentSampleId(v) {
+      _currentSampleId = v;
+    },
+    get currentSampleMeta() {
+      return _currentSampleMeta;
+    },
+    setCurrentSampleMeta(v) {
+      _currentSampleMeta = v;
+    },
+    get isDirty() {
+      return _isDirty;
+    },
+    setDirty(v) {
+      _isDirty = !!v;
+    },
+    get partnerCache() {
+      return _partnerCache;
+    },
+    setPartnerCache(v) {
+      _partnerCache = v;
+    },
+
+    // ── Helpers (non-secret) ──────────────────────────────────────────
+    api: (method, url, body) => api(method, url, body),
+    refreshPartners: () => refreshPartners(),
+    refreshSamples: () => refreshSamples(),
+    renderAuthWidget: () => renderAuthWidget(),
+    partnerOptionsHtml: (sel) => partnerOptionsHtml(sel),
+    wireEnterSubmit: (id, fn) => wireEnterSubmit(id, fn),
+
+    // ── Crypto operations (DEK stays in closure) ──────────────────────
+    hasSession: () => !!_sessionDEK,
+    encryptBlob: async (plain) => SpyglassCrypto.encryptBlob(_sessionDEK, plain),
+    decryptBlob: async (ivB64, ctB64) => SpyglassCrypto.decryptBlob(_sessionDEK, ivB64, ctB64),
+
+    // ── Crypto lifecycle (for auth-modal / unlock-modal / etc.) ───────
+    // These accept and produce metadata (state, recoveryKey) but never
+    // expose raw DEK bytes to the caller. Wrapping/unwrapping happens
+    // inside the facade using the closure-private _sessionDEK.
+    async openFromPassword(password, encState, opts) {
+      _sessionDEK = await SpyglassCrypto.openWithPassword(password, encState, opts || {});
+      await persistDEK(_sessionDEK);
+    },
+    async bootstrap(password) {
+      // Register flow: derives a fresh DEK + recovery key, returns the
+      // wrap-state for the server to persist + the recovery key to show
+      // to the user once.
+      const result = await SpyglassCrypto.bootstrap(password, { extractable: true });
+      _sessionDEK = result.dekKey;
+      await persistDEK(_sessionDEK);
+      return { state: result.state, recoveryKey: result.recoveryKey };
+    },
+    clearSession() {
+      _sessionDEK = null;
+      clearPersistedDEK();
+      _currentUser = null;
+      _currentSampleId = null;
+      _currentSampleMeta = null;
+      _isDirty = false;
+    },
+    async importDEKFromBytes(dekBytes) {
+      // For recovery + password-reset: caller has unwrapped raw DEK
+      // bytes via SpyglassCrypto.unwrapWithRecoveryKey/etc. We import
+      // them as a CryptoKey and store. Bytes themselves stay with the
+      // caller for the duration of the call; facade doesn't retain.
+      _sessionDEK = await SpyglassCrypto.importDEK(dekBytes, { extractable: true });
+      await persistDEK(_sessionDEK);
+    },
+  };
+
   window.openSaveModal = function () {
     if (!_currentUser) {
       // Phase 9b auth-gate: surface an explanatory toast BEFORE opening
