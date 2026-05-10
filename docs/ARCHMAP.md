@@ -118,7 +118,7 @@ does NOT false-positive.
   doesn't have direct access to bundled core helpers; future
   `window.SpyglassCore` exposure would let us drop the duplication).
 
-### 1.3.2 Mirror generator (since 0.15.0)
+### 1.3.2 Mirror generator (since 0.15.0; modes + diff added 0.16.0)
 
 - `packages/core/mirror.js` — rule-based generator that turns the
   validator inside-out. Same rule knowledge as `rules-request.js` /
@@ -137,12 +137,21 @@ does NOT false-positive.
   `mirror.note.ortb_30_not_supported` instead of half-baked output.
   AdCOM-aware 3.0 mirror is a follow-up tied to Chapter C of
   `next-chapters-2026-05-09.md`.
-- HTTP: `POST /api/v1/mirror`, body `{ input }`. Reuses the analyze
-  rate-limiter (60/min/IP) — generation is on the same human-paste
-  cadence so sharing the bucket keeps fuzz protection coherent.
-- UI: button + modal in inspector (3 locales), "load into the other
-  editor" wires the result back into the empty `bidReq` / `bidRes`
-  textarea so the user can immediately analyse the pair.
+- **Modes** (since 0.16.0): `opts.mode` ∈ `{'minimal', 'best-practice'}`.
+  Default `'minimal'` = required-only fields. `'best-practice'` runs
+  additive enrichers that add recommended IAB fields (response: crid /
+  cid / cattax / lurl / nurl / ext.dsa / bidid / seat. request:
+  source.ext.schain / regs.coppa / regs.ext.gdpr / user.ext.consent /
+  device.sua). Enrichers never overwrite a minimal-set field.
+- HTTP: `POST /api/v1/mirror`, body `{ input, mode? }`. Reuses the
+  analyze rate-limiter (60/min/IP) — generation is on the same
+  human-paste cadence so sharing the bucket keeps fuzz protection
+  coherent.
+- UI: button + modal in inspector (3 locales). When both `bidReq` and
+  `bidRes` are filled the modal also renders a top-level JSON diff
+  between the user's counterpart and the canonical mirror output
+  (≠ / + / − markers, colour-coded). "Load into the other editor"
+  wires the generated result into the empty textarea.
 
 ### 1.4 Consumers
 
@@ -164,10 +173,10 @@ does NOT false-positive.
 | `crosscheck.js` | `tests/validator.test.js` (crosscheck section, ~40 cases) |
 | `format-detect.js` | `tests/format-detect.test.js` (~30 cases) |
 | `behavior/` | `tests/behavior.test.js` |
-| `mirror.js` | `tests/mirror.test.js` (16 cases — both directions, banner/video/native/no-bid/round-trip) |
+| `mirror.js` | `tests/mirror.test.js` (21 cases — both directions, banner/video/native/no-bid/round-trip + best-practice mode) |
 | Any new message key | manually check 3 locales (`messages/{en,uk,ru}.json`) — there's no test that enforces this; *yet* |
 
-**Total suite**: 418 tests (as of 2026-05-10 v0.25.0). Run `node --test tests/` from repo root, ~8s.
+**Total suite**: 423 tests (as of 2026-05-10 v0.26.0). Run `node --test tests/` from repo root, ~8s.
 
 ---
 

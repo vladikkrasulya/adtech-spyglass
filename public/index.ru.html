@@ -235,12 +235,12 @@
     <div id="app-root" class="workbench"></div>
     <script src="/version.js?v=1"></script>
     <script src="/spyglass-crypto.js?v=1"></script>
-    <script src="/i18n.js?v=20"></script>
+    <script src="/i18n.js?v=21"></script>
     <script src="/lang-switch.js?v=1"></script>
     <script type="module">
       // Inspector module boot (Phase C-2/C-3 — the module fetches its
       // template + CSS itself; shell stays locale-agnostic markup-wise).
-      import inspectorModule from '/modules/inspector/index.js?v=6';
+      import inspectorModule from '/modules/inspector/index.js?v=7';
       import { register, activate } from '/core/registry.js';
       register(inspectorModule);
       try {
@@ -252,7 +252,7 @@
     <!-- Classic <script> utilities. They wait for `kt:inspector-ready`
          (emitted by inspector mount() once template DOM is injected)
          before binding to inspector-owned elements. -->
-    <script src="/shortcuts.js?v=1"></script>
+    <script src="/shortcuts.js?v=2"></script>
     <script src="/export.js?v=1"></script>
     <script src="/share.js?v=3"></script>
     <script src="/embed.js?v=1"></script>

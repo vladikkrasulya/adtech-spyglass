@@ -6,6 +6,74 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.26.0 — Mirror++ sprint (2026-05-10)
+
+Compounding the v0.25.0 mirror release into something pedagogical:
+the canonical pair stops being a side-toy and becomes a teaching
+surface for "your response vs how it should look".
+
+**core@0.16.0 — best-practice mode**
+
+- `mirror(input, { mode: 'best-practice' })` — additive enrichers that
+  fill recommended-not-required IAB fields on top of minimal-mode output.
+- Response side: per-bid `crid`, `cid`, `cattax` (IAB Taxonomy 3.0),
+  `cat`, `lurl`, `nurl`, `ext.dsa` (EU Digital Services Act
+  transparency). Top-level `bidid` and seatbid `seat`.
+- Request side: `source.ext.schain` (sellers.json + ads.txt
+  enforcement, ver 1.0 with one-node placeholder), `regs.coppa`,
+  `regs.ext.gdpr`, `user.ext.consent` placeholder, `device.sua`
+  (Structured User-Agent for the post-Chrome-UA-freeze world).
+- Enrichers are strictly additive — they never overwrite a value
+  the minimal pass already set.
+- Two new notes (`mirror.note.bestpractice_response_enriched` /
+  `..._request_enriched`) explain what the mode added.
+
+**UI — mirror modal mode toggle**
+
+- Radio between "minimal" and "best-practice" inside the modal.
+  Switching re-fetches without closing — diff view, notes, and
+  output update live.
+
+**UI — diff view (the headline of this release)**
+
+- When both `bidReq` and `bidRes` are filled, the modal now renders a
+  third panel: top-level JSON diff between the user's actual
+  counterpart and the canonical mirror output. Three change kinds —
+  `≠ different`, `+ canonical added`, `− user has, canonical doesn't` —
+  colour-coded (orange for yours, green for canonical). Mirror stops
+  being a one-way generator and becomes "ось як мало бути, поряд з
+  тим, як у тебе".
+
+**UI — tab title status**
+
+- After every analysis, `document.title` reflects the verdict:
+  `Spyglass · ⚠ N errors` / `Spyglass · ! N warns` /
+  `Spyglass · ✓ clean`. Resets to baseline as soon as the user
+  starts editing either textarea (the verdict is stale once you
+  type). Solves the "which of my 7 tabs has the broken request"
+  problem.
+
+**UI — hotkey `M`**
+
+- Bare `M` (no modifier) opens the mirror modal. Skipped while
+  typing into a textarea (so users can type "m" inside JSON
+  without hijack) and while another modal is open. New cheat-sheet
+  row in 3 locales.
+
+**Tests + i18n**
+
+- `tests/mirror.test.js` grows 16 → 21: 5 best-practice cases.
+  Full suite 418 → 423.
+- New i18n keys: 15 modal copy strings (mode_label, mode.minimal,
+  mode.best_practice, diff_label, diff_legend, diff_no_changes ×3 locales)
+  + 2 mirror notes ×3 locales + 1 shortcut row ×3 locales.
+
+Smoke-tested via real browser (Playwright MCP): hotkey M, modal
+opening with both editors filled, mode toggle, best-practice DSA +
+crid + bidid present, diff rendering 2 changed rows
+(cur EUR→USD, seatbid different), tab title flipping to "! 1 warn"
+post-analyze, reset on input. 0 console errors.
+
 ### v0.25.0 — Mirror generator (2026-05-10)
 
 New public surface that turns the validator inside-out: instead of only
