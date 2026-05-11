@@ -728,13 +728,13 @@ test('validateBidSim: bid=false legit pass-through', () => {
   assert.match(r.reason, /floor/);
 });
 
-test('validateBidSim: truncates >200-char reason with ellipsis', () => {
+test('validateBidSim: truncates >140-char reason with ellipsis', () => {
   const longReason = 'x'.repeat(300);
   const r = intelLlm.validateBidSim(
     { bid: false, price: null, reason: longReason },
     { key: 'c', label: 'c' },
   );
-  assert.ok(r.reason.length <= 200);
+  assert.ok(r.reason.length <= 140);
   assert.ok(r.reason.endsWith('…'));
 });
 

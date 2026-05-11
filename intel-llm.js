@@ -236,12 +236,16 @@ function buildFieldPurposePrompt(path, charClass, bucket) {
     '',
     'Field path: ' + safePath,
     'Char class: ' + safeClass,
+    '  (alphabet of typical values: ascii / numeric / mixed / cyrillic / hex / base64)',
     'Bucket: ' + safeBucket,
+    '  (ad inventory family: display / video / native / audio / pop / push)',
     '',
     'Common purposes (pick one):',
     '  click_url, image_url, icon_url, tracker_pixel, title, description,',
     '  advertiser_domain, segment_id, macro_token, format_id, subscription_age,',
     '  zone_id, custom_extension, unknown',
+    '',
+    "Prefer 'unknown' over guessing when the path and char class don't strongly imply a purpose.",
     '',
     'Output: {"purpose": "<one purpose from list>", "confidence": "high"|"medium"|"low"}',
   ].join('\n');
@@ -361,7 +365,7 @@ function buildPartnerHintPrompt(domains) {
     ...domains.slice(0, 30).map((d) => '  - ' + d),
     '',
     'Output STRICT JSON, no commentary, no markdown:',
-    '{"name": "<vendor short name OR \\"unknown\\">", "confidence": "high"|"medium"|"low"}',
+    '{"name": "<vendor short name, max 40 chars, OR \\"unknown\\">", "confidence": "high"|"medium"|"low"}',
   ].join('\n');
 }
 
@@ -537,14 +541,18 @@ BidRequest summary (metadata only, no personally identifiable data):
 - device_type: ${summary.deviceType || 'unspecified'}
 - auction_type: ${summary.auctionType || 'unspecified'}
 
-Decide whether to bid and at what price. Respond with ONLY this JSON:
-{"bid": true|false, "price": <number or null>, "reason": "<one sentence why>"}
+Decide whether to bid and at what price. Output STRICT JSON in this exact shape:
+  - bid: boolean
+  - price: number (when bid=true) or null (when bid=false)
+  - reason: short string, max 140 chars, no emojis
+
+Example bid:  {"bid": true, "price": 1.42, "reason": "premium video on app, geo fits brief"}
+Example pass: {"bid": false, "price": null, "reason": "floor above ROI threshold for this shape"}
 
 Rules:
-- price is in ${summary.currency} per impression, must be a positive number when bid=true
+- price is in ${summary.currency} per impression, must be > 0 when bid=true
 - price must be >= avg_floor when bid=true (otherwise the bid won't clear)
-- reason is at most 140 characters, in English, no emojis
-- if abstaining, set bid=false and price=null and explain in reason`;
+- if abstaining, set bid=false and price=null and explain briefly in reason`;
 }
 
 function validateBidSim(parsed, strategy) {
@@ -564,7 +572,7 @@ function validateBidSim(parsed, strategy) {
     return { bid: false, price: null, reason: 'price_invalid' };
   }
   let reason = typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
-  if (reason.length > 200) reason = reason.slice(0, 197) + '…';
+  if (reason.length > 140) reason = reason.slice(0, 137) + '…';
   if (!reason) reason = bid ? 'bid' : 'pass';
   return { bid, price, reason };
 }
