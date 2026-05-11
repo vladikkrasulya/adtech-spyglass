@@ -233,6 +233,37 @@ test('invalidateUserSessions drops only the target user sessions', async () => {
   assert.ok(auth.getCurrentUser(fakeReq({ cookie: cookieB })), 'B unaffected');
 });
 
+test('invalidateUserSessions throws when DB-side delete fails', () => {
+  // Build a synthetic auth with a Sessions mock that throws on destroyForUser.
+  // The pre-v0.25.0 behavior was to swallow this and log — leaving stale
+  // sessions in DB that would resurrect on next container restart. Now the
+  // throw propagates so the caller (handleResetPassword) refuses to mint a
+  // new session.
+  const boomSessions = {
+    create() {},
+    destroy() {},
+    destroyForUser() {
+      throw new Error('SQLITE_BUSY (synthetic)');
+    },
+    loadActive() {
+      return [];
+    },
+    purgeExpired() {
+      return 0;
+    },
+  };
+  const isolatedAuth = require('../auth').createAuth({
+    Users,
+    Sessions: boomSessions,
+    logger: { info: () => {}, error: () => {} },
+  });
+  assert.throws(
+    () => isolatedAuth.invalidateUserSessions(999999),
+    /SQLITE_BUSY \(synthetic\)/,
+    'DB-side error must propagate, not be swallowed',
+  );
+});
+
 test('checkForgotPasswordLimit: returns true under limit, false over', () => {
   const ip = '10.99.99.1';
   for (let i = 0; i < 5; i++) {

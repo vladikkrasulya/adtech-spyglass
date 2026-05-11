@@ -404,8 +404,11 @@ function createAuthRoutesModule(deps) {
             }
           }
           const newHash = await auth.hashPassword(b.newPassword);
-          Users.updatePassword(payload.user_id, newHash);
-          Users.setPasswordCryptoState(payload.user_id, {
+          // Atomic: password + crypto-state wrap rotate together. A crash
+          // between hash-write and wrap-write previously locked the user
+          // out of their own library (new password → new KEK → can't
+          // unwrap old DEK). Now both land or neither does.
+          Users.updatePasswordAndCrypto(payload.user_id, newHash, {
             kdf_salt: b.new_kdf_salt,
             dek_wrapped: b.new_dek_wrapped,
             dek_iv: b.new_dek_iv,
@@ -420,25 +423,46 @@ function createAuthRoutesModule(deps) {
             }
           }
           const newHash = await auth.hashPassword(b.newPassword);
-          Users.updatePassword(payload.user_id, newHash);
-          Users.setPasswordCryptoState(payload.user_id, {
+          // Same atomicity contract as 'rotate' — locked-out-on-crash was a
+          // missed defect in the original audit (caught on second pass).
+          Users.updatePasswordAndCrypto(payload.user_id, newHash, {
             kdf_salt: b.new_kdf_salt,
             dek_wrapped: b.new_dek_wrapped,
             dek_iv: b.new_dek_iv,
           });
         } else if (mode === 'wipe') {
           // Lost both password AND recovery key. User accepts data loss.
+          // Atomic: password + clear crypto + wipe all five per-user tables
+          // in one transaction. Crash mid-flow rolls back entirely — user
+          // keeps old state or transitions to clean-slate, never a half-state.
           const newHash = await auth.hashPassword(b.newPassword);
-          Users.updatePassword(payload.user_id, newHash);
-          Users.clearCryptoState(payload.user_id);
-          Users.wipeUserData(payload.user_id);
+          Users.updatePasswordAndWipe(payload.user_id, newHash);
         } else {
           return sendError(res, 400, 'invalid_mode', `Unknown reset mode: ${mode}`);
         }
 
         // Drop all old sessions, mint a new one. Old cookies (if stolen)
         // stop working immediately.
-        auth.invalidateUserSessions(payload.user_id);
+        //
+        // Throw on DB-side session-delete failure (post-v0.25.0): refuse to
+        // mint a new session if the old ones might still be valid. Returning
+        // 500 lets the client retry; minting under partial invalidation
+        // would silently revive stolen tokens after the next container
+        // restart.
+        try {
+          auth.invalidateUserSessions(payload.user_id);
+        } catch (e) {
+          notifyAdmin(
+            `<b>reset-password session-invalidate failed</b>\n<pre>${notifyEscape(String((e && e.stack) || e).slice(0, 800))}</pre>`,
+            { tag: 'reset-password-sessions', level: 'error' },
+          );
+          return sendError(
+            res,
+            500,
+            'sessions_invalidate_failed',
+            'Password reset partially applied. Please retry; do not assume old sessions are invalidated.',
+          );
+        }
         const fresh = Users.get(payload.user_id);
         auth.createSession(req, res, fresh);
         const encryption = publicEncryption(Users.getCryptoState(payload.user_id));

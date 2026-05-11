@@ -256,6 +256,77 @@ test('users: clearCryptoState nulls all 6 crypto columns', () => {
   assert.equal(after.recovery_dek_iv, null);
 });
 
+test('users: updatePasswordAndCrypto rotates atomically, preserves recovery wrap', () => {
+  const u = Users.create({ email: 'rotate@example.com', password_hash: 'old' });
+  // Seed full crypto state including recovery wrap.
+  Users.setCryptoState(u.id, {
+    kdf_salt: 'salt-old',
+    dek_wrapped: 'wrap-old',
+    dek_iv: 'iv-old',
+    recovery_salt: 'rsalt',
+    recovery_dek_wrapped: 'rwrap',
+    recovery_dek_iv: 'riv',
+  });
+
+  Users.updatePasswordAndCrypto(u.id, 'new', {
+    kdf_salt: 'salt-new',
+    dek_wrapped: 'wrap-new',
+    dek_iv: 'iv-new',
+  });
+
+  const after = Users.getCryptoState(u.id);
+  assert.equal(after.kdf_salt, 'salt-new', 'password-side salt rotated');
+  assert.equal(after.dek_wrapped, 'wrap-new', 'password-side wrap rotated');
+  assert.equal(after.recovery_salt, 'rsalt', 'recovery salt preserved');
+  assert.equal(after.recovery_dek_wrapped, 'rwrap', 'recovery wrap preserved');
+  assert.equal(Users.getByEmail('rotate@example.com').password_hash, 'new');
+});
+
+test('users: updatePasswordAndWipe is atomic and returns per-table counts', () => {
+  const u = Users.create({ email: 'awipe@example.com', password_hash: 'old' });
+  Users.setCryptoState(u.id, {
+    kdf_salt: 's',
+    dek_wrapped: 'w',
+    dek_iv: 'i',
+    recovery_salt: 'rs',
+    recovery_dek_wrapped: 'rw',
+    recovery_dek_iv: 'ri',
+  });
+  Partners.create({ userId: u.id, name: 'p1' });
+  Samples.create({ userId: u.id, title: 's1' });
+  AnalyzeLog.record({
+    userId: u.id,
+    payloadType: 'request',
+    version: '2.6',
+    status: 'clean',
+    format: 'banner',
+    findingCount: 0,
+    errorCount: 0,
+    warningCount: 0,
+  });
+  BehaviorCorpus.create({ userId: u.id, label: 'fraud', events: [{ kind: 'click' }] });
+  Sessions.create({
+    token: 'awipe-tok-' + u.id,
+    userId: u.id,
+    expiresAt: Date.now() + 60000,
+    ip: '127.0.0.1',
+    ua: 'test',
+  });
+
+  const r = Users.updatePasswordAndWipe(u.id, 'fresh');
+  assert.equal(r.samplesDeleted, 1);
+  assert.equal(r.partnersDeleted, 1);
+  assert.equal(r.analyzeLogDeleted, 1);
+  assert.equal(r.behaviorCorpusDeleted, 1);
+  assert.equal(r.sessionsDeleted, 1);
+
+  // Password updated, crypto cleared
+  assert.equal(Users.getByEmail('awipe@example.com').password_hash, 'fresh');
+  const cs = Users.getCryptoState(u.id);
+  assert.equal(cs.kdf_salt, null, 'password-side crypto cleared');
+  assert.equal(cs.recovery_salt, null, 'recovery-side crypto cleared too');
+});
+
 test('users: wipeUserData sweeps all per-user tables but keeps the user row', () => {
   const u = Users.create({ email: 'wipe@example.com', password_hash: 'x' });
   const p = Partners.create({ userId: u.id, name: 'WipePartner' });

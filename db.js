@@ -379,6 +379,88 @@ const Users = {
   },
 
   /**
+   * Atomic password + password-side crypto rotation. Used by reset-password
+   * mode='rotate' and mode='recover'. Wraps updatePassword +
+   * setPasswordCryptoState in a single db.transaction so a crash between
+   * the two leaves the user neither half-locked-out (new password but old
+   * wrap = can't decrypt with new KEK) nor half-rolled (old password but
+   * new wrap = can't decrypt with old KEK).
+   *
+   * Recovery wrap (recovery_dek_wrapped + recovery_salt) is intentionally
+   * untouched — rotation keeps the existing recovery key valid.
+   *
+   * @param {number} id
+   * @param {string} password_hash  — new bcrypt hash
+   * @param {{ kdf_salt: string, dek_wrapped: string, dek_iv: string }} state
+   */
+  updatePasswordAndCrypto(id, password_hash, state) {
+    db.transaction(() => {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(
+        String(password_hash),
+        id,
+      );
+      db.prepare(
+        `UPDATE users
+         SET kdf_salt = ?, dek_wrapped = ?, dek_iv = ?
+         WHERE id = ?`,
+      ).run(String(state.kdf_salt), String(state.dek_wrapped), String(state.dek_iv), id);
+    })();
+  },
+
+  /**
+   * Atomic password reset + full wipe. Used by reset-password mode='wipe'
+   * when user lost both password AND recovery key. Combines updatePassword
+   * + clearCryptoState + wipeUserData (all five per-user tables) in a single
+   * db.transaction so a crash mid-flow rolls back everything — the user
+   * either keeps their old state entirely or transitions to the clean-slate
+   * state, never an inconsistent middle.
+   *
+   * @param {number} id
+   * @param {string} password_hash  — new bcrypt hash
+   * @returns {{
+   *   samplesDeleted: number, partnersDeleted: number,
+   *   analyzeLogDeleted: number, behaviorCorpusDeleted: number,
+   *   sessionsDeleted: number,
+   * }}
+   */
+  updatePasswordAndWipe(id, password_hash) {
+    return db.transaction(() => {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(
+        String(password_hash),
+        id,
+      );
+      db.prepare(
+        `UPDATE users
+         SET kdf_salt = NULL, dek_wrapped = NULL, dek_iv = NULL,
+             recovery_salt = NULL, recovery_dek_wrapped = NULL, recovery_dek_iv = NULL
+         WHERE id = ?`,
+      ).run(id);
+      const samplesDeleted = db
+        .prepare('DELETE FROM samples WHERE user_id = ?')
+        .run(id).changes;
+      const partnersDeleted = db
+        .prepare('DELETE FROM partners WHERE user_id = ?')
+        .run(id).changes;
+      const analyzeLogDeleted = db
+        .prepare('DELETE FROM analyze_log WHERE user_id = ?')
+        .run(id).changes;
+      const behaviorCorpusDeleted = db
+        .prepare('DELETE FROM behavior_corpus WHERE user_id = ?')
+        .run(id).changes;
+      const sessionsDeleted = db
+        .prepare('DELETE FROM sessions WHERE user_id = ?')
+        .run(id).changes;
+      return {
+        samplesDeleted,
+        partnersDeleted,
+        analyzeLogDeleted,
+        behaviorCorpusDeleted,
+        sessionsDeleted,
+      };
+    })();
+  },
+
+  /**
    * Null out crypto state — used by reset-password mode='wipe' so the user
    * re-bootstraps encryption on next login (existing flow handles NULL
    * crypto state by triggering bootstrap).

@@ -322,29 +322,38 @@ function createAuth({ Users, Sessions, logger }) {
   }
 
   /**
-   * Drop ALL sessions belonging to a user — Map AND DB. Used on password
-   * reset so previously-stolen cookies stop working immediately, even
-   * across container restarts.
+   * Drop ALL sessions belonging to a user — DB first, then in-memory Map.
+   * Used on password reset so previously-stolen cookies stop working
+   * immediately, even across container restarts.
    *
-   * Pre-v0.20.0 this only cleared the in-memory Map; sessions persisted
-   * in DB would re-hydrate on next boot and stolen cookies would silently
-   * revive. Now we wipe both halves write-through.
+   * Order matters: DB is the source of truth (rehydrated on boot via
+   * Sessions.loadActive). If DB delete fails and we'd already nuked the
+   * Map, sessions look gone for this process lifetime but resurrect on
+   * next restart — the "session revival" bug. By writing through DB
+   * first and only touching the Map on success, a DB failure leaves
+   * everything in its prior consistent state, and the thrown error
+   * tells the caller to abort the broader flow (return 500 to client)
+   * rather than mint a new session against partially-invalidated state.
+   *
+   * Pre-v0.20.0 this only cleared the in-memory Map.
+   * Pre-v0.25.0 this swallowed DB-delete failures (session revival).
    *
    * @param {number} userId
+   * @returns {number} count removed from the in-memory Map
+   * @throws if DB-side delete fails — caller must surface to user
    */
   function invalidateUserSessions(userId) {
+    if (Sessions) {
+      // Let DB errors propagate — caller (handleResetPassword) catches
+      // and returns 500 without minting a new session. Better a failed
+      // reset than a partial wipe that "leaks" stale tokens.
+      Sessions.destroyForUser(userId);
+    }
     let removed = 0;
     for (const [t, s] of sessions) {
       if (s.userId === userId) {
         sessions.delete(t);
         removed++;
-      }
-    }
-    if (Sessions) {
-      try {
-        Sessions.destroyForUser(userId);
-      } catch (e) {
-        log.error && log.error({ err: e.message }, 'session DB invalidate failed');
       }
     }
     return removed;
