@@ -484,12 +484,12 @@
             (зелений ≥90%).
           </p>
 
-          <h3>🤖 Bid simulator (gemma 3-strategy)</h3>
+          <h3>🤖 Bid simulator (local LLM 3-strategy)</h3>
           <p>
-            Кнопка <strong>🤖 simulate</strong> у шапці. Локальна gemma3:4b симулює як 3 типи DSP
+            Кнопка <strong>🤖 simulate</strong> у шапці. Локальна qwen2.5:3b симулює як 3 типи DSP
             відповіли б на твій запит: <em>aggressive (max scale, +30-50% над floor)</em>,
             <em>conservative (ROAS guard, +5-15%)</em>,
-            <em>quality (premium only, +50-80% або skip)</em>. Privacy: gemma бачить тільки 8
+            <em>quality (premium only, +50-80% або skip)</em>. Privacy: LLM бачить тільки 8
             metadata-полів (формат, розмір, гео, currency, floor, surface, device-type,
             auction-type) — bid VALUES в LLM не потрапляють.
           </p>
@@ -664,7 +664,7 @@
           <p>
             Якщо адмін Spyglass підключив локальний
             <a href="https://github.com/ollama/ollama" target="_blank" rel="noopener">Ollama</a> з
-            моделлю <code>gemma3:4b</code> — ти отримуєш AI-помічника, який вміє
+            моделлю <code>qwen2.5:3b</code> — ти отримуєш AI-помічника, який вміє
             <strong>називати кластери нових полів</strong> у Discovery-режимі та пояснювати
             призначення окремих <code>ext.*</code>-полів. Все працює
             <strong>на тій самій машині, що Spyglass</strong>, без публічного інтернету:

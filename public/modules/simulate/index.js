@@ -21,7 +21,7 @@
                                     'modal-close' / 'modal-backdrop-close')
 
    Backend: /api/intel/simulate-bids — handler delegates to local
-   gemma3:4b via Ollama (see packages/intel/intel-llm.js). On
+   qwen2.5:3b via Ollama (see packages/intel/intel-llm.js). On
    ollama_unavailable the modal renders a translated friendly error
    instead of the raw error string.
    ============================================================ */

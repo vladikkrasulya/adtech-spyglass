@@ -33,8 +33,8 @@
  */
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemma3:4b';
-// Generation timeout: gemma3:4b on i7-7700 CPU emits ~10 tok/s, so a
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
+// Generation timeout: qwen2.5:3b on i7-7700 CPU emits ~10 tok/s, so a
 // 100-token JSON response takes ~10 sec wall-clock. Add headroom for
 // prompt-eval (8B+ models can be slow on first warm-up), cap at 30s.
 const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS) || 30_000;
@@ -54,7 +54,7 @@ class OllamaUnavailable extends Error {
  *
  * Why `format: 'json'`:
  *   Ollama supports a JSON mode where the model is constrained to
- *   emit valid JSON. gemma3:4b respects this faithfully — no fenced
+ *   emit valid JSON. qwen2.5:3b respects this faithfully — no fenced
  *   blocks, no preamble. Falls back gracefully if the response still
  *   isn't parseable (extractStructured handles it).
  */
@@ -422,7 +422,7 @@ async function suggestPartner(parsedReq, parsedRes) {
 
 /**
  * Simulate three DSP bidding strategies for a given BidRequest. Each
- * strategy gets its own prompt that asks gemma to (a) decide whether to
+ * strategy gets its own prompt that asks the LLM to (a) decide whether to
  * bid, (b) at what price, (c) why — in plain language. Output is a
  * compact array we render as a "what would 3 different DSPs do?" panel.
  *

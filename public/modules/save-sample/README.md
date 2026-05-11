@@ -1,7 +1,7 @@
 # save-sample — library save / update modal
 
 The library "save / update" modal: title + partner picker + notes,
-plus the live partner-inference banner that asks gemma to identify
+plus the live partner-inference banner that asks the LLM to identify
 the SSP / vendor based on the current bid_req / bid_res. Encrypts
 blobs locally via the SpyglassSession facade BEFORE POSTing — the
 server never sees plaintext.
@@ -82,7 +82,7 @@ reads `#bidReq` / `#bidRes` / `#stEntity` (contracts owned by
 
 - `POST /api/samples` — create new sample (encrypted blobs).
 - `PATCH /api/samples/:id` — update existing sample.
-- `POST /api/intel/suggest-partner` — gemma SSP-inference for the
+- `POST /api/intel/suggest-partner` — LLM SSP-inference for the
   partner-suggest banner (best-effort; failures silently hide the
   banner).
 - `POST /api/partners` — used by `_spy_createPartner` when the user

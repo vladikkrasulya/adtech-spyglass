@@ -41,7 +41,7 @@ and writes its modal into `#modalRoot`.
 ## Backend
 
 Talks to `POST /api/intel/simulate-bids` (handler delegates to local
-gemma3:4b via Ollama; see `packages/intel/intel-llm.js`). When the
+qwen2.5:3b via Ollama; see `packages/intel/intel-llm.js`). When the
 backend returns `{ success: false, code: 'ollama_unavailable' }` the
 modal renders a translated friendly error
 (`modal.simbids.ollama_down`) instead of the raw error string.

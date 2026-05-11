@@ -1476,7 +1476,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   justify-content: flex-end;
   margin-top: var(--space-3);
 }
-/* Phase C-1 — gemma-inferred partner suggestion banner inside the
+/* Phase C-1 — LLM-inferred partner suggestion banner inside the
    save modal. Soft accent panel; never blocks user input. */
 .modal-hint {
   display: flex;

@@ -3254,7 +3254,7 @@ export async function mountInspector(root, ctx) {
   // Both fetch on first click of their topnav buttons (`case 'live'`
   // and `case 'sim-bids'` in the dispatcher below). Pre-migration this
   // block held openLiveModal (~164 LOC, EventSource + tail list) and
-  // openSimBidsModal (~105 LOC, gemma 3-strategy DSP demo). Together
+  // openSimBidsModal (~105 LOC, LLM 3-strategy DSP demo). Together
   // they used to add ~280 LOC + 23 i18n keys × 3 locales to the initial
   // bundle. Now they're lazy — only loaded for users who click.
 

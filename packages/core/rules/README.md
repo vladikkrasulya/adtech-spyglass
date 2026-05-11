@@ -103,7 +103,7 @@ rejected"; `info` is for "this is just a tip".
 
 ## Future expansion (intentionally not done yet)
 
-- LLM-suggested checks: a plugin could call gemma (`intel-llm.js`)
+- LLM-suggested checks: a plugin could call the LLM bridge (`intel-llm.js`)
   to flag patterns it noticed across recent traffic. Architecturally
   fits — plugin just returns findings.
 - Statistical context: a plugin could query `analyze_log` for "how

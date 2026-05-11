@@ -3,7 +3,7 @@
    (lazy-loaded ES module).
 
    The library "save / update" modal: title + partner picker + notes,
-   plus the live partner-inference banner that asks gemma to identify
+   plus the live partner-inference banner that asks the LLM to identify
    the SSP / vendor based on the current bid_req / bid_res. Encrypts
    blobs locally via the SpyglassSession facade BEFORE POSTing — the
    server never sees plaintext.
@@ -163,7 +163,7 @@ export function openSaveModal() {
   }, 0);
 }
 
-// Phase C-1: ask gemma to identify the SSP / vendor based on the
+// Phase C-1: ask the LLM to identify the SSP / vendor based on the
 // current bid_req / bid_res contents. Privacy-safe: payload stays on
 // the local Ollama, never reaches a cloud LLM. Banner offers two paths:
 // pick an existing partner with the same name, OR create + select a
