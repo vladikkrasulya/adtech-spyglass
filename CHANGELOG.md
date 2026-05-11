@@ -6,6 +6,93 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.37.0 — P1 hardening sprint (audit 6-round outcome, 2026-05-11)
+
+Six-round adversarial audit (Gemini + Claude calibration loop) surfaced
+~32 candidate findings; verification against actual code accepted ~12 as
+real (38% net) and rejected the rest as confident hallucinations or
+trade-offs. This release lands the P1 subset — five separate commits
+addressing correctness across DB, auth, validator, behavior, and intel
+layers. Core bumps to 0.17.0 (new findings = feat); app bumps to
+0.37.0 (lockstep with core).
+
+**DB hardening (db.js)**
+- `init()` wraps `migrate(db, cur)` + `user_version` pragma bump in a
+  single `db.transaction()`. A crash mid-migration previously left
+  schema_version stale; on next boot the same blocks re-ran and crashed
+  loop on "table already exists" (CREATE without IF NOT EXISTS).
+- Added `IF NOT EXISTS` to every CREATE TABLE / CREATE INDEX in
+  v4→v5, v5→v6, v6→v7 blocks (belt-and-suspenders over the transaction).
+- `busy_timeout = 5000` pragma — 5s headroom for SQLITE_BUSY during
+  the daily backup window (03:30 UA, `sqlite3 .backup` holds reader
+  briefly). Pre-fix a coincident analyze call returned BUSY immediately.
+- `wipeUserData` now sweeps `analyze_log`, `behavior_corpus`, and
+  `sessions` too — previously only samples + partners. Stolen cookies
+  issued before a wipe stop working at the wipe boundary, not at the
+  next container restart.
+
+**Auth atomicity + session revival (auth.js, modules/auth/handler.js)**
+- New `Users.updatePasswordAndCrypto(id, hash, state)` and
+  `Users.updatePasswordAndWipe(id, hash)` helpers wrap the multi-write
+  reset flows in `db.transaction`. Used by reset-password modes
+  `rotate`, `recover`, and `wipe`. Pre-fix a crash between the password
+  update and the crypto-state update permanently locked the user out
+  (new password → new KEK → can't unwrap old DEK). All three modes
+  now land all writes or none.
+  - Recovery wrap (recovery_dek_wrapped + recovery_salt) is preserved
+    by both `rotate` and `recover` — key-on-paper remains valid.
+- `invalidateUserSessions` no longer swallows DB-side delete failures.
+  Pre-fix: `try/catch` around `Sessions.destroyForUser` meant a
+  SQLITE_BUSY left DB rows intact while in-memory Map was cleared;
+  next container restart re-hydrated the "dropped" sessions and stolen
+  cookies silently revived. Now DB-side runs first, errors propagate,
+  in-memory Map only mutates if DB succeeded.
+- `handleResetPassword` catches the propagated error and returns 500
+  with code `sessions_invalidate_failed` rather than minting a new
+  session against partially-invalidated state.
+
+**Validator + crosscheck (`packages/core/`)**
+- New finding `request.site_and_app_both` (WARNING). oRTB §3.2.1
+  requires exactly one of `site` or `app`. Pre-fix we only flagged
+  the case where neither was present; a request with both passed
+  silently. Messages in 3 locales.
+- `crosscheck.bid.cat_blocked` now does hierarchical match. IAB
+  Content Taxonomy organizes IDs as parent–child via hyphen
+  (`IAB7` parent, `IAB7-39` child; or `1` and `1-7` in Taxonomy
+  2.x). A `bcat` listing the parent must reject any child. Pre-fix
+  was exact-string match only — bid with `cat=["IAB7-39"]` cleared
+  `bcat=["IAB7"]`, a false-clean verdict. Strict `${parent}-` prefix
+  ensures siblings like `IAB10` are correctly NOT blocked by `IAB1`.
+
+**Behavior engine (`packages/core/behavior/`, `public/creative-probe.js`)**
+- New finding `behavior.trap.invisible_overlay_aggregate` (ERROR).
+  The Phase 1 rule catches a single click target covering >50% of
+  viewport while invisible. Audit surfaced an evasion: ship 10
+  transparent divs at ~12% each — no single trip, but collectively
+  a full-screen click trap. Probe now maintains `_invisibleEls`
+  Map<HTMLElement, ratio> populated on every invisible click target;
+  on each click, sum coverage across live tracked elements; if >50%
+  AND ≥2 contributors, emit aggregate event. Messages in 3 locales.
+- Server-side events cap (`/api/analyze-behavior`): 1000-event
+  ceiling, head-truncate with `truncated: true` flag in response
+  meta. Probe-side already emits summarised events; this caps the
+  flood-of-events vector for callers bypassing the probe.
+
+**Intel (intel-llm.js, malicious.js)**
+- `addDomain` (server-side, partner inference): now strips anything
+  not `[a-z0-9.-]` before adding to the prompt's domain list. Pre-fix
+  explicit-field domains went through with only `toLowerCase + trim`,
+  so a `bid_req.site.domain` of `"x.com\n\nIMPORTANT: ..."` could
+  bleed past the bullet-list boundary and risk steering the LLM.
+  Output is still bounced by `PARTNER_NAME_RE` in
+  `validatePartnerSuggestion`, but cleaning the input boundary is
+  the right belt-and-suspenders posture.
+- `malicious.js:260` docstring updated to say
+  `FROZEN_THRESHOLD_MS = 6000` (was stale at "3.5s"; constant was
+  bumped to 6s in v0.24.0 but rule comment lagged).
+
+**Tests**: +14 over the sprint (524 → 538). All 538 pass. 0 lint errors.
+
 ### v0.36.2 — Favicon resilience (2026-05-10)
 
 User reported the browser tab showing a generic globe icon despite the
