@@ -147,8 +147,5 @@ test('proxy: protocol smuggling (gopher://) is rejected at URL parse', async () 
   // (no network call made).
   const res = await callHandler(handler, { url: 'gopher://httpbin.org/', data: {} });
   // Either 403 (host check on empty hostname) or 400 (parse error) is acceptable.
-  assert.ok(
-    res._status === 403 || res._status === 400,
-    'gopher:// must not reach the network',
-  );
+  assert.ok(res._status === 403 || res._status === 400, 'gopher:// must not reach the network');
 });
