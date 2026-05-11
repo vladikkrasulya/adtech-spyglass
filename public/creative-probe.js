@@ -426,6 +426,18 @@
           // in-viewport coverage ratio. Returns null if too small to matter.
           function classifyInvisible(el) {
             try {
+              // Skip structural roots — HTML and BODY default to transparent
+              // background and span the whole viewport, so without this guard
+              // every page trips the aggregate detector. They aren't click
+              // traps either: clicks "on body" fall through to whatever is
+              // underneath, not to the body element itself.
+              // IFRAME skipped too — nested iframes have their own probe and
+              // we shouldn't double-count their viewport area as our own.
+              // (Caught by Playwright smoke 2026-05-11 — pre-fix scan
+              // returned contributorCount=11 + agg=236% on a 4-overlay test;
+              // post-fix expects ~4-8 contributors.)
+              const tag = el.tagName;
+              if (tag === 'HTML' || tag === 'BODY' || tag === 'IFRAME') return null;
               const r = el.getBoundingClientRect();
               if (r.width <= 0 || r.height <= 0) return null;
               // Clip to viewport so off-screen elements don't inflate ratio.
