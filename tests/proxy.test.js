@@ -40,7 +40,10 @@ function makeRes() {
 function makeReq(body) {
   // readJson reads from a Node IncomingMessage. We fake just enough to
   // pass through readJson's expectation of a string-chunked stream.
+  // Cast to `any` because IncomingMessage extends Readable with extra
+  // headers/method fields the TypeScript type doesn't know we're patching on.
   const Readable = require('stream').Readable;
+  /** @type {any} */
   const r = new Readable();
   r.headers = { 'content-type': 'application/json' };
   r.method = 'POST';
