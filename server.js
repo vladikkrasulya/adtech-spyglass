@@ -584,6 +584,10 @@ router.register(
     setLocaleCookie,
     VERIFY_TOKEN_TTL,
     RESET_TOKEN_TTL,
+    // Post-login Ollama warmup (v0.38.2). Fire-and-forget — login
+    // response is sent first, then warmup ping is issued. Tests in
+    // isolation get the no-op stub default.
+    intelLlm,
   }),
 );
 router.register(createPartnersModule({ auth, Partners }));

@@ -6,6 +6,39 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.38.2 — Ollama warmup ping post-login (2026-05-11)
+
+Closes the cold-start latency gap identified in audit Etap 5.1.1.
+Pre-fix: a first `/api/intel/*` call after Ollama-idle (default 5min
+unload) paid 10-15s for model load on top of the actual generation
+latency, sometimes brushing the 30s call timeout.
+
+Fix: fire-and-forget warmup ping immediately after a successful
+`/api/auth/login`. `warmupOllama()` POSTs `prompt:'hi'` with
+`keep_alive:'10m'` to `/api/generate`, telling Ollama to load the
+model into memory and keep it resident. By the time the user clicks
+"🤖 simulate" or hits any intel button, the model is hot and the
+real call returns in ~2s.
+
+Guarantees:
+- Fire-and-forget: login response is `sendJson`'d FIRST, then
+  warmup is issued. The user doesn't wait on Ollama.
+- 5s abort timeout on the warmup fetch itself — even if Ollama is
+  hung, the warmup attempt cannot pile up.
+- All errors swallowed silently. If Ollama is unreachable / model
+  missing, the user's next intel call hits the existing
+  fail-open "AI unavailable" UI — same as before.
+- Optional dep injection: tests that don't wire intel-llm get a
+  no-op stub default, so `tests/auth.test.js` doesn't need a
+  mock Ollama.
+
+Tests: 554/554 still pass; warmupOllama itself isn't unit-tested
+(network side-effect inside fire-and-forget, no return value, no
+state to assert) — semantics are covered by the lack of assertion
+that login waits for it. Manual smoke: hit /api/auth/login on a
+cold Ollama, then time the next /api/intel call (should be ~2s,
+not 12s+).
+
 ### v0.38.1 — /api/proxy SSRF hardening (Gemini Pro 3.1 audit, 2026-05-11)
 
 Focused SSRF review of the /api/proxy harness by Gemini Pro 3.1 (CLI,

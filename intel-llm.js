@@ -593,11 +593,54 @@ function validateBidSim(parsed, strategy) {
   return { bid, price, reason };
 }
 
+/**
+ * Fire-and-forget warmup ping to Ollama. Tells the daemon to load the
+ * configured model into memory and keep it resident for the next 10
+ * minutes (`keep_alive` is Ollama-specific). Used post-login so the
+ * user's first /api/intel/* request returns in ~2s instead of the
+ * 10-15s cold-start latency we'd otherwise hit on an idle daemon.
+ *
+ * Best-effort: errors are swallowed entirely (Ollama unreachable,
+ * model missing, slow network — all silent). If the daemon really
+ * is down, the next intel call surfaces the existing fail-open
+ * "AI unavailable" UI path.
+ *
+ * Returns nothing — callers shouldn't await. The function itself
+ * doesn't throw; the inner fetch's `.catch(() => {})` absorbs.
+ *
+ * @param {{model?: string, keepAlive?: string}} [opts]
+ */
+function warmupOllama(opts) {
+  const o = opts || {};
+  const url = OLLAMA_URL.replace(/\/+$/, '') + '/api/generate';
+  const body = JSON.stringify({
+    model: o.model || OLLAMA_MODEL,
+    prompt: 'hi',
+    stream: false,
+    keep_alive: o.keepAlive || '10m',
+    options: { num_predict: 1, temperature: 0 },
+  });
+  // Separate AbortController + tighter timeout (5s) than the regular
+  // call path: warmup must never block login or pile up requests.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    signal: controller.signal,
+  })
+    .then((r) => r && r.body && typeof r.body.cancel === 'function' && r.body.cancel())
+    .catch(() => {})
+    .finally(() => clearTimeout(timer));
+}
+
 module.exports = {
   suggestName,
   fieldPurpose,
   suggestPartner,
   simulateBids,
+  warmupOllama,
   OllamaUnavailable,
   // Exposed for tests / inspection:
   callOllama,
