@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" font-family="system-ui, sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="250" fill="url(#g)"/>
+  <path d="M180 100 Q170 80 190 75 Q200 55 225 60 Q250 50 260 75 Q280 80 270 105 Q265 125 240 120 L200 120 Q175 125 180 100 Z" fill="#fff" opacity="0.95"/>
+  <circle cx="220" cy="92" r="3" fill="#7c3aed"/>
+  <circle cx="232" cy="92" r="3" fill="#7c3aed"/>
+  <circle cx="244" cy="92" r="3" fill="#7c3aed"/>
+  <text x="20" y="50" fill="#fff" font-size="13" font-weight="700" letter-spacing="2" opacity="0.9">FLOWHUB · TEAMS</text>
+  <text x="20" y="110" fill="#fff" font-size="28" font-weight="900">Ship 2× faster</text>
+  <text x="20" y="138" fill="#fff" font-size="14" opacity="0.9">Tasks. Docs. Sync. One place.</text>
+  <rect x="20" y="180" width="130" height="36" rx="18" fill="#fff"/>
+  <text x="85" y="203" fill="#2563eb" font-size="13" font-weight="800" text-anchor="middle">TRY FREE →</text>
+</svg>

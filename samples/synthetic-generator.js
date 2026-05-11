@@ -36,6 +36,7 @@ const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
 const { randomUUID } = require('crypto');
+const { pickCreative } = require('./creative-picker');
 
 const DEFAULT_INTERVAL_MS = 1000;
 
@@ -113,7 +114,12 @@ class SyntheticGenerator extends EventEmitter {
     this.cursor++;
     const { specimen, emittedAt } = this.mutate(item.base);
     this.emittedCount++;
-    this.emit('specimen', { source: item.name, specimen, emittedAt });
+    // Pick a deterministic placeholder creative for the stream thumb.
+    // `creative` is a bare ref (filename minus .svg); the client
+    // resolves it against /assets/creatives/. Null when picker can't
+    // route the format (defensive — never observed in normal corpus).
+    const creative = pickCreative(specimen);
+    this.emit('specimen', { source: item.name, specimen, emittedAt, creative });
     return specimen;
   }
 

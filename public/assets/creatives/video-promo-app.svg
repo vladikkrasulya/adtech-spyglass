@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" font-family="system-ui, sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c2d12"/>
+      <stop offset="1" stop-color="#171717"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="225" fill="url(#g)"/>
+  <rect x="80" y="50" width="60" height="60" rx="10" fill="#facc15" transform="rotate(15 110 80)"/>
+  <rect x="160" y="120" width="50" height="50" rx="8" fill="#22c55e" transform="rotate(-20 185 145)"/>
+  <rect x="280" y="40" width="70" height="70" rx="14" fill="#ec4899" transform="rotate(8 315 75)"/>
+  <rect x="50" y="160" width="300" height="6" fill="#7c2d12"/>
+  <rect x="50" y="160" width="60" height="6" fill="#facc15"/>
+  <circle cx="200" cy="112" r="48" fill="#fff" opacity="0.95"/>
+  <polygon points="188,90 188,134 222,112" fill="#171717"/>
+  <text x="20" y="30" fill="#facc15" font-size="11" font-weight="800" letter-spacing="2">GAMEPLAY</text>
+  <text x="20" y="205" fill="#fff" font-size="14" font-weight="800">Install Match Mania · Free</text>
+</svg>

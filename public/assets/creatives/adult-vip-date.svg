@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" font-family="system-ui, sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c1d95"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f0abfc" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#f0abfc" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="300" height="250" fill="url(#g)"/>
+  <circle cx="150" cy="125" r="80" fill="url(#glow)"/>
+  <circle cx="115" cy="115" r="22" fill="#f0abfc"/>
+  <path d="M85 175 Q85 145 115 145 Q145 145 145 175 L145 200 L85 200 Z" fill="#f0abfc"/>
+  <circle cx="185" cy="115" r="22" fill="#f9a8d4"/>
+  <path d="M155 175 Q155 145 185 145 Q215 145 215 175 L215 200 L155 200 Z" fill="#f9a8d4"/>
+  <rect x="245" y="15" width="40" height="22" rx="4" fill="#fbbf24"/>
+  <text x="265" y="31" fill="#1e1b4b" font-size="12" font-weight="900" text-anchor="middle">18+</text>
+  <text x="20" y="40" fill="#fbbf24" font-size="13" font-weight="800" letter-spacing="3">VIP DATE</text>
+  <text x="20" y="232" fill="#fff" font-size="14" font-weight="700">Verified profiles · No bots</text>
+</svg>

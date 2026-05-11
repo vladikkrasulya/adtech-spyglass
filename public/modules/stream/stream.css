@@ -147,14 +147,13 @@
   font-family: var(--font-body);
 }
 #app-root .row {
-  display: grid;
-  grid-template-columns: 92px 60px 1fr;
+  display: flex;
+  align-items: center;
   gap: var(--space-3, 12px);
-  padding: 10px var(--space-4, 16px);
+  padding: 8px var(--space-4, 16px);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.1s ease;
-  align-items: center;
 }
 #app-root .row:hover {
   background: var(--accent-soft);
@@ -165,9 +164,21 @@
   padding-left: calc(var(--space-4, 16px) - 2px);
 }
 #app-root .row .ts {
+  flex: 0 0 92px;
   color: var(--text-dim);
 }
+#app-root .row .creative-thumb {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--surface-sunken, rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--border);
+  display: block;
+}
 #app-root .row .fmt {
+  flex: 0 0 60px;
   color: var(--accent);
   text-transform: uppercase;
   font-size: 10px;
@@ -175,6 +186,8 @@
   font-weight: 600;
 }
 #app-root .row .ctx {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;

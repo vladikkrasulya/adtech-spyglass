@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" font-family="system-ui, sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0ea5e9"/>
+      <stop offset="1" stop-color="#1e40af"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="250" fill="url(#g)"/>
+  <rect x="150" y="50" width="40" height="40" fill="#ef4444"/>
+  <rect x="190" y="50" width="40" height="40" fill="#22c55e"/>
+  <rect x="150" y="90" width="40" height="40" fill="#facc15"/>
+  <rect x="190" y="90" width="40" height="40" fill="#a855f7"/>
+  <rect x="230" y="50" width="40" height="40" fill="#22c55e"/>
+  <rect x="230" y="90" width="40" height="40" fill="#ef4444"/>
+  <text x="20" y="45" fill="#facc15" font-size="13" font-weight="800" letter-spacing="2">★★★★★ 4.8</text>
+  <text x="20" y="95" fill="#fff" font-size="26" font-weight="900">Match Mania</text>
+  <text x="20" y="120" fill="#bfdbfe" font-size="13">10M+ installs</text>
+  <rect x="20" y="180" width="160" height="40" rx="20" fill="#22c55e"/>
+  <text x="100" y="206" fill="#fff" font-size="15" font-weight="900" text-anchor="middle">INSTALL FREE</text>
+</svg>

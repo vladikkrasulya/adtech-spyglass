@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" font-family="system-ui, sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="250" fill="url(#g)"/>
+  <rect x="170" y="60" width="100" height="80" rx="4" fill="#fff" opacity="0.95"/>
+  <circle cx="220" cy="92" r="14" fill="#fde68a"/>
+  <path d="M170 130 L195 100 L210 115 L240 80 L270 130 L270 140 L170 140 Z" fill="#86efac"/>
+  <rect x="170" y="150" width="100" height="50" rx="4" fill="#000" opacity="0.4"/>
+  <circle cx="180" cy="160" r="3" fill="#fff"/>
+  <circle cx="195" cy="160" r="3" fill="#fff"/>
+  <circle cx="210" cy="160" r="3" fill="#fff"/>
+  <circle cx="225" cy="160" r="3" fill="#fff"/>
+  <rect x="175" y="175" width="90" height="3" rx="1" fill="#fff"/>
+  <rect x="175" y="183" width="60" height="3" rx="1" fill="#fff"/>
+  <rect x="175" y="191" width="75" height="3" rx="1" fill="#fff"/>
+  <text x="20" y="50" fill="#fff" font-size="13" font-weight="800" letter-spacing="2">SNAP PRO</text>
+  <text x="20" y="105" fill="#fff" font-size="24" font-weight="900">AI Photo</text>
+  <text x="20" y="130" fill="#fff" font-size="24" font-weight="900">Magic</text>
+  <rect x="20" y="170" width="120" height="34" rx="17" fill="#fff"/>
+  <text x="80" y="192" fill="#ec4899" font-size="13" font-weight="800" text-anchor="middle">TRY FREE</text>
+</svg>

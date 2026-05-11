@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" font-family="system-ui, sans-serif">
+  <rect width="300" height="250" fill="#fff"/>
+  <rect x="20" y="20" width="260" height="100" rx="6" fill="#ddd6fe"/>
+  <rect x="160" y="40" width="50" height="60" rx="4" fill="#7c3aed"/>
+  <rect x="170" y="50" width="30" height="4" fill="#fff"/>
+  <rect x="170" y="58" width="22" height="4" fill="#fff"/>
+  <rect x="170" y="66" width="26" height="4" fill="#fff"/>
+  <rect x="170" y="74" width="18" height="4" fill="#fff"/>
+  <rect x="40" y="40" width="100" height="6" rx="2" fill="#7c3aed"/>
+  <rect x="40" y="55" width="80" height="6" rx="2" fill="#a78bfa"/>
+  <rect x="40" y="75" width="100" height="4" rx="2" fill="#a78bfa"/>
+  <rect x="40" y="85" width="70" height="4" rx="2" fill="#a78bfa"/>
+  <text x="20" y="155" fill="#0f172a" font-size="16" font-weight="800">How a 5-person team</text>
+  <text x="20" y="178" fill="#0f172a" font-size="16" font-weight="800">ships like a 50-person one</text>
+  <text x="20" y="205" fill="#64748b" font-size="11">FlowHub · workflow automation that scales</text>
+  <rect x="20" y="218" width="60" height="16" rx="3" fill="#f1f5f9"/>
+  <text x="26" y="230" fill="#64748b" font-size="9" font-weight="700">Promoted</text>
+  <text x="220" y="230" fill="#7c3aed" font-size="11" font-weight="700">Try free →</text>
+</svg>

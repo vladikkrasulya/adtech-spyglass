@@ -150,16 +150,35 @@ export default {
 
     function fmtFrom(specimen) {
       const imp0 = specimen.imp && specimen.imp[0];
-      if (!imp0) return '?';
-      if (imp0.banner) return 'banner';
-      if (imp0.video) return 'video';
-      if (imp0.native) return 'native';
-      if (imp0.audio) return 'audio';
+      if (imp0) {
+        if (imp0.banner) return 'banner';
+        if (imp0.video) return 'video';
+        if (imp0.native) return 'native';
+        if (imp0.audio) return 'audio';
+      }
+      // BidResponse-shaped specimens — peek at adm shape.
+      const bid0 =
+        specimen.seatbid &&
+        specimen.seatbid[0] &&
+        specimen.seatbid[0].bid &&
+        specimen.seatbid[0].bid[0];
+      if (bid0 && typeof bid0.adm === 'string') {
+        const head = bid0.adm.trimStart().slice(0, 64).toLowerCase();
+        if (head.includes('<vast') || head.includes('<?xml')) return 'video';
+        if (head.startsWith('{') && head.includes('"native"')) return 'native';
+        if (head.startsWith('<')) return 'banner';
+      }
+      if (specimen.seatbid) return 'response';
       return '?';
     }
     function ctxFrom(specimen) {
       if (specimen.site) return 'site=' + (specimen.site.domain || '?');
       if (specimen.app) return 'app=' + (specimen.app.bundle || '?');
+      // BidResponse-shaped: surface seat / currency / bidid as fallback.
+      const seat = specimen.seatbid && specimen.seatbid[0] && specimen.seatbid[0].seat;
+      if (seat) return 'seat=' + seat;
+      if (specimen.bidid) return 'bidid=' + String(specimen.bidid).slice(0, 16);
+      if (Array.isArray(specimen.cur) && specimen.cur[0]) return 'cur=' + specimen.cur[0];
       return 'ctx=?';
     }
     function timeStr(ms) {
@@ -181,13 +200,27 @@ export default {
       const tsSpan = document.createElement('span');
       tsSpan.className = 'ts';
       tsSpan.textContent = timeStr(envelope.emittedAt);
+      // Synthetic placeholder thumbnail. <object> renders the SVG inline
+      // so root-styled colors theme correctly; falls back to <img>-like
+      // behavior if the asset 404s. Lazy-loaded so off-screen rows don't
+      // block initial paint when 100 rows replay on connect.
+      let thumbEl = null;
+      if (envelope.creative) {
+        thumbEl = document.createElement('img');
+        thumbEl.className = 'creative-thumb';
+        thumbEl.src = '/assets/creatives/' + encodeURIComponent(envelope.creative) + '.svg';
+        thumbEl.alt = '';
+        thumbEl.loading = 'lazy';
+        thumbEl.decoding = 'async';
+      }
       const fmtSpan = document.createElement('span');
       fmtSpan.className = 'fmt';
       fmtSpan.textContent = fmtFrom(envelope.specimen);
       const ctxSpan = document.createElement('span');
       ctxSpan.className = 'ctx';
       ctxSpan.textContent = ctxFrom(envelope.specimen);
-      row.append(tsSpan, fmtSpan, ctxSpan);
+      if (thumbEl) row.append(tsSpan, thumbEl, fmtSpan, ctxSpan);
+      else row.append(tsSpan, fmtSpan, ctxSpan);
       // Row click: signal-bound so it detaches with the rest on unmount.
       row.addEventListener('click', () => selectRow(row, envelope), { signal: ctx.signal });
 

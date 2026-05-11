@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" font-family="system-ui, sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e3a8a"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="225" fill="url(#g)"/>
+  <circle cx="100" cy="100" r="35" fill="#fbbf24" opacity="0.7"/>
+  <rect x="50" y="160" width="300" height="6" fill="#1e40af"/>
+  <rect x="50" y="160" width="180" height="6" fill="#fff"/>
+  <circle cx="200" cy="112" r="48" fill="#fff" opacity="0.95"/>
+  <polygon points="188,90 188,134 222,112" fill="#0f172a"/>
+  <text x="20" y="30" fill="#fff" font-size="11" font-weight="700" opacity="0.85">SPONSORED</text>
+  <text x="20" y="200" fill="#fff" font-size="14" font-weight="700">Discover what's new this fall</text>
+  <text x="320" y="180" fill="#fff" font-size="10" opacity="0.85">0:15 / 0:30</text>
+</svg>
