@@ -6,6 +6,39 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.37.2 — Invisible-scan FP tuning (Playwright smoke catch, 2026-05-11)
+
+End-to-end Playwright smoke against a crafted 4× transparent-overlay
+creative confirmed the v0.37.1 scan-on-click fix actually fires — but
+also revealed an over-counting issue: HTML defaults to transparent
+background and spans the full viewport, so the classifier flagged it
+as "invisible" too. The test creative reported `contributorCount=11`
+and `aggregateCoverage=236%`. Worse, every legit creative without an
+explicit `<html>` background would trip the aggregate rule.
+
+Fix: skip HTML, BODY, IFRAME tags in `classifyInvisible`. They're
+structural roots, not click traps:
+
+- **HTML/BODY**: clicks "on body" fall through to whatever is
+  underneath, so these elements aren't intentional click surface.
+- **IFRAME**: nested iframes have their own probe; double-counting
+  their viewport area as our own would inflate the aggregate.
+
+Post-fix on the same test creative: `contributorCount=10`,
+`aggregateCoverage=153.8%`, top `tagName=H2` (a real content
+element, not a trivial root). The attack pattern still fires; the
+trivial-root false positive is gone.
+
+Caught by Playwright smoke, not by unit tests — synthesized aggregate
+events in the test suite bypass the scan logic entirely. Future
+tuning candidate (deferred): require `cursor: pointer` or a clickable
+tag (anchor / button / `onclick` handler) to count toward the
+aggregate. That would filter text wrappers like `h2` / `p` further;
+holding off until we have a corpus of legit creatives to measure
+real-world FP rate.
+
+541/541 tests pass, 0 lint errors. Tiny 12-LOC patch.
+
 ### v0.37.1 — Post-audit fixes (Gemini Pro 3.1 review, 2026-05-11)
 
 Independent code review of the v0.37.0 branch by Gemini Pro 3.1 surfaced
