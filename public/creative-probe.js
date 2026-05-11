@@ -122,6 +122,17 @@
   const CLICK_BURST_THRESHOLD = 3;
   const CENTER_TOLERANCE_PX = 0.5;
 
+  // Invisible-overlay aggregate tracker (post-v0.25.0). Per-element rule
+  // (>50% viewport AND invisible) is here since Phase 1; we discovered an
+  // evasion where a creative ships N transparent divs each <50% of the
+  // viewport. None trip the per-element threshold, but their sum is a
+  // full-screen click trap. Map persists across clicks within a single
+  // probe lifetime (one creative); dead element refs are pruned when
+  // encountered (document.contains check).
+  const _invisibleEls = new Map();
+  const AGGREGATE_COVERAGE_THRESHOLD = 0.5;
+  const AGGREGATE_MIN_CONTRIBUTORS = 2;
+
   // Phase 3 (malicious-ads) — gesture timing for auto-redirect classification.
   // Capture-phase listeners on the user-input events below update _lastGestureAt;
   // the navigation hooks (window.open / Location.* / anchor click / form.submit)
@@ -402,10 +413,12 @@
           const area = w * h;
           const viewport = vw * vh;
           const ratio = area / viewport;
-          // Skip small elements early — a 30×30 hidden close button is
-          // also "invisible" but it's not a coverage trap. The trap
-          // signature is `large + invisible`.
-          if (ratio < 0.5) return;
+
+          // Skip truly tiny elements (a 30×30 hidden close button is
+          // "invisible" but contributes negligibly to a coverage trap).
+          // Threshold low enough that 10× 12%-viewport overlays all get
+          // counted toward the aggregate.
+          if (ratio < 0.05) return;
 
           const style = window.getComputedStyle(t);
           const opacityRaw = parseFloat(style.opacity);
@@ -429,18 +442,62 @@
           }
           const noBgImage = !style.backgroundImage || style.backgroundImage === 'none';
           const isInvisible = opacity < 0.05 || (bgAlpha < 0.05 && noBgImage);
-          if (!isInvisible) return;
+          if (!isInvisible) {
+            // Visible click target — if we had tracked it as invisible
+            // previously (style mutated), forget it so the aggregate
+            // doesn't double-count.
+            _invisibleEls.delete(t);
+            return;
+          }
 
-          send({
-            kind: 'invisible_overlay_click',
-            method: 'click',
-            url: '',
-            trigger: 'click',
-            tagName: t.tagName || '',
-            coverageRatio: Number(ratio.toFixed(3)),
-            opacity: Number(opacity.toFixed(3)),
-            bgAlpha: Number(bgAlpha.toFixed(3)),
-          });
+          // Track this invisible target with its current viewport coverage.
+          _invisibleEls.set(t, ratio);
+
+          // Per-element rule (original Phase 1 behavior): ≥50% viewport
+          // AND invisible is a textbook click-skim trap.
+          if (ratio >= 0.5) {
+            send({
+              kind: 'invisible_overlay_click',
+              method: 'click',
+              url: '',
+              trigger: 'click',
+              tagName: t.tagName || '',
+              coverageRatio: Number(ratio.toFixed(3)),
+              opacity: Number(opacity.toFixed(3)),
+              bgAlpha: Number(bgAlpha.toFixed(3)),
+            });
+            return;
+          }
+
+          // Aggregate rule (post-v0.25.0): SUM coverage across all
+          // currently-live tracked invisibles. Prune dead element refs
+          // along the way so the Map stays bounded.
+          let aggregateRatio = 0;
+          let contributorCount = 0;
+          for (const [el, r] of _invisibleEls) {
+            if (!document.contains(el)) {
+              _invisibleEls.delete(el);
+              continue;
+            }
+            aggregateRatio += r;
+            contributorCount++;
+          }
+          if (
+            aggregateRatio > AGGREGATE_COVERAGE_THRESHOLD &&
+            contributorCount >= AGGREGATE_MIN_CONTRIBUTORS
+          ) {
+            send({
+              kind: 'invisible_overlay_aggregate_click',
+              method: 'click',
+              url: '',
+              trigger: 'click',
+              tagName: t.tagName || '',
+              aggregateCoverage: Number(aggregateRatio.toFixed(3)),
+              contributorCount,
+              opacity: Number(opacity.toFixed(3)),
+              bgAlpha: Number(bgAlpha.toFixed(3)),
+            });
+          }
         } catch (err) {
           /* per-click measurement failure — ignore so we keep observing */
         }

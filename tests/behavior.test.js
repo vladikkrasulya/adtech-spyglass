@@ -39,6 +39,27 @@ function invisibleOverlayClickEvent(opts) {
   );
 }
 
+function invisibleOverlayAggregateClickEvent(opts) {
+  const o = opts || {};
+  return Object.assign(
+    {
+      type: 'spyglass-probe',
+      v: 1,
+      ts: Date.now(),
+      kind: 'invisible_overlay_aggregate_click',
+      method: 'click',
+      url: '',
+      trigger: 'click',
+      tagName: 'DIV',
+      aggregateCoverage: 0.84,
+      contributorCount: 7,
+      opacity: 0.02,
+      bgAlpha: 0,
+    },
+    o,
+  );
+}
+
 function centerSynthClickEvent(opts) {
   return Object.assign(
     {
@@ -300,6 +321,33 @@ test('analyze() — multiple traps produce one finding each, in event order', ()
   assert.equal(r.findings.length, 2);
   assert.equal(r.findings[0].params.coverage, '70%');
   assert.equal(r.findings[1].params.coverage, '95%');
+});
+
+test('analyze() — invisible_overlay_aggregate_click → behavior.trap.invisible_overlay_aggregate error', () => {
+  // Split-overlay evasion: 7 transparent divs at ~12% each → sum 84%.
+  // None tripped per-element threshold; probe emitted aggregate event.
+  const r = analyze([probeReady(), invisibleOverlayAggregateClickEvent()]);
+  assert.equal(r.findings.length, 1);
+  assert.equal(r.findings[0].id, 'behavior.trap.invisible_overlay_aggregate');
+  assert.equal(r.findings[0].level, 'error');
+  assert.equal(r.findings[0].params.coverage, '84%');
+  assert.equal(r.findings[0].params.contributors, 7);
+});
+
+test('analyze() — aggregate and per-element overlay findings coexist independently', () => {
+  // A probe may emit both kinds during a session: a small invisible overlay
+  // raising the aggregate, plus a separate large one tripping the per-element
+  // rule. Each event maps to exactly one finding; rules don't interfere.
+  const r = analyze([
+    probeReady(),
+    invisibleOverlayAggregateClickEvent({ aggregateCoverage: 0.6, contributorCount: 5 }),
+    invisibleOverlayClickEvent({ coverageRatio: 0.9 }),
+  ]);
+  const ids = r.findings.map((f) => f.id).sort();
+  assert.deepEqual(ids, [
+    'behavior.trap.invisible_overlay',
+    'behavior.trap.invisible_overlay_aggregate',
+  ]);
 });
 
 test('analyze() — unrelated probe events are ignored by the rule', () => {

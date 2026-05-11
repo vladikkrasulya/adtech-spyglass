@@ -224,11 +224,24 @@ function createAnalyzeModule(deps) {
         if (!Array.isArray(events)) {
           return sendError(res, 400, 'invalid_input', 'events array is required');
         }
+        // Server-side events cap (post-v0.25.0). Probe-side already
+        // emits summarised events (one click_burst per burst, not one
+        // per click) so a real session tops out at ~100 events. A
+        // caller bypassing the probe and POSTing a flood-of-events
+        // array directly could otherwise burn CPU in the rules loop.
+        // Take the head of the array — the early events are where
+        // most patterns of interest live (probe_ready, first clicks,
+        // first navigations); tail-clipping is acceptable for legit
+        // workflows and a hard stop for abuse.
+        const MAX_EVENTS = 1000;
+        const truncated = events.length > MAX_EVENTS;
+        const capped = truncated ? events.slice(0, MAX_EVENTS) : events;
+
         // Phase 6: optional `adm` field carries the raw creative string for
         // static-payload analysis (obfuscation/miner/XSS pattern matching +
         // entropy). Engine treats it as opt-in; callers that omit it get
         // the pre-Phase-6 runtime-only pipeline.
-        const r = analyzeBehavior(events, {
+        const r = analyzeBehavior(capped, {
           locale,
           adm: typeof adm === 'string' ? adm : '',
         });
@@ -237,7 +250,7 @@ function createAnalyzeModule(deps) {
           findings: r.findings,
           status: r.status,
           eventCount: r.eventCount,
-          meta: { locale },
+          meta: { locale, truncated, maxEvents: MAX_EVENTS },
         });
       })
       .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
