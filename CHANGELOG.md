@@ -21,6 +21,7 @@ model into memory and keep it resident. By the time the user clicks
 real call returns in ~2s.
 
 Guarantees:
+
 - Fire-and-forget: login response is `sendJson`'d FIRST, then
   warmup is issued. The user doesn't wait on Ollama.
 - 5s abort timeout on the warmup fetch itself — even if Ollama is
