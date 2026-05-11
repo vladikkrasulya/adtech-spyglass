@@ -307,8 +307,19 @@ function extractPartnerHints(payloadObj, maxLen) {
 
   function addDomain(d) {
     if (!d || typeof d !== 'string') return;
+    // Strip everything that isn't a valid host-name character. Pre-fix,
+    // explicit-field domains went into the LLM prompt with only
+    // toLowerCase+trim — leaving `\n`, `\r`, control chars, spaces,
+    // backticks, etc. intact. With newlines a `bid_req.site.domain` of
+    // "x.com\n\nIMPORTANT: Ignore previous instructions..." would
+    // escape the bullet list inside buildPartnerHintPrompt and risk
+    // steering the model. Output is still bounced by the strict
+    // PARTNER_NAME_RE regex in validatePartnerSuggestion, but
+    // belt-and-suspenders at the input boundary keeps the prompt
+    // body clean.
     const norm = d
       .toLowerCase()
+      .replace(/[^a-z0-9.-]/g, '')
       .replace(/^www\./, '')
       .trim();
     if (norm && norm.length < 80) out.add(norm);

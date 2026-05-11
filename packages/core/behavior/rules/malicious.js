@@ -257,12 +257,13 @@ function heavyAdNetwork(events) {
  * Synthesized BY THE PARENT (not the probe — a frozen probe can't
  * send postMessages). The parent watchdog in spyglass.app.js injects a
  * `kind:'frozen_thread'` event into __spyglassBehavior.events when the
- * heartbeat lag exceeds FROZEN_THRESHOLD_MS (default 3.5s). This rule
- * promotes the synthetic event to a finding the same way it would for
- * any probe-emitted event — engine doesn't need to know who the source
- * was, the kind tag is enough.
+ * heartbeat lag exceeds FROZEN_THRESHOLD_MS (currently 6000ms; bumped
+ * from 3500ms in v0.24.0 after the audit found false-positives on
+ * heavy creatives). This rule promotes the synthetic event to a
+ * finding the same way it would for any probe-emitted event — engine
+ * doesn't need to know who the source was, the kind tag is enough.
  *
- * Severity ERROR. A creative that hangs the JS thread for >3 seconds
+ * Severity ERROR. A creative that hangs the JS thread for >6 seconds
  * is broken (or hostile) regardless of intent.
  */
 function frozenThread(events) {
