@@ -30,14 +30,27 @@ function init() {
   const db = new Database(path.join(DATA_DIR, 'spyglass.db'));
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  // 5s headroom for SQLITE_BUSY during contentions (backup script runs
+  // sqlite3 .backup at 03:30 UA daily; without this pragma a write
+  // request during the backup window returns immediately with BUSY).
+  db.pragma('busy_timeout = 5000');
 
   // better-sqlite3 returns user_version as a number on some builds and a
   // string on others — coerce so the comparison is numeric, not lexicographic
   // ("10" < "9" is true otherwise and migrations would silently skip).
   const cur = Number(db.pragma('user_version', { simple: true })) || 0;
   if (cur < SCHEMA_VERSION) {
-    migrate(db, cur);
-    db.pragma(`user_version = ${SCHEMA_VERSION}`);
+    // Atomicity: wrap migrate() + user_version bump in one transaction so
+    // a crash mid-flow rolls back the schema and leaves user_version at the
+    // pre-migration value. Without this, a partial migration could land
+    // half-built tables with stale user_version, and the next boot would
+    // either re-run the same blocks (crashing on duplicate-column or
+    // already-exists errors) or skip them (running app code against an
+    // incomplete schema).
+    db.transaction(() => {
+      migrate(db, cur);
+      db.pragma(`user_version = ${SCHEMA_VERSION}`);
+    })();
   }
 
   return db;
@@ -132,7 +145,7 @@ function migrate(db, fromVersion) {
   // on (user_id, ts DESC) for fast cabinet queries.
   if (fromVersion < 5) {
     db.exec(`
-      CREATE TABLE analyze_log (
+      CREATE TABLE IF NOT EXISTS analyze_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         ts INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000),
@@ -144,7 +157,7 @@ function migrate(db, fromVersion) {
         error_count INTEGER NOT NULL DEFAULT 0,
         warning_count INTEGER NOT NULL DEFAULT 0
       );
-      CREATE INDEX idx_analyze_log_user_ts ON analyze_log(user_id, ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_analyze_log_user_ts ON analyze_log(user_id, ts DESC);
     `);
   }
 
@@ -165,7 +178,7 @@ function migrate(db, fromVersion) {
   // server-side too — see resolveLocaleRoute).
   if (fromVersion < 6) {
     db.exec(`
-      CREATE TABLE sessions (
+      CREATE TABLE IF NOT EXISTS sessions (
         token TEXT PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         expires_at INTEGER NOT NULL,
@@ -173,8 +186,8 @@ function migrate(db, fromVersion) {
         ua TEXT,
         created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
       );
-      CREATE INDEX idx_sessions_user ON sessions(user_id);
-      CREATE INDEX idx_sessions_expires ON sessions(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 
       ALTER TABLE users ADD COLUMN preferred_locale TEXT;
     `);
@@ -194,7 +207,7 @@ function migrate(db, fromVersion) {
   // was loaded; nullable for synthetic/anonymous captures.
   if (fromVersion < 7) {
     db.exec(`
-      CREATE TABLE behavior_corpus (
+      CREATE TABLE IF NOT EXISTS behavior_corpus (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         label TEXT NOT NULL CHECK(label IN ('legitimate','fraud','ambiguous')),
@@ -203,9 +216,9 @@ function migrate(db, fromVersion) {
         notes TEXT NOT NULL DEFAULT '',
         created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
       );
-      CREATE INDEX idx_corpus_user ON behavior_corpus(user_id);
-      CREATE INDEX idx_corpus_label ON behavior_corpus(label);
-      CREATE INDEX idx_corpus_created ON behavior_corpus(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_corpus_user ON behavior_corpus(user_id);
+      CREATE INDEX IF NOT EXISTS idx_corpus_label ON behavior_corpus(label);
+      CREATE INDEX IF NOT EXISTS idx_corpus_created ON behavior_corpus(created_at DESC);
     `);
   }
 }
@@ -381,16 +394,41 @@ const Users = {
   },
 
   /**
-   * Hard-delete all user data: samples + partners. Used by reset-password
-   * mode='wipe' when user has lost both password AND recovery key. Does
-   * NOT delete the user row (account survives, becomes empty). Returns
-   * counts of rows deleted.
+   * Hard-delete all user data: samples + partners + analyze_log +
+   * behavior_corpus + sessions. Used by reset-password mode='wipe' when
+   * user has lost both password AND recovery key. Does NOT delete the
+   * user row (account survives, becomes empty). Returns counts of rows
+   * deleted per table.
+   *
+   * Why sessions too: a wiping user has effectively repudiated their
+   * old identity — any sessions issued under the old password are now
+   * stale by intent. Without this sweep, a stolen cookie from before
+   * the wipe would still authenticate against the new (empty) account.
+   *
+   * Why analyze_log + behavior_corpus: these carry per-user metadata
+   * about activity. Wipe-mode is the user's explicit "delete my history"
+   * request; leaving these behind leaks behavioral signal across what
+   * the user expects to be a fresh start.
+   *
    * @param {number} id
    */
   wipeUserData(id) {
     const samplesDeleted = db.prepare('DELETE FROM samples WHERE user_id = ?').run(id).changes;
     const partnersDeleted = db.prepare('DELETE FROM partners WHERE user_id = ?').run(id).changes;
-    return { samplesDeleted, partnersDeleted };
+    const analyzeLogDeleted = db
+      .prepare('DELETE FROM analyze_log WHERE user_id = ?')
+      .run(id).changes;
+    const behaviorCorpusDeleted = db
+      .prepare('DELETE FROM behavior_corpus WHERE user_id = ?')
+      .run(id).changes;
+    const sessionsDeleted = db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id).changes;
+    return {
+      samplesDeleted,
+      partnersDeleted,
+      analyzeLogDeleted,
+      behaviorCorpusDeleted,
+      sessionsDeleted,
+    };
   },
 };
 

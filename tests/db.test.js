@@ -10,10 +10,11 @@ const { join } = require('node:path');
 const TMP = mkdtempSync(join(tmpdir(), 'spyglass-test-'));
 process.env.SPYGLASS_DATA_DIR = TMP;
 
-let Users, Partners, Samples, BehaviorCorpus;
+let db, Users, Partners, Samples, AnalyzeLog, Sessions, BehaviorCorpus, SCHEMA_VERSION;
 let userA, userB;
 before(() => {
-  ({ Users, Partners, Samples, BehaviorCorpus } = require('../db'));
+  ({ db, Users, Partners, Samples, AnalyzeLog, Sessions, BehaviorCorpus, SCHEMA_VERSION } =
+    require('../db'));
   // Seed two users so scoping tests have something to compare against.
   userA = Users.create({ email: 'a@example.com', password_hash: 'x' });
   userB = Users.create({ email: 'b@example.com', password_hash: 'x' });
@@ -21,6 +22,25 @@ before(() => {
 
 after(() => {
   rmSync(TMP, { recursive: true, force: true });
+});
+
+// ── Schema + pragmas ──────────────────────────────────────────────────────
+
+test('init: user_version matches SCHEMA_VERSION after fresh boot', () => {
+  const ver = Number(db.pragma('user_version', { simple: true }));
+  assert.equal(ver, SCHEMA_VERSION, 'pragma user_version should equal SCHEMA_VERSION');
+});
+
+test('init: busy_timeout is set to 5000ms', () => {
+  const bt = Number(db.pragma('busy_timeout', { simple: true }));
+  assert.equal(bt, 5000, 'busy_timeout pragma should be 5000ms for backup contention headroom');
+});
+
+test('init: WAL mode + foreign_keys enabled', () => {
+  const jm = String(db.pragma('journal_mode', { simple: true })).toLowerCase();
+  assert.equal(jm, 'wal', 'journal_mode should be WAL');
+  const fk = Number(db.pragma('foreign_keys', { simple: true }));
+  assert.equal(fk, 1, 'foreign_keys should be ON');
 });
 
 // ── Users ─────────────────────────────────────────────────────────────────
@@ -236,15 +256,44 @@ test('users: clearCryptoState nulls all 6 crypto columns', () => {
   assert.equal(after.recovery_dek_iv, null);
 });
 
-test('users: wipeUserData deletes samples + partners but keeps the user row', () => {
+test('users: wipeUserData sweeps all per-user tables but keeps the user row', () => {
   const u = Users.create({ email: 'wipe@example.com', password_hash: 'x' });
   const p = Partners.create({ userId: u.id, name: 'WipePartner' });
   const s1 = Samples.create({ userId: u.id, title: 's1' });
   const s2 = Samples.create({ userId: u.id, partner_id: p.id, title: 's2' });
+  // Seed activity + corpus + session rows so the wipe has something to clear.
+  // Pre-fix wipeUserData only touched samples + partners; this exercises the
+  // extended contract (analyze_log + behavior_corpus + sessions also swept).
+  AnalyzeLog.record({
+    userId: u.id,
+    payloadType: 'request',
+    version: '2.6',
+    status: 'clean',
+    format: 'banner',
+    findingCount: 0,
+    errorCount: 0,
+    warningCount: 0,
+  });
+  BehaviorCorpus.create({
+    userId: u.id,
+    label: 'fraud',
+    events: [{ kind: 'click', t: 100 }],
+    notes: 'pre-wipe',
+  });
+  Sessions.create({
+    token: 'wipe-token-' + u.id,
+    userId: u.id,
+    expiresAt: Date.now() + 60000,
+    ip: '127.0.0.1',
+    ua: 'test',
+  });
 
   const result = Users.wipeUserData(u.id);
   assert.equal(result.samplesDeleted, 2);
   assert.equal(result.partnersDeleted, 1);
+  assert.equal(result.analyzeLogDeleted, 1);
+  assert.equal(result.behaviorCorpusDeleted, 1);
+  assert.equal(result.sessionsDeleted, 1);
 
   // User row still exists
   assert.ok(Users.get(u.id), 'user must survive');
@@ -252,6 +301,9 @@ test('users: wipeUserData deletes samples + partners but keeps the user row', ()
   assert.equal(Samples.get({ id: s1.id, userId: u.id }), undefined);
   assert.equal(Samples.get({ id: s2.id, userId: u.id }), undefined);
   assert.equal(Partners.get({ id: p.id, userId: u.id }), undefined);
+  // Activity + corpus + sessions also gone
+  assert.equal(BehaviorCorpus.listForUser(u.id).length, 0, 'behavior_corpus wiped');
+  assert.equal(Sessions.loadActive(Date.now()).filter((s) => s.userId === u.id).length, 0);
 });
 
 // ── BehaviorCorpus ────────────────────────────────────────────────────────
