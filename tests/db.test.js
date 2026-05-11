@@ -256,6 +256,52 @@ test('users: clearCryptoState nulls all 6 crypto columns', () => {
   assert.equal(after.recovery_dek_iv, null);
 });
 
+test('users: updatePasswordAndCrypto also clears sessions in the same transaction', () => {
+  // v0.37.1 post-audit P1-001: sessions DB delete moved INSIDE the
+  // password-change transaction. Pre-fix the session delete happened in
+  // a separate call afterward; if THAT call threw (SQLITE_BUSY), DB had
+  // new password but stale session rows that re-hydrated to the
+  // in-memory Map on next container restart — stolen-cookie revival.
+  const u = Users.create({ email: 'rotate-sessions@example.com', password_hash: 'old' });
+  Users.setCryptoState(u.id, {
+    kdf_salt: 's1',
+    dek_wrapped: 'w1',
+    dek_iv: 'i1',
+    recovery_salt: 'rs',
+    recovery_dek_wrapped: 'rw',
+    recovery_dek_iv: 'ri',
+  });
+  // Seed two sessions for this user.
+  Sessions.create({
+    token: 'rs-tok-1-' + u.id,
+    userId: u.id,
+    expiresAt: Date.now() + 60000,
+    ip: '127.0.0.1',
+    ua: 'test',
+  });
+  Sessions.create({
+    token: 'rs-tok-2-' + u.id,
+    userId: u.id,
+    expiresAt: Date.now() + 60000,
+    ip: '127.0.0.1',
+    ua: 'test',
+  });
+  const beforeCount = Sessions.loadActive(Date.now()).filter((s) => s.userId === u.id).length;
+  assert.equal(beforeCount, 2);
+
+  Users.updatePasswordAndCrypto(u.id, 'new', {
+    kdf_salt: 's2',
+    dek_wrapped: 'w2',
+    dek_iv: 'i2',
+  });
+
+  const afterCount = Sessions.loadActive(Date.now()).filter((s) => s.userId === u.id).length;
+  assert.equal(afterCount, 0, 'all sessions for this user must be wiped atomically');
+  // Recovery wrap still preserved (the rotate guarantee).
+  const cs = Users.getCryptoState(u.id);
+  assert.equal(cs.recovery_dek_wrapped, 'rw', 'recovery wrap survives rotation');
+});
+
 test('users: updatePasswordAndCrypto rotates atomically, preserves recovery wrap', () => {
   const u = Users.create({ email: 'rotate@example.com', password_hash: 'old' });
   // Seed full crypto state including recovery wrap.

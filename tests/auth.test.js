@@ -264,6 +264,59 @@ test('invalidateUserSessions throws when DB-side delete fails', () => {
   );
 });
 
+test('invalidateUserSessions clears in-memory Map even when DB delete throws (P1-001 fix)', async () => {
+  // v0.37.1 audit-finding P1-001: pre-fix, a DB throw skipped the Map
+  // cleanup because the throw happened BEFORE the for-loop. A stolen
+  // cookie that already resolved through the Map stayed live until
+  // container restart. Post-fix: Map is cleared in a finally-shaped
+  // path; DB error is rethrown afterward.
+  //
+  // Use the real Users store + a mock Sessions that throws on destroyForUser
+  // so we exercise the auth module's in-memory `sessions` map without
+  // touching the test DB's actual sessions table.
+  const boomSessions = {
+    create() {},
+    destroy() {},
+    destroyForUser() {
+      throw new Error('SQLITE_BUSY (P1-001 synthetic)');
+    },
+    loadActive() {
+      return [];
+    },
+    purgeExpired() {
+      return 0;
+    },
+  };
+  const isolatedAuth = require('../auth').createAuth({
+    Users,
+    Sessions: boomSessions,
+    logger: { info: () => {}, error: () => {} },
+  });
+  // Register + create a session so the in-memory Map has an entry.
+  const ipX = nextIp();
+  const userX = await isolatedAuth.register(
+    { email: 'p1001@example.com', password: 'longenough' },
+    fakeReq({ ip: ipX }),
+  );
+  const resX = fakeRes();
+  isolatedAuth.createSession(fakeReq({ ip: ipX }), resX, userX);
+  const cookieX = cookieFromSetCookie(resX.getHeader('Set-Cookie'));
+  // Confirm session live in Map
+  assert.ok(isolatedAuth.getCurrentUser(fakeReq({ cookie: cookieX })));
+
+  // Invalidate — DB throws but Map must still be cleared.
+  assert.throws(
+    () => isolatedAuth.invalidateUserSessions(userX.id),
+    /SQLITE_BUSY \(P1-001 synthetic\)/,
+  );
+  // Map cleanup must have happened despite the DB throw.
+  assert.equal(
+    isolatedAuth.getCurrentUser(fakeReq({ cookie: cookieX })),
+    null,
+    'in-memory session must be gone even though DB call threw',
+  );
+});
+
 test('checkForgotPasswordLimit: returns true under limit, false over', () => {
   const ip = '10.99.99.1';
   for (let i = 0; i < 5; i++) {

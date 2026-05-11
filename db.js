@@ -404,6 +404,13 @@ const Users = {
          SET kdf_salt = ?, dek_wrapped = ?, dek_iv = ?
          WHERE id = ?`,
       ).run(String(state.kdf_salt), String(state.dek_wrapped), String(state.dek_iv), id);
+      // Sessions invalidated atomically with password change (post-audit
+      // fix v0.37.1). Pre-fix the session DB delete happened in a separate
+      // call after the password commit; if THAT second call threw
+      // (SQLITE_BUSY), DB had new password but stale session rows that
+      // re-hydrated to the in-memory Map on next container restart —
+      // stolen-cookie revival. Now both land or neither does.
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
     })();
   },
 

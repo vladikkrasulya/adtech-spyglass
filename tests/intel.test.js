@@ -522,6 +522,18 @@ test('extractPartnerHints — strips control chars from explicit domain fields (
   }
 });
 
+test('extractPartnerHints — preserves underscore in Android bundle IDs (P1-004 fix)', () => {
+  // v0.37.1 post-audit P1-004: the addDomain regex was /[^a-z0-9.-]/g
+  // which stripped underscores. Android `app.bundle` IDs commonly contain
+  // `_` (com.example.my_app); pre-fix this mutated to com.example.myapp,
+  // degrading LLM partner-inference precision for mobile traffic.
+  const hints = intelLlm.extractPartnerHints({ app: { bundle: 'com.example.my_app' } }, 5);
+  assert.ok(
+    hints.includes('com.example.my_app'),
+    'underscore must be preserved in bundle ID, got: ' + JSON.stringify(hints),
+  );
+});
+
 test('extractPartnerHints — legit domain passes through unchanged', () => {
   // Regression guard: ordinary domains shouldn't be mangled by the
   // new strip-anything-not-host-char rule.

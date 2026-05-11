@@ -122,16 +122,28 @@
   const CLICK_BURST_THRESHOLD = 3;
   const CENTER_TOLERANCE_PX = 0.5;
 
-  // Invisible-overlay aggregate tracker (post-v0.25.0). Per-element rule
-  // (>50% viewport AND invisible) is here since Phase 1; we discovered an
-  // evasion where a creative ships N transparent divs each <50% of the
-  // viewport. None trip the per-element threshold, but their sum is a
-  // full-screen click trap. Map persists across clicks within a single
-  // probe lifetime (one creative); dead element refs are pruned when
-  // encountered (document.contains check).
-  const _invisibleEls = new Map();
+  // Invisible-overlay aggregate detection (v0.37.1 — Pro-audit P1-002 fix).
+  // Per-element rule (>50% viewport AND invisible) has been here since
+  // Phase 1. We discovered an evasion where a creative ships N transparent
+  // divs each <50% of the viewport — none trip the per-element threshold,
+  // but their sum is a full-screen click trap.
+  //
+  // Pre-fix: a click-driven Map (_invisibleEls) accumulated invisible click
+  // targets across clicks. That logic NEVER fired in real life — a click
+  // trap redirects on the FIRST click, so the Map only ever contained one
+  // entry before the user left the page.
+  //
+  // Post-fix: scan-on-click. On every click (capture phase, runs BEFORE
+  // the trap's redirect handler), we sweep all elements that intersect
+  // the viewport, identify invisibles, sum their visible coverage. If
+  // total > threshold across ≥2 contributors, emit the aggregate event
+  // RIGHT NOW — before the trap can navigate away.
   const AGGREGATE_COVERAGE_THRESHOLD = 0.5;
   const AGGREGATE_MIN_CONTRIBUTORS = 2;
+  // Bound the scan so a pathological creative with 100k elements can't
+  // turn a click into a several-second freeze. Real creatives have
+  // <100 elements; even adversarial cases top out around 1000.
+  const AGGREGATE_SCAN_CAP = 5000;
 
   // Phase 3 (malicious-ads) — gesture timing for auto-redirect classification.
   // Capture-phase listeners on the user-input events below update _lastGestureAt;
@@ -408,79 +420,96 @@
             0;
           if (!vw || !vh) return;
 
-          const w = Math.max(0, rect.width);
-          const h = Math.max(0, rect.height);
-          const area = w * h;
           const viewport = vw * vh;
-          const ratio = area / viewport;
 
-          // Skip truly tiny elements (a 30×30 hidden close button is
-          // "invisible" but contributes negligibly to a coverage trap).
-          // Threshold low enough that 10× 12%-viewport overlays all get
-          // counted toward the aggregate.
-          if (ratio < 0.05) return;
-
-          const style = window.getComputedStyle(t);
-          const opacityRaw = parseFloat(style.opacity);
-          const opacity = isNaN(opacityRaw) ? 1 : opacityRaw;
-
-          // backgroundColor is browser-normalized to rgb()/rgba()/transparent.
-          // Pull the alpha component; default to 1 for opaque rgb().
-          const bg = String(style.backgroundColor || '');
-          let bgAlpha = 1;
-          if (bg === 'transparent' || bg === '') {
-            bgAlpha = 0;
-          } else {
-            const m = bg.match(/^rgba?\(([^)]+)\)$/);
-            if (m) {
-              const parts = m[1].split(',');
-              if (parts.length === 4) {
-                const a = parseFloat(parts[3]);
-                bgAlpha = isNaN(a) ? 1 : a;
+          // Helper: classify an element as visible / invisible + return its
+          // in-viewport coverage ratio. Returns null if too small to matter.
+          function classifyInvisible(el) {
+            try {
+              const r = el.getBoundingClientRect();
+              if (r.width <= 0 || r.height <= 0) return null;
+              // Clip to viewport so off-screen elements don't inflate ratio.
+              const visW = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
+              const visH = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+              const visArea = visW * visH;
+              if (visArea <= 0) return null;
+              const ratio = visArea / viewport;
+              if (ratio < 0.05) return null;
+              const style = window.getComputedStyle(el);
+              const opacityRaw = parseFloat(style.opacity);
+              const opacity = isNaN(opacityRaw) ? 1 : opacityRaw;
+              const bg = String(style.backgroundColor || '');
+              let bgAlpha = 1;
+              if (bg === 'transparent' || bg === '') {
+                bgAlpha = 0;
+              } else {
+                const m = bg.match(/^rgba?\(([^)]+)\)$/);
+                if (m) {
+                  const parts = m[1].split(',');
+                  if (parts.length === 4) {
+                    const a = parseFloat(parts[3]);
+                    bgAlpha = isNaN(a) ? 1 : a;
+                  }
+                }
               }
+              const noBgImage = !style.backgroundImage || style.backgroundImage === 'none';
+              const isInvisible = opacity < 0.05 || (bgAlpha < 0.05 && noBgImage);
+              if (!isInvisible) return null;
+              return { ratio, opacity, bgAlpha };
+            } catch {
+              return null;
             }
           }
-          const noBgImage = !style.backgroundImage || style.backgroundImage === 'none';
-          const isInvisible = opacity < 0.05 || (bgAlpha < 0.05 && noBgImage);
-          if (!isInvisible) {
-            // Visible click target — if we had tracked it as invisible
-            // previously (style mutated), forget it so the aggregate
-            // doesn't double-count.
-            _invisibleEls.delete(t);
-            return;
-          }
 
-          // Track this invisible target with its current viewport coverage.
-          _invisibleEls.set(t, ratio);
-
-          // Per-element rule (original Phase 1 behavior): ≥50% viewport
-          // AND invisible is a textbook click-skim trap.
-          if (ratio >= 0.5) {
+          // Per-element rule (Phase 1): the click TARGET itself, if
+          // invisible AND >50% viewport, is a textbook click-skim trap.
+          const targetClass = classifyInvisible(t);
+          if (targetClass && targetClass.ratio >= 0.5) {
             send({
               kind: 'invisible_overlay_click',
               method: 'click',
               url: '',
               trigger: 'click',
               tagName: t.tagName || '',
-              coverageRatio: Number(ratio.toFixed(3)),
-              opacity: Number(opacity.toFixed(3)),
-              bgAlpha: Number(bgAlpha.toFixed(3)),
+              coverageRatio: Number(targetClass.ratio.toFixed(3)),
+              opacity: Number(targetClass.opacity.toFixed(3)),
+              bgAlpha: Number(targetClass.bgAlpha.toFixed(3)),
             });
             return;
           }
 
-          // Aggregate rule (post-v0.25.0): SUM coverage across all
-          // currently-live tracked invisibles. Prune dead element refs
-          // along the way so the Map stays bounded.
+          // Aggregate rule (v0.37.1 — Pro-audit P1-002 fix): scan the
+          // viewport NOW for ALL invisible elements covering meaningful
+          // area. Sum their coverage. If above threshold across ≥2
+          // contributors, this is a split-overlay click trap — fire the
+          // aggregate finding RIGHT NOW, before the trap can navigate
+          // away (we're in capture phase, runs before author handlers).
+          //
+          // Pre-fix: only-the-click-target tracking via a Map populated
+          // over multiple clicks. Click traps redirect on first click,
+          // so the Map never accumulated past one entry. End-to-end
+          // detection never fired on real attacks.
           let aggregateRatio = 0;
           let contributorCount = 0;
-          for (const [el, r] of _invisibleEls) {
-            if (!document.contains(el)) {
-              _invisibleEls.delete(el);
-              continue;
-            }
-            aggregateRatio += r;
+          // Track max-ratio contributor for tagName/opacity finding params.
+          let topRatio = 0;
+          let topOpacity = 1;
+          let topBgAlpha = 1;
+          let topTagName = (t.tagName || '').toString();
+          const all = document.querySelectorAll('*');
+          const scanLimit = Math.min(all.length, AGGREGATE_SCAN_CAP);
+          for (let i = 0; i < scanLimit; i++) {
+            const el = all[i];
+            const c = classifyInvisible(el);
+            if (!c) continue;
+            aggregateRatio += c.ratio;
             contributorCount++;
+            if (c.ratio > topRatio) {
+              topRatio = c.ratio;
+              topOpacity = c.opacity;
+              topBgAlpha = c.bgAlpha;
+              topTagName = el.tagName || topTagName;
+            }
           }
           if (
             aggregateRatio > AGGREGATE_COVERAGE_THRESHOLD &&
@@ -491,11 +520,11 @@
               method: 'click',
               url: '',
               trigger: 'click',
-              tagName: t.tagName || '',
+              tagName: topTagName,
               aggregateCoverage: Number(aggregateRatio.toFixed(3)),
               contributorCount,
-              opacity: Number(opacity.toFixed(3)),
-              bgAlpha: Number(bgAlpha.toFixed(3)),
+              opacity: Number(topOpacity.toFixed(3)),
+              bgAlpha: Number(topBgAlpha.toFixed(3)),
             });
           }
         } catch (err) {

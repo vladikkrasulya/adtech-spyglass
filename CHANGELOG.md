@@ -6,6 +6,71 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.37.1 — Post-audit fixes (Gemini Pro 3.1 review, 2026-05-11)
+
+Independent code review of the v0.37.0 branch by Gemini Pro 3.1 surfaced
+4 real findings (verified all 4, 0 hallucinations — much higher accuracy
+than the Flash baseline used for the earlier 6-round audit). Calibrated
+severity downward on one (CRITICAL→HIGH on P1-001 since it requires a
+DB-malfunction trigger), kept the others as reported.
+
+**P1-001 (HIGH) — Session Map desync on DB throw**
+The v0.37.0 fix made `invalidateUserSessions` propagate DB errors so the
+caller could return 500 instead of minting a session against partial
+state. But that throw happened BEFORE the in-memory Map cleanup loop —
+so on a SQLITE_BUSY between the password commit and the session-delete,
+the Map kept stale entries pointing to the user. A stolen cookie that
+already resolved through the Map stayed live until container restart.
+
+Fix:
+- `Users.updatePasswordAndCrypto` now does `DELETE FROM sessions
+  WHERE user_id = ?` INSIDE its transaction. Password rotation and
+  session invalidation land atomically; the follow-up `invalidate`
+  call's DB delete is a no-op double-check on the happy path.
+- `invalidateUserSessions` runs its Map cleanup unconditionally in a
+  finally-shaped path (Map.delete cannot throw), then rethrows the DB
+  error so the caller still sees 500. Map is guaranteed cleared even
+  when DB throws — the stolen-cookie attack window is closed.
+
+**P1-002 (HIGH) — Aggregate invisible-overlay never fired end-to-end**
+The v0.37.0 fix populated a per-click `_invisibleEls` Map and summed
+its values. But the Map only ever contained ONE entry — click traps
+redirect on the first click, so the user never came back to populate
+entries 2-N. The detection passed unit tests (which synthesized the
+aggregate event directly) but would never fire on a real attack.
+
+Fix: replaced Map-driven logic with viewport-wide scan-on-click. On
+every click (capture phase, before author redirect handlers), iterate
+`document.querySelectorAll('*')` up to AGGREGATE_SCAN_CAP, classify
+each element's in-viewport coverage + opacity/bgAlpha, sum coverage
+across invisibles. If sum > 50% across ≥2 contributors, emit the
+aggregate event right away — before the trap can navigate.
+
+**P1-003 (HIGH) — Events flood evasion via tail-clipping**
+The v0.37.0 cap took the head of the events array (`events.slice(0,
+MAX_EVENTS)`). A malicious creative could pad with 1000 benign
+mousemove events up front and place the real fraud signal
+(auto_redirect, frame_bust) at index 1001 — server cuts the tail,
+returns status:clean.
+
+Fix: head + tail sample. `slice(0, 500).concat(slice(-500))`
+preserves the probe_ready handshake at index 0 AND the most recent
+events (where fraud actions concentrate). Same MAX_EVENTS=1000
+ceiling, but both ends of the timeline exercised.
+
+**P1-004 (LOW) — Underscore stripped from Android bundle IDs**
+The v0.37.0 addDomain regex `/[^a-z0-9.-]/g` stripped underscores.
+Android `app.bundle` IDs commonly contain `_` (com.example.my_app);
+pre-fix this mutated to com.example.myapp, degrading LLM
+partner-inference precision for mobile traffic.
+
+Fix: include `_` in the allowed set: `/[^a-z0-9._-]/g`. Newline and
+control-char defense remains intact.
+
+Tests: 541/541 pass, +3 over v0.37.0 — atomicity of session-clear in
+updatePasswordAndCrypto, Map cleanup on DB throw, underscore
+preservation in bundle ID. 0 lint errors.
+
 ### v0.37.0 — P1 hardening sprint (audit 6-round outcome, 2026-05-11)
 
 Six-round adversarial audit (Gemini + Claude calibration loop) surfaced

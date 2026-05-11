@@ -307,19 +307,24 @@ function extractPartnerHints(payloadObj, maxLen) {
 
   function addDomain(d) {
     if (!d || typeof d !== 'string') return;
-    // Strip everything that isn't a valid host-name character. Pre-fix,
-    // explicit-field domains went into the LLM prompt with only
-    // toLowerCase+trim — leaving `\n`, `\r`, control chars, spaces,
-    // backticks, etc. intact. With newlines a `bid_req.site.domain` of
-    // "x.com\n\nIMPORTANT: Ignore previous instructions..." would
-    // escape the bullet list inside buildPartnerHintPrompt and risk
-    // steering the model. Output is still bounced by the strict
-    // PARTNER_NAME_RE regex in validatePartnerSuggestion, but
-    // belt-and-suspenders at the input boundary keeps the prompt
+    // Strip everything that isn't a valid host-or-bundle character.
+    // Pre-v0.25.0 the explicit-field path did only toLowerCase+trim,
+    // leaving `\n`, `\r`, control chars, spaces, backticks intact — a
+    // `bid_req.site.domain` of "x.com\n\nIMPORTANT: Ignore previous
+    // instructions..." would escape the bullet list inside
+    // buildPartnerHintPrompt and risk steering the LLM. Output is
+    // still bounced by PARTNER_NAME_RE in validatePartnerSuggestion,
+    // but belt-and-suspenders at the input boundary keeps the prompt
     // body clean.
+    //
+    // Underscore included in the allowed set (v0.37.1, Pro-audit
+    // P1-004): Android `app.bundle` IDs commonly contain `_`
+    // (e.g. com.example.my_app). Stripping `_` mutated valid bundles
+    // (com.example.myapp), degrading LLM partner-inference precision
+    // on mobile traffic.
     const norm = d
       .toLowerCase()
-      .replace(/[^a-z0-9.-]/g, '')
+      .replace(/[^a-z0-9._-]/g, '')
       .replace(/^www\./, '')
       .trim();
     if (norm && norm.length < 80) out.add(norm);

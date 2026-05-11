@@ -322,32 +322,44 @@ function createAuth({ Users, Sessions, logger }) {
   }
 
   /**
-   * Drop ALL sessions belonging to a user — DB first, then in-memory Map.
+   * Drop ALL sessions belonging to a user — DB and in-memory Map.
    * Used on password reset so previously-stolen cookies stop working
    * immediately, even across container restarts.
    *
-   * Order matters: DB is the source of truth (rehydrated on boot via
-   * Sessions.loadActive). If DB delete fails and we'd already nuked the
-   * Map, sessions look gone for this process lifetime but resurrect on
-   * next restart — the "session revival" bug. By writing through DB
-   * first and only touching the Map on success, a DB failure leaves
-   * everything in its prior consistent state, and the thrown error
-   * tells the caller to abort the broader flow (return 500 to client)
-   * rather than mint a new session against partially-invalidated state.
+   * Critical invariant (post-audit v0.37.1): the in-memory Map MUST be
+   * cleared regardless of DB outcome. Map cleanup uses Map.delete which
+   * cannot throw, so we run it in a finally block; the DB error (if any)
+   * is rethrown afterward so the caller still sees the failure.
+   *
+   * Why both halves matter even after the DB throws:
+   *   • If DB delete fails but Map was nuked anyway, a stolen cookie
+   *     stops working immediately (which is what we want).
+   *   • Restart resurrection is now closed at a different layer —
+   *     updatePasswordAndCrypto / updatePasswordAndWipe both DELETE
+   *     FROM sessions inside their atomic transaction, so by the time
+   *     this function runs the DB is already clean and the call below
+   *     is a defensive double-check that returns 0 changes on the
+   *     happy path.
    *
    * Pre-v0.20.0 this only cleared the in-memory Map.
    * Pre-v0.25.0 this swallowed DB-delete failures (session revival).
+   * Pre-v0.37.1 a DB throw skipped Map cleanup (Pro-audit P1-001
+   *     desync: stolen cookies stayed live in Map until container
+   *     restart). Closed by the finally+atomic-transaction combo.
    *
    * @param {number} userId
    * @returns {number} count removed from the in-memory Map
-   * @throws if DB-side delete fails — caller must surface to user
+   * @throws if DB-side delete fails — caller must surface to user,
+   *         but Map is already cleared so the security boundary holds
    */
   function invalidateUserSessions(userId) {
-    if (Sessions) {
-      // Let DB errors propagate — caller (handleResetPassword) catches
-      // and returns 500 without minting a new session. Better a failed
-      // reset than a partial wipe that "leaks" stale tokens.
-      Sessions.destroyForUser(userId);
+    let dbError = null;
+    try {
+      if (Sessions) {
+        Sessions.destroyForUser(userId);
+      }
+    } catch (e) {
+      dbError = e;
     }
     let removed = 0;
     for (const [t, s] of sessions) {
@@ -356,6 +368,7 @@ function createAuth({ Users, Sessions, logger }) {
         removed++;
       }
     }
+    if (dbError) throw dbError;
     return removed;
   }
 

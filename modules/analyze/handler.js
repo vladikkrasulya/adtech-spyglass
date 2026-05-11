@@ -224,18 +224,29 @@ function createAnalyzeModule(deps) {
         if (!Array.isArray(events)) {
           return sendError(res, 400, 'invalid_input', 'events array is required');
         }
-        // Server-side events cap (post-v0.25.0). Probe-side already
-        // emits summarised events (one click_burst per burst, not one
-        // per click) so a real session tops out at ~100 events. A
-        // caller bypassing the probe and POSTing a flood-of-events
-        // array directly could otherwise burn CPU in the rules loop.
-        // Take the head of the array — the early events are where
-        // most patterns of interest live (probe_ready, first clicks,
-        // first navigations); tail-clipping is acceptable for legit
-        // workflows and a hard stop for abuse.
+        // Server-side events cap (v0.25.0; head-only → head+tail in
+        // v0.37.1 after Pro-audit P1-003). Probe-side already emits
+        // summarised events (one click_burst per burst, not one per
+        // click), so a real session tops out at ~100 events. A caller
+        // bypassing the probe and POSTing a flood directly would
+        // otherwise burn CPU in the rules loop.
+        //
+        // Why head+tail and not head-only: malicious flooding can
+        // intentionally pad with thousands of benign mousemove events
+        // up front to push the real fraud signal (auto_redirect,
+        // frame_bust) past the head boundary — head-slice would then
+        // return status:clean. Sampling both ends preserves the
+        // probe_ready handshake (always at index 0) AND the latest
+        // events (where the fraud action most often sits). A 50/50
+        // split keeps total within MAX_EVENTS while exercising both
+        // boundaries of the timeline.
         const MAX_EVENTS = 1000;
+        const HEAD_SAMPLE = 500;
+        const TAIL_SAMPLE = 500;
         const truncated = events.length > MAX_EVENTS;
-        const capped = truncated ? events.slice(0, MAX_EVENTS) : events;
+        const capped = truncated
+          ? events.slice(0, HEAD_SAMPLE).concat(events.slice(-TAIL_SAMPLE))
+          : events;
 
         // Phase 6: optional `adm` field carries the raw creative string for
         // static-payload analysis (obfuscation/miner/XSS pattern matching +
