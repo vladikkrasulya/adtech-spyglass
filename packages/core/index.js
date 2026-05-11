@@ -29,6 +29,7 @@ const { validateResponse30 } = require('./rules-response-30');
 const { validateFeedResponse } = require('./rules-feed');
 const { crosscheck: doCrosscheck, nativeAssetCrosscheck } = require('./crosscheck');
 const { mirror: doMirror } = require('./mirror');
+const { runRulePlugins, listPlugins } = require('./rules');
 const {
   LEVELS,
   CROSS_LEVELS,
@@ -98,6 +99,12 @@ function validate(payload, opts) {
     } else {
       findings = validateRequest(payload, { dialect, version });
     }
+    // Plugin pass — modular rules from packages/core/rules/<name>/.
+    // Plugins join findings BEFORE dedup+sort in finalize(), so a
+    // plugin can't shadow a legacy finding accidentally. See
+    // packages/core/rules/README.md for the contract.
+    const pluginFindings = runRulePlugins(payload, 'ORTB_REQUEST', { dialect, version });
+    if (pluginFindings.length) findings = findings.concat(pluginFindings);
   } else if (t === TYPES.ORTB_RESPONSE) {
     // Same version dispatch on the response side. 3.0 BidResponse lives
     // under `openrtb.response` and uses `bid.item` (not 2.x `bid.impid`).

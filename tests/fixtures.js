@@ -29,6 +29,8 @@ const validRequest = () => ({
   device: {
     ip: '203.0.113.1',
     ua: 'Mozilla/5.0',
+    os: 'Linux',
+    osv: '6.1',
     geo: { country: 'UKR' },
     language: 'uk',
   },

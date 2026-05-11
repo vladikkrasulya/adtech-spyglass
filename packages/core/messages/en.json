@@ -182,5 +182,9 @@
   "mirror.note.imp_banner_default_size": "Slot {num}: response had no size — used the 300×250 banner default.",
   "mirror.note.no_bids_default_banner_imp": "Response has no bids — created one default 300×250 banner imp.",
   "mirror.note.bestpractice_response_enriched": "Best-practice mode: added crid/cid/cattax/lurl/nurl + DSA bidext (EU compliance) + bidid and seat.",
-  "mirror.note.bestpractice_request_enriched": "Best-practice mode: added source.ext.schain (sellers.json), regs.coppa/gdpr, user.ext.consent placeholder, device.sua (Structured UA for the post-Chrome-UA-freeze world)."
+  "mirror.note.bestpractice_request_enriched": "Best-practice mode: added source.ext.schain (sellers.json), regs.coppa/gdpr, user.ext.consent placeholder, device.sua (Structured UA for the post-Chrome-UA-freeze world).",
+
+  "device.client_hints.sua_missing": "device.sua (Structured User Agent) is missing. Chrome/Edge 100+ freeze the legacy UA string — without sua the DSP can't target by OS version, browser minor version, or device model. Bid is valid; targeting will be coarser, expect lower buyout.",
+  "device.client_hints.os_unknown": "OS not specified — neither device.os/.osv nor device.sua.platform carries it. The DSP can't run OS-segmented campaigns (mobile/desktop split, iOS-only creatives, etc.). Add device.os + device.osv, or better — device.sua.platform from client-hints.",
+  "device.client_hints.browser_unknown": "Browser identity unreachable: no device.browser, no device.sua.browsers[], and device.ua is empty. The DSP can't exclude obsolete browsers or pick creatives that depend on modern WebAPIs. At minimum fill device.ua; ideally device.sua.browsers[] from client-hints."
 }

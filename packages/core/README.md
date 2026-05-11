@@ -130,6 +130,54 @@ result.findings[0].msg; // 'Слот #1: банер без розмірів...'
 
 Currently shipping locales: Ukrainian (`uk`, complete), English (`en`, stub — falls back to Ukrainian). Russian (`ru`) and English completion land in the consuming app's i18n phase.
 
+## How validation works (the 5-second map)
+
+```
+              ┌──────────────────────────────────────────────────┐
+   payload ── │  validate(payload, { dialect?, locale?, … })     │
+   (any JSON) │     │                                            │
+              │     ├─ detectType    → ORTB_REQUEST/RESPONSE/…   │
+              │     ├─ detectVersion → 2.5 / 2.6 / 3.0           │
+              │     │                                            │
+              │     │   ── Legacy spec validators ───            │
+              │     ├─→ validateRequest(req, ctx)        ─┐      │
+              │     │   rules-request.js (432 LOC)        │      │
+              │     │                                     │      │
+              │     │   ── Plugin rules ─────────         │      │
+              │     ├─→ runRulePlugins(req, type, ctx) ──┤       │
+              │     │   rules/                            │      │
+              │     │   ├─ client-hints/                  │      │
+              │     │   ├─ (future) categories/           │      │
+              │     │   └─ (future) native/               │      │
+              │     │                                     │      │
+              │     │                       findings ←────┘      │
+              │     │                                            │
+              │     ├─ applyDisabledRules  (skip suppressed)     │
+              │     ├─ dedupFindings       (collapse (id,path))  │
+              │     ├─ sortFindings        (severity DESC → …)   │
+              │     └─ decorate            (localize msg + spec) │
+              │                                                  │
+              └──────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+              { type, version, status, findings: [...] }
+```
+
+**Where the rules live:**
+
+| Surface                               | Folder / file                                  | Style                                                            |
+| ------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| oRTB 2.x BidRequest baseline          | `rules-request.js` (432 LOC)                   | flat function, sections marked by `// ── ──` comments. Legacy.   |
+| oRTB 2.x BidResponse baseline         | `rules-response.js`                            | same                                                             |
+| oRTB 3.0 dispatch                     | `rules-request-30.js` / `rules-response-30.js` | same                                                             |
+| VAST 4.x rules                        | `rules-vast.js`                                | same                                                             |
+| JsonFeed / Kadam feed responses       | `rules-feed.js`                                | same                                                             |
+| **New rule-groups (post-2026-05-10)** | **`rules/<plugin>/index.js`**                  | **plugin contract** — see [`rules/README.md`](./rules/README.md) |
+
+**Pattern for adding new rules**: drop a folder under `rules/<name>/`,
+register in `rules/index.js`, add message keys to `messages/{en,uk,ru}.json`.
+That's it. See [`rules/README.md`](./rules/README.md) for the contract.
+
 ## Design principles
 
 - **i18n-neutral findings** — engine emits `{ id, params }`, never inline copy.

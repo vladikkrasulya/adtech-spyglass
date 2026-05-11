@@ -24,6 +24,7 @@
     "messages/",
     "dialects/",
     "knowledge_base/",
+    "rules/",
     "README.md",
     "LICENSE"
   ],
