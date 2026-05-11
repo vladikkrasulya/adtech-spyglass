@@ -55,6 +55,8 @@
   "feed.push.id_required": "Push material #{num}: missing id. Unique identifier of the material — used in subsequent click/win callbacks.",
   "feed.push.click_url_required": "Push material #{num}: neither click_url nor link is set. Click destination is required — without it the push notification has no action.",
   "feed.push.bid_required": "Push material #{num}: missing cpc / price. A bid (number) per click or impression is required — without it the auction has no signal.",
+  "feed.push.bid_string_type": "Push material #{num}: cpc is a string ('{val}'), but the spec wants a number. Most SSPs parseFloat it and let it through; strict parsers will reject.",
+  "feed.push.bid_not_numeric": "Push material #{num}: cpc / price is present but doesn't parse as a number. The bidder can't compute economics.",
   "feed.push.title_recommended": "Push material #{num}: title is recommended — the headline shown in the push notification. Without it the user sees a generic \"New message\" prompt.",
   "feed.push.image_url_recommended": "Push material #{num}: image_url is recommended — a large image lifts CTR significantly on push surfaces.",
   "feed.push.nurl_recommended": "Push material #{num}: nurl is missing (and not embedded in icon_url) — win notification won't fire, billing tracking breaks.",

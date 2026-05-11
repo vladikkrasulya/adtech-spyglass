@@ -82,7 +82,29 @@ function validateKadamPush(arr) {
       findings.push(F('feed.push.click_url_required', LEVELS.ERROR, `${p}.click_url`, { num }));
     }
     if (!isNum(m.cpc) && !isNum(m.price)) {
-      findings.push(F('feed.push.bid_required', LEVELS.ERROR, `${p}.cpc`, { num }));
+      // 3-tier: distinguish missing / wrong-type-but-parseable / wrong-type-unparseable.
+      // The narrow original "missing" message confused users when cpc was present
+      // as a numeric string (most SSPs do parseFloat, so it works in practice
+      // but violates the spec). Now we tell them WHAT is wrong, not just that
+      // something is.
+      const cpcStr = typeof m.cpc === 'string' ? m.cpc : null;
+      const priceStr = typeof m.price === 'string' ? m.price : null;
+      const cpcParsed = cpcStr != null ? parseFloat(cpcStr) : NaN;
+      const priceParsed = priceStr != null ? parseFloat(priceStr) : NaN;
+      const parseable = Number.isFinite(cpcParsed)
+        ? cpcStr
+        : Number.isFinite(priceParsed)
+          ? priceStr
+          : null;
+      if (parseable != null) {
+        findings.push(
+          F('feed.push.bid_string_type', LEVELS.WARNING, `${p}.cpc`, { num, val: parseable }),
+        );
+      } else if (cpcStr != null || priceStr != null) {
+        findings.push(F('feed.push.bid_not_numeric', LEVELS.ERROR, `${p}.cpc`, { num }));
+      } else {
+        findings.push(F('feed.push.bid_required', LEVELS.ERROR, `${p}.cpc`, { num }));
+      }
     }
     if (!isStr(m.title)) {
       findings.push(F('feed.push.title_recommended', LEVELS.WARNING, `${p}.title`, { num }));

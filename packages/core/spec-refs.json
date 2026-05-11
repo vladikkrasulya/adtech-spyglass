@@ -44,6 +44,8 @@
   "feed.push.id_required": "",
   "feed.push.click_url_required": "",
   "feed.push.bid_required": "",
+  "feed.push.bid_string_type": "",
+  "feed.push.bid_not_numeric": "",
   "feed.push.title_recommended": "",
   "feed.push.image_url_recommended": "",
   "feed.push.nurl_recommended": "",

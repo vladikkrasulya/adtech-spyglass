@@ -54,6 +54,8 @@
   "feed.push.id_required": "Push-матеріал #{num}: немає id. Унікальний ідентифікатор матеріалу — використовується для звітів і dedup.",
   "feed.push.click_url_required": "Push-матеріал #{num}: немає ні click_url, ні link. Куди веде клік — обовʼязкове поле, інакше показ безглуздий.",
   "feed.push.bid_required": "Push-матеріал #{num}: немає cpc / price. Має бути ставка (число) за клік чи показ — без неї біддер не порахує економіку.",
+  "feed.push.bid_string_type": "Push-матеріал #{num}: cpc передано рядком ('{val}'), а за специфікацією має бути числом. Більшість SSP роблять parseFloat і пропускають, але суворі парсери відкинуть.",
+  "feed.push.bid_not_numeric": "Push-матеріал #{num}: cpc / price вказано, але не парситься як число. Біддер не зможе порахувати економіку.",
   "feed.push.title_recommended": "Push-матеріал #{num}: бажано задати title — заголовок, що зʼявляється в push-нотифікації.",
   "feed.push.image_url_recommended": "Push-матеріал #{num}: бажано додати image_url — велике зображення підвищує CTR push-показу.",
   "feed.push.nurl_recommended": "Push-матеріал #{num}: немає nurl (та не \"зашитий\" у icon_url) — win-нотіс не спрацює, статистика покази/виграші буде розсинхронована.",

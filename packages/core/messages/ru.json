@@ -54,6 +54,8 @@
   "feed.push.id_required": "Push-материал #{num}: нет id. Уникальный идентификатор материала — используется для отчётов и dedup.",
   "feed.push.click_url_required": "Push-материал #{num}: нет ни click_url, ни link. Куда ведёт клик — обязательное поле, иначе показ бессмысленен.",
   "feed.push.bid_required": "Push-материал #{num}: нет cpc / price. Должна быть ставка (число) за клик или показ — без неё биддер не посчитает экономику.",
+  "feed.push.bid_string_type": "Push-материал #{num}: cpc передан строкой ('{val}'), а по спеке должно быть числом. Большинство SSP делают parseFloat и пропускают, но строгие парсеры отбракуют.",
+  "feed.push.bid_not_numeric": "Push-материал #{num}: cpc / price указан, но не парсится как число. Биддер не сможет посчитать экономику.",
   "feed.push.title_recommended": "Push-материал #{num}: желательно задать title — заголовок в push-уведомлении.",
   "feed.push.image_url_recommended": "Push-материал #{num}: желательно добавить image_url — большое изображение повышает CTR push-показа.",
   "feed.push.nurl_recommended": "Push-материал #{num}: нет nurl (и не \"зашит\" в icon_url) — win-уведомление не сработает, статистика показов/выигрышей будет рассинхронизирована.",

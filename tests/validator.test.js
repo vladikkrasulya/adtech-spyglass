@@ -733,3 +733,46 @@ test('nativeAssetCrosscheck: invalid JSON adm returns errorKey', () => {
   const cm = nativeAssetCrosscheck(req.imp[0].native, 'not json');
   assert.equal(cm.errorKey, 'crosscheck.bid.native_invalid_adm');
 });
+
+// ── Kadam push feed — cpc/price 3-tier finding ─────────────────────────────
+
+const findByIdInResult = (result, id) => (result.findings || []).find((f) => f.id === id);
+
+test('kadam push: numeric cpc → no bid finding fires', () => {
+  const r = validate([{ id: 'm1', click_url: 'https://x', cpc: 0.05 }]);
+  assert.equal(findByIdInResult(r, 'feed.push.bid_required'), undefined);
+  assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);
+  assert.equal(findByIdInResult(r, 'feed.push.bid_not_numeric'), undefined);
+});
+
+test('kadam push: numeric-string cpc → WARN bid_string_type, NOT bid_required', () => {
+  const r = validate([{ id: 'm1', click_url: 'https://x', cpc: '0.01495' }]);
+  const f = findByIdInResult(r, 'feed.push.bid_string_type');
+  assert.ok(f, 'expected bid_string_type finding to fire');
+  assert.equal(f.level, 'warning');
+  assert.equal(findByIdInResult(r, 'feed.push.bid_required'), undefined);
+  assert.equal(findByIdInResult(r, 'feed.push.bid_not_numeric'), undefined);
+});
+
+test('kadam push: non-numeric string cpc → ERROR bid_not_numeric', () => {
+  const r = validate([{ id: 'm1', click_url: 'https://x', cpc: 'free' }]);
+  const f = findByIdInResult(r, 'feed.push.bid_not_numeric');
+  assert.ok(f, 'expected bid_not_numeric finding to fire');
+  assert.equal(f.level, 'error');
+  assert.equal(findByIdInResult(r, 'feed.push.bid_required'), undefined);
+  assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);
+});
+
+test('kadam push: absent cpc AND absent price → ERROR bid_required (unchanged)', () => {
+  const r = validate([{ id: 'm1', click_url: 'https://x' }]);
+  const f = findByIdInResult(r, 'feed.push.bid_required');
+  assert.ok(f, 'expected bid_required finding to fire');
+  assert.equal(f.level, 'error');
+  assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);
+});
+
+test('kadam push: numeric price (fallback) → no bid finding', () => {
+  const r = validate([{ id: 'm1', click_url: 'https://x', price: 1.5 }]);
+  assert.equal(findByIdInResult(r, 'feed.push.bid_required'), undefined);
+  assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);
+});
