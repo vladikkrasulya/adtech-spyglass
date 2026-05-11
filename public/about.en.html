@@ -882,7 +882,7 @@
             </li>
             <li>
               <strong>frozen_thread</strong> — separate mechanism via the <em>parent watchdog</em>:
-              the probe sends a 1Hz heartbeat, the parent monitors lag — if &gt; 3.5s without a
+              the probe sends a 1Hz heartbeat, the parent monitors lag — if &gt; 6s without a
               signal, a synthetic event is injected (a frozen probe can't report its own freeze — an
               infinite loop blocks both <code>setInterval</code> and <code>postMessage</code>, so
               detection has to live outside the iframe). ERROR.

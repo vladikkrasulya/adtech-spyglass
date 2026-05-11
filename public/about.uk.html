@@ -433,7 +433,7 @@
 
           <h2 id="whats-new">Що нового · 2026-05-10</h2>
           <p>
-            За один день викатили 11 версій (v0.25 → v0.35). Тут — короткі описи нових поверхонь.
+            За один день викатили 11 версій (v0.25 → v0.35). Тут — короткий огляд нових функцій.
             Деталі — у відповідних розділах нижче або у CHANGELOG.md.
           </p>
 
@@ -442,12 +442,12 @@
             Натисни <strong>дзеркало ↔</strong> у шапці (або hotkey <code>M</code>) — Spyglass
             згенерує канонічну пару до твого вставленого payload-у. Якщо вставив BidRequest —
             отримаєш мінімально-валідну BidResponse. Якщо BidResponse — згенерує запит, в якому ця
-            відповідь би пройшла. Output self-tested через існуючі validate() + crosscheck(), тому
-            завжди clean. Два режими: <em>minimal</em> (тільки обовʼязкові поля) та
+            відповідь би пройшла. Результат самоперевіряється через існуючий цикл validate() + crosscheck(), тому
+            завжди чистий. Два режими: <em>minimal</em> (тільки обовʼязкові поля) та
             <em>best-practice</em> (з recommended: schain, dchain, DSA, GDPR consent, device.sua).
           </p>
           <p>
-            Якщо у тебе заповнені обидва панелі — модалка дзеркала також показує
+            Якщо у тебе заповнені обидві панелі — модалка дзеркала також показує
             <strong>diff</strong>: твоя версія vs канонічна, з кольоровим маркуванням (≠
             розбіжність, + у канонічній є, − у тебе є зайве). 🔗 share-кнопка генерує permalink що
             містить пару — корисно для дзвінків з SSP.
@@ -489,9 +489,9 @@
             Кнопка <strong>🤖 simulate</strong> у шапці. Локальна qwen2.5:3b симулює як 3 типи DSP
             відповіли б на твій запит: <em>aggressive (max scale, +30-50% над floor)</em>,
             <em>conservative (ROAS guard, +5-15%)</em>,
-            <em>quality (premium only, +50-80% або skip)</em>. Privacy: LLM бачить тільки 8
-            metadata-полів (формат, розмір, гео, currency, floor, surface, device-type,
-            auction-type) — bid VALUES в LLM не потрапляють.
+            <em>quality (premium only, +50-80% або skip)</em>. Приватність: LLM бачить тільки 8
+            полів метаданих (формат, розмір, гео, currency, floor, surface, device-type,
+            auction-type) — значення bid-ів в LLM не потрапляють.
           </p>
 
           <h3>📦 Specimen replay endpoint</h3>
@@ -509,15 +509,15 @@
             розділами — Профіль · Бібліотека · Активність · Behavior corpus · Налаштування · Безпека
             · Danger zone. Scroll-spy підсвічує активну секцію при скролі. URL hash оновлюється для
             глибоких посилань: <code>/uk/account#corpus</code> відкриває одразу корпус. Mobile
-            (≤880px) — sidebar колапсує у горизонтальні tab-чіпи.
+            (≤880px) — sidebar згортається у горизонтальні tab-чіпи.
           </p>
 
           <h3>Локалізація: EN та RU тепер повноцінні</h3>
           <p>
-            Англійська і російська про-сторінки викочені у v0.32 (раніше були stub-и). Перемикач мов
+            Англійська і російська сторінки «Про нас» викочені у v0.32 (раніше були заглушками). Перемикач мов
             у шапці працює як на головній (повна навігація замість in-place морфа), так і на /about
-            та /account. Cookie <code>kt-lang</code> синхронізується з вибраним локалем перед
-            fetch-ом, щоб сервер не редіректив назад.
+            та /account. Cookie <code>kt-lang</code> синхронізується з вибраною локаллю перед
+            fetch-ом, щоб сервер не перенаправляв назад.
           </p>
 
           <hr />
@@ -589,7 +589,7 @@
             Spyglass рендерить кожен креатив у sandboxed iframe з instrumentation-probe-ом
             всередині. Probe ловить 11 типів підозрілої поведінки — від невидимих клік-пасток до
             зависання головного потоку — і вкладка <strong>Behavior</strong> поряд з Validation /
-            Crosscheck показує structured findings із severity та URL призначення. Деталі
+            Crosscheck показує структуровані знахідки із severity та URL призначення. Деталі
             архітектури — у розділі
             <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a> нижче.
           </p>
@@ -736,7 +736,7 @@
             підозрілу поведінку: invisible click-traps, frame-bust attempts, frozen-thread
             heartbeat-и, permission abuse (<code>Notification</code>, geolocation,
             <code>getUserMedia</code>), miner-сигнатури в коді, click-skim probe-и (фейкові
-            клік-події що випереджають реальний клік користувача). Engine видає structured findings
+            клік-події що випереджають реальний клік користувача). Engine видає структуровані знахідки
             — той самий шейп, що Static, плюс severity та URL призначення. Деталі — у розділі
             <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a
             >.
@@ -842,7 +842,7 @@
             <code>&lt;form target="_top"&gt;</code> сабміт або auto-redirect через
             <code>setTimeout</code>. Sandbox блокує саму навігацію (немає
             <code>allow-top-navigation</code>), але probe бачить <em>спробу</em>. Engine трекає
-            user-gesture лінейность через <code>navigator.userActivation</code> + ручний
+            історію user-gesture через <code>navigator.userActivation</code> + ручний
             <code>_lastGestureAt</code> snapshot і розрізняє чотири підпатерни:
           </p>
           <ul>
@@ -883,7 +883,7 @@
             </li>
             <li>
               <strong>frozen_thread</strong> — окремий механізм через <em>parent watchdog</em>:
-              probe шле 1Hz heartbeat, parent моніторить лаг — якщо &gt; 3.5с без сигналу,
+              probe шле 1Hz heartbeat, parent моніторить лаг — якщо &gt; 6с без сигналу,
               генерується синтетична подія (probe не може репортити власне зависання — нескінченний
               цикл блокує і <code>setInterval</code> і <code>postMessage</code>, тому детекція
               повинна жити поза iframe-ом). ERROR.

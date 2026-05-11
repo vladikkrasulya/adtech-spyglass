@@ -434,7 +434,7 @@
 
           <h2 id="whats-new">Что нового · 2026-05-10</h2>
           <p>
-            За один день выкатили 11 версий (v0.25 → v0.35). Краткий обзор новых поверхностей —
+            За один день выкатили 11 версий (v0.25 → v0.35). Краткий обзор новых функций —
             детали в соответствующих разделах ниже или в CHANGELOG.md.
           </p>
 
@@ -443,8 +443,8 @@
             Жми <strong>зеркало ↔</strong> в шапке (или hotkey <code>M</code>) — Spyglass
             сгенерирует канонический counterpart твоего payload-а. Если вставил BidRequest —
             получишь минимально-валидный BidResponse. Если BidResponse — сгенерирует запрос, в
-            котором этот ответ прошёл бы. Output self-tested через существующие validate() +
-            crosscheck(), поэтому всегда clean. Два режима: <em>minimal</em> (только обязательные
+            котором этот ответ прошёл бы. Результат самопроверяется через существующий цикл validate() +
+            crosscheck(), поэтому всегда чистый. Два режима: <em>minimal</em> (только обязательные
             поля) и <em>best-practice</em> (с recommended: schain, dchain, DSA, GDPR consent,
             device.sua).
           </p>
@@ -491,9 +491,9 @@
             Кнопка <strong>🤖 simulate</strong> в шапке. Локальная qwen2.5:3b симулирует как 3 типа
             DSP ответили бы на твой запрос: <em>aggressive (max scale, +30-50% над floor)</em>,
             <em>conservative (ROAS guard, +5-15%)</em>,
-            <em>quality (premium only, +50-80% или skip)</em>. Privacy: LLM видит только 8
-            metadata-полей (формат, размер, гео, currency, floor, surface, device-type,
-            auction-type) — bid VALUES в LLM не попадают.
+            <em>quality (premium only, +50-80% или skip)</em>. Приватность: LLM видит только 8
+            полей метаданных (формат, размер, гео, currency, floor, surface, device-type,
+            auction-type) — значения bid-ов в LLM не попадают.
           </p>
 
           <h3>📦 Specimen replay endpoint</h3>
@@ -511,12 +511,12 @@
             разделами — Профиль · Библиотека · Активность · Behavior corpus · Настройки ·
             Безопасность · Danger zone. Scroll-spy подсвечивает активную секцию при скролле. URL
             hash обновляется для глубоких ссылок: <code>/ru/account#corpus</code> открывает сразу
-            корпус. Mobile (≤880px) — sidebar коллапсирует в горизонтальные tab-чипы.
+            корпус. Mobile (≤880px) — sidebar сворачивается в горизонтальные tab-чипы.
           </p>
 
           <h3>Локализация: EN и RU теперь полноценные</h3>
           <p>
-            Английская и русская про-страницы выкачены в v0.32 (раньше были stub-ы). Переключатель
+            Английская и русская страницы «О проекте» выкачены в v0.32 (раньше были заглушками). Переключатель
             языков в шапке работает как на главной (полная навигация вместо in-place морфа), так и
             на /about и /account. Cookie <code>kt-lang</code> синхронизируется с выбранной локалью
             перед fetch-ом, чтобы сервер не редиректил назад.
@@ -575,7 +575,7 @@
             <li>
               <strong>Vendor overlays</strong> — опциональные overlay-правила для конкретных SSP/DSP
               (их <code>ext.*</code>, custom-макросы, специфичные ограничения). Активируются через
-              <code>?dialect=&lt;vendor&gt;</code> query-параметр. Публичный UI остаётся generic.
+              <code>?dialect=&lt;vendor&gt;</code> query-параметр. Публичный UI остаётся стандартным.
             </li>
           </ul>
 
@@ -591,7 +591,7 @@
             Spyglass рендерит каждый креатив в sandboxed iframe с instrumentation-probe-ом внутри.
             Probe ловит 11 типов подозрительного поведения — от невидимых клик-ловушек до зависания
             главного потока — и вкладка
-            <strong>Behavior</strong> рядом с Validation / Crosscheck показывает structured findings
+            <strong>Behavior</strong> рядом с Validation / Crosscheck показывает структурированные находки
             с severity и URL назначения. Архитектурный deep-dive — в разделе
             <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a> ниже.
           </p>
@@ -792,7 +792,7 @@
           <p>
             Родительское окно прогоняет события через <strong>engine</strong> в
             <code>packages/core/behavior/</code> — pure-data функцию, которая матчит шаблоны и
-            выдаёт structured findings с severity (error / warning / info), URL назначения,
+            выдаёт структурированные находки с severity (error / warning / info), URL назначения,
             метаданными (gesture lineage, threshold breached, и т.п.). Engine browser-and-Node
             compatible: запускается в браузере через <code>/api/analyze-behavior</code> и на сервере
             для replay архивных специменов.
@@ -841,7 +841,7 @@
             <code>&lt;form target="_top"&gt;</code> сабмит или auto-redirect через
             <code>setTimeout</code>. Sandbox блокирует саму навигацию (нет
             <code>allow-top-navigation</code>), но probe видит <em>попытку</em>. Engine трекает
-            user-gesture lineage через <code>navigator.userActivation</code> + ручной
+            историю user-gesture через <code>navigator.userActivation</code> + ручной
             <code>_lastGestureAt</code> snapshot и разделяет на четыре подпаттерна:
           </p>
           <ul>
@@ -858,7 +858,7 @@
               gesture (ERROR)
             </li>
             <li>
-              <strong>late_redirect</strong> — gesture был, но навигация через
+              <strong>late_redirect</strong> — gesture был, но навигация сработала через
               <code>setTimeout</code> &gt; 500мс позже (WARNING — классический клоакинг:
               пользователь кликнул что-то видимое, потом setTimeout провёл реальную навигацию вне
               gesture-lineage)
@@ -883,7 +883,7 @@
             </li>
             <li>
               <strong>frozen_thread</strong> — отдельный механизм через <em>parent watchdog</em>:
-              probe шлёт 1Hz heartbeat, parent мониторит лаг — если &gt; 3.5с без сигнала,
+              probe шлёт 1Hz heartbeat, parent мониторит лаг — если &gt; 6с без сигнала,
               генерируется синтетическое событие (probe не может репортить собственное зависание —
               бесконечный цикл блокирует и <code>setInterval</code>, и <code>postMessage</code>,
               поэтому детекция должна жить вне iframe-а). ERROR.
@@ -893,7 +893,7 @@
           <p style="color: var(--text-muted); font-size: var(--fs-sm); margin-top: var(--space-5)">
             Всё это работает client-side, ноль нагрузки на бекенд. Engine в
             <code>packages/core/behavior/</code> — pure-data функция; находки рендерятся во вкладке
-            <strong>Behavior</strong> рядом с Validation / Crosscheck. Sandbox блокирует саму
+            <strong>Behavior</strong> рядом с Validation / Crosscheck. Sandbox блокирует само
             fraud-действие; мы делаем <em>факт попытки</em> видимым — чтобы можно было прикрепить к
             bug-тикету и вернуться к поставщику креатива со screenshot-ом.
           </p>
