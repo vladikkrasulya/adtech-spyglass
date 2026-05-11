@@ -23,8 +23,9 @@ the Map kept stale entries pointing to the user. A stolen cookie that
 already resolved through the Map stayed live until container restart.
 
 Fix:
+
 - `Users.updatePasswordAndCrypto` now does `DELETE FROM sessions
-  WHERE user_id = ?` INSIDE its transaction. Password rotation and
+WHERE user_id = ?` INSIDE its transaction. Password rotation and
   session invalidation land atomically; the follow-up `invalidate`
   call's DB delete is a no-op double-check on the happy path.
 - `invalidateUserSessions` runs its Map cleanup unconditionally in a
@@ -82,6 +83,7 @@ layers. Core bumps to 0.17.0 (new findings = feat); app bumps to
 0.37.0 (lockstep with core).
 
 **DB hardening (db.js)**
+
 - `init()` wraps `migrate(db, cur)` + `user_version` pragma bump in a
   single `db.transaction()`. A crash mid-migration previously left
   schema_version stale; on next boot the same blocks re-ran and crashed
@@ -97,6 +99,7 @@ layers. Core bumps to 0.17.0 (new findings = feat); app bumps to
   next container restart.
 
 **Auth atomicity + session revival (auth.js, modules/auth/handler.js)**
+
 - New `Users.updatePasswordAndCrypto(id, hash, state)` and
   `Users.updatePasswordAndWipe(id, hash)` helpers wrap the multi-write
   reset flows in `db.transaction`. Used by reset-password modes
@@ -117,6 +120,7 @@ layers. Core bumps to 0.17.0 (new findings = feat); app bumps to
   session against partially-invalidated state.
 
 **Validator + crosscheck (`packages/core/`)**
+
 - New finding `request.site_and_app_both` (WARNING). oRTB §3.2.1
   requires exactly one of `site` or `app`. Pre-fix we only flagged
   the case where neither was present; a request with both passed
@@ -130,6 +134,7 @@ layers. Core bumps to 0.17.0 (new findings = feat); app bumps to
   ensures siblings like `IAB10` are correctly NOT blocked by `IAB1`.
 
 **Behavior engine (`packages/core/behavior/`, `public/creative-probe.js`)**
+
 - New finding `behavior.trap.invisible_overlay_aggregate` (ERROR).
   The Phase 1 rule catches a single click target covering >50% of
   viewport while invisible. Audit surfaced an evasion: ship 10
@@ -144,6 +149,7 @@ layers. Core bumps to 0.17.0 (new findings = feat); app bumps to
   flood-of-events vector for callers bypassing the probe.
 
 **Intel (intel-llm.js, malicious.js)**
+
 - `addDomain` (server-side, partner inference): now strips anything
   not `[a-z0-9.-]` before adding to the prompt's domain list. Pre-fix
   explicit-field domains went through with only `toLowerCase + trim`,

@@ -395,10 +395,7 @@ const Users = {
    */
   updatePasswordAndCrypto(id, password_hash, state) {
     db.transaction(() => {
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(
-        String(password_hash),
-        id,
-      );
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(String(password_hash), id);
       db.prepare(
         `UPDATE users
          SET kdf_salt = ?, dek_wrapped = ?, dek_iv = ?
@@ -432,31 +429,22 @@ const Users = {
    */
   updatePasswordAndWipe(id, password_hash) {
     return db.transaction(() => {
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(
-        String(password_hash),
-        id,
-      );
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(String(password_hash), id);
       db.prepare(
         `UPDATE users
          SET kdf_salt = NULL, dek_wrapped = NULL, dek_iv = NULL,
              recovery_salt = NULL, recovery_dek_wrapped = NULL, recovery_dek_iv = NULL
          WHERE id = ?`,
       ).run(id);
-      const samplesDeleted = db
-        .prepare('DELETE FROM samples WHERE user_id = ?')
-        .run(id).changes;
-      const partnersDeleted = db
-        .prepare('DELETE FROM partners WHERE user_id = ?')
-        .run(id).changes;
+      const samplesDeleted = db.prepare('DELETE FROM samples WHERE user_id = ?').run(id).changes;
+      const partnersDeleted = db.prepare('DELETE FROM partners WHERE user_id = ?').run(id).changes;
       const analyzeLogDeleted = db
         .prepare('DELETE FROM analyze_log WHERE user_id = ?')
         .run(id).changes;
       const behaviorCorpusDeleted = db
         .prepare('DELETE FROM behavior_corpus WHERE user_id = ?')
         .run(id).changes;
-      const sessionsDeleted = db
-        .prepare('DELETE FROM sessions WHERE user_id = ?')
-        .run(id).changes;
+      const sessionsDeleted = db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id).changes;
       return {
         samplesDeleted,
         partnersDeleted,

@@ -442,9 +442,10 @@
             Натисни <strong>дзеркало ↔</strong> у шапці (або hotkey <code>M</code>) — Spyglass
             згенерує канонічну пару до твого вставленого payload-у. Якщо вставив BidRequest —
             отримаєш мінімально-валідну BidResponse. Якщо BidResponse — згенерує запит, в якому ця
-            відповідь би пройшла. Результат самоперевіряється через існуючий цикл validate() + crosscheck(), тому
-            завжди чистий. Два режими: <em>minimal</em> (тільки обовʼязкові поля) та
-            <em>best-practice</em> (з recommended: schain, dchain, DSA, GDPR consent, device.sua).
+            відповідь би пройшла. Результат самоперевіряється через існуючий цикл validate() +
+            crosscheck(), тому завжди чистий. Два режими: <em>minimal</em> (тільки обовʼязкові поля)
+            та <em>best-practice</em> (з recommended: schain, dchain, DSA, GDPR consent,
+            device.sua).
           </p>
           <p>
             Якщо у тебе заповнені обидві панелі — модалка дзеркала також показує
@@ -514,10 +515,10 @@
 
           <h3>Локалізація: EN та RU тепер повноцінні</h3>
           <p>
-            Англійська і російська сторінки «Про нас» викочені у v0.32 (раніше були заглушками). Перемикач мов
-            у шапці працює як на головній (повна навігація замість in-place морфа), так і на /about
-            та /account. Cookie <code>kt-lang</code> синхронізується з вибраною локаллю перед
-            fetch-ом, щоб сервер не перенаправляв назад.
+            Англійська і російська сторінки «Про нас» викочені у v0.32 (раніше були заглушками).
+            Перемикач мов у шапці працює як на головній (повна навігація замість in-place морфа),
+            так і на /about та /account. Cookie <code>kt-lang</code> синхронізується з вибраною
+            локаллю перед fetch-ом, щоб сервер не перенаправляв назад.
           </p>
 
           <hr />
@@ -736,9 +737,9 @@
             підозрілу поведінку: invisible click-traps, frame-bust attempts, frozen-thread
             heartbeat-и, permission abuse (<code>Notification</code>, geolocation,
             <code>getUserMedia</code>), miner-сигнатури в коді, click-skim probe-и (фейкові
-            клік-події що випереджають реальний клік користувача). Engine видає структуровані знахідки
-            — той самий шейп, що Static, плюс severity та URL призначення. Деталі — у розділі
-            <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a
+            клік-події що випереджають реальний клік користувача). Engine видає структуровані
+            знахідки — той самий шейп, що Static, плюс severity та URL призначення. Деталі — у
+            розділі <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a
             >.
           </p>
 
@@ -883,10 +884,10 @@
             </li>
             <li>
               <strong>frozen_thread</strong> — окремий механізм через <em>parent watchdog</em>:
-              probe шле 1Hz heartbeat, parent моніторить лаг — якщо &gt; 6с без сигналу,
-              генерується синтетична подія (probe не може репортити власне зависання — нескінченний
-              цикл блокує і <code>setInterval</code> і <code>postMessage</code>, тому детекція
-              повинна жити поза iframe-ом). ERROR.
+              probe шле 1Hz heartbeat, parent моніторить лаг — якщо &gt; 6с без сигналу, генерується
+              синтетична подія (probe не може репортити власне зависання — нескінченний цикл блокує
+              і <code>setInterval</code> і <code>postMessage</code>, тому детекція повинна жити поза
+              iframe-ом). ERROR.
             </li>
           </ul>
 

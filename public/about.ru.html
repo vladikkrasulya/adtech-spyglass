@@ -434,8 +434,8 @@
 
           <h2 id="whats-new">Что нового · 2026-05-10</h2>
           <p>
-            За один день выкатили 11 версий (v0.25 → v0.35). Краткий обзор новых функций —
-            детали в соответствующих разделах ниже или в CHANGELOG.md.
+            За один день выкатили 11 версий (v0.25 → v0.35). Краткий обзор новых функций — детали в
+            соответствующих разделах ниже или в CHANGELOG.md.
           </p>
 
           <h3>🪞 Зеркало (Mirror) — эталонная пара одним кликом</h3>
@@ -443,10 +443,10 @@
             Жми <strong>зеркало ↔</strong> в шапке (или hotkey <code>M</code>) — Spyglass
             сгенерирует канонический counterpart твоего payload-а. Если вставил BidRequest —
             получишь минимально-валидный BidResponse. Если BidResponse — сгенерирует запрос, в
-            котором этот ответ прошёл бы. Результат самопроверяется через существующий цикл validate() +
-            crosscheck(), поэтому всегда чистый. Два режима: <em>minimal</em> (только обязательные
-            поля) и <em>best-practice</em> (с recommended: schain, dchain, DSA, GDPR consent,
-            device.sua).
+            котором этот ответ прошёл бы. Результат самопроверяется через существующий цикл
+            validate() + crosscheck(), поэтому всегда чистый. Два режима: <em>minimal</em> (только
+            обязательные поля) и <em>best-practice</em> (с recommended: schain, dchain, DSA, GDPR
+            consent, device.sua).
           </p>
           <p>
             Если у тебя заполнены оба поля — модалка зеркала также показывает
@@ -491,9 +491,9 @@
             Кнопка <strong>🤖 simulate</strong> в шапке. Локальная qwen2.5:3b симулирует как 3 типа
             DSP ответили бы на твой запрос: <em>aggressive (max scale, +30-50% над floor)</em>,
             <em>conservative (ROAS guard, +5-15%)</em>,
-            <em>quality (premium only, +50-80% или skip)</em>. Приватность: LLM видит только 8
-            полей метаданных (формат, размер, гео, currency, floor, surface, device-type,
-            auction-type) — значения bid-ов в LLM не попадают.
+            <em>quality (premium only, +50-80% или skip)</em>. Приватность: LLM видит только 8 полей
+            метаданных (формат, размер, гео, currency, floor, surface, device-type, auction-type) —
+            значения bid-ов в LLM не попадают.
           </p>
 
           <h3>📦 Specimen replay endpoint</h3>
@@ -516,10 +516,10 @@
 
           <h3>Локализация: EN и RU теперь полноценные</h3>
           <p>
-            Английская и русская страницы «О проекте» выкачены в v0.32 (раньше были заглушками). Переключатель
-            языков в шапке работает как на главной (полная навигация вместо in-place морфа), так и
-            на /about и /account. Cookie <code>kt-lang</code> синхронизируется с выбранной локалью
-            перед fetch-ом, чтобы сервер не редиректил назад.
+            Английская и русская страницы «О проекте» выкачены в v0.32 (раньше были заглушками).
+            Переключатель языков в шапке работает как на главной (полная навигация вместо in-place
+            морфа), так и на /about и /account. Cookie <code>kt-lang</code> синхронизируется с
+            выбранной локалью перед fetch-ом, чтобы сервер не редиректил назад.
           </p>
 
           <hr />
@@ -575,7 +575,8 @@
             <li>
               <strong>Vendor overlays</strong> — опциональные overlay-правила для конкретных SSP/DSP
               (их <code>ext.*</code>, custom-макросы, специфичные ограничения). Активируются через
-              <code>?dialect=&lt;vendor&gt;</code> query-параметр. Публичный UI остаётся стандартным.
+              <code>?dialect=&lt;vendor&gt;</code> query-параметр. Публичный UI остаётся
+              стандартным.
             </li>
           </ul>
 
@@ -591,8 +592,8 @@
             Spyglass рендерит каждый креатив в sandboxed iframe с instrumentation-probe-ом внутри.
             Probe ловит 11 типов подозрительного поведения — от невидимых клик-ловушек до зависания
             главного потока — и вкладка
-            <strong>Behavior</strong> рядом с Validation / Crosscheck показывает структурированные находки
-            с severity и URL назначения. Архитектурный deep-dive — в разделе
+            <strong>Behavior</strong> рядом с Validation / Crosscheck показывает структурированные
+            находки с severity и URL назначения. Архитектурный deep-dive — в разделе
             <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a> ниже.
           </p>
 

@@ -13,8 +13,16 @@ process.env.SPYGLASS_DATA_DIR = TMP;
 let db, Users, Partners, Samples, AnalyzeLog, Sessions, BehaviorCorpus, SCHEMA_VERSION;
 let userA, userB;
 before(() => {
-  ({ db, Users, Partners, Samples, AnalyzeLog, Sessions, BehaviorCorpus, SCHEMA_VERSION } =
-    require('../db'));
+  ({
+    db,
+    Users,
+    Partners,
+    Samples,
+    AnalyzeLog,
+    Sessions,
+    BehaviorCorpus,
+    SCHEMA_VERSION,
+  } = require('../db'));
   // Seed two users so scoping tests have something to compare against.
   userA = Users.create({ email: 'a@example.com', password_hash: 'x' });
   userB = Users.create({ email: 'b@example.com', password_hash: 'x' });
