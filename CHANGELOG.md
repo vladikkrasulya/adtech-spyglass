@@ -31,6 +31,7 @@ The dev then either removes the rogue fields (pin was right) or updates
 their pin (traffic moved on). Either way the silent flip is gone.
 
 **Behavior:**
+
 - Backwards-compatible: `opts.expectedVersion` is opt-in. Validators
   called without it behave exactly as before.
 - Garbage-in safety: unknown values (e.g. `expectedVersion: 'banana'`)

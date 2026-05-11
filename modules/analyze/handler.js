@@ -130,7 +130,12 @@ function createAnalyzeModule(deps) {
         if (hasReq) {
           validation = validate(bidReq, { locale, dialect, disabledRules, expectedVersion });
           if (hasRes) {
-            const resValidation = validate(bidRes, { locale, dialect, disabledRules, expectedVersion });
+            const resValidation = validate(bidRes, {
+              locale,
+              dialect,
+              disabledRules,
+              expectedVersion,
+            });
             if (resValidation.findings && resValidation.findings.length) {
               validation.findings = validation.findings.concat(
                 resValidation.findings.map((f) =>
