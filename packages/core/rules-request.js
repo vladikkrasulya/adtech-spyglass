@@ -24,6 +24,12 @@ function validateRequest(req, ctx) {
     findings.push(F('request.imp_required', LEVELS.ERROR, 'imp'));
   }
   if (!req.site && !req.app) findings.push(F('request.no_site_or_app', LEVELS.ERROR, 'site/app'));
+  // oRTB §3.2.1: "site OR app, never both". Some SSPs reject; others
+  // silently pick one and discard the other's targeting context.
+  // Surface as WARNING — the request still has *some* targeting surface,
+  // but the inventory side is ambiguous.
+  else if (req.site && req.app)
+    findings.push(F('request.site_and_app_both', LEVELS.WARNING, 'site/app'));
 
   // at is required per oRTB §3.2.1. Missing or non-numeric → error.
   // Present-but-wrong-value (3, 4, "first", …) → at_invalid warning below.

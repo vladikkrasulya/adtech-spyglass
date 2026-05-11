@@ -3,6 +3,7 @@
   "request.id_required": "BidRequest has no id. Without it the SSP can't match its log to the bid — add a non-empty BidRequest.id (any unique string within the auction).",
   "request.imp_required": "Empty imp[]. A request with no slot is an empty auction note — the bidder has nothing to bid on. Add at least one impression object.",
   "request.no_site_or_app": "Neither site nor app is set. The bidder needs to know where the creative will render (web vs in-app) — fill exactly one of site / app.",
+  "request.site_and_app_both": "Both site and app are set. Per oRTB §3.2.1 a BidRequest must carry exactly one — some SSPs reject the request outright, others silently pick one. Remove whichever object doesn't apply.",
   "request.at_required": "Missing auction type (at). Required per oRTB §3.2.1 — set 1 (first-price, common for header bidding) or 2 (second-price, classic Vickrey). Without it bidders can't price correctly and many SSPs reject the request outright.",
   "request.at_invalid": "Auction type at = {at} is non-standard. Allowed: 1 (first-price, typical for CPC) or 2 (second-price). Other values won't be accepted by spec-compliant SSPs.",
   "regs.gdpr_consent_missing": "regs.ext.gdpr=1 (GDPR applies) but user.ext.consent is empty. EU exchanges drop the bid without a TCF v2 consent string. Add user.ext.consent or set regs.ext.gdpr=0 if the request is outside EU scope.",

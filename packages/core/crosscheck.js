@@ -149,9 +149,25 @@ function crosscheck(req, res, _ctx) {
         }
       }
 
-      // 3c. bcat
+      // 3c. bcat — hierarchical match.
+      // IAB Content Taxonomy uses hyphen-separated hierarchy: in 1.x
+      // "IAB1" is the top-level category and "IAB1-1" is a leaf under it;
+      // in 2.x the equivalent is plain "1" and "1-7". A blocker that lists
+      // a parent ("IAB1" or "1") must also reject any child whose id starts
+      // with `<parent>-…`. Pre-v0.25.0 we did exact-string match only, so a
+      // bid with cat=["IAB1-1"] could clear a bcat=["IAB1"] block (false
+      // clean verdict). Strict prefix `${parent}-` prevents accidentally
+      // matching siblings like "IAB10" against bcat=["IAB1"].
       if (Array.isArray(bid.cat) && bcat.size) {
-        const violated = bid.cat.filter((c) => bcat.has(c));
+        const violated = bid.cat.filter((c) => {
+          if (typeof c !== 'string') return false;
+          if (bcat.has(c)) return true;
+          for (const blocked of bcat) {
+            if (typeof blocked !== 'string') continue;
+            if (c.startsWith(blocked + '-')) return true;
+          }
+          return false;
+        });
         if (violated.length) {
           out.push(
             C('crosscheck.bid.cat_blocked', false, CROSS_LEVELS.CRIT, `${bp}.cat`, {

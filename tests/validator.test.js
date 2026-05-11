@@ -97,6 +97,18 @@ test('missing site AND app is error "request.no_site_or_app"', () => {
   assert.ok(findById(findings, 'request.no_site_or_app'));
 });
 
+test('both site AND app present is warning "request.site_and_app_both"', () => {
+  const req = validRequest();
+  // validRequest() ships with site; add app so both are present.
+  req.app = { bundle: 'com.example.app' };
+  const { findings } = validate(req);
+  const f = findById(findings, 'request.site_and_app_both');
+  assert.ok(f, 'site+app dual presence should fire request.site_and_app_both');
+  assert.equal(f.level, 'warning');
+  // And we must NOT spuriously fire the opposite "neither present" rule.
+  assert.equal(findById(findings, 'request.no_site_or_app'), undefined);
+});
+
 test('banner without w/h or format[] is error "imp.banner.size_required"', () => {
   const req = validRequest();
   req.imp[0].banner = {};
@@ -434,6 +446,51 @@ test('crosscheck: bid.cat in bcat is crit', () => {
   res.seatbid[0].bid[0].cat = ['IAB7-39'];
   const findings = crosscheck(req, res);
   assert.ok(findings.some((f) => f.id === 'crosscheck.bid.cat_blocked' && f.level === 'crit'));
+});
+
+test('crosscheck: bcat parent blocks child via hierarchy (IAB Taxonomy 1.x)', () => {
+  // bcat=["IAB7"] (Health & Fitness top-level) must block any subcategory
+  // like "IAB7-1" (Exercise) or "IAB7-39" (Substance Abuse).
+  // Pre-v0.25.0: exact-string match only — bid cleared the block.
+  const req = validRequest();
+  req.bcat = ['IAB7'];
+  const res = validResponse();
+  res.seatbid[0].bid[0].cat = ['IAB7-39'];
+  const findings = crosscheck(req, res);
+  assert.ok(
+    findings.some((f) => f.id === 'crosscheck.bid.cat_blocked' && f.level === 'crit'),
+    'IAB7-39 should be blocked by bcat=["IAB7"] via hierarchical match',
+  );
+});
+
+test('crosscheck: bcat parent blocks child via hierarchy (IAB Taxonomy 2.x)', () => {
+  // 2.x uses plain numbers: bcat=["1"] should block "1-7".
+  const req = validRequest();
+  req.bcat = ['1'];
+  const res = validResponse();
+  res.seatbid[0].bid[0].cat = ['1-7'];
+  const findings = crosscheck(req, res);
+  assert.ok(
+    findings.some((f) => f.id === 'crosscheck.bid.cat_blocked' && f.level === 'crit'),
+    'Taxonomy 2.x: id "1-7" should be blocked by bcat=["1"]',
+  );
+});
+
+test('crosscheck: bcat does NOT match sibling-by-prefix (IAB1 vs IAB10)', () => {
+  // Strict hierarchical match: "IAB10" is NOT a child of "IAB1" — they are
+  // independent top-level categories. The prefix rule must require a hyphen
+  // boundary; otherwise we'd false-block sibling categories.
+  const req = validRequest();
+  req.bcat = ['IAB1'];
+  const res = validResponse();
+  res.seatbid[0].bid[0].cat = ['IAB10'];
+  const findings = crosscheck(req, res);
+  assert.ok(
+    !findings.some((f) => f.id === 'crosscheck.bid.cat_blocked'),
+    'IAB10 must NOT be blocked by bcat=["IAB1"] — different top-level category',
+  );
+  // Should see cat_clean instead, since bcat is non-empty and bid.cat present.
+  assert.ok(findings.some((f) => f.id === 'crosscheck.bid.cat_clean'));
 });
 
 test('crosscheck: banner size mismatch is warn', () => {
