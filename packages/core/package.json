@@ -25,6 +25,7 @@
     "dialects/",
     "knowledge_base/",
     "rules/",
+    "decoders/",
     "README.md",
     "LICENSE"
   ],
