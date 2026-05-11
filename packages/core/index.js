@@ -65,11 +65,27 @@ const DEFAULT_DIALECT = 'iab';
  * @param {unknown} payload
  * @param {{dialect?: string, locale?: string, disabledRules?: string[]}} [opts]
  */
+// Versions that participate in the pinning contract. `detectVersion` can
+// return any of these or `UNKNOWN`; expectedVersion must match one of these
+// to participate in mismatch detection. Centralised so future additions
+// (e.g. 2.6-202309 revision) only need adding here.
+const PINNABLE_VERSIONS = [VERSIONS.V_2_5, VERSIONS.V_2_6, VERSIONS.V_3_0];
+
 function validate(payload, opts) {
   const o = opts || {};
   const dialect = DIALECTS[o.dialect || DEFAULT_DIALECT] || DIALECTS[DEFAULT_DIALECT];
   const locale = o.locale || FALLBACK_LOCALE;
   const disabledRules = o.disabledRules;
+  // v0.38.0 — Version Pinning. Caller declares the version they're targeting
+  // (e.g. "I'm writing oRTB 2.5"); we emit `version.mismatch` if detection
+  // lands elsewhere. Closes the circular "version inferred from fields, but
+  // fields validated against version" loop that surfaced in Round 1 of the
+  // audit — without pinning, a 2.5-targeted payload that accidentally
+  // includes a 2.6-only field (e.g. `device.sua`) silently flips detection
+  // to 2.6 and the rogue field passes unflagged. Backwards-compatible: when
+  // `expectedVersion` is absent the validator behaves exactly as before.
+  const expectedVersion =
+    typeof o.expectedVersion === 'string' && o.expectedVersion ? o.expectedVersion : null;
 
   if (payload == null || typeof payload !== 'object') {
     return finalize(
@@ -126,6 +142,29 @@ function validate(payload, opts) {
     );
   } else {
     findings = [makeFinding('payload.unknown_type', LEVELS.ERROR, '')];
+  }
+
+  // Version pinning verdict. Only meaningful for oRTB request/response —
+  // other formats (Kadam feed, JSON feed) don't carry an IAB version axis.
+  // Skipped when detection itself is `unknown` (we wouldn't know what to
+  // compare) or when the expected value isn't a recognised pinnable
+  // version (silently ignore garbage rather than throw).
+  if (
+    expectedVersion &&
+    PINNABLE_VERSIONS.includes(expectedVersion) &&
+    version &&
+    PINNABLE_VERSIONS.includes(version.version) &&
+    version.version !== expectedVersion &&
+    (resolvedType === TYPES.ORTB_REQUEST || resolvedType === TYPES.ORTB_RESPONSE)
+  ) {
+    findings.push(
+      makeFinding('version.mismatch', LEVELS.WARNING, '', {
+        expected: expectedVersion,
+        detected: version.version,
+        confidence: version.confidence,
+        signals: JSON.stringify(version.signals || []),
+      }),
+    );
   }
 
   return finalize({ type: resolvedType, version, findings }, null, locale, disabledRules);

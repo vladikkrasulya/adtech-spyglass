@@ -564,6 +564,78 @@ test('validate() result includes version detection', () => {
   assert.ok(Array.isArray(result.version.signals));
 });
 
+// ── Version pinning (v0.38.0) ────────────────────────────────────────────
+
+test('version pinning: expected=2.5 but payload has 2.6 markers → version.mismatch', () => {
+  // The canonical "rogue 2.6 field in a pinned-2.5 payload" scenario from
+  // Round 1 of the audit. v26Request() includes imp[].rwdd which is a
+  // 2.6-only field; the detector flips to 2.6 silently. With pinning we
+  // surface the mismatch so the dev sees that rwdd is the rogue field.
+  const result = validate(v26Request(), { expectedVersion: VERSIONS.V_2_5 });
+  const f = findById(result.findings, 'version.mismatch');
+  assert.ok(f, 'version.mismatch must fire');
+  assert.equal(f.level, 'warning');
+  assert.equal(f.params.expected, VERSIONS.V_2_5);
+  assert.equal(f.params.detected, VERSIONS.V_2_6);
+  // signals param should be JSON-stringified array carrying the path that
+  // triggered the detection flip
+  const signals = JSON.parse(f.params.signals);
+  assert.ok(Array.isArray(signals));
+  assert.ok(
+    signals.some((s) => s.includes('rwdd')),
+    'signals should mention rwdd (the 2.6-only field that flipped detection)',
+  );
+});
+
+test('version pinning: expected=2.6 but only 2.5 markers present → version.mismatch', () => {
+  // Inverse case: dev declares "this is a 2.6 stream" but the payload only
+  // carries 2.5 signals (source.pchain). Detection lands on 2.5; pinning
+  // surfaces the gap so dev can confirm whether the pin or the payload
+  // is wrong.
+  const result = validate(v25Request(), { expectedVersion: VERSIONS.V_2_6 });
+  const f = findById(result.findings, 'version.mismatch');
+  assert.ok(f, 'version.mismatch must fire (2.6 expected, 2.5 detected)');
+  assert.equal(f.params.expected, VERSIONS.V_2_6);
+  assert.equal(f.params.detected, VERSIONS.V_2_5);
+});
+
+test('version pinning: expected matches detected → NO mismatch finding', () => {
+  // The happy path. v26Request() has 2.6 markers; pinning to 2.6 should
+  // be silent on the version axis. (Other findings — like
+  // device.client_hints.os_unknown — are still allowed.)
+  const result = validate(v26Request(), { expectedVersion: VERSIONS.V_2_6 });
+  assert.equal(
+    findById(result.findings, 'version.mismatch'),
+    undefined,
+    'matching pin must not fire mismatch',
+  );
+});
+
+test('version pinning: no opts.expectedVersion → backward-compat, no mismatch', () => {
+  // Regression guard: pre-v0.38.0 behavior must be preserved when caller
+  // omits expectedVersion. Skipping pinning entirely (not even a finding
+  // for "version is unknown").
+  const result = validate(v26Request());
+  assert.equal(findById(result.findings, 'version.mismatch'), undefined);
+});
+
+test('version pinning: invalid expected (random string) is silently ignored', () => {
+  // Garbage-in defense: we accept any string but only act on the three
+  // pinnable versions. Anything else degrades to no-finding rather than
+  // throwing or "expected_unknown" noise.
+  const result = validate(v26Request(), { expectedVersion: 'banana' });
+  assert.equal(findById(result.findings, 'version.mismatch'), undefined);
+});
+
+test('version pinning: non-oRTB type (JSON Feed) → no mismatch', () => {
+  // Pinning is meaningful only on the oRTB axis. Other formats (JSON
+  // Feed, Kadam feed) don't carry an IAB version, so even with an
+  // expectedVersion the rule stays silent.
+  const jsonFeed = { version: 'https://jsonfeed.org/version/1.1', items: [] };
+  const result = validate(jsonFeed, { expectedVersion: VERSIONS.V_2_6 });
+  assert.equal(findById(result.findings, 'version.mismatch'), undefined);
+});
+
 // ── VAST 4.x acceptance + unknown protocol detection ─────────────────────
 
 test('video.protocols with VAST 4.x codes (10, 11, 12) is accepted', () => {

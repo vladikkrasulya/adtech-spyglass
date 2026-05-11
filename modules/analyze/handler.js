@@ -100,6 +100,18 @@ function createAnalyzeModule(deps) {
           ? rawDisabled.filter((r) => typeof r === 'string' && r.length).slice(0, 100)
           : undefined;
 
+        // v0.38.0 — Version Pinning. Caller declares the oRTB version they
+        // think they're targeting; if detection lands elsewhere we emit
+        // `version.mismatch` (WARNING). Forwarded to validate() only —
+        // crosscheck is version-agnostic (semantic alignment between
+        // req/res shapes, not field-level checks). Accepts the three
+        // pinnable versions; anything else silently ignored by the core.
+        const rawExpected =
+          body && body.opts && typeof body.opts.expectedVersion === 'string'
+            ? body.opts.expectedVersion.trim()
+            : null;
+        const expectedVersion = rawExpected || undefined;
+
         // Empty payload is now an explicit 400 instead of a synthetic
         // "unknown_type" finding masquerading as a real validation error.
         if (!hasReq && !hasRes) {
@@ -116,9 +128,9 @@ function createAnalyzeModule(deps) {
         // that masked perfectly valid response findings.
         let validation;
         if (hasReq) {
-          validation = validate(bidReq, { locale, dialect, disabledRules });
+          validation = validate(bidReq, { locale, dialect, disabledRules, expectedVersion });
           if (hasRes) {
-            const resValidation = validate(bidRes, { locale, dialect, disabledRules });
+            const resValidation = validate(bidRes, { locale, dialect, disabledRules, expectedVersion });
             if (resValidation.findings && resValidation.findings.length) {
               validation.findings = validation.findings.concat(
                 resValidation.findings.map((f) =>
@@ -129,7 +141,7 @@ function createAnalyzeModule(deps) {
           }
         } else {
           // Response-only path. Validate bidRes and prefix findings for clarity.
-          validation = validate(bidRes, { locale, dialect, disabledRules });
+          validation = validate(bidRes, { locale, dialect, disabledRules, expectedVersion });
           validation.findings = validation.findings.map((f) =>
             Object.assign({}, f, { msg: '[response] ' + f.msg }),
           );

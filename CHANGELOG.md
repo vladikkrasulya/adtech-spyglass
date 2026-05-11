@@ -6,6 +6,49 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.38.0 — Version Pinning (2026-05-11)
+
+Closes the circular-detection loophole that Round 1 of the audit
+surfaced: `detectVersion()` infers the oRTB version from field presence,
+but `validateRequest` then validates fields against that inferred
+version. If a payload meant for 2.5 accidentally includes a 2.6-only
+field (`imp[].rwdd`, `device.sua`, `regs.gpp`, ...), detection silently
+flips to 2.6 and the rogue field passes unflagged — even though the
+developer's intent was 2.5.
+
+**New API:** `validate(payload, { expectedVersion: '2.5' | '2.6' | '3.0' })`
+
+When the caller declares an expected version and detection lands
+elsewhere, a `version.mismatch` (WARNING) finding is emitted with:
+
+- `expected` — what the caller pinned to
+- `detected` — what `detectVersion` returned
+- `confidence` — the detector's confidence score
+- `signals` — JSON-stringified list of field paths that triggered the
+  detected version
+
+The dev then either removes the rogue fields (pin was right) or updates
+their pin (traffic moved on). Either way the silent flip is gone.
+
+**Behavior:**
+- Backwards-compatible: `opts.expectedVersion` is opt-in. Validators
+  called without it behave exactly as before.
+- Garbage-in safety: unknown values (e.g. `expectedVersion: 'banana'`)
+  are silently ignored rather than throwing or producing noise.
+- Scope: only emitted for oRTB BidRequest / BidResponse types. Other
+  formats (Kadam feed, JSON feed) don't carry an IAB version axis;
+  pinning is silent there.
+
+**HTTP API:** `POST /api/analyze` accepts `opts.expectedVersion` in the
+request body and forwards it to `validate()`. Not yet exposed in the
+UI — that's a follow-up (requires preview gate per the
+no-default-state-changes rule).
+
+Core 0.17.0 → 0.18.0 (MINOR — feat in core); app 0.37.2 → 0.38.0
+(lockstep). Messages in 3 locales. +6 tests covering 2.5↔2.6 both
+directions, matching pins, missing pins, garbage pins, and non-oRTB
+shapes. 547/547 pass, 0 lint errors.
+
 ### v0.37.2 — Invisible-scan FP tuning (Playwright smoke catch, 2026-05-11)
 
 End-to-end Playwright smoke against a crafted 4× transparent-overlay
