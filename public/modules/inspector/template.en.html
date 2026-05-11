@@ -220,7 +220,11 @@
     <textarea
       id="bidReq"
       class="json-input"
-      placeholder="Paste oRTB BidRequest JSON here.&#10;&#10;Or up top:&#10;  🎲 example ▾ — synthetic sample, one click&#10;  📡 live — RTB stream&#10;  M — mirror (what canonical looks like)&#10;&#10;Hint: Ctrl+Enter to run analysis."
+      spellcheck="false"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      placeholder="Paste oRTB BidRequest JSON here.&#10;&#10;Or up top:&#10;  🎲 example ▾ — synthetic sample, one click&#10;  📡 live — RTB stream&#10;  mirror ↔ — what canonical looks like&#10;&#10;Hint: Ctrl+Enter to run analysis. Press ? for all shortcuts."
     ></textarea>
     <div class="input-card-summary" data-card-summary="cardReq">
       <span class="input-card-summary__label">id</span>
@@ -261,7 +265,11 @@
     <textarea
       id="bidRes"
       class="json-input"
-      placeholder="Paste oRTB BidResponse JSON (optional).&#10;&#10;If you paste both request AND response — press M; the modal will diff your version against the canonical one."
+      spellcheck="false"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      placeholder="Paste oRTB BidResponse JSON (optional).&#10;&#10;If both panes are filled — click mirror ↔ to diff your version against the canonical one."
     ></textarea>
     <div class="input-card-summary" data-card-summary="cardRes">
       <span class="input-card-summary__label">id</span>
