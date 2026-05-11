@@ -6,6 +6,38 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.39.0 — Version Pinning UI control (2026-05-11)
+
+The v0.38.0 API surface (`opts.expectedVersion`) gets a UI face. Adds a
+`<select id="versionPinSelector">` to the inspector toolbar with four
+options: `''` (auto), `'2.5'`, `'2.6'`, `'3.0'`. Sits next to the
+existing dialect picker; matches its `data-action`/change-listener
+pattern.
+
+Behavior:
+
+- Default = auto (empty string). Detector decides version. No
+  `version.mismatch` finding can fire — same as pre-v0.38.0.
+- Pick any of the three concrete versions to declare intent. The
+  engine emits `version.mismatch` (WARNING) if detection lands
+  elsewhere, with `signals` showing which field triggered the flip
+  — see v0.38.0 entry for the full mechanism.
+- Re-runs analyze on change when editors have content; no-op on
+  empty editors.
+- Persisted to `localStorage['spyglass_version_pin']`. Stale or
+  invalid values are stripped on mount via the allow-list
+  `['2.5', '2.6', '3.0'].includes(savedPin)`.
+
+3-locale parity: same selector + four options across the three
+inspector templates (`en` / `uk` / `ru`); copy localised, structure
+identical.
+
+Verified by Gemini Pro 3.1 audit (plan-mode CLI, 0 findings, 9
+references inspected). Merge-ready confirmed.
+
+Bump v0.38.2 → v0.39.0 (MINOR — new user-facing surface). 554/554
+pass, 0 lint errors, 0 type errors.
+
 ### v0.38.2 — Ollama warmup ping post-login (2026-05-11)
 
 Closes the cold-start latency gap identified in audit Etap 5.1.1.

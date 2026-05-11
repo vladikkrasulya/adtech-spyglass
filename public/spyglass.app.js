@@ -1604,10 +1604,21 @@ export async function mountInspector(root, ctx) {
       let validation = null,
         cross = null;
       try {
+        // v0.39.0 — Version Pinning UI. Read the toolbar selector once
+        // per call; "" / "auto" means "trust the detector". Forwarded as
+        // opts.expectedVersion through the API. Server returns
+        // `version.mismatch` finding when the dev's declared version
+        // differs from what field-presence detection landed on, so a
+        // rogue 2.6-only field in a payload pinned to 2.5 is visible
+        // instead of silently flipping the rule set.
+        const versionPinEl = document.getElementById('versionPinSelector');
+        const expectedVersion = versionPinEl && versionPinEl.value ? versionPinEl.value : null;
+        const body = { bidReq: req, bidRes: res };
+        if (expectedVersion) body.opts = { expectedVersion };
         const r = await fetch(analyzeUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bidReq: req, bidRes: res }),
+          body: JSON.stringify(body),
           signal: _analyzeAbort ? _analyzeAbort.signal : undefined,
         });
         const j = await r.json().catch(() => ({}));
@@ -4121,6 +4132,19 @@ export async function mountInspector(root, ctx) {
           // IAB payload_missing rule), so the user expects findings to
           // refresh in place. No-op when the editors are empty.
           if ($('bidReq').value || $('bidRes').value) runAnalysis();
+        } else if (action === 'change-version-pin') {
+          // v0.39.0 — Version Pinning UI. Persist the chosen pin
+          // (or empty for 'auto'); re-run analysis so version.mismatch
+          // findings surface immediately. Forwarded into the request
+          // body via the analyze fetch — see the body construction
+          // near the analyzeUrl call.
+          try {
+            if (el.value) localStorage.setItem('spyglass_version_pin', el.value);
+            else localStorage.removeItem('spyglass_version_pin');
+          } catch {
+            /* storage disabled / quota — pin stays in-memory only */
+          }
+          if ($('bidReq').value || $('bidRes').value) runAnalysis();
         }
       },
       { signal: ctx.signal },
@@ -4270,6 +4294,20 @@ export async function mountInspector(root, ctx) {
     // even on first paint without waiting for a manual interaction.
     const initialDialect = activeDialect();
     const dialectSel = $('dialectSelector');
+
+    // v0.39.0 — restore Version Pinning selector from localStorage. Empty
+    // value (the default) means "auto", which lets the field-presence
+    // detector decide. Stale values that don't match an <option> are
+    // silently ignored — the <select> falls back to its first option.
+    try {
+      const savedPin = localStorage.getItem('spyglass_version_pin');
+      const pinEl = $('versionPinSelector');
+      if (pinEl && savedPin && ['2.5', '2.6', '3.0'].includes(savedPin)) {
+        pinEl.value = savedPin;
+      }
+    } catch {
+      /* localStorage disabled — pin stays at 'auto' for this session */
+    }
 
     // Phase 7b: append <option>s for every temporary dialect the user
     // has saved in IndexedDB. Re-runs on `spyglass:intel-dialect-changed`

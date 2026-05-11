@@ -23,7 +23,7 @@
     <span class="kt-brand-spark">K</span>
     <span>spyglass · openrtb inspector</span>
     <span class="mono-label hide-sm" style="margin-left: var(--space-2)" data-spyglass-version
-      >v0.38.2</span
+      >v0.39.0</span
     >
   </div>
   <div class="app-header-actions">
@@ -387,6 +387,17 @@
         <option value="kadam">Vendor · RTB</option>
         <option value="kadam-inpage-push">Vendor · In-Page Push</option>
       </select>
+      <select
+        class="format-pill format-pill-select"
+        id="versionPinSelector"
+        data-action="change-version-pin"
+        title="Очікувана версія oRTB. Якщо детектор побачить іншу — engine видасть warning з полями-винуватцями. Залиш «авто», щоб довіритися детектору."
+      >
+        <option value="">авто</option>
+        <option value="2.5">пін: 2.5</option>
+        <option value="2.6">пін: 2.6</option>
+        <option value="3.0">пін: 3.0</option>
+      </select>
       <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
       <div class="format-bar-actions">
         <button
@@ -540,7 +551,7 @@
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v0.38.2</span></span
+      <span id="engineVer" style="color: var(--text)" data-spyglass-version>v0.39.0</span></span
     >
     <span style="color: var(--text-dim)">·</span>
     <span style="color: var(--text-dim)" title="Підтримувані специфікації"
