@@ -6,6 +6,51 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.38.1 — /api/proxy SSRF hardening (Gemini Pro 3.1 audit, 2026-05-11)
+
+Focused SSRF review of the /api/proxy harness by Gemini Pro 3.1 (CLI,
+plan mode, read-only). Returned 3 findings, all verified real:
+
+- **F-1 HIGH — Unbounded response buffering + missing timeout.**
+  `proxyRes.on('data')` concatenated chunks into a string with no cap;
+  `proxyReq` had no socket timeout. An authed user could request
+  `httpbin.org/bytes/N` for arbitrary N and OOM the Node process, or
+  hit `/drip` and exhaust file descriptors.
+  Fix: 1 MB response cap (`MAX_PROXY_RESPONSE_BYTES`) — destroy
+  upstream socket on overflow, return 502 `response_too_large`.
+  10s socket timeout (`PROXY_TIMEOUT_MS`) — destroy on fire, return
+  504 `upstream_timeout`. Both guarded with `!res.headersSent` so the
+  error path doesn't try to double-write.
+
+- **F-2 MEDIUM — Port verification bypass.**
+  The allow-list checked `targetUrl.hostname` but `client.request(url)`
+  honoured the port in the original URL. `http://httpbin.org:22/` slipped
+  through and the proxy attempted to connect — leaking ECONNREFUSED vs
+  timeout side-channels (port-scan amplifier on the allowed hosts).
+  Fix: `ALLOWED_PORTS = {'', '80', '443'}` strict allow-list. Non-default
+  ports return 403 `port_not_allowed`.
+
+- **F-3 INFO — Subdomain wildcard.**
+  `hostname.endsWith('.' + h)` admitted any subdomain of the allowed
+  roots. Theoretical SSRF amplifier if httpbin.org or postman-echo.com
+  ever permitted user-registered subdomains (or via DNS rebinding /
+  wildcard misconfig). The allow-list is two specific hosts; subdomain
+  acceptance was unnecessary by design.
+  Fix: strict equality (`hostname === h`). Same 403 `host_not_allowed`
+  message; allow-list still echoed for UI rendering.
+
+Tests: new `tests/proxy.test.js` covering all three vectors plus auth
+gate, protocol smuggling, malformed URL — 7 tests. 554/554 pass overall,
+0 lint errors.
+
+This audit was the first run of the new gemini-CLI direct workflow:
+`gemini --skip-trust --approval-mode plan -m gemini-3.1-pro-preview -p
+"<prompt>"` from a Claude-side Bash. Gemini reads the source via its
+file-access tools, verifies its own claims, returns structured findings.
+Claude verifies each claim against the actual code (file:line + grep),
+then writes the fix. Gemini never gets write/edit/commit access — that
+boundary is captured in `feedback_gemini_audit_not_writer.md`.
+
 ### v0.38.0 — Version Pinning (2026-05-11)
 
 Closes the circular-detection loophole that Round 1 of the audit
