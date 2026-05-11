@@ -461,7 +461,10 @@ async function simulateBids(bidReq) {
     strategies.map(async (s) => {
       try {
         const prompt = buildBidSimPrompt(summary, s);
-        const resp = await callOllama(prompt, { numPredict: 200, temperature: 0.4 });
+        // num_predict tuned 2026-05-11: response is `{"bid": …, "price": …,
+        // "reason": "…"}` — ~30-50 tokens. 100 leaves comfortable headroom
+        // and shaves ~30% off wall-time vs the prior 200-budget.
+        const resp = await callOllama(prompt, { numPredict: 100, temperature: 0.4 });
         const parsed = extractStructured(resp);
         const v = validateBidSim(parsed, s);
         return { strategy: s.key, label: s.label, ...v };
