@@ -242,7 +242,7 @@ test('integration: disabledRules suppresses plugin findings via prefix', () => {
 // ── imp-secure plugin ──────────────────────────────────────────────────────
 
 test('imp-secure: missing secure flag fires recommended-warning', () => {
-  const out = impSecure.validate({ imp: [{ id: 's1' }] }, {});
+  const out = impSecure.validate({ imp: [{ id: 's1' }] });
   assert.equal(out.length, 1);
   assert.equal(out[0].id, 'imp.secure_recommended');
   assert.equal(out[0].level, 'info');
@@ -251,33 +251,33 @@ test('imp-secure: missing secure flag fires recommended-warning', () => {
 });
 
 test('imp-secure: secure: 0 fires recommended-warning', () => {
-  const out = impSecure.validate({ imp: [{ id: 's1', secure: 0 }] }, {});
+  const out = impSecure.validate({ imp: [{ id: 's1', secure: 0 }] });
   assert.equal(out.length, 1);
   assert.equal(out[0].id, 'imp.secure_recommended');
 });
 
 test('imp-secure: secure: 1 produces no finding', () => {
-  const out = impSecure.validate({ imp: [{ id: 's1', secure: 1 }] }, {});
+  const out = impSecure.validate({ imp: [{ id: 's1', secure: 1 }] });
   assert.deepEqual(out, []);
 });
 
 test('imp-secure: secure: 2 fires invalid-error', () => {
-  const out = impSecure.validate({ imp: [{ id: 's1', secure: 2 }] }, {});
+  const out = impSecure.validate({ imp: [{ id: 's1', secure: 2 }] });
   assert.equal(out.length, 1);
   assert.equal(out[0].id, 'imp.secure_invalid');
   assert.equal(out[0].level, 'error');
 });
 
 test('imp-secure: secure as string "1" fires invalid-error', () => {
-  const out = impSecure.validate({ imp: [{ id: 's1', secure: '1' }] }, {});
+  const out = impSecure.validate({ imp: [{ id: 's1', secure: '1' }] });
   assert.equal(out.length, 1);
   assert.equal(out[0].id, 'imp.secure_invalid');
 });
 
 test('imp-secure: missing imp array returns []', () => {
-  assert.deepEqual(impSecure.validate({}, {}), []);
-  assert.deepEqual(impSecure.validate({ imp: null }, {}), []);
-  assert.deepEqual(impSecure.validate(null, {}), []);
+  assert.deepEqual(impSecure.validate({}), []);
+  assert.deepEqual(impSecure.validate({ imp: null }), []);
+  assert.deepEqual(impSecure.validate(null), []);
 });
 
 test('imp-secure: plugin is registered with correct metadata', () => {
