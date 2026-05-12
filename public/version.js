@@ -32,7 +32,7 @@
     try {
       const els = document.querySelectorAll('[data-spyglass-version]');
       for (let i = 0; i < els.length; i++) els[i].textContent = VERSION;
-    } catch (e) {
+    } catch (_e) {
       /* DOM not ready — paint() is idempotent, the late call below picks up */
     }
   }

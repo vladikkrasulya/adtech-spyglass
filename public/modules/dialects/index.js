@@ -167,7 +167,7 @@ async function loadDialects() {
     const data = await apiCall('/api/dialects');
     state.dialects = data.dialects || [];
     rerender();
-  } catch (e) {
+  } catch (_e) {
     toast(t('dialects.toast.error'), 'error');
   }
 }
@@ -178,7 +178,7 @@ async function loadMappings(dialectId) {
     state.mappings = data.mappings || [];
     state.selectedDialectId = dialectId;
     rerender();
-  } catch (e) {
+  } catch (_e) {
     toast(t('dialects.toast.error'), 'error');
   }
 }
@@ -269,7 +269,7 @@ async function handleImportFile(input) {
     });
     toast(t('dialects.toast.imported'), 'success');
     await loadDialects();
-  } catch (e) {
+  } catch (_e) {
     toast(t('dialects.toast.error'), 'error');
   } finally {
     input.value = ''; // allow re-selecting the same file
@@ -286,7 +286,7 @@ async function setDefaultDialect(id) {
     });
     toast(t('dialects.toast.updated'), 'success');
     await loadDialects();
-  } catch (e) {
+  } catch (_e) {
     toast(t('dialects.toast.error'), 'error');
   }
 }
@@ -297,7 +297,7 @@ async function deleteDialect(id) {
     if (state.selectedDialectId === id) state.selectedDialectId = null;
     toast(t('dialects.toast.deleted'), 'success');
     await loadDialects();
-  } catch (e) {
+  } catch (_e) {
     toast(t('dialects.toast.error'), 'error');
   }
 }
@@ -310,7 +310,7 @@ async function deleteMapping(id) {
     );
     toast(t('dialects.toast.deleted'), 'success');
     await loadMappings(state.selectedDialectId);
-  } catch (e) {
+  } catch (_e) {
     toast(t('dialects.toast.error'), 'error');
   }
 }
@@ -475,7 +475,7 @@ function showFormDialog({ title, fields, onSubmit }) {
     try {
       await onSubmit(formData);
       modalRoot.innerHTML = '';
-    } catch (err) {
+    } catch (_err) {
       toast(t('dialects.toast.error'), 'error');
     }
   });
