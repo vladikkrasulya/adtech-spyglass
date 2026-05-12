@@ -169,8 +169,8 @@ function createAnalyzeModule(deps) {
         // / pagecat / bid.cat) into English labels so the frontend can render
         // human text alongside `IAB9-11` etc. without bundling its own dict.
         const categories = {};
-        if (hasReq) Object.assign(categories, extractAllCategories(bidReq));
-        if (hasRes) Object.assign(categories, extractAllCategories(bidRes));
+        if (hasReq) Object.assign(categories, extractAllCategories(bidReq, locale));
+        if (hasRes) Object.assign(categories, extractAllCategories(bidRes, locale));
 
         // Phase 10b — third detection axis (banner/video/audio/native/push/…
         // + web/inapp/ctv/dooh + vast-N/daast). Compute on whichever payloads

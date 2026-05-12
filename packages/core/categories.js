@@ -2,56 +2,86 @@
 
 /**
  * IAB Content Taxonomy decoder. Resolves codes like "IAB9-11" → human label.
- * Currently English-only (Taxonomy 1.0 source language). Multi-locale labels
- * could land later via parallel iab-categories-{locale}.json files; resolver
- * signature stays the same.
+ *
+ * Three locales: en (source language per IAB 1.0), uk, ru. Stored as
+ * parallel `iab-categories.{locale}.json` flat dicts. Each locale carries
+ * the same key set (verified by the 3-locale parity test in
+ * tests/categories.test.js). Missing keys fall back to en, then to
+ * top-level, then to null — so an unknown sub-code or an unsupported
+ * locale never crashes the decoder.
  *
  * Resolution order:
- *   exact code → top-level fallback (drop "-N" suffix) → null
+ *   exact code (locale) → exact code (en) → top-level (drop "-N" suffix) → null
  *
  * Used both at server-render time (to enrich findings) and at API-response
  * time (to populate meta.categories) so the frontend doesn't need its own
  * copy of the dictionary.
  */
 
-const dict = require('./iab-categories.json');
+const enDict = require('./iab-categories.en.json');
+const ukDict = require('./iab-categories.uk.json');
+const ruDict = require('./iab-categories.ru.json');
+
+const DICTS = { en: enDict, uk: ukDict, ru: ruDict };
+const DEFAULT_LOCALE = 'en';
+
+function pickDict(locale) {
+  return (locale && DICTS[locale]) || enDict;
+}
 
 /**
- * Decode a single IAB code. Falls through to the top-level if the sub-code
- * isn't in the dict (some networks invent custom subs that share a parent).
+ * Decode a single IAB code in the requested locale. Falls back to the
+ * en label if the locale dict has the code missing, then to the parent
+ * if the sub-code itself is unknown.
  *
- *   decodeCategory('IAB9-11')        → 'Hobbies & Interests → Comic Books'
- *   decodeCategory('IAB9')           → 'Hobbies & Interests'
- *   decodeCategory('IAB9-99')        → 'Hobbies & Interests' (parent fallback)
- *   decodeCategory('NOT_A_CODE')     → null
+ *   decodeCategory('IAB9-11')            → 'Hobbies & Interests → Comic Books'
+ *   decodeCategory('IAB9-11', 'uk')      → 'Хобі та інтереси → Комікси'
+ *   decodeCategory('IAB9', 'ru')         → 'Хобби и интересы'
+ *   decodeCategory('IAB9-99', 'uk')      → 'Хобі та інтереси' (parent fallback)
+ *   decodeCategory('NOT_A_CODE', 'uk')   → null
+ *   decodeCategory('IAB9-11', 'fr')      → 'Hobbies & Interests → Comic Books' (en fallback)
  *
  * @param {string} code
+ * @param {string} [locale='en']
  * @returns {string | null}
  */
-function decodeCategory(code) {
+function decodeCategory(code, locale) {
   if (typeof code !== 'string' || !code.length) return null;
+  const loc = locale || DEFAULT_LOCALE;
+  const dict = pickDict(loc);
   const direct = dict[code];
   if (typeof direct === 'string') return direct;
-  // Fallback: try parent ("IAB9-11" → "IAB9")
+  // en fallback when the requested locale has the code missing
+  if (dict !== enDict) {
+    const enDirect = enDict[code];
+    if (typeof enDirect === 'string') return enDirect;
+  }
+  // Top-level fallback: try parent ("IAB9-11" → "IAB9") in the SAME locale,
+  // then en. Lets exchanges that invent custom subs still get a meaningful
+  // group label.
   const dash = code.indexOf('-');
   if (dash > 0) {
-    const parent = dict[code.slice(0, dash)];
+    const parentCode = code.slice(0, dash);
+    const parent = dict[parentCode];
     if (typeof parent === 'string') return parent;
+    if (dict !== enDict) {
+      const enParent = enDict[parentCode];
+      if (typeof enParent === 'string') return enParent;
+    }
   }
   return null;
 }
 
 /**
- * Decode an array of IAB codes. Preserves the original array order and
- * keeps unrecognised codes as `{ code, label: null }` so the consumer can
- * render them as-is without losing track.
+ * Decode an array of IAB codes in the requested locale.
  *
  * @param {string[]} codes
+ * @param {string} [locale='en']
  * @returns {Array<{ code: string, label: string | null }>}
  */
-function decodeCategories(codes) {
+function decodeCategories(codes, locale) {
   if (!Array.isArray(codes)) return [];
-  return codes.map((c) => ({ code: c, label: decodeCategory(c) }));
+  return codes.map((c) => ({ code: c, label: decodeCategory(c, locale) }));
 }
 
 /**
@@ -64,14 +94,15 @@ function decodeCategories(codes) {
  *     → { 'bcat': [...], 'site.cat': [...] }
  *
  * @param {object} payload
+ * @param {string} [locale='en']
  * @returns {Record<string, Array<{ code: string, label: string | null }>>}
  */
-function extractAllCategories(payload) {
+function extractAllCategories(payload, locale) {
   if (!payload || typeof payload !== 'object') return {};
   /** @type {Record<string, Array<{ code: string, label: string | null }>>} */
   const out = {};
   function take(path, arr) {
-    if (Array.isArray(arr) && arr.length) out[path] = decodeCategories(arr);
+    if (Array.isArray(arr) && arr.length) out[path] = decodeCategories(arr, locale);
   }
 
   // BidRequest-side
@@ -90,7 +121,7 @@ function extractAllCategories(payload) {
     if (imp && imp.pmp && Array.isArray(imp.pmp.deals)) {
       imp.pmp.deals.forEach((d, di) => {
         if (d && Array.isArray(d.bcat) && d.bcat.length) {
-          out[`imp[${i}].pmp.deals[${di}].bcat`] = decodeCategories(d.bcat);
+          out[`imp[${i}].pmp.deals[${di}].bcat`] = decodeCategories(d.bcat, locale);
         }
       });
     }
@@ -100,7 +131,7 @@ function extractAllCategories(payload) {
   (payload.seatbid || []).forEach((sb, sbi) => {
     (sb && sb.bid ? sb.bid : []).forEach((bid, bi) => {
       if (bid && Array.isArray(bid.cat) && bid.cat.length) {
-        out[`seatbid[${sbi}].bid[${bi}].cat`] = decodeCategories(bid.cat);
+        out[`seatbid[${sbi}].bid[${bi}].cat`] = decodeCategories(bid.cat, locale);
       }
     });
   });
