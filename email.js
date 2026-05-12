@@ -19,6 +19,7 @@
  */
 
 const https = require('https');
+const log = require('./lib/logger').child('email');
 
 const RESEND_HOST = 'api.resend.com';
 const RESEND_PATH = '/emails';
@@ -129,8 +130,16 @@ function resetTemplate(user, link) {
 
 async function sendTemplate(user, tpl, link) {
   if (isDevMode()) {
-    console.log(
-      `[email:DEV] → ${user.email}\n  subject: ${tpl.subject}\n  link: ${link}\n  (RESEND_API_KEY ${process.env.RESEND_API_KEY ? 'set' : 'missing'}, NODE_ENV=${process.env.NODE_ENV})`,
+    log.info(
+      {
+        to: user.email,
+        subject: tpl.subject,
+        link,
+        resendKey: process.env.RESEND_API_KEY ? 'set' : 'missing',
+        nodeEnv: process.env.NODE_ENV,
+        devMode: true,
+      },
+      'email dev-mode short-circuit',
     );
     return { dev: true, link };
   }

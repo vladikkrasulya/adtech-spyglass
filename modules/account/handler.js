@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('../../lib/logger').child('account');
+
 /**
  * modules/account/handler.js — GET /api/account/insights
  *
@@ -36,7 +38,7 @@ function createAccountModule(deps) {
       const data = AnalyzeLog.insights(user.id);
       sendJson(res, 200, { success: true, insights: data });
     } catch (e) {
-      console.error('[account/insights] failed:', e.message);
+      log.error({ err: e }, 'account insights failed');
       sendError(res, 500, 'insights_failed', e.message);
     }
   }

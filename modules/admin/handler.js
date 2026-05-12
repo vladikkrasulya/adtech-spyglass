@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('../../lib/logger').child('admin');
+
 /**
  * modules/admin/handler.js — GET /api/admin/stats
  *
@@ -71,7 +73,7 @@ function createAdminModule(deps) {
         },
       });
     } catch (e) {
-      console.error('[admin/stats]', e.message);
+      log.error({ err: e }, 'admin stats failed');
       sendError(res, 500, 'stats_failed', e.message);
     }
   }

@@ -31,6 +31,7 @@
  */
 
 const https = require('https');
+const log = require('./lib/logger').child('notify');
 
 const TG_HOST = 'api.telegram.org';
 const REQUEST_TIMEOUT_MS = 5_000;
@@ -76,14 +77,17 @@ function postToTelegram(text) {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve({ ok: true });
           } else {
-            console.error(`[notify] Telegram ${res.statusCode}: ${chunks.slice(0, 200)}`);
+            log.error(
+              { statusCode: res.statusCode, body: chunks.slice(0, 200) },
+              'Telegram non-2xx response',
+            );
             resolve({ ok: false, error: `HTTP ${res.statusCode}` });
           }
         });
       },
     );
     req.on('error', (err) => {
-      console.error('[notify] Telegram request error:', err.message);
+      log.error({ err }, 'Telegram request error');
       resolve({ ok: false, error: err.message });
     });
     req.setTimeout(REQUEST_TIMEOUT_MS, () => {
@@ -123,7 +127,11 @@ async function notifyAdmin(message, opts) {
   const text = `${icon} <b>${escapeHtml(tag)}</b>\n${message}`;
 
   if (isDevMode()) {
-    console.log(`[notify:DEV] ${level.toUpperCase()} [${tag}] ${message.slice(0, 200)}`);
+    // Dev-mode short-circuit. Log at the requested level so the dev sees the
+    // alert in the local pino stream (info/warn/error) without paging
+    // Telegram. Trimmed to 200 chars to match the prior console output.
+    const dev = log[level] ? log[level].bind(log) : log.info.bind(log);
+    dev({ tag, devMode: true }, message.slice(0, 200));
     return { ok: true, dev: true };
   }
 
@@ -131,7 +139,7 @@ async function notifyAdmin(message, opts) {
     return await postToTelegram(text);
   } catch (err) {
     // Belt-and-suspenders: postToTelegram already swallows everything.
-    console.error('[notify] unexpected error:', err.message);
+    log.error({ err }, 'unexpected error in notifyAdmin');
     return { ok: false, error: err.message };
   }
 }

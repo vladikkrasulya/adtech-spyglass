@@ -40,6 +40,7 @@ const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
 const { notifyAdmin, escapeHtml: notifyEscape } = require('./notify');
 const httpLib = require('./lib/http');
+const log = require('./lib/logger').child('server');
 httpLib.init({ notifyAdmin, notifyEscape });
 const { sendJson, sendError } = httpLib;
 const { Router } = require('./lib/router');
@@ -132,7 +133,7 @@ function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || 'http://localhost:' + PORT;
 }
 
-const auth = createAuth({ Users, Sessions });
+const auth = createAuth({ Users, Sessions, logger: require('./lib/logger').child('auth') });
 
 // ── Backend module router ───────────────────────────────────────────────────
 // First-module migration: GET /api/health moved to modules/health/handler.js.
@@ -145,14 +146,14 @@ router.register(createHealthModule({ db, auth, Users, sendJson }));
 // Throttled per-tag so a tight crash loop doesn't burn through Telegram's
 // 30-msg/sec limit; the alert will fire once, then logs cover the rest.
 process.on('uncaughtException', (err) => {
-  console.error('[uncaughtException]', err && err.stack ? err.stack : err);
+  log.fatal({ err }, 'uncaughtException');
   notifyAdmin(
     `Uncaught exception\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
     { tag: 'uncaught-exception', level: 'error' },
   );
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('[unhandledRejection]', reason);
+  log.fatal({ err: reason }, 'unhandledRejection');
   notifyAdmin(
     `Unhandled rejection\n<pre>${notifyEscape(String((reason instanceof Error && reason.stack) || reason).slice(0, 800))}</pre>`,
     { tag: 'unhandled-rejection', level: 'error' },
@@ -817,7 +818,7 @@ streamGenerator.loadCorpus();
 // point). Per-IP cap will land separately as a connection limiter.
 streamGenerator.setMaxListeners(0);
 streamGenerator.on('specimen', streamBufferPush);
-streamGenerator.on('error', (err) => console.error('[stream]', err));
+streamGenerator.on('error', (err) => log.error({ err }, 'stream generator error'));
 streamGenerator.start();
 
 // Stream module registers here — needs streamGenerator + streamBuffer in scope.
@@ -829,13 +830,13 @@ router.register(
     STREAM_HEARTBEAT_MS,
   }),
 );
-console.log(
-  '[stream] generator running: ' +
-    STREAM_RATE_MS +
-    'ms cadence, ' +
-    streamGenerator.corpus.length +
-    ' samples, buffer=' +
-    STREAM_BUFFER_MAX,
+log.info(
+  {
+    cadenceMs: STREAM_RATE_MS,
+    samples: streamGenerator.corpus.length,
+    bufferMax: STREAM_BUFFER_MAX,
+  },
+  'stream generator running',
 );
 
 // ── /api/v1/sample — one synthetic example for the Playground "🎲 приклад" ─
@@ -913,7 +914,7 @@ const server = http.createServer((req, res) => {
       const out = hit.handler(req, res, parsed, hit.match);
       if (out && typeof out.then === 'function') {
         out.catch((err) => {
-          console.error('[router handler]', err && err.stack ? err.stack : err);
+          log.error({ err, method: req.method, url: req.url }, 'router handler rejection');
           notifyAdmin(
             `<b>500 on</b> <code>${notifyEscape(req.method + ' ' + req.url)}</code>\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
             { tag: 'handler-500', level: 'error' },
@@ -930,7 +931,7 @@ const server = http.createServer((req, res) => {
     // Router above. Unmatched paths fall through to static file serving.
     return serveStaticFile(req, res);
   } catch (err) {
-    console.error('[handler error]', err && err.stack ? err.stack : err);
+    log.error({ err, method: req.method, url: req.url }, 'handler crashed sync');
     notifyAdmin(
       `<b>500 on</b> <code>${notifyEscape(req.method + ' ' + req.url)}</code>\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
       { tag: 'handler-500', level: 'error' },
@@ -940,11 +941,11 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('Spyglass backend listening at http://0.0.0.0:' + PORT);
+  log.info({ port: PORT, addr: 'http://0.0.0.0:' + PORT }, 'spyglass backend listening');
 });
 
 const shutdown = (signal) => {
-  console.log('[' + signal + '] shutting down');
+  log.info({ signal }, 'shutting down');
   streamGenerator.stop();
   auth.shutdown();
   server.close(() => process.exit(0));

@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('../../lib/logger').child('corpus');
+
 /**
  * modules/corpus/handler.js — /api/behavior/corpus route module.
  *
@@ -68,7 +70,7 @@ function createCorpusModule(deps) {
       const counts = BehaviorCorpus.countsForUser(user.id);
       sendJson(res, 200, { success: true, entries, counts });
     } catch (e) {
-      console.error('[corpus/list] failed:', e.message);
+      log.error({ err: e }, 'corpus/list failed');
       sendError(res, 500, 'list_failed', e.message);
     }
   }
@@ -106,7 +108,7 @@ function createCorpusModule(deps) {
           });
           sendJson(res, 200, { success: true, id: r.id });
         } catch (e) {
-          console.error('[corpus/create] failed:', e.message);
+          log.error({ err: e }, 'corpus/create failed');
           sendError(res, 400, 'create_failed', e.message);
         }
       })
@@ -132,7 +134,7 @@ function createCorpusModule(deps) {
       const matrix = computeCorpusMatrix(user.id);
       sendJson(res, 200, { success: true, matrix });
     } catch (e) {
-      console.error('[corpus/matrix] failed:', e.message);
+      log.error({ err: e }, 'corpus/matrix failed');
       sendError(res, 500, 'matrix_failed', e.message);
     }
   }

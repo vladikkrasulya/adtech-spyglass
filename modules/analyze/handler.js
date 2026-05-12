@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('../../lib/logger').child('analyze');
+
 /**
  * modules/analyze/handler.js — POST /api/analyze + /api/analyze-behavior.
  *
@@ -213,7 +215,7 @@ function createAnalyzeModule(deps) {
           }
         } catch (e) {
           // Tracking failure must never break the response. Log + continue.
-          console.error('[analyze-log] record failed:', e.message);
+          log.error({ err: e }, 'analyze-log record failed');
         }
 
         sendJson(res, 200, {

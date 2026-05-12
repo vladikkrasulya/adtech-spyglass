@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('../../lib/logger').child('intel');
+
 /**
  * modules/intel/handler.js — POST /api/intel/* route module.
  *
@@ -98,7 +100,7 @@ function createIntelModule(deps) {
         } catch (/** @type {any} */ e) {
           if (e instanceof intelLlm.OllamaUnavailable) {
             const msg = /** @type {Error} */ (e).message;
-            console.warn('[intel] Ollama unavailable:', msg);
+            log.warn({ reason: msg }, 'Ollama unavailable');
             return sendError(res, 503, 'ollama_unavailable', msg);
           }
           throw e;
@@ -156,7 +158,7 @@ function createIntelModule(deps) {
         } catch (/** @type {any} */ e) {
           if (e instanceof intelLlm.OllamaUnavailable) {
             const msg = /** @type {Error} */ (e).message;
-            console.warn('[intel] Ollama unavailable:', msg);
+            log.warn({ reason: msg }, 'Ollama unavailable');
             return sendError(res, 503, 'ollama_unavailable', msg);
           }
           throw e;
@@ -188,7 +190,7 @@ function createIntelModule(deps) {
         } catch (/** @type {any} */ e) {
           if (e instanceof intelLlm.OllamaUnavailable) {
             const msg = /** @type {Error} */ (e).message;
-            console.warn('[intel] Ollama unavailable:', msg);
+            log.warn({ reason: msg }, 'Ollama unavailable');
             return sendError(res, 503, 'ollama_unavailable', msg);
           }
           throw e;
@@ -242,7 +244,7 @@ function createIntelModule(deps) {
         } catch (/** @type {any} */ e) {
           if (e instanceof intelLlm.OllamaUnavailable) {
             const msg = /** @type {Error} */ (e).message;
-            console.warn('[intel] Ollama unavailable:', msg);
+            log.warn({ reason: msg }, 'Ollama unavailable');
             return sendError(res, 503, 'ollama_unavailable', msg);
           }
           throw e;

@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('../../lib/logger').child('mirror');
+
 /**
  * modules/mirror/handler.js — POST /api/v1/mirror route module.
  *
@@ -70,7 +72,7 @@ function createMirrorModule(deps) {
         sendJson(res, 200, { success: true, result });
       })
       .catch((e) => {
-        console.error('[mirror] failed:', e.message);
+        log.error({ err: e }, 'mirror failed');
         sendError(res, 400, 'invalid_json', e.message);
       });
   }

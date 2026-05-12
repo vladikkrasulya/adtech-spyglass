@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('../../lib/logger').child('replay');
+
 /**
  * modules/replay/handler.js — POST /api/v1/replay route module.
  *
@@ -89,7 +91,7 @@ function createReplayModule(deps) {
           });
           sendJson(res, 200, { success: true, ...out });
         } catch (e) {
-          console.error('[replay] failed:', e.message);
+          log.error({ err: e }, 'replay failed');
           sendError(res, 400, 'replay_failed', e.message);
         }
       })

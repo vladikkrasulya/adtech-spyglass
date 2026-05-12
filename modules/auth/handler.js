@@ -1,5 +1,7 @@
 'use strict';
 
+const log = require('../../lib/logger').child('auth');
+
 /**
  * modules/auth/handler.js — /api/auth/* (11 routes).
  *
@@ -115,7 +117,7 @@ function createAuthRoutesModule(deps) {
           emailSent = !result || !('dev' in result) || !result.dev;
         } catch (err) {
           emailError = err.message;
-          console.error('[register] verify email send failed:', err.message);
+          log.error({ err }, 'register verify-email send failed');
           notifyAdmin(
             `Verify email send failed for new user <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
             { tag: 'email-send-fail', level: 'error' },
@@ -261,7 +263,7 @@ function createAuthRoutesModule(deps) {
     return sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).then(
       () => sendJson(res, 200, { success: true, email_sent: true }),
       (sendErr) => {
-        console.error('[verify-email/request] send failed:', sendErr.message);
+        log.error({ err: sendErr }, 'verify-email request send failed');
         notifyAdmin(
           `Verify-email resend failed for <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(sendErr.message.slice(0, 500))}</pre>`,
           { tag: 'email-send-fail', level: 'error' },
@@ -321,14 +323,14 @@ function createAuthRoutesModule(deps) {
                 expirySeconds: RESET_TOKEN_TTL,
               });
               sendResetEmail({ email: u.email }, tok, getPublicBaseUrl()).catch((err) => {
-                console.error('[forgot-password] send failed:', err.message);
+                log.error({ err }, 'forgot-password send failed');
                 notifyAdmin(
                   `Reset-password email failed for <code>${notifyEscape(u.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
                   { tag: 'email-send-fail', level: 'error' },
                 );
               });
             } catch (err) {
-              console.error('[forgot-password] sign failed:', err.message);
+              log.error({ err }, 'forgot-password sign failed');
             }
           }
         }
