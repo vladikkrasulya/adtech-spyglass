@@ -15,6 +15,11 @@
  */
 
 function createHealthModule({ db, auth, Users, sendJson }) {
+  // Capture once at module load — BUILD_SHA is set at Docker build time
+  // via ARG → ENV in the Dockerfile and never changes during a run. 'dev'
+  // is the dev-image / dev-tree fallback so the field is always present.
+  const buildSha = process.env.BUILD_SHA || 'dev';
+
   function handleHealth(req, res) {
     let dbOk = false;
     try {
@@ -28,6 +33,7 @@ function createHealthModule({ db, auth, Users, sendJson }) {
       success: dbOk,
       status: dbOk ? 'ok' : 'degraded',
       checks: { db: dbOk },
+      build: { sha: buildSha },
     };
     if (auth.getCurrentUser(req)) {
       body.sessions = auth.activeSessionCount();

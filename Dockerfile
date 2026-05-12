@@ -17,6 +17,11 @@ RUN npm ci --omit=dev
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
+# BUILD_SHA — short git SHA injected at build time. Surfaced via /api/health
+# so monitoring + smoke tests can verify the deployed image matches HEAD.
+# Defaults to 'dev' if the build context didn't pass --build-arg BUILD_SHA=…
+ARG BUILD_SHA=dev
+ENV BUILD_SHA=${BUILD_SHA}
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
 USER node

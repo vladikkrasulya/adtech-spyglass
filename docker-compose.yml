@@ -4,6 +4,13 @@ services:
     build:
       context: /srv/DATA/Stacks/adtech-spyglass
       dockerfile: Dockerfile
+      args:
+        # Short git SHA — surfaced via /api/health so we can verify which
+        # commit the deployed image was built from. Compose substitutes
+        # ${BUILD_SHA} from the shell env (or .env file). Pass via:
+        #   BUILD_SHA=$(git rev-parse --short HEAD) docker compose build
+        # Falls back to 'dev' inside the Dockerfile if unset.
+        BUILD_SHA: ${BUILD_SHA:-dev}
     env_file:
       # Phase 8: NODE_ENV, RESEND_API_KEY, EMAIL_FROM, EMAIL_TOKEN_SECRET,
       # PUBLIC_BASE_URL. File is gitignored; .env.example documents the keys.
