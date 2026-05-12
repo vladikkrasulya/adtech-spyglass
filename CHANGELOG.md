@@ -6,6 +6,37 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.1 — empty-state placeholder rewrite (2026-05-12)
+
+UX audit (GPT-5.5 vision pass, 2026-05-12) flagged the textarea
+placeholders as burying the primary path: "Paste oRTB BidRequest JSON
+here. Or up top: 🎲 example ▾ ..." mixed primary instruction with
+secondary escape hatches, and new users had to parse a paragraph to
+find the 3-step flow (paste → optional response → analyze).
+
+DeepSeek v4 Pro wrote the new copy ($0.012 / 4k tokens) — Claude
+reviewed, kept the structure, fixed the tone in UK/RU (DS drifted to
+formal "Ви"-form; original was informal "ти"-form, matching the
+engineer-to-engineer tone of the rest of the UI).
+
+#### Changes
+
+- BidRequest placeholder collapses to a numbered 3-step list, then a
+  one-line escape-hatch row (`no JSON? 🎲 example ▾ · 📡 live · mirror
+↔`), then a single shortcut hint (`? for shortcuts`). All three
+  locales matched.
+- BidResponse placeholder shrinks from a 3-line paragraph to two short
+  lines: optional-status + what happens when both panes are filled.
+- "Analyze" / "аналізувати" / "анализировать" in step 3 quoted to match
+  the actual button text in each locale (was generic "Analyze" in all
+  three before).
+
+#### Files
+
+- `public/modules/inspector/template.{en,uk,ru}.html` — both textarea
+  placeholders replaced.
+- `package.json`, `public/version.js` — lockstep bump 0.42.0 → 0.42.1.
+
 ### v0.42.0 — User Dialects feature (2026-05-12)
 
 First-class support for per-user vendor-extension mappings. A "dialect"
