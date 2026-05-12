@@ -83,6 +83,9 @@ function crosscheck(req, res, _ctx) {
   let totalBids = 0;
   let bidsAboveFloor = 0;
   const winningByImp = new Map();
+  // Track imps for which we've already noted "no explicit floor" so we
+  // emit at most one finding per slot regardless of how many bids hit it.
+  const floorNoteEmitted = new Set();
 
   res.seatbid.forEach((sb, sbi) => {
     const bids = Array.isArray(sb.bid) ? sb.bid : [];
@@ -117,6 +120,26 @@ function crosscheck(req, res, _ctx) {
       // like 0 — which then false-positive passes a 0-floor and pollutes
       // bidsAboveFloor + topPrice. Surface invalid prices as their own CRIT
       // finding and skip the floor compare. bcat/badv/sizes still run.
+      //
+      // imp.bidfloor is OPTIONAL per spec — missing means "no minimum" (=0).
+      // Spec-valid, but operationally a "no floor" auction means every bid
+      // above 0 wins on price alone. Surface it as WARN once per imp so the
+      // integrator sees that the price-vs-floor compare is degenerate.
+      const hasExplicitFloor =
+        imp.bidfloor !== undefined && imp.bidfloor !== null && imp.bidfloor !== '';
+      if (!hasExplicitFloor && !floorNoteEmitted.has(bid.impid)) {
+        const impIdx = req.imp.findIndex((i) => i && i.id === bid.impid);
+        out.push(
+          C(
+            'crosscheck.bid.no_floor_set',
+            false,
+            CROSS_LEVELS.WARN,
+            impIdx >= 0 ? `imp[${impIdx}].bidfloor` : 'imp.bidfloor',
+            { impid: bid.impid },
+          ),
+        );
+        floorNoteEmitted.add(bid.impid);
+      }
       const floor = Number(imp.bidfloor) || 0;
       const priceRaw = bid.price;
       const priceIsValid =

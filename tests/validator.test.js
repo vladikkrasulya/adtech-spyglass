@@ -439,6 +439,49 @@ test('crosscheck: price below floor is crit', () => {
   assert.equal(f.level, 'crit');
 });
 
+test('crosscheck: imp without bidfloor → no_floor_set WARN', () => {
+  const req = validRequest();
+  delete req.imp[0].bidfloor;
+  delete req.imp[0].bidfloorcur;
+  const res = validResponse();
+  const findings = crosscheck(req, res);
+  const f = findings.find((x) => x.id === 'crosscheck.bid.no_floor_set');
+  assert.ok(f, 'no_floor_set should fire when imp.bidfloor is missing');
+  assert.equal(f.level, 'warn');
+  assert.equal(f.path, 'imp[0].bidfloor');
+  assert.equal(f.params.impid, 'imp-1');
+  // above_floor must still fire — the comparison happens against implicit 0
+  assert.ok(findings.some((x) => x.id === 'crosscheck.bid.above_floor' && x.ok));
+});
+
+test('crosscheck: imp with bidfloor:0 explicit → no no_floor_set fired', () => {
+  const req = validRequest();
+  req.imp[0].bidfloor = 0;
+  const res = validResponse();
+  const findings = crosscheck(req, res);
+  // explicit 0 means the integrator opted in; not a degenerate auction
+  assert.equal(
+    findings.filter((x) => x.id === 'crosscheck.bid.no_floor_set').length,
+    0,
+    'explicit bidfloor:0 must not fire no_floor_set',
+  );
+});
+
+test('crosscheck: no_floor_set fires at most once per imp across multiple bids', () => {
+  const req = validRequest();
+  delete req.imp[0].bidfloor;
+  const res = validResponse();
+  // Three bids targeting the same imp.
+  res.seatbid[0].bid = [
+    { ...res.seatbid[0].bid[0], id: 'b1', price: 1.0 },
+    { ...res.seatbid[0].bid[0], id: 'b2', price: 1.5 },
+    { ...res.seatbid[0].bid[0], id: 'b3', price: 2.0 },
+  ];
+  const findings = crosscheck(req, res);
+  const hits = findings.filter((x) => x.id === 'crosscheck.bid.no_floor_set');
+  assert.equal(hits.length, 1, 'should de-dupe per imp');
+});
+
 test('crosscheck: bid.cat in bcat is crit', () => {
   const req = validRequest();
   req.bcat = ['IAB7-39'];

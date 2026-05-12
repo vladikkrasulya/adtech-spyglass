@@ -172,5 +172,6 @@
   "kadam.inpage.title_too_long": null,
   "behavior.malicious.frame_bust_anchor": null,
   "behavior.malicious.permission_abuse": null,
-  "regs.gdpr_consent_missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3217-object-regs"
+  "regs.gdpr_consent_missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3217-object-regs",
+  "crosscheck.bid.no_floor_set": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp"
 }

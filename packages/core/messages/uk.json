@@ -191,5 +191,6 @@
   "device.client_hints.os_unknown": "ОС не вказано — ні device.os/.osv, ні device.sua.platform її не несе. DSP не може запускати OS-сегментовані кампанії (mobile/desktop split, iOS-only креативи тощо). Додай device.os + device.osv, або краще — device.sua.platform з client-hints.",
   "device.client_hints.browser_unknown": "Браузер недосяжний: немає device.browser, device.sua.browsers[] пусте, device.ua теж порожнє. DSP не може виключити застарілі браузери або підібрати креативи що залежать від сучасних WebAPI. Мінімум — заповни device.ua; ідеально — device.sua.browsers[] з client-hints.",
   "imp.secure_recommended": "Слот #{num}: прапор secure відсутній або 0. Більшість видавців віддає сторінки по HTTPS; HTTP-креативи браузер беззвучно блокує вже після виграного аукціону. Безпечний дефолт — secure: 1.",
-  "imp.secure_invalid": "Слот #{num}: secure має бути 0 або 1 (числовий прапор). Зараз — інший тип, аукціон не може надійно зрозуміти, чи потрібен HTTPS."
+  "imp.secure_invalid": "Слот #{num}: secure має бути 0 або 1 (числовий прапор). Зараз — інший тип, аукціон не може надійно зрозуміти, чи потрібен HTTPS.",
+  "crosscheck.bid.no_floor_set": "У слоті відсутній bidfloor — аукціон без явного мінімуму, тож будь-яка невід'ємна ставка автоматично проходить «флор». За специфікацією (oRTB §3.2.4) поле опціональне, але всі живі SSP його виставляють; явний флор уберігає від низько-CPM-гонок."
 }

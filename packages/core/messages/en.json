@@ -192,5 +192,6 @@
   "device.client_hints.os_unknown": "OS not specified — neither device.os/.osv nor device.sua.platform carries it. The DSP can't run OS-segmented campaigns (mobile/desktop split, iOS-only creatives, etc.). Add device.os + device.osv, or better — device.sua.platform from client-hints.",
   "device.client_hints.browser_unknown": "Browser identity unreachable: no device.browser, no device.sua.browsers[], and device.ua is empty. The DSP can't exclude obsolete browsers or pick creatives that depend on modern WebAPIs. At minimum fill device.ua; ideally device.sua.browsers[] from client-hints.",
   "imp.secure_recommended": "Slot #{num}: secure flag is missing or 0. Most publishers serve HTTPS pages; mixed-content creatives (HTTP) get silently blocked by the browser after the bid wins. Setting secure: 1 is the safe default.",
-  "imp.secure_invalid": "Slot #{num}: secure must be 0 or 1 (numeric flag). It's another type now, so the auction can't reliably determine whether HTTPS is required."
+  "imp.secure_invalid": "Slot #{num}: secure must be 0 or 1 (numeric flag). It's another type now, so the auction can't reliably determine whether HTTPS is required.",
+  "crosscheck.bid.no_floor_set": "Slot bidfloor missing — the auction has no explicit minimum, so any non-negative bid clears \"the floor\" automatically. Spec-valid (oRTB §3.2.4 makes bidfloor optional), but every active SSP exposes it; explicit floors prevent low-CPM races."
 }
