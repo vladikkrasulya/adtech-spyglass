@@ -15,7 +15,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { mirror, validate, crosscheck } = require('@kyivtech/spyglass-core');
+const { mirror } = require('@kyivtech/spyglass-core');
 
 const { validRequest, validResponse, nativeRequest, v3Request } = require('./fixtures');
 

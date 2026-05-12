@@ -344,7 +344,6 @@ export async function mountInspector(root, ctx) {
   // collapsible-style list in the categories tab.
   function renderCategories(catsByPath) {
     const el = $('tCategories');
-    const badge = $('categoriesBadge');
     if (!el) return;
     const paths = Object.keys(catsByPath || {});
     const total = paths.reduce((n, p) => n + catsByPath[p].length, 0);

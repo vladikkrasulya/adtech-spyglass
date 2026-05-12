@@ -54,7 +54,7 @@
                                               bootstrap opens the
                                               recovery modal.
    ============================================================ */
-import { $, escapeHtml, toast, t } from '/core/utils.js';
+import { $, toast, t } from '/core/utils.js';
 
 // Centralizes the "code → human-friendly localized message" map.
 // Stays inside this module because no caller outside auth ever

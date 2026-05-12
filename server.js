@@ -31,7 +31,6 @@
  */
 
 const http = require('http');
-const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -42,7 +41,7 @@ const { sendVerifyEmail, sendResetEmail } = require('./email');
 const { notifyAdmin, escapeHtml: notifyEscape } = require('./notify');
 const httpLib = require('./lib/http');
 httpLib.init({ notifyAdmin, notifyEscape });
-const { readJson, sendJson, sendError, makeError, MAX_BODY_BYTES } = httpLib;
+const { sendJson, sendError } = httpLib;
 const { Router } = require('./lib/router');
 const { createHealthModule } = require('./modules/health/handler');
 const {
@@ -606,8 +605,6 @@ router.register(createSamplesModule({ auth, Samples }));
 // (attacker burns *our* IP+TLS to hit their webhook). webhook.site was the
 // worst offender — wildcard subdomain → any attacker-controlled bin — so it's
 // off the allow-list.
-
-const PROXY_ALLOWED_HOSTS = ['httpbin.org', 'postman-echo.com'];
 
 // Merge two detectFormat() results (request side + response side) into
 // a single, de-duplicated tag set. Returns the canonical empty shape if

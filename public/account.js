@@ -188,7 +188,7 @@
       const clean = bs.clean || 0;
       const warns = bs.warnings || 0;
       const errs = bs.errors || 0;
-      const other = total - clean - warns - errs;
+
       // Three-way Math.round can sum to 99% or 101%. Compute the first
       // three normally and force the last segment to absorb any rounding
       // delta so the bar always fills exactly 100%.

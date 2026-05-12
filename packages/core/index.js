@@ -29,7 +29,7 @@ const { validateResponse30 } = require('./rules-response-30');
 const { validateFeedResponse } = require('./rules-feed');
 const { crosscheck: doCrosscheck, nativeAssetCrosscheck } = require('./crosscheck');
 const { mirror: doMirror } = require('./mirror');
-const { runRulePlugins, listPlugins } = require('./rules');
+const { runRulePlugins } = require('./rules');
 const {
   LEVELS,
   CROSS_LEVELS,

@@ -58,7 +58,6 @@ function decode(payload, opts) {
       claimed = !!dec.detect(payload, parsed);
     } catch (e) {
       // A buggy detect() must not break dispatch — log + skip.
-      // eslint-disable-next-line no-console
       console.error('[decoder.detect]', dec.id, e && e.stack ? e.stack : e);
       continue;
     }
@@ -66,7 +65,6 @@ function decode(payload, opts) {
     try {
       return dec.decode(payload, parsed);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('[decoder.decode]', dec.id, e && e.stack ? e.stack : e);
       return { ok: false, reason: 'decoder_threw', detail: String((e && e.message) || e) };
     }

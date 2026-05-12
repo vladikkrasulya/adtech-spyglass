@@ -409,7 +409,7 @@
           const t = e && e.target;
           if (!t || typeof t.getBoundingClientRect !== 'function') return;
 
-          const rect = t.getBoundingClientRect();
+          const _rect = t.getBoundingClientRect();
           const vw =
             window.innerWidth ||
             (document.documentElement && document.documentElement.clientWidth) ||
@@ -608,7 +608,7 @@
         try {
           const t = e && e.target;
           if (t && typeof t.getBoundingClientRect === 'function') {
-            const rect = t.getBoundingClientRect();
+            const _rect = t.getBoundingClientRect();
             // Skip degenerate targets (1×1 hit-areas trivially "centered").
             if (rect.width > 4 && rect.height > 4) {
               const cx = rect.left + rect.width / 2;

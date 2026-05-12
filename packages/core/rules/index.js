@@ -52,7 +52,6 @@ function runRulePlugins(payload, type, ctx) {
       }
     } catch (e) {
       // A bug in one plugin must NOT break validation. Log + skip.
-      // eslint-disable-next-line no-console
       console.error('[validator-plugin]', plugin.id, e && e.stack ? e.stack : e);
     }
   }

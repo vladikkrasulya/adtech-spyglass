@@ -75,14 +75,6 @@ function clearPendingRecovery() {
   }
 }
 
-function readPendingRecovery() {
-  try {
-    return sessionStorage.getItem(RECOVERY_PENDING_KEY) || null;
-  } catch (_e) {
-    return null;
-  }
-}
-
 export function showRecoveryKeyModal(recoveryKey) {
   // Defensive null-guard on match() — if recoveryKey is somehow empty
   // (shouldn't happen, but guards against null.join() crash).
