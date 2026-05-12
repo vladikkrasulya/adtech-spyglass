@@ -929,6 +929,26 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: #facc15;
   background: rgba(234, 179, 8, 0.08);
 }
+/* Pop family (popunder / popup / clickunder) — purple so it's instantly
+   distinguishable from the blue banner/video/native chips. Pops are the
+   primary monetisation surface for some users; making the chip visible
+   matters. Push family rendered in pink for the same reason — distinct
+   from pops, distinct from banner. */
+.format-chip--format[data-fmt='pops'] {
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.08);
+}
+.format-chip--format[data-fmt='push'] {
+  border-color: rgba(244, 114, 182, 0.5);
+  color: #f9a8d4;
+  background: rgba(244, 114, 182, 0.08);
+}
+.format-chip--format[data-fmt='inpage'] {
+  border-color: rgba(251, 146, 60, 0.5);
+  color: #fdba74;
+  background: rgba(251, 146, 60, 0.08);
+}
 .info-row:last-child {
   border-bottom: none;
 }

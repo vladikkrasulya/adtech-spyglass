@@ -33,6 +33,14 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
   asset-id match, …).
 - **JsonFeed**: validation for non-RTB push/pop feeds — vendor-specific
   push, clickunder, single-bid shapes.
+- **Pop / Clickunder** (`pop`, `popunder`, `popup`, `clickunder`): first-class
+  detection + validation. `format-detect.js` tags pop intent from
+  `imp.ext.adtype` / `imp.ext.popunder` / `bid.ext.adtype` and from
+  `bid.adm` shape (window.open / bare URL / location.href). Plugin rules
+  warn on missing fcap, recommend `imp.banner.btype:[4]`, flag bid.adm
+  shipping banner HTML instead of a redirect, and crosscheck the
+  landing host against `bid.adomain` — pops bypass anti-phishing
+  filters so adomain truth is the only safety signal.
 - **IAB Content Taxonomy 1.0** category decoding from `cat[]` / `bcat[]` /
   `pcat[]`.
 - **Vendor dialect overlays** — opt-in extra rules for specific SSPs/DSPs via

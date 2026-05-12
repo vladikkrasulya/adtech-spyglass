@@ -1949,7 +1949,13 @@ export async function mountInspector(root, ctx) {
     }
     const parts = [];
     for (const f of detected.formats || []) {
-      parts.push('<span class="format-chip format-chip--format">' + escapeHtml(f) + '</span>');
+      parts.push(
+        '<span class="format-chip format-chip--format" data-fmt="' +
+          escapeHtml(f) +
+          '">' +
+          escapeHtml(f) +
+          '</span>',
+      );
     }
     for (const c of detected.contexts || []) {
       parts.push('<span class="format-chip format-chip--context">' + escapeHtml(c) + '</span>');
