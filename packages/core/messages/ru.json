@@ -198,5 +198,7 @@
   "imp.pop.secure_may_block_landing": "Слот #{num} — pop-слот с secure:1. Pop-ы исторически открывают HTTP-лендинг через JS — политика смешанного контента может заблокировать навигацию после выигрыша ставки. Если ваш лендинг HTTPS, это нормально; иначе рассмотрите secure:0.",
   "bid.pop.adm_not_redirect": "Сид #{sNum}, ставка #{bNum}: bid.adm не похож на pop-креатив. Попандеры используют window.open(URL), top.location или прямую ссылку на лендинг — баннерный HTML в adm не отрендерится как pop, и показ будет потерян после выигрыша. Замените на редирект или скрипт, открывающий лендинг.",
   "crosscheck.bid.pop.adomain_landing_mismatch": "Seat #{sNum} bid #{bNum}: popunder adm открывает landing host \"{landing}\", но bid.adomain заявляет {declared}. Adomain ДОЛЖЕН совпадать с хостом, на который фактически попадает пользователь — несоответствие означает либо неверно задекларированного рекламодателя, либо подделку. Фильтр антифишинга/безопасности бренда издателя не может проверить pop-посадку заранее, поэтому заявленный adomain является единственным сигналом, которому он может доверять.",
-  "crosscheck.bid.pop.adomain_landing_match": "Seat #{sNum} bid #{bNum}: popunder adm landing host \"{host}\" совпадает с заявленным bid.adomain."
+  "crosscheck.bid.pop.adomain_landing_match": "Seat #{sNum} bid #{bNum}: popunder adm landing host \"{host}\" совпадает с заявленным bid.adomain.",
+  "feed.clickunder.nobid": "Clickunder-фид вернул result.status=\"NOBID\" — аукцион не дал победной ставки на этот слот. Валидная форма; нечего рендерить.",
+  "dialects.question.unknown_ext_signal": "Неизвестный vendor-сигнал в `{path}` со значением `{value}`. По форме payload, скорее всего это `{recommended}`. Сохранить в диалекте?"
 }

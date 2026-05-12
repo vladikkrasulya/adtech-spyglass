@@ -28,8 +28,15 @@ const F = makeFinding;
 
 function validateFeedResponse(arrOrObj) {
   // Kadam clickunder
-  if (isObj(arrOrObj) && isObj(arrOrObj.result) && Array.isArray(arrOrObj.result.listing)) {
-    return validateKadamClickunder(arrOrObj);
+  // Kadam clickunder XML-engine response — recognise BID (listing object OR
+  // listing array) and NOBID shapes. See detect.js for the full shape table.
+  if (isObj(arrOrObj) && isObj(arrOrObj.result)) {
+    const r = arrOrObj.result;
+    const isClickunderBid = Array.isArray(r.listing) || isObj(r.listing);
+    const isClickunderNobid = typeof r.status === 'string' && r.status.toUpperCase() === 'NOBID';
+    if (isClickunderBid || isClickunderNobid) {
+      return validateKadamClickunder(arrOrObj);
+    }
   }
 
   // Kadam push (array of materials)
@@ -55,9 +62,32 @@ function validateFeedResponse(arrOrObj) {
 
 function validateKadamClickunder(o) {
   const findings = [];
-  o.result.listing.forEach((row, i) => {
+  const r = o.result;
+
+  // NOBID is a spec-valid shape — no listing, only a status string. The
+  // upstream auction simply had no winning bid. Surface as info rather
+  // than zero findings so the inspector clearly says "received, no bid"
+  // instead of looking like an empty / broken response.
+  const status = typeof r.status === 'string' ? r.status.toUpperCase() : null;
+  if (status === 'NOBID' && r.listing == null) {
+    findings.push(F('feed.clickunder.nobid', LEVELS.INFO, 'result.status', {}));
+    return { type: 'Kadam Feed Response (clickunder, no bid)', findings };
+  }
+
+  // BID — listing may be a single object (real production shape, common
+  // single-creative case) or an array (multi-creative variant). Normalise to
+  // an array of one for iteration; path strings stay accurate either way.
+  const isArrayShape = Array.isArray(r.listing);
+  const rows = isArrayShape ? r.listing : [r.listing];
+
+  rows.forEach((row, i) => {
     const num = i + 1;
-    const p = `result.listing[${i}]`;
+    const p = isArrayShape ? `result.listing[${i}]` : 'result.listing';
+    if (!row || typeof row !== 'object') {
+      findings.push(F('feed.clickunder.url_required', LEVELS.ERROR, `${p}.url`, { num }));
+      findings.push(F('feed.clickunder.bid_required', LEVELS.ERROR, `${p}.bid`, { num }));
+      return;
+    }
     if (!isStr(row.url)) {
       findings.push(F('feed.clickunder.url_required', LEVELS.ERROR, `${p}.url`, { num }));
     }
@@ -65,7 +95,12 @@ function validateKadamClickunder(o) {
       findings.push(F('feed.clickunder.bid_required', LEVELS.ERROR, `${p}.bid`, { num }));
     }
   });
-  return { type: 'Kadam Feed Response (clickunder)', findings };
+  return {
+    type: isArrayShape
+      ? 'Kadam Feed Response (clickunder)'
+      : 'Kadam Feed Response (clickunder, single)',
+    findings,
+  };
 }
 
 // ── Kadam push (array) ─────────────────────────────────────────────

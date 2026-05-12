@@ -6,6 +6,87 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.0 — User Dialects feature (2026-05-12)
+
+First-class support for per-user vendor-extension mappings. A "dialect"
+is a named recipe that tells the validator/crosscheck how a specific
+SSP/DSP encodes information that doesn't fit the canonical IAB schema
+(custom `ext.*` fields, non-standard pop / clickunder envelope shapes,
+inpage-push wrappers, etc.). Users can author dialects in the cabinet,
+import/export them as JSON, and apply them per-analysis so findings
+respect the partner's actual contract instead of vanilla 2.6.
+
+Companion to the existing Kadam dialect built in earlier, but now
+exposed as a user-editable surface rather than a hard-coded module.
+
+#### API (auth-gated; 401 for anonymous)
+
+`modules/dialects/handler.js` adds:
+- `GET    /api/dialects` — list user's dialects
+- `POST   /api/dialects` — create
+- `PATCH  /api/dialects/:id` / `DELETE /api/dialects/:id`
+- `GET    /api/dialects/:id/mappings` + full CRUD on mappings
+- `GET    /api/dialects/:id/export` — JSON download
+- `POST   /api/dialects/import` — JSON upload
+- `POST   /api/dialects/questions/dismiss` — silence repeated
+  "did you mean…?" prompts per dialect
+
+Schema bumped in `db.js`: `dialects` + `dialect_mappings` +
+`dialect_question_dismissals` tables, all `INTEGER` IDs matching the
+existing users/partners/samples convention. Hard deletes (no soft-delete).
+
+#### Core engine
+
+`packages/core` (0.18.0 → 0.19.0):
+- `dialects/user-dialect-runtime.js` — applies a dialect's mappings at
+  detect/validate time without polluting the canonical rules.
+- `dialects/shape-fingerprint.js` — stable hash of a payload's
+  ext-shape so identical structures get the same suggestion.
+- `dialects/iab.js`, `dialects/kadam.js`, `dialects/kadam-inpage-push.js`
+  — built-in dialects, now consumable through the same runtime as
+  user-authored ones.
+- `rules/dialects-questions/index.js` — emits guided questions when
+  the engine sees an unknown ext-shape ("This looks like X. Save as
+  a dialect mapping?"). Respects the dismissal log so each shape
+  prompts at most once per user.
+- `detect.js` — recognises Kadam's single-object `result.listing` and
+  `NOBID` envelopes (previously only the array form was detected).
+- `findings.js`, `rules-feed.js`, `rules/index.js`, `index.js` — wired
+  into the validation pipeline so dialect-aware findings flow out the
+  same `result.findings[]` shape.
+
+#### Frontend
+
+- `public/modules/dialects/index.js` + `i18n.js` — analyzer-side
+  picker UI; integrates with the existing dialect dropdown in the
+  inspector.
+- `public/account.{en,uk,ru}.html` + `public/account.js` — cabinet
+  section listing the user's dialects with create/edit/export/import
+  affordances. Wired through the same `loadDialects()` and
+  `downloadJson()` helpers introduced for the API.
+
+#### Tests
+
+402 → 489 (`+87`) — three new files cover the runtime, the
+shape-fingerprint, and the dialects-questions rules engine.
+
+#### Files
+
+- New: `modules/dialects/handler.js`,
+  `packages/core/dialects/{iab,kadam,kadam-inpage-push,shape-fingerprint,user-dialect-runtime}.js`,
+  `packages/core/rules/dialects-questions/{index.js,README.md}`,
+  `public/modules/dialects/{index.js,i18n.js,README.md}`,
+  `tests/{dialects,rules-dialects-questions,shape-fingerprint}.test.js`,
+  `docs/audit-2026-05-12.md` (the audit-of-record that informed the
+  perf bundle in v0.41.3).
+- Modified: `db.js`, `modules/analyze/handler.js`,
+  `packages/core/{detect,findings,index,rules-feed}.js`,
+  `packages/core/rules/index.js`, `packages/core/spec-refs.json`,
+  `packages/core/messages/{en,uk,ru}.json`,
+  `public/account.{en,uk,ru}.html`, `public/account.js`,
+  `packages/core/package.json` (0.18.0 → 0.19.0),
+  `package.json` + `public/version.js` (0.41.4 → 0.42.0).
+
 ### v0.41.4 — backdrop-filter reduction on docs nav (2026-05-12)
 
 The `.kt-topnav` sticky nav on /about.{en,uk,ru}.html was using a

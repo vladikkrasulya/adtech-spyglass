@@ -95,6 +95,73 @@
     }
   }
 
+  // v8 — User Dialects loader. Returns dialects array or null on failure.
+  async function loadDialects() {
+    try {
+      const r = await api('/api/dialects');
+      return r && r.dialects ? r.dialects : [];
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  // Blob-download helper for dialect export. Sanitizes filename to
+  // avoid path-traversal-ish UX issues from user-chosen dialect names.
+  function downloadJson(filename, data) {
+    const safe = String(filename).replace(/[/\\?%*:|"<>]/g, '_').slice(0, 120) || 'dialect';
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = safe.endsWith('.json') ? safe : safe + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function renderDialectsCard(dialects) {
+    // Null-guarded throughout — future ID drift in account.{lang}.html
+    // won't crash init (per spyglass_cabinet_draft.md convention).
+    var $stat = document.getElementById('statDialects');
+    var $mappings = document.getElementById('statDialectMappings');
+    var $defName = document.getElementById('dialectDefault');
+    var $llm = document.getElementById('dialectLlm');
+    var $btnExport = document.getElementById('btnExportDialects');
+
+    if (!Array.isArray(dialects)) return; // null = load failed; leave '—'
+    if ($stat) $stat.textContent = String(dialects.length);
+    if ($mappings) {
+      var total = dialects.reduce(function (acc, d) { return acc + (d.mapping_count || 0); }, 0);
+      $mappings.textContent = String(total);
+    }
+    if ($defName) {
+      var def = dialects.find(function (d) { return d.is_default; });
+      $defName.textContent = def ? def.name : '—';
+    }
+    if ($llm) $llm.textContent = '—'; // placeholder until LLM-suggester wiring
+
+    if ($btnExport && !$btnExport.dataset.bound) {
+      $btnExport.dataset.bound = '1';
+      $btnExport.addEventListener('click', async function () {
+        $btnExport.disabled = true;
+        try {
+          for (var i = 0; i < dialects.length; i += 1) {
+            var d = dialects[i];
+            try {
+              var data = await api('/api/dialects/' + encodeURIComponent(d.id) + '/export');
+              downloadJson(d.name || 'dialect-' + d.id, data);
+            } catch (e) {
+              console.warn('export failed for dialect', d.id, e);
+            }
+          }
+        } finally {
+          $btnExport.disabled = false;
+        }
+      });
+    }
+  }
+
   function showGate() {
     $('cabGate').style.display = '';
     $('cabBody').style.display = 'none';
@@ -419,13 +486,15 @@
     // Profile is fast — render immediately. The four data calls below are
     // independent; run them in parallel and let each panel render as data
     // arrives.
-    const [samples, partners, insights, corpus, matrix] = await Promise.all([
+    const [samples, partners, insights, corpus, matrix, dialects] = await Promise.all([
       loadSamples(),
       loadPartners(),
       loadInsights(),
       loadCorpus(),
       loadMatrix(),
+      loadDialects(),
     ]);
+    renderDialectsCard(dialects);
     // Compute encrypted/assigned counts from sample metadata.
     const encryptedCount = samples.filter((s) => s.is_encrypted).length;
     const assignedCount = samples.filter((s) => s.partner_id != null).length;

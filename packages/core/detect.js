@@ -161,7 +161,18 @@ function detectType(obj) {
   // Structural markers — the canonical array decides the type.
   if (Array.isArray(obj.imp)) return TYPES.ORTB_REQUEST;
   if (Array.isArray(obj.seatbid)) return TYPES.ORTB_RESPONSE;
-  if (obj.result && Array.isArray(obj.result.listing)) return TYPES.KADAM_FEED;
+  // Kadam-style clickunder XML-engine response. Three observed shapes:
+  //   { result: { status: "BID",   listing: { …creative } } }  (single object — real prod shape)
+  //   { result: { status: "BID",   listing: [{ … }, …] } }      (array — multi-creative variant)
+  //   { result: { status: "NOBID" } }                            (no-bid, listing absent)
+  // Pre-2026-05-12 only the array form was detected; the single-object and
+  // NOBID shapes fell through to `unknown_type` despite being canonical real
+  // responses that the buyer-side platform accepts in production.
+  if (isObj(obj.result)) {
+    const r = obj.result;
+    if (Array.isArray(r.listing) || isObj(r.listing)) return TYPES.KADAM_FEED;
+    if (typeof r.status === 'string' && r.status.toUpperCase() === 'NOBID') return TYPES.KADAM_FEED;
+  }
   if (obj.version && obj.items) return TYPES.JSON_FEED;
 
   // Single-bid JSON-feed responses (ExoClick, RichAds, Zeropark, …). These

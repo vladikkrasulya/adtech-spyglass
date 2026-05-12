@@ -1,5 +1,5 @@
 {
-  "_comment": "Maps finding id → IAB OpenRTB spec section URL. URLs anchor into the canonical 2.6 markdown spec on GitHub. When IAB ships new minor revisions (2.6-202506+), update anchors here, not in rule code.",
+  "_comment": "Maps finding id \u2192 IAB OpenRTB spec section URL. URLs anchor into the canonical 2.6 markdown spec on GitHub. When IAB ships new minor revisions (2.6-202506+), update anchors here, not in rule code.",
   "_base": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md",
   "request.id_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#321-object-bidrequest",
   "request.imp_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#321-object-bidrequest",
@@ -179,5 +179,7 @@
   "imp.pop.secure_may_block_landing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
   "bid.pop.adm_not_redirect": null,
   "crosscheck.bid.pop.adomain_landing_mismatch": null,
-  "crosscheck.bid.pop.adomain_landing_match": null
+  "crosscheck.bid.pop.adomain_landing_match": null,
+  "feed.clickunder.nobid": null,
+  "dialects.question.unknown_ext_signal": null
 }

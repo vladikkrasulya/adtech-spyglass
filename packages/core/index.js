@@ -86,6 +86,13 @@ function validate(payload, opts) {
   // `expectedVersion` is absent the validator behaves exactly as before.
   const expectedVersion =
     typeof o.expectedVersion === 'string' && o.expectedVersion ? o.expectedVersion : null;
+  // v8 — User Dialect overlay. When the caller supplies a loaded user
+  // dialect (server.js does this for authed sessions with a default
+  // dialect), plugins can call `userDialect.lookupMapping(path, value)`
+  // to suppress findings on already-labelled signals. Anonymous /
+  // logged-in-without-dialect users pass null → plugins emit all
+  // eligible questions.
+  const userDialect = o.userDialect || null;
 
   if (payload == null || typeof payload !== 'object') {
     return finalize(
@@ -119,7 +126,7 @@ function validate(payload, opts) {
     // Plugins join findings BEFORE dedup+sort in finalize(), so a
     // plugin can't shadow a legacy finding accidentally. See
     // packages/core/rules/README.md for the contract.
-    const pluginFindings = runRulePlugins(payload, 'ORTB_REQUEST', { dialect, version });
+    const pluginFindings = runRulePlugins(payload, 'ORTB_REQUEST', { dialect, version, userDialect });
     if (pluginFindings.length) findings = findings.concat(pluginFindings);
   } else if (t === TYPES.ORTB_RESPONSE) {
     // Same version dispatch on the response side. 3.0 BidResponse lives

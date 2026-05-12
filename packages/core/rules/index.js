@@ -38,6 +38,13 @@ const PLUGINS = [
   //    response actually ships a redirect / window.open in adm
   //    instead of banner HTML (mis-shaped pop bids don't render).
   require('./pop-response'),
+
+  // 5. dialects-questions (v8) — walks imp.ext.* / req.ext.* for unknown
+  //    vendor extension keys. Emits `level:'question'` findings carrying
+  //    shape-based format suggestions + a stable fingerprint. Non-
+  //    blocking; rollupStatus ignores `question` level. If ctx.userDialect
+  //    has a saved mapping for a signal, that question is suppressed.
+  require('./dialects-questions'),
 ];
 
 /**

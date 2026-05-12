@@ -23,7 +23,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const DATA_DIR = process.env.SPYGLASS_DATA_DIR || '/data';
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -219,6 +219,56 @@ function migrate(db, fromVersion) {
       CREATE INDEX IF NOT EXISTS idx_corpus_user ON behavior_corpus(user_id);
       CREATE INDEX IF NOT EXISTS idx_corpus_label ON behavior_corpus(label);
       CREATE INDEX IF NOT EXISTS idx_corpus_created ON behavior_corpus(created_at DESC);
+    `);
+  }
+
+  // v8 — User Dialects. Per-user maps of vendor-extension signals to
+  // IAB-recognized formats. Validator emits `level:'question'` findings
+  // for unknown ext.* keys; a saved mapping suppresses future questions
+  // on the same (signal_path, signal_value). All IDs INTEGER to match
+  // the rest of the schema.
+  if (fromVersion < 8) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_dialects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_user_dialects_user ON user_dialects(user_id);
+
+      CREATE TABLE IF NOT EXISTS dialect_mappings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dialect_id INTEGER NOT NULL REFERENCES user_dialects(id) ON DELETE CASCADE,
+        signal_path TEXT NOT NULL,
+        signal_value TEXT NOT NULL,
+        semantic_label TEXT NOT NULL,
+        shape_fingerprint TEXT,
+        params TEXT,
+        version INTEGER NOT NULL DEFAULT 1,
+        confidence TEXT NOT NULL DEFAULT 'user-confirmed',
+        notes TEXT,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_dialect_mappings_dialect
+        ON dialect_mappings(dialect_id);
+      CREATE INDEX IF NOT EXISTS idx_dialect_mappings_lookup
+        ON dialect_mappings(dialect_id, signal_path, signal_value);
+
+      CREATE TABLE IF NOT EXISTS dialect_question_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dialect_id INTEGER,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        signal_path TEXT NOT NULL,
+        signal_value TEXT NOT NULL,
+        payload_shape_sig TEXT NOT NULL,
+        asked_at INTEGER NOT NULL,
+        action TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_dialect_question_log_user_sig
+        ON dialect_question_log(user_id, signal_path, signal_value, payload_shape_sig);
     `);
   }
 }

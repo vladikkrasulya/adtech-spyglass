@@ -74,6 +74,12 @@ function createAnalyzeModule(deps) {
     detectFormat,
     unionFormat,
     AnalyzeLog,
+    // v8 — User Dialect overlay. Optional; if not injected, fall through
+    // to anonymous validation (no per-user suppression of question
+    // findings).
+    loadUserDialect,
+    getDefaultDialectForUser,
+    db,
   } = deps;
 
   function handleAnalyze(req, res, parsed) {
@@ -87,6 +93,21 @@ function createAnalyzeModule(deps) {
     }
     const locale = resolveLocale(parsed);
     const dialect = resolveDialect(parsed);
+
+    // v8 — Resolve the caller's default user dialect (if any). Failure
+    // is soft: log + continue with userDialect:null so anon flows still
+    // work.
+    let userDialect = null;
+    try {
+      const u = auth.getCurrentUser(req);
+      if (u && u.id && typeof getDefaultDialectForUser === 'function' && typeof loadUserDialect === 'function' && db) {
+        const did = getDefaultDialectForUser(db, u.id);
+        if (did) userDialect = loadUserDialect(db, did);
+      }
+    } catch (e) {
+      log.warn({ err: e }, 'user dialect load failed, continuing without');
+    }
+
     readJson(req)
       .then((body) => {
         const { bidReq, bidRes } = body || {};
@@ -130,13 +151,14 @@ function createAnalyzeModule(deps) {
         // that masked perfectly valid response findings.
         let validation;
         if (hasReq) {
-          validation = validate(bidReq, { locale, dialect, disabledRules, expectedVersion });
+          validation = validate(bidReq, { locale, dialect, disabledRules, expectedVersion, userDialect });
           if (hasRes) {
             const resValidation = validate(bidRes, {
               locale,
               dialect,
               disabledRules,
               expectedVersion,
+              userDialect,
             });
             if (resValidation.findings && resValidation.findings.length) {
               validation.findings = validation.findings.concat(
@@ -148,7 +170,7 @@ function createAnalyzeModule(deps) {
           }
         } else {
           // Response-only path. Validate bidRes and prefix findings for clarity.
-          validation = validate(bidRes, { locale, dialect, disabledRules, expectedVersion });
+          validation = validate(bidRes, { locale, dialect, disabledRules, expectedVersion, userDialect });
           validation.findings = validation.findings.map((f) =>
             Object.assign({}, f, { msg: '[response] ' + f.msg }),
           );
