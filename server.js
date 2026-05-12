@@ -423,14 +423,70 @@ function serveStaticFile(req, res) {
     if (ct === 'text/html') {
       body = Buffer.from(rewriteAssetVersions(content.toString('utf8'), 'html'), 'utf8');
     } else if (ct === 'application/javascript') {
-      // .js files also get rewritten so their `import …` statements pick up
-      // current content-hashes for child modules. Critical for ES module
-      // graphs: changing modules/foo/index.js must invalidate any parent
-      // that imports it, even if the parent's disk bytes haven't changed.
-      body = Buffer.from(rewriteAssetVersions(content.toString('utf8'), 'js'), 'utf8');
+      // .js files get two passes: rewriteAssetVersions for static
+      // `import …` graphs (transitive content-hash), and
+      // injectModuleBundleHashes for `__<MODULE>_BUNDLE_HASH__` tokens
+      // inside runtime-built URLs (template literals etc.) that the
+      // regex-based rewriter can't reach. Together these eliminate every
+      // manual `?v=N` knob in the codebase.
+      let txt = rewriteAssetVersions(content.toString('utf8'), 'js');
+      txt = injectModuleBundleHashes(txt);
+      body = Buffer.from(txt, 'utf8');
     }
     res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'no-cache' });
     res.end(body);
+  });
+}
+
+// ── Module bundle hash: token-based cache-bust for runtime-built URLs ────
+//
+// rewriteAssetVersions() above handles static imports + <script src=> /
+// <link href=> markup. But some modules build URLs at runtime in JS
+// (template literals, string concat), which the regex can't safely catch.
+//
+// Convention: a module foo declares `const ASSET_VERSION =
+// '__FOO_BUNDLE_HASH__';` and interpolates it where needed. When the
+// server delivers the JS, every `__<MODULE>_BUNDLE_HASH__` token is
+// replaced with sha1(concat of all direct files in public/modules/<module>/)
+// — same idea as a webpack bundle hash, applied at serve time.
+//
+// Why bundle-hash (not per-file): a module is a unit. Bumping the inspector
+// CSS should re-fetch the template too (they may have a coupled DOM
+// contract). Bundle = "everything inside the module's dir". Touching any
+// file flips the hash. Mtime-cached via a {filename: mtimeMs} manifest.
+const _bundleHashCache = new Map(); // moduleId → { manifest, hash }
+
+function moduleBundleHash(moduleId) {
+  const dir = path.join(PUBLIC_DIR, 'modules', moduleId);
+  let files;
+  try {
+    files = fs
+      .readdirSync(dir)
+      .filter((f) => fs.statSync(path.join(dir, f)).isFile())
+      .sort();
+  } catch {
+    return null;
+  }
+  if (files.length === 0) return null;
+  const manifest = {};
+  for (const f of files) manifest[f] = fs.statSync(path.join(dir, f)).mtimeMs;
+  const cached = _bundleHashCache.get(moduleId);
+  if (cached && JSON.stringify(cached.manifest) === JSON.stringify(manifest)) {
+    return cached.hash;
+  }
+  const h = crypto.createHash('sha1');
+  for (const f of files) h.update(fs.readFileSync(path.join(dir, f)));
+  const hash = h.digest('hex').slice(0, 8);
+  _bundleHashCache.set(moduleId, { manifest, hash });
+  return hash;
+}
+
+const BUNDLE_TOKEN_RE = /__([A-Z][A-Z0-9_]*)_BUNDLE_HASH__/g;
+
+function injectModuleBundleHashes(txt) {
+  return txt.replace(BUNDLE_TOKEN_RE, (match, mod) => {
+    const hash = moduleBundleHash(mod.toLowerCase());
+    return hash !== null ? hash : match;
   });
 }
 

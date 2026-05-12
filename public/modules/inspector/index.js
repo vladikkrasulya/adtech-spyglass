@@ -29,12 +29,11 @@
 // Note: ?v=… is auto-injected by server.js rewriteAssetVersions() — no manual bump needed.
 import { mountInspector } from '/spyglass.app.js';
 
-// Used for the per-locale template fetch. Not auto-rewritten (it's a
-// runtime-built URL, not a static import), so we keep a manual knob.
-// Bump when template/css change in a way that needs old browsers to
-// drop the cached version. With the new transitive-hash on .js parents,
-// this is now the ONLY manual ?v= knob in the inspector module.
-const ASSET_VERSION = '22';
+// Bundle hash for the inspector module. The literal `__INSPECTOR_BUNDLE_HASH__`
+// is replaced at serve time by server.js → injectModuleBundleHashes() with the
+// sha1 of all files in public/modules/inspector/. Any CSS/template/JS edit in
+// this module flips the hash → all consumers re-fetch. No manual knob.
+const ASSET_VERSION = '__INSPECTOR_BUNDLE_HASH__';
 
 async function loadStylesheet(href) {
   const link = document.createElement('link');
