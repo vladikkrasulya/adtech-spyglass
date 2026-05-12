@@ -187,8 +187,9 @@
   "mirror.note.no_bids_default_banner_imp": "У відповіді немає bid-ів — створено один дефолтний banner imp 300×250.",
   "mirror.note.bestpractice_response_enriched": "Best-practice mode: додано crid/cid/cattax/lurl/nurl + DSA bidext (EU compliance) + bidid та seat.",
   "mirror.note.bestpractice_request_enriched": "Best-practice mode: додано source.ext.schain (sellers.json), regs.coppa/gdpr, user.ext.consent placeholder, device.sua (Structured UA для post-Chrome-UA-freeze).",
-
   "device.client_hints.sua_missing": "device.sua (Structured User Agent) відсутнє. Chrome/Edge 100+ заморозили класичний UA-string — без sua DSP не може таргетити за версією ОС, мінорною версією браузера або моделлю девайса. Запит валідний; таргет буде грубшим, очікуй нижчий buyout.",
   "device.client_hints.os_unknown": "ОС не вказано — ні device.os/.osv, ні device.sua.platform її не несе. DSP не може запускати OS-сегментовані кампанії (mobile/desktop split, iOS-only креативи тощо). Додай device.os + device.osv, або краще — device.sua.platform з client-hints.",
-  "device.client_hints.browser_unknown": "Браузер недосяжний: немає device.browser, device.sua.browsers[] пусте, device.ua теж порожнє. DSP не може виключити застарілі браузери або підібрати креативи що залежать від сучасних WebAPI. Мінімум — заповни device.ua; ідеально — device.sua.browsers[] з client-hints."
+  "device.client_hints.browser_unknown": "Браузер недосяжний: немає device.browser, device.sua.browsers[] пусте, device.ua теж порожнє. DSP не може виключити застарілі браузери або підібрати креативи що залежать від сучасних WebAPI. Мінімум — заповни device.ua; ідеально — device.sua.browsers[] з client-hints.",
+  "imp.secure_recommended": "Слот #{num}: прапор secure відсутній або 0. Більшість видавців віддає сторінки по HTTPS; HTTP-креативи браузер беззвучно блокує вже після виграного аукціону. Безпечний дефолт — secure: 1.",
+  "imp.secure_invalid": "Слот #{num}: secure має бути 0 або 1 (числовий прапор). Зараз — інший тип, аукціон не може надійно зрозуміти, чи потрібен HTTPS."
 }

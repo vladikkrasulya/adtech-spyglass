@@ -22,6 +22,11 @@ const PLUGINS = [
   //    modern (Chrome/Edge 100+) browsers would carry. Warning severity
   //    because the bid still works, just with coarser targeting.
   require('./client-hints'),
+
+  // 2. imp.secure — checks each impression's `secure` flag. Warns when
+  //    missing/0 (HTTPS publishers risk mixed-content blocks); errors
+  //    when the value isn't 0 or 1 (oRTB §3.2.4 violation).
+  require('./imp-secure'),
 ];
 
 /**

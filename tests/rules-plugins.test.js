@@ -21,6 +21,7 @@ const assert = require('node:assert/strict');
 
 const { runRulePlugins, listPlugins } = require('@kyivtech/spyglass-core/rules');
 const clientHints = require('@kyivtech/spyglass-core/rules/client-hints');
+const impSecure = require('@kyivtech/spyglass-core/rules/imp-secure');
 const { validate } = require('@kyivtech/spyglass-core');
 
 // ── Registry ────────────────────────────────────────────────────────────────
@@ -236,4 +237,52 @@ test('integration: disabledRules suppresses plugin findings via prefix', () => {
   for (const id of ids) {
     assert.ok(!id.startsWith('device.client_hints.'), `${id} should be suppressed`);
   }
+});
+
+// ── imp-secure plugin ──────────────────────────────────────────────────────
+
+test('imp-secure: missing secure flag fires recommended-warning', () => {
+  const out = impSecure.validate({ imp: [{ id: 's1' }] }, {});
+  assert.equal(out.length, 1);
+  assert.equal(out[0].id, 'imp.secure_recommended');
+  assert.equal(out[0].level, 'info');
+  assert.equal(out[0].path, 'imp[0].secure');
+  assert.deepEqual(out[0].params, { num: 1 });
+});
+
+test('imp-secure: secure: 0 fires recommended-warning', () => {
+  const out = impSecure.validate({ imp: [{ id: 's1', secure: 0 }] }, {});
+  assert.equal(out.length, 1);
+  assert.equal(out[0].id, 'imp.secure_recommended');
+});
+
+test('imp-secure: secure: 1 produces no finding', () => {
+  const out = impSecure.validate({ imp: [{ id: 's1', secure: 1 }] }, {});
+  assert.deepEqual(out, []);
+});
+
+test('imp-secure: secure: 2 fires invalid-error', () => {
+  const out = impSecure.validate({ imp: [{ id: 's1', secure: 2 }] }, {});
+  assert.equal(out.length, 1);
+  assert.equal(out[0].id, 'imp.secure_invalid');
+  assert.equal(out[0].level, 'error');
+});
+
+test('imp-secure: secure as string "1" fires invalid-error', () => {
+  const out = impSecure.validate({ imp: [{ id: 's1', secure: '1' }] }, {});
+  assert.equal(out.length, 1);
+  assert.equal(out[0].id, 'imp.secure_invalid');
+});
+
+test('imp-secure: missing imp array returns []', () => {
+  assert.deepEqual(impSecure.validate({}, {}), []);
+  assert.deepEqual(impSecure.validate({ imp: null }, {}), []);
+  assert.deepEqual(impSecure.validate(null, {}), []);
+});
+
+test('imp-secure: plugin is registered with correct metadata', () => {
+  const meta = listPlugins().find((p) => p.id === 'imp-secure');
+  assert.ok(meta, 'imp-secure plugin should appear in listPlugins()');
+  assert.deepEqual(meta.appliesTo, ['ORTB_REQUEST']);
+  assert.ok(meta.description && meta.description.length > 0);
 });

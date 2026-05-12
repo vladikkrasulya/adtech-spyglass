@@ -188,8 +188,9 @@
   "mirror.note.no_bids_default_banner_imp": "Response has no bids — created one default 300×250 banner imp.",
   "mirror.note.bestpractice_response_enriched": "Best-practice mode: added crid/cid/cattax/lurl/nurl + DSA bidext (EU compliance) + bidid and seat.",
   "mirror.note.bestpractice_request_enriched": "Best-practice mode: added source.ext.schain (sellers.json), regs.coppa/gdpr, user.ext.consent placeholder, device.sua (Structured UA for the post-Chrome-UA-freeze world).",
-
   "device.client_hints.sua_missing": "device.sua (Structured User Agent) is missing. Chrome/Edge 100+ freeze the legacy UA string — without sua the DSP can't target by OS version, browser minor version, or device model. Bid is valid; targeting will be coarser, expect lower buyout.",
   "device.client_hints.os_unknown": "OS not specified — neither device.os/.osv nor device.sua.platform carries it. The DSP can't run OS-segmented campaigns (mobile/desktop split, iOS-only creatives, etc.). Add device.os + device.osv, or better — device.sua.platform from client-hints.",
-  "device.client_hints.browser_unknown": "Browser identity unreachable: no device.browser, no device.sua.browsers[], and device.ua is empty. The DSP can't exclude obsolete browsers or pick creatives that depend on modern WebAPIs. At minimum fill device.ua; ideally device.sua.browsers[] from client-hints."
+  "device.client_hints.browser_unknown": "Browser identity unreachable: no device.browser, no device.sua.browsers[], and device.ua is empty. The DSP can't exclude obsolete browsers or pick creatives that depend on modern WebAPIs. At minimum fill device.ua; ideally device.sua.browsers[] from client-hints.",
+  "imp.secure_recommended": "Slot #{num}: secure flag is missing or 0. Most publishers serve HTTPS pages; mixed-content creatives (HTTP) get silently blocked by the browser after the bid wins. Setting secure: 1 is the safe default.",
+  "imp.secure_invalid": "Slot #{num}: secure must be 0 or 1 (numeric flag). It's another type now, so the auction can't reliably determine whether HTTPS is required."
 }

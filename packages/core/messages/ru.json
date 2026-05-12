@@ -187,8 +187,9 @@
   "mirror.note.no_bids_default_banner_imp": "В ответе нет bid-ов — создан один дефолтный banner imp 300×250.",
   "mirror.note.bestpractice_response_enriched": "Best-practice mode: добавлено crid/cid/cattax/lurl/nurl + DSA bidext (EU compliance) + bidid и seat.",
   "mirror.note.bestpractice_request_enriched": "Best-practice mode: добавлено source.ext.schain (sellers.json), regs.coppa/gdpr, user.ext.consent placeholder, device.sua (Structured UA для post-Chrome-UA-freeze).",
-
   "device.client_hints.sua_missing": "device.sua (Structured User Agent) отсутствует. Chrome/Edge 100+ замораживают классическую UA-строку — без sua DSP не может таргетить по версии ОС, минорной версии браузера или модели устройства. Запрос валиден; таргет будет грубее, ожидай ниже buyout.",
   "device.client_hints.os_unknown": "ОС не указана — ни device.os/.osv, ни device.sua.platform её не несут. DSP не может запускать OS-сегментированные кампании (mobile/desktop split, iOS-only креативы и т.д.). Добавь device.os + device.osv, или лучше — device.sua.platform из client-hints.",
-  "device.client_hints.browser_unknown": "Браузер недосягаем: нет device.browser, device.sua.browsers[] пустой, device.ua тоже пустой. DSP не может исключить устаревшие браузеры или подобрать креативы, зависящие от современных WebAPI. Минимум — заполни device.ua; идеально — device.sua.browsers[] из client-hints."
+  "device.client_hints.browser_unknown": "Браузер недосягаем: нет device.browser, device.sua.browsers[] пустой, device.ua тоже пустой. DSP не может исключить устаревшие браузеры или подобрать креативы, зависящие от современных WebAPI. Минимум — заполни device.ua; идеально — device.sua.browsers[] из client-hints.",
+  "imp.secure_recommended": "Слот #{num}: флаг secure отсутствует или равен 0. Большинство издателей отдают страницы по HTTPS; HTTP-креативы браузер беззвучно блокирует уже после выигранного аукциона. Безопасный дефолт — secure: 1.",
+  "imp.secure_invalid": "Слот #{num}: secure должен быть 0 или 1 (числовой флаг). Сейчас — другой тип, аукцион не может надёжно определить, нужен ли HTTPS."
 }
