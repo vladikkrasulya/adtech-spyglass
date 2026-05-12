@@ -56,6 +56,9 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
  *   detectFormat: Function,
  *   unionFormat: Function,
  *   AnalyzeLog: { record: Function },
+ *   loadUserDialect?: Function,
+ *   getDefaultDialectForUser?: Function,
+ *   db?: any,
  * }} deps
  */
 function createAnalyzeModule(deps) {
