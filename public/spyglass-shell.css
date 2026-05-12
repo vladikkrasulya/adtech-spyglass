@@ -1,0 +1,88 @@
+/* ============================================================
+   Spyglass shell-critical styles, shared across all locales.
+   Extracted from index.{uk,en,ru}.html on 2026-05-12.
+
+   Three sections — all token-driven, all theme-aware:
+   - Scrollbars (palette-aligned in both themes, fixed 10px width)
+   - Text selection (::selection + ::-moz-selection)
+   - Pre-render hero (above-fold SEO copy inside #app-root, replaced
+     by inspector module's mount() once JS boots)
+   ============================================================ */
+
+/* Scrollbars — palette-aligned in BOTH themes. Width identical across
+   themes (10px) so theme toggle never reflows content. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Text selection — accent-tinted, contrast-preserved. */
+::selection {
+  background: var(--selection-bg);
+  color: var(--text);
+}
+::-moz-selection {
+  background: var(--selection-bg);
+  color: var(--text);
+}
+
+/* Pre-render hero — SEO above-fold copy. Lives in raw HTML inside
+   #app-root so crawlers, social-preview bots, and LLMs that read
+   markup index it. display:none keeps it out of the visual frame for
+   JS-enabled users (they'd otherwise see a ~200ms flash before
+   inspector mount() replaces #app-root.innerHTML with the live app). */
+.pre-render-hero {
+  display: none;
+  max-width: 720px;
+  margin: clamp(24px, 8vh, 96px) auto;
+  padding: 0 24px;
+  font-family:
+    Onest,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  color: var(--text);
+}
+.pre-render-hero h1 {
+  margin: 0 0 16px;
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.pre-render-hero p {
+  margin: 0 0 20px;
+  font-size: clamp(15px, 2vw, 17px);
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.pre-render-hero ul {
+  margin: 0;
+  padding: 0 0 0 1.1em;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+.pre-render-hero li::marker {
+  color: var(--accent);
+}

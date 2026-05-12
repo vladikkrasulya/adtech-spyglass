@@ -181,55 +181,7 @@
         } catch (e) {}
       })();
     </script>
-    <style>
-      /* ============================================================
-   2026-05-06: Indigo redesign rolled back to classic Yellow-Black
-   palette (Dewalt-style). All colour roles now flow from
-   /design-system.css :root + [data-theme="dark"] tokens directly —
-   no shell-level palette overrides. The Indigo override block, the
-   bottom-anchored gradient glow, and any accent-specific decorative
-   rules were removed surgically. Scrollbar + selection rules below
-   stay because they're token-driven (var(--border-strong) etc.) and
-   recolour automatically on the new palette.
-   ============================================================ */
-
-      /* Scrollbars — palette-aligned in BOTH themes. Width identical across
-         themes (10px) so theme toggle never reflows content. */
-      * {
-        scrollbar-width: thin;
-        scrollbar-color: var(--border-strong) transparent;
-      }
-      *::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-      }
-      *::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      *::-webkit-scrollbar-thumb {
-        background: var(--border-strong);
-        border-radius: 6px;
-        border: 2px solid transparent;
-        background-clip: content-box;
-      }
-      *::-webkit-scrollbar-thumb:hover {
-        background: var(--text-dim);
-        background-clip: content-box;
-      }
-      *::-webkit-scrollbar-corner {
-        background: transparent;
-      }
-
-      /* Text selection — accent-tinted, contrast-preserved. */
-      ::selection {
-        background: var(--selection-bg);
-        color: var(--text);
-      }
-      ::-moz-selection {
-        background: var(--selection-bg);
-        color: var(--text);
-      }
-    </style>
+    <link rel="stylesheet" href="/spyglass-shell.css" />
   </head>
   <body>
     <!-- Inspector module owns its own template + CSS — see
@@ -237,7 +189,25 @@
          Shell provides only base tokens (above) + the mount root.
          The .workbench grid sits ON #app-root (not body) so the grid
          items inside the injected template are direct grid children. -->
-    <div id="app-root" class="workbench"></div>
+    <div id="app-root" class="workbench">
+      <!-- Pre-render hero (v0.41.0): above-fold SEO copy for crawlers,
+           social-preview bots, and no-JS visitors. The inspector module's
+           mount() writes innerHTML here once it loads, replacing this. -->
+      <section class="pre-render-hero">
+        <h1>Spyglass — публічний OpenRTB-інспектор</h1>
+        <p>
+          Встав BidRequest або BidResponse JSON — отримай validation
+          findings, crosscheck request↔response, декодовані IAB-категорії
+          та превʼю креативу. Без реклами, без логів, zero-knowledge
+          шифрування для збережених зразків.
+        </p>
+        <ul>
+          <li>Валідація oRTB 2.5 / 2.6 / 3.0 + Native 1.x + VAST 4.x</li>
+          <li>Крос-перевірка семантики request ↔ response</li>
+          <li>Сигнали поведінки + превʼю креативу</li>
+        </ul>
+      </section>
+    </div>
     <script src="/version.js?v=1"></script>
     <script src="/spyglass-crypto.js?v=1"></script>
     <script src="/i18n.js?v=30"></script>
@@ -257,23 +227,23 @@
     <!-- Classic <script> utilities. They wait for `kt:inspector-ready`
          (emitted by inspector mount() once template DOM is injected)
          before binding to inspector-owned elements. -->
-    <script src="/modules/shortcuts/i18n.js"></script>
-    <script src="/modules/shortcuts/index.js"></script>
-    <script src="/export.js?v=1"></script>
-    <script src="/modules/share/i18n.js"></script>
-    <script src="/modules/share/index.js"></script>
-    <script src="/modules/embed/i18n.js"></script>
-    <script src="/modules/embed/index.js"></script>
-    <script src="/modules/behavior/index.js?v=4"></script>
+    <script src="/modules/shortcuts/i18n.js" defer></script>
+    <script src="/modules/shortcuts/index.js" defer></script>
+    <script src="/export.js?v=1" defer></script>
+    <script src="/modules/share/i18n.js" defer></script>
+    <script src="/modules/share/index.js" defer></script>
+    <script src="/modules/embed/i18n.js" defer></script>
+    <script src="/modules/embed/index.js" defer></script>
+    <script src="/modules/behavior/index.js?v=4" defer></script>
     <!-- Phase 7a — Spyglass Intelligence (Discovery Mode). Loads in order:
          storage → banner → observer → entry. All four expose IIFE-scoped
          globals (SpyglassIntelStorage / SpyglassIntelBanner /
          SpyglassIntelObserver / SpyglassIntel) and are no-ops when
          IndexedDB is unavailable (private mode etc.). -->
-    <script src="/modules/intel/storage.js?v=3"></script>
-    <script src="/modules/intel/banner.js?v=3"></script>
-    <script src="/modules/intel/observer.js?v=2"></script>
-    <script src="/modules/intel/builder.js?v=4"></script>
-    <script src="/modules/intel/index.js?v=3"></script>
+    <script src="/modules/intel/storage.js?v=3" defer></script>
+    <script src="/modules/intel/banner.js?v=3" defer></script>
+    <script src="/modules/intel/observer.js?v=2" defer></script>
+    <script src="/modules/intel/builder.js?v=4" defer></script>
+    <script src="/modules/intel/index.js?v=3" defer></script>
   </body>
 </html>

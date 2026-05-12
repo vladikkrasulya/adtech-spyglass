@@ -6,6 +6,144 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.41.3 — Perf bundle from DeepSeek audit (2026-05-12)
+
+Five surgical wins from the external DeepSeek v4 Pro audit. Each fix
+verified against the actual call graph before applying — one audit
+finding (`JSON.parse` without try/catch) turned out to be a false
+positive (all 15 callsites already protected) and was dropped from the
+bundle.
+
+#### Changes
+
+- **Classic scripts get `defer`** in `index.{uk,en,ru}.html`. 13 tags
+  after the inspector module no longer block parsing. The four
+  pre-module scripts (`version.js`, `spyglass-crypto.js`, `i18n.js`,
+  `lang-switch.js`) intentionally stay synchronous — the inspector
+  module imports them transitively. Deferred scripts already wait for
+  `kt:inspector-ready` before binding to inspector-owned DOM, so the
+  defer change is safe.
+- **`fileHash` dep-tracking mtime cache** (`server.js`). Was: read +
+  SHA1 every request, for every transitively-imported JS/HTML file —
+  dozens of blocking-I/O ops per page load. Now: two new module-level
+  Maps (`_jsHtmlHashCache`, `_activeCollector`). Top-level call seeds a
+  collector; nested sync recursion records every file's mtime into it;
+  on next request a cache hit costs N `statSync` calls instead of
+  N `readFileSync` + SHA1. Bind-mounted-public-friendly: any file
+  edit invalidates via mtime, no `fs.watch` needed.
+- **`moduleBundleHash` cache hit becomes cheap** (`server.js`). Was:
+  `readdirSync` + 2N `statSync` + 2× `JSON.stringify` even on cache
+  hit. Now: directory mtime is the primary invalidation signal;
+  fast-path does 1 + N `statSync` calls and returns the cached hash.
+  Single-pass over the `fs.Stats` object replaces the redundant
+  filter/manifest passes.
+- **Gzip compression with content-hash cache** (`server.js`). All
+  text content types (HTML/CSS/JS/JSON/SVG/plain) compressed with
+  `zlib.gzipSync` when the client sends `Accept-Encoding: gzip`.
+  Cached by `sha1[0:12]` of the post-processed body so the
+  `rewriteAssetVersions`-mutated outputs cache once per unique shape.
+  Capped at 200 entries with FIFO eviction. `Vary: Accept-Encoding`
+  set unconditionally so proxies don't poison legacy clients.
+  Empirical: inspector.css 62KB → 14KB (78%), spyglass.app.js
+  197KB → 59KB (70%), HTML 15KB → 5KB (68%).
+- **Shell-critical CSS extracted** to `public/spyglass-shell.css`.
+  Was duplicated inline `<style>` block in each `index.{uk,en,ru}.html`
+  — 86/86/82 lines respectively. RU was missing the
+  `::-moz-selection` rule (Firefox-only selection styling); extraction
+  fixes that drift by including the rule in the shared file. Pulled
+  through `rewriteAssetVersions` so the new `<link>` gets a
+  content-hash auto-version (`?v=8a9c6d45` on this build).
+
+#### Files
+
+- `server.js` — zlib require, `_jsHtmlHashCache`/`_activeCollector`/
+  `_gzipCache` declarations, rewritten `fileHash` and
+  `moduleBundleHash`, `maybeGzip` helper, response-header path through
+  the static file handler.
+- `public/index.{uk,en,ru}.html` — `defer` on 13 classic scripts,
+  inline `<style>` block replaced with `<link rel="stylesheet"
+  href="/spyglass-shell.css" />`.
+- `public/spyglass-shell.css` — new file holding the
+  scrollbar / selection / pre-render-hero CSS shared across locales.
+- `package.json`, `public/version.js` — lockstep bump 0.41.2 → 0.41.3.
+
+#### Verification
+
+- `curl --compressed http://localhost:8090/modules/inspector/inspector.css`
+  returns 14KB (gzipped) with `Content-Encoding: gzip`; same URL
+  without `Accept-Encoding` returns 62KB.
+- Playwright smoke: all three locales render unchanged; zero console
+  errors/warnings; tab UI (INSPECTOR/VALIDATION/CROSSCHECK/
+  CATEGORIES/BEHAVIOR) intact.
+- 10 consecutive requests to `/modules/inspector/index.js` complete in
+  ~9ms each (vs ~30ms first request) — bundle-hash cache hit path.
+
+### v0.40.0 — SEO pre-render hero (2026-05-12)
+
+Tiny, surgical SEO win. The `#app-root` mount element used to be a
+literal empty `<div>` — crawlers, social-preview bots, and no-JS
+visitors saw nothing meaningful above the fold (`<title>`,
+`<meta description>`, and `application/ld+json` were already present
+in `<head>`, but no body copy). Adds a short hero section inside
+`#app-root` that the inspector module's `mount()` overwrites once
+the live app boots.
+
+Motivated by an external SEO/perf audit (Gemini, 2026-05-12) which
+proposed full template hydration. After verification, three of the
+four findings turned out stale or false-positive; the hero captures
+the bulk of the indexable-content improvement at a fraction of the
+risk. Template fetch + mount lifecycle unchanged.
+
+#### Changes
+
+- **`<h1>` per locale** — the first H1 anywhere in the Spyglass
+  landing surface (template never had one). Locale-appropriate
+  text: "Public OpenRTB Inspector" (en) / "публічний
+  OpenRTB-інспектор" (uk) / "публичный OpenRTB-инспектор" (ru).
+- **Value-prop paragraph** mirroring the existing `<meta
+  description>` tone in each locale (paste oRTB JSON →
+  validation + crosscheck + IAB decoding + preview; no ads, no
+  logs, zero-knowledge for saved samples).
+- **Three-bullet capability list** — oRTB versions covered,
+  crosscheck pitch, behavior + preview.
+- **Inline `<style>` rule `.pre-render-hero`** scoped to the new
+  section. Uses existing design-system tokens (`--text`,
+  `--text-dim`, `--accent`) so it themes correctly in both light
+  and dark mode before any JS runs. Lives in the same shell
+  `<style>` block as the scrollbar + selection rules — these are
+  the only place in the public-facing HTML that holds critical
+  inline CSS for first-paint.
+- **No JS changes.** Inspector `mount()` still does
+  `root.innerHTML = html`, which transparently replaces the hero
+  once the template arrives. Single-frame visible flash on first
+  page load only; SPA navigation (lang-switch / link) re-fetches
+  the page from scratch so the flash re-renders each navigation
+  but the user already has the cached template fetch resolved
+  fast.
+- **3-locale parity preserved.** All three index files updated
+  in lockstep with appropriately translated copy. The bullet list
+  retains the same number + intent across locales.
+
+#### Files
+
+- `public/index.en.html`, `public/index.uk.html`,
+  `public/index.ru.html` — hero markup inside `#app-root`;
+  `.pre-render-hero` CSS rule appended to the inline `<style>`
+  block.
+- `package.json`, `public/version.js`, `public/about.{en,uk,ru}.html`
+  — lockstep version bump 0.39.0 → 0.40.0.
+
+#### Verification
+
+- `curl -L https://spyglass.kyivtech.com.ua/` (and `/uk/`, `/ru/`)
+  should now return the H1 + paragraph + bullets inside `#app-root`
+  before any JS runs. Gemini's suggested verification curl
+  (`grep "OpenRTB-інспектор"`) will pass on the uk locale.
+- Visual: on a slow connection (or with JS disabled) the hero is
+  visible; with JS enabled, it disappears within ~200ms as the
+  inspector template injects.
+- `npm test` baseline (402/402) unaffected — no logic touched.
+
 ### v0.39.0 — Version Pinning UI control (2026-05-11)
 
 The v0.38.0 API surface (`opts.expectedVersion`) gets a UI face. Adds a

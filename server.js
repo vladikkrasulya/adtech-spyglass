@@ -34,6 +34,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const { Users, Partners, Samples, AnalyzeLog, Sessions, BehaviorCorpus, db } = require('./db');
 const { createAuth } = require('./auth');
 const { signToken, verifyToken, TokenError } = require('./tokens');
@@ -281,6 +282,37 @@ function resolveLocaleRoute(reqUrl) {
 // rules. A content-hash in the URL is the only bulletproof invalidation.
 
 const _hashCache = new Map(); // absPath → { hash, mtimeMs } — for terminal (.css, image) only
+const _jsHtmlHashCache = new Map(); // absPath → { hash, deps: Map<absPath, mtimeMs> }
+let _activeCollector = null; // set at top-level fileHash call, shared down sync recursion
+
+// ── Gzip compression with content-hash cache ────────────────────────────
+// Keyed by sha1(body)[0:12] so HTML/JS bodies that vary across requests
+// (rewriteAssetVersions/injectModuleBundleHashes outputs) cache by their
+// final shape, not by source file. Capped at MAX_GZIP_CACHE entries with
+// FIFO eviction — keeps memory bounded under varied query strings.
+const _gzipCache = new Map();
+const MAX_GZIP_CACHE = 200;
+const _gzipCompressibleTypes = new Set([
+  'text/html', 'text/css', 'application/javascript', 'application/json',
+  'image/svg+xml', 'text/plain',
+]);
+
+function maybeGzip(body, req, ct) {
+  if (body.length < 1024) return { body, encoding: null };
+  if (!(req.headers['accept-encoding'] || '').includes('gzip')) return { body, encoding: null };
+  if (!_gzipCompressibleTypes.has(ct)) return { body, encoding: null };
+
+  const key = crypto.createHash('sha1').update(body).digest('hex').slice(0, 12);
+  let gz = _gzipCache.get(key);
+  if (!gz) {
+    gz = zlib.gzipSync(body, { level: 6 });
+    if (_gzipCache.size >= MAX_GZIP_CACHE) {
+      _gzipCache.delete(_gzipCache.keys().next().value);
+    }
+    _gzipCache.set(key, gz);
+  }
+  return { body: gz, encoding: 'gzip' };
+}
 
 const HTML_TAG_RE = /(<(?:script|link)[^>]*?(?:src|href)=")(\/[^"?]+\.(?:js|css))(?:\?v=[^"]+)?"/g;
 // Catches `from "/x.js"` and `import("/x.js")` with optional ?v=…
@@ -309,6 +341,7 @@ function rewriteAssetVersions(content, sourceType, visited) {
 }
 
 function fileHash(filepath, visited) {
+  const isTopLevel = _activeCollector === null;
   try {
     // Cycle protection: if we're already computing this file's hash deeper
     // up the call stack, return a stub. ES modules don't permit cycles in
@@ -319,18 +352,39 @@ function fileHash(filepath, visited) {
 
     const ext = path.extname(filepath).toLowerCase();
     if (ext === '.js' || ext === '.html') {
-      // Transitive hash: rewrite first (which recursively hashes imports),
-      // then hash the rewritten content. Not mtime-cached because a child
-      // mtime change must invalidate this entry; tracking that explicitly
-      // is more complex than just recomputing on each request.
+      // Dep-tracking mtime cache: on top-level call validate all transitive
+      // deps; if all mtimes match return cached hash. Nested calls share the
+      // same _activeCollector (module-level, safe because everything is sync)
+      // so every file read anywhere in the recursion is recorded as a dep.
+      if (isTopLevel) {
+        const c = _jsHtmlHashCache.get(filepath);
+        if (c) {
+          let valid = true;
+          for (const [dep, mtime] of c.deps) {
+            try { if (fs.statSync(dep).mtimeMs !== mtime) { valid = false; break; } }
+            catch { valid = false; break; }
+          }
+          if (valid) { v.delete(filepath); return c.hash; }
+        }
+        _activeCollector = new Map();
+      }
+
+      try { _activeCollector.set(filepath, fs.statSync(filepath).mtimeMs); } catch { /* gone */ }
+
       const buf = fs.readFileSync(filepath);
       const rewritten = rewriteAssetVersions(
         buf.toString('utf8'),
         ext === '.html' ? 'html' : 'js',
         v,
       );
+      const hash = crypto.createHash('sha1').update(rewritten).digest('hex').slice(0, 8);
       v.delete(filepath);
-      return crypto.createHash('sha1').update(rewritten).digest('hex').slice(0, 8);
+
+      if (isTopLevel) {
+        _jsHtmlHashCache.set(filepath, { hash, deps: _activeCollector });
+        _activeCollector = null;
+      }
+      return hash;
     }
 
     // Terminal assets (.css, images, …) — disk-content hash, mtime-cached.
@@ -346,6 +400,7 @@ function fileHash(filepath, visited) {
     v.delete(filepath);
     return hash;
   } catch {
+    if (isTopLevel) _activeCollector = null;
     return null;
   }
 }
@@ -438,8 +493,34 @@ function serveStaticFile(req, res) {
       txt = injectModuleBundleHashes(txt);
       body = Buffer.from(txt, 'utf8');
     }
-    res.writeHead(200, { 'Content-Type': ct, 'Cache-Control': 'no-cache' });
-    res.end(body);
+    // v0.41.2 — Cache-Control strategy:
+    // - HTML files: no-cache (entry points; must always re-fetch to pick up
+    //   new asset hashes).
+    // - Static assets with ?v=<hash> query (content-hashed by
+    //   rewriteAssetVersions): public, max-age=31536000, immutable —
+    //   the hash itself is the cache key, so any content change yields a
+    //   new URL and the browser fetches fresh automatically.
+    // - Assets WITHOUT ?v= (direct refs, fonts, images): no-cache fallback.
+    // Previously everything was `no-cache`, forcing a revalidation round-
+    // trip on every asset on every page load — 17 scripts × ~300ms RTT
+    // was ≈5s of pure handshake time before the page could become
+    // interactive. With this fix subsequent loads serve from disk cache
+    // (0ms) and only HTML hits the network.
+    const hasVersionQuery = (req.url || '').indexOf('?v=') !== -1;
+    const cacheControl =
+      ct === 'text/html' || !hasVersionQuery
+        ? 'no-cache'
+        : 'public, max-age=31536000, immutable';
+
+    const { body: outBody, encoding } = maybeGzip(body, req, ct);
+    const headers = {
+      'Content-Type': ct,
+      'Cache-Control': cacheControl,
+      'Vary': 'Accept-Encoding',
+    };
+    if (encoding) headers['Content-Encoding'] = encoding;
+    res.writeHead(200, headers);
+    res.end(outBody);
   });
 }
 
@@ -459,30 +540,48 @@ function serveStaticFile(req, res) {
 // CSS should re-fetch the template too (they may have a coupled DOM
 // contract). Bundle = "everything inside the module's dir". Touching any
 // file flips the hash. Mtime-cached via a {filename: mtimeMs} manifest.
-const _bundleHashCache = new Map(); // moduleId → { manifest, hash }
+const _bundleHashCache = new Map(); // moduleId → { dirMtime, manifest, hash }
 
 function moduleBundleHash(moduleId) {
   const dir = path.join(PUBLIC_DIR, 'modules', moduleId);
-  let files;
-  try {
-    files = fs
-      .readdirSync(dir)
-      .filter((f) => fs.statSync(path.join(dir, f)).isFile())
-      .sort();
-  } catch {
-    return null;
-  }
-  if (files.length === 0) return null;
-  const manifest = {};
-  for (const f of files) manifest[f] = fs.statSync(path.join(dir, f)).mtimeMs;
   const cached = _bundleHashCache.get(moduleId);
-  if (cached && JSON.stringify(cached.manifest) === JSON.stringify(manifest)) {
-    return cached.hash;
+
+  // Fast path: dirMtime changes when files are added/removed, file mtime
+  // changes when content is edited. Both together cover bind-mount dev
+  // edits without ever calling readdirSync/readFileSync on a cache hit.
+  let dirStat;
+  try { dirStat = fs.statSync(dir); }
+  catch { _bundleHashCache.delete(moduleId); return null; }
+
+  const dirMtime = dirStat.mtimeMs;
+  if (cached && cached.dirMtime === dirMtime) {
+    let valid = true;
+    for (const f of Object.keys(cached.manifest)) {
+      try {
+        if (fs.statSync(path.join(dir, f)).mtimeMs !== cached.manifest[f]) { valid = false; break; }
+      } catch { valid = false; break; }
+    }
+    if (valid) return cached.hash;
   }
+
+  // Slow path: rebuild manifest + recompute hash.
+  let entries;
+  try { entries = fs.readdirSync(dir); }
+  catch { _bundleHashCache.delete(moduleId); return null; }
+
+  const manifest = {};
+  const fileList = [];
+  for (const f of entries) {
+    let fstat;
+    try { fstat = fs.statSync(path.join(dir, f)); } catch { continue; }
+    if (fstat.isFile()) { fileList.push(f); manifest[f] = fstat.mtimeMs; }
+  }
+  if (fileList.length === 0) { _bundleHashCache.delete(moduleId); return null; }
+  fileList.sort();
   const h = crypto.createHash('sha1');
-  for (const f of files) h.update(fs.readFileSync(path.join(dir, f)));
+  for (const f of fileList) h.update(fs.readFileSync(path.join(dir, f)));
   const hash = h.digest('hex').slice(0, 8);
-  _bundleHashCache.set(moduleId, { manifest, hash });
+  _bundleHashCache.set(moduleId, { dirMtime, manifest, hash });
   return hash;
 }
 
@@ -557,6 +656,12 @@ const { createCorpusModule } = require('./modules/corpus/handler');
 const { createAccountModule } = require('./modules/account/handler');
 const { createAdminModule } = require('./modules/admin/handler');
 const { createProxyModule } = require('./modules/proxy/handler');
+// v8 — User Dialects feature
+const { createDialectsModule } = require('./modules/dialects/handler');
+const {
+  loadUserDialect,
+  getDefaultDialectForUser,
+} = require('./packages/core/dialects/user-dialect-runtime');
 // intelLlm + knowledgeBase already required at the top of the file
 const { computeCorpusMatrix: _computeCorpusMatrix } = require('./lib/corpus-matrix');
 
@@ -600,6 +705,12 @@ router.register(
     detectFormat,
     unionFormat,
     AnalyzeLog,
+    // v8 — User Dialects: analyze handler loads the caller's default
+    // dialect per request and passes it into validate() so the
+    // dialects-questions plugin can suppress already-mapped signals.
+    loadUserDialect,
+    getDefaultDialectForUser,
+    db,
   }),
 );
 router.register(
@@ -619,6 +730,7 @@ router.register(
   }),
 );
 router.register(createAccountModule({ auth, AnalyzeLog }));
+router.register(createDialectsModule({ auth, db }));
 router.register(createAdminModule({ db, Users, auth }));
 router.register(createProxyModule({ auth }));
 
