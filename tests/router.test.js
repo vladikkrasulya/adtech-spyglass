@@ -97,11 +97,27 @@ test('Router.register: accepts an array of modules', async () => {
   let calledB = false;
   const modA = {
     id: 'a',
-    routes: [{ method: 'GET', path: '/a', handler: () => { calledA = true; } }],
+    routes: [
+      {
+        method: 'GET',
+        path: '/a',
+        handler: () => {
+          calledA = true;
+        },
+      },
+    ],
   };
   const modB = {
     id: 'b',
-    routes: [{ method: 'GET', path: '/b', handler: () => { calledB = true; } }],
+    routes: [
+      {
+        method: 'GET',
+        path: '/b',
+        handler: () => {
+          calledB = true;
+        },
+      },
+    ],
   };
   router.register([modA, modB]);
 
@@ -120,7 +136,15 @@ test('Router.register: silently skips falsy or route-less modules', async () => 
   let called = false;
   const valid = {
     id: 'valid',
-    routes: [{ method: 'GET', path: '/ok', handler: () => { called = true; } }],
+    routes: [
+      {
+        method: 'GET',
+        path: '/ok',
+        handler: () => {
+          called = true;
+        },
+      },
+    ],
   };
   // falsy module, module without routes array, module with non-array routes
   router.register([null, undefined, {}, { id: 'noRoutes' }, valid]);
@@ -130,26 +154,38 @@ test('Router.register: silently skips falsy or route-less modules', async () => 
 
 test('Router.register: throws on missing method', () => {
   const router = new Router();
-  assert.throws(() => router.register({
-    id: 'bad',
-    routes: [{ path: '/x', handler: () => {} }],
-  }), /invalid route/);
+  assert.throws(
+    () =>
+      router.register({
+        id: 'bad',
+        routes: [{ path: '/x', handler: () => {} }],
+      }),
+    /invalid route/,
+  );
 });
 
 test('Router.register: throws on missing handler', () => {
   const router = new Router();
-  assert.throws(() => router.register({
-    id: 'bad',
-    routes: [{ method: 'GET', path: '/x' }],
-  }), /invalid route/);
+  assert.throws(
+    () =>
+      router.register({
+        id: 'bad',
+        routes: [{ method: 'GET', path: '/x' }],
+      }),
+    /invalid route/,
+  );
 });
 
 test('Router.register: throws on handler not a function', () => {
   const router = new Router();
-  assert.throws(() => router.register({
-    id: 'bad',
-    routes: [{ method: 'GET', path: '/x', handler: 'notafn' }],
-  }), /invalid route/);
+  assert.throws(
+    () =>
+      router.register({
+        id: 'bad',
+        routes: [{ method: 'GET', path: '/x', handler: 'notafn' }],
+      }),
+    /invalid route/,
+  );
 });
 
 test('Router.match: POST route does not match GET on same path', () => {
@@ -168,11 +204,27 @@ test('Router.dispatch: first-match-wins when two routes overlap', async () => {
   let secondCalled = false;
   router.register({
     id: 'first',
-    routes: [{ method: 'GET', path: '/api/overlap', handler: () => { firstCalled = true; } }],
+    routes: [
+      {
+        method: 'GET',
+        path: '/api/overlap',
+        handler: () => {
+          firstCalled = true;
+        },
+      },
+    ],
   });
   router.register({
     id: 'second',
-    routes: [{ method: 'GET', path: '/api/overlap', handler: () => { secondCalled = true; } }],
+    routes: [
+      {
+        method: 'GET',
+        path: '/api/overlap',
+        handler: () => {
+          secondCalled = true;
+        },
+      },
+    ],
   });
   await router.dispatch({ method: 'GET' }, {}, new URL('http://localhost/api/overlap'));
   assert.equal(firstCalled, true);
@@ -183,11 +235,15 @@ test('Router.dispatch: handler that throws propagates error', async () => {
   const router = new Router();
   router.register({
     id: 'err',
-    routes: [{
-      method: 'GET',
-      path: '/err',
-      handler: () => { throw new Error('boom'); },
-    }],
+    routes: [
+      {
+        method: 'GET',
+        path: '/err',
+        handler: () => {
+          throw new Error('boom');
+        },
+      },
+    ],
   });
   await assert.rejects(
     () => router.dispatch({ method: 'GET' }, {}, new URL('http://localhost/err')),
