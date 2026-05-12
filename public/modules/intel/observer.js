@@ -288,7 +288,7 @@
     let prev;
     try {
       prev = await storage.getCoOccurrence(key);
-    } catch (e) {
+    } catch (_e) {
       prev = null;
     }
     const decayedScore = prev
@@ -322,7 +322,7 @@
     let prev;
     try {
       prev = await storage.getObservation(key);
-    } catch (e) {
+    } catch (_e) {
       // First call may race the upgradeneeded transaction; treat as no-prev.
       prev = null;
     }

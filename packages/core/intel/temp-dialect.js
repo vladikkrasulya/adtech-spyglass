@@ -184,7 +184,7 @@ function generateTempDialectId() {
     if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.randomUUID) {
       return TEMP_DIALECT_ID_PREFIX + globalThis.crypto.randomUUID();
     }
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
   return TEMP_DIALECT_ID_PREFIX + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

@@ -121,7 +121,7 @@
     try {
       await navigator.clipboard.writeText(url);
       toastOk(tt('toast.share_link_copied'));
-    } catch (e) {
+    } catch (_e) {
       // Clipboard blocked — surface URL inline so the user can copy manually.
       window.prompt(tt('toast.share_link_manual_copy'), url);
     }

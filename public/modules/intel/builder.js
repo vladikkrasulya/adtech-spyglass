@@ -505,7 +505,7 @@
           if (fmt && Array.isArray(fmt.formats) && fmt.formats.length > 0) {
             detectedFormat = String(fmt.formats[0]);
           }
-        } catch (e) {
+        } catch (_e) {
           /* defensive — never block the suggest flow */
         }
         let suggestion = null;
@@ -513,7 +513,7 @@
           if (window.SpyglassIntel) {
             suggestion = await window.SpyglassIntel.suggestName(bucket, fields, detectedFormat);
           }
-        } catch (e) {
+        } catch (_e) {
           /* swallow — graceful degradation */
         }
         suggestBtn.textContent = original;
@@ -558,7 +558,7 @@
                 'AI-suggested purpose: ' + r.purpose + ' (confidence: ' + r.confidence + ')';
             }
           }
-        } catch (e) {
+        } catch (_e) {
           /* graceful */
         }
       };

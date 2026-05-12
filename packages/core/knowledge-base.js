@@ -57,7 +57,7 @@ function readSampleFile(relativeFile) {
     if (!abs.startsWith(KB_ROOT + path.sep) && abs !== KB_ROOT) return null;
     const raw = fs.readFileSync(abs, 'utf8');
     return JSON.parse(raw);
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }

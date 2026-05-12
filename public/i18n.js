@@ -931,7 +931,7 @@
       const v = localStorage.getItem('kt-lang');
       if (v === 'en' || v === 'ru') return v;
       return 'uk';
-    } catch (e) {
+    } catch (_e) {
       return 'uk';
     }
   }

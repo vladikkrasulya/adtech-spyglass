@@ -183,7 +183,7 @@
         payload || {},
       );
       parent.postMessage(msg, '*');
-    } catch (e) {
+    } catch (_e) {
       /* parent gone */
     }
   }
@@ -210,7 +210,7 @@
         isActive = !!navigator.userActivation.isActive;
         hasBeenActive = !!navigator.userActivation.hasBeenActive;
       }
-    } catch (e) {
+    } catch (_e) {
       /* feature missing — falls through to gesture-time heuristic */
     }
     const msSinceGesture = _lastGestureAt ? Date.now() - _lastGestureAt : -1;
@@ -246,11 +246,11 @@
       reportNavigation('window.open', url, { target: String(target || '') });
       try {
         return origOpen ? origOpen(url, target, features) : null;
-      } catch (e) {
+      } catch (_e) {
         return null;
       }
     };
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -262,11 +262,11 @@
         reportNavigation('location.' + method, url);
         try {
           return orig.call(this, url);
-        } catch (e) {
+        } catch (_e) {
           /* sandbox denied */
         }
       };
-    } catch (e) {
+    } catch (_e) {
       /* can't redefine */
     }
   });
@@ -283,13 +283,13 @@
           reportNavigation('location.href=', v);
           try {
             origSet.call(this, v);
-          } catch (e) {
+          } catch (_e) {
             /* sandbox denied */
           }
         },
       });
     }
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -314,7 +314,7 @@
       };
       return origAEL.call(this, type, wrapped, opts);
     };
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -354,7 +354,7 @@
           }
         },
       });
-    } catch (e) {
+    } catch (_e) {
       /* */
     }
   });
@@ -378,7 +378,7 @@
       });
       return origClick.apply(this, arguments);
     };
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -539,13 +539,13 @@
               bgAlpha: Number(topBgAlpha.toFixed(3)),
             });
           }
-        } catch (err) {
+        } catch (_err) {
           /* per-click measurement failure — ignore so we keep observing */
         }
       },
       true,
     );
-  } catch (e) {
+  } catch (_e) {
     /* listener install failed — non-fatal */
   }
 
@@ -562,7 +562,7 @@
       },
       true,
     );
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -574,7 +574,7 @@
       },
       true,
     );
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -629,7 +629,7 @@
               }
             }
           }
-        } catch (err) {
+        } catch (_err) {
           /* center detection failed — continue with other checks */
         }
 
@@ -654,7 +654,7 @@
           } else {
             _burstActive = false;
           }
-        } catch (err) {
+        } catch (_err) {
           /* burst detection failed */
         }
 
@@ -670,13 +670,13 @@
               isTrusted: !!(e && e.isTrusted),
             });
           }
-        } catch (err) {
+        } catch (_err) {
           /* phantom detection failed */
         }
       },
       true,
     );
-  } catch (e) {
+  } catch (_e) {
     /* listener install failed — non-fatal */
   }
 
@@ -696,7 +696,7 @@
         },
         true,
       );
-    } catch (e) {
+    } catch (_e) {
       /* */
     }
   });
@@ -753,13 +753,13 @@
               navContext(),
             ),
           );
-        } catch (err) {
+        } catch (_err) {
           /* */
         }
       },
       true,
     );
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -793,12 +793,12 @@
             ),
           );
         }
-      } catch (e) {
+      } catch (_e) {
         /* measurement failed — still delegate to native */
       }
       return origSubmit.apply(this, arguments);
     };
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -825,13 +825,13 @@
               navContext(),
             ),
           );
-        } catch (err) {
+        } catch (_err) {
           /* */
         }
       },
       true,
     );
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -876,13 +876,13 @@
               breachedThreshold: breached,
             });
           }
-        } catch (err) {
+        } catch (_err) {
           /* */
         }
       });
       cpuObserver.observe({ entryTypes: ['longtask'] });
     }
-  } catch (e) {
+  } catch (_e) {
     /* longtask unsupported (older Safari, some WebViews) — no-op */
   }
 
@@ -915,13 +915,13 @@
               resourceCount: _networkResourceCount,
             });
           }
-        } catch (err) {
+        } catch (_err) {
           /* */
         }
       });
       netObserver.observe({ entryTypes: ['resource'] });
     }
-  } catch (e) {
+  } catch (_e) {
     /* resource entry type unsupported — no-op */
   }
 
@@ -939,11 +939,11 @@
     setInterval(function () {
       try {
         send({ kind: 'heartbeat', method: 'heartbeat', url: '', trigger: 'no-event' });
-      } catch (err) {
+      } catch (_err) {
         /* */
       }
     }, HEARTBEAT_INTERVAL_MS);
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -986,12 +986,12 @@
         permissionHookSend('notification', 'Notification.requestPermission');
         try {
           return origNotifReq(callback);
-        } catch (e) {
+        } catch (_e) {
           return Promise.resolve('denied');
         }
       };
     }
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -1008,16 +1008,16 @@
             permissionHookSend('geolocation', 'navigator.geolocation.' + m);
             try {
               return orig.apply(navigator.geolocation, arguments);
-            } catch (e) {
+            } catch (_e) {
               /* sandbox / permission denied */
             }
           };
-        } catch (e) {
+        } catch (_e) {
           /* */
         }
       });
     }
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -1040,7 +1040,7 @@
                 : wantsAudio
                   ? 'mic'
                   : '';
-        } catch (e) {
+        } catch (_e) {
           /* */
         }
         permissionHookSend('getUserMedia', 'navigator.mediaDevices.getUserMedia', {
@@ -1053,7 +1053,7 @@
         }
       };
     }
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -1068,7 +1068,7 @@
         let permName = '';
         try {
           permName = descriptor && descriptor.name ? String(descriptor.name) : '';
-        } catch (e) {
+        } catch (_e) {
           /* */
         }
         permissionHookSend('permissions.query', 'navigator.permissions.query', {
@@ -1081,7 +1081,7 @@
         }
       };
     }
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 
@@ -1103,11 +1103,11 @@
         permissionHookSend('fullscreen', 'Element.' + m);
         try {
           return orig.apply(this, arguments);
-        } catch (e) {
+        } catch (_e) {
           /* sandbox / activation denied */
         }
       };
-    } catch (e) {
+    } catch (_e) {
       /* */
     }
   });
@@ -1132,7 +1132,7 @@
         }
       };
     }
-  } catch (e) {
+  } catch (_e) {
     /* */
   }
 

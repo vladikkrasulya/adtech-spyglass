@@ -36,7 +36,7 @@ export async function openSimBidsModal() {
   let parsed;
   try {
     parsed = JSON.parse(reqVal);
-  } catch (e) {
+  } catch (_e) {
     toast(t('toast.simbids_invalid_json'), 'error');
     return;
   }

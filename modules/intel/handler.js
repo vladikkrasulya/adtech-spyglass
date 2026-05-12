@@ -85,7 +85,7 @@ function createIntelModule(deps) {
         if (cleanFormat) {
           try {
             fewShot = knowledgeBase.fewShotForFormat(cleanFormat, { limit: 2 });
-          } catch (/** @type {any} */ e) {
+          } catch (/** @type {any} */ _e) {
             fewShot = [];
           }
         }

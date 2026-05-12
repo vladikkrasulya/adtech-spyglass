@@ -107,7 +107,7 @@ export async function openMirrorModal() {
   try {
     if (reqVal) parsedReq = JSON.parse(reqVal);
     if (resVal) parsedRes = JSON.parse(resVal);
-  } catch (e) {
+  } catch (_e) {
     toast(t('toast.mirror_invalid_json'), 'error');
     return;
   }

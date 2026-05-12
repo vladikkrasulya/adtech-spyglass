@@ -155,7 +155,7 @@ export async function mountInspector(root, ctx) {
       const v = localStorage.getItem('kt-lang');
       if (v === 'uk' || v === 'en' || v === 'ru') return v;
       return 'uk';
-    } catch (e) {
+    } catch (_e) {
       return 'uk';
     }
   }
@@ -199,7 +199,7 @@ export async function mountInspector(root, ctx) {
       if (fromStorage && (KNOWN_DIALECTS.has(fromStorage) || isTempDialect(fromStorage))) {
         return fromStorage;
       }
-    } catch (e) {
+    } catch (_e) {
       /* private mode / SSR */
     }
     return 'iab';
@@ -218,7 +218,7 @@ export async function mountInspector(root, ctx) {
     if (!KNOWN_DIALECTS.has(dialect) && !isTempDialect(dialect)) return;
     try {
       localStorage.setItem(DIALECT_STORAGE_KEY, dialect);
-    } catch (e) {
+    } catch (_e) {
       /* storage quota / private mode — best effort, the URL reflects state */
     }
     // Notify the intel module so its activeSpec cache invalidates and
@@ -259,7 +259,7 @@ export async function mountInspector(root, ctx) {
         url.searchParams.set('dialect', dialect);
       }
       history.replaceState({}, '', url.toString());
-    } catch (e) {
+    } catch (_e) {
       /* */
     }
   }
@@ -333,7 +333,7 @@ export async function mountInspector(root, ctx) {
         // would skip the lang-change re-render for that whole branch.
         if (!req && !res) return;
         window.runAnalysis({ req: req, res: res });
-      } catch (e) {
+      } catch (_e) {
         /* silent — user may not have a payload yet */
       }
     }),
@@ -736,7 +736,7 @@ export async function mountInspector(root, ctx) {
     ta.focus();
     try {
       ta.setSelectionRange(idx, idx + needle.length);
-    } catch (e) {
+    } catch (_e) {
       /* */
     }
     // setSelectionRange doesn't reliably scroll the textarea into view —
@@ -803,7 +803,7 @@ export async function mountInspector(root, ctx) {
       const admStr = String(adm);
       window.__spyglassBehavior.creative_adm =
         admStr.length > ADM_TRANSPORT_LIMIT ? admStr.slice(0, ADM_TRANSPORT_LIMIT) : admStr;
-    } catch (e) {
+    } catch (_e) {
       /* defensive — shouldn't fail, but the rest of preview must run */
     }
     // Resolve known macros so the preview reflects an actual rendered impression.
@@ -1156,7 +1156,7 @@ export async function mountInspector(root, ctx) {
   function persistHistory() {
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(historyStore.slice(0, HISTORY_MAX)));
-    } catch (e) {
+    } catch (_e) {
       // QuotaExceeded — drop oldest half until it fits, or give up gracefully.
       try {
         historyStore.length = Math.floor(historyStore.length / 2);
@@ -1682,7 +1682,7 @@ export async function mountInspector(root, ctx) {
           ) {
             try {
               await window.SpyglassIntel.applyToFindings({ req, res }, validation);
-            } catch (e) {
+            } catch (_e) {
               /* defensive — never block the analyze flow */
             }
           }
@@ -1711,7 +1711,7 @@ export async function mountInspector(root, ctx) {
             try {
               window.SpyglassIntel.observe(req, validation);
               window.SpyglassIntel.observe(res, validation);
-            } catch (e) {
+            } catch (_e) {
               /* observe() is already defensive; this is belt-and-braces */
             }
           }
@@ -3417,7 +3417,7 @@ export async function mountInspector(root, ctx) {
     let savedAt = 0;
     try {
       savedAt = parseInt(localStorage.getItem(SB_HIDDEN_TS_KEYS[side]) || '0', 10);
-    } catch (e) {
+    } catch (_e) {
       /* private mode → savedAt stays 0, no timestamp = legacy hide before
          this hotfix shipped → treat as fresh, won't expire on first visit */
     }
@@ -3456,7 +3456,7 @@ export async function mountInspector(root, ctx) {
       // forgotten state ages out without further action.
       localStorage.setItem(SB_HIDDEN_KEYS[side], isHidden ? '1' : '0');
       localStorage.setItem(SB_HIDDEN_TS_KEYS[side], String(Date.now()));
-    } catch (e) {
+    } catch (_e) {
       /* private mode */
     }
     const btn = document.getElementById(
@@ -3471,7 +3471,7 @@ export async function mountInspector(root, ctx) {
       let saved;
       try {
         saved = localStorage.getItem(SB_HIDDEN_KEYS[side]);
-      } catch (e) {
+      } catch (_e) {
         saved = null;
       }
 
@@ -3485,7 +3485,7 @@ export async function mountInspector(root, ctx) {
           try {
             localStorage.removeItem(SB_HIDDEN_KEYS[side]);
             localStorage.removeItem(SB_HIDDEN_TS_KEYS[side]);
-          } catch (e) {
+          } catch (_e) {
             /* */
           }
         }
@@ -3509,7 +3509,7 @@ export async function mountInspector(root, ctx) {
       try {
         localStorage.removeItem(SB_HIDDEN_KEYS[side]);
         localStorage.removeItem(SB_HIDDEN_TS_KEYS[side]);
-      } catch (e) {
+      } catch (_e) {
         /* */
       }
       const btn = document.getElementById(
@@ -4323,7 +4323,7 @@ export async function mountInspector(root, ctx) {
       let temps = [];
       try {
         temps = await window.SpyglassIntel.listTempDialects();
-      } catch (e) {
+      } catch (_e) {
         /* */
       }
       for (const spec of temps || []) {

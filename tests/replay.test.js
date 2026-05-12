@@ -11,7 +11,7 @@ function makeDeps(overrides = {}) {
   return {
     validate:
       overrides.validate ||
-      ((p) => ({
+      ((_p) => ({
         type: 'oRTB BidRequest',
         version: '2.5',
         status: 'clean',
@@ -144,7 +144,7 @@ test('replay: counts errors / warnings / info / crits per sample', () => {
   const out = replay(
     [{ bidReq: { id: 'a' } }, { bidReq: { id: 'b' }, bidRes: { id: 'b' } }],
     makeDeps({
-      validate: (p) => ({
+      validate: (_p) => ({
         type: 'r',
         version: '2.5',
         status: 'errors',

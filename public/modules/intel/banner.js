@@ -112,7 +112,7 @@
     try {
       const until = Number(localStorage.getItem(DISMISS_KEY) || '0');
       return until > Date.now();
-    } catch (e) {
+    } catch (_e) {
       return false;
     }
   }
@@ -120,7 +120,7 @@
   function dismiss() {
     try {
       localStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_DURATION_MS));
-    } catch (e) {
+    } catch (_e) {
       /* private mode */
     }
     if (_root) _root.hidden = true;

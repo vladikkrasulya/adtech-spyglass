@@ -167,7 +167,7 @@
     try {
       const ctx = window.__spyglassBehavior;
       if (ctx && typeof ctx.creative_adm === 'string') adm = ctx.creative_adm;
-    } catch (e) {
+    } catch (_e) {
       /* noop */
     }
     return fetch(

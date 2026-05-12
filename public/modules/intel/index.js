@@ -152,7 +152,7 @@
           const fromLs = localStorage.getItem('spyglass_dialect_v1');
           if (fromLs && fromLs.startsWith('temp:')) _activeId = fromLs;
         }
-      } catch (e) {
+      } catch (_e) {
         /* */
       }
     }
@@ -161,7 +161,7 @@
     try {
       _activeSpec = await window.SpyglassIntelStorage.getTempDialect(_activeId);
       return _activeSpec || null;
-    } catch (e) {
+    } catch (_e) {
       return null;
     }
   }
@@ -174,7 +174,7 @@
     // state via SpyglassIntel.list / activeDialectId.
     try {
       window.dispatchEvent(new CustomEvent('spyglass:intel-dialect-changed', { detail: { id } }));
-    } catch (e) {
+    } catch (_e) {
       /* CustomEvent may be unavailable in unusual runtimes */
     }
   }
@@ -184,7 +184,7 @@
     try {
       const list = await window.SpyglassIntelStorage.listTempDialects();
       return list || [];
-    } catch (e) {
+    } catch (_e) {
       return [];
     }
   }
@@ -246,14 +246,14 @@
         _llmUnavailable = true;
         try {
           window.dispatchEvent(new CustomEvent('spyglass:intel-llm-unavailable'));
-        } catch (e) {
+        } catch (_e) {
           /* */
         }
         return { ok: false, status: 503, body: j };
       }
       if (!r.ok) return { ok: false, status: r.status, body: j };
       return { ok: true, status: r.status, body: j };
-    } catch (e) {
+    } catch (_e) {
       _llmUnavailable = true;
       return { ok: false, status: 0, body: null };
     } finally {
@@ -280,7 +280,7 @@
       try {
         const cached = await window.SpyglassIntelStorage.getLlmCache(key);
         if (cached && cached.kind === 'name') return cached;
-      } catch (e) {
+      } catch (_e) {
         /* cache miss is fine */
       }
     }
@@ -299,7 +299,7 @@
     if (window.SpyglassIntelStorage) {
       try {
         await window.SpyglassIntelStorage.putLlmCache(key, out);
-      } catch (e) {
+      } catch (_e) {
         /* */
       }
     }
@@ -318,7 +318,7 @@
       try {
         const cached = await window.SpyglassIntelStorage.getLlmCache(key);
         if (cached && cached.kind === 'purpose') return cached;
-      } catch (e) {
+      } catch (_e) {
         /* */
       }
     }
@@ -337,7 +337,7 @@
     if (window.SpyglassIntelStorage) {
       try {
         await window.SpyglassIntelStorage.putLlmCache(key, out);
-      } catch (e) {
+      } catch (_e) {
         /* */
       }
     }

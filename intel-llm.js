@@ -130,7 +130,7 @@ function extractStructured(ollamaResp) {
   if (start >= 0 && end > start) s = s.slice(start, end + 1);
   try {
     return JSON.parse(s);
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -488,7 +488,7 @@ async function simulateBids(bidReq) {
         const parsed = extractStructured(resp);
         const v = validateBidSim(parsed, s);
         return { strategy: s.key, label: s.label, ...v };
-      } catch (e) {
+      } catch (_e) {
         // One strategy fails → other two still ship. Caller can render
         // the available ones with a "1 of 3 strategies failed" note.
         return {
@@ -571,7 +571,7 @@ Rules:
 - if abstaining, set bid=false and price=null and explain briefly in reason`;
 }
 
-function validateBidSim(parsed, strategy) {
+function validateBidSim(parsed, _strategy) {
   if (!parsed || typeof parsed !== 'object') {
     return { bid: false, price: null, reason: 'unparseable' };
   }
