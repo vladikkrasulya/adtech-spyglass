@@ -27,8 +27,11 @@
     >
   </div>
   <div class="app-header-actions">
-    <div class="sim-price-wrap">
-      <label for="simPrice">sim price</label>
+    <div
+      class="sim-price-wrap"
+      title="Auction clearing price substituted into ${AUCTION_PRICE} macro in the creative preview. Auto-derived from seatbid.bid.price or imp.bidfloor on analyze; override to test other prices."
+    >
+      <label for="simPrice">auction price</label>
       <input id="simPrice" type="text" placeholder="0.00" />
     </div>
     <details class="kt-example-menu">

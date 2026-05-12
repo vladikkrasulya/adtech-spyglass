@@ -6,6 +6,28 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.2 — rename "sim price" → "auction price" (2026-05-12)
+
+UX audit flagged "SIM PRICE" pill in the header as cryptic without
+context. The field substitutes its value into the `${AUCTION_PRICE}`
+IAB macro in the creative preview, auto-derived from
+`seatbid.bid.price` or `imp.bidfloor` on analyze.
+
+Renamed to "auction price" (matches the IAB macro it drives) and
+added a tooltip on the wrap explaining the derivation and override
+behaviour. Three locales matched: "auction price" / "ціна аукціону" /
+"цена аукциона".
+
+Considered "Sim CPM" (GPT-5.5's suggestion) but rejected — CPM is per-
+thousand-impression in adtech vocabulary; `bid.price` is per-impression
+and the OpenRTB macro is literally named `AUCTION_PRICE`.
+
+#### Files
+
+- `public/modules/inspector/template.{en,uk,ru}.html` — label text +
+  tooltip on `.sim-price-wrap` (CSS class kept; pure copy change).
+- `package.json`, `public/version.js` — lockstep bump 0.42.1 → 0.42.2.
+
 ### v0.42.1 — empty-state placeholder rewrite (2026-05-12)
 
 UX audit (GPT-5.5 vision pass, 2026-05-12) flagged the textarea

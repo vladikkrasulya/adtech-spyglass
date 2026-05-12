@@ -27,8 +27,11 @@
     >
   </div>
   <div class="app-header-actions">
-    <div class="sim-price-wrap">
-      <label for="simPrice">sim price</label>
+    <div
+      class="sim-price-wrap"
+      title="Ціна, яку аукціон віддає переможцю — підставляється в макрос ${AUCTION_PRICE} у preview креативу. Авто-виводиться з seatbid.bid.price або imp.bidfloor під час analyze; можна перебити вручну для перевірки інших цін."
+    >
+      <label for="simPrice">ціна аукціону</label>
       <input id="simPrice" type="text" placeholder="0.00" />
     </div>
     <details class="kt-example-menu">
