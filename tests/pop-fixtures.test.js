@@ -42,7 +42,11 @@ test('fixture: synthetic-pop-clean-request → tagged pops + 0 pop-request findi
   assert.ok(fmt.formats.includes(FORMATS.POPS), 'must tag pops');
   const out = popReq.validate(req);
   const popIds = out.filter((f) => f.id.startsWith('imp.pop.')).map((f) => f.id);
-  assert.deepEqual(popIds, [], `pop-request should emit 0 findings on a clean fixture, got: ${popIds.join(', ')}`);
+  assert.deepEqual(
+    popIds,
+    [],
+    `pop-request should emit 0 findings on a clean fixture, got: ${popIds.join(', ')}`,
+  );
 });
 
 test('fixture: synthetic-pop-clean-response → tagged pops + 0 pop-response findings', () => {
@@ -51,7 +55,11 @@ test('fixture: synthetic-pop-clean-response → tagged pops + 0 pop-response fin
   assert.ok(fmt.formats.includes(FORMATS.POPS), 'must tag pops');
   const out = popResp.validate(res);
   const popIds = out.filter((f) => f.id.startsWith('bid.pop.')).map((f) => f.id);
-  assert.deepEqual(popIds, [], `pop-response should emit 0 findings on a clean fixture, got: ${popIds.join(', ')}`);
+  assert.deepEqual(
+    popIds,
+    [],
+    `pop-response should emit 0 findings on a clean fixture, got: ${popIds.join(', ')}`,
+  );
 });
 
 test('fixture: synthetic-pop-broken-adm → exactly one bid.pop.adm_not_redirect ERROR', () => {
@@ -68,7 +76,10 @@ test('fixture: synthetic-pop-broken-adm → exactly one bid.pop.adm_not_redirect
 test('fixture: synthetic-popunder-feed → detectFormat tags pops on JSON-feed shape', () => {
   const feed = load('synthetic-popunder-feed.json');
   const fmt = detectFormat(feed);
-  assert.ok(fmt.formats.includes(FORMATS.POPS), 'JSON-feed single-object with redirecturl must tag pops');
+  assert.ok(
+    fmt.formats.includes(FORMATS.POPS),
+    'JSON-feed single-object with redirecturl must tag pops',
+  );
 });
 
 test('fixture: all four pop fixtures parse as JSON and have a _note comment', () => {
