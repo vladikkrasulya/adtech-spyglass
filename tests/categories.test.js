@@ -62,7 +62,9 @@ test('decodeCategory: non-string / empty input returns null', () => {
   assert.equal(decodeCategory(null), null);
   assert.equal(decodeCategory(undefined), null);
   assert.equal(decodeCategory(''), null);
+  // @ts-expect-error -- intentionally passing wrong types to test the guard
   assert.equal(decodeCategory(42), null);
+  // @ts-expect-error -- intentionally passing wrong types to test the guard
   assert.equal(decodeCategory({}), null);
 });
 
@@ -108,6 +110,7 @@ test('decodeCategories: routes locale through', () => {
 test('decodeCategories: non-array input returns []', () => {
   assert.deepEqual(decodeCategories(null), []);
   assert.deepEqual(decodeCategories(undefined), []);
+  // @ts-expect-error -- intentionally passing wrong type to test the guard
   assert.deepEqual(decodeCategories('IAB1'), []);
 });
 
