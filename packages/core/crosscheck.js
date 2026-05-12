@@ -13,6 +13,7 @@
 const { isObj } = require('./helpers');
 const { CROSS_LEVELS, makeCross } = require('./findings');
 const { isVastShape } = require('./format-detect');
+const { scanExtForFormatHints, isPopFormat, extractPopLandingHost } = require('./non-iab-formats');
 
 const C = makeCross;
 
@@ -213,6 +214,59 @@ function crosscheck(req, res, _ctx) {
               domains: JSON.stringify(violated),
             }),
           );
+        }
+      }
+
+      // 3d-pop. adomain vs landing host for pop bids
+      //
+      // Pops bypass the publisher's anti-phishing list and the user only
+      // sees the LANDING domain after the new tab opens. If bid.adomain
+      // (= the advertiser the SSP/exchange thinks it's buying for) doesn't
+      // match the host the adm actually navigates to, that's either a
+      // mis-declared advertiser (operational) or an outright spoof
+      // (security). Both deserve a CRIT.
+      //
+      // Heuristic match: exact eTLD+1 equality, OR landing host is a
+      // subdomain of an adomain entry. ("ads.brand.com" ⊆ "brand.com" OK.)
+      // Anything else → mismatch.
+      const isPopBid =
+        isObj(bid.ext) && scanExtForFormatHints(bid.ext, '').some((h) => isPopFormat(h.format));
+      if (isPopBid && typeof bid.adm === 'string' && Array.isArray(bid.adomain)) {
+        const landingHost = extractPopLandingHost(bid.adm);
+        if (landingHost && bid.adomain.length) {
+          const adomainLc = bid.adomain
+            .filter((d) => typeof d === 'string')
+            .map((d) =>
+              d
+                .toLowerCase()
+                .replace(/^https?:\/\//, '')
+                .replace(/\/.*$/, ''),
+            );
+          const matches = adomainLc.some(
+            (ad) => landingHost === ad || landingHost.endsWith('.' + ad),
+          );
+          if (!matches) {
+            out.push(
+              C(
+                'crosscheck.bid.pop.adomain_landing_mismatch',
+                false,
+                CROSS_LEVELS.CRIT,
+                `${bp}.adm`,
+                {
+                  ...baseParams,
+                  declared: JSON.stringify(adomainLc),
+                  landing: landingHost,
+                },
+              ),
+            );
+          } else {
+            out.push(
+              C('crosscheck.bid.pop.adomain_landing_match', true, CROSS_LEVELS.OK, `${bp}.adm`, {
+                ...baseParams,
+                host: landingHost,
+              }),
+            );
+          }
         }
       }
 

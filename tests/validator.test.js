@@ -545,6 +545,53 @@ test('crosscheck: banner size mismatch is warn', () => {
   assert.ok(findings.some((f) => f.id === 'crosscheck.bid.size_mismatch' && f.level === 'warn'));
 });
 
+test('crosscheck: pop bid with adomain matching landing host → match OK', () => {
+  const req = validRequest();
+  const res = validResponse();
+  res.seatbid[0].bid[0].ext = { adtype: 'popunder' };
+  res.seatbid[0].bid[0].adm = '<script>window.open("https://landing.com/promo")</script>';
+  res.seatbid[0].bid[0].adomain = ['landing.com'];
+  const findings = crosscheck(req, res);
+  assert.ok(
+    findings.some((f) => f.id === 'crosscheck.bid.pop.adomain_landing_match' && f.ok),
+    'should emit landing_match OK',
+  );
+  assert.ok(!findings.some((f) => f.id === 'crosscheck.bid.pop.adomain_landing_mismatch'));
+});
+
+test('crosscheck: pop bid with adomain mismatching landing → mismatch CRIT', () => {
+  const req = validRequest();
+  const res = validResponse();
+  res.seatbid[0].bid[0].ext = { adtype: 'popunder' };
+  res.seatbid[0].bid[0].adm = '<script>window.open("https://evil-spoof.tld/")</script>';
+  res.seatbid[0].bid[0].adomain = ['legit-brand.com'];
+  const findings = crosscheck(req, res);
+  const f = findings.find((x) => x.id === 'crosscheck.bid.pop.adomain_landing_mismatch');
+  assert.ok(f, 'should emit landing_mismatch');
+  assert.equal(f.level, 'crit');
+  assert.equal(f.params.landing, 'evil-spoof.tld');
+  assert.match(f.params.declared, /legit-brand\.com/);
+});
+
+test('crosscheck: pop bid with subdomain landing matches adomain (host ⊆ adomain)', () => {
+  const req = validRequest();
+  const res = validResponse();
+  res.seatbid[0].bid[0].ext = { adtype: 'popunder' };
+  res.seatbid[0].bid[0].adm = 'https://ads.brand.com/utm';
+  res.seatbid[0].bid[0].adomain = ['brand.com'];
+  const findings = crosscheck(req, res);
+  assert.ok(findings.some((f) => f.id === 'crosscheck.bid.pop.adomain_landing_match' && f.ok));
+});
+
+test('crosscheck: non-pop bid does NOT trigger adomain_landing_* check', () => {
+  const req = validRequest();
+  const res = validResponse();
+  // No bid.ext.adtype — banner bid. adm has window.open but the request side
+  // doesn't smell like pop, so the check should be inert.
+  const findings = crosscheck(req, res);
+  assert.ok(!findings.some((f) => f.id.startsWith('crosscheck.bid.pop.')));
+});
+
 test('crosscheck: empty seatbid returns single crit (crosscheck.no_response)', () => {
   const req = validRequest();
   const res = { id: 'req-1', seatbid: [] };

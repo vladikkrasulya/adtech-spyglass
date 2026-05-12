@@ -177,5 +177,7 @@
   "imp.pop.fcap_missing": null,
   "imp.pop.btype_popup_recommended": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#326-object-banner",
   "imp.pop.secure_may_block_landing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
-  "bid.pop.adm_not_redirect": null
+  "bid.pop.adm_not_redirect": null,
+  "crosscheck.bid.pop.adomain_landing_mismatch": null,
+  "crosscheck.bid.pop.adomain_landing_match": null
 }
