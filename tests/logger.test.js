@@ -13,7 +13,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { logger, child } = require('../lib/logger');
+const { logger, child, captureException, flushSentry, sentryReady } = require('../lib/logger');
 
 test('logger: root is a pino instance with the expected methods', () => {
   assert.equal(typeof logger.info, 'function');
@@ -62,4 +62,34 @@ test('logger: call methods do not throw at any level (silent or not)', () => {
   assert.doesNotThrow(() => sub.warn({ err: new Error('boom') }, 'warn with err'));
   assert.doesNotThrow(() => sub.error({ err: new Error('crash') }, 'error with err'));
   assert.doesNotThrow(() => sub.fatal({ err: new Error('die') }, 'fatal with err'));
+});
+
+// ── Sentry / GlitchTip integration ─────────────────────────────────────────
+
+test('sentry: not initialized in test env (no DSN configured)', () => {
+  // npm test runs with NODE_ENV=test which forces the init path to skip
+  // even if SENTRY_DSN happens to be set in the developer's shell. This
+  // keeps the suite from POSTing envelopes to a live GlitchTip during
+  // CI / local test runs.
+  assert.equal(sentryReady(), false);
+});
+
+test('sentry: captureException is a safe no-op when Sentry is off', () => {
+  // No DSN → no init → captureException should silently swallow. Never
+  // throw, never block, never crash the caller. The whole observability
+  // story has to fail-safe.
+  assert.doesNotThrow(() => captureException(new Error('test')));
+  assert.doesNotThrow(() => captureException(new Error('test'), { request: { url: '/x' } }));
+  assert.doesNotThrow(() => captureException(undefined));
+  assert.doesNotThrow(() => captureException(null));
+  // @ts-expect-error -- exercise the ctx-iteration path with weird values
+  assert.doesNotThrow(() => captureException(new Error('test'), { tag: 42, obj: { a: 1 } }));
+});
+
+test('sentry: flushSentry resolves true when not initialized', async () => {
+  // No flush to do → resolves true immediately. Critical for the
+  // graceful-shutdown path in server.js: don't hang on a Sentry flush
+  // when the SDK was never wired up.
+  const result = await flushSentry(100);
+  assert.equal(result, true);
 });

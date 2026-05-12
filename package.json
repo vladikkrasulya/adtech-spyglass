@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@kyivtech/spyglass-core": "*",
+    "@sentry/node": "^10.53.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.5.0",
     "pino": "^10.3.1"

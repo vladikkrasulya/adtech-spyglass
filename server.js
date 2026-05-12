@@ -40,7 +40,9 @@ const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
 const { notifyAdmin, escapeHtml: notifyEscape } = require('./notify');
 const httpLib = require('./lib/http');
-const log = require('./lib/logger').child('server');
+const _logger = require('./lib/logger');
+const log = _logger.child('server');
+const { captureException, flushSentry } = _logger;
 httpLib.init({ notifyAdmin, notifyEscape });
 const { sendJson, sendError } = httpLib;
 const { Router } = require('./lib/router');
@@ -147,6 +149,7 @@ router.register(createHealthModule({ db, auth, Users, sendJson }));
 // 30-msg/sec limit; the alert will fire once, then logs cover the rest.
 process.on('uncaughtException', (err) => {
   log.fatal({ err }, 'uncaughtException');
+  captureException(err, { source: 'uncaughtException' });
   notifyAdmin(
     `Uncaught exception\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
     { tag: 'uncaught-exception', level: 'error' },
@@ -154,6 +157,7 @@ process.on('uncaughtException', (err) => {
 });
 process.on('unhandledRejection', (reason) => {
   log.fatal({ err: reason }, 'unhandledRejection');
+  captureException(reason, { source: 'unhandledRejection' });
   notifyAdmin(
     `Unhandled rejection\n<pre>${notifyEscape(String((reason instanceof Error && reason.stack) || reason).slice(0, 800))}</pre>`,
     { tag: 'unhandled-rejection', level: 'error' },
@@ -915,6 +919,7 @@ const server = http.createServer((req, res) => {
       if (out && typeof out.then === 'function') {
         out.catch((err) => {
           log.error({ err, method: req.method, url: req.url }, 'router handler rejection');
+          captureException(err, { request: { method: req.method, url: req.url } });
           notifyAdmin(
             `<b>500 on</b> <code>${notifyEscape(req.method + ' ' + req.url)}</code>\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
             { tag: 'handler-500', level: 'error' },
@@ -932,6 +937,7 @@ const server = http.createServer((req, res) => {
     return serveStaticFile(req, res);
   } catch (err) {
     log.error({ err, method: req.method, url: req.url }, 'handler crashed sync');
+    captureException(err, { request: { method: req.method, url: req.url } });
     notifyAdmin(
       `<b>500 on</b> <code>${notifyEscape(req.method + ' ' + req.url)}</code>\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
       { tag: 'handler-500', level: 'error' },
@@ -948,7 +954,10 @@ const shutdown = (signal) => {
   log.info({ signal }, 'shutting down');
   streamGenerator.stop();
   auth.shutdown();
-  server.close(() => process.exit(0));
+  // Flush in-flight Sentry events before close — best-effort 2s budget.
+  // Server close + flush race; whichever finishes first wins, the 5s
+  // hard-exit below catches any remaining hang.
+  flushSentry(2000).finally(() => server.close(() => process.exit(0)));
   setTimeout(() => process.exit(1), 5000).unref();
 };
 process.on('SIGINT', () => shutdown('SIGINT'));
