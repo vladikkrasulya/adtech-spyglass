@@ -128,22 +128,22 @@
   function renderDialectsCard(dialects) {
     // Null-guarded throughout — future ID drift in account.{lang}.html
     // won't crash init (per spyglass_cabinet_draft.md convention).
-    var $stat = document.getElementById('statDialects');
-    var $mappings = document.getElementById('statDialectMappings');
-    var $defName = document.getElementById('dialectDefault');
-    var $llm = document.getElementById('dialectLlm');
-    var $btnExport = document.getElementById('btnExportDialects');
+    const $stat = document.getElementById('statDialects');
+    const $mappings = document.getElementById('statDialectMappings');
+    const $defName = document.getElementById('dialectDefault');
+    const $llm = document.getElementById('dialectLlm');
+    const $btnExport = document.getElementById('btnExportDialects');
 
     if (!Array.isArray(dialects)) return; // null = load failed; leave '—'
     if ($stat) $stat.textContent = String(dialects.length);
     if ($mappings) {
-      var total = dialects.reduce(function (acc, d) {
+      const total = dialects.reduce(function (acc, d) {
         return acc + (d.mapping_count || 0);
       }, 0);
       $mappings.textContent = String(total);
     }
     if ($defName) {
-      var def = dialects.find(function (d) {
+      const def = dialects.find(function (d) {
         return d.is_default;
       });
       $defName.textContent = def ? def.name : '—';
@@ -155,10 +155,10 @@
       $btnExport.addEventListener('click', async function () {
         $btnExport.disabled = true;
         try {
-          for (var i = 0; i < dialects.length; i += 1) {
-            var d = dialects[i];
+          for (let i = 0; i < dialects.length; i += 1) {
+            const d = dialects[i];
             try {
-              var data = await api('/api/dialects/' + encodeURIComponent(d.id) + '/export');
+              const data = await api('/api/dialects/' + encodeURIComponent(d.id) + '/export');
               downloadJson(d.name || 'dialect-' + d.id, data);
             } catch (e) {
               console.warn('export failed for dialect', d.id, e);
