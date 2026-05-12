@@ -144,9 +144,18 @@ packages/core/            validator core (browser + server-side compatible)
   detect.js               type + oRTB version autodetection
   format-detect.js        format detection (banner/video/audio/native/push/…)
   knowledge-base.js       fixture loader + few-shot helper for the LLM
-  rules-request.js        oRTB BidRequest rules
+  rules-request.js        oRTB BidRequest rules (IAB-spec baseline)
   rules-response.js       oRTB BidResponse rules
+  rules-request-30.js     oRTB 3.0 BidRequest envelope checks
+  rules-response-30.js    oRTB 3.0 BidResponse envelope checks
+  rules-vast.js           VAST 2.x / 3.x / 4.x envelope + quality checks
   rules-feed.js           JsonFeed rules (vendor-specific shapes)
+  rules/                  plugin-style validator rules — see rules/README.md
+                          for contract. Currently shipped: client-hints,
+                          imp-secure. Append-only — adding one is a folder
+                          + one line in PLUGINS array.
+  spec-refs.json          finding-id → IAB spec URL map (gated by
+                          tests/spec-refs.test.js)
   crosscheck.js           request↔response semantic checks
   categories.js           IAB Content Taxonomy decoder
   dialects/iab.js         IAB-canonical baseline (default)
@@ -175,9 +184,10 @@ Dockerfile                multi-stage alpine + node + better-sqlite3 build
 ## Tests
 
 ```bash
-npm test          # 309 tests at v9.8.2 — validator, crosscheck, auth,
+npm test          # 581 tests at v0.40.x — validator, crosscheck, auth,
                   # tokens, behavior engine, intel walker/cluster/LLM,
-                  # format detection, knowledge-base round-trip
+                  # format detection, knowledge-base round-trip, router
+                  # dispatch, health endpoint, spec-refs coverage gate
 ```
 
 ## Configuration
@@ -190,6 +200,12 @@ needed if you want the saved-samples library + verify-email flow.
 
 Issues + PRs welcome. Particularly useful:
 
+- **Validator rule plugins** — see [`packages/core/rules/README.md`](./packages/core/rules/README.md)
+  for the plugin contract. A plugin is one folder + one line in the
+  PLUGINS array; legacy `rules-request.js` / `rules-response.js` stay
+  authoritative for IAB-spec baseline. Every new finding-id must
+  also land in `packages/core/spec-refs.json` (the `tests/spec-refs.test.js`
+  gate enforces it).
 - **Vendor dialect overlays** — if you have public docs for a CIS adtech
   network we don't cover, drop a PR with a new `dialects/<vendor>.js`.
 - **Translations** — `packages/core/messages/` and `public/i18n.js` accept
