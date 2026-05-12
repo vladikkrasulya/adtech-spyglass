@@ -82,7 +82,6 @@ test('sentry: captureException is a safe no-op when Sentry is off', () => {
   assert.doesNotThrow(() => captureException(new Error('test'), { request: { url: '/x' } }));
   assert.doesNotThrow(() => captureException(undefined));
   assert.doesNotThrow(() => captureException(null));
-  // @ts-expect-error -- exercise the ctx-iteration path with weird values
   assert.doesNotThrow(() => captureException(new Error('test'), { tag: 42, obj: { a: 1 } }));
 });
 
