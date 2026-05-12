@@ -852,14 +852,43 @@ console.log(
 // Baseline hardening headers applied to every response. The portal proxy
 // in front of this app also sets some of these, but defense-in-depth means
 // keeping them at the origin too — direct access (debug ports, dev) never
-// loses the floor. CSP intentionally omitted: the frontend is full of
-// inline event handlers + innerHTML usage that would break under any non-
-// trivial CSP. Re-enable once those are migrated to delegated listeners.
+// loses the floor.
+//
+// CSP — enabled 2026-05-12 after the Phase-C / Cabinet sprint migrated all
+// 126× inline event handlers to `data-action` + central dispatcher. Old
+// comment about "frontend is full of inline event handlers" is now stale.
+// What remains and requires 'unsafe-inline':
+//   - 4 inline <script> blocks in each HTML shell (theme IIFE, JSON-LD,
+//     module bootstrap, etc.) — would need per-request nonces to remove
+//   - Inline <style> for palette/theme overrides — same nonce story
+//   - iframe srcdoc creatives that ship inline event handlers from the
+//     publisher's ad markup; the srcdoc iframe inherits parent CSP per
+//     spec so blocking inline would break creative preview entirely
+// 'unsafe-inline' is a known compromise; future improvement = per-request
+// nonces + drop 'unsafe-inline' for script-src. Tracked in tech-debt.
+//
+// External origins allow-listed: only Google Fonts CSS + WOFF2 endpoints,
+// pulled in by /design-system.css from the kyivtech-portal shared file.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "connect-src 'self'",
+  "frame-src 'self' data: blob:",
+  "frame-ancestors 'self'",
+  "form-action 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join('; ');
+
 function applyBaselineHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  res.setHeader('Content-Security-Policy', CSP);
   // Spyglass landing/docs are public — no global X-Robots-Tag. Admin/auth
   // surfaces aren't crawler-relevant (no GET-renders to index), so a global
   // noindex would just hurt the public demo's discoverability.
