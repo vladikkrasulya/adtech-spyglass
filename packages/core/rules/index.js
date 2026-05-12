@@ -27,6 +27,17 @@ const PLUGINS = [
   //    missing/0 (HTTPS publishers risk mixed-content blocks); errors
   //    when the value isn't 0 or 1 (oRTB §3.2.4 violation).
   require('./imp-secure'),
+
+  // 3. pop-request — request-side checks that fire ONLY when a pop /
+  //    popunder / clickunder hint is present on the request (fcap
+  //    missing → warn, banner.btype:[4] missing → info, secure:1
+  //    + pop → info).
+  require('./pop-request'),
+
+  // 4. pop-response — response-side check that a bid in a pop-tagged
+  //    response actually ships a redirect / window.open in adm
+  //    instead of banner HTML (mis-shaped pop bids don't render).
+  require('./pop-response'),
 ];
 
 /**

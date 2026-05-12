@@ -11,6 +11,7 @@
 
 const { isObj, isStr, isNum, ISO_3166_ALPHA3, ISO_639_ALPHA2 } = require('./helpers');
 const { LEVELS, makeFinding } = require('./findings');
+const { scanExtForFormatHints, ALL_NON_STANDARD } = require('./non-iab-formats');
 
 const F = makeFinding;
 
@@ -183,36 +184,9 @@ function validateRequest(req, ctx) {
   return findings;
 }
 
-// Recognised non-IAB format strings (lowercase, normalised). Underscores and
-// hyphens are stripped before comparison so `pop_under`/`pop-under` match.
-const NON_STANDARD_FORMATS = new Set([
-  'pop',
-  'popup',
-  'popunder',
-  'clickunder',
-  'pushunder',
-  'push',
-  'nativepush',
-  'banner_pop'.replace(/[-_]/g, ''),
-]);
-
-// Boolean flags networks use to mark these formats. Same name conventions as
-// strings above but addressed as truthy markers instead of `adtype: "pop"`.
-const NON_STANDARD_FLAG_KEYS = [
-  'pop',
-  'popup',
-  'popunder',
-  'clickunder',
-  'pushunder',
-  'push',
-  'pushup',
-];
-
-function normaliseFormatName(s) {
-  return String(s || '')
-    .toLowerCase()
-    .replace(/[-_\s]/g, '');
-}
+// Pop/push detection constants + helpers moved to packages/core/non-iab-formats.js
+// (2026-05-12) so format-detect.js + future plugins can share the same source
+// of truth. `ALL_NON_STANDARD` and `scanExtForFormatHints` are imported above.
 
 // AdKernel runs as a white-label engine across 49+ alias networks (Waardex,
 // Monetix, Denakop, Türk Telekom, Display.io, …). All share the same wire
@@ -317,32 +291,20 @@ function detectAdKernelRouting(req) {
 
 function detectNonStandardFormats(req) {
   const findings = [];
-  const seen = new Map(); // format → first-seen path
+  const seen = new Map(); // format → first-seen { format, path }
 
-  function record(format, path) {
-    const key = normaliseFormatName(format);
-    if (!NON_STANDARD_FORMATS.has(key)) return;
-    if (!seen.has(key)) seen.set(key, { format: key, path });
-  }
-
-  function scanExt(ext, basePath) {
-    if (!isObj(ext)) return;
-    // String hints: ext.adtype = "pop" / ext.format = "popunder" / ext.type = ...
-    for (const k of ['adtype', 'format', 'type', 'ad_format']) {
-      const v = ext[k];
-      if (typeof v === 'string') record(v, `${basePath}.${k}`);
-    }
-    // Boolean / truthy flags: ext.pop = true, ext.popunder = 1, etc.
-    for (const k of NON_STANDARD_FLAG_KEYS) {
-      if (ext[k]) record(k, `${basePath}.${k}`);
+  function harvest(ext, basePath) {
+    for (const hint of scanExtForFormatHints(ext, basePath)) {
+      if (!ALL_NON_STANDARD.has(hint.format)) continue;
+      if (!seen.has(hint.format)) seen.set(hint.format, hint);
     }
   }
 
-  scanExt(req.ext, 'ext');
+  harvest(req.ext, 'ext');
   (req.imp || []).forEach((imp, i) => {
-    scanExt(imp && imp.ext, `imp[${i}].ext`);
-    if (imp && imp.banner) scanExt(imp.banner.ext, `imp[${i}].banner.ext`);
-    if (imp && imp.video) scanExt(imp.video.ext, `imp[${i}].video.ext`);
+    harvest(imp && imp.ext, `imp[${i}].ext`);
+    if (imp && imp.banner) harvest(imp.banner.ext, `imp[${i}].banner.ext`);
+    if (imp && imp.video) harvest(imp.video.ext, `imp[${i}].video.ext`);
   });
 
   for (const { format, path } of seen.values()) {

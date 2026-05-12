@@ -286,3 +286,157 @@ test('imp-secure: plugin is registered with correct metadata', () => {
   assert.deepEqual(meta.appliesTo, ['ORTB_REQUEST']);
   assert.ok(meta.description && meta.description.length > 0);
 });
+
+// ── pop-request plugin ─────────────────────────────────────────────────────
+
+const popReq = require('@kyivtech/spyglass-core/rules/pop-request');
+
+test('pop-request: non-pop request → no findings', () => {
+  const req = { imp: [{ id: '1', banner: { w: 300, h: 250 } }] };
+  assert.deepEqual(popReq.validate(req), []);
+});
+
+test('pop-request: imp.ext.adtype=popunder + no fcap → fcap_missing WARN', () => {
+  const req = {
+    imp: [{ id: '1', ext: { adtype: 'popunder' }, banner: { w: 100, h: 100, btype: [4] } }],
+  };
+  const out = popReq.validate(req);
+  const f = out.find((x) => x.id === 'imp.pop.fcap_missing');
+  assert.ok(f, 'fcap_missing should fire');
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'imp[0].ext');
+  assert.equal(f.params.num, 1);
+});
+
+test('pop-request: imp.ext.fcap present → fcap_missing NOT fired', () => {
+  const req = {
+    imp: [
+      { id: '1', ext: { adtype: 'popunder', fcap: 3 }, banner: { w: 100, h: 100, btype: [4] } },
+    ],
+  };
+  const ids = popReq.validate(req).map((f) => f.id);
+  assert.ok(!ids.includes('imp.pop.fcap_missing'));
+});
+
+test('pop-request: clickunder + banner without btype:[4] → btype_popup_recommended INFO', () => {
+  const req = {
+    imp: [{ id: '1', ext: { adtype: 'clickunder', fcap: 1 }, banner: { w: 300, h: 250 } }],
+  };
+  const f = popReq.validate(req).find((x) => x.id === 'imp.pop.btype_popup_recommended');
+  assert.ok(f);
+  assert.equal(f.level, 'info');
+  assert.equal(f.path, 'imp[0].banner.btype');
+});
+
+test('pop-request: pop + secure:1 → secure_may_block_landing INFO', () => {
+  const req = {
+    imp: [{ id: '1', ext: { popunder: 1, fcap: 5 }, secure: 1, banner: { btype: [4] } }],
+  };
+  const f = popReq.validate(req).find((x) => x.id === 'imp.pop.secure_may_block_landing');
+  assert.ok(f);
+  assert.equal(f.level, 'info');
+});
+
+test('pop-request: flag-key shape (imp.ext.popunder=true) is recognised', () => {
+  const req = { imp: [{ id: '1', ext: { popunder: true }, banner: { btype: [4] } }] };
+  assert.ok(popReq._requestHasPopHint(req));
+});
+
+test('pop-request: request-level ext also recognised', () => {
+  const req = { ext: { adtype: 'popunder' }, imp: [{ id: '1' }] };
+  assert.ok(popReq._requestHasPopHint(req));
+});
+
+test('pop-request: plugin metadata registered', () => {
+  const meta = listPlugins().find((p) => p.id === 'pop-request');
+  assert.ok(meta);
+  assert.deepEqual(meta.appliesTo, ['ORTB_REQUEST']);
+});
+
+// ── pop-response plugin ────────────────────────────────────────────────────
+
+const popResp = require('@kyivtech/spyglass-core/rules/pop-response');
+
+test('pop-response: non-pop response → no findings', () => {
+  const res = { seatbid: [{ bid: [{ impid: '1', price: 1, adm: '<img src=x>' }] }] };
+  assert.deepEqual(popResp.validate(res), []);
+});
+
+test('pop-response: pop bid with window.open adm → no finding (valid pop)', () => {
+  const res = {
+    seatbid: [
+      {
+        bid: [
+          {
+            impid: '1',
+            price: 1,
+            ext: { adtype: 'popunder' },
+            adm: '<script>window.open("http://x.com")</script>',
+          },
+        ],
+      },
+    ],
+  };
+  const out = popResp.validate(res);
+  assert.deepEqual(
+    out.filter((f) => f.id === 'bid.pop.adm_not_redirect'),
+    [],
+  );
+});
+
+test('pop-response: pop bid with bare URL adm → no finding (valid pop)', () => {
+  const res = {
+    seatbid: [
+      { bid: [{ impid: '1', price: 1, ext: { adtype: 'popunder' }, adm: 'http://x.com/landing' }] },
+    ],
+  };
+  assert.deepEqual(
+    popResp.validate(res).filter((f) => f.id === 'bid.pop.adm_not_redirect'),
+    [],
+  );
+});
+
+test('pop-response: pop bid with banner-HTML adm → adm_not_redirect ERROR', () => {
+  const res = {
+    seatbid: [
+      {
+        bid: [
+          {
+            impid: '1',
+            price: 1,
+            ext: { adtype: 'popunder' },
+            adm: '<img src=banner.png>',
+          },
+        ],
+      },
+    ],
+  };
+  const f = popResp.validate(res).find((x) => x.id === 'bid.pop.adm_not_redirect');
+  assert.ok(f);
+  assert.equal(f.level, 'error');
+  assert.equal(f.path, 'seatbid[0].bid[0].adm');
+  assert.equal(f.params.sNum, 1);
+  assert.equal(f.params.bNum, 1);
+});
+
+test('pop-response: mixed seatbid — only the pop-tagged bid is flagged', () => {
+  const res = {
+    seatbid: [
+      {
+        bid: [
+          { impid: '1', price: 1, adm: '<img src=clean.png>' }, // banner — no pop hint
+          { impid: '2', price: 2, ext: { adtype: 'popunder' }, adm: '<img src=wrong.png>' }, // pop with wrong shape
+        ],
+      },
+    ],
+  };
+  const flags = popResp.validate(res).filter((f) => f.id === 'bid.pop.adm_not_redirect');
+  assert.equal(flags.length, 1);
+  assert.equal(flags[0].params.bNum, 2);
+});
+
+test('pop-response: plugin metadata registered', () => {
+  const meta = listPlugins().find((p) => p.id === 'pop-response');
+  assert.ok(meta);
+  assert.deepEqual(meta.appliesTo, ['ORTB_RESPONSE']);
+});

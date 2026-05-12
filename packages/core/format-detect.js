@@ -34,6 +34,13 @@
  *     to read; we don't try to repair malformed XML.
  */
 
+const {
+  scanExtForFormatHints,
+  isPopFormat,
+  isPushFormat,
+  admLooksLikePop,
+} = require('./non-iab-formats');
+
 const FORMATS = {
   BANNER: 'banner',
   VIDEO: 'video',
@@ -163,6 +170,12 @@ function detectFormat(payload) {
 
     // ── BidRequest path
     if (Array.isArray(p.imp)) {
+      // Scan top-level req.ext for non-IAB hints first — some vendors put
+      // request-wide `ext.adtype = "popunder"` instead of per-imp.
+      for (const hint of scanExtForFormatHints(p.ext, 'ext')) {
+        if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
+        else if (isPushFormat(hint.format)) formats.add(FORMATS.PUSH);
+      }
       for (const imp of p.imp) {
         if (!isObj(imp)) continue;
         if (imp.banner) formats.add(FORMATS.BANNER);
@@ -178,6 +191,19 @@ function detectFormat(payload) {
         }
         if (imp.audio) formats.add(FORMATS.AUDIO);
         if (imp.native) formats.add(FORMATS.NATIVE);
+        // Non-IAB format hints (pop / popunder / clickunder / push / pushunder)
+        // in vendor extensions. Add the corresponding FORMATS tag so the UI
+        // and downstream rules see the same picture detectNonStandardFormats
+        // emits as an `imp.non_standard_format` INFO finding.
+        const impExtHints = [
+          ...scanExtForFormatHints(imp.ext, ''),
+          ...(imp.banner ? scanExtForFormatHints(imp.banner.ext, '') : []),
+          ...(imp.video ? scanExtForFormatHints(imp.video.ext, '') : []),
+        ];
+        for (const hint of impExtHints) {
+          if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
+          else if (isPushFormat(hint.format)) formats.add(FORMATS.PUSH);
+        }
       }
     }
 
@@ -198,6 +224,24 @@ function detectFormat(payload) {
               else if (major === '3') protocols.add(PROTOCOLS.VAST_3);
               else if (major === '4') protocols.add(PROTOCOLS.VAST_4);
             }
+          }
+          // Non-IAB hints on the bid itself: `bid.ext.adtype="popunder"` is
+          // the most common shape after the request signals the slot. Also
+          // sniff bid.adm — pop creatives ship a window.open / redirect URL,
+          // not banner HTML — but only if the request side ALSO smelled
+          // like pop, to avoid false-positive on banner clicktrackers.
+          for (const hint of scanExtForFormatHints(bid.ext, '')) {
+            if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
+            else if (isPushFormat(hint.format)) formats.add(FORMATS.PUSH);
+          }
+          if (formats.has(FORMATS.POPS) && admLooksLikePop(bid.adm)) {
+            // Already tagged from ext signal — admLooksLikePop here is a
+            // confirmation, not a standalone trigger. Keeping the
+            // double-check inline for clarity.
+          } else if (admLooksLikePop(bid.adm) && !mt && !/<\w+\s/.test(bid.adm || '')) {
+            // Standalone trigger: no mtype, no HTML tag-shape in adm, but adm
+            // looks like a window.open / bare URL — most likely pop. Tag it.
+            formats.add(FORMATS.POPS);
           }
         }
       }

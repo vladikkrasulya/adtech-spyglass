@@ -173,5 +173,9 @@
   "behavior.malicious.frame_bust_anchor": null,
   "behavior.malicious.permission_abuse": null,
   "regs.gdpr_consent_missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3217-object-regs",
-  "crosscheck.bid.no_floor_set": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp"
+  "crosscheck.bid.no_floor_set": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
+  "imp.pop.fcap_missing": null,
+  "imp.pop.btype_popup_recommended": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#326-object-banner",
+  "imp.pop.secure_may_block_landing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
+  "bid.pop.adm_not_redirect": null
 }
