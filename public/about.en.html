@@ -377,6 +377,11 @@
         background: var(--accent-soft);
         font-weight: 600;
       }
+      /* v0.41.2 perf — same backdrop-filter reduction as account pages */
+      .kt-topnav {
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+      }
     </style>
   </head>
   <body>
@@ -413,7 +418,7 @@
     <section class="kt-section" style="padding-top: var(--space-7)">
       <div class="kt-container">
         <div class="doc-prose">
-          <span class="eyebrow">docs · v0.39.0</span>
+          <span class="eyebrow">docs · v0.41.4</span>
           <h1 style="margin-top: var(--space-3)">Spyglass — how to use it</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             A private inspector for OpenRTB traffic. Paste JSON, get a breakdown: whether the
@@ -1331,7 +1336,7 @@ server formats localised text and returns 200 JSON</code></pre>
               font-size: var(--fs-sm);
             "
           >
-            <span data-spyglass-version>v0.39.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
+            <span data-spyglass-version>v0.41.4</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
             4.x · <a href="/" style="color: var(--text-dim)">↗ Spyglass</a> ·
             <a href="https://kyivtech.com.ua/" style="color: var(--text-dim)">kyivtech.com.ua</a>
           </p>

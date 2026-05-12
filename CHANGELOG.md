@@ -6,6 +6,27 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.41.4 — backdrop-filter reduction on docs nav (2026-05-12)
+
+The `.kt-topnav` sticky nav on /about.{en,uk,ru}.html was using a
+`backdrop-filter: blur(12px)` over scrolling content. Gaussian-blur
+cost is roughly O(radius²) on the GPU; at 12px the composite alone
+ate the entire 8.3ms frame budget at 120Hz, visible as scroll jank
+on integrated graphics. Same reduction had already shipped on the
+account pages (4px, ~9× cheaper, visually equivalent) — this brings
+the docs nav into line.
+
+Also rolls the displayed version string in the docs (eyebrow +
+data-spyglass-version fallback) forward to v0.41.4 so the static
+HTML matches the runtime version.js value.
+
+#### Files
+
+- `public/about.en.html`, `public/about.uk.html`, `public/about.ru.html`
+  — `.kt-topnav` blur 12px → 4px (with `-webkit-` prefix), version
+  display updated.
+- `package.json`, `public/version.js` — lockstep bump 0.41.3 → 0.41.4.
+
 ### v0.41.3 — Perf bundle from DeepSeek audit (2026-05-12)
 
 Five surgical wins from the external DeepSeek v4 Pro audit. Each fix
