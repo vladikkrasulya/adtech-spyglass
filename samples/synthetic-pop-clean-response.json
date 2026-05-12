@@ -1,0 +1,27 @@
+{
+  "_note": "Clean popunder BidResponse matching synthetic-pop-clean-request.json. Bid declares pop intent via bid.ext.adtype and ships a window.open script in adm. pop-response plugin's bid.pop.adm_not_redirect rule must NOT fire. detectFormat() should tag this as ['pops'].",
+  "id": "smp-popunder-clean-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "trusted-pop-dsp",
+      "bid": [
+        {
+          "id": "bid-pop-clean-001",
+          "impid": "1",
+          "price": 2.75,
+          "adid": "creative-pop-clean-001",
+          "adomain": ["example-landing.com"],
+          "cid": "campaign-pop-spring-2026",
+          "crid": "creative-pop-clean-001",
+          "adm": "<script>window.open('https://example-landing.com/promo?utm_source=pop&id=001','_blank');</script>",
+          "nurl": "https://win.trusted-pop-dsp.example/n?id=bid-pop-clean-001&price=${AUCTION_PRICE}",
+          "burl": "https://billing.trusted-pop-dsp.example/b?id=bid-pop-clean-001",
+          "ext": {
+            "adtype": "popunder"
+          }
+        }
+      ]
+    }
+  ]
+}

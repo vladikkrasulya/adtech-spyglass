@@ -1,0 +1,71 @@
+{
+  "_note": "Clean popunder BidRequest. Vendor-shape declaration via imp.ext.adtype + fcap + btype:[4] + secure:0. Validator should emit 0 imp.pop.* findings (all three pop-request rules satisfied). detectFormat() should tag this as ['banner','pops']. Use as the pop-side control case alongside iab-banner-valid.json.",
+  "id": "smp-popunder-clean-001",
+  "at": 2,
+  "tmax": 120,
+  "cur": ["USD"],
+  "imp": [
+    {
+      "id": "1",
+      "tagid": "/123456/popunder",
+      "bidfloor": 1.5,
+      "bidfloorcur": "USD",
+      "secure": 0,
+      "exp": 300,
+      "banner": {
+        "w": 1,
+        "h": 1,
+        "btype": [4],
+        "battr": [13, 14, 15]
+      },
+      "ext": {
+        "adtype": "popunder",
+        "fcap": 3,
+        "fcap_window_seconds": 86400
+      }
+    }
+  ],
+  "site": {
+    "id": "pub-pop-001",
+    "name": "Example Pop Publisher",
+    "domain": "example-pop.com",
+    "page": "https://example-pop.com/article/widgets",
+    "cat": ["IAB19"],
+    "publisher": {
+      "id": "9001",
+      "name": "Example Pop Publishing",
+      "domain": "example-pop.com"
+    }
+  },
+  "device": {
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "ip": "192.0.2.55",
+    "devicetype": 2,
+    "os": "Windows",
+    "osv": "10",
+    "language": "en",
+    "connectiontype": 2,
+    "geo": {
+      "country": "USA",
+      "region": "CA",
+      "type": 2
+    }
+  },
+  "user": {
+    "id": "synthetic-user-pop-001"
+  },
+  "source": {
+    "fd": 0,
+    "tid": "smp-popunder-clean-001"
+  },
+  "regs": {
+    "coppa": 0,
+    "ext": {
+      "gdpr": 0,
+      "us_privacy": "1YNN"
+    }
+  },
+  "ext": {
+    "openrtb_version": "2.6"
+  }
+}

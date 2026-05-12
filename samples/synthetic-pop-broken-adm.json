@@ -1,0 +1,23 @@
+{
+  "_note": "Pop BidResponse with WRONG adm shape — bid declares popunder intent via bid.ext.adtype but ships banner HTML (<img>) in adm instead of a redirect / window.open script. pop-response plugin MUST fire bid.pop.adm_not_redirect (ERROR). This is the negative-case fixture for the pop-response rule.",
+  "id": "smp-popunder-broken-adm-001",
+  "cur": "USD",
+  "seatbid": [
+    {
+      "seat": "misconfigured-pop-dsp",
+      "bid": [
+        {
+          "id": "bid-pop-broken-adm-001",
+          "impid": "1",
+          "price": 1.85,
+          "adomain": ["example-landing.com"],
+          "crid": "creative-pop-broken-001",
+          "adm": "<img src=\"https://cdn.example/banner-728x90.png\" width=\"728\" height=\"90\" />",
+          "ext": {
+            "adtype": "popunder"
+          }
+        }
+      ]
+    }
+  ]
+}
