@@ -34,7 +34,7 @@ import { mountInspector } from '/spyglass.app.js';
 // Bump when template/css change in a way that needs old browsers to
 // drop the cached version. With the new transitive-hash on .js parents,
 // this is now the ONLY manual ?v= knob in the inspector module.
-const ASSET_VERSION = '20';
+const ASSET_VERSION = '22';
 
 async function loadStylesheet(href) {
   const link = document.createElement('link');

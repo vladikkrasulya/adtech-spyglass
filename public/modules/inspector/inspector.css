@@ -83,26 +83,77 @@ body {
   }
 }
 @media (max-width: 720px) {
+  /* Release the desktop scroll-lock — html/body and workbench above set
+     height:100vh + overflow:hidden so the 3-col workbench fits the
+     viewport on desktop. On phones the workbench stacks vertically and
+     overflows, so we must let the page scroll instead of clipping. */
+  html,
+  body {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+    overflow-x: hidden;
+  }
   .workbench {
-    height: auto; /* let page scroll naturally on phones */
+    height: auto;
     min-height: 100vh;
   }
   .input-section {
     grid-template-columns: 1fr !important;
-    height: auto;
+    height: auto !important; /* base .input-section sets 280px later in
+                                 file, would otherwise win source-order
+                                 and crush stacked cards to ~140px each */
   }
   .input-section .input-card {
     min-height: 180px;
   }
+  /* Header: stack brand on its own row above the action cluster so the
+     title doesn't get squeezed into a 3-line vertical wrap. */
   .app-header {
     padding: var(--space-3);
     gap: var(--space-2);
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
   .app-header .kt-brand {
     font-size: var(--fs-sm);
+    flex: 1 1 100%;
+    min-width: 0;
   }
+  .app-header-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    gap: var(--space-2);
+  }
+  /* sim-price box rarely needed on phone. !important needed because the
+     base `.sim-price-wrap { display: flex }` rule lives lower in this file
+     and would otherwise win on source order at equal specificity. */
   .sim-price-wrap {
-    display: none; /* sim-price box rarely needed on phone */
+    display: none !important;
+  }
+  /* Tab strip: 5+ tabs (inspector / validation / crosscheck / categories /
+     behavior [+ vendor ref]) overflow horizontally on narrow screens. Base
+     `.tab-bar` is flex with no overflow → trailing tabs (behavior!) get
+     clipped invisibly. Make it touch-scrollable and prevent tab buttons
+     from shrinking. Also hide the sb-toggle arrows since the sidebars
+     stack vertically on mobile — the toggle is meaningless here and just
+     steals horizontal space from the tabs. */
+  .tab-bar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+  .tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .sb-toggle {
+    display: none !important;
   }
 }
 
