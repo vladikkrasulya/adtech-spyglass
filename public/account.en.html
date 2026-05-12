@@ -232,7 +232,10 @@
         cursor: pointer;
         font-size: var(--fs-sm);
         background: var(--bg);
-        transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+        transition:
+          background-color 0.15s,
+          border-color 0.15s,
+          color 0.15s;
         user-select: none;
       }
       .cab-radio:hover {
@@ -780,9 +783,8 @@
               <h2>Dialects</h2>
               <p class="lead">
                 Your saved vendor-extension mappings. When an SSP/DSP sends an
-                <code>imp.ext</code> field outside IAB-canonical oRTB, you tell
-                Spyglass once what format it represents — after that it stops
-                flagging the field as a question.
+                <code>imp.ext</code> field outside IAB-canonical oRTB, you tell Spyglass once what
+                format it represents — after that it stops flagging the field as a question.
               </p>
               <div class="cab-stats">
                 <div class="cab-stat">

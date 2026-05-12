@@ -40,7 +40,7 @@ function loadUserDialect(db, dialectId, opts) {
     .prepare(
       `SELECT signal_path, signal_value, semantic_label, shape_fingerprint, params
        FROM dialect_mappings
-       WHERE dialect_id = ?`
+       WHERE dialect_id = ?`,
     )
     .all(dialectId);
 

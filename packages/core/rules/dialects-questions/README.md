@@ -17,7 +17,7 @@ IAB-blessed allowlist that the user hasn't already labelled, emits a
 ## Why `question` level?
 
 Spec violations are `error`/`warning`/`info`. An unrecognized vendor
-extension isn't a violation — it's an *open question*: "you put
+extension isn't a violation — it's an _open question_: "you put
 something here, what does it mean?". The user answers once per
 (signal_path, signal_value) pair; subsequent payloads with the same
 signal are silently skipped on lookup.
@@ -39,8 +39,8 @@ questions — useful for the public demo but noisier.
 There's only one finding id emitted by this plugin
 (`dialects.question.unknown_ext_signal`), so the matrix is small:
 
-| level    | when                                  |
-|----------|---------------------------------------|
+| level    | when                                                                 |
+| -------- | -------------------------------------------------------------------- |
 | question | imp.ext or req.ext key outside IAB allowlist AND not in user dialect |
 
 The shape heuristic decides `params.recommended` — if it's `null`, the

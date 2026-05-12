@@ -33,14 +33,20 @@ const {
 // from IAB oRTB 2.6, 3.0, and widely-adopted public extensions. NEVER
 // add vendor-specific custom keys — those belong in user dialects.
 const KNOWN_IAB_IMP_EXT_KEYS = new Set([
-  'skadn', 'gpid', 'dpid', 'is_secure', 'tid',
-  'data', 'reward', 'dlp', 'omidpn', 'omidpv',
+  'skadn',
+  'gpid',
+  'dpid',
+  'is_secure',
+  'tid',
+  'data',
+  'reward',
+  'dlp',
+  'omidpn',
+  'omidpv',
 ]);
 
 // Known IAB / industry-blessed ext.* keys at the req level.
-const KNOWN_IAB_REQ_EXT_KEYS = new Set([
-  'schain', 'sda', 'eids', 'gpc', 'dsa', 'ssn',
-]);
+const KNOWN_IAB_REQ_EXT_KEYS = new Set(['schain', 'sda', 'eids', 'gpc', 'dsa', 'ssn']);
 
 const MAX_FINDINGS = 20;
 
@@ -97,12 +103,17 @@ module.exports = {
           }
 
           findings.push(
-            makeFinding('dialects.question.unknown_ext_signal', 'question', `imp[${i}].ext.${key}`, {
-              value: valueStr,
-              candidates: impCandidates,
-              recommended: impRecommended,
-              shape_signature: impFingerprint,
-            })
+            makeFinding(
+              'dialects.question.unknown_ext_signal',
+              'question',
+              `imp[${i}].ext.${key}`,
+              {
+                value: valueStr,
+                candidates: impCandidates,
+                recommended: impRecommended,
+                shape_signature: impFingerprint,
+              },
+            ),
           );
           count += 1;
         }
@@ -133,7 +144,7 @@ module.exports = {
             candidates: [],
             recommended: null,
             shape_signature: fingerprint,
-          })
+          }),
         );
         count += 1;
       }

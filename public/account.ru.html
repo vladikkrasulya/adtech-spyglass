@@ -232,7 +232,10 @@
         cursor: pointer;
         font-size: var(--fs-sm);
         background: var(--bg);
-        transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+        transition:
+          background-color 0.15s,
+          border-color 0.15s,
+          color 0.15s;
         user-select: none;
       }
       .cab-radio:hover {
@@ -781,9 +784,8 @@
               <h2>Диалекты</h2>
               <p class="lead">
                 Твои сохранённые карты vendor-расширений. Когда SSP/DSP присылает
-                <code>imp.ext</code> поле вне IAB-канонического oRTB, ты один раз
-                говоришь Spyglass какой это формат — дальше он перестаёт
-                подсвечивать его как вопрос.
+                <code>imp.ext</code> поле вне IAB-канонического oRTB, ты один раз говоришь Spyglass
+                какой это формат — дальше он перестаёт подсвечивать его как вопрос.
               </p>
               <div class="cab-stats">
                 <div class="cab-stat">
@@ -805,7 +807,9 @@
               </div>
               <div class="cab-row">
                 <a class="cab-btn" href="/app/dialects">Управление диалектами</a>
-                <button class="cab-btn" id="btnExportDialects" type="button">Экспортировать всё</button>
+                <button class="cab-btn" id="btnExportDialects" type="button">
+                  Экспортировать всё
+                </button>
               </div>
             </section>
           </section>

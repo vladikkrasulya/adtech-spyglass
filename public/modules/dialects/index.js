@@ -86,13 +86,15 @@ function renderList() {
           <div class="dialect-actions">
             <button class="btn btn-sm" data-action="dialect-open" data-id="${escapeHtml(d.id)}">${escapeHtml(t('dialects.btn.open'))}</button>
             <button class="btn btn-sm" data-action="dialect-rename" data-id="${escapeHtml(d.id)}">${escapeHtml(t('dialects.btn.rename'))}</button>
-            ${!d.is_default
-              ? `<button class="btn btn-sm" data-action="dialect-set-default" data-id="${escapeHtml(d.id)}">${escapeHtml(t('dialects.btn.set_default'))}</button>`
-              : ''}
+            ${
+              !d.is_default
+                ? `<button class="btn btn-sm" data-action="dialect-set-default" data-id="${escapeHtml(d.id)}">${escapeHtml(t('dialects.btn.set_default'))}</button>`
+                : ''
+            }
             <button class="btn btn-sm" data-action="dialect-export" data-id="${escapeHtml(d.id)}">${escapeHtml(t('dialects.btn.export'))}</button>
             <button class="btn btn-sm btn-danger" data-action="dialect-delete" data-id="${escapeHtml(d.id)}">${escapeHtml(t('dialects.btn.delete'))}</button>
           </div>
-        </div>`
+        </div>`,
         )
         .join('')}
     </div>
@@ -304,7 +306,7 @@ async function deleteMapping(id) {
   try {
     await apiCall(
       `/api/dialects/${encodeURIComponent(state.selectedDialectId)}/mappings/${encodeURIComponent(id)}`,
-      { method: 'DELETE' }
+      { method: 'DELETE' },
     );
     toast(t('dialects.toast.deleted'), 'success');
     await loadMappings(state.selectedDialectId);
@@ -318,7 +320,15 @@ async function deleteMapping(id) {
 function showCreateDialog() {
   showFormDialog({
     title: t('dialects.dialog.create_title'),
-    fields: [{ name: 'name', label: t('dialects.field.name'), type: 'text', maxlength: 80, required: true }],
+    fields: [
+      {
+        name: 'name',
+        label: t('dialects.field.name'),
+        type: 'text',
+        maxlength: 80,
+        required: true,
+      },
+    ],
     onSubmit: async (data) => {
       await apiCall('/api/dialects', {
         method: 'POST',
@@ -334,7 +344,14 @@ function showRenameDialog(dialect) {
   showFormDialog({
     title: t('dialects.dialog.rename_title'),
     fields: [
-      { name: 'name', label: t('dialects.field.name'), type: 'text', value: dialect.name, maxlength: 80, required: true },
+      {
+        name: 'name',
+        label: t('dialects.field.name'),
+        type: 'text',
+        value: dialect.name,
+        maxlength: 80,
+        required: true,
+      },
     ],
     onSubmit: async (data) => {
       await apiCall(`/api/dialects/${encodeURIComponent(dialect.id)}`, {
@@ -348,9 +365,17 @@ function showRenameDialog(dialect) {
 }
 
 const SEMANTIC_LABELS = [
-  'pop', 'native', 'banner', 'video', 'audio',
-  'in-page-push', 'push', 'interstitial-banner',
-  'ignore', 'informational', 'custom',
+  'pop',
+  'native',
+  'banner',
+  'video',
+  'audio',
+  'in-page-push',
+  'push',
+  'interstitial-banner',
+  'ignore',
+  'informational',
+  'custom',
 ];
 
 function showMappingDialog(existing) {
@@ -384,7 +409,7 @@ function showMappingDialog(existing) {
         name: 'notes',
         label: t('dialects.field.notes'),
         type: 'textarea',
-        value: isEdit ? (existing.notes || '') : '',
+        value: isEdit ? existing.notes || '' : '',
       },
     ],
     onSubmit: async (data) => {
@@ -408,20 +433,25 @@ function showFormDialog({ title, fields, onSubmit }) {
     return;
   }
 
-  const fieldHtml = fields.map((f) => {
-    const v = f.value || '';
-    if (f.type === 'select') {
-      const opts = f.options
-        .map((o) => `<option value="${escapeHtml(o)}" ${o === v ? 'selected' : ''}>${escapeHtml(o)}</option>`)
-        .join('');
-      return `<label>${escapeHtml(f.label)}<select name="${escapeHtml(f.name)}" ${f.required ? 'required' : ''}>${opts}</select></label>`;
-    }
-    if (f.type === 'textarea') {
-      return `<label>${escapeHtml(f.label)}<textarea name="${escapeHtml(f.name)}">${escapeHtml(v)}</textarea></label>`;
-    }
-    const maxlen = f.maxlength ? ` maxlength="${f.maxlength}"` : '';
-    return `<label>${escapeHtml(f.label)}<input type="text" name="${escapeHtml(f.name)}" value="${escapeHtml(v)}" ${f.required ? 'required' : ''}${maxlen}></label>`;
-  }).join('');
+  const fieldHtml = fields
+    .map((f) => {
+      const v = f.value || '';
+      if (f.type === 'select') {
+        const opts = f.options
+          .map(
+            (o) =>
+              `<option value="${escapeHtml(o)}" ${o === v ? 'selected' : ''}>${escapeHtml(o)}</option>`,
+          )
+          .join('');
+        return `<label>${escapeHtml(f.label)}<select name="${escapeHtml(f.name)}" ${f.required ? 'required' : ''}>${opts}</select></label>`;
+      }
+      if (f.type === 'textarea') {
+        return `<label>${escapeHtml(f.label)}<textarea name="${escapeHtml(f.name)}">${escapeHtml(v)}</textarea></label>`;
+      }
+      const maxlen = f.maxlength ? ` maxlength="${f.maxlength}"` : '';
+      return `<label>${escapeHtml(f.label)}<input type="text" name="${escapeHtml(f.name)}" value="${escapeHtml(v)}" ${f.required ? 'required' : ''}${maxlen}></label>`;
+    })
+    .join('');
 
   modalRoot.innerHTML = `
     <div class="modal-backdrop" data-action="modal-backdrop-close">

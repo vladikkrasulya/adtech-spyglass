@@ -108,7 +108,10 @@
   // Blob-download helper for dialect export. Sanitizes filename to
   // avoid path-traversal-ish UX issues from user-chosen dialect names.
   function downloadJson(filename, data) {
-    const safe = String(filename).replace(/[/\\?%*:|"<>]/g, '_').slice(0, 120) || 'dialect';
+    const safe =
+      String(filename)
+        .replace(/[/\\?%*:|"<>]/g, '_')
+        .slice(0, 120) || 'dialect';
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -117,7 +120,9 @@
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 1000);
   }
 
   function renderDialectsCard(dialects) {
@@ -132,11 +137,15 @@
     if (!Array.isArray(dialects)) return; // null = load failed; leave '—'
     if ($stat) $stat.textContent = String(dialects.length);
     if ($mappings) {
-      var total = dialects.reduce(function (acc, d) { return acc + (d.mapping_count || 0); }, 0);
+      var total = dialects.reduce(function (acc, d) {
+        return acc + (d.mapping_count || 0);
+      }, 0);
       $mappings.textContent = String(total);
     }
     if ($defName) {
-      var def = dialects.find(function (d) { return d.is_default; });
+      var def = dialects.find(function (d) {
+        return d.is_default;
+      });
       $defName.textContent = def ? def.name : '—';
     }
     if ($llm) $llm.textContent = '—'; // placeholder until LLM-suggester wiring

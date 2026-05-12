@@ -293,8 +293,12 @@ let _activeCollector = null; // set at top-level fileHash call, shared down sync
 const _gzipCache = new Map();
 const MAX_GZIP_CACHE = 200;
 const _gzipCompressibleTypes = new Set([
-  'text/html', 'text/css', 'application/javascript', 'application/json',
-  'image/svg+xml', 'text/plain',
+  'text/html',
+  'text/css',
+  'application/javascript',
+  'application/json',
+  'image/svg+xml',
+  'text/plain',
 ]);
 
 function maybeGzip(body, req, ct) {
@@ -361,15 +365,29 @@ function fileHash(filepath, visited) {
         if (c) {
           let valid = true;
           for (const [dep, mtime] of c.deps) {
-            try { if (fs.statSync(dep).mtimeMs !== mtime) { valid = false; break; } }
-            catch { valid = false; break; }
+            try {
+              if (fs.statSync(dep).mtimeMs !== mtime) {
+                valid = false;
+                break;
+              }
+            } catch {
+              valid = false;
+              break;
+            }
           }
-          if (valid) { v.delete(filepath); return c.hash; }
+          if (valid) {
+            v.delete(filepath);
+            return c.hash;
+          }
         }
         _activeCollector = new Map();
       }
 
-      try { _activeCollector.set(filepath, fs.statSync(filepath).mtimeMs); } catch { /* gone */ }
+      try {
+        _activeCollector.set(filepath, fs.statSync(filepath).mtimeMs);
+      } catch {
+        /* gone */
+      }
 
       const buf = fs.readFileSync(filepath);
       const rewritten = rewriteAssetVersions(
@@ -508,15 +526,13 @@ function serveStaticFile(req, res) {
     // (0ms) and only HTML hits the network.
     const hasVersionQuery = (req.url || '').indexOf('?v=') !== -1;
     const cacheControl =
-      ct === 'text/html' || !hasVersionQuery
-        ? 'no-cache'
-        : 'public, max-age=31536000, immutable';
+      ct === 'text/html' || !hasVersionQuery ? 'no-cache' : 'public, max-age=31536000, immutable';
 
     const { body: outBody, encoding } = maybeGzip(body, req, ct);
     const headers = {
       'Content-Type': ct,
       'Cache-Control': cacheControl,
-      'Vary': 'Accept-Encoding',
+      Vary: 'Accept-Encoding',
     };
     if (encoding) headers['Content-Encoding'] = encoding;
     res.writeHead(200, headers);
@@ -550,33 +566,57 @@ function moduleBundleHash(moduleId) {
   // changes when content is edited. Both together cover bind-mount dev
   // edits without ever calling readdirSync/readFileSync on a cache hit.
   let dirStat;
-  try { dirStat = fs.statSync(dir); }
-  catch { _bundleHashCache.delete(moduleId); return null; }
+  try {
+    dirStat = fs.statSync(dir);
+  } catch {
+    _bundleHashCache.delete(moduleId);
+    return null;
+  }
 
   const dirMtime = dirStat.mtimeMs;
   if (cached && cached.dirMtime === dirMtime) {
     let valid = true;
     for (const f of Object.keys(cached.manifest)) {
       try {
-        if (fs.statSync(path.join(dir, f)).mtimeMs !== cached.manifest[f]) { valid = false; break; }
-      } catch { valid = false; break; }
+        if (fs.statSync(path.join(dir, f)).mtimeMs !== cached.manifest[f]) {
+          valid = false;
+          break;
+        }
+      } catch {
+        valid = false;
+        break;
+      }
     }
     if (valid) return cached.hash;
   }
 
   // Slow path: rebuild manifest + recompute hash.
   let entries;
-  try { entries = fs.readdirSync(dir); }
-  catch { _bundleHashCache.delete(moduleId); return null; }
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    _bundleHashCache.delete(moduleId);
+    return null;
+  }
 
   const manifest = {};
   const fileList = [];
   for (const f of entries) {
     let fstat;
-    try { fstat = fs.statSync(path.join(dir, f)); } catch { continue; }
-    if (fstat.isFile()) { fileList.push(f); manifest[f] = fstat.mtimeMs; }
+    try {
+      fstat = fs.statSync(path.join(dir, f));
+    } catch {
+      continue;
+    }
+    if (fstat.isFile()) {
+      fileList.push(f);
+      manifest[f] = fstat.mtimeMs;
+    }
   }
-  if (fileList.length === 0) { _bundleHashCache.delete(moduleId); return null; }
+  if (fileList.length === 0) {
+    _bundleHashCache.delete(moduleId);
+    return null;
+  }
   fileList.sort();
   const h = crypto.createHash('sha1');
   for (const f of fileList) h.update(fs.readFileSync(path.join(dir, f)));

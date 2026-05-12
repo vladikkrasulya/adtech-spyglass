@@ -126,7 +126,11 @@ function validate(payload, opts) {
     // Plugins join findings BEFORE dedup+sort in finalize(), so a
     // plugin can't shadow a legacy finding accidentally. See
     // packages/core/rules/README.md for the contract.
-    const pluginFindings = runRulePlugins(payload, 'ORTB_REQUEST', { dialect, version, userDialect });
+    const pluginFindings = runRulePlugins(payload, 'ORTB_REQUEST', {
+      dialect,
+      version,
+      userDialect,
+    });
     if (pluginFindings.length) findings = findings.concat(pluginFindings);
   } else if (t === TYPES.ORTB_RESPONSE) {
     // Same version dispatch on the response side. 3.0 BidResponse lives

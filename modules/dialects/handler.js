@@ -29,9 +29,17 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
 const log = require('../../lib/logger').child('dialects');
 
 const SEMANTIC_LABELS = new Set([
-  'pop', 'native', 'banner', 'video', 'audio',
-  'in-page-push', 'push', 'interstitial-banner',
-  'ignore', 'informational', 'custom',
+  'pop',
+  'native',
+  'banner',
+  'video',
+  'audio',
+  'in-page-push',
+  'push',
+  'interstitial-banner',
+  'ignore',
+  'informational',
+  'custom',
 ]);
 
 const NAME_MAX = 80;
@@ -53,52 +61,50 @@ function createDialectsModule(deps) {
     `),
     getDialect: db.prepare(
       `SELECT id, user_id, name, is_default, created_at, updated_at
-       FROM user_dialects WHERE id = ?`
+       FROM user_dialects WHERE id = ?`,
     ),
     insertDialect: db.prepare(
       `INSERT INTO user_dialects (user_id, name, is_default, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?)`,
     ),
     updateDialect: db.prepare(
-      `UPDATE user_dialects SET name = ?, is_default = ?, updated_at = ? WHERE id = ?`
+      `UPDATE user_dialects SET name = ?, is_default = ?, updated_at = ? WHERE id = ?`,
     ),
     unsetDefaults: db.prepare(
       `UPDATE user_dialects SET is_default = 0, updated_at = ?
-       WHERE user_id = ? AND is_default = 1`
+       WHERE user_id = ? AND is_default = 1`,
     ),
     deleteDialect: db.prepare(`DELETE FROM user_dialects WHERE id = ?`),
     listMappings: db.prepare(
       `SELECT id, signal_path, signal_value, semantic_label, shape_fingerprint,
               params, confidence, notes, created_at
        FROM dialect_mappings WHERE dialect_id = ?
-       ORDER BY created_at DESC`
+       ORDER BY created_at DESC`,
     ),
-    countMappings: db.prepare(
-      `SELECT COUNT(*) AS n FROM dialect_mappings WHERE dialect_id = ?`
-    ),
+    countMappings: db.prepare(`SELECT COUNT(*) AS n FROM dialect_mappings WHERE dialect_id = ?`),
     getMappingWithOwner: db.prepare(
       `SELECT m.*, d.user_id AS owner_user_id
        FROM dialect_mappings m
        JOIN user_dialects d ON m.dialect_id = d.id
-       WHERE m.id = ?`
+       WHERE m.id = ?`,
     ),
     insertMapping: db.prepare(
       `INSERT INTO dialect_mappings
          (dialect_id, signal_path, signal_value, semantic_label,
           shape_fingerprint, params, version, confidence, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
     ),
     updateMapping: db.prepare(
       `UPDATE dialect_mappings
        SET signal_path = ?, signal_value = ?, semantic_label = ?,
            shape_fingerprint = ?, params = ?, notes = ?
-       WHERE id = ?`
+       WHERE id = ?`,
     ),
     deleteMapping: db.prepare(`DELETE FROM dialect_mappings WHERE id = ?`),
     insertQuestionLog: db.prepare(
       `INSERT INTO dialect_question_log
          (dialect_id, user_id, signal_path, signal_value, payload_shape_sig, asked_at, action)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ),
   };
 
@@ -154,7 +160,11 @@ function createDialectsModule(deps) {
     if (!row) return null;
     let params = null;
     if (row.params) {
-      try { params = JSON.parse(row.params); } catch (_) { params = null; }
+      try {
+        params = JSON.parse(row.params);
+      } catch (_) {
+        params = null;
+      }
     }
     return {
       id: row.id,
@@ -278,11 +288,15 @@ function createDialectsModule(deps) {
         if (err) return sendError(res, 400, err, 'Invalid mapping');
         const now = Date.now();
         const r = stmts.insertMapping.run(
-          d.id, body.signal_path, body.signal_value, body.semantic_label,
+          d.id,
+          body.signal_path,
+          body.signal_value,
+          body.semantic_label,
           body.shape_fingerprint || null,
           body.params ? JSON.stringify(body.params) : null,
           'user-confirmed',
-          body.notes || null, now
+          body.notes || null,
+          now,
         );
         sendJson(res, 200, {
           success: true,
@@ -319,18 +333,23 @@ function createDialectsModule(deps) {
         const merged = {
           signal_path: body.signal_path !== undefined ? body.signal_path : m.signal_path,
           signal_value: body.signal_value !== undefined ? body.signal_value : m.signal_value,
-          semantic_label: body.semantic_label !== undefined ? body.semantic_label : m.semantic_label,
-          shape_fingerprint: body.shape_fingerprint !== undefined ? body.shape_fingerprint : m.shape_fingerprint,
-          params: body.params !== undefined ? body.params : (m.params ? JSON.parse(m.params) : null),
+          semantic_label:
+            body.semantic_label !== undefined ? body.semantic_label : m.semantic_label,
+          shape_fingerprint:
+            body.shape_fingerprint !== undefined ? body.shape_fingerprint : m.shape_fingerprint,
+          params: body.params !== undefined ? body.params : m.params ? JSON.parse(m.params) : null,
           notes: body.notes !== undefined ? body.notes : m.notes,
         };
         const err = validateMappingFields(merged);
         if (err) return sendError(res, 400, err, 'Invalid mapping update');
         stmts.updateMapping.run(
-          merged.signal_path, merged.signal_value, merged.semantic_label,
+          merged.signal_path,
+          merged.signal_value,
+          merged.semantic_label,
           merged.shape_fingerprint,
           merged.params ? JSON.stringify(merged.params) : null,
-          merged.notes, m.id
+          merged.notes,
+          m.id,
         );
         const fresh = stmts.getMappingWithOwner.get(m.id);
         sendJson(res, 200, { success: true, mapping: serializeMapping(fresh) });
@@ -373,7 +392,10 @@ function createDialectsModule(deps) {
     }));
     res.setHeader('Content-Disposition', `attachment; filename="dialect-${d.id}.json"`);
     sendJson(res, 200, {
-      name: d.name, mappings, exported_at: Date.now(), schema_version: 1,
+      name: d.name,
+      mappings,
+      exported_at: Date.now(),
+      schema_version: 1,
     });
   }
 
@@ -404,10 +426,15 @@ function createDialectsModule(deps) {
           newId = r.lastInsertRowid;
           for (const m of body.mappings) {
             stmts.insertMapping.run(
-              newId, m.signal_path, m.signal_value, m.semantic_label,
+              newId,
+              m.signal_path,
+              m.signal_value,
+              m.semantic_label,
               m.shape_fingerprint || null,
               m.params ? JSON.stringify(m.params) : null,
-              'imported', m.notes || null, now
+              'imported',
+              m.notes || null,
+              now,
             );
           }
         });
@@ -436,11 +463,21 @@ function createDialectsModule(deps) {
           return sendError(res, 400, 'invalid_input', 'payload_shape_sig required');
         }
         if (body.action !== 'dismissed_once' && body.action !== 'dismissed_forever') {
-          return sendError(res, 400, 'invalid_input', "action must be 'dismissed_once' or 'dismissed_forever'");
+          return sendError(
+            res,
+            400,
+            'invalid_input',
+            "action must be 'dismissed_once' or 'dismissed_forever'",
+          );
         }
         stmts.insertQuestionLog.run(
-          null, user.id, body.signal_path, body.signal_value,
-          body.payload_shape_sig, Date.now(), body.action
+          null,
+          user.id,
+          body.signal_path,
+          body.signal_value,
+          body.payload_shape_sig,
+          Date.now(),
+          body.action,
         );
         sendJson(res, 200, { success: true });
       })
@@ -448,25 +485,37 @@ function createDialectsModule(deps) {
   }
 
   function safeParse(s) {
-    try { return JSON.parse(s); } catch (_) { return null; }
+    try {
+      return JSON.parse(s);
+    } catch (_) {
+      return null;
+    }
   }
 
   return {
     id: 'dialects',
     routes: [
       // Static paths BEFORE :id paths to avoid placeholder swallowing.
-      { method: 'POST',   path: '/api/dialects/import',                          handler: handleImport },
-      { method: 'POST',   path: '/api/dialects/questions/dismiss',               handler: handleDismissQuestion },
+      { method: 'POST', path: '/api/dialects/import', handler: handleImport },
+      { method: 'POST', path: '/api/dialects/questions/dismiss', handler: handleDismissQuestion },
 
-      { method: 'GET',    path: '/api/dialects',                                 handler: handleList },
-      { method: 'POST',   path: '/api/dialects',                                 handler: handleCreate },
-      { method: 'PATCH',  path: '/api/dialects/:id',                             handler: handleUpdate },
-      { method: 'DELETE', path: '/api/dialects/:id',                             handler: handleDelete },
-      { method: 'GET',    path: '/api/dialects/:id/mappings',                    handler: handleListMappings },
-      { method: 'POST',   path: '/api/dialects/:id/mappings',                    handler: handleCreateMapping },
-      { method: 'PATCH',  path: '/api/dialects/:id/mappings/:mapping_id',        handler: handleUpdateMapping },
-      { method: 'DELETE', path: '/api/dialects/:id/mappings/:mapping_id',        handler: handleDeleteMapping },
-      { method: 'GET',    path: '/api/dialects/:id/export',                      handler: handleExport },
+      { method: 'GET', path: '/api/dialects', handler: handleList },
+      { method: 'POST', path: '/api/dialects', handler: handleCreate },
+      { method: 'PATCH', path: '/api/dialects/:id', handler: handleUpdate },
+      { method: 'DELETE', path: '/api/dialects/:id', handler: handleDelete },
+      { method: 'GET', path: '/api/dialects/:id/mappings', handler: handleListMappings },
+      { method: 'POST', path: '/api/dialects/:id/mappings', handler: handleCreateMapping },
+      {
+        method: 'PATCH',
+        path: '/api/dialects/:id/mappings/:mapping_id',
+        handler: handleUpdateMapping,
+      },
+      {
+        method: 'DELETE',
+        path: '/api/dialects/:id/mappings/:mapping_id',
+        handler: handleDeleteMapping,
+      },
+      { method: 'GET', path: '/api/dialects/:id/export', handler: handleExport },
     ],
   };
 }

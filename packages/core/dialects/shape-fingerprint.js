@@ -122,8 +122,10 @@ function analyzeShape(payloadNode) {
   // Small banner (1×1…50×50) + instl=1 with no pop-family hits.
   if (
     banner &&
-    banner.w >= 1 && banner.w <= 50 &&
-    banner.h >= 1 && banner.h <= 50 &&
+    banner.w >= 1 &&
+    banner.w <= 50 &&
+    banner.h >= 1 &&
+    banner.h <= 50 &&
     payloadNode.instl === 1 &&
     popScore === 0
   ) {
@@ -138,12 +140,19 @@ function analyzeShape(payloadNode) {
 
   // ---- Vendor heuristic: push notification
   // Native shape with short title.len (≤60 chars) → push.
-  if (nativeRequestParsed && nativeRequestParsed.title && typeof nativeRequestParsed.title.len === 'number') {
+  if (
+    nativeRequestParsed &&
+    nativeRequestParsed.title &&
+    typeof nativeRequestParsed.title.len === 'number'
+  ) {
     if (nativeRequestParsed.title.len <= 60) {
       candidates.push({
         format: 'push',
         score: 2.0,
-        signals_matched: ['native.request:str', `native.request.title.len:${nativeRequestParsed.title.len}`],
+        signals_matched: [
+          'native.request:str',
+          `native.request.title.len:${nativeRequestParsed.title.len}`,
+        ],
         iab_ref: false,
         notes: 'non-IAB: native shape with short title constraint (push family)',
       });
@@ -152,11 +161,7 @@ function analyzeShape(payloadNode) {
 
   // ---- IAB canonical: interstitial-banner
   // banner with real dims + instl=1, and no pop-family signals to compete.
-  if (
-    banner && banner.w > 1 && banner.h > 1 &&
-    payloadNode.instl === 1 &&
-    popScore === 0
-  ) {
+  if (banner && banner.w > 1 && banner.h > 1 && payloadNode.instl === 1 && popScore === 0) {
     candidates.push({
       format: 'interstitial-banner',
       score: 2.0,
@@ -219,9 +224,11 @@ function shapeFingerprint(payloadNode) {
     else if (t === 'number') signals.push(`${path}:num`);
     else if (t === 'string') signals.push(`${path}:str`);
     else if (t === 'object') {
-      Object.keys(obj).sort().forEach((k) => {
-        walk(obj[k], path ? `${path}.${k}` : k);
-      });
+      Object.keys(obj)
+        .sort()
+        .forEach((k) => {
+          walk(obj[k], path ? `${path}.${k}` : k);
+        });
     }
   }
 

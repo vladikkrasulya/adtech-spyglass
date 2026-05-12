@@ -100,7 +100,13 @@ function createAnalyzeModule(deps) {
     let userDialect = null;
     try {
       const u = auth.getCurrentUser(req);
-      if (u && u.id && typeof getDefaultDialectForUser === 'function' && typeof loadUserDialect === 'function' && db) {
+      if (
+        u &&
+        u.id &&
+        typeof getDefaultDialectForUser === 'function' &&
+        typeof loadUserDialect === 'function' &&
+        db
+      ) {
         const did = getDefaultDialectForUser(db, u.id);
         if (did) userDialect = loadUserDialect(db, did);
       }
@@ -151,7 +157,13 @@ function createAnalyzeModule(deps) {
         // that masked perfectly valid response findings.
         let validation;
         if (hasReq) {
-          validation = validate(bidReq, { locale, dialect, disabledRules, expectedVersion, userDialect });
+          validation = validate(bidReq, {
+            locale,
+            dialect,
+            disabledRules,
+            expectedVersion,
+            userDialect,
+          });
           if (hasRes) {
             const resValidation = validate(bidRes, {
               locale,
@@ -170,7 +182,13 @@ function createAnalyzeModule(deps) {
           }
         } else {
           // Response-only path. Validate bidRes and prefix findings for clarity.
-          validation = validate(bidRes, { locale, dialect, disabledRules, expectedVersion, userDialect });
+          validation = validate(bidRes, {
+            locale,
+            dialect,
+            disabledRules,
+            expectedVersion,
+            userDialect,
+          });
           validation.findings = validation.findings.map((f) =>
             Object.assign({}, f, { msg: '[response] ' + f.msg }),
           );

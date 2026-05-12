@@ -78,7 +78,8 @@ export const en = {
   'dialects.toast.error': 'Error',
   'dialects.empty.no_dialects': 'You have no dialects yet',
   'dialects.empty.no_mappings': 'No mappings in this dialect yet',
-  'dialects.drift.warning': 'This mapping was saved against a different payload shape — possibly stale',
+  'dialects.drift.warning':
+    'This mapping was saved against a different payload shape — possibly stale',
 };
 
 export const ru = {

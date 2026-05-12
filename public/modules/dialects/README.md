@@ -45,7 +45,7 @@ Idempotent — calling twice is safe; the listener is bound once via
 
 Skeleton-level: each mapping row carries a ⚠ badge if it has a stored
 `shape_fingerprint`. Clicking the badge shows the warning toast. Real
-drift will compare the stored fingerprint against the *current* payload
+drift will compare the stored fingerprint against the _current_ payload
 fingerprint at validation time — that integration lives in the analyze
 pipeline, not here.
 

@@ -22,6 +22,7 @@ exposed as a user-editable surface rather than a hard-coded module.
 #### API (auth-gated; 401 for anonymous)
 
 `modules/dialects/handler.js` adds:
+
 - `GET    /api/dialects` — list user's dialects
 - `POST   /api/dialects` — create
 - `PATCH  /api/dialects/:id` / `DELETE /api/dialects/:id`
@@ -38,6 +39,7 @@ existing users/partners/samples convention. Hard deletes (no soft-delete).
 #### Core engine
 
 `packages/core` (0.18.0 → 0.19.0):
+
 - `dialects/user-dialect-runtime.js` — applies a dialect's mappings at
   detect/validate time without polluting the canonical rules.
 - `dialects/shape-fingerprint.js` — stable hash of a payload's
@@ -164,7 +166,7 @@ bundle.
   the static file handler.
 - `public/index.{uk,en,ru}.html` — `defer` on 13 classic scripts,
   inline `<style>` block replaced with `<link rel="stylesheet"
-  href="/spyglass-shell.css" />`.
+href="/spyglass-shell.css" />`.
 - `public/spyglass-shell.css` — new file holding the
   scrollbar / selection / pre-render-hero CSS shared across locales.
 - `package.json`, `public/version.js` — lockstep bump 0.41.2 → 0.41.3.
@@ -203,7 +205,7 @@ risk. Template fetch + mount lifecycle unchanged.
   text: "Public OpenRTB Inspector" (en) / "публічний
   OpenRTB-інспектор" (uk) / "публичный OpenRTB-инспектор" (ru).
 - **Value-prop paragraph** mirroring the existing `<meta
-  description>` tone in each locale (paste oRTB JSON →
+description>` tone in each locale (paste oRTB JSON →
   validation + crosscheck + IAB decoding + preview; no ads, no
   logs, zero-knowledge for saved samples).
 - **Three-bullet capability list** — oRTB versions covered,
