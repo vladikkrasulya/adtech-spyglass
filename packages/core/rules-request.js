@@ -40,15 +40,16 @@ function validateRequest(req, ctx) {
     findings.push(F('request.at_invalid', LEVELS.WARNING, 'at', { at: req.at }));
   }
 
-  // GDPR consent — oRTB 2.5 placed it at `regs.ext.gdpr=1`; oRTB 2.6 §3.2.3
-  // promoted it to top-level `regs.gdpr=1`. Modern EU exchanges send the
-  // 2.6 form; accept either so validation stays honest across versions.
-  // When set, `user.ext.consent` must be a non-empty TCF v2 string — EU
-  // exchanges drop the bid without it.
+  // GDPR consent — oRTB 2.5 placed it at `regs.ext.gdpr=1` + `user.ext.consent`;
+  // oRTB 2.6 §3.2.3+§3.2.18 promoted both to top-level `regs.gdpr=1` +
+  // `user.consent`. Modern EU exchanges send the 2.6 form; accept either
+  // path on both flag and string so a 2.6-compliant payload doesn't trigger
+  // a false-positive `gdpr_consent_missing` finding.
   const gdprTopLevel = req.regs && req.regs.gdpr === 1;
   const gdprLegacy = req.regs && req.regs.ext && req.regs.ext.gdpr === 1;
   if (gdprTopLevel || gdprLegacy) {
-    const consent = req.user && req.user.ext && req.user.ext.consent;
+    const consent =
+      (req.user && req.user.consent) || (req.user && req.user.ext && req.user.ext.consent);
     if (!isStr(consent) || !consent.trim()) {
       findings.push(
         F(

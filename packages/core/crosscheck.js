@@ -57,8 +57,14 @@ function crosscheck(req, res, _ctx) {
   // explicitly excludes USD, that default-fallback is a real mismatch — the
   // bid would settle in a currency the exchange refuses. Easy to miss when
   // the response is silent about it; surface explicitly.
+  //
+  // ISO 4217 codes are case-insensitive by spec. Real-world feeds sometimes
+  // ship lowercase ("usd") — uppercase-normalize both sides before compare
+  // so we don't fire a `cur_not_in_request` false-positive on the case alone.
   const reqCur = Array.isArray(req.cur) ? req.cur : ['USD'];
-  if (res.cur && !reqCur.includes(res.cur)) {
+  const reqCurUp = reqCur.map((c) => (typeof c === 'string' ? c.toUpperCase() : c));
+  const resCurUp = typeof res.cur === 'string' ? res.cur.toUpperCase() : res.cur;
+  if (res.cur && !reqCurUp.includes(resCurUp)) {
     out.push(
       C('crosscheck.cur_not_in_request', false, CROSS_LEVELS.WARN, 'cur', {
         cur: res.cur,
@@ -67,7 +73,7 @@ function crosscheck(req, res, _ctx) {
     );
   } else if (res.cur) {
     out.push(C('crosscheck.cur_allowed', true, CROSS_LEVELS.OK, 'cur', { cur: res.cur }));
-  } else if (Array.isArray(req.cur) && req.cur.length && !req.cur.includes('USD')) {
+  } else if (Array.isArray(req.cur) && req.cur.length && !reqCurUp.includes('USD')) {
     out.push(
       C('crosscheck.cur_default_usd_mismatch', false, CROSS_LEVELS.WARN, 'cur', {
         allowed: JSON.stringify(reqCur),
@@ -389,6 +395,25 @@ function crosscheck(req, res, _ctx) {
   return out;
 }
 
+// Try to parse a native payload that may be wrapped in base64. Some SSPs
+// ship adm as `base64(JSON)` despite spec; we attempt direct JSON.parse
+// first, then a single base64 → JSON.parse hop. Returns parsed object or
+// throws if neither path yields valid JSON.
+function tryParseNativePayload(s) {
+  if (typeof s !== 'string') return s;
+  try {
+    return JSON.parse(s);
+  } catch (_e) {
+    // Heuristic: looks base64-ish (length divisible by 4, no whitespace,
+    // restricted alphabet). Bail fast on obvious non-base64 to keep the
+    // error surface clean.
+    if (!/^[A-Za-z0-9+/=_-]+$/.test(s.replace(/\s+/g, ''))) throw _e;
+    const decoded =
+      typeof atob === 'function' ? atob(s) : Buffer.from(s, 'base64').toString('utf-8');
+    return JSON.parse(decoded);
+  }
+}
+
 /**
  * Compare request native asset declaration against response native assets.
  * Returns { requiredIds, providedIds, missing, extra } or { errorKey } on parse failure.
@@ -397,14 +422,18 @@ function nativeAssetCrosscheck(impNative, adm) {
   let nativeReq;
   try {
     nativeReq =
-      typeof impNative.request === 'string' ? JSON.parse(impNative.request) : impNative.request;
+      typeof impNative.request === 'string'
+        ? tryParseNativePayload(impNative.request)
+        : impNative.request;
   } catch {
     return { errorKey: 'crosscheck.bid.native_invalid_request' };
   }
-  const requestedAssets =
-    nativeReq && nativeReq.native && Array.isArray(nativeReq.native.assets)
-      ? nativeReq.native.assets
-      : [];
+  // IAB Native 1.x allows both `{native:{assets}}` (wrapped) and bare
+  // `{assets}` shapes — some SSPs strip the envelope. Accept either so a
+  // bare-shape payload doesn't get its assets treated as empty (which
+  // would false-positive every required asset as missing).
+  const reqInner = (nativeReq && nativeReq.native) || nativeReq || {};
+  const requestedAssets = Array.isArray(reqInner.assets) ? reqInner.assets : [];
   const requiredIds = requestedAssets
     .filter((a) => a && a.required === 1 && a.id != null)
     .map((a) => Number(a.id));
@@ -412,14 +441,12 @@ function nativeAssetCrosscheck(impNative, adm) {
 
   let nativeRes;
   try {
-    nativeRes = typeof adm === 'string' ? JSON.parse(adm) : adm;
+    nativeRes = typeof adm === 'string' ? tryParseNativePayload(adm) : adm;
   } catch {
     return { errorKey: 'crosscheck.bid.native_invalid_adm' };
   }
-  const responseAssets =
-    nativeRes && nativeRes.native && Array.isArray(nativeRes.native.assets)
-      ? nativeRes.native.assets
-      : [];
+  const resInner = (nativeRes && nativeRes.native) || nativeRes || {};
+  const responseAssets = Array.isArray(resInner.assets) ? resInner.assets : [];
   const providedIds = responseAssets.filter((a) => a && a.id != null).map((a) => Number(a.id));
 
   const provided = new Set(providedIds);

@@ -160,6 +160,14 @@ function validate(payload, opts) {
   // Skipped when detection itself is `unknown` (we wouldn't know what to
   // compare) or when the expected value isn't a recognised pinnable
   // version (silently ignore garbage rather than throw).
+  //
+  // Note: we DELIBERATELY fire at any detector confidence. A pin to 2.6
+  // on a payload with no 2.6-only fields (c=0.7 or 0.3) is information
+  // -bearing — "you said 2.6 but nothing in the payload says so". The
+  // 2026-05-13 audit flagged this as a false-positive risk, but the
+  // validator.test "expected=2.6 but only 2.5 markers" case codifies
+  // the intent. `confidence` is exposed in finding params so the UI can
+  // soften the message when low-confidence.
   if (
     expectedVersion &&
     PINNABLE_VERSIONS.includes(expectedVersion) &&

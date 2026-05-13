@@ -1323,30 +1323,34 @@ export async function mountInspector(root, ctx) {
   // Skip same-key writes from this tab (event.key is null when caller
   // is the originator's storage.setItem? no — actually the event fires
   // ONLY in other tabs, never the originating one. Safe to mutate).
-  window.addEventListener('storage', (e) => {
-    if (e.key !== HISTORY_KEY) return;
-    try {
-      const raw = e.newValue ? JSON.parse(e.newValue) : [];
-      historyStore.length = 0;
-      if (Array.isArray(raw)) {
-        for (const entry of raw.slice(0, HISTORY_MAX)) {
-          if (
-            entry &&
-            typeof entry === 'object' &&
-            typeof entry.ts === 'number' &&
-            (typeof entry.req === 'string' || typeof entry.res === 'string')
-          ) {
-            historyStore.push(entry);
+  window.addEventListener(
+    'storage',
+    (e) => {
+      if (e.key !== HISTORY_KEY) return;
+      try {
+        const raw = e.newValue ? JSON.parse(e.newValue) : [];
+        historyStore.length = 0;
+        if (Array.isArray(raw)) {
+          for (const entry of raw.slice(0, HISTORY_MAX)) {
+            if (
+              entry &&
+              typeof entry === 'object' &&
+              typeof entry.ts === 'number' &&
+              (typeof entry.req === 'string' || typeof entry.res === 'string')
+            ) {
+              historyStore.push(entry);
+            }
           }
         }
+        // Active-entry pointer may have shifted; clamp.
+        if (_currentHistoryIdx >= historyStore.length) _currentHistoryIdx = -1;
+        if (typeof renderHistory === 'function') renderHistory();
+      } catch (_e) {
+        /* parse error → leave in-memory store as-is */
       }
-      // Active-entry pointer may have shifted; clamp.
-      if (_currentHistoryIdx >= historyStore.length) _currentHistoryIdx = -1;
-      if (typeof renderHistory === 'function') renderHistory();
-    } catch (_e) {
-      /* parse error → leave in-memory store as-is */
-    }
-  });
+    },
+    { signal: ctx.signal },
+  );
 
   function renderHistory() {
     const list = $('hList');
@@ -3715,11 +3719,17 @@ export async function mountInspector(root, ctx) {
 
     // Global Esc closes any open modal. Modals each had their own Enter
     // handler before; consolidating Esc here covers all of them.
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && $('modalRoot').children.length) {
-        closeModal();
-      }
-    });
+    // {signal: ctx.signal} auto-detaches on module unmount; otherwise a
+    // remount would stack a second Esc handler that double-closes.
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && $('modalRoot') && $('modalRoot').children.length) {
+          closeModal();
+        }
+      },
+      { signal: ctx.signal },
+    );
 
     // Prefetch the creative-probe source so it's ready when the first
     // adm renders. Fire-and-forget — setAdPreview gracefully renders
@@ -3732,26 +3742,32 @@ export async function mountInspector(root, ctx) {
     // the iframe we just mounted (set inside setAdPreview) and reject
     // anything else. Without this any frame on the page could fabricate
     // `spyglass-probe` events and poison the analysis pipeline.
-    window.addEventListener('message', (e) => {
-      const d = e.data;
-      if (!d || d.type !== 'spyglass-probe') return;
-      // Spoof-protection: only accept messages from the currently-mounted
-      // probed iframe. Drops events when no iframe is active (VAST/native
-      // previews, between-creative gap) and from any unrelated frame.
-      if (!_currentProbedIframe || e.source !== _currentProbedIframe.contentWindow) return;
-      // Phase 4 watchdog liveness: every accepted probe message resets
-      // the freeze timer. Heartbeats (kind:'heartbeat') are 1Hz pings
-      // sent purely for this purpose — they update liveness but DON'T
-      // pollute the user-visible events timeline. Other event kinds
-      // also count as liveness (more activity = more recent proof of
-      // a working JS thread).
-      _lastHeartbeatAt = Date.now();
-      _frozenAlerted = false;
-      if (!_watchdogTimer) startWatchdog();
-      if (d.kind === 'heartbeat') return;
-      pushBehaviorEvent(d);
-      renderBehaviorTab();
-    });
+    // {signal: ctx.signal} so a remount detaches the previous handler,
+    // otherwise probe events could fan-out to stale closures.
+    window.addEventListener(
+      'message',
+      (e) => {
+        const d = e.data;
+        if (!d || d.type !== 'spyglass-probe') return;
+        // Spoof-protection: only accept messages from the currently-mounted
+        // probed iframe. Drops events when no iframe is active (VAST/native
+        // previews, between-creative gap) and from any unrelated frame.
+        if (!_currentProbedIframe || e.source !== _currentProbedIframe.contentWindow) return;
+        // Phase 4 watchdog liveness: every accepted probe message resets
+        // the freeze timer. Heartbeats (kind:'heartbeat') are 1Hz pings
+        // sent purely for this purpose — they update liveness but DON'T
+        // pollute the user-visible events timeline. Other event kinds
+        // also count as liveness (more activity = more recent proof of
+        // a working JS thread).
+        _lastHeartbeatAt = Date.now();
+        _frozenAlerted = false;
+        if (!_watchdogTimer) startWatchdog();
+        if (d.kind === 'heartbeat') return;
+        pushBehaviorEvent(d);
+        renderBehaviorTab();
+      },
+      { signal: ctx.signal },
+    );
 
     // Render any history that was persisted from a prior session.
     renderHistory();
