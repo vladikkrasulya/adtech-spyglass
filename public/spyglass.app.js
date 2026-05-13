@@ -1923,6 +1923,19 @@ export async function mountInspector(root, ctx) {
             }),
             'success',
           );
+        // P0 #3 fix — bring the verdict into view after a fresh analyze.
+        // On desktop the format-bar usually sits at or near the fold; on
+        // mobile + small viewports the JSON input panes push it well
+        // below the fold and the user has to hunt for the result. Only
+        // scroll when the bar is meaningfully off-screen (>60% of fold)
+        // so tall screens don't get a jarring jump.
+        const bar = $('formatBar');
+        if (bar && !bar.hidden) {
+          const r = bar.getBoundingClientRect();
+          if (r.top > window.innerHeight * 0.6 || r.top < 0) {
+            bar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
       }
     } catch (e) {
       // AbortError fires when a newer analyze starts before this one
@@ -4437,6 +4450,19 @@ export async function mountInspector(root, ctx) {
             : t('reset.err.verify_failed');
       toast(msg, 'error');
       history.replaceState({}, '', location.pathname);
+    } else if (qp.get('auth') === 'login' || qp.get('auth') === 'signup') {
+      // Deep-link from the cabinet anon-gate "Sign in" / "Create account"
+      // CTAs (/account → /?auth=login|signup). The modal's internal mode
+      // name is 'register' (not 'signup'); map here so the URL stays
+      // user-readable. Skip if already signed in — the modal would be
+      // confusing and the user landed here from a back-button +
+      // cookie-refresh race. URL is cleaned so a refresh doesn't
+      // re-open the modal.
+      const mode = qp.get('auth') === 'signup' ? 'register' : 'login';
+      history.replaceState({}, '', location.pathname);
+      if (!_currentUser) {
+        lazyOpenAuth(mode);
+      }
     }
   }
   window.refreshSamples = refreshSamples;

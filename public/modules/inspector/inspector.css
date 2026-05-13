@@ -155,6 +155,46 @@ body {
   .sb-toggle {
     display: none !important;
   }
+  /* P0 #5 — Compact mobile header: hide secondary action chips so the
+     header stays on 2 rows (brand + primary actions) instead of 4. The
+     hidden chips (docs / simulate / mirror) point to power-user features
+     that read fine on desktop but crowd a 375px viewport. Users can
+     still reach them by switching to desktop or pinch-zooming. */
+  .app-header-actions a[href='/about'],
+  .app-header-actions #simBidsBtn,
+  .app-header-actions #mirrorBtn {
+    display: none !important;
+  }
+  /* Toolbar clipping fix — the input-card-actions strip
+     (char-count + json-badge + save/clear/format/copy + collapse caret)
+     overflowed off the right edge on narrow viewports because items had
+     no wrap directive. Allow wrap so secondary buttons line-break to a
+     second row instead of clipping. */
+  .input-card-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+  /* Tab-strip scroll hint — the overflow-x:auto above hides the
+     scrollbar (it's noise on touch). Without a visible cue users don't
+     know the tab strip is scrollable, so the last (clipped) tab reads
+     as "broken layout". A right-edge gradient over the tab-bar's parent
+     hints "more here, scroll right". */
+  .tab-bar-wrap,
+  .tabs-wrap {
+    position: relative;
+  }
+  .tab-bar::after {
+    content: '';
+    position: sticky;
+    right: 0;
+    top: 0;
+    width: 28px;
+    height: 100%;
+    background: linear-gradient(to right, transparent, var(--bg-2));
+    pointer-events: none;
+    flex-shrink: 0;
+  }
 }
 
 /* ── Large-display responsive (added 2026-05-04) ──────────────────

@@ -500,6 +500,33 @@
           flex-shrink: 0;
         }
       }
+      @media (max-width: 600px) {
+        .kt-topnav-inner {
+          flex-wrap: wrap;
+          row-gap: var(--space-2);
+        }
+        .kt-topnav-inner .kt-brand {
+          flex: 1 1 100%;
+          min-width: 0;
+        }
+        .kt-topnav-inner > a.btn {
+          display: none;
+        }
+        .cab-gate {
+          padding: var(--space-5) var(--space-3);
+        }
+        .cab-gate h1 {
+          font-size: var(--fs-md);
+          line-height: 1.25;
+        }
+        .cab-gate .cab-actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .cab-gate .cab-actions .btn {
+          width: 100%;
+        }
+      }
       /* v0.41.1 perf — reduce backdrop-filter blur from 12px to 4px.
          GPU cost of Gaussian blur is roughly O(radius²); at 12px on a sticky
          topnav over scrolling content, a 120Hz frame budget (~8.3ms) is blown
@@ -537,10 +564,11 @@
         <h1>Войди чтобы посмотреть аккаунт</h1>
         <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto var(--space-5)">
           Персональный кабинет показывает сохранённые запросы, партнёров, состояние шифрования,
-          аналитику и настройки. Войди или создай аккаунт чтобы продолжить.
+          аналитику и настройки.
         </p>
         <div class="cab-actions" style="justify-content: center">
-          <a href="/ru" class="btn btn-primary">← Перейти в Spyglass и войти</a>
+          <a href="/ru?auth=login" class="btn btn-primary">Войти</a>
+          <a href="/ru?auth=signup" class="btn btn-secondary">Создать аккаунт</a>
         </div>
       </div>
 

@@ -500,6 +500,41 @@
           flex-shrink: 0;
         }
       }
+      @media (max-width: 600px) {
+        /* Topnav: let the brand take its own row so EN/theme/Spyglass-back
+           chips don't visually overlap the brand text on narrow phones.
+           Also hide the "← Spyglass" back link — the brand itself is
+           already an anchor to /, so the extra chip is redundant and
+           crowds the chip row enough to clip the theme toggle. */
+        .kt-topnav-inner {
+          flex-wrap: wrap;
+          row-gap: var(--space-2);
+        }
+        .kt-topnav-inner .kt-brand {
+          flex: 1 1 100%;
+          min-width: 0;
+        }
+        .kt-topnav-inner > a.btn {
+          display: none;
+        }
+        /* P0 #6 — Compact anon gate: cut vertical padding ~60% and ease
+           the h1 size so the dual CTAs land above the fold. Stack the
+           CTAs full-width so neither is half-cut by the viewport edge. */
+        .cab-gate {
+          padding: var(--space-5) var(--space-3);
+        }
+        .cab-gate h1 {
+          font-size: var(--fs-md);
+          line-height: 1.25;
+        }
+        .cab-gate .cab-actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .cab-gate .cab-actions .btn {
+          width: 100%;
+        }
+      }
       /* v0.41.1 perf — reduce backdrop-filter blur from 12px to 4px.
          GPU cost of Gaussian blur is roughly O(radius²); at 12px on a sticky
          topnav over scrolling content, a 120Hz frame budget (~8.3ms) is blown
@@ -538,10 +573,11 @@
         <h1>Sign in to view your account</h1>
         <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto var(--space-5)">
           The personal cabinet shows your saved samples, partners, encryption state, insights, and
-          preferences. Sign in or create an account to continue.
+          preferences.
         </p>
         <div class="cab-actions" style="justify-content: center">
-          <a href="/" class="btn btn-primary">← Go to Spyglass and sign in</a>
+          <a href="/?auth=login" class="btn btn-primary">Sign in</a>
+          <a href="/?auth=signup" class="btn btn-secondary">Create account</a>
         </div>
       </div>
 

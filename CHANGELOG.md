@@ -6,6 +6,69 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.4 — post-audit P0 trio: focus, mobile header, /account anon gate (2026-05-13)
+
+Three P0 fixes from the GPT-5.5 audit (2026-05-12).
+
+**P0 #3 — Post-analyze focus.** After Analyze, the user's eye stayed
+on the BID REQUEST / BID RESPONSE JSON panes because they dominate
+the top of the page. The verdict (format-bar + findings tabs) sat
+below the fold on mobile and at the lower half of the fold on
+desktop. Fix: on successful analyze, smooth-scroll the format-bar
+into view at the top of the viewport — but only when the bar is
+meaningfully off-screen (`r.top > viewportH * 0.6`), so tall
+desktops don't get an unnecessary jolt. Skipped for re-renders
+from history nav (user is browsing, not analyzing fresh).
+
+**P0 #5 — Compact mobile header + toolbar/tab clipping.** The
+inspector header was eating 4 rows on a 375px viewport before any
+content appeared. Hid `docs`, `simulate`, `mirror` on mobile (power-
+user features that read better on desktop); kept `🎲 example`,
+`📡 live`, `analyze`, lang/theme/auth. Result: 2 rows of chrome
+instead of 4. The `.input-card-actions` toolbar
+(save/clear/format/copy) was clipping off the right edge — added
+`flex-wrap: wrap` + smaller gap so secondary buttons line-break
+gracefully instead of running past the panel edge. Tab strip
+already had `overflow-x: auto` but no scroll hint, so the clipped
+last tab read as a broken layout; added a right-edge fade gradient
+via `::after` to signal "more here".
+
+**P0 #6 — /account anon gate.** Anon hero on /account had a single
+"← Go to Spyglass and sign in" CTA that conflated two intents.
+Replaced with dual CTAs: `Sign in` (primary, deep-links
+`/?auth=login`) + `Create account` (secondary, deep-links
+`/?auth=signup`). Added a `?auth=login|signup` deep-link handler
+that opens the auth modal in the requested mode (signup→register
+internally to match the existing module's vocabulary). Reduced
+hero vertical padding ~60% on mobile, stepped down the h1 size,
+and stacked the dual CTAs full-width so neither is half-cut by
+the viewport edge. Hid the redundant `← Spyglass` back chip on
+mobile (the brand itself is already an anchor to `/`); fixed the
+topnav row 1 to take full width via `flex-wrap` so brand text no
+longer collides with EN/theme chips on narrow phones.
+
+#### Files
+
+- `public/spyglass.app.js` — autoscroll-into-view after analyze;
+  `?auth=login|signup` URL handler.
+- `public/modules/inspector/inspector.css` — mobile media-query
+  additions: hide `docs/simulate/mirror`, `flex-wrap` on
+  `.input-card-actions`, scroll-hint `::after` on `.tab-bar`.
+- `public/account.{en,uk,ru}.html` — dual-CTA anon gate +
+  `@media (max-width: 600px)` block (topnav wrap, hide back
+  chip, compact `.cab-gate`, stack `.cab-actions`).
+- `package.json`, `public/version.js` — lockstep bump 0.42.3 → 0.42.4.
+
+#### Verified
+
+- 658 tests pass, prettier/lint/typecheck clean.
+- Mobile (375×812): inspector empty + post-analyze, /account anon.
+- Desktop (1440×900): all chips visible, ← Spyglass link still
+  rendered, dual CTAs side-by-side, autoscroll NOT triggered
+  because format-bar at y=340 < 60% × 900px = 540 (threshold).
+- Deep-link `/?auth=signup` opens modal in "create account" mode;
+  URL cleaned after handler runs.
+
 ### v0.42.3 — format-bar outcome-first + demote header version chip (2026-05-13)
 
 Two post-audit UX fixes from the GPT-5.5 batch.
