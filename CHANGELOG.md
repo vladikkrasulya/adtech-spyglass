@@ -6,6 +6,78 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.8 — dark theme parity + cabinet copy register (2026-05-13)
+
+Two P1 polish items: dark/light theme parity audit + cabinet copy
+operational rewrite. Both used external models — GPT-5.5 for the
+parity vision audit ($0.075), DeepSeek v4 Pro for the copy
+rewrite ($0.009). Session cumulative external-model spend:
+$0.338 / $22 cap.
+
+**P1 #19 — Dark theme parity.** Sent 3 light/dark screenshot pairs
+(home empty, home post-analyze, cabinet authed) to GPT-5.5 vision.
+Verdict: 3 P1 issues + 2 P2 + 1 light-side P2. Top-3 priority
+fixes addressed in this release:
+
+1. **Surface elevation.** Cabinet cards used `var(--bg-elev)` and
+   `var(--bg-elev-2)` but those tokens were referenced without
+   ever being declared in `kyivtech-portal/public/design-system.css`
+   — both themes fell back to transparent, so cabinet panels
+   blended into the page background (worst in dark). Added the
+   token declarations: light `#FFFFFF` / `#F2EDE3` (matches
+   `--surface` / `--bg-2`); dark `#2A2622` / `#34302A` (one step
+   above `--bg-2`).
+2. **Muted text contrast.** Dark `--text-dim` bumped from
+   `#8A8478` (≈53% L*) to `#9B968C` (≈60% L*) to match the
+   perceived contrast of the light `--text-dim` `#5F5F66`
+   (≈40% L\*). Lifts placeholder text, sidebar labels, footnotes
+   and status footer copy in dark mode.
+3. **Dashed callout border.** The Library empty-state hint added
+   in v0.42.6 used `var(--border)` (10% white in dark = barely
+   visible). Switched to `var(--border-strong)` (22% white) in
+   all 3 cabinet locales so the dashed inset reads at-a-glance.
+
+Container restart needed after editing the bind-mounted
+`design-system.css` — the `Edit` tool's atomic rewrite created a
+new inode while the container held the old one. Lesson noted; a
+later memory entry will codify this.
+
+**P1 #16 — Cabinet copy register.** GPT-5.5's original audit:
+"Cabinet section descriptions too pedagogical for senior adtech
+engineer audience. Tighten to operational language." Sent the 10
+EN section descriptions to DeepSeek v4 Pro for a register-shift
+rewrite. Reviewed DS's output, applied 8/10 EN rewrites that were
+meaningfully tighter (Library, Library insights, Activity, What's
+tracked, Dialects, Preferences, Encryption & recovery, Account
+actions); left 2 (Behavior corpus, Confusion matrix) unchanged
+because DS's rewrite was essentially the same wording. UA/RU
+already read in operational tone (the pedagogical drift was
+EN-only) — deferred for now; will revisit if the audit's UA/RU
+re-pass flags anything.
+
+#### Files
+
+- `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` —
+  `--bg-elev` + `--bg-elev-2` token declarations in both `:root`
+  and `[data-theme="dark"]` blocks; dark `--text-dim` bumped.
+- `public/account.{en,uk,ru}.html` — Library empty-state hint
+  border changed from `var(--border)` to `var(--border-strong)`.
+- `public/account.en.html` — 8 `<p class="lead">` rewrites under
+  cabinet section headings (Library, Library insights, Activity,
+  What's tracked, Dialects, Preferences, Encryption & recovery,
+  Account actions).
+- `package.json`, `public/version.js` — 0.42.7 → 0.42.8.
+
+#### Verified
+
+- 658 tests pass, prettier/lint/typecheck clean.
+- Dark cabinet probe: card bg `rgb(42,38,34)` vs page bg
+  `rgb(26,24,20)` — clear elevation (was transparent before).
+- `--text-dim` token now resolves to `#9B968C` in dark theme
+  (was `#8A8478`).
+- Container restart picked up new bind-mounted CSS (atomic edit
+  swap had decoupled the inode).
+
 ### v0.42.7 — findings-tab severity prominence + tablet toolbar wrap (2026-05-13)
 
 Two P1 polish items.
