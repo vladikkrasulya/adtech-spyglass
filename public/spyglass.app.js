@@ -4516,10 +4516,14 @@ export async function mountInspector(root, ctx) {
     }
     repaintDialectOptions();
     paintFooterDialect();
-    window.addEventListener('spyglass:intel-dialect-changed', () => {
-      repaintDialectOptions();
-      paintFooterDialect();
-    });
+    window.addEventListener(
+      'spyglass:intel-dialect-changed',
+      () => {
+        repaintDialectOptions();
+        paintFooterDialect();
+      },
+      { signal: ctx.signal },
+    );
 
     // Input-section drag-resize. User can pull the handle below the
     // BID REQUEST / BID RESPONSE panes to grow them when working with
