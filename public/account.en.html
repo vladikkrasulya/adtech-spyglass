@@ -483,8 +483,18 @@
         margin-top: var(--space-7);
       }
       @media (max-width: 880px) {
+        /* `1fr` alone resolves to `minmax(auto, 1fr)`, where `auto`
+           respects each child's min-content size. The `.cab-stats` grids
+           inside (`repeat(auto-fit, minmax(140px, 1fr))` with 4 stat
+           boxes) had a min-content of 4×140 = 560px, which propagated
+           up and inflated the layout column to ~821px on a 375px
+           viewport — every card extended off-screen to the right.
+           `minmax(0, 1fr)` lets the grid track shrink below children's
+           min-content; children must handle overflow themselves
+           (which `.cab-stats` does via the `min(140px, 100%)` fix
+           below). */
         .cab-layout {
-          grid-template-columns: 1fr;
+          grid-template-columns: minmax(0, 1fr);
         }
         .cab-sidebar {
           position: static;
@@ -498,6 +508,29 @@
         .cab-nav-item {
           white-space: nowrap;
           flex-shrink: 0;
+        }
+        /* P0 #2 — stat grids must wrap when the viewport is narrower
+           than min×N (where min=140px, N=stat count). `min(140px,100%)`
+           makes a single stat box never wider than 100% of its container,
+           which means at viewports < 280px the grid collapses to a
+           single column; between 280-440px it's 2-col; etc. */
+        .cab-stats {
+          grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+        }
+        /* P0 #2 — defensive: any direct cab-card child that would
+           otherwise force an intrinsic min-width larger than viewport
+           (e.g. very long emails, vendor IDs, code blocks pasted by
+           the user) is allowed to break/wrap or scroll inside its
+           card rather than expanding the card itself. */
+        .cab-card {
+          max-width: 100%;
+          min-width: 0;
+        }
+        .cab-card pre,
+        .cab-card code,
+        .cab-card .mono-label {
+          overflow-wrap: anywhere;
+          word-break: break-word;
         }
       }
       @media (max-width: 600px) {

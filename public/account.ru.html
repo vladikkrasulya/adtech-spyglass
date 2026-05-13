@@ -483,8 +483,15 @@
         margin-top: var(--space-7);
       }
       @media (max-width: 880px) {
+        /* `1fr` resolves to `minmax(auto, 1fr)` and `auto` respects
+           children's min-content — the `.cab-stats` grids inside used
+           `minmax(140px, 1fr)` × 4 boxes, forcing the layout column to
+           ~821px on a 375px viewport and pushing every card off-screen.
+           `minmax(0, 1fr)` lets the grid track shrink below min-content
+           while child grids handle their own overflow via the
+           `min(140px, 100%)` trick below. */
         .cab-layout {
-          grid-template-columns: 1fr;
+          grid-template-columns: minmax(0, 1fr);
         }
         .cab-sidebar {
           position: static;
@@ -498,6 +505,19 @@
         .cab-nav-item {
           white-space: nowrap;
           flex-shrink: 0;
+        }
+        .cab-stats {
+          grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+        }
+        .cab-card {
+          max-width: 100%;
+          min-width: 0;
+        }
+        .cab-card pre,
+        .cab-card code,
+        .cab-card .mono-label {
+          overflow-wrap: anywhere;
+          word-break: break-word;
         }
       }
       @media (max-width: 600px) {

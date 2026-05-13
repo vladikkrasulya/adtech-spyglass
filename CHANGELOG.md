@@ -6,6 +6,72 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.5 — cabinet mobile viewport fix (P0 #2) (2026-05-13)
+
+The last remaining P0 from the 2026-05-12 GPT-5.5 audit. Originally
+flagged as "Cabinet mobile is functionally broken — sidebar nav
+collapses to truncated icons; 7 cards stack vertically with right-side
+content clipped (heatmap, distribution panels half-visible); section
+copy wraps weirdly".
+
+**Diagnosis.** Live DOM probing on a 375px viewport revealed every
+`.cab-card` rendering at 821px wide — about 2.2× the viewport. The
+chain: `.cab-stats` used `grid-template-columns: repeat(auto-fit,
+minmax(140px, 1fr))` × 4 stat boxes, giving the stats grid a
+min-content size of 560px. That intrinsic size propagated up through
+`.cab-section` → `.cab-card` → `.cab-content`, which sat in
+`.cab-layout`'s `grid-template-columns: 1fr` track. `1fr` is shorthand
+for `minmax(auto, 1fr)`, and the `auto` minimum **respects** child
+min-content. So the single layout track resolved to 821px to fit the
+stats grid's 560px min-content plus padding, pushing every card off-
+screen.
+
+**Fix.** Pure CSS, no HTML or JS change, no sidebar routing
+refactor (P1 #14 deferred). Three rules inside the existing
+`@media (max-width: 880px)` block in the per-page `<style>` of
+`account.{en,uk,ru}.html`:
+
+1. `.cab-layout { grid-template-columns: minmax(0, 1fr) }` — allows
+   the layout track to shrink **below** children's min-content. Child
+   overflow becomes the child's problem to solve, not the layout's.
+2. `.cab-stats { grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)) }`
+   — `min(140px, 100%)` lets each stat box collapse to full-container
+   width on viewports < 280px (4 × 140 = 560), giving graceful 1-col /
+   2-col / 4-col wrapping as the viewport grows.
+3. Defensive: `.cab-card { max-width: 100%; min-width: 0 }` plus
+   `overflow-wrap: anywhere; word-break: break-word` on `pre`/`code`/
+   `.mono-label`, so user-pasted vendor IDs, long emails, or saved
+   sample IDs don't reintroduce overflow.
+
+**Verified.** Layout/content/cards all 327px (viewport 375 minus
+container padding). Stats grid: single 277px column on a 327px parent,
+all 4 stat tiles stack vertically and remain fully visible. Doc width
+matches inner width — zero horizontal scroll, zero clipping. All 7
+sections (Profile / Library / Library insights / Recent samples /
+Activity / What's tracked / Behavior corpus / Confusion matrix /
+Dialects / Preferences / Encryption & recovery / Account actions)
+render readably end-to-end without right-edge truncation.
+
+External validation: sent before+after screenshots to GPT-5.5
+(`openai/gpt-5.5`, $0.050) — verdict: "YES-WITH-FOLLOWUP — the
+viewport-breaking/clipping regression is fixed CSS-only, with
+remaining issues downgraded to mobile polish/IA followups."
+
+**Out of scope (intentionally deferred):**
+
+- P1 #14 — sidebar nav implies tab routing but page renders all
+  sections at once. Section-only routing is a separate task.
+- P2 — dense two-column rows in "What's tracked"; some Preferences
+  control groups feel cramped. GPT-5.5 flagged these as polish, not
+  blockers.
+
+#### Files
+
+- `public/account.{en,uk,ru}.html` — `@media (max-width: 880px)`
+  block: `.cab-layout` minmax(0, 1fr), `.cab-stats` min(140, 100%),
+  defensive `.cab-card` constraints, overflow-wrap on monospace.
+- `package.json`, `public/version.js` — lockstep bump 0.42.4 → 0.42.5.
+
 ### v0.42.4 — post-audit P0 trio: focus, mobile header, /account anon gate (2026-05-13)
 
 Three P0 fixes from the GPT-5.5 audit (2026-05-12).
