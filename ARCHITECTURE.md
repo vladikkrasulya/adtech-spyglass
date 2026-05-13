@@ -6,19 +6,39 @@ This document describes the **target architecture**. The current state has conve
 
 ---
 
-## 0. Current state (as of 2026-05-04)
+## 0. Current state (as of 2026-05-13)
 
 A snapshot of what's actually live on `spyglass.kyivtech.com.ua`. Anything below differs from later sections — those describe target architecture, this section describes today.
 
 **Live and working:**
 
-- **Validator core in `packages/core/`** — extracted from `server.js`, used by both the Node server and (planned) the browser. Pure JS, no Node-only APIs. 209 unit tests pass. Phase 1 ✅, Phase 4 🟢 (npm publish pending).
+- **Validator core in `packages/core/`** — extracted from `server.js`, used by both the Node server and (planned) the browser. Pure JS, no Node-only APIs. **658 tests pass** (up from 209 — `Phase 1 ✅`; npm publish still gated by API-stability work). Folder-per-rule layout under `packages/core/rules/` makes new rules a small, isolated addition.
 - **3 locales** (`/`, `/uk/`, `/ru/`) with **seamless DOM-morph language switch** (no full reload, preserves analysis state). About pages parallel: `/about`, `/uk/about`, `/ru/about`. SEO via hreflang + sitemap.
 - **Anonymous-first UX**: paste-and-validate works without login. Login is opt-in for the encrypted library (zero-knowledge AES-GCM-256, PBKDF2 600k, recovery key) + partner profiles.
 - **JsonFeed validators** for non-RTB CIS adtech: vendor-specific push, clickunder, single-bid shapes.
 - **AdKernel routing detection** as info-level finding (49+ alias networks share the same wire format).
-- **Format-pill bar** in inspector — surfaces type / status / oRTB version / dialect at a glance.
-- **Operations**: SQLite daily backup (cron, gzipped, 30-day rotation, restore drill verified), per-IP rate-limiting (60/min on analyze, 10/15min on login, 5/hour on register), HttpOnly+SameSite+Secure cookies, full `npm run ci` green (format/lint/typecheck/tests).
+- **Format-pill bar** in inspector — surfaces `[status] [type] [version] [dialect-picker] [version-pin]` at a glance, with the status pill hoisted to first via `order: -1` so the verdict reads outcome-first (icon + count for warnings/errors). Added in v0.42.3.
+- **User Dialects (v0.42.0)** — per-user vendor-extension mappings. Saved dialect → discovery flow → IAB-aware overrides. Lives in cabinet `#dialects` section.
+- **Cabinet section-only routing (v0.42.10)** — `/account` is Gmail-style: sidebar click → only that section renders, URL hash drives state, deep-links work (`/account#library`), browser back/forward walks between sections. Inner anchors like `<a href="#privacy">` resolve to the ancestor section + scroll the inner element.
+- **Auto-version of module assets** — `__<MODULE>_BUNDLE_HASH__` tokens in JS get replaced server-side with content-hash of `public/modules/<module>/`. No manual bumps on rule/template changes.
+- **Modular code shape** — `server.js` 2033 → 868 LOC (Phase 7c modularization closed 2026-05-10); both backend and frontend are folder-per-tool under `modules/<name>/` and `public/modules/<name>/` respectively. See [docs/ARCHMAP.md](./docs/ARCHMAP.md) for the authoritative map.
+- **Operations**: SQLite daily backup (kt-backup-\* cron, gzipped, 30-day rotation, off-site rclone to Drive verified fresh 2026-05-10), per-IP rate-limiting (60/min on analyze, 10/15min on login, 5/hour on register), HttpOnly+SameSite+Secure cookies, full `npm run ci` green (format/lint/typecheck/658 tests).
+
+**Recent UX polish wave (2026-05-13 v0.42.1 → v0.42.10):**
+
+A 2026-05-12 GPT-5.5 vision audit found 29 issues across 9 screenshots. Across 10 lockstep releases on 2026-05-13 the actionable items closed: 4 P0s, 12 P1s, 4 P2s. Highlights worth knowing for orientation:
+
+- Empty-state copy + auction-price relabel (v0.42.1-v0.42.2)
+- Outcome-first format-bar + demoted version chip (v0.42.3)
+- Post-analyze autoscroll + compact mobile header + /account dual-CTA + `?auth=login|signup` deep-link (v0.42.4)
+- Cabinet mobile viewport fix — `.cab-stats minmax(140, 1fr)` ×4 was inflating `.cab-layout 1fr` to 821px on 375px viewports (v0.42.5)
+- Auth modal subtitle + footer hierarchy + save tooltip + cabinet zero-state hint (v0.42.6)
+- Findings-tab severity hand-off (`:has()` upgrades inactive tab when its badge is danger/warn) + tablet toolbar wrap (v0.42.7)
+- Dark theme parity (added `--bg-elev` + `--bg-elev-2` tokens that were referenced but never declared; bumped dark `--text-dim`) + EN cabinet copy operational rewrite (v0.42.8)
+- Mobile footer collapse + dialect state-chip + IAB-categories rename + mobile letter-spacing tightening (v0.42.9)
+- Cabinet section-only routing — replaced scroll-spy with `hidden`-attr toggle + pushState (v0.42.10)
+
+External-model spend across that wave: **$0.401 / $22 OpenRouter cap** (5 GPT-5.5 vision audits + 1 DeepSeek copy rewrite). False-positive rate on the vision audit: 2/29 ≈ 6.9%, within the expected 10-20% band.
 
 **Diverges from target (still on the roadmap):**
 
@@ -26,10 +46,10 @@ A snapshot of what's actually live on `spyglass.kyivtech.com.ua`. Anything below
 - 🟢 **Validator strictness levels** (`lax`/`normal`/`pedantic`) and full version-aware rule gating (Phase 2) are partially shipped — `detectVersion()` works with confidence + signals, but most rules don't yet branch by version.
 - 🟢 **`@spyglass/core` is extracted as a workspace** but **not yet npm-published** — held back until Phase 2 strict-mode work stabilises the public API.
 - ⏹️ **`@spyglass/cli` (Phase 6)** not started.
-- 🟢 **Phase 7 Pro features**: multi-user accounts ✅, encrypted library ✅, per-user history ✅. Per-partner default profiles, share read-only sample, mock generation, schema diff, browser extension — not started.
-- ❌ **Operationalize gaps** (Phase 8 ⏸️ partial): error tracking (Sentry/GlitchTip), structured logging (Pino), build-SHA in `/api/health`, content-hashed cache-bust automation — all on the backlog.
+- 🟢 **Phase 7 Pro features**: multi-user accounts ✅, encrypted library ✅, per-user history ✅, dialects ✅. Per-partner default profiles, share read-only sample, mock generation, schema diff, browser extension — not started.
+- 🟢 **Operationalize gaps** (Phase 8): pre-push hook enforces full CI, daily backup + off-site replica live. Still backlog: error tracking (Sentry/GlitchTip), structured logging (Pino — partial), build-SHA in `/api/health`.
 
-For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md).
+For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md). For the authoritative module dependency map, see [docs/ARCHMAP.md](./docs/ARCHMAP.md). For operating the live service, see [docs/OPERATIONS.md](./docs/OPERATIONS.md). For privacy claims, see [docs/PRIVACY.md](./docs/PRIVACY.md).
 
 ---
 
@@ -300,7 +320,7 @@ Planned additions:
 - May graduate to its own subdomain `spyglass.kyivtech.com.ua` once team accounts land.
 - Container: `adtech-spyglass` on host network, port `127.0.0.1:8090`.
 - DB: `/srv/DATA/AppData/adtech-spyglass/spyglass.db` (bind-mounted).
-- Backups: rotation needed before launch (currently absent — see [ROADMAP](./ROADMAP.md) phase 4).
+- Backups: daily `kt-backup-*` cron, gzipped SQLite snapshot, 30-day rotation, off-site rclone replica to Drive (verified fresh 2026-05-10). See [docs/OPERATIONS.md](./docs/OPERATIONS.md) for the restore drill.
 
 ### 6.3 Self-hosted / enterprise
 

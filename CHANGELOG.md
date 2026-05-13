@@ -6,6 +6,105 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.11 — exhaustive documentation pass (2026-05-13)
+
+No code changes. Five new docs + four existing docs updated. Goal:
+project should be operable, contributable, and auditable by reading
+the repo alone — no tribal knowledge required. Written by three
+Sonnet sub-agents in parallel (each scoped to 1-2 docs) with Claude
+review + stale-fact cross-checks afterwards.
+
+**New files (5):**
+
+- `CONTRIBUTING.md` (429 lines) — full contributor workflow: clone,
+  install (npm workspace), Docker Compose dev loop, the bind-mount
+  layout (`/public` live-reloads, `/packages` reloads on restart,
+  `server.js` needs `--build`), prettier+eslint+JSDoc conventions,
+  3-locale rule (UA informal "ти"), SemVer-in-same-commit pattern,
+  module-asset auto-versioning via `__<MODULE>_BUNDLE_HASH__` tokens,
+  pre-push hook enablement (`git config core.hooksPath .githooks`),
+  commit-message style, common gotchas (rebuild trap, bind-mount
+  inode, CSS source-order).
+- `docs/TESTING.md` (295 lines) — `node --test` runner (no Jest),
+  `npm test` / `npm run test:watch` / `npm run test:coverage`,
+  `npm run ci` (the pre-push gate), where tests live and what each
+  group covers, fixture loading patterns, debugging via
+  `--test-name-pattern` + `LOG_LEVEL=debug`.
+- `docs/OPERATIONS.md` (819 lines) — maintainer runbook for the live
+  service. TL;DR quick-reference up top. Sections: architecture
+  overview (single container, SQLite, optional Ollama cross-stack),
+  full bind-mount table verified against compose, the bind-mount
+  inode gotcha with v0.42.5/v0.42.8 real-world examples, common ops
+  tasks (restart, rebuild, logs, sqlite shell, reset test user
+  password, force-clear sessions), secrets vault (`/srv/DATA/.secrets/
+api-tokens.env`), backups (kt-backup-\* cron + off-site rclone +
+  restore drill), monitoring (Beszel, healthcheck, n8n stats,
+  Telegram alerts), 5-scenario incident playbook, deployment flow,
+  external integrations, network appendix.
+- `docs/PRIVACY.md` (328 lines) — exhaustive zero-knowledge story
+  written for both skeptical users and auditors. Concrete numbers
+  verified against code: PBKDF2 600k iterations × SHA-256, 16-byte
+  salt, AES-GCM-256, 12-byte IV per blob, 32-char hex recovery key,
+  bcrypt rounds 12, 30-day session TTL. Per-surface "what we keep"
+  table (anonymous / account / saved samples / activity log /
+  insights aggregates). Threat model with explicit protected vs
+  not-protected scenarios. Auditor proof-points (file paths +
+  endpoints + open-source repo). Changelog of privacy-relevant
+  releases pulled from CHANGELOG history.
+- `CLAUDE.md` (308 lines) — repo-level guidance for AI agents
+  (future-Claude + sub-agents). File-system layout, the two
+  authoritative maps (ARCHMAP.md + CHANGELOG.md), conventions
+  cheat-sheet, two well-known traps (file-level bind-mount inode +
+  CSS source-order), external LLMs available (DeepSeek + GPT-5.5 on
+  OpenRouter with $22 cap and token-accounting habit), description
+  of each `.claude/agents/*.md` specialist agent, commit-message
+  style with `Co-Authored-By:` convention.
+
+**Updated files (5):**
+
+- `ARCHITECTURE.md` — Current State snapshot refreshed from
+  2026-05-04 → 2026-05-13. Test count 209 → 658. Added v0.42.x
+  highlights (format-bar outcome-first, cabinet section-only routing,
+  dialect chip, module asset auto-versioning). Backup status changed
+  from "needed before launch" to live with details. Cross-links to
+  the new OPERATIONS.md / PRIVACY.md / ARCHMAP.md.
+- `docs/ARCHMAP.md` — 2026-05-10 → 2026-05-13 delta block at the top
+  listing each file touched in the v0.42.x wave + the two new
+  operational traps so future-Claude doesn't re-debug them.
+- `README.md` — test count 581 → 658, added `npm run ci` to the
+  Tests section, Ollama default model `gemma3:4b` → `qwen2.5:3b`
+  with 2026-05-11 switch note.
+- `LLM_SETUP.md` — Ollama default model `gemma3:4b` → `qwen2.5:3b`,
+  noted gemma3 as optional fallback, fixed container exec name from
+  `adtech-spyglass-spyglass-1` → `adtech-spyglass`, kept env-var
+  table aligned.
+- `CHANGELOG.md` — this entry.
+
+**Stale-fact cross-checks the agents flagged:**
+
+- README test count 581 (v0.40.x baseline) was off vs current 658.
+  Fixed.
+- LLM_SETUP referenced the legacy `gemma3:4b` model in 6+ places.
+  All updated to `qwen2.5:3b` with the legacy retained as fallback.
+- ARCHITECTURE.md §6.2 said "backups: rotation needed before launch
+  (currently absent)" — was true at writing time, no longer.
+  Updated.
+- CONTRIBUTING.md initially missed the `git config core.hooksPath
+.githooks` step for enabling the pre-push hook. Added.
+- 10 of the `.claude/agents/*.md` files reference an old "141 tests"
+  baseline. Flagged but NOT fixed in this commit — they're agent
+  prompts, the test count there is descriptive context not load-
+  bearing. Will refresh in a separate pass.
+- ARCHITECTURE.md §5.3 schema table is stale (doesn't show the
+  crypto columns added in Phase 7). Flagged for separate work.
+
+**Verified:** prettier+eslint+typecheck+658 tests green. All new
+docs cross-link consistently.
+
+**Cost report:** three Sonnet sub-agents in parallel, ~225k tokens
+total. No external-model spend (Sonnet is on the Pro plan tier).
+The session's cumulative OpenRouter spend remains $0.401 / $22.
+
 ### v0.42.10 — cabinet section-only routing (P1 #14) (2026-05-13)
 
 The last remaining sidebar-IA item from the 2026-05-12 audit:

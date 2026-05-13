@@ -77,10 +77,11 @@ browser** (IndexedDB) — payload values never leave the tab. Highlights:
   pick fields, and turn it into a temporary dialect overlay applied to
   validation findings client-side.
 - **Local LLM bridge** (Phase 7c, **opt-in**): a self-hosted Ollama instance
-  (default model `gemma3:4b`) provides cluster naming + per-field purpose
-  hints. The LLM call is fail-open: if Ollama is unreachable, the AI
-  affordances quietly hide and the rest of Spyglass continues unaffected.
-  See [LLM_SETUP.md](./LLM_SETUP.md) for deployment.
+  (default model `qwen2.5:3b` since 2026-05-11; previously `gemma3:4b`)
+  provides cluster naming + per-field purpose hints. The LLM call is
+  fail-open: if Ollama is unreachable, the AI affordances quietly hide
+  and the rest of Spyglass continues unaffected. See
+  [LLM_SETUP.md](./LLM_SETUP.md) for deployment.
 - **Knowledge Base** (Phase 10): a curated set of OpenRTB / JsonFeed
   reference fixtures under [packages/core/knowledge_base/](./packages/core/knowledge_base/).
   Used for two things — `format-detect` self-tests and **few-shot context**
@@ -192,10 +193,12 @@ Dockerfile                multi-stage alpine + node + better-sqlite3 build
 ## Tests
 
 ```bash
-npm test          # 581 tests at v0.40.x — validator, crosscheck, auth,
+npm test          # 658 tests at v0.42.10 — validator, crosscheck, auth,
                   # tokens, behavior engine, intel walker/cluster/LLM,
                   # format detection, knowledge-base round-trip, router
                   # dispatch, health endpoint, spec-refs coverage gate
+npm run ci        # prettier:check → eslint → typecheck → tests; what the
+                  # pre-push hook enforces
 ```
 
 ## Configuration

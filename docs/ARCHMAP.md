@@ -8,9 +8,67 @@ shifts a connection.
 > **Never trust this doc 100%** — verify with grep. But if a grep result
 > contradicts the map, fix the map.
 
-Last touched: 2026-05-10 (after the full modularization closure —
-14 frontend + 14 backend modules, `server.js` 2033 → 868 LOC, both
-sides of the app now folder-per-tool).
+Last touched: 2026-05-13 (post the UX-polish wave v0.42.1 → v0.42.10
+that closed the 2026-05-12 GPT-5.5 vision audit; modularization
+state unchanged from 2026-05-10).
+
+## 0.1 What changed 2026-05-10 → 2026-05-13
+
+Frontend module count + folder layout are unchanged. The wave was
+pure CSS/HTML/JS-inside-existing-modules polish + one IA refactor:
+
+- **`public/account.js`** — `bindScrollSpy()` replaced by
+  `bindSectionRouting()`. Cabinet is now Gmail-style: only the
+  active `.cab-section` renders (others get the `hidden` attr).
+  URL hash drives state via `pushState`/`popstate`. Inner anchors
+  like `<a href="#privacy">` resolve to the ancestor `.cab-section`
+  via `closest()` and scroll the inner element into view.
+- **`public/account.{en,uk,ru}.html`** — added missing `#dialects`
+  sidebar nav row (was 7/8 — Dialects section existed but had no
+  nav). Added `.cab-nav::after` sticky fade gradient on mobile so
+  clipped tabs don't read as broken layout.
+- **`public/spyglass.app.js`** — `updateFormatBar()` now paints
+  status pill with icon + finding count; `paintFooterDialect()`
+  reflects active dialect in footer state-chip;
+  `?auth=login|signup` URL handler routes to the auth modal in
+  the right mode (signup → register internally).
+- **`public/modules/inspector/inspector.css`** — added
+  `.format-pill-status { order: -1 }` to hoist the verdict pill,
+  expanded `@media (max-width: 720px)` to also wrap toolbar at
+  720-900px, dark-theme tab severity hand-off via `:has()`,
+  end-of-file mobile letter-spacing block behind a SOURCE-ORDER
+  ANCHOR comment.
+- **`/srv/DATA/Stacks/kyivtech-portal/public/design-system.css`**
+  (shared, bind-mounted into Spyglass) — added `--bg-elev` and
+  `--bg-elev-2` token declarations that the cabinet referenced
+  via `var()` but were never declared (both themes fell back to
+  transparent → cabinet cards lost elevation). Dark `--text-dim`
+  bumped `#8A8478` → `#9B968C` to match light theme perceived
+  contrast.
+- **`public/modules/auth/index.js` + `public/modules/auth/i18n.js`**
+  — modal now has `auth.subtitle` line + footer pattern of
+  `[cancel] [primary]` right-aligned (switch-mode demoted to a
+  centered link above).
+- **`public/i18n.js`** — added `status.error_one` /
+  `status.warning_one` × 3 locales for grammatically correct
+  count-of-1 status pill. Rewrote `toast.signin_to_save` to
+  mention encryption + fixed UA from formal "Увійдіть" → informal
+  "Увійди".
+
+Two operationally-relevant traps surfaced + got memory entries
+(reference these before debugging "why doesn't my change apply"):
+
+- **File-level bind-mount inode trap** — `Edit`/`Write` atomically
+  rewrites → new host inode → container holds old. Fix:
+  `docker compose restart`. Hit twice (v0.42.5, v0.42.8) when
+  editing the shared `design-system.css`. Single-file bind-mounts
+  only — directory mounts (like `./public:/app/public`) are fine.
+- **CSS source-order trap with mobile @media** — early
+  `@media (max-width: 720px) { .foo {x: A} }` + later
+  unconditional `.foo {x: B}` → desktop wins on mobile via
+  source-order at equal specificity. Two fixes: wrap desktop in
+  `@media (min-width: 721px)`, or anchor mobile rule at end of
+  file behind a comment. Hit twice in v0.42.9.
 
 ---
 
