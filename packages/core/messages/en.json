@@ -171,6 +171,8 @@
   "mirror.error.type_not_supported": "Mirror currently supports only oRTB 2.x BidRequest or BidResponse. Detected type: {type}.",
   "mirror.note.ortb_30_not_supported": "This is an oRTB 3.0 envelope. Mirror v0 covers 2.5/2.6 only — 3.0 needs deep AdCOM validation (next chapter on the roadmap).",
   "mirror.note.cur_inferred_from_request": "Currency taken from the request: cur = {cur}.",
+  "mirror.note.cur_multi_dropped": "Request listed multiple currencies; mirror can only emit one. Picked {picked}, dropped: {dropped}.",
+  "mirror.note.cur_invalid_fallback": "Request currency \"{raw}\" is not a valid ISO 4217 code; mirror falls back to {fallback}.",
   "mirror.note.cur_inferred_from_response": "Currency taken from the response: cur = {cur}.",
   "mirror.note.banner_size_copied": "Slot #{num}: banner size copied from the request — {w}×{h}.",
   "mirror.note.banner_size_default": "Slot #{num}: no banner size in the request — used the 300×250 default.",

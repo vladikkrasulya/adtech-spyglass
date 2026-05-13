@@ -69,7 +69,11 @@ function validateKadamClickunder(o) {
   // than zero findings so the inspector clearly says "received, no bid"
   // instead of looking like an empty / broken response.
   const status = typeof r.status === 'string' ? r.status.toUpperCase() : null;
-  if (status === 'NOBID' && r.listing == null) {
+  // Empty array `listing:[]` is structurally equivalent to absent for NOBID.
+  // Pre-fix the BID path would normalize [] to [] and iterate zero rows,
+  // returning zero findings — invisible to the user.
+  const listingAbsent = r.listing == null || (Array.isArray(r.listing) && r.listing.length === 0);
+  if (status === 'NOBID' && listingAbsent) {
     findings.push(F('feed.clickunder.nobid', LEVELS.INFO, 'result.status', {}));
     return { type: 'Kadam Feed Response (clickunder, no bid)', findings };
   }

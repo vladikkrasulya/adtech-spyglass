@@ -74,14 +74,27 @@ function scanExtForFormatHints(ext, basePath) {
   if (!isObj(ext)) return [];
   const out = [];
   const base = basePath || 'ext';
+  // Dedupe by format name. When a payload carries both a string hint
+  // (`ext.adtype='pop'`) AND a matching flag hint (`ext.pop=true`), the
+  // pre-dedup version would emit two records for the same format and
+  // downstream consumers would surface two near-identical findings.
+  // First-seen wins so the path points at the most explicit signal.
+  const seen = new Set();
   for (const k of STRING_HINT_KEYS) {
     const v = ext[k];
     if (typeof v !== 'string') continue;
     const n = normaliseFormatName(v);
-    if (ALL_NON_STANDARD.has(n)) out.push({ format: n, path: `${base}.${k}` });
+    if (ALL_NON_STANDARD.has(n) && !seen.has(n)) {
+      seen.add(n);
+      out.push({ format: n, path: `${base}.${k}` });
+    }
   }
   for (const k of FLAG_HINT_KEYS) {
-    if (ext[k]) out.push({ format: normaliseFormatName(k), path: `${base}.${k}` });
+    if (!ext[k]) continue;
+    const n = normaliseFormatName(k);
+    if (seen.has(n)) continue;
+    seen.add(n);
+    out.push({ format: n, path: `${base}.${k}` });
   }
   return out;
 }

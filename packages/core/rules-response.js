@@ -19,6 +19,10 @@ const { scanCreative } = staticRules;
 // helper used by format-detect.js + crosscheck.js (one anchored regex,
 // not three near-duplicates).
 const { validateVast, isVastShape } = require('./rules-vast');
+// Pop sniff: lets us skip static creative scan on bare-URL pop adm where
+// the obfuscation/entropy heuristics produce false positives on b64-laden
+// query strings.
+const { admLooksLikePop } = require('./non-iab-formats');
 
 const F = makeFinding;
 
@@ -82,21 +86,30 @@ function validateResponse(res, ctx) {
         findings.push(F('response.bid.adomain_missing', LEVELS.WARNING, `${bp}.adomain`, params));
       }
 
-      // Static creative scan — fires obfuscation / miner / XSS-marker /
-      // high-entropy-blob findings on the adm string. Previously these
-      // only showed up under the runtime Behavior tab; surfacing them on
-      // the static validate path means a user pasting just a malicious
-      // BidResponse gets the right verdict in the same panel as IAB
-      // findings, no probe required.
       if (isStr(b.adm) && b.adm.length) {
-        const events = scanCreative(b.adm);
-        if (events.length) {
-          for (const rule of staticRules) {
-            const ruleFindings = rule(events);
-            for (const f of ruleFindings) {
-              f.path = `${bp}.adm`;
-              f.params = Object.assign({ sNum, bNum }, f.params || {});
-              findings.push(f);
+        // Static creative scan — fires obfuscation / miner / XSS-marker /
+        // high-entropy-blob findings on the adm string. Previously these
+        // only showed up under the runtime Behavior tab; surfacing them on
+        // the static validate path means a user pasting just a malicious
+        // BidResponse gets the right verdict in the same panel as IAB
+        // findings, no probe required.
+        //
+        // Skip ONLY pop adm — bare landing URL, not HTML/JS, so the
+        // entropy-and-eval heuristics don't apply and would only produce
+        // false-positive obfuscation findings on base64-laden query
+        // strings. VAST adm IS still scanned because VAST XML can carry
+        // malicious tracking-pixel JS or eval blobs in payload that
+        // validateVast doesn't check.
+        if (!admLooksLikePop(b.adm)) {
+          const events = scanCreative(b.adm);
+          if (events.length) {
+            for (const rule of staticRules) {
+              const ruleFindings = rule(events);
+              for (const f of ruleFindings) {
+                f.path = `${bp}.adm`;
+                f.params = Object.assign({ sNum, bNum }, f.params || {});
+                findings.push(f);
+              }
             }
           }
         }

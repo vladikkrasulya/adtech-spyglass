@@ -124,10 +124,16 @@ module.exports = {
     // Request-level extensions don't have a "format" shape to fingerprint
     // (req isn't an impression), so we always emit candidates:[] and
     // recommended:null for these — UI shows them as "vendor extension,
-    // label manually". Shape signature is still computed from the whole
-    // req for drift detection.
+    // label manually". Shape signature is scoped to req.ext + a couple
+    // of top-level structure hints; fingerprinting the whole request would
+    // produce a noisy, request-id-sensitive signature that mismatches on
+    // every paste and never recognises a previously-seen dialect.
     if (isPlainObject(req.ext) && count < MAX_FINDINGS) {
-      const fingerprint = shapeFingerprint(req);
+      const fingerprint = shapeFingerprint({
+        ext: req.ext,
+        has_site: !!req.site,
+        has_app: !!req.app,
+      });
       const keys = Object.keys(req.ext).sort();
       for (const key of keys) {
         if (count >= MAX_FINDINGS) break;

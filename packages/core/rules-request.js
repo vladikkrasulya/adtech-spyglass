@@ -167,14 +167,19 @@ function validateRequest(req, ctx) {
   findings.push(...detectNonStandardFormats(req));
 
   // ── AdKernel-routed traffic (any of 49 aliased networks) ─────────────────
+  // Multi-imp requests can fan out through several aliases at once; emit
+  // one info finding per distinct alias so multi-alias traffic doesn't
+  // hide behind the first detection.
   const adkernel = detectAdKernelRouting(req);
   if (adkernel) {
-    findings.push(
-      F('info.adkernel.routed', LEVELS.INFO, adkernel.signal, {
-        alias: adkernel.alias,
-        signal: adkernel.signal,
-      }),
-    );
+    for (const a of adkernel.aliases) {
+      findings.push(
+        F('info.adkernel.routed', LEVELS.INFO, a.signal, {
+          alias: a.alias,
+          signal: a.signal,
+        }),
+      );
+    }
   }
 
   // ── Dialect overlay ──────────────────────────────────────────────────────
@@ -256,6 +261,17 @@ function detectAdKernelRouting(req) {
     return isObj(o) && o.zoneId != null;
   }
 
+  // Multi-imp requests can fan out through different aliases (e.g.
+  // imp[0].ext.monetix + imp[1].ext.denakop) — collect every unique alias
+  // we see so the caller can surface all of them, not just the first.
+  // Dedup by lowercased alias name; keep the first-seen signal path so
+  // the finding points at a real location.
+  const seen = new Map();
+  const record = (alias, signal) => {
+    const key = alias.toLowerCase();
+    if (!seen.has(key)) seen.set(key, { alias, signal });
+  };
+
   for (let i = 0; i < imps.length; i++) {
     const ext = imps[i] && imps[i].ext;
     if (!isObj(ext)) continue;
@@ -265,7 +281,7 @@ function detectAdKernelRouting(req) {
     for (const k of Object.keys(ext)) {
       const lk = k.toLowerCase();
       if (ADKERNEL_ALIASES.has(lk) && looksLikeAdKernelParams(ext[k])) {
-        return { alias: k, signal: 'imp.ext.' + k };
+        record(k, 'imp.ext.' + k);
       }
     }
 
@@ -273,7 +289,7 @@ function detectAdKernelRouting(req) {
     if (isObj(ext.bidder)) {
       for (const k of Object.keys(ext.bidder)) {
         if (ADKERNEL_ALIASES.has(k.toLowerCase())) {
-          return { alias: k, signal: 'imp.ext.bidder.' + k };
+          record(k, 'imp.ext.bidder.' + k);
         }
       }
     }
@@ -282,12 +298,17 @@ function detectAdKernelRouting(req) {
     if (isObj(ext.prebid) && isObj(ext.prebid.bidder)) {
       for (const k of Object.keys(ext.prebid.bidder)) {
         if (ADKERNEL_ALIASES.has(k.toLowerCase())) {
-          return { alias: k, signal: 'imp.ext.prebid.bidder.' + k };
+          record(k, 'imp.ext.prebid.bidder.' + k);
         }
       }
     }
   }
-  return null;
+  if (seen.size === 0) return null;
+  const aliases = Array.from(seen.values());
+  // Caller-compat: keep `alias` + `signal` as the primary (first detected)
+  // so existing single-alias display paths stay unchanged. Add `aliases`
+  // array for callers that want the full list.
+  return { alias: aliases[0].alias, signal: aliases[0].signal, aliases };
 }
 
 function detectNonStandardFormats(req) {

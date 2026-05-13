@@ -218,8 +218,31 @@ function responseFromRequest(req, notes) {
 
 function pickCur(req, notes) {
   if (Array.isArray(req.cur) && req.cur.length && isStr(req.cur[0])) {
-    notes.push({ id: 'mirror.note.cur_inferred_from_request', params: { cur: req.cur[0] } });
-    return req.cur[0];
+    // Normalize to uppercase ISO 4217 form. Real-world feeds occasionally
+    // ship lowercase ("usd"); the mirror response should still emit the
+    // canonical form so downstream re-validation doesn't false-positive
+    // on case-mismatch. Invalid currency at index 0 falls back to USD,
+    // but the note tells the user we ignored their value rather than
+    // pretending it was the requested currency.
+    const raw = req.cur[0];
+    if (!/^[A-Za-z]{3}$/.test(raw)) {
+      notes.push({
+        id: 'mirror.note.cur_invalid_fallback',
+        params: { raw, fallback: DEFAULT_CUR },
+      });
+      return DEFAULT_CUR;
+    }
+    const cur = raw.toUpperCase();
+    notes.push({ id: 'mirror.note.cur_inferred_from_request', params: { cur } });
+    if (req.cur.length > 1) {
+      // Mirror can only set a single cur; tell the user which others
+      // were available but dropped so the choice isn't silent.
+      notes.push({
+        id: 'mirror.note.cur_multi_dropped',
+        params: { picked: cur, dropped: req.cur.slice(1).join(',') },
+      });
+    }
+    return cur;
   }
   return DEFAULT_CUR;
 }

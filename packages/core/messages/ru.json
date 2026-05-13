@@ -170,6 +170,8 @@
   "mirror.error.type_not_supported": "Зеркало пока поддерживает только oRTB 2.x BidRequest или BidResponse. Обнаруженный тип: {type}.",
   "mirror.note.ortb_30_not_supported": "Это oRTB 3.0 envelope. Mirror v0 покрывает только 2.5/2.6 — для 3.0 нужна глубокая AdCOM-валидация (следующая глава дорожной карты).",
   "mirror.note.cur_inferred_from_request": "Валюта взята из запроса: cur = {cur}.",
+  "mirror.note.cur_multi_dropped": "В запросе указано несколько валют, mirror может вернуть только одну. Выбрано {picked}, отброшено: {dropped}.",
+  "mirror.note.cur_invalid_fallback": "Валюта запроса «{raw}» не является валидным кодом ISO 4217; mirror откатывается на {fallback}.",
   "mirror.note.cur_inferred_from_response": "Валюта взята из ответа: cur = {cur}.",
   "mirror.note.banner_size_copied": "Слот #{num}: размер баннера скопирован из запроса — {w}×{h}.",
   "mirror.note.banner_size_default": "Слот #{num}: в запросе нет размеров баннера — использован стандарт 300×250.",

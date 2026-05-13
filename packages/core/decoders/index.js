@@ -123,10 +123,20 @@ function parseFor(payload, rawFormat) {
  * SENTINEL_PARSE_ERROR if structure can't be read.
  */
 function xmlShallowParse(payload) {
-  const declStripped = payload.replace(/^\s*<\?xml[^?]*\?>\s*/i, '');
-  const rootMatch = declStripped.match(/^\s*<(\w+)\b/);
+  // Strip XML declaration AND comments before scanning. Without the
+  // comment strip, `<!-- <fake/> -->` would inject phantom children.
+  const declStripped = payload
+    .replace(/^\s*<\?xml[^?]*\?>\s*/i, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+  const rootMatch = declStripped.match(/^\s*<(\w+)\b([^>]*?)(\/?)>/);
   if (!rootMatch) return SENTINEL_PARSE_ERROR;
   const root = rootMatch[1];
+  // Self-closing root (`<root/>`) or root with no children. Surface as a
+  // valid-but-empty document; decoders that need ANY child will skip via
+  // their own detect() returning false.
+  if (rootMatch[3] === '/') {
+    return { root, children: [] };
+  }
   const children = [];
   const childRe = /<(\w+)\b([^>]*?)\/>/g;
   let m;

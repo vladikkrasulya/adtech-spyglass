@@ -395,23 +395,32 @@ function crosscheck(req, res, _ctx) {
   return out;
 }
 
-// Try to parse a native payload that may be wrapped in base64. Some SSPs
-// ship adm as `base64(JSON)` despite spec; we attempt direct JSON.parse
-// first, then a single base64 → JSON.parse hop. Returns parsed object or
-// throws if neither path yields valid JSON.
+// Try to parse a native payload that may be wrapped in 1-3 layers of
+// base64. Some SSPs ship adm as `base64(JSON)`; a smaller subset double-
+// or triple-wrap (Prebid passthrough, vendor obfuscation). Depth cap of
+// 3 keeps malformed inputs from looping if every layer happens to look
+// base64-ish.
 function tryParseNativePayload(s) {
   if (typeof s !== 'string') return s;
-  try {
-    return JSON.parse(s);
-  } catch (_e) {
-    // Heuristic: looks base64-ish (length divisible by 4, no whitespace,
-    // restricted alphabet). Bail fast on obvious non-base64 to keep the
-    // error surface clean.
-    if (!/^[A-Za-z0-9+/=_-]+$/.test(s.replace(/\s+/g, ''))) throw _e;
-    const decoded =
-      typeof atob === 'function' ? atob(s) : Buffer.from(s, 'base64').toString('utf-8');
-    return JSON.parse(decoded);
+  const isB64ish = (v) => /^[A-Za-z0-9+/=_-]+$/.test(v.replace(/\s+/g, ''));
+  const b64decode = (v) =>
+    typeof atob === 'function' ? atob(v) : Buffer.from(v, 'base64').toString('utf-8');
+  let cur = s;
+  let firstErr;
+  for (let depth = 0; depth <= 3; depth++) {
+    try {
+      return JSON.parse(cur);
+    } catch (e) {
+      if (!firstErr) firstErr = e;
+      if (!isB64ish(cur)) throw firstErr;
+      try {
+        cur = b64decode(cur);
+      } catch {
+        throw firstErr;
+      }
+    }
   }
+  throw firstErr;
 }
 
 /**

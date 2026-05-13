@@ -184,14 +184,20 @@ function createAuth({ Users, Sessions, logger }) {
     const expiresAt = Date.now() + SESSION_TTL_MS;
     const ip = clientIp(req);
     const ua = (req.headers['user-agent'] || '').slice(0, 200);
-    sessions.set(token, { userId: user.id, expiresAt, ip, ua });
     if (Sessions) {
+      // Persist FIRST. If the DB write fails, the session would survive
+      // only until container restart — the cookie would lie about
+      // persistence and the user would experience a "silent logout"
+      // post-restart. Throwing here lets the caller return 500; better
+      // than handing out a session that won't outlive the process.
       try {
         Sessions.create({ token, userId: user.id, expiresAt, ip, ua });
       } catch (e) {
         log.error && log.error({ err: e.message }, 'session DB write failed');
+        throw new Error('session_persistence_failed');
       }
     }
+    sessions.set(token, { userId: user.id, expiresAt, ip, ua });
     setSessionCookie(req, res, token);
     log.info && log.info({ userId: user.id, sessions: sessions.size }, 'session created');
   }
