@@ -520,6 +520,15 @@
     setText('statPartners', partners.length);
     setText('statEncrypted', encryptedCount);
     setText('statAssigned', assignedCount);
+    // P1 #15 — when all 4 Library stats are zero (fresh account, nothing
+    // saved yet), show a contextual empty-state hint immediately under
+    // the stats grid pointing the user at the action. Without it the
+    // "0 0 0 0" row reads as a dead end. The hint hides as soon as any
+    // metric becomes non-zero.
+    const allZero =
+      samples.length === 0 && partners.length === 0 && encryptedCount === 0 && assignedCount === 0;
+    const hint = $('libraryEmptyHint');
+    if (hint) hint.hidden = !allZero;
     setRecent(samples);
     setLibraryInsights(samples, partners);
     setUsage(insights);

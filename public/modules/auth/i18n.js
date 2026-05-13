@@ -36,6 +36,11 @@
         en: 'create account',
         ru: 'создать аккаунт',
       },
+      'auth.subtitle': {
+        uk: 'збережені запити · мапінги діалектів · метадані партнерів — все наскрізно зашифровано',
+        en: 'saved samples · dialect mappings · partner metadata — all end-to-end encrypted',
+        ru: 'сохранённые запросы · маппинги диалектов · метаданные партнёров — всё сквозное шифрование',
+      },
       'auth.label.password_hint': {
         uk: 'пароль (мінімум 8 символів)',
         en: 'password (min. 8 chars)',

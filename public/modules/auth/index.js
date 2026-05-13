@@ -81,6 +81,13 @@ export function openAuthModal(mode) {
     '<div class="modal-title">' +
     t(isReg ? 'auth.register.title' : 'auth.login.title') +
     '</div>' +
+    // P1 #17 — one-liner explains what an account is for (the value
+    // prop, not the action). Mentions encryption so users coming from
+    // privacy-sensitive contexts (adtech engineers reviewing real
+    // bid payloads) know data isn't leaving their session.
+    '<div class="modal-subtitle" style="font-size:var(--fs-sm);color:var(--text-dim);margin:calc(-1*var(--space-2)) 0 var(--space-4);line-height:1.4">' +
+    t('auth.subtitle') +
+    '</div>' +
     '<div class="modal-row"><label>' +
     t('auth.label.email') +
     '</label><input id="authEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
@@ -95,13 +102,18 @@ export function openAuthModal(mode) {
       : '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" data-action="open-forgot" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
         t('auth.forgot_password') +
         '</a></div>') +
-    '<div class="modal-actions" style="justify-content:space-between">' +
-    '<button class="btn btn-ghost btn-sm" data-action="open-auth" data-mode="' +
+    // P1 #18 — switch-mode link moved out of the footer into a small
+    // text row above it; the footer keeps the conventional
+    // [cancel] [primary] pair right-aligned. Before, switch-mode sat
+    // far-left with `justify-content: space-between`, putting weight
+    // on the secondary path.
+    '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3);text-align:center">' +
+    '<a href="#" class="auth-switch-link" data-action="open-auth" data-mode="' +
     (isReg ? 'login' : 'register') +
-    '">' +
+    '" style="color:var(--text-dim);text-decoration:underline;text-underline-offset:2px">' +
     t(isReg ? 'auth.switch_to_login' : 'auth.switch_to_register') +
-    '</button>' +
-    '<div style="display:flex;gap:var(--space-2)">' +
+    '</a></div>' +
+    '<div class="modal-actions" style="justify-content:flex-end;gap:var(--space-2)">' +
     '<button class="btn btn-ghost btn-sm" data-action="modal-close">' +
     t('btn.cancel') +
     '</button>' +
@@ -110,7 +122,7 @@ export function openAuthModal(mode) {
     '">' +
     t(isReg ? 'auth.btn.register' : 'auth.btn.login') +
     '</button>' +
-    '</div></div></div></div>';
+    '</div></div></div>';
   setTimeout(() => {
     // Restore prior values from previous mode (preserved across switches).
     // Don't auto-focus password if it was empty — focus email first.

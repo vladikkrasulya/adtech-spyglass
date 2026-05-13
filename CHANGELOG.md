@@ -6,6 +6,58 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.6 — auth-modal value prop + cabinet zero-state hint + save tooltip (2026-05-13)
+
+Four P1 polish items from the 2026-05-12 audit.
+
+**P1 #17 — Auth modal value prop.** Added a one-liner subtitle under
+the modal title in 3 locales: `saved samples · dialect mappings ·
+partner metadata — all end-to-end encrypted`. Adtech engineers
+reviewing real bid payloads need to know data doesn't leave their
+session.
+
+**P1 #18 — Auth modal footer hierarchy.** Before: `justify-content:
+space-between` pinned the switch-mode link (`no account? create one`)
+far-left while the primary action (`sign in`) sat far-right —
+equal visual weight to a secondary path. Now: switch-mode lives in
+a small dimmed text row above the footer; footer is `[cancel]
+[primary]` right-aligned (Gmail/GitHub modal pattern).
+
+**P1 #21 — Save button tooltip + signed-out copy.** Save button's
+`title` rewritten in 3 locales to mention encryption + the
+signed-out flow. Also fixed `toast.signin_to_save` (shown when a
+guest clicks save): EN now mentions encryption explicitly; UA
+fixed from formal "Увійдіть" to informal "Увійди" (matches the
+rest of the UA UI per [[feedback_collaboration_meta]]).
+
+**P1 #15 — Cabinet zero-state hint.** When all four Library stats
+are zero, an inline hint appears under the stats grid: "Library is
+empty. Open Spyglass, paste a BidRequest, click `save` …". The
+hint hides as soon as any metric becomes non-zero. Translated for
+all 3 locales.
+
+#### Files
+
+- `public/modules/auth/index.js` — subtitle div + switch-mode
+  relocated + footer right-aligned.
+- `public/modules/auth/i18n.js` — `auth.subtitle` × 3 locales.
+- `public/i18n.js` — `toast.signin_to_save` rewrite (EN encryption
+  mention, UA Ви→ти, RU "шифрованные").
+- `public/modules/inspector/template.{en,uk,ru}.html` — save
+  button `title` rewrite.
+- `public/account.{en,uk,ru}.html` — `#libraryEmptyHint` element
+  with localized copy.
+- `public/account.js` — `allZero` derivation toggles
+  `#libraryEmptyHint.hidden` on stats render.
+- `package.json`, `public/version.js` — 0.42.5 → 0.42.6.
+
+#### Verified
+
+- 658 tests pass; prettier + lint + typecheck clean.
+- Auth modal renders subtitle + new footer order across locales.
+- Cabinet empty hint appears at all-zero stats and disappears on
+  non-zero.
+
 ### v0.42.5 — cabinet mobile viewport fix (P0 #2) (2026-05-13)
 
 The last remaining P0 from the 2026-05-12 GPT-5.5 audit. Originally

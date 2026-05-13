@@ -51,7 +51,7 @@
       // toast.password_reset lives in modules/password-reset/i18n.js (lazy)
       'toast.added': 'Додано · {name}',
       'toast.nothing_to_save': 'Нічого зберігати — обидва поля порожні',
-      'toast.signin_to_save': 'Увійдіть, щоб зберігати запити в особисту бібліотеку',
+      'toast.signin_to_save': 'Увійди, щоб зберігати шифровані запити в кабінеті',
       'toast.bundle_downloaded': 'Завантажено · {name}',
       // toast.share_* keys live in modules/share/i18n.js (registered at boot)
 
@@ -286,7 +286,7 @@
       // toast.password_reset lives in modules/password-reset/i18n.js (lazy)
       'toast.added': 'Added · {name}',
       'toast.nothing_to_save': 'Nothing to save — both fields are empty',
-      'toast.signin_to_save': 'Sign in to save samples to your personal library',
+      'toast.signin_to_save': 'Sign in to save encrypted samples to your Cabinet',
       'toast.bundle_downloaded': 'Downloaded · {name}',
       // toast.share_* keys live in modules/share/i18n.js (registered at boot)
 
@@ -523,7 +523,7 @@
       // toast.password_reset lives in modules/password-reset/i18n.js (lazy)
       'toast.added': 'Добавлено · {name}',
       'toast.nothing_to_save': 'Нечего сохранять — оба поля пусты',
-      'toast.signin_to_save': 'Войди, чтобы сохранять запросы в личную библиотеку',
+      'toast.signin_to_save': 'Войди, чтобы сохранять шифрованные запросы в кабинете',
       'toast.bundle_downloaded': 'Скачано · {name}',
       // toast.share_* keys live in modules/share/i18n.js (registered at boot)
       // confirm.recovery_save lives in modules/recovery/i18n.js
