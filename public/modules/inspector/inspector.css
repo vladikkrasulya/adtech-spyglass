@@ -195,6 +195,21 @@ body {
     pointer-events: none;
     flex-shrink: 0;
   }
+  /* P1 #20 — collapse footer extras on mobile. Specs/source/dialect/
+     reset-layout add no mobile value (trivia, an unhelpable link, a
+     power-user feature, a layout toggle for sidebars that aren't shown
+     on mobile anyway). Keep visible: status entity + engine version +
+     online indicator. Result: 1 dense row → 1 readable row on 375px. */
+  .footer-extras {
+    display: none;
+  }
+  /* P2 #27 — mobile letter-spacing reduction lives in a dedicated
+     @media block at the very end of this file (search for "P2 #27
+     SOURCE-ORDER ANCHOR"). Reason: many of the affected selectors
+     have their `letter-spacing: 0.14em` declared unconditionally
+     later in this file, which would beat any rule placed here at
+     equal specificity. Putting the mobile override last guarantees
+     it wins on small viewports. */
 }
 
 /* ── Large-display responsive (added 2026-05-04) ──────────────────
@@ -2497,6 +2512,60 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   font-family: var(--font-mono);
   font-size: 11px;
 }
+.footer-status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+/* Desktop default: footer-extras vanishes from layout box tree so its
+   children (specs, source, dialect chip, reset-layout) flow inline as
+   if siblings of the status row. Scoped to a min-width media query so
+   the mobile `display: none` rule earlier in this file (inside
+   @media max-width: 720px) wins on small screens without needing
+   !important. Without this scoping the desktop rule sits at the
+   bottom of source-order and unconditionally overrides the mobile
+   one. */
+@media (min-width: 721px) {
+  .footer-extras {
+    display: contents;
+  }
+}
+.footer-sep {
+  color: var(--text-dim);
+}
+/* P2 #26 — footer dialect chip now reads as state, not as a feature
+   badge. "Dialect: custom ▾" with a dim label and full-contrast value
+   feels like the rest of the status row (engine v0.42.x, online dot)
+   rather than a colorful action button. */
+.footer-dialect-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-dim);
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.footer-dialect-state .footer-dialect-value {
+  color: var(--text);
+}
+.footer-dialect-state:hover .footer-dialect-value {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.footer-reset-layout {
+  color: var(--text-dim);
+  background: transparent;
+  border: 0;
+  padding: 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  cursor: pointer;
+}
 .status-dot {
   width: 7px;
   height: 7px;
@@ -2578,5 +2647,23 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* ── P2 #27 SOURCE-ORDER ANCHOR ────────────────────────────────────
+   Mobile letter-spacing reduction (uppercase labels). Placed last so
+   it beats the unconditional `letter-spacing: 0.14em` declarations
+   on `.tab-btn`, `.mono-label`, `.section-title` etc that live
+   earlier in this file. 0.14em on 11px = ~1.5px per glyph — fine on
+   1440px, costly on 375px. Step to 0.06em across small viewports. */
+@media (max-width: 720px) {
+  .tab-btn,
+  .input-card-title,
+  .section-title,
+  .mono-label,
+  .stat-label,
+  .cab-stat .lbl,
+  .cab-pill {
+    letter-spacing: 0.06em;
   }
 }

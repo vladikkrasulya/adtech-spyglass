@@ -214,6 +214,24 @@ export async function mountInspector(root, ctx) {
     return isTempDialect(d) ? 'iab' : d;
   }
 
+  // P2 #26 — footer dialect label is state-style ("Dialect: <name> ▾")
+  // instead of feature-badge ("🧬 custom dialect"). Paint the value
+  // from the canonical activeDialect getter so it stays in sync with
+  // the format-bar's dialect picker, URL ?dialect, and localStorage.
+  function paintFooterDialect() {
+    const valueEl = document.querySelector('.footer-dialect-value');
+    if (!valueEl) return;
+    const d = activeDialect();
+    let label;
+    if (d === 'iab') label = 'IAB ▾';
+    else if (d === 'kadam') label = 'Vendor · RTB ▾';
+    else if (d === 'kadam-inpage-push') label = 'Vendor · In-Page Push ▾';
+    else if (isTempDialect(d)) label = 'custom ▾';
+    else label = d + ' ▾';
+    valueEl.textContent = label;
+  }
+  window.paintFooterDialect = paintFooterDialect;
+
   function setActiveDialect(dialect) {
     if (!KNOWN_DIALECTS.has(dialect) && !isTempDialect(dialect)) return;
     try {
@@ -221,6 +239,7 @@ export async function mountInspector(root, ctx) {
     } catch (_e) {
       /* storage quota / private mode — best effort, the URL reflects state */
     }
+    paintFooterDialect();
     // Notify the intel module so its activeSpec cache invalidates and
     // applyToFindings reaches for the right spec on the next analyze.
     if (
@@ -4377,7 +4396,11 @@ export async function mountInspector(root, ctx) {
       updateCustomDialectIndicator();
     }
     repaintDialectOptions();
-    window.addEventListener('spyglass:intel-dialect-changed', repaintDialectOptions);
+    paintFooterDialect();
+    window.addEventListener('spyglass:intel-dialect-changed', () => {
+      repaintDialectOptions();
+      paintFooterDialect();
+    });
 
     // Phase 7b: header indicator — small badge that surfaces "this is a
     // user-built dialect, not a stock one". The format-bar already shows

@@ -6,6 +6,85 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.9 — mobile footer collapse + dialect state-chip + IAB-categories rename + tight letter-spacing (2026-05-13)
+
+Four polish items bundled — one P1, three P2s. All low-risk
+CSS/markup changes.
+
+**P1 #20 — Footer collapse on mobile.** The status footer carried 6
+items on one line (status entity · engine vX · openrtb/native/vast/
+jsonfeed specs · open-source link · custom-dialect builder · reset-
+layout). On a 375px viewport it ate ~30% of vertical height and
+clipped right. Wrapped the dense middle items (specs / source link
+/ dialect chip / reset-layout) in a `.footer-extras` span; CSS
+hides it on `@media (max-width: 720px)` so mobile only shows what
+matters there: entity status, engine version, online dot. Layout
+reset is meaningless on mobile (sidebars don't toggle in the
+stacked layout) and trivia/source link belong on desktop.
+
+**P2 #26 — Dialect chip reads as state, not as a badge.** Before:
+`🧬 custom dialect` looked like a feature pill / action. Now:
+`Dialect: IAB ▾` (or the active dialect name) reads as the same
+status-row vocabulary as `engine v0.42.x`. Hover underlines the
+value to signal "you can change this". JS hook
+`paintFooterDialect()` re-runs on `spyglass:intel-dialect-changed`
+so the value tracks the active dialect (IAB / Vendor · RTB /
+Vendor · In-Page Push / custom).
+
+**P2 #23 — Categories tab → "IAB categories".** Domain-clearer
+name; the data shown is IAB category codes (1, IAB2-3, etc) from
+`site.cat` / `app.cat` / `bcat`. Renamed in 3 locales + added
+descriptive `title` tooltips on the tab button.
+
+**P2 #27 — Tighten letter-spacing on mobile uppercase labels.**
+Desktop labels (`.tab-btn`, `.mono-label`, `.section-title`,
+`.stat-label`, `.cab-stat .lbl`, `.cab-pill`) carry
+`letter-spacing: 0.14em` for the "engineering-console" feel — at
+11px that's ~1.5px per glyph, fine on 1440px, costly on 375px
+where words start to sprawl. Step to 0.06em on `@media
+(max-width: 720px)`. Anchored at the very end of `inspector.css`
+in a "P2 #27 SOURCE-ORDER ANCHOR" block — needed because the
+unconditional 0.14em declarations sit later in the file and would
+otherwise win source-order at equal specificity.
+
+**Source-order gotcha learned.** Two of the rules in this batch
+(footer-extras display, mobile letter-spacing) initially didn't
+fire on mobile even though the media query matched. Cause: the
+desktop counterparts were declared unconditionally LATER in the
+file, so source-order won at equal specificity. Two fixes
+applied: (a) the desktop `.footer-extras { display: contents }`
+was wrapped in `@media (min-width: 721px)` so it no longer
+applies on mobile; (b) the mobile letter-spacing rule was moved
+to the bottom of the file behind a clear anchor comment so future
+edits don't re-introduce the same issue. Saving this pattern as a
+memory entry alongside the bind-mount-inode one — both are
+"things that look like Edit not working but are actually CSS
+cascade traps".
+
+#### Files
+
+- `public/modules/inspector/template.{en,uk,ru}.html` — footer
+  markup rewrite (`.footer-status-row` + `.footer-extras`
+  wrapper + state-style dialect chip + Categories→IAB rename).
+- `public/modules/inspector/inspector.css` — footer-row styles
+  (`.footer-status-row`, `.footer-extras` with min-width
+  scoping, `.footer-dialect-state`, `.footer-reset-layout`),
+  mobile @media: `.footer-extras { display: none }`, end-of-file
+  anchor block for mobile letter-spacing.
+- `public/spyglass.app.js` — `paintFooterDialect()` reader +
+  hook on init + on `spyglass:intel-dialect-changed`.
+- `package.json`, `public/version.js` — 0.42.8 → 0.42.9.
+
+#### Verified
+
+- 658 tests pass; prettier+lint+typecheck clean.
+- Desktop 1440: footer shows `ready · engine v0.42.9 · openrtb…
+· open source ↗ · Dialect: IAB ▾ · ↺ reset layout · ● online`.
+- Mobile 375: footer compacts to `ready · engine v0.42.9 ·
+● online` (extras hidden), tab letter-spacing 0.66px (was
+  1.54px), Categories tab reads "IAB categories" in all 3
+  locales.
+
 ### v0.42.8 — dark theme parity + cabinet copy register (2026-05-13)
 
 Two P1 polish items: dark/light theme parity audit + cabinet copy
