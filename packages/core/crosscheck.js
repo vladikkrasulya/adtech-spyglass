@@ -30,27 +30,28 @@ function crosscheck(req, res, _ctx) {
   if (!isObj(res)) {
     return [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
   }
-  // No-bid response (oRTB §3.3.1: just `id` + `nbr` reason code) is a valid
-  // shape; crosscheck has nothing to do. rules-response surfaces the INFO
-  // finding for the no-bid case so users still see *why* there's no bid.
+  // No-bid response (oRTB §3.3.1: just `id` + `nbr` reason code) still
+  // carries the request id and that id MUST match — a no-bid for the
+  // wrong request id is a real exchange bug. Run the id check FIRST,
+  // then early-return on no-bid so the rest of crosscheck (bcat / badv /
+  // floor compare) doesn't run against an absent seatbid.
+  const idFinding =
+    res.id === req.id
+      ? C('crosscheck.id_match', true, CROSS_LEVELS.OK, 'id', { id: req.id })
+      : C('crosscheck.id_mismatch', false, CROSS_LEVELS.CRIT, 'id', {
+          reqId: req.id,
+          resId: res.id,
+        });
+
   if (typeof res.nbr === 'number' && (!Array.isArray(res.seatbid) || !res.seatbid.length)) {
-    return [];
+    return [idFinding];
   }
   if (!Array.isArray(res.seatbid) || !res.seatbid.length) {
     return [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
   }
 
-  // 1. id match
-  if (res.id === req.id) {
-    out.push(C('crosscheck.id_match', true, CROSS_LEVELS.OK, 'id', { id: req.id }));
-  } else {
-    out.push(
-      C('crosscheck.id_mismatch', false, CROSS_LEVELS.CRIT, 'id', {
-        reqId: req.id,
-        resId: res.id,
-      }),
-    );
-  }
+  // 1. id match (already computed above, push now so order matches pre-fix)
+  out.push(idFinding);
 
   // 2. currency
   // Per oRTB §3.3: response without `cur` defaults to USD. If the request

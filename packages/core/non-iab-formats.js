@@ -160,9 +160,13 @@ function extractPopLandingHost(adm) {
       /* fall through */
     }
   }
-  // Try URL inside window.open / location.href / etc.
+  // Try URL inside the redirect call sites that admLooksLikePop recognizes.
+  // window.open(URL) / location.{href,replace,assign} / top.location / parent.location.
+  // Keep these in sync with admLooksLikePop — otherwise pop is detected but
+  // adomain-vs-landing crosscheck silently can't extract the host and the
+  // security comparison is skipped.
   const inside = s.match(
-    /(?:window\.open|location\.(?:href|replace|assign))\s*[=(]\s*['"`](https?:\/\/[^'"`]+)['"`]/i,
+    /(?:window\.open|(?:top|parent)\.location|location\.(?:href|replace|assign))\s*[=(]?\.?\s*\(?\s*['"`](https?:\/\/[^'"`]+)['"`]/i,
   );
   if (inside) {
     try {
