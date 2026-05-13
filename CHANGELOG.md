@@ -6,6 +6,85 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.10 — cabinet section-only routing (P1 #14) (2026-05-13)
+
+The last remaining sidebar-IA item from the 2026-05-12 audit:
+"Cabinet sidebar implies tab routing but page renders all sections
+at once. Real section-only routing." Externally verified by
+GPT-5.5 ($0.063) before ship; one follow-up the model raised (nav
+scroll affordance on mobile) was applied in the same commit.
+
+**Before.** All 8 `.cab-section` elements rendered concurrently;
+the sidebar nav (`href="#profile"` etc) anchor-scrolled the page
+and an IntersectionObserver-based scroll-spy painted the active
+sidebar item. Reading was scroll-based, navigation was anchor
+jump — but the sidebar looked like Gmail/GitHub-style tabs, so
+users expected a content-panel swap. The audit called this
+expectation-mismatch a P1.
+
+**After.** Section-only routing:
+
+- Default load (`/account`) shows only the first section in DOM
+  order — Profile — and hides the rest via the `hidden` attribute.
+- Sidebar click → toggles `hidden` so only the clicked section
+  renders. `history.pushState` updates the URL hash so back/forward
+  walk between sections.
+- Deep-links (`/account#dialects`) land on the right section.
+- Existing inner anchors (e.g. `<a href="#privacy">` from the
+  Activity section pointing to the `#privacy` card inside the
+  same section) still work — `sectionIdFor()` walks
+  `el.closest('.cab-section')` to find the ancestor, shows it,
+  then `scrollIntoView()`'s the inner element.
+- `popstate` re-renders without a new history entry.
+- `aria-current` syncs with `.is-active` so screen readers
+  announce the right tab.
+
+**Bonus fix found while wiring this up.** The sidebar listed 7 of
+8 sections — `Dialects` had no nav item. With scroll-spy it just
+meant "Dialects gets a class only when scrolled into view"; with
+section-only routing it would mean "Dialects exists but is
+unreachable from the sidebar". Added the missing
+`<a href="#dialects">` row with 🧬 icon in all 3 locales between
+Behavior corpus and Preferences.
+
+**GPT-5.5 follow-up applied.** The vision audit (verdict
+"YES-WITH-FOLLOWUP") flagged that the mobile `.cab-nav`
+horizontal scroll has no visible affordance — clipped tabs
+(Dialects/Security/Danger zone past Activity) read as broken
+layout. Added a `::after` sticky right-edge fade gradient inside
+the existing `@media (max-width: 880px)` block, mirroring the
+inspector tab-bar treatment from v0.42.4. Hides scrollbar
+chrome (`scrollbar-width: none`) so it doesn't fight the fade.
+
+#### Files
+
+- `public/account.js` — replaced `bindScrollSpy()` with
+  `bindSectionRouting()`: section show/hide via `hidden` attr,
+  `pushState`/`popstate` for back-forward, click delegation
+  catches both `.cab-nav-item` and inner anchors, default falls
+  back to first DOM section.
+- `public/account.{en,uk,ru}.html` — added Dialects sidebar nav
+  item between Behavior corpus and Preferences; mobile `.cab-nav`
+  scroll affordance (`::after` fade gradient,
+  `scrollbar-width: none`).
+- `package.json`, `public/version.js` — 0.42.9 → 0.42.10.
+
+#### Verified
+
+- 658 tests pass; prettier+lint+typecheck clean.
+- Default `/account` shows Profile only; click Library →
+  Library only; click `<a href="#privacy">` → Activity section
+  shown with privacy card scrolled into view.
+- Deep-link `/account#dialects` opens Dialects with sidebar
+  highlighted.
+- Browser back/forward walks between sections without page
+  reload.
+- Mobile cabinet tabs scroll horizontally with fade affordance
+  at right edge.
+- GPT-5.5 external verify (`openai/gpt-5.5`, $0.063): "YES-WITH-
+  FOLLOWUP — P1 #14 is fixed; follow up on mobile tab
+  discoverability/overflow." Follow-up applied same commit.
+
 ### v0.42.9 — mobile footer collapse + dialect state-chip + IAB-categories rename + tight letter-spacing (2026-05-13)
 
 Four polish items bundled — one P1, three P2s. All low-risk

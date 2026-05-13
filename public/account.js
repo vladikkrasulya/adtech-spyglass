@@ -785,75 +785,120 @@
     }
   });
 
-  // Scroll-spy: highlight active sidebar item as the user scrolls past
-  // each section. IntersectionObserver fires when a section enters the
-  // configured rootMargin band; we toggle .is-active on its corresponding
-  // nav link. rootMargin '-20% 0px -70% 0px' means a section becomes
-  // active when its top crosses 20% from the viewport top — felt right
-  // for a tall cabinet where users dwell on the visible-mid region.
-  function bindScrollSpy() {
-    const sections = document.querySelectorAll('.cab-section');
-    const navItems = document.querySelectorAll('.cab-nav-item');
+  // P1 #14 — Section-only routing. The cabinet used to render every
+  // section at once and rely on scroll-spy to highlight whichever one
+  // crossed a viewport threshold. The audit flagged this as "sidebar
+  // implies tab routing but page renders all sections at once" — users
+  // expect Gmail-style settings where clicking a sidebar item swaps
+  // the content panel.
+  //
+  // This rewrite hides every section except the active one. Routing
+  // surfaces in the URL hash so:
+  //   - deep-links from outside (/account#library) land on the right
+  //     section,
+  //   - existing in-page anchors that target an element inside a
+  //     section (e.g. <a href="#privacy">) still work by finding the
+  //     ancestor .cab-section, showing it, then scrolling the inner
+  //     element into view,
+  //   - browser back/forward navigates between sections.
+  //
+  // We pushState the hash so back works; updateState on the initial
+  // load just paints the hash without adding a history entry.
+  function bindSectionRouting() {
+    const sections = [...document.querySelectorAll('.cab-section')];
+    const navItems = [...document.querySelectorAll('.cab-nav-item')];
     if (!sections.length || !navItems.length) return;
-    const setActive = (id) => {
+    const validSectionIds = new Set(sections.map((s) => s.id));
+
+    // Find the .cab-section ancestor of a given element id (or the
+    // element itself if it IS a section). Returns the section id or
+    // null. Used so deep-links to inner anchors like #privacy still
+    // resolve to a section to show.
+    function sectionIdFor(targetId) {
+      if (!targetId) return null;
+      if (validSectionIds.has(targetId)) return targetId;
+      const el = document.getElementById(targetId);
+      if (!el) return null;
+      const sec = el.closest('.cab-section');
+      return sec ? sec.id : null;
+    }
+
+    function paintActive(activeId) {
       navItems.forEach((n) => {
-        const matches = n.getAttribute('href') === '#' + id;
+        const matches = n.getAttribute('href') === '#' + activeId;
         n.classList.toggle('is-active', matches);
-        // a11y: keep aria-current in sync with .is-active so screen readers
-        // announce the right section as the user scrolls. Pre-fix only the
-        // visual class updated.
         if (matches) n.setAttribute('aria-current', 'true');
         else n.removeAttribute('aria-current');
       });
-    };
-    const obs = new IntersectionObserver(
-      (entries) => {
-        // Pick the topmost-intersecting section as the active one. This
-        // avoids flicker when the user scrolls fast and multiple sections
-        // briefly intersect at once.
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length) setActive(visible[0].target.id);
-      },
-      { rootMargin: '-20% 0px -70% 0px', threshold: 0 },
-    );
-    sections.forEach((s) => obs.observe(s));
+    }
 
-    // Click on a nav link → smooth-scroll to the target. Native href="#id"
-    // already navigates; we just make it smooth + update URL hash for share.
-    navItems.forEach((n) => {
-      n.addEventListener('click', (ev) => {
-        const id = (n.getAttribute('href') || '').replace('#', '');
-        const target = document.getElementById(id);
-        if (!target) return;
-        ev.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        history.replaceState(null, '', '#' + id);
-        setActive(id);
+    function showSection(activeId, opts) {
+      const o = opts || {};
+      if (!validSectionIds.has(activeId)) activeId = sections[0].id;
+      sections.forEach((s) => {
+        s.hidden = s.id !== activeId;
       });
+      paintActive(activeId);
+      // If the target hash pointed at an inner element (e.g. #privacy
+      // inside #activity), scroll it into view after the section
+      // becomes visible. Otherwise reset scroll so the user starts at
+      // the top of the new section.
+      const innerTargetId = o.innerTargetId;
+      if (innerTargetId && innerTargetId !== activeId) {
+        const inner = document.getElementById(innerTargetId);
+        if (inner) {
+          requestAnimationFrame(() => {
+            inner.scrollIntoView({ behavior: 'instant', block: 'start' });
+          });
+          return;
+        }
+      }
+      if (o.scrollTop !== false) window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    // Click delegation handles both .cab-nav-item AND inner anchors
+    // like the "privacy section" link inside Activity, which target an
+    // id that lives inside another section.
+    document.addEventListener('click', (ev) => {
+      const a = ev.target.closest('a[href^="#"]');
+      if (!a) return;
+      // Skip anchors that are decorative or that the rest of the page
+      // owns (none in cabinet yet; defensive).
+      const href = a.getAttribute('href') || '';
+      const targetId = href.slice(1);
+      if (!targetId) return;
+      const secId = sectionIdFor(targetId);
+      if (!secId) return; // not a cabinet anchor — leave native nav alone
+      ev.preventDefault();
+      showSection(secId, { innerTargetId: targetId });
+      // pushState so browser back/forward steps between sections.
+      const newHash = '#' + targetId;
+      if (location.hash !== newHash) {
+        history.pushState({ cabSection: secId }, '', newHash);
+      }
     });
 
-    // Honor an initial hash (deep-link from share / refresh).
-    if (location.hash) {
-      const id = location.hash.replace('#', '');
-      const target = document.getElementById(id);
-      if (target) {
-        // Defer to next frame so layout has settled.
-        requestAnimationFrame(() => {
-          target.scrollIntoView({ behavior: 'instant', block: 'start' });
-          setActive(id);
-        });
-      }
-    }
+    // popstate (back/forward) re-renders without adding history.
+    window.addEventListener('popstate', () => {
+      const targetId = location.hash.slice(1);
+      const secId = sectionIdFor(targetId) || sections[0].id;
+      showSection(secId, { innerTargetId: targetId, scrollTop: !targetId });
+    });
+
+    // Initial render — honor hash, fall back to first section.
+    const initialTarget = location.hash.slice(1);
+    const initialSec = sectionIdFor(initialTarget) || sections[0].id;
+    showSection(initialSec, {
+      innerTargetId: initialTarget && initialTarget !== initialSec ? initialTarget : null,
+    });
   }
   // Bind after init so cabBody is visible (sidebar lives inside cabBody and
   // is hidden until showBody flips display).
   const _origInit = init;
-  // eslint-disable-next-line no-func-assign -- intentional decorator pattern: wrap init() to also bind scroll-spy after the original init runs
+  // eslint-disable-next-line no-func-assign -- intentional decorator pattern: wrap init() to also bind section routing after the original init runs
   init = async function () {
     await _origInit.apply(this, arguments);
-    bindScrollSpy();
+    bindSectionRouting();
   };
 
   if (document.readyState === 'loading') {

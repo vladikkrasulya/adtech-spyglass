@@ -504,6 +504,27 @@
           overflow-x: auto;
           gap: var(--space-1);
           padding: var(--space-2);
+          /* GPT-5.5 P1 #14 follow-up — scroll affordance. Without a
+             visible cue the clipped Dialects/Security/Danger reads
+             as broken instead of scrollable. Sticky right-edge fade
+             gradient hints "more →"; matches the inspector tab-bar
+             treatment from v0.42.4 (P0 #5 batch). */
+          position: relative;
+          scrollbar-width: none;
+        }
+        .cab-nav::-webkit-scrollbar {
+          display: none;
+        }
+        .cab-nav::after {
+          content: '';
+          position: sticky;
+          right: 0;
+          top: 0;
+          width: 28px;
+          height: 100%;
+          background: linear-gradient(to right, transparent, var(--bg-elev));
+          pointer-events: none;
+          flex-shrink: 0;
         }
         .cab-nav-item {
           white-space: nowrap;
@@ -627,6 +648,9 @@
             >
             <a href="#corpus" class="cab-nav-item"
               ><span class="cab-nav-icon">🛡</span>Behavior corpus</a
+            >
+            <a href="#dialects" class="cab-nav-item"
+              ><span class="cab-nav-icon">🧬</span>Dialects</a
             >
             <a href="#preferences" class="cab-nav-item"
               ><span class="cab-nav-icon">⚙</span>Preferences</a

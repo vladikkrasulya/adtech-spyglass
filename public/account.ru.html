@@ -501,6 +501,22 @@
           overflow-x: auto;
           gap: var(--space-1);
           padding: var(--space-2);
+          position: relative;
+          scrollbar-width: none;
+        }
+        .cab-nav::-webkit-scrollbar {
+          display: none;
+        }
+        .cab-nav::after {
+          content: '';
+          position: sticky;
+          right: 0;
+          top: 0;
+          width: 28px;
+          height: 100%;
+          background: linear-gradient(to right, transparent, var(--bg-elev));
+          pointer-events: none;
+          flex-shrink: 0;
         }
         .cab-nav-item {
           white-space: nowrap;
@@ -606,6 +622,9 @@
             >
             <a href="#corpus" class="cab-nav-item"
               ><span class="cab-nav-icon">🛡</span>Корпус поведения</a
+            >
+            <a href="#dialects" class="cab-nav-item"
+              ><span class="cab-nav-icon">🧬</span>Диалекты</a
             >
             <a href="#preferences" class="cab-nav-item"
               ><span class="cab-nav-icon">⚙</span>Настройки</a
