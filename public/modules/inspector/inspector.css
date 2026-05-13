@@ -668,6 +668,20 @@ body {
   gap: 6px;
   align-items: center;
 }
+/* P1 #11 — JSON-pane toolbar (char-count + json-badge + save/clear/
+   format/copy + collapse caret) overflowed the right edge of the
+   input-card on tablet-class viewports (720-900px) where the
+   workbench splits into 2 cols of ~360-440px each. The 720px wrap
+   inside the existing mobile @media handles phones; this rule covers
+   the tablet zone with the same `flex-wrap: wrap` strategy so
+   secondary buttons line-break instead of clipping. */
+@media (max-width: 900px) {
+  .input-card-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+}
 .char-count {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1829,15 +1843,16 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .tab-badge {
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
   border-radius: var(--r-pill);
   background: var(--bg-2);
   color: var(--text-muted);
-  min-width: 20px;
+  min-width: 22px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 .tab-btn.active .tab-badge {
   background: var(--accent);
@@ -1851,10 +1866,12 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .tab-btn .tab-badge.danger {
   background: var(--danger);
   color: var(--text-inv);
+  box-shadow: 0 0 0 1px var(--danger);
 }
 .tab-btn .tab-badge.warn {
   background: var(--warning);
   color: var(--surface-ink);
+  box-shadow: 0 0 0 1px var(--warning);
 }
 .tab-btn .tab-badge.info {
   background: var(--accent-soft);
@@ -1863,6 +1880,24 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .tab-btn .tab-badge.ok {
   background: rgba(22, 163, 74, 0.15);
   color: var(--success);
+}
+/* P1 #13 — bind tab severity to the tab label itself, not just the
+   badge. When a tab has a non-clean badge, the label text uses
+   full --text contrast (instead of dimmed) and inherits a thin
+   severity-tinted bottom border so the eye is pulled to the tab
+   that needs attention even when scanning the strip peripherally.
+   `:has()` is now Baseline-2024; if it's missing the rule degrades
+   to "badge is colored but tab text stays dim" — still readable. */
+.tab-btn:has(.tab-badge.danger):not(.active),
+.tab-btn:has(.tab-badge.warn):not(.active) {
+  color: var(--text);
+  font-weight: 600;
+}
+.tab-btn:has(.tab-badge.danger):not(.active) {
+  border-bottom-color: rgba(220, 38, 38, 0.4);
+}
+.tab-btn:has(.tab-badge.warn):not(.active) {
+  border-bottom-color: rgba(255, 193, 7, 0.5);
 }
 .tab-content {
   flex: 1;

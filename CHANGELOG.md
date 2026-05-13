@@ -6,6 +6,55 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.7 — findings-tab severity prominence + tablet toolbar wrap (2026-05-13)
+
+Two P1 polish items.
+
+**P1 #13 — Findings tab severity prominence.** Tab-badges grew from
+10→11px, font-weight 600→700, padding 1×7 → 2×8, with a same-color
+box-shadow ring on danger/warn variants so they read at-a-glance
+against any tab background. More important: the tab LABEL itself
+(not just the badge) now reflects severity via `:has()` — when an
+inactive tab carries a `.tab-badge.danger` or `.tab-badge.warn`,
+the tab text upgrades from dim+500 to full+600 and its bottom
+border picks up a tinted severity color (red 40%, amber 50%). The
+eye is pulled to "validation 7" even when scanning the strip
+peripherally, instead of finding the badge only after focused
+inspection. `:has()` is Baseline-2024; older engines degrade to
+the previous "colored badge, dim tab text" behavior — still
+readable.
+
+**P1 #11 — JSON-pane toolbar overflow at tablet widths.** The
+v0.42.4 fix wrapped `.input-card-actions` only on phones (≤720px).
+At 720-900px (tablet workbench: 2 cols of ~360-440px), the toolbar
+still clipped the rightmost button (`copy` + collapse caret) past
+the input-card edge. Probed at 768px: last button overflowed parent
+by +55px before the fix; -12px (inside parent) after. Added a
+parallel `@media (max-width: 900px) { .input-card-actions
+{ flex-wrap: wrap; gap: 4px; justify-content: flex-end } }`.
+
+P1 #12 (mobile findings-first ordering) was effectively addressed
+by P0 #3's autoscroll in v0.42.4 — the post-analyze page scrolls
+the format-bar to viewport top, which puts the findings tabs
+immediately under the verdict. No additional change.
+
+#### Files
+
+- `public/modules/inspector/inspector.css` — `.tab-badge` size
+  +box-shadow tweaks, `.tab-btn:has(.tab-badge.{danger,warn}):not(.active)`
+  rule pair for label severity hand-off, new `@media (max-width: 900px)`
+  for input-card-actions wrap.
+- `package.json`, `public/version.js` — 0.42.6 → 0.42.7.
+
+#### Verified
+
+- 658 tests pass, prettier+lint+typecheck clean.
+- Desktop 1440: VALIDATION 7 (red) and CROSSCHECK — read with
+  clear visual hierarchy; INSPECTOR (active, yellow) keeps its
+  own state.
+- Tablet 768: input-card-actions wraps cleanly (overflow -12px
+  inside parent), no button clipping.
+
 ### v0.42.6 — auth-modal value prop + cabinet zero-state hint + save tooltip (2026-05-13)
 
 Four P1 polish items from the 2026-05-12 audit.
