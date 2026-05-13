@@ -413,7 +413,28 @@ export async function mountInspector(root, ctx) {
     pillType.dataset.format = family;
 
     const pillStatus = $('formatPillStatus');
-    pillStatus.textContent = humanStatus(status) || status || '—';
+    // Outcome-first: status pill leads with an icon and (for warnings/errors)
+    // the count of findings, so the reader gets the verdict before format
+    // metadata. Order in the DOM is preserved; visual reordering is done in
+    // CSS via `order:` so any non-JS consumer still sees type→status→version.
+    const findings = (validation && validation.findings) || [];
+    const errCount = findings.filter((f) => f.level === 'error').length;
+    const warnCount = findings.filter((f) => f.level === 'warning').length;
+    let icon = '·';
+    let statusText = humanStatus(status) || status || '—';
+    if (status === 'clean') {
+      icon = '✓';
+    } else if (status === 'invalid') {
+      icon = '✗';
+    } else if (errCount) {
+      icon = '✗';
+      statusText = errCount + ' ' + (errCount === 1 ? t('status.error_one') : t('status.errors'));
+    } else if (warnCount) {
+      icon = '⚠';
+      statusText =
+        warnCount + ' ' + (warnCount === 1 ? t('status.warning_one') : t('status.warnings'));
+    }
+    pillStatus.textContent = icon + ' ' + statusText;
     pillStatus.dataset.status = status;
 
     const pillVer = $('formatPillVersion');

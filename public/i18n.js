@@ -174,6 +174,8 @@
       'status.warnings': 'попередження',
       'status.clean': 'чисто',
       'status.invalid': 'невалідний payload',
+      'status.error_one': 'помилка',
+      'status.warning_one': 'попередження',
       'status.local': 'локально',
       'validation.all_passed': 'Усі перевірки пройдено — {type} валідний',
 
@@ -407,6 +409,8 @@
       'status.warnings': 'warnings',
       'status.clean': 'clean',
       'status.invalid': 'invalid payload',
+      'status.error_one': 'error',
+      'status.warning_one': 'warning',
       'status.local': 'local',
       'validation.all_passed': 'All checks passed — {type} is valid',
 
@@ -627,6 +631,8 @@
       'status.warnings': 'предупреждения',
       'status.clean': 'чисто',
       'status.invalid': 'невалидный payload',
+      'status.error_one': 'ошибка',
+      'status.warning_one': 'предупреждение',
       'status.local': 'локально',
       'validation.all_passed': 'Все проверки пройдены — {type} валиден',
       'theme.tooltip.auto': 'тема: авто · клик → светлая',

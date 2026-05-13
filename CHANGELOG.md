@@ -6,6 +6,61 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.3 — format-bar outcome-first + demote header version chip (2026-05-13)
+
+Two post-audit UX fixes from the GPT-5.5 batch.
+
+**P1 #10 — Format-bar reads outcome-first.** Before: chips rendered
+in DOM order `[oRTB BidRequest] [clean] [oRTB 3.0]` — type pill led
+the row, so the reader scanned format-metadata before reaching the
+verdict ("did my paste validate?"). After: status pill is hoisted to
+the front via flexbox `order: -1`, prefixed with an icon (`✓` clean,
+`✗` invalid/errors, `⚠` warnings) and the finding count when
+applicable. DOM order is unchanged for screen readers and embedded
+consumers; only visual order shifts.
+
+Examples:
+
+- `[✓ clean] [oRTB BidRequest] [oRTB 3.0]`
+- `[⚠ 1 warning] [oRTB BidRequest] [oRTB 2.5 ?]`
+- `[✗ 3 critical errors] [oRTB BidRequest] [oRTB 2.5 ?]`
+
+Locales: added singular-count keys `status.error_one` /
+`status.warning_one` for grammatical correctness on count == 1
+(EN "1 warning" not "1 warnings"; UK "1 попередження"; RU "1
+предупреждение").
+
+**P1 #9 — Demote version chip from header brand.** The
+`v0.42.x · mono-label` span next to `spyglass · openrtb inspector`
+(and `spyglass · account` / `spyglass · акаунт` / `spyglass · аккаунт`)
+was taking horizontal real estate without earning attention.
+Version surfaces in the footer status row (`engine v0.42.x`) and on
+the `/about` page, both of which remain. On mobile the version chip
+was already hidden via `.hide-sm`; on desktop it now matches.
+
+#### Files
+
+- `public/spyglass.app.js` — `updateFormatBar()` adds icon + count
+  to status pill text.
+- `public/modules/inspector/inspector.css` — `.format-pill-status`
+  gets `order: -1` (single rule; other pills stay at default order).
+- `public/i18n.js` — 6 new keys (`status.{error,warning}_one` × 3
+  locales).
+- `public/modules/inspector/template.{en,uk,ru}.html` —
+  removed header `<span data-spyglass-version>` next to brand.
+- `public/account.{en,uk,ru}.html` — same removal in cabinet header.
+- `package.json`, `public/version.js` — lockstep bump 0.42.2 → 0.42.3.
+
+#### Verified
+
+- All 658 tests pass.
+- Three locales render correctly (EN/UK/RU) — desktop + post-analyze
+  states.
+- Existing `.format-bar` dropdowns (dialect picker, version pin) and
+  action buttons (embed / share link / download) retain their
+  original order: only the status pill jumps to front.
+- Tab badge findings count still shown in tab strip (unchanged).
+
 ### v0.42.2 — rename "sim price" → "auction price" (2026-05-12)
 
 UX audit flagged "SIM PRICE" pill in the header as cryptic without

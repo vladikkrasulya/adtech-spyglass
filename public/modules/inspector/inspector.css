@@ -1654,6 +1654,13 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .format-pill[hidden] {
   display: none;
 }
+/* Outcome-first reading: hoist the status pill (the verdict) to the front
+   of the format-bar row via `order: -1`. DOM order stays unchanged so
+   screen readers, embedded consumers, and the dialect/version selectors
+   that share this row are not disturbed. */
+.format-pill-status {
+  order: -1;
+}
 .format-pill-type[data-format='ortb'] {
   background: var(--accent-soft);
   border-color: var(--accent);
