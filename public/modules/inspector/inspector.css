@@ -34,11 +34,12 @@ body {
 
 .workbench {
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  grid-template-rows: auto auto auto auto 1fr auto;
   grid-template-areas:
     'banner'
     'header'
     'inputs'
+    'inputs-resize'
     'main'
     'footer';
   height: 100vh;
@@ -97,6 +98,22 @@ body {
   .workbench {
     height: auto;
     min-height: 100vh;
+  }
+  /* Mobile: input section stacks vertically; the resize handle is
+     pointless on a scrollable page (just scroll). Hide it + revert
+     the workbench grid to the pre-resize area set so the missing
+     `inputs-resize` track doesn't leave a phantom gap row. */
+  .input-section-resize {
+    display: none;
+  }
+  .workbench {
+    grid-template-rows: auto auto auto 1fr auto;
+    grid-template-areas:
+      'banner'
+      'header'
+      'inputs'
+      'main'
+      'footer';
   }
   .input-section {
     grid-template-columns: 1fr !important;
@@ -493,7 +510,12 @@ body {
   box-shadow: none;
 }
 
-/* ── Inputs section (request + response textareas side by side) ── */
+/* ── Inputs section (request + response textareas side by side) ──
+   The height is a CSS var so a drag handle below this section can
+   write to it from JS + persist to localStorage. Default 280px
+   matches the original fixed height. Min 180px keeps the textareas
+   usable; the JS clamps max to 65vh so the inspector tabs below
+   don't get squeezed off-screen on shorter monitors. */
 .input-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -501,7 +523,56 @@ body {
   padding: var(--space-3) var(--space-5);
   background: var(--bg);
   border-bottom: 1px solid var(--border);
-  height: 280px;
+  height: var(--input-section-height, 280px);
+}
+/* Drag-resize handle. Stretches the full width across the bottom of
+   the input section, 6px tall, near-invisible at rest. On hover it
+   shows a soft accent tint + the cursor changes to ns-resize. While
+   actively dragging, the body gets `data-resizing="input-section"`
+   so the rest of the page can disable pointer events on textareas
+   (otherwise the textarea steals the mousemove). */
+.input-section-resize {
+  grid-area: inputs-resize;
+  height: 6px;
+  background: transparent;
+  cursor: ns-resize;
+  position: relative;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+.input-section-resize::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  opacity: 0.5;
+  transition:
+    opacity var(--t-fast),
+    background var(--t-fast),
+    width var(--t-fast);
+}
+.input-section-resize:hover::after {
+  opacity: 1;
+  width: 56px;
+  background: var(--accent);
+}
+[data-resizing='input-section'] .input-section-resize::after {
+  opacity: 1;
+  background: var(--accent);
+  width: 56px;
+}
+[data-resizing='input-section'] {
+  cursor: ns-resize !important;
+  user-select: none;
+}
+[data-resizing='input-section'] textarea,
+[data-resizing='input-section'] * {
+  pointer-events: none !important;
 }
 .input-card {
   background: var(--surface);

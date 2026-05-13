@@ -36,14 +36,18 @@
   background: transparent;
 }
 
-/* Text selection — accent-tinted, contrast-preserved. */
+/* Text selection — yellow accent tint, dark text pinned for contrast
+   in both themes. --selection-bg token declared in design-system.css
+   (light: 55% yellow on cream; dark: 45% yellow on graphite). The
+   `color: --text-on-accent` is #18181B in both themes — readable
+   against the yellow tint regardless of underlying background. */
 ::selection {
   background: var(--selection-bg);
-  color: var(--text);
+  color: var(--text-on-accent);
 }
 ::-moz-selection {
   background: var(--selection-bg);
-  color: var(--text);
+  color: var(--text-on-accent);
 }
 
 /* Pre-render hero — SEO above-fold copy. Lives in raw HTML inside

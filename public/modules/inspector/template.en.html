@@ -292,6 +292,19 @@
   </div>
 </section>
 
+<!-- Drag-resize handle for the input section. JS in spyglass.app.js
+     reads/writes --input-section-height on documentElement.style and
+     persists to localStorage. Hidden on mobile via @media. -->
+<div
+  class="input-section-resize"
+  role="separator"
+  aria-orientation="horizontal"
+  aria-label="Resize request/response panels"
+  tabindex="0"
+  data-action="input-section-resize"
+  title="Drag to resize · double-click to reset"
+></div>
+
 <!-- ── Main grid ── -->
 <main class="main-grid">
   <!-- Left sidebar -->

@@ -6,6 +6,74 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.42.12 — visible text selection + drag-resizable input panels (2026-05-13)
+
+Two user-flagged issues fixed.
+
+**Selection highlight finally visible in both themes.** The
+`::selection { background: var(--selection-bg) }` rule in
+`spyglass-shell.css` referenced a token **never declared** in
+`design-system.css` — `var()` resolved to nothing → browser default
+selection → indistinguishable from page bg on cream / warm-graphite.
+Same family as the `--bg-elev` gap fixed in v0.42.8. Prior "fix"
+attempt was a no-op because the rule was a no-op.
+
+Fix:
+
+- `--selection-bg: rgba(255, 204, 0, 0.55)` in `:root` (light)
+- `--selection-bg: rgba(255, 204, 0, 0.45)` in `[data-theme=dark]`
+- `::selection { color: var(--text-on-accent) }` (`#18181B` in both
+  themes) so the glyph reads on yellow regardless of theme
+
+**Drag-resizable input panels.** User can pull the handle below the
+BID REQUEST / BID RESPONSE textareas to grow them. Implemented:
+
+- `.input-section { height: var(--input-section-height, 280px) }`
+- New `inputs-resize` grid row + `.input-section-resize` handle:
+  6px tall, central 32×3 px pill that grows + colors accent on
+  hover and during drag.
+- `initInputSectionResize()` in `spyglass.app.js`: mousedown +
+  touchstart + mousemove → updates the CSS var; clamps to
+  `[180px, 65vh]` so inspector tabs can't be squeezed off-screen.
+- Persisted to `localStorage` (`kt-input-section-height`).
+- Double-click resets to 280px default.
+- Keyboard: `role="separator"` + tabindex 0; ArrowUp/Down 10px,
+  PageUp/Down 40px, Home resets.
+- Hidden on `@media (max-width: 720px)` + workbench grid reverts to
+  the pre-resize template-rows there (mobile is already scrollable).
+- `body[data-resizing="input-section"]` disables textarea pointer
+  events during drag so mousemove doesn't get stolen.
+
+#### Files
+
+- `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` —
+  declared `--selection-bg` in both themes (separate portal commit;
+  design-system.css is shared + bind-mounted into Spyglass).
+- `public/spyglass-shell.css` — `::selection` + `::-moz-selection`
+  text color pinned to `var(--text-on-accent)`.
+- `public/modules/inspector/inspector.css` — workbench grid adds
+  `inputs-resize` area; `.input-section` height becomes CSS var;
+  `.input-section-resize` styles; mobile media query reverts grid
+  - hides handle.
+- `public/modules/inspector/template.{en,uk,ru}.html` — added
+  `.input-section-resize` element with localized `title` +
+  `aria-label`.
+- `public/spyglass.app.js` — `initInputSectionResize()` function +
+  hook from boot.
+- `package.json`, `public/version.js` — 0.42.11 → 0.42.12.
+
+#### Verified
+
+- 658 tests pass; prettier + lint + typecheck clean.
+- Light theme: yellow-tint selection visible on brand text + JSON.
+- Dark theme: same, with `--text-on-accent` rendering dark glyph
+  on yellow bg.
+- Resize: dispatched mousedown→mousemove(+120px)→mouseup → section
+  280→400px, `kt-input-section-height=400` persisted.
+- Container restart needed after editing the bind-mounted
+  `design-system.css` (the inode trap surfaced again — same fix:
+  `docker compose restart`).
+
 ### v0.42.11 — exhaustive documentation pass (2026-05-13)
 
 No code changes. Five new docs + four existing docs updated. Goal:

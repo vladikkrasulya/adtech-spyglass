@@ -232,6 +232,109 @@ export async function mountInspector(root, ctx) {
   }
   window.paintFooterDialect = paintFooterDialect;
 
+  // Input-section drag-resize. Reads height from localStorage and
+  // paints --input-section-height on documentElement. Mousedown on
+  // the handle starts a drag; mousemove updates the var while
+  // body[data-resizing="input-section"] keeps pointer-events off
+  // the textareas (otherwise the textarea steals the mousemove and
+  // the drag stutters). Mouseup persists + clears the data attr.
+  // Double-click resets to the 280px default.
+  const RESIZE_STORAGE_KEY = 'kt-input-section-height';
+  const RESIZE_DEFAULT_PX = 280;
+  const RESIZE_MIN_PX = 180;
+  function clampResize(px) {
+    const max = Math.round(window.innerHeight * 0.65);
+    if (px < RESIZE_MIN_PX) return RESIZE_MIN_PX;
+    if (px > max) return max;
+    return px;
+  }
+  function applyInputSectionHeight(px) {
+    document.documentElement.style.setProperty('--input-section-height', px + 'px');
+  }
+  function initInputSectionResize() {
+    const handle = document.querySelector('[data-action="input-section-resize"]');
+    const section = document.querySelector('.input-section');
+    if (!handle || !section) return;
+    // Restore persisted height (if any).
+    try {
+      const saved = parseInt(localStorage.getItem(RESIZE_STORAGE_KEY) || '', 10);
+      if (Number.isFinite(saved) && saved > 0) applyInputSectionHeight(clampResize(saved));
+    } catch (_e) {
+      /* private mode — best effort */
+    }
+    let dragging = false;
+    let startY = 0;
+    let startH = 0;
+    function onMove(ev) {
+      if (!dragging) return;
+      const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      const next = clampResize(startH + (y - startY));
+      applyInputSectionHeight(next);
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      document.body.removeAttribute('data-resizing');
+      // Persist the actual rendered height (post-clamp) so reloads land
+      // on the same layout the user saw.
+      const cur = section.getBoundingClientRect().height;
+      try {
+        localStorage.setItem(RESIZE_STORAGE_KEY, String(Math.round(cur)));
+      } catch (_e) {
+        /* best effort */
+      }
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    }
+    function onDown(ev) {
+      dragging = true;
+      const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      startY = y;
+      startH = section.getBoundingClientRect().height;
+      document.body.setAttribute('data-resizing', 'input-section');
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onUp);
+      ev.preventDefault();
+    }
+    handle.addEventListener('mousedown', onDown);
+    handle.addEventListener('touchstart', onDown, { passive: false });
+    // Double-click resets to default.
+    handle.addEventListener('dblclick', () => {
+      applyInputSectionHeight(RESIZE_DEFAULT_PX);
+      try {
+        localStorage.removeItem(RESIZE_STORAGE_KEY);
+      } catch (_e) {
+        /* best effort */
+      }
+    });
+    // Keyboard accessibility — focus the handle, use Up/Down (or
+    // PageUp/PageDown for big steps) to nudge. Reset on Home.
+    handle.addEventListener('keydown', (ev) => {
+      const cur = section.getBoundingClientRect().height;
+      const step =
+        ev.key === 'PageUp' || ev.key === 'PageDown' ? 40 : ev.key === 'Home' ? null : 10;
+      if (ev.key === 'ArrowDown' || ev.key === 'PageDown') {
+        applyInputSectionHeight(clampResize(cur + step));
+        ev.preventDefault();
+      } else if (ev.key === 'ArrowUp' || ev.key === 'PageUp') {
+        applyInputSectionHeight(clampResize(cur - step));
+        ev.preventDefault();
+      } else if (ev.key === 'Home') {
+        applyInputSectionHeight(RESIZE_DEFAULT_PX);
+        try {
+          localStorage.removeItem(RESIZE_STORAGE_KEY);
+        } catch (_e) {
+          /* best effort */
+        }
+        ev.preventDefault();
+      }
+    });
+  }
+
   function setActiveDialect(dialect) {
     if (!KNOWN_DIALECTS.has(dialect) && !isTempDialect(dialect)) return;
     try {
@@ -4401,6 +4504,14 @@ export async function mountInspector(root, ctx) {
       repaintDialectOptions();
       paintFooterDialect();
     });
+
+    // Input-section drag-resize. User can pull the handle below the
+    // BID REQUEST / BID RESPONSE panes to grow them when working with
+    // large bid payloads. Persisted across reloads via localStorage.
+    // Defaults to 280px (the original fixed height). Range clamped
+    // [180, 65vh] so the page doesn't squeeze the inspector tabs
+    // below off-screen on shorter monitors. Double-click resets.
+    initInputSectionResize();
 
     // Phase 7b: header indicator — small badge that surfaces "this is a
     // user-built dialect, not a stock one". The format-bar already shows
