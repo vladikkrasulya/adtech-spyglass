@@ -64,7 +64,7 @@ const DEFAULT_DIALECT = 'iab';
  * ids — exact ('imp.id_required') or '*'-suffixed prefix ('regs.*').
  *
  * @param {unknown} payload
- * @param {{dialect?: string, locale?: string, disabledRules?: string[]}} [opts]
+ * @param {{dialect?: string, locale?: string, disabledRules?: string[], strictness?: string}} [opts]
  */
 // Versions that participate in the pinning contract. `detectVersion` can
 // return any of these or `UNKNOWN`; expectedVersion must match one of these
