@@ -91,13 +91,15 @@ test('detectVastVersion: missing returns null', () => {
 
 test('validateVast: clean InLine emits 0 findings', () => {
   // Clean = all required InLine tags present (AdSystem, AdTitle,
-  // MediaFile, Impression) AND Linear has Duration (v0.14.0 added the
-  // linear_duration_missing rule, so a "clean" fixture must include it).
+  // MediaFile with dimensions, Impression) AND Linear has Duration AND
+  // TrackingEvents (R13 added tracking_events_missing for InLine Linear).
   const adm =
     '<?xml version="1.0"?><VAST version="4.2"><Ad><InLine>' +
     '<AdSystem>X</AdSystem><AdTitle>Title</AdTitle>' +
     '<Impression><![CDATA[https://i.example/i]]></Impression>' +
-    '<Creatives><Creative><Linear><Duration>00:00:15</Duration><MediaFiles>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration>' +
+    '<TrackingEvents><Tracking event="start"><![CDATA[https://trk.example/start]]></Tracking></TrackingEvents>' +
+    '<MediaFiles>' +
     '<MediaFile delivery="progressive" type="video/mp4" width="640" height="360">' +
     '<![CDATA[https://cdn.example/v.mp4]]></MediaFile>' +
     '</MediaFiles></Linear></Creative></Creatives>' +
@@ -351,4 +353,204 @@ test('samples: synthetic-vast-insecure-wrapper.json fires exactly 1 insecure_url
   assert.equal(insecure.length, 1);
   assert.equal(insecure[0].level, 'warning');
   assert.equal(insecure[0].params.count, 3);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// R11 — vast.mediafile_no_dimensions
+// ─────────────────────────────────────────────────────────────────
+
+test('validateVast: MediaFile missing width → mediafile_no_dimensions WARN count=1', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration><MediaFiles>' +
+    '<MediaFile delivery="progressive" type="video/mp4" height="360"/>' +
+    '</MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>';
+  const f = findById(validateVast(adm, 'adm'), 'vast.mediafile_no_dimensions');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.params.count, 1);
+});
+
+test('validateVast: MediaFile missing both width and height → fires', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration><MediaFiles>' +
+    '<MediaFile delivery="progressive" type="video/mp4"/>' +
+    '</MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>';
+  const f = findById(validateVast(adm, 'adm'), 'vast.mediafile_no_dimensions');
+  assert.ok(f);
+  assert.equal(f.params.count, 1);
+});
+
+test('validateVast: MediaFile with both width and height → no mediafile_no_dimensions', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration><MediaFiles>' +
+    '<MediaFile delivery="progressive" type="video/mp4" width="640" height="360"/>' +
+    '<MediaFile delivery="progressive" type="video/webm" width="1280" height="720"/>' +
+    '</MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.mediafile_no_dimensions'), undefined);
+});
+
+test('validateVast: no MediaFile elements → no mediafile_no_dimensions (R4 handles it)', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative><Linear/></Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.mediafile_no_dimensions'), undefined);
+});
+
+test('validateVast: mixed MediaFiles — count reflects only the bad ones', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration><MediaFiles>' +
+    '<MediaFile width="640" height="360" type="video/mp4"/>' +
+    '<MediaFile width="640" type="video/webm"/>' +
+    '<MediaFile type="video/ogg"/>' +
+    '</MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>';
+  const f = findById(validateVast(adm, 'adm'), 'vast.mediafile_no_dimensions');
+  assert.ok(f);
+  assert.equal(f.params.count, 2);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// R12 — vast.skip_offset_invalid
+// ─────────────────────────────────────────────────────────────────
+
+test('validateVast: skipoffset HH:MM:SS → no skip_offset_invalid', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="00:00:05"><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.skip_offset_invalid'), undefined);
+});
+
+test('validateVast: skipoffset valid percentage → no skip_offset_invalid', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="20%"><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.skip_offset_invalid'), undefined);
+});
+
+test('validateVast: skipoffset bare number → skip_offset_invalid WARN with val', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="15"><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  const f = findById(validateVast(adm, 'adm'), 'vast.skip_offset_invalid');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.params.val, '15');
+});
+
+test('validateVast: skipoffset > 100% → skip_offset_invalid', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="150%"><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  const f = findById(validateVast(adm, 'adm'), 'vast.skip_offset_invalid');
+  assert.ok(f);
+  assert.equal(f.params.val, '150%');
+});
+
+test('validateVast: skipoffset malformed timecode "0:15" → fires', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="0:15"><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  const f = findById(validateVast(adm, 'adm'), 'vast.skip_offset_invalid');
+  assert.ok(f);
+  assert.equal(f.params.val, '0:15');
+});
+
+test('validateVast: skipoffset absent → no skip_offset_invalid (non-skippable is valid)', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.skip_offset_invalid'), undefined);
+});
+
+test('validateVast: skipoffset edge — 0% and 100% are valid boundaries', () => {
+  const adm0 =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="0%"><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  const adm100 =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="100%"><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm0, 'adm'), 'vast.skip_offset_invalid'), undefined);
+  assert.equal(findById(validateVast(adm100, 'adm'), 'vast.skip_offset_invalid'), undefined);
+});
+
+test('validateVast: skipoffset out-of-range minutes "00:75:00" → fires', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="00:75:00"><Duration>00:01:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  const f = findById(validateVast(adm, 'adm'), 'vast.skip_offset_invalid');
+  assert.ok(f);
+  assert.equal(f.params.val, '00:75:00');
+});
+
+test('validateVast: skipoffset decimal percentage "33.33%" is valid', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<Linear skipoffset="33.33%"><Duration>00:00:30</Duration><MediaFiles><MediaFile/></MediaFiles></Linear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.skip_offset_invalid'), undefined);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// R13 — vast.tracking_events_missing
+// ─────────────────────────────────────────────────────────────────
+
+test('validateVast: InLine Linear without TrackingEvents → tracking_events_missing INFO', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration>' +
+    '<MediaFiles><MediaFile/></MediaFiles></Linear></Creative></Creatives>' +
+    '</InLine></Ad></VAST>';
+  const f = findById(validateVast(adm, 'adm'), 'vast.tracking_events_missing');
+  assert.ok(f);
+  assert.equal(f.level, 'info');
+});
+
+test('validateVast: InLine Linear WITH TrackingEvents → no tracking_events_missing', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration>' +
+    '<TrackingEvents><Tracking event="start"><![CDATA[https://trk.example/start]]></Tracking></TrackingEvents>' +
+    '<MediaFiles><MediaFile/></MediaFiles></Linear></Creative></Creatives>' +
+    '</InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.tracking_events_missing'), undefined);
+});
+
+test('validateVast: Wrapper Linear without TrackingEvents → no tracking_events_missing', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><Wrapper><AdSystem>X</AdSystem>' +
+    '<VASTAdTagURI><![CDATA[https://ads.example/next.xml]]></VASTAdTagURI>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration></Linear></Creative></Creatives>' +
+    '</Wrapper></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.tracking_events_missing'), undefined);
+});
+
+test('validateVast: InLine without Linear → no tracking_events_missing', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Creatives><Creative>' +
+    '<NonLinear><StaticResource creativeType="image/png"><![CDATA[https://cdn.example/img.png]]></StaticResource></NonLinear>' +
+    '</Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.tracking_events_missing'), undefined);
 });

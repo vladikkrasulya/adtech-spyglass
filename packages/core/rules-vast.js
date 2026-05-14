@@ -154,6 +154,35 @@ function validateVast(adm, path) {
     findings.push(F('vast.impression_tracking_missing', LEVELS.WARNING, path));
   }
 
+  // R11. <MediaFile> should declare both width and height (VAST §3.8).
+  const mfTags = adm.match(/<MediaFile\b[^>]*>/gi) || [];
+  let mfNoDims = 0;
+  for (const tag of mfTags) {
+    if (!/\bwidth\s*=\s*["']\d+["']/i.test(tag) || !/\bheight\s*=\s*["']\d+["']/i.test(tag))
+      mfNoDims++;
+  }
+  if (mfNoDims > 0)
+    findings.push(F('vast.mediafile_no_dimensions', LEVELS.WARNING, path, { count: mfNoDims }));
+
+  // R12. <Linear> skipoffset, if present, must be HH:MM:SS(.mmm) or 0–100%.
+  //   Minutes and seconds are range-checked (0–59), not just format-checked.
+  //   Decimals allowed in percentage (e.g. 33.33%); must not exceed 100.
+  const skipOffsets = getAttrValues(adm, 'Linear', 'skipoffset');
+  const isValidSkipOffset = (v) => {
+    if (/^\d{2}:[0-5]\d:[0-5]\d(?:\.\d{1,3})?$/.test(v)) return true;
+    const pct = /^(\d+(?:\.\d+)?)%$/.exec(v);
+    if (pct) return Number(pct[1]) >= 0 && Number(pct[1]) <= 100;
+    return false;
+  };
+  const firstBadSkip = skipOffsets.find((v) => !isValidSkipOffset(v));
+  if (firstBadSkip !== undefined)
+    findings.push(F('vast.skip_offset_invalid', LEVELS.WARNING, path, { val: firstBadSkip }));
+
+  // R13. InLine <Linear> without <TrackingEvents>.
+  //   Wrapper delegates tracking to the next VAST in chain; don't fire for it.
+  if (hasInLine && hasTag(adm, 'Linear') && !hasTag(adm, 'TrackingEvents'))
+    findings.push(F('vast.tracking_events_missing', LEVELS.INFO, path));
+
   return findings;
 }
 
