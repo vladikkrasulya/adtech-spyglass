@@ -1,6 +1,6 @@
 {
   "name": "adtech-spyglass",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "description": "OpenRTB inspector — paste a BidRequest/BidResponse, get human-readable validation, semantic crosscheck, creative preview.",
   "private": true,
   "workspaces": [
@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "ci": "npm run format:check && npm run lint && npm run typecheck && npm test"
+    "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage"
   },
   "dependencies": {
     "@kyivtech/spyglass-core": "*",

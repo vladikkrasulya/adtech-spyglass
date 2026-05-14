@@ -96,6 +96,7 @@ test('validateVast: clean InLine emits 0 findings', () => {
   const adm =
     '<?xml version="1.0"?><VAST version="4.2"><Ad><InLine>' +
     '<AdSystem>X</AdSystem><AdTitle>Title</AdTitle>' +
+    '<UniversalAdId idRegistry="ad-id.org">abc123</UniversalAdId>' +
     '<Impression><![CDATA[https://i.example/i]]></Impression>' +
     '<Creatives><Creative><Linear><Duration>00:00:15</Duration>' +
     '<TrackingEvents><Tracking event="start"><![CDATA[https://trk.example/start]]></Tracking></TrackingEvents>' +
@@ -603,4 +604,106 @@ test('validateVast: CDATA-wrapped invalid "0:15" → duration_invalid fires', ()
   const f = findById(validateVast(SKEL('<![CDATA[0:15]]>'), 'adm'), 'vast.duration_invalid');
   assert.ok(f);
   assert.equal(f.params.val, '0:15');
+});
+
+// ─────────────────────────────────────────────────────────────────
+// R15 — vast.mediafile_type_invalid
+// ─────────────────────────────────────────────────────────────────
+
+// Helper: SKEL already uses type="video/mp4" → valid, so we need a variant
+// that lets us inject a custom type attribute value.
+const SKEL_TYPE = (mimeType) =>
+  `<VAST version="4.2"><Ad><InLine>` +
+  `<AdSystem>X</AdSystem><AdTitle>T</AdTitle>` +
+  `<Impression><![CDATA[https://imp.example/i]]></Impression>` +
+  `<Creatives><Creative><Linear>` +
+  `<Duration>00:00:15</Duration>` +
+  `<TrackingEvents><Tracking event="start"><![CDATA[https://trk.example/s]]></Tracking></TrackingEvents>` +
+  `<MediaFiles><MediaFile width="640" height="360" type="${mimeType}"><![CDATA[https://cdn.example/v.mp4]]></MediaFile></MediaFiles>` +
+  `</Linear></Creative></Creatives>` +
+  `</InLine></Ad></VAST>`;
+
+test('validateVast: valid MediaFile type "video/mp4" → no mediafile_type_invalid', () => {
+  assert.equal(
+    findById(validateVast(SKEL_TYPE('video/mp4'), 'adm'), 'vast.mediafile_type_invalid'),
+    undefined,
+  );
+});
+
+test('validateVast: valid MediaFile type "application/dash+xml" → no mediafile_type_invalid', () => {
+  assert.equal(
+    findById(validateVast(SKEL_TYPE('application/dash+xml'), 'adm'), 'vast.mediafile_type_invalid'),
+    undefined,
+  );
+});
+
+test('validateVast: invalid MediaFile type "video/avi" → mediafile_type_invalid WARNING', () => {
+  const f = findById(validateVast(SKEL_TYPE('video/avi'), 'adm'), 'vast.mediafile_type_invalid');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.params.type, 'video/avi');
+});
+
+test('validateVast: MediaFile without type attr → no mediafile_type_invalid', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine><AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Impression><![CDATA[https://i.example/i]]></Impression>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration>' +
+    '<TrackingEvents><Tracking event="start"><![CDATA[https://t.example/s]]></Tracking></TrackingEvents>' +
+    '<MediaFiles><MediaFile width="640" height="360"><![CDATA[https://cdn.example/v.mp4]]></MediaFile></MediaFiles>' +
+    '</Linear></Creative></Creatives></InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.mediafile_type_invalid'), undefined);
+});
+
+test('validateVast: MediaFile type case-insensitive — "VIDEO/MP4" → no mediafile_type_invalid', () => {
+  assert.equal(
+    findById(validateVast(SKEL_TYPE('VIDEO/MP4'), 'adm'), 'vast.mediafile_type_invalid'),
+    undefined,
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────
+// R16 — vast.universaladid_missing
+// ─────────────────────────────────────────────────────────────────
+
+test('validateVast: VAST 4.x InLine without UniversalAdId → universaladid_missing INFO', () => {
+  const f = findById(validateVast(SKEL('00:00:15'), 'adm'), 'vast.universaladid_missing');
+  assert.ok(f);
+  assert.equal(f.level, 'info');
+});
+
+test('validateVast: VAST 4.x InLine WITH UniversalAdId → no universaladid_missing', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><InLine>' +
+    '<AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<UniversalAdId idRegistry="ad-id.org">abc123</UniversalAdId>' +
+    '<Impression><![CDATA[https://imp.example/i]]></Impression>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration>' +
+    '<TrackingEvents><Tracking event="start"><![CDATA[https://trk.example/s]]></Tracking></TrackingEvents>' +
+    '<MediaFiles><MediaFile width="640" height="360" type="video/mp4"><![CDATA[https://cdn.example/v.mp4]]></MediaFile></MediaFiles>' +
+    '</Linear></Creative></Creatives>' +
+    '</InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.universaladid_missing'), undefined);
+});
+
+test('validateVast: VAST 3.x InLine without UniversalAdId → no universaladid_missing', () => {
+  const adm =
+    '<VAST version="3.0"><Ad><InLine>' +
+    '<AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+    '<Impression><![CDATA[https://imp.example/i]]></Impression>' +
+    '<Creatives><Creative><Linear><Duration>00:00:15</Duration>' +
+    '<TrackingEvents><Tracking event="start"><![CDATA[https://trk.example/s]]></Tracking></TrackingEvents>' +
+    '<MediaFiles><MediaFile width="640" height="360" type="video/mp4"><![CDATA[https://cdn.example/v.mp4]]></MediaFile></MediaFiles>' +
+    '</Linear></Creative></Creatives>' +
+    '</InLine></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.universaladid_missing'), undefined);
+});
+
+test('validateVast: VAST 4.x Wrapper → no universaladid_missing', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><Wrapper>' +
+    '<AdSystem>X</AdSystem>' +
+    '<VASTAdTagURI><![CDATA[https://w.example/v]]></VASTAdTagURI>' +
+    '</Wrapper></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.universaladid_missing'), undefined);
 });

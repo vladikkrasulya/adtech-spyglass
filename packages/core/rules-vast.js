@@ -12,10 +12,9 @@
  *     (wrapper-chain traversal, mediafile codec sniffing, etc.) — not
  *     in scope for a paste-and-go inspector
  *
- * The 7 rules below are the "every serious SSP rejects on these" set.
- * Deeper coverage (VPAID deprecation, ad-pod info, Linear duration,
- * OMID viewability) is documented in
- * docs/validator-roadmap-2026-05-09.md §③ for a future expansion.
+ * The 16 rules below are the "every serious SSP rejects on these" set plus
+ * common quality signals. Deeper coverage (OMID viewability, ad-pod
+ * sequencing) is documented in docs/validator-roadmap-2026-05-09.md §③.
  *
  * Spec reference: IAB VAST 4.2 (2019/2022 errata).
  *   https://iabtechlab.com/standards/vast/
@@ -200,6 +199,35 @@ function validateVast(adm, path) {
     if (firstBadDur !== undefined)
       findings.push(F('vast.duration_invalid', LEVELS.WARNING, path, { val: firstBadDur }));
   }
+
+  // R15: <MediaFile type> must be a recognised VAST-compatible MIME type.
+  //   Only fires when the `type` attribute IS present — absence is covered by
+  //   R11 (no dimensions). Case-insensitive; reports the first bad type found.
+  {
+    const VALID_MF_TYPES = new Set([
+      'video/mp4', 'video/webm', 'video/ogg', 'video/3gpp',
+      'video/x-flv', 'video/x-ms-wmv', 'video/x-msvideo',
+      'application/x-mpegurl', 'video/mp2t', 'application/dash+xml',
+    ]);
+    const mfTags = adm.match(/<MediaFile\b[^>]*>/gi) || [];
+    let badType = null;
+    for (const tag of mfTags) {
+      const m = /\btype\s*=\s*(["'])([^"']+)\1/i.exec(tag);
+      if (!m) continue;
+      if (!VALID_MF_TYPES.has(m[2].trim().toLowerCase())) {
+        badType = m[2];
+        break;
+      }
+    }
+    if (badType !== null)
+      findings.push(F('vast.mediafile_type_invalid', LEVELS.WARNING, path, { type: badType }));
+  }
+
+  // R16: VAST 4.x InLine should include <UniversalAdId> (required since 4.0).
+  //   Wrapper is exempt — it delegates ad identity to the resolved VAST chain.
+  //   VAST 2.x/3.x didn't define UniversalAdId; guard on detected version.
+  if (ver && /^4/.test(ver) && hasInLine && !hasTag(adm, 'UniversalAdId'))
+    findings.push(F('vast.universaladid_missing', LEVELS.INFO, path));
 
   return findings;
 }

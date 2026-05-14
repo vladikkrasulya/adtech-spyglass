@@ -314,7 +314,6 @@ test('applyStrictness: validate lax returns 0 findings for valid request (no err
 });
 
 test('applyStrictness: pedantic matches default (backwards compat)', () => {
-  const req = VALID_REQUEST;
   const defaultResult = validate(VALID_REQUEST);
   const pedanticResult = validate(VALID_REQUEST, { strictness: 'pedantic' });
   assert.equal(pedanticResult.findings.length, defaultResult.findings.length);
