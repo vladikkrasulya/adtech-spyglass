@@ -205,9 +205,16 @@ function validateVast(adm, path) {
   //   R11 (no dimensions). Case-insensitive; reports the first bad type found.
   {
     const VALID_MF_TYPES = new Set([
-      'video/mp4', 'video/webm', 'video/ogg', 'video/3gpp',
-      'video/x-flv', 'video/x-ms-wmv', 'video/x-msvideo',
-      'application/x-mpegurl', 'video/mp2t', 'application/dash+xml',
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/3gpp',
+      'video/x-flv',
+      'video/x-ms-wmv',
+      'video/x-msvideo',
+      'application/x-mpegurl',
+      'video/mp2t',
+      'application/dash+xml',
     ]);
     const mfTags = adm.match(/<MediaFile\b[^>]*>/gi) || [];
     let badType = null;
