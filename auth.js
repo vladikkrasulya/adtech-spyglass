@@ -23,6 +23,7 @@
 
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const eventLog = require('./lib/event-log');
 
 const COOKIE_NAME = 'spy_session';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -272,6 +273,13 @@ function createAuth({ Users, Sessions, logger }) {
     // per-account catches one identity getting hammered from many IPs.
     // Any failure to either bucket → 429 (without saying which one).
     if (!loginLimiter(ip) || !loginEmailLimiter(emailKey)) {
+      eventLog.record({
+        level: 'warn',
+        component: 'auth',
+        msg: 'login rate-limited',
+        ip,
+        ctx: { email: emailKey, reason: 'rate_limited' },
+      });
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Too many login attempts. Try again in 15 minutes.')
       );
@@ -292,6 +300,13 @@ function createAuth({ Users, Sessions, logger }) {
     // "wrong password" cases.
     const ok = await bcrypt.compare(password, userRow ? userRow.password_hash : TIMING_DUMMY_HASH);
     if (!userRow || !ok) {
+      eventLog.record({
+        level: 'warn',
+        component: 'auth',
+        msg: 'login failed: invalid credentials',
+        ip,
+        ctx: { email: emailKey, reason: userRow ? 'wrong_password' : 'no_such_user' },
+      });
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Wrong email or password')
       );
@@ -299,6 +314,14 @@ function createAuth({ Users, Sessions, logger }) {
       e.status = 401;
       throw e;
     }
+    eventLog.record({
+      level: 'info',
+      component: 'auth',
+      msg: 'login success',
+      ip,
+      user_id: userRow.id,
+      ctx: { email: userRow.email },
+    });
     return { id: userRow.id, email: userRow.email, created_at: userRow.created_at };
   }
 

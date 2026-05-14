@@ -1,6 +1,7 @@
 'use strict';
 
 const log = require('../../lib/logger').child('admin');
+const eventLog = require('../../lib/event-log');
 
 /**
  * modules/admin/handler.js — GET /api/admin/stats
@@ -78,9 +79,79 @@ function createAdminModule(deps) {
     }
   }
 
+  // Same Bearer-token auth as /api/admin/stats — read at request time so
+  // env rotation doesn't require a restart.
+  function requireAdminToken(req, res) {
+    const expected = process.env.ADMIN_STATS_TOKEN;
+    if (!expected) {
+      sendError(res, 503, 'admin_disabled', 'ADMIN_STATS_TOKEN not configured');
+      return false;
+    }
+    const auth_h = req.headers['authorization'] || '';
+    const provided = auth_h.startsWith('Bearer ') ? auth_h.slice(7) : '';
+    if (!provided || provided !== expected) {
+      sendError(res, 401, 'unauthorized', 'Bearer token required');
+      return false;
+    }
+    return true;
+  }
+
+  function parseIntOrNull(s) {
+    if (s == null || s === '') return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  /**
+   * GET /api/admin/logs
+   *
+   * Query params (all optional):
+   *   since=<unix-ms>          lower bound (inclusive)
+   *   until=<unix-ms>          upper bound (exclusive)
+   *   level=info|warn|error
+   *   component=http|auth|intel|…
+   *   user_id=<int>
+   *   limit=<int>              default 200, max 1000
+   *   offset=<int>
+   *
+   * Returns { success, items: [...], total, components: [...] }.
+   * `components` is the distinct set currently in the table — feeds the
+   * portal's filter dropdown so it stays in sync with what's actually
+   * being recorded.
+   */
+  function handleAdminLogs(req, res, parsed) {
+    if (!requireAdminToken(req, res)) return;
+    try {
+      const q = parsed.searchParams;
+      const filters = {
+        since: parseIntOrNull(q.get('since')),
+        until: parseIntOrNull(q.get('until')),
+        level: q.get('level') || undefined,
+        component: q.get('component') || undefined,
+        user_id: parseIntOrNull(q.get('user_id')),
+        limit: parseIntOrNull(q.get('limit')) || undefined,
+        offset: parseIntOrNull(q.get('offset')) || undefined,
+      };
+      const result = eventLog.query(filters);
+      sendJson(res, 200, {
+        success: true,
+        generated_at: Date.now(),
+        retention_days: eventLog.RETENTION_DAYS,
+        components: eventLog.listComponents(),
+        ...result,
+      });
+    } catch (e) {
+      log.error({ err: e }, 'admin logs query failed');
+      sendError(res, 500, 'logs_failed', e.message);
+    }
+  }
+
   return {
     id: 'admin',
-    routes: [{ method: 'GET', path: '/api/admin/stats', handler: handleAdminStats }],
+    routes: [
+      { method: 'GET', path: '/api/admin/stats', handler: handleAdminStats },
+      { method: 'GET', path: '/api/admin/logs', handler: handleAdminLogs },
+    ],
   };
 }
 

@@ -32,12 +32,19 @@
  * silently hides the AI affordances — no toast, no broken UI.
  */
 
+const eventLog = require('./lib/event-log');
+
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
 // Generation timeout: qwen2.5:3b on i7-7700 CPU emits ~10 tok/s, so a
 // 100-token JSON response takes ~10 sec wall-clock. Add headroom for
 // prompt-eval (8B+ models can be slow on first warm-up), cap at 30s.
 const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS) || 30_000;
+// CPU inference is serial: ~10 tok/s on i7-7700 → ~9s per fieldPurpose call.
+// Beyond 2 in-flight the 3rd would queue >27s and hit the 30s timeout anyway.
+// Fail-fast with 503 instead of hanging — frontend silently hides AI affordances.
+const MAX_FIELD_PURPOSE_CONCURRENT = 2;
+let _fieldPurposeInFlight = 0;
 
 class OllamaUnavailable extends Error {
   constructor(message, cause) {
@@ -93,8 +100,20 @@ async function callOllama(prompt, opts) {
     });
   } catch (e) {
     if (e && e.name === 'AbortError') {
+      eventLog.record({
+        level: 'warn',
+        component: 'intel',
+        msg: 'Ollama call timed out',
+        ctx: { timeout_ms: OLLAMA_TIMEOUT_MS, model: o.model || OLLAMA_MODEL },
+      });
       throw new OllamaUnavailable('timeout after ' + OLLAMA_TIMEOUT_MS + 'ms');
     }
+    eventLog.record({
+      level: 'error',
+      component: 'intel',
+      msg: 'Ollama fetch failed',
+      ctx: { error: (e && e.message) || 'unknown', model: o.model || OLLAMA_MODEL },
+    });
     throw new OllamaUnavailable('fetch failed: ' + (e && e.message ? e.message : 'unknown'), e);
   } finally {
     clearTimeout(timer);
@@ -409,10 +428,23 @@ async function suggestName(bucket, fields, opts) {
 }
 
 async function fieldPurpose(path, charClass, bucket) {
-  const prompt = buildFieldPurposePrompt(path, charClass, bucket);
-  const resp = await callOllama(prompt, { numPredict: 60, temperature: 0.1 });
-  const parsed = extractStructured(resp);
-  return validatePurposeSuggestion(parsed);
+  if (_fieldPurposeInFlight >= MAX_FIELD_PURPOSE_CONCURRENT) {
+    eventLog.record({
+      level: 'warn',
+      component: 'intel',
+      msg: 'fieldPurpose queue full',
+      ctx: { in_flight: _fieldPurposeInFlight, max: MAX_FIELD_PURPOSE_CONCURRENT, field: path },
+    });
+    throw new OllamaUnavailable('queue full (' + _fieldPurposeInFlight + ' in flight)');
+  }
+  _fieldPurposeInFlight++;
+  try {
+    const prompt = buildFieldPurposePrompt(path, charClass, bucket);
+    const resp = await callOllama(prompt, { numPredict: 60, temperature: 0.1 });
+    return validatePurposeSuggestion(extractStructured(resp));
+  } finally {
+    _fieldPurposeInFlight--;
+  }
 }
 
 /**
@@ -477,30 +509,32 @@ async function simulateBids(bidReq) {
     },
   ];
 
-  const results = await Promise.all(
-    strategies.map(async (s) => {
-      try {
-        const prompt = buildBidSimPrompt(summary, s);
-        // num_predict tuned 2026-05-11: response is `{"bid": …, "price": …,
-        // "reason": "…"}` — ~30-50 tokens. 100 leaves comfortable headroom
-        // and shaves ~30% off wall-time vs the prior 200-budget.
-        const resp = await callOllama(prompt, { numPredict: 100, temperature: 0.4 });
-        const parsed = extractStructured(resp);
-        const v = validateBidSim(parsed, s);
-        return { strategy: s.key, label: s.label, ...v };
-      } catch (_e) {
-        // One strategy fails → other two still ship. Caller can render
-        // the available ones with a "1 of 3 strategies failed" note.
-        return {
-          strategy: s.key,
-          label: s.label,
-          bid: false,
-          price: null,
-          reason: 'simulation_failed',
-        };
-      }
-    }),
-  );
+  // Sequential (not Promise.all): Ollama is a serial CPU queue, so parallel
+  // submission means strategy 3 waits ~20s before inference starts and its
+  // 30s AbortController window is almost gone. Sequential gives each call a
+  // fresh timer. Total wall-time ~27s vs ~30s parallel — acceptable trade-off.
+  const results = [];
+  for (const s of strategies) {
+    try {
+      const prompt = buildBidSimPrompt(summary, s);
+      // num_predict tuned 2026-05-11: response is `{"bid": …, "price": …,
+      // "reason": "…"}` — ~30-50 tokens. 100 leaves comfortable headroom
+      // and shaves ~30% off wall-time vs the prior 200-budget.
+      const resp = await callOllama(prompt, { numPredict: 100, temperature: 0.4 });
+      const parsed = extractStructured(resp);
+      const v = validateBidSim(parsed, s);
+      results.push({ strategy: s.key, label: s.label, ...v });
+    } catch (_e) {
+      // One strategy fails → others still ship.
+      results.push({
+        strategy: s.key,
+        label: s.label,
+        bid: false,
+        price: null,
+        reason: 'simulation_failed',
+      });
+    }
+  }
   return results;
 }
 

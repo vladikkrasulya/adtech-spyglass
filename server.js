@@ -44,6 +44,7 @@ const httpLib = require('./lib/http');
 const _logger = require('./lib/logger');
 const log = _logger.child('server');
 const { captureException, flushSentry } = _logger;
+const eventLog = require('./lib/event-log');
 httpLib.init({ notifyAdmin, notifyEscape });
 const { sendJson, sendError } = httpLib;
 const { Router } = require('./lib/router');
@@ -1051,6 +1052,51 @@ function applyBaselineHeaders(res) {
   // noindex would just hurt the public demo's discoverability.
 }
 
+// ── Request-logging middleware ─────────────────────────────────────────────
+//
+// Tracks every /api/* request to event_log so the operator can replay traffic
+// in the admin observability panel without SSH. Hybrid sampling: every 4xx/5xx
+// is captured; 2xx is sampled 1-in-N to keep the table bounded. Static-asset
+// requests (everything outside /api/) are skipped — too noisy and uninformative.
+const HTTP_LOG_SAMPLE_RATE = Number(process.env.HTTP_LOG_SAMPLE_RATE) || 10;
+
+function shouldLogHttpEvent(pathname, status) {
+  if (!pathname.startsWith('/api/')) return false;
+  if (status >= 400) return true; // always log errors
+  // Probabilistic sampling for success. Deterministic-feeling enough at scale,
+  // and avoids the synchronization cost of a counter under concurrent requests.
+  return Math.random() < 1 / HTTP_LOG_SAMPLE_RATE;
+}
+
+function attachRequestLogger(req, res, pathname) {
+  if (!pathname.startsWith('/api/')) return;
+  const start = Date.now();
+  const requestId = crypto.randomBytes(6).toString('hex');
+  req._requestId = requestId;
+
+  res.once('finish', () => {
+    try {
+      const status = res.statusCode || 0;
+      if (!shouldLogHttpEvent(pathname, status)) return;
+      const user = auth.getCurrentUser(req);
+      eventLog.record({
+        level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
+        component: 'http',
+        msg: `${req.method} ${pathname} → ${status}`,
+        method: req.method,
+        path: pathname,
+        status,
+        latency_ms: Date.now() - start,
+        user_id: user ? user.id : null,
+        ip: auth.clientIp(req),
+        request_id: requestId,
+      });
+    } catch (_e) {
+      // Never let logging crash the request lifecycle.
+    }
+  });
+}
+
 const server = http.createServer((req, res) => {
   applyBaselineHeaders(res);
 
@@ -1061,6 +1107,7 @@ const server = http.createServer((req, res) => {
     return sendError(res, 400, 'bad_url', 'Invalid request URL');
   }
   const { pathname } = parsed;
+  attachRequestLogger(req, res, pathname);
 
   try {
     // Backend module router first; falls through on miss to the inline
@@ -1101,6 +1148,19 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
   log.info({ port: PORT, addr: 'http://0.0.0.0:' + PORT }, 'spyglass backend listening');
 });
+
+// Daily event_log prune. Opportunistic prune also runs every N writes inside
+// event-log.js itself; this cron is the floor that catches low-traffic
+// stretches where the write-threshold never triggers.
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const _pruneTimer = setInterval(() => {
+  try {
+    eventLog.pruneOlderThan(eventLog.RETENTION_DAYS);
+  } catch (err) {
+    log.error({ err }, 'event_log prune cron failed');
+  }
+}, ONE_DAY_MS);
+if (typeof _pruneTimer.unref === 'function') _pruneTimer.unref();
 
 const shutdown = (signal) => {
   log.info({ signal }, 'shutting down');

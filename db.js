@@ -23,7 +23,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const DATA_DIR = process.env.SPYGLASS_DATA_DIR || '/data';
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -269,6 +269,47 @@ function migrate(db, fromVersion) {
       );
       CREATE INDEX IF NOT EXISTS idx_dialect_question_log_user_sig
         ON dialect_question_log(user_id, signal_path, signal_value, payload_shape_sig);
+    `);
+  }
+
+  // v8 → v9 (2026-05-13): event_log for admin observability panel.
+  //
+  // Captures HTTP requests (1-in-10 sample for 2xx, all 4xx/5xx) plus
+  // hand-picked events: auth login fail/success, intel queue saturation,
+  // LLM timeouts, rate-limit hits. Read by /admin/spyglass/logs in the
+  // kyivtech-portal so the operator can see how Spyglass behaves when
+  // they're not watching. Bounded by daily prune (7-day retention).
+  //
+  // Columns:
+  //   ts          unix-ms timestamp
+  //   level       'info' | 'warn' | 'error'
+  //   component   'http' | 'auth' | 'intel' | 'server' | …
+  //   msg         short human-readable message
+  //   method/path/status/latency_ms  populated for HTTP events; NULL otherwise
+  //   user_id     NULL for anonymous traffic
+  //   ip/request_id  optional correlation
+  //   ctx         JSON blob with extra fields (intel reason, auth detail, etc.)
+  if (fromVersion < 9) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS event_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts INTEGER NOT NULL,
+        level TEXT NOT NULL,
+        component TEXT NOT NULL,
+        msg TEXT NOT NULL,
+        method TEXT,
+        path TEXT,
+        status INTEGER,
+        latency_ms INTEGER,
+        user_id INTEGER,
+        ip TEXT,
+        request_id TEXT,
+        ctx TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_event_log_ts ON event_log(ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_event_log_level_ts ON event_log(level, ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_event_log_component_ts ON event_log(component, ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_event_log_user_ts ON event_log(user_id, ts DESC);
     `);
   }
 }
