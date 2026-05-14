@@ -205,7 +205,7 @@ function validate(payload, opts) {
  *
  * @param {object} req
  * @param {object} res
- * @param {{locale?: string, dialect?: string, disabledRules?: string[]}} [opts]
+ * @param {{locale?: string, dialect?: string, disabledRules?: string[], strictness?: string}} [opts]
  */
 function crosscheck(req, res, opts) {
   const o = opts || {};
