@@ -189,7 +189,13 @@ function validate(payload, opts) {
     );
   }
 
-  return finalize({ type: resolvedType, version, findings }, null, locale, disabledRules, strictness);
+  return finalize(
+    { type: resolvedType, version, findings },
+    null,
+    locale,
+    disabledRules,
+    strictness,
+  );
 }
 
 /**
