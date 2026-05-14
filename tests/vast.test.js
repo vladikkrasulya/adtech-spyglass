@@ -554,3 +554,53 @@ test('validateVast: InLine without Linear → no tracking_events_missing', () =>
     '</Creative></Creatives></InLine></Ad></VAST>';
   assert.equal(findById(validateVast(adm, 'adm'), 'vast.tracking_events_missing'), undefined);
 });
+
+// ─────────────────────────────────────────────────────────────────
+// R14 — vast.duration_invalid
+// ─────────────────────────────────────────────────────────────────
+
+const SKEL = (dur) =>
+  `<VAST version="4.2"><Ad><InLine>` +
+  `<AdSystem>X</AdSystem><AdTitle>T</AdTitle>` +
+  `<Impression><![CDATA[https://imp.example/i]]></Impression>` +
+  `<Creatives><Creative><Linear>` +
+  `<Duration>${dur}</Duration>` +
+  `<TrackingEvents><Tracking event="start"><![CDATA[https://trk.example/s]]></Tracking></TrackingEvents>` +
+  `<MediaFiles><MediaFile width="640" height="360" type="video/mp4"><![CDATA[https://cdn.example/v.mp4]]></MediaFile></MediaFiles>` +
+  `</Linear></Creative></Creatives>` +
+  `</InLine></Ad></VAST>`;
+
+test('validateVast: valid duration "00:00:15" → no duration_invalid', () => {
+  assert.equal(findById(validateVast(SKEL('00:00:15'), 'adm'), 'vast.duration_invalid'), undefined);
+});
+
+test('validateVast: bare seconds "15" → duration_invalid fires', () => {
+  const f = findById(validateVast(SKEL('15'), 'adm'), 'vast.duration_invalid');
+  assert.ok(f);
+  assert.equal(f.params.val, '15');
+});
+
+test('validateVast: out-of-range minutes "00:90:00" → duration_invalid fires', () => {
+  const f = findById(validateVast(SKEL('00:90:00'), 'adm'), 'vast.duration_invalid');
+  assert.ok(f);
+  assert.equal(f.params.val, '00:90:00');
+});
+
+test('validateVast: out-of-range seconds "00:00:60" → duration_invalid fires', () => {
+  const f = findById(validateVast(SKEL('00:00:60'), 'adm'), 'vast.duration_invalid');
+  assert.ok(f);
+  assert.equal(f.params.val, '00:00:60');
+});
+
+test('validateVast: CDATA-wrapped valid "00:01:30" → no duration_invalid', () => {
+  assert.equal(
+    findById(validateVast(SKEL('<![CDATA[00:01:30]]>'), 'adm'), 'vast.duration_invalid'),
+    undefined,
+  );
+});
+
+test('validateVast: CDATA-wrapped invalid "0:15" → duration_invalid fires', () => {
+  const f = findById(validateVast(SKEL('<![CDATA[0:15]]>'), 'adm'), 'vast.duration_invalid');
+  assert.ok(f);
+  assert.equal(f.params.val, '0:15');
+});

@@ -183,6 +183,24 @@ function validateVast(adm, path) {
   if (hasInLine && hasTag(adm, 'Linear') && !hasTag(adm, 'TrackingEvents'))
     findings.push(F('vast.tracking_events_missing', LEVELS.INFO, path));
 
+  // R14. <Duration> value must be a valid VAST timecode when the tag is present.
+  //   R8 already fires if the tag is absent; here we validate the content.
+  //   VAST §3.7: HH:MM:SS or HH:MM:SS.mmm; minutes/seconds are range-checked 00–59.
+  //   Content may be CDATA-wrapped — strip markers before validating.
+  if (hasTag(adm, 'Linear') && hasTag(adm, 'Duration')) {
+    const durRe = /<Duration\b[^>]*>([\s\S]*?)<\/Duration>/gi;
+    const durations = [];
+    let dm;
+    while ((dm = durRe.exec(adm)) !== null) {
+      const raw = (dm[1] || '').trim();
+      const cdata = /^<!\[CDATA\[([\s\S]*?)\]\]>$/.exec(raw);
+      durations.push(cdata ? cdata[1].trim() : raw);
+    }
+    const firstBadDur = durations.find((v) => !/^\d{2}:[0-5]\d:[0-5]\d(?:\.\d{1,3})?$/.test(v));
+    if (firstBadDur !== undefined)
+      findings.push(F('vast.duration_invalid', LEVELS.WARNING, path, { val: firstBadDur }));
+  }
+
   return findings;
 }
 
