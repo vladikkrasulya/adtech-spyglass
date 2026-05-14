@@ -38,6 +38,7 @@ const {
   sortFindings,
   dedupFindings,
   applyDisabledRules,
+  applyStrictness,
 } = require('./findings');
 const { resolve, listLocales, FALLBACK_LOCALE } = require('./messages');
 
@@ -76,6 +77,7 @@ function validate(payload, opts) {
   const dialect = DIALECTS[o.dialect || DEFAULT_DIALECT] || DIALECTS[DEFAULT_DIALECT];
   const locale = o.locale || FALLBACK_LOCALE;
   const disabledRules = o.disabledRules;
+  const strictness = o.strictness;
   // v0.38.0 — Version Pinning. Caller declares the version they're targeting
   // (e.g. "I'm writing oRTB 2.5"); we emit `version.mismatch` if detection
   // lands elsewhere. Closes the circular "version inferred from fields, but
@@ -104,6 +106,7 @@ function validate(payload, opts) {
       'invalid',
       locale,
       disabledRules,
+      strictness,
     );
   }
 
@@ -186,7 +189,7 @@ function validate(payload, opts) {
     );
   }
 
-  return finalize({ type: resolvedType, version, findings }, null, locale, disabledRules);
+  return finalize({ type: resolvedType, version, findings }, null, locale, disabledRules, strictness);
 }
 
 /**
@@ -201,6 +204,7 @@ function validate(payload, opts) {
 function crosscheck(req, res, opts) {
   const o = opts || {};
   const locale = o.locale || FALLBACK_LOCALE;
+  const strictness = o.strictness;
   // Resolve dialect the same way validate() does — opts.dialect may be a
   // string slug ('iab' / 'kadam' / ...) coming from the HTTP layer or an
   // already-resolved dialect object from internal callers.
@@ -216,13 +220,15 @@ function crosscheck(req, res, opts) {
   findings = applyDisabledRules(findings, o.disabledRules);
   findings = dedupFindings(findings);
   findings = sortFindings(findings);
+  findings = applyStrictness(findings, strictness);
   return findings.map((f) => decorate(f, locale));
 }
 
-function finalize(result, statusOverride, locale, disabledRules) {
+function finalize(result, statusOverride, locale, disabledRules, strictness) {
   let raw = applyDisabledRules(result.findings, disabledRules);
   raw = dedupFindings(raw);
   raw = sortFindings(raw);
+  raw = applyStrictness(raw, strictness);
   const decorated = raw.map((f) => decorate(f, locale));
   const status = statusOverride || rollupStatus(raw);
   return { type: result.type, version: result.version, status, findings: decorated };

@@ -18,7 +18,12 @@ const assert = require('node:assert/strict');
 
 const { validate } = require('@kyivtech/spyglass-core');
 
-const { sortFindings, dedupFindings, applyDisabledRules } = require('../packages/core/findings');
+const {
+  sortFindings,
+  dedupFindings,
+  applyDisabledRules,
+  applyStrictness,
+} = require('../packages/core/findings');
 
 // ─────────────────────────────────────────────────────────────────
 // sortFindings
@@ -258,4 +263,59 @@ test('validate(): repeats of the same (id,path) are collapsed via dedup', () => 
     assert.ok(!seen.has(k), `duplicate (id,path) survived dedup: ${f.id} @ ${f.path}`);
     seen.add(k);
   }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// applyStrictness (since 0.21.0)
+// ─────────────────────────────────────────────────────────────────
+
+const ALL_LEVELS = [
+  { level: 'error', code: 'E' },
+  { level: 'warning', code: 'W' },
+  { level: 'info', code: 'I' },
+  { level: 'question', code: 'Q' },
+  { level: 'crit', code: 'C' },
+  { level: 'warn', code: 'CW' },
+  { level: 'ok', code: 'OK' },
+];
+
+test('applyStrictness: lax keeps only error + crit', () => {
+  assert.deepEqual(
+    applyStrictness(ALL_LEVELS, 'lax').map((f) => f.code),
+    ['E', 'C'],
+  );
+});
+
+test('applyStrictness: normal keeps error + warning + question + crit + warn', () => {
+  assert.deepEqual(
+    applyStrictness(ALL_LEVELS, 'normal').map((f) => f.code),
+    ['E', 'W', 'Q', 'C', 'CW'],
+  );
+});
+
+test('applyStrictness: pedantic keeps everything', () => {
+  assert.deepEqual(
+    applyStrictness(ALL_LEVELS, 'pedantic').map((f) => f.code),
+    ['E', 'W', 'I', 'Q', 'C', 'CW', 'OK'],
+  );
+});
+
+const VALID_REQUEST = {
+  id: 'req-1',
+  at: 1,
+  imp: [{ id: '1', banner: { w: 300, h: 250 } }],
+  site: { id: 's1', page: 'https://example.com', publisher: { id: 'p1' } },
+  device: { ua: 'Mozilla/5.0', ip: '1.2.3.4' },
+};
+
+test('applyStrictness: validate lax returns 0 findings for valid request (no errors)', () => {
+  const result = validate(VALID_REQUEST, { strictness: 'lax' });
+  assert.equal(result.findings.length, 0);
+});
+
+test('applyStrictness: pedantic matches default (backwards compat)', () => {
+  const req = VALID_REQUEST;
+  const defaultResult = validate(VALID_REQUEST);
+  const pedanticResult = validate(VALID_REQUEST, { strictness: 'pedantic' });
+  assert.equal(pedanticResult.findings.length, defaultResult.findings.length);
 });
