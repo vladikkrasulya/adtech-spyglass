@@ -26,11 +26,13 @@ includes `'toast'` so no stale reference persists past module deactivate.
 'function'` — clear mismatch between IIFE consumers and ES-module provider.
 
 Files changed:
+
 - `public/spyglass.app.js` — `window.toast = toast` added, `'toast'` in cleanup list
 - `public/version.js` — 0.48.0 → 0.48.1
 - `package.json` — 0.48.0 → 0.48.1
 
 Verified:
+
 - `npm run ci` — 715/715 tests pass.
 - Playwright smoke: `share-link` click → toast "Посилання скопійовано ✓".
 - Playwright smoke: `open-embed` click → modal "Вбудувати в інший сайт" opens.
