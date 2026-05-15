@@ -19,7 +19,9 @@ if (typeof process !== 'undefined' && process.versions && process.versions.node)
 
 function makeConsoleStub() {
   return {
-    error(obj, msg) { console.error(msg || obj, msg ? obj : undefined); },
+    error(obj, msg) {
+      console.error(msg || obj, msg ? obj : undefined);
+    },
   };
 }
 

@@ -770,7 +770,9 @@ const SKEL_NONLINEAR = (nlAttrs) =>
   '<UniversalAdId idRegistry="ad-id.org">abc</UniversalAdId>' +
   '<Impression><![CDATA[https://imp.example/i]]></Impression>' +
   '<Creatives><Creative>' +
-  '<NonLinearAds><NonLinear ' + nlAttrs + '>' +
+  '<NonLinearAds><NonLinear ' +
+  nlAttrs +
+  '>' +
   '<StaticResource creativeType="image/png"><![CDATA[https://cdn.example/overlay.png]]></StaticResource>' +
   '</NonLinear></NonLinearAds>' +
   '</Creative></Creatives>' +
@@ -806,10 +808,7 @@ test('validateVast: NonLinear missing height → nonlinear_no_dimensions WARNING
 });
 
 test('validateVast: NonLinear missing both dimensions → nonlinear_no_dimensions count=1', () => {
-  const f = findById(
-    validateVast(SKEL_NONLINEAR(''), 'adm'),
-    'vast.nonlinear_no_dimensions',
-  );
+  const f = findById(validateVast(SKEL_NONLINEAR(''), 'adm'), 'vast.nonlinear_no_dimensions');
   assert.ok(f);
   assert.equal(f.params.count, 1);
 });
