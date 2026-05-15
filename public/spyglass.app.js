@@ -1291,7 +1291,9 @@ export async function mountInspector(root, ctx) {
           (e) =>
             e &&
             typeof e === 'object' &&
-            typeof e.ts === 'number' &&
+            // Accept entries with a numeric ts (new format) OR a time string
+            // (entries written before ts was added to the schema — migration path).
+            (typeof e.ts === 'number' || typeof e.time === 'string') &&
             (typeof e.req === 'string' || typeof e.res === 'string'),
         )
         .slice(0, HISTORY_MAX);
@@ -2034,6 +2036,7 @@ export async function mountInspector(root, ctx) {
       if (!fromHist) {
         const status = validation ? validation.status : 'local';
         historyStore.unshift({
+          ts: Date.now(),
           req: JSON.stringify(req, null, 2),
           res: resVal ? JSON.stringify(res, null, 2) : '',
           title: entity,
