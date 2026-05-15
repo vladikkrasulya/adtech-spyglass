@@ -92,6 +92,10 @@ export async function mountInspector(root, ctx) {
     _flashTimers.set(btn, { timeout, original });
   }
 
+  // Expose toast on window so non-module IIFE scripts (share/index.js,
+  // embed/index.js, export.js) can call it for user feedback.
+  window.toast = toast;
+
   window.utils = {
     format(id, btn) {
       try {
@@ -4640,6 +4644,7 @@ export async function mountInspector(root, ctx) {
   ctx.addCleanup(() => {
     const exposed = [
       // utilities + tab/input chrome
+      'toast',
       'utils',
       'switchTab',
       'clearInput',

@@ -6,6 +6,36 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.48.1 — fix: embed/share buttons silent no-op (2026-05-15)
+
+**Root cause:** `spyglass.app.js` is an ES module that imports `toast` from
+`/core/utils.js`. The `toast` function was never assigned to `window.toast`,
+yet the IIFE-based sibling scripts (`modules/share/index.js`,
+`modules/embed/index.js`, `export.js`) all guard their feedback via
+`if (typeof window.toast === 'function') window.toast(...)`. With `window.toast`
+undefined, clicks produced no toast, no error — just silence. The buttons were
+actually doing the right work (clipboard write, modal render) but the user
+received zero visual confirmation.
+
+**Fix:** `mountInspector()` now exposes `window.toast = toast` immediately after
+the other window-utilities block (line ~95). The cleanup sweep on unmount
+includes `'toast'` so no stale reference persists past module deactivate.
+
+**How it was caught:** user-reported regression; Playwright console audit showed
+`typeof window.toast === 'undefined'` while `typeof window.openEmbedModal ===
+'function'` — clear mismatch between IIFE consumers and ES-module provider.
+
+Files changed:
+- `public/spyglass.app.js` — `window.toast = toast` added, `'toast'` in cleanup list
+- `public/version.js` — 0.48.0 → 0.48.1
+- `package.json` — 0.48.0 → 0.48.1
+
+Verified:
+- `npm run ci` — 715/715 tests pass.
+- Playwright smoke: `share-link` click → toast "Посилання скопійовано ✓".
+- Playwright smoke: `open-embed` click → modal "Вбудувати в інший сайт" opens.
+- `download-bundle` unaffected (it had its own fallback and still works).
+
 ### v0.42.12 — visible text selection + drag-resizable input panels (2026-05-13)
 
 Two user-flagged issues fixed.
