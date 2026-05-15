@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../logger');
+
 /**
  * Decoder registry for feed-style DSP responses (the "JsonFeed" family
  * plus its XML siblings — all the non-oRTB response shapes).
@@ -58,14 +60,14 @@ function decode(payload, opts) {
       claimed = !!dec.detect(payload, parsed);
     } catch (e) {
       // A buggy detect() must not break dispatch — log + skip.
-      console.error('[decoder.detect]', dec.id, e && e.stack ? e.stack : e);
+      logger.error({ decoderId: dec.id, phase: 'detect', err: e }, '[decoder] plugin threw');
       continue;
     }
     if (!claimed) continue;
     try {
       return dec.decode(payload, parsed);
     } catch (e) {
-      console.error('[decoder.decode]', dec.id, e && e.stack ? e.stack : e);
+      logger.error({ decoderId: dec.id, phase: 'decode', err: e }, '[decoder] plugin threw');
       return { ok: false, reason: 'decoder_threw', detail: String((e && e.message) || e) };
     }
   }

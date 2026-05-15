@@ -236,6 +236,28 @@ function validateVast(adm, path) {
   if (ver && /^4/.test(ver) && hasInLine && !hasTag(adm, 'UniversalAdId'))
     findings.push(F('vast.universaladid_missing', LEVELS.INFO, path));
 
+  // R17: InLine <VideoClicks> should contain a <ClickThrough> landing URL.
+  //   <ClickTracking> without <ClickThrough> records a pixel but sends the
+  //   user nowhere — clicks are unattributable and the bid CPC/CPA value is
+  //   lost. Wrapper is exempt; it delegates click handling to the chain.
+  if (hasInLine && hasTag(adm, 'VideoClicks') && !hasTag(adm, 'ClickThrough'))
+    findings.push(F('vast.videoclicks_no_clickthrough', LEVELS.INFO, path));
+
+  // R18: <NonLinear> overlays should declare width and height (VAST §3.10).
+  //   The player uses these to position and scale the overlay over the video
+  //   frame; without dimensions placement is guesswork and the overlay may
+  //   not render at all. Analogue of R11 for NonLinear.
+  {
+    const nlTags = adm.match(/<NonLinear\b[^>]*>/gi) || [];
+    let nlNoDims = 0;
+    for (const tag of nlTags) {
+      if (!/\bwidth\s*=\s*["']\d+["']/i.test(tag) || !/\bheight\s*=\s*["']\d+["']/i.test(tag))
+        nlNoDims++;
+    }
+    if (nlNoDims > 0)
+      findings.push(F('vast.nonlinear_no_dimensions', LEVELS.WARNING, path, { count: nlNoDims }));
+  }
+
   return findings;
 }
 

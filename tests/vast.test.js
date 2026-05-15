@@ -707,3 +707,109 @@ test('validateVast: VAST 4.x Wrapper → no universaladid_missing', () => {
     '</Wrapper></Ad></VAST>';
   assert.equal(findById(validateVast(adm, 'adm'), 'vast.universaladid_missing'), undefined);
 });
+
+// ─────────────────────────────────────────────────────────────────
+// R17 — vast.videoclicks_no_clickthrough
+// ─────────────────────────────────────────────────────────────────
+
+// Helper: InLine with VideoClicks block, parameterised on ClickThrough presence.
+const SKEL_CLICKS = (withClickThrough) =>
+  '<VAST version="4.2"><Ad><InLine>' +
+  '<AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+  '<UniversalAdId idRegistry="ad-id.org">abc</UniversalAdId>' +
+  '<Impression><![CDATA[https://imp.example/i]]></Impression>' +
+  '<Creatives><Creative><Linear><Duration>00:00:15</Duration>' +
+  '<TrackingEvents><Tracking event="start"><![CDATA[https://trk.example/s]]></Tracking></TrackingEvents>' +
+  '<VideoClicks>' +
+  (withClickThrough ? '<ClickThrough><![CDATA[https://brand.example/lp]]></ClickThrough>' : '') +
+  '<ClickTracking><![CDATA[https://trk.example/c]]></ClickTracking>' +
+  '</VideoClicks>' +
+  '<MediaFiles><MediaFile width="640" height="360" type="video/mp4"><![CDATA[https://cdn.example/v.mp4]]></MediaFile></MediaFiles>' +
+  '</Linear></Creative></Creatives>' +
+  '</InLine></Ad></VAST>';
+
+test('validateVast: InLine VideoClicks WITH ClickThrough → no videoclicks_no_clickthrough', () => {
+  assert.equal(
+    findById(validateVast(SKEL_CLICKS(true), 'adm'), 'vast.videoclicks_no_clickthrough'),
+    undefined,
+  );
+});
+
+test('validateVast: InLine VideoClicks NO ClickThrough → videoclicks_no_clickthrough INFO', () => {
+  const f = findById(validateVast(SKEL_CLICKS(false), 'adm'), 'vast.videoclicks_no_clickthrough');
+  assert.ok(f);
+  assert.equal(f.level, 'info');
+});
+
+test('validateVast: InLine WITHOUT VideoClicks → no videoclicks_no_clickthrough', () => {
+  // SKEL() has no VideoClicks block at all
+  assert.equal(
+    findById(validateVast(SKEL('00:00:15'), 'adm'), 'vast.videoclicks_no_clickthrough'),
+    undefined,
+  );
+});
+
+test('validateVast: Wrapper with VideoClicks no ClickThrough → no videoclicks_no_clickthrough (exempt)', () => {
+  const adm =
+    '<VAST version="4.2"><Ad><Wrapper>' +
+    '<AdSystem>X</AdSystem>' +
+    '<VASTAdTagURI><![CDATA[https://w.example/v]]></VASTAdTagURI>' +
+    '<VideoClicks><ClickTracking><![CDATA[https://trk.example/c]]></ClickTracking></VideoClicks>' +
+    '</Wrapper></Ad></VAST>';
+  assert.equal(findById(validateVast(adm, 'adm'), 'vast.videoclicks_no_clickthrough'), undefined);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// R18 — vast.nonlinear_no_dimensions
+// ─────────────────────────────────────────────────────────────────
+
+// Helper: InLine with a NonLinear overlay, parameterised on attribute string.
+const SKEL_NONLINEAR = (nlAttrs) =>
+  '<VAST version="4.2"><Ad><InLine>' +
+  '<AdSystem>X</AdSystem><AdTitle>T</AdTitle>' +
+  '<UniversalAdId idRegistry="ad-id.org">abc</UniversalAdId>' +
+  '<Impression><![CDATA[https://imp.example/i]]></Impression>' +
+  '<Creatives><Creative>' +
+  '<NonLinearAds><NonLinear ' + nlAttrs + '>' +
+  '<StaticResource creativeType="image/png"><![CDATA[https://cdn.example/overlay.png]]></StaticResource>' +
+  '</NonLinear></NonLinearAds>' +
+  '</Creative></Creatives>' +
+  '</InLine></Ad></VAST>';
+
+test('validateVast: NonLinear with width+height → no nonlinear_no_dimensions', () => {
+  assert.equal(
+    findById(
+      validateVast(SKEL_NONLINEAR('width="300" height="250"'), 'adm'),
+      'vast.nonlinear_no_dimensions',
+    ),
+    undefined,
+  );
+});
+
+test('validateVast: NonLinear missing width → nonlinear_no_dimensions WARNING count=1', () => {
+  const f = findById(
+    validateVast(SKEL_NONLINEAR('height="250"'), 'adm'),
+    'vast.nonlinear_no_dimensions',
+  );
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.params.count, 1);
+});
+
+test('validateVast: NonLinear missing height → nonlinear_no_dimensions WARNING count=1', () => {
+  const f = findById(
+    validateVast(SKEL_NONLINEAR('width="300"'), 'adm'),
+    'vast.nonlinear_no_dimensions',
+  );
+  assert.ok(f);
+  assert.equal(f.params.count, 1);
+});
+
+test('validateVast: NonLinear missing both dimensions → nonlinear_no_dimensions count=1', () => {
+  const f = findById(
+    validateVast(SKEL_NONLINEAR(''), 'adm'),
+    'vast.nonlinear_no_dimensions',
+  );
+  assert.ok(f);
+  assert.equal(f.params.count, 1);
+});

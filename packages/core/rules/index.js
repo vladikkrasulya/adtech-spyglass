@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../logger');
+
 /**
  * Plugin registry for validator rules.
  *
@@ -75,7 +77,7 @@ function runRulePlugins(payload, type, ctx) {
       }
     } catch (e) {
       // A bug in one plugin must NOT break validation. Log + skip.
-      console.error('[validator-plugin]', plugin.id, e && e.stack ? e.stack : e);
+      logger.error({ pluginId: plugin.id, err: e }, '[rules] plugin threw');
     }
   }
   return findings;

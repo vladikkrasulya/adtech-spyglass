@@ -129,6 +129,8 @@
   "vast.duration_invalid": "https://iabtechlab.com/standards/vast/",
   "vast.mediafile_type_invalid": "https://iabtechlab.com/standards/vast/",
   "vast.universaladid_missing": "https://iabtechlab.com/standards/vast/",
+  "vast.videoclicks_no_clickthrough": "https://iabtechlab.com/standards/vast/",
+  "vast.nonlinear_no_dimensions": "https://iabtechlab.com/standards/vast/",
   "response.30.envelope_required": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md",
   "response.30.ver_required": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md",
   "response.30.ver_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md",
