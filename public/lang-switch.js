@@ -273,6 +273,20 @@
       } catch (_) {
         /* ignore */
       }
+      // Snapshot textarea content so the new page can restore it after
+      // kt:inspector-ready. The morph path preserves these in-place, but
+      // the workbench branch does a full navigation — without this save the
+      // user loses their in-progress bid request on every language switch.
+      try {
+        const reqEl = document.getElementById('bidReq');
+        const resEl = document.getElementById('bidRes');
+        if (reqEl && reqEl.value) sessionStorage.setItem('_sg_restore_bidReq', reqEl.value);
+        else sessionStorage.removeItem('_sg_restore_bidReq');
+        if (resEl && resEl.value) sessionStorage.setItem('_sg_restore_bidRes', resEl.value);
+        else sessionStorage.removeItem('_sg_restore_bidRes');
+      } catch (_) {
+        /* storage disabled — content is lost, acceptable degradation */
+      }
       location.assign(targetUrl);
       return;
     }
@@ -419,6 +433,23 @@
     () => {
       bindLangLinks();
       bindThemeTooltipI18n();
+      // Restore textarea content saved before a lang-switch full navigation.
+      try {
+        const reqVal = sessionStorage.getItem('_sg_restore_bidReq');
+        const resVal = sessionStorage.getItem('_sg_restore_bidRes');
+        if (reqVal !== null) {
+          const el = document.getElementById('bidReq');
+          if (el) el.value = reqVal;
+          sessionStorage.removeItem('_sg_restore_bidReq');
+        }
+        if (resVal !== null) {
+          const el = document.getElementById('bidRes');
+          if (el) el.value = resVal;
+          sessionStorage.removeItem('_sg_restore_bidRes');
+        }
+      } catch (_) {
+        /* storage disabled */
+      }
     },
     { once: true },
   );
