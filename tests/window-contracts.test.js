@@ -29,7 +29,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { glob } = require('node:fs/promises'); // Node 22+; fallback below
 
 const ROOT = path.join(__dirname, '..');
 
@@ -134,8 +133,9 @@ function extractTypeofGuards(src) {
   for (const m of src.matchAll(/typeof\s+window\.(\w+)\s*===?\s*['"]function['"]/g)) {
     names.add(m[1]);
   }
-  // Also catch: `window.X && window.X(` — slightly less explicit but common
-  for (const m of src.matchAll(/window\.(\w+)\s*&&\s*(?:typeof\s+)?window\.\1/g)) {
+  // Also catch: `window.X && window.X(` — require trailing `(` to avoid matching
+  // non-function property checks like `if (window.config && window.config)`.
+  for (const m of src.matchAll(/window\.(\w+)\s*&&\s*(?:typeof\s+)?window\.\1\s*\(/g)) {
     names.add(m[1]);
   }
   return names;
