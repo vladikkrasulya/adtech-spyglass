@@ -14,6 +14,14 @@
  * the module stays testable without a live HTTP server.
  */
 
+/**
+ * @param {object} deps
+ * @param {*} deps.db
+ * @param {*} deps.auth
+ * @param {*} deps.Users
+ * @param {*} deps.sendJson
+ * @param {() => boolean} [deps.sentryReady] Optional; absent in unit tests.
+ */
 function createHealthModule({ db, auth, Users, sendJson, sentryReady }) {
   // Capture once at module load — BUILD_SHA is set at Docker build time
   // via ARG → ENV in the Dockerfile and never changes during a run. 'dev'

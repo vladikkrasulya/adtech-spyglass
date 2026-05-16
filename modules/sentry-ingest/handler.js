@@ -64,11 +64,12 @@ function createSentryIngestModule({ logger }) {
       return;
     }
 
-    const forwardHeaders = {};
+    /** @type {http.OutgoingHttpHeaders} */
+    const forwardHeaders = { host: `${upstreamHost}:${upstreamPort}` };
     for (const k of ['content-type', 'content-length', 'x-sentry-auth', 'user-agent']) {
-      if (req.headers[k]) forwardHeaders[k] = req.headers[k];
+      const v = req.headers[k];
+      if (v) forwardHeaders[k] = v;
     }
-    forwardHeaders.host = `${upstreamHost}:${upstreamPort}`;
 
     const proxyReq = http.request(
       {
