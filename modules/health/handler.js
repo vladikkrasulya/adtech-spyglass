@@ -14,7 +14,7 @@
  * the module stays testable without a live HTTP server.
  */
 
-function createHealthModule({ db, auth, Users, sendJson }) {
+function createHealthModule({ db, auth, Users, sendJson, sentryReady }) {
   // Capture once at module load — BUILD_SHA is set at Docker build time
   // via ARG → ENV in the Dockerfile and never changes during a run. 'dev'
   // is the dev-image / dev-tree fallback so the field is always present.
@@ -34,6 +34,9 @@ function createHealthModule({ db, auth, Users, sendJson }) {
       status: dbOk ? 'ok' : 'degraded',
       checks: { db: dbOk },
       build: { sha: buildSha },
+      // Anonymous tier surfaces only a boolean — fine for ops dashboards
+      // and avoids leaking the DSN host or project id.
+      sentry: { ready: typeof sentryReady === 'function' ? !!sentryReady() : false },
     };
     if (auth.getCurrentUser(req)) {
       body.sessions = auth.activeSessionCount();

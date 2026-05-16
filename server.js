@@ -49,6 +49,7 @@ httpLib.init({ notifyAdmin, notifyEscape });
 const { sendJson, sendError } = httpLib;
 const { Router } = require('./lib/router');
 const { createHealthModule } = require('./modules/health/handler');
+const { createSentryIngestModule } = require('./modules/sentry-ingest/handler');
 const {
   validate,
   crosscheck,
@@ -144,7 +145,8 @@ const auth = createAuth({ Users, Sessions, logger: require('./lib/logger').child
 // Subsequent migrations register here; the dispatcher in createServer checks
 // the Router first and falls through to the inline if-chain on miss.
 const router = new Router();
-router.register(createHealthModule({ db, auth, Users, sendJson }));
+router.register(createHealthModule({ db, auth, Users, sendJson, sentryReady: _logger.sentryReady }));
+router.register(createSentryIngestModule({ logger: _logger }));
 
 // ── Process-level safety net ────────────────────────────────────────────────
 // Throttled per-tag so a tight crash loop doesn't burn through Telegram's
@@ -500,7 +502,13 @@ function serveStaticFile(req, res) {
     const ct = CONTENT_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
     let body = content;
     if (ct === 'text/html') {
-      body = Buffer.from(rewriteAssetVersions(content.toString('utf8'), 'html'), 'utf8');
+      let txt = rewriteAssetVersions(content.toString('utf8'), 'html');
+      // SENTRY_DSN_PUBLIC is the browser-reachable DSN (subpath via
+      // /glitchtip-ingest/* same-origin proxy). When unset (dev / opt-out)
+      // the meta tag's content stays as the literal token and the reporter
+      // self-disables on `dsn.startsWith('__')`.
+      txt = txt.replace(/__SENTRY_DSN_PUBLIC__/g, process.env.SENTRY_DSN_PUBLIC || '');
+      body = Buffer.from(txt, 'utf8');
     } else if (ct === 'application/javascript') {
       // .js files get two passes: rewriteAssetVersions for static
       // `import …` graphs (transitive content-hash), and
