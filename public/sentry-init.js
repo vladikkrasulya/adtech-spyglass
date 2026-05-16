@@ -30,8 +30,7 @@
     const segments = u.pathname.replace(/^\/|\/$/g, '').split('/');
     projectId = segments.pop();
     const subpath = segments.join('/');
-    endpoint =
-      u.origin + (subpath ? '/' + subpath : '') + '/api/' + projectId + '/envelope/';
+    endpoint = u.origin + (subpath ? '/' + subpath : '') + '/api/' + projectId + '/envelope/';
     if (!key || !projectId) return;
   } catch (_e) {
     return;
@@ -75,7 +74,8 @@
     if (sent >= MAX_PER_PAGE) return;
     sent++;
     try {
-      const eventId = (crypto.randomUUID ? crypto.randomUUID() : '').replace(/-/g, '') ||
+      const eventId =
+        (crypto.randomUUID ? crypto.randomUUID() : '').replace(/-/g, '') ||
         Math.random().toString(16).slice(2).padEnd(32, '0').slice(0, 32);
       const sentAt = new Date().toISOString();
       const header = JSON.stringify({
@@ -110,7 +110,8 @@
       const fp = fingerprint(err);
       if (seen.has(fp)) return;
       seen.add(fp);
-      const e = err instanceof Error ? err : new Error(String(err && err.message ? err.message : err));
+      const e =
+        err instanceof Error ? err : new Error(String(err && err.message ? err.message : err));
       send({
         level: 'error',
         platform: 'javascript',

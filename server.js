@@ -145,7 +145,9 @@ const auth = createAuth({ Users, Sessions, logger: require('./lib/logger').child
 // Subsequent migrations register here; the dispatcher in createServer checks
 // the Router first and falls through to the inline if-chain on miss.
 const router = new Router();
-router.register(createHealthModule({ db, auth, Users, sendJson, sentryReady: _logger.sentryReady }));
+router.register(
+  createHealthModule({ db, auth, Users, sendJson, sentryReady: _logger.sentryReady }),
+);
 router.register(createSentryIngestModule({ logger: _logger }));
 
 // ── Process-level safety net ────────────────────────────────────────────────
