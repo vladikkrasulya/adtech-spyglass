@@ -6,6 +6,24 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.49.1 — config: OLLAMA_MODEL qwen2.5:3b → gemma4:e2b (2026-05-21)
+
+- `docker-compose.yml`: `OLLAMA_MODEL` env switched from `qwen2.5:3b` to
+  `gemma4:e2b`. Gemma 4 (Google, released April 2026, "effective 2B"
+  variant with 5.1B actual params) benched on i7-7700 CPU as 23% faster
+  than qwen on the 3-parallel bid-sim workload (~24s vs ~34s wall time),
+  39% faster on suggest-name, and validated JSON-mode at 3/3 in both
+  sequential and parallel patterns.
+- `intel-llm.js`: fallback default updated to `gemma4:e2b`. JSDoc and
+  inline tok/s notes refreshed (~14 tok/s vs prior ~10-12).
+- `README.md`, `LLM_SETUP.md`, `docs/OPERATIONS.md`, `public/about.{en,ru,uk}.html`:
+  doc references updated to reflect the new default. Historical context
+  retained where relevant (model lineage gemma3:4b → qwen2.5:3b → gemma4:e2b).
+- Companion ops change: ollama container memory limit bumped 10G → 12G
+  in `/srv/DATA/Stacks/ollama/docker-compose.yml`. gemma4:e2b peaks at
+  8.44 GiB RSS under 3-parallel load (vs qwen ~2 GiB), so the prior 10G
+  cap left only 1.5 GiB margin. 12G gives ~3.5 GiB headroom.
+
 ### v0.48.1 — fix: embed/share buttons silent no-op (2026-05-15)
 
 **Root cause:** `spyglass.app.js` is an ES module that imports `toast` from

@@ -25,13 +25,17 @@ audit story per provider.
 Ollama on a single LAN box keeps the whole stack honest: prompts touch
 disk and RAM but never the public internet.
 
-The chosen default model is **qwen2.5:3b** (Alibaba, Apache-2.0 license,
-~2 GB on disk, ~6 GB RAM headroom on i7-7700-class hardware). Switched
-from `gemma3:4b` on 2026-05-11 for stability under 3-parallel load on the
-production box. Small enough to run on a 2017 mini-PC with no GPU, large
-enough to follow the narrow JSON-output contract reliably under
-`format: 'json'`. Both models remain on disk in the local Ollama
-volume; the active one is set via `INTEL_LLM_MODEL` env in
+The chosen default model is **gemma4:e2b** (Google, Apache-2.0 license,
+~7 GB on disk, ~8 GB RAM resident, ~5 GB host headroom on i7-7700-class
+hardware). Switched from `qwen2.5:3b` on 2026-05-21 — Gemma 4 (released
+April 2026, "effective 2B" Nano-class variant with 5.1B actual params)
+benched 23% faster than qwen on the same 3-parallel bid-sim workload
+(~24s vs ~34s), 39% faster on suggest-name, 3/3 JSON-validity in both
+sequential and parallel runs. Ollama container memory limit was bumped
+10G → 12G to accommodate the larger resident size. Small enough to run
+on a 2017 mini-PC with no GPU, large enough to follow the narrow
+JSON-output contract reliably under `format: 'json'`. Active model is
+set via `OLLAMA_MODEL` env in
 `docker-compose.yml`.
 
 ## Prerequisites
@@ -91,24 +95,21 @@ docker network ls | grep ollama_default      # confirm network exists
 
 ## Step 2 — Pull the model
 
-Pull the current default (qwen2.5:3b) and optionally the legacy gemma3:4b
-as a fallback:
+Pull the current default (gemma4:e2b):
 
 ```bash
-docker exec ollama ollama pull qwen2.5:3b
-docker exec ollama ollama pull gemma3:4b      # optional, fallback
-docker exec ollama ollama list                # confirm both appear
+docker exec ollama ollama pull gemma4:e2b
+docker exec ollama ollama list                # confirm it appears
 ```
 
-First pull takes 1-3 minutes for qwen2.5:3b (~2 GB) or 5-15 minutes for
-gemma3:4b (~7 GB) depending on bandwidth.
+First pull takes 5-15 minutes for gemma4:e2b (~7 GB) depending on bandwidth.
 Subsequent container restarts read from the bind-mount and the model is
 available immediately.
 
 ## Step 3 — Verify the model works in isolation
 
 ```bash
-docker exec ollama ollama run qwen2.5:3b "Say hello in one word."
+docker exec ollama ollama run gemma4:e2b "Say hello in one word."
 # Expected: "Hello"
 ```
 
@@ -124,7 +125,7 @@ services:
   spyglass:
     environment:
       - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=qwen2.5:3b
+      - OLLAMA_MODEL=gemma4:e2b
     networks:
       - default
       - ollama_default # ← cross-stack join
@@ -150,7 +151,7 @@ no published port on the Spyglass side, no firewall change needed.
 
 ```bash
 docker exec adtech-spyglass \
-  wget -qO- --post-data='{"model":"qwen2.5:3b","prompt":"hi","stream":false}' \
+  wget -qO- --post-data='{"model":"gemma4:e2b","prompt":"hi","stream":false}' \
   --header='Content-Type: application/json' \
   http://ollama:11434/api/generate
 ```
@@ -164,8 +165,8 @@ Open the inspector, paste a payload, switch to the Discovery tab, and the
 | Var                    | Default               | Effect                                                                                                                            |
 | ---------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `OLLAMA_URL`           | `http://ollama:11434` | Where the bridge POSTs `/api/generate`. Trailing slashes stripped.                                                                |
-| `OLLAMA_MODEL`         | `qwen2.5:3b`          | Model tag. Any locally-pulled model that supports `format: 'json'` works. `gemma3:4b` is a fallback. Try `gemma3:1b` for low-RAM. |
-| `OLLAMA_TIMEOUT_MS`    | `30000`               | Hard timeout per request via `AbortController`. 30s is conservative for qwen2.5:3b on CPU.                                        |
+| `OLLAMA_MODEL`         | `gemma4:e2b`          | Model tag. Any locally-pulled model that supports `format: 'json'` works. For low-RAM hosts that can't afford 8GB resident, fall back to `qwen2.5:3b` (~2GB) or smaller. |
+| `OLLAMA_TIMEOUT_MS`    | `30000`               | Hard timeout per request via `AbortController`. 30s is conservative for gemma4:e2b on CPU (~14 tok/s).                            |
 | `INTEL_MAX_PER_WINDOW` | `30`                  | Per-IP rate limit on `/api/intel/*` (per minute). Set to `0` to disable.                                                          |
 
 ## Operational posture

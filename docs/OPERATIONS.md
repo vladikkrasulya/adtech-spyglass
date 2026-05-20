@@ -50,8 +50,9 @@ Postgres or Redis to manage.
 
 **Ollama** (cross-stack, `ollama_default` network): LLM intel features call
 `http://ollama:11434`. Fail-open — if Ollama is down, AI affordances hide in the UI,
-everything else continues unaffected. The model in use is `qwen2.5:3b`. See
-§8 (Monitoring) and §5.8 (Bump Ollama model) for ops details.
+everything else continues unaffected. The model in use is `gemma4:e2b` (since
+2026-05-21; previously `qwen2.5:3b`). See §8 (Monitoring) and §5.8 (Bump Ollama
+model) for ops details.
 
 For deep architectural context see `ARCHITECTURE.md` (especially §0 Current State).
 
@@ -280,8 +281,8 @@ outstanding tokens of that type).
 
 ### 4.8 Bump Ollama model
 
-The current model is `qwen2.5:3b` (set in `docker-compose.yml` as
-`OLLAMA_MODEL=qwen2.5:3b`). To switch:
+The current model is `gemma4:e2b` (set in `docker-compose.yml` as
+`OLLAMA_MODEL=gemma4:e2b`). To switch:
 
 1. Pull the new model into Ollama first:
    ```bash

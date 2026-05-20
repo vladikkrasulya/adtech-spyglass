@@ -77,7 +77,7 @@ browser** (IndexedDB) — payload values never leave the tab. Highlights:
   pick fields, and turn it into a temporary dialect overlay applied to
   validation findings client-side.
 - **Local LLM bridge** (Phase 7c, **opt-in**): a self-hosted Ollama instance
-  (default model `qwen2.5:3b` since 2026-05-11; previously `gemma3:4b`)
+  (default model `gemma4:e2b` since 2026-05-21; previously `qwen2.5:3b`)
   provides cluster naming + per-field purpose hints. The LLM call is
   fail-open: if Ollama is unreachable, the AI affordances quietly hide
   and the rest of Spyglass continues unaffected. See

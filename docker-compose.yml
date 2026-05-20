@@ -19,16 +19,18 @@ services:
       # Phase 7c — Spyglass Intelligence bridge. The ollama service lives
       # on the `ollama_default` network (managed by /srv/DATA/Stacks/ollama/);
       # we attach below so DNS-by-name resolution (`http://ollama:11434`)
-      # works. OLLAMA_MODEL switched 2026-05-11 from gemma3:4b → qwen2.5:3b.
-      # Benchmarked on the same i7-7700 CPU: gemma 22s worst-case for the
-      # 3-parallel simulate-bids workload (= 7s headroom from the 30s
-      # timeout, flaky under any extra concurrent load — surfaced as
-      # `simulation_failed` for one of the strategies). Qwen 2.5 3B
-      # finishes the same 3-parallel run in 16.8s (13s headroom) and uses
-      # 1.9 GB on disk vs 3.3 GB. Qwen's structured-output reliability
-      # is better-documented for JSON-mode workflows we depend on here.
+      # works.
+      # Model history:
+      #   2026-05-08: gemma3:4b (Phase 7c initial)
+      #   2026-05-11: → qwen2.5:3b (gemma3:4b flaky at 3-parallel, 22s worst case;
+      #                qwen 16.8s, better JSON-mode reliability, 1.9GB on disk)
+      #   2026-05-21: → gemma4:e2b (Gemma 4 released April 2026 — runs the same
+      #                3-parallel bid-sim 23% faster than qwen at 13.9 tok/s vs
+      #                12.0, peaks at 8.44GiB RSS though, so ollama mem limit
+      #                bumped 10G → 12G in parallel commit. JSON-mode 3/3 ok
+      #                under both sequential and parallel patterns.)
       - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=qwen2.5:3b
+      - OLLAMA_MODEL=gemma4:e2b
     ports:
       - '127.0.0.1:8090:3000'
     volumes:
@@ -73,6 +75,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 768m
 
 networks:
   default:
