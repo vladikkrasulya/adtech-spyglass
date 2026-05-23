@@ -122,6 +122,44 @@ export default {
     //    require those scripts to handle re-entry, which is out of
     //    scope here (they boot once per page).
     ctx.emit('kt:inspector-ready', { lang });
+
+    // 6. ?sample=SLUG handoff (Stage 1 — Library section sends users
+    //    here pre-loaded with a curated sample). Fetch via the public
+    //    catalog endpoint, fill request + response editors, strip the
+    //    query so reloads don't re-trigger the fetch.
+    try {
+      const params = new URLSearchParams(location.search);
+      const sample = params.get('sample');
+      if (sample && /^[a-z0-9-]+$/.test(sample)) {
+        const resp = await fetch(`/api/v1/sample?type=${encodeURIComponent(sample)}`, {
+          signal: ctx.signal,
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const reqEl = document.getElementById('bidReq');
+          const resEl = document.getElementById('bidRes');
+          if (reqEl && data.bid_request && Object.keys(data.bid_request).length) {
+            reqEl.value = JSON.stringify(data.bid_request, null, 2);
+            reqEl.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (resEl && data.bid_response && Object.keys(data.bid_response).length) {
+            resEl.value = JSON.stringify(data.bid_response, null, 2);
+            resEl.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          // Strip ?sample so reload doesn't loop. keepalive: future Stage
+          // 2 specimen permalinks (/r/{hash}) use the same pattern.
+          params.delete('sample');
+          const newUrl = location.pathname + (params.toString() ? '?' + params : '') + location.hash;
+          history.replaceState(history.state, '', newUrl);
+        } else {
+          console.warn('[inspector] sample handoff fetch failed:', resp.status);
+        }
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        console.warn('[inspector] sample handoff:', e.message);
+      }
+    }
   },
 
   async unmount(_root) {

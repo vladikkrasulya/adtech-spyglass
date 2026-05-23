@@ -1,0 +1,186 @@
+/* Stage 1 — public/modules/library/library.css */
+
+.lib-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6, 32px) var(--space-5, 24px);
+}
+
+.lib-section__head {
+  margin-bottom: var(--space-5, 24px);
+}
+.lib-section__head h1 {
+  margin: 0 0 6px;
+  font-size: var(--fs-xl, 28px);
+  font-weight: 600;
+  color: var(--text);
+}
+.lib-section__sub {
+  margin: 0 0 var(--space-5, 24px);
+  color: var(--text-muted, #52525b);
+  font-size: var(--fs-base, 15px);
+  max-width: 720px;
+}
+
+.lib-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.lib-tab {
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted, #52525b);
+  cursor: pointer;
+}
+.lib-tab:hover {
+  color: var(--text);
+}
+.lib-tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent, #ffcc00);
+}
+
+.lib-panel[hidden] {
+  display: none;
+}
+
+.lib-group {
+  margin-top: var(--space-5, 24px);
+}
+.lib-group__title {
+  margin: 0 0 var(--space-3, 12px);
+  font-size: var(--fs-sm, 13px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #52525b);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.lib-group__count {
+  font-weight: 400;
+  font-size: 11px;
+  background: var(--bg-2, #f2ede3);
+  color: var(--text-muted, #52525b);
+  padding: 1px 8px;
+  border-radius: var(--r-pill, 999px);
+}
+
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4, 16px);
+}
+
+.lib-card {
+  background: var(--bg-elev, #fff);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 16px);
+  padding: var(--space-4, 16px);
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+.lib-card:hover {
+  border-color: var(--accent, #ffcc00);
+  transform: translateY(-1px);
+}
+.lib-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: var(--space-2, 8px);
+}
+.lib-card__title {
+  margin: 0;
+  font-size: var(--fs-base, 15px);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.lib-card__format {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  color: var(--text);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill, 999px);
+  flex-shrink: 0;
+  font-family: var(--font-mono, ui-monospace);
+}
+.lib-card__note {
+  flex: 1;
+  margin: 0 0 var(--space-3, 12px);
+  font-size: 13px;
+  color: var(--text-muted, #52525b);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lib-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+.lib-card__btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 10px);
+  background: var(--bg-2, #f2ede3);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.lib-card__btn:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  border-color: var(--accent, #ffcc00);
+}
+.lib-card__btn--primary {
+  background: var(--accent, #ffcc00);
+  color: var(--accent-ink, #18181b);
+  border-color: var(--accent, #ffcc00);
+}
+.lib-card__btn--primary:hover {
+  background: var(--accent-hover, #ffd633);
+}
+
+.lib-loading,
+.lib-empty {
+  padding: var(--space-6, 32px);
+  text-align: center;
+  color: var(--text-muted, #52525b);
+  font-size: 14px;
+}
+.lib-empty p {
+  margin: 0 0 var(--space-3, 12px);
+  max-width: 480px;
+  margin-inline: auto;
+}
+.lib-empty .lib-card__btn--primary {
+  display: inline-flex;
+  width: auto;
+  padding: 8px 16px;
+  flex: 0;
+}
+
+.lib-card--saved .lib-card__format {
+  background: var(--bg-2, #f2ede3);
+  color: var(--text-muted, #52525b);
+}

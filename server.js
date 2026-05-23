@@ -278,6 +278,15 @@ function resolveLocaleRoute(reqUrl) {
   const ruMatch = u.match(/^\/ru\/([a-z][a-z0-9-]*)$/);
   if (ruMatch && SPA_SECTIONS.has(ruMatch[1])) return { file: '/index.ru.html' };
 
+  // SPA sub-routes (en/uk/ru) — e.g. /docs/findings → same shell as /docs
+  // Pattern: /uk/<section>/<sub> or /<section>/<sub>
+  const enSub = u.match(/^\/([a-z][a-z0-9-]*)\/([a-z][a-z0-9-]*)$/);
+  if (enSub && SPA_SECTIONS.has(enSub[1])) return { file: '/index.en.html' };
+  const ukSub = u.match(/^\/uk\/([a-z][a-z0-9-]*)\/([a-z][a-z0-9-]*)$/);
+  if (ukSub && SPA_SECTIONS.has(ukSub[1])) return { file: '/index.uk.html' };
+  const ruSub = u.match(/^\/ru\/([a-z][a-z0-9-]*)\/([a-z][a-z0-9-]*)$/);
+  if (ruSub && SPA_SECTIONS.has(ruSub[1])) return { file: '/index.ru.html' };
+
   // Legacy /en/<section> → drop /en prefix (en is canonical no-prefix locale)
   if (enMatch === null) {
     const enLegacy = u.match(/^\/en\/([a-z][a-z0-9-]*)$/);
@@ -751,6 +760,7 @@ function resolveDialect(parsed) {
 const { createMirrorModule } = require('./modules/mirror/handler');
 const { createReplayModule } = require('./modules/replay/handler');
 const sampleModule = require('./modules/sample/handler');
+const findingsModule = require('./modules/findings/handler');
 const { createAnalyzeModule } = require('./modules/analyze/handler');
 const { createIntelModule } = require('./modules/intel/handler');
 const { createCorpusModule } = require('./modules/corpus/handler');
@@ -790,6 +800,7 @@ router.register(
   }),
 );
 router.register(sampleModule);
+router.register(findingsModule);
 router.register(
   createAnalyzeModule({
     analyzeLimiter,

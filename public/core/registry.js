@@ -58,7 +58,7 @@ import { emit, on, off } from './events.js';
 // router instance the registry uses internally. Asset-version injection
 // otherwise gives consumers a *different* `/core/router.js?v=H` URL → two
 // singletons, register() goes to one, match() reads the other (empty).
-export { match, list as listRoutes } from './router.js';
+export { match, list as listRoutes, register as registerRoute } from './router.js';
 
 const modules = new Map(); // id → module
 let active = null; // { id, mod, root, controller, cleanups }

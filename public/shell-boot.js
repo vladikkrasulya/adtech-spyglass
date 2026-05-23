@@ -24,6 +24,9 @@
 
 import * as registry from '/core/registry.js';
 import inspectorModule from '/modules/inspector/index.js';
+import libraryModule from '/modules/library/index.js';
+import docsModule from '/modules/docs/index.js';
+import dialectsModule from '/modules/dialects/index.js';
 import { createStubModule } from '/modules/stub/index.js';
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
@@ -57,30 +60,6 @@ const STUB_SECTIONS = [
     },
   },
   {
-    id: 'library',
-    route: '/library',
-    icon: '📚',
-    stage: 1,
-    title: { en: 'Sample library', uk: 'Бібліотека зразків', ru: 'Библиотека образцов' },
-    copy: {
-      en: 'Public catalog of valid and invalid OpenRTB test cases (banner, video, native, pop, 3.0, in-page push) plus your private zero-knowledge encrypted saves.',
-      uk: 'Публічний каталог валідних та невалідних OpenRTB тест-кейсів (banner / video / native / pop / 3.0 / in-page push) плюс твої приватні ZK-зашифровані збереження.',
-      ru: 'Публичный каталог валидных и невалидных OpenRTB тест-кейсов (banner / video / native / pop / 3.0 / in-page push) плюс твои приватные ZK-зашифрованные сохранения.',
-    },
-  },
-  {
-    id: 'dialects',
-    route: '/dialects',
-    icon: '🎛',
-    stage: 1,
-    title: { en: 'Dialect catalog', uk: 'Каталог діалектів', ru: 'Каталог диалектов' },
-    copy: {
-      en: 'Public reference for known dialects (iab, ext-rtb, in-page push) plus the dialect builder — derive an overlay from observed *.ext.* fields in your samples.',
-      uk: 'Публічний референс відомих діалектів (iab, ext-rtb, in-page push) плюс dialect builder — виводь overlay з *.ext.* полів зі своїх зразків.',
-      ru: 'Публичный референс известных диалектов (iab, ext-rtb, in-page push) плюс dialect builder — выводи overlay из *.ext.* полей в своих образцах.',
-    },
-  },
-  {
     id: 'blog',
     route: '/blog',
     icon: '📰',
@@ -92,18 +71,7 @@ const STUB_SECTIONS = [
       ru: 'Редакционные посты о внутренней кухне OpenRTB плюс curated-новости из firehose. Три категории: новости, разборы, гайды.',
     },
   },
-  {
-    id: 'docs',
-    route: '/docs',
-    icon: '📖',
-    stage: 1,
-    title: { en: 'Docs', uk: 'Документація', ru: 'Документация' },
-    copy: {
-      en: 'Spec coverage tables, finding-ID catalog, API reference, integration guide.',
-      uk: 'Таблиці покриття специфікацій, каталог finding-ID, API-референс, інтеграційний гайд.',
-      ru: 'Таблицы покрытия спецификаций, каталог finding-ID, API-референс, интеграционный гайд.',
-    },
-  },
+
 ];
 
 // ── Initial dependency loading ───────────────────────────────────
@@ -120,10 +88,16 @@ async function loadStylesheet(href) {
 
 // ── Module registration ──────────────────────────────────────────
 function registerSections() {
-  // Inspector (real module, no stub).
+  // Real modules (built across stages).
   registry.register(inspectorModule);
+  registry.register(libraryModule);
+  registry.register(docsModule);
+  registry.register(dialectsModule);
+  // Register /docs/findings as an additional route pointing to the same 'docs' module id.
+  // registry.register() already mapped /docs → 'docs'; we add /docs/findings here.
+  registry.registerRoute('/docs/findings', 'docs');
 
-  // Stub sections.
+  // Stub sections (yet to be built — see ROADMAP).
   for (const cfg of STUB_SECTIONS) {
     registry.register(createStubModule(cfg));
   }

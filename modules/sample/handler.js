@@ -154,7 +154,70 @@ function handleSample(req, res) {
   }
 }
 
+
+// ── GET /api/v1/sample/list — public catalog metadata ──────────────
+// Returns one row per sample in samples/ for the /library section.
+// Reads from disk on each request (cheap, ~21 files). _note from the
+// fixture is used as the human description.
+function handleSampleList(req, res) {
+  try {
+    const dir = SAMPLES_DIR;
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json') && f !== 'README.md');
+    const items = [];
+    for (const f of files) {
+      let note = '';
+      try {
+        const raw = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+        if (raw && typeof raw === 'object' && typeof raw._note === 'string') {
+          note = raw._note;
+        }
+      } catch (_e) {
+        /* invalid JSON — skip note */
+      }
+      const slug = f.replace(/\.json$/, '');
+      // Category: iab-* fixtures are IAB-spec exemplars; clean-* are valid
+      // baselines; everything else is an attack/edge-case specimen.
+      let category;
+      if (slug.startsWith('iab-')) {
+        category = 'iab';
+      } else if (
+        /clean/.test(slug) && !/broken|with-issues|insecure|vpaid-deprecated|invisible|frame-bust|redirect|frozen|heavy|popunder-feed/.test(slug)
+      ) {
+        category = 'valid';
+      } else {
+        category = 'attack';
+      }
+      // Format heuristic from slug — banner/video/native/pop/vast/ortb30.
+      let format = 'banner';
+      if (/video/.test(slug)) format = 'video';
+      else if (/vast/.test(slug)) format = 'vast';
+      else if (/pop|popunder/.test(slug)) format = 'pop';
+      else if (/native/.test(slug)) format = 'native';
+      else if (/ortb30/.test(slug)) format = 'ortb30';
+      // Label = slug minus prefix, hyphens to spaces.
+      const label = slug
+        .replace(/^synthetic-/, '')
+        .replace(/^iab-/, 'IAB ')
+        .replace(/-/g, ' ');
+      items.push({ slug, label, category, format, note });
+    }
+    // Stable ordering: iab → valid → attack, alphabetical within group.
+    const order = { iab: 0, valid: 1, attack: 2 };
+    items.sort((a, b) => {
+      const c = (order[a.category] || 9) - (order[b.category] || 9);
+      return c !== 0 ? c : a.slug.localeCompare(b.slug);
+    });
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    sendJson(res, 200, { ok: true, count: items.length, items });
+  } catch (e) {
+    sendError(res, 500, 'list_failed', e.message);
+  }
+}
+
 module.exports = {
   id: 'sample',
-  routes: [{ method: 'GET', path: '/api/v1/sample', handler: handleSample }],
+  routes: [
+    { method: 'GET', path: '/api/v1/sample', handler: handleSample },
+    { method: 'GET', path: '/api/v1/sample/list', handler: handleSampleList },
+  ],
 };

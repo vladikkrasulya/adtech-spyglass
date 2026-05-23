@@ -1,0 +1,263 @@
+/* public/modules/docs/docs.css — Stage 1 docs section styles.
+   Visual language mirrors library.css (cards, badges, padding rhythm). */
+
+/* ── Shell ── */
+.docs-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6, 32px) var(--space-5, 24px);
+}
+
+.docs-section__head {
+  margin-bottom: var(--space-5, 24px);
+}
+.docs-section__head h1 {
+  margin: 0 0 6px;
+  font-size: var(--fs-xl, 28px);
+  font-weight: 600;
+  color: var(--text);
+}
+.docs-section__sub {
+  margin: 0 0 var(--space-5, 24px);
+  color: var(--text-muted, #52525b);
+  font-size: var(--fs-base, 15px);
+  max-width: 720px;
+}
+
+/* ── Breadcrumb ── */
+.docs-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted, #52525b);
+  margin-bottom: var(--space-4, 16px);
+}
+.docs-breadcrumb a {
+  color: var(--text-muted, #52525b);
+  text-decoration: none;
+}
+.docs-breadcrumb a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.docs-breadcrumb__sep {
+  opacity: 0.5;
+}
+.docs-breadcrumb__current {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── Overview welcome card ── */
+.docs-welcome {
+  background: var(--bg-elev, #fff);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent, #ffcc00);
+  border-radius: var(--r-md, 16px);
+  padding: var(--space-5, 24px);
+  margin-bottom: var(--space-5, 24px);
+}
+.docs-welcome h2 {
+  margin: 0 0 8px;
+  font-size: var(--fs-lg, 20px);
+  font-weight: 600;
+  color: var(--text);
+}
+.docs-welcome p {
+  margin: 0;
+  color: var(--text-muted, #52525b);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── Topic grid ── */
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4, 16px);
+  margin-bottom: var(--space-6, 32px);
+}
+
+.docs-card {
+  background: var(--bg-elev, #fff);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 16px);
+  padding: var(--space-4, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 150ms ease, transform 150ms ease;
+  cursor: pointer;
+}
+.docs-card:hover {
+  border-color: var(--accent, #ffcc00);
+  transform: translateY(-1px);
+}
+.docs-card__icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.docs-card__title {
+  margin: 0;
+  font-size: var(--fs-base, 15px);
+  font-weight: 600;
+  color: var(--text);
+}
+.docs-card__desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, #52525b);
+  line-height: 1.5;
+  flex: 1;
+}
+.docs-card__action {
+  margin-top: auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-hover, #ffd633);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.docs-card--external .docs-card__action {
+  color: var(--text-muted, #52525b);
+}
+
+/* ── Finding catalog ── */
+.docs-catalog {
+  /* intentionally empty; children use lib-card-like patterns */
+}
+
+/* Filter chips */
+.docs-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4, 16px);
+}
+.docs-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill, 999px);
+  background: var(--bg-2, #f2ede3);
+  color: var(--text-muted, #52525b);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 100ms ease, border-color 100ms ease, color 100ms ease;
+}
+.docs-chip:hover {
+  background: var(--accent-soft, rgba(255,204,0,0.14));
+  border-color: var(--accent, #ffcc00);
+  color: var(--text);
+}
+.docs-chip.is-active {
+  background: var(--accent, #ffcc00);
+  border-color: var(--accent, #ffcc00);
+  color: var(--accent-ink, #18181b);
+}
+
+/* Stats bar */
+.docs-stats {
+  font-size: 13px;
+  color: var(--text-muted, #52525b);
+  margin-bottom: var(--space-3, 12px);
+}
+
+/* Table */
+.docs-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 16px);
+}
+.docs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.docs-table thead tr {
+  background: var(--bg-2, #f2ede3);
+}
+.docs-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #52525b);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.docs-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text);
+}
+.docs-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.docs-table tbody tr:hover td {
+  background: var(--bg-2, #f2ede3);
+}
+
+/* ID cell — monospace */
+.docs-table .col-id {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-muted, #52525b);
+}
+/* Message cell — wraps */
+.docs-table .col-msg {
+  max-width: 480px;
+  line-height: 1.5;
+}
+/* Spec ref link */
+.docs-table .col-spec a {
+  color: var(--text-muted, #52525b);
+  font-size: 12px;
+  text-decoration: none;
+}
+.docs-table .col-spec a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* Severity badges */
+.docs-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--r-pill, 999px);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.docs-badge--error {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+.docs-badge--warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+.docs-badge--info {
+  background: var(--accent-soft, rgba(255,204,0,0.14));
+  color: var(--text-muted, #52525b);
+}
+
+/* Loading / empty states */
+.docs-loading,
+.docs-empty {
+  padding: var(--space-6, 32px);
+  text-align: center;
+  color: var(--text-muted, #52525b);
+  font-size: 14px;
+}

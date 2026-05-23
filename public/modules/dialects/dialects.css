@@ -1,0 +1,267 @@
+/* public/modules/dialects/dialects.css — Stage 1 dialects section styles.
+   Visual language mirrors library.css and docs.css. */
+
+/* ── Shell ── */
+.dlc-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6, 32px) var(--space-5, 24px);
+}
+
+.dlc-section__head {
+  margin-bottom: var(--space-5, 24px);
+}
+.dlc-section__head h1 {
+  margin: 0 0 6px;
+  font-size: var(--fs-xl, 28px);
+  font-weight: 600;
+  color: var(--text);
+}
+.dlc-section__sub {
+  margin: 0 0 0;
+  color: var(--text-muted, #52525b);
+  font-size: var(--fs-base, 15px);
+  max-width: 720px;
+  line-height: 1.6;
+}
+
+/* ── Intro card ── */
+.dlc-intro {
+  background: var(--bg-elev, #fff);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent, #ffcc00);
+  border-radius: var(--r-md, 16px);
+  padding: var(--space-5, 24px);
+  margin-bottom: var(--space-5, 24px);
+}
+.dlc-intro h2 {
+  margin: 0 0 8px;
+  font-size: var(--fs-lg, 20px);
+  font-weight: 600;
+  color: var(--text);
+}
+.dlc-intro p {
+  margin: 0;
+  color: var(--text-muted, #52525b);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── Section group heading ── */
+.dlc-group {
+  margin-bottom: var(--space-6, 32px);
+}
+.dlc-group__title {
+  margin: 0 0 var(--space-3, 12px);
+  font-size: var(--fs-sm, 13px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #52525b);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.dlc-group__count {
+  font-weight: 400;
+  font-size: 11px;
+  background: var(--bg-2, #f2ede3);
+  color: var(--text-muted, #52525b);
+  padding: 1px 8px;
+  border-radius: var(--r-pill, 999px);
+}
+
+/* ── Dialect card grid ── */
+.dlc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4, 16px);
+}
+
+.dlc-card {
+  background: var(--bg-elev, #fff);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 16px);
+  padding: var(--space-4, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+.dlc-card:hover {
+  border-color: var(--accent, #ffcc00);
+  transform: translateY(-1px);
+}
+.dlc-card--cta {
+  border-style: dashed;
+}
+.dlc-card--cta:hover {
+  border-style: solid;
+}
+
+.dlc-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dlc-card__title {
+  margin: 0;
+  font-size: var(--fs-base, 15px);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  font-family: var(--font-mono, ui-monospace);
+}
+.dlc-card__slug {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  color: var(--text);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill, 999px);
+  flex-shrink: 0;
+  font-family: var(--font-mono, ui-monospace);
+}
+
+.dlc-card__desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, #52525b);
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* ── Rule count badge ── */
+.dlc-rule-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted, #52525b);
+}
+.dlc-rule-count__num {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* ── Severity bar ── */
+.dlc-sev-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.dlc-sev-bar__label {
+  color: var(--text-muted, #52525b);
+  flex-shrink: 0;
+}
+.dlc-sev-bar__track {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex: 1;
+}
+.dlc-sev-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: var(--r-pill, 999px);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.dlc-sev-chip--error {
+  background: rgba(220, 38, 38, 0.10);
+  color: var(--danger, #dc2626);
+}
+.dlc-sev-chip--warning {
+  background: rgba(234, 179, 8, 0.12);
+  color: #a16207;
+}
+.dlc-sev-chip--info {
+  background: rgba(59, 130, 246, 0.10);
+  color: #2563eb;
+}
+
+/* ── Card actions ── */
+.dlc-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.dlc-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 10px);
+  background: var(--bg-2, #f2ede3);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.dlc-btn:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  border-color: var(--accent, #ffcc00);
+}
+.dlc-btn--primary {
+  background: var(--accent, #ffcc00);
+  color: var(--accent-ink, #18181b);
+  border-color: var(--accent, #ffcc00);
+}
+.dlc-btn--primary:hover {
+  background: var(--accent-hover, #ffd633);
+}
+
+/* ── User builder card ── */
+.dlc-builder-card {
+  background: var(--bg-elev, #fff);
+  border: 2px dashed var(--border);
+  border-radius: var(--r-md, 16px);
+  padding: var(--space-5, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 150ms ease;
+}
+.dlc-builder-card:hover {
+  border-color: var(--accent, #ffcc00);
+  border-style: solid;
+}
+.dlc-builder-card h2 {
+  margin: 0;
+  font-size: var(--fs-lg, 20px);
+  font-weight: 600;
+  color: var(--text);
+}
+.dlc-builder-card p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted, #52525b);
+  line-height: 1.6;
+  max-width: 600px;
+}
+.dlc-builder-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Loading / error ── */
+.dlc-loading,
+.dlc-error {
+  padding: var(--space-6, 32px);
+  text-align: center;
+  color: var(--text-muted, #52525b);
+  font-size: 14px;
+}
+.dlc-error {
+  color: var(--danger, #dc2626);
+}
