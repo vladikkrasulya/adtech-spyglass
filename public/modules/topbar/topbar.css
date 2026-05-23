@@ -1,0 +1,125 @@
+/* Stage 0 — public/modules/topbar/topbar.css. Thin global topbar (~52px). */
+
+:root {
+  --kt-topbar-height: 52px;
+  --kt-topbar-bg: var(--bg, #faf7f2);
+  --kt-topbar-border: var(--border, rgba(24, 24, 27, 0.08));
+}
+
+.kt-topbar {
+  height: var(--kt-topbar-height);
+  background: var(--kt-topbar-bg);
+  border-bottom: 1px solid var(--kt-topbar-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.kt-topbar__nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  border-radius: var(--r-sm, 10px);
+  flex-shrink: 0;
+}
+.kt-topbar__nav-toggle:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+}
+
+.kt-topbar__brand-mini {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.kt-topbar__brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--accent, #ffcc00);
+  color: var(--accent-ink, #18181b);
+  border-radius: var(--r-sm, 10px);
+  font-size: 12px;
+}
+
+.kt-topbar__search {
+  flex: 1;
+  max-width: 480px;
+}
+.kt-topbar__search-input {
+  width: 100%;
+  height: 34px;
+  background: var(--bg-2, #f2ede3);
+  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border-radius: var(--r-sm, 10px);
+  padding: 0 12px;
+  font: inherit;
+  color: var(--text-muted, #52525b);
+  cursor: not-allowed;
+}
+.kt-topbar__search-input:disabled {
+  opacity: 0.6;
+}
+
+.kt-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.kt-topbar__slot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.kt-topbar__profile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--bg-2, #f2ede3);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 16px;
+}
+.kt-topbar__profile:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+}
+
+/* ── Mobile (< 1024px): show hamburger + mini brand ─────────────── */
+@media (max-width: 1023px) {
+  .kt-topbar__nav-toggle,
+  .kt-topbar__brand-mini {
+    display: inline-flex;
+  }
+  .kt-topbar__search {
+    /* Less prominent on mobile — search is disabled anyway in Stage 0 */
+    max-width: none;
+  }
+}
+
+/* ── Reposition legacy floating chrome into the topbar slots ──── */
+/* The theme toggle is injected by design-system.css as a fixed button.
+   For Stage 0 we leave it floating (don't break the visual contract).
+   Stage 1 task: relocate it into the .kt-theme-slot for tidiness. */

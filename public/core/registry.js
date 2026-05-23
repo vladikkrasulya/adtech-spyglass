@@ -54,6 +54,12 @@ import * as router from './router.js';
 import { t, toast, escapeHtml } from './utils.js';
 import { emit, on, off } from './events.js';
 
+// Re-export router primitives so consumers (shell-boot.js) reach the same
+// router instance the registry uses internally. Asset-version injection
+// otherwise gives consumers a *different* `/core/router.js?v=H` URL → two
+// singletons, register() goes to one, match() reads the other (empty).
+export { match, list as listRoutes } from './router.js';
+
 const modules = new Map(); // id → module
 let active = null; // { id, mod, root, controller, cleanups }
 

@@ -236,31 +236,68 @@ function readLocaleCookie(req) {
   return null;
 }
 
+// Stage 0 multi-section site (ROADMAP.md 2026-05-23): all 7 SPA sections
+// (inspector, live, behavior, library, dialects, blog, docs) share the same
+// per-locale shell HTML — the client router activates the right module
+// based on location.pathname. /account stays SSR for now (existing login
+// page); Stage 1 will split it into /library + auth-only /account.
+const SPA_SECTIONS = new Set([
+  'inspector',
+  'live',
+  'behavior',
+  'library',
+  'dialects',
+  'blog',
+  'docs',
+]);
+
 function resolveLocaleRoute(reqUrl) {
   const u = reqUrl.replace(/\/$/, '');
-  // "/" stays the Playground (the canonical entry — what Google indexed,
-  // what the operator's brand pointed at for years). Stream is reachable
-  // via "/stream" as a secondary surface. Briefly tried Stream-as-default
-  // 2026-05-09 — reverted same day per operator preference.
+
+  // Root → 301 → /inspector (canonical). Decided 2026-05-23: single
+  // canonical URL per section; / stays free for a future marketing or
+  // dashboard landing (ROADMAP Decisions log).
   if (u === '' || u === '/index.html') {
-    return u === '' ? { file: '/index.en.html' } : { redirect: '/' };
+    return u === '' ? { redirect: '/inspector' } : { redirect: '/inspector' };
   }
+
+  // Locale roots redirect to the locale's inspector. /uk → /uk/inspector etc.
+  if (u === '/en') return { redirect: '/inspector' };
+  if (u === '/uk') return { redirect: '/uk/inspector' };
+  if (u === '/ru') return { redirect: '/ru/inspector' };
+
+  // SPA sections (en) — all share index.en.html, client router picks module
+  const enMatch = u.match(/^\/([a-z][a-z0-9-]*)$/);
+  if (enMatch && SPA_SECTIONS.has(enMatch[1])) return { file: '/index.en.html' };
+
+  // SPA sections (uk) — all share index.uk.html
+  const ukMatch = u.match(/^\/uk\/([a-z][a-z0-9-]*)$/);
+  if (ukMatch && SPA_SECTIONS.has(ukMatch[1])) return { file: '/index.uk.html' };
+
+  // SPA sections (ru) — all share index.ru.html
+  const ruMatch = u.match(/^\/ru\/([a-z][a-z0-9-]*)$/);
+  if (ruMatch && SPA_SECTIONS.has(ruMatch[1])) return { file: '/index.ru.html' };
+
+  // Legacy /en/<section> → drop /en prefix (en is canonical no-prefix locale)
+  if (enMatch === null) {
+    const enLegacy = u.match(/^\/en\/([a-z][a-z0-9-]*)$/);
+    if (enLegacy && SPA_SECTIONS.has(enLegacy[1])) {
+      return { redirect: '/' + enLegacy[1] };
+    }
+  }
+
+  // Existing SSR pages (preserve behaviour) — stream, about, account
   if (u === '/stream') return { file: '/stream.html' };
   if (u === '/stream.html') return { redirect: '/stream' };
-  // /playground was a brief alias during the failed pivot — keep the
-  // 301 so any stray bookmarks land at /.
-  if (u === '/playground' || u === '/playground.html') return { redirect: '/' };
+  if (u === '/playground' || u === '/playground.html') return { redirect: '/inspector' };
   if (u === '/about') return { file: '/about.en.html' };
   if (u === '/about.html') return { redirect: '/about' };
   if (u === '/account') return { file: '/account.en.html' };
   if (u === '/account.html') return { redirect: '/account' };
-  if (u === '/en') return { redirect: '/' };
   if (u === '/en/about') return { redirect: '/about' };
   if (u === '/en/account') return { redirect: '/account' };
-  if (u === '/uk') return { file: '/index.uk.html' };
   if (u === '/uk/about') return { file: '/about.uk.html' };
   if (u === '/uk/account') return { file: '/account.uk.html' };
-  if (u === '/ru') return { file: '/index.ru.html' };
   if (u === '/ru/about') return { file: '/about.ru.html' };
   if (u === '/ru/account') return { file: '/account.ru.html' };
   return null;
@@ -434,9 +471,22 @@ function fileHash(filepath, visited) {
 // live under /uk/ and /ru/. Out-of-scope URLs (assets, /api/, deep app
 // paths) are NEVER redirected — only these "front door" landing pages.
 const LOCALE_REDIRECT_TABLE = {
+  // Bare landings that observe the kt-lang cookie and 302 to the localised path.
+  // / is included so cookie=uk visitors landing on / get sent to /uk (which then
+  // 301s to /uk/inspector via resolveLocaleRoute).
   '/': { uk: '/uk', ru: '/ru' },
   '/about': { uk: '/uk/about', ru: '/ru/about' },
   '/account': { uk: '/uk/account', ru: '/ru/account' },
+  // Stage 0 SPA sections — cookie-locale visitors get redirected to the
+  // localised variant. The shared shell would render the same DOM regardless
+  // of locale, but lang preference must drive the canonical URL.
+  '/inspector': { uk: '/uk/inspector', ru: '/ru/inspector' },
+  '/live': { uk: '/uk/live', ru: '/ru/live' },
+  '/behavior': { uk: '/uk/behavior', ru: '/ru/behavior' },
+  '/library': { uk: '/uk/library', ru: '/ru/library' },
+  '/dialects': { uk: '/uk/dialects', ru: '/ru/dialects' },
+  '/blog': { uk: '/uk/blog', ru: '/ru/blog' },
+  '/docs': { uk: '/uk/docs', ru: '/ru/docs' },
 };
 
 function serveStaticFile(req, res) {

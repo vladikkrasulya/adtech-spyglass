@@ -365,7 +365,20 @@
   //   /uk/about          + en → /about
   // Unknown deep paths fall back to the locale root (`/`, `/uk`, `/ru`)
   // so we don't link to a 404.
-  const KNOWN_LANDINGS = ['/', '/about', '/account', '/stream'];
+  const KNOWN_LANDINGS = [
+    '/',
+    '/about',
+    '/account',
+    '/stream',
+    // Stage 0 multi-section SPA sections (ROADMAP.md 2026-05-23):
+    '/inspector',
+    '/live',
+    '/behavior',
+    '/library',
+    '/dialects',
+    '/blog',
+    '/docs',
+  ];
   function localizePath(currentPath, targetLang) {
     const cur = (currentPath || '/').replace(/\/$/, '') || '/';
     let canonical = cur;

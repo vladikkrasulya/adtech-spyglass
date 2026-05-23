@@ -68,11 +68,11 @@ async function fetchTemplate(lang) {
 
 export default {
   id: 'inspector',
-  // Single route entry won't catch /uk/, /ru/, /en/ because they're
-  // separate files served via locale-aware routing in server.js.
-  // Each shell explicitly calls activate('inspector', ...) in its
-  // boot script, so the route field is informational only here.
-  route: '/',
+  // Stage 0 multi-section site: client router maps /inspector to this
+  // module via core/router.js. Locale-prefixed variants (/uk/inspector,
+  // /ru/inspector) are handled by the boot script — it strips /uk or /ru
+  // before calling router.match().
+  route: '/inspector',
   manifest: {
     title: { en: 'Inspector', uk: 'Інспектор', ru: 'Инспектор' },
     description: {
@@ -83,6 +83,13 @@ export default {
   },
 
   async mount(root, ctx) {
+    // 0. Stage 0 multi-section shell: the shell HTML provides a bare
+    //    <main id="app-root"> root. Inspector layout (the .workbench
+    //    grid in inspector.css) requires the workbench class on root.
+    //    Add it on mount; clean it up on unmount.
+    root.classList.add('workbench');
+    ctx.addCleanup(() => root.classList.remove('workbench'));
+
     // 1. Component CSS — append + await + register cleanup so the
     //    next mount starts from a clean head.
     const cssLink = await loadStylesheet(`/modules/inspector/inspector.css?v=${ASSET_VERSION}`);

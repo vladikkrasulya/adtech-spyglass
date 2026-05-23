@@ -1,0 +1,59 @@
+/* Stage 0 — public/modules/stub/stub.css */
+.stub-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-7, 48px) var(--space-5, 24px);
+  min-height: 100%;
+}
+.stub-card {
+  max-width: 640px;
+  width: 100%;
+  background: var(--bg-elev, #fff);
+  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border-radius: var(--r-lg, 22px);
+  padding: var(--space-6, 32px);
+  box-shadow: var(--shadow-sm);
+}
+.stub-card__head {
+  display: flex;
+  gap: var(--space-4, 16px);
+  align-items: center;
+  margin-bottom: var(--space-5, 24px);
+}
+.stub-card__icon {
+  font-size: 40px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.stub-card__title {
+  margin: 0 0 4px;
+  font-size: var(--fs-xl, 28px);
+  font-weight: 600;
+  color: var(--text);
+}
+.stub-card__meta {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  font-size: var(--fs-sm, 13px);
+}
+.stub-card__badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  color: var(--accent-ink, #18181b);
+  padding: 2px 10px;
+  border-radius: var(--r-pill, 999px);
+  font-weight: 500;
+}
+.stub-card__status {
+  color: var(--text-muted, #52525b);
+}
+.stub-card__copy {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-base, 15px);
+  line-height: 1.6;
+}

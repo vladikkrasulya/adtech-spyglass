@@ -51,6 +51,12 @@ services:
       # gained string-bidReq support that was previously baked into the
       # image). :ro because the container never writes here.
       - ./modules:/app/modules:ro
+      # server.js — bind-mounted so route table edits take effect on
+      # `compose restart` (no rebuild). Required by Stage 0 multi-section
+      # shell (ROADMAP.md 2026-05-23) — frequent resolveLocaleRoute()
+      # edits otherwise needed a 60s rebuild each. :ro because nothing
+      # in the container should write to it.
+      - ./server.js:/app/server.js:ro
       # intel-llm.js — Phase 7c LLM bridge. Bind-mounted same as packages
       # so prompt edits take effect on `compose restart` without rebuild.
       - ./intel-llm.js:/app/intel-llm.js:ro

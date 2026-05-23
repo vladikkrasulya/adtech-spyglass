@@ -176,12 +176,15 @@
     <link rel="stylesheet" href="/spyglass-shell.css" />
   </head>
   <body>
-    <!-- Inspector module owns its own template + CSS — see
-         /modules/inspector/{index.js,template.${lang}.html,inspector.css}.
-         Shell provides only base tokens (above) + the mount root.
-         The .workbench grid sits ON #app-root (not body) so the grid
-         items inside the injected template are direct grid children. -->
-    <div id="app-root" class="workbench">
+    <!-- Stage 0 multi-section shell (ROADMAP.md). kt-shell hosts the
+         sidebar (kt-nav-root) + topbar (kt-topbar-root) + main content
+         (app-root). The active section module is mounted into #app-root
+         by /shell-boot.js based on location.pathname. -->
+    <div class="kt-shell">
+      <aside id="kt-nav-root" class="kt-nav" aria-label="Sections"></aside>
+      <div class="kt-shell__column">
+        <header id="kt-topbar-root" class="kt-topbar" role="banner"></header>
+        <main id="app-root">
       <!-- Pre-render hero (v0.41.0): above-fold SEO copy for crawlers,
            social-preview bots, and no-JS visitors. The inspector module's
            mount() writes innerHTML here once it loads, replacing this. -->
@@ -199,23 +202,14 @@
           <li>Поведенческие сигналы + превью креатива</li>
         </ul>
       </section>
+        </main>
+      </div>
     </div>
     <script src="/version.js?v=1"></script>
     <script src="/spyglass-crypto.js?v=1"></script>
     <script src="/i18n.js?v=30"></script>
     <script src="/lang-switch.js?v=2"></script>
-    <script type="module">
-      // Inspector module boot (Phase C-2/C-3 — the module fetches its
-      // template + CSS itself; shell stays locale-agnostic markup-wise).
-      import inspectorModule from '/modules/inspector/index.js?v=19';
-      import { register, activate } from '/core/registry.js';
-      register(inspectorModule);
-      try {
-        await activate('inspector', document.getElementById('app-root'));
-      } catch (err) {
-        console.error('[shell] inspector mount failed', err);
-      }
-    </script>
+    <script type="module" src="/shell-boot.js"></script>
     <!-- Classic <script> utilities. They wait for `kt:inspector-ready`
          (emitted by inspector mount() once template DOM is injected)
          before binding to inspector-owned elements. -->
