@@ -4,6 +4,12 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: var(--space-6, 32px) var(--space-5, 24px);
+  /* Scroll when content overflows shorter viewports. Constrained by the
+     parent #app-root (flex:1, overflow:auto) — adding overflow:auto here
+     means the section scrolls before the page does. */
+  height: 100%;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 /* Header */
@@ -248,4 +254,39 @@
 @keyframes ins-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+
+/* ── Premium thin scrollbar for the /insights container ─────────── */
+.ins-section::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.ins-section::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ins-section::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+[data-theme='light'] .ins-section::-webkit-scrollbar-thumb {
+  background: rgba(24, 24, 27, 0.18);
+}
+.ins-section::-webkit-scrollbar-thumb:hover {
+  background: var(--accent, #FFCC00);
+}
+.ins-section {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+/* ── Smooth slide animation on the area chart refresh ───────────────
+   Modern browsers (Chrome 78+, Firefox 89+) interpolate the `d`
+   attribute on <path> elements when CSS transition is applied. On
+   each refresh the chart re-renders the path with one extra point on
+   the right; the browser smoothly tweens from the old curve to the
+   new one over 600ms, creating the «повз вліво» effect. */
+.ins-chart-area,
+.ins-chart-line {
+  transition: d 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
