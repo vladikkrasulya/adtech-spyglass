@@ -99,9 +99,7 @@ function renderNav() {
       <span class="kt-nav__brand-icon" aria-hidden="true">◆</span>
       <span class="kt-nav__brand-text">ortbtools</span>
     </a>
-    <button type="button" class="kt-nav__collapse-tab" data-action="collapse-nav" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}">
-      <span aria-hidden="true">‹</span>
-    </button>
+    <button type="button" class="kt-nav__collapse-tab" data-action="collapse-nav" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}"></button>
     <nav class="kt-nav__nav" aria-label="Sections">
       ${groups}
     </nav>
@@ -146,23 +144,20 @@ export function mountNav(root) {
   // anchored to the sidebar itself per user feedback.
   const COLLAPSE_KEY = 'kt-nav-collapsed';
   const shellRoot = document.querySelector('.kt-shell');
-  // Render the reopen tab as a sibling of .kt-nav so it survives when nav
-  // is display:none. Mounted lazily and never removed (cheap, idempotent).
-  let reopenTab = document.querySelector('.kt-shell__reopen-tab');
-  if (!reopenTab && shellRoot) {
-    reopenTab = document.createElement('button');
-    reopenTab.type = 'button';
-    reopenTab.className = 'kt-shell__reopen-tab';
-    reopenTab.setAttribute('aria-label', 'Expand sidebar');
-    reopenTab.innerHTML = '<span aria-hidden="true">›</span>';
-    shellRoot.appendChild(reopenTab);
-  }
-  // Restore persisted state.
+  // Restore persisted state. Single .kt-nav__collapse-tab button serves
+  // both roles — it rides the sidebar's right edge when expanded, slides
+  // to viewport left edge (half visible) when collapsed. CSS handles the
+  // animation + arrow swap.
   try {
     if (shellRoot && localStorage.getItem(COLLAPSE_KEY) === '1') {
       shellRoot.classList.add('is-nav-collapsed');
     }
   } catch (_) { /* storage disabled */ }
+
+  // Clean up any pre-existing reopen-tab from earlier shell versions.
+  const stale = document.querySelector('.kt-shell__reopen-tab');
+  if (stale) stale.remove();
+
   const collapseBtn = root.querySelector('[data-action="collapse-nav"]');
   const onCollapse = (e) => {
     e.preventDefault();
@@ -171,7 +166,6 @@ export function mountNav(root) {
     try { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (_) {}
   };
   if (collapseBtn) collapseBtn.addEventListener('click', onCollapse);
-  if (reopenTab) reopenTab.addEventListener('click', onCollapse);
 
   // Sync active state on every URL change (initial pushState + popstate).
   const onLocationChange = () => {
@@ -189,7 +183,6 @@ export function mountNav(root) {
 
   return function unmountNav() {
     if (collapseBtn) collapseBtn.removeEventListener('click', onCollapse);
-    if (reopenTab) reopenTab.removeEventListener('click', onCollapse);
     window.removeEventListener('popstate', onLocationChange);
     window.removeEventListener('kt:pushstate', onLocationChange);
     window.removeEventListener('kt:lang-change', onLang);

@@ -117,66 +117,42 @@
   gap: 4px;
 }
 
-/* ── Collapse tab on the sidebar's right edge ──────────────────────
-   Desktop-only (≥1024px). Pinned to the sidebar's right edge, slightly
-   overlapping the content column so it's discoverable but unobtrusive.
-   Click toggles .is-nav-collapsed on .kt-shell — handled by the boot
-   script (or the topbar's existing handler, now relocated). */
+/* ── Unified collapse/expand tab (desktop ≥1024px) ─────────────────
+   One persistent yellow pill. Color/shape/height stay constant; only
+   the `left` coordinate and the arrow direction change between states.
+
+   Expanded:  pill anchored to sidebar's right edge (left: 208 = 220-12),
+              slightly overlapping the content column.
+   Collapsed: sidebar width transitions to 0; pill slides to left: -12,
+              leaving the right half (12px) visible flush against the
+              viewport's left edge.
+   Mobile:    falls back to the existing drawer pattern (≤1023px). */
 .kt-nav__collapse-tab {
   display: none;
 }
 @media (min-width: 1024px) {
   .kt-nav {
-    position: sticky; /* default, but explicit so the tab anchors to it */
+    width: var(--kt-nav-width);
+    transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
+    overflow-y: auto;
   }
-  .kt-nav__collapse-tab {
-    position: absolute;
-    top: 18px;
-    right: -10px;
-    width: 20px;
-    height: 20px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--kt-nav-border);
-    border-radius: var(--r-pill, 999px);
-    background: var(--bg-elev, #fff);
-    color: var(--text-muted, #52525b);
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1;
-    padding: 0;
-    z-index: 35;
-    box-shadow: var(--shadow-sm);
-    transition: background-color 150ms ease, color 150ms ease;
+  .kt-shell.is-nav-collapsed .kt-nav {
+    width: 0;
   }
-  .kt-nav__collapse-tab:hover {
-    color: var(--text);
-  }
-  .kt-nav__collapse-tab:hover {
-    background: var(--accent-soft, rgba(255, 204, 0, 0.14));
-  }
-}
 
-/* When the sidebar is collapsed, render a tiny reopen tab on the left
-   edge of the viewport so the user can bring it back. */
-.kt-shell__reopen-tab {
-  display: none;
-}
-@media (min-width: 1024px) {
-  .kt-shell.is-nav-collapsed .kt-shell__reopen-tab {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  .kt-nav__collapse-tab {
     position: fixed;
-    left: 0;
     top: 50%;
     transform: translateY(-50%);
+    left: calc(var(--kt-nav-width) - 12px);
     width: 24px;
     height: 56px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid var(--accent, #ffcc00);
-    border-left: none;
-    border-radius: 0 var(--r-md, 16px) var(--r-md, 16px) 0;
+    border-radius: var(--r-md, 16px);
     background: var(--accent, #ffcc00);
     color: var(--accent-ink, #18181b);
     cursor: pointer;
@@ -184,13 +160,24 @@
     font-weight: 600;
     line-height: 1;
     padding: 0;
-    z-index: 35;
+    z-index: 40;
     box-shadow: var(--shadow-md);
-    transition: width 180ms ease, background-color 150ms ease;
+    transition: left 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms ease;
   }
-  .kt-shell.is-nav-collapsed .kt-shell__reopen-tab:hover {
-    width: 32px;
+  .kt-nav__collapse-tab:hover {
     background: var(--accent-hover, #ffd633);
+  }
+  .kt-shell.is-nav-collapsed .kt-nav__collapse-tab {
+    left: -12px;
+  }
+
+  /* Icon: ‹ when expanded, › when collapsed. Pseudo-element so the
+     button itself stays a single DOM node and the swap is purely CSS. */
+  .kt-nav__collapse-tab::after {
+    content: '\2039'; /* ‹ */
+  }
+  .kt-shell.is-nav-collapsed .kt-nav__collapse-tab::after {
+    content: '\203A'; /* › */
   }
 }
 

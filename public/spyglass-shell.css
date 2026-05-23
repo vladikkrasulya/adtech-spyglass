@@ -153,11 +153,8 @@
    .kt-shell.is-nav-collapsed hides the sidebar entirely on desktop,
    giving the section the full window width. Toggle button lives in
    the topbar. State persists via localStorage so the choice sticks. */
-@media (min-width: 1024px) {
-  .kt-shell.is-nav-collapsed .kt-nav {
-    display: none;
-  }
-}
+/* Sidebar width transition (220 ↔ 0) is handled in
+   public/modules/nav/nav.css so the collapse pill can ride the edge. */
 /* .kt-topbar__nav-collapse moved to the sidebar edge (.kt-nav__collapse-tab)
    — see public/modules/nav/nav.css. The button is now a tab on the right
    edge of .kt-nav at desktop widths, plus a reopen tab fixed to the left
