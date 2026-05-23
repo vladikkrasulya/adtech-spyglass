@@ -36,6 +36,9 @@ const log = require('../../lib/logger').child('analyze');
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
+// Stage 5 — Insights: fire-and-forget logging of validation results.
+let _logValidation = null;
+try { ({ logValidation: _logValidation } = require('../../lib/validation-log')); } catch (_) {}
 
 /**
  * @param {{
@@ -276,6 +279,35 @@ function createAnalyzeModule(deps) {
           crosscheck: cross,
           meta: { locale, dialect, categories, format },
         });
+
+        // Stage 5 — log to analytics.validation_logs after response is sent.
+        // process.nextTick ensures response flushes before this runs.
+        if (_logValidation) {
+          process.nextTick(() => {
+            try {
+              const findings = (validation && validation.findings) || [];
+              const errCnt = findings.filter((f) => f.level === 'error').length;
+              const warnCnt = findings.filter((f) => f.level === 'warning').length;
+              const infoCnt = findings.filter((f) => f.level === 'info').length;
+              const fmtArr =
+                format && format.formats && format.formats.length ? format.formats : [];
+              const fmtStr = fmtArr.length === 1 ? fmtArr[0] : fmtArr.length > 1 ? 'multi' : 'unknown';
+              const verStr =
+                validation && validation.version && validation.version.version
+                  ? String(validation.version.version)
+                  : 'unknown';
+              _logValidation({
+                format: fmtStr,
+                version: verStr,
+                has_errors: errCnt > 0 ? 1 : 0,
+                error_count: errCnt,
+                warning_count: warnCnt,
+                info_count: infoCnt,
+                source: 'analyze',
+              });
+            } catch (_) { /* silent */ }
+          });
+        }
       })
       .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
   }

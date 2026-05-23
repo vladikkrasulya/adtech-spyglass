@@ -249,6 +249,7 @@ const SPA_SECTIONS = new Set([
   'dialects',
   'blog',
   'docs',
+  'insights', // Stage 5
 ]);
 
 function resolveLocaleRoute(reqUrl) {
@@ -797,6 +798,10 @@ const { createAdminModule } = require('./modules/admin/handler');
 const { createAdminBlogModule } = require('./modules/admin/blog');
 const { createBlogModule } = require('./modules/blog/handler');
 const { createProxyModule } = require('./modules/proxy/handler');
+// Stage 5 — Insights Dashboard analytics endpoint
+const analyticsModule = require('./modules/analytics/handler');
+// Stage 5 — validation-log helper (stream + analyze hooks)
+const { logValidation, fmtFromSpecimen } = require('./lib/validation-log');
 // v8 — User Dialects feature
 const { createDialectsModule } = require('./modules/dialects/handler');
 const {
@@ -831,6 +836,7 @@ router.register(
 );
 router.register(sampleModule);
 router.register(findingsModule);
+router.register(analyticsModule);
 router.register(
   createAnalyzeModule({
     analyzeLimiter,
@@ -1068,6 +1074,22 @@ function streamBufferPush(envelope) {
   enrichAndStore(envelope);
   streamBuffer.push(envelope);
   if (streamBuffer.length > STREAM_BUFFER_MAX) streamBuffer.shift();
+  // Stage 5: log to analytics.validation_logs — fire-and-forget, never blocks stream.
+  // Stream specimens are unanalyzed so error/warning counts are set to 0 (source='stream').
+  Promise.resolve().then(() => {
+    try {
+      const sp = envelope && envelope.specimen;
+      logValidation({
+        format: fmtFromSpecimen(sp),
+        version: (sp && sp.at) ? '3.0' : (sp && sp.ver) ? String(sp.ver) : 'unknown',
+        has_errors: 0,
+        error_count: 0,
+        warning_count: 0,
+        info_count: 0,
+        source: 'stream',
+      });
+    } catch (_) { /* silent — never break stream */ }
+  });
 }
 
 const streamGenerator = new SyntheticGenerator({

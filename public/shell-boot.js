@@ -31,6 +31,7 @@ import streamModule from '/modules/stream/index.js';
 import blogModule from '/modules/blog/index.js';
 import adminBlogModule from '/modules/admin-blog/index.js';
 import behaviorModule from '/modules/behavior/index.js';
+import insightsModule from '/modules/insights/index.js';
 import { createStubModule } from '/modules/stub/index.js';
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
@@ -68,7 +69,7 @@ function registerSections() {
   registry.register(blogModule);
   registry.register(adminBlogModule);
   registry.register(behaviorModule);
-
+  registry.register(insightsModule);
 
   // Stub sections (yet to be built — see ROADMAP).
   for (const cfg of STUB_SECTIONS) {

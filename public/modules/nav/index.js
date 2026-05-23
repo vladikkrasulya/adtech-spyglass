@@ -26,6 +26,7 @@ export const SECTIONS = [
   { group: 'work', id: 'behavior',  route: '/behavior',  icon: '🧪', label: { en: 'Behavior',  uk: 'Behavior', ru: 'Behavior' } },
   { group: 'data', id: 'library',   route: '/library',   icon: '📚', label: { en: 'Library',   uk: 'Зразки',   ru: 'Образцы' } },
   { group: 'data', id: 'dialects',  route: '/dialects',  icon: '🎛', label: { en: 'Dialects',  uk: 'Діалекти', ru: 'Диалекты' } },
+  { group: 'data', id: 'insights',  route: '/insights',  icon: '📊', label: { en: 'Insights',  uk: 'Інсайти',  ru: 'Аналитика' } },
   { group: 'know', id: 'blog',      route: '/blog',      icon: '📰', label: { en: 'Blog',      uk: 'Блог',     ru: 'Блог' } },
   { group: 'know', id: 'docs',      route: '/docs',      icon: '📖', label: { en: 'Docs',      uk: 'Доки',     ru: 'Доки' } },
 ];
