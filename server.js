@@ -1124,6 +1124,16 @@ log.info(
   'stream generator running',
 );
 
+// ── News Crawler — AdTech RSS feed ingester (Stage blog) ────────────────────
+// Fetches AdExchanger + ExchangeWire RSS feeds hourly and inserts new items
+// as pending blog_drafts for moderation at /admin/blog.
+// Disabled via NEWS_CRAWLER_DISABLED=1 in .env for dev/test runs.
+const { startScheduled: startNewsCrawler } = require('./lib/news-crawler');
+if (process.env.NEWS_CRAWLER_DISABLED !== '1') {
+  startNewsCrawler();
+  log.info({ component: 'news-crawler' }, 'news crawler scheduled (run on +5s, then hourly)');
+}
+
 // ── /api/v1/sample — one synthetic example for the Playground "🎲 приклад" ─
 // First-time-visitor onboarding: empty Playground is intimidating, "what do
 // I paste here?" is the bounce signal. This endpoint returns a complete

@@ -64,6 +64,8 @@ services:
       - ./lib/event-log.js:/app/lib/event-log.js:ro
       # Stage 5 — validation-log CH writer (stream + analyze hooks).
       - ./lib/validation-log.js:/app/lib/validation-log.js:ro
+      # Stage blog — news crawler RSS ingester (blog_drafts).
+      - ./lib/news-crawler.js:/app/lib/news-crawler.js:ro
       # Synthetic specimen corpus. `/api/v1/sample` reads this directory
       # at request time; bind-mounting means new sample files appear
       # without `compose up --build`. Was baked-in until 2026-05-09 — see
