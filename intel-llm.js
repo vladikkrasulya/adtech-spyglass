@@ -36,6 +36,16 @@ const eventLog = require('./lib/event-log');
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemma4:e2b';
+
+// ── Training-corpus logging ──────────────────────────────────────
+// Fire-and-forget INSERT into analytics.intel_llm_calls (ClickHouse).
+// Captures every prompt/response pair so we can later build a fine-tune
+// dataset. Failures are silent — observability, not a hard dependency.
+// Disable by unsetting CLICKHOUSE_URL.
+const CH_URL = process.env.CLICKHOUSE_URL || 'http://clickhouse:8123';
+const CH_USER = process.env.CLICKHOUSE_USER || '';
+const CH_PASSWORD = process.env.CLICKHOUSE_PASSWORD || '';
+const CH_ENABLED = !!(CH_URL && CH_USER);
 // Generation timeout: gemma4:e2b on i7-7700 CPU emits ~14 tok/s (measured
 // 2026-05-21 vs qwen2.5:3b's ~12 tok/s prior). A 100-token JSON response
 // takes ~7s wall-clock. Cap at 30s for headroom on prompt-eval + warm-up.
@@ -68,6 +78,7 @@ class OllamaUnavailable extends Error {
  */
 async function callOllama(prompt, opts) {
   const o = opts || {};
+  const _intelStart = Date.now();
   const url = OLLAMA_URL.replace(/\/+$/, '') + '/api/generate';
   const body = JSON.stringify({
     model: o.model || OLLAMA_MODEL,
@@ -128,7 +139,43 @@ async function callOllama(prompt, opts) {
   } catch (e) {
     throw new OllamaUnavailable('ollama returned non-JSON envelope', e);
   }
+  json._intelLatencyMs = Date.now() - _intelStart;
   return json;
+}
+
+function logIntelCall(args) {
+  if (!CH_ENABLED) return;
+  const row = {
+    task: String(args.task || 'unknown'),
+    model: String(args.model || OLLAMA_MODEL),
+    prompt: String(args.prompt || ''),
+    response: String(args.response || ''),
+    parsed_ok: args.parsedOk ? 1 : 0,
+    latency_ms: Math.max(0, Math.floor(args.latencyMs || 0)),
+    eval_tokens: Math.max(0, Math.floor(args.evalTokens || 0)),
+    prompt_tokens: Math.max(0, Math.floor(args.promptTokens || 0)),
+    user_id: Math.max(0, Math.floor(args.userId || 0)),
+    sample_id: String(args.sampleId || ''),
+    meta: args.meta ? JSON.stringify(args.meta).slice(0, 4000) : '',
+  };
+  const url =
+    CH_URL.replace(/\/+$/, '') +
+    '/?query=' +
+    encodeURIComponent('INSERT INTO analytics.intel_llm_calls FORMAT JSONEachRow');
+  const headers = { 'Content-Type': 'application/json' };
+  if (CH_USER) headers['X-ClickHouse-User'] = CH_USER;
+  if (CH_PASSWORD) headers['X-ClickHouse-Key'] = CH_PASSWORD;
+  // Hard 2s timeout — training-log writes must never delay user-facing intel responses.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2000);
+  fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(row),
+    signal: controller.signal,
+  })
+    .catch(() => {})
+    .finally(() => clearTimeout(timer));
 }
 
 /**
@@ -422,10 +469,22 @@ function validatePartnerSuggestion(obj) {
 // ── Public API ───────────────────────────────────────────────────
 
 async function suggestName(bucket, fields, opts) {
+  const o = opts || {};
   const prompt = buildSuggestNamePrompt(bucket, fields, opts);
   const resp = await callOllama(prompt, { numPredict: 120, temperature: 0.2 });
   const parsed = extractStructured(resp);
-  return validateNameSuggestion(parsed);
+  const validated = validateNameSuggestion(parsed);
+  logIntelCall({
+    task: 'suggest_name',
+    prompt,
+    response: (resp && resp.response) || '',
+    parsedOk: validated != null,
+    latencyMs: resp && resp._intelLatencyMs,
+    evalTokens: resp && resp.eval_count,
+    promptTokens: resp && resp.prompt_eval_count,
+    meta: { bucket, field_count: (o && o.fewShot && o.fewShot.length) || 0 },
+  });
+  return validated;
 }
 
 async function fieldPurpose(path, charClass, bucket) {
@@ -442,7 +501,18 @@ async function fieldPurpose(path, charClass, bucket) {
   try {
     const prompt = buildFieldPurposePrompt(path, charClass, bucket);
     const resp = await callOllama(prompt, { numPredict: 60, temperature: 0.1 });
-    return validatePurposeSuggestion(extractStructured(resp));
+    const validated = validatePurposeSuggestion(extractStructured(resp));
+    logIntelCall({
+      task: 'field_purpose',
+      prompt,
+      response: (resp && resp.response) || '',
+      parsedOk: validated != null,
+      latencyMs: resp && resp._intelLatencyMs,
+      evalTokens: resp && resp.eval_count,
+      promptTokens: resp && resp.prompt_eval_count,
+      meta: { path, char_class: charClass, bucket },
+    });
+    return validated;
   } finally {
     _fieldPurposeInFlight--;
   }
@@ -469,6 +539,16 @@ async function suggestPartner(parsedReq, parsedRes) {
   const resp = await callOllama(prompt, { numPredict: 60, temperature: 0.1 });
   const parsed = extractStructured(resp);
   const validated = validatePartnerSuggestion(parsed);
+  logIntelCall({
+    task: 'partner',
+    prompt,
+    response: (resp && resp.response) || '',
+    parsedOk: validated != null,
+    latencyMs: resp && resp._intelLatencyMs,
+    evalTokens: resp && resp.eval_count,
+    promptTokens: resp && resp.prompt_eval_count,
+    meta: { hint_domains: domains.slice(0, 10) },
+  });
   if (!validated) return null;
   return { ...validated, hint_domains: domains.slice(0, 10) };
 }
@@ -524,6 +604,16 @@ async function simulateBids(bidReq) {
       const resp = await callOllama(prompt, { numPredict: 100, temperature: 0.4 });
       const parsed = extractStructured(resp);
       const v = validateBidSim(parsed, s);
+      logIntelCall({
+        task: 'bid_sim',
+        prompt,
+        response: (resp && resp.response) || '',
+        parsedOk: parsed != null && v.reason !== 'unparseable' && v.reason !== 'price_invalid',
+        latencyMs: resp && resp._intelLatencyMs,
+        evalTokens: resp && resp.eval_count,
+        promptTokens: resp && resp.prompt_eval_count,
+        meta: { strategy: s.key, summary },
+      });
       results.push({ strategy: s.key, label: s.label, ...v });
     } catch (_e) {
       // One strategy fails → others still ship.

@@ -60,17 +60,17 @@
 
 **Does:** `format-detect.js` implements heuristic detection: inspects `imp[].banner/video/audio/native`, `site/app` context, `device.devicetype`, `video.protocols`, response adm shape, and JSON feed keys. Returns `{ formats, contexts, protocols, tags, confidence }`. The UI paints chips in `paintFormatSummary()` in `spyglass.app.js`. (`packages/core/format-detect.js`, `public/spyglass.app.js` line ~1233‑1247)
 
-**Gap:** JSON‑feed detection is intentionally narrow; some vendor shapes (e.g., ExoClick’s `clickUrl`) are detected, but not all possible JSON‑feed variants will be tagged. The format‑detection heuristic sometimes yields low confidence or no tag for edge cases.
+**Gap:** JSON‑feed detection is intentionally narrow; some vendor shapes (e.g., value-feed vendor’s `clickUrl`) are detected, but not all possible JSON‑feed variants will be tagged. The format‑detection heuristic sometimes yields low confidence or no tag for edge cases.
 
 **Recommendation:** Expand the JSON‑feed signature library as new vendor APIs are documented; consider exposing a “format unknown” chip rather than hiding the entire bar.
 
-### 🟡 MEDIUM — Vendor dialect overlays (Kadam, Kadam In‑Page Push)
+### 🟡 MEDIUM — Vendor dialect overlays (ext-rtb vendor, ext-rtb vendor In‑Page Push)
 
 **Should:** Opt‑in vendor‑specific rules layered over IAB baseline via `?dialect=<vendor>`. Dialect modules add extra validation findings and may suppress IAB rules (e.g., payload_missing when bid.ext carries creative). (README, ARCHMAP)
 
-**Does:** Dialects are registered in `DIALECTS` map in `index.js`. `dialects/kadam.js` adds checks for Kadam macros and feed‑specific fields; `dialects/kadam-inpage-push.js` defines `claimsBid()` to suppress payload_missing when the bid’s ext contains title/image/url. The server resolves `?dialect=` and passes it to `validate`. Temporary client‑side dialects from the Discovery layer are applied via `SpyglassIntel.applyToFindings()`. (`packages/core/index.js` line ~42‑47, `packages/core/dialects/kadam-inpage-push.js`, `public/spyglass.app.js` line ~2874‑2888)
+**Does:** Dialects are registered in `DIALECTS` map in `index.js`. `dialects/ext-rtb.js` adds checks for ext-rtb vendor macros and feed‑specific fields; `dialects/inpage-push.js` defines `claimsBid()` to suppress payload_missing when the bid’s ext contains title/image/url. The server resolves `?dialect=` and passes it to `validate`. Temporary client‑side dialects from the Discovery layer are applied via `SpyglassIntel.applyToFindings()`. (`packages/core/index.js` line ~42‑47, `packages/core/dialects/inpage-push.js`, `public/spyglass.app.js` line ~2874‑2888)
 
-**Gap:** The dialect selection via `?dialect=kadam` is stored in localStorage but not mirrored back to the URL for sharing (see later note). The `claimsBid` mechanism is dialect‑specific; not all dialects use it, and adding new dialects requires both a server‑side module and possibly a front‑end <option>.
+**Gap:** The dialect selection via `?dialect=ext-rtb` is stored in localStorage but not mirrored back to the URL for sharing (see later note). The `claimsBid` mechanism is dialect‑specific; not all dialects use it, and adding new dialects requires both a server‑side module and possibly a front‑end <option>.
 
 **Recommendation:** Standardize a dialect descriptor that includes `claimsBid`, `validateRequest`, `validateResponse`, and UX metadata so adding a dialect is a single file.
 
@@ -134,11 +134,11 @@
 
 **Recommendation:** Consider adding i18n support for category labels as future polish, but it’s not a gap for functionality.
 
-### 🟡 MEDIUM — JsonFeed validation (Kadam push/clickunder, ExoClick, RichAds, Zeropark)
+### 🟡 MEDIUM — JsonFeed validation (ext-rtb vendor push/clickunder, value-feed vendor, bid-price vendor, bid-redirect vendor)
 
 **Should:** Validate vendor‑specific JSON‑feed shapes (push arrays, clickunder, single‑bid objects). (README, ARCHMAP §1.1)
 
-**Does:** `rules-feed.js` handles Kadam push array, Kadam clickunder, ExoClick, RichAds, Zeropark. Each vendor has dedicated validation with appropriate field names (e.g., `clickUrl` for ExoClick, `bid_price` for RichAds). The validation is triggered when `detectType` returns `KADAM_FEED` or `JSON_FEED` for arrays/objects. (`packages/core/rules-feed.js`)
+**Does:** `rules-feed.js` handles ext-rtb vendor push array, ext-rtb vendor clickunder, value-feed vendor, bid-price vendor, bid-redirect vendor. Each vendor has dedicated validation with appropriate field names (e.g., `clickUrl` for value-feed vendor, `bid_price` for bid-price vendor). The validation is triggered when `detectType` returns `VENDOR_FEED` or `JSON_FEED` for arrays/objects. (`packages/core/rules-feed.js`)
 
 **Gap:** The single‑bid object detection relies on vendor‑unique keys (`clickUrl`, `notification_url`, `redirecturl`). If a new vendor overlaps (e.g., both have `bid` and `link` without a unique key), detection may misclassify. Also, the `JSON_FEED` type is returned for an object that doesn’t match any known vendor; currently that results in an empty findings list with type `JSON_FEED`, which may be confusing.
 
@@ -432,7 +432,7 @@
 
 **Does:** `setupPreferences()` in `public/account.js` wires radio buttons for theme, locale, dialect. Theme uses `kt-theme` key and updates `data-theme`. Locale writes `kt-lang` cookie and POSTs to preferences. Dialect uses `spyglass_dialect_v1`. The pickers reflect current values. (`public/account.js`)
 
-**Gap:** The dialect picker offers only `iab`, `kadam`, `kadam-inpage-push`; it does not list temporary dialects, which the main app’s dialect selector does. That’s minor.
+**Gap:** The dialect picker offers only `iab`, `ext-rtb`, `inpage-push`; it does not list temporary dialects, which the main app’s dialect selector does. That’s minor.
 
 **Recommendation:** Unify the dialect pickers across cabinet and inspector; use the same code to populate options.
 

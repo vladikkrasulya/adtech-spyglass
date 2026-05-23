@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * Kadam In-Page Push dialect overlay.
+ * In-Page Push dialect overlay.
  *
- * In-Page Push is one of Kadam.net's vendor-specific creative formats. It
+ * In-Page Push is a vendor-specific creative format. It
  * does NOT use the standard `bid.adm` (banner HTML / VAST XML) or
  * `bid.native` (oRTB Native 1.x JSON) carrier. Instead the creative
  * fragments — title, description, hero image, icon, click URL, CTA —
@@ -21,7 +21,7 @@
  *   validate the In-Page Push fields instead.
  *
  * Field name aliases:
- *   Different Kadam-routed networks normalise the field names slightly
+ *   Different vendor-routed networks normalise the field names slightly
  *   differently. We accept the most common variants under each role:
  *     - title:       title / text
  *     - description: description / body / desc
@@ -40,8 +40,8 @@
  *     preview pipeline (analogous to renderNativeToHtml in
  *     spyglass.app.js) and is intentionally out of scope here — the
  *     engine's job is validation, not preview.
- *   - Validate request-side ext fields. Kadam-RTB request-side rules
- *     (bsection / btags / push detection) live in dialects/kadam.js;
+ *   - Validate request-side ext fields. Extended-RTB request-side rules
+ *     (bsection / btags / push detection) live in dialects/ext-rtb.js;
  *     this overlay focuses entirely on the response-side bid shape.
  */
 
@@ -113,11 +113,11 @@ function validateResponse(res) {
       // broken/empty card on the publisher side.
       if (!title) {
         findings.push(
-          F('kadam.inpage.title_required', LEVELS.ERROR, `${bp}.ext.title`, { sNum, bNum }),
+          F('inpage-push.title_required', LEVELS.ERROR, `${bp}.ext.title`, { sNum, bNum }),
         );
       } else if (title.length > TITLE_MAX) {
         findings.push(
-          F('kadam.inpage.title_too_long', LEVELS.WARNING, `${bp}.ext.title`, {
+          F('inpage-push.title_too_long', LEVELS.WARNING, `${bp}.ext.title`, {
             sNum,
             bNum,
             len: title.length,
@@ -127,11 +127,11 @@ function validateResponse(res) {
       }
       if (!image) {
         findings.push(
-          F('kadam.inpage.image_required', LEVELS.ERROR, `${bp}.ext.image`, { sNum, bNum }),
+          F('inpage-push.image_required', LEVELS.ERROR, `${bp}.ext.image`, { sNum, bNum }),
         );
       } else if (!isHttpUrl(image)) {
         findings.push(
-          F('kadam.inpage.image_invalid_url', LEVELS.ERROR, `${bp}.ext.image`, {
+          F('inpage-push.image_invalid_url', LEVELS.ERROR, `${bp}.ext.image`, {
             sNum,
             bNum,
             url: String(image).slice(0, 80),
@@ -140,11 +140,11 @@ function validateResponse(res) {
       }
       if (!click) {
         findings.push(
-          F('kadam.inpage.click_required', LEVELS.ERROR, `${bp}.ext.url`, { sNum, bNum }),
+          F('inpage-push.click_required', LEVELS.ERROR, `${bp}.ext.url`, { sNum, bNum }),
         );
       } else if (!isHttpUrl(click)) {
         findings.push(
-          F('kadam.inpage.click_invalid_url', LEVELS.ERROR, `${bp}.ext.url`, {
+          F('inpage-push.click_invalid_url', LEVELS.ERROR, `${bp}.ext.url`, {
             sNum,
             bNum,
             url: String(click).slice(0, 80),
@@ -156,7 +156,7 @@ function validateResponse(res) {
       // common quality gates (max length / valid URL).
       if (icon && !isHttpUrl(icon)) {
         findings.push(
-          F('kadam.inpage.icon_invalid_url', LEVELS.WARNING, `${bp}.ext.icon`, {
+          F('inpage-push.icon_invalid_url', LEVELS.WARNING, `${bp}.ext.icon`, {
             sNum,
             bNum,
             url: String(icon).slice(0, 80),
@@ -165,7 +165,7 @@ function validateResponse(res) {
       }
       if (desc && desc.length > DESC_MAX) {
         findings.push(
-          F('kadam.inpage.desc_too_long', LEVELS.WARNING, `${bp}.ext.description`, {
+          F('inpage-push.desc_too_long', LEVELS.WARNING, `${bp}.ext.description`, {
             sNum,
             bNum,
             len: desc.length,
@@ -175,7 +175,7 @@ function validateResponse(res) {
       }
       if (cta && cta.length > CTA_MAX) {
         findings.push(
-          F('kadam.inpage.cta_too_long', LEVELS.WARNING, `${bp}.ext.cta`, {
+          F('inpage-push.cta_too_long', LEVELS.WARNING, `${bp}.ext.cta`, {
             sNum,
             bNum,
             len: cta.length,
@@ -189,9 +189,9 @@ function validateResponse(res) {
 }
 
 module.exports = {
-  name: 'kadam-inpage-push',
+  name: 'inpage-push',
   // No request-side overlay — keep all RTB-level extras (bsection/btags/
-  // push macro support) in dialects/kadam.js so they don't double-fire
+  // push macro support) in dialects/ext-rtb.js so they don't double-fire
   // when a user picks In-Page Push.
   validateRequest: () => [],
   validateResponse,

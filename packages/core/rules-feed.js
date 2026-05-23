@@ -4,17 +4,17 @@
  * JSON-feed format validation for non-RTB CIS adtech responses.
  *
  * Five shapes recognized today:
- *   - Kadam push       — array of materials (id, click_url|link, cpc|price, …)
- *   - Kadam clickunder — { result: { listing: [{ url, bid }, …] } }
- *   - ExoClick         — single-bid object with `clickUrl` (camelCase) + `value`
- *   - RichAds          — single-bid object with `bid_price` + `link` + `notification_url`
- *   - Zeropark         — minimal single-bid `{ bid, redirecturl }`
+ *   - Push-materials feed — array of materials (id, click_url|link, cpc|price, …)
+ *   - Clickunder feed     — { result: { listing: [{ url, bid }, …] } }
+ *   - Value-feed          — single-bid object with `clickUrl` (camelCase) + `value`
+ *   - Bid-price feed      — single-bid object with `bid_price` + `link` + `notification_url`
+ *   - Bid-redirect feed   — minimal single-bid `{ bid, redirecturl }`
  *
- * Per the 2026-05-04 vendor research the same logical fields use different
- * physical keys per vendor (e.g. price = `cpc`/`value`/`bid_price`/`bid`,
- * click target = `click_url`/`link`/`clickUrl`/`redirecturl`). Each vendor
+ * Per the 2026-05-04 format research the same logical fields use different
+ * physical keys per format (e.g. price = `cpc`/`value`/`bid_price`/`bid`,
+ * click target = `click_url`/`link`/`clickUrl`/`redirecturl`). Each format
  * gets its own validator with the specific naming so finding messages can
- * point users at the exact key their vendor expects.
+ * point users at the exact key their format expects.
  *
  * Lives outside dialects/ because feed-format is intrinsically a top-level
  * shape decision (oRTB vs. JSON-feed), not an extension overlay on top of a
@@ -27,35 +27,35 @@ const { LEVELS, makeFinding } = require('./findings');
 const F = makeFinding;
 
 function validateFeedResponse(arrOrObj) {
-  // Kadam clickunder
-  // Kadam clickunder XML-engine response — recognise BID (listing object OR
+  // Clickunder feed
+  // Clickunder XML-engine response — recognise BID (listing object OR
   // listing array) and NOBID shapes. See detect.js for the full shape table.
   if (isObj(arrOrObj) && isObj(arrOrObj.result)) {
     const r = arrOrObj.result;
     const isClickunderBid = Array.isArray(r.listing) || isObj(r.listing);
     const isClickunderNobid = typeof r.status === 'string' && r.status.toUpperCase() === 'NOBID';
     if (isClickunderBid || isClickunderNobid) {
-      return validateKadamClickunder(arrOrObj);
+      return validateClickunderFeed(arrOrObj);
     }
-    // Pushub link-feed (single object OR array). Same `result`-wrapped
-    // family as Kadam but the bids live under `link` rather than `listing`.
-    // See validatePushubFeed below for the field contract.
+    // Link-feed (single object OR array). Same `result`-wrapped
+    // family as clickunder but the bids live under `link` rather than `listing`.
+    // See validateLinkFeed below for the field contract.
     if (Array.isArray(r.link) || isObj(r.link)) {
-      return validatePushubFeed(arrOrObj);
+      return validateLinkFeed(arrOrObj);
     }
   }
 
-  // Kadam push (array of materials)
+  // Push-materials feed (array of materials)
   if (Array.isArray(arrOrObj)) {
-    return validateKadamPush(arrOrObj);
+    return validatePushMaterialsFeed(arrOrObj);
   }
 
   // Single-bid object — discriminate vendor by signature key
   if (isObj(arrOrObj)) {
-    const vendor = detectSingleVendor(arrOrObj);
-    if (vendor === 'exoclick') return validateExoClick(arrOrObj);
-    if (vendor === 'richads') return validateRichAds(arrOrObj);
-    if (vendor === 'zeropark') return validateZeropark(arrOrObj);
+    const vendor = detectSingleBidShape(arrOrObj);
+    if (vendor === 'valuefeed') return validateValueFeed(arrOrObj);
+    if (vendor === 'bidprice') return validateBidPriceFeed(arrOrObj);
+    if (vendor === 'bidredirect') return validateBidRedirectFeed(arrOrObj);
   }
 
   return {
@@ -64,9 +64,9 @@ function validateFeedResponse(arrOrObj) {
   };
 }
 
-// ── Kadam clickunder ───────────────────────────────────────────────
+// ── Clickunder feed ─────────────────────────────────────────────────────
 
-function validateKadamClickunder(o) {
+function validateClickunderFeed(o) {
   const findings = [];
   const r = o.result;
 
@@ -81,7 +81,7 @@ function validateKadamClickunder(o) {
   const listingAbsent = r.listing == null || (Array.isArray(r.listing) && r.listing.length === 0);
   if (status === 'NOBID' && listingAbsent) {
     findings.push(F('feed.clickunder.nobid', LEVELS.INFO, 'result.status', {}));
-    return { type: 'Kadam Feed Response (clickunder, no bid)', findings };
+    return { type: 'Clickunder Feed Response (no bid)', findings };
   }
 
   // BID — listing may be a single object (real production shape, common
@@ -107,22 +107,20 @@ function validateKadamClickunder(o) {
   });
   return {
     type: isArrayShape
-      ? 'Kadam Feed Response (clickunder)'
-      : 'Kadam Feed Response (clickunder, single)',
+      ? 'Clickunder Feed Response'
+      : 'Clickunder Feed Response (single)',
     findings,
   };
 }
 
-// ── Pushub link-feed ───────────────────────────────────────────────
+// ── Link-feed ─────────────────────────────────────────────────────────
 //
-// Pushub clickunder/push response. Wrapped in `result` like Kadam but bids
-// live under `link` (array OR single object) instead of `listing`. Each bid
-// row: { bid: <float>, url: <click target>, seat: <buyer id string> }.
-// `seat` is informational only — a missing seat is unusual but not fatal,
-// so it surfaces as INFO not ERROR (mirrors how Kadam treats absent
-// non-required fields).
+// URL-style link-feed response. Wrapped in `result` but bids live under
+// `link` (array OR single object) instead of `listing`. Each bid row:
+// { bid: <float>, url: <click target>, seat: <buyer id string> }.
+// `seat` is informational only — a missing seat is unusual but not fatal.
 
-function validatePushubFeed(o) {
+function validateLinkFeed(o) {
   const findings = [];
   const r = o.result;
   const isArrayShape = Array.isArray(r.link);
@@ -132,34 +130,34 @@ function validatePushubFeed(o) {
     const num = i + 1;
     const p = isArrayShape ? `result.link[${i}]` : 'result.link';
     if (!row || typeof row !== 'object') {
-      findings.push(F('feed.pushub.url_required', LEVELS.ERROR, `${p}.url`, { num }));
-      findings.push(F('feed.pushub.bid_required', LEVELS.ERROR, `${p}.bid`, { num }));
+      findings.push(F('feed.linkfeed.url_required', LEVELS.ERROR, `${p}.url`, { num }));
+      findings.push(F('feed.linkfeed.bid_required', LEVELS.ERROR, `${p}.bid`, { num }));
       return;
     }
     if (!isStr(row.url)) {
-      findings.push(F('feed.pushub.url_required', LEVELS.ERROR, `${p}.url`, { num }));
+      findings.push(F('feed.linkfeed.url_required', LEVELS.ERROR, `${p}.url`, { num }));
     }
     if (!isNum(row.bid)) {
-      findings.push(F('feed.pushub.bid_required', LEVELS.ERROR, `${p}.bid`, { num }));
+      findings.push(F('feed.linkfeed.bid_required', LEVELS.ERROR, `${p}.bid`, { num }));
     } else if (row.bid <= 0) {
       findings.push(
-        F('feed.pushub.bid_nonpositive', LEVELS.WARNING, `${p}.bid`, { num, bid: row.bid }),
+        F('feed.linkfeed.bid_nonpositive', LEVELS.WARNING, `${p}.bid`, { num, bid: row.bid }),
       );
     }
     if (!isStr(row.seat)) {
-      findings.push(F('feed.pushub.seat_missing', LEVELS.INFO, `${p}.seat`, { num }));
+      findings.push(F('feed.linkfeed.seat_missing', LEVELS.INFO, `${p}.seat`, { num }));
     }
   });
 
   return {
-    type: isArrayShape ? 'Pushub Feed Response' : 'Pushub Feed Response (single)',
+    type: isArrayShape ? 'Link-Feed Response' : 'Link-Feed Response (single)',
     findings,
   };
 }
 
-// ── Kadam push (array) ─────────────────────────────────────────────
+// ── Push-materials feed (array) ─────────────────────────────────────
 
-function validateKadamPush(arr) {
+function validatePushMaterialsFeed(arr) {
   const findings = [];
   arr.forEach((m, i) => {
     const num = i + 1;
@@ -207,84 +205,84 @@ function validateKadamPush(arr) {
       findings.push(F('feed.push.nurl_recommended', LEVELS.WARNING, `${p}.nurl`, { num }));
     }
   });
-  return { type: 'Kadam Feed Response (push)', findings };
+  return { type: 'Push-Materials Feed Response', findings };
 }
 
-// ── Vendor discrimination for single-bid objects ───────────────────
+// ── Single-bid shape discrimination ─────────────────────────────────
 
-function detectSingleVendor(o) {
-  // Each predicate keys off a vendor-unique field name. Order matters where
+function detectSingleBidShape(o) {
+  // Each predicate keys off a format-unique field name. Order matters where
   // multiple match — but in practice the camelCase/snake_case split makes
   // these mutually exclusive.
-  if ('clickUrl' in o || ('value' in o && 'nUrl' in o)) return 'exoclick';
-  if ('notification_url' in o || 'bid_price' in o) return 'richads';
-  if ('redirecturl' in o) return 'zeropark';
+  if ('clickUrl' in o || ('value' in o && 'nUrl' in o)) return 'valuefeed';
+  if ('notification_url' in o || 'bid_price' in o) return 'bidprice';
+  if ('redirecturl' in o) return 'bidredirect';
   return null;
 }
 
-// ── ExoClick (rtb.php proprietary) ─────────────────────────────────
+// ── Value-feed (rtb.php-style) ───────────────────────────────────────
 
-function validateExoClick(o) {
+function validateValueFeed(o) {
   const findings = [];
   if (!isStr(o.id) && !isNum(o.id)) {
-    findings.push(F('feed.exoclick.id_required', LEVELS.ERROR, 'id'));
+    findings.push(F('feed.valuefeed.id_required', LEVELS.ERROR, 'id'));
   }
   if (!isNum(o.value)) {
-    findings.push(F('feed.exoclick.value_required', LEVELS.ERROR, 'value'));
+    findings.push(F('feed.valuefeed.value_required', LEVELS.ERROR, 'value'));
   }
   if (!isStr(o.clickUrl)) {
-    findings.push(F('feed.exoclick.click_url_required', LEVELS.ERROR, 'clickUrl'));
+    findings.push(F('feed.valuefeed.click_url_required', LEVELS.ERROR, 'clickUrl'));
   }
   if (!isStr(o.title)) {
-    findings.push(F('feed.exoclick.title_recommended', LEVELS.WARNING, 'title'));
+    findings.push(F('feed.valuefeed.title_recommended', LEVELS.WARNING, 'title'));
   }
   if (!isStr(o.description)) {
-    findings.push(F('feed.exoclick.description_recommended', LEVELS.WARNING, 'description'));
+    findings.push(F('feed.valuefeed.description_recommended', LEVELS.WARNING, 'description'));
   }
   if (!isStr(o.iconUrl) && !isStr(o.nUrl)) {
-    findings.push(F('feed.exoclick.notify_recommended', LEVELS.WARNING, 'nUrl'));
+    findings.push(F('feed.valuefeed.notify_recommended', LEVELS.WARNING, 'nUrl'));
   }
-  return { type: 'ExoClick Feed Response', findings };
+  return { type: 'Value-Feed Response', findings };
 }
 
-// ── RichAds (telegram-bid / per-format) ────────────────────────────
+// ── Bid-price feed ───────────────────────────────────────────────────
 
-function validateRichAds(o) {
+function validateBidPriceFeed(o) {
   const findings = [];
   if (!isNum(o.bid_price)) {
-    findings.push(F('feed.richads.bid_price_required', LEVELS.ERROR, 'bid_price'));
+    findings.push(F('feed.bidprice.bid_price_required', LEVELS.ERROR, 'bid_price'));
   }
   if (!isStr(o.link)) {
-    findings.push(F('feed.richads.link_required', LEVELS.ERROR, 'link'));
+    findings.push(F('feed.bidprice.link_required', LEVELS.ERROR, 'link'));
   }
   if (!isStr(o.notification_url)) {
     findings.push(
-      F('feed.richads.notification_url_recommended', LEVELS.WARNING, 'notification_url'),
+      F('feed.bidprice.notification_url_recommended', LEVELS.WARNING, 'notification_url'),
     );
   }
   if (!isStr(o.title) && !isStr(o.message)) {
-    findings.push(F('feed.richads.copy_recommended', LEVELS.WARNING, 'title'));
+    findings.push(F('feed.bidprice.copy_recommended', LEVELS.WARNING, 'title'));
   }
   if (!isStr(o.icon)) {
-    findings.push(F('feed.richads.icon_recommended', LEVELS.WARNING, 'icon'));
+    findings.push(F('feed.bidprice.icon_recommended', LEVELS.WARNING, 'icon'));
   }
-  return { type: 'RichAds Feed Response', findings };
+  return { type: 'Bid-Price Feed Response', findings };
 }
 
-// ── Zeropark (minimal redirect shape) ──────────────────────────────
+// ── Bid-redirect feed (minimal redirect shape) ───────────────────────
 
-function validateZeropark(o) {
+function validateBidRedirectFeed(o) {
   const findings = [];
   if (!isNum(o.bid)) {
-    findings.push(F('feed.zeropark.bid_required', LEVELS.ERROR, 'bid'));
+    findings.push(F('feed.bidredirect.bid_required', LEVELS.ERROR, 'bid'));
   }
   if (!isStr(o.redirecturl)) {
-    findings.push(F('feed.zeropark.redirecturl_required', LEVELS.ERROR, 'redirecturl'));
+    findings.push(F('feed.bidredirect.redirecturl_required', LEVELS.ERROR, 'redirecturl'));
   }
   if (o.campaignid != null && !isStr(o.campaignid) && !isNum(o.campaignid)) {
-    findings.push(F('feed.zeropark.campaignid_invalid', LEVELS.WARNING, 'campaignid'));
+    findings.push(F('feed.bidredirect.campaignid_invalid', LEVELS.WARNING, 'campaignid'));
   }
-  return { type: 'Zeropark Feed Response', findings };
+  return { type: 'Bid-Redirect Feed Response', findings };
 }
 
 module.exports = { validateFeedResponse };

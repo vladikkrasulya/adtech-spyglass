@@ -4,7 +4,7 @@
  * Canonical internal representation for any URL-style ad REQUEST.
  *
  * Mirrors the response-side `decoders/_canonical.js` contract, but for the
- * opposite direction: most non-oRTB SSPs (Kadam clickunder, pushub, pop
+ * opposite direction: most non-oRTB SSPs (clickunder, url-linkfeed, pop
  * networks) accept ad calls as plain `GET host/endpoint?key=value&…` and
  * return JSON/XML feeds. There's no OpenRTB request body to validate — just
  * a URL with query parameters that follow loosely-vendor-specific schemas.

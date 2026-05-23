@@ -17,7 +17,7 @@ const { validateUrlRequest } = require('@kyivtech/spyglass-core/rules-request-ur
 const { makeCanonicalUrlRequest } = require('@kyivtech/spyglass-core/decoders/request/_canonical');
 
 function baseCanonical(extra) {
-  const c = makeCanonicalUrlRequest('pushub-link', 'http://xml.pushub.net/link?x=1');
+  const c = makeCanonicalUrlRequest('url-linkfeed', 'http://xml.pushub.net/link?x=1');
   // Default sane shape — IPv4, no empty CH fields, no quoted ch-uafull,
   // no trailing-? in url. Each test mutates exactly one signal.
   c.device.ip = '192.0.2.1';

@@ -4,6 +4,20 @@ All notable changes to Spyglass are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning is
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Vendor-name scrub
+
+- Feed validator finding IDs renamed to format-descriptive identifiers: `feed.pushub.*` → `feed.linkfeed.*`, `feed.exoclick.*` → `feed.valuefeed.*`, `feed.richads.*` → `feed.bidprice.*`, `feed.zeropark.*` → `feed.bidredirect.*`
+- Dialect filenames renamed: `kadam.js` → `ext-rtb.js`, `kadam-inpage-push.js` → `inpage-push.js`; dialect finding IDs `kadam.*` → `extrtb.*`, `kadam.inpage.*` → `inpage-push.*`
+- Decoder directory renamed: `decoders/request/pushub-link/` → `decoders/request/url-linkfeed/`; `const ID = 'url-linkfeed'`; description updated to generic label
+- Feed validator function names renamed: `validatePushubFeed` → `validateLinkFeed`, `validateKadamClickunder` → `validateClickunderFeed`, `validateKadamPush` → `validatePushMaterialsFeed`, `validateExoClick` → `validateValueFeed`, `validateRichAds` → `validateBidPriceFeed`, `validateZeropark` → `validateBidRedirectFeed`, `detectSingleVendor` → `detectSingleBidShape`
+- Type labels returned by validators updated to format-descriptive strings (e.g. "Link-Feed Response", "Value-Feed Response")
+- HTML dropdown option values updated: `kadam` → `ext-rtb`, `kadam-inpage-push` → `inpage-push`
+- `KNOWN_DIALECTS` set and related conditionals updated in `spyglass.app.js`
+- `KADAM` reference object renamed to `VENDOR_REF`; `window._kadam` → `window._vendorRef`; data-action attributes updated to `vendor-paste-*`
+- Wiki.kadam.net source link removed; replaced with generic note
+- Message prose updated to drop partner brand names across en/ru/uk locales
+
+
 ## [Unreleased]
 
 ### v0.51.0 — feat: URL-style request validator + Pushub decoder (2026-05-23)

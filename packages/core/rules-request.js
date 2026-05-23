@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * IAB OpenRTB 2.x BidRequest validation rules. Pure spec — no Kadam (or any
+ * IAB OpenRTB 2.x BidRequest validation rules. Pure spec — no vendor-dialect (or any
  * other SSP) dialect concerns; those layer on top via ctx.dialect.
  *
  * Phase 2 will gate version-specific fields (rwdd, sua, regs.gpp, etc.) on

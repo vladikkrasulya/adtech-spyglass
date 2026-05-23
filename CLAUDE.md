@@ -53,7 +53,7 @@ packages/core/                    Validator engine — pure JS, Node + browser c
   rules/                          Plugin-style rules — see rules/README.md for contract
   crosscheck.js                   Request↔response semantic checks
   categories.js                   IAB Content Taxonomy decoder
-  dialects/                       iab.js (default), kadam.js, kadam-inpage-push.js
+  dialects/                       iab.js (default), ext-rtb.js, inpage-push.js
   intel/                          walker.js, cluster.js, temp-dialect.js
   knowledge_base/                 Curated oRTB / JsonFeed reference fixtures
   messages/{en,uk,ru}.json        Localised finding messages (en/uk/ru parity required)

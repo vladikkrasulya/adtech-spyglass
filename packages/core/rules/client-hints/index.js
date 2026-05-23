@@ -31,9 +31,9 @@
  *     `disabledRules: ['device.client_hints.os_unknown']` if their
  *     vertical doesn't care.
  *
- * Vendor-neutral. The doc that motivated this lives at Kadam, but the
+ * Vendor-neutral. Client hints apply broadly across adtech networks;
  * pattern (SSP doesn't capture client-hints → DSP works with degraded
- * data) applies to many networks. No Kadam-specific code here.
+ * data) applies to many networks. No vendor-specific code here.
  */
 
 const { LEVELS, makeFinding } = require('../../findings');

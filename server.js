@@ -956,7 +956,7 @@ function unionFormat(a, b) {
 // ── /api/v1/stream — public RTB observability feed (Phase 1 Step 1.2) ──────
 //
 // Synthetic-only for now; real-traffic ingest is gated on Risk B in
-// docs/stream-platform-pivot-2026-05-05.md (Kadam legal/management approval).
+// docs/stream-platform-pivot-2026-05-05.md (legal/management approval).
 // Pipeline: SyntheticGenerator → in-process ring buffer → SSE subscribers.
 //
 // Buffer is FIFO Array (Array.shift() at small N is fine). Replay window

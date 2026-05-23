@@ -168,8 +168,8 @@ packages/core/            validator core (browser + server-side compatible)
   crosscheck.js           request↔response semantic checks
   categories.js           IAB Content Taxonomy decoder
   dialects/iab.js         IAB-canonical baseline (default)
-  dialects/kadam.js       Vendor oRTB-extension overlay
-  dialects/kadam-inpage-push.js   Vendor in-page push overlay
+  dialects/ext-rtb.js     Vendor oRTB-extension overlay
+  dialects/inpage-push.js  Vendor in-page push overlay
   intel/walker.js         discovery walker with PII denylist
   intel/cluster.js        co-occurrence clustering
   intel/temp-dialect.js   client-side temporary dialect runtime

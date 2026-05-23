@@ -121,8 +121,8 @@ function detectVastVersion(s) {
 }
 
 /**
- * Single-object JSON-feed signatures. The Kadam-style push and the
- * Zeropark-style popunder have unique enough shapes that one or two
+ * Single-object JSON-feed signatures. The push-materials feed and the
+ * bid-redirect-style popunder have unique enough shapes that one or two
  * keys discriminate them. Inpage is a soft heuristic — the canonical
  * signal is server-side `ext.format` rather than shape.
  */
@@ -161,7 +161,7 @@ function detectFormat(payload) {
   const contexts = new Set();
   const protocols = new Set();
 
-  // Array payloads → JSON-feed list (Kadam push, etc.)
+  // Array payloads → JSON-feed list (push-materials feed, etc.)
   if (Array.isArray(payload)) {
     for (const item of payload) detectFeedFormat(item, formats);
   } else if (typeof payload === 'object') {

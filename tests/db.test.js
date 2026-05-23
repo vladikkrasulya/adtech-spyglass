@@ -76,7 +76,7 @@ test('users: count reflects seeds', () => {
 // ── Partners CRUD ─────────────────────────────────────────────────────────
 
 test('partners: create + list scoped to user', () => {
-  const p = Partners.create({ userId: userA.id, name: 'Kadam' });
+  const p = Partners.create({ userId: userA.id, name: 'TestVendor' });
   assert.equal(p.user_id, userA.id);
   const list = Partners.list({ userId: userA.id });
   assert.ok(list.some((x) => x.id === p.id));
@@ -89,17 +89,17 @@ test('partners: create + list scoped to user', () => {
 });
 
 test('partners: same slug allowed across different users', () => {
-  const a = Partners.create({ userId: userA.id, name: 'Adsterra' });
-  const b = Partners.create({ userId: userB.id, name: 'Adsterra' });
-  assert.equal(a.slug, 'adsterra');
-  assert.equal(b.slug, 'adsterra'); // not 'adsterra-2' — slug is per-user
+  const a = Partners.create({ userId: userA.id, name: 'PartnerOne' });
+  const b = Partners.create({ userId: userB.id, name: 'PartnerOne' });
+  assert.equal(a.slug, 'partnerone');
+  assert.equal(b.slug, 'partnerone'); // not 'partnerone-2' — slug is per-user
 });
 
 test('partners: slug collision within same user adds numeric suffix', () => {
-  const a = Partners.create({ userId: userA.id, name: 'PropellerAds' });
-  const b = Partners.create({ userId: userA.id, name: 'PropellerAds' });
-  assert.equal(a.slug, 'propellerads');
-  assert.equal(b.slug, 'propellerads-2');
+  const a = Partners.create({ userId: userA.id, name: 'PartnerTwo' });
+  const b = Partners.create({ userId: userA.id, name: 'PartnerTwo' });
+  assert.equal(a.slug, 'partnertwo');
+  assert.equal(b.slug, 'partnertwo-2');
 });
 
 test('partners: update is scoped — userB cannot update userA partner', () => {

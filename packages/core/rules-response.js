@@ -71,7 +71,7 @@ function validateResponse(res, ctx) {
       }
       if (!isStr(b.adm) && !isStr(b.nurl)) {
         // Vendor dialects can declare that they "claim" bids of a custom
-        // shape (e.g. Kadam In-Page Push carries the creative in
+        // shape (e.g. In-Page Push carries the creative in
         // bid.ext.{title,image,url} instead of adm/nurl). When a dialect
         // claims the bid, skip the IAB payload-missing rule — the dialect's
         // own validateResponse will assert the correct shape and we'd
@@ -127,7 +127,7 @@ function validateResponse(res, ctx) {
     });
   });
 
-  // Dialect overlay (e.g. Kadam macro support check)
+  // Dialect overlay (e.g. vendor macro support check)
   if (dialect && typeof dialect.validateResponse === 'function') {
     findings.push(...dialect.validateResponse(res));
   }

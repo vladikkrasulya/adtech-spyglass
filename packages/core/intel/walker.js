@@ -215,8 +215,8 @@ function extractFields(payload) {
 function bucketize(payload) {
   if (!payload || typeof payload !== 'object') return 'unknown';
 
-  // Push detection: any imp.ext carries Kadam-style subage hints, OR
-  // site.ext.idzone matches push pattern (mirrors dialects/kadam.js
+  // Push detection: any imp.ext carries subage hints (push subscription age), OR
+  // site.ext.idzone matches push pattern (mirrors dialects/ext-rtb.js
   // detection logic).
   if (Array.isArray(payload.imp)) {
     for (const imp of payload.imp) {

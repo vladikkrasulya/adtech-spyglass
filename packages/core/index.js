@@ -6,7 +6,7 @@
  *   validate(payload, { dialect, locale })   → { type, status, findings }
  *   crosscheck(req, res, { locale })         → [findings]
  *   detectType(payload)                      → string
- *   listDialects()                           → ['iab', 'kadam', …]
+ *   listDialects()                           → ['iab', 'ext-rtb', …]
  *
  * Findings have a stable `id` (e.g. `'imp.banner.size_required'`), structured
  * `params` for interpolation, the JSON `path` they apply to, the spec section
@@ -45,14 +45,14 @@ const {
 const { resolve, listLocales, FALLBACK_LOCALE } = require('./messages');
 
 const dialectIab = require('./dialects/iab');
-const dialectKadam = require('./dialects/kadam');
-const dialectKadamInPagePush = require('./dialects/kadam-inpage-push');
+const dialectExtRtb = require('./dialects/ext-rtb');
+const dialectInPagePush = require('./dialects/inpage-push');
 const specRefs = require('./spec-refs.json');
 
 const DIALECTS = {
   iab: dialectIab,
-  kadam: dialectKadam,
-  'kadam-inpage-push': dialectKadamInPagePush,
+  'ext-rtb': dialectExtRtb,
+  'inpage-push': dialectInPagePush,
 };
 const DEFAULT_DIALECT = 'iab';
 
@@ -183,7 +183,7 @@ function validate(payload, opts) {
     } else {
       findings = validateResponse(payload, { dialect, version });
     }
-  } else if (t === TYPES.KADAM_FEED) {
+  } else if (t === TYPES.VENDOR_FEED) {
     const r = validateFeedResponse(payload);
     findings = r.findings;
     resolvedType = r.type;
@@ -199,7 +199,7 @@ function validate(payload, opts) {
   }
 
   // Version pinning verdict. Only meaningful for oRTB request/response —
-  // other formats (Kadam feed, JSON feed) don't carry an IAB version axis.
+  // other formats (vendor feed, JSON feed) don't carry an IAB version axis.
   // Skipped when detection itself is `unknown` (we wouldn't know what to
   // compare) or when the expected value isn't a recognised pinnable
   // version (silently ignore garbage rather than throw).
@@ -252,7 +252,7 @@ function crosscheck(req, res, opts) {
   const locale = o.locale || FALLBACK_LOCALE;
   const strictness = o.strictness;
   // Resolve dialect the same way validate() does — opts.dialect may be a
-  // string slug ('iab' / 'kadam' / ...) coming from the HTTP layer or an
+  // string slug ('iab' / 'ext-rtb' / ...) coming from the HTTP layer or an
   // already-resolved dialect object from internal callers.
   const dialect =
     typeof o.dialect === 'string'

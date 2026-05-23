@@ -3,29 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Spyglass — how to use it · documentation</title>
-    <meta
-      name="description"
-      content="Spyglass docs: what the OpenRTB inspector does (oRTB 2.5/2.6/3.0, native, VAST), what it doesn't do, what data it processes locally, what it stores on the server (zero-knowledge encryption), and how to read validation/crosscheck output."
-    />
+    <title>How to Use Spyglass — OpenRTB Validator Documentation</title>
+    <meta name="description" content="Spyglass documentation: how the OpenRTB validator works, what it analyzes, what stays on your device (100% client-side), what is stored with end-to-end encryption (key only on your browser). oRTB 2.5/2.6/3.0, Native, VAST." />
     <meta name="robots" content="index,follow" />
-    <link rel="canonical" href="https://spyglass.kyivtech.com.ua/about" />
-    <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about" />
-    <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/about" />
-    <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about" />
-    <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about" />
+    <link rel="canonical" href="https://ortbtools.com/about" />
+    <link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/about" />
+    <link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/about" />
+    <link rel="alternate" hreflang="en" href="https://ortbtools.com/about" />
+    <link rel="alternate" hreflang="x-default" href="https://ortbtools.com/about" />
 
     <meta property="og:type" content="article" />
-    <meta property="og:site_name" content="Kyiv Tech" />
-    <meta property="og:title" content="Spyglass — how to use it" />
-    <meta
-      property="og:description"
-      content="OpenRTB inspector docs: what it does, what it doesn't, what data it uses, what it stores."
-    />
-    <meta property="og:url" content="https://spyglass.kyivtech.com.ua/about" />
+    <meta property="og:site_name" content="ortbtools.com" />
+    <meta property="og:title" content="Spyglass Docs — OpenRTB Validator" />
+    <meta property="og:description" content="How the OpenRTB validator works, what it analyzes, what stays on your device, and what is stored end-to-end encrypted." />
+    <meta property="og:url" content="https://ortbtools.com/about" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:locale:alternate" content="uk_UA" />
-    <meta property="og:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
+    <meta property="og:image" content="https://ortbtools.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
@@ -34,22 +28,22 @@
     />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Spyglass — how to use it" />
-    <meta name="twitter:description" content="Spyglass docs — public OpenRTB inspector." />
-    <meta name="twitter:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
+    <meta name="twitter:title" content="Spyglass Docs — OpenRTB Validator" />
+    <meta name="twitter:description" content="Spyglass documentation — the free OpenRTB validator that runs entirely in your browser." />
+    <meta name="twitter:image" content="https://ortbtools.com/og-image.png" />
 
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "TechArticle",
-        "headline": "Spyglass — how to use it",
+        "headline": "How to use Spyglass — OpenRTB Validator Documentation",
         "description": "Spyglass OpenRTB inspector documentation.",
-        "url": "https://spyglass.kyivtech.com.ua/about",
+        "url": "https://ortbtools.com/about",
         "inLanguage": "en",
         "isPartOf": {
           "@type": "WebApplication",
-          "name": "Spyglass · OpenRTB Inspector",
-          "url": "https://spyglass.kyivtech.com.ua/"
+          "name": "Spyglass — OpenRTB Validator",
+          "url": "https://ortbtools.com/"
         }
       }
     </script>
@@ -419,7 +413,7 @@
       <div class="kt-container">
         <div class="doc-prose">
           <span class="eyebrow">docs · v0.41.4</span>
-          <h1 style="margin-top: var(--space-3)">Spyglass — how to use it</h1>
+          <h1 style="margin-top: var(--space-3)">How to use Spyglass</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             A private inspector for OpenRTB traffic. Paste JSON, get a breakdown: whether the
             request/response is well-formed, which fields are required, whether request↔response
@@ -598,7 +592,7 @@
           <ul>
             <li>
               <strong>Share link</strong> — copies a self-contained URL like
-              <code>spyglass.kyivtech.com.ua/?#req=…&amp;res=…</code>. The payload is
+              <code>ortbtools.com/?#req=…&amp;res=…</code>. The payload is
               deflate-compressed + base64url-encoded into the URL hash fragment, which
               <strong>never reaches the server</strong> (zero-knowledge by URL design). Opening the
               link auto-populates both panes and re-runs the analysis.
@@ -974,7 +968,7 @@
               </tr>
               <tr>
                 <td>Doesn't parse TCF/GPP consent strings</td>
-                <td>Planned as a separate tab in <code>kyivtech.com.ua/tools/</code>.</td>
+                <td>Planned as a separate tool under the <code>ortbtools.com</code> umbrella.</td>
               </tr>
               <tr>
                 <td>Doesn't validate <code>ads.txt</code> / <code>sellers.json</code></td>
@@ -1259,7 +1253,6 @@ server formats localised text and returns 200 JSON</code></pre>
                 target="_blank"
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/Content-Taxonomy</a
-              >
             </li>
             <li>
               <strong>Native 1.1 / 1.2</strong> —
@@ -1268,7 +1261,6 @@ server formats localised text and returns 200 JSON</code></pre>
                 target="_blank"
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/openrtb</a
-              >
             </li>
             <li>
               <strong>Vendor JSON feed (push + clickunder)</strong> — single-bid push array or
@@ -1276,22 +1268,16 @@ server formats localised text and returns 200 JSON</code></pre>
               Spyglass infers it from the response root.
             </li>
             <li>
-              <strong>ExoClick proprietary RTB</strong> —
-              <a href="https://docs.exoclick.com/docs/rtb-direct" target="_blank" rel="noopener"
-                >docs.exoclick.com — RTB Direct</a
-              >
+              <strong>Value-feed (proprietary RTB)</strong> —
+              format reference (private)
             </li>
             <li>
-              <strong>RichAds telegram-bid + per-format</strong> —
-              <a href="https://docs.richads.com/" target="_blank" rel="noopener"
-                >docs.richads.com</a
-              >
+              <strong>Bid-price feed (per-format)</strong> —
+              format reference (private)
             </li>
             <li>
-              <strong>Zeropark redirect feed</strong> —
-              <a href="https://help.zeropark.com/" target="_blank" rel="noopener"
-                >help.zeropark.com</a
-              >
+              <strong>Bid-redirect feed</strong> —
+              format reference (private)
             </li>
             <li>
               <strong>AdKernel (oRTB-based)</strong> — covered by the standard OpenRTB validator;
@@ -1301,7 +1287,6 @@ server formats localised text and returns 200 JSON</code></pre>
                 target="_blank"
                 rel="noopener"
                 >prebid-server/adapters/adkernel</a
-              >
             </li>
           </ul>
           <p>
@@ -1319,7 +1304,7 @@ server formats localised text and returns 200 JSON</code></pre>
           <h2>Questions + contact</h2>
           <p>
             Bug, feature request, "why isn't this working" —
-            <a href="mailto:hi@kyivtech.com.ua">hi@kyivtech.com.ua</a>.
+            <a href="mailto:hi@ortbtools.com">hi@ortbtools.com</a>.
           </p>
           <p>
             Spyglass isn't a commercial product. It's open tooling that helps you work with OpenRTB
@@ -1338,7 +1323,7 @@ server formats localised text and returns 200 JSON</code></pre>
           >
             <span data-spyglass-version>v0.41.4</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
             4.x · <a href="/" style="color: var(--text-dim)">↗ Spyglass</a> ·
-            <a href="https://kyivtech.com.ua/" style="color: var(--text-dim)">kyivtech.com.ua</a>
+            <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>
         </div>
       </div>

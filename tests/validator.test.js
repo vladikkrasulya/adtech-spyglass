@@ -4,8 +4,8 @@
  * Validator tests. Findings are asserted by stable `id` and `path` fields,
  * not by message text — so the suite survives future i18n / copy edits.
  *
- * Test fixtures default to the IAB dialect (no Kadam-isms unless the test
- * explicitly opts in via { dialect: 'kadam' }).
+ * Test fixtures default to the IAB dialect (no vendor-dialect extras unless the test
+ * explicitly opts in via { dialect: 'ext-rtb' }).
  */
 
 const { test } = require('node:test');
@@ -45,12 +45,12 @@ test('detectType: BidResponse', () => {
   assert.equal(detectType(validResponse()), TYPES.ORTB_RESPONSE);
 });
 
-test('detectType: Kadam Feed (clickunder)', () => {
-  assert.equal(detectType({ result: { listing: [{ url: 'x', bid: 1 }] } }), TYPES.KADAM_FEED);
+test('detectType: vendor feed (clickunder)', () => {
+  assert.equal(detectType({ result: { listing: [{ url: 'x', bid: 1 }] } }), TYPES.VENDOR_FEED);
 });
 
-test('detectType: Kadam Feed (push array)', () => {
-  assert.equal(detectType([{ id: 'm1' }]), TYPES.KADAM_FEED);
+test('detectType: vendor feed (push array)', () => {
+  assert.equal(detectType([{ id: 'm1' }]), TYPES.VENDOR_FEED);
 });
 
 test('detectType: garbage', () => {
@@ -255,64 +255,64 @@ test('GDPR=0 produces no consent finding regardless of user.ext.consent', () => 
   assert.equal(findById(findings, 'regs.gdpr_consent_missing'), undefined);
 });
 
-// ── Dialect: IAB default does NOT emit Kadam-isms ────────────────────────
+// ── Dialect: IAB default does NOT emit vendor-dialect extras ──────────────
 
-test('IAB dialect ignores ext.bsection (no kadam-* findings)', () => {
+test('IAB dialect ignores ext.bsection (no extrtb-* findings)', () => {
   const req = validRequest();
   req.ext = { bsection: 'wrong-type' };
   const { findings } = validate(req, { dialect: 'iab' });
-  assert.equal(findings.filter((f) => f.id.startsWith('kadam.')).length, 0);
+  assert.equal(findings.filter((f) => f.id.startsWith('extrtb.')).length, 0);
 });
 
-test('IAB dialect ignores push markers (no kadam.push_detected)', () => {
+test('IAB dialect ignores push markers (no extrtb.push_detected)', () => {
   const req = validRequest();
   req.site.ext = { idzone: 'push-zone' };
   req.imp[0].ext = { subage: 7 };
   const { findings } = validate(req, { dialect: 'iab' });
-  assert.equal(findings.filter((f) => f.id.startsWith('kadam.')).length, 0);
+  assert.equal(findings.filter((f) => f.id.startsWith('extrtb.')).length, 0);
 });
 
-// ── Dialect: Kadam emits its extras ──────────────────────────────────────
+// ── Dialect: Ext-RTB emits its extras ─────────────────────────────────────
 
-test('Kadam dialect: ext.bsection wrong type → kadam.ext.bsection_invalid', () => {
+test('Ext-RTB dialect: ext.bsection wrong type → extrtb.ext.bsection_invalid', () => {
   const req = validRequest();
   req.ext = { bsection: 'wrong-type' };
-  const { findings } = validate(req, { dialect: 'kadam' });
-  assert.ok(findById(findings, 'kadam.ext.bsection_invalid'));
+  const { findings } = validate(req, { dialect: 'ext-rtb' });
+  assert.ok(findById(findings, 'extrtb.ext.bsection_invalid'));
 });
 
-test('Kadam dialect: push detected emits info finding', () => {
+test('Ext-RTB dialect: push detected emits info finding', () => {
   const req = validRequest();
   req.site.ext = { idzone: 'push-1234' };
   req.imp[0].ext = { subage: 7 };
-  const { findings, type } = validate(req, { dialect: 'kadam' });
-  assert.ok(findById(findings, 'kadam.push_detected'));
+  const { findings, type } = validate(req, { dialect: 'ext-rtb' });
+  assert.ok(findById(findings, 'extrtb.push_detected'));
   // type comes from detect.js — pure IAB BidRequest (no push suffix any more)
   assert.equal(type, TYPES.ORTB_REQUEST);
 });
 
-test('Kadam dialect: push without subage triggers kadam.imp.subage_missing', () => {
+test('Ext-RTB dialect: push without subage triggers extrtb.imp.subage_missing', () => {
   const req = validRequest();
   req.site.ext = { idzone: 'push-zone' };
   // imp.ext absent → push detected via idzone, subage missing
-  const { findings } = validate(req, { dialect: 'kadam' });
-  assert.ok(findById(findings, 'kadam.imp.subage_missing'));
+  const { findings } = validate(req, { dialect: 'ext-rtb' });
+  assert.ok(findById(findings, 'extrtb.imp.subage_missing'));
 });
 
-test('Kadam dialect: unsupported macro in bid.adm → kadam.bid.macro_unsupported', () => {
+test('Ext-RTB dialect: unsupported macro in bid.adm → extrtb.bid.macro_unsupported', () => {
   const res = validResponse();
   res.seatbid[0].bid[0].adm = '<a href="${CLICKURL}">click</a>';
-  const { findings } = validate(res, { dialect: 'kadam' });
-  const f = findById(findings, 'kadam.bid.macro_unsupported');
+  const { findings } = validate(res, { dialect: 'ext-rtb' });
+  const f = findById(findings, 'extrtb.bid.macro_unsupported');
   assert.ok(f);
   assert.equal(f.params.macro, 'CLICKURL');
 });
 
-test('IAB dialect does NOT flag macros — they belong to kadam dialect only', () => {
+test('IAB dialect does NOT flag macros — they belong to ext-rtb dialect only', () => {
   const res = validResponse();
   res.seatbid[0].bid[0].adm = '<a href="${CLICKURL}">click</a>';
   const { findings } = validate(res, { dialect: 'iab' });
-  assert.equal(findById(findings, 'kadam.bid.macro_unsupported'), undefined);
+  assert.equal(findById(findings, 'extrtb.bid.macro_unsupported'), undefined);
 });
 
 // ── BidResponse paths ────────────────────────────────────────────────────
@@ -719,7 +719,7 @@ test('version pinning: invalid expected (random string) is silently ignored', ()
 
 test('version pinning: non-oRTB type (JSON Feed) → no mismatch', () => {
   // Pinning is meaningful only on the oRTB axis. Other formats (JSON
-  // Feed, Kadam feed) don't carry an IAB version, so even with an
+  // Feed, vendor feed) don't carry an IAB version, so even with an
   // expectedVersion the rule stays silent.
   const jsonFeed = { version: 'https://jsonfeed.org/version/1.1', items: [] };
   const result = validate(jsonFeed, { expectedVersion: VERSIONS.V_2_6 });
@@ -953,18 +953,18 @@ test('nativeAssetCrosscheck: invalid JSON adm returns errorKey', () => {
   assert.equal(cm.errorKey, 'crosscheck.bid.native_invalid_adm');
 });
 
-// ── Kadam push feed — cpc/price 3-tier finding ─────────────────────────────
+// ── Push-materials feed — cpc/price 3-tier finding ──────────────────────────
 
 const findByIdInResult = (result, id) => (result.findings || []).find((f) => f.id === id);
 
-test('kadam push: numeric cpc → no bid finding fires', () => {
+test('push-materials feed: numeric cpc → no bid finding fires', () => {
   const r = validate([{ id: 'm1', click_url: 'https://x', cpc: 0.05 }]);
   assert.equal(findByIdInResult(r, 'feed.push.bid_required'), undefined);
   assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);
   assert.equal(findByIdInResult(r, 'feed.push.bid_not_numeric'), undefined);
 });
 
-test('kadam push: numeric-string cpc → WARN bid_string_type, NOT bid_required', () => {
+test('push-materials feed: numeric-string cpc → WARN bid_string_type, NOT bid_required', () => {
   const r = validate([{ id: 'm1', click_url: 'https://x', cpc: '0.01495' }]);
   const f = findByIdInResult(r, 'feed.push.bid_string_type');
   assert.ok(f, 'expected bid_string_type finding to fire');
@@ -973,7 +973,7 @@ test('kadam push: numeric-string cpc → WARN bid_string_type, NOT bid_required'
   assert.equal(findByIdInResult(r, 'feed.push.bid_not_numeric'), undefined);
 });
 
-test('kadam push: non-numeric string cpc → ERROR bid_not_numeric', () => {
+test('push-materials feed: non-numeric string cpc → ERROR bid_not_numeric', () => {
   const r = validate([{ id: 'm1', click_url: 'https://x', cpc: 'free' }]);
   const f = findByIdInResult(r, 'feed.push.bid_not_numeric');
   assert.ok(f, 'expected bid_not_numeric finding to fire');
@@ -982,7 +982,7 @@ test('kadam push: non-numeric string cpc → ERROR bid_not_numeric', () => {
   assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);
 });
 
-test('kadam push: absent cpc AND absent price → ERROR bid_required (unchanged)', () => {
+test('push-materials feed: absent cpc AND absent price → ERROR bid_required (unchanged)', () => {
   const r = validate([{ id: 'm1', click_url: 'https://x' }]);
   const f = findByIdInResult(r, 'feed.push.bid_required');
   assert.ok(f, 'expected bid_required finding to fire');
@@ -990,7 +990,7 @@ test('kadam push: absent cpc AND absent price → ERROR bid_required (unchanged)
   assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);
 });
 
-test('kadam push: numeric price (fallback) → no bid finding', () => {
+test('push-materials feed: numeric price (fallback) → no bid finding', () => {
   const r = validate([{ id: 'm1', click_url: 'https://x', price: 1.5 }]);
   assert.equal(findByIdInResult(r, 'feed.push.bid_required'), undefined);
   assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);

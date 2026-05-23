@@ -9,7 +9,7 @@
      {
        "spyglass_version": "v8.0.0",
        "captured_at": "<ISO>",
-       "url": "https://spyglass.kyivtech.com.ua/...",
+       "url": "https://ortbtools.com/...",
        "bid_request": <object | string>,
        "bid_response": <object | string | null>,
        "validation": <object | null>,

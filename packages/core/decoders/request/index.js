@@ -9,7 +9,7 @@
  *
  * Decoder contract:
  *   module.exports = {
- *     id: 'pushub-link',                    // unique slug
+ *     id: 'url-linkfeed',                    // unique slug
  *     description: '…',                      // for docs/UI
  *     detect(text, parsedUrl): boolean,      // text + pre-parsed URL object
  *     decode(text, parsedUrl): CanonicalUrlRequest | { ok: false, reason },
@@ -23,7 +23,7 @@
 
 const logger = require('../../logger');
 
-const DECODERS = [require('./pushub-link')];
+const DECODERS = [require('./url-linkfeed')];
 
 /**
  * Try to decode a URL-style request payload. Returns the first decoder's

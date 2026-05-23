@@ -16,7 +16,7 @@
 **Gap:** oRTB request pop/clickunder format not detected  
 **Severity:** 🔴 CRITICAL  
 **Evidence from snapshot:** `packages/core/format-detect.js` lines 120–150 scan `imp.banner`, `imp.video`, `imp.audio`, `imp.native` but never inspect `imp.ext` for pop signals like `adtype`, `format`, `type`, or boolean flags.  
-**What's missing for proper CU/Pops support:** Many pop SSPs (AdMaven, Kadam, PropellerAds) signal the format via `imp.ext.adtype = "popunder"` or similar. Without detection, the inspector cannot tag the payload as `pops`, breaking downstream validation, crosscheck, and UI chips.  
+**What's missing for proper CU/Pops support:** Many pop SSPs (pop vendor B, ext-rtb vendor, pop vendor C) signal the format via `imp.ext.adtype = "popunder"` or similar. Without detection, the inspector cannot tag the payload as `pops`, breaking downstream validation, crosscheck, and UI chips.  
 **Proposed fix:** In `detectFormat`, after the `imp` loop, iterate `imp.ext` keys for known pop strings/booleans and add `FORMATS.POPS`. Also check `imp.banner.btype` for `4` (popup block) as a secondary signal.  
 **Test angle:** Provide an oRTB request with `imp[0].ext.adtype = "popunder"` and assert `detectFormat` returns `formats: ['pops']`.
 
@@ -29,7 +29,7 @@
 
 **Gap:** JSON-feed pop detection misses feeds with additional metadata  
 **Severity:** 🟡 MEDIUM  
-**Evidence from snapshot:** `packages/core/format-detect.js` lines 85–95: `detectFeedFormat` only adds `POPS` when `hasRedirect && !hasImage && !hasTitle`. Some pop feeds (e.g., PopAds) may include a `type` field or frequency cap keys alongside the redirect URL, but still lack image/title.  
+**Evidence from snapshot:** `packages/core/format-detect.js` lines 85–95: `detectFeedFormat` only adds `POPS` when `hasRedirect && !hasImage && !hasTitle`. Some pop feeds (e.g., pop vendor D) may include a `type` field or frequency cap keys alongside the redirect URL, but still lack image/title.  
 **What's missing for proper CU/Pops support:** A feed object like `{ redirecturl: "...", freqcap: 3 }` would not be tagged as pops because the heuristic is too narrow.  
 **Proposed fix:** Also check for a `type` field equal to `"pop"` or `"popunder"`, or relax the condition to require only a redirect URL and no creative assets (image/title/description).  
 **Test angle:** Feed a single object `{ redirecturl: "http://x.com", freqcap: 2 }` and assert `pops` is detected.
@@ -80,7 +80,7 @@
 
 **Gap:** No validation of pop-specific macros (e.g., `${POPUNDER_URL}`)  
 **Severity:** 🟡 MEDIUM  
-**Evidence from snapshot:** `packages/core/dialects/kadam.js` checks macros but only for Kadam push; no pop macro check exists.  
+**Evidence from snapshot:** `packages/core/dialects/ext-rtb.js` checks macros but only for ext-rtb vendor push; no pop macro check exists.  
 **What's missing for proper CU/Pops support:** Vendors split macros into `${POPUNDER_URL}` vs `${CLICK_URL}`. Using the wrong macro breaks the pop.  
 **Proposed fix:** In a pop dialect, scan `bid.adm`/`nurl` for known pop macros and warn if standard click macros are used instead.  
 **Test angle:** Provide a pop bid with `${CLICK_URL}` in `adm` and expect a WARNING suggesting `${POPUNDER_URL}`.
@@ -115,93 +115,93 @@
 **Proposed fix:** If pop format detected, check for a currency/unit hint (e.g., `imp.ext.bidtype = "cpc"`) and adjust comparison or warn about unit mismatch.  
 **Test angle:** Crosscheck a pop request with `bidfloor=0.50` (CPM) and bid `price=0.01` (CPC) and expect a WARNING about unit mismatch.
 
-## 4. Dialect overlays — which CIS-adtech pop SSPs are missing (PropellerAds, AdMaven, Clickadu, AdCash, PopAds, PopCash, TrafficStars)?
+## 4. Dialect overlays — which CIS-adtech pop SSPs are missing (pop vendor C, pop vendor B, pop vendor A, pop vendor E, pop vendor D, pop vendor F, pop vendor G)?
 
-**Gap:** Missing PropellerAds dialect  
+**Gap:** Missing pop vendor C dialect  
 **Severity:** 🔴 CRITICAL  
-**Evidence from snapshot:** `packages/core/dialects/` contains only `iab.js`, `kadam-inpage-push.js`, `kadam.js`.  
-**What's missing for proper CU/Pops support:** PropellerAds uses `imp.ext.type = "pop"` and custom frequency cap fields; without a dialect, these go unvalidated.  
-**Proposed fix:** Create `dialects/propellerads.js` with `validateRequest` checking `ext.type`, `ext.fcap`, and `validateResponse` checking `bid.adm` shape.  
-**Test angle:** Provide a PropellerAds request and verify dialect fires findings for missing fcap.
+**Evidence from snapshot:** `packages/core/dialects/` contains only `iab.js`, `inpage-push.js`, `ext-rtb.js`.  
+**What's missing for proper CU/Pops support:** pop vendor C uses `imp.ext.type = "pop"` and custom frequency cap fields; without a dialect, these go unvalidated.  
+**Proposed fix:** Create `dialects/popvendor-c.js` with `validateRequest` checking `ext.type`, `ext.fcap`, and `validateResponse` checking `bid.adm` shape.  
+**Test angle:** Provide a pop vendor C request and verify dialect fires findings for missing fcap.
 
-**Gap:** Missing AdMaven dialect  
+**Gap:** Missing pop vendor B dialect  
 **Severity:** 🔴 CRITICAL  
 **Evidence from snapshot:** Same as above.  
-**What's missing for proper CU/Pops support:** AdMaven uses `imp.ext.adtype = "popunder"` and specific `ext.frequency_cap` structure.  
-**Proposed fix:** Create `dialects/admaven.js` with validation for `adtype`, `frequency_cap`, and response `adm` script.  
-**Test angle:** Provide an AdMaven request and verify dialect validates fcap.
+**What's missing for proper CU/Pops support:** pop vendor B uses `imp.ext.adtype = "popunder"` and specific `ext.frequency_cap` structure.  
+**Proposed fix:** Create `dialects/popvendor-b.js` with validation for `adtype`, `frequency_cap`, and response `adm` script.  
+**Test angle:** Provide an pop vendor B request and verify dialect validates fcap.
 
-**Gap:** Missing Clickadu dialect  
+**Gap:** Missing pop vendor A dialect  
 **Severity:** 🔴 CRITICAL  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** Clickadu uses a custom JSON feed (similar to Kadam) but also oRTB with `ext.adtype`.  
-**Proposed fix:** Create `dialects/clickadu.js` for oRTB validation and extend `rules-feed.js` for its JSON shape.  
-**Test angle:** Provide a Clickadu oRTB request and verify dialect detects missing `ext.zone_id`.
+**What's missing for proper CU/Pops support:** pop vendor A uses a custom JSON feed (similar to ext-rtb vendor) but also oRTB with `ext.adtype`.  
+**Proposed fix:** Create `dialects/popvendor-a.js` for oRTB validation and extend `rules-feed.js` for its JSON shape.  
+**Test angle:** Provide a pop vendor A oRTB request and verify dialect detects missing `ext.zone_id`.
 
-**Gap:** Missing AdCash dialect  
+**Gap:** Missing pop vendor E dialect  
 **Severity:** 🟠 HIGH  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** AdCash uses oRTB with `imp.ext.format = "popunder"` and specific `ext.zoneid`.  
-**Proposed fix:** Create `dialects/adcash.js` to validate `format` and `zoneid`.  
-**Test angle:** Provide an AdCash request and verify dialect warns if `zoneid` missing.
+**What's missing for proper CU/Pops support:** pop vendor E uses oRTB with `imp.ext.format = "popunder"` and specific `ext.zoneid`.  
+**Proposed fix:** Create `dialects/popvendor-e.js` to validate `format` and `zoneid`.  
+**Test angle:** Provide an pop vendor E request and verify dialect warns if `zoneid` missing.
 
-**Gap:** Missing PopAds dialect  
+**Gap:** Missing pop vendor D dialect  
 **Severity:** 🔴 CRITICAL  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** PopAds has a unique auction model (bid-per-thousand then bid-per-popunder) and uses a custom JSON feed with `bid` and `url`.  
-**Proposed fix:** Create `dialects/popads.js` for feed validation (or extend `rules-feed.js`) and handle the two-stage bidding logic.  
-**Test angle:** Provide a PopAds feed and verify it's recognized and validated.
+**What's missing for proper CU/Pops support:** pop vendor D has a unique auction model (bid-per-thousand then bid-per-popunder) and uses a custom JSON feed with `bid` and `url`.  
+**Proposed fix:** Create `dialects/popvendor-d.js` for feed validation (or extend `rules-feed.js`) and handle the two-stage bidding logic.  
+**Test angle:** Provide a pop vendor D feed and verify it's recognized and validated.
 
-**Gap:** Missing PopCash dialect  
+**Gap:** Missing pop vendor F dialect  
 **Severity:** 🔴 CRITICAL  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** PopCash uses a JSON feed with `url`, `bid`, and `frequency` fields.  
-**Proposed fix:** Create `dialects/popcash.js` or add to `rules-feed.js`.  
-**Test angle:** Provide a PopCash feed and verify validation of `frequency`.
+**What's missing for proper CU/Pops support:** pop vendor F uses a JSON feed with `url`, `bid`, and `frequency` fields.  
+**Proposed fix:** Create `dialects/popvendor-f.js` or add to `rules-feed.js`.  
+**Test angle:** Provide a pop vendor F feed and verify validation of `frequency`.
 
-**Gap:** Missing TrafficStars dialect  
+**Gap:** Missing pop vendor G dialect  
 **Severity:** 🟠 HIGH  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** TrafficStars uses oRTB with `imp.ext.format = "popunder"` and custom `ext.zone_id`.  
-**Proposed fix:** Create `dialects/trafficstars.js` to validate `format` and `zone_id`.  
-**Test angle:** Provide a TrafficStars request and verify dialect fires.
+**What's missing for proper CU/Pops support:** pop vendor G uses oRTB with `imp.ext.format = "popunder"` and custom `ext.zone_id`.  
+**Proposed fix:** Create `dialects/popvendor-g.js` to validate `format` and `zone_id`.  
+**Test angle:** Provide a pop vendor G request and verify dialect fires.
 
 ## 5. JsonFeed shapes — what vendor-specific JSON feed formats are missing from rules-feed.js?
 
-**Gap:** PropellerAds JSON feed not recognized  
+**Gap:** pop vendor C JSON feed not recognized  
 **Severity:** 🔴 CRITICAL  
-**Evidence from snapshot:** `packages/core/rules-feed.js` only handles Kadam, ExoClick, RichAds, Zeropark.  
-**What's missing for proper CU/Pops support:** PropellerAds delivers pops via a custom JSON feed with fields like `url`, `bid`, `campaign_id`, `frequency`. Without a validator, users get "unknown feed shape".  
-**Proposed fix:** Add a `detectSingleVendor` predicate for PropellerAds (e.g., presence of `campaign_id` and `url`) and a `validatePropellerAds` function.  
-**Test angle:** Paste a PropellerAds feed and verify it's identified and validated.
+**Evidence from snapshot:** `packages/core/rules-feed.js` only handles ext-rtb vendor, value-feed vendor, bid-price vendor, bid-redirect vendor.  
+**What's missing for proper CU/Pops support:** pop vendor C delivers pops via a custom JSON feed with fields like `url`, `bid`, `campaign_id`, `frequency`. Without a validator, users get "unknown feed shape".  
+**Proposed fix:** Add a `detectSingleVendor` predicate for pop vendor C (e.g., presence of `campaign_id` and `url`) and a `validatePopVendorC` function.  
+**Test angle:** Paste a pop vendor C feed and verify it's identified and validated.
 
-**Gap:** Clickadu JSON feed not recognized  
+**Gap:** pop vendor A JSON feed not recognized  
 **Severity:** 🔴 CRITICAL  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** Clickadu feed shape is similar to Kadam clickunder (`{ result: { listing: [...] } }`) but may use different keys.  
-**Proposed fix:** Extend `validateFeedResponse` to detect Clickadu’s envelope and validate `url`, `bid`, `id`.  
-**Test angle:** Provide a Clickadu feed and verify it's not "unknown feed shape".
+**What's missing for proper CU/Pops support:** pop vendor A feed shape is similar to ext-rtb vendor clickunder (`{ result: { listing: [...] } }`) but may use different keys.  
+**Proposed fix:** Extend `validateFeedResponse` to detect pop vendor A’s envelope and validate `url`, `bid`, `id`.  
+**Test angle:** Provide a pop vendor A feed and verify it's not "unknown feed shape".
 
-**Gap:** PopCash JSON feed not recognized  
+**Gap:** pop vendor F JSON feed not recognized  
 **Severity:** 🔴 CRITICAL  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** PopCash feed objects contain `url`, `bid`, `frequency`.  
+**What's missing for proper CU/Pops support:** pop vendor F feed objects contain `url`, `bid`, `frequency`.  
 **Proposed fix:** Add detection for `frequency` key and validate required fields.  
-**Test angle:** Provide a PopCash feed and verify validation.
+**Test angle:** Provide a pop vendor F feed and verify validation.
 
-**Gap:** PopAds JSON feed not recognized  
+**Gap:** pop vendor D JSON feed not recognized  
 **Severity:** 🔴 CRITICAL  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** PopAds feed may have a unique structure (e.g., `{ bids: [...] }` with `bid` and `url`).  
-**Proposed fix:** Add PopAds feed validator.  
-**Test angle:** Provide a PopAds feed and verify it's handled.
+**What's missing for proper CU/Pops support:** pop vendor D feed may have a unique structure (e.g., `{ bids: [...] }` with `bid` and `url`).  
+**Proposed fix:** Add pop vendor D feed validator.  
+**Test angle:** Provide a pop vendor D feed and verify it's handled.
 
-**Gap:** AdMaven JSON feed not recognized (if they offer one)  
+**Gap:** pop vendor B JSON feed not recognized (if they offer one)  
 **Severity:** 🟡 MEDIUM  
 **Evidence from snapshot:** Same.  
-**What's missing for proper CU/Pops support:** AdMaven primarily uses oRTB, but may have a JSON fallback; if so, it's missing.  
+**What's missing for proper CU/Pops support:** pop vendor B primarily uses oRTB, but may have a JSON fallback; if so, it's missing.  
 **Proposed fix:** Research and add if applicable.  
-**Test angle:** Provide an AdMaven JSON feed (if exists) and verify recognition.
+**Test angle:** Provide an pop vendor B JSON feed (if exists) and verify recognition.
 
 ## 6. Sample fixtures — what `samples/synthetic-*.json` are missing for pop/clickunder coverage?
 
@@ -223,7 +223,7 @@
 **Severity:** 🟠 HIGH  
 **Evidence from snapshot:** No feed fixtures beyond the existing ones.  
 **What's missing for proper CU/Pops support:** Each SSP feed shape needs a fixture to test `rules-feed.js`.  
-**Proposed fix:** Create `synthetic-feed-propellerads.json`, `synthetic-feed-clickadu.json`, `synthetic-feed-popcash.json`, etc.  
+**Proposed fix:** Create `synthetic-feed-popvendor-c.json`, `synthetic-feed-popvendor-a.json`, `synthetic-feed-popvendor-f.json`, etc.  
 **Test angle:** Run feed validation tests with these fixtures.
 
 ## 7. UI surface — does the inspector visibly flag "POPS" as a top-level format in tabs / chips?
@@ -253,7 +253,7 @@
 **Severity:** 🟢 LOW  
 **Evidence from snapshot:** Messages list shows `feed.clickunder.url_required: ''` and `feed.clickunder.bid_required: ''` (empty specRef).  
 **What's missing for proper CU/Pops support:** Users can't click through to vendor docs for these findings.  
-**Proposed fix:** Add URLs to Kadam clickunder documentation (e.g., `https://docs.kadam.net/...`) in the messages config.  
+**Proposed fix:** Add URLs to ext-rtb vendor clickunder documentation (e.g., `(vendor docs — private)) in the messages config.  
 **Test angle:** Check that the finding object includes a non-empty `specRef`.
 
 **Gap:** Missing spec links for any new pop findings  

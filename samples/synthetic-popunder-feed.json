@@ -1,5 +1,5 @@
 {
-  "_note": "Single-object JSON-feed popunder, PopAds-style shape: redirecturl + bid + frequency-cap metadata, no banner-like creative assets (no title / image / icon). detectFormat() should classify this as ['pops']. rules-feed dispatches by single-vendor detection — this lands in the zeropark branch (which checks redirecturl + bid).",
+  "_note": "Single-object JSON-feed popunder, pop vendor D-style shape: redirecturl + bid + frequency-cap metadata, no banner-like creative assets (no title / image / icon). detectFormat() should classify this as ['pops']. rules-feed dispatches by single-vendor detection — this lands in the bidredirect branch (which checks redirecturl + bid).",
   "redirecturl": "https://example-landing.com/pop-offer-001?source=feed",
   "bid": 0.0042,
   "freqcap": 2,

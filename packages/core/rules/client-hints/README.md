@@ -53,9 +53,9 @@ Suppresses all three rules. Or disable individually with the exact ID.
 
 ## Vendor-neutrality
 
-The doc that motivated this lives at Kadam. The pattern — "SSP omits
+The doc that motivated this lives at ext-rtb vendor. The pattern — "SSP omits
 client-hints, DSP targets blindly" — applies to many networks. The
-plugin doesn't reference Kadam, doesn't depend on dialect, and runs
+plugin doesn't reference ext-rtb vendor, doesn't depend on dialect, and runs
 for every oRTB 2.x BidRequest.
 
 ## Implementation notes

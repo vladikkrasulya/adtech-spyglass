@@ -14,7 +14,7 @@ You answer questions of the form "where is X?", "what calls Y?", "why might Z be
 - `db.js` / `auth.js` / `tokens.js` / `email.js` — backend modules
 - `packages/core/` — npm-workspace, validator engine (browser + server compatible)
   - `index.js`, `detect.js`, `rules-request.js`, `rules-response.js`, `rules-feed.js`, `crosscheck.js`, `categories.js`
-  - `dialects/iab.js`, `dialects/kadam.js`
+  - `dialects/iab.js`, `dialects/ext-rtb.js`
   - `messages/{uk,en,ru}.json`
 - `public/` — vanilla HTML/JS/CSS, no build step
   - `index.{en,uk,ru}.html`, `about.{en,uk,ru}.html`

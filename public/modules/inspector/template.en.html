@@ -41,6 +41,14 @@
       <div class="example-menu-list" role="menu">
         <button data-action="load-demo" role="menuitem">🎲 random</button>
         <div class="menu-divider"></div>
+        <span class="menu-label">IAB 2.6 · valid</span>
+        <button data-action="load-demo" data-type="iab-banner-valid" role="menuitem">
+          ✨ OpenRTB 2.6 banner
+        </button>
+        <button data-action="load-demo" data-type="iab-video-valid" role="menuitem">
+          ✨ OpenRTB 2.6 video
+        </button>
+        <div class="menu-divider"></div>
         <span class="menu-label">control</span>
         <button data-action="load-demo" data-type="clean-banner" role="menuitem">
           ✓ clean banner (no findings)
@@ -389,8 +397,8 @@
         title="Validation-dialect switch — changes the rule set the engine applies to the payload"
       >
         <option value="iab">Standard IAB (oRTB 2.5)</option>
-        <option value="kadam">Vendor · RTB</option>
-        <option value="kadam-inpage-push">Vendor · In-Page Push</option>
+        <option value="ext-rtb">Vendor · RTB</option>
+        <option value="inpage-push">Vendor · In-Page Push</option>
       </select>
       <select
         class="format-pill format-pill-select"
@@ -466,7 +474,7 @@
       >
         behavior <span class="tab-badge" id="behaviorBadge" hidden></span>
       </button>
-      <button class="tab-btn" id="kadamRefTab" data-action="switch-tab" data-target="tRef" hidden>
+      <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
         vendor ref
       </button>
       <button

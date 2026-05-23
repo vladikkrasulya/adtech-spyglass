@@ -44,7 +44,14 @@ function handleSample(req, res) {
     const wanted = (url.searchParams.get('type') || '').trim();
     let pick = null;
     if (wanted) {
-      const match = files.find((f) => f === 'synthetic-' + wanted + '.json');
+      // Explicit ?type= can resolve to either a synthetic-<slug>.json (the
+      // random pool) or a non-prefixed <slug>.json (curated IAB fixtures
+      // — iab-banner-valid, iab-video-valid). Random pick still uses the
+      // synthetic-* filter below so curated fixtures stay opt-in.
+      const allFiles = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
+      const match = allFiles.find(
+        (f) => f === 'synthetic-' + wanted + '.json' || f === wanted + '.json',
+      );
       if (match) pick = match;
     }
     if (!pick) pick = files[Math.floor(Math.random() * files.length)];
@@ -147,41 +154,7 @@ function handleSample(req, res) {
   }
 }
 
-// ── GET /api/sample-preview/:id ─────────────────────────────────────────────
-// Public, no-auth endpoint feeding the "Try with sample" CTA on the hero.
-// Three curated fixtures, fixed whitelist so the URL is bookmarkable and the
-// caller doesn't need to know the on-disk filenames. Returns the raw fixture
-// JSON wrapped so the client doesn't have to second-guess the shape.
-const PREVIEW_FIXTURES = {
-  banner26: { file: 'iab-banner-valid.json', label: 'OpenRTB 2.6 banner' },
-  video26: { file: 'iab-video-valid.json', label: 'OpenRTB 2.6 video' },
-  env30: { file: 'synthetic-ortb30-clean.json', label: 'OpenRTB 3.0 envelope' },
-};
-
-function handlePreview(req, res, _parsed, match) {
-  const id = (match && match.params && match.params.id) || '';
-  const fixture = PREVIEW_FIXTURES[id];
-  if (!fixture) {
-    return sendError(res, 404, 'unknown_preview', 'Unknown sample preview id');
-  }
-  try {
-    const raw = fs.readFileSync(path.join(SAMPLES_DIR, fixture.file), 'utf8');
-    const json = JSON.parse(raw);
-    // Strip the human-targeted _note for parity with handleSample (which
-    // delete-strips it via cleanSample). Otherwise the preview UX shows
-    // an extra field in the editor that the corpus sample doesn't.
-    if (json && typeof json === 'object') delete json._note;
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    sendJson(res, 200, { ok: true, id, label: fixture.label, json });
-  } catch (e) {
-    sendError(res, 500, 'preview_failed', e.message);
-  }
-}
-
 module.exports = {
   id: 'sample',
-  routes: [
-    { method: 'GET', path: '/api/v1/sample', handler: handleSample },
-    { method: 'GET', path: '/api/sample-preview/:id', handler: handlePreview },
-  ],
+  routes: [{ method: 'GET', path: '/api/v1/sample', handler: handleSample }],
 };

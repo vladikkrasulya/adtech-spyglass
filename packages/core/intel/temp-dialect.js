@@ -12,7 +12,7 @@
  *
  * Why client-side only:
  *   - Engine purity: the server-side validate() rule families remain a
- *     fixed taxonomy (IAB + Kadam variants). Temp dialects are user
+ *     fixed taxonomy (IAB + vendor-dialect variants). Temp dialects are user
  *     experiments, not first-class engine extensions.
  *   - Privacy: temp dialect specs may encode field names a user discovered
  *     from sensitive traffic. Keeping them browser-local mirrors the
@@ -22,11 +22,11 @@
  * Spec format (stored in IndexedDB store `temporary_dialects`):
  *   {
  *     id: 'temp_<uuid>',
- *     name: 'Kadam Custom',
+ *     name: 'Vendor Custom',
  *     domainBucket: 'push' | 'display' | 'inapp' | 'all',
  *     fields: [
  *       { path: 'req.imp.ext.subage', required: true, expectedType: 'number' },
- *       { path: 'res.bid.ext.kadam_macro', required: false }
+ *       { path: 'res.bid.ext.vendor_macro', required: false }
  *     ],
  *     parentDialect: 'iab',         // server-side dialect to use as base
  *     createdAt: 1700000000000,

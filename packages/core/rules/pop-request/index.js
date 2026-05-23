@@ -58,9 +58,9 @@ function requestHasPopHint(req) {
 
 /**
  * Look for a frequency-cap signal anywhere a vendor commonly puts it.
- * Most networks use one of: `frequency_cap` (Kadam, Clickadu),
- * `fcap` (PropellerAds, AdMaven), `freq` (PopAds shortform), `cap`
- * (legacy ExoClick). Any non-null/empty value counts.
+ * Most networks use one of: `frequency_cap` (various SSPs),
+ * `fcap` (pop vendors C+B), `freq` (shortform alt), `cap`
+ * (legacy URL-based SSPs). Any non-null/empty value counts.
  */
 function impHasFcap(imp) {
   if (!imp || typeof imp !== 'object') return false;

@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * Decoder: pushub `xml.pushub.net/link` endpoint.
+ * Decoder: URL-style link-feed `xml.pushub.net/link` endpoint.
  *
- * Pushub clickunder/teaser request signature (observed 2026-05-21):
+ * URL-style link-feed request signature (observed 2026-05-21):
  *   GET http://xml.pushub.net/link
  *     ?format=json
  *     &feed=<id>
@@ -21,14 +21,13 @@
  *     &ad_info=<flag>
  *     &lang=<ISO 639-1>
  *
- * Response shape (handled separately by rules-feed dispatch — pending
- * pushub entry there too):
+ * Response shape (handled separately by rules-feed dispatch):
  *   { "result": { "link": [{ "bid": <float>, "url": "<click>", "seat": "<id>" }] } }
  */
 
 const { makeCanonicalUrlRequest } = require('../_canonical');
 
-const ID = 'pushub-link';
+const ID = 'url-linkfeed';
 const HOST = 'xml.pushub.net';
 const PATH = '/link';
 
@@ -81,7 +80,7 @@ function decode(text, parsedUrl) {
 
 module.exports = {
   id: ID,
-  description: 'Pushub clickunder/teaser GET request (xml.pushub.net/link).',
+  description: 'URL-style link-feed GET request decoder.',
   detect,
   decode,
 };

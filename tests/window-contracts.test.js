@@ -78,7 +78,7 @@ const CLEANUP_SKIP = new Set([
   'openPartnerModal',
   'confirmAddPartner',
   'deletePartner',
-  '_kadam',
+  '_vendorRef',
   '__spyglassLast',
   'clearHistory',
   'historyStore',

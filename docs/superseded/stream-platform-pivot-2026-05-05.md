@@ -1,3 +1,7 @@
+> **SUPERSEDED 2026-05-23** — See ROADMAP.md. Stream MVP is now Stage 2 of the multi-section site architecture, not a landing-page replacement. The SSE contract / ring buffer / specimen permalink design below remains useful as Stage 2 reference.
+
+---
+
 # Stream-Platform Pivot — Product Doc + 6-Month Roadmap
 
 > **Date:** 2026-05-05
@@ -177,7 +181,7 @@ Honest dates. Each milestone closes with a working surface, not a half-built one
 - 4 of 5 patterns panels (format-mix, top-findings-by-partner, version-mix, geo)
 - Hourly aggregation job (in-process cron, SQLite time-bucket table)
 - `/patterns/snapshot/{hash}` permalinks
-- Initial corpus expanded (Smaato OB samples, ExoClick public examples, etc.)
+- Initial corpus expanded (Smaato OB samples, value-feed vendor public examples, etc.)
 
 ### Month 4: Directory + API
 

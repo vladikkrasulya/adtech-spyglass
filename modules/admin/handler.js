@@ -119,7 +119,7 @@ function createAdminModule(deps) {
    * portal's filter dropdown so it stays in sync with what's actually
    * being recorded.
    */
-  function handleAdminLogs(req, res, parsed) {
+  async function handleAdminLogs(req, res, parsed) {
     if (!requireAdminToken(req, res)) return;
     try {
       const q = parsed.searchParams;
@@ -132,12 +132,15 @@ function createAdminModule(deps) {
         limit: parseIntOrNull(q.get('limit')) || undefined,
         offset: parseIntOrNull(q.get('offset')) || undefined,
       };
-      const result = eventLog.query(filters);
+      const [result, components] = await Promise.all([
+        eventLog.query(filters),
+        eventLog.listComponents(),
+      ]);
       sendJson(res, 200, {
         success: true,
         generated_at: Date.now(),
         retention_days: eventLog.RETENTION_DAYS,
-        components: eventLog.listComponents(),
+        components,
         ...result,
       });
     } catch (e) {

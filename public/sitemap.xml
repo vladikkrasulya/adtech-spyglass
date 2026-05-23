@@ -2,56 +2,56 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://spyglass.kyivtech.com.ua/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/"/>
-    <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/"/>
+    <loc>https://ortbtools.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ortbtools.com/"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ortbtools.com/"/>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://spyglass.kyivtech.com.ua/uk/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/"/>
-    <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/"/>
+    <loc>https://ortbtools.com/uk/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ortbtools.com/"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ortbtools.com/"/>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://spyglass.kyivtech.com.ua/ru/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/"/>
-    <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/"/>
+    <loc>https://ortbtools.com/ru/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ortbtools.com/"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ortbtools.com/"/>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://spyglass.kyivtech.com.ua/about</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about"/>
-    <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/about"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about"/>
+    <loc>https://ortbtools.com/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ortbtools.com/about"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/about"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ortbtools.com/about"/>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://spyglass.kyivtech.com.ua/uk/about</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about"/>
-    <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/about"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about"/>
+    <loc>https://ortbtools.com/uk/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ortbtools.com/about"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/about"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ortbtools.com/about"/>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://spyglass.kyivtech.com.ua/ru/about</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about"/>
-    <xhtml:link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/about"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about"/>
+    <loc>https://ortbtools.com/ru/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ortbtools.com/about"/>
+    <xhtml:link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/about"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ortbtools.com/about"/>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

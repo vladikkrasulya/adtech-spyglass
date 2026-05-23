@@ -19,7 +19,7 @@ const C = makeCross;
 
 function crosscheck(req, res, _ctx) {
   // _ctx.dialect is reserved for future dialect-aware crosscheck rules
-  // (e.g. Kadam-specific bid.ext.bsection expectations). Today the rules
+  // (e.g. vendor-specific bid.ext.bsection expectations). Today the rules
   // here are spec-agnostic; the param is accepted to keep the call shape
   // stable.
   const out = [];

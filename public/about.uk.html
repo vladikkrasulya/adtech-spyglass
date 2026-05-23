@@ -3,29 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Spyglass — як ним користуватись · документація</title>
-    <meta
-      name="description"
-      content="Документація Spyglass: що вміє OpenRTB-інспектор (oRTB 2.5/2.6/3.0, native, VAST), чого не робить, які дані використовує локально, що зберігає на сервері (zero-knowledge шифрування), і як читати результат validation/crosscheck."
-    />
+    <title>Як користуватися Spyglass — документація валідатора OpenRTB</title>
+    <meta name="description" content="Документація Spyglass: як працює валідатор OpenRTB, що аналізує, що залишається на пристрої (100% локально), що зберігається із шифруванням (ключ є лише у вашому браузері). oRTB 2.5/2.6/3.0, Native, VAST." />
     <meta name="robots" content="index,follow" />
-    <link rel="canonical" href="https://spyglass.kyivtech.com.ua/uk/about" />
-    <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/about" />
-    <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/about" />
-    <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/about" />
-    <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/about" />
+    <link rel="canonical" href="https://ortbtools.com/uk/about" />
+    <link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/about" />
+    <link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/about" />
+    <link rel="alternate" hreflang="en" href="https://ortbtools.com/about" />
+    <link rel="alternate" hreflang="x-default" href="https://ortbtools.com/about" />
 
     <meta property="og:type" content="article" />
-    <meta property="og:site_name" content="Kyiv Tech" />
-    <meta property="og:title" content="Spyglass — як ним користуватись" />
-    <meta
-      property="og:description"
-      content="Документація OpenRTB-інспектора: що вміє, чого не робить, які дані використовує, що зберігає."
-    />
-    <meta property="og:url" content="https://spyglass.kyivtech.com.ua/uk/about" />
+    <meta property="og:site_name" content="ortbtools.com" />
+    <meta property="og:title" content="Документація Spyglass — валідатор OpenRTB" />
+    <meta property="og:description" content="Як працює валідатор OpenRTB, що аналізує, що залишається у браузері, а що зберігається з наскрізним шифруванням." />
+    <meta property="og:url" content="https://ortbtools.com/uk/about" />
     <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:locale" content="uk_UA" />
-    <meta property="og:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
+    <meta property="og:image" content="https://ortbtools.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
@@ -34,25 +28,22 @@
     />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Spyglass — як ним користуватись" />
-    <meta
-      name="twitter:description"
-      content="Документація Spyglass — публічного OpenRTB-інспектора."
-    />
-    <meta name="twitter:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
+    <meta name="twitter:title" content="Документація Spyglass — валідатор OpenRTB" />
+    <meta name="twitter:description" content="Документація Spyglass — безкоштовний валідатор OpenRTB, що працює повністю у браузері." />
+    <meta name="twitter:image" content="https://ortbtools.com/og-image.png" />
 
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "TechArticle",
-        "headline": "Spyglass — як ним користуватись",
+        "headline": "Як користуватися Spyglass",
         "description": "Документація OpenRTB-інспектора Spyglass.",
-        "url": "https://spyglass.kyivtech.com.ua/uk/about",
+        "url": "https://ortbtools.com/uk/about",
         "inLanguage": "uk",
         "isPartOf": {
           "@type": "WebApplication",
           "name": "Spyglass · OpenRTB Inspector",
-          "url": "https://spyglass.kyivtech.com.ua/"
+          "url": "https://ortbtools.com/"
         }
       }
     </script>
@@ -422,7 +413,7 @@
       <div class="kt-container">
         <div class="doc-prose">
           <span class="eyebrow">docs · v0.41.4</span>
-          <h1 style="margin-top: var(--space-3)">Spyglass — як ним користуватись</h1>
+          <h1 style="margin-top: var(--space-3)">Як користуватися Spyglass</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             Приватний інспектор OpenRTB-трафіку. Вставив JSON, отримав розбір: чи правильно
             сформований запит/відповідь, які поля обов'язкові, чи проходить crosscheck
@@ -604,7 +595,7 @@
           <ul>
             <li>
               <strong>Посилання</strong> — копіює self-contained URL виду
-              <code>spyglass.kyivtech.com.ua/?#req=…&amp;res=…</code>. Payload deflate-стиснутий +
+              <code>ortbtools.com/?#req=…&amp;res=…</code>. Payload deflate-стиснутий +
               base64url-закодований у hash-фрагменті URL, який
               <strong>ніколи не доходить до сервера</strong> (zero-knowledge на рівні самої URL).
               Відкриваєш посилання — обидва поля автоматично заповнюються та аналіз
@@ -971,7 +962,7 @@
               </tr>
               <tr>
                 <td>Не парсить TCF/GPP consent strings</td>
-                <td>Запланована окрема вкладка у <code>kyivtech.com.ua/tools/</code>.</td>
+                <td>Запланований окремий інструмент на <code>ortbtools.com</code>.</td>
               </tr>
               <tr>
                 <td>Не валідує <code>ads.txt</code> / <code>sellers.json</code></td>
@@ -1264,7 +1255,6 @@ findings[]: { id, level, path, params, msg, specRef }
                 target="_blank"
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/Content-Taxonomy</a
-              >
             </li>
             <li>
               <strong>Native 1.1 / 1.2</strong> —
@@ -1273,7 +1263,6 @@ findings[]: { id, level, path, params, msg, specRef }
                 target="_blank"
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/openrtb</a
-              >
             </li>
             <li>
               <strong>Vendor JSON feed (push + клікандер)</strong> — single-bid push-масив або
@@ -1281,22 +1270,16 @@ findings[]: { id, level, path, params, msg, specRef }
               vendors; Spyglass визначає її з кореня відповіді.
             </li>
             <li>
-              <strong>ExoClick proprietary RTB</strong> —
-              <a href="https://docs.exoclick.com/docs/rtb-direct" target="_blank" rel="noopener"
-                >docs.exoclick.com — RTB Direct</a
-              >
+              <strong>Value-feed (proprietary RTB)</strong> —
+              format reference (private)
             </li>
             <li>
-              <strong>RichAds telegram-bid + per-format</strong> —
-              <a href="https://docs.richads.com/" target="_blank" rel="noopener"
-                >docs.richads.com</a
-              >
+              <strong>Bid-price feed (per-format)</strong> —
+              format reference (private)
             </li>
             <li>
-              <strong>Zeropark redirect feed</strong> —
-              <a href="https://help.zeropark.com/" target="_blank" rel="noopener"
-                >help.zeropark.com</a
-              >
+              <strong>Bid-redirect feed</strong> —
+              format reference (private)
             </li>
             <li>
               <strong>AdKernel (oRTB-based)</strong> — покривається стандартним OpenRTB-валідатором;
@@ -1306,7 +1289,6 @@ findings[]: { id, level, path, params, msg, specRef }
                 target="_blank"
                 rel="noopener"
                 >prebid-server/adapters/adkernel</a
-              >
             </li>
           </ul>
           <p>
@@ -1324,7 +1306,7 @@ findings[]: { id, level, path, params, msg, specRef }
           <h2>Питання + контакт</h2>
           <p>
             Bug, feature request, "чому це не працює" —
-            <a href="mailto:hi@kyivtech.com.ua">hi@kyivtech.com.ua</a>.
+            <a href="mailto:hi@ortbtools.com">hi@ortbtools.com</a>.
           </p>
           <p>
             Spyglass — це не комерційний продукт. Це open-tools, що допомагають розбиратись з
@@ -1343,7 +1325,7 @@ findings[]: { id, level, path, params, msg, specRef }
           >
             <span data-spyglass-version>v0.41.4</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
             4.x · <a href="/uk/" style="color: var(--text-dim)">↗ Spyglass</a> ·
-            <a href="https://kyivtech.com.ua/" style="color: var(--text-dim)">kyivtech.com.ua</a>
+            <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>
         </div>
       </div>

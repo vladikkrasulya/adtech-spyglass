@@ -16,7 +16,7 @@ The canonical brief is in `MEMORY.md`. The architecture map is in
 
 **Mature surface**:
 
-- Validator: oRTB 2.5/2.6 schema + 3.0 envelope (req + resp), 3 oRTB dialects (iab / kadam / kadam-inpage-push) + 4 JsonFeed handlers (kadam / exoclick / richads / zeropark)
+- Validator: oRTB 2.5/2.6 schema + 3.0 envelope (req + resp), 3 oRTB dialects (iab / ext-rtb / inpage-push) + 4 JsonFeed handlers (ext-rtb / valuefeed / bidprice / bidredirect)
 - VAST: 12 rules (8 envelope + 4 quality)
 - Behavior: 16 detection patterns across misclick / bot-patterns /
   malicious / static creative scan

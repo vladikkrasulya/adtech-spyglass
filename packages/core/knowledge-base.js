@@ -93,7 +93,7 @@ function loadSample(id) {
  * Extract the top-level FIELD NAMES (not values) from a sample. Used
  * by Phase 10b few-shot wiring to pass anonymized hints to the LLM.
  *
- * For an array payload (Kadam-style feed), uses the first item.
+ * For an array payload (push-materials feed), uses the first item.
  * For an oRTB request, walks one level under the most format-relevant
  * subtree (`imp[0].banner` for banner, `imp[0].video` for video, etc.)
  * so the field list reflects the format, not boilerplate.

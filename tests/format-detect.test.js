@@ -120,7 +120,7 @@ test('detectFormat: BidResponse adm contains <VAST version="3.0"> → VAST_3 + V
   assert.ok(r.protocols.includes(PROTOCOLS.VAST_3));
 });
 
-test('detectFormat: Kadam-style push array → PUSH', () => {
+test('detectFormat: push-materials feed array → PUSH', () => {
   const feed = [
     {
       title: 'Hello',

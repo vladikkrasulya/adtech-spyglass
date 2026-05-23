@@ -4,37 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="index,follow" />
-    <title>Spyglass · OpenRTB Inspector — oRTB 2.5/2.6/3.0, native, VAST</title>
-    <meta
-      name="description"
-      content="Публичный OpenRTB-инспектор: вставь BidRequest / BidResponse JSON, получи validation findings, crosscheck request↔response, декодированные IAB-категории. oRTB 2.5/2.6/3.0, Native 1.x, VAST 4.x. Без рекламы, без логов, zero-knowledge шифрование для сохранённых образцов."
-    />
+    <title>Бесплатный валидатор OpenRTB 2.5/2.6/3.0 — локально</title>
+    <meta name="description" content="Валидация OpenRTB BidRequest/BidResponse JSON прямо в браузере. oRTB 2.5/2.6/3.0, Native, VAST. Перекрёстная проверка request↔response, декодирование IAB-категорий, превью креатива. 100% локально — ваши данные не покидают устройство. Бесплатно, без регистрации." />
     <meta
       name="keywords"
       content="openrtb, oRTB, openrtb inspector, openrtb validator, IAB, bid request, bid response, RTB, AdTech, VAST, native ads, programmatic, real-time bidding"
     />
-    <meta name="author" content="kyivtech.com.ua" />
-    <!-- Browser error reporter — DSN templated server-side from SENTRY_DSN_PUBLIC env -->
-    <meta name="sentry-dsn" content="__SENTRY_DSN_PUBLIC__" />
-    <link rel="canonical" href="https://spyglass.kyivtech.com.ua/ru/" />
-    <link rel="alternate" hreflang="ru" href="https://spyglass.kyivtech.com.ua/ru/" />
-    <link rel="alternate" hreflang="uk" href="https://spyglass.kyivtech.com.ua/uk/" />
-    <link rel="alternate" hreflang="en" href="https://spyglass.kyivtech.com.ua/" />
-    <link rel="alternate" hreflang="x-default" href="https://spyglass.kyivtech.com.ua/" />
+    <meta name="author" content="ortbtools.com" />
+    <link rel="canonical" href="https://ortbtools.com/ru/" />
+    <link rel="alternate" hreflang="ru" href="https://ortbtools.com/ru/" />
+    <link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/" />
+    <link rel="alternate" hreflang="en" href="https://ortbtools.com/" />
+    <link rel="alternate" hreflang="x-default" href="https://ortbtools.com/" />
 
     <!-- Open Graph (Facebook, Telegram, Slack, Discord previews) -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Kyiv Tech" />
-    <meta property="og:title" content="Spyglass · OpenRTB Inspector" />
-    <meta
-      property="og:description"
-      content="Публичный OpenRTB-инспектор: BidRequest / BidResponse JSON → validation findings, crosscheck request↔response, декодированные IAB-категории. oRTB 2.5/2.6/3.0, Native, VAST. Без рекламы, без логов."
-    />
-    <meta property="og:url" content="https://spyglass.kyivtech.com.ua/ru/" />
+    <meta property="og:site_name" content="ortbtools.com" />
+    <meta property="og:title" content="Spyglass — бесплатный валидатор OpenRTB (2.5, 2.6, 3.0)" />
+    <meta property="og:description" content="Бесплатный валидатор OpenRTB в браузере. Вставьте BidRequest/BidResponse JSON — мгновенная валидация, перекрёстная проверка, декодирование IAB, превью креатива. 100% локально — данные не покидают браузер." />
+    <meta property="og:url" content="https://ortbtools.com/ru/" />
     <meta property="og:locale" content="ru_RU" />
     <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:locale:alternate" content="uk_UA" />
-    <meta property="og:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
+    <meta property="og:image" content="https://ortbtools.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
@@ -44,21 +36,18 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Spyglass · OpenRTB Inspector" />
-    <meta
-      name="twitter:description"
-      content="Публичный OpenRTB-инспектор с валидацией, crosscheck и декодированием IAB-категорий. oRTB 2.5/2.6/3.0, Native, VAST. Бесплатно, без рекламы, без логов."
-    />
-    <meta name="twitter:image" content="https://spyglass.kyivtech.com.ua/og-image.png" />
+    <meta name="twitter:title" content="Spyglass — бесплатный валидатор OpenRTB (2.5, 2.6, 3.0)" />
+    <meta name="twitter:description" content="Бесплатный валидатор OpenRTB в браузере. oRTB 2.5/2.6/3.0, Native, VAST. 100% локально — данные не покидают браузер." />
+    <meta name="twitter:image" content="https://ortbtools.com/og-image.png" />
 
     <!-- JSON-LD structured data — tells Google this is a free, browser-based dev tool -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "Spyglass · OpenRTB Inspector",
-        "url": "https://spyglass.kyivtech.com.ua/",
-        "description": "Public OpenRTB inspector with validation, crosscheck request↔response, and IAB Content Taxonomy decoding. Supports oRTB 2.5/2.6/3.0, Native 1.1/1.2, VAST 4.x.",
+        "name": "Spyglass — OpenRTB Validator",
+        "url": "https://ortbtools.com/",
+        "description": "Free browser-based OpenRTB validator with request↔response crosscheck, IAB Content Taxonomy decoding, and creative preview. 100% client-side — your data never leaves the browser.",
         "applicationCategory": "DeveloperApplication",
         "applicationSubCategory": "AdTech tooling",
         "operatingSystem": "Any (browser)",
@@ -70,8 +59,8 @@
         "license": "https://opensource.org/licenses/MIT",
         "creator": {
           "@type": "Organization",
-          "name": "Kyiv Tech",
-          "url": "https://kyivtech.com.ua/"
+          "name": "ortbtools.com",
+          "url": "https://ortbtools.com/"
         }
       }
     </script>
@@ -197,20 +186,20 @@
            social-preview bots, and no-JS visitors. The inspector module's
            mount() writes innerHTML here once it loads, replacing this. -->
       <section class="pre-render-hero">
-        <h1>Spyglass — публичный OpenRTB-инспектор</h1>
+        <h1>Бесплатный валидатор OpenRTB BidRequest и BidResponse</h1>
+        <p><strong>🔒 100% локально</strong> — ваши данные не покидают браузер.</p>
         <p>
-          Вставь BidRequest или BidResponse JSON — получи validation findings, crosscheck
-          request↔response, декодированные IAB-категории и превью креатива. Без рекламы, без логов,
-          zero-knowledge шифрование для сохранённых образцов.
+          Вставьте JSON BidRequest или BidResponse — получите мгновенную валидацию,
+          перекрёстную проверку request ↔ response, декодирование IAB-категорий
+          и превью креатива. Без регистрации, без логов, без серверов.
         </p>
         <ul>
           <li>Валидация oRTB 2.5 / 2.6 / 3.0 + Native 1.x + VAST 4.x</li>
-          <li>Кросс-проверка семантики request ↔ response</li>
-          <li>Сигналы поведения + превью креатива</li>
+          <li>Перекрёстная проверка request ↔ response</li>
+          <li>Поведенческие сигналы + превью креатива</li>
         </ul>
       </section>
     </div>
-    <script src="/sentry-init.js?v=1"></script>
     <script src="/version.js?v=1"></script>
     <script src="/spyglass-crypto.js?v=1"></script>
     <script src="/i18n.js?v=30"></script>
@@ -237,8 +226,6 @@
     <script src="/modules/share/index.js" defer></script>
     <script src="/modules/embed/i18n.js" defer></script>
     <script src="/modules/embed/index.js" defer></script>
-    <script src="/modules/sample-preview/i18n.js?v=1" defer></script>
-    <script src="/modules/sample-preview/index.js?v=2" defer></script>
     <script src="/modules/behavior/index.js?v=4" defer></script>
     <!-- Phase 7a — Spyglass Intelligence (Discovery Mode). Loads in order:
          storage → banner → observer → entry. All four expose IIFE-scoped

@@ -89,7 +89,7 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 │  │   - detectVersion(payload)         │     runs in browser + CI │
 │  │   - validate(payload, opts)        │     published to npm     │
 │  │   - crosscheck(req, res)           │                          │
-│  │   - dialects: iab | kadam | …      │                          │
+│  │   - dialects: iab | ext-rtb | …    │                          │
 │  │   - findings + spec refs           │                          │
 │  │   - i18n string keys (no copy)     │                          │
 │  └─────────────────┬──────────────────┘                          │
@@ -123,7 +123,7 @@ const detection = detectVersion(payload);
 
 const result = validate(payload, {
   version: 'auto', // 'auto' | '2.5' | '2.6' | '2.6-202309' | …
-  dialect: 'iab', // 'iab' | 'kadam' | 'propellerads' | …
+  dialect: 'iab', // 'iab' | 'ext-rtb' | 'inpage-push' | …
   strictness: 'normal', // 'lax' | 'normal' | 'pedantic'
   locale: 'uk', // resolved client-side; server passes through
 });

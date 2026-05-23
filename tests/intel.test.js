@@ -35,8 +35,8 @@ test('extractFields — empty payload yields empty list', () => {
 test('extractFields — picks up req.imp[*].ext fields, collapses array index', () => {
   const payload = {
     imp: [
-      { id: '1', ext: { subage: 7, kadam_macro: 'foo' } },
-      { id: '2', ext: { subage: 14, kadam_macro: 'bar' } },
+      { id: '1', ext: { subage: 7, vendor_macro: 'foo' } },
+      { id: '2', ext: { subage: 14, vendor_macro: 'bar' } },
     ],
   };
   const fields = extractFields(payload);
@@ -45,7 +45,7 @@ test('extractFields — picks up req.imp[*].ext fields, collapses array index', 
   // are expected because the walker emits per-occurrence; the observer
   // upserts on (bucket, path) key so they aggregate downstream.
   assert.ok(paths.includes('req.imp.ext.subage'));
-  assert.ok(paths.includes('req.imp.ext.kadam_macro'));
+  assert.ok(paths.includes('req.imp.ext.vendor_macro'));
   assert.equal(paths.filter((p) => p === 'req.imp.ext.subage').length, 2);
 });
 
@@ -67,7 +67,7 @@ test('extractFields — skips PII path components inside ext (consent/buyeruid/e
         buyeruid: 'pii-buyer-uid', // PII denylist
         gpp: 'GPP_SID_xyz', // PII denylist
         // legitimate ext field that should pass through
-        kadam_segment: 'gaming',
+        vendor_segment: 'gaming',
       },
     },
   };
@@ -76,7 +76,7 @@ test('extractFields — skips PII path components inside ext (consent/buyeruid/e
   assert.ok(!paths.some((p) => p.endsWith('.consent')), 'consent must be skipped');
   assert.ok(!paths.some((p) => p.endsWith('.buyeruid')), 'buyeruid must be skipped');
   assert.ok(!paths.some((p) => p.endsWith('.gpp')), 'gpp must be skipped');
-  assert.ok(paths.includes('req.user.ext.kadam_segment'));
+  assert.ok(paths.includes('req.user.ext.vendor_segment'));
 });
 
 test('extractFields — skips fuzzy PII patterns (*_id, *_uid, *consent*)', () => {
@@ -419,12 +419,12 @@ test('resolvePath — walks req.imp[*].ext.subage to first occurrence', () => {
   assert.equal(resolvePath(pair, 'req.imp.ext.subage'), 7);
 });
 
-test('resolvePath — walks res.seatbid.bid.ext.kadam_macro', () => {
+test('resolvePath — walks res.seatbid.bid.ext.vendor_macro', () => {
   const pair = {
     req: {},
-    res: { seatbid: [{ bid: [{ id: 'b1', ext: { kadam_macro: '${PRICE}' } }] }] },
+    res: { seatbid: [{ bid: [{ id: 'b1', ext: { vendor_macro: '${PRICE}' } }] }] },
   };
-  assert.equal(resolvePath(pair, 'res.seatbid.bid.ext.kadam_macro'), '${PRICE}');
+  assert.equal(resolvePath(pair, 'res.seatbid.bid.ext.vendor_macro'), '${PRICE}');
 });
 
 test('resolvePath — returns undefined for missing path', () => {
@@ -491,10 +491,10 @@ test('generateTempDialectId — produces stable temp:* prefix', () => {
 const intelLlm = require('../intel-llm');
 
 test('buildSuggestNamePrompt — includes bucket and field list', () => {
-  const p = intelLlm.buildSuggestNamePrompt('push', ['req.imp.ext.subage', 'bid.ext.kadam_macro']);
+  const p = intelLlm.buildSuggestNamePrompt('push', ['req.imp.ext.subage', 'bid.ext.vendor_macro']);
   assert.match(p, /Bucket: push/);
   assert.match(p, /req\.imp\.ext\.subage/);
-  assert.match(p, /bid\.ext\.kadam_macro/);
+  assert.match(p, /bid\.ext\.vendor_macro/);
   // The "STRICT JSON only" instruction may wrap across lines in the
   // prompt template — match across whitespace.
   assert.match(p, /STRICT[\s\S]*JSON only/);
@@ -617,7 +617,7 @@ test('Phase 10b end-to-end: KB.fewShotForFormat → buildSuggestNamePrompt groun
     { fewShot: examples },
   );
   assert.match(p, /Reference examples/);
-  // The shipped Kadam push sample exposes title/image/clickurl-class fields,
+  // The shipped push-materials sample exposes title/image/clickurl-class fields,
   // which should land in the prompt verbatim.
   assert.match(p, /push — /);
   assert.match(p, /title/);
@@ -640,15 +640,15 @@ test('buildFieldPurposePrompt — includes path / charClass / bucket', () => {
 
 test('validateNameSuggestion — accepts well-formed snake_case', () => {
   const r = intelLlm.validateNameSuggestion({
-    name: 'kadam_push',
-    description: 'Kadam push subscription traffic',
+    name: 'vendor_push',
+    description: 'Vendor push subscription traffic',
   });
-  assert.deepEqual(r, { name: 'kadam_push', description: 'Kadam push subscription traffic' });
+  assert.deepEqual(r, { name: 'vendor_push', description: 'Vendor push subscription traffic' });
 });
 
 test('validateNameSuggestion — coerces hyphens / spaces to underscores', () => {
-  const r = intelLlm.validateNameSuggestion({ name: 'Kadam-Push Custom', description: 'X' });
-  assert.equal(r.name, 'kadam_push_custom');
+  const r = intelLlm.validateNameSuggestion({ name: 'Vendor-Push Custom', description: 'X' });
+  assert.equal(r.name, 'vendor_push_custom');
 });
 
 test('validateNameSuggestion — rejects non-string / empty / starting digit', () => {

@@ -3,9 +3,9 @@
 /**
  * Dialect overlay tests. Covers:
  *   - listDialects() — public registry
- *   - Kadam RTB (existing) — bsection/btags shape, push detection,
+ *   - Ext-RTB (existing) — bsection/btags shape, push detection,
  *     macro support warnings on response
- *   - Kadam In-Page Push (new) — claimsBid suppression of the IAB
+ *   - In-Page Push (new) — claimsBid suppression of the IAB
  *     payload_missing rule + custom field validation
  *
  * The validation engine itself is tested separately via validator.test.js;
@@ -23,14 +23,14 @@ const { validate, listDialects } = require('@kyivtech/spyglass-core');
 
 // ── Registry ────────────────────────────────────────────────────────────
 
-test('listDialects() — exposes iab + both Kadam variants', () => {
+test('listDialects() — exposes iab + both vendor variants', () => {
   const list = listDialects();
   assert.ok(list.includes('iab'), 'iab dialect must be registered');
-  assert.ok(list.includes('kadam'), 'kadam dialect must be registered');
-  assert.ok(list.includes('kadam-inpage-push'), 'kadam-inpage-push must be registered');
+  assert.ok(list.includes('ext-rtb'), 'ext-rtb dialect must be registered');
+  assert.ok(list.includes('inpage-push'), 'inpage-push must be registered');
 });
 
-// ── Kadam In-Page Push: claimsBid suppression ──────────────────────────
+// ── In-Page Push: claimsBid suppression ──────────────────────────────────
 
 function inPagePushResponse(extOverrides) {
   return {
@@ -69,10 +69,10 @@ test('iab dialect — In-Page Push response triggers payload_missing (no adm/nur
   );
 });
 
-test('kadam-inpage-push dialect — claimsBid suppresses payload_missing', () => {
+test('inpage-push dialect — claimsBid suppresses payload_missing', () => {
   // Same payload, dialect switched → engine recognises the In-Page Push
   // shape via claimsBid() and skips the IAB payload check.
-  const r = validate(inPagePushResponse(), { dialect: 'kadam-inpage-push' });
+  const r = validate(inPagePushResponse(), { dialect: 'inpage-push' });
   const ids = r.findings.map((f) => f.id);
   assert.ok(
     !ids.includes('response.bid.payload_missing'),
@@ -80,12 +80,12 @@ test('kadam-inpage-push dialect — claimsBid suppresses payload_missing', () =>
   );
 });
 
-test('kadam-inpage-push — well-formed bid produces no required-field findings', () => {
-  const r = validate(inPagePushResponse(), { dialect: 'kadam-inpage-push' });
+test('inpage-push — well-formed bid produces no required-field findings', () => {
+  const r = validate(inPagePushResponse(), { dialect: 'inpage-push' });
   const required = [
-    'kadam.inpage.title_required',
-    'kadam.inpage.image_required',
-    'kadam.inpage.click_required',
+    'inpage-push.title_required',
+    'inpage-push.image_required',
+    'inpage-push.click_required',
   ];
   for (const id of required) {
     assert.ok(
@@ -95,84 +95,84 @@ test('kadam-inpage-push — well-formed bid produces no required-field findings'
   }
 });
 
-// ── Kadam In-Page Push: required-field validation ──────────────────────
+// ── In-Page Push: required-field validation ──────────────────────────────
 
-test('kadam-inpage-push — missing title → ERROR', () => {
+test('inpage-push — missing title → ERROR', () => {
   const payload = inPagePushResponse();
   delete payload.seatbid[0].bid[0].ext.title;
-  const r = validate(payload, { dialect: 'kadam-inpage-push' });
-  const f = r.findings.find((f) => f.id === 'kadam.inpage.title_required');
+  const r = validate(payload, { dialect: 'inpage-push' });
+  const f = r.findings.find((f) => f.id === 'inpage-push.title_required');
   assert.ok(f, 'title_required should fire');
   assert.equal(f.level, 'error');
 });
 
-test('kadam-inpage-push — missing image → ERROR', () => {
+test('inpage-push — missing image → ERROR', () => {
   const payload = inPagePushResponse();
   delete payload.seatbid[0].bid[0].ext.image_url;
-  const r = validate(payload, { dialect: 'kadam-inpage-push' });
-  const f = r.findings.find((f) => f.id === 'kadam.inpage.image_required');
+  const r = validate(payload, { dialect: 'inpage-push' });
+  const f = r.findings.find((f) => f.id === 'inpage-push.image_required');
   assert.ok(f, 'image_required should fire');
   assert.equal(f.level, 'error');
 });
 
-test('kadam-inpage-push — missing click URL → ERROR', () => {
+test('inpage-push — missing click URL → ERROR', () => {
   const payload = inPagePushResponse();
   delete payload.seatbid[0].bid[0].ext.url;
-  const r = validate(payload, { dialect: 'kadam-inpage-push' });
-  const f = r.findings.find((f) => f.id === 'kadam.inpage.click_required');
+  const r = validate(payload, { dialect: 'inpage-push' });
+  const f = r.findings.find((f) => f.id === 'inpage-push.click_required');
   assert.ok(f, 'click_required should fire');
   assert.equal(f.level, 'error');
 });
 
-test('kadam-inpage-push — non-http(s) image URL → image_invalid_url ERROR', () => {
+test('inpage-push — non-http(s) image URL → image_invalid_url ERROR', () => {
   const r = validate(inPagePushResponse({ image_url: 'data:image/png;base64,iVBORw0KGgo' }), {
-    dialect: 'kadam-inpage-push',
+    dialect: 'inpage-push',
   });
-  const f = r.findings.find((f) => f.id === 'kadam.inpage.image_invalid_url');
+  const f = r.findings.find((f) => f.id === 'inpage-push.image_invalid_url');
   assert.ok(f, 'image_invalid_url should fire on non-http(s) URL');
   assert.equal(f.level, 'error');
 });
 
-test('kadam-inpage-push — non-http(s) click URL → click_invalid_url ERROR', () => {
+test('inpage-push — non-http(s) click URL → click_invalid_url ERROR', () => {
   const r = validate(inPagePushResponse({ url: 'javascript:alert(1)' }), {
-    dialect: 'kadam-inpage-push',
+    dialect: 'inpage-push',
   });
-  const f = r.findings.find((f) => f.id === 'kadam.inpage.click_invalid_url');
+  const f = r.findings.find((f) => f.id === 'inpage-push.click_invalid_url');
   assert.ok(f, 'click_invalid_url should fire — javascript: scheme is a click-jacking primer');
   assert.equal(f.level, 'error');
 });
 
-// ── Kadam In-Page Push: field aliases ──────────────────────────────────
+// ── In-Page Push: field aliases ──────────────────────────────────────────
 
-test('kadam-inpage-push — accepts `text` alias for title', () => {
+test('inpage-push — accepts `text` alias for title', () => {
   const payload = inPagePushResponse();
   delete payload.seatbid[0].bid[0].ext.title;
   payload.seatbid[0].bid[0].ext.text = 'Alternate title';
-  const r = validate(payload, { dialect: 'kadam-inpage-push' });
-  assert.ok(!r.findings.some((f) => f.id === 'kadam.inpage.title_required'));
+  const r = validate(payload, { dialect: 'inpage-push' });
+  assert.ok(!r.findings.some((f) => f.id === 'inpage-push.title_required'));
 });
 
-test('kadam-inpage-push — accepts `picture` and `image` aliases', () => {
+test('inpage-push — accepts `picture` and `image` aliases', () => {
   for (const alias of ['picture', 'image']) {
     const payload = inPagePushResponse();
     delete payload.seatbid[0].bid[0].ext.image_url;
     payload.seatbid[0].bid[0].ext[alias] = 'https://cdn.example.com/hero.jpg';
-    const r = validate(payload, { dialect: 'kadam-inpage-push' });
+    const r = validate(payload, { dialect: 'inpage-push' });
     assert.ok(
-      !r.findings.some((f) => f.id === 'kadam.inpage.image_required'),
+      !r.findings.some((f) => f.id === 'inpage-push.image_required'),
       `alias '${alias}' should satisfy image requirement`,
     );
   }
 });
 
-test('kadam-inpage-push — accepts click/click_url/href/link aliases', () => {
+test('inpage-push — accepts click/click_url/href/link aliases', () => {
   for (const alias of ['click', 'click_url', 'href', 'link']) {
     const payload = inPagePushResponse();
     delete payload.seatbid[0].bid[0].ext.url;
     payload.seatbid[0].bid[0].ext[alias] = 'https://example.com/landing';
-    const r = validate(payload, { dialect: 'kadam-inpage-push' });
+    const r = validate(payload, { dialect: 'inpage-push' });
     assert.ok(
-      !r.findings.some((f) => f.id === 'kadam.inpage.click_required'),
+      !r.findings.some((f) => f.id === 'inpage-push.click_required'),
       `alias '${alias}' should satisfy click-URL requirement`,
     );
   }
@@ -180,21 +180,21 @@ test('kadam-inpage-push — accepts click/click_url/href/link aliases', () => {
 
 // ── Length-limit warnings ──────────────────────────────────────────────
 
-test('kadam-inpage-push — over-length title → WARNING with len/max params', () => {
+test('inpage-push — over-length title → WARNING with len/max params', () => {
   const longTitle = 'x'.repeat(120);
   const r = validate(inPagePushResponse({ title: longTitle }), {
-    dialect: 'kadam-inpage-push',
+    dialect: 'inpage-push',
   });
-  const f = r.findings.find((f) => f.id === 'kadam.inpage.title_too_long');
+  const f = r.findings.find((f) => f.id === 'inpage-push.title_too_long');
   assert.ok(f, 'title_too_long should fire above 90 chars');
   assert.equal(f.level, 'warning');
   assert.equal(f.params.len, 120);
   assert.equal(f.params.max, 90);
 });
 
-// ── Kadam RTB (existing dialect) — sanity baseline ─────────────────────
+// ── Ext-RTB (existing dialect) — sanity baseline ─────────────────────────
 
-test('kadam dialect — push-traffic detection on imp.ext.subage', () => {
+test('ext-rtb dialect — push-traffic detection on imp.ext.subage', () => {
   const req = {
     id: 'req-x',
     imp: [
@@ -208,21 +208,21 @@ test('kadam dialect — push-traffic detection on imp.ext.subage', () => {
     at: 1,
     device: { ua: 'Mozilla/5.0', ip: '1.2.3.4' },
   };
-  const r = validate(req, { dialect: 'kadam' });
+  const r = validate(req, { dialect: 'ext-rtb' });
   assert.ok(
-    r.findings.some((f) => f.id === 'kadam.push_detected'),
-    'kadam dialect should detect push traffic via subage',
+    r.findings.some((f) => f.id === 'extrtb.push_detected'),
+    'ext-rtb dialect should detect push traffic via subage',
   );
 });
 
-test('kadam dialect — In-Page Push payload still WARNs payload_missing', () => {
-  // The plain 'kadam' (RTB) dialect doesn't know about In-Page Push —
-  // only 'kadam-inpage-push' suppresses payload_missing. Asserting this
+test('ext-rtb dialect — In-Page Push payload still WARNs payload_missing', () => {
+  // The plain 'ext-rtb' dialect doesn't know about In-Page Push —
+  // only 'inpage-push' suppresses payload_missing. Asserting this
   // explicitly catches accidental cross-dialect leaking via a shared
   // claimsBid.
-  const r = validate(inPagePushResponse(), { dialect: 'kadam' });
+  const r = validate(inPagePushResponse(), { dialect: 'ext-rtb' });
   assert.ok(
     r.findings.some((f) => f.id === 'response.bid.payload_missing'),
-    'plain kadam dialect must NOT suppress payload_missing — that is In-Page Push only',
+    'plain ext-rtb dialect must NOT suppress payload_missing — that is In-Page Push only',
   );
 });

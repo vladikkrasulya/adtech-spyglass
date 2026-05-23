@@ -179,8 +179,8 @@ export async function mountInspector(root, ctx) {
 
   // ── Dialect state ─────────────────────────────────────────────
   // The validation engine accepts ?dialect=<name> to layer vendor-specific
-  // rules (Kadam RTB, Kadam In-Page Push) over the IAB baseline. The
-  // active dialect needs to survive page reloads (so users on a Kadam
+  // rules (ext-rtb, inpage-push) over the IAB baseline. The
+  // active dialect needs to survive page reloads (so users on a vendor
   // workflow don't reset every session) and be shareable via URL (so a
   // bug report can carry the dialect context). Resolution priority:
   //   1. ?dialect=… in the URL — highest, lets shared links override the
@@ -188,7 +188,7 @@ export async function mountInspector(root, ctx) {
   //   2. localStorage — survives reloads
   //   3. 'iab' — safe default
   const DIALECT_STORAGE_KEY = 'spyglass_dialect_v1';
-  const KNOWN_DIALECTS = new Set(['iab', 'kadam', 'kadam-inpage-push']);
+  const KNOWN_DIALECTS = new Set(['iab', 'ext-rtb', 'inpage-push']);
 
   function isTempDialect(value) {
     return typeof value === 'string' && value.startsWith('temp:');
@@ -210,7 +210,7 @@ export async function mountInspector(root, ctx) {
   }
 
   // Phase 7b: when a temp dialect is active, the server doesn't know
-  // about it (server validate() only sees IAB+Kadam variants). Send the
+  // about it (server validate() only sees IAB+vendor variants). Send the
   // parent dialect server-side; the temp-dialect overlay is applied
   // client-side after analyze().
   function serverSideDialect() {
@@ -228,8 +228,8 @@ export async function mountInspector(root, ctx) {
     const d = activeDialect();
     let label;
     if (d === 'iab') label = 'IAB ▾';
-    else if (d === 'kadam') label = 'Vendor · RTB ▾';
-    else if (d === 'kadam-inpage-push') label = 'Vendor · In-Page Push ▾';
+    else if (d === 'ext-rtb') label = 'Vendor · RTB ▾';
+    else if (d === 'inpage-push') label = 'Vendor · In-Page Push ▾';
     else if (isTempDialect(d)) label = 'custom ▾';
     else label = d + ' ▾';
     valueEl.textContent = label;
@@ -375,7 +375,7 @@ export async function mountInspector(root, ctx) {
     //     bare UUID looked alarming. Author's own tab still keeps the
     //     temp dialect active via localStorage, so this is purely a
     //     URL-display fix.
-    //   - Everything else (kadam, kadam-inpage-push, future named
+    //   - Everything else (ext-rtb, inpage-push, future named
     //     dialects) is shareable — we write it.
     try {
       const url = new URL(location.href);
@@ -454,8 +454,8 @@ export async function mountInspector(root, ctx) {
       try {
         const req = document.getElementById('bidReq').value;
         const res = document.getElementById('bidRes').value;
-        // Re-run when either pane has content — JsonFeed payloads (ExoClick,
-        // RichAds, Zeropark) live in bidRes only, so gating on req-presence
+        // Re-run when either pane has content — JSON-feed payloads (value-feed,
+        // bid-price, bid-redirect) live in bidRes only, so gating on req-presence
         // would skip the lang-change re-render for that whole branch.
         if (!req && !res) return;
         window.runAnalysis({ req: req, res: res });
@@ -567,7 +567,7 @@ export async function mountInspector(root, ctx) {
     const v = validation.version;
     // oRTB version pill only makes sense for oRTB-family payloads. JsonFeed
     // formats don't have an oRTB version dimension — suppress to avoid
-    // showing a confusing "oRTB 2.5 ?" tag on e.g. an ExoClick rtb.php feed.
+    // showing a confusing "oRTB 2.5 ?" tag on e.g. a value-feed (rtb.php) payload.
     if (family === 'ortb' && v && v.version && v.version !== 'unknown') {
       const cf = v.confidence;
       const cfTag = cf >= 1 ? '' : cf >= 0.5 ? ' ≈' : ' ?';
@@ -1529,7 +1529,7 @@ export async function mountInspector(root, ctx) {
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
     const resVal = fromHist ? fromHist.res : $('bidRes').value;
     // Backend supports request-only, response-only, or both. JsonFeed-format
-    // payloads (Kadam push, ExoClick rtb.php, RichAds, Zeropark) are typically
+    // payloads (push-materials, value-feed, bid-price, bid-redirect) are typically
     // pasted into bidRes — refusing to analyze in that case loses the whole
     // JsonFeed branch. Only block when both fields are empty.
     if (!reqVal && !resVal) {
@@ -2214,8 +2214,8 @@ export async function mountInspector(root, ctx) {
     );
   }
 
-  // ── Kadam reference tab ───────────────────────────────────────
-  const KADAM = {
+  // ── Vendor reference tab ─────────────────────────────────────
+  const VENDOR_REF = {
     macros: [
       ['${AUCTION_PRICE}', 'Winning bid price (used in nurl/burl).'],
       ['${AUCTION_CURRENCY}', 'Currency of the auction (e.g. USD).'],
@@ -2436,7 +2436,7 @@ export async function mountInspector(root, ctx) {
     toast(t('toast.template_inserted'), 'success');
   }
   // Expose for inline onclicks
-  window._kadam = { pasteIntoReq, pasteIntoRes, pasteString, KADAM };
+  window._vendorRef = { pasteIntoReq, pasteIntoRes, pasteString, VENDOR_REF };
 
   function tableHtml(headers, rows) {
     return (
@@ -2467,7 +2467,7 @@ export async function mountInspector(root, ctx) {
   }
 
   function renderReference() {
-    const T = KADAM.templates;
+    const T = VENDOR_REF.templates;
     const reqNativeJson = JSON.stringify(T.requestNative, null, 2);
     const reqPushJson = JSON.stringify(T.requestPush, null, 2);
     const resNativeJson = JSON.stringify(T.responseNative, null, 2);
@@ -2480,7 +2480,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Native (web/in-page)</span>
-            <button class="ref-paste-btn" data-action="kadam-paste-req" data-template="requestNative">paste → request</button>
+            <button class="ref-paste-btn" data-action="vendor-paste-req" data-template="requestNative">paste → request</button>
           </div>
           <div class="ref-card-desc">Vendor-style Native 1.1 with subage hints, geo, user, ext.bsection/btags blocking.</div>
           <pre class="ref-code">${escapeHtml(reqNativeJson)}</pre>
@@ -2488,7 +2488,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Push (subscription)</span>
-            <button class="ref-paste-btn" data-action="kadam-paste-req" data-template="requestPush">paste → request</button>
+            <button class="ref-paste-btn" data-action="vendor-paste-req" data-template="requestPush">paste → request</button>
           </div>
           <div class="ref-card-desc">Push impression with imp.ext.subage, subage0, subage_dt, subage_ts — required to maximize buyout.</div>
           <pre class="ref-code">${escapeHtml(reqPushJson)}</pre>
@@ -2500,7 +2500,7 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Native bid response</span>
-            <button class="ref-paste-btn" data-action="kadam-paste-res" data-template="responseNative">paste → response</button>
+            <button class="ref-paste-btn" data-action="vendor-paste-res" data-template="responseNative">paste → response</button>
           </div>
           <div class="ref-card-desc">Bid + nurl/burl/lurl with macros + Native 1.1 adm with assets matching the request.</div>
           <pre class="ref-code">${escapeHtml(resNativeJson)}</pre>
@@ -2512,24 +2512,24 @@ export async function mountInspector(root, ctx) {
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Feed request URL</span>
-            <button class="ref-paste-btn" data-action="kadam-paste-string" data-target="bidReq" data-template="feedRequestUrl">paste → request box</button>
+            <button class="ref-paste-btn" data-action="vendor-paste-string" data-target="bidReq" data-template="feedRequestUrl">paste → request box</button>
           </div>
           <div class="ref-card-desc">Vendor feed expects a GET with parameters; SSP issues sid + skey per ad format.</div>
           <pre class="ref-code">${escapeHtml(T.feedRequestUrl)}</pre>
-          ${tableHtml(['param', 'type', 'rule', 'description'], KADAM.feedParams)}
+          ${tableHtml(['param', 'type', 'rule', 'description'], VENDOR_REF.feedParams)}
         </div>
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Feed response — push (JSON array)</span>
-            <button class="ref-paste-btn" data-action="kadam-paste-res" data-template="feedResponsePush">paste → response</button>
+            <button class="ref-paste-btn" data-action="vendor-paste-res" data-template="feedResponsePush">paste → response</button>
           </div>
           <pre class="ref-code">${escapeHtml(feedPushJson)}</pre>
-          ${tableHtml(['field', 'type', 'description'], KADAM.pushResponseFields)}
+          ${tableHtml(['field', 'type', 'description'], VENDOR_REF.pushResponseFields)}
         </div>
         <div class="ref-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
             <span class="ref-card-title">Feed response — clickunder</span>
-            <button class="ref-paste-btn" data-action="kadam-paste-res" data-template="feedResponseClickunder">paste → response</button>
+            <button class="ref-paste-btn" data-action="vendor-paste-res" data-template="feedResponseClickunder">paste → response</button>
           </div>
           <pre class="ref-code">${escapeHtml(feedCuJson)}</pre>
         </div>
@@ -2539,7 +2539,7 @@ export async function mountInspector(root, ctx) {
         <h3>URL macros</h3>
         <div class="ref-card">
           <div class="ref-card-desc">This vendor supports only these three macros — others are ignored. Use in nurl, burl, lurl.</div>
-          ${tableHtml(['macro', 'description'], KADAM.macros)}
+          ${tableHtml(['macro', 'description'], VENDOR_REF.macros)}
         </div>
       </div>
 
@@ -2547,20 +2547,20 @@ export async function mountInspector(root, ctx) {
         <h3>Field cheatsheet</h3>
         <div class="ref-card">
           <span class="ref-card-title">BidRequest root</span>
-          ${tableHtml(['field', 'type', 'rule', 'description'], KADAM.requestFields)}
+          ${tableHtml(['field', 'type', 'rule', 'description'], VENDOR_REF.requestFields)}
         </div>
         <div class="ref-card">
           <span class="ref-card-title">imp[]</span>
-          ${tableHtml(['field', 'type', 'rule', 'description'], KADAM.impFields)}
+          ${tableHtml(['field', 'type', 'rule', 'description'], VENDOR_REF.impFields)}
         </div>
         <div class="ref-card">
           <span class="ref-card-title">site / app</span>
-          ${tableHtml(['field', 'type', 'rule', 'description'], KADAM.siteFields)}
+          ${tableHtml(['field', 'type', 'rule', 'description'], VENDOR_REF.siteFields)}
         </div>
       </div>
 
       <div class="ref-section" style="color:var(--text-dim);font-size:var(--fs-sm);text-align:center;padding:var(--space-4) 0">
-        Source: <a href="https://wiki.kadam.net/en/index.php?title=RTB_setting" target="_blank" rel="noopener" style="color:var(--text);text-decoration:underline">wiki.kadam.net · RTB setting</a>
+        Source: vendor-specific RTB dialect reference (private).
       </div>
     `;
   }
@@ -3855,7 +3855,7 @@ export async function mountInspector(root, ctx) {
     //   - per-list scoped dispatchers from Etap 1 (#hList, #savedList)
     //   - 39 inline onclick="…" handlers inside JS-generated modal
     //     templates (auth, unlock, recovery, forgot, reset, save,
-    //     edit-sample, partner, kadam-reference)
+    //     edit-sample, partner, vendor-reference)
     // {signal: ctx.signal} auto-detaches on module unmount.
     const root = document.getElementById('app-root') || document.body;
 
@@ -4133,7 +4133,7 @@ export async function mountInspector(root, ctx) {
           }
           case 'open-builder':
             // Phase 9: Dialect Builder is the new public-facing entry
-            // point (replaces the Kadam-branded partner button on the
+            // point (replaces the vendor-branded partner button on the
             // sidebar). Falls back gracefully when the intel module
             // isn't loaded (embed mode, private browsing).
             return (
@@ -4323,23 +4323,23 @@ export async function mountInspector(root, ctx) {
           case 'delete-partner':
             return window.deletePartner && window.deletePartner(Number(el.dataset.id));
 
-          // — Kadam reference templates (paste-from-docs buttons) —
-          case 'kadam-paste-req':
+          // — Vendor reference templates (paste-from-docs buttons) —
+          case 'vendor-paste-req':
             return (
-              window._kadam &&
-              window._kadam.pasteIntoReq(window._kadam.KADAM.templates[el.dataset.template])
+              window._vendorRef &&
+              window._vendorRef.pasteIntoReq(window._vendorRef.VENDOR_REF.templates[el.dataset.template])
             );
-          case 'kadam-paste-res':
+          case 'vendor-paste-res':
             return (
-              window._kadam &&
-              window._kadam.pasteIntoRes(window._kadam.KADAM.templates[el.dataset.template])
+              window._vendorRef &&
+              window._vendorRef.pasteIntoRes(window._vendorRef.VENDOR_REF.templates[el.dataset.template])
             );
-          case 'kadam-paste-string':
+          case 'vendor-paste-string':
             return (
-              window._kadam &&
-              window._kadam.pasteString(
+              window._vendorRef &&
+              window._vendorRef.pasteString(
                 el.dataset.target,
-                window._kadam.KADAM.templates[el.dataset.template],
+                window._vendorRef.VENDOR_REF.templates[el.dataset.template],
               )
             );
         }
@@ -4378,7 +4378,7 @@ export async function mountInspector(root, ctx) {
         if (action === 'change-dialect') {
           setActiveDialect(el.value);
           // Re-run analysis if the editors hold a payload — engine output
-          // is dialect-sensitive (e.g. Kadam In-Page Push suppresses the
+          // is dialect-sensitive (e.g. inpage-push suppresses the
           // IAB payload_missing rule), so the user expects findings to
           // refresh in place. No-op when the editors are empty.
           if ($('bidReq').value || $('bidRes').value) runAnalysis();
@@ -4566,7 +4566,7 @@ export async function mountInspector(root, ctx) {
     async function repaintDialectOptions() {
       if (!dialectSel || !window.SpyglassIntel) return;
       // Strip prior temp options — keep the first three built-ins.
-      const built = ['iab', 'kadam', 'kadam-inpage-push'];
+      const built = ['iab', 'ext-rtb', 'inpage-push'];
       Array.from(dialectSel.options)
         .filter((o) => !built.includes(o.value))
         .forEach((o) => o.remove());
@@ -4638,7 +4638,7 @@ export async function mountInspector(root, ctx) {
     // OR when the persisted dialect is non-IAB (so a power user who
     // switched once doesn't lose the reference tab on next visit).
     if (initialDialect !== 'iab') {
-      const tab = document.getElementById('kadamRefTab');
+      const tab = document.getElementById('vendorRefTab');
       if (tab) tab.hidden = false;
     }
     if (qp.get('reset')) {
@@ -4728,9 +4728,9 @@ export async function mountInspector(root, ctx) {
       'clearHistory',
       'historyStore',
       'humanStatus',
-      // behaviour tab + kadam dialect
+      // behaviour tab + vendor dialect
       'renderBehaviorTab',
-      '_kadam',
+      '_vendorRef',
       // auth flows
       // openUnlockModal + doUnlock live in /modules/unlock/ (lazy);
       // managed by the module loader, not by this sweep.

@@ -4,7 +4,7 @@
  * Payload type + OpenRTB version detection.
  *
  * `detectType()` answers the four-way question: is this a BidRequest, a
- * BidResponse, a Kadam feed, or a JSON Feed.
+ * BidResponse, a vendor feed, or a JSON Feed.
  *
  * `detectVersion()` answers "which OpenRTB version produced this?" by walking
  * the payload for **field-presence signals** that only exist in particular
@@ -22,12 +22,12 @@ const { isObj } = require('./helpers');
 const TYPES = {
   ORTB_REQUEST: 'oRTB BidRequest',
   ORTB_RESPONSE: 'oRTB BidResponse',
-  KADAM_FEED: 'Vendor Feed Response',
+  VENDOR_FEED: 'Vendor Feed Response',
   JSON_FEED: 'JSON Feed 1.1',
   // URL-style ad request (clickunder/teaser/pop GETs that take params in the
   // query-string instead of an oRTB JSON body). Decoded by
   // `decoders/request/<variant>/` into a canonical request shape. Added
-  // 2026-05-21 alongside pushub-link as the first vendor.
+  // 2026-05-21 alongside url-linkfeed as the first decoder.
   URL_REQUEST: 'URL Request',
   UNKNOWN: 'unknown',
 };
@@ -124,20 +124,20 @@ function collectMatches(payload, paths) {
   return hits;
 }
 
-// Single-object signatures for non-RTB JSON feeds. These vendors return one
+// Single-object signatures for non-RTB JSON feeds. These formats return one
 // bid as a top-level object (not an array, not wrapped in seatbid). Each has
-// a small set of keys unique enough to discriminate from oRTB/Kadam.
-//   ExoClick — `clickUrl` (camelCase) or `value` + `nUrl`
-//   RichAds  — `notification_url` or `bid_price` + `link`
-//   Zeropark — `redirecturl` + `bid` (small object, ≤6 keys)
+// a small set of keys unique enough to discriminate from oRTB/RTB-envelope.
+//   Value-feed     — `clickUrl` (camelCase) or `value` + `nUrl`
+//   Bid-price feed — `notification_url` or `bid_price` + `link`
+//   Bid-redirect   — `redirecturl` + `bid` (small object, ≤6 keys)
 function looksLikeJsonFeedSingle(o) {
   // Each predicate uses a key unique enough that no other format we care
   // about ships it. `bid` / `link` alone are too generic — those check that
   // they appear *together* with a vendor-specific neighbour.
-  if ('clickUrl' in o) return true; // ExoClick (camelCase is unique)
-  if ('notification_url' in o) return true; // RichAds
-  if ('bid_price' in o) return true; // RichAds
-  if ('redirecturl' in o) return true; // Zeropark
+  if ('clickUrl' in o) return true; // value-feed (camelCase is unique)
+  if ('notification_url' in o) return true; // bid-price feed
+  if ('bid_price' in o) return true; // bid-price feed
+  if ('redirecturl' in o) return true; // bid-redirect feed
   return false;
 }
 
@@ -165,8 +165,8 @@ function detectType(obj) {
     if (decoded && decoded.variant) return TYPES.URL_REQUEST;
     return TYPES.UNKNOWN;
   }
-  // Arrays are Kadam push-feed responses (list of materials).
-  if (Array.isArray(obj)) return TYPES.KADAM_FEED;
+  // Arrays are push-materials feed responses (list of materials).
+  if (Array.isArray(obj)) return TYPES.VENDOR_FEED;
   if (!isObj(obj)) return TYPES.UNKNOWN;
 
   // 3.0 envelope check (the only structurally-distinct shape).
@@ -189,29 +189,29 @@ function detectType(obj) {
   // Structural markers — the canonical array decides the type.
   if (Array.isArray(obj.imp)) return TYPES.ORTB_REQUEST;
   if (Array.isArray(obj.seatbid)) return TYPES.ORTB_RESPONSE;
-  // Kadam-style clickunder XML-engine response. Three observed shapes:
+  // Clickunder XML-engine response. Three observed shapes:
   //   { result: { status: "BID",   listing: { …creative } } }  (single object — real prod shape)
   //   { result: { status: "BID",   listing: [{ … }, …] } }      (array — multi-creative variant)
   //   { result: { status: "NOBID" } }                            (no-bid, listing absent)
   // Pre-2026-05-12 only the array form was detected; the single-object and
   // NOBID shapes fell through to `unknown_type` despite being canonical real
-  // responses that the buyer-side platform accepts in production.
+  // responses accepted in production.
   if (isObj(obj.result)) {
     const r = obj.result;
-    if (Array.isArray(r.listing) || isObj(r.listing)) return TYPES.KADAM_FEED;
-    // Pushub link-feed: `result.link[]` with { bid, url, seat } per row.
-    // Same family as Kadam clickunder (XML-engine response wrapped in
-    // `result`), different vendor-specific key. Routed through KADAM_FEED
-    // so rules-feed dispatch can discriminate by key → validatePushubFeed.
-    if (Array.isArray(r.link) || isObj(r.link)) return TYPES.KADAM_FEED;
-    if (typeof r.status === 'string' && r.status.toUpperCase() === 'NOBID') return TYPES.KADAM_FEED;
+    if (Array.isArray(r.listing) || isObj(r.listing)) return TYPES.VENDOR_FEED;
+    // Link-feed shape: `result.link[]` with { bid, url, seat } per row.
+    // Same family as clickunder (XML-engine response wrapped in
+    // `result`), different key. Routed through VENDOR_FEED
+    // so rules-feed dispatch can discriminate by key → validateLinkFeed.
+    if (Array.isArray(r.link) || isObj(r.link)) return TYPES.VENDOR_FEED;
+    if (typeof r.status === 'string' && r.status.toUpperCase() === 'NOBID') return TYPES.VENDOR_FEED;
   }
   if (obj.version && obj.items) return TYPES.JSON_FEED;
 
-  // Single-bid JSON-feed responses (ExoClick, RichAds, Zeropark, …). These
-  // get routed through the same KADAM_FEED type — the rules-feed dispatcher
-  // discriminates the actual vendor and returns a vendor-named result type.
-  if (looksLikeJsonFeedSingle(obj)) return TYPES.KADAM_FEED;
+  // Single-bid JSON-feed responses (value-feed, bid-price, bid-redirect, …).
+  // Get routed through the same VENDOR_FEED type — the rules-feed dispatcher
+  // discriminates the actual format and returns a format-named result type.
+  if (looksLikeJsonFeedSingle(obj)) return TYPES.VENDOR_FEED;
 
   // Heuristics for malformed payloads.
   if (obj.site || obj.app || obj.device) return TYPES.ORTB_REQUEST;

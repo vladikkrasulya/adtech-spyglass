@@ -10,7 +10,7 @@
  * pasted URL trivially malformed.
  *
  * Skeleton scope (2026-05-21): four base findings that fired on the
- * first pushub-link sample. Vendor-specific rule packs go into
+ * first url-linkfeed sample. Format-specific rule packs go into
  * `dialects/<vendor>.js` later, mirroring the oRTB dialect pattern —
  * this file stays vendor-neutral and works off the canonical shape.
  *
@@ -41,7 +41,7 @@ function validateUrlRequest(canonical) {
   const raw = canonical._raw || {};
 
   // IPv6 in user_ip — many SSPs only accept IPv4. INFO not WARNING because
-  // pushub itself bids on IPv6 fine; the signal is "verify your downstream
+  // The link-feed endpoint handles IPv6 fine; the signal is "verify your downstream
   // chain handles v6". When we observe vendor-specific intolerance we'll
   // promote to WARNING in that vendor's dialect.
   if (canonical.device && canonical.device.ipv6) {

@@ -20,7 +20,7 @@ npm install @kyivtech/spyglass-core
 const { validate, crosscheck, detectVersion, listDialects } = require('@kyivtech/spyglass-core');
 
 const result = validate(bidRequest, {
-  dialect: 'iab', // 'iab' | 'kadam'
+  dialect: 'iab', // 'iab' | 'ext-rtb'
   locale: 'uk', // 'uk' | 'en' (en is stub for now)
 });
 
@@ -173,7 +173,7 @@ Currently shipping locales: Ukrainian (`uk`, complete), English (`en`, stub — 
 | oRTB 2.x BidResponse baseline         | `rules-response.js`                            | same                                                             |
 | oRTB 3.0 dispatch                     | `rules-request-30.js` / `rules-response-30.js` | same                                                             |
 | VAST 4.x rules                        | `rules-vast.js`                                | same                                                             |
-| JsonFeed / Kadam feed responses       | `rules-feed.js`                                | same                                                             |
+| JsonFeed / ext-rtb vendor feed responses       | `rules-feed.js`                                | same                                                             |
 | **New rule-groups (post-2026-05-10)** | **`rules/<plugin>/index.js`**                  | **plugin contract** — see [`rules/README.md`](./rules/README.md) |
 
 **Pattern for adding new rules**: drop a folder under `rules/<name>/`,

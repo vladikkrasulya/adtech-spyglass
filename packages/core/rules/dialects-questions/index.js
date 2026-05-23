@@ -15,7 +15,7 @@
  * Inputs:
  *   - ctx.userDialect (optional): { lookupMapping(path, value) -> mapping|null }
  *     If present, signals the user already mapped are silently skipped.
- *   - ctx.dialect (existing): the static IAB/kadam/etc overlay (unused here).
+ *   - ctx.dialect (existing): the static IAB/ext-rtb/etc overlay (unused here).
  *
  * Caps emission at 20 findings per payload — UI overflow protection on
  * payloads with many vendor fields.

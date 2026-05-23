@@ -8,7 +8,12 @@
       "spec": "ortb-2.5",
       "side": "request",
       "format": "banner",
-      "tags": ["display", "300x250", "300x600", "web"],
+      "tags": [
+        "display",
+        "300x250",
+        "300x600",
+        "web"
+      ],
       "file": "ortb-2.5/request/banner/iab-display-300x250.json",
       "source": "synthesized from IAB OpenRTB 2.5 §3.2.6 + §3.2.7",
       "license": "MIT (Spyglass)",
@@ -19,7 +24,13 @@
       "spec": "ortb-2.5",
       "side": "request",
       "format": "video",
-      "tags": ["instream", "vast-2", "vast-3", "linear", "skippable"],
+      "tags": [
+        "instream",
+        "vast-2",
+        "vast-3",
+        "linear",
+        "skippable"
+      ],
       "file": "ortb-2.5/request/video/instream-vast.json",
       "source": "synthesized from IAB OpenRTB 2.5 §3.2.7 (Video)",
       "license": "MIT (Spyglass)",
@@ -30,7 +41,11 @@
       "spec": "ortb-2.5",
       "side": "request",
       "format": "native",
-      "tags": ["native-1.2", "feed-card", "title-image-data"],
+      "tags": [
+        "native-1.2",
+        "feed-card",
+        "title-image-data"
+      ],
       "file": "ortb-2.5/request/native/native-card.json",
       "source": "synthesized from IAB OpenRTB Native 1.2 spec",
       "license": "MIT (Spyglass)",
@@ -41,7 +56,13 @@
       "spec": "ortb-2.5",
       "side": "request",
       "format": "banner",
-      "tags": ["inapp", "mobile", "android", "320x50", "mraid"],
+      "tags": [
+        "inapp",
+        "mobile",
+        "android",
+        "320x50",
+        "mraid"
+      ],
       "file": "ortb-2.5/request/inapp/banner-mobile.json",
       "source": "synthesized from IAB OpenRTB 2.5 §3.2.14 (App)",
       "license": "MIT (Spyglass)",
@@ -52,7 +73,11 @@
       "spec": "ortb-2.5",
       "side": "request",
       "format": "audio",
-      "tags": ["audio", "podcast", "daast"],
+      "tags": [
+        "audio",
+        "podcast",
+        "daast"
+      ],
       "file": "ortb-2.5/request/audio/audio-podcast.json",
       "source": "synthesized from IAB OpenRTB 2.5 §3.2.8 (Audio)",
       "license": "MIT (Spyglass)",
@@ -63,7 +88,14 @@
       "spec": "ortb-2.6",
       "side": "request",
       "format": "video",
-      "tags": ["ctv", "rewarded", "vast-4", "rwdd", "sua", "gpp"],
+      "tags": [
+        "ctv",
+        "rewarded",
+        "vast-4",
+        "rwdd",
+        "sua",
+        "gpp"
+      ],
       "file": "ortb-2.6/request/video/ctv-rewarded.json",
       "source": "synthesized from IAB OpenRTB 2.6 §3.2.4 (rwdd) + §3.2.18 (sua)",
       "license": "MIT (Spyglass)",
@@ -74,7 +106,11 @@
       "spec": "ortb-2.6",
       "side": "request",
       "format": "video",
-      "tags": ["dooh", "billboard", "qty"],
+      "tags": [
+        "dooh",
+        "billboard",
+        "qty"
+      ],
       "file": "ortb-2.6/request/dooh/billboard-roadside.json",
       "source": "synthesized from IAB OpenRTB 2.6 §3.2.16 (DOOH) + §3.2.5 (Qty)",
       "license": "MIT (Spyglass)",
@@ -85,7 +121,12 @@
       "spec": "ortb-2.6",
       "side": "response",
       "format": "banner",
-      "tags": ["mtype", "cattax", "300x250", "html-adm"],
+      "tags": [
+        "mtype",
+        "cattax",
+        "300x250",
+        "html-adm"
+      ],
       "file": "ortb-2.6/response/banner/mtype-banner.json",
       "source": "synthesized from IAB OpenRTB 2.6 §5.30 (mtype)",
       "license": "MIT (Spyglass)",
@@ -96,8 +137,12 @@
       "spec": "jsonfeed",
       "side": "response",
       "format": "push",
-      "tags": ["push", "vendor-style", "title-image-clickurl"],
-      "file": "jsonfeed/push/kadam-push.json",
+      "tags": [
+        "push",
+        "vendor-style",
+        "title-image-clickurl"
+      ],
+      "file": "jsonfeed/push/push-materials.json",
       "source": "synthesized to match a canonical vendor push feed shape",
       "license": "MIT (Spyglass)",
       "description": "Vendor-style push notification material (single-item array)"
@@ -107,9 +152,12 @@
       "spec": "jsonfeed",
       "side": "response",
       "format": "pops",
-      "tags": ["popunder", "redirecturl"],
+      "tags": [
+        "popunder",
+        "redirecturl"
+      ],
       "file": "jsonfeed/pops/popunder.json",
-      "source": "synthesized from common popunder feed shape (Zeropark-class)",
+      "source": "synthesized from common popunder feed shape (bid-redirect-class)",
       "license": "MIT (Spyglass)",
       "description": "Popunder redirect-only payload, no creative"
     },
@@ -118,7 +166,11 @@
       "spec": "jsonfeed",
       "side": "response",
       "format": "inpage",
-      "tags": ["inpage", "widget", "native-card"],
+      "tags": [
+        "inpage",
+        "widget",
+        "native-card"
+      ],
       "file": "jsonfeed/inpage/inpage-card.json",
       "source": "synthesized to match in-page recommendation widget shape",
       "license": "MIT (Spyglass)",

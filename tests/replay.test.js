@@ -284,6 +284,6 @@ test('replay: empty array returns clean summary', () => {
 });
 
 test('replay: label is echoed back in result', () => {
-  const out = replay([{ bidReq: { id: 'r' }, label: 'kadam-prod-2026-05-10' }], makeDeps());
-  assert.equal(out.results[0].label, 'kadam-prod-2026-05-10');
+  const out = replay([{ bidReq: { id: 'r' }, label: 'vendor-prod-2026-05-10' }], makeDeps());
+  assert.equal(out.results[0].label, 'vendor-prod-2026-05-10');
 });
