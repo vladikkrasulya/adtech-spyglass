@@ -6,6 +6,37 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.50.0 — feat: Try-with-sample CTA on hero (2026-05-23)
+
+Hero now offers three one-click sample loads — `OpenRTB 2.6 banner`,
+`OpenRTB 2.6 video`, `OpenRTB 3.0 envelope` — so first-time visitors
+can run a real validation without hunting for a fixture or pasting
+their own JSON. Click pre-fills `#bidReq` and triggers `#analyzeBtn`.
+
+- `modules/sample/handler.js`: new `GET /api/sample-preview/:id` route
+  on the existing `sample` module. Whitelisted to three fixtures
+  (`banner26`, `video26`, `env30` → `samples/iab-banner-valid.json`,
+  `samples/iab-video-valid.json`, `samples/synthetic-ortb30-clean.json`).
+  Public, no-auth, `Cache-Control: public, max-age=3600`. Returns
+  `{ok, id, label, json}`. Unknown id → 404 `unknown_preview` — keeps
+  the URL safe to bookmark and predictable for fuzzers.
+- `public/modules/sample-preview/index.js`: IIFE module. Inserts a CTA
+  row after `.pre-render-hero ul`, re-inserts into `.app-header` after
+  `kt:inspector-ready` (hero gets wiped by inspector mount). Uses
+  `AbortController` with 5s timeout; loading state holds for ≥1.5s so
+  the spinner isn't a flash. Errors fall back to localized inline text
+  via `SpyglassI18n`.
+- `public/modules/sample-preview/i18n.js`: 6 keys × 3 locales
+  (button labels for each fixture, ARIA group label, two error
+  strings) registered via the lazy `window.kt_i18n_modules` queue.
+- `public/spyglass-shell.css`: `.sample-preview-cta`, `.cta-btn`,
+  `.sp-err` styles. All inline styles removed from the JS module.
+- `public/index.{en,uk,ru}.html`: script tags added next to the other
+  per-module classic scripts (after `embed/`, before `behavior/`).
+- `tests/sample-preview.test.js`: 6 cases — route registered, 200 +
+  wrapped fixture for each of the 3 IDs incl. Cache-Control check,
+  404 for unknown id, 404 for missing `match` (defensive).
+
 ### v0.49.1 — config: OLLAMA_MODEL qwen2.5:3b → gemma4:e2b (2026-05-21)
 
 - `docker-compose.yml`: `OLLAMA_MODEL` env switched from `qwen2.5:3b` to
