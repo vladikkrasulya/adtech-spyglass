@@ -135,3 +135,48 @@
 [data-embed='1'] .kt-shell {
   display: block;
 }
+
+
+/* ── Workbench-in-shell overrides ──────────────────────────────────
+   .workbench is a legacy class that used to be the page-level grid
+   (when inspector was the whole page). Now it lives inside #app-root
+   inside .kt-shell__column. The inherited rules from inspector.css
+   (height: 100vh, max-width: 2200px @ ≥2000px, margin: 0 auto) fight
+   the shell. Override them so the workbench fills the column. */
+.kt-shell #app-root.workbench {
+  height: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+/* ── Sidebar collapse (desktop) ────────────────────────────────────
+   .kt-shell.is-nav-collapsed hides the sidebar entirely on desktop,
+   giving the section the full window width. Toggle button lives in
+   the topbar. State persists via localStorage so the choice sticks. */
+@media (min-width: 1024px) {
+  .kt-shell.is-nav-collapsed .kt-nav {
+    display: none;
+  }
+}
+.kt-topbar__nav-collapse {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: var(--r-sm, 10px);
+  flex-shrink: 0;
+}
+.kt-topbar__nav-collapse:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+}
+@media (min-width: 1024px) {
+  .kt-topbar__nav-collapse {
+    display: inline-flex;
+  }
+}
