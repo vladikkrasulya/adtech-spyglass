@@ -182,7 +182,7 @@
 .kt-topbar .kt-lang-menu {
   position: relative;
 }
-.kt-topbar .kt-lang-toggle {
+.kt-topbar .kt-lang-menu summary.kt-lang-toggle {
   /* Override design-system.css `.kt-lang-toggle { position: fixed; ... }`
      — that rule pins the legacy floating toggle to bottom-right. In the
      topbar context we want flow positioning. */
@@ -213,7 +213,7 @@
 .kt-topbar .kt-lang-toggle:hover {
   background: var(--accent-soft, rgba(255, 204, 0, 0.14));
 }
-.kt-topbar .kt-lang-menu-list {
+.kt-topbar .kt-lang-menu .kt-lang-menu-list {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
@@ -228,7 +228,7 @@
   flex-direction: column;
   gap: 2px;
 }
-.kt-topbar .kt-lang-menu-list a {
+.kt-topbar .kt-lang-menu .kt-lang-menu-list a {
   display: block;
   padding: 8px 10px;
   text-decoration: none;
@@ -236,13 +236,13 @@
   font-size: 13px;
   border-radius: var(--r-sm, 10px);
 }
-.kt-topbar .kt-lang-menu-list a:hover { background: var(--accent-soft, rgba(255, 204, 0, 0.14)); }
-.kt-topbar .kt-lang-menu-list a[aria-current="true"] {
+.kt-topbar .kt-lang-menu .kt-lang-menu-list a:hover { background: var(--accent-soft, rgba(255, 204, 0, 0.14)); }
+.kt-topbar .kt-lang-menu .kt-lang-menu-list a[aria-current="true"] {
   background: var(--accent, #ffcc00);
   color: var(--accent-ink, #18181b);
 }
 
-.kt-topbar .kt-theme-toggle {
+.kt-topbar button.kt-theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -260,7 +260,7 @@
      affecting any other instance. */
   position: static !important;
 }
-.kt-topbar .kt-theme-toggle:hover {
+.kt-topbar button.kt-theme-toggle:hover {
   background: var(--accent-soft, rgba(255, 204, 0, 0.14));
 }
 
