@@ -16,7 +16,7 @@ const THEME_KEY = 'kt-theme';
 
 export default {
   id: 'stream',
-  route: '/stream.html',
+  route: '/live',
   manifest: {
     title: { en: 'Stream', uk: 'Стрім', ru: 'Стрим' },
     description: {
@@ -55,6 +55,11 @@ export default {
     let activeEnvelope = null;
     let activeAnalysis = null;
 
+    // ── Rolling 1-hour aggregates (client-side, no chart — MVP text/badges) ─
+    // Each entry: { ts: Number, fmt: String, source: String }
+    const rollingEvents = [];
+    const ROLLING_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
     // ── 1. Load module-scoped CSS via <link>. addCleanup removes it
     //       on unmount so the next module's CSS doesn't compete. ────
     const cssHref = new URL('./stream.css', import.meta.url).href;
@@ -78,6 +83,7 @@ export default {
     const tabs = Array.from(root.querySelectorAll('.tab'));
     const badgeValidation = root.querySelector('#badgeValidation');
     const themeToggle = root.querySelector('#themeToggle');
+    const aggregatesPanel = root.querySelector('#aggregatesPanel');
 
     // ── 3. Theme persistence (legacy kt-theme localStorage key). ───
     try {
@@ -230,6 +236,14 @@ export default {
       }
       received++;
       counterEl.textContent = received + ' specimen' + (received === 1 ? '' : 's');
+      // Update rolling 1h aggregates
+      const now = Date.now();
+      rollingEvents.push({ ts: now, fmt: fmtFrom(envelope.specimen), source: envelope.source || '?' });
+      // Prune entries older than 1 hour
+      while (rollingEvents.length && rollingEvents[0].ts < now - ROLLING_WINDOW_MS) {
+        rollingEvents.shift();
+      }
+      renderAggregates();
     }
 
     function selectRow(row, envelope) {
@@ -294,9 +308,69 @@ export default {
         return;
       }
       updateValidationBadge();
+      renderActionBar();
       if (currentTab === 'decoded') return renderDecoded();
       if (currentTab === 'validation') return renderValidation();
       if (currentTab === 'raw') return renderRaw();
+    }
+
+    function renderActionBar() {
+      const existing = root.querySelector('.stream-action-bar');
+      if (existing) existing.remove();
+      const hash = activeEnvelope && activeEnvelope.hash;
+      if (!hash) return;
+      const lang = ctx.lang || 'en';
+      const bar = document.createElement('div');
+      bar.className = 'stream-action-bar';
+      const inspectBtn = document.createElement('button');
+      inspectBtn.className = 'stream-action-btn';
+      inspectBtn.textContent = 'Open in Inspector';
+      inspectBtn.addEventListener('click', () => {
+        window.SpyglassShell.navigateTo('/' + lang + '/r/' + hash);
+      }, { signal: ctx.signal });
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'stream-action-btn stream-action-btn--secondary';
+      copyBtn.textContent = 'Copy permalink';
+      copyBtn.addEventListener('click', () => {
+        const url = location.origin + '/' + lang + '/r/' + hash;
+        navigator.clipboard.writeText(url).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy permalink'; }, 1500);
+        }).catch(() => { copyBtn.textContent = url; });
+      }, { signal: ctx.signal });
+      bar.append(inspectBtn, copyBtn);
+      const detail = root.querySelector('.detail');
+      if (detail) {
+        const tabsEl = detail.querySelector('.detail-tabs');
+        if (tabsEl) detail.insertBefore(bar, tabsEl);
+        else detail.prepend(bar);
+      }
+    }
+
+    function renderAggregates() {
+      if (!aggregatesPanel) return;
+      const now = Date.now();
+      const cutoff = now - ROLLING_WINDOW_MS;
+      const recent = rollingEvents.filter((e) => e.ts >= cutoff);
+      const total = recent.length;
+      const fmtCounts = {};
+      const srcCounts = {};
+      for (const e of recent) {
+        fmtCounts[e.fmt] = (fmtCounts[e.fmt] || 0) + 1;
+        srcCounts[e.source] = (srcCounts[e.source] || 0) + 1;
+      }
+      const topFmts = Object.entries(fmtCounts)
+        .sort((a, b) => b[1] - a[1]).slice(0, 4)
+        .map(([k, v]) => '<span class="stream-agg-badge">' + escapeHtml(k) + ' ' + v + '</span>')
+        .join('');
+      const topSrcs = Object.entries(srcCounts)
+        .sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([k, v]) => '<span class="stream-agg-badge stream-agg-badge--src">' + escapeHtml(k) + ' ' + v + '</span>')
+        .join('');
+      aggregatesPanel.innerHTML =
+        '<span class="stream-agg-label">Last hour: ' + total + ' specimens</span>' +
+        (topFmts ? ' &nbsp; ' + topFmts : '') +
+        (topSrcs ? ' &nbsp; <span class="stream-agg-sep">sources:</span> ' + topSrcs : '');
     }
 
     function updateValidationBadge() {

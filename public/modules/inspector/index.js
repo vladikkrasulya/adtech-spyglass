@@ -160,6 +160,46 @@ export default {
         console.warn('[inspector] sample handoff:', e.message);
       }
     }
+
+    // 7. /r/:hash specimen permalink handoff (Stage 2).
+    //    shell-boot.js sets window.__pendingSpecimenHash when routing /r/<hash>.
+    //    We fetch the envelope, fill the appropriate editor, then clean up.
+    try {
+      const pendingHash = window.__pendingSpecimenHash;
+      if (pendingHash) {
+        delete window.__pendingSpecimenHash;
+        const resp = await fetch('/api/v1/specimen/' + pendingHash, { signal: ctx.signal });
+        if (resp.ok) {
+          const data = await resp.json();
+          const specimen = data.specimen;
+          if (specimen) {
+            const reqEl = document.getElementById('bidReq');
+            const resEl = document.getElementById('bidRes');
+            // Detect shape: BidRequest has imp[], BidResponse has seatbid[]
+            if (Array.isArray(specimen.imp) && reqEl) {
+              reqEl.value = JSON.stringify(specimen, null, 2);
+              reqEl.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (Array.isArray(specimen.seatbid) && resEl) {
+              resEl.value = JSON.stringify(specimen, null, 2);
+              resEl.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (reqEl) {
+              // Fallback: put in request editor
+              reqEl.value = JSON.stringify(specimen, null, 2);
+              reqEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          }
+          // Replace /r/<hash> with /<lang>/inspector for a clean URL state.
+          const cleanUrl = location.pathname.replace(/\/r\/[0-9a-f]+/i, '/inspector');
+          history.replaceState(history.state, '', cleanUrl);
+        } else {
+          console.warn('[inspector] specimen handoff fetch failed:', resp.status);
+        }
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        console.warn('[inspector] specimen hash handoff:', e.message);
+      }
+    }
   },
 
   async unmount(_root) {

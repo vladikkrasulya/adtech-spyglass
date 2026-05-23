@@ -27,6 +27,7 @@ import inspectorModule from '/modules/inspector/index.js';
 import libraryModule from '/modules/library/index.js';
 import docsModule from '/modules/docs/index.js';
 import dialectsModule from '/modules/dialects/index.js';
+import streamModule from '/modules/stream/index.js';
 import { createStubModule } from '/modules/stub/index.js';
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
@@ -35,18 +36,6 @@ import { mountTopbar } from '/modules/topbar/index.js';
 // Locked to ROADMAP.md stage descriptions. Keep these short — the user
 // should immediately see WHAT and WHEN, not read a novel.
 const STUB_SECTIONS = [
-  {
-    id: 'live',
-    route: '/live',
-    icon: '📡',
-    stage: 2,
-    title: { en: 'Live RTB feed', uk: 'Live RTB-стрім', ru: 'Live RTB-стрим' },
-    copy: {
-      en: 'Synthetic OpenRTB specimens streamed at 60–120 req/min. Filter by format and version, click any specimen to inspect.',
-      uk: 'Синтетичні OpenRTB-зразки потоком 60–120 запитів/хв. Фільтри за форматом і версією, клік на будь-який — відкрити в інспекторі.',
-      ru: 'Синтетические OpenRTB-образцы потоком 60–120 запросов/мин. Фильтры по формату и версии, клик на любой — открыть в инспекторе.',
-    },
-  },
   {
     id: 'behavior',
     route: '/behavior',
@@ -93,9 +82,12 @@ function registerSections() {
   registry.register(libraryModule);
   registry.register(docsModule);
   registry.register(dialectsModule);
+  registry.register(streamModule);
   // Register /docs/findings as an additional route pointing to the same 'docs' module id.
   // registry.register() already mapped /docs → 'docs'; we add /docs/findings here.
   registry.registerRoute('/docs/findings', 'docs');
+  // Legacy /stream.html URL alias → keep existing share-links working.
+  registry.registerRoute('/stream.html', 'stream');
 
   // Stub sections (yet to be built — see ROADMAP).
   for (const cfg of STUB_SECTIONS) {
@@ -113,6 +105,19 @@ async function activateFromUrl() {
 
   // Canonical route strips /uk or /ru locale prefix.
   const canonical = canonicalize(location.pathname);
+
+  // /r/:hash specimen permalink — route to inspector with pending hash hint.
+  const hashMatch = canonical.match(/^\/r\/([0-9a-f]{8,12})$/i);
+  if (hashMatch) {
+    window.__pendingSpecimenHash = hashMatch[1];
+    try {
+      await registry.activate('inspector', root);
+    } catch (err) {
+      console.error('[shell-boot] /r/:hash activate failed:', err);
+    }
+    return;
+  }
+
   const id = registry.match(canonical);
 
   if (!id) {

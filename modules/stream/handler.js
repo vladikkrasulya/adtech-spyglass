@@ -1,46 +1,43 @@
 'use strict';
 
 /**
- * modules/stream/handler.js — GET /api/v1/stream
+ * modules/stream/handler.js — GET /api/v1/stream + GET /api/v1/specimen/:hash
  *
- * Public RTB observability feed (Phase 1 Step 1.2, see
- * docs/stream-platform-pivot-2026-05-05.md). Long-lived SSE connection:
+ * Public RTB observability feed (Phase 1 Step 1.2). Long-lived SSE connection:
  * server emits one synthetic specimen per cadence tick (~1Hz) until the
  * client disconnects, with a 15s heartbeat comment to keep CF/nginx from
  * killing idle streams.
  *
- * Unlike sample/mirror this is NOT a request/response handler — there is
- * no JSON body, no sendJson. Output is raw `res.write(...)` framed as
- * SSE messages (`event:` / `data:` / `:comment`). Connection lifecycle
- * is owned by the client; we attach listeners on entry and tear them
- * down on `req.on('close' | 'error', …)`.
- *
- * Factory shape (mirrors createMirrorModule): server.js owns the
- * singleton generator + buffer (boot-time setup + graceful shutdown via
- * generator.stop()), and passes references here at registration time.
- * Keeping the lifecycle outside the module means tests can substitute
- * a fake EventEmitter without spinning up a real corpus loader.
- *
- * Wiring (in server.js):
- *   const { createStreamModule } = require('./modules/stream/handler');
- *   router.register(createStreamModule({
- *     streamGenerator,        // EventEmitter — .on/.off('specimen', cb)
- *     streamBuffer,           // Array<envelope> — replay ring buffer
- *     STREAM_REPLAY_MAX,      // how many recent specimens to seed
- *     STREAM_HEARTBEAT_MS,    // comment-frame cadence (anti-idle)
- *   }));
- *
- * SSE leak hazards (the reason this handler exists separately):
- *   - The per-connection `setInterval` MUST be cleared on disconnect.
- *     If it isn't, every dropped client leaves a timer plus a closure
- *     pinning `res` alive → unbounded heap growth.
- *   - The 'specimen' listener MUST be removed on disconnect. The
- *     generator has setMaxListeners(0), so Node won't warn — leaks
- *     would silently accumulate and each emit would write into a
- *     dead socket (EPIPE noise + GC pressure).
- *   - Both cleanups are idempotent: `cleaned` boolean gates against
- *     'close' + 'error' firing back-to-back.
+ * Stage 2 additions:
+ *   - Each emitted envelope gets a deterministic sha1[0..8] hash of the
+ *     canonical specimen JSON. Same specimen content → same hash (de-dup).
+ *   - Hash → envelope stored in specimenStore Map (FIFO, capped at 1000).
+ *   - GET /api/v1/specimen/:hash — returns cached envelope or 404.
+ *     Cache-Control: public, max-age=3600 (content-hashed, safe to cache).
  */
+
+const crypto = require('crypto');
+
+/** FIFO map capped at MAX_SPECIMEN_STORE entries. */
+const MAX_SPECIMEN_STORE = 1000;
+const specimenStore = new Map(); // hash → envelope
+
+function specimenHash(specimen) {
+  return crypto
+    .createHash('sha1')
+    .update(JSON.stringify(specimen))
+    .digest('hex')
+    .slice(0, 8);
+}
+
+function specimenStorePut(hash, envelope) {
+  if (specimenStore.size >= MAX_SPECIMEN_STORE) {
+    // Evict oldest (Map preserves insertion order).
+    const firstKey = specimenStore.keys().next().value;
+    specimenStore.delete(firstKey);
+  }
+  specimenStore.set(hash, envelope);
+}
 
 /**
  * @param {{
@@ -88,10 +85,45 @@ function createStreamModule(deps) {
     req.on('error', cleanup);
   }
 
+  // Handler for GET /api/v1/specimen/:hash
+  // match.params.hash is provided by the router.
+  function handleSpecimen(req, res, _parsed, match) {
+    const hash = (match && match.params && match.params.hash) || '';
+    if (!hash || !/^[0-9a-f]{8,12}$/i.test(hash)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'invalid hash format' }));
+      return;
+    }
+    const envelope = specimenStore.get(hash);
+    if (!envelope) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'specimen not found' }));
+      return;
+    }
+    const body = Buffer.from(JSON.stringify({ success: true, ...envelope }));
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=3600',
+      'Content-Length': body.length,
+    });
+    res.end(body);
+  }
+
   return {
     id: 'stream',
-    routes: [{ method: 'GET', path: '/api/v1/stream', handler: handleStream }],
+    routes: [
+      { method: 'GET', path: '/api/v1/stream', handler: handleStream },
+      { method: 'GET', path: '/api/v1/specimen/:hash', handler: handleSpecimen },
+    ],
   };
 }
 
-module.exports = { createStreamModule };
+/** Called by server.js streamBufferPush — attaches hash field + stores envelope. */
+function enrichAndStore(envelope) {
+  const hash = specimenHash(envelope.specimen);
+  envelope.hash = hash;
+  specimenStorePut(hash, envelope);
+  return envelope;
+}
+
+module.exports = { createStreamModule, enrichAndStore };

@@ -389,3 +389,85 @@
   margin-bottom: var(--space-4, 16px);
   border-bottom: 1px solid var(--border);
 }
+
+/* ── Stage 2: Aggregates panel ───────────────────────────────────── */
+.stream-aggregates {
+  grid-area: header;
+  /* sits in header row, full width after the app-header */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  padding: 6px var(--space-5, 24px);
+  background: var(--surface-2, var(--surface));
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-height: 0;
+}
+.stream-aggregates:empty {
+  display: none;
+}
+.stream-agg-label {
+  font-weight: 600;
+  color: var(--text-secondary, var(--text-muted));
+}
+.stream-agg-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  background: var(--accent-muted, rgba(99,102,241,0.15));
+  color: var(--accent, #6366f1);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.stream-agg-badge--src {
+  background: var(--surface-3, rgba(100,116,139,0.15));
+  color: var(--text-secondary, #64748b);
+}
+.stream-agg-sep {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* ── Stage 2: Grid layout with aggregates row ─────────────────────── */
+/* Override previous 2-row grid to account for the aggregates bar */
+#app-root {
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas: 'header header' 'aggs aggs' 'feed detail';
+}
+.stream-aggregates {
+  grid-area: aggs;
+}
+
+/* ── Stage 2: Action bar (Inspect + Copy) ────────────────────────── */
+.stream-action-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 4px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.stream-action-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent, #6366f1);
+  background: transparent;
+  color: var(--accent, #6366f1);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.stream-action-btn:hover {
+  background: var(--accent, #6366f1);
+  color: #fff;
+}
+.stream-action-btn--secondary {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.stream-action-btn--secondary:hover {
+  background: var(--surface-2, var(--surface));
+  color: var(--text);
+}

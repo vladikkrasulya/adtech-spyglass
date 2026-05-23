@@ -295,6 +295,15 @@ function resolveLocaleRoute(reqUrl) {
     }
   }
 
+  // /r/:hash specimen permalink — serve SPA shell (inspector hydrates from hash).
+  // Supports 8–12 hex chars (current sha1[0..8] = 8 chars, future flexibility).
+  const enHash = u.match(/^\/r\/([0-9a-f]{8,12})$/i);
+  if (enHash) return { file: '/index.en.html' };
+  const ukHash = u.match(/^\/uk\/r\/([0-9a-f]{8,12})$/i);
+  if (ukHash) return { file: '/index.uk.html' };
+  const ruHash = u.match(/^\/ru\/r\/([0-9a-f]{8,12})$/i);
+  if (ruHash) return { file: '/index.ru.html' };
+
   // Existing SSR pages (preserve behaviour) — stream, about, account
   if (u === '/stream') return { file: '/stream.html' };
   if (u === '/stream.html') return { redirect: '/stream' };
@@ -857,7 +866,7 @@ router.register(createProxyModule({ auth }));
 const { createAuthRoutesModule } = require('./modules/auth/handler');
 const { createPartnersModule } = require('./modules/partners/handler');
 const { createSamplesModule } = require('./modules/samples/handler');
-const { createStreamModule } = require('./modules/stream/handler');
+const { createStreamModule, enrichAndStore } = require('./modules/stream/handler');
 router.register(
   createAuthRoutesModule({
     auth,
@@ -1039,6 +1048,8 @@ const STREAM_HEARTBEAT_MS = 15_000;
 
 const streamBuffer = [];
 function streamBufferPush(envelope) {
+  // Stage 2: attach deterministic hash + store for /api/v1/specimen/:hash lookup.
+  enrichAndStore(envelope);
   streamBuffer.push(envelope);
   if (streamBuffer.length > STREAM_BUFFER_MAX) streamBuffer.shift();
 }
