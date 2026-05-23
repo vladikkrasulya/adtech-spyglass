@@ -107,16 +107,33 @@ function renderTopbar() {
 export function mountTopbar(root, shellRoot) {
   root.innerHTML = renderTopbar();
 
-  // Wire the sign-in pill to the existing auth modal. The modal lives in
-  // spyglass.app.js and is exposed via window.openAuthModal; in dev modes
-  // where it is unavailable, fall back to navigating /account.
+  // Wire the sign-in pill. The auth modal lives in /modules/auth/ but
+  // depends on the inspector's closure-scoped SpyglassSession (DEK +
+  // crypto state). Until that dependency is hoisted to the shell level
+  // (backlog item: chrome-level auth), sign-in from any section
+  // navigates to /inspector?auth=login — the inspector's bootAuth
+  // reads the query and opens the modal once mounted.
+  //
+  // If the inspector is already the active section (modal can open
+  // in place), call window.openAuthModal directly.
   const signInBtn = root.querySelector('[data-action="open-auth"]');
   const onSignIn = (e) => {
     e.preventDefault();
     if (typeof window.openAuthModal === 'function') {
-      window.openAuthModal({ mode: 'login' });
+      window.openAuthModal('login');
+      return;
+    }
+    if (typeof window.lazyOpenAuth === 'function') {
+      window.lazyOpenAuth('login');
+      return;
+    }
+    const langAttr = document.documentElement.getAttribute('lang') || 'en';
+    const prefix = langAttr === 'en' ? '' : '/' + langAttr;
+    const target = prefix + '/inspector?auth=login';
+    if (window.SpyglassShell && typeof window.SpyglassShell.navigateTo === 'function') {
+      window.SpyglassShell.navigateTo(target);
     } else {
-      window.location.assign('/account');
+      window.location.assign(target);
     }
   };
   if (signInBtn) signInBtn.addEventListener('click', onSignIn);

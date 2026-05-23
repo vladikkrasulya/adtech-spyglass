@@ -278,6 +278,8 @@ Ordered by likelihood it will eventually matter:
 
 ---
 
+18. **Chrome-level auth modal (popup on any page)** — current Stage 1 sign-in flow SPA-navigates to /inspector?auth=login when the user clicks because the auth modal depends on the inspector closure-scoped SpyglassSession (DEK + crypto state). To open the modal in place from /library or /docs etc., SpyglassSession must be hoisted to the shell-boot level: a small standalone facade exposing api/setUser/openFromPassword/bootstrap that the inspector and other sections share. Stage 2+ work — ~3-5 days. Until then sign-in from any section opens the modal but routes through /inspector first.
+
 ## Decisions log (2026-05-23)
 
 - **Multi-section site with wide grouped sidebar.** The inspector was hitting a single-screen ceiling. A proper navigation shell makes each capability discoverable without crowding the paste surface. 8 sections, 3 groups (РОБОТА / ДАНІ / ЗНАННЯ).

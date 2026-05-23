@@ -537,7 +537,14 @@ function serveStaticFile(req, res) {
 
   const route = resolveLocaleRoute(reqPath);
   if (route && route.redirect) {
-    res.writeHead(302, { Location: route.redirect, 'Cache-Control': 'no-cache' });
+    // Preserve incoming query string so URLs like /uk?auth=login survive
+    // the locale-root → /uk/inspector redirect (Stage 1 sign-in flow).
+    const qIdx = (req.url || '').indexOf('?');
+    const target =
+      qIdx >= 0 && route.redirect.indexOf('?') === -1
+        ? route.redirect + req.url.slice(qIdx)
+        : route.redirect;
+    res.writeHead(302, { Location: target, 'Cache-Control': 'no-cache' });
     res.end();
     return;
   }
