@@ -162,12 +162,12 @@ Open the inspector, paste a payload, switch to the Discovery tab, and the
 
 ## Configuration knobs (env vars on the Spyglass side)
 
-| Var                    | Default               | Effect                                                                                                                            |
-| ---------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `OLLAMA_URL`           | `http://ollama:11434` | Where the bridge POSTs `/api/generate`. Trailing slashes stripped.                                                                |
+| Var                    | Default               | Effect                                                                                                                                                                   |
+| ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `OLLAMA_URL`           | `http://ollama:11434` | Where the bridge POSTs `/api/generate`. Trailing slashes stripped.                                                                                                       |
 | `OLLAMA_MODEL`         | `gemma4:e2b`          | Model tag. Any locally-pulled model that supports `format: 'json'` works. For low-RAM hosts that can't afford 8GB resident, fall back to `qwen2.5:3b` (~2GB) or smaller. |
-| `OLLAMA_TIMEOUT_MS`    | `30000`               | Hard timeout per request via `AbortController`. 30s is conservative for gemma4:e2b on CPU (~14 tok/s).                            |
-| `INTEL_MAX_PER_WINDOW` | `30`                  | Per-IP rate limit on `/api/intel/*` (per minute). Set to `0` to disable.                                                          |
+| `OLLAMA_TIMEOUT_MS`    | `30000`               | Hard timeout per request via `AbortController`. 30s is conservative for gemma4:e2b on CPU (~14 tok/s).                                                                   |
+| `INTEL_MAX_PER_WINDOW` | `30`                  | Per-IP rate limit on `/api/intel/*` (per minute). Set to `0` to disable.                                                                                                 |
 
 ## Operational posture
 
