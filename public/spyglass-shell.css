@@ -180,3 +180,121 @@
     display: inline-flex;
   }
 }
+
+
+/* ── Move shared chrome into the topbar ────────────────────────────
+   Hide the inspector's internal lang menu, theme toggle, and auth
+   widget. The topbar now renders functional duplicates (with the same
+   class names the existing IIFE handlers bind to), so the user sees
+   one set instead of two. The hidden DOM nodes remain present for any
+   inspector code that directly references them by ID. */
+.kt-shell .app-header .kt-lang-menu,
+.kt-shell .app-header .kt-theme-toggle,
+.kt-shell .app-header #authWidget {
+  display: none !important;
+}
+
+/* ── Topbar lang + theme + sign-in styling ─────────────────────────
+   Match the existing aesthetic the inspector header used so the
+   relocated controls feel native to the new chrome. */
+.kt-topbar .kt-lang-menu {
+  position: relative;
+}
+.kt-topbar .kt-lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  list-style: none;
+  padding: 6px 10px;
+  border-radius: var(--r-pill, 999px);
+  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  background: var(--bg-elev, #fff);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.kt-topbar .kt-lang-toggle::-webkit-details-marker { display: none; }
+.kt-topbar .kt-lang-toggle:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+}
+.kt-topbar .kt-lang-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-elev, #fff);
+  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border-radius: var(--r-sm, 10px);
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kt-topbar .kt-lang-menu-list a {
+  display: block;
+  padding: 8px 10px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 13px;
+  border-radius: var(--r-sm, 10px);
+}
+.kt-topbar .kt-lang-menu-list a:hover { background: var(--accent-soft, rgba(255, 204, 0, 0.14)); }
+.kt-topbar .kt-lang-menu-list a[aria-current="true"] {
+  background: var(--accent, #ffcc00);
+  color: var(--accent-ink, #18181b);
+}
+
+.kt-topbar .kt-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border-radius: var(--r-pill, 999px);
+  background: var(--bg-elev, #fff);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 16px;
+  /* The legacy IIFE may have left the floating fixed-position fallback;
+     scoping by .kt-topbar gives us topbar-specific positioning without
+     affecting any other instance. */
+  position: static !important;
+}
+.kt-topbar .kt-theme-toggle:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+}
+
+.kt-topbar__signin {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: var(--r-pill, 999px);
+  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  background: var(--bg-elev, #fff);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+.kt-topbar__signin:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+}
+
+/* ── Sidebar footer height matches inspector footer ────────────────
+   The inspector's .app-footer uses padding var(--space-2) var(--space-5)
+   (8px vertical) and font-size 11px monospace. Apply the same so the
+   sidebar's "● online" row sits at the same baseline as "готовий ·
+   engine v0.51.0 · …" for a continuous bottom band. */
+.kt-nav__footer {
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 11px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}

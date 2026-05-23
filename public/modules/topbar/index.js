@@ -38,6 +38,7 @@ function escapeHtml(s) {
 }
 
 function renderTopbar() {
+  const l = lang();
   const searchPlaceholder = pick({
     en: '🔎 search — coming soon',
     uk: '🔎 пошук — скоро',
@@ -48,17 +49,32 @@ function renderTopbar() {
     uk: 'Меню',
     ru: 'Меню',
   });
-  const accountLabel = pick({
-    en: 'Account',
-    uk: 'Кабінет',
-    ru: 'Кабинет',
-  });
   const collapseLabel = pick({
     en: 'Toggle sidebar',
     uk: 'Згорнути меню',
     ru: 'Свернуть меню',
   });
+  const themeLabel = pick({
+    en: 'Toggle theme',
+    uk: 'Перемкнути тему',
+    ru: 'Переключить тему',
+  });
+  const signInLabel = pick({
+    en: 'sign in',
+    uk: 'увійти',
+    ru: 'войти',
+  });
+  const langTitle = pick({
+    en: 'Language: English',
+    uk: 'Мова: українська',
+    ru: 'Язык: русский',
+  });
+  const langCurrent = l.toUpperCase();
 
+  // Lang menu mirrors the markup the existing lang-switch.js binds to
+  // (querySelectorAll('.kt-lang-menu-list a') + .kt-lang-menu details).
+  // The IIFE in HTML head also re-binds .kt-theme-toggle on
+  // kt:inspector-ready, so the topbar copy gets wired automatically.
   return `
     <button type="button" class="kt-topbar__nav-toggle" data-action="toggle-nav" aria-label="${escapeHtml(navToggleLabel)}">
       <span aria-hidden="true">☰</span>
@@ -80,17 +96,38 @@ function renderTopbar() {
       />
     </div>
     <div class="kt-topbar__actions">
-      <div class="kt-topbar__slot kt-lang-slot"></div>
-      <div class="kt-topbar__slot kt-theme-slot"></div>
-      <a class="kt-topbar__profile" href="/account" aria-label="${escapeHtml(accountLabel)}">
-        <span class="kt-topbar__avatar" aria-hidden="true">👤</span>
-      </a>
+      <details class="kt-lang-menu">
+        <summary class="kt-lang-toggle" title="${escapeHtml(langTitle)}">
+          <span class="kt-lang-current">${escapeHtml(langCurrent)}</span><span class="kt-lang-caret">▾</span>
+        </summary>
+        <div class="kt-lang-menu-list" role="menu">
+          <a href="/" role="menuitem" lang="en"${l === 'en' ? ' aria-current="true"' : ''}>EN · English</a>
+          <a href="/uk/" role="menuitem" lang="uk"${l === 'uk' ? ' aria-current="true"' : ''}>UK · Українська</a>
+          <a href="/ru/" role="menuitem" lang="ru"${l === 'ru' ? ' aria-current="true"' : ''}>RU · Русский</a>
+        </div>
+      </details>
+      <button class="kt-theme-toggle" type="button" aria-label="${escapeHtml(themeLabel)}" title="${escapeHtml(themeLabel)}">◐</button>
+      <button type="button" class="kt-topbar__signin" data-action="open-auth" data-mode="login">${escapeHtml(signInLabel)}</button>
     </div>
   `;
 }
 
 export function mountTopbar(root, shellRoot) {
   root.innerHTML = renderTopbar();
+
+  // Wire the sign-in pill to the existing auth modal. The modal lives in
+  // spyglass.app.js and is exposed via window.openAuthModal; in dev modes
+  // where it is unavailable, fall back to navigating /account.
+  const signInBtn = root.querySelector('[data-action="open-auth"]');
+  const onSignIn = (e) => {
+    e.preventDefault();
+    if (typeof window.openAuthModal === 'function') {
+      window.openAuthModal({ mode: 'login' });
+    } else {
+      window.location.assign('/account');
+    }
+  };
+  if (signInBtn) signInBtn.addEventListener('click', onSignIn);
 
   // Hook up the nav drawer toggle. Adds/removes is-nav-open on the shell root.
   const toggleBtn = root.querySelector('[data-action="toggle-nav"]');
@@ -154,6 +191,7 @@ export function mountTopbar(root, shellRoot) {
   window.addEventListener('kt:lang-change', onLang);
 
   return function unmountTopbar() {
+    if (signInBtn) signInBtn.removeEventListener('click', onSignIn);
     toggleBtn.removeEventListener('click', onToggle);
     if (collapseBtn) collapseBtn.removeEventListener('click', onCollapse);
     shellRoot.removeEventListener('click', onShellClick);
