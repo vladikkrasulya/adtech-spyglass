@@ -1987,6 +1987,10 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .tab-content {
   flex: 1;
+  /* min-height: 0 lets the flex child shrink below its intrinsic content
+     height so overflow-y:auto can actually trigger. Without it, long
+     findings lists blow past the parent and the scroll vanishes. */
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-4);
   display: none;
@@ -1994,6 +1998,54 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .tab-content.active {
   display: block;
+  min-height: 0;
+}
+
+/* Premium thin scrollbars for the findings/inspector tab body. Match the
+   user-approved spec: 6px width, transparent track, soft white thumb,
+   accent yellow on hover. */
+.tab-content::-webkit-scrollbar,
+.sidebar-left::-webkit-scrollbar,
+.sidebar-right::-webkit-scrollbar,
+.history-list::-webkit-scrollbar,
+.main-editor::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.tab-content::-webkit-scrollbar-track,
+.sidebar-left::-webkit-scrollbar-track,
+.sidebar-right::-webkit-scrollbar-track,
+.history-list::-webkit-scrollbar-track,
+.main-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tab-content::-webkit-scrollbar-thumb,
+.sidebar-left::-webkit-scrollbar-thumb,
+.sidebar-right::-webkit-scrollbar-thumb,
+.history-list::-webkit-scrollbar-thumb,
+.main-editor::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+[data-theme='light'] .tab-content::-webkit-scrollbar-thumb,
+[data-theme='light'] .sidebar-left::-webkit-scrollbar-thumb,
+[data-theme='light'] .sidebar-right::-webkit-scrollbar-thumb,
+[data-theme='light'] .history-list::-webkit-scrollbar-thumb,
+[data-theme='light'] .main-editor::-webkit-scrollbar-thumb {
+  background: rgba(24, 24, 27, 0.18);
+}
+.tab-content::-webkit-scrollbar-thumb:hover,
+.sidebar-left::-webkit-scrollbar-thumb:hover,
+.sidebar-right::-webkit-scrollbar-thumb:hover,
+.history-list::-webkit-scrollbar-thumb:hover,
+.main-editor::-webkit-scrollbar-thumb:hover {
+  background: var(--accent, #FFCC00);
+}
+.tab-content,
+.history-list,
+.main-editor {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 .empty-hint {
   color: var(--text-dim);

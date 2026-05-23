@@ -168,7 +168,10 @@
     background: var(--accent-hover, #ffd633);
   }
   .kt-shell.is-nav-collapsed .kt-nav__collapse-tab {
-    left: -12px;
+    /* User-requested 1.1 fix (2026-05-23): pill fully visible flush
+       against the viewport's left edge instead of half-hidden. Larger,
+       easier hit-target; arrow stays perfectly centered. */
+    left: 0;
   }
 
   /* Icon: ‹ when expanded, › when collapsed. Pseudo-element so the
