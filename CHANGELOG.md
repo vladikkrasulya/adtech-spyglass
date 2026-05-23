@@ -6,6 +6,84 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.51.0 — feat: URL-style request validator + Pushub decoder (2026-05-23)
+
+Spyglass now accepts URL-style ad requests — clickunder/teaser/pop GETs
+that take their params in the query-string instead of an oRTB JSON body.
+Paste the URL into `#bidReq`, get the same structured findings tier you
+get from JSON BidRequests.
+
+First vendor decoder: **Pushub** (`xml.pushub.net/link`). Adds matching
+response-side validator for the `{result:{link:[{bid,url,seat}]}}`
+feed shape.
+
+Why now: real Pushub samples from a partner integration kept producing
+"this looks like garbage" UX in the inspector because the validator
+walked oRTB paths that don't apply to URL-style requests. The
+canonical-shape pattern lets shared concerns (IPv6 IP, UA, language)
+reuse existing rules.
+
+## Architecture
+
+- `packages/core/decoders/request/_canonical.js`: canonical shape mirror
+  of `decoders/_canonical.js` (response side). Maps shared concepts to
+  oRTB paths (`device.ip`/`ipv6`/`ua`, `site.page`, `user.id`) so future
+  cross-cutting rules can target one shape.
+- `packages/core/decoders/request/index.js`: decoder registry, same
+  `detect()` + `decode()` contract as the response side. First-claim
+  wins; null on unknown host or malformed URL.
+- `packages/core/decoders/request/pushub-link/`: Pushub `xml.pushub.net/link`
+  decoder. Maps `user_ip` to `device.ip|ipv6`, `ua` to `device.ua`,
+  `lang` to `device.language`, `subid` to `user.id`, `url` to
+  `site.page`, `ch-*` to `device.sua{brands,fullVersion,platform,
+platformVersion,mobile,model}`. Empty `ch-*` values stay in `_raw`.
+- `packages/core/rules-request-url.js`: vendor-neutral URL-request
+  validator. 5 base findings: `decode_failed` ERROR (unparseable
+  canonical), `user_ip_ipv6` INFO (heads-up for v4-only downstream),
+  `ch_field_empty` WARNING (Sec-CH-UA spec violation), `ch_uafull_quoted`
+  INFO (common client bug), `url_trailing_questionmark` WARNING.
+- `packages/core/rules-feed.js`: new `validatePushubFeed()` dispatched
+  when response has `result.link[]` (array or single object).
+- `packages/core/detect.js`: `URL_REQUEST` type. `detectType()` on a
+  string lazy-loads the decoder registry and claims `URL_REQUEST` if
+  any decoder recognizes the URL signature.
+- `packages/core/index.js`: `validate()` adds string-payload branch that
+  short-circuits oRTB version detection / plugin pass / crosscheck and
+  attaches the decoded canonical as `.urlRequest`.
+- `packages/core/messages/{en,ru,uk}.json`: 9 localized strings (4
+  request.url._ + 4 feed.pushub._ + 1 user_ip_ipv6).
+- `packages/core/spec-refs.json`: 9 new entries, all `null` (no IAB
+  spec exists for URL-style requests; pushub is vendor-specific).
+
+## Server + client
+
+- `modules/analyze/handler.js`: admit string `bidReq`, gate crosscheck
+  - IAB category extraction + format detection on `hasReqObj` not
+    `hasReq` (string never has imp[] / cat to walk).
+- `modules/intel/handler.js`: shape guard on `/api/intel/simulate-bids`
+  — bare `seatbid[]` no longer wastes ~21s of CPU on dutiful SKIPs.
+- `public/spyglass.app.js`: JSON.parse with fallback to URL detection
+  via `^https?://`. Skip pretty-print for string bidReq (would overwrite
+  textarea with quoted-string). New URL-request slot card surfaces
+  endpoint + ip + ua-truncated + page on the right pane.
+- `docker-compose.yml`: bind-mount `./modules:/app/modules:ro` so
+  handler edits don't need a rebuild (matches the existing
+  `./packages` bind-mount).
+
+## Tests
+
+- `tests/decoder-request.test.js`: 16 cases — canonical shape, registry
+  (null/empty/malformed/unknown-host), pushub detect (claim vs reject),
+  pushub decode (IPv4 vs IPv6 mapping, ua + lang + subid + url, sua
+  folding, \_raw preservation, missing-param hygiene).
+- `tests/rules-request-url.test.js`: 12 cases — null/non-object →
+  decode_failed; clean canonical → 0 findings; each of the 5 base
+  findings in isolation; negative cases (bare value, missing field,
+  no trailing ?) to pin the no-fire path.
+- E2E verified via `curl http://127.0.0.1:8090/api/analyze` against a
+  synthetic Pushub URL: returns `URL Request` type with all 4 IPv6/CH
+  findings + canonical `urlRequest` payload.
+
 ### v0.50.0 — feat: Try-with-sample CTA on hero (2026-05-23)
 
 Hero now offers three one-click sample loads — `OpenRTB 2.6 banner`,

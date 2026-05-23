@@ -211,5 +211,14 @@
   "crosscheck.bid.pop.adomain_landing_mismatch": "Seat #{sNum} bid #{bNum}: popunder adm opens landing host \"{landing}\" but bid.adomain declares {declared}. Adomain MUST match the host the user actually lands on — mismatch is either a mis-declared advertiser or a spoof. The publisher's anti-phishing/brand-safety filter cannot verify a pop landing in advance, so the declared adomain is the only signal it can trust.",
   "crosscheck.bid.pop.adomain_landing_match": "Seat #{sNum} bid #{bNum}: popunder adm landing host \"{host}\" matches the declared bid.adomain.",
   "feed.clickunder.nobid": "Clickunder feed response carries result.status=\"NOBID\" — the upstream auction had no winning bid for this slot. Valid shape; nothing to render.",
-  "dialects.question.unknown_ext_signal": "Unknown vendor-extension signal at `{path}` with value `{value}`. Based on the payload shape, this most likely represents `{recommended}`. Save mapping to your dialect?"
+  "dialects.question.unknown_ext_signal": "Unknown vendor-extension signal at `{path}` with value `{value}`. Based on the payload shape, this most likely represents `{recommended}`. Save mapping to your dialect?",
+  "request.url.user_ip_ipv6": "user_ip is IPv6 ({ip}). Many DSPs/SSPs only resolve IPv4 geo data — confirm downstream geo enrichment handles v6 before relying on it.",
+  "request.url.ch_field_empty": "Client Hints field `{field}` is present but empty. Per Sec-CH-UA spec, omit the parameter for 'unknown'; empty values are a serialization bug some validators reject.",
+  "request.url.ch_uafull_quoted": "ch-uafull value {value} carries literal quotes. Sec-CH-UA-Full-Version is a bare token — quotes are usually a client-side bug and a few exchanges reject the request outright.",
+  "request.url.url_trailing_questionmark": "`url=` value ends with a trailing `?`. The empty query suffix is ambiguous and some click-redirect chains drop everything past it — URL-encode the referrer or strip the `?`.",
+  "request.url.decode_failed": "URL request decoder failed to produce a canonical shape. Either the URL is malformed or no vendor decoder claims this host/path yet.",
+  "feed.pushub.url_required": "result.link[{num}].url is required. Pushub click URL for bid #{num} is missing — without it the user has nowhere to land on click.",
+  "feed.pushub.bid_required": "result.link[{num}].bid is required (a positive float). Pushub uses this as the eCPM the SSP pays for the impression.",
+  "feed.pushub.bid_nonpositive": "result.link[{num}].bid is {bid} — non-positive bid will be filtered by the SSP. Expected a positive float.",
+  "feed.pushub.seat_missing": "result.link[{num}].seat is absent. Pushub usually echoes the buyer/seat id here — its absence makes server-side attribution harder but the bid itself stays valid."
 }

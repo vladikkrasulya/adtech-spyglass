@@ -189,5 +189,14 @@
   "crosscheck.bid.pop.adomain_landing_mismatch": null,
   "crosscheck.bid.pop.adomain_landing_match": null,
   "feed.clickunder.nobid": null,
-  "dialects.question.unknown_ext_signal": null
+  "dialects.question.unknown_ext_signal": null,
+  "feed.pushub.url_required": null,
+  "feed.pushub.bid_required": null,
+  "feed.pushub.bid_nonpositive": null,
+  "feed.pushub.seat_missing": null,
+  "request.url.decode_failed": null,
+  "request.url.user_ip_ipv6": null,
+  "request.url.ch_field_empty": null,
+  "request.url.ch_uafull_quoted": null,
+  "request.url.url_trailing_questionmark": null
 }

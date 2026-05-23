@@ -27,6 +27,8 @@ const { validateRequest30 } = require('./rules-request-30');
 const { validateResponse } = require('./rules-response');
 const { validateResponse30 } = require('./rules-response-30');
 const { validateFeedResponse } = require('./rules-feed');
+const { validateUrlRequest } = require('./rules-request-url');
+const { decodeRequest } = require('./decoders/request');
 const { crosscheck: doCrosscheck, nativeAssetCrosscheck } = require('./crosscheck');
 const { mirror: doMirror } = require('./mirror');
 const { runRulePlugins } = require('./rules');
@@ -95,6 +97,44 @@ function validate(payload, opts) {
   // logged-in-without-dialect users pass null → plugins emit all
   // eligible questions.
   const userDialect = o.userDialect || null;
+
+  // String payloads are URL-style requests (clickunder/teaser/pop GETs).
+  // Routed through the request-decoder registry → `validateUrlRequest`.
+  // Returns early — URL_REQUEST has no oRTB version axis to pin, no
+  // plugin pass, no crosscheck input (response side handles that itself).
+  if (typeof payload === 'string') {
+    if (detectType(payload) !== TYPES.URL_REQUEST) {
+      return finalize(
+        {
+          type: TYPES.UNKNOWN,
+          version: { version: VERSIONS.UNKNOWN, confidence: 0, signals: [] },
+          findings: [makeFinding('payload.invalid_root', LEVELS.ERROR, '')],
+        },
+        'invalid',
+        locale,
+        disabledRules,
+        strictness,
+      );
+    }
+    const canonical = decodeRequest(payload);
+    const r = validateUrlRequest(canonical);
+    const out = finalize(
+      {
+        type: TYPES.URL_REQUEST,
+        version: { version: VERSIONS.UNKNOWN, confidence: 0, signals: [] },
+        findings: r.findings,
+      },
+      null,
+      locale,
+      disabledRules,
+      strictness,
+    );
+    // Attach decoded canonical for UI consumption. finalize() returns only
+    // {type, version, status, findings} by contract; we merge here so the
+    // public shape stays additive (other callers ignore unknown fields).
+    out.urlRequest = canonical;
+    return out;
+  }
 
   if (payload == null || typeof payload !== 'object') {
     return finalize(

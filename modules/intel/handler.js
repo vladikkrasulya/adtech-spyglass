@@ -235,6 +235,27 @@ function createIntelModule(deps) {
         if (!parsed) {
           return sendError(res, 400, 'invalid_input', 'bid_req JSON required');
         }
+        // Shape guard: Simulate works on BidRequests (must have imp[]).
+        // A common mistake is pasting a BidResponse (has seatbid[]) — without
+        // this check the LLM gets an empty metadata summary and dutifully
+        // returns 3x SKIP, wasting ~21s of CPU and confusing the user.
+        const hasImp = Array.isArray(parsed.imp) && parsed.imp.length > 0;
+        if (!hasImp) {
+          if (Array.isArray(parsed.seatbid)) {
+            return sendError(
+              res,
+              400,
+              'wrong_shape',
+              'This looks like a BidResponse (has seatbid[]). Simulate needs a BidRequest with imp[].',
+            );
+          }
+          return sendError(
+            res,
+            400,
+            'wrong_shape',
+            'BidRequest must contain a non-empty imp[] array.',
+          );
+        }
         try {
           const results = await intelLlm.simulateBids(parsed);
           if (!results) {

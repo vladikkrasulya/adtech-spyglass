@@ -37,6 +37,12 @@ function validateFeedResponse(arrOrObj) {
     if (isClickunderBid || isClickunderNobid) {
       return validateKadamClickunder(arrOrObj);
     }
+    // Pushub link-feed (single object OR array). Same `result`-wrapped
+    // family as Kadam but the bids live under `link` rather than `listing`.
+    // See validatePushubFeed below for the field contract.
+    if (Array.isArray(r.link) || isObj(r.link)) {
+      return validatePushubFeed(arrOrObj);
+    }
   }
 
   // Kadam push (array of materials)
@@ -103,6 +109,50 @@ function validateKadamClickunder(o) {
     type: isArrayShape
       ? 'Kadam Feed Response (clickunder)'
       : 'Kadam Feed Response (clickunder, single)',
+    findings,
+  };
+}
+
+// ── Pushub link-feed ───────────────────────────────────────────────
+//
+// Pushub clickunder/push response. Wrapped in `result` like Kadam but bids
+// live under `link` (array OR single object) instead of `listing`. Each bid
+// row: { bid: <float>, url: <click target>, seat: <buyer id string> }.
+// `seat` is informational only — a missing seat is unusual but not fatal,
+// so it surfaces as INFO not ERROR (mirrors how Kadam treats absent
+// non-required fields).
+
+function validatePushubFeed(o) {
+  const findings = [];
+  const r = o.result;
+  const isArrayShape = Array.isArray(r.link);
+  const rows = isArrayShape ? r.link : [r.link];
+
+  rows.forEach((row, i) => {
+    const num = i + 1;
+    const p = isArrayShape ? `result.link[${i}]` : 'result.link';
+    if (!row || typeof row !== 'object') {
+      findings.push(F('feed.pushub.url_required', LEVELS.ERROR, `${p}.url`, { num }));
+      findings.push(F('feed.pushub.bid_required', LEVELS.ERROR, `${p}.bid`, { num }));
+      return;
+    }
+    if (!isStr(row.url)) {
+      findings.push(F('feed.pushub.url_required', LEVELS.ERROR, `${p}.url`, { num }));
+    }
+    if (!isNum(row.bid)) {
+      findings.push(F('feed.pushub.bid_required', LEVELS.ERROR, `${p}.bid`, { num }));
+    } else if (row.bid <= 0) {
+      findings.push(
+        F('feed.pushub.bid_nonpositive', LEVELS.WARNING, `${p}.bid`, { num, bid: row.bid }),
+      );
+    }
+    if (!isStr(row.seat)) {
+      findings.push(F('feed.pushub.seat_missing', LEVELS.INFO, `${p}.seat`, { num }));
+    }
+  });
+
+  return {
+    type: isArrayShape ? 'Pushub Feed Response' : 'Pushub Feed Response (single)',
     findings,
   };
 }

@@ -45,6 +45,12 @@ services:
       # tweak required a full image rebuild, slowing iteration to minutes.
       # :ro because nothing in the container should write to it.
       - ./packages:/app/packages:ro
+      # HTTP route handlers — bind-mounted same as packages/ so handler edits
+      # take effect on `compose restart` without rebuild. Added 2026-05-21
+      # alongside the URL-style request decoder skeleton (modules/analyze
+      # gained string-bidReq support that was previously baked into the
+      # image). :ro because the container never writes here.
+      - ./modules:/app/modules:ro
       # intel-llm.js — Phase 7c LLM bridge. Bind-mounted same as packages
       # so prompt edits take effect on `compose restart` without rebuild.
       - ./intel-llm.js:/app/intel-llm.js:ro

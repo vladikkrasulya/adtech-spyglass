@@ -1549,7 +1549,26 @@ export async function mountInspector(root, ctx) {
     }
 
     try {
-      const req = reqVal ? JSON.parse(reqVal) : {};
+      // bidReq accepts two shapes: oRTB JSON (parsed to object) OR a URL-
+      // style ad request string (clickunder/teaser/pop GET — decoded
+      // server-side via packages/core/decoders/request/). If JSON.parse
+      // fails AND the text looks like a URL, pass it through verbatim;
+      // the server's validate() will route it to the URL_REQUEST branch.
+      let req;
+      if (!reqVal) {
+        req = {};
+      } else {
+        try {
+          req = JSON.parse(reqVal);
+        } catch (e) {
+          const trimmed = reqVal.trim();
+          if (/^https?:\/\//i.test(trimmed)) {
+            req = trimmed;
+          } else {
+            throw e;
+          }
+        }
+      }
       const res = resVal ? JSON.parse(resVal) : {};
       // Auto-fill SIM PRICE from the actual auction signals so the value
       // shown reflects the bid being analysed, not a stale placeholder.
@@ -1571,7 +1590,11 @@ export async function mountInspector(root, ctx) {
       const simP = simPriceEl.value || '0.00';
 
       if (!fromHist) {
-        if (reqVal) $('bidReq').value = JSON.stringify(req, null, 2);
+        // Skip pretty-print for string bidReq (URL-style requests). Running
+        // JSON.stringify on a string yields a quote-wrapped version that
+        // would overwrite the user's textarea with `"http://…"` on every
+        // analyse click.
+        if (reqVal && typeof req === 'object') $('bidReq').value = JSON.stringify(req, null, 2);
         if (resVal) $('bidRes').value = JSON.stringify(res, null, 2);
         if (reqVal) updateCharCount('bidReq');
         if (resVal) updateCharCount('bidRes');
@@ -1734,9 +1757,52 @@ export async function mountInspector(root, ctx) {
               );
             })
             .join('')
-        : '<div class="empty-hint" style="grid-column:1/-1">' +
-          escapeHtml(t('empty.no_imp_slots')) +
-          '</div>';
+        : (function () {
+            // URL-style request branch: `req` is a string when the user
+            // pasted a clickunder/teaser/pop GET URL. Parse it client-side
+            // just enough to surface endpoint + key query params — the
+            // server's canonical (validation.urlRequest) is richer but
+            // arrives AFTER this slot render runs (`validation` is in TDZ
+            // here), so we work from `req` directly.
+            if (typeof req !== 'string') {
+              return (
+                '<div class="empty-hint" style="grid-column:1/-1">' +
+                escapeHtml(t('empty.no_imp_slots')) +
+                '</div>'
+              );
+            }
+            let endpoint = '';
+            let ip = '';
+            let ua = '';
+            let page = '';
+            try {
+              const u = new URL(req);
+              endpoint = u.hostname + u.pathname;
+              ip = u.searchParams.get('user_ip') || '';
+              ua = u.searchParams.get('ua') || '';
+              page = u.searchParams.get('url') || '';
+            } catch (e) {
+              endpoint = req.slice(0, 80);
+            }
+            const uaShort = ua.length > 80 ? ua.slice(0, 80) + '…' : ua;
+            return (
+              '<div class="slot-card" style="grid-column:1/-1">' +
+              '<div class="slot-type-row">' +
+              '<span class="slot-type">URL</span>' +
+              '</div>' +
+              '<div class="slot-id">' +
+              escapeHtml(endpoint) +
+              '</div>' +
+              (ip ? '<div class="slot-dims">ip: ' + escapeHtml(ip) + '</div>' : '') +
+              (uaShort
+                ? '<div class="slot-dims" style="font-size:10px;color:var(--text-dim)">' +
+                  escapeHtml(uaShort) +
+                  '</div>'
+                : '') +
+              (page ? '<div class="slot-dims">page: ' + escapeHtml(page) + '</div>' : '') +
+              '</div>'
+            );
+          })();
 
       // Quick stats (right sidebar)
       const counts = {

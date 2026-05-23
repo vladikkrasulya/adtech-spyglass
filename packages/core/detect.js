@@ -24,6 +24,11 @@ const TYPES = {
   ORTB_RESPONSE: 'oRTB BidResponse',
   KADAM_FEED: 'Vendor Feed Response',
   JSON_FEED: 'JSON Feed 1.1',
+  // URL-style ad request (clickunder/teaser/pop GETs that take params in the
+  // query-string instead of an oRTB JSON body). Decoded by
+  // `decoders/request/<variant>/` into a canonical request shape. Added
+  // 2026-05-21 alongside pushub-link as the first vendor.
+  URL_REQUEST: 'URL Request',
   UNKNOWN: 'unknown',
 };
 
@@ -136,7 +141,30 @@ function looksLikeJsonFeedSingle(o) {
   return false;
 }
 
+// Lazy-load to avoid a require cycle: decoders/request/index.js pulls
+// `logger`, which is fine, but keeping the require inside the function
+// also matches how downstream callers may stub detect.js in tests.
+let _decodeRequest = null;
+function decodeRequestLazy(text) {
+  if (_decodeRequest === null) {
+    try {
+      _decodeRequest = require('./decoders/request').decodeRequest;
+    } catch {
+      _decodeRequest = () => null;
+    }
+  }
+  return _decodeRequest(text);
+}
+
 function detectType(obj) {
+  // String inputs are URL-style requests (clickunder/teaser/pop GETs). The
+  // analyze pipeline passes pasted text verbatim when JSON.parse fails — we
+  // claim it here if any request-decoder recognizes the URL signature.
+  if (typeof obj === 'string') {
+    const decoded = decodeRequestLazy(obj);
+    if (decoded && decoded.variant) return TYPES.URL_REQUEST;
+    return TYPES.UNKNOWN;
+  }
   // Arrays are Kadam push-feed responses (list of materials).
   if (Array.isArray(obj)) return TYPES.KADAM_FEED;
   if (!isObj(obj)) return TYPES.UNKNOWN;
@@ -171,6 +199,11 @@ function detectType(obj) {
   if (isObj(obj.result)) {
     const r = obj.result;
     if (Array.isArray(r.listing) || isObj(r.listing)) return TYPES.KADAM_FEED;
+    // Pushub link-feed: `result.link[]` with { bid, url, seat } per row.
+    // Same family as Kadam clickunder (XML-engine response wrapped in
+    // `result`), different vendor-specific key. Routed through KADAM_FEED
+    // so rules-feed dispatch can discriminate by key → validatePushubFeed.
+    if (Array.isArray(r.link) || isObj(r.link)) return TYPES.KADAM_FEED;
     if (typeof r.status === 'string' && r.status.toUpperCase() === 'NOBID') return TYPES.KADAM_FEED;
   }
   if (obj.version && obj.items) return TYPES.JSON_FEED;

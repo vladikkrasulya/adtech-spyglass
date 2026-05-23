@@ -120,7 +120,13 @@ function createAnalyzeModule(deps) {
     readJson(req)
       .then((body) => {
         const { bidReq, bidRes } = body || {};
-        const hasReq = bidReq && typeof bidReq === 'object' && Object.keys(bidReq).length > 0;
+        // bidReq can now be either a parsed JSON object (oRTB BidRequest) OR
+        // a URL string (clickunder/teaser/pop GET, decoded by
+        // packages/core/decoders/request/). validate() in core handles the
+        // string branch internally — handler just needs to admit it.
+        const hasReqStr = typeof bidReq === 'string' && bidReq.trim().length > 0;
+        const hasReqObj = bidReq && typeof bidReq === 'object' && Object.keys(bidReq).length > 0;
+        const hasReq = hasReqStr || hasReqObj;
         const hasRes = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0;
 
         // Optional `opts.disabledRules`: forwarded to validate() / crosscheck()
@@ -207,14 +213,17 @@ function createAnalyzeModule(deps) {
             ? 'warnings'
             : 'clean';
 
+        // URL-style request (string bidReq) is not in scope for crosscheck /
+        // IAB category extraction / format detection — those all walk oRTB
+        // JSON paths. Gate them on hasReqObj, not hasReq.
         const cross =
-          hasReq && hasRes ? crosscheck(bidReq, bidRes, { locale, dialect, disabledRules }) : [];
+          hasReqObj && hasRes ? crosscheck(bidReq, bidRes, { locale, dialect, disabledRules }) : [];
 
         // Decode IAB Content Taxonomy codes (cat / bcat / pcat / sectioncat
         // / pagecat / bid.cat) into English labels so the frontend can render
         // human text alongside `IAB9-11` etc. without bundling its own dict.
         const categories = {};
-        if (hasReq) Object.assign(categories, extractAllCategories(bidReq, locale));
+        if (hasReqObj) Object.assign(categories, extractAllCategories(bidReq, locale));
         if (hasRes) Object.assign(categories, extractAllCategories(bidRes, locale));
 
         // Phase 10b — third detection axis (banner/video/audio/native/push/…
@@ -223,7 +232,7 @@ function createAnalyzeModule(deps) {
         // imp[].banner|video|audio|native + context, the response side
         // carries mtype + adm sniffing. A null/empty `format` is a valid
         // outcome — the frontend gates rendering on `confidence`.
-        const formatReq = hasReq ? detectFormat(bidReq) : null;
+        const formatReq = hasReqObj ? detectFormat(bidReq) : null;
         const formatRes = hasRes ? detectFormat(bidRes) : null;
         const format = unionFormat(formatReq, formatRes);
 
