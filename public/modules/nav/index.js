@@ -100,7 +100,7 @@ function renderNav() {
       <span class="kt-nav__brand-text">ortbtools</span>
     </a>
     <button type="button" class="kt-nav__collapse-tab" data-action="collapse-nav" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}">
-      <span aria-hidden="true">⮜</span>
+      <span aria-hidden="true">‹</span>
     </button>
     <nav class="kt-nav__nav" aria-label="Sections">
       ${groups}
@@ -154,7 +154,7 @@ export function mountNav(root) {
     reopenTab.type = 'button';
     reopenTab.className = 'kt-shell__reopen-tab';
     reopenTab.setAttribute('aria-label', 'Expand sidebar');
-    reopenTab.innerHTML = '<span aria-hidden="true">⮞</span>';
+    reopenTab.innerHTML = '<span aria-hidden="true">›</span>';
     shellRoot.appendChild(reopenTab);
   }
   // Restore persisted state.
