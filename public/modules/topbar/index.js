@@ -37,7 +37,7 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-function renderTopbar() {
+function renderTopbar(authUser) {
   const l = lang();
   const searchPlaceholder = pick({
     en: '🔎 search the site',
@@ -65,6 +65,20 @@ function renderTopbar() {
     ru: 'Язык: русский',
   });
   const langCurrent = l.toUpperCase();
+
+  // Right-side auth area: profile pill when logged in, sign-in button otherwise.
+  let authHtml;
+  if (authUser && authUser.email) {
+    const initial = authUser.email.charAt(0).toUpperCase();
+    const emailPrefix = authUser.email.split('@')[0];
+    const langAttr = l === 'en' ? '' : '/' + l;
+    authHtml = `<a class="kt-topbar__profile" href="${escapeHtml(langAttr + '/account')}" data-internal title="${escapeHtml(authUser.email)}" aria-label="${escapeHtml(authUser.email)}">
+      <span class="kt-topbar__avatar" aria-hidden="true">${escapeHtml(initial)}</span>
+      <span class="kt-topbar__email-prefix">${escapeHtml(emailPrefix)}</span>
+    </a>`;
+  } else {
+    authHtml = `<button type="button" class="kt-topbar__signin" data-action="open-auth" data-mode="login">${escapeHtml(signInLabel)}</button>`;
+  }
 
   // Lang menu mirrors the markup the existing lang-switch.js binds to
   // (querySelectorAll('.kt-lang-menu-list a') + .kt-lang-menu details).
@@ -100,33 +114,43 @@ function renderTopbar() {
         </div>
       </details>
       <button class="kt-theme-toggle" type="button" aria-label="${escapeHtml(themeLabel)}" title="${escapeHtml(themeLabel)}">◐</button>
-      <button type="button" class="kt-topbar__signin" data-action="open-auth" data-mode="login">${escapeHtml(signInLabel)}</button>
+      ${authHtml}
     </div>
   `;
 }
 
-export function mountTopbar(root, shellRoot) {
-  root.innerHTML = renderTopbar();
+// Fetch /api/auth/me and return the user object, or null on 401/error.
+// Used by updateAuthArea to drive the profile pill vs sign-in button.
+async function fetchAuthUser() {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (res.status === 401) return null;
+    if (!res.ok) return null;
+    const j = await res.json();
+    return (j && j.user) ? j.user : null;
+  } catch (_) {
+    return null;
+  }
+}
 
-  // Wire global search.
-  let searchCleanup = null;
-  const searchInput = root.querySelector('.kt-topbar__search-input');
-  if (searchInput) {
-    import('/modules/search/index.js').then(({ initSearch }) => {
-      searchCleanup = initSearch(searchInput, shellRoot);
-    }).catch(e => console.warn('[topbar] search module load failed:', e));
+export function mountTopbar(root, shellRoot) {
+  // Tracked auth user for the current render cycle. Starts null (anon);
+  // updateAuthArea() fetches /api/auth/me and re-renders the action area.
+  let _authUser = null;
+
+  // ── Nav toggle (declared early — doRender references it) ────────────
+  const onToggle = (e) => {
+    e.preventDefault();
+    shellRoot.classList.toggle('is-nav-open');
+  };
+
+  // ── Helpers to wire/unwire the sign-in click on a fresh DOM render ──
+  function wireSignIn() {
+    const signInBtn = root.querySelector('[data-action="open-auth"]');
+    if (!signInBtn) return;
+    signInBtn.addEventListener('click', onSignIn);
   }
 
-  // Wire the sign-in pill. The auth modal lives in /modules/auth/ but
-  // depends on the inspector's closure-scoped SpyglassSession (DEK +
-  // crypto state). Until that dependency is hoisted to the shell level
-  // (backlog item: chrome-level auth), sign-in from any section
-  // navigates to /inspector?auth=login — the inspector's bootAuth
-  // reads the query and opens the modal once mounted.
-  //
-  // If the inspector is already the active section (modal can open
-  // in place), call window.openAuthModal directly.
-  const signInBtn = root.querySelector('[data-action="open-auth"]');
   const onSignIn = (e) => {
     e.preventDefault();
     if (typeof window.openAuthModal === 'function') {
@@ -146,14 +170,98 @@ export function mountTopbar(root, shellRoot) {
       window.location.assign(target);
     }
   };
-  if (signInBtn) signInBtn.addEventListener('click', onSignIn);
+
+  // ── Full topbar render (preserves _authUser across re-renders) ───────
+  function doRender(user) {
+    _authUser = user !== undefined ? user : _authUser;
+    root.innerHTML = renderTopbar(_authUser);
+    // Re-wire toggle (it's a fresh DOM node after innerHTML).
+    const newToggle = root.querySelector('[data-action="toggle-nav"]');
+    if (newToggle) newToggle.addEventListener('click', onToggle);
+    wireSignIn();
+  }
+
+  // ── Fetch auth state + patch ONLY the auth button (sign-in / profile pill) ─
+  // Deliberately does NOT re-render the lang menu or theme toggle so that
+  // lang-switch.js's data-langSwapBound markers and href rewrites survive.
+  // Full re-render (doRender) is reserved for kt:lang-change.
+  async function updateAuthArea(userOverride) {
+    let user;
+    if (userOverride !== undefined) {
+      // Caller already knows the new user (from auth:changed event detail).
+      user = userOverride;
+    } else {
+      user = await fetchAuthUser();
+    }
+    _authUser = user;
+
+    const l = lang();
+    const signInLabel = l === 'uk' ? 'увійти' : l === 'ru' ? 'войти' : 'sign in';
+
+    // Build just the auth node (profile pill or sign-in button).
+    let newNode;
+    if (user && user.email) {
+      const initial = user.email.charAt(0).toUpperCase();
+      const emailPrefix = user.email.split('@')[0];
+      const langAttr = l === 'en' ? '' : '/' + l;
+      newNode = document.createElement('a');
+      newNode.className = 'kt-topbar__profile';
+      newNode.href = langAttr + '/account';
+      newNode.setAttribute('data-internal', '');
+      newNode.title = user.email;
+      newNode.setAttribute('aria-label', user.email);
+      newNode.innerHTML = `<span class="kt-topbar__avatar" aria-hidden="true">${escapeHtml(initial)}</span><span class="kt-topbar__email-prefix">${escapeHtml(emailPrefix)}</span>`;
+    } else {
+      newNode = document.createElement('button');
+      newNode.type = 'button';
+      newNode.className = 'kt-topbar__signin';
+      newNode.setAttribute('data-action', 'open-auth');
+      newNode.setAttribute('data-mode', 'login');
+      newNode.textContent = signInLabel;
+    }
+
+    // Swap: remove the existing auth element (sign-in btn or profile pill),
+    // append the new one. This leaves lang menu + theme toggle untouched.
+    const actions = root.querySelector('.kt-topbar__actions');
+    if (!actions) {
+      // Fallback: full re-render only if .kt-topbar__actions is missing.
+      doRender(user);
+      return;
+    }
+    const existingAuth = actions.querySelector('.kt-topbar__signin, .kt-topbar__profile');
+    if (existingAuth) {
+      actions.replaceChild(newNode, existingAuth);
+    } else {
+      actions.appendChild(newNode);
+    }
+    wireSignIn();
+  }
+
+  // ── Initial render (anon — auth check follows async) ─────────────────
+  doRender(null);
+
+  // Wire global search on the first render.
+  let searchCleanup = null;
+  const searchInput = root.querySelector('.kt-topbar__search-input');
+  if (searchInput) {
+    import('/modules/search/index.js').then(({ initSearch }) => {
+      searchCleanup = initSearch(searchInput, shellRoot);
+    }).catch(e => console.warn('[topbar] search module load failed:', e));
+  }
+
+  // Wire the sign-in pill. The auth modal lives in /modules/auth/ but
+  // depends on the inspector's closure-scoped SpyglassSession (DEK +
+  // crypto state). Until that dependency is hoisted to the shell level
+  // (backlog item: chrome-level auth), sign-in from any section
+  // navigates to /inspector?auth=login — the inspector's bootAuth
+  // reads the query and opens the modal once mounted.
+  //
+  // If the inspector is already the active section (modal can open
+  // in place), call window.openAuthModal directly.
+  wireSignIn();
 
   // Hook up the nav drawer toggle. Adds/removes is-nav-open on the shell root.
   const toggleBtn = root.querySelector('[data-action="toggle-nav"]');
-  const onToggle = (e) => {
-    e.preventDefault();
-    shellRoot.classList.toggle('is-nav-open');
-  };
   toggleBtn.addEventListener('click', onToggle);
 
 
@@ -167,7 +275,8 @@ export function mountTopbar(root, shellRoot) {
     if (window.innerWidth >= 1024) return;
     const nav = document.getElementById('kt-nav-root');
     if (nav && nav.contains(e.target)) return;
-    if (toggleBtn.contains(e.target)) return;
+    const tb = root.querySelector('[data-action="toggle-nav"]');
+    if (tb && tb.contains(e.target)) return;
     shellRoot.classList.remove('is-nav-open');
   };
   shellRoot.addEventListener('click', onShellClick);
@@ -177,13 +286,21 @@ export function mountTopbar(root, shellRoot) {
   window.addEventListener('popstate', onRoute);
   window.addEventListener('kt:pushstate', onRoute);
 
-  // Re-render labels on language change.
+  // Re-check auth on SPA navigation (covers going from /inspector to
+  // /library after sign-in — the profile pill must persist).
+  const onPushState = () => {
+    shellRoot.classList.remove('is-nav-open');
+    updateAuthArea(); // best-effort; anon fallback on network failure
+  };
+  window.addEventListener('kt:pushstate', onPushState);
+
+  // Re-render labels on language change; preserve auth state.
   const onLang = () => {
     // Cleanup existing search before re-render
     if (searchCleanup) { searchCleanup(); searchCleanup = null; }
-    root.innerHTML = renderTopbar();
+    doRender(); // keeps _authUser
     const newToggle = root.querySelector('[data-action="toggle-nav"]');
-    newToggle.addEventListener('click', onToggle);
+    if (newToggle) newToggle.addEventListener('click', onToggle);
     // Re-init search on new input
     const newSearchInput = root.querySelector('.kt-topbar__search-input');
     if (newSearchInput) {
@@ -194,14 +311,28 @@ export function mountTopbar(root, shellRoot) {
   };
   window.addEventListener('kt:lang-change', onLang);
 
+  // ── Auth state sync ────────────────────────────────────────────────────
+  // Listen to auth:changed dispatched by SpyglassSession.setUser and
+  // window.signOut. Detail carries {user} (null on logout).
+  const onAuthChanged = (e) => {
+    const user = (e && e.detail && e.detail.user) ? e.detail.user : null;
+    updateAuthArea(user);
+  };
+  window.addEventListener('auth:changed', onAuthChanged);
+
+  // Best-effort initial auth check (covers page-reload while session
+  // is still active — session cookie exists but _authUser starts null).
+  updateAuthArea();
+
   return function unmountTopbar() {
     if (searchCleanup) { searchCleanup(); searchCleanup = null; }
-    if (signInBtn) signInBtn.removeEventListener('click', onSignIn);
     toggleBtn.removeEventListener('click', onToggle);
     shellRoot.removeEventListener('click', onShellClick);
     window.removeEventListener('popstate', onRoute);
     window.removeEventListener('kt:pushstate', onRoute);
+    window.removeEventListener('kt:pushstate', onPushState);
     window.removeEventListener('kt:lang-change', onLang);
+    window.removeEventListener('auth:changed', onAuthChanged);
     root.innerHTML = '';
   };
 }

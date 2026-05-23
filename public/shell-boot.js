@@ -162,6 +162,11 @@ function isInternalLink(a) {
   if (a.hasAttribute('download')) return false;
   if (a.target && a.target !== '' && a.target !== '_self') return false;
   if (a.hasAttribute('data-external')) return false;
+  // Skip lang-menu links — lang-switch.js owns these and calls switchLang()
+  // which handles locale updates, cookie, sessionStorage snapshot, and
+  // kt:lang-change dispatch. Letting interceptClicks capture them would
+  // bypass all of that and land on a bare navigateTo(/) with no lang update.
+  if (a.closest('.kt-lang-menu-list')) return false;
   // Require same origin and same protocol.
   let url;
   try {
@@ -207,6 +212,40 @@ function mountChrome() {
   const topbarRoot = document.getElementById('kt-topbar-root');
   if (navRoot) mountNav(navRoot);
   if (topbarRoot) mountTopbar(topbarRoot, shellRoot);
+  // Signal classic scripts (lang-switch.js) that the chrome DOM is ready.
+  // lang-switch.js bindLangLinks() needs the .kt-lang-menu-list elements
+  // that topbar injects — DOMContentLoaded fires too early for this.
+  window.dispatchEvent(new CustomEvent('kt:chrome-ready'));
+}
+
+// ── Lang-change: re-activate the current section ─────────────────
+// When lang-switch.js fires kt:lang-change in SPA mode, the nav and
+// topbar re-render themselves (they have their own kt:lang-change
+// listeners). The currently-active section module also needs to be
+// re-mounted so its localised copy (sidebar group labels, empty-state
+// strings, section-specific placeholders) reflects the new locale.
+// We deactivate the current section and re-activate it into the same
+// root — registry.activate() tears down the old mount first.
+function wireLangChange() {
+  window.addEventListener('kt:lang-change', async () => {
+    const id = registry.current();
+    if (!id) return; // no section active — nothing to re-mount
+    const root = document.getElementById('app-root');
+    if (!root) return;
+    try {
+      // Deactivate (registry unmounts the section, clears root.innerHTML).
+      await registry.deactivate();
+      // Re-activate the same section — it reads the now-updated
+      // document.documentElement.lang so all ctx.lang-derived strings
+      // are in the new locale.
+      await registry.activate(id, root);
+    } catch (err) {
+      console.warn('[shell-boot] kt:lang-change section remount failed:', err);
+      // Best-effort fallback: re-activate from URL so the shell
+      // doesn't get stuck on a blank #app-root.
+      try { await activateFromUrl(); } catch (_) { /* ignore */ }
+    }
+  });
 }
 
 // ── Boot ─────────────────────────────────────────────────────────
@@ -225,6 +264,7 @@ async function boot() {
   registerSections();
   mountChrome();
   interceptClicks();
+  wireLangChange();
   await activateFromUrl();
 }
 

@@ -2952,6 +2952,11 @@ export async function mountInspector(root, ctx) {
     _isDirty = false;
     renderAuthWidget();
     refreshSamples();
+    // Notify chrome that auth state changed (user → null) so topbar
+    // immediately reverts profile pill → sign-in pill.
+    try {
+      window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: null } }));
+    } catch (_) { /* non-fatal */ }
     toast(t('toast.signed_out'), 'success');
   };
 
@@ -3405,6 +3410,11 @@ export async function mountInspector(root, ctx) {
     },
     setUser(u) {
       _currentUser = u;
+      // Notify chrome (topbar) that auth state changed so it can
+      // re-render the sign-in pill → profile pill without a page reload.
+      try {
+        window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: u } }));
+      } catch (_) { /* never block auth on event dispatch */ }
     },
     get currentSampleId() {
       return _currentSampleId;

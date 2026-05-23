@@ -242,21 +242,24 @@
       /* cookie disabled — fetch may still bounce; we'll fall through */
     }
 
-    // Inspector pages mount their template ASYNC (modules/inspector/index.js
-    // injects markup AFTER the shell loads). The fetched server HTML carries
-    // an EMPTY #app-root, while the live DOM has the fully-injected
-    // workbench. langMorph aborts on child-count mismatch at the top level,
-    // leaving the page Ukrainian after a UK→EN click. Cookie is set; just
-    // do a full navigation — the new page boots its own module mount in
-    // the right locale, no morph game required.
+    // SPA shell detection: every section page uses the multi-section SPA
+    // shell (.kt-shell). When the shell is present we do an in-place SPA
+    // lang switch: update metadata + localStorage/cookie, snapshot textarea
+    // content, navigate via SpyglassShell.navigateTo(), then fire
+    // kt:lang-change so nav + topbar + the current section all re-render in
+    // the new locale. No server roundtrip or hard reload needed.
     //
-    // Lightweight surfaces (/about, future static pages) don't have
-    // #app-root.workbench and continue using the in-place morph.
-    const hasMountedWorkbench = !!document.querySelector('#app-root.workbench');
-    if (hasMountedWorkbench) {
-      // Best-effort POST so cross-device preference updates before we leave.
-      // .catch is needed even though we navigate — the request kicks off
-      // before navigation tears down the page; if it fails it fails.
+    // The legacy fetch+morph path (below) is preserved for non-SPA pages
+    // such as about.html where .kt-shell is absent.
+    const hasSpaShell = !!document.querySelector('.kt-shell');
+    if (hasSpaShell) {
+      // Update document-level lang attributes immediately.
+      document.documentElement.lang = newLangFromUrl;
+      document.documentElement.setAttribute('data-lang', newLangFromUrl);
+      try {
+        localStorage.setItem('kt-lang', newLangFromUrl);
+      } catch (_) { /* ignore */ }
+      // Best-effort POST so cross-device preference updates.
       try {
         fetch('/api/auth/preferences', {
           method: 'POST',
@@ -265,18 +268,9 @@
           body: JSON.stringify({ locale: newLangFromUrl }),
           keepalive: true,
         }).catch(() => {});
-      } catch (_) {
-        /* ignore */
-      }
-      try {
-        localStorage.setItem('kt-lang', newLangFromUrl);
-      } catch (_) {
-        /* ignore */
-      }
-      // Snapshot textarea content so the new page can restore it after
-      // kt:inspector-ready. The morph path preserves these in-place, but
-      // the workbench branch does a full navigation — without this save the
-      // user loses their in-progress bid request on every language switch.
+      } catch (_) { /* ignore */ }
+      // Snapshot textarea content so the inspector module can restore it
+      // after kt:inspector-ready (same pattern as the old hard-nav branch).
       try {
         const reqEl = document.getElementById('bidReq');
         const resEl = document.getElementById('bidRes');
@@ -284,10 +278,24 @@
         else sessionStorage.removeItem('_sg_restore_bidReq');
         if (resEl && resEl.value) sessionStorage.setItem('_sg_restore_bidRes', resEl.value);
         else sessionStorage.removeItem('_sg_restore_bidRes');
-      } catch (_) {
-        /* storage disabled — content is lost, acceptable degradation */
+      } catch (_) { /* storage disabled — acceptable */ }
+      // Close lang dropdown.
+      const menuEl = document.querySelector('.kt-lang-menu');
+      if (menuEl) menuEl.removeAttribute('open');
+      // SPA navigation: updates URL without server roundtrip, fires
+      // kt:pushstate so shell listeners re-activate the correct section.
+      if (window.SpyglassShell && typeof window.SpyglassShell.navigateTo === 'function') {
+        window.SpyglassShell.navigateTo(targetUrl);
+      } else {
+        // Shell not ready yet (extremely unlikely) — fall back to hard nav.
+        location.assign(targetUrl);
+        return;
       }
-      location.assign(targetUrl);
+      // Fire kt:lang-change so nav + topbar re-render in the new locale,
+      // and shell-boot re-activates the current section (see shell-boot.js).
+      // doc is undefined here (no fetch), which is fine — subscribers that
+      // need doc should only be on non-SPA surfaces.
+      window.dispatchEvent(new CustomEvent('kt:lang-change', { detail: { lang: newLangFromUrl } }));
       return;
     }
 
@@ -472,5 +480,26 @@
     if (e.state && e.state.lang) {
       switchLang(window.location.pathname, { push: false });
     }
+  });
+
+  // SPA shell: chrome mounts async (shell-boot.js mountChrome() runs after
+  // the module graph resolves). lang-switch.js is a classic script that
+  // binds at DOMContentLoaded — before the topbar DOM exists. kt:chrome-ready
+  // signals that the .kt-lang-menu-list elements are now in the DOM.
+  window.addEventListener('kt:chrome-ready', () => {
+    bindLangLinks();
+    bindThemeTooltipI18n();
+  });
+
+  // SPA navigation: topbar re-renders its lang menu on kt:lang-change and
+  // kt:pushstate (fresh DOM nodes, no data-langSwapBound). Re-bind so click
+  // handlers are wired on the new elements and hrefs point at the current
+  // section's equivalent path in each locale.
+  // setTimeout(0) ensures topbar/nav re-render flush runs first.
+  window.addEventListener('kt:lang-change', () => {
+    setTimeout(bindLangLinks, 0);
+  });
+  window.addEventListener('kt:pushstate', () => {
+    setTimeout(bindLangLinks, 0);
   });
 })();
