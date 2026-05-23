@@ -158,28 +158,10 @@
     display: none;
   }
 }
-.kt-topbar__nav-collapse {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  font-size: 18px;
-  cursor: pointer;
-  border-radius: var(--r-sm, 10px);
-  flex-shrink: 0;
-}
-.kt-topbar__nav-collapse:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
-}
-@media (min-width: 1024px) {
-  .kt-topbar__nav-collapse {
-    display: inline-flex;
-  }
-}
+/* .kt-topbar__nav-collapse moved to the sidebar edge (.kt-nav__collapse-tab)
+   — see public/modules/nav/nav.css. The button is now a tab on the right
+   edge of .kt-nav at desktop widths, plus a reopen tab fixed to the left
+   edge of the viewport when the sidebar is collapsed. */
 
 
 /* ── Move shared chrome into the topbar ────────────────────────────
@@ -201,6 +183,18 @@
   position: relative;
 }
 .kt-topbar .kt-lang-toggle {
+  /* Override design-system.css `.kt-lang-toggle { position: fixed; ... }`
+     — that rule pins the legacy floating toggle to bottom-right. In the
+     topbar context we want flow positioning. */
+  position: static !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: auto !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  min-width: 0 !important;
+  height: auto !important;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -213,6 +207,7 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--text);
+  font-family: inherit;
 }
 .kt-topbar .kt-lang-toggle::-webkit-details-marker { display: none; }
 .kt-topbar .kt-lang-toggle:hover {

@@ -101,15 +101,85 @@
 }
 
 .kt-nav__footer {
-  padding: 12px 16px;
-  border-top: 1px solid var(--kt-nav-border);
+  /* Match inspector .app-footer (8px vertical padding, 11px mono, surface
+     bg + top border) so the sidebar "● online" row baseline lines up
+     with "готовий · engine v0.51.0 · …" for a continuous bottom band. */
+  padding: var(--space-2, 8px) var(--space-4, 16px);
+  font-family: var(--font-mono, ui-monospace);
   font-size: 11px;
   color: var(--text-muted, #52525b);
+  background: var(--surface);
+  border-top: 1px solid var(--kt-nav-border);
 }
 .kt-nav__status {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+/* ── Collapse tab on the sidebar's right edge ──────────────────────
+   Desktop-only (≥1024px). Pinned to the sidebar's right edge, slightly
+   overlapping the content column so it's discoverable but unobtrusive.
+   Click toggles .is-nav-collapsed on .kt-shell — handled by the boot
+   script (or the topbar's existing handler, now relocated). */
+.kt-nav__collapse-tab {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .kt-nav {
+    position: sticky; /* default, but explicit so the tab anchors to it */
+  }
+  .kt-nav__collapse-tab {
+    position: absolute;
+    top: 14px;
+    right: -12px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--kt-nav-border);
+    border-radius: var(--r-pill, 999px);
+    background: var(--bg-elev, #fff);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+    z-index: 35;
+    box-shadow: var(--shadow-sm);
+    transition: background-color 150ms ease;
+  }
+  .kt-nav__collapse-tab:hover {
+    background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  }
+}
+
+/* When the sidebar is collapsed, render a tiny reopen tab on the left
+   edge of the viewport so the user can bring it back. */
+.kt-shell__reopen-tab {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .kt-shell.is-nav-collapsed .kt-shell__reopen-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    left: 0;
+    top: 14px;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+    border-left: none;
+    border-radius: 0 var(--r-pill, 999px) var(--r-pill, 999px) 0;
+    background: var(--bg-elev, #fff);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+    z-index: 35;
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 /* ── Drawer mode below 1024px ───────────────────────────────────── */

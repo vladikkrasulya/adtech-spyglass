@@ -89,11 +89,19 @@ function renderNav() {
     `;
   }).join('');
 
+  const collapseLabel = pick({
+    en: 'Collapse sidebar',
+    uk: 'Згорнути меню',
+    ru: 'Свернуть меню',
+  });
   return `
     <a href="${escapeHtml(prefixLocale('/inspector'))}" class="kt-nav__brand">
       <span class="kt-nav__brand-icon" aria-hidden="true">◆</span>
       <span class="kt-nav__brand-text">ortbtools</span>
     </a>
+    <button type="button" class="kt-nav__collapse-tab" data-action="collapse-nav" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}">
+      <span aria-hidden="true">⮜</span>
+    </button>
     <nav class="kt-nav__nav" aria-label="Sections">
       ${groups}
     </nav>
@@ -101,6 +109,11 @@ function renderNav() {
       <span class="kt-nav__status" aria-hidden="true">● online</span>
     </div>
   `;
+}
+
+function pick(map) {
+  const l = lang();
+  return map[l] || map.en || '';
 }
 
 function highlight(root) {
@@ -128,6 +141,38 @@ export function mountNav(root) {
   root.innerHTML = renderNav();
   highlight(root);
 
+  // Sidebar collapse-tab — toggles .is-nav-collapsed on .kt-shell,
+  // persists in localStorage. Mirrors the previous topbar handler but
+  // anchored to the sidebar itself per user feedback.
+  const COLLAPSE_KEY = 'kt-nav-collapsed';
+  const shellRoot = document.querySelector('.kt-shell');
+  // Render the reopen tab as a sibling of .kt-nav so it survives when nav
+  // is display:none. Mounted lazily and never removed (cheap, idempotent).
+  let reopenTab = document.querySelector('.kt-shell__reopen-tab');
+  if (!reopenTab && shellRoot) {
+    reopenTab = document.createElement('button');
+    reopenTab.type = 'button';
+    reopenTab.className = 'kt-shell__reopen-tab';
+    reopenTab.setAttribute('aria-label', 'Expand sidebar');
+    reopenTab.innerHTML = '<span aria-hidden="true">⮞</span>';
+    shellRoot.appendChild(reopenTab);
+  }
+  // Restore persisted state.
+  try {
+    if (shellRoot && localStorage.getItem(COLLAPSE_KEY) === '1') {
+      shellRoot.classList.add('is-nav-collapsed');
+    }
+  } catch (_) { /* storage disabled */ }
+  const collapseBtn = root.querySelector('[data-action="collapse-nav"]');
+  const onCollapse = (e) => {
+    e.preventDefault();
+    if (!shellRoot) return;
+    const collapsed = shellRoot.classList.toggle('is-nav-collapsed');
+    try { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (_) {}
+  };
+  if (collapseBtn) collapseBtn.addEventListener('click', onCollapse);
+  if (reopenTab) reopenTab.addEventListener('click', onCollapse);
+
   // Sync active state on every URL change (initial pushState + popstate).
   const onLocationChange = () => {
     refreshLocalisedHrefs(root);
@@ -143,6 +188,8 @@ export function mountNav(root) {
   window.addEventListener('kt:lang-change', onLang);
 
   return function unmountNav() {
+    if (collapseBtn) collapseBtn.removeEventListener('click', onCollapse);
+    if (reopenTab) reopenTab.removeEventListener('click', onCollapse);
     window.removeEventListener('popstate', onLocationChange);
     window.removeEventListener('kt:pushstate', onLocationChange);
     window.removeEventListener('kt:lang-change', onLang);

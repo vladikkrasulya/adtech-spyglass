@@ -49,11 +49,6 @@ function renderTopbar() {
     uk: 'Меню',
     ru: 'Меню',
   });
-  const collapseLabel = pick({
-    en: 'Toggle sidebar',
-    uk: 'Згорнути меню',
-    ru: 'Свернуть меню',
-  });
   const themeLabel = pick({
     en: 'Toggle theme',
     uk: 'Перемкнути тему',
@@ -78,9 +73,6 @@ function renderTopbar() {
   return `
     <button type="button" class="kt-topbar__nav-toggle" data-action="toggle-nav" aria-label="${escapeHtml(navToggleLabel)}">
       <span aria-hidden="true">☰</span>
-    </button>
-    <button type="button" class="kt-topbar__nav-collapse" data-action="collapse-nav" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}">
-      <span aria-hidden="true" data-icon>⮜</span>
     </button>
     <a class="kt-topbar__brand-mini" href="/inspector" data-internal>
       <span class="kt-topbar__brand-icon" aria-hidden="true">◆</span>
@@ -137,30 +129,6 @@ export function mountTopbar(root, shellRoot) {
   };
   toggleBtn.addEventListener('click', onToggle);
 
-  // Desktop sidebar collapse (≥1024px). Persists in localStorage so the
-  // choice sticks across reloads.
-  const COLLAPSE_KEY = 'kt-nav-collapsed';
-  try {
-    if (localStorage.getItem(COLLAPSE_KEY) === '1') {
-      shellRoot.classList.add('is-nav-collapsed');
-    }
-  } catch (_) { /* storage disabled */ }
-  const collapseBtn = root.querySelector('[data-action="collapse-nav"]');
-  const onCollapse = (e) => {
-    e.preventDefault();
-    const collapsed = shellRoot.classList.toggle('is-nav-collapsed');
-    try { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (_) {}
-    const icon = collapseBtn.querySelector('[data-icon]');
-    if (icon) icon.textContent = collapsed ? '⮞' : '⮜';
-  };
-  if (collapseBtn) {
-    collapseBtn.addEventListener('click', onCollapse);
-    // Set initial icon based on persisted state.
-    if (shellRoot.classList.contains('is-nav-collapsed')) {
-      const icon = collapseBtn.querySelector('[data-icon]');
-      if (icon) icon.textContent = '⮞';
-    }
-  }
 
   // Close drawer when clicking outside the sidebar (on the backdrop pseudo-el
   // we set in nav.css). The backdrop is created via ::before on .kt-shell so
@@ -193,7 +161,6 @@ export function mountTopbar(root, shellRoot) {
   return function unmountTopbar() {
     if (signInBtn) signInBtn.removeEventListener('click', onSignIn);
     toggleBtn.removeEventListener('click', onToggle);
-    if (collapseBtn) collapseBtn.removeEventListener('click', onCollapse);
     shellRoot.removeEventListener('click', onShellClick);
     window.removeEventListener('popstate', onRoute);
     window.removeEventListener('kt:pushstate', onRoute);
