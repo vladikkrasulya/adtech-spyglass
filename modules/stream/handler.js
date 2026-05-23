@@ -18,9 +18,42 @@
 
 const crypto = require('crypto');
 
-/** FIFO map capped at MAX_SPECIMEN_STORE entries. */
-const MAX_SPECIMEN_STORE = 1000;
-const specimenStore = new Map(); // hash → envelope
+/** SQLite-backed specimen cache (Step 2 — persistence).
+ *  Survives container restarts so /r/{hash} permalinks remain resolvable.
+ *  Lazy-initialized by createStreamModule when db is passed; reads are
+ *  no-ops until then (returning null). */
+const MAX_SPECIMEN_STORE = 10000;
+
+let _putStmt = null;
+let _getStmt = null;
+let _countStmt = null;
+let _evictStmt = null;
+
+function initSpecimenStore(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cached_specimens (
+      hash TEXT PRIMARY KEY,
+      envelope_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_specimens_created_at
+      ON cached_specimens(created_at);
+  `);
+  _putStmt = db.prepare(
+    'INSERT OR REPLACE INTO cached_specimens (hash, envelope_json, created_at) VALUES (?, ?, ?)',
+  );
+  _getStmt = db.prepare('SELECT envelope_json FROM cached_specimens WHERE hash = ?');
+  _countStmt = db.prepare('SELECT COUNT(*) AS n FROM cached_specimens');
+  // Bulk FIFO eviction: drop the oldest ~10% in one go when over cap.
+  _evictStmt = db.prepare(`
+    DELETE FROM cached_specimens
+    WHERE hash IN (
+      SELECT hash FROM cached_specimens
+      ORDER BY created_at ASC
+      LIMIT ?
+    )
+  `);
+}
 
 function specimenHash(specimen) {
   return crypto
@@ -31,12 +64,18 @@ function specimenHash(specimen) {
 }
 
 function specimenStorePut(hash, envelope) {
-  if (specimenStore.size >= MAX_SPECIMEN_STORE) {
-    // Evict oldest (Map preserves insertion order).
-    const firstKey = specimenStore.keys().next().value;
-    specimenStore.delete(firstKey);
+  if (!_putStmt) return; // not initialized — fail-open, no caching
+  _putStmt.run(hash, JSON.stringify(envelope), Date.now());
+  const { n } = _countStmt.get();
+  if (n > MAX_SPECIMEN_STORE) {
+    _evictStmt.run(Math.ceil(MAX_SPECIMEN_STORE * 0.1));
   }
-  specimenStore.set(hash, envelope);
+}
+
+function specimenStoreGet(hash) {
+  if (!_getStmt) return null;
+  const row = _getStmt.get(hash);
+  return row ? JSON.parse(row.envelope_json) : null;
 }
 
 /**
@@ -48,7 +87,8 @@ function specimenStorePut(hash, envelope) {
  * }} deps
  */
 function createStreamModule(deps) {
-  const { streamGenerator, streamBuffer, STREAM_REPLAY_MAX, STREAM_HEARTBEAT_MS } = deps;
+  const { streamGenerator, streamBuffer, STREAM_REPLAY_MAX, STREAM_HEARTBEAT_MS, db } = deps;
+  if (db) initSpecimenStore(db);
 
   function handleStream(req, res) {
     res.writeHead(200, {
@@ -94,7 +134,7 @@ function createStreamModule(deps) {
       res.end(JSON.stringify({ success: false, error: 'invalid hash format' }));
       return;
     }
-    const envelope = specimenStore.get(hash);
+    const envelope = specimenStoreGet(hash);
     if (!envelope) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: 'specimen not found' }));

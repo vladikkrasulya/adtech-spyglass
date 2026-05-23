@@ -214,10 +214,34 @@ function handleSampleList(req, res) {
   }
 }
 
+
+// ── GET /api/v1/behavior/scenarios — behavior hub catalog ──────────
+// Returns all scenario entries from samples/behavior-scenarios.json.
+// Cached 300s. Used by the /behavior section module.
+let _scenariosCache = null;
+let _scenariosCacheAt = 0;
+const SCENARIOS_CACHE_TTL = 300 * 1000;
+
+function handleBehaviorScenarios(req, res) {
+  try {
+    const now = Date.now();
+    if (!_scenariosCache || now - _scenariosCacheAt > SCENARIOS_CACHE_TTL) {
+      const scenariosPath = path.join(SAMPLES_DIR, 'behavior-scenarios.json');
+      _scenariosCache = JSON.parse(fs.readFileSync(scenariosPath, 'utf8'));
+      _scenariosCacheAt = now;
+    }
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    sendJson(res, 200, { ok: true, count: _scenariosCache.length, items: _scenariosCache });
+  } catch (e) {
+    sendError(res, 500, 'scenarios_failed', e.message);
+  }
+}
+
 module.exports = {
   id: 'sample',
   routes: [
     { method: 'GET', path: '/api/v1/sample', handler: handleSample },
     { method: 'GET', path: '/api/v1/sample/list', handler: handleSampleList },
+    { method: 'GET', path: '/api/v1/behavior/scenarios', handler: handleBehaviorScenarios },
   ],
 };

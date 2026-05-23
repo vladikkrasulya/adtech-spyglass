@@ -1,0 +1,62 @@
+{
+  "_note": "Synthetic GDPR privacy scenario — EU traffic with regs.ext.gdpr=1 but no user.ext.consent TCF string. Validator should fire regs.gdpr_consent_missing. This is the most common privacy compliance gap seen in real programmatic traffic.",
+  "id": "synthetic-gdpr-no-consent-001",
+  "at": 2,
+  "tmax": 300,
+  "cur": [
+    "USD"
+  ],
+  "imp": [
+    {
+      "id": "1",
+      "tagid": "eu-pub-300x250",
+      "bidfloor": 0.5,
+      "bidfloorcur": "USD",
+      "secure": 1,
+      "banner": {
+        "w": 300,
+        "h": 250,
+        "pos": 1,
+        "btype": [
+          4
+        ],
+        "battr": [
+          14
+        ]
+      }
+    }
+  ],
+  "site": {
+    "id": "eu-site-001",
+    "domain": "example.de",
+    "page": "https://example.de/news/article",
+    "cat": [
+      "IAB1"
+    ],
+    "publisher": {
+      "id": "pub-001",
+      "name": "EU Publisher GmbH"
+    }
+  },
+  "device": {
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "ip": "82.135.1.42",
+    "geo": {
+      "country": "DEU",
+      "region": "BY",
+      "metro": "742",
+      "lat": 48.137,
+      "lon": 11.575
+    },
+    "devicetype": 2,
+    "language": "de"
+  },
+  "user": {
+    "id": "user-de-001"
+  },
+  "regs": {
+    "ext": {
+      "gdpr": 1
+    }
+  }
+}

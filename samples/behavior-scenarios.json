@@ -1,0 +1,295 @@
+[
+  {
+    "id": "valid-banner-bid",
+    "name": {
+      "en": "Valid Banner Bid",
+      "uk": "Валідний банер-бід",
+      "ru": "Валидный баннер-бид"
+    },
+    "category": "baseline",
+    "sample": "iab-banner-valid",
+    "description": {
+      "en": "A complete, well-formed IAB OpenRTB 2.6 banner BidRequest. All required fields present, GDPR=0 (non-EU), bidfloor and cur aligned. Zero errors expected.",
+      "uk": "Повний коректно сформований IAB OpenRTB 2.6 банер BidRequest. Всі обовязкові поля присутні, GDPR=0, bidfloor та cur узгоджені. Очікується нуль помилок.",
+      "ru": "Полный корректно сформированный IAB OpenRTB 2.6 баннер BidRequest. Все обязательные поля присутствуют, GDPR=0, bidfloor и cur согласованы. Ожидается ноль ошибок."
+    },
+    "expected": {
+      "severity_summary": "0 errors, ~9 info",
+      "key_findings": [
+        "info.payload_valid",
+        "request.tmax_present"
+      ]
+    },
+    "demonstrates": {
+      "en": "Baseline control — confirm the validator fires zero errors on clean traffic before testing edge cases.",
+      "uk": "Базовий контроль — переконайся що валідатор не видає помилок на чистому трафіку перед тестуванням граничних випадків.",
+      "ru": "Базовый контроль — убедись что валидатор не выдаёт ошибок на чистом трафике перед тестированием граничных случаев."
+    }
+  },
+  {
+    "id": "valid-video-bid",
+    "name": {
+      "en": "Valid Video Bid",
+      "uk": "Валідний відео-бід",
+      "ru": "Валидный видео-бид"
+    },
+    "category": "baseline",
+    "sample": "iab-video-valid",
+    "description": {
+      "en": "Clean IAB OpenRTB 2.6 video BidRequest inside a mobile app context. All required video object fields present: mimes, minduration, maxduration, protocols.",
+      "uk": "Чистий IAB OpenRTB 2.6 відео BidRequest у мобільному контексті. Всі обовязкові поля video-обєкту: mimes, minduration, maxduration, protocols.",
+      "ru": "Чистый IAB OpenRTB 2.6 видео BidRequest в мобильном контексте. Все обязательные поля видео-объекта: mimes, minduration, maxduration, protocols."
+    },
+    "expected": {
+      "severity_summary": "0 errors, ~11 info",
+      "key_findings": [
+        "info.payload_valid",
+        "video.mimes_present"
+      ]
+    },
+    "demonstrates": {
+      "en": "App-context video baseline — compare against the banner baseline to see which validations are video-specific.",
+      "uk": "Відео baseline у контексті застосунку — порівняй з банер baseline щоб побачити відео-специфічні перевірки.",
+      "ru": "Видео baseline в контексте приложения — сравни с баннерным baseline чтобы увидеть видео-специфичные проверки."
+    }
+  },
+  {
+    "id": "banner-with-issues",
+    "name": {
+      "en": "Banner with Validation Issues",
+      "uk": "Банер з помилками валідації",
+      "ru": "Баннер с ошибками валидации"
+    },
+    "category": "baseline",
+    "sample": "iab-banner-with-issues",
+    "description": {
+      "en": "A banner BidRequest that omits several recommended fields (at, cur, source) and has regs.ext.gdpr=1 without a consent string. Expect multiple warnings and errors.",
+      "uk": "Банер BidRequest що пропускає декілька рекомендованих полів (at, cur, source) та має regs.ext.gdpr=1 без рядка consent. Очікується кілька попереджень та помилок.",
+      "ru": "Баннер BidRequest пропускающий несколько рекомендованных полей (at, cur, source) и с regs.ext.gdpr=1 без строки consent. Ожидается несколько предупреждений и ошибок."
+    },
+    "expected": {
+      "severity_summary": "2+ errors, 3+ warnings",
+      "key_findings": [
+        "regs.gdpr_consent_missing",
+        "request.at_missing"
+      ]
+    },
+    "demonstrates": {
+      "en": "Shows how the validator catches missing consent strings under GDPR=1 and omitted fields. Good contrast to the valid banner baseline.",
+      "uk": "Показує як валідатор відловлює відсутні consent strings при GDPR=1 та пропущені поля. Хороший контраст до валідного банер baseline.",
+      "ru": "Показывает как валидатор обнаруживает отсутствующие consent strings при GDPR=1 и пропущенные поля. Хороший контраст с валидным баннерным baseline."
+    }
+  },
+  {
+    "id": "gdpr-consent-missing",
+    "name": {
+      "en": "GDPR Consent Missing",
+      "uk": "GDPR: відсутній Consent",
+      "ru": "GDPR: отсутствует Consent"
+    },
+    "category": "privacy",
+    "sample": "synthetic-gdpr-no-consent",
+    "description": {
+      "en": "EU traffic with regs.ext.gdpr=1 but no user.ext.consent TCF string. The most common privacy compliance gap before personalised bidding.",
+      "uk": "ЄС трафік з regs.ext.gdpr=1 але без TCF рядка user.ext.consent. Найпоширеніша прогалина у дотриманні конфіденційності перед персоналізованим бідингом.",
+      "ru": "EU-трафик с regs.ext.gdpr=1 но без TCF строки user.ext.consent. Наиболее распространённый пробел в конфиденциальности перед персонализированным биддингом."
+    },
+    "expected": {
+      "severity_summary": "1 error",
+      "key_findings": [
+        "regs.gdpr_consent_missing"
+      ]
+    },
+    "demonstrates": {
+      "en": "Privacy compliance gate — any bid with GDPR=1 and no TCF consent string must be blocked before personalisation.",
+      "uk": "Ворота дотримання конфіденційності — будь-який бід з GDPR=1 та без TCF consent string повинен бути заблокований до персоналізації.",
+      "ru": "Ворота соответствия конфиденциальности — любой бид с GDPR=1 и без TCF consent string должен быть заблокирован до персонализации."
+    }
+  },
+  {
+    "id": "vast-clean-inline",
+    "name": {
+      "en": "Clean VAST 4.2 Inline",
+      "uk": "Чистий VAST 4.2 Inline",
+      "ru": "Чистый VAST 4.2 Inline"
+    },
+    "category": "creative",
+    "sample": "synthetic-vast-clean-inline",
+    "description": {
+      "en": "Well-formed VAST 4.2 InLine with all required elements: VAST version attribute, AdSystem, MediaFile. All tracking URLs are HTTPS. Zero errors expected.",
+      "uk": "Коректний VAST 4.2 InLine з усіма обовязковими елементами: VAST version, AdSystem, MediaFile. Всі tracking URL HTTPS. Очікується нуль помилок.",
+      "ru": "Корректный VAST 4.2 InLine со всеми обязательными элементами: VAST version, AdSystem, MediaFile. Все tracking URL HTTPS. Ожидается ноль ошибок."
+    },
+    "expected": {
+      "severity_summary": "0 errors, ~5 info",
+      "key_findings": [
+        "vast.version_present",
+        "vast.media_file_secure"
+      ]
+    },
+    "demonstrates": {
+      "en": "VAST baseline — confirm the VAST parser handles clean video before testing broken or insecure variants.",
+      "uk": "VAST baseline — переконайся що VAST парсер коректно обробляє чисте відео перед тестуванням зламаних варіантів.",
+      "ru": "VAST baseline — убедись что VAST парсер корректно обрабатывает чистое видео перед тестированием сломанных вариантов."
+    }
+  },
+  {
+    "id": "vast-broken-inline",
+    "name": {
+      "en": "VAST Tracker Broken",
+      "uk": "VAST: зламані трекери",
+      "ru": "VAST: сломанные трекеры"
+    },
+    "category": "creative",
+    "sample": "synthetic-vast-broken-inline",
+    "description": {
+      "en": "VAST InLine missing the version attribute, missing AdSystem, and missing MediaFile. These are the three most common creative QA failures in real auction traffic.",
+      "uk": "VAST InLine без version атрибута, без AdSystem та без MediaFile. Найпоширеніші QA помилки у реальному аукціонному трафіку.",
+      "ru": "VAST InLine без атрибута version, без AdSystem и без MediaFile. Три наиболее распространённые QA-ошибки в реальном аукционном трафике."
+    },
+    "expected": {
+      "severity_summary": "3 errors",
+      "key_findings": [
+        "vast.version_missing",
+        "vast.ad_system_missing",
+        "vast.media_file_missing"
+      ]
+    },
+    "demonstrates": {
+      "en": "VAST structure errors — any of these three causes the video player to silently fail to render. High-volume QA failure mode.",
+      "uk": "Помилки структури VAST — будь-яка з трьох призводить до того що відеоплеєр мовчки не рендерить рекламу. Поширений режим збою QA.",
+      "ru": "Ошибки структуры VAST — любая из трёх приводит к тому что видеоплеер молча не рендерит рекламу. Распространённый режим сбоя QA."
+    }
+  },
+  {
+    "id": "vast-insecure-wrapper",
+    "name": {
+      "en": "VAST Insecure Wrapper URLs",
+      "uk": "VAST: небезпечні URL в Wrapper",
+      "ru": "VAST: небезопасные URL в Wrapper"
+    },
+    "category": "creative",
+    "sample": "synthetic-vast-insecure-wrapper",
+    "description": {
+      "en": "VAST 3.0 Wrapper with HTTP (non-HTTPS) tracking URLs in Impression and Tracking nodes. Modern browsers block mixed-content, so these trackers silently fail.",
+      "uk": "VAST 3.0 Wrapper з HTTP tracking URL у нодах Impression та Tracking. Сучасні браузери блокують mixed-content тому трекери мовчки не спрацьовують.",
+      "ru": "VAST 3.0 Wrapper с HTTP tracking URL в нодах Impression и Tracking. Современные браузеры блокируют mixed-content поэтому трекеры молча не срабатывают."
+    },
+    "expected": {
+      "severity_summary": "3 warnings",
+      "key_findings": [
+        "vast.insecure_tracker_url",
+        "vast.wrapper_present"
+      ]
+    },
+    "demonstrates": {
+      "en": "Mixed-content tracking loss — insecure trackers fire on HTTP publishers but are silently blocked on HTTPS, causing measurement discrepancies.",
+      "uk": "Втрата трекінгу через mixed-content — небезпечні трекери спрацьовують на HTTP паблішерах але блокуються на HTTPS, спричиняючи розбіжності у вимірюваннях.",
+      "ru": "Потеря трекинга из-за mixed-content — небезопасные трекеры срабатывают на HTTP-паблишерах но блокируются на HTTPS, вызывая расхождения в измерениях."
+    }
+  },
+  {
+    "id": "floor-price-violation",
+    "name": {
+      "en": "Floor Price Violation",
+      "uk": "Порушення floor price",
+      "ru": "Нарушение floor price"
+    },
+    "category": "crosscheck",
+    "sample": "iab-banner-valid",
+    "description": {
+      "en": "Loads the valid banner request (bidfloor set). Edit the response to bid below floor — the crosscheck engine fires the below_floor finding. Demonstrates cross-object validation.",
+      "uk": "Завантажує валідний банер запит (з bidfloor). Відредагуй відповідь аби бідувати нижче floor — crosscheck engine тригерить below_floor finding. Демонструє крос-обєктну валідацію.",
+      "ru": "Загружает валидный баннерный запрос (с bidfloor). Отредактируй ответ чтобы сделать бид ниже floor — crosscheck engine триггерит below_floor finding. Демонстрирует кросс-объектную валидацию."
+    },
+    "expected": {
+      "severity_summary": "1 error if bid.price < imp.bidfloor",
+      "key_findings": [
+        "crosscheck.bid.below_floor"
+      ]
+    },
+    "demonstrates": {
+      "en": "Cross-object validation — the crosscheck engine compares bid.price in the response against imp.bidfloor in the request. Adjust bid.price in the response editor.",
+      "uk": "Крос-обєктна валідація — crosscheck рушій порівнює bid.price у відповіді з imp.bidfloor у запиті. Налаштуй bid.price у редакторі відповіді.",
+      "ru": "Кросс-объектная валидация — crosscheck-движок сравнивает bid.price в ответе с imp.bidfloor в запросе. Настрой bid.price в редакторе ответа."
+    }
+  },
+  {
+    "id": "frame-bust-form",
+    "name": {
+      "en": "Frame-Bust via Form Submit",
+      "uk": "Frame-bust через form submit",
+      "ru": "Frame-bust через form submit"
+    },
+    "category": "malicious",
+    "sample": "synthetic-frame-bust-form",
+    "description": {
+      "en": "A BidResponse whose adm mounts a hidden form with target=_top that auto-submits on load. Breaks out of the ad iframe and navigates the top-level page.",
+      "uk": "BidResponse чий adm монтує приховану форму з target=_top що авто-сабмітиться при завантаженні. Виривається з рекламного iframe та навігує верхньорівневу сторінку.",
+      "ru": "BidResponse чей adm монтирует скрытую форму с target=_top которая авто-сабмитится при загрузке. Вырывается из рекламного iframe и навигирует страницу верхнего уровня."
+    },
+    "expected": {
+      "severity_summary": "1 error",
+      "key_findings": [
+        "creative.frame_bust_form"
+      ]
+    },
+    "demonstrates": {
+      "en": "Frame-busting via form submit — one of the most disruptive ad fraud techniques. Detected by the behavior probe monitoring hidden form target attributes.",
+      "uk": "Frame-busting через form submit — одна з найруйнівніших технік рекламного фроду. Виявляється behavior probe що моніторить атрибути target прихованих форм.",
+      "ru": "Frame-busting через form submit — одна из наиболее разрушительных техник рекламного мошенничества. Обнаруживается behavior probe, мониторящим атрибуты target скрытых форм."
+    }
+  },
+  {
+    "id": "heavy-cpu",
+    "name": {
+      "en": "Heavy CPU Ad",
+      "uk": "Реклама з важким CPU",
+      "ru": "Реклама с тяжёлым CPU"
+    },
+    "category": "malicious",
+    "sample": "synthetic-heavy-cpu",
+    "description": {
+      "en": "A BidResponse whose adm chains setTimeout(blockingChunk, 0) loops to saturate the main thread. Triggers the Heavy Ad Intervention and fires the heavy_ad_cpu behavior finding.",
+      "uk": "BidResponse чий adm ланцюгує setTimeout(blockingChunk, 0) цикли для насичення основного потоку. Тригерить Heavy Ad Intervention та видає finding heavy_ad_cpu.",
+      "ru": "BidResponse чей adm цепочкой setTimeout(blockingChunk, 0) циклов насыщает основной поток. Триггерит Heavy Ad Intervention и выдаёт finding heavy_ad_cpu."
+    },
+    "expected": {
+      "severity_summary": "1 error",
+      "key_findings": [
+        "creative.heavy_ad_cpu"
+      ]
+    },
+    "demonstrates": {
+      "en": "CPU-based heavy ad — Chrome Heavy Ad Intervention unloads creatives consuming excessive CPU. Detected by behavior probe timing main-thread blocks.",
+      "uk": "CPU-важка реклама — Chrome Heavy Ad Intervention вивантажує креативи що споживають надмірний CPU. Виявляється behavior probe що хронометрує блоки основного потоку.",
+      "ru": "CPU-тяжёлая реклама — Chrome Heavy Ad Intervention выгружает креативы потребляющие чрезмерный CPU. Обнаруживается behavior probe хронометрирующим блоки основного потока."
+    }
+  },
+  {
+    "id": "auto-redirect",
+    "name": {
+      "en": "Auto-Redirect Without Gesture",
+      "uk": "Авто-редирект без жесту",
+      "ru": "Авто-редирект без жеста"
+    },
+    "category": "malicious",
+    "sample": "synthetic-auto-redirect",
+    "description": {
+      "en": "A BidResponse that fires a top-level navigation (window.top.location) via setTimeout without user interaction. Causes forced redirects destroying the browsing session.",
+      "uk": "BidResponse що тригерить навігацію верхнього рівня (window.top.location) через setTimeout без взаємодії користувача. Спричиняє примусові редиректи що руйнують сесію перегляду.",
+      "ru": "BidResponse триггерящий навигацию верхнего уровня (window.top.location) через setTimeout без взаимодействия пользователя. Вызывает принудительные редиректы разрушающие сессию просмотра."
+    },
+    "expected": {
+      "severity_summary": "1 error",
+      "key_findings": [
+        "creative.auto_redirect"
+      ]
+    },
+    "demonstrates": {
+      "en": "Auto-redirect fraud — top-level navigation without user gesture is always malicious. Behavior probe detects setTimeout-triggered location changes.",
+      "uk": "Фрод авто-редирект — навігація верхнього рівня без жесту завжди зловмисна. Behavior probe виявляє зміни location тригеровані через setTimeout.",
+      "ru": "Фрод авто-редирект — навигация верхнего уровня без жеста всегда злоумышленна. Behavior probe обнаруживает изменения location триггеренные через setTimeout."
+    }
+  }
+]

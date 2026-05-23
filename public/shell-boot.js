@@ -30,6 +30,7 @@ import dialectsModule from '/modules/dialects/index.js';
 import streamModule from '/modules/stream/index.js';
 import blogModule from '/modules/blog/index.js';
 import adminBlogModule from '/modules/admin-blog/index.js';
+import behaviorModule from '/modules/behavior/index.js';
 import { createStubModule } from '/modules/stub/index.js';
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
@@ -37,20 +38,7 @@ import { mountTopbar } from '/modules/topbar/index.js';
 // ── Stub section content (one-paragraph "what will be here" copy) ──
 // Locked to ROADMAP.md stage descriptions. Keep these short — the user
 // should immediately see WHAT and WHEN, not read a novel.
-const STUB_SECTIONS = [
-  {
-    id: 'behavior',
-    route: '/behavior',
-    icon: '🧪',
-    stage: 4,
-    title: { en: 'Behavior corpus', uk: 'Behavior-корпус', ru: 'Behavior-корпус' },
-    copy: {
-      en: 'Labelling tool for the behavior probe capture pipeline. Tag false positives and negatives per pattern; weekly confusion matrix export.',
-      uk: 'Інструмент для розмітки зразків з behavior-пробера. Тегаєш false positive/negative по кожному паттерну, щотижневий confusion matrix експорт.',
-      ru: 'Инструмент для разметки образцов из behavior-пробера. Тегаешь false positive/negative по каждому паттерну, еженедельный confusion matrix экспорт.',
-    },
-  },
-];
+const STUB_SECTIONS = [];
 
 // ── Initial dependency loading ───────────────────────────────────
 async function loadStylesheet(href) {
@@ -79,6 +67,7 @@ function registerSections() {
   registry.registerRoute('/stream.html', 'stream');
   registry.register(blogModule);
   registry.register(adminBlogModule);
+  registry.register(behaviorModule);
 
 
   // Stub sections (yet to be built — see ROADMAP).

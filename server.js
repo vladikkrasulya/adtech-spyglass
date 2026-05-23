@@ -1090,6 +1090,7 @@ router.register(
     streamBuffer,
     STREAM_REPLAY_MAX,
     STREAM_HEARTBEAT_MS,
+    db,
   }),
 );
 log.info(
