@@ -98,7 +98,12 @@
    above the active section's main content (#app-root). */
 .kt-shell {
   display: flex;
-  min-height: 100vh;
+  /* Desktop: height: 100vh constrains flex children so #app-root
+     (flex:1, overflow:auto, min-height:0) can actually clip + scroll
+     when content overflows. Previously min-height let the shell grow
+     under the content → #app-root grew with it → no scroll. */
+  height: 100vh;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
 }
@@ -120,6 +125,10 @@
 @media (max-width: 1023px) {
   .kt-shell {
     display: block;
+    /* Mobile: undo desktop height: 100vh so document scroll handles
+       overflow naturally (drawer pattern). */
+    height: auto;
+    overflow: visible;
   }
   .kt-shell__column {
     min-height: 100vh;
