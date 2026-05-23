@@ -8,7 +8,7 @@
      - hamburger (visible only below 1024px, toggles sidebar drawer)
      - compact brand (visible only below 1024px — full brand lives
        inside the sidebar at desktop widths)
-     - global search input (disabled in Stage 0; real search Stage 5+)
+     - global search input (active — /modules/search/ wired on mount)
      - language picker container (the legacy /lang-switch.js script
        injects its own button + menu into .kt-lang-slot; we just
        provide the slot)
@@ -40,9 +40,9 @@ function escapeHtml(s) {
 function renderTopbar() {
   const l = lang();
   const searchPlaceholder = pick({
-    en: '🔎 search — coming soon',
-    uk: '🔎 пошук — скоро',
-    ru: '🔎 поиск — скоро',
+    en: '🔎 search the site',
+    uk: '🔎 шукати по сайту',
+    ru: '🔎 искать по сайту',
   });
   const navToggleLabel = pick({
     en: 'Toggle navigation',
@@ -83,8 +83,9 @@ function renderTopbar() {
         type="text"
         class="kt-topbar__search-input"
         placeholder="${escapeHtml(searchPlaceholder)}"
-        disabled
-        aria-disabled="true"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="${escapeHtml(searchPlaceholder)}"
       />
     </div>
     <div class="kt-topbar__actions">
@@ -106,6 +107,15 @@ function renderTopbar() {
 
 export function mountTopbar(root, shellRoot) {
   root.innerHTML = renderTopbar();
+
+  // Wire global search.
+  let searchCleanup = null;
+  const searchInput = root.querySelector('.kt-topbar__search-input');
+  if (searchInput) {
+    import('/modules/search/index.js').then(({ initSearch }) => {
+      searchCleanup = initSearch(searchInput, shellRoot);
+    }).catch(e => console.warn('[topbar] search module load failed:', e));
+  }
 
   // Wire the sign-in pill. The auth modal lives in /modules/auth/ but
   // depends on the inspector's closure-scoped SpyglassSession (DEK +
@@ -169,13 +179,23 @@ export function mountTopbar(root, shellRoot) {
 
   // Re-render labels on language change.
   const onLang = () => {
+    // Cleanup existing search before re-render
+    if (searchCleanup) { searchCleanup(); searchCleanup = null; }
     root.innerHTML = renderTopbar();
     const newToggle = root.querySelector('[data-action="toggle-nav"]');
     newToggle.addEventListener('click', onToggle);
+    // Re-init search on new input
+    const newSearchInput = root.querySelector('.kt-topbar__search-input');
+    if (newSearchInput) {
+      import('/modules/search/index.js').then(({ initSearch }) => {
+        searchCleanup = initSearch(newSearchInput, shellRoot);
+      }).catch(e => console.warn('[topbar] search module reload failed:', e));
+    }
   };
   window.addEventListener('kt:lang-change', onLang);
 
   return function unmountTopbar() {
+    if (searchCleanup) { searchCleanup(); searchCleanup = null; }
     if (signInBtn) signInBtn.removeEventListener('click', onSignIn);
     toggleBtn.removeEventListener('click', onToggle);
     shellRoot.removeEventListener('click', onShellClick);

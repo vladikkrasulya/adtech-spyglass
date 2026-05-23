@@ -1,0 +1,252 @@
+/* ============================================================
+   public/modules/search/search.css — Global Search dropdown.
+   Glassmorphism panel, dark/light theme-aware, keyboard-navigable.
+   ============================================================ */
+
+/* ── Wrapper: keeps the search container position:relative for anchoring ── */
+.kt-topbar__search {
+  position: relative;
+}
+
+/* ── Active input state ─────────────────────────────────── */
+.kt-topbar__search-input {
+  cursor: text;
+  color: var(--text);
+  transition: border-color var(--t-fast, 150ms), box-shadow var(--t-fast, 150ms);
+}
+.kt-topbar__search-input:focus {
+  outline: none;
+  border-color: var(--accent, #ffcc00);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(255,204,0,0.18));
+  color: var(--text);
+}
+.kt-topbar__search-input::placeholder {
+  color: var(--text-dim, #5f5f66);
+}
+
+/* ── Dropdown panel ─────────────────────────────────────── */
+.sg-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: 480px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 1000;
+
+  border-radius: var(--r-md, 16px);
+  border: 1px solid var(--border, rgba(24,24,27,0.08));
+
+  /* Glassmorphism */
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(24,24,27,0.12), 0 4px 8px rgba(24,24,27,0.06));
+
+  /* Entrance animation */
+  animation: sg-dropdown-in var(--t-fast, 150ms) var(--ease-out, cubic-bezier(0.16,1,0.3,1)) both;
+}
+
+/* Dark theme glass */
+[data-theme="dark"] .sg-search-dropdown {
+  background: rgba(42, 38, 34, 0.88);
+}
+
+/* Fallback: no backdrop-filter support */
+@supports not (backdrop-filter: blur(20px)) {
+  .sg-search-dropdown {
+    background: var(--bg-elev, #ffffff);
+  }
+  [data-theme="dark"] .sg-search-dropdown {
+    background: var(--bg-elev, #2a2622);
+  }
+}
+
+@keyframes sg-dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* Mobile: full-width with gutters */
+@media (max-width: 600px) {
+  .sg-search-dropdown {
+    width: calc(100vw - 16px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Hint card (empty query) ───────────────────────────── */
+.sg-search-hint {
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sg-search-hint__title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim, #5f5f66);
+}
+.sg-search-hint__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sg-search-hint__chip {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--bg-2, #f2ede3);
+  border: 1px solid var(--border, rgba(24,24,27,0.08));
+  font-size: 12px;
+  color: var(--text-muted, #52525b);
+  cursor: pointer;
+  transition: background var(--t-fast, 150ms);
+  user-select: none;
+}
+.sg-search-hint__chip:hover {
+  background: var(--accent-soft, rgba(255,204,0,0.14));
+  color: var(--text, #18181b);
+}
+
+/* ── "Nothing found" ───────────────────────────────────── */
+.sg-search-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim, #5f5f66);
+}
+
+/* ── Group header ───────────────────────────────────────── */
+.sg-search-group {
+  padding: 6px 0 4px;
+}
+.sg-search-group + .sg-search-group {
+  border-top: 1px solid var(--border, rgba(24,24,27,0.06));
+  margin-top: 2px;
+  padding-top: 8px;
+}
+.sg-search-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 4px;
+}
+.sg-search-group__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim, #5f5f66);
+}
+.sg-search-group__count {
+  font-size: 10px;
+  color: var(--text-dim, #5f5f66);
+  background: var(--bg-2, #f2ede3);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* ── Result row ─────────────────────────────────────────── */
+.sg-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  margin: 0 4px;
+  transition: background var(--t-fast, 150ms);
+  text-decoration: none;
+  color: var(--text, #18181b);
+  min-width: 0;
+}
+.sg-search-row:hover,
+.sg-search-row.is-selected {
+  background: var(--accent-soft, rgba(255,204,0,0.14));
+  outline: none;
+}
+.sg-search-row.is-selected {
+  outline: 2px solid var(--accent, #ffcc00);
+  outline-offset: -2px;
+}
+
+/* ── Badge ──────────────────────────────────────────────── */
+.sg-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sg-badge--sample   { background: rgba(234,179,8,0.18);  color: #92650a; }
+.sg-badge--behavior { background: rgba(220,38,38,0.12);  color: #b91c1c; }
+.sg-badge--finding-error   { background: rgba(220,38,38,0.14);  color: #b91c1c; }
+.sg-badge--finding-warning { background: rgba(245,158,11,0.18); color: #92650a; }
+.sg-badge--finding-info    { background: rgba(59,130,246,0.14);  color: #1d4ed8; }
+.sg-badge--blog     { background: rgba(22,163,74,0.14);  color: #15803d;  }
+
+[data-theme="dark"] .sg-badge--sample   { background: rgba(234,179,8,0.22);  color: #fbbf24; }
+[data-theme="dark"] .sg-badge--behavior { background: rgba(220,38,38,0.20);  color: #f87171; }
+[data-theme="dark"] .sg-badge--finding-error   { background: rgba(220,38,38,0.22);  color: #f87171; }
+[data-theme="dark"] .sg-badge--finding-warning { background: rgba(245,158,11,0.22); color: #fbbf24; }
+[data-theme="dark"] .sg-badge--finding-info    { background: rgba(59,130,246,0.22);  color: #93c5fd; }
+[data-theme="dark"] .sg-badge--blog     { background: rgba(22,163,74,0.22);  color: #4ade80;  }
+
+/* ── Row text ───────────────────────────────────────────── */
+.sg-search-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sg-search-row__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text, #18181b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sg-search-row__preview {
+  font-size: 11px;
+  color: var(--text-dim, #5f5f66);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Highlight mark ─────────────────────────────────────── */
+mark.search-hit {
+  background: var(--accent, #ffcc00);
+  color: var(--accent-ink, #18181b);
+  border-radius: 2px;
+  padding: 0 1px;
+  font-style: normal;
+}
+
+/* ── Loading state ──────────────────────────────────────── */
+.sg-search-loading {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim, #5f5f66);
+  animation: sg-pulse 1.2s ease-in-out infinite;
+}
+@keyframes sg-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

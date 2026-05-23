@@ -230,7 +230,7 @@ function renderTable(items, lang) {
       ? `<a href="${escapeHtml(item.specRef)}" target="_blank" rel="noopener noreferrer">${escapeHtml(pick(L.specLink, lang))}</a>`
       : '—';
     return `
-      <tr>
+      <tr id="finding-${escapeHtml(item.id)}">
         <td class="col-id">${escapeHtml(item.id)}</td>
         <td>${severityBadge(item.severity)}</td>
         <td class="col-msg">${escapeHtml(item.message)}</td>

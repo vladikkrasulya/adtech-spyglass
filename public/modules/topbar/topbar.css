@@ -72,10 +72,12 @@
   padding: 0 12px;
   font: inherit;
   color: var(--text-muted, #52525b);
-  cursor: not-allowed;
+  cursor: text;
+  transition: border-color 150ms, box-shadow 150ms;
 }
 .kt-topbar__search-input:disabled {
   opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .kt-topbar__actions {
@@ -114,7 +116,7 @@
     display: inline-flex;
   }
   .kt-topbar__search {
-    /* Less prominent on mobile — search is disabled anyway in Stage 0 */
+    /* Full-width on mobile to give search maximum input space */
     max-width: none;
   }
 }
