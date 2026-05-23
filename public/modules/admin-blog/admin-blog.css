@@ -1,0 +1,143 @@
+/* public/modules/admin-blog/admin-blog.css — Stage 3 admin blog styles */
+
+.ablog-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-6, 32px) var(--space-5, 24px);
+}
+.ablog-section h1 {
+  margin: 0 0 var(--space-4, 20px);
+  font-size: var(--fs-xl, 26px);
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── Auth form ───────────────────────────────────────────── */
+.ablog-auth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  max-width: 400px;
+}
+.ablog-auth label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.ablog-input {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #3f3f46);
+  background: var(--surface, #18181b);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ablog-input:focus {
+  outline: none;
+  border-color: var(--accent, #ffcc00);
+}
+
+/* ── Head row ────────────────────────────────────────────── */
+.ablog-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  margin-bottom: var(--space-4, 20px);
+}
+.ablog-head h1 { margin-bottom: 0; }
+.ablog-head-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.ablog-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #3f3f46);
+  background: var(--surface-alt, #27272a);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.ablog-btn:hover { background: var(--surface, #18181b); border-color: var(--text-muted); }
+.ablog-btn--primary {
+  background: var(--accent, #ffcc00);
+  border-color: var(--accent, #ffcc00);
+  color: #000;
+}
+.ablog-btn--primary:hover { background: #ffd94d; border-color: #ffd94d; }
+.ablog-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+.ablog-btn--ghost:hover { background: var(--surface, #18181b); }
+.ablog-btn--publish { border-color: #1d4ed8; color: #93c5fd; }
+.ablog-btn--publish:hover { background: #1e3a5f; }
+.ablog-btn--promote { border-color: #6d28d9; color: #c4b5fd; }
+.ablog-btn--promote:hover { background: #1e1a3f; }
+.ablog-btn--reject  { border-color: #dc2626; color: #fca5a5; }
+.ablog-btn--reject:hover { background: #3f1010; }
+
+/* ── Table ───────────────────────────────────────────────── */
+.ablog-table-wrap {
+  overflow-x: auto;
+}
+.ablog-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ablog-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border, #3f3f46);
+  white-space: nowrap;
+}
+.ablog-td {
+  padding: 10px 12px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border, #3f3f46);
+  color: var(--text);
+}
+.ablog-td--title { font-weight: 500; max-width: 260px; }
+.ablog-td--summary { max-width: 280px; color: var(--text-muted); }
+.ablog-td--date { white-space: nowrap; color: var(--text-muted); }
+.ablog-td--actions {
+  white-space: nowrap;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  padding-top: 8px;
+}
+.ablog-table tr:hover .ablog-td {
+  background: var(--surface, #18181b);
+}
+.ablog-link {
+  font-size: 11px;
+  color: var(--accent, #ffcc00);
+  text-decoration: none;
+  margin-left: 4px;
+}
+.ablog-link:hover { text-decoration: underline; }
+.ablog-loading, .ablog-empty, .ablog-error {
+  padding: var(--space-5, 24px);
+  text-align: center;
+  color: var(--text-muted);
+}
+.ablog-error { color: var(--danger, #dc2626); }

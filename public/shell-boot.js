@@ -28,6 +28,8 @@ import libraryModule from '/modules/library/index.js';
 import docsModule from '/modules/docs/index.js';
 import dialectsModule from '/modules/dialects/index.js';
 import streamModule from '/modules/stream/index.js';
+import blogModule from '/modules/blog/index.js';
+import adminBlogModule from '/modules/admin-blog/index.js';
 import { createStubModule } from '/modules/stub/index.js';
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
@@ -48,19 +50,6 @@ const STUB_SECTIONS = [
       ru: 'Инструмент для разметки образцов из behavior-пробера. Тегаешь false positive/negative по каждому паттерну, еженедельный confusion matrix экспорт.',
     },
   },
-  {
-    id: 'blog',
-    route: '/blog',
-    icon: '📰',
-    stage: 3,
-    title: { en: 'Blog', uk: 'Блог', ru: 'Блог' },
-    copy: {
-      en: 'Editorial posts on OpenRTB internals plus curated news from the firehose. Three categories: news, deep-dives, guides.',
-      uk: 'Редакційні пости про внутрішню кухню OpenRTB плюс curated-новини з firehose. Три категорії: новини, розбори, гайди.',
-      ru: 'Редакционные посты о внутренней кухне OpenRTB плюс curated-новости из firehose. Три категории: новости, разборы, гайды.',
-    },
-  },
-
 ];
 
 // ── Initial dependency loading ───────────────────────────────────
@@ -88,6 +77,9 @@ function registerSections() {
   registry.registerRoute('/docs/findings', 'docs');
   // Legacy /stream.html URL alias → keep existing share-links working.
   registry.registerRoute('/stream.html', 'stream');
+  registry.register(blogModule);
+  registry.register(adminBlogModule);
+
 
   // Stub sections (yet to be built — see ROADMAP).
   for (const cfg of STUB_SECTIONS) {
@@ -114,6 +106,26 @@ async function activateFromUrl() {
       await registry.activate('inspector', root);
     } catch (err) {
       console.error('[shell-boot] /r/:hash activate failed:', err);
+    }
+    return;
+  }
+
+  // Blog post deep routes: /blog/{lang}/{slug} (canonicalized — locale prefix stripped)
+  if (canonical.startsWith('/blog/')) {
+    try {
+      await registry.activate('blog', root);
+    } catch (err) {
+      console.error('[shell-boot] blog post activate failed:', err);
+    }
+    return;
+  }
+
+  // Admin blog route
+  if (canonical === '/admin/blog') {
+    try {
+      await registry.activate('admin-blog', root);
+    } catch (err) {
+      console.error('[shell-boot] admin-blog activate failed:', err);
     }
     return;
   }

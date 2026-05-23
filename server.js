@@ -287,6 +287,18 @@ function resolveLocaleRoute(reqUrl) {
   const ruSub = u.match(/^\/ru\/([a-z][a-z0-9-]*)\/([a-z][a-z0-9-]*)$/);
   if (ruSub && SPA_SECTIONS.has(ruSub[1])) return { file: '/index.ru.html' };
 
+  // Blog deep routes: /blog/{lang}/{slug} and /uk/blog/{lang}/{slug} style
+  // Pattern: /blog/<lang>/<slug> (3-segment, section=blog)
+  const blogDeep = u.match(/^\/blog\/([a-z]{2})\/([a-z0-9][a-z0-9-]*)$/);
+  if (blogDeep) return { file: '/index.en.html' };
+  const ukBlogDeep = u.match(/^\/uk\/blog\/([a-z]{2})\/([a-z0-9][a-z0-9-]*)$/);
+  if (ukBlogDeep) return { file: '/index.uk.html' };
+  const ruBlogDeep = u.match(/^\/ru\/blog\/([a-z]{2})\/([a-z0-9][a-z0-9-]*)$/);
+  if (ruBlogDeep) return { file: '/index.ru.html' };
+
+  // Admin blog: /admin/blog → serve en shell (no locale prefix for admin)
+  if (u === '/admin/blog') return { file: '/index.en.html' };
+
   // Legacy /en/<section> → drop /en prefix (en is canonical no-prefix locale)
   if (enMatch === null) {
     const enLegacy = u.match(/^\/en\/([a-z][a-z0-9-]*)$/);
@@ -782,6 +794,8 @@ const { createIntelModule } = require('./modules/intel/handler');
 const { createCorpusModule } = require('./modules/corpus/handler');
 const { createAccountModule } = require('./modules/account/handler');
 const { createAdminModule } = require('./modules/admin/handler');
+const { createAdminBlogModule } = require('./modules/admin/blog');
+const { createBlogModule } = require('./modules/blog/handler');
 const { createProxyModule } = require('./modules/proxy/handler');
 // v8 — User Dialects feature
 const { createDialectsModule } = require('./modules/dialects/handler');
@@ -860,6 +874,8 @@ router.register(
 router.register(createAccountModule({ auth, AnalyzeLog }));
 router.register(createDialectsModule({ auth, db }));
 router.register(createAdminModule({ db, Users, auth }));
+router.register(createAdminBlogModule());
+router.register(createBlogModule());
 router.register(createProxyModule({ auth }));
 
 // Wave 3 modules (auth bundle, library, stream)

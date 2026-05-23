@@ -67,6 +67,10 @@ services:
       # without `compose up --build`. Was baked-in until 2026-05-09 — see
       # docs/ARCHMAP.md §4 for the trap that motivated this.
       - ./samples:/app/samples:ro
+      # Blog editorial markdown posts — bind-mounted so new posts and
+      # promoted drafts appear without a rebuild. NOT :ro because the
+      # promote action writes new .md files.
+      - ./content/posts:/app/content/posts
       # Persistent SQLite store (partners + saved bid samples).
       - /srv/DATA/AppData/adtech-spyglass:/data
     networks:
