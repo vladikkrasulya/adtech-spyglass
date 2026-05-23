@@ -170,24 +170,27 @@
     justify-content: center;
     position: fixed;
     left: 0;
-    top: 18px;
-    width: 20px;
-    height: 20px;
-    border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 56px;
+    border: 1px solid var(--accent, #ffcc00);
     border-left: none;
-    border-radius: 0 var(--r-pill, 999px) var(--r-pill, 999px) 0;
-    background: var(--bg-elev, #fff);
-    color: var(--text-muted, #52525b);
+    border-radius: 0 var(--r-md, 16px) var(--r-md, 16px) 0;
+    background: var(--accent, #ffcc00);
+    color: var(--accent-ink, #18181b);
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
+    font-weight: 600;
     line-height: 1;
     padding: 0;
     z-index: 35;
-    box-shadow: var(--shadow-sm);
-    transition: color 150ms ease;
+    box-shadow: var(--shadow-md);
+    transition: width 180ms ease, background-color 150ms ease;
   }
   .kt-shell.is-nav-collapsed .kt-shell__reopen-tab:hover {
-    color: var(--text);
+    width: 32px;
+    background: var(--accent-hover, #ffd633);
   }
 }
 
