@@ -111,6 +111,7 @@ test('schain: ver = "2.0" → err-schain-version', () => {
 
 test('schain: ver = 1 (number instead of string) → err-schain-version', () => {
   const sc = validSchain();
+  // @ts-ignore — intentional wrong type for validation testing
   sc.ver = 1;
   const out = schain.validate(reqWithSchain(sc));
   assert.ok(out.find((x) => x.id === 'err-schain-version'));
@@ -353,6 +354,7 @@ test('eids: uid.atype = 0 → err-eids-uid-atype-invalid', () => {
 
 test('eids: uid.atype = "1" (string) → err-eids-uid-atype-invalid', () => {
   const e = validEids();
+  // @ts-ignore — intentional wrong type for validation testing
   e[0].uids[0].atype = '1';
   assert.ok(eids.validate(reqWithEids(e)).find((x) => x.id === 'err-eids-uid-atype-invalid'));
 });
@@ -687,6 +689,7 @@ test('eids: eid.source = 42 (number) → err-eids-source-invalid-type (NOT missi
 
 test('eids: uid.id = 42 (number) → err-eids-uid-id-invalid-type (NOT missing)', () => {
   const e = validEids();
+  // @ts-ignore — intentional wrong type for validation testing
   e[0].uids[0].id = 42;
   const out = eids.validate(reqWithEids(e));
   assert.ok(

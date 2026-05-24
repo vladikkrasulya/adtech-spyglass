@@ -36,6 +36,7 @@ module.exports = [
       'prefer-const': 'warn',
       'no-var': 'error',
       'no-prototype-builtins': 'off',
+      'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
 
@@ -94,6 +95,14 @@ module.exports = [
 
   // Don't lint vendored / generated assets
   {
-    ignores: ['node_modules/', 'public/design-system.css', '*.min.js', 'dist/', 'build/'],
+    ignores: [
+      'node_modules/',
+      'public/design-system.css',
+      '*.min.js',
+      '**/*.min.js',
+      'public/vendor/',
+      'dist/',
+      'build/',
+    ],
   },
 ];

@@ -83,6 +83,7 @@ test('schain: node.domain absent → warn-schain-node-domain-missing', () => {
 
 test('schain: node.rid = 12345 (number) → err-schain-node-rid-invalid', () => {
   const sc = validSchain();
+  // @ts-ignore — intentional wrong type for validation testing
   sc.nodes[0].rid = 12345;
   const out = schain.validate(reqWithSchain(sc));
   const f = out.find((x) => x.id === 'err-schain-node-rid-invalid');
@@ -115,6 +116,7 @@ test('schain: node.rid = null → warn-schain-node-rid-missing (not invalid)', (
 
 test('schain: node.rid = false (boolean) → err-schain-node-rid-invalid', () => {
   const sc = validSchain();
+  // @ts-ignore — intentional wrong type for validation testing
   sc.nodes[0].rid = false;
   const out = schain.validate(reqWithSchain(sc));
   assert.ok(out.find((x) => x.id === 'err-schain-node-rid-invalid'));

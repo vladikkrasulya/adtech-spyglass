@@ -80,6 +80,7 @@ function specimenStoreGet(hash) {
  *   streamBuffer: Array<unknown>,
  *   STREAM_REPLAY_MAX: number,
  *   STREAM_HEARTBEAT_MS: number,
+ *   db?: object,
  * }} deps
  */
 function createStreamModule(deps) {

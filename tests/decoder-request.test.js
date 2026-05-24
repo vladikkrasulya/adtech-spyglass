@@ -42,7 +42,9 @@ test('makeCanonicalUrlRequest: returns expected envelope', () => {
 test('decodeRequest: null/empty/non-string input → null', () => {
   assert.equal(decodeRequest(null), null);
   assert.equal(decodeRequest(''), null);
+  // @ts-ignore — intentional wrong type for robustness testing
   assert.equal(decodeRequest(42), null);
+  // @ts-ignore — intentional wrong type for robustness testing
   assert.equal(decodeRequest({}), null);
 });
 
