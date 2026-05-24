@@ -237,5 +237,8 @@
   "err-pod-id-seq-mismatch": "{has} is set but {missing} is absent. podid and podseq must be used together — podid groups the slots of one ad pod, podseq gives the position within it. Set both or neither.",
   "err-podseq-invalid": "podseq = \"{val}\" is invalid. podseq must be a non-negative integer (0 = any position, 1 = first, 2 = second…).",
   "err-pod-len-mismatch": "minadlen ({min}s) > maxadlen ({max}s). Minimum ad duration cannot exceed the maximum — no bid can satisfy this constraint and the exchange will receive zero bids.",
-  "err-pod-len-invalid": "{field} = \"{val}\" is not a positive integer. Ad duration lengths must be whole seconds greater than zero."
+  "err-pod-len-invalid": "{field} = \"{val}\" is not a positive integer. Ad duration lengths must be whole seconds greater than zero.",
+  "err-schain-node-domain-invalid": "schain node[{idx}].domain = \"{val}\" is not a valid domain. domain must be a bare hostname (e.g. \"openx.com\") — no scheme, no path. Fix or remove the domain field.",
+  "err-schain-node-rid-invalid": "schain node[{idx}].rid = \"{val}\" is not a string. rid must be a non-empty string (the exchange request ID). Convert it to string or remove the field.",
+  "err-eids-source-invalid": "user.ext.eids[{idx}].source = \"{val}\" is not a valid domain. EID source must be the canonical domain of the identity provider (e.g. \"id5-sync.com\"). A bare label without a TLD is rejected."
 }

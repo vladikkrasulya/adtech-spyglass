@@ -10,27 +10,22 @@
  * SChain spec: https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md
  *
  * Rules:
- *   err-schain-version         — schain.ver missing or not "1.0"
- *   err-schain-complete        — schain.complete not 0 or 1
- *   err-schain-nodes-empty     — schain.nodes missing or empty array
- *   err-schain-node-asi        — node.asi missing or not a valid domain
- *   err-schain-node-sid        — node.sid missing or empty
- *   err-schain-node-hp         — node.hp not 0 or 1
- *   warn-schain-node-rid-missing   — node.rid absent (recommended)
+ *   err-schain-version              — schain.ver missing or not "1.0"
+ *   err-schain-complete             — schain.complete not 0 or 1
+ *   err-schain-nodes-empty          — schain.nodes missing or empty array
+ *   err-schain-node-asi             — node.asi missing or not a valid domain
+ *   err-schain-node-sid             — node.sid missing or empty
+ *   err-schain-node-hp              — node.hp not 0 or 1
+ *   warn-schain-node-rid-missing    — node.rid absent (recommended)
+ *   err-schain-node-rid-invalid     — node.rid present but not a non-empty string
  *   warn-schain-node-domain-missing — node.domain absent (recommended)
+ *   err-schain-node-domain-invalid  — node.domain present but not a valid domain
  */
 
 const { LEVELS, makeFinding } = require('../../findings');
+const { isValidDomain } = require('../../utils/domain');
 
 const F = makeFinding;
-
-// Minimal domain validator — no external deps.
-// Accepts: "openx.com", "doubleclick.net", "ad.example.co.uk"
-const DOMAIN_RE = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
-
-function isValidDomain(v) {
-  return typeof v === 'string' && v.length > 0 && DOMAIN_RE.test(v);
-}
 
 function validateSchainObject(schain, basePath, findings) {
   if (!schain || typeof schain !== 'object') return;
@@ -45,7 +40,7 @@ function validateSchainObject(schain, basePath, findings) {
     findings.push(F('err-schain-complete', LEVELS.ERROR, basePath + '.complete', { val: String(schain.complete ?? '') }));
   }
 
-  // nodes — must be array with ≥1 entry
+  // nodes — must be array with >=1 entry
   if (!Array.isArray(schain.nodes) || schain.nodes.length === 0) {
     findings.push(F('err-schain-nodes-empty', LEVELS.ERROR, basePath + '.nodes'));
     return; // can't walk nodes
@@ -71,14 +66,18 @@ function validateSchainObject(schain, basePath, findings) {
       findings.push(F('err-schain-node-hp', LEVELS.ERROR, np + '.hp', { idx: i, val: String(node.hp ?? '') }));
     }
 
-    // rid — optional but recommended
-    if (node.rid == null || (typeof node.rid === 'string' && node.rid.length === 0)) {
+    // rid — optional but recommended; if present must be a non-empty string
+    if (node.rid == null) {
       findings.push(F('warn-schain-node-rid-missing', LEVELS.WARNING, np + '.rid', { idx: i }));
+    } else if (typeof node.rid !== 'string' || node.rid.length === 0) {
+      findings.push(F('err-schain-node-rid-invalid', LEVELS.ERROR, np + '.rid', { idx: i, val: String(node.rid) }));
     }
 
-    // domain — optional but recommended, must be valid domain if present
+    // domain — optional but recommended; if present must be a valid domain
     if (node.domain == null) {
       findings.push(F('warn-schain-node-domain-missing', LEVELS.WARNING, np + '.domain', { idx: i }));
+    } else if (!isValidDomain(node.domain)) {
+      findings.push(F('err-schain-node-domain-invalid', LEVELS.ERROR, np + '.domain', { idx: i, val: String(node.domain) }));
     }
   });
 }
@@ -107,6 +106,6 @@ module.exports = {
   description: 'Validates IAB SupplyChain (SChain) object: ver/complete/nodes + per-node asi/sid/hp/rid/domain.',
   appliesTo: ['ORTB_REQUEST'],
   validate,
-  // Expose for tests
+  // Expose for tests (back-compat: tests/rules-etap-b.test.js uses this)
   _isValidDomain: isValidDomain,
 };

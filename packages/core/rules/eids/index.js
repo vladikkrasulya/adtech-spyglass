@@ -12,14 +12,16 @@
  * EID spec: https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md
  *
  * Rules:
- *   err-eids-not-array         — user.ext.eids is present but not an array
- *   err-eids-source-missing    — eid.source missing or empty
- *   err-eids-uids-empty        — eid.uids missing or empty array
- *   err-eids-uid-id-missing    — uid.id missing or empty
+ *   err-eids-not-array          — user.ext.eids is present but not an array
+ *   err-eids-source-missing     — eid.source missing or empty
+ *   err-eids-source-invalid     — eid.source present but not a valid domain
+ *   err-eids-uids-empty         — eid.uids missing or empty array
+ *   err-eids-uid-id-missing     — uid.id missing or empty
  *   warn-eids-uid-atype-invalid — uid.atype present but not 1, 2, or 3
  */
 
 const { LEVELS, makeFinding } = require('../../findings');
+const { isValidDomain } = require('../../utils/domain');
 
 const F = makeFinding;
 
@@ -43,9 +45,11 @@ function validate(req /*, ctx */) {
     if (!eid || typeof eid !== 'object') return;
     const ep = `user.ext.eids[${i}]`;
 
-    // source — required non-empty string
+    // source — required non-empty string that must be a valid domain
     if (typeof eid.source !== 'string' || eid.source.length === 0) {
       findings.push(F('err-eids-source-missing', LEVELS.ERROR, ep + '.source', { idx: i }));
+    } else if (!isValidDomain(eid.source)) {
+      findings.push(F('err-eids-source-invalid', LEVELS.ERROR, ep + '.source', { idx: i, val: eid.source }));
     }
 
     // uids — required non-empty array
@@ -77,7 +81,7 @@ function validate(req /*, ctx */) {
 
 module.exports = {
   id: 'eids',
-  description: 'Validates Extended User IDs (user.ext.eids): source/uids per entry and id/atype per UID.',
+  description: 'Validates Extended User IDs (user.ext.eids): source domain/uids per entry and id/atype per UID.',
   appliesTo: ['ORTB_REQUEST'],
   validate,
 };

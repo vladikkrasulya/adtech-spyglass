@@ -215,5 +215,8 @@
   "err-pod-id-seq-mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "err-podseq-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "err-pod-len-mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
-  "err-pod-len-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video"
+  "err-pod-len-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
+  "err-schain-node-domain-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-schain-node-rid-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-eids-source-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md"
 }
