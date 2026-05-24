@@ -2943,8 +2943,9 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 /* ── Feature #12: Quality Score Pill ──────────────────────────────── */
 .analysis-strip-quality {
   flex: 0 0 auto;
-  min-width: 88px;
-  max-width: 110px;
+  min-width: 100px;
+  /* No max-width — pill self-sizes to fit longest status label per
+     locale (RU "ТРЕБУЕТ ВНИМАНИЯ" is the widest). */
   align-items: center;
   justify-content: center;
   padding: 4px var(--space-3);
@@ -2959,17 +2960,20 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   justify-content: center;
 }
 .quality-pill {
+  /* Vertical capsule — number on top, status label below it. Width set
+     to comfortably fit the longest tier label in any locale ("ТРЕБУЕТ
+     ВНИМАНИЯ" RU ≈ 16 chars at 8px font + 0.06em tracking ≈ 100px). */
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2px 10px;
+  padding: 3px 14px;
   border-radius: var(--r-pill, 999px);
   border: 1px solid transparent;
   cursor: default;
   position: relative;
   transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-  min-width: 52px;
+  min-width: 130px;
   line-height: 1;
 }
 /* Tier colors */
@@ -3001,15 +3005,16 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--text);
 }
 .quality-status {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-dim);
-  margin-top: 1px;
+  margin-top: 2px;
   white-space: nowrap;
 }
 /* Tier-colored status text */
+/* Status text tier colors — descendant of .quality-pill again. */
 .quality-pill.q-excellent .quality-status { color: #16a34a; }
 .quality-pill.q-good .quality-status { color: #b8960a; }
 [data-theme='dark'] .quality-pill.q-good .quality-status { color: var(--accent, #ffcc00); }
