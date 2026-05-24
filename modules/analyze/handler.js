@@ -185,6 +185,7 @@ function createAnalyzeModule(deps) {
               disabledRules,
               expectedVersion,
               userDialect,
+              pairReq: bidReq, // inject paired request for floor/currency mismatch plugins
             });
             if (resValidation.findings && resValidation.findings.length) {
               validation.findings = validation.findings.concat(
