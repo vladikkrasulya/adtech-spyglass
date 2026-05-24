@@ -12,12 +12,12 @@
  * Asserts on stable `id` and `path`, never on message text.
  */
 
-const test   = require('node:test');
+const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const schain = require('@kyivtech/spyglass-core/rules/schain');
-const eids   = require('@kyivtech/spyglass-core/rules/eids');
-const adpod  = require('@kyivtech/spyglass-core/rules/adpod');
+const eids = require('@kyivtech/spyglass-core/rules/eids');
+const adpod = require('@kyivtech/spyglass-core/rules/adpod');
 const { listPlugins } = require('@kyivtech/spyglass-core/rules');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -26,9 +26,7 @@ const { listPlugins } = require('@kyivtech/spyglass-core/rules');
 const validSchain = () => ({
   ver: '1.0',
   complete: 1,
-  nodes: [
-    { asi: 'openx.com', sid: 'pub-12345', hp: 1, rid: 'abc123', domain: 'openx.com' },
-  ],
+  nodes: [{ asi: 'openx.com', sid: 'pub-12345', hp: 1, rid: 'abc123', domain: 'openx.com' }],
 });
 
 /** Build a minimal valid request that carries a schain */
@@ -56,8 +54,8 @@ const validVideoWithPod = () => ({
     mimes: ['video/mp4'],
     podid: 'pod-a',
     podseq: 1,
-    minadlen: 5,
-    maxadlen: 30,
+    minduration: 5,
+    maxduration: 30,
   },
 });
 
@@ -74,7 +72,9 @@ test('schain: plugin is registered with correct metadata', () => {
 
 test('schain: valid source.ext.schain → no schain findings', () => {
   const out = schain.validate(reqWithSchain(validSchain()));
-  const ids = out.map((f) => f.id).filter((id) => id.startsWith('err-schain') || id.startsWith('warn-schain'));
+  const ids = out
+    .map((f) => f.id)
+    .filter((id) => id.startsWith('err-schain') || id.startsWith('warn-schain'));
   assert.deepEqual(ids, []);
 });
 
@@ -208,7 +208,13 @@ test('schain: node.domain absent → warn-schain-node-domain-missing', () => {
 
 test('schain: second node (idx=1) errors carry correct index in path', () => {
   const sc = validSchain();
-  sc.nodes.push({ asi: 'rubiconproject.com', sid: 'seller-1', hp: 1, rid: 'r1', domain: 'rubiconproject.com' });
+  sc.nodes.push({
+    asi: 'rubiconproject.com',
+    sid: 'seller-1',
+    hp: 1,
+    rid: 'r1',
+    domain: 'rubiconproject.com',
+  });
   delete sc.nodes[1].sid; // corrupt second node
   const out = schain.validate(reqWithSchain(sc));
   const f = out.find((x) => x.id === 'err-schain-node-sid');
@@ -319,40 +325,43 @@ test('eids: uid.id empty string → err-eids-uid-id-missing', () => {
 
 // ─── EIDs uid.atype ──────────────────────────────────────────────────────────
 
-test('eids: uid.atype = 1,2,3 → no warning', () => {
+test('eids: uid.atype = 1,2,3 → no error', () => {
   for (const atype of [1, 2, 3]) {
     const e = validEids();
     e[0].uids[0].atype = atype;
     const out = eids.validate(reqWithEids(e));
-    assert.ok(!out.find((x) => x.id === 'warn-eids-uid-atype-invalid'), `atype ${atype} should be valid`);
+    assert.ok(
+      !out.find((x) => x.id === 'err-eids-uid-atype-invalid'),
+      `atype ${atype} should be valid`,
+    );
   }
 });
 
-test('eids: uid.atype = 4 → warn-eids-uid-atype-invalid (boundary)', () => {
+test('eids: uid.atype = 4 → err-eids-uid-atype-invalid (promoted to error)', () => {
   const e = validEids();
   e[0].uids[0].atype = 4;
-  const f = eids.validate(reqWithEids(e)).find((x) => x.id === 'warn-eids-uid-atype-invalid');
+  const f = eids.validate(reqWithEids(e)).find((x) => x.id === 'err-eids-uid-atype-invalid');
   assert.ok(f);
-  assert.equal(f.level, 'warning');
+  assert.equal(f.level, 'error');
 });
 
-test('eids: uid.atype = 0 → warn-eids-uid-atype-invalid', () => {
+test('eids: uid.atype = 0 → err-eids-uid-atype-invalid', () => {
   const e = validEids();
   e[0].uids[0].atype = 0;
-  assert.ok(eids.validate(reqWithEids(e)).find((x) => x.id === 'warn-eids-uid-atype-invalid'));
+  assert.ok(eids.validate(reqWithEids(e)).find((x) => x.id === 'err-eids-uid-atype-invalid'));
 });
 
-test('eids: uid.atype = "1" (string) → warn-eids-uid-atype-invalid', () => {
+test('eids: uid.atype = "1" (string) → err-eids-uid-atype-invalid', () => {
   const e = validEids();
   e[0].uids[0].atype = '1';
-  assert.ok(eids.validate(reqWithEids(e)).find((x) => x.id === 'warn-eids-uid-atype-invalid'));
+  assert.ok(eids.validate(reqWithEids(e)).find((x) => x.id === 'err-eids-uid-atype-invalid'));
 });
 
-test('eids: uid.atype absent → no warning', () => {
+test('eids: uid.atype absent → no error', () => {
   const e = validEids();
   delete e[0].uids[0].atype;
   const out = eids.validate(reqWithEids(e));
-  assert.ok(!out.find((x) => x.id === 'warn-eids-uid-atype-invalid'));
+  assert.ok(!out.find((x) => x.id === 'err-eids-uid-atype-invalid'));
 });
 
 // ─── AdPod plugin registration ───────────────────────────────────────────────
@@ -382,25 +391,21 @@ test('adpod: request with no imp → no findings', () => {
 
 // ─── AdPod podid/podseq coupling ────────────────────────────────────────────
 
-test('adpod: podid present, podseq absent → err-pod-id-seq-mismatch', () => {
+test('adpod: podid present alone → no err-pod-id-seq-mismatch (removed)', () => {
+  // err-pod-id-seq-mismatch removed per audit — IAB does not require podid/podseq pairing
   const req = { imp: [{ id: 'i1', video: { podid: 'pod-a' } }] };
-  const f = adpod.validate(req).find((x) => x.id === 'err-pod-id-seq-mismatch');
-  assert.ok(f);
-  assert.equal(f.level, 'error');
-  assert.equal(f.path, 'imp[0].video');
-  assert.equal(f.params.has, 'podid');
-  assert.equal(f.params.missing, 'podseq');
+  const out = adpod.validate(req);
+  assert.ok(!out.find((x) => x.id === 'err-pod-id-seq-mismatch'));
 });
 
-test('adpod: podseq present, podid absent → err-pod-id-seq-mismatch', () => {
+test('adpod: podseq present alone → no err-pod-id-seq-mismatch (removed)', () => {
+  // err-pod-id-seq-mismatch removed — podid/podseq are independent optional fields
   const req = { imp: [{ id: 'i1', video: { podseq: 2 } }] };
-  const f = adpod.validate(req).find((x) => x.id === 'err-pod-id-seq-mismatch');
-  assert.ok(f);
-  assert.equal(f.params.has, 'podseq');
-  assert.equal(f.params.missing, 'podid');
+  const out = adpod.validate(req);
+  assert.ok(!out.find((x) => x.id === 'err-pod-id-seq-mismatch'));
 });
 
-test('adpod: both podid and podseq present → no mismatch', () => {
+test('adpod: both podid and podseq present → no findings', () => {
   const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: 1 } }] };
   assert.ok(!adpod.validate(req).find((x) => x.id === 'err-pod-id-seq-mismatch'));
 });
@@ -429,8 +434,8 @@ test('adpod: podseq = 1.5 (float) → err-podseq-invalid', () => {
 
 // ─── AdPod duration lengths ──────────────────────────────────────────────────
 
-test('adpod: minadlen > maxadlen → err-pod-len-mismatch', () => {
-  const req = { imp: [{ id: 'i1', video: { podid: 'p1', podseq: 1, minadlen: 30, maxadlen: 15 } }] };
+test('adpod: minduration > maxduration → err-pod-len-mismatch', () => {
+  const req = { imp: [{ id: 'i1', video: { minduration: 30, maxduration: 15 } }] };
   const f = adpod.validate(req).find((x) => x.id === 'err-pod-len-mismatch');
   assert.ok(f);
   assert.equal(f.level, 'error');
@@ -438,57 +443,258 @@ test('adpod: minadlen > maxadlen → err-pod-len-mismatch', () => {
   assert.equal(f.params.max, 15);
 });
 
-test('adpod: minadlen === maxadlen → no mismatch (edge case)', () => {
-  const req = { imp: [{ id: 'i1', video: { podid: 'p1', podseq: 1, minadlen: 15, maxadlen: 15 } }] };
+test('adpod: minduration === maxduration → no mismatch (edge case)', () => {
+  const req = { imp: [{ id: 'i1', video: { minduration: 15, maxduration: 15 } }] };
   assert.ok(!adpod.validate(req).find((x) => x.id === 'err-pod-len-mismatch'));
 });
 
-test('adpod: minadlen < maxadlen → no mismatch', () => {
-  const req = { imp: [{ id: 'i1', video: { podid: 'p1', podseq: 1, minadlen: 5, maxadlen: 30 } }] };
+test('adpod: minduration < maxduration → no mismatch', () => {
+  const req = { imp: [{ id: 'i1', video: { minduration: 5, maxduration: 30 } }] };
   assert.ok(!adpod.validate(req).find((x) => x.id === 'err-pod-len-mismatch'));
 });
 
-test('adpod: minadlen = 0 → err-pod-len-invalid', () => {
-  const req = { imp: [{ id: 'i1', video: { minadlen: 0 } }] };
+test('adpod: minduration = 0 → err-pod-len-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { minduration: 0 } }] };
   const f = adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid');
   assert.ok(f);
-  assert.equal(f.params.field, 'minadlen');
+  assert.equal(f.params.field, 'minduration');
 });
 
-test('adpod: maxadlen = -5 → err-pod-len-invalid', () => {
-  const req = { imp: [{ id: 'i1', video: { maxadlen: -5 } }] };
+test('adpod: maxduration = -5 → err-pod-len-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { maxduration: -5 } }] };
   assert.ok(adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid'));
 });
 
-test('adpod: maxadlen = "30" (string) → err-pod-len-invalid', () => {
-  const req = { imp: [{ id: 'i1', video: { maxadlen: '30' } }] };
+test('adpod: maxduration = "30" (string) → err-pod-len-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { maxduration: '30' } }] };
   assert.ok(adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid'));
 });
 
 // ─── AdPod audio path ────────────────────────────────────────────────────────
 
-test('adpod: imp.audio podid without podseq → err-pod-id-seq-mismatch', () => {
+test('adpod: imp.audio podid alone → no mismatch finding (coupling removed)', () => {
   const req = { imp: [{ id: 'i1', audio: { mimes: ['audio/mp4'], podid: 'p1' } }] };
-  const f = adpod.validate(req).find((x) => x.id === 'err-pod-id-seq-mismatch');
-  assert.ok(f);
-  assert.equal(f.path, 'imp[0].audio');
+  const out = adpod.validate(req);
+  assert.ok(!out.find((x) => x.id === 'err-pod-id-seq-mismatch'));
 });
 
 test('adpod: imp.audio valid pod fields → no findings', () => {
-  const req = { imp: [{ id: 'i1', audio: { podid: 'p1', podseq: 2, minadlen: 10, maxadlen: 60 } }] };
+  const req = {
+    imp: [{ id: 'i1', audio: { podid: 'p1', podseq: 2, minduration: 10, maxduration: 60 } }],
+  };
   assert.deepEqual(adpod.validate(req), []);
 });
 
 // ─── AdPod multi-imp path indexing ───────────────────────────────────────────
 
-test('adpod: second imp[1].video path is correct in finding', () => {
+test('adpod: second imp[1].video with invalid minduration → path is correct in finding', () => {
   const req = {
     imp: [
       { id: 'i0', video: { mimes: ['video/mp4'] } }, // clean
-      { id: 'i1', video: { podid: 'p1' } }, // missing podseq
+      { id: 'i1', video: { minduration: 0 } }, // invalid (0 not allowed)
     ],
   };
-  const f = adpod.validate(req).find((x) => x.id === 'err-pod-id-seq-mismatch');
+  const f = adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid');
   assert.ok(f);
-  assert.equal(f.path, 'imp[1].video');
+  assert.ok(f.path.startsWith('imp[1].video'));
+});
+
+// ─── NEW: adpod poddur + maxseq coverage ────────────────────────────────────
+
+test('adpod: poddur = 120 (positive int) → no findings', () => {
+  const req = { imp: [{ id: 'i1', video: { poddur: 120 } }] };
+  assert.deepEqual(adpod.validate(req), []);
+});
+
+test('adpod: poddur = 0 → err-pod-len-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { poddur: 0 } }] };
+  const f = adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid');
+  assert.ok(f);
+  assert.equal(f.params.field, 'poddur');
+});
+
+test('adpod: maxseq = 3 (positive int) → no findings', () => {
+  const req = { imp: [{ id: 'i1', video: { maxseq: 3 } }] };
+  assert.deepEqual(adpod.validate(req), []);
+});
+
+test('adpod: maxseq = -1 → err-pod-len-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { maxseq: -1 } }] };
+  const f = adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid');
+  assert.ok(f);
+  assert.equal(f.params.field, 'maxseq');
+});
+
+test('adpod: minduration=5, maxduration=30 → no findings (valid range)', () => {
+  const req = { imp: [{ id: 'i1', video: { minduration: 5, maxduration: 30 } }] };
+  assert.deepEqual(adpod.validate(req), []);
+});
+
+test('adpod: podid =  (empty string) → err-podid-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { podid: '' } }] };
+  const f = adpod.validate(req).find((x) => x.id === 'err-podid-invalid');
+  assert.ok(f, 'err-podid-invalid should fire for empty string');
+});
+
+test('adpod: podid = 0 (zero int) → err-podid-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { podid: 0 } }] };
+  const f = adpod.validate(req).find((x) => x.id === 'err-podid-invalid');
+  assert.ok(f, 'err-podid-invalid should fire for 0 (not positive)');
+});
+
+test('adpod: podid = 5 (positive int) → no err-podid-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { podid: 5 } }] };
+  assert.ok(!adpod.validate(req).find((x) => x.id === 'err-podid-invalid'));
+});
+
+// ─── NEW: schain native path (source.schain oRTB 2.6) ───────────────────────
+
+test('schain: native source.schain (oRTB 2.6) → validates correctly', () => {
+  const req = { source: { schain: validSchain() } };
+  const out = schain.validate(req);
+  const ids = out
+    .map((f) => f.id)
+    .filter((id) => id.startsWith('err-schain') || id.startsWith('warn-schain'));
+  assert.deepEqual(ids, []);
+});
+
+test('schain: source.schain with bad ver → err-schain-version at source.schain.ver', () => {
+  const sc = validSchain();
+  sc.ver = '2.0';
+  const req = { source: { schain: sc } };
+  const out = schain.validate(req);
+  const f = out.find((x) => x.id === 'err-schain-version');
+  assert.ok(f);
+  assert.equal(f.path, 'source.schain.ver');
+});
+
+test('schain: both source.schain and source.ext.schain → both validated', () => {
+  const sc1 = validSchain();
+  const sc2 = {
+    ver: '2.0',
+    complete: 1,
+    nodes: [{ asi: 'openx.com', sid: 's1', hp: 1, rid: 'r', domain: 'openx.com' }],
+  };
+  const req = { source: { schain: sc1, ext: { schain: sc2 } } };
+  const out = schain.validate(req);
+  // sc1 is valid → no error from source.schain
+  // sc2 has bad ver → err-schain-version from source.ext.schain
+  const f = out.find((x) => x.id === 'err-schain-version' && x.path === 'source.ext.schain.ver');
+  assert.ok(f, 'should find version error from legacy path');
+  const nativeErrors = out.filter(
+    (x) => x.id === 'err-schain-version' && x.path === 'source.schain.ver',
+  );
+  assert.equal(nativeErrors.length, 0, 'native schain should be clean');
+});
+
+// ─── NEW: schain type guards ─────────────────────────────────────────────────
+
+test('schain: schain = false (boolean) → err-schain-invalid', () => {
+  const req = { source: { schain: false } };
+  const out = schain.validate(req);
+  const f = out.find((x) => x.id === 'err-schain-invalid');
+  assert.ok(f, 'err-schain-invalid should fire for non-object schain');
+  assert.equal(f.level, 'error');
+});
+
+test('schain: schain = string → err-schain-invalid', () => {
+  const req = { source: { ext: { schain: 'not-an-object' } } };
+  const out = schain.validate(req);
+  assert.ok(out.find((x) => x.id === 'err-schain-invalid'));
+});
+
+test('schain: nodes = [null] → err-schain-node-invalid', () => {
+  const sc = { ver: '1.0', complete: 1, nodes: [null] };
+  const out = schain.validate({ source: { ext: { schain: sc } } });
+  const f = out.find((x) => x.id === 'err-schain-node-invalid');
+  assert.ok(f, 'err-schain-node-invalid should fire for null node');
+  assert.equal(f.level, 'error');
+});
+
+test('schain: nodes = [42] → err-schain-node-invalid', () => {
+  const sc = { ver: '1.0', complete: 1, nodes: [42] };
+  const out = schain.validate({ source: { ext: { schain: sc } } });
+  assert.ok(out.find((x) => x.id === 'err-schain-node-invalid'));
+});
+
+// ─── NEW: eids native path (user.eids oRTB 2.6) ─────────────────────────────
+
+test('eids: native user.eids (oRTB 2.6) → validates correctly', () => {
+  const req = { user: { eids: validEids() } };
+  const out = eids.validate(req);
+  assert.deepEqual(out, []);
+});
+
+test('eids: user.eids with missing source → err-eids-source-missing at user.eids[0].source', () => {
+  const e = validEids();
+  delete e[0].source;
+  const req = { user: { eids: e } };
+  const out = eids.validate(req);
+  const f = out.find((x) => x.id === 'err-eids-source-missing' && x.path === 'user.eids[0].source');
+  assert.ok(f, 'should find source-missing at native user.eids path');
+});
+
+test('eids: both user.eids and user.ext.eids → both validated', () => {
+  const goodEids = validEids();
+  const badEids = [{ source: 42, uids: [{ id: 'x', atype: 1 }] }]; // source wrong type
+  const req = { user: { eids: goodEids, ext: { eids: badEids } } };
+  const out = eids.validate(req);
+  // goodEids clean → no error from user.eids
+  // badEids source wrong type → err-eids-source-invalid-type from user.ext.eids
+  const f = out.find(
+    (x) => x.id === 'err-eids-source-invalid-type' && x.path.includes('user.ext.eids'),
+  );
+  assert.ok(f, 'should find source-invalid-type from legacy ext path');
+});
+
+// ─── NEW: eids type guards ───────────────────────────────────────────────────
+
+test('eids: eids = [null] → err-eids-entry-invalid', () => {
+  const out = eids.validate(reqWithEids([null]));
+  const f = out.find((x) => x.id === 'err-eids-entry-invalid');
+  assert.ok(f, 'err-eids-entry-invalid should fire for null entry');
+  assert.equal(f.level, 'error');
+});
+
+test('eids: eids = [42] → err-eids-entry-invalid', () => {
+  const out = eids.validate(reqWithEids([42]));
+  assert.ok(out.find((x) => x.id === 'err-eids-entry-invalid'));
+});
+
+test('eids: uids = [null] → err-eids-uid-invalid', () => {
+  const e = validEids();
+  e[0].uids = [null];
+  const out = eids.validate(reqWithEids(e));
+  const f = out.find((x) => x.id === 'err-eids-uid-invalid');
+  assert.ok(f, 'err-eids-uid-invalid should fire for null uid');
+  assert.equal(f.level, 'error');
+});
+
+// ─── NEW: eids mislabeling fixes ─────────────────────────────────────────────
+
+test('eids: eid.source = 42 (number) → err-eids-source-invalid-type (NOT missing)', () => {
+  const e = [{ source: 42, uids: [{ id: 'x', atype: 1 }] }];
+  const out = eids.validate(reqWithEids(e));
+  assert.ok(
+    out.find((x) => x.id === 'err-eids-source-invalid-type'),
+    'should find invalid-type, not missing',
+  );
+  assert.ok(
+    !out.find((x) => x.id === 'err-eids-source-missing'),
+    'should NOT find -missing for wrong-type source',
+  );
+});
+
+test('eids: uid.id = 42 (number) → err-eids-uid-id-invalid-type (NOT missing)', () => {
+  const e = validEids();
+  e[0].uids[0].id = 42;
+  const out = eids.validate(reqWithEids(e));
+  assert.ok(
+    out.find((x) => x.id === 'err-eids-uid-id-invalid-type'),
+    'should find uid-id-invalid-type, not missing',
+  );
+  assert.ok(
+    !out.find((x) => x.id === 'err-eids-uid-id-missing'),
+    'should NOT find -missing for wrong-type id',
+  );
 });

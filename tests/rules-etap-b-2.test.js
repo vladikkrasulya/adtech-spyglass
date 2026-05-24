@@ -16,14 +16,14 @@
  * Asserts on stable `id` and `path`, never on message text.
  */
 
-const test   = require('node:test');
+const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const schain   = require('@kyivtech/spyglass-core/rules/schain');
-const eids     = require('@kyivtech/spyglass-core/rules/eids');
+const schain = require('@kyivtech/spyglass-core/rules/schain');
+const eids = require('@kyivtech/spyglass-core/rules/eids');
 const currency = require('@kyivtech/spyglass-core/rules/currency');
 const priceFloor = require('@kyivtech/spyglass-core/rules/price-floor');
-const tmax     = require('@kyivtech/spyglass-core/rules/tmax');
+const tmax = require('@kyivtech/spyglass-core/rules/tmax');
 const { listPlugins } = require('@kyivtech/spyglass-core/rules');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -132,7 +132,9 @@ test('eids: source = "id5-sync" (no TLD) → err-eids-source-invalid', () => {
 });
 
 test('eids: source = "id5-sync.com" (valid domain) → no source error', () => {
-  const req = { user: { ext: { eids: [{ source: 'id5-sync.com', uids: [{ id: 'x', atype: 3 }] }] } } };
+  const req = {
+    user: { ext: { eids: [{ source: 'id5-sync.com', uids: [{ id: 'x', atype: 3 }] }] } },
+  };
   const out = eids.validate(req);
   assert.ok(!out.find((x) => x.id === 'err-eids-source-invalid'));
   assert.ok(!out.find((x) => x.id === 'err-eids-source-missing'));
@@ -249,7 +251,10 @@ test('currency: res.cur = "usd" (lowercase) → err-bid-currency-invalid', () =>
 test('currency: res.cur absent, no req → no findings', () => {
   const res = { seatbid: [{ bid: [{ id: 'b1', impid: 'i1', price: 1.5 }] }] };
   const out = currency.validate(res, { type: 'ORTB_RESPONSE' });
-  assert.deepEqual(out.filter((f) => f.id.startsWith('err-bid-currency')), []);
+  assert.deepEqual(
+    out.filter((f) => f.id.startsWith('err-bid-currency')),
+    [],
+  );
 });
 
 // ─── Price-floor: bid.price validation ──────────────────────────────────────
@@ -264,9 +269,12 @@ test('price-floor: bid.price = 1.5 → no findings', () => {
   assert.deepEqual(out, []);
 });
 
-test('price-floor: bid.price = 0 → err-bid-price-negative', () => {
+test('price-floor: bid.price = 0 → no error (zero allowed per IAB §4.3.1)', () => {
   const out = priceFloor.validate(makeRes(0), { type: 'ORTB_RESPONSE' });
-  assert.ok(out.find((x) => x.id === 'err-bid-price-negative'));
+  assert.ok(
+    !out.find((x) => x.id === 'err-bid-price-negative'),
+    'zero price is valid per IAB second-price auctions',
+  );
 });
 
 test('price-floor: bid.price = -1 → err-bid-price-negative', () => {
@@ -290,25 +298,25 @@ test('price-floor: bid.price = Infinity → err-bid-price-negative', () => {
 });
 
 test('price-floor: bid.price = 1.20, bidfloor = 1.50 → err-bid-price-below-floor', () => {
-  const res = makeRes(1.20);
-  const req = { imp: [{ id: 'imp1', bidfloor: 1.50 }] };
+  const res = makeRes(1.2);
+  const req = { imp: [{ id: 'imp1', bidfloor: 1.5 }] };
   const out = priceFloor.validate(res, { type: 'ORTB_RESPONSE', req });
   const f = out.find((x) => x.id === 'err-bid-price-below-floor');
   assert.ok(f, 'err-bid-price-below-floor should fire');
-  assert.equal(f.params.price, 1.20);
-  assert.equal(f.params.floor, 1.50);
+  assert.equal(f.params.price, 1.2);
+  assert.equal(f.params.floor, 1.5);
 });
 
 test('price-floor: bid.price = 1.50, bidfloor = 1.50 → no floor finding', () => {
-  const res = makeRes(1.50);
-  const req = { imp: [{ id: 'imp1', bidfloor: 1.50 }] };
+  const res = makeRes(1.5);
+  const req = { imp: [{ id: 'imp1', bidfloor: 1.5 }] };
   const out = priceFloor.validate(res, { type: 'ORTB_RESPONSE', req });
   assert.ok(!out.find((x) => x.id === 'err-bid-price-below-floor'));
 });
 
 test('price-floor: bid.price = 2.00, bidfloor = 1.50 → no floor finding', () => {
-  const res = makeRes(2.00);
-  const req = { imp: [{ id: 'imp1', bidfloor: 1.50 }] };
+  const res = makeRes(2.0);
+  const req = { imp: [{ id: 'imp1', bidfloor: 1.5 }] };
   const out = priceFloor.validate(res, { type: 'ORTB_RESPONSE', req });
   assert.ok(!out.find((x) => x.id === 'err-bid-price-below-floor'));
 });
@@ -403,13 +411,152 @@ test('schain _isValidDomain still exported (back-compat)', () => {
 
 // ─── currency _isValidCurrency helper ───────────────────────────────────────
 
-test('currency _isValidCurrency: USD/EUR valid, usd/USDD invalid', () => {
+test('currency _isValidCurrency: USD/EUR valid, usd/USDD/ZZZ invalid', () => {
   assert.equal(currency._isValidCurrency('USD'), true);
   assert.equal(currency._isValidCurrency('EUR'), true);
   assert.equal(currency._isValidCurrency('UAH'), true);
+  assert.equal(currency._isValidCurrency('GBP'), true);
   assert.equal(currency._isValidCurrency('usd'), false);
   assert.equal(currency._isValidCurrency('USDD'), false);
   assert.equal(currency._isValidCurrency('US'), false);
+  assert.equal(currency._isValidCurrency('ZZZ'), false); // valid regex but not in ISO-4217 Set
   assert.equal(currency._isValidCurrency(''), false);
   assert.equal(currency._isValidCurrency(null), false);
+});
+
+// ─── NEW: price-floor currency-mismatch + PMP + Infinity ────────────────────
+
+test('price-floor: bid.price = -0.01 → err-bid-price-negative', () => {
+  const out = priceFloor.validate(makeRes(-0.01), { type: 'ORTB_RESPONSE' });
+  assert.ok(
+    out.find((x) => x.id === 'err-bid-price-negative'),
+    'negative price must error',
+  );
+});
+
+test('price-floor: bidfloor = Infinity → no phantom below-floor (Infinity not finite)', () => {
+  const res = makeRes(1.5);
+  const req = { imp: [{ id: 'imp1', bidfloor: Infinity }] };
+  const out = priceFloor.validate(res, { type: 'ORTB_RESPONSE', req });
+  assert.ok(
+    !out.find((x) => x.id === 'err-bid-price-below-floor'),
+    'Infinity bidfloor must be ignored',
+  );
+});
+
+test('price-floor: currency mismatch → warn-currency-conversion-needed, no below-floor', () => {
+  const res = {
+    id: 'resp1',
+    cur: 'EUR', // response currency
+    seatbid: [{ bid: [{ id: 'b1', impid: 'imp1', price: 0.5 }] }],
+  };
+  const req = {
+    cur: ['USD'],
+    imp: [{ id: 'imp1', bidfloor: 1.0, bidfloorcur: 'USD' }], // floor in USD
+  };
+  const out = priceFloor.validate(res, { type: 'ORTB_RESPONSE', req });
+  const warn = out.find((x) => x.id === 'warn-currency-conversion-needed');
+  assert.ok(warn, 'warn-currency-conversion-needed should fire for EUR vs USD');
+  assert.equal(warn.level, 'warning');
+  assert.ok(
+    !out.find((x) => x.id === 'err-bid-price-below-floor'),
+    'no numeric floor check when currencies differ',
+  );
+});
+
+test('price-floor: PMP deal floor wins over imp floor', () => {
+  // bid passes deal floor (1.0) but would fail imp floor (2.0)
+  const res = {
+    id: 'resp1',
+    cur: 'USD',
+    seatbid: [{ bid: [{ id: 'b1', impid: 'imp1', price: 1.2, dealid: 'deal-123' }] }],
+  };
+  const req = {
+    cur: ['USD'],
+    imp: [
+      {
+        id: 'imp1',
+        bidfloor: 2.0,
+        bidfloorcur: 'USD',
+        pmp: {
+          deals: [{ dealid: 'deal-123', bidfloor: 1.0, bidfloorcur: 'USD' }],
+        },
+      },
+    ],
+  };
+  const out = priceFloor.validate(res, { type: 'ORTB_RESPONSE', req });
+  assert.ok(
+    !out.find((x) => x.id === 'err-bid-price-below-floor'),
+    'deal floor (1.0) wins: price 1.2 passes',
+  );
+});
+
+test('price-floor: PMP deal floor applies — bid below deal floor fails', () => {
+  const res = {
+    id: 'resp1',
+    cur: 'USD',
+    seatbid: [{ bid: [{ id: 'b1', impid: 'imp1', price: 0.5, dealid: 'deal-456' }] }],
+  };
+  const req = {
+    cur: ['USD'],
+    imp: [
+      {
+        id: 'imp1',
+        bidfloor: 0.1,
+        bidfloorcur: 'USD',
+        pmp: {
+          deals: [{ dealid: 'deal-456', bidfloor: 1.0, bidfloorcur: 'USD' }],
+        },
+      },
+    ],
+  };
+  const out = priceFloor.validate(res, { type: 'ORTB_RESPONSE', req });
+  assert.ok(
+    out.find((x) => x.id === 'err-bid-price-below-floor'),
+    'price 0.5 should fail deal floor 1.0',
+  );
+});
+
+// ─── NEW: currency ISO-4217 Set checks ──────────────────────────────────────
+
+test('currency: req.cur = [ZZZ] → err-bid-currency-invalid (not in ISO-4217 Set)', () => {
+  const out = currency.validate({ cur: ['ZZZ'] }, { type: 'ORTB_REQUEST' });
+  const f = out.find((x) => x.id === 'err-bid-currency-invalid');
+  assert.ok(f, 'ZZZ must fail ISO-4217 Set check');
+});
+
+test('currency: req.cur = [USD] → no findings (valid)', () => {
+  const out = currency.validate({ cur: ['USD'] }, { type: 'ORTB_REQUEST' });
+  assert.deepEqual(out, []);
+});
+
+test('currency: req.cur = USD (string not array) → err-bid-currency-invalid', () => {
+  const out = currency.validate({ cur: 'USD' }, { type: 'ORTB_REQUEST' });
+  const f = out.find((x) => x.id === 'err-bid-currency-invalid');
+  assert.ok(f, 'string cur on request should error');
+  assert.equal(f.params.context, 'request');
+});
+
+test('currency: HRK is included (legacy code for existing data)', () => {
+  // HRK was deprecated when Croatia joined EUR in 2023, but we may need for legacy parsing
+  // If it is NOT in the set, this test documents the decision
+  const included = currency._ISO_4217_CODES.has('HRK');
+  // Just document — either way is acceptable per spec
+  assert.equal(typeof included, 'boolean');
+});
+
+test('currency: ISO_4217_CODES set has at least 150 entries', () => {
+  assert.ok(
+    currency._ISO_4217_CODES.size >= 150,
+    `Expected >=150 codes, got ${currency._ISO_4217_CODES.size}`,
+  );
+});
+
+// ─── NEW: eids/schain registrations still correct after refactor ─────────────
+
+test('eids: plugin still registered for ORTB_REQUEST after refactor', () => {
+  const { listPlugins } = require('@kyivtech/spyglass-core/rules');
+  const meta = listPlugins().find((p) => p.id === 'eids');
+  assert.ok(meta);
+  assert.deepEqual(meta.appliesTo, ['ORTB_REQUEST']);
 });

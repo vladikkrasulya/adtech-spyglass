@@ -211,8 +211,6 @@
   "err-eids-source-missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
   "err-eids-uids-empty": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
   "err-eids-uid-id-missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
-  "warn-eids-uid-atype-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
-  "err-pod-id-seq-mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "err-podseq-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "err-pod-len-mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "err-pod-len-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
@@ -225,5 +223,14 @@
   "err-bid-price-below-floor": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#322-object-imp",
   "err-tmax-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
   "warn-tmax-too-small": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
-  "warn-tmax-too-large": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest"
+  "warn-tmax-too-large": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
+  "err-podid-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
+  "err-schain-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-schain-node-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-eids-entry-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md",
+  "err-eids-uid-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md",
+  "err-eids-source-invalid-type": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md",
+  "err-eids-uid-id-invalid-type": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md",
+  "err-eids-uid-atype-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
+  "warn-currency-conversion-needed": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#361-object-bid"
 }
