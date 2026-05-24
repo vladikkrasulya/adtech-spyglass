@@ -23,12 +23,12 @@
 const FALLBACK_LANG = 'en';
 
 const CATEGORY_LABEL = {
-  all:        { en: 'All',        uk: 'Всі',        ru: 'Все'         },
-  baseline:   { en: 'Baseline',   uk: 'Baseline',   ru: 'Baseline'    },
-  privacy:    { en: 'Privacy',    uk: 'Privacy',    ru: 'Privacy'     },
-  creative:   { en: 'Creative',   uk: 'Creative',   ru: 'Creative'    },
-  crosscheck: { en: 'Crosscheck', uk: 'Crosscheck', ru: 'Crosscheck'  },
-  malicious:  { en: 'Malicious',  uk: 'Malicious',  ru: 'Malicious'   },
+  all: { en: 'All', uk: 'Всі', ru: 'Все' },
+  baseline: { en: 'Baseline', uk: 'Baseline', ru: 'Baseline' },
+  privacy: { en: 'Privacy', uk: 'Privacy', ru: 'Privacy' },
+  creative: { en: 'Creative', uk: 'Creative', ru: 'Creative' },
+  crosscheck: { en: 'Crosscheck', uk: 'Crosscheck', ru: 'Crosscheck' },
+  malicious: { en: 'Malicious', uk: 'Malicious', ru: 'Malicious' },
 };
 
 const L = {
@@ -69,10 +69,22 @@ const L = {
     ru: 'Ожидается:',
   },
   loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
-  error:   { en: 'Failed to load scenarios.', uk: 'Помилка завантаження сценаріїв.', ru: 'Ошибка загрузки сценариев.' },
-  empty:   { en: 'No scenarios match this filter.', uk: 'Немає сценаріїв за цим фільтром.', ru: 'Нет сценариев по этому фильтру.' },
-  statsAll:      { en: '{n} scenarios',      uk: '{n} сценаріїв',      ru: '{n} сценариев'       },
-  statsFiltered: { en: '{n} of {t} scenarios', uk: '{n} з {t} сценаріїв', ru: '{n} из {t} сценариев' },
+  error: {
+    en: 'Failed to load scenarios.',
+    uk: 'Помилка завантаження сценаріїв.',
+    ru: 'Ошибка загрузки сценариев.',
+  },
+  empty: {
+    en: 'No scenarios match this filter.',
+    uk: 'Немає сценаріїв за цим фільтром.',
+    ru: 'Нет сценариев по этому фильтру.',
+  },
+  statsAll: { en: '{n} scenarios', uk: '{n} сценаріїв', ru: '{n} сценариев' },
+  statsFiltered: {
+    en: '{n} of {t} scenarios',
+    uk: '{n} з {t} сценаріїв',
+    ru: '{n} из {t} сценариев',
+  },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -97,10 +109,12 @@ function localePrefix(lang) {
 // ── Renderers ────────────────────────────────────────────────────
 
 function renderShell(lang) {
-  const chips = ['all', 'baseline', 'privacy', 'creative', 'crosscheck', 'malicious'].map((cat) => {
-    const active = cat === 'all' ? ' is-active' : '';
-    return `<button type="button" class="bhv-chip${active}" data-cat="${escapeHtml(cat)}">${escapeHtml(pick(CATEGORY_LABEL[cat], lang))}</button>`;
-  }).join('');
+  const chips = ['all', 'baseline', 'privacy', 'creative', 'crosscheck', 'malicious']
+    .map((cat) => {
+      const active = cat === 'all' ? ' is-active' : '';
+      return `<button type="button" class="bhv-chip${active}" data-cat="${escapeHtml(cat)}">${escapeHtml(pick(CATEGORY_LABEL[cat], lang))}</button>`;
+    })
+    .join('');
 
   return `
     <section class="bhv-section">
@@ -131,7 +145,8 @@ function renderCard(item, lang, localeP) {
   const badgeCls = 'bhv-card__badge--' + escapeHtml(cat);
   const badgeLabel = escapeHtml(pick(CATEGORY_LABEL[cat] || CATEGORY_LABEL.baseline, lang));
 
-  const expChips = (item.expected.key_findings || []).slice(0, 2)
+  const expChips = (item.expected.key_findings || [])
+    .slice(0, 2)
     .map((f) => `<span class="bhv-card__exp-chip">${escapeHtml(f)}</span>`)
     .join('');
 
@@ -166,7 +181,8 @@ function renderCard(item, lang, localeP) {
 
 function renderGrid(items, lang, activeFilter) {
   const localeP = localePrefix(lang);
-  const filtered = activeFilter === 'all' ? items : items.filter((i) => i.category === activeFilter);
+  const filtered =
+    activeFilter === 'all' ? items : items.filter((i) => i.category === activeFilter);
   if (!filtered.length) {
     return `<p class="bhv-empty">${escapeHtml(pick(L.empty, lang))}</p>`;
   }
@@ -232,9 +248,8 @@ export default {
       grid.innerHTML = renderGrid(allItems, lang, cat);
 
       // Update stats
-      const visibleCount = cat === 'all'
-        ? allItems.length
-        : allItems.filter((i) => i.category === cat).length;
+      const visibleCount =
+        cat === 'all' ? allItems.length : allItems.filter((i) => i.category === cat).length;
       updateStats(visibleCount);
     }
 
@@ -254,9 +269,7 @@ export default {
           const card = detailsBtn.closest('.bhv-card');
           if (!card) return;
           const expanded = card.classList.toggle('is-expanded');
-          detailsBtn.textContent = expanded
-            ? pick(L.hideDetails, lang)
-            : pick(L.details, lang);
+          detailsBtn.textContent = expanded ? pick(L.hideDetails, lang) : pick(L.details, lang);
           return;
         }
 

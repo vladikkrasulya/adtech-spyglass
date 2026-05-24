@@ -40,36 +40,48 @@ function localePrefix(lang) {
 // ── Localised strings ────────────────────────────────────────────
 
 const L = {
-  title:         { en: 'Docs',          uk: 'Документація',   ru: 'Документация'   },
+  title: { en: 'Docs', uk: 'Документація', ru: 'Документация' },
   subtitle: {
     en: 'Spec coverage, finding reference, API guide, and architecture overview.',
     uk: 'Покриття специфікацій, референс finding-ID, API-гайд та архітектурний огляд.',
     ru: 'Покрытие спецификаций, референс finding-ID, API-гайд и архитектурный обзор.',
   },
-  welcomeTitle:  { en: 'Welcome to Spyglass Docs', uk: 'Ласкаво просимо до документації Spyglass', ru: 'Добро пожаловать в документацию Spyglass' },
+  welcomeTitle: {
+    en: 'Welcome to Spyglass Docs',
+    uk: 'Ласкаво просимо до документації Spyglass',
+    ru: 'Добро пожаловать в документацию Spyglass',
+  },
   welcomeBody: {
     en: 'Spyglass is an OpenRTB 2.x / 3.0 inspector and validator. Use the cards below to navigate documentation topics.',
     uk: 'Spyglass — інспектор і валідатор OpenRTB 2.x / 3.0. Використовуй картки нижче для навігації темами документації.',
     ru: 'Spyglass — инспектор и валидатор OpenRTB 2.x / 3.0. Используй карточки ниже для навигации по темам документации.',
   },
-  topicsHeading: { en: 'Topics',         uk: 'Теми',            ru: 'Темы'            },
+  topicsHeading: { en: 'Topics', uk: 'Теми', ru: 'Темы' },
 
   // Topic cards
-  cardAboutTitle:   { en: 'About',         uk: 'Про проєкт',      ru: 'О проекте'       },
+  cardAboutTitle: { en: 'About', uk: 'Про проєкт', ru: 'О проекте' },
   cardAboutDesc: {
     en: 'Full introduction: what Spyglass is, which spec versions it covers, and how it fits your stack.',
     uk: 'Повне введення: що таке Spyglass, які версії специфікацій підтримуються і як вписується у твій стек.',
     ru: 'Полное введение: что такое Spyglass, какие версии спецификаций поддерживаются и как вписывается в твой стек.',
   },
-  cardAboutAction:  { en: 'Open full docs →', uk: 'Відкрити повну документацію →', ru: 'Открыть полную документацию →' },
+  cardAboutAction: {
+    en: 'Open full docs →',
+    uk: 'Відкрити повну документацію →',
+    ru: 'Открыть полную документацию →',
+  },
 
-  cardSpecTitle:    { en: 'Spec coverage',  uk: 'Покриття специфікацій', ru: 'Покрытие спецификаций' },
+  cardSpecTitle: { en: 'Spec coverage', uk: 'Покриття специфікацій', ru: 'Покрытие спецификаций' },
   cardSpecDesc: {
     en: 'Tables mapping every oRTB 2.6 / 3.0 field to its validation rule status (covered, partial, planned).',
     uk: 'Таблиці відповідності кожного поля oRTB 2.6 / 3.0 до стану валідаційного правила (покрито, частково, в планах).',
     ru: 'Таблицы соответствия каждого поля oRTB 2.6 / 3.0 к статусу валидационного правила (покрыто, частично, в планах).',
   },
-  cardSpecAction:   { en: 'Open full docs →', uk: 'Відкрити повну документацію →', ru: 'Открыть полную документацию →' },
+  cardSpecAction: {
+    en: 'Open full docs →',
+    uk: 'Відкрити повну документацію →',
+    ru: 'Открыть полную документацию →',
+  },
 
   cardFindingsTitle: { en: 'Finding catalog', uk: 'Каталог findings', ru: 'Каталог findings' },
   cardFindingsDesc: {
@@ -77,43 +89,59 @@ const L = {
     uk: 'Кожен finding-ID з бейджем серйозності, шаблоном повідомлення та посиланням на специфікацію IAB.',
     ru: 'Каждый finding-ID с бейджем серьёзности, шаблоном сообщения и ссылкой на спецификацию IAB.',
   },
-  cardFindingsAction: { en: 'Browse catalog →', uk: 'Переглянути каталог →', ru: 'Просмотреть каталог →' },
+  cardFindingsAction: {
+    en: 'Browse catalog →',
+    uk: 'Переглянути каталог →',
+    ru: 'Просмотреть каталог →',
+  },
 
-  cardArchTitle:    { en: 'Architecture',   uk: 'Архітектура',     ru: 'Архитектура'    },
+  cardArchTitle: { en: 'Architecture', uk: 'Архітектура', ru: 'Архитектура' },
   cardArchDesc: {
     en: 'How the validator pipeline, dialect overlays, and event log fit together under the hood.',
     uk: 'Як валідаційний пайплайн, overlay діалектів та event log поєднуються під капотом.',
     ru: 'Как валидационный пайплайн, overlay диалектов и event log соединяются под капотом.',
   },
-  cardArchAction:   { en: 'Open full docs →', uk: 'Відкрити повну документацію →', ru: 'Открыть полную документацию →' },
+  cardArchAction: {
+    en: 'Open full docs →',
+    uk: 'Відкрити повну документацію →',
+    ru: 'Открыть полную документацию →',
+  },
 
-  cardIntegTitle:   { en: 'Integration',    uk: 'Інтеграція',      ru: 'Интеграция'     },
+  cardIntegTitle: { en: 'Integration', uk: 'Інтеграція', ru: 'Интеграция' },
   cardIntegDesc: {
     en: 'REST API reference, authentication, batch analysis, and embed / stream endpoints.',
     uk: 'REST API референс, автентифікація, пакетний аналіз та embed / stream ендпоінти.',
     ru: 'REST API референс, аутентификация, пакетный анализ и embed / stream эндпоинты.',
   },
-  cardIntegAction:  { en: 'Open full docs →', uk: 'Відкрити повну документацію →', ru: 'Открыть полную документацию →' },
+  cardIntegAction: {
+    en: 'Open full docs →',
+    uk: 'Відкрити повну документацію →',
+    ru: 'Открыть полную документацию →',
+  },
 
   // Finding catalog page
-  catalogTitle:   { en: 'Finding catalog', uk: 'Каталог findings', ru: 'Каталог findings' },
+  catalogTitle: { en: 'Finding catalog', uk: 'Каталог findings', ru: 'Каталог findings' },
   catalogSub: {
     en: 'Auto-generated from finding message files. Each ID maps to a severity, human-readable message, and IAB spec section.',
     uk: 'Автоматично згенеровано з файлів повідомлень. Кожен ID → серйозність, читабельне повідомлення, розділ специфікації IAB.',
     ru: 'Автоматически сгенерировано из файлов сообщений. Каждый ID → серьёзность, читаемое сообщение, раздел спецификации IAB.',
   },
-  chipAll:    { en: 'All',     uk: 'Всі',    ru: 'Все'     },
-  chipError:  { en: 'Error',   uk: 'Помилки', ru: 'Ошибки' },
-  chipWarn:   { en: 'Warning', uk: 'Попередження', ru: 'Предупреждения' },
-  chipInfo:   { en: 'Info',    uk: 'Інфо',   ru: 'Инфо'    },
-  colId:      { en: 'Finding ID',   uk: 'Finding ID',   ru: 'Finding ID'   },
-  colSev:     { en: 'Severity',     uk: 'Серйозність',  ru: 'Серьёзность'  },
-  colMsg:     { en: 'Message',      uk: 'Повідомлення', ru: 'Сообщение'    },
-  colSpec:    { en: 'Spec ref',     uk: 'Специфікація', ru: 'Спецификация' },
-  specLink:   { en: 'IAB spec ↗',   uk: 'IAB spec ↗',   ru: 'IAB spec ↗'   },
-  loading:    { en: 'Loading…',     uk: 'Завантаження…', ru: 'Загрузка…'   },
-  errorLoad:  { en: 'Failed to load catalog:', uk: 'Не вдалося завантажити каталог:', ru: 'Не удалось загрузить каталог:' },
-  backDocs:   { en: 'Docs', uk: 'Документація', ru: 'Документация' },
+  chipAll: { en: 'All', uk: 'Всі', ru: 'Все' },
+  chipError: { en: 'Error', uk: 'Помилки', ru: 'Ошибки' },
+  chipWarn: { en: 'Warning', uk: 'Попередження', ru: 'Предупреждения' },
+  chipInfo: { en: 'Info', uk: 'Інфо', ru: 'Инфо' },
+  colId: { en: 'Finding ID', uk: 'Finding ID', ru: 'Finding ID' },
+  colSev: { en: 'Severity', uk: 'Серйозність', ru: 'Серьёзность' },
+  colMsg: { en: 'Message', uk: 'Повідомлення', ru: 'Сообщение' },
+  colSpec: { en: 'Spec ref', uk: 'Специфікація', ru: 'Спецификация' },
+  specLink: { en: 'IAB spec ↗', uk: 'IAB spec ↗', ru: 'IAB spec ↗' },
+  loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
+  errorLoad: {
+    en: 'Failed to load catalog:',
+    uk: 'Не вдалося завантажити каталог:',
+    ru: 'Не удалось загрузить каталог:',
+  },
+  backDocs: { en: 'Docs', uk: 'Документація', ru: 'Документация' },
   findingsCount: { en: '{n} findings', uk: '{n} findings', ru: '{n} findings' },
 };
 
@@ -165,9 +193,10 @@ function renderOverview(lang) {
     },
   ];
 
-  const cardsHtml = topicCards.map(c => {
-    const extClass = c.external ? ' docs-card--external' : '';
-    return `
+  const cardsHtml = topicCards
+    .map((c) => {
+      const extClass = c.external ? ' docs-card--external' : '';
+      return `
       <a class="docs-card${extClass}" href="${escapeHtml(c.href)}"${c.external ? ' data-external' : ''}>
         <span class="docs-card__icon">${c.icon}</span>
         <h3 class="docs-card__title">${escapeHtml(pick(L[c.titleKey], lang))}</h3>
@@ -175,7 +204,8 @@ function renderOverview(lang) {
         <span class="docs-card__action">${escapeHtml(pick(L[c.actionKey], lang))}</span>
       </a>
     `;
-  }).join('');
+    })
+    .join('');
 
   return `
     <section class="docs-section">
@@ -225,11 +255,12 @@ function renderCatalogShell(lang) {
 }
 
 function renderTable(items, lang) {
-  const rows = items.map(item => {
-    const specCell = item.specRef
-      ? `<a href="${escapeHtml(item.specRef)}" target="_blank" rel="noopener noreferrer">${escapeHtml(pick(L.specLink, lang))}</a>`
-      : '—';
-    return `
+  const rows = items
+    .map((item) => {
+      const specCell = item.specRef
+        ? `<a href="${escapeHtml(item.specRef)}" target="_blank" rel="noopener noreferrer">${escapeHtml(pick(L.specLink, lang))}</a>`
+        : '—';
+      return `
       <tr id="finding-${escapeHtml(item.id)}">
         <td class="col-id">${escapeHtml(item.id)}</td>
         <td>${severityBadge(item.severity)}</td>
@@ -237,7 +268,8 @@ function renderTable(items, lang) {
         <td class="col-spec">${specCell}</td>
       </tr>
     `;
-  }).join('');
+    })
+    .join('');
 
   if (!rows) {
     return `<p class="docs-empty">—</p>`;
@@ -283,10 +315,10 @@ async function mountCatalog(root, lang, signal) {
 
   function applyFilter(filter) {
     activeFilter = filter;
-    const filtered = filter === 'all' ? allItems : allItems.filter(i => i.severity === filter);
+    const filtered = filter === 'all' ? allItems : allItems.filter((i) => i.severity === filter);
 
     // Update chip active states
-    root.querySelectorAll('.docs-chip').forEach(chip => {
+    root.querySelectorAll('.docs-chip').forEach((chip) => {
       chip.classList.toggle('is-active', chip.dataset.sev === filter);
     });
 
@@ -299,7 +331,7 @@ async function mountCatalog(root, lang, signal) {
   }
 
   // Chip click delegation
-  root.querySelectorAll('.docs-chip').forEach(chip => {
+  root.querySelectorAll('.docs-chip').forEach((chip) => {
     chip.addEventListener('click', () => applyFilter(chip.dataset.sev), { signal });
   });
 

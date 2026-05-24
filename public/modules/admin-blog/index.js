@@ -16,17 +16,17 @@ import { escapeHtml } from '/core/utils.js';
 const TOKEN_KEY = 'spyglass_admin_token';
 
 const L = {
-  title:     { en: 'Blog Admin',      uk: 'Адмін блогу',      ru: 'Админ блога'    },
-  authTitle: { en: 'Admin Auth',      uk: 'Авторизація',       ru: 'Авторизация'    },
-  authLabel: { en: 'Bearer Token',    uk: 'Bearer-токен',      ru: 'Bearer-токен'   },
-  authBtn:   { en: 'Connect',         uk: 'Підключитись',      ru: 'Подключиться'   },
-  loading:   { en: 'Loading…',        uk: 'Завантаження…',     ru: 'Загрузка…'      },
-  noItems:   { en: 'No pending drafts.', uk: 'Немає draft-ів.', ru: 'Нет черновиков.' },
-  refresh:   { en: '↻ Refresh',       uk: '↻ Оновити',         ru: '↻ Обновить'     },
-  logout:    { en: 'Logout',          uk: 'Вийти',             ru: 'Выйти'          },
-  publish:   { en: 'Publish',         uk: 'Опублікувати',      ru: 'Опубликовать'   },
-  promote:   { en: 'Promote →MD',     uk: 'Promote →MD',       ru: 'Promote →MD'    },
-  reject:    { en: 'Reject',          uk: 'Відхилити',         ru: 'Отклонить'      },
+  title: { en: 'Blog Admin', uk: 'Адмін блогу', ru: 'Админ блога' },
+  authTitle: { en: 'Admin Auth', uk: 'Авторизація', ru: 'Авторизация' },
+  authLabel: { en: 'Bearer Token', uk: 'Bearer-токен', ru: 'Bearer-токен' },
+  authBtn: { en: 'Connect', uk: 'Підключитись', ru: 'Подключиться' },
+  loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
+  noItems: { en: 'No pending drafts.', uk: 'Немає draft-ів.', ru: 'Нет черновиков.' },
+  refresh: { en: '↻ Refresh', uk: '↻ Оновити', ru: '↻ Обновить' },
+  logout: { en: 'Logout', uk: 'Вийти', ru: 'Выйти' },
+  publish: { en: 'Publish', uk: 'Опублікувати', ru: 'Опубликовать' },
+  promote: { en: 'Promote →MD', uk: 'Promote →MD', ru: 'Promote →MD' },
+  reject: { en: 'Reject', uk: 'Відхилити', ru: 'Отклонить' },
   slugPrompt: { en: 'Enter slug for this post:', uk: 'Введіть slug:', ru: 'Введите slug:' },
 };
 
@@ -36,17 +36,29 @@ function pick(map, lang) {
 }
 
 function getSavedToken() {
-  try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
 }
 function saveToken(t) {
-  try { sessionStorage.setItem(TOKEN_KEY, t); } catch {}
+  try {
+    sessionStorage.setItem(TOKEN_KEY, t);
+  } catch {}
 }
 function clearToken() {
-  try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+  } catch {}
 }
 
 function formatDate(s) {
-  try { return new Date(s).toLocaleString(); } catch { return s || ''; }
+  try {
+    return new Date(s).toLocaleString();
+  } catch {
+    return s || '';
+  }
 }
 
 export default {
@@ -80,14 +92,18 @@ export default {
           </form>
         </section>
       `;
-      root.querySelector('#authForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const val = root.querySelector('#tokenInput').value.trim();
-        if (!val) return;
-        token = val;
-        saveToken(token);
-        loadDrafts();
-      }, { signal: ctx.signal });
+      root.querySelector('#authForm').addEventListener(
+        'submit',
+        (e) => {
+          e.preventDefault();
+          const val = root.querySelector('#tokenInput').value.trim();
+          if (!val) return;
+          token = val;
+          saveToken(token);
+          loadDrafts();
+        },
+        { signal: ctx.signal },
+      );
     }
 
     async function loadDrafts() {
@@ -103,12 +119,18 @@ export default {
           <div id="draftsContainer"><p class="ablog-loading">${escapeHtml(pick(L.loading, lang))}</p></div>
         </section>
       `;
-      root.querySelector('#refreshBtn').addEventListener('click', () => loadDrafts(), { signal: ctx.signal });
-      root.querySelector('#logoutBtn').addEventListener('click', () => {
-        clearToken();
-        token = '';
-        renderAuthForm();
-      }, { signal: ctx.signal });
+      root
+        .querySelector('#refreshBtn')
+        .addEventListener('click', () => loadDrafts(), { signal: ctx.signal });
+      root.querySelector('#logoutBtn').addEventListener(
+        'click',
+        () => {
+          clearToken();
+          token = '';
+          renderAuthForm();
+        },
+        { signal: ctx.signal },
+      );
 
       await fetchAndRender();
     }
@@ -137,15 +159,20 @@ export default {
 
         // Wire action buttons
         container.querySelectorAll('[data-action]').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const id = btn.dataset.id;
-            const action = btn.dataset.action;
-            await handleAction(id, action);
-          }, { signal: ctx.signal });
+          btn.addEventListener(
+            'click',
+            async () => {
+              const id = btn.dataset.id;
+              const action = btn.dataset.action;
+              await handleAction(id, action);
+            },
+            { signal: ctx.signal },
+          );
         });
       } catch (e) {
         if (e.name === 'AbortError') return;
-        if (container) container.innerHTML = `<p class="ablog-error">Error: ${escapeHtml(e.message)}</p>`;
+        if (container)
+          container.innerHTML = `<p class="ablog-error">Error: ${escapeHtml(e.message)}</p>`;
       }
     }
 

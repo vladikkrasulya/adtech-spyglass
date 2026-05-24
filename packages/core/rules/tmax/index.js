@@ -17,8 +17,8 @@ const { LEVELS, makeFinding } = require('../../findings');
 
 const F = makeFinding;
 
-const TMAX_MIN_WARN = 50;    // ms below which we warn
-const TMAX_MAX_WARN = 3000;  // ms above which we warn
+const TMAX_MIN_WARN = 50; // ms below which we warn
+const TMAX_MAX_WARN = 3000; // ms above which we warn
 
 function validate(req /*, ctx */) {
   const findings = [];
@@ -35,12 +35,16 @@ function validate(req /*, ctx */) {
 
   // Warn on suspiciously small values
   if (tmax < TMAX_MIN_WARN) {
-    findings.push(F('warn-tmax-too-small', LEVELS.WARNING, 'tmax', { val: tmax, min: TMAX_MIN_WARN }));
+    findings.push(
+      F('warn-tmax-too-small', LEVELS.WARNING, 'tmax', { val: tmax, min: TMAX_MIN_WARN }),
+    );
   }
 
   // Warn on suspiciously large values
   if (tmax > TMAX_MAX_WARN) {
-    findings.push(F('warn-tmax-too-large', LEVELS.WARNING, 'tmax', { val: tmax, max: TMAX_MAX_WARN }));
+    findings.push(
+      F('warn-tmax-too-large', LEVELS.WARNING, 'tmax', { val: tmax, max: TMAX_MAX_WARN }),
+    );
   }
 
   return findings;
@@ -48,7 +52,8 @@ function validate(req /*, ctx */) {
 
 module.exports = {
   id: 'tmax',
-  description: 'Validates req.tmax: must be a positive integer; warns when below 50ms or above 3000ms.',
+  description:
+    'Validates req.tmax: must be a positive integer; warns when below 50ms or above 3000ms.',
   appliesTo: ['ORTB_REQUEST'],
   validate,
 };

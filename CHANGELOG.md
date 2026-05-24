@@ -17,7 +17,6 @@ All notable changes to Spyglass are documented here. Format follows
 - Wiki.kadam.net source link removed; replaced with generic note
 - Message prose updated to drop partner brand names across en/ru/uk locales
 
-
 ## [Unreleased]
 
 ### v0.51.0 — feat: URL-style request validator + Pushub decoder (2026-05-23)

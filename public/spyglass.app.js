@@ -1077,20 +1077,22 @@ export async function mountInspector(root, ctx) {
     if (!findings || !findings.length) {
       return { score: 100, errors: 0, warnings: 0, info: 0, deductions: 0 };
     }
-    let errors = 0, warnings = 0, info = 0;
-    findings.forEach(function(f) {
+    let errors = 0,
+      warnings = 0,
+      info = 0;
+    findings.forEach(function (f) {
       const lvl = f.level === 'danger' ? 'error' : f.level;
       if (lvl === 'error') errors++;
       else if (lvl === 'warning') warnings++;
       else info++;
     });
-    const deductions = (errors * 25) + (warnings * 10) + (info * 2);
+    const deductions = errors * 25 + warnings * 10 + info * 2;
     const score = Math.max(0, Math.min(100, 100 - deductions));
     return { score: score, errors: errors, warnings: warnings, info: info, deductions: deductions };
   }
   window.computeQualityScore = computeQualityScore;
 
-    // ── Feature #13: Request Analysis Summary Strip ─────────────────────────
+  // ── Feature #13: Request Analysis Summary Strip ─────────────────────────
   // Renders a thin horizontal strip above the tab-bar showing 5 key
   // parameters extracted from the BidRequest JSON. Injected once into the
   // DOM between .format-bar and .tab-bar; updated on every analyze.
@@ -1161,8 +1163,18 @@ export async function mountInspector(root, ctx) {
     const make = (dev.make || '').toLowerCase();
     const os = (dev.os || '').toLowerCase();
     const ua = (dev.ua || '').toLowerCase();
-    if (make.includes('apple') || os.includes('ios') || os.includes('macos') || ua.includes('iphone') || ua.includes('ipad')) {
-      deviceLabel = 'Apple' + (os ? ' (' + (os.includes('ios') ? 'iOS' : os.includes('macos') ? 'macOS' : dev.os) + ')' : '');
+    if (
+      make.includes('apple') ||
+      os.includes('ios') ||
+      os.includes('macos') ||
+      ua.includes('iphone') ||
+      ua.includes('ipad')
+    ) {
+      deviceLabel =
+        'Apple' +
+        (os
+          ? ' (' + (os.includes('ios') ? 'iOS' : os.includes('macos') ? 'macOS' : dev.os) + ')'
+          : '');
     } else if (make.includes('google') || os.includes('android') || ua.includes('android')) {
       deviceLabel = 'Google (Android)';
     } else if (os.includes('windows') || ua.includes('windows')) {
@@ -1188,62 +1200,116 @@ export async function mountInspector(root, ctx) {
     let pricingValue = escapeHtml(t('strip.pricing.no_floor'));
     if (imp0 && imp0.bidfloor != null) {
       const cur = imp0.bidfloorcur || (req.cur && req.cur[0]) || 'USD';
-      pricingValue =
-        'Floor: $' + Number(imp0.bidfloor).toFixed(2) + ' · ' + escapeHtml(cur);
+      pricingValue = 'Floor: $' + Number(imp0.bidfloor).toFixed(2) + ' · ' + escapeHtml(cur);
     }
 
     const stripHtml =
       '<div class="analysis-strip-block">' +
-        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.version')) + '</div>' +
-        '<div class="analysis-strip-value"><span class="ver-badge">' + escapeHtml(version) + '</span></div>' +
+      '<div class="analysis-strip-label">' +
+      escapeHtml(t('strip.label.version')) +
+      '</div>' +
+      '<div class="analysis-strip-value"><span class="ver-badge">' +
+      escapeHtml(version) +
+      '</span></div>' +
       '</div>' +
       '<div class="analysis-strip-block">' +
-        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.traffic')) + '</div>' +
-        '<div class="analysis-strip-value">' + escapeHtml(trafficValue) + '</div>' +
+      '<div class="analysis-strip-label">' +
+      escapeHtml(t('strip.label.traffic')) +
+      '</div>' +
+      '<div class="analysis-strip-value">' +
+      escapeHtml(trafficValue) +
+      '</div>' +
       '</div>' +
       '<div class="analysis-strip-block">' +
-        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.device')) + '</div>' +
-        '<div class="analysis-strip-value">' + escapeHtml(deviceLabel) + '</div>' +
+      '<div class="analysis-strip-label">' +
+      escapeHtml(t('strip.label.device')) +
+      '</div>' +
+      '<div class="analysis-strip-value">' +
+      escapeHtml(deviceLabel) +
+      '</div>' +
       '</div>' +
       '<div class="analysis-strip-block">' +
-        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.privacy')) + '</div>' +
-        '<div class="analysis-strip-value">' + privValue + '</div>' +
+      '<div class="analysis-strip-label">' +
+      escapeHtml(t('strip.label.privacy')) +
+      '</div>' +
+      '<div class="analysis-strip-value">' +
+      privValue +
+      '</div>' +
       '</div>' +
       '<div class="analysis-strip-block">' +
-        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.pricing')) + '</div>' +
-        '<div class="analysis-strip-value">' + pricingValue + '</div>' +
+      '<div class="analysis-strip-label">' +
+      escapeHtml(t('strip.label.pricing')) +
+      '</div>' +
+      '<div class="analysis-strip-value">' +
+      pricingValue +
+      '</div>' +
       '</div>';
 
     // Quality Pill (Feature #12) — 6th block
-    const qualityBlock = (function() {
+    const qualityBlock = (function () {
       if (!findings || !findings.length) return '';
       const q = computeQualityScore(findings);
       const s = q.score;
       let tierClass, tierLabel;
-      if (s >= 90) { tierClass = 'q-excellent'; tierLabel = t('quality.status.excellent'); }
-      else if (s >= 70) { tierClass = 'q-good'; tierLabel = t('quality.status.good'); }
-      else if (s >= 40) { tierClass = 'q-needs-attention'; tierLabel = t('quality.status.needs_attention'); }
-      else { tierClass = 'q-critical'; tierLabel = t('quality.status.critical'); }
+      if (s >= 90) {
+        tierClass = 'q-excellent';
+        tierLabel = t('quality.status.excellent');
+      } else if (s >= 70) {
+        tierClass = 'q-good';
+        tierLabel = t('quality.status.good');
+      } else if (s >= 40) {
+        tierClass = 'q-needs-attention';
+        tierLabel = t('quality.status.needs_attention');
+      } else {
+        tierClass = 'q-critical';
+        tierLabel = t('quality.status.critical');
+      }
 
       // Build tooltip text
       const deductionParts = [];
-      if (q.errors) deductionParts.push(q.errors + ' ' + t('quality.tooltip.error') + ' (-' + (q.errors * 25) + ')');
-      if (q.warnings) deductionParts.push(q.warnings + ' ' + t('quality.tooltip.warning') + ' (-' + (q.warnings * 10) + ')');
-      if (q.info) deductionParts.push(q.info + ' ' + t('quality.tooltip.info') + ' (-' + (q.info * 2) + ')');
-      const tooltipText = t('quality.tooltip.base') + ': 100 · ' +
-        t('quality.tooltip.deductions') + ': ' +
+      if (q.errors)
+        deductionParts.push(
+          q.errors + ' ' + t('quality.tooltip.error') + ' (-' + q.errors * 25 + ')',
+        );
+      if (q.warnings)
+        deductionParts.push(
+          q.warnings + ' ' + t('quality.tooltip.warning') + ' (-' + q.warnings * 10 + ')',
+        );
+      if (q.info)
+        deductionParts.push(q.info + ' ' + t('quality.tooltip.info') + ' (-' + q.info * 2 + ')');
+      const tooltipText =
+        t('quality.tooltip.base') +
+        ': 100 · ' +
+        t('quality.tooltip.deductions') +
+        ': ' +
         (deductionParts.length ? deductionParts.join(', ') : '0') +
-        ' · ' + t('quality.tooltip.total') + ': ' + s + '/100';
+        ' · ' +
+        t('quality.tooltip.total') +
+        ': ' +
+        s +
+        '/100';
 
-      return '<div class="analysis-strip-block analysis-strip-quality">' +
-        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.quality')) + '</div>' +
-        '<div class="analysis-strip-value">' +
-          '<span class="quality-pill ' + tierClass + '" data-tooltip="' + escapeHtml(tooltipText) + '" data-score="' + s + '">' +
-            '<span class="quality-score">0</span>' +
-            '<span class="quality-status">' + escapeHtml(tierLabel) + '</span>' +
-          '</span>' +
+      return (
+        '<div class="analysis-strip-block analysis-strip-quality">' +
+        '<div class="analysis-strip-label">' +
+        escapeHtml(t('strip.label.quality')) +
         '</div>' +
-      '</div>';
+        '<div class="analysis-strip-value">' +
+        '<span class="quality-pill ' +
+        tierClass +
+        '" data-tooltip="' +
+        escapeHtml(tooltipText) +
+        '" data-score="' +
+        s +
+        '">' +
+        '<span class="quality-score">0</span>' +
+        '<span class="quality-status">' +
+        escapeHtml(tierLabel) +
+        '</span>' +
+        '</span>' +
+        '</div>' +
+        '</div>'
+      );
     })();
 
     const fullStripHtml = stripHtml + qualityBlock;
@@ -1393,31 +1459,34 @@ export async function mountInspector(root, ctx) {
 
     // Initial render
     let currentFilter = 'all';
-    container.innerHTML =
-      (headerHtml || '') + chipsHtml(currentFilter) + listHtml(currentFilter);
+    container.innerHTML = (headerHtml || '') + chipsHtml(currentFilter) + listHtml(currentFilter);
 
     // Wire chip clicks
-    container.addEventListener('click', function onChipClick(e) {
-      const chip = e.target.closest('[data-sev-filter]');
-      if (!chip) return;
-      const newFilter = chip.dataset.sevFilter;
-      if (newFilter === currentFilter) return;
+    container.addEventListener(
+      'click',
+      function onChipClick(e) {
+        const chip = e.target.closest('[data-sev-filter]');
+        if (!chip) return;
+        const newFilter = chip.dataset.sevFilter;
+        if (newFilter === currentFilter) return;
 
-      // Fade animation
-      const list = container.querySelector('.findings-list, .severity-empty-state');
-      if (list) list.style.opacity = '0';
+        // Fade animation
+        const list = container.querySelector('.findings-list, .severity-empty-state');
+        if (list) list.style.opacity = '0';
 
-      setTimeout(function () {
-        currentFilter = newFilter;
-        // Re-render chips + list
-        const chipsEl = container.querySelector('.severity-chips');
-        if (chipsEl) chipsEl.outerHTML = chipsHtml(currentFilter);
-        // Re-render chips (the above outerHTML swap disconnects old listener,
-        // but that's ok since the listener is on the container, not chips)
-        container.innerHTML =
-          (headerHtml || '') + chipsHtml(currentFilter) + listHtml(currentFilter);
-      }, 180);
-    }, { once: false });
+        setTimeout(function () {
+          currentFilter = newFilter;
+          // Re-render chips + list
+          const chipsEl = container.querySelector('.severity-chips');
+          if (chipsEl) chipsEl.outerHTML = chipsHtml(currentFilter);
+          // Re-render chips (the above outerHTML swap disconnects old listener,
+          // but that's ok since the listener is on the container, not chips)
+          container.innerHTML =
+            (headerHtml || '') + chipsHtml(currentFilter) + listHtml(currentFilter);
+        }, 180);
+      },
+      { once: false },
+    );
   }
   window.renderSeverityTabs = renderSeverityTabs;
 
@@ -3261,7 +3330,9 @@ export async function mountInspector(root, ctx) {
     // immediately reverts profile pill → sign-in pill.
     try {
       window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: null } }));
-    } catch (_) { /* non-fatal */ }
+    } catch (_) {
+      /* non-fatal */
+    }
     toast(t('toast.signed_out'), 'success');
   };
 
@@ -3719,7 +3790,9 @@ export async function mountInspector(root, ctx) {
       // re-render the sign-in pill → profile pill without a page reload.
       try {
         window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: u } }));
-      } catch (_) { /* never block auth on event dispatch */ }
+      } catch (_) {
+        /* never block auth on event dispatch */
+      }
     },
     get currentSampleId() {
       return _currentSampleId;
@@ -4642,12 +4715,16 @@ export async function mountInspector(root, ctx) {
           case 'vendor-paste-req':
             return (
               window._vendorRef &&
-              window._vendorRef.pasteIntoReq(window._vendorRef.VENDOR_REF.templates[el.dataset.template])
+              window._vendorRef.pasteIntoReq(
+                window._vendorRef.VENDOR_REF.templates[el.dataset.template],
+              )
             );
           case 'vendor-paste-res':
             return (
               window._vendorRef &&
-              window._vendorRef.pasteIntoRes(window._vendorRef.VENDOR_REF.templates[el.dataset.template])
+              window._vendorRef.pasteIntoRes(
+                window._vendorRef.VENDOR_REF.templates[el.dataset.template],
+              )
             );
           case 'vendor-paste-string':
             return (

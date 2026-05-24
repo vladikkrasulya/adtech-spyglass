@@ -17,6 +17,7 @@ This is the canonical roadmap for Spyglass / ortbtools.com. Single source of tru
 ## Mini-tasks (not stage-bound)
 
 ### Domain migration — spyglass.kyivtech.com.ua → ortbtools.com
+
 Status: pending. Configure 301 redirect from `spyglass.kyivtech.com.ua` to `ortbtools.com` for 60-90 days, then drop the subdomain DNS record. Verify via Cloudflare page rules or the cloudflared tunnel config (check `~/server/cloudflared/` or `/srv/DATA/Stacks/cloudflared/` on OptiPlex for the right approach). ~1 hour config + 60-90 days passive monitoring.
 
 ---
@@ -39,23 +40,25 @@ The decision: Spyglass becomes a multi-section site with a **wide grouped sideba
 
 **8 sections:**
 
-| Path | Purpose |
-|------|---------|
-| `/inspector` (default) | Paste and validate — existing core product |
-| `/live` | Synthetic SSE stream of oRTB specimens at 60–120 req/min |
-| `/behavior` | Behavior corpus labelling UI and confusion matrix |
-| `/library` | Zero-knowledge saved samples (moved from `/account`) |
-| `/dialects` | Public catalog of known dialects and user dialect builder |
-| `/blog` | Editorial posts (markdown) and firehose-sourced posts (ClickHouse) |
-| `/docs` | Reference: spec coverage, finding IDs, API, integration guide |
-| `/account` | Auth and profile settings (login/logout/password) |
+| Path                   | Purpose                                                            |
+| ---------------------- | ------------------------------------------------------------------ |
+| `/inspector` (default) | Paste and validate — existing core product                         |
+| `/live`                | Synthetic SSE stream of oRTB specimens at 60–120 req/min           |
+| `/behavior`            | Behavior corpus labelling UI and confusion matrix                  |
+| `/library`             | Zero-knowledge saved samples (moved from `/account`)               |
+| `/dialects`            | Public catalog of known dialects and user dialect builder          |
+| `/blog`                | Editorial posts (markdown) and firehose-sourced posts (ClickHouse) |
+| `/docs`                | Reference: spec coverage, finding IDs, API, integration guide      |
+| `/account`             | Auth and profile settings (login/logout/password)                  |
 
 **Sidebar grouping:**
+
 - РОБОТА: Інспектор / Стрім / Behavior
 - ДАНІ: Зразки / Діалекти
 - ЗНАННЯ: Блог / Доки
 
 **Architectural choices:**
+
 - Path-based routing (pushState), single domain, single Node process
 - Sidebar: ~220px on desktop; drawer below 1024px breakpoint (tablets 768-1023px get the drawer because the inspector dual-panel needs the horizontal space)
 - Topbar: logo, disabled search slot (`🔎 пошук — скоро`, real search Stage 5+), lang switcher, theme toggle, profile avatar (~44px)
@@ -79,6 +82,7 @@ The goal: wire the URL structure and chrome without building any new feature.
 7. **Root redirect** — `server.js` route `GET /` issues `301` to `/inspector`.
 
 **Acceptance criteria:**
+
 - `ortbtools.com/` redirects 301 to `ortbtools.com/inspector`
 - `ortbtools.com/inspector` loads the full existing inspector; all 715+ tests pass
 - `ortbtools.com/live` renders a stub with Stage 2 copy
@@ -90,6 +94,7 @@ The goal: wire the URL structure and chrome without building any new feature.
 **Risk:** `public/spyglass.app.js` is 4785 lines and bootstraps many `window.*` globals. The mount/unmount lifecycle needs care to avoid leaks when navigating away from `/inspector`. The existing `mountInspector()` cleanup list (which already covers `window.toast`, `window.openEmbedModal`, etc.) is the model to follow.
 
 **Files touched:**
+
 - `public/modules/nav/` — new
 - `public/modules/topbar/` — new
 - `public/modules/router/` — new
@@ -135,11 +140,13 @@ The User Dialects feature (v0.42.0) lets logged-in users create custom dialect o
 Activates the `/live` section.
 
 **Backend (already largely built):**
+
 - `modules/stream/handler.js` and `streamGenerator` in `server.js` already exist. Generator emits synthetic oRTB specimens at ~1Hz with a 15s heartbeat comment to keep CF/nginx from killing idle connections.
 - Add `GET /api/v1/stream/stats` — returns in-memory aggregate of last 1000 specimens: format distribution, top-5 finding IDs by count, oRTB version mix. Drives the mini-dashboard above the stream rows.
 - Add `cached_specimens` SQLite table: `(hash TEXT PK, json TEXT, created_at INTEGER, last_accessed INTEGER)`. Hash = `sha256(canonical-json).slice(0,12)`. TTL: 90 days from `last_accessed`. Route `GET /r/:hash` serves the cached specimen into the inspector. (No route conflict — verified via grep of `server.js` + `modules/*/handler.js`; no existing route matches `/r/*` or `/r/:hash`.)
 
 **Frontend:**
+
 - `public/stream.html` exists (211 lines, canonical URL `ortbtools.com/stream`) but is a standalone page. Absorb into the section framework from Stage 0.
 - `public/modules/live/index.js` — connects to `/api/v1/stream` (SSE), appends rows to a virtual scroll list.
 - Each row: timestamp, format pill, oRTB version badge, finding count. Click navigates to `/inspector?specimen={hash}`.
@@ -147,6 +154,7 @@ Activates the `/live` section.
 - Pause/resume button toggles SSE subscribe/unsubscribe.
 
 **Acceptance criteria:**
+
 - Stream visible at `/live` with rows updating at 60–120 req/min
 - Filter by format narrows stream rows and updates URL
 - Click a row — specimen loads in `/inspector` with all tabs working
@@ -154,6 +162,7 @@ Activates the `/live` section.
 - Stats panel shows format breakdown and top-5 finding IDs
 
 **Files touched:**
+
 - `public/modules/live/` — new
 - `public/stream.html` — absorbed into section framework
 - `modules/stream/handler.js` — add `/api/v1/stream/stats`
@@ -175,16 +184,19 @@ Frontmatter keys: `title`, `date` (ISO-8601), `category` (новини|розб�
 The Mozok news pipeline surfaces adtech articles daily. A subset should become Spyglass blog posts. Schema for `analytics.blog_drafts`: `(id UUID, title String, url String, summary String, category String, lang String, created_at DateTime64, approved_at Nullable(DateTime64), approved_by Nullable(String), slug Nullable(String), status Enum8('pending'=1, 'published'=2, 'promoted'=3))`.
 
 Admin page `/admin/blog` (auth-gated): lists unapproved candidates; two actions per draft:
+
 - **Approve + publish to DB** (default, faster, auto-refreshable, no git): draft moves from `analytics.blog_drafts` → `analytics.blog_posts` (published table), served from DB. Status set to `published`.
 - **Approve + promote to markdown** (for evergreen / lasting content): writes `content/posts/{lang}/{slug}.md` from the draft; marks CH row as `promoted` (kept as audit trail). Requires manual `git add && git commit` after — surfaced in admin UI as a hint. Default UI choice = DB publish; markdown promotion is opt-in per post.
 
 **Additional deliverables:**
+
 - `GET /blog/rss.xml` — last 20 posts across locales
 - `/blog` listing: cards sorted by date, category filter, locale switcher per post
 - Three categories: новини (adtech news from firehose), розбори (technical breakdowns), гайди (integration guides)
 - Per-locale slug routing: `/blog/uk/ortb-3-zero-adoption`, `/blog/en/ortb-3-zero-adoption`
 
 **Files touched:**
+
 - `content/posts/` — new directory, git-tracked
 - `public/modules/blog/` — new
 - `modules/blog/handler.js` — new (list, slug, rss routes)
@@ -200,12 +212,14 @@ Activates the `/behavior` section.
 The corpus capture pipeline shipped in v0.29.0. `modules/corpus/handler.js` exposes: `GET /api/behavior/corpus` (list with optional `?label=` filter), `POST /api/behavior/corpus` (save new entry), `DELETE /api/behavior/corpus/:id`, `GET /api/behavior/corpus/matrix` (confusion matrix runner). These routes work. What is missing is a first-class UI.
 
 **Deliverables:**
+
 1. `/behavior` section with three sub-tabs: Corpus / Matrix / Patterns
 2. Corpus tab — lists saved behavior entries with tag filter (legitimate/fraud/ambiguous) and delete button
 3. Matrix tab — calls `/api/behavior/corpus/matrix` and renders per-pattern FP/FN table (currently API-only)
 4. Two deferred patterns (`bot.center_pixel_perfect`, `bot.double_too_fast`) — ship once the corpus has at least 100 labelled samples per pattern. Deferred status set in `docs/next-chapters-2026-05-09.md` remains valid.
 
 **Files touched:**
+
 - `public/modules/behavior/` — new
 - `modules/corpus/handler.js` — no changes needed; wire UI to existing routes
 
@@ -218,6 +232,7 @@ Self-validation analytics surface. Aggregates everything a user has run through 
 Inspiration: openrtb.ovh ships an aggregate route titled "All requests combined" — proves there is appetite for a personal aggregate view alongside per-sample validation.
 
 **Two scopes, decide at build time:**
+
 - Local-only: IndexedDB-backed, zero server cost, no auth required. Each user sees only their own browser history.
 - Account-scoped: synced via ZK library (already encrypted server-side), available across devices for logged-in users. Adds a query layer on top of the existing `cached_specimens` table.
 
@@ -240,7 +255,7 @@ Ordered by likelihood it will eventually matter:
    - **Baseline checks**: `TMAX_INVALID`, `CURRENCY_FORMAT`, `BANNER_POS_NONSTANDARD`, `BANNER_MIMES_RECOMMENDED`
    - **Native granularity**: `NATIVE_ASSET_TYPE_REQUIRED` (we have `imp.native.ver_missing` but not the per-asset type check)
    - **HTML creative inspection**: `HTML_UNSAFE_SCRIPT`, `HTML_LIMITED_MEDIA` (overlaps our behavior probe but at static-scan level)
-   - **Business framing**: `BUSINESS_DOMAIN_FORMAT`, `BUSINESS_EMPTY_DOMAIN`, `BUSINESS_ADOMAIN_REQUIRED` (they aggregate adomain/cid/crid under a "Business" category; we scatter these across response.* and crosscheck.bid.*)
+   - **Business framing**: `BUSINESS_DOMAIN_FORMAT`, `BUSINESS_EMPTY_DOMAIN`, `BUSINESS_ADOMAIN_REQUIRED` (they aggregate adomain/cid/crid under a "Business" category; we scatter these across response._ and crosscheck.bid._)
 
    We retain wide leadership on `behavior.*` (17), `crosscheck.*` (28), `feed.*` (30), `vast.*` (20), `inpage-push.*` (9) — openrtb.ovh has zero overlap with any of these. Closing the 19-item gap brings us to parity on baseline + keeps our differentiators.
 
@@ -268,7 +283,7 @@ Ordered by likelihood it will eventually matter:
 
 13. **Request Analysis summary strip** — openrtb.ovh shows a structured metadata strip above findings: `OpenRTB Version · Traffic Type · Device Category · Privacy Signals · Ad Formats`. We have format-chips today but not the structured strip with device/privacy/traffic. Strip lives in inspector section between editors and Inspector/Validation/Crosscheck/Behavior tabs. ~1 day in `public/spyglass.app.js` `renderSummaryStrip()` + small helpers in `packages/core/`.
 
-14. **Severity tabs in findings panel** — openrtb.ovh splits findings into `Errors (N) | Warnings (N) | Info (N)` tabs with counters. We use semantic tabs (Inspector/Validation/Crosscheck/Behavior) which group by *domain*; layer a severity filter on top. Empty-state with friendly tone (`No errors detected! 🎉`). ~0.5 day, mostly CSS + small DOM rewrite.
+14. **Severity tabs in findings panel** — openrtb.ovh splits findings into `Errors (N) | Warnings (N) | Info (N)` tabs with counters. We use semantic tabs (Inspector/Validation/Crosscheck/Behavior) which group by _domain_; layer a severity filter on top. Empty-state with friendly tone (`No errors detected! 🎉`). ~0.5 day, mostly CSS + small DOM rewrite.
 
 15. **Test Cases public gallery (Stage 1 expansion)** — openrtb.ovh `/testcases` is a public-facing catalog of curated valid/invalid samples with copy + download. Their best SEO + onboarding surface. We have ~25 synthetic specimens hidden in the `приклад` dropdown. Promote them to `/library` Stage 1 as a public catalog (no auth required) sectioned as: Valid Cases (banner / video / native / pop / 3.0 / inpage-push) vs Invalid Cases (attack patterns, malformed shapes). Each card: title, description, Valid|Invalid badge, Copy, Download. Authenticated users see their own ZK-encrypted saves in a separate tab on the same page. This expands the original Stage 1 scope.
 
@@ -309,20 +324,20 @@ Ordered by likelihood it will eventually matter:
 
 Cross-check of claims in `docs/tech-debt-2026-05-04.md`, `docs/functional-audit-2026-05-12.md`, `docs/cu-pops-audit-2026-05-12.md`, and the old ROADMAP against HEAD code.
 
-| Old claim | Audit doc | Status at HEAD | Evidence |
-|-----------|-----------|----------------|---------|
-| `packages/core` not bind-mounted (CRITICAL) | tech-debt-2026-05-04 | **RESOLVED** | `docker-compose.yml` line 47: `./packages:/app/packages:ro` |
-| SQLite backup missing (CRITICAL) | tech-debt-2026-05-04 | **RESOLVED** | `scripts/backup-db.sh`, cron 03:30 |
-| GlitchTip not integrated | ROADMAP Phase 8 | **RESOLVED** | `lib/logger.js` (`@sentry/node` init), `modules/sentry-ingest/handler.js` (proxy), wired in `server.js` |
-| Pino not in package.json | tech-debt-2026-05-04 | **RESOLVED** | `lib/logger.js` uses `require('pino')` |
-| Strictness levels not wired to API | ROADMAP Phase 2 | **RESOLVED** | `packages/core/index.js` `applyStrictness()`; documented in `packages/core/README.md` line 67 |
-| `@spyglass/core` private:true | ROADMAP Phase 4 | **PARTIALLY DONE** | `private` field removed; `publishConfig.access:"public"` set; actual `npm publish` not done |
-| ~30 hardcoded Cyrillic strings | next-chapters-2026-05-09 | **RESOLVED** | `wc -l` grep: 9 Cyrillic lines in `spyglass.app.js`, all in comments |
-| `spyglass.app.js` 4505 lines | functional-audit-2026-05-12 | **STALE** (grew) | Currently 4785 lines |
-| Stream endpoint missing | ROADMAP Phase 8 | **RESOLVED** | `modules/stream/handler.js`, `public/stream.html` at `ortbtools.com/stream` |
-| Replay endpoint missing | next-chapters-2026-05-09 | **RESOLVED** | `modules/replay/handler.js`, `GET /api/v1/replay` |
-| Confusion matrix missing | next-chapters-2026-05-09 | **RESOLVED** | `modules/corpus/handler.js` `GET /api/behavior/corpus/matrix` |
-| "All 7 pop-vendor dialects missing" | cu-pops-audit-2026-05-12 | **CONFIRMED** | `packages/core/dialects/` has only `ext-rtb.js`, `iab.js`, `inpage-push.js` |
-| AdCOM 1.0 deep validation missing | functional-audit-2026-05-12 | **CONFIRMED (gated)** | `rules-request-30.js` emits `deep_validation_limited INFO` by design |
-| Phase 5 public/private domain split REJECTED | old ROADMAP | **OBSOLETE** | Decision logged; single domain confirmed; domain is now ortbtools.com |
-| stream-platform-pivot as landing strategy | stream-platform-pivot-2026-05-05 | **SUPERSEDED** | Stream is Stage 2 of multi-section, not landing pivot |
+| Old claim                                    | Audit doc                        | Status at HEAD        | Evidence                                                                                                |
+| -------------------------------------------- | -------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------- |
+| `packages/core` not bind-mounted (CRITICAL)  | tech-debt-2026-05-04             | **RESOLVED**          | `docker-compose.yml` line 47: `./packages:/app/packages:ro`                                             |
+| SQLite backup missing (CRITICAL)             | tech-debt-2026-05-04             | **RESOLVED**          | `scripts/backup-db.sh`, cron 03:30                                                                      |
+| GlitchTip not integrated                     | ROADMAP Phase 8                  | **RESOLVED**          | `lib/logger.js` (`@sentry/node` init), `modules/sentry-ingest/handler.js` (proxy), wired in `server.js` |
+| Pino not in package.json                     | tech-debt-2026-05-04             | **RESOLVED**          | `lib/logger.js` uses `require('pino')`                                                                  |
+| Strictness levels not wired to API           | ROADMAP Phase 2                  | **RESOLVED**          | `packages/core/index.js` `applyStrictness()`; documented in `packages/core/README.md` line 67           |
+| `@spyglass/core` private:true                | ROADMAP Phase 4                  | **PARTIALLY DONE**    | `private` field removed; `publishConfig.access:"public"` set; actual `npm publish` not done             |
+| ~30 hardcoded Cyrillic strings               | next-chapters-2026-05-09         | **RESOLVED**          | `wc -l` grep: 9 Cyrillic lines in `spyglass.app.js`, all in comments                                    |
+| `spyglass.app.js` 4505 lines                 | functional-audit-2026-05-12      | **STALE** (grew)      | Currently 4785 lines                                                                                    |
+| Stream endpoint missing                      | ROADMAP Phase 8                  | **RESOLVED**          | `modules/stream/handler.js`, `public/stream.html` at `ortbtools.com/stream`                             |
+| Replay endpoint missing                      | next-chapters-2026-05-09         | **RESOLVED**          | `modules/replay/handler.js`, `GET /api/v1/replay`                                                       |
+| Confusion matrix missing                     | next-chapters-2026-05-09         | **RESOLVED**          | `modules/corpus/handler.js` `GET /api/behavior/corpus/matrix`                                           |
+| "All 7 pop-vendor dialects missing"          | cu-pops-audit-2026-05-12         | **CONFIRMED**         | `packages/core/dialects/` has only `ext-rtb.js`, `iab.js`, `inpage-push.js`                             |
+| AdCOM 1.0 deep validation missing            | functional-audit-2026-05-12      | **CONFIRMED (gated)** | `rules-request-30.js` emits `deep_validation_limited INFO` by design                                    |
+| Phase 5 public/private domain split REJECTED | old ROADMAP                      | **OBSOLETE**          | Decision logged; single domain confirmed; domain is now ortbtools.com                                   |
+| stream-platform-pivot as landing strategy    | stream-platform-pivot-2026-05-05 | **SUPERSEDED**        | Stream is Stage 2 of multi-section, not landing pivot                                                   |

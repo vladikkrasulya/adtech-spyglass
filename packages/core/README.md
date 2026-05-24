@@ -167,14 +167,14 @@ Currently shipping locales: Ukrainian (`uk`, complete), English (`en`, stub — 
 
 **Where the rules live:**
 
-| Surface                               | Folder / file                                  | Style                                                            |
-| ------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
-| oRTB 2.x BidRequest baseline          | `rules-request.js` (432 LOC)                   | flat function, sections marked by `// ── ──` comments. Legacy.   |
-| oRTB 2.x BidResponse baseline         | `rules-response.js`                            | same                                                             |
-| oRTB 3.0 dispatch                     | `rules-request-30.js` / `rules-response-30.js` | same                                                             |
-| VAST 4.x rules                        | `rules-vast.js`                                | same                                                             |
-| JsonFeed / ext-rtb vendor feed responses       | `rules-feed.js`                                | same                                                             |
-| **New rule-groups (post-2026-05-10)** | **`rules/<plugin>/index.js`**                  | **plugin contract** — see [`rules/README.md`](./rules/README.md) |
+| Surface                                  | Folder / file                                  | Style                                                            |
+| ---------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| oRTB 2.x BidRequest baseline             | `rules-request.js` (432 LOC)                   | flat function, sections marked by `// ── ──` comments. Legacy.   |
+| oRTB 2.x BidResponse baseline            | `rules-response.js`                            | same                                                             |
+| oRTB 3.0 dispatch                        | `rules-request-30.js` / `rules-response-30.js` | same                                                             |
+| VAST 4.x rules                           | `rules-vast.js`                                | same                                                             |
+| JsonFeed / ext-rtb vendor feed responses | `rules-feed.js`                                | same                                                             |
+| **New rule-groups (post-2026-05-10)**    | **`rules/<plugin>/index.js`**                  | **plugin contract** — see [`rules/README.md`](./rules/README.md) |
 
 **Pattern for adding new rules**: drop a folder under `rules/<name>/`,
 register in `rules/index.js`, add message keys to `messages/{en,uk,ru}.json`.

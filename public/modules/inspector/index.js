@@ -149,7 +149,8 @@ export default {
           // Strip ?sample so reload doesn't loop. keepalive: future Stage
           // 2 specimen permalinks (/r/{hash}) use the same pattern.
           params.delete('sample');
-          const newUrl = location.pathname + (params.toString() ? '?' + params : '') + location.hash;
+          const newUrl =
+            location.pathname + (params.toString() ? '?' + params : '') + location.hash;
           history.replaceState(history.state, '', newUrl);
         } else {
           console.warn('[inspector] sample handoff fetch failed:', resp.status);

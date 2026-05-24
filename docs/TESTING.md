@@ -67,7 +67,7 @@ All tests are under `tests/` at the repo root. Node's discovery glob is
 | `format-detect.test.js`            | `detectFormat()` — banner / video / native / pops / push classification + VAST sniff (~30 cases)           |
 | `behavior.test.js`                 | `behavior.analyze()` — synthetic event stream inputs → expected finding set                                |
 | `ortb30.test.js`                   | oRTB 3.0 request + response envelope rules (~36 cases)                                                     |
-| `dialects.test.js`                 | ext-rtb vendor and vendor dialect overlays applied over IAB baseline                                                |
+| `dialects.test.js`                 | ext-rtb vendor and vendor dialect overlays applied over IAB baseline                                       |
 | `rules-dialects-questions.test.js` | Dialect question-bank coverage for the UI's dialect-hint surface                                           |
 | `rules-plugins.test.js`            | Plugin rule registry — client-hints, imp-secure, pop-request, pop-response                                 |
 | `pop-fixtures.test.js`             | Pin the four synthetic pop JSON fixtures to their expected finding sets                                    |

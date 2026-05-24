@@ -238,7 +238,11 @@ export default {
       counterEl.textContent = received + ' specimen' + (received === 1 ? '' : 's');
       // Update rolling 1h aggregates
       const now = Date.now();
-      rollingEvents.push({ ts: now, fmt: fmtFrom(envelope.specimen), source: envelope.source || '?' });
+      rollingEvents.push({
+        ts: now,
+        fmt: fmtFrom(envelope.specimen),
+        source: envelope.source || '?',
+      });
       // Prune entries older than 1 hour
       while (rollingEvents.length && rollingEvents[0].ts < now - ROLLING_WINDOW_MS) {
         rollingEvents.shift();
@@ -325,19 +329,34 @@ export default {
       const inspectBtn = document.createElement('button');
       inspectBtn.className = 'stream-action-btn';
       inspectBtn.textContent = 'Open in Inspector';
-      inspectBtn.addEventListener('click', () => {
-        window.SpyglassShell.navigateTo('/' + lang + '/r/' + hash);
-      }, { signal: ctx.signal });
+      inspectBtn.addEventListener(
+        'click',
+        () => {
+          window.SpyglassShell.navigateTo('/' + lang + '/r/' + hash);
+        },
+        { signal: ctx.signal },
+      );
       const copyBtn = document.createElement('button');
       copyBtn.className = 'stream-action-btn stream-action-btn--secondary';
       copyBtn.textContent = 'Copy permalink';
-      copyBtn.addEventListener('click', () => {
-        const url = location.origin + '/' + lang + '/r/' + hash;
-        navigator.clipboard.writeText(url).then(() => {
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBtn.textContent = 'Copy permalink'; }, 1500);
-        }).catch(() => { copyBtn.textContent = url; });
-      }, { signal: ctx.signal });
+      copyBtn.addEventListener(
+        'click',
+        () => {
+          const url = location.origin + '/' + lang + '/r/' + hash;
+          navigator.clipboard
+            .writeText(url)
+            .then(() => {
+              copyBtn.textContent = 'Copied!';
+              setTimeout(() => {
+                copyBtn.textContent = 'Copy permalink';
+              }, 1500);
+            })
+            .catch(() => {
+              copyBtn.textContent = url;
+            });
+        },
+        { signal: ctx.signal },
+      );
       bar.append(inspectBtn, copyBtn);
       const detail = root.querySelector('.detail');
       if (detail) {
@@ -360,15 +379,26 @@ export default {
         srcCounts[e.source] = (srcCounts[e.source] || 0) + 1;
       }
       const topFmts = Object.entries(fmtCounts)
-        .sort((a, b) => b[1] - a[1]).slice(0, 4)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
         .map(([k, v]) => '<span class="stream-agg-badge">' + escapeHtml(k) + ' ' + v + '</span>')
         .join('');
       const topSrcs = Object.entries(srcCounts)
-        .sort((a, b) => b[1] - a[1]).slice(0, 3)
-        .map(([k, v]) => '<span class="stream-agg-badge stream-agg-badge--src">' + escapeHtml(k) + ' ' + v + '</span>')
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(
+          ([k, v]) =>
+            '<span class="stream-agg-badge stream-agg-badge--src">' +
+            escapeHtml(k) +
+            ' ' +
+            v +
+            '</span>',
+        )
         .join('');
       aggregatesPanel.innerHTML =
-        '<span class="stream-agg-label">Last hour: ' + total + ' specimens</span>' +
+        '<span class="stream-agg-label">Last hour: ' +
+        total +
+        ' specimens</span>' +
         (topFmts ? ' &nbsp; ' + topFmts : '') +
         (topSrcs ? ' &nbsp; <span class="stream-agg-sep">sources:</span> ' + topSrcs : '');
     }

@@ -95,7 +95,11 @@ function readMarkdownPosts(lang) {
       lang,
       title: meta.title || '',
       category: meta.category || 'guide',
-      summary: body.trim().split('\n').find((l) => l.trim()) || '',
+      summary:
+        body
+          .trim()
+          .split('\n')
+          .find((l) => l.trim()) || '',
       published_at: meta.date || new Date().toISOString(),
       tags: Array.isArray(meta.tags) ? meta.tags : [],
       source: 'markdown',
@@ -248,7 +252,11 @@ function createBlogModule() {
           lang,
           title: meta.title || '',
           category: meta.category || 'guide',
-          summary: body.trim().split('\n').find((l) => l.trim()) || '',
+          summary:
+            body
+              .trim()
+              .split('\n')
+              .find((l) => l.trim()) || '',
           published_at: meta.date || new Date().toISOString(),
           tags: Array.isArray(meta.tags) ? meta.tags : [],
           body,

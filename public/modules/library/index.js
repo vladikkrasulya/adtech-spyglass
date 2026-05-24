@@ -93,7 +93,10 @@ function renderShell(lang) {
 
 function renderCard(item, lang, localeP) {
   const fmt = pick(FORMAT_LABEL[item.format] || { en: item.format }, lang);
-  const loadLabel = pick({ en: 'Open in inspector', uk: 'Відкрити в інспекторі', ru: 'Открыть в инспекторе' }, lang);
+  const loadLabel = pick(
+    { en: 'Open in inspector', uk: 'Відкрити в інспекторі', ru: 'Открыть в инспекторе' },
+    lang,
+  );
   const copyLabel = pick({ en: 'Copy JSON', uk: 'Копіювати JSON', ru: 'Копировать JSON' }, lang);
   const inspectorHref = `${localeP}/inspector?sample=${encodeURIComponent(item.slug)}`;
   return `
@@ -118,7 +121,10 @@ function renderCard(item, lang, localeP) {
 function renderCatalogPanel(items, lang) {
   const localeP = localePrefix(lang);
   const groups = ['iab', 'valid', 'attack'];
-  const empty = pick({ en: 'No samples yet.', uk: 'Поки що зразків немає.', ru: 'Образцов пока нет.' }, lang);
+  const empty = pick(
+    { en: 'No samples yet.', uk: 'Поки що зразків немає.', ru: 'Образцов пока нет.' },
+    lang,
+  );
   if (!items || !items.length) {
     return `<p class="lib-empty">${escapeHtml(empty)}</p>`;
   }
@@ -165,7 +171,10 @@ function renderSavedPanel(state, samples, lang) {
       },
       lang,
     );
-    const goToAccount = pick({ en: 'Open cabinet', uk: 'Відкрити кабінет', ru: 'Открыть кабинет' }, lang);
+    const goToAccount = pick(
+      { en: 'Open cabinet', uk: 'Відкрити кабінет', ru: 'Открыть кабинет' },
+      lang,
+    );
     return `
       <div class="lib-empty">
         <p>${escapeHtml(msg)}</p>
@@ -192,7 +201,9 @@ function renderSavedPanel(state, samples, lang) {
 }
 
 function renderSavedCard(s, lang, localeP) {
-  const created = s.created_at ? new Date(s.created_at).toLocaleString(lang === 'en' ? 'en-GB' : lang) : '';
+  const created = s.created_at
+    ? new Date(s.created_at).toLocaleString(lang === 'en' ? 'en-GB' : lang)
+    : '';
   const openLabel = pick({ en: 'Open', uk: 'Відкрити', ru: 'Открыть' }, lang);
   return `
     <article class="lib-card lib-card--saved" data-id="${escapeHtml(s.id)}">
@@ -245,7 +256,13 @@ async function copySampleToClipboard(slug, signal, toast) {
     const r = await fetch(`/api/v1/sample?type=${encodeURIComponent(slug)}`, { signal });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
-    const text = JSON.stringify(data.bid_request && Object.keys(data.bid_request).length ? data.bid_request : data.bid_response, null, 2);
+    const text = JSON.stringify(
+      data.bid_request && Object.keys(data.bid_request).length
+        ? data.bid_request
+        : data.bid_response,
+      null,
+      2,
+    );
     await navigator.clipboard.writeText(text);
     if (toast) toast('✓ скопійовано', 'success');
   } catch (e) {

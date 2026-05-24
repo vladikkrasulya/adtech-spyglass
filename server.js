@@ -1081,14 +1081,16 @@ function streamBufferPush(envelope) {
       const sp = envelope && envelope.specimen;
       logValidation({
         format: fmtFromSpecimen(sp),
-        version: (sp && sp.at) ? '3.0' : (sp && sp.ver) ? String(sp.ver) : 'unknown',
+        version: sp && sp.at ? '3.0' : sp && sp.ver ? String(sp.ver) : 'unknown',
         has_errors: 0,
         error_count: 0,
         warning_count: 0,
         info_count: 0,
         source: 'stream',
       });
-    } catch (_) { /* silent — never break stream */ }
+    } catch (_) {
+      /* silent — never break stream */
+    }
   });
 }
 

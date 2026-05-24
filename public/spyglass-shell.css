@@ -91,7 +91,6 @@
   color: var(--accent);
 }
 
-
 /* ── Stage 0 multi-section shell layout (ROADMAP.md 2026-05-23) ──────
    .kt-shell is a flex row: sidebar (kt-nav) on the left, content
    column (kt-shell__column) on the right. The column stacks topbar
@@ -145,7 +144,6 @@
   display: block;
 }
 
-
 /* ── Workbench-in-shell overrides ──────────────────────────────────
    .workbench is a legacy class that used to be the page-level grid
    (when inspector was the whole page). Now it lives inside #app-root
@@ -168,7 +166,6 @@
    — see public/modules/nav/nav.css. The button is now a tab on the right
    edge of .kt-nav at desktop widths, plus a reopen tab fixed to the left
    edge of the viewport when the sidebar is collapsed. */
-
 
 /* ── Move shared chrome into the topbar ────────────────────────────
    Hide the inspector's internal lang menu, theme toggle, and auth
@@ -215,7 +212,9 @@
   color: var(--text);
   font-family: inherit;
 }
-.kt-topbar .kt-lang-toggle::-webkit-details-marker { display: none; }
+.kt-topbar .kt-lang-toggle::-webkit-details-marker {
+  display: none;
+}
 .kt-topbar .kt-lang-toggle:hover {
   background: var(--accent-soft, rgba(255, 204, 0, 0.14));
 }
@@ -242,8 +241,10 @@
   font-size: 13px;
   border-radius: var(--r-sm, 10px);
 }
-.kt-topbar .kt-lang-menu .kt-lang-menu-list a:hover { background: var(--accent-soft, rgba(255, 204, 0, 0.14)); }
-.kt-topbar .kt-lang-menu .kt-lang-menu-list a[aria-current="true"] {
+.kt-topbar .kt-lang-menu .kt-lang-menu-list a:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+}
+.kt-topbar .kt-lang-menu .kt-lang-menu-list a[aria-current='true'] {
   background: var(--accent, #ffcc00);
   color: var(--accent-ink, #18181b);
 }

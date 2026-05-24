@@ -56,11 +56,7 @@ function initSpecimenStore(db) {
 }
 
 function specimenHash(specimen) {
-  return crypto
-    .createHash('sha1')
-    .update(JSON.stringify(specimen))
-    .digest('hex')
-    .slice(0, 8);
+  return crypto.createHash('sha1').update(JSON.stringify(specimen)).digest('hex').slice(0, 8);
 }
 
 function specimenStorePut(hash, envelope) {

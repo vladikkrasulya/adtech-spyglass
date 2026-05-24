@@ -15,10 +15,7 @@
     },
     "expected": {
       "severity_summary": "0 errors, ~9 info",
-      "key_findings": [
-        "info.payload_valid",
-        "request.tmax_present"
-      ]
+      "key_findings": ["info.payload_valid", "request.tmax_present"]
     },
     "demonstrates": {
       "en": "Baseline control — confirm the validator fires zero errors on clean traffic before testing edge cases.",
@@ -42,10 +39,7 @@
     },
     "expected": {
       "severity_summary": "0 errors, ~11 info",
-      "key_findings": [
-        "info.payload_valid",
-        "video.mimes_present"
-      ]
+      "key_findings": ["info.payload_valid", "video.mimes_present"]
     },
     "demonstrates": {
       "en": "App-context video baseline — compare against the banner baseline to see which validations are video-specific.",
@@ -69,10 +63,7 @@
     },
     "expected": {
       "severity_summary": "2+ errors, 3+ warnings",
-      "key_findings": [
-        "regs.gdpr_consent_missing",
-        "request.at_missing"
-      ]
+      "key_findings": ["regs.gdpr_consent_missing", "request.at_missing"]
     },
     "demonstrates": {
       "en": "Shows how the validator catches missing consent strings under GDPR=1 and omitted fields. Good contrast to the valid banner baseline.",
@@ -96,9 +87,7 @@
     },
     "expected": {
       "severity_summary": "1 error",
-      "key_findings": [
-        "regs.gdpr_consent_missing"
-      ]
+      "key_findings": ["regs.gdpr_consent_missing"]
     },
     "demonstrates": {
       "en": "Privacy compliance gate — any bid with GDPR=1 and no TCF consent string must be blocked before personalisation.",
@@ -122,10 +111,7 @@
     },
     "expected": {
       "severity_summary": "0 errors, ~5 info",
-      "key_findings": [
-        "vast.version_present",
-        "vast.media_file_secure"
-      ]
+      "key_findings": ["vast.version_present", "vast.media_file_secure"]
     },
     "demonstrates": {
       "en": "VAST baseline — confirm the VAST parser handles clean video before testing broken or insecure variants.",
@@ -149,11 +135,7 @@
     },
     "expected": {
       "severity_summary": "3 errors",
-      "key_findings": [
-        "vast.version_missing",
-        "vast.ad_system_missing",
-        "vast.media_file_missing"
-      ]
+      "key_findings": ["vast.version_missing", "vast.ad_system_missing", "vast.media_file_missing"]
     },
     "demonstrates": {
       "en": "VAST structure errors — any of these three causes the video player to silently fail to render. High-volume QA failure mode.",
@@ -177,10 +159,7 @@
     },
     "expected": {
       "severity_summary": "3 warnings",
-      "key_findings": [
-        "vast.insecure_tracker_url",
-        "vast.wrapper_present"
-      ]
+      "key_findings": ["vast.insecure_tracker_url", "vast.wrapper_present"]
     },
     "demonstrates": {
       "en": "Mixed-content tracking loss — insecure trackers fire on HTTP publishers but are silently blocked on HTTPS, causing measurement discrepancies.",
@@ -204,9 +183,7 @@
     },
     "expected": {
       "severity_summary": "1 error if bid.price < imp.bidfloor",
-      "key_findings": [
-        "crosscheck.bid.below_floor"
-      ]
+      "key_findings": ["crosscheck.bid.below_floor"]
     },
     "demonstrates": {
       "en": "Cross-object validation — the crosscheck engine compares bid.price in the response against imp.bidfloor in the request. Adjust bid.price in the response editor.",
@@ -230,9 +207,7 @@
     },
     "expected": {
       "severity_summary": "1 error",
-      "key_findings": [
-        "creative.frame_bust_form"
-      ]
+      "key_findings": ["creative.frame_bust_form"]
     },
     "demonstrates": {
       "en": "Frame-busting via form submit — one of the most disruptive ad fraud techniques. Detected by the behavior probe monitoring hidden form target attributes.",
@@ -256,9 +231,7 @@
     },
     "expected": {
       "severity_summary": "1 error",
-      "key_findings": [
-        "creative.heavy_ad_cpu"
-      ]
+      "key_findings": ["creative.heavy_ad_cpu"]
     },
     "demonstrates": {
       "en": "CPU-based heavy ad — Chrome Heavy Ad Intervention unloads creatives consuming excessive CPU. Detected by behavior probe timing main-thread blocks.",
@@ -282,9 +255,7 @@
     },
     "expected": {
       "severity_summary": "1 error",
-      "key_findings": [
-        "creative.auto_redirect"
-      ]
+      "key_findings": ["creative.auto_redirect"]
     },
     "demonstrates": {
       "en": "Auto-redirect fraud — top-level navigation without user gesture is always malicious. Behavior probe detects setTimeout-triggered location changes.",

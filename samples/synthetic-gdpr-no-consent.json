@@ -3,9 +3,7 @@
   "id": "synthetic-gdpr-no-consent-001",
   "at": 2,
   "tmax": 300,
-  "cur": [
-    "USD"
-  ],
+  "cur": ["USD"],
   "imp": [
     {
       "id": "1",
@@ -17,12 +15,8 @@
         "w": 300,
         "h": 250,
         "pos": 1,
-        "btype": [
-          4
-        ],
-        "battr": [
-          14
-        ]
+        "btype": [4],
+        "battr": [14]
       }
     }
   ],
@@ -30,9 +24,7 @@
     "id": "eu-site-001",
     "domain": "example.de",
     "page": "https://example.de/news/article",
-    "cat": [
-      "IAB1"
-    ],
+    "cat": ["IAB1"],
     "publisher": {
       "id": "pub-001",
       "name": "EU Publisher GmbH"

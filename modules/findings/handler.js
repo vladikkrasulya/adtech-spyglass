@@ -42,13 +42,13 @@ function inferSeverity(id) {
   if (/^warn-/.test(id)) return 'warning';
   if (/^info-/.test(id)) return 'info';
   if (/_required$/.test(id)) return 'error';
-  if (/_invalid$/.test(id))  return 'error';
+  if (/_invalid$/.test(id)) return 'error';
   if (/_mismatch$/.test(id)) return 'error';
   if (/_recommended$/.test(id)) return 'warning';
-  if (/_missing$/.test(id))  return 'warning';
+  if (/_missing$/.test(id)) return 'warning';
   if (/_detected$/.test(id)) return 'info';
-  if (/_unknown$/.test(id))  return 'info';
-  if (/_empty$/.test(id))    return 'warning';
+  if (/_unknown$/.test(id)) return 'info';
+  if (/_empty$/.test(id)) return 'warning';
   return 'info';
 }
 
@@ -97,7 +97,5 @@ function handleFindingCatalog(req, res) {
 
 module.exports = {
   id: 'findings',
-  routes: [
-    { method: 'GET', path: '/api/v1/finding-catalog', handler: handleFindingCatalog },
-  ],
+  routes: [{ method: 'GET', path: '/api/v1/finding-catalog', handler: handleFindingCatalog }],
 };

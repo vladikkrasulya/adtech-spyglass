@@ -48,7 +48,9 @@ async function loadStylesheet(href) {
     link.rel = 'stylesheet';
     link.href = href;
     link.addEventListener('load', () => resolve(link), { once: true });
-    link.addEventListener('error', () => reject(new Error('failed to load ' + href)), { once: true });
+    link.addEventListener('error', () => reject(new Error('failed to load ' + href)), {
+      once: true,
+    });
     document.head.appendChild(link);
   });
 }
@@ -179,7 +181,15 @@ function isInternalLink(a) {
   if (url.pathname.startsWith('/api/')) return false;
   if (url.pathname.includes('.')) return false; // crude: real assets have extensions
   // Skip SSR landings that aren't SPA sections.
-  const SSR_PATHS = new Set(['/stream', '/about', '/account', '/uk/about', '/uk/account', '/ru/about', '/ru/account']);
+  const SSR_PATHS = new Set([
+    '/stream',
+    '/about',
+    '/account',
+    '/uk/about',
+    '/uk/account',
+    '/ru/about',
+    '/ru/account',
+  ]);
   if (SSR_PATHS.has(url.pathname)) return false;
   return true;
 }
@@ -243,7 +253,11 @@ function wireLangChange() {
       console.warn('[shell-boot] kt:lang-change section remount failed:', err);
       // Best-effort fallback: re-activate from URL so the shell
       // doesn't get stuck on a blank #app-root.
-      try { await activateFromUrl(); } catch (_) { /* ignore */ }
+      try {
+        await activateFromUrl();
+      } catch (_) {
+        /* ignore */
+      }
     }
   });
 }

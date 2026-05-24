@@ -21,20 +21,68 @@
 // are computed by prefixLocale() based on the current document lang.
 export const SECTIONS = [
   // group key, route, icon, label keys
-  { group: 'work', id: 'inspector', route: '/inspector', icon: '⚡', label: { en: 'Inspector', uk: 'Інспектор', ru: 'Инспектор' } },
-  { group: 'work', id: 'live',      route: '/live',      icon: '📡', label: { en: 'Live',      uk: 'Стрім',    ru: 'Стрим' } },
-  { group: 'work', id: 'behavior',  route: '/behavior',  icon: '🧪', label: { en: 'Behavior',  uk: 'Behavior', ru: 'Behavior' } },
-  { group: 'data', id: 'library',   route: '/library',   icon: '📚', label: { en: 'Library',   uk: 'Зразки',   ru: 'Образцы' } },
-  { group: 'data', id: 'dialects',  route: '/dialects',  icon: '🎛', label: { en: 'Dialects',  uk: 'Діалекти', ru: 'Диалекты' } },
-  { group: 'data', id: 'insights',  route: '/insights',  icon: '📊', label: { en: 'Insights',  uk: 'Інсайти',  ru: 'Аналитика' } },
-  { group: 'know', id: 'blog',      route: '/blog',      icon: '📰', label: { en: 'Blog',      uk: 'Блог',     ru: 'Блог' } },
-  { group: 'know', id: 'docs',      route: '/docs',      icon: '📖', label: { en: 'Docs',      uk: 'Доки',     ru: 'Доки' } },
+  {
+    group: 'work',
+    id: 'inspector',
+    route: '/inspector',
+    icon: '⚡',
+    label: { en: 'Inspector', uk: 'Інспектор', ru: 'Инспектор' },
+  },
+  {
+    group: 'work',
+    id: 'live',
+    route: '/live',
+    icon: '📡',
+    label: { en: 'Live', uk: 'Стрім', ru: 'Стрим' },
+  },
+  {
+    group: 'work',
+    id: 'behavior',
+    route: '/behavior',
+    icon: '🧪',
+    label: { en: 'Behavior', uk: 'Behavior', ru: 'Behavior' },
+  },
+  {
+    group: 'data',
+    id: 'library',
+    route: '/library',
+    icon: '📚',
+    label: { en: 'Library', uk: 'Зразки', ru: 'Образцы' },
+  },
+  {
+    group: 'data',
+    id: 'dialects',
+    route: '/dialects',
+    icon: '🎛',
+    label: { en: 'Dialects', uk: 'Діалекти', ru: 'Диалекты' },
+  },
+  {
+    group: 'data',
+    id: 'insights',
+    route: '/insights',
+    icon: '📊',
+    label: { en: 'Insights', uk: 'Інсайти', ru: 'Аналитика' },
+  },
+  {
+    group: 'know',
+    id: 'blog',
+    route: '/blog',
+    icon: '📰',
+    label: { en: 'Blog', uk: 'Блог', ru: 'Блог' },
+  },
+  {
+    group: 'know',
+    id: 'docs',
+    route: '/docs',
+    icon: '📖',
+    label: { en: 'Docs', uk: 'Доки', ru: 'Доки' },
+  },
 ];
 
 const GROUP_LABELS = {
-  work: { en: 'WORK',      uk: 'РОБОТА',  ru: 'РАБОТА' },
-  data: { en: 'DATA',      uk: 'ДАНІ',    ru: 'ДАННЫЕ' },
-  know: { en: 'KNOWLEDGE', uk: 'ЗНАННЯ',  ru: 'ЗНАНИЯ' },
+  work: { en: 'WORK', uk: 'РОБОТА', ru: 'РАБОТА' },
+  data: { en: 'DATA', uk: 'ДАНІ', ru: 'ДАННЫЕ' },
+  know: { en: 'KNOWLEDGE', uk: 'ЗНАННЯ', ru: 'ЗНАНИЯ' },
 };
 const GROUP_ORDER = ['work', 'data', 'know'];
 
@@ -153,7 +201,9 @@ export function mountNav(root) {
     if (shellRoot && localStorage.getItem(COLLAPSE_KEY) === '1') {
       shellRoot.classList.add('is-nav-collapsed');
     }
-  } catch (_) { /* storage disabled */ }
+  } catch (_) {
+    /* storage disabled */
+  }
 
   // Clean up any pre-existing reopen-tab from earlier shell versions.
   const stale = document.querySelector('.kt-shell__reopen-tab');
@@ -164,7 +214,9 @@ export function mountNav(root) {
     e.preventDefault();
     if (!shellRoot) return;
     const collapsed = shellRoot.classList.toggle('is-nav-collapsed');
-    try { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (_) {}
+    try {
+      localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+    } catch (_) {}
   };
   if (collapseBtn) collapseBtn.addEventListener('click', onCollapse);
 

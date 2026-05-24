@@ -2039,7 +2039,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .sidebar-right::-webkit-scrollbar-thumb:hover,
 .history-list::-webkit-scrollbar-thumb:hover,
 .main-editor::-webkit-scrollbar-thumb:hover {
-  background: var(--accent, #FFCC00);
+  background: var(--accent, #ffcc00);
 }
 .tab-content,
 .history-list,
@@ -2796,7 +2796,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   display: flex;
   align-items: stretch;
   height: 46px;
-  background: rgba(var(--bg-elev-rgb, 255,255,255), 0.85);
+  background: rgba(var(--bg-elev-rgb, 255, 255, 255), 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
@@ -2846,9 +2846,9 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   font-size: 10px;
   font-weight: 700;
   margin-right: 3px;
-  background: rgba(var(--accent-rgb, 255,204,0), 0.15);
+  background: rgba(var(--accent-rgb, 255, 204, 0), 0.15);
   color: var(--text);
-  border: 1px solid rgba(var(--accent-rgb, 255,204,0), 0.4);
+  border: 1px solid rgba(var(--accent-rgb, 255, 204, 0), 0.4);
 }
 /* Version badge accent */
 .analysis-strip-value .ver-badge {
@@ -2857,7 +2857,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border-radius: 3px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(var(--accent-rgb, 255,204,0), 0.2);
+  background: rgba(var(--accent-rgb, 255, 204, 0), 0.2);
   color: var(--text);
   border: 1px solid var(--accent, #ffcc00);
 }
@@ -2892,16 +2892,19 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   font-weight: 600;
   cursor: pointer;
   border: 1px solid var(--border);
-  background: rgba(var(--bg-elev-rgb, 255,255,255), 0.5);
+  background: rgba(var(--bg-elev-rgb, 255, 255, 255), 0.5);
   color: var(--text-dim);
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   user-select: none;
 }
 [data-theme='dark'] .severity-chip {
-  background: rgba(255,255,255, 0.04);
+  background: rgba(255, 255, 255, 0.04);
 }
 .severity-chip:hover {
-  background: rgba(var(--accent-rgb, 255,204,0), 0.1);
+  background: rgba(var(--accent-rgb, 255, 204, 0), 0.1);
   border-color: var(--accent, #ffcc00);
   color: var(--text);
 }
@@ -2972,7 +2975,10 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border: 1px solid transparent;
   cursor: default;
   position: relative;
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
   min-width: 130px;
   line-height: 1;
 }
@@ -2980,22 +2986,30 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .quality-pill.q-excellent {
   background: rgba(22, 163, 74, 0.18);
   border-color: #16a34a;
-  box-shadow: 0 0 6px 0 rgba(22, 163, 74, 0.35) inset, 0 0 4px rgba(22, 163, 74, 0.25);
+  box-shadow:
+    0 0 6px 0 rgba(22, 163, 74, 0.35) inset,
+    0 0 4px rgba(22, 163, 74, 0.25);
 }
 .quality-pill.q-good {
   background: rgba(255, 204, 0, 0.18);
-  border-color: var(--accent, #FFCC00);
-  box-shadow: 0 0 6px 0 rgba(255, 204, 0, 0.35) inset, 0 0 4px rgba(255, 204, 0, 0.25);
+  border-color: var(--accent, #ffcc00);
+  box-shadow:
+    0 0 6px 0 rgba(255, 204, 0, 0.35) inset,
+    0 0 4px rgba(255, 204, 0, 0.25);
 }
 .quality-pill.q-needs-attention {
   background: rgba(234, 88, 12, 0.18);
   border-color: #ea580c;
-  box-shadow: 0 0 6px 0 rgba(234, 88, 12, 0.35) inset, 0 0 4px rgba(234, 88, 12, 0.25);
+  box-shadow:
+    0 0 6px 0 rgba(234, 88, 12, 0.35) inset,
+    0 0 4px rgba(234, 88, 12, 0.25);
 }
 .quality-pill.q-critical {
   background: rgba(220, 38, 38, 0.18);
   border-color: #dc2626;
-  box-shadow: 0 0 6px 0 rgba(220, 38, 38, 0.35) inset, 0 0 4px rgba(220, 38, 38, 0.25);
+  box-shadow:
+    0 0 6px 0 rgba(220, 38, 38, 0.35) inset,
+    0 0 4px rgba(220, 38, 38, 0.25);
 }
 .quality-score {
   font-family: var(--font-mono);
@@ -3015,11 +3029,21 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 /* Tier-colored status text */
 /* Status text tier colors — descendant of .quality-pill again. */
-.quality-pill.q-excellent .quality-status { color: #16a34a; }
-.quality-pill.q-good .quality-status { color: #b8960a; }
-[data-theme='dark'] .quality-pill.q-good .quality-status { color: var(--accent, #ffcc00); }
-.quality-pill.q-needs-attention .quality-status { color: #ea580c; }
-.quality-pill.q-critical .quality-status { color: #dc2626; }
+.quality-pill.q-excellent .quality-status {
+  color: #16a34a;
+}
+.quality-pill.q-good .quality-status {
+  color: #b8960a;
+}
+[data-theme='dark'] .quality-pill.q-good .quality-status {
+  color: var(--accent, #ffcc00);
+}
+.quality-pill.q-needs-attention .quality-status {
+  color: #ea580c;
+}
+.quality-pill.q-critical .quality-status {
+  color: #dc2626;
+}
 
 /* Tooltip via data-attr + CSS ::after */
 .quality-pill[data-tooltip] {
@@ -3034,7 +3058,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   transform: translateX(-50%);
   background: var(--bg-elev, #1a1b2e);
   color: var(--text, #e0e0e0);
-  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
   border-radius: 5px;
   padding: 5px 9px;
   font-family: var(--font-mono);
@@ -3045,7 +3069,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   opacity: 0;
   transition: opacity 0.15s;
   z-index: 100;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 .quality-pill[data-tooltip]:hover::after {
   opacity: 1;

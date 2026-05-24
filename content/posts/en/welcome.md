@@ -1,6 +1,6 @@
 ---
-title: "Welcome to the Spyglass Blog"
-date: "2026-05-23T00:00:00Z"
+title: 'Welcome to the Spyglass Blog'
+date: '2026-05-23T00:00:00Z'
 category: guide
 tags: [meta, intro]
 slug: welcome

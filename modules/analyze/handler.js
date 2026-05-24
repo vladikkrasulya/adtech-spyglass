@@ -38,7 +38,9 @@ const log = require('../../lib/logger').child('analyze');
 const { readJson, sendJson, sendError } = require('../../lib/http');
 // Stage 5 — Insights: fire-and-forget logging of validation results.
 let _logValidation = null;
-try { ({ logValidation: _logValidation } = require('../../lib/validation-log')); } catch (_) {}
+try {
+  ({ logValidation: _logValidation } = require('../../lib/validation-log'));
+} catch (_) {}
 
 /**
  * @param {{
@@ -291,7 +293,8 @@ function createAnalyzeModule(deps) {
               const infoCnt = findings.filter((f) => f.level === 'info').length;
               const fmtArr =
                 format && format.formats && format.formats.length ? format.formats : [];
-              const fmtStr = fmtArr.length === 1 ? fmtArr[0] : fmtArr.length > 1 ? 'multi' : 'unknown';
+              const fmtStr =
+                fmtArr.length === 1 ? fmtArr[0] : fmtArr.length > 1 ? 'multi' : 'unknown';
               const verStr =
                 validation && validation.version && validation.version.version
                   ? String(validation.version.version)
@@ -305,7 +308,9 @@ function createAnalyzeModule(deps) {
                 info_count: infoCnt,
                 source: 'analyze',
               });
-            } catch (_) { /* silent */ }
+            } catch (_) {
+              /* silent */
+            }
           });
         }
       })

@@ -17,7 +17,7 @@
 const FALLBACK_LANG = 'en';
 
 const L = {
-  title:    { en: 'Insights', uk: 'Інсайти', ru: 'Аналитика' },
+  title: { en: 'Insights', uk: 'Інсайти', ru: 'Аналитика' },
   subtitle: {
     en: 'Real-time analytics from validation stream and inspector usage.',
     uk: 'Аналітика валідаційного стріму та інспектора в реальному часі.',
@@ -26,12 +26,12 @@ const L = {
   widget1Title: { en: 'Stream Activity', uk: 'Активність стріму', ru: 'Активность потока' },
   widget2Title: { en: 'Validation Health', uk: 'Якість валідацій', ru: 'Качество валидаций' },
   widget3Title: { en: 'Spec Mix', uk: 'Розподіл специфікацій', ru: 'Распределение спецификаций' },
-  total:    { en: 'total', uk: 'всього', ru: 'всего' },
-  peak:     { en: 'peak', uk: 'пік', ru: 'пик' },
-  errors:   { en: 'Errors', uk: 'Помилки', ru: 'Ошибки' },
+  total: { en: 'total', uk: 'всього', ru: 'всего' },
+  peak: { en: 'peak', uk: 'пік', ru: 'пик' },
+  errors: { en: 'Errors', uk: 'Помилки', ru: 'Ошибки' },
   warnings: { en: 'Warnings', uk: 'Попередження', ru: 'Предупреждения' },
-  info:     { en: 'Info', uk: 'Інфо', ru: 'Инфо' },
-  formats:  { en: 'Formats', uk: 'Формати', ru: 'Форматы' },
+  info: { en: 'Info', uk: 'Інфо', ru: 'Инфо' },
+  formats: { en: 'Formats', uk: 'Формати', ru: 'Форматы' },
   versions: { en: 'Versions', uk: 'Версії', ru: 'Версии' },
   autoRefresh: { en: 'Auto-refresh', uk: 'Авто-оновлення', ru: 'Авто-обновление' },
   refreshOff: { en: 'Off', uk: 'Вимк', ru: 'Выкл' },
@@ -44,29 +44,33 @@ const L = {
   },
   emptyBody: {
     en: 'Data will appear here in about a minute once the validation stream emits events.',
-    uk: 'Дані з\'являться тут приблизно за хвилину, коли валідаційний стрім почне надсилати події.',
+    uk: "Дані з'являться тут приблизно за хвилину, коли валідаційний стрім почне надсилати події.",
     ru: 'Данные появятся здесь примерно через минуту после начала эмиссии событий потоком.',
   },
   loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
-  errFetch: { en: 'Failed to load analytics.', uk: 'Не вдалось завантажити аналітику.', ru: 'Не удалось загрузить аналитику.' },
+  errFetch: {
+    en: 'Failed to load analytics.',
+    uk: 'Не вдалось завантажити аналітику.',
+    ru: 'Не удалось загрузить аналитику.',
+  },
 };
 
 // Format + version colour maps
 const FORMAT_COLORS = {
   banner: '#f59e0b',
-  video:  '#3b82f6',
+  video: '#3b82f6',
   native: '#10b981',
-  audio:  '#8b5cf6',
-  pop:    '#ef4444',
-  vast:   '#06b6d4',
-  multi:  '#6b7280',
+  audio: '#8b5cf6',
+  pop: '#ef4444',
+  vast: '#06b6d4',
+  multi: '#6b7280',
   unknown: '#9ca3af',
 };
 const VERSION_COLORS = {
-  '2.5':     '#6b7280',
-  '2.6':     '#f59e0b',
-  '3.0':     '#8b5cf6',
-  unknown:   '#9ca3af',
+  2.5: '#6b7280',
+  2.6: '#f59e0b',
+  '3.0': '#8b5cf6',
+  unknown: '#9ca3af',
 };
 
 function pick(map, lang) {
@@ -94,7 +98,7 @@ function verColor(ver) {
 function buildActivityPath(points, W, H, pad) {
   if (!points || points.length === 0) return '';
   const maxCount = Math.max(...points.map((p) => p.count), 1);
-  const xFor = (i) => W * i / (points.length - 1 || 1);
+  const xFor = (i) => (W * i) / (points.length - 1 || 1);
   const yFor = (count) => H - pad - (H - pad * 2) * (count / maxCount);
 
   let d = 'M' + xFor(0) + ',' + yFor(points[0].count);
@@ -116,7 +120,7 @@ function buildActivityPath(points, W, H, pad) {
 function buildLinePath(points, W, H, pad) {
   if (!points || points.length === 0) return '';
   const maxCount = Math.max(...points.map((p) => p.count), 1);
-  const xFor = (i) => W * i / (points.length - 1 || 1);
+  const xFor = (i) => (W * i) / (points.length - 1 || 1);
   const yFor = (count) => H - pad - (H - pad * 2) * (count / maxCount);
 
   let d = 'M' + xFor(0) + ',' + yFor(points[0].count);
@@ -134,9 +138,11 @@ function buildLinePath(points, W, H, pad) {
 function renderWidget1(data, lang) {
   const points = data.stream_activity || [];
   const total = points.reduce((s, p) => s + p.count, 0);
-  const peak  = Math.max(...points.map((p) => p.count), 0);
+  const peak = Math.max(...points.map((p) => p.count), 0);
 
-  const W = 600, H = 180, PAD = 20;
+  const W = 600,
+    H = 180,
+    PAD = 20;
   const areaPath = buildActivityPath(points, W, H, PAD);
   const linePath = buildLinePath(points, W, H, PAD);
 
@@ -195,7 +201,10 @@ function renderWidget2(data, lang) {
   const total = t.errors + t.warnings + t.info || 1;
   const errPct = ((t.errors / total) * 100).toFixed(1);
 
-  const CX = 100, CY = 100, R_OUTER = 90, R_INNER = 54;
+  const CX = 100,
+    CY = 100,
+    R_OUTER = 90,
+    R_INNER = 54;
   // Start at top (−π/2)
   const START = -Math.PI / 2;
   let angle = START;
@@ -208,7 +217,9 @@ function renderWidget2(data, lang) {
 
   let arcs = '';
   for (const seg of segments) {
-    if (seg.count <= 0) { continue; }
+    if (seg.count <= 0) {
+      continue;
+    }
     const sweep = (seg.count / total) * 2 * Math.PI;
     const pathD = buildArcPath(CX, CY, R_INNER, R_OUTER, angle, angle + sweep);
     arcs += `<path d="${escapeHtml(pathD)}" fill="${escapeHtml(seg.color)}" opacity="0.92"/>`;
@@ -220,13 +231,17 @@ function renderWidget2(data, lang) {
     arcs = `<path d="${escapeHtml(pathD)}" fill="var(--bg-2,#f2ede3)"/>`;
   }
 
-  const legendRows = segments.map((s) => `
+  const legendRows = segments
+    .map(
+      (s) => `
     <div class="ins-donut-legend-row">
       <span class="ins-donut-dot" style="background:${escapeHtml(s.color)}"></span>
       <span>${escapeHtml(s.label)}</span>
       <span class="ins-donut-legend-count">${s.count.toLocaleString()}</span>
     </div>
-  `).join('');
+  `,
+    )
+    .join('');
 
   return `
     <div class="ins-widget" id="ins-w2">
@@ -249,7 +264,9 @@ function renderWidget2(data, lang) {
 
 function renderBars(rows, colorFn, lang) {
   if (!rows || rows.length === 0) return '<p style="font-size:13px;color:var(--text-muted)">—</p>';
-  return rows.map((r) => `
+  return rows
+    .map(
+      (r) => `
     <div class="ins-mix-row">
       <span class="ins-mix-label" title="${escapeHtml(r.format || r.version || '')}">${escapeHtml(r.format || r.version || '?')}</span>
       <div class="ins-mix-bar-wrap">
@@ -257,7 +274,9 @@ function renderBars(rows, colorFn, lang) {
       </div>
       <span class="ins-mix-pct">${r.pct}%</span>
     </div>
-  `).join('');
+  `,
+    )
+    .join('');
 }
 
 function renderWidget3(data, lang) {
@@ -339,11 +358,7 @@ function isEmptyData(data) {
 }
 
 function renderWidgets(data, lang) {
-  return (
-    renderWidget1(data, lang) +
-    renderWidget2(data, lang) +
-    renderWidget3(data, lang)
-  );
+  return renderWidget1(data, lang) + renderWidget2(data, lang) + renderWidget3(data, lang);
 }
 
 export default {
@@ -373,7 +388,10 @@ export default {
 
     function updateAgoLabel() {
       if (!updatedLabel) return;
-      if (!lastFetch) { updatedLabel.textContent = ''; return; }
+      if (!lastFetch) {
+        updatedLabel.textContent = '';
+        return;
+      }
       const secs = Math.floor((Date.now() - lastFetch) / 1000);
       if (secs < 5) {
         updatedLabel.textContent = pick(L.updatedNow, lang);

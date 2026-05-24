@@ -106,9 +106,7 @@ function validateClickunderFeed(o) {
     }
   });
   return {
-    type: isArrayShape
-      ? 'Clickunder Feed Response'
-      : 'Clickunder Feed Response (single)',
+    type: isArrayShape ? 'Clickunder Feed Response' : 'Clickunder Feed Response (single)',
     findings,
   };
 }

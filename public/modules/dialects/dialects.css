@@ -86,7 +86,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: border-color 150ms ease, transform 150ms ease;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease;
 }
 .dlc-card:hover {
   border-color: var(--accent, #ffcc00);
@@ -173,7 +175,7 @@
   white-space: nowrap;
 }
 .dlc-sev-chip--error {
-  background: rgba(220, 38, 38, 0.10);
+  background: rgba(220, 38, 38, 0.1);
   color: var(--danger, #dc2626);
 }
 .dlc-sev-chip--warning {
@@ -181,7 +183,7 @@
   color: #a16207;
 }
 .dlc-sev-chip--info {
-  background: rgba(59, 130, 246, 0.10);
+  background: rgba(59, 130, 246, 0.1);
   color: #2563eb;
 }
 
@@ -205,7 +207,9 @@
   text-decoration: none;
   text-align: center;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 .dlc-btn:hover {
   background: var(--accent-soft, rgba(255, 204, 0, 0.14));

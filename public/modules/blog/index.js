@@ -18,24 +18,26 @@ import { escapeHtml } from '/core/utils.js';
 const FALLBACK_LANG = 'en';
 
 const CATEGORY_LABELS = {
-  news:     { en: 'News',       uk: 'Новини',   ru: 'Новости'  },
-  analysis: { en: 'Deep-dives', uk: 'Розбори',  ru: 'Разборы'  },
-  guide:    { en: 'Guides',     uk: 'Гайди',    ru: 'Гайды'    },
+  news: { en: 'News', uk: 'Новини', ru: 'Новости' },
+  analysis: { en: 'Deep-dives', uk: 'Розбори', ru: 'Разборы' },
+  guide: { en: 'Guides', uk: 'Гайди', ru: 'Гайды' },
 };
 
 const L = {
-  title:       { en: 'Blog',             uk: 'Блог',              ru: 'Блог'               },
-  subtitle:    { en: 'OpenRTB internals, adtech news, and integration guides.',
-                 uk: 'Внутрішня кухня OpenRTB, adtech-новини та гайди з інтеграції.',
-                 ru: 'Внутренняя кухня OpenRTB, adtech-новости и гайды по интеграции.' },
-  allLangs:    { en: 'All languages',    uk: 'Всі мови',          ru: 'Все языки'          },
-  loading:     { en: 'Loading…',         uk: 'Завантаження…',     ru: 'Загрузка…'          },
-  noItems:     { en: 'No posts yet.',    uk: 'Поки немає постів.', ru: 'Постов пока нет.'  },
-  readMore:    { en: 'Read more →',      uk: 'Читати далі →',     ru: 'Читать далее →'    },
-  backToList:  { en: '← Back to blog',  uk: '← До блогу',        ru: '← К блогу'         },
-  editorial:   { en: 'editorial',        uk: 'редакційне',        ru: 'редакционное'       },
-  firehose:    { en: 'firehose',         uk: 'firehose',          ru: 'firehose'           },
-  notFound:    { en: 'Post not found.',  uk: 'Пост не знайдено.', ru: 'Пост не найден.'   },
+  title: { en: 'Blog', uk: 'Блог', ru: 'Блог' },
+  subtitle: {
+    en: 'OpenRTB internals, adtech news, and integration guides.',
+    uk: 'Внутрішня кухня OpenRTB, adtech-новини та гайди з інтеграції.',
+    ru: 'Внутренняя кухня OpenRTB, adtech-новости и гайды по интеграции.',
+  },
+  allLangs: { en: 'All languages', uk: 'Всі мови', ru: 'Все языки' },
+  loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
+  noItems: { en: 'No posts yet.', uk: 'Поки немає постів.', ru: 'Постов пока нет.' },
+  readMore: { en: 'Read more →', uk: 'Читати далі →', ru: 'Читать далее →' },
+  backToList: { en: '← Back to blog', uk: '← До блогу', ru: '← К блогу' },
+  editorial: { en: 'editorial', uk: 'редакційне', ru: 'редакционное' },
+  firehose: { en: 'firehose', uk: 'firehose', ru: 'firehose' },
+  notFound: { en: 'Post not found.', uk: 'Пост не знайдено.', ru: 'Пост не найден.' },
 };
 
 function pick(map, lang) {
@@ -109,13 +111,13 @@ export default {
 
 async function mountListing(root, ctx, lang) {
   const cats = [
-    { id: '',         label: pick({ en: 'All', uk: 'Всі', ru: 'Все' }, lang) },
-    { id: 'news',     label: pick(CATEGORY_LABELS.news, lang) },
+    { id: '', label: pick({ en: 'All', uk: 'Всі', ru: 'Все' }, lang) },
+    { id: 'news', label: pick(CATEGORY_LABELS.news, lang) },
     { id: 'analysis', label: pick(CATEGORY_LABELS.analysis, lang) },
-    { id: 'guide',    label: pick(CATEGORY_LABELS.guide, lang) },
+    { id: 'guide', label: pick(CATEGORY_LABELS.guide, lang) },
   ];
   const langFilters = [
-    { id: '',   label: pick(L.allLangs, lang) },
+    { id: '', label: pick(L.allLangs, lang) },
     { id: 'uk', label: 'UA' },
     { id: 'en', label: 'EN' },
     { id: 'ru', label: 'RU' },
@@ -168,26 +170,34 @@ async function mountListing(root, ctx, lang) {
   }
 
   // Category chips
-  root.querySelector('#catChips').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-cat]');
-    if (!btn) return;
-    activeCat = btn.dataset.cat;
-    root.querySelectorAll('#catChips .blog-chip').forEach((b) =>
-      b.classList.toggle('is-active', b.dataset.cat === activeCat),
-    );
-    loadAndRender();
-  }, { signal: ctx.signal });
+  root.querySelector('#catChips').addEventListener(
+    'click',
+    (e) => {
+      const btn = e.target.closest('[data-cat]');
+      if (!btn) return;
+      activeCat = btn.dataset.cat;
+      root
+        .querySelectorAll('#catChips .blog-chip')
+        .forEach((b) => b.classList.toggle('is-active', b.dataset.cat === activeCat));
+      loadAndRender();
+    },
+    { signal: ctx.signal },
+  );
 
   // Lang chips
-  root.querySelector('#langChips').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-lang]');
-    if (!btn) return;
-    activeLang = btn.dataset.lang;
-    root.querySelectorAll('#langChips .blog-chip').forEach((b) =>
-      b.classList.toggle('is-active', b.dataset.lang === activeLang),
-    );
-    loadAndRender();
-  }, { signal: ctx.signal });
+  root.querySelector('#langChips').addEventListener(
+    'click',
+    (e) => {
+      const btn = e.target.closest('[data-lang]');
+      if (!btn) return;
+      activeLang = btn.dataset.lang;
+      root
+        .querySelectorAll('#langChips .blog-chip')
+        .forEach((b) => b.classList.toggle('is-active', b.dataset.lang === activeLang));
+      loadAndRender();
+    },
+    { signal: ctx.signal },
+  );
 
   loadAndRender();
 }
@@ -196,9 +206,8 @@ function renderCard(post, uiLang) {
   const catKey = post.category || 'guide';
   const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
   const dateStr = formatDate(post.published_at, post.lang || uiLang);
-  const sourceLabel = post.source === 'markdown'
-    ? pick(L.editorial, uiLang)
-    : pick(L.firehose, uiLang);
+  const sourceLabel =
+    post.source === 'markdown' ? pick(L.editorial, uiLang) : pick(L.firehose, uiLang);
   const sourceIcon = post.source === 'markdown' ? '📝' : '📰';
   const postUrl = `/blog/${post.lang}/${post.slug}`;
   return `

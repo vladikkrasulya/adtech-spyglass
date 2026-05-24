@@ -258,7 +258,9 @@
       document.documentElement.setAttribute('data-lang', newLangFromUrl);
       try {
         localStorage.setItem('kt-lang', newLangFromUrl);
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
       // Best-effort POST so cross-device preference updates.
       try {
         fetch('/api/auth/preferences', {
@@ -268,7 +270,9 @@
           body: JSON.stringify({ locale: newLangFromUrl }),
           keepalive: true,
         }).catch(() => {});
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
       // Snapshot textarea content so the inspector module can restore it
       // after kt:inspector-ready (same pattern as the old hard-nav branch).
       try {
@@ -278,7 +282,9 @@
         else sessionStorage.removeItem('_sg_restore_bidReq');
         if (resEl && resEl.value) sessionStorage.setItem('_sg_restore_bidRes', resEl.value);
         else sessionStorage.removeItem('_sg_restore_bidRes');
-      } catch (_) { /* storage disabled — acceptable */ }
+      } catch (_) {
+        /* storage disabled — acceptable */
+      }
       // Close lang dropdown.
       const menuEl = document.querySelector('.kt-lang-menu');
       if (menuEl) menuEl.removeAttribute('open');

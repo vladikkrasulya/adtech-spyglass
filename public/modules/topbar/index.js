@@ -127,7 +127,7 @@ async function fetchAuthUser() {
     if (res.status === 401) return null;
     if (!res.ok) return null;
     const j = await res.json();
-    return (j && j.user) ? j.user : null;
+    return j && j.user ? j.user : null;
   } catch (_) {
     return null;
   }
@@ -244,9 +244,11 @@ export function mountTopbar(root, shellRoot) {
   let searchCleanup = null;
   const searchInput = root.querySelector('.kt-topbar__search-input');
   if (searchInput) {
-    import('/modules/search/index.js').then(({ initSearch }) => {
-      searchCleanup = initSearch(searchInput, shellRoot);
-    }).catch(e => console.warn('[topbar] search module load failed:', e));
+    import('/modules/search/index.js')
+      .then(({ initSearch }) => {
+        searchCleanup = initSearch(searchInput, shellRoot);
+      })
+      .catch((e) => console.warn('[topbar] search module load failed:', e));
   }
 
   // Wire the sign-in pill. The auth modal lives in /modules/auth/ but
@@ -263,7 +265,6 @@ export function mountTopbar(root, shellRoot) {
   // Hook up the nav drawer toggle. Adds/removes is-nav-open on the shell root.
   const toggleBtn = root.querySelector('[data-action="toggle-nav"]');
   toggleBtn.addEventListener('click', onToggle);
-
 
   // Close drawer when clicking outside the sidebar (on the backdrop pseudo-el
   // we set in nav.css). The backdrop is created via ::before on .kt-shell so
@@ -297,16 +298,21 @@ export function mountTopbar(root, shellRoot) {
   // Re-render labels on language change; preserve auth state.
   const onLang = () => {
     // Cleanup existing search before re-render
-    if (searchCleanup) { searchCleanup(); searchCleanup = null; }
+    if (searchCleanup) {
+      searchCleanup();
+      searchCleanup = null;
+    }
     doRender(); // keeps _authUser
     const newToggle = root.querySelector('[data-action="toggle-nav"]');
     if (newToggle) newToggle.addEventListener('click', onToggle);
     // Re-init search on new input
     const newSearchInput = root.querySelector('.kt-topbar__search-input');
     if (newSearchInput) {
-      import('/modules/search/index.js').then(({ initSearch }) => {
-        searchCleanup = initSearch(newSearchInput, shellRoot);
-      }).catch(e => console.warn('[topbar] search module reload failed:', e));
+      import('/modules/search/index.js')
+        .then(({ initSearch }) => {
+          searchCleanup = initSearch(newSearchInput, shellRoot);
+        })
+        .catch((e) => console.warn('[topbar] search module reload failed:', e));
     }
   };
   window.addEventListener('kt:lang-change', onLang);
@@ -315,7 +321,7 @@ export function mountTopbar(root, shellRoot) {
   // Listen to auth:changed dispatched by SpyglassSession.setUser and
   // window.signOut. Detail carries {user} (null on logout).
   const onAuthChanged = (e) => {
-    const user = (e && e.detail && e.detail.user) ? e.detail.user : null;
+    const user = e && e.detail && e.detail.user ? e.detail.user : null;
     updateAuthArea(user);
   };
   window.addEventListener('auth:changed', onAuthChanged);
@@ -325,7 +331,10 @@ export function mountTopbar(root, shellRoot) {
   updateAuthArea();
 
   return function unmountTopbar() {
-    if (searchCleanup) { searchCleanup(); searchCleanup = null; }
+    if (searchCleanup) {
+      searchCleanup();
+      searchCleanup = null;
+    }
     toggleBtn.removeEventListener('click', onToggle);
     shellRoot.removeEventListener('click', onShellClick);
     window.removeEventListener('popstate', onRoute);

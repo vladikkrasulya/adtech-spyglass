@@ -48,7 +48,10 @@
   font-weight: 500;
   color: var(--text-muted, #71717a);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 .blog-chip:hover {
   color: var(--text);
@@ -89,7 +92,9 @@
   border-radius: 8px;
   padding: var(--space-4, 20px);
   cursor: pointer;
-  transition: border-color 0.15s, transform 0.12s;
+  transition:
+    border-color 0.15s,
+    transform 0.12s;
 }
 .blog-card:hover {
   border-color: var(--accent, #ffcc00);
@@ -160,9 +165,18 @@
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
-.blog-badge--news     { background: #1e3a5f; color: #93c5fd; }
-.blog-badge--analysis { background: #1e1a3f; color: #c4b5fd; }
-.blog-badge--guide    { background: #1a3a2a; color: #6ee7b7; }
+.blog-badge--news {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+.blog-badge--analysis {
+  background: #1e1a3f;
+  color: #c4b5fd;
+}
+.blog-badge--guide {
+  background: #1a3a2a;
+  color: #6ee7b7;
+}
 
 /* ── Post view ───────────────────────────────────────────── */
 .blog-post-section {
@@ -207,7 +221,9 @@
   text-decoration: none;
   font-size: 12px;
 }
-.blog-post__src:hover { text-decoration: underline; }
+.blog-post__src:hover {
+  text-decoration: underline;
+}
 
 /* ── Post body (markdown output) ─────────────────────────── */
 .blog-post__body {
@@ -222,11 +238,16 @@
   font-weight: 600;
   color: var(--text);
 }
-.blog-post__body p { margin: 0 0 1em; }
-.blog-post__body ul, .blog-post__body ol {
+.blog-post__body p {
+  margin: 0 0 1em;
+}
+.blog-post__body ul,
+.blog-post__body ol {
   margin: 0 0 1em 1.5em;
 }
-.blog-post__body li { margin: 0.3em 0; }
+.blog-post__body li {
+  margin: 0.3em 0;
+}
 .blog-post__body code {
   background: var(--surface-alt, #27272a);
   border-radius: 4px;
@@ -255,8 +276,12 @@
   color: var(--text-muted);
   font-style: italic;
 }
-.blog-post__body strong { font-weight: 700; }
-.blog-post__body em { font-style: italic; }
+.blog-post__body strong {
+  font-weight: 700;
+}
+.blog-post__body em {
+  font-style: italic;
+}
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 600px) {

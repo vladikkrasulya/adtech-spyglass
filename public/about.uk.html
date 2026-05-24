@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Як користуватися Spyglass — документація валідатора OpenRTB</title>
-    <meta name="description" content="Документація Spyglass: як працює валідатор OpenRTB, що аналізує, що залишається на пристрої (100% локально), що зберігається із шифруванням (ключ є лише у вашому браузері). oRTB 2.5/2.6/3.0, Native, VAST." />
+    <meta
+      name="description"
+      content="Документація Spyglass: як працює валідатор OpenRTB, що аналізує, що залишається на пристрої (100% локально), що зберігається із шифруванням (ключ є лише у вашому браузері). oRTB 2.5/2.6/3.0, Native, VAST."
+    />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href="https://ortbtools.com/uk/about" />
     <link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/about" />
@@ -15,7 +18,10 @@
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="ortbtools.com" />
     <meta property="og:title" content="Документація Spyglass — валідатор OpenRTB" />
-    <meta property="og:description" content="Як працює валідатор OpenRTB, що аналізує, що залишається у браузері, а що зберігається з наскрізним шифруванням." />
+    <meta
+      property="og:description"
+      content="Як працює валідатор OpenRTB, що аналізує, що залишається у браузері, а що зберігається з наскрізним шифруванням."
+    />
     <meta property="og:url" content="https://ortbtools.com/uk/about" />
     <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:locale" content="uk_UA" />
@@ -29,7 +35,10 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Документація Spyglass — валідатор OpenRTB" />
-    <meta name="twitter:description" content="Документація Spyglass — безкоштовний валідатор OpenRTB, що працює повністю у браузері." />
+    <meta
+      name="twitter:description"
+      content="Документація Spyglass — безкоштовний валідатор OpenRTB, що працює повністю у браузері."
+    />
     <meta name="twitter:image" content="https://ortbtools.com/og-image.png" />
 
     <script type="application/ld+json">
@@ -735,7 +744,7 @@
             <code>getUserMedia</code>), miner-сигнатури в коді, click-skim probe-и (фейкові
             клік-події що випереджають реальний клік користувача). Engine видає структуровані
             знахідки — той самий шейп, що Static, плюс severity та URL призначення. Деталі — у
-            розділі <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a
+            розділі <a href="#behavior"><strong>Behavior Analysis &amp; Anti-Fraud</strong></a>
             >.
           </p>
 
@@ -1246,7 +1255,7 @@ findings[]: { id, level, path, params, msg, specRef }
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/openrtb2.x</a
               >
-              (IAB Tech Lab)
+              > (IAB Tech Lab)
             </li>
             <li>
               <strong>IAB Content Taxonomy 1.0</strong> —
@@ -1255,6 +1264,7 @@ findings[]: { id, level, path, params, msg, specRef }
                 target="_blank"
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/Content-Taxonomy</a
+              >
             </li>
             <li>
               <strong>Native 1.1 / 1.2</strong> —
@@ -1263,24 +1273,16 @@ findings[]: { id, level, path, params, msg, specRef }
                 target="_blank"
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/openrtb</a
+              >
             </li>
             <li>
               <strong>Vendor JSON feed (push + клікандер)</strong> — single-bid push-масив або
               <code>{result: {listing: [...]}}</code> клікандер-обгортка. Структура різна у різних
               vendors; Spyglass визначає її з кореня відповіді.
             </li>
-            <li>
-              <strong>Value-feed (proprietary RTB)</strong> —
-              format reference (private)
-            </li>
-            <li>
-              <strong>Bid-price feed (per-format)</strong> —
-              format reference (private)
-            </li>
-            <li>
-              <strong>Bid-redirect feed</strong> —
-              format reference (private)
-            </li>
+            <li><strong>Value-feed (proprietary RTB)</strong> — format reference (private)</li>
+            <li><strong>Bid-price feed (per-format)</strong> — format reference (private)</li>
+            <li><strong>Bid-redirect feed</strong> — format reference (private)</li>
             <li>
               <strong>AdKernel (oRTB-based)</strong> — покривається стандартним OpenRTB-валідатором;
               форма інтеграції —
@@ -1289,6 +1291,7 @@ findings[]: { id, level, path, params, msg, specRef }
                 target="_blank"
                 rel="noopener"
                 >prebid-server/adapters/adkernel</a
+              >
             </li>
           </ul>
           <p>
@@ -1298,6 +1301,7 @@ findings[]: { id, level, path, params, msg, specRef }
               target="_blank"
               rel="noopener"
               >github.com/vladikkrasulya/adtech-spyglass</a
+            >
             >
           </p>
 

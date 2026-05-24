@@ -204,7 +204,8 @@ function detectType(obj) {
     // `result`), different key. Routed through VENDOR_FEED
     // so rules-feed dispatch can discriminate by key → validateLinkFeed.
     if (Array.isArray(r.link) || isObj(r.link)) return TYPES.VENDOR_FEED;
-    if (typeof r.status === 'string' && r.status.toUpperCase() === 'NOBID') return TYPES.VENDOR_FEED;
+    if (typeof r.status === 'string' && r.status.toUpperCase() === 'NOBID')
+      return TYPES.VENDOR_FEED;
   }
   if (obj.version && obj.items) return TYPES.JSON_FEED;
 

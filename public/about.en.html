@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>How to Use Spyglass — OpenRTB Validator Documentation</title>
-    <meta name="description" content="Spyglass documentation: how the OpenRTB validator works, what it analyzes, what stays on your device (100% client-side), what is stored with end-to-end encryption (key only on your browser). oRTB 2.5/2.6/3.0, Native, VAST." />
+    <meta
+      name="description"
+      content="Spyglass documentation: how the OpenRTB validator works, what it analyzes, what stays on your device (100% client-side), what is stored with end-to-end encryption (key only on your browser). oRTB 2.5/2.6/3.0, Native, VAST."
+    />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href="https://ortbtools.com/about" />
     <link rel="alternate" hreflang="uk" href="https://ortbtools.com/uk/about" />
@@ -15,7 +18,10 @@
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="ortbtools.com" />
     <meta property="og:title" content="Spyglass Docs — OpenRTB Validator" />
-    <meta property="og:description" content="How the OpenRTB validator works, what it analyzes, what stays on your device, and what is stored end-to-end encrypted." />
+    <meta
+      property="og:description"
+      content="How the OpenRTB validator works, what it analyzes, what stays on your device, and what is stored end-to-end encrypted."
+    />
     <meta property="og:url" content="https://ortbtools.com/about" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:locale:alternate" content="uk_UA" />
@@ -29,7 +35,10 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Spyglass Docs — OpenRTB Validator" />
-    <meta name="twitter:description" content="Spyglass documentation — the free OpenRTB validator that runs entirely in your browser." />
+    <meta
+      name="twitter:description"
+      content="Spyglass documentation — the free OpenRTB validator that runs entirely in your browser."
+    />
     <meta name="twitter:image" content="https://ortbtools.com/og-image.png" />
 
     <script type="application/ld+json">
@@ -592,8 +601,8 @@
           <ul>
             <li>
               <strong>Share link</strong> — copies a self-contained URL like
-              <code>ortbtools.com/?#req=…&amp;res=…</code>. The payload is
-              deflate-compressed + base64url-encoded into the URL hash fragment, which
+              <code>ortbtools.com/?#req=…&amp;res=…</code>. The payload is deflate-compressed +
+              base64url-encoded into the URL hash fragment, which
               <strong>never reaches the server</strong> (zero-knowledge by URL design). Opening the
               link auto-populates both panes and re-runs the analysis.
             </li>
@@ -1244,7 +1253,7 @@ server formats localised text and returns 200 JSON</code></pre>
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/openrtb2.x</a
               >
-              (IAB Tech Lab)
+              > (IAB Tech Lab)
             </li>
             <li>
               <strong>IAB Content Taxonomy 1.0</strong> —
@@ -1253,6 +1262,7 @@ server formats localised text and returns 200 JSON</code></pre>
                 target="_blank"
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/Content-Taxonomy</a
+              >
             </li>
             <li>
               <strong>Native 1.1 / 1.2</strong> —
@@ -1261,24 +1271,16 @@ server formats localised text and returns 200 JSON</code></pre>
                 target="_blank"
                 rel="noopener"
                 >github.com/InteractiveAdvertisingBureau/openrtb</a
+              >
             </li>
             <li>
               <strong>Vendor JSON feed (push + clickunder)</strong> — single-bid push array or
               <code>{result: {listing: [...]}}</code> clickunder wrapper. Shape varies by vendor;
               Spyglass infers it from the response root.
             </li>
-            <li>
-              <strong>Value-feed (proprietary RTB)</strong> —
-              format reference (private)
-            </li>
-            <li>
-              <strong>Bid-price feed (per-format)</strong> —
-              format reference (private)
-            </li>
-            <li>
-              <strong>Bid-redirect feed</strong> —
-              format reference (private)
-            </li>
+            <li><strong>Value-feed (proprietary RTB)</strong> — format reference (private)</li>
+            <li><strong>Bid-price feed (per-format)</strong> — format reference (private)</li>
+            <li><strong>Bid-redirect feed</strong> — format reference (private)</li>
             <li>
               <strong>AdKernel (oRTB-based)</strong> — covered by the standard OpenRTB validator;
               integration shape via
@@ -1287,6 +1289,7 @@ server formats localised text and returns 200 JSON</code></pre>
                 target="_blank"
                 rel="noopener"
                 >prebid-server/adapters/adkernel</a
+              >
             </li>
           </ul>
           <p>
@@ -1296,6 +1299,7 @@ server formats localised text and returns 200 JSON</code></pre>
               target="_blank"
               rel="noopener"
               >github.com/vladikkrasulya/adtech-spyglass</a
+            >
             >
           </p>
 

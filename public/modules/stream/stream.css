@@ -416,13 +416,13 @@
   display: inline-block;
   padding: 1px 7px;
   border-radius: 9999px;
-  background: var(--accent-muted, rgba(99,102,241,0.15));
+  background: var(--accent-muted, rgba(99, 102, 241, 0.15));
   color: var(--accent, #6366f1);
   font-size: 0.75rem;
   font-weight: 500;
 }
 .stream-agg-badge--src {
-  background: var(--surface-3, rgba(100,116,139,0.15));
+  background: var(--surface-3, rgba(100, 116, 139, 0.15));
   color: var(--text-secondary, #64748b);
 }
 .stream-agg-sep {
@@ -457,7 +457,9 @@
   font-size: 0.78rem;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .stream-action-btn:hover {
   background: var(--accent, #6366f1);

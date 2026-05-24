@@ -37,16 +37,20 @@ function escHtml(s) {
 }
 
 const GROUP_LABELS = {
-  sample:   { en: 'Samples',            uk: 'Зразки',                   ru: 'Образцы' },
-  behavior: { en: 'Behavior scenarios', uk: 'Сценарії поведінки',        ru: 'Поведенческие сценарии' },
-  finding:  { en: 'Finding catalog',    uk: 'Документація помилок',      ru: 'Каталог ошибок' },
-  blog:     { en: 'Blog',               uk: 'Блог',                      ru: 'Блог' },
+  sample: { en: 'Samples', uk: 'Зразки', ru: 'Образцы' },
+  behavior: { en: 'Behavior scenarios', uk: 'Сценарії поведінки', ru: 'Поведенческие сценарии' },
+  finding: { en: 'Finding catalog', uk: 'Документація помилок', ru: 'Каталог ошибок' },
+  blog: { en: 'Blog', uk: 'Блог', ru: 'Блог' },
 };
 
 const HINT_LABELS = {
-  typeToSearch: { en: 'Type to search', uk: 'Введіть запит для пошуку', ru: 'Введите запрос для поиска' },
-  nothing:      { en: 'Nothing found',  uk: 'Нічого не знайдено',       ru: 'Ничего не найдено' },
-  loading:      { en: 'Loading index…', uk: 'Завантаження…',             ru: 'Загрузка…' },
+  typeToSearch: {
+    en: 'Type to search',
+    uk: 'Введіть запит для пошуку',
+    ru: 'Введите запрос для поиска',
+  },
+  nothing: { en: 'Nothing found', uk: 'Нічого не знайдено', ru: 'Ничего не найдено' },
+  loading: { en: 'Loading index…', uk: 'Завантаження…', ru: 'Загрузка…' },
 };
 
 const PLACEHOLDERS = {
@@ -57,8 +61,8 @@ const PLACEHOLDERS = {
 
 // ── Data fetch + cache ───────────────────────────────────────────
 
-let _index = null;          // cached flat item array
-let _indexPromise = null;   // in-flight load promise
+let _index = null; // cached flat item array
+let _indexPromise = null; // in-flight load promise
 
 async function loadIndex() {
   if (_index) return _index;
@@ -67,10 +71,14 @@ async function loadIndex() {
   _indexPromise = (async () => {
     const lang = getLang();
     const results = await Promise.allSettled([
-      fetch('/api/v1/sample/list').then(r => r.ok ? r.json() : Promise.reject(r.status)),
-      fetch('/api/v1/behavior/scenarios').then(r => r.ok ? r.json() : Promise.reject(r.status)),
-      fetch(`/api/v1/finding-catalog?lang=${encodeURIComponent(lang)}`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-      fetch(`/api/v1/blog/list?lang=${encodeURIComponent(lang)}&limit=50`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+      fetch('/api/v1/sample/list').then((r) => (r.ok ? r.json() : Promise.reject(r.status))),
+      fetch('/api/v1/behavior/scenarios').then((r) => (r.ok ? r.json() : Promise.reject(r.status))),
+      fetch(`/api/v1/finding-catalog?lang=${encodeURIComponent(lang)}`).then((r) =>
+        r.ok ? r.json() : Promise.reject(r.status),
+      ),
+      fetch(`/api/v1/blog/list?lang=${encodeURIComponent(lang)}&limit=50`).then((r) =>
+        r.ok ? r.json() : Promise.reject(r.status),
+      ),
     ]);
 
     const items = [];
@@ -78,14 +86,16 @@ async function loadIndex() {
     // samples
     if (results[0].status === 'fulfilled') {
       const raw = results[0].value;
-      const list = Array.isArray(raw) ? raw : (raw.items || []);
-      list.forEach(s => items.push({
-        type: 'sample',
-        slug: s.slug || '',
-        label: s.label || s.slug || '',
-        format: s.format || '',
-        note: s.note || '',
-      }));
+      const list = Array.isArray(raw) ? raw : raw.items || [];
+      list.forEach((s) =>
+        items.push({
+          type: 'sample',
+          slug: s.slug || '',
+          label: s.label || s.slug || '',
+          format: s.format || '',
+          note: s.note || '',
+        }),
+      );
     } else {
       console.warn('[search] samples fetch failed:', results[0].reason);
     }
@@ -93,16 +103,18 @@ async function loadIndex() {
     // behavior scenarios
     if (results[1].status === 'fulfilled') {
       const raw = results[1].value;
-      const list = Array.isArray(raw) ? raw : (raw.scenarios || raw.items || []);
-      list.forEach(s => items.push({
-        type: 'behavior',
-        id: s.id || '',
-        name: pickStrFrom(s.name, lang),
-        category: s.category || '',
-        description: pickStrFrom(s.description, lang),
-        demonstrates: pickStrFrom(s.demonstrates, lang),
-        sample: s.sample || '',
-      }));
+      const list = Array.isArray(raw) ? raw : raw.scenarios || raw.items || [];
+      list.forEach((s) =>
+        items.push({
+          type: 'behavior',
+          id: s.id || '',
+          name: pickStrFrom(s.name, lang),
+          category: s.category || '',
+          description: pickStrFrom(s.description, lang),
+          demonstrates: pickStrFrom(s.demonstrates, lang),
+          sample: s.sample || '',
+        }),
+      );
     } else {
       console.warn('[search] behavior fetch failed:', results[1].reason);
     }
@@ -110,14 +122,16 @@ async function loadIndex() {
     // findings
     if (results[2].status === 'fulfilled') {
       const raw = results[2].value;
-      const list = Array.isArray(raw) ? raw : (raw.findings || raw.items || []);
-      list.forEach(f => items.push({
-        type: 'finding',
-        id: f.id || '',
-        severity: f.severity || 'info',
-        message: f.message || '',
-        specRef: f.specRef || f.spec_ref || '',
-      }));
+      const list = Array.isArray(raw) ? raw : raw.findings || raw.items || [];
+      list.forEach((f) =>
+        items.push({
+          type: 'finding',
+          id: f.id || '',
+          severity: f.severity || 'info',
+          message: f.message || '',
+          specRef: f.specRef || f.spec_ref || '',
+        }),
+      );
     } else {
       console.warn('[search] findings fetch failed:', results[2].reason);
     }
@@ -125,15 +139,17 @@ async function loadIndex() {
     // blog
     if (results[3].status === 'fulfilled') {
       const raw = results[3].value;
-      const list = Array.isArray(raw) ? raw : (raw.posts || raw.items || []);
-      list.forEach(p => items.push({
-        type: 'blog',
-        slug: p.slug || '',
-        lang: p.lang || lang,
-        title: p.title || '',
-        category: p.category || '',
-        summary: p.summary || '',
-      }));
+      const list = Array.isArray(raw) ? raw : raw.posts || raw.items || [];
+      list.forEach((p) =>
+        items.push({
+          type: 'blog',
+          slug: p.slug || '',
+          lang: p.lang || lang,
+          title: p.title || '',
+          category: p.category || '',
+          summary: p.summary || '',
+        }),
+      );
     } else {
       console.warn('[search] blog fetch failed:', results[3].reason);
     }
@@ -167,7 +183,14 @@ function scoreItem(item, tokens) {
     if (cat.includes(tok)) tokScore += 1.5;
 
     // Description / note / summary / message weight = 1.0
-    const desc = (item.description || item.note || item.summary || item.message || item.demonstrates || '').toLowerCase();
+    const desc = (
+      item.description ||
+      item.note ||
+      item.summary ||
+      item.message ||
+      item.demonstrates ||
+      ''
+    ).toLowerCase();
     if (desc.includes(tok)) tokScore += 1.0;
 
     // ID / slug also searchable at 1.5 (precise match on ID is useful)
@@ -207,7 +230,7 @@ function search(query) {
     groups[type].sort((a, b) => b.score - a.score);
     const slice = groups[type].slice(0, 5);
     if (slice.length) {
-      result.push({ type, items: slice.map(x => x.item) });
+      result.push({ type, items: slice.map((x) => x.item) });
       total += slice.length;
     }
     if (total >= 20) break;
@@ -221,11 +244,16 @@ function buildUrl(item) {
   const lang = getLang();
   const prefix = lang === 'en' ? '' : '/' + lang;
   switch (item.type) {
-    case 'sample':   return `${prefix}/inspector?sample=${encodeURIComponent(item.slug)}`;
-    case 'behavior': return `${prefix}/inspector?sample=${encodeURIComponent(item.sample)}`;
-    case 'finding':  return `${prefix}/docs/findings#${encodeURIComponent(item.id)}`;
-    case 'blog':     return `${prefix}/blog/${encodeURIComponent(item.lang)}/${encodeURIComponent(item.slug)}`;
-    default:         return '/';
+    case 'sample':
+      return `${prefix}/inspector?sample=${encodeURIComponent(item.slug)}`;
+    case 'behavior':
+      return `${prefix}/inspector?sample=${encodeURIComponent(item.sample)}`;
+    case 'finding':
+      return `${prefix}/docs/findings#${encodeURIComponent(item.id)}`;
+    case 'blog':
+      return `${prefix}/blog/${encodeURIComponent(item.lang)}/${encodeURIComponent(item.slug)}`;
+    default:
+      return '/';
   }
 }
 
@@ -251,11 +279,11 @@ function truncate(text, len) {
 // ── Badge ────────────────────────────────────────────────────────
 
 function badgeClass(item) {
-  if (item.type === 'sample')   return 'sg-badge--sample';
+  if (item.type === 'sample') return 'sg-badge--sample';
   if (item.type === 'behavior') return 'sg-badge--behavior';
-  if (item.type === 'blog')     return 'sg-badge--blog';
+  if (item.type === 'blog') return 'sg-badge--blog';
   if (item.type === 'finding') {
-    if (item.severity === 'error')   return 'sg-badge--finding-error';
+    if (item.severity === 'error') return 'sg-badge--finding-error';
     if (item.severity === 'warning') return 'sg-badge--finding-warning';
     return 'sg-badge--finding-info';
   }
@@ -263,10 +291,10 @@ function badgeClass(item) {
 }
 
 function badgeText(item) {
-  if (item.type === 'sample')   return item.format || 'smpl';
+  if (item.type === 'sample') return item.format || 'smpl';
   if (item.type === 'behavior') return item.category || 'scn';
-  if (item.type === 'finding')  return item.severity || 'info';
-  if (item.type === 'blog')     return item.category || 'blog';
+  if (item.type === 'finding') return item.severity || 'info';
+  if (item.type === 'blog') return item.category || 'blog';
   return '?';
 }
 
@@ -314,7 +342,10 @@ function renderDropdown(state, query, groups) {
     for (const item of group.items) {
       const url = buildUrl(item);
       const primaryText = item.label || item.name || item.title || item.id || '';
-      const previewText = truncate(item.description || item.note || item.summary || item.message || item.demonstrates || '', 80);
+      const previewText = truncate(
+        item.description || item.note || item.summary || item.message || item.demonstrates || '',
+        80,
+      );
       const bClass = badgeClass(item);
       const bText = badgeText(item);
       html += `
@@ -381,7 +412,7 @@ export function initSearch(inputEl, shellRoot) {
     selectedIndex = -1;
 
     // Wire hint chip clicks
-    dropdownEl.querySelectorAll('[data-suggest]').forEach(chip => {
+    dropdownEl.querySelectorAll('[data-suggest]').forEach((chip) => {
       chip.addEventListener('mousedown', (e) => {
         e.preventDefault();
         inputEl.value = chip.dataset.suggest;
@@ -434,7 +465,7 @@ export function initSearch(inputEl, shellRoot) {
     }
   };
 
-  // ── Input ─────────────────────────────────────────────────── 
+  // ── Input ───────────────────────────────────────────────────
   const onInput = () => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {

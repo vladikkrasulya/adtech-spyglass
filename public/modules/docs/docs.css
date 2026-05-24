@@ -89,7 +89,9 @@
   gap: 8px;
   text-decoration: none;
   color: inherit;
-  transition: border-color 150ms ease, transform 150ms ease;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease;
   cursor: pointer;
 }
 .docs-card:hover {
@@ -148,10 +150,13 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 100ms ease, border-color 100ms ease, color 100ms ease;
+  transition:
+    background-color 100ms ease,
+    border-color 100ms ease,
+    color 100ms ease;
 }
 .docs-chip:hover {
-  background: var(--accent-soft, rgba(255,204,0,0.14));
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
   border-color: var(--accent, #ffcc00);
   color: var(--text);
 }
@@ -249,7 +254,7 @@
   color: #b45309;
 }
 .docs-badge--info {
-  background: var(--accent-soft, rgba(255,204,0,0.14));
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
   color: var(--text-muted, #52525b);
 }
 

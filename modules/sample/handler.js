@@ -154,7 +154,6 @@ function handleSample(req, res) {
   }
 }
 
-
 // ── GET /api/v1/sample/list — public catalog metadata ──────────────
 // Returns one row per sample in samples/ for the /library section.
 // Reads from disk on each request (cheap, ~21 files). _note from the
@@ -181,7 +180,10 @@ function handleSampleList(req, res) {
       if (slug.startsWith('iab-')) {
         category = 'iab';
       } else if (
-        /clean/.test(slug) && !/broken|with-issues|insecure|vpaid-deprecated|invisible|frame-bust|redirect|frozen|heavy|popunder-feed/.test(slug)
+        /clean/.test(slug) &&
+        !/broken|with-issues|insecure|vpaid-deprecated|invisible|frame-bust|redirect|frozen|heavy|popunder-feed/.test(
+          slug,
+        )
       ) {
         category = 'valid';
       } else {
@@ -213,7 +215,6 @@ function handleSampleList(req, res) {
     sendError(res, 500, 'list_failed', e.message);
   }
 }
-
 
 // ── GET /api/v1/behavior/scenarios — behavior hub catalog ──────────
 // Returns all scenario entries from samples/behavior-scenarios.json.

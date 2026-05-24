@@ -64,10 +64,14 @@ function zeroFillMinutes(rows) {
   for (let i = 59; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 60_000);
     const key =
-      d.getUTCFullYear() + '-' +
-      String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getUTCDate()).padStart(2, '0') + 'T' +
-      String(d.getUTCHours()).padStart(2, '0') + ':' +
+      d.getUTCFullYear() +
+      '-' +
+      String(d.getUTCMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(d.getUTCDate()).padStart(2, '0') +
+      'T' +
+      String(d.getUTCHours()).padStart(2, '0') +
+      ':' +
       String(d.getUTCMinutes()).padStart(2, '0');
     result.push({ minute: key, count: map[key] || 0 });
   }
@@ -78,25 +82,25 @@ async function handleSummary(req, res) {
   try {
     const [activityRows, totalsRows, formatRows, versionRows] = await Promise.all([
       queryCh(
-        "SELECT toStartOfMinute(timestamp) AS minute, count() AS count " +
-        "FROM analytics.validation_logs " +
-        "WHERE timestamp >= now() - INTERVAL 1 HOUR " +
-        "GROUP BY minute ORDER BY minute"
+        'SELECT toStartOfMinute(timestamp) AS minute, count() AS count ' +
+          'FROM analytics.validation_logs ' +
+          'WHERE timestamp >= now() - INTERVAL 1 HOUR ' +
+          'GROUP BY minute ORDER BY minute',
       ),
       queryCh(
-        "SELECT sum(error_count) AS errors, sum(warning_count) AS warnings, sum(info_count) AS info " +
-        "FROM analytics.validation_logs " +
-        "WHERE timestamp >= now() - INTERVAL 1 HOUR"
+        'SELECT sum(error_count) AS errors, sum(warning_count) AS warnings, sum(info_count) AS info ' +
+          'FROM analytics.validation_logs ' +
+          'WHERE timestamp >= now() - INTERVAL 1 HOUR',
       ),
       queryCh(
-        "SELECT format, count() AS count FROM analytics.validation_logs " +
-        "WHERE timestamp >= now() - INTERVAL 1 HOUR " +
-        "GROUP BY format ORDER BY count DESC"
+        'SELECT format, count() AS count FROM analytics.validation_logs ' +
+          'WHERE timestamp >= now() - INTERVAL 1 HOUR ' +
+          'GROUP BY format ORDER BY count DESC',
       ),
       queryCh(
-        "SELECT version, count() AS count FROM analytics.validation_logs " +
-        "WHERE timestamp >= now() - INTERVAL 1 HOUR " +
-        "GROUP BY version ORDER BY count DESC"
+        'SELECT version, count() AS count FROM analytics.validation_logs ' +
+          'WHERE timestamp >= now() - INTERVAL 1 HOUR ' +
+          'GROUP BY version ORDER BY count DESC',
       ),
     ]);
 
@@ -114,14 +118,14 @@ async function handleSummary(req, res) {
     const format_mix = formatRows.map((r) => ({
       format: r.format || 'unknown',
       count: Number(r.count) || 0,
-      pct: Math.round((Number(r.count) || 0) / fmtTotal * 100),
+      pct: Math.round(((Number(r.count) || 0) / fmtTotal) * 100),
     }));
 
     const verTotal = versionRows.reduce((s, r) => s + (Number(r.count) || 0), 0) || 1;
     const version_mix = versionRows.map((r) => ({
       version: r.version || 'unknown',
       count: Number(r.count) || 0,
-      pct: Math.round((Number(r.count) || 0) / verTotal * 100),
+      pct: Math.round(((Number(r.count) || 0) / verTotal) * 100),
     }));
 
     res.setHeader('Cache-Control', 'public, max-age=15');
@@ -141,7 +145,5 @@ async function handleSummary(req, res) {
 
 module.exports = {
   id: 'analytics',
-  routes: [
-    { method: 'GET', path: '/api/v1/analytics/summary', handler: handleSummary },
-  ],
+  routes: [{ method: 'GET', path: '/api/v1/analytics/summary', handler: handleSummary }],
 };

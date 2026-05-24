@@ -41,7 +41,7 @@ function localePrefix(lang) {
 // ── Localised strings ─────────────────────────────────────────────
 
 const L = {
-  title:    { en: 'Dialect catalog',    uk: 'Каталог діалектів',   ru: 'Каталог диалектов' },
+  title: { en: 'Dialect catalog', uk: 'Каталог діалектів', ru: 'Каталог диалектов' },
   subtitle: {
     en: 'Built-in validation overlays and the user dialect builder — tune Spyglass to your traffic.',
     uk: 'Вбудовані overlay-валідатори та конструктор діалектів — налаштуй Spyglass під свій трафік.',
@@ -112,7 +112,11 @@ const L = {
   },
 
   loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
-  error:   { en: 'Failed to load catalog.',  uk: 'Помилка завантаження каталогу.', ru: 'Ошибка загрузки каталога.' },
+  error: {
+    en: 'Failed to load catalog.',
+    uk: 'Помилка завантаження каталогу.',
+    ru: 'Ошибка загрузки каталога.',
+  },
 };
 
 // ── Built-in dialect definitions ──────────────────────────────────
@@ -123,7 +127,7 @@ const BUILTIN_DIALECTS = [
     title: { en: 'IAB OpenRTB', uk: 'IAB OpenRTB', ru: 'IAB OpenRTB' },
     desc: {
       en: 'Canonical IAB OpenRTB 2.x / 3.0 baseline. Covers the full public specification — required fields, type constraints, enum validity, and payload integrity for banner, video, native, and audio impression objects.',
-      uk: 'Канонічний IAB OpenRTB 2.x / 3.0 baseline. Охоплює повну публічну специфікацію — обов\'язкові поля, обмеження типів, валідність enum та цілісність payload для banner, video, native та audio impression об\'єктів.',
+      uk: "Канонічний IAB OpenRTB 2.x / 3.0 baseline. Охоплює повну публічну специфікацію — обов'язкові поля, обмеження типів, валідність enum та цілісність payload для banner, video, native та audio impression об'єктів.",
       ru: 'Канонический IAB OpenRTB 2.x / 3.0 baseline. Покрывает полную публичную спецификацию — обязательные поля, ограничения типов, валидность enum и целостность payload для banner, video, native и audio impression объектов.',
     },
     prefix: null, // iab = everything not extrtb. / inpage-push.
@@ -143,7 +147,7 @@ const BUILTIN_DIALECTS = [
     title: { en: 'In-Page Push', uk: 'In-Page Push', ru: 'In-Page Push' },
     desc: {
       en: 'In-page push creative format — validates bid.ext.title / image / url / icon / description / cta fields instead of adm/nurl. Suppresses the IAB payload_missing warning for push bids. Required, optional, and length rules for all creative fields.',
-      uk: 'Формат In-page push креативів — валідує поля bid.ext.title / image / url / icon / description / cta замість adm/nurl. Пригнічує IAB попередження payload_missing для push-бідів. Обов\'язкові, необов\'язкові та правила довжини для всіх creative-полів.',
+      uk: "Формат In-page push креативів — валідує поля bid.ext.title / image / url / icon / description / cta замість adm/nurl. Пригнічує IAB попередження payload_missing для push-бідів. Обов'язкові, необов'язкові та правила довжини для всіх creative-полів.",
       ru: 'Формат In-page push креативов — валидирует поля bid.ext.title / image / url / icon / description / cta вместо adm/nurl. Подавляет IAB предупреждение payload_missing для push-бидов. Обязательные, необязательные и правила длины для всех creative-полей.',
     },
     prefix: 'inpage-push.',
@@ -176,10 +180,18 @@ function renderShell(lang) {
 function renderSevBar(lang, counts) {
   const label = escapeHtml(pick(L.validationBehav, lang));
   const chips = [
-    counts.error   > 0 ? `<span class="dlc-sev-chip dlc-sev-chip--error">${counts.error} error</span>` : '',
-    counts.warning > 0 ? `<span class="dlc-sev-chip dlc-sev-chip--warning">${counts.warning} warning</span>` : '',
-    counts.info    > 0 ? `<span class="dlc-sev-chip dlc-sev-chip--info">${counts.info} info</span>` : '',
-  ].filter(Boolean).join('');
+    counts.error > 0
+      ? `<span class="dlc-sev-chip dlc-sev-chip--error">${counts.error} error</span>`
+      : '',
+    counts.warning > 0
+      ? `<span class="dlc-sev-chip dlc-sev-chip--warning">${counts.warning} warning</span>`
+      : '',
+    counts.info > 0
+      ? `<span class="dlc-sev-chip dlc-sev-chip--info">${counts.info} info</span>`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
   return `
     <div class="dlc-sev-bar">
       <span class="dlc-sev-bar__label">${label}:</span>
@@ -267,23 +279,23 @@ async function fetchCatalogStats(signal) {
   const items = data.items || [];
 
   // Count per dialect by prefix
-  const extrtb   = items.filter((f) => f.id.startsWith('extrtb.'));
-  const inpage   = items.filter((f) => f.id.startsWith('inpage-push.'));
-  const iab      = items.filter((f) => !f.id.startsWith('extrtb.') && !f.id.startsWith('inpage-push.'));
+  const extrtb = items.filter((f) => f.id.startsWith('extrtb.'));
+  const inpage = items.filter((f) => f.id.startsWith('inpage-push.'));
+  const iab = items.filter((f) => !f.id.startsWith('extrtb.') && !f.id.startsWith('inpage-push.'));
 
   function tally(arr) {
     return {
-      count:   arr.length,
-      error:   arr.filter((f) => f.severity === 'error').length,
+      count: arr.length,
+      error: arr.filter((f) => f.severity === 'error').length,
       warning: arr.filter((f) => f.severity === 'warning').length,
-      info:    arr.filter((f) => f.severity === 'info').length,
+      info: arr.filter((f) => f.severity === 'info').length,
     };
   }
 
   return {
-    'iab':          tally(iab),
-    'ext-rtb':      tally(extrtb),
-    'inpage-push':  tally(inpage),
+    iab: tally(iab),
+    'ext-rtb': tally(extrtb),
+    'inpage-push': tally(inpage),
   };
 }
 
@@ -386,11 +398,14 @@ export default {
         if (action === 'copy-dialect') {
           e.preventDefault();
           const slug = btn.dataset.slug || '';
-          navigator.clipboard.writeText(slug).then(() => {
-            showToast(pick(L.toastCopied, lang), 'success', ctx.toast);
-          }).catch(() => {
-            showToast(slug, 'info', ctx.toast);
-          });
+          navigator.clipboard
+            .writeText(slug)
+            .then(() => {
+              showToast(pick(L.toastCopied, lang), 'success', ctx.toast);
+            })
+            .catch(() => {
+              showToast(slug, 'info', ctx.toast);
+            });
           return;
         }
 
@@ -400,9 +415,15 @@ export default {
           const inspectorPath = (localeP || '') + '/inspector';
           // Try SpyglassIntelBuilder first (from spyglass.app.js Phase 9).
           // If not available (SPA context), navigate to inspector.
-          if (window.SpyglassIntelBuilder && typeof window.SpyglassIntelBuilder.open === 'function') {
+          if (
+            window.SpyglassIntelBuilder &&
+            typeof window.SpyglassIntelBuilder.open === 'function'
+          ) {
             window.SpyglassIntelBuilder.open();
-          } else if (window.SpyglassShell && typeof window.SpyglassShell.navigateTo === 'function') {
+          } else if (
+            window.SpyglassShell &&
+            typeof window.SpyglassShell.navigateTo === 'function'
+          ) {
             window.SpyglassShell.navigateTo(inspectorPath);
             // Dispatch the custom event after navigation settles
             setTimeout(() => {

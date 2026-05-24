@@ -73,7 +73,9 @@
   font: inherit;
   color: var(--text-muted, #52525b);
   cursor: text;
-  transition: border-color 150ms, box-shadow 150ms;
+  transition:
+    border-color 150ms,
+    box-shadow 150ms;
 }
 .kt-topbar__search-input:disabled {
   opacity: 0.6;
@@ -112,7 +114,9 @@
   font-size: 13px;
   font-weight: 500;
   max-width: 200px;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 .kt-topbar__profile:hover {
   background: var(--accent-soft, rgba(255, 204, 0, 0.14));
