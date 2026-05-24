@@ -1070,6 +1070,283 @@ export async function mountInspector(root, ctx) {
     return 'info';
   }
 
+  // ── Feature #13: Request Analysis Summary Strip ─────────────────────────
+  // Renders a thin horizontal strip above the tab-bar showing 5 key
+  // parameters extracted from the BidRequest JSON. Injected once into the
+  // DOM between .format-bar and .tab-bar; updated on every analyze.
+  function renderAnalysisStrip(req) {
+    if (!req || typeof req !== 'object') {
+      const existing = document.getElementById('analysisStrip');
+      if (existing) existing.hidden = true;
+      return;
+    }
+
+    // 1. Version — precedence:
+    //    a) oRTB 3.0 envelope (req.openrtb.ver)
+    //    b) explicit ext.openrtb_version declaration in the payload
+    //    c) high-confidence (≥0.8) engine detection from __spyglassLast
+    //    d) low-confidence engine fallback (prefixed with ≈)
+    //    e) '?' if nothing found
+    let version = '?';
+    if (req.openrtb && req.openrtb.ver) {
+      version = 'oRTB 3.0';
+    } else if (req.ext && req.ext.openrtb_version) {
+      // Explicit self-declaration in payload — highest trust for 2.x
+      version = 'oRTB ' + req.ext.openrtb_version;
+    } else {
+      // Use validation result from last analysis if available
+      const lastVer =
+        window.__spyglassLast &&
+        window.__spyglassLast.validation &&
+        window.__spyglassLast.validation.version;
+      if (lastVer && lastVer.version && lastVer.version !== 'unknown') {
+        const cf = lastVer.confidence || 0;
+        const cfTag = cf >= 0.8 ? '' : ' (≈)';
+        version = 'oRTB ' + lastVer.version + cfTag;
+      } else if (req.at !== undefined || req.imp) {
+        version = 'oRTB 2.x';
+      }
+    }
+
+    // 2. Traffic + Format
+    let trafficEmoji = '💻';
+    let trafficLabel = 'Web';
+    if (req.app) {
+      trafficEmoji = '📱';
+      trafficLabel = 'In-App';
+    } else if (req.site) {
+      const dt = req.device && req.device.devicetype;
+      if (dt === 3 || dt === 7) {
+        trafficEmoji = '📺';
+        trafficLabel = 'CTV';
+      } else {
+        trafficEmoji = '💻';
+        trafficLabel = 'Web';
+      }
+    }
+    let formatLabel = '';
+    const imp0 = req.imp && req.imp[0];
+    if (imp0) {
+      if (imp0.banner) formatLabel = 'Banner';
+      else if (imp0.video) formatLabel = 'Video';
+      else if (imp0.native) formatLabel = 'Native';
+      else if (imp0.audio) formatLabel = 'Audio';
+    }
+    const trafficValue =
+      trafficEmoji + ' ' + trafficLabel + (formatLabel ? ' (' + formatLabel + ')' : '');
+
+    // 3. Device + OS
+    let deviceLabel = '?';
+    const dev = req.device || {};
+    const make = (dev.make || '').toLowerCase();
+    const os = (dev.os || '').toLowerCase();
+    const ua = (dev.ua || '').toLowerCase();
+    if (make.includes('apple') || os.includes('ios') || os.includes('macos') || ua.includes('iphone') || ua.includes('ipad')) {
+      deviceLabel = 'Apple' + (os ? ' (' + (os.includes('ios') ? 'iOS' : os.includes('macos') ? 'macOS' : dev.os) + ')' : '');
+    } else if (make.includes('google') || os.includes('android') || ua.includes('android')) {
+      deviceLabel = 'Google (Android)';
+    } else if (os.includes('windows') || ua.includes('windows')) {
+      deviceLabel = 'PC (Windows)';
+    } else if (dev.devicetype === 2 || ua.includes('macintosh')) {
+      deviceLabel = 'PC';
+    } else if (dev.make) {
+      deviceLabel = dev.make + (dev.os ? ' (' + dev.os + ')' : '');
+    }
+
+    // 4. Privacy
+    const regs = req.regs || {};
+    const regsExt = regs.ext || {};
+    const privBadges = [];
+    if (regsExt.gdpr === 1 || regs.gdpr === 1) privBadges.push('GDPR');
+    if (regsExt.us_privacy || regs.us_privacy) privBadges.push('CCPA');
+    if (regs.gpp || regs.gpp_sid) privBadges.push('GPP');
+    const privValue = privBadges.length
+      ? privBadges.map((b) => '<span class="priv-badge">' + escapeHtml(b) + '</span>').join('')
+      : escapeHtml(t('strip.privacy.none'));
+
+    // 5. Pricing
+    let pricingValue = escapeHtml(t('strip.pricing.no_floor'));
+    if (imp0 && imp0.bidfloor != null) {
+      const cur = imp0.bidfloorcur || (req.cur && req.cur[0]) || 'USD';
+      pricingValue =
+        'Floor: $' + Number(imp0.bidfloor).toFixed(2) + ' · ' + escapeHtml(cur);
+    }
+
+    const stripHtml =
+      '<div class="analysis-strip-block">' +
+        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.version')) + '</div>' +
+        '<div class="analysis-strip-value"><span class="ver-badge">' + escapeHtml(version) + '</span></div>' +
+      '</div>' +
+      '<div class="analysis-strip-block">' +
+        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.traffic')) + '</div>' +
+        '<div class="analysis-strip-value">' + escapeHtml(trafficValue) + '</div>' +
+      '</div>' +
+      '<div class="analysis-strip-block">' +
+        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.device')) + '</div>' +
+        '<div class="analysis-strip-value">' + escapeHtml(deviceLabel) + '</div>' +
+      '</div>' +
+      '<div class="analysis-strip-block">' +
+        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.privacy')) + '</div>' +
+        '<div class="analysis-strip-value">' + privValue + '</div>' +
+      '</div>' +
+      '<div class="analysis-strip-block">' +
+        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.pricing')) + '</div>' +
+        '<div class="analysis-strip-value">' + pricingValue + '</div>' +
+      '</div>';
+
+    // Inject the strip between .format-bar and .tab-bar if not yet present
+    let strip = document.getElementById('analysisStrip');
+    if (!strip) {
+      strip = document.createElement('div');
+      strip.id = 'analysisStrip';
+      strip.className = 'analysis-strip';
+      const tabBar = document.querySelector('.center-panel .tab-bar');
+      if (tabBar) {
+        tabBar.parentNode.insertBefore(strip, tabBar);
+      }
+    }
+    strip.innerHTML = stripHtml;
+    strip.hidden = false;
+  }
+  window.renderAnalysisStrip = renderAnalysisStrip;
+
+  // ── Feature #14: Severity Filter Chips ─────────────────────────────────
+  // Renders severity chips (All / Errors / Warnings / Info) above a findings
+  // list in a tab container. `container` is the tab's DOM element.
+  // `findings` is the array of finding objects. `headerHtml` is the header
+  // row HTML (mono-label + version pill) that sits above the chips.
+  function renderSeverityTabs(container, findings, headerHtml) {
+    const errCount = findings.filter((f) => {
+      const l = f.level === 'danger' ? 'error' : f.level;
+      return l === 'error';
+    }).length;
+    const warnCount = findings.filter((f) => f.level === 'warning').length;
+    const infoCount = findings.filter((f) => f.level === 'info').length;
+
+    function buildFindingHtml(f) {
+      const lvl = f.level === 'danger' ? 'error' : f.level;
+      const cls = lvl === 'error' ? 'danger' : lvl === 'info' ? 'info' : 'warning';
+      const ic = lvl === 'error' ? '✕' : lvl === 'info' ? 'i' : '!';
+      const specLink = f.specRef
+        ? ' <a href="' +
+          escapeHtml(f.specRef) +
+          '" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px;text-decoration:none" title="OpenRTB spec reference">spec ↗</a>'
+        : '';
+      const pathBtn = f.path
+        ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
+          escapeHtml(f.path) +
+          '" title="Jump to this path in the JSON">[' +
+          escapeHtml(f.path) +
+          ']</button>'
+        : '';
+      return (
+        '<details class="validation-item ' +
+        cls +
+        ' finding-detail" data-finding-id="' +
+        escapeHtml(f.id || '') +
+        '" data-finding-path="' +
+        escapeHtml(f.path || '') +
+        '" data-finding-level="' +
+        escapeHtml(lvl || '') +
+        '" data-finding-spec="' +
+        escapeHtml(f.specRef || '') +
+        '">' +
+        '<summary>' +
+        '<span class="validation-icon">' +
+        ic +
+        '</span>' +
+        '<span class="validation-text">' +
+        escapeHtml(f.msg) +
+        pathBtn +
+        specLink +
+        '</span>' +
+        '<span class="finding-detail-toggle" aria-hidden="true">▾</span>' +
+        '</summary>' +
+        '<div class="finding-detail-body" data-detail-rendered="0"></div>' +
+        '</details>'
+      );
+    }
+
+    function emptyStateHtml(filter) {
+      const msg = t('severity.empty.' + filter);
+      return '<div class="severity-empty-state">' + escapeHtml(msg) + '</div>';
+    }
+
+    function chipsHtml(activeFilter) {
+      const chips = [
+        { key: 'all', label: t('severity.chip.all'), count: findings.length, dot: null },
+        { key: 'error', label: t('severity.chip.error'), count: errCount, dot: '#ef4444' },
+        { key: 'warning', label: t('severity.chip.warning'), count: warnCount, dot: '#f59e0b' },
+        { key: 'info', label: t('severity.chip.info'), count: infoCount, dot: '#3b82f6' },
+      ];
+      return (
+        '<div class="severity-chips">' +
+        chips
+          .map((c) => {
+            const dotHtml = c.dot
+              ? '<span class="chip-dot" style="background:' + c.dot + '"></span>'
+              : '';
+            return (
+              '<button type="button" class="severity-chip' +
+              (activeFilter === c.key ? ' active' : '') +
+              '" data-sev-filter="' +
+              c.key +
+              '">' +
+              dotHtml +
+              escapeHtml(c.label) +
+              ' <span class="chip-count">' +
+              c.count +
+              '</span>' +
+              '</button>'
+            );
+          })
+          .join('') +
+        '</div>'
+      );
+    }
+
+    function listHtml(filter) {
+      const filtered =
+        filter === 'all'
+          ? findings
+          : findings.filter((f) => {
+              const l = f.level === 'danger' ? 'error' : f.level;
+              return l === filter;
+            });
+      if (!filtered.length) return emptyStateHtml(filter);
+      return '<div class="findings-list">' + filtered.map(buildFindingHtml).join('') + '</div>';
+    }
+
+    // Initial render
+    let currentFilter = 'all';
+    container.innerHTML =
+      (headerHtml || '') + chipsHtml(currentFilter) + listHtml(currentFilter);
+
+    // Wire chip clicks
+    container.addEventListener('click', function onChipClick(e) {
+      const chip = e.target.closest('[data-sev-filter]');
+      if (!chip) return;
+      const newFilter = chip.dataset.sevFilter;
+      if (newFilter === currentFilter) return;
+
+      // Fade animation
+      const list = container.querySelector('.findings-list, .severity-empty-state');
+      if (list) list.style.opacity = '0';
+
+      setTimeout(function () {
+        currentFilter = newFilter;
+        // Re-render chips + list
+        const chipsEl = container.querySelector('.severity-chips');
+        if (chipsEl) chipsEl.outerHTML = chipsHtml(currentFilter);
+        // Re-render chips (the above outerHTML swap disconnects old listener,
+        // but that's ok since the listener is on the container, not chips)
+        container.innerHTML =
+          (headerHtml || '') + chipsHtml(currentFilter) + listHtml(currentFilter);
+      }, 180);
+    }, { once: false });
+  }
+  window.renderSeverityTabs = renderSeverityTabs;
+
   function renderBehaviorTab() {
     const tab = $('tBehavior');
     const badge = $('behaviorBadge');
@@ -1974,70 +2251,24 @@ export async function mountInspector(root, ctx) {
           '</span>'
         );
       })();
+      // Render analysis strip (Feature #13) — uses validation.version which
+      // is now stashed in window.__spyglassLast after the try-block above.
+      renderAnalysisStrip(req);
+
       if (validation && findings && findings.length) {
         setTabBadge('validationBadge', {
           text: findings.length,
           severity: severityFromFindings(findings),
         });
-        valEl.innerHTML =
+        // Feature #14: replace flat list with severity-filtered tabs.
+        const headerHtml =
           '<div class="mono-label" style="margin-bottom:var(--space-3)">' +
           escapeHtml(validation.type) +
           ' · ' +
           escapeHtml(humanStatus(validation.status)) +
           versionPill +
-          '</div>' +
-          findings
-            .map((f) => {
-              // 'error' is canonical; fall back to old 'danger' if API still emits it.
-              const lvl = f.level === 'danger' ? 'error' : f.level;
-              const cls = lvl === 'error' ? 'danger' : lvl === 'info' ? 'info' : 'warning';
-              const ic = lvl === 'error' ? '✕' : lvl === 'info' ? 'i' : '!';
-              const specLink = f.specRef
-                ? ' <a href="' +
-                  escapeHtml(f.specRef) +
-                  '" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px;text-decoration:none" title="OpenRTB spec reference">spec ↗</a>'
-                : '';
-              const pathBtn = f.path
-                ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
-                  escapeHtml(f.path) +
-                  '" title="Jump to this path in the JSON">[' +
-                  escapeHtml(f.path) +
-                  ']</button>'
-                : '';
-              // Finding-detail expand. Wrap the row in <details> so the
-              // native disclosure widget gives us free keyboard support and
-              // ARIA semantics. The summary is the original one-line view;
-              // the body (rendered lazily by buildFindingDetail on first
-              // open) shows path, the user's value at that path, severity
-              // meaning, and spec link.
-              return (
-                '<details class="validation-item ' +
-                cls +
-                ' finding-detail" data-finding-id="' +
-                escapeHtml(f.id || '') +
-                '" data-finding-path="' +
-                escapeHtml(f.path || '') +
-                '" data-finding-level="' +
-                escapeHtml(lvl || '') +
-                '" data-finding-spec="' +
-                escapeHtml(f.specRef || '') +
-                '">' +
-                '<summary>' +
-                '<span class="validation-icon">' +
-                ic +
-                '</span>' +
-                '<span class="validation-text">' +
-                escapeHtml(f.msg) +
-                pathBtn +
-                specLink +
-                '</span>' +
-                '<span class="finding-detail-toggle" aria-hidden="true">▾</span>' +
-                '</summary>' +
-                '<div class="finding-detail-body" data-detail-rendered="0"></div>' +
-                '</details>'
-              );
-            })
-            .join('');
+          '</div>';
+        renderSeverityTabs(valEl, findings, headerHtml);
       } else if (validation) {
         setTabBadge('validationBadge', { text: '✓', severity: 'ok' });
         // Clean state — still surface the detected oRTB version so the user
@@ -4772,6 +5003,9 @@ export async function mountInspector(root, ctx) {
       // ephemeral state
       '__spyglassLast',
       '__spyglassBehavior',
+      // Feature #13 + #14 helpers
+      'renderAnalysisStrip',
+      'renderSeverityTabs',
     ];
     for (const name of exposed) {
       try {

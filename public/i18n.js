@@ -179,6 +179,25 @@
       'status.local': 'локально',
       'validation.all_passed': 'Усі перевірки пройдено — {type} валідний',
 
+      // ── severity filter chips (Feature #14) ──────────────
+      'severity.chip.all': 'Всі',
+      'severity.chip.error': 'Помилки',
+      'severity.chip.warning': 'Попередження',
+      'severity.chip.info': 'Інфо',
+      'severity.empty.error': '🎉 Чудова робота! Жодних критичних помилок не виявлено.',
+      'severity.empty.warning': '✨ Ідеально! Попередження відсутні.',
+      'severity.empty.info': '☕️ Інформаційних сповіщень немає, все чисто.',
+      'severity.empty.all': '🧘 Нічого не знайдено для цього тесту.',
+
+      // ── analysis strip labels (Feature #13) ──────────────
+      'strip.label.version': 'Версія',
+      'strip.label.traffic': 'Трафік',
+      'strip.label.device': 'Пристрій',
+      'strip.label.privacy': 'Приватність',
+      'strip.label.pricing': 'Ціна',
+      'strip.privacy.none': 'Без приватності',
+      'strip.pricing.no_floor': 'Без floor',
+
       // ── theme toggle tooltips ─────────────────────────────
       'theme.tooltip.auto': 'тема: авто · клік → світла',
       'theme.tooltip.light': 'тема: світла · клік → темна',
@@ -414,6 +433,25 @@
       'status.local': 'local',
       'validation.all_passed': 'All checks passed — {type} is valid',
 
+      // ── severity filter chips (Feature #14) ──────────────
+      'severity.chip.all': 'All',
+      'severity.chip.error': 'Errors',
+      'severity.chip.warning': 'Warnings',
+      'severity.chip.info': 'Info',
+      'severity.empty.error': '🎉 Great job! No critical errors found.',
+      'severity.empty.warning': '✨ Perfect! No warnings.',
+      'severity.empty.info': '☕️ No info notices — all clean.',
+      'severity.empty.all': '🧘 Nothing found for this check.',
+
+      // ── analysis strip labels (Feature #13) ──────────────
+      'strip.label.version': 'Version',
+      'strip.label.traffic': 'Traffic',
+      'strip.label.device': 'Device',
+      'strip.label.privacy': 'Privacy',
+      'strip.label.pricing': 'Pricing',
+      'strip.privacy.none': 'No Privacy',
+      'strip.pricing.no_floor': 'No Floor',
+
       // ── theme toggle tooltips ─────────────────────────────
       'theme.tooltip.auto': 'theme: auto · click → light',
       'theme.tooltip.light': 'theme: light · click → dark',
@@ -635,6 +673,26 @@
       'status.warning_one': 'предупреждение',
       'status.local': 'локально',
       'validation.all_passed': 'Все проверки пройдены — {type} валиден',
+
+      // ── severity filter chips (Feature #14) ──────────────
+      'severity.chip.all': 'Все',
+      'severity.chip.error': 'Ошибки',
+      'severity.chip.warning': 'Предупреждения',
+      'severity.chip.info': 'Инфо',
+      'severity.empty.error': '🎉 Отлично! Критических ошибок не найдено.',
+      'severity.empty.warning': '✨ Идеально! Предупреждений нет.',
+      'severity.empty.info': '☕️ Информационных уведомлений нет, всё чисто.',
+      'severity.empty.all': '🧘 Ничего не найдено для этой проверки.',
+
+      // ── analysis strip labels (Feature #13) ──────────────
+      'strip.label.version': 'Версия',
+      'strip.label.traffic': 'Трафик',
+      'strip.label.device': 'Устройство',
+      'strip.label.privacy': 'Приватность',
+      'strip.label.pricing': 'Цена',
+      'strip.privacy.none': 'Без приватности',
+      'strip.pricing.no_floor': 'Без floor',
+
       'theme.tooltip.auto': 'тема: авто · клик → светлая',
       'theme.tooltip.light': 'тема: светлая · клик → тёмная',
       'theme.tooltip.dark': 'тема: тёмная · клик → авто',

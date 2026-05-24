@@ -2790,3 +2790,152 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
     letter-spacing: 0.06em;
   }
 }
+
+/* ── Feature #13: Request Analysis Strip ──────────────────────────── */
+.analysis-strip {
+  display: flex;
+  align-items: stretch;
+  height: 46px;
+  background: rgba(var(--bg-elev-rgb, 255,255,255), 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+/* Dark-theme tint */
+[data-theme='dark'] .analysis-strip {
+  background: rgba(15, 17, 28, 0.88);
+}
+.analysis-strip-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 var(--space-3);
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+.analysis-strip-block:last-child {
+  border-right: none;
+}
+.analysis-strip-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  line-height: 1;
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+.analysis-strip-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+/* Privacy badges row */
+.analysis-strip-value .priv-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-right: 3px;
+  background: rgba(var(--accent-rgb, 255,204,0), 0.15);
+  color: var(--text);
+  border: 1px solid rgba(var(--accent-rgb, 255,204,0), 0.4);
+}
+/* Version badge accent */
+.analysis-strip-value .ver-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(var(--accent-rgb, 255,204,0), 0.2);
+  color: var(--text);
+  border: 1px solid var(--accent, #ffcc00);
+}
+/* Narrow viewports: hide labels, keep values */
+@media (max-width: 720px) {
+  .analysis-strip-label {
+    display: none;
+  }
+  .analysis-strip-block {
+    padding: 0 var(--space-2);
+    justify-content: center;
+  }
+  .analysis-strip {
+    height: 36px;
+  }
+}
+
+/* ── Feature #14: Severity Filter Chips ───────────────────────────── */
+.severity-chips {
+  display: flex;
+  gap: 6px;
+  padding: var(--space-2) 0 var(--space-3);
+  flex-wrap: wrap;
+}
+.severity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(var(--bg-elev-rgb, 255,255,255), 0.5);
+  color: var(--text-dim);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  user-select: none;
+}
+[data-theme='dark'] .severity-chip {
+  background: rgba(255,255,255, 0.04);
+}
+.severity-chip:hover {
+  background: rgba(var(--accent-rgb, 255,204,0), 0.1);
+  border-color: var(--accent, #ffcc00);
+  color: var(--text);
+}
+.severity-chip.active {
+  background: var(--accent, #ffcc00);
+  border-color: var(--accent, #ffcc00);
+  color: var(--accent-ink, #18181b);
+}
+.severity-chip .chip-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.severity-chip .chip-count {
+  opacity: 0.75;
+  font-size: 10px;
+}
+.severity-chip.active .chip-count {
+  opacity: 1;
+}
+/* Findings list animation on filter change */
+.findings-list {
+  transition: opacity 0.18s ease;
+}
+.findings-list.fading {
+  opacity: 0;
+}
+.severity-empty-state {
+  text-align: center;
+  padding: var(--space-7) var(--space-4);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  line-height: 1.6;
+}
