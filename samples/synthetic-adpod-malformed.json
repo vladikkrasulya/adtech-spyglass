@@ -1,0 +1,19 @@
+{
+  "_comment": "Etap B sample: AdPod malformed — triggers err-pod-id-seq-mismatch, err-pod-len-mismatch",
+  "id": "adpod-malformed-1",
+  "at": 2,
+  "imp": [
+    {
+      "id": "imp-1",
+      "video": {
+        "mimes": ["video/mp4"],
+        "linearity": 1,
+        "podid": "pod-a",
+        "minadlen": 60,
+        "maxadlen": 15
+      }
+    }
+  ],
+  "site": { "domain": "example.com" },
+  "device": { "ip": "203.0.113.3", "ua": "Mozilla/5.0", "language": "en" }
+}

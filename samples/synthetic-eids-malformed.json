@@ -1,0 +1,25 @@
+{
+  "_comment": "Etap B sample: Extended User IDs malformed — triggers err-eids-source-missing, warn-eids-uid-atype-invalid",
+  "id": "eids-malformed-1",
+  "at": 2,
+  "imp": [
+    {
+      "id": "imp-1",
+      "bidfloor": 0.05,
+      "bidfloorcur": "USD",
+      "banner": { "w": 320, "h": 50 }
+    }
+  ],
+  "site": { "domain": "example.com" },
+  "device": { "ip": "203.0.113.2", "ua": "Mozilla/5.0", "language": "en" },
+  "user": {
+    "id": "user-123",
+    "ext": {
+      "eids": [
+        {
+          "uids": [{ "id": "abc", "atype": 9 }]
+        }
+      ]
+    }
+  }
+}

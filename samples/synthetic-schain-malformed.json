@@ -1,0 +1,24 @@
+{
+  "_comment": "Etap B sample: SupplyChain malformed — triggers err-schain-version, err-schain-nodes-empty",
+  "id": "schain-malformed-1",
+  "at": 2,
+  "imp": [
+    {
+      "id": "imp-1",
+      "bidfloor": 0.05,
+      "bidfloorcur": "USD",
+      "banner": { "w": 300, "h": 250 }
+    }
+  ],
+  "site": { "domain": "example.com" },
+  "device": { "ip": "203.0.113.1", "ua": "Mozilla/5.0", "language": "en" },
+  "source": {
+    "ext": {
+      "schain": {
+        "ver": "2.0",
+        "complete": 1,
+        "nodes": []
+      }
+    }
+  }
+}

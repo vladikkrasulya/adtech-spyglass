@@ -220,5 +220,22 @@
   "feed.linkfeed.url_required": "Link-feed click URL for bid #{num} is missing — without it the user has nowhere to land on click.",
   "feed.linkfeed.bid_required": "result.link[{num}].bid is required (positive float). This bid amount is interpreted by the SSP as the eCPM paid for the impression.",
   "feed.linkfeed.bid_nonpositive": "result.link[{num}].bid = {bid} — non-positive bid will be filtered by the SSP. Expected a positive float.",
-  "feed.linkfeed.seat_missing": "result.link[{num}].seat is absent. The vendor usually echoes the buyer/seat id here — its absence makes server-side attribution harder but the bid itself stays valid."
+  "feed.linkfeed.seat_missing": "result.link[{num}].seat is absent. The vendor usually echoes the buyer/seat id here — its absence makes server-side attribution harder but the bid itself stays valid.",
+  "err-schain-version": "source.ext.schain.ver is missing or not \"1.0\". The SupplyChain spec requires ver=\"1.0\" — exchanges use this to choose the correct parser. Set ver: \"1.0\".",
+  "err-schain-complete": "schain.complete must be 0 (incomplete chain) or 1 (complete chain). Missing or non-integer values cause chain parsing to fail on the exchange side.",
+  "err-schain-nodes-empty": "schain.nodes is missing or empty. A SupplyChain must contain at least one node representing the direct seller.",
+  "err-schain-node-asi": "schain node[{idx}].asi is missing or not a valid domain (got: \"{val}\"). asi is the canonical domain of the SSP or exchange and is required for audit trail integrity.",
+  "err-schain-node-sid": "schain node[{idx}].sid is missing or empty. sid is the seller account ID on the asi domain — required for buyers to verify the seller via ads.txt.",
+  "err-schain-node-hp": "schain node[{idx}].hp must be 0 or 1 (got: \"{val}\"). hp=1 means this node is included in the payment flow; hp=0 means it is a passthrough. Missing hp breaks payment attribution.",
+  "warn-schain-node-rid-missing": "schain node[{idx}].rid is absent. rid (request ID) is optional per spec but strongly recommended — without it buyers cannot correlate impressions back to exchange logs for discrepancy resolution.",
+  "warn-schain-node-domain-missing": "schain node[{idx}].domain is absent. domain is optional but recommended — it lets buyers cross-reference the seller domain independently of the asi field.",
+  "err-eids-not-array": "user.ext.eids is present but not an array (got: {type}). The EID spec requires an array of identity source objects — wrap your EID object in an array.",
+  "err-eids-source-missing": "user.ext.eids[{idx}].source is missing or empty. source must be the canonical domain of the identity provider (e.g. \"liveramp.com\", \"id5-sync.com\").",
+  "err-eids-uids-empty": "user.ext.eids[{idx}].uids is missing or empty. Each EID entry must contain at least one uid record with the actual identifier.",
+  "err-eids-uid-id-missing": "user.ext.eids[{eidIdx}].uids[{uidIdx}].id is missing or empty. id is the actual user identifier string — without it the EID entry carries no signal.",
+  "warn-eids-uid-atype-invalid": "user.ext.eids[{eidIdx}].uids[{uidIdx}].atype = {val} is outside the allowed range. Per spec atype must be 1 (cookie), 2 (device), or 3 (people-based). Unrecognised atypes are ignored or rejected by DSPs.",
+  "err-pod-id-seq-mismatch": "{has} is set but {missing} is absent. podid and podseq must be used together — podid groups the slots of one ad pod, podseq gives the position within it. Set both or neither.",
+  "err-podseq-invalid": "podseq = \"{val}\" is invalid. podseq must be a non-negative integer (0 = any position, 1 = first, 2 = second…).",
+  "err-pod-len-mismatch": "minadlen ({min}s) > maxadlen ({max}s). Minimum ad duration cannot exceed the maximum — no bid can satisfy this constraint and the exchange will receive zero bids.",
+  "err-pod-len-invalid": "{field} = \"{val}\" is not a positive integer. Ad duration lengths must be whole seconds greater than zero."
 }

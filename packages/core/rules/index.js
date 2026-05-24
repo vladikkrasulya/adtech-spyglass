@@ -47,6 +47,19 @@ const PLUGINS = [
   //    blocking; rollupStatus ignores `question` level. If ctx.userDialect
   //    has a saved mapping for a signal, that question is suppressed.
   require('./dialects-questions'),
+  // 6. SChain — validates IAB SupplyChain object at source.ext.schain
+  //    (oRTB 2.x) and ext.schain (oRTB 3.0): ver/complete/nodes +
+  //    per-node asi/sid/hp/rid/domain.
+  require('./schain'),
+
+  // 7. EIDs — validates Extended User IDs (user.ext.eids): source and
+  //    uids per entry, plus id/atype per UID record (oRTB §3.2.20).
+  require('./eids'),
+
+  // 8. AdPod — validates AdPod fields on imp.video/imp.audio: podid/
+  //    podseq must appear together, podseq >= 0, minadlen <= maxadlen
+  //    (oRTB 2.6 §3.2.7 / §3.2.8).
+  require('./adpod'),
 ];
 
 /**

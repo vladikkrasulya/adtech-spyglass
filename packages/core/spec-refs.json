@@ -198,5 +198,22 @@
   "request.url.user_ip_ipv6": null,
   "request.url.ch_field_empty": null,
   "request.url.ch_uafull_quoted": null,
-  "request.url.url_trailing_questionmark": null
+  "request.url.url_trailing_questionmark": null,
+  "err-schain-version": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-schain-complete": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-schain-nodes-empty": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-schain-node-asi": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-schain-node-sid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-schain-node-hp": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "warn-schain-node-rid-missing": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "warn-schain-node-domain-missing": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
+  "err-eids-not-array": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
+  "err-eids-source-missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
+  "err-eids-uids-empty": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
+  "err-eids-uid-id-missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
+  "warn-eids-uid-atype-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220-object-user",
+  "err-pod-id-seq-mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
+  "err-podseq-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
+  "err-pod-len-mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
+  "err-pod-len-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video"
 }

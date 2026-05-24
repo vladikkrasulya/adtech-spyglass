@@ -32,8 +32,8 @@ const CORE_DIR = path.join(__dirname, '..', 'packages', 'core');
 const SPEC_REFS_PATH = path.join(CORE_DIR, 'spec-refs.json');
 
 const EMISSION_REGEXES = [
-  /\bF\(\s*['"]([a-zA-Z0-9._]+)['"]/g,
-  /\bmakeFinding\(\s*['"]([a-zA-Z0-9._]+)['"]/g,
+  /\bF\(\s*['"]([a-zA-Z0-9._-]+)['"]/g,
+  /\bmakeFinding\(\s*['"]([a-zA-Z0-9._-]+)['"]/g,
 ];
 
 // `_comment` / `_base` are metadata in spec-refs.json, not finding ids.

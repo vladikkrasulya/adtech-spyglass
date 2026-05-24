@@ -37,6 +37,10 @@ const VALID_LANGS = new Set(['en', 'uk', 'ru']);
 
 // Severity inference from ID suffix (longest-match first)
 function inferSeverity(id) {
+  // Prefix-based: err-* / warn-* / info-* (Etap B+ naming convention)
+  if (/^err-/.test(id)) return 'error';
+  if (/^warn-/.test(id)) return 'warning';
+  if (/^info-/.test(id)) return 'info';
   if (/_required$/.test(id)) return 'error';
   if (/_invalid$/.test(id))  return 'error';
   if (/_mismatch$/.test(id)) return 'error';
