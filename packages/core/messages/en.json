@@ -240,5 +240,12 @@
   "err-pod-len-invalid": "{field} = \"{val}\" is not a positive integer. Ad duration lengths must be whole seconds greater than zero.",
   "err-schain-node-domain-invalid": "schain node[{idx}].domain = \"{val}\" is not a valid domain. domain must be a bare hostname (e.g. \"openx.com\") — no scheme, no path. Fix or remove the domain field.",
   "err-schain-node-rid-invalid": "schain node[{idx}].rid = \"{val}\" is not a string. rid must be a non-empty string (the exchange request ID). Convert it to string or remove the field.",
-  "err-eids-source-invalid": "user.ext.eids[{idx}].source = \"{val}\" is not a valid domain. EID source must be the canonical domain of the identity provider (e.g. \"id5-sync.com\"). A bare label without a TLD is rejected."
+  "err-eids-source-invalid": "user.ext.eids[{idx}].source = \"{val}\" is not a valid domain. EID source must be the canonical domain of the identity provider (e.g. \"id5-sync.com\"). A bare label without a TLD is rejected.",
+  "err-bid-currency-invalid": "Currency \"{val}\" is not valid ISO-4217 ({context}). Currency must be exactly 3 uppercase ASCII letters (e.g. \"USD\", \"EUR\", \"UAH\"). Lowercase or non-standard codes will be misrouted.",
+  "err-bid-currency-mismatch": "Currency \"{val}\" is not in the request-allowed set {allowed}. The exchange will settle only in one of the request currencies. Set the bid or response cur to a value in {allowed}.",
+  "err-bid-price-negative": "bid.price = {val} is not a positive number (seatbid[{si}].bid[{bi}]). bid.price must be a finite number > 0 representing the CPM in the request currency. A zero or negative price will be rejected by the exchange.",
+  "err-bid-price-below-floor": "bid.price {price} < imp.bidfloor {floor} for impid \"{impid}\" (seatbid[{si}].bid[{bi}]). The exchange will filter this bid. Raise the price to at least {floor}.",
+  "err-tmax-invalid": "req.tmax = \"{val}\" is not a positive integer. tmax must be a whole number of milliseconds > 0. Non-integer or non-positive values cause unpredictable timeout behaviour on the exchange.",
+  "warn-tmax-too-small": "req.tmax = {val}ms is below {min}ms. At this latency budget almost no DSP will respond in time — the auction will likely time out with no valid bids.",
+  "warn-tmax-too-large": "req.tmax = {val}ms exceeds {max}ms. Very long timeouts increase auction latency for publishers and are unusual in programmatic RTB. Verify this is intentional."
 }

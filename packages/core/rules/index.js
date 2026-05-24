@@ -47,6 +47,7 @@ const PLUGINS = [
   //    blocking; rollupStatus ignores `question` level. If ctx.userDialect
   //    has a saved mapping for a signal, that question is suppressed.
   require('./dialects-questions'),
+
   // 6. SChain — validates IAB SupplyChain object at source.ext.schain
   //    (oRTB 2.x) and ext.schain (oRTB 3.0): ver/complete/nodes +
   //    per-node asi/sid/hp/rid/domain.
@@ -60,6 +61,19 @@ const PLUGINS = [
   //    podseq must appear together, podseq >= 0, minadlen <= maxadlen
   //    (oRTB 2.6 §3.2.7 / §3.2.8).
   require('./adpod'),
+
+  // 9. Currency — ISO-4217 format validation on req.cur (request-side) and
+  //    res.cur / bid.cur (response-side). Currency mismatch check (response
+  //    currency not in request allowed set) is gated on ctx.req presence.
+  require('./currency'),
+
+  // 10. Price-floor — validates bid.price > 0 and bid.price >= imp.bidfloor
+  //     when the paired request is available via ctx.req.
+  require('./price-floor'),
+
+  // 11. TMAX — validates req.tmax is a positive integer; warns when below
+  //     50ms (too tight) or above 3000ms (unusually loose).
+  require('./tmax'),
 ];
 
 /**
@@ -71,20 +85,25 @@ const PLUGINS = [
  *                            payload kind.
  * @param {string} type       One of TYPES.* (see detect.js).
  * @param {object} ctx        Same context the legacy rules get:
- *                            `{ dialect, version }`.
+ *                            `{ dialect, version }`. May include `req`
+ *                            when running response-side plugins in paired
+ *                            context (for floor/currency mismatch checks).
  * @returns {Array}           Findings array (never null).
  */
 function runRulePlugins(payload, type, ctx) {
   const findings = [];
+  // Pass type through ctx so plugins that support multiple payload kinds can
+  // branch internally without needing a separate parameter.
+  const ctxWithType = Object.assign({ type }, ctx);
   for (const plugin of PLUGINS) {
     if (Array.isArray(plugin.appliesTo) && !plugin.appliesTo.includes(type)) {
       continue;
     }
-    if (typeof plugin.applies === 'function' && !plugin.applies(payload, ctx)) {
+    if (typeof plugin.applies === 'function' && !plugin.applies(payload, ctxWithType)) {
       continue;
     }
     try {
-      const out = /** @type {(p: any, c: any) => any[]} */ (plugin.validate)(payload, ctx);
+      const out = /** @type {(p: any, c: any) => any[]} */ (plugin.validate)(payload, ctxWithType);
       if (Array.isArray(out) && out.length) {
         findings.push(...out);
       }

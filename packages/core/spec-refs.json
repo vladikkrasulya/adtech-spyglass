@@ -218,5 +218,12 @@
   "err-pod-len-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "err-schain-node-domain-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
   "err-schain-node-rid-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
-  "err-eids-source-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md"
+  "err-eids-source-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md",
+  "err-bid-currency-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
+  "err-bid-currency-mismatch": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
+  "err-bid-price-negative": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#361-object-bid",
+  "err-bid-price-below-floor": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#322-object-imp",
+  "err-tmax-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
+  "warn-tmax-too-small": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
+  "warn-tmax-too-large": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest"
 }

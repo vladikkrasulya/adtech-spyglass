@@ -183,6 +183,15 @@ function validate(payload, opts) {
     } else {
       findings = validateResponse(payload, { dialect, version });
     }
+    // Plugin pass — response-side. Modular rules with appliesTo:'ORTB_RESPONSE'
+    // run here. Paired req context is not available in standalone validate()
+    // (only the response is pasted); plugins gate ctx.req-dependent checks.
+    const responsePluginFindings = runRulePlugins(payload, 'ORTB_RESPONSE', {
+      dialect,
+      version,
+      userDialect,
+    });
+    if (responsePluginFindings.length) findings = findings.concat(responsePluginFindings);
   } else if (t === TYPES.VENDOR_FEED) {
     const r = validateFeedResponse(payload);
     findings = r.findings;
