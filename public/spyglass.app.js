@@ -1070,11 +1070,31 @@ export async function mountInspector(root, ctx) {
     return 'info';
   }
 
-  // ── Feature #13: Request Analysis Summary Strip ─────────────────────────
+  // ── Feature #12: Quality Score Pill ─────────────────────────────────────
+  // Computes a 0-100 quality score from findings. Returns {score, errors,
+  // warnings, info, deductions} for tooltip use.
+  function computeQualityScore(findings) {
+    if (!findings || !findings.length) {
+      return { score: 100, errors: 0, warnings: 0, info: 0, deductions: 0 };
+    }
+    let errors = 0, warnings = 0, info = 0;
+    findings.forEach(function(f) {
+      const lvl = f.level === 'danger' ? 'error' : f.level;
+      if (lvl === 'error') errors++;
+      else if (lvl === 'warning') warnings++;
+      else info++;
+    });
+    const deductions = (errors * 25) + (warnings * 10) + (info * 2);
+    const score = Math.max(0, Math.min(100, 100 - deductions));
+    return { score: score, errors: errors, warnings: warnings, info: info, deductions: deductions };
+  }
+  window.computeQualityScore = computeQualityScore;
+
+    // ── Feature #13: Request Analysis Summary Strip ─────────────────────────
   // Renders a thin horizontal strip above the tab-bar showing 5 key
   // parameters extracted from the BidRequest JSON. Injected once into the
   // DOM between .format-bar and .tab-bar; updated on every analyze.
-  function renderAnalysisStrip(req) {
+  function renderAnalysisStrip(req, findings) {
     if (!req || typeof req !== 'object') {
       const existing = document.getElementById('analysisStrip');
       if (existing) existing.hidden = true;
@@ -1194,6 +1214,40 @@ export async function mountInspector(root, ctx) {
         '<div class="analysis-strip-value">' + pricingValue + '</div>' +
       '</div>';
 
+    // Quality Pill (Feature #12) — 6th block
+    const qualityBlock = (function() {
+      if (!findings || !findings.length) return '';
+      const q = computeQualityScore(findings);
+      const s = q.score;
+      let tierClass, tierLabel;
+      if (s >= 90) { tierClass = 'q-excellent'; tierLabel = t('quality.status.excellent'); }
+      else if (s >= 70) { tierClass = 'q-good'; tierLabel = t('quality.status.good'); }
+      else if (s >= 40) { tierClass = 'q-needs-attention'; tierLabel = t('quality.status.needs_attention'); }
+      else { tierClass = 'q-critical'; tierLabel = t('quality.status.critical'); }
+
+      // Build tooltip text
+      const deductionParts = [];
+      if (q.errors) deductionParts.push(q.errors + ' ' + t('quality.tooltip.error') + ' (-' + (q.errors * 25) + ')');
+      if (q.warnings) deductionParts.push(q.warnings + ' ' + t('quality.tooltip.warning') + ' (-' + (q.warnings * 10) + ')');
+      if (q.info) deductionParts.push(q.info + ' ' + t('quality.tooltip.info') + ' (-' + (q.info * 2) + ')');
+      const tooltipText = t('quality.tooltip.base') + ': 100 · ' +
+        t('quality.tooltip.deductions') + ': ' +
+        (deductionParts.length ? deductionParts.join(', ') : '0') +
+        ' · ' + t('quality.tooltip.total') + ': ' + s + '/100';
+
+      return '<div class="analysis-strip-block analysis-strip-quality">' +
+        '<div class="analysis-strip-label">' + escapeHtml(t('strip.label.quality')) + '</div>' +
+        '<div class="analysis-strip-value">' +
+          '<span class="quality-pill ' + tierClass + '" data-tooltip="' + escapeHtml(tooltipText) + '" data-score="' + s + '">' +
+            '<span class="quality-score">0</span>' +
+            '<span class="quality-status">' + escapeHtml(tierLabel) + '</span>' +
+          '</span>' +
+        '</div>' +
+      '</div>';
+    })();
+
+    const fullStripHtml = stripHtml + qualityBlock;
+
     // Inject the strip between .format-bar and .tab-bar if not yet present
     let strip = document.getElementById('analysisStrip');
     if (!strip) {
@@ -1205,8 +1259,28 @@ export async function mountInspector(root, ctx) {
         tabBar.parentNode.insertBefore(strip, tabBar);
       }
     }
-    strip.innerHTML = stripHtml;
+    strip.innerHTML = fullStripHtml;
     strip.hidden = false;
+
+    // Animate quality pill count-up (Feature #12)
+    // Uses setTimeout-based ticks so it works even in background tabs
+    // where requestAnimationFrame is throttled to ~1fps.
+    const pillEl = strip.querySelector('.quality-pill');
+    if (pillEl) {
+      const numberEl = pillEl.querySelector('.quality-score');
+      const target = parseInt(pillEl.getAttribute('data-score'), 10) || 0;
+      const duration = 400;
+      const frameMs = 16; // ~60fps via setTimeout
+      const startTime = Date.now();
+      function tickQuality() {
+        const elapsed = Date.now() - startTime;
+        const t = Math.min(1, elapsed / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        numberEl.textContent = Math.round(target * eased);
+        if (t < 1) setTimeout(tickQuality, frameMs);
+      }
+      tickQuality();
+    }
   }
   window.renderAnalysisStrip = renderAnalysisStrip;
 
@@ -2253,7 +2327,7 @@ export async function mountInspector(root, ctx) {
       })();
       // Render analysis strip (Feature #13) — uses validation.version which
       // is now stashed in window.__spyglassLast after the try-block above.
-      renderAnalysisStrip(req);
+      renderAnalysisStrip(req, findings);
 
       if (validation && findings && findings.length) {
         setTabBadge('validationBadge', {
@@ -5003,7 +5077,8 @@ export async function mountInspector(root, ctx) {
       // ephemeral state
       '__spyglassLast',
       '__spyglassBehavior',
-      // Feature #13 + #14 helpers
+      // Feature #12 + #13 + #14 helpers
+      'computeQualityScore',
       'renderAnalysisStrip',
       'renderSeverityTabs',
     ];

@@ -198,6 +198,19 @@
       'strip.privacy.none': 'Без приватності',
       'strip.pricing.no_floor': 'Без floor',
 
+      // ── quality score pill (Feature #12) ─────────────────
+      'quality.status.excellent': 'Відмінно',
+      'quality.status.good': 'Добре',
+      'quality.status.needs_attention': 'Потребує уваги',
+      'quality.status.critical': 'Критично',
+      'quality.tooltip.base': 'База',
+      'quality.tooltip.deductions': 'Штрафи',
+      'quality.tooltip.total': 'Підсумок',
+      'quality.tooltip.error': 'Помилка',
+      'quality.tooltip.warning': 'Попередження',
+      'quality.tooltip.info': 'Інфо',
+      'strip.label.quality': 'Якість',
+
       // ── theme toggle tooltips ─────────────────────────────
       'theme.tooltip.auto': 'тема: авто · клік → світла',
       'theme.tooltip.light': 'тема: світла · клік → темна',
@@ -452,6 +465,19 @@
       'strip.privacy.none': 'No Privacy',
       'strip.pricing.no_floor': 'No Floor',
 
+      // ── quality score pill (Feature #12) ─────────────────
+      'quality.status.excellent': 'Excellent',
+      'quality.status.good': 'Good',
+      'quality.status.needs_attention': 'Needs Attention',
+      'quality.status.critical': 'Critical',
+      'quality.tooltip.base': 'Base',
+      'quality.tooltip.deductions': 'Deductions',
+      'quality.tooltip.total': 'Total',
+      'quality.tooltip.error': 'Error',
+      'quality.tooltip.warning': 'Warning',
+      'quality.tooltip.info': 'Info',
+      'strip.label.quality': 'Quality',
+
       // ── theme toggle tooltips ─────────────────────────────
       'theme.tooltip.auto': 'theme: auto · click → light',
       'theme.tooltip.light': 'theme: light · click → dark',
@@ -692,6 +718,19 @@
       'strip.label.pricing': 'Цена',
       'strip.privacy.none': 'Без приватности',
       'strip.pricing.no_floor': 'Без floor',
+
+      // ── quality score pill (Feature #12) ─────────────────
+      'quality.status.excellent': 'Отлично',
+      'quality.status.good': 'Хорошо',
+      'quality.status.needs_attention': 'Требует внимания',
+      'quality.status.critical': 'Критично',
+      'quality.tooltip.base': 'База',
+      'quality.tooltip.deductions': 'Штрафы',
+      'quality.tooltip.total': 'Итого',
+      'quality.tooltip.error': 'Ошибка',
+      'quality.tooltip.warning': 'Предупреждение',
+      'quality.tooltip.info': 'Инфо',
+      'strip.label.quality': 'Качество',
 
       'theme.tooltip.auto': 'тема: авто · клик → светлая',
       'theme.tooltip.light': 'тема: светлая · клик → тёмная',
