@@ -93,20 +93,62 @@
   align-items: center;
 }
 
+/* Auth profile pill — shown when user is logged in. Mirrors the
+   sign-in pill geometry (.kt-topbar__signin in spyglass-shell.css)
+   so the topbar's right edge stays visually consistent regardless
+   of auth state. Avatar circle hosts user's initial; the email
+   prefix sits to the right, truncated on narrow viewports. */
 .kt-topbar__profile {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
   border-radius: var(--r-pill, 999px);
-  background: var(--bg-2, #f2ede3);
+  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  background: var(--bg-elev, #fff);
   color: var(--text);
   text-decoration: none;
-  font-size: 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  max-width: 200px;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 .kt-topbar__profile:hover {
   background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  border-color: var(--accent, #ffcc00);
+}
+.kt-topbar__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--accent, #ffcc00);
+  color: var(--accent-ink, #18181b);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.kt-topbar__email-prefix {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* On narrow desktop the email prefix is the first to hide — avatar
+   remains visible and clickable as the account entry point. */
+@media (max-width: 1199px) {
+  .kt-topbar__profile {
+    padding: 4px;
+    max-width: none;
+  }
+  .kt-topbar__email-prefix {
+    display: none;
+  }
 }
 
 /* ── Mobile (< 1024px): show hamburger + mini brand ─────────────── */
