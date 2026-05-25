@@ -318,14 +318,26 @@ test('pop-request: imp.ext.fcap present → fcap_missing NOT fired', () => {
   assert.ok(!ids.includes('imp.pop.fcap_missing'));
 });
 
-test('pop-request: clickunder + banner without btype:[4] → btype_popup_recommended INFO', () => {
+test('pop-request: clickunder + banner.battr blocks pop (8) → battr_popup_blocked WARN', () => {
   const req = {
-    imp: [{ id: '1', ext: { adtype: 'clickunder', fcap: 1 }, banner: { w: 300, h: 250 } }],
+    imp: [
+      { id: '1', ext: { adtype: 'clickunder', fcap: 1 }, banner: { w: 300, h: 250, battr: [8] } },
+    ],
   };
-  const f = popReq.validate(req).find((x) => x.id === 'imp.pop.btype_popup_recommended');
+  const f = popReq.validate(req).find((x) => x.id === 'imp.pop.battr_popup_blocked');
   assert.ok(f);
-  assert.equal(f.level, 'info');
-  assert.equal(f.path, 'imp[0].banner.btype');
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'imp[0].banner.battr');
+});
+
+test('pop-request: instl:1 on a pop slot → instl_conflict WARN', () => {
+  const req = {
+    imp: [{ id: '1', instl: 1, ext: { adtype: 'popunder', fcap: 1 }, banner: { w: 300, h: 250 } }],
+  };
+  const f = popReq.validate(req).find((x) => x.id === 'imp.pop.instl_conflict');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'imp[0].instl');
 });
 
 test('pop-request: pop + secure:1 → secure_may_block_landing INFO', () => {

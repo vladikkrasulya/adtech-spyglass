@@ -238,8 +238,8 @@ function createAnalyzeModule(deps) {
         // imp[].banner|video|audio|native + context, the response side
         // carries mtype + adm sniffing. A null/empty `format` is a valid
         // outcome — the frontend gates rendering on `confidence`.
-        const formatReq = hasReqObj ? detectFormat(bidReq) : null;
-        const formatRes = hasRes ? detectFormat(bidRes) : null;
+        const formatReq = hasReqObj ? detectFormat(bidReq, userDialect) : null;
+        const formatRes = hasRes ? detectFormat(bidRes, userDialect) : null;
         const format = unionFormat(formatReq, formatRes);
 
         // Per-user usage tracking — METADATA only, never the payload bodies.

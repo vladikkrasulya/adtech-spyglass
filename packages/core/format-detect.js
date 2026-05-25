@@ -151,9 +151,10 @@ function detectFeedFormat(o, tags) {
 
 /**
  * @param {unknown} payload
+ * @param {{lookupMapping?: Function}|null} [userDialect] - optional user dialect; when present, dialect-mapped ext signals are recognised as format hints
  * @returns {{formats:string[], contexts:string[], protocols:string[], tags:string[], confidence:number}}
  */
-function detectFormat(payload) {
+function detectFormat(payload, userDialect) {
   const empty = { formats: [], contexts: [], protocols: [], tags: [], confidence: 0 };
   if (payload == null) return empty;
 
@@ -172,7 +173,7 @@ function detectFormat(payload) {
     if (Array.isArray(p.imp)) {
       // Scan top-level req.ext for non-IAB hints first — some vendors put
       // request-wide `ext.adtype = "popunder"` instead of per-imp.
-      for (const hint of scanExtForFormatHints(p.ext, 'ext')) {
+      for (const hint of scanExtForFormatHints(p.ext, 'ext', userDialect)) {
         if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
         else if (isPushFormat(hint.format)) formats.add(FORMATS.PUSH);
       }
@@ -196,9 +197,9 @@ function detectFormat(payload) {
         // and downstream rules see the same picture detectNonStandardFormats
         // emits as an `imp.non_standard_format` INFO finding.
         const impExtHints = [
-          ...scanExtForFormatHints(imp.ext, ''),
-          ...(imp.banner ? scanExtForFormatHints(imp.banner.ext, '') : []),
-          ...(imp.video ? scanExtForFormatHints(imp.video.ext, '') : []),
+          ...scanExtForFormatHints(imp.ext, '', userDialect),
+          ...(imp.banner ? scanExtForFormatHints(imp.banner.ext, '', userDialect) : []),
+          ...(imp.video ? scanExtForFormatHints(imp.video.ext, '', userDialect) : []),
         ];
         for (const hint of impExtHints) {
           if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
@@ -230,7 +231,7 @@ function detectFormat(payload) {
           // sniff bid.adm — pop creatives ship a window.open / redirect URL,
           // not banner HTML — but only if the request side ALSO smelled
           // like pop, to avoid false-positive on banner clicktrackers.
-          for (const hint of scanExtForFormatHints(bid.ext, '')) {
+          for (const hint of scanExtForFormatHints(bid.ext, '', userDialect)) {
             if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
             else if (isPushFormat(hint.format)) formats.add(FORMATS.PUSH);
           }

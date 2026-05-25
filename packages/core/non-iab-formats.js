@@ -42,6 +42,14 @@ const STRING_HINT_KEYS = ['adtype', 'format', 'type', 'ad_format'];
 // `imp.ext.popunder = 1` instead of `imp.ext.adtype = "popunder"`.
 const FLAG_HINT_KEYS = ['pop', 'popup', 'popunder', 'clickunder', 'pushunder', 'push', 'pushup'];
 
+// Shape-fingerprint pop signals (mirrors dialects/shape-fingerprint.js): vendor
+// allow-flags that pop SSPs send INSTEAD of a string adtype. Presence is the
+// signal; the value is permissive (bool / 0 / 1 / "0" / "1" / "true" / "false").
+// Lets pop RULES detect onclick/popunder traffic that carries only these
+// markers (e.g. imp.ext.allowShock) and no canonical hint. `sizeID:[0]` is
+// handled separately (array shape, not a flag value).
+const POP_SHAPE_FLAG_KEYS = ['allowMT', 'allowLayer', 'allowShock', 'viewOnClick', 'directLink'];
+
 /**
  * Normalise a format name for lookup: lowercase + strip hyphens/underscores
  * /whitespace. `pop_under`, `Pop-Under`, `popunder` all become `popunder`.
@@ -66,36 +74,84 @@ function isObj(v) {
  * `path` is a string suffix the caller can append to a base (e.g. base
  * `'imp[0].ext'` + suffix `.adtype` → full path `imp[0].ext.adtype`).
  *
+ * Detection sources, first-seen-wins per format name:
+ *   P0 — user dialect mappings (when `userDialect` is supplied): any ext key
+ *        whose saved `semantic_label` resolves to a non-standard format.
+ *   - canonical string hints (`ext.adtype = "popunder"`) + boolean flag keys.
+ *   P1 — shape signals shared with analyzeShape (`ext.allowShock`, `sizeID:[0]`
+ *        …) → pop. These fire WITHOUT a dialect, so pop networks that signal
+ *        only with vendor allow-flags (e.g. Kadam `ext.ad_type` mapped via a
+ *        dialect, or bare allow* flags) are no longer invisible to the rules.
+ *
  * @param {unknown} ext
  * @param {string} [basePath='ext']
+ * @param {{lookupMapping?: Function}|null} [userDialect]
  * @returns {Array<{format: string, path: string}>}
  */
-function scanExtForFormatHints(ext, basePath) {
+function scanExtForFormatHints(ext, basePath, userDialect) {
   if (!isObj(ext)) return [];
   const out = [];
   const base = basePath || 'ext';
-  // Dedupe by format name. When a payload carries both a string hint
-  // (`ext.adtype='pop'`) AND a matching flag hint (`ext.pop=true`), the
-  // pre-dedup version would emit two records for the same format and
-  // downstream consumers would surface two near-identical findings.
-  // First-seen wins so the path points at the most explicit signal.
+  // Dedupe by format name — first-seen wins so the path points at the most
+  // explicit signal (dialect mapping > string hint > flag > shape signal).
   const seen = new Set();
+  const pushHint = (format, key) => {
+    if (seen.has(format)) return;
+    seen.add(format);
+    out.push({ format, path: `${base}.${key}` });
+  };
+
+  // P0 — user dialect mappings. Signal-path convention matches the dialect
+  // builder: `imp[].ext.<key>` for per-imp ext, `ext.<key>` otherwise.
+  if (userDialect && typeof userDialect.lookupMapping === 'function') {
+    const signalBase = String(basePath || '').startsWith('imp') ? 'imp[].ext' : 'ext';
+    for (const k of Object.keys(ext)) {
+      const v = ext[k];
+      if (v == null) continue;
+      const mapping = userDialect.lookupMapping(`${signalBase}.${k}`, String(v));
+      if (!mapping || !mapping.semantic_label) continue;
+      const n = normaliseFormatName(mapping.semantic_label);
+      if (ALL_NON_STANDARD.has(n)) pushHint(n, k);
+    }
+  }
+
+  // Canonical string hints — `ext.adtype = "popunder"`.
   for (const k of STRING_HINT_KEYS) {
     const v = ext[k];
     if (typeof v !== 'string') continue;
     const n = normaliseFormatName(v);
-    if (ALL_NON_STANDARD.has(n) && !seen.has(n)) {
-      seen.add(n);
-      out.push({ format: n, path: `${base}.${k}` });
-    }
+    if (ALL_NON_STANDARD.has(n)) pushHint(n, k);
   }
+  // Boolean / truthy flag hints — `ext.popunder = 1`.
   for (const k of FLAG_HINT_KEYS) {
     if (!ext[k]) continue;
-    const n = normaliseFormatName(k);
-    if (seen.has(n)) continue;
-    seen.add(n);
-    out.push({ format: n, path: `${base}.${k}` });
+    pushHint(normaliseFormatName(k), k);
   }
+
+  // P1 — shape signals (pop family). A vendor allow-flag with a permissive
+  // value, or a single-zero sizeID, marks pop intent on its own.
+  for (const k of POP_SHAPE_FLAG_KEYS) {
+    // Absent key → ext[k] is undefined, which isn't in the permitted set
+    // below, so it's skipped — no separate presence check needed.
+    const v = ext[k];
+    if (
+      v === true ||
+      v === false ||
+      v === 0 ||
+      v === 1 ||
+      v === '0' ||
+      v === '1' ||
+      v === 'true' ||
+      v === 'false'
+    ) {
+      pushHint('pop', k);
+    }
+  }
+  const sizeID = ext['sizeID'];
+  if (Array.isArray(sizeID) && sizeID.length === 1 && sizeID[0] === 0) {
+    pushHint('pop', 'sizeID');
+  }
+
   return out;
 }
 

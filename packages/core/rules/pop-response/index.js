@@ -28,24 +28,35 @@
 
 const { LEVELS, makeFinding } = require('../../findings');
 const { scanExtForFormatHints, isPopFormat, admLooksLikePop } = require('../../non-iab-formats');
+// Pop-request's hint detector — reused so a paired request (ctx.req) that was
+// itself a pop slot marks the response as pop even if the bid omits ext hints.
+const { _requestHasPopHint } = require('../pop-request');
 
 const F = makeFinding;
 
-function responseHasPopHint(res) {
+function responseHasPopHint(res, ctx) {
+  const userDialect = (ctx && ctx.userDialect) || null;
+  // Paired-request signal: if the analyze flow supplied the bid request via
+  // ctx.req and it was itself a pop slot, this response is pop traffic too —
+  // even when the bid omits its own ext pop hint (common: the SSP knows the
+  // slot is pop from the request and the bid just ships a redirect adm).
+  if (ctx && ctx.req && _requestHasPopHint(ctx.req, ctx)) return true;
   if (!res || !Array.isArray(res.seatbid)) return false;
   for (const sb of res.seatbid) {
     if (!sb || !Array.isArray(sb.bid)) continue;
     for (const bid of sb.bid) {
       if (!bid || typeof bid !== 'object') continue;
-      if (scanExtForFormatHints(bid.ext, '').some((h) => isPopFormat(h.format))) return true;
+      if (scanExtForFormatHints(bid.ext, '', userDialect).some((h) => isPopFormat(h.format)))
+        return true;
     }
   }
   return false;
 }
 
-function validate(res /*, ctx */) {
-  if (!responseHasPopHint(res)) return [];
+function validate(res, ctx) {
+  if (!responseHasPopHint(res, ctx)) return [];
   const findings = [];
+  const userDialect = (ctx && ctx.userDialect) || null;
   const seatbids = Array.isArray(res.seatbid) ? res.seatbid : [];
 
   seatbids.forEach((sb, sbi) => {
@@ -58,7 +69,8 @@ function validate(res /*, ctx */) {
       // Only flag bids that themselves declare pop intent. A response with
       // mixed inventory (one pop bid + one banner bid in different seatbids)
       // would otherwise generate noise on the banner side.
-      if (!scanExtForFormatHints(bid.ext, '').some((h) => isPopFormat(h.format))) return;
+      if (!scanExtForFormatHints(bid.ext, '', userDialect).some((h) => isPopFormat(h.format)))
+        return;
       if (!admLooksLikePop(bid.adm)) {
         findings.push(F('bid.pop.adm_not_redirect', LEVELS.ERROR, `${path}.adm`, { sNum, bNum }));
       }

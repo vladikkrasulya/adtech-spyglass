@@ -14,8 +14,8 @@
  *
  * What's checked per fixture:
  *   clean-request    detectFormat tags pops; pop-request emits 0 findings
- *                    (no fcap_missing, btype_popup_recommended, or
- *                    secure_may_block_landing — all three precautions met)
+ *                    (no fcap_missing, battr_popup_blocked, instl_conflict,
+ *                    or secure_may_block_landing — all precautions met)
  *   clean-response   detectFormat tags pops; pop-response emits 0
  *                    (adm shape is window.open script — valid pop)
  *   broken-adm       detectFormat tags pops; pop-response emits exactly
