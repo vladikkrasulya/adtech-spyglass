@@ -1,0 +1,45 @@
+{
+  "_note": "Synthetic oRTB 3.0 BidResponse containing creative and media validation errors.",
+  "openrtb": {
+    "ver": "3.0",
+    "response": {
+      "id": "ortb30-resp-deep-errors",
+      "seatbid": [
+        {
+          "seat": "test-dsp",
+          "bid": [
+            {
+              "id": "bid-1",
+              "item": "item-1",
+              "price": 1.2
+            },
+            {
+              "id": "bid-2",
+              "item": "item-2",
+              "price": 0.8,
+              "media": {
+                "display": {}
+              }
+            },
+            {
+              "id": "bid-3",
+              "item": "item-3",
+              "price": 2.5,
+              "media": {
+                "video": {
+                  "adm": "<VAST version=\"4.0\"><Ad><InLine><AdSystem>Test</AdSystem></InLine></Ad></VAST>"
+                }
+              }
+            },
+            {
+              "id": "bid-4",
+              "item": "item-4",
+              "price": 0.5,
+              "media": {}
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

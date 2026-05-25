@@ -151,8 +151,11 @@ test('validateRequest30: well-formed envelope fires only deep_validation_limited
       ver: '3.0',
       request: {
         id: 'r1',
-        item: [{ id: '1', spec: {} }],
-        context: { site: { id: 's1' } },
+        item: [{ id: '1', spec: { placement: { display: { w: 300, h: 250 } } } }],
+        context: {
+          site: { id: 's1', domain: 'example.com' },
+          device: { ip: '1.2.3.4', ua: 'Mozilla', lang: 'en' },
+        },
       },
     },
   });
@@ -288,7 +291,22 @@ test('validateResponse30: well-formed response fires only deep_validation_limite
       ver: '3.0',
       response: {
         id: 'r1',
-        seatbid: [{ seat: 's1', bid: [{ id: 'b1', item: '1', price: 1.5 }] }],
+        seatbid: [
+          {
+            seat: 's1',
+            bid: [
+              {
+                id: 'b1',
+                item: '1',
+                price: 1.5,
+                media: {
+                  adomain: ['example.com'],
+                  display: { adm: '<div>ad</div>' },
+                },
+              },
+            ],
+          },
+        ],
       },
     },
   });
@@ -347,4 +365,262 @@ test('samples: synthetic-ortb30-broken-envelope.json fires expected ERROR set', 
   assert.ok(findById(r.findings, 'request.30.item.spec_required'));
   // qty=0 fires the WARN
   assert.ok(findById(r.findings, 'request.30.item.qty_invalid'));
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Deep 3.0 Request Validation (Context & Placements) — unit & integration
+// ─────────────────────────────────────────────────────────────────
+
+test('validateRequest30: deep context validation (site vs app both/neither)', () => {
+  const findingsBoth = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [{ id: '1', spec: {} }],
+        context: { site: { id: 's1', domain: 'a.com' }, app: { id: 'a1', bundle: 'b.com' } },
+      },
+    },
+  });
+  assert.ok(findById(findingsBoth, 'request.30.context.site_and_app_both'));
+
+  const findingsNeither = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [{ id: '1', spec: {} }],
+        context: {},
+      },
+    },
+  });
+  assert.ok(findById(findingsNeither, 'request.30.context.no_site_or_app'));
+});
+
+test('validateRequest30: DOOH-only context does NOT false-fire no_site_or_app', () => {
+  const f = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [{ id: '1', spec: {} }],
+        context: { dooh: { id: 'd1' }, device: { ip: '1.2.3.4', ua: 'M', lang: 'en' } },
+      },
+    },
+  });
+  assert.equal(findById(f, 'request.30.context.no_site_or_app'), undefined);
+});
+
+test('validateRequest30: site domain and app bundle missing checks', () => {
+  const fSite = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [{ id: '1', spec: {} }],
+        context: { site: { id: 's1' } },
+      },
+    },
+  });
+  assert.ok(findById(fSite, 'request.30.context.site.domain_missing'));
+
+  const fApp = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [{ id: '1', spec: {} }],
+        context: { app: { id: 'a1' } },
+      },
+    },
+  });
+  assert.ok(findById(fApp, 'request.30.context.app.bundle_missing'));
+});
+
+test('validateRequest30: device IP, UA, country and lang validations', () => {
+  const fDevice = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [{ id: '1', spec: {} }],
+        context: {
+          site: { domain: 'a.com' },
+          device: { geo: { country: 'USAA' }, lang: 'ENG' },
+        },
+      },
+    },
+  });
+  assert.ok(findById(fDevice, 'request.30.context.device.ip_required'));
+  assert.ok(findById(fDevice, 'request.30.context.device.ua_required'));
+  assert.ok(findById(fDevice, 'request.30.context.device.geo.country_invalid'));
+  assert.ok(findById(fDevice, 'request.30.context.device.language_invalid'));
+});
+
+test('validateRequest30: privacy framework regs validations (GDPR/COPPA/CCPA/GPP)', () => {
+  const fPrivacy = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [{ id: '1', spec: {} }],
+        context: {
+          site: { domain: 'a.com' },
+          device: { ip: '1.2.3.4', ua: 'Mozilla', geo: { lat: 34, lon: -118 } },
+          regs: { gdpr: 1, coppa: 1, gpp_sid: [2], ext: { us_privacy: 'INVALID' } },
+          user: { id: 'u1' },
+        },
+      },
+    },
+  });
+  assert.ok(findById(fPrivacy, 'request.30.regs.gdpr_consent_missing'));
+  assert.ok(findById(fPrivacy, 'request.30.regs.coppa_pii_present'));
+  assert.ok(findById(fPrivacy, 'request.30.regs.us_privacy_invalid'));
+  assert.ok(findById(fPrivacy, 'request.30.regs.gpp_sid_without_string'));
+});
+
+test('validateRequest30: user gender validation', () => {
+  const fUser = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [{ id: '1', spec: {} }],
+        context: {
+          site: { domain: 'a.com' },
+          user: { gender: 'X' },
+        },
+      },
+    },
+  });
+  assert.ok(findById(fUser, 'request.30.context.user.gender_invalid'));
+});
+
+test('validateRequest30: deep placement spec validations (formats, display w/h, video mime/ctype/dur)', () => {
+  const fPlacement = validateRequest30({
+    openrtb: {
+      ver: '3.0',
+      request: {
+        id: 'r1',
+        item: [
+          {
+            id: '1',
+            spec: {
+              placement: {
+                display: { w: -100, h: 0 },
+                video: { mime: [], mindur: 15, maxdur: 5 },
+                audio: { mime: [] },
+                native: 'not_an_obj',
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  assert.ok(findById(fPlacement, 'request.30.item.display.size_invalid'));
+  assert.ok(findById(fPlacement, 'request.30.item.video.mime_required'));
+  assert.ok(findById(fPlacement, 'request.30.item.video.ctype_recommended'));
+  assert.ok(findById(fPlacement, 'request.30.item.video.dur_invalid'));
+  assert.ok(findById(fPlacement, 'request.30.item.audio.mime_required'));
+  assert.ok(findById(fPlacement, 'request.30.item.native_invalid'));
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Deep 3.0 Response Validation (Media & Creative) — unit & integration
+// ─────────────────────────────────────────────────────────────────
+
+test('validateResponse30: deep creative validation (media missing/empty, display/video/audio markup)', () => {
+  const fMedia = validateResponse30({
+    openrtb: {
+      ver: '3.0',
+      response: {
+        id: 'r1',
+        seatbid: [
+          {
+            seat: 's1',
+            bid: [
+              { id: 'b1', item: '1', price: 1.5 }, // media missing
+              { id: 'b2', item: '2', price: 1.5, media: {} }, // media empty
+              { id: 'b3', item: '3', price: 1.5, media: { display: {} } }, // display empty
+              { id: 'b4', item: '4', price: 1.5, media: { video: {} } }, // video empty
+              { id: 'b5', item: '5', price: 1.5, media: { audio: {} } }, // audio empty
+            ],
+          },
+        ],
+      },
+    },
+  });
+  assert.ok(findById(fMedia, 'response.30.bid.media_missing'));
+  assert.ok(findById(fMedia, 'response.30.bid.media.format_required'));
+  assert.ok(findById(fMedia, 'response.30.bid.display.markup_required'));
+  assert.ok(findById(fMedia, 'response.30.bid.video.markup_required'));
+  assert.ok(findById(fMedia, 'response.30.bid.audio.markup_required'));
+  assert.ok(findById(fMedia, 'response.30.bid.adomain_missing'));
+});
+
+test('validateResponse30: recursive VAST validation inside video.adm', () => {
+  const fVast = validateResponse30({
+    openrtb: {
+      ver: '3.0',
+      response: {
+        id: 'r1',
+        seatbid: [
+          {
+            seat: 's1',
+            bid: [
+              {
+                id: 'b1',
+                item: '1',
+                price: 1.5,
+                media: {
+                  video: {
+                    adm: '<VAST version="4.0"><Ad><InLine></InLine></Ad></VAST>',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  });
+  // Should see standard VAST findings propagated
+  assert.ok(findById(fVast, 'vast.adsystem_missing'));
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Integration with synthetic sample files
+// ─────────────────────────────────────────────────────────────────
+
+test('samples: synthetic-ortb30-deep-errors.json fires expected deep errors', () => {
+  const fp = path.join(__dirname, '..', 'samples', 'synthetic-ortb30-deep-errors.json');
+  const sample = JSON.parse(fs.readFileSync(fp, 'utf8'));
+  const r = validate(sample);
+  const errs = r.findings.filter((f) => f.level === 'error');
+  const warns = r.findings.filter((f) => f.level === 'warning');
+
+  assert.ok(errs.length > 0);
+  assert.ok(warns.length > 0);
+  assert.ok(findById(r.findings, 'request.30.context.site_and_app_both'));
+  assert.ok(findById(r.findings, 'request.30.context.device.ua_required'));
+  assert.ok(findById(r.findings, 'request.30.context.device.geo.country_invalid'));
+  assert.ok(findById(r.findings, 'request.30.regs.gdpr_consent_missing'));
+  assert.ok(findById(r.findings, 'request.30.regs.coppa_pii_present'));
+  assert.ok(findById(r.findings, 'request.30.regs.us_privacy_invalid'));
+  assert.ok(findById(r.findings, 'request.30.context.user.gender_invalid'));
+  assert.ok(findById(r.findings, 'request.30.item.display.size_invalid'));
+  assert.ok(findById(r.findings, 'request.30.item.video.mime_required'));
+  assert.ok(findById(r.findings, 'request.30.item.video.dur_invalid'));
+});
+
+test('samples: synthetic-ortb30-deep-response-errors.json fires expected deep response errors', () => {
+  const fp = path.join(__dirname, '..', 'samples', 'synthetic-ortb30-deep-response-errors.json');
+  const sample = JSON.parse(fs.readFileSync(fp, 'utf8'));
+  const r = validate(sample);
+
+  assert.ok(findById(r.findings, 'response.30.bid.media_missing'));
+  assert.ok(findById(r.findings, 'response.30.bid.display.markup_required'));
+  assert.ok(findById(r.findings, 'vast.adtitle_missing')); // inside bid[2] VAST adm
+  assert.ok(findById(r.findings, 'response.30.bid.media.format_required'));
 });

@@ -19,6 +19,40 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.54.0 — feat: deep OpenRTB 3.0 + AdCOM 1.0 validation (proactive 3.0-readiness) (2026-05-25)
+
+Deep request + response validation for the OpenRTB 3.0 envelope and AdCOM 1.0
+objects, extending the previous envelope-only checks in `rules-request-30.js` /
+`rules-response-30.js`. Shipped **proactively**: production 3.0 traffic is ~zero,
+so this is spec-validated future-proofing (cross-checked against AdCOM 1.0), not
+live-traffic-validated. Overrides the ROADMAP "gated on real 3.0 traffic"
+deferral (user-approved). Risk is low — the 3.0 path only fires on 3.0 payloads.
+
+Request (`validateContext30` / `validatePlacement30`):
+
+- context: distribution channel — exactly one of site / app / **DOOH**;
+  site.domain; app.bundle; device (ip|ipv6 + ua required; geo.country ISO-3166
+  alpha-3; lang ISO-639 alpha-2); user.gender M/F/O.
+- privacy: GDPR consent presence, COPPA PII restriction, CCPA us_privacy format,
+  GPP gpp/gpp_sid pairing.
+- item[].spec.placement: ≥1 format; display w/h sanity; video mime (required) +
+  `ctype` (recommended — AdCOM Creative Subtypes, NOT 2.x `protocols`) +
+  mindur/maxdur; audio mime.
+
+Response (`validateCreative30`):
+
+- bid.media format presence; display/video/audio markup (adm|curl); recursive
+  VAST validation of `media.video.adm`; `bid.media.adomain` (AdCOM Ad path).
+
+**Origin/review note:** the bulk was drafted by an external assistant; this is
+the reviewed result. The correctness review fixed two spec false-positives —
+video required 2.x `protocols` (AdCOM uses `ctype`), and the channel check
+rejected valid DOOH requests — plus 40+ localised finding IDs across en/uk/ru +
+spec-refs, two deep-error samples, and expanded `tests/ortb30.test.js`.
+
+917 tests green; typecheck / format / lint clean. App **0.53.0 → 0.54.0**,
+`@kyivtech/spyglass-core` **0.26.0 → 0.27.0**.
+
 ### v0.53.0 — feat: AI auto-publisher for the news firehose (Ollama score + DeepSeek translate) (2026-05-25)
 
 The AdTech RSS firehose now auto-publishes. A new moderator scores pending

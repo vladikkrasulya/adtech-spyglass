@@ -1,5 +1,5 @@
 {
-  "_note": "Clean oRTB 3.0 BidRequest — all required envelope + item structure fields present. Validator should emit only the request.30.deep_validation_limited INFO note (Spyglass currently checks envelope shape only; deeper AdCOM validation is deferred). This is the 3.0 control case.",
+  "_note": "Clean oRTB 3.0 BidRequest — all required envelope + item structure fields present. Validator should emit only the request.30.deep_validation_limited INFO note. This is the 3.0 control case.",
   "openrtb": {
     "ver": "3.0",
     "request": {
@@ -17,6 +17,7 @@
               "secure": 1,
               "video": {
                 "mime": ["video/mp4", "video/webm"],
+                "ctype": [2, 3],
                 "w": 640,
                 "h": 360,
                 "mindur": 5,
@@ -35,7 +36,8 @@
         "device": {
           "ua": "Mozilla/5.0",
           "ip": "203.0.113.42",
-          "devicetype": 2
+          "devicetype": 2,
+          "lang": "en"
         },
         "user": {
           "id": "demo-user"

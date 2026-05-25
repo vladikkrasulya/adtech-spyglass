@@ -100,7 +100,7 @@ docs/                             ARCHMAP.md, USER_GUIDE.md, historical audits
 
 ```bash
 npm run ci          # format:check + lint + typecheck + test — runs before every push
-npm test            # 891 tests (as of v0.52.0)
+npm test            # 917 tests (as of v0.54.0)
 npm run lint:fix    # auto-fix eslint issues
 npm run format      # prettier --write .
 ```

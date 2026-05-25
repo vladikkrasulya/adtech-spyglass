@@ -1,0 +1,66 @@
+{
+  "_note": "Synthetic oRTB 3.0 BidRequest containing context and placement spec validation errors.",
+  "openrtb": {
+    "ver": "3.0",
+    "request": {
+      "id": "ortb30-req-deep-errors",
+      "item": [
+        {
+          "id": "item-1",
+          "qty": 0,
+          "spec": {
+            "placement": {
+              "display": {
+                "w": -300,
+                "h": -250
+              },
+              "video": {
+                "mime": [],
+                "mindur": 30,
+                "maxdur": 10
+              },
+              "audio": {
+                "mime": []
+              }
+            }
+          }
+        },
+        {
+          "id": "item-2",
+          "spec": {
+            "placement": {}
+          }
+        }
+      ],
+      "context": {
+        "site": {
+          "id": "demo-site"
+        },
+        "app": {
+          "id": "demo-app"
+        },
+        "device": {
+          "ua": 12345,
+          "geo": {
+            "country": "USAA",
+            "lat": 34.05,
+            "lon": -118.24
+          },
+          "lang": "ENG"
+        },
+        "regs": {
+          "gdpr": 1,
+          "coppa": 1,
+          "gpp_sid": [2],
+          "ext": {
+            "us_privacy": "1INVALID"
+          }
+        },
+        "user": {
+          "id": "pii-user-id",
+          "gender": "X"
+        }
+      }
+    }
+  }
+}

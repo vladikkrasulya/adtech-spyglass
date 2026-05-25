@@ -1,5 +1,5 @@
 {
-  "_note": "Clean oRTB 3.0 BidResponse — well-formed envelope { openrtb: { ver:'3.0', response: {...} } } with one seatbid carrying one bid. Each bid has id, item (the request item.id reference), and price. Validator should emit only the response.30.deep_validation_limited INFO note. The 3.0 control case for responses.",
+  "_note": "Clean oRTB 3.0 BidResponse — well-formed envelope with one seatbid carrying one bid. Validator should emit only the response.30.deep_validation_limited INFO note. The 3.0 control case for responses.",
   "openrtb": {
     "ver": "3.0",
     "response": {
@@ -15,7 +15,10 @@
               "item": "1",
               "price": 4.5,
               "media": {
-                "type": "video"
+                "adomain": ["example.com"],
+                "video": {
+                  "adm": "<VAST version=\"4.0\"><Ad><InLine><AdSystem>Trusted DSP</AdSystem><AdTitle>Clean Video Ad</AdTitle><Impression>http://trusted-dsp.com/imp</Impression><Creatives><Creative><Linear><Duration>00:00:15</Duration><MediaFiles><MediaFile type=\"video/mp4\" width=\"640\" height=\"360\">https://trusted-dsp.com/video.mp4</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>"
+                }
               }
             }
           ]

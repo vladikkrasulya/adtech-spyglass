@@ -177,7 +177,7 @@ Pasted JSON has no HTTP headers, so `X-Openrtb-Version` is unavailable. Detectio
 | Default           | none of the above + valid 2.5-shaped payload                                                                            | assume 2.5     |
 | Deprecated/legacy | `banner.wmax`, `video.protocol` singular, `device.didsha1`, `user.yob`, …                                               | hint as legacy |
 
-**OpenRTB 3.0 is intentionally not a primary target.** Production adoption is essentially zero (BidSwitch's own blog title: "OpenRTB 3.0: What Is It, and Why Is (Almost) Nobody Using It?"). IAB back-ported the wanted bits into 2.6. Spyglass detects 3.0 and labels it; full validation deferred until adoption changes.
+**OpenRTB 3.0 is fully validated.** Production adoption remains low, but Spyglass now implements full spec-compliant deep validation for oRTB 3.0 requests, including AdCOM 1.0 placements, contexts, and bid media/creative specs (including recursive VAST validation).
 
 ### 3.4 Strictness levels
 
@@ -381,7 +381,7 @@ type ValidationResult = {
 ## 8. Open questions / decisions deferred
 
 - **License** for `@spyglass/core`: MIT vs Apache-2.0. MIT is friendlier for vendors to embed; Apache-2.0 includes patent grant. Decision before first npm publish.
-- **3.0 support timeline.** Currently: detect and label only. If/when a major SSP ships 3.0 for real, escalate to a phase.
+- **3.0 support timeline.** Deep validation is fully resolved and implemented in v0.53.0. Gating check is retired.
 - **Hosted backend for public demo** — none planned, but if `/api/proxy`-style replay is needed, it becomes a Cloudflare Worker rather than a Node server (rate-limit + serverless cost shape).
 - **Auth provider** for multi-user: keep bcrypt sessions for v1, evaluate Auth.js / Clerk / Lucia later.
 - **Mock / fixture generation** as a feature (generate a valid `BidRequest` matching given constraints). Post-MVP. Strong magnet for organic discovery if it works well.

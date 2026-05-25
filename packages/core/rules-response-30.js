@@ -1,20 +1,17 @@
 'use strict';
 
 /**
- * IAB OpenRTB 3.0 BidResponse validation — minimal envelope + per-bid shape.
+ * IAB OpenRTB 3.0 BidResponse validation — envelope + per-bid shape + creative deep validation.
  *
  * 3.0 BidResponse mirrors the request envelope:
  *   { openrtb: { ver: "3.0", response: { id, bidid?, seatbid: [...] } } }
- *
- * Like rules-request-30.js, this file ships STRUCTURAL validation only.
- * Deeper bid-shape validation (item-id alignment, AdCOM creative specs)
- * is deferred until production 3.0 traffic shows up.
  *
  * Spec: https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md
  */
 
 const { isObj, isStr, isNum } = require('./helpers');
 const { LEVELS, makeFinding } = require('./findings');
+const { validateVast, isVastShape } = require('./rules-vast');
 
 const F = makeFinding;
 
@@ -93,11 +90,105 @@ function validateResponse30(payload) {
       if (!isNum(b.price)) {
         findings.push(F('response.30.bid.price_required', LEVELS.ERROR, `${bp}.price`, params));
       }
+
+      // Deep Media Validation
+      validateCreative30(b.media, bp, params, findings);
+
+      // Adomain validation (lives in AdCOM Ad/Media, but let's check media.adomain)
+      const media = b.media || {};
+      const adom = media.adomain;
+      if (!Array.isArray(adom) || !adom.length) {
+        findings.push(
+          F('response.30.bid.adomain_missing', LEVELS.WARNING, `${bp}.media.adomain`, params),
+        );
+      }
     });
   });
 
   findings.push(F('response.30.deep_validation_limited', LEVELS.INFO, ''));
   return findings;
+}
+
+/**
+ * Validates AdCOM creative specifications under bid.media.
+ */
+function validateCreative30(media, bp, params, findings) {
+  if (media == null) {
+    findings.push(F('response.30.bid.media_missing', LEVELS.WARNING, `${bp}.media`, params));
+    return;
+  }
+  if (!isObj(media)) {
+    findings.push(F('response.30.bid.media_invalid', LEVELS.ERROR, `${bp}.media`, params));
+    return;
+  }
+
+  const hasDisplay = media.display != null;
+  const hasVideo = media.video != null;
+  const hasAudio = media.audio != null;
+  const hasNative = media.native != null;
+
+  if (!hasDisplay && !hasVideo && !hasAudio && !hasNative) {
+    findings.push(F('response.30.bid.media.format_required', LEVELS.ERROR, `${bp}.media`, params));
+  }
+
+  // display
+  if (hasDisplay) {
+    if (!isObj(media.display)) {
+      findings.push(
+        F('response.30.bid.display_invalid', LEVELS.ERROR, `${bp}.media.display`, params),
+      );
+    } else {
+      const d = media.display;
+      if (!isStr(d.adm) && !isStr(d.curl)) {
+        findings.push(
+          F('response.30.bid.display.markup_required', LEVELS.ERROR, `${bp}.media.display`, params),
+        );
+      }
+    }
+  }
+
+  // video
+  if (hasVideo) {
+    if (!isObj(media.video)) {
+      findings.push(F('response.30.bid.video_invalid', LEVELS.ERROR, `${bp}.media.video`, params));
+    } else {
+      const v = media.video;
+      if (!isStr(v.adm) && !isStr(v.curl)) {
+        findings.push(
+          F('response.30.bid.video.markup_required', LEVELS.ERROR, `${bp}.media.video`, params),
+        );
+      } else if (isStr(v.adm) && isVastShape(v.adm)) {
+        const vastFindings = validateVast(v.adm, `${bp}.media.video.adm`);
+        for (const f of vastFindings) {
+          f.params = Object.assign({}, params, f.params || {});
+          findings.push(f);
+        }
+      }
+    }
+  }
+
+  // audio
+  if (hasAudio) {
+    if (!isObj(media.audio)) {
+      findings.push(F('response.30.bid.audio_invalid', LEVELS.ERROR, `${bp}.media.audio`, params));
+    } else {
+      const a = media.audio;
+      if (!isStr(a.adm) && !isStr(a.curl)) {
+        findings.push(
+          F('response.30.bid.audio.markup_required', LEVELS.ERROR, `${bp}.media.audio`, params),
+        );
+      }
+    }
+  }
+
+  // native
+  if (hasNative) {
+    if (!isObj(media.native)) {
+      findings.push(
+        F('response.30.bid.native_invalid', LEVELS.ERROR, `${bp}.media.native`, params),
+      );
+    }
+  }
 }
 
 module.exports = { validateResponse30 };
