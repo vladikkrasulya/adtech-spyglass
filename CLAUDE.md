@@ -43,7 +43,7 @@ modules/                          Backend handler folders (baked into image — 
 packages/core/                    Validator engine — pure JS, Node + browser compatible
   index.js                        Public API: validate(), crosscheck(), mirror(), detect*()
   detect.js                       Type + oRTB version autodetection
-  format-detect.js                Format detection (banner/video/audio/native/push/pop)
+  format-detect.js                Format detection (banner/video/audio/native/push/pop); dialect- & shape-aware
   rules-request.js                oRTB BidRequest rules (IAB-spec baseline)
   rules-response.js               oRTB BidResponse rules
   rules-request-30.js             oRTB 3.0 BidRequest envelope checks
@@ -100,7 +100,7 @@ docs/                             ARCHMAP.md, USER_GUIDE.md, historical audits
 
 ```bash
 npm run ci          # format:check + lint + typecheck + test — runs before every push
-npm test            # 658 tests (as of v0.42.10)
+npm test            # 891 tests (as of v0.52.0)
 npm run lint:fix    # auto-fix eslint issues
 npm run format      # prettier --write .
 ```
@@ -122,16 +122,27 @@ When adding a new i18n key: edit all three locale objects in the same commit. Th
 is no automated enforcement yet — a missing key surfaces as a runtime `undefined`
 in the UI.
 
-### SemVer bump — all 9 locations, same commit
+### SemVer bump — version.js is the live source, fallbacks bump with it
 
-`feat` → MINOR (`0.X.0`), `fix` / polish → PATCH (`0.42.X`). Every version bump
-touches **9 files** in one commit:
+`feat` → MINOR (`0.X.0`), `fix` / polish → PATCH (`0.42.X`). Bump in one commit.
+
+**Canonical (the version logic reads these):**
 
 1. `package.json` (root)
-2. `packages/core/package.json`
-3. `public/version.js`
-   4–6. `public/about.{en,uk,ru}.html` (eyebrow + footer span — search `v0.` to find both spots)
-   7–9. `public/modules/inspector/template.{en,uk,ru}.html` (topnav brand + `#engineVer`)
+2. `packages/core/package.json` — the engine has its **own** SemVer number track
+   (it was `0.26.0` when the app was `0.52.0`); bump it on its own MINOR/PATCH
+   merits at the same tier as the app, not the same number.
+3. `public/version.js` — `const VERSION`. **Live source of truth for the version
+   shown in chrome**: on load it repaints every `[data-spyglass-version]` span.
+
+**Inline fallbacks — repainted by version.js at runtime, but bump them in the
+same commit so view-source and the pre-JS render are correct.** They are easy to
+forget: they had drifted (about `v0.41.4`, engineVer `v0.39.0`) for ~10 releases
+before being re-synced in v0.52.0.
+
+4–6. `public/about.{en,uk,ru}.html` — `docs · vX.Y.Z` eyebrow + footer
+`[data-spyglass-version]` span (`replace_all` the old version string covers both).
+7–9. `public/modules/inspector/template.{en,uk,ru}.html` — `#engineVer` span.
 
 See `docs/ARCHMAP.md §2.4` for the canonical list.
 

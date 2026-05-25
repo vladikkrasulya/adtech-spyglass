@@ -41,8 +41,18 @@ module.exports = {
 ```
 
 The `validate()` function gets the same `(payload, ctx)` shape as legacy
-rules. `ctx` includes `{ dialect, version }`. Return an array (never
-null). Use `makeFinding(id, level, path, params)` from `../findings`.
+rules. `ctx` includes `{ dialect, version, userDialect, req }`:
+
+- `userDialect` — the caller's loaded user dialect, or `null`. Plugins can
+  call `userDialect.lookupMapping(path, value)` to resolve vendor-mapped
+  signals. The pop rules use it so a saved `ext.ad_type = 40 → pop` mapping is
+  recognised without hardcoding the value (see `non-iab-formats.js`).
+- `req` — on the **response** side, the paired bid request (from
+  `opts.pairReq`, else `null`). `pop-response` reads it to treat a pop-slot
+  request's bids as pop traffic even when an individual bid has no ext hint.
+
+Return an array (never null). Use `makeFinding(id, level, path, params)` from
+`../findings`.
 
 ## Adding a new plugin
 

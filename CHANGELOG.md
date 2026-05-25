@@ -19,6 +19,63 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.52.0 — feat: dialect-aware + shape-based pop detection; battr:8 / instl pop rules (2026-05-25) — core 0.26.0
+
+Pop / popunder / clickunder traffic that signals intent through vendor
+extensions — a numeric `ext.ad_type` code, or `allowMT` / `allowLayer` /
+`allowShock` / `viewOnClick` / `directLink` flags + `sizeID:[0]` — was
+invisible to the pop rules. `scanExtForFormatHints` only recognised a string
+`adtype`/`format`/`type`/`ad_format` value or a boolean flag key, and real
+pop-SSP samples carry neither. Three detection layers close the gap, plus two
+IAB-spec corrections to the pop request rule.
+
+#### Dynamic user-dialect detection (P0)
+
+- `scanExtForFormatHints(ext, basePath, userDialect)` gained an optional third
+  argument. When a loaded user dialect is supplied, each key on the ext object
+  is resolved via `userDialect.lookupMapping(signalPath, value)` — signal path
+  `imp[].ext.<key>` for per-imp ext, `ext.<key>` otherwise. A mapping whose
+  `semantic_label` normalises to a known non-standard format registers as that
+  hint. So a saved mapping like `ext.ad_type = 40 → pop` makes the pop rules
+  fire **with no vendor value hardcoded in core**. Threaded through
+  `detectFormat(payload, userDialect)` (called from `modules/analyze/handler.js`)
+  and both pop plugins via `ctx.userDialect`.
+
+#### Unified shape heuristics (P1)
+
+- The vendor-shape signals the suggestion engine (`analyzeShape` in
+  `dialects/shape-fingerprint.js`) already scored are now first-class format
+  hints in `scanExtForFormatHints`: boolean-ish `allowMT`, `allowLayer`,
+  `allowShock`, `viewOnClick`, `directLink`, and `sizeID:[0]` → `pop`. These
+  fire with no dialect at all, so format-detect and the pop rules now agree
+  with the suggestion engine instead of diverging.
+
+#### Paired-request response check (P3)
+
+- `pop-response` now reads `ctx.req`: if the analyze flow supplied the paired
+  bid request and it was itself a pop slot, the whole response is treated as
+  pop traffic — so bids that ship only a redirect `adm` and no ext pop hint of
+  their own are still validated under pop rules.
+
+#### IAB-spec pop-rule corrections (P2)
+
+- **`imp.pop.btype_popup_recommended` removed** — it nudged for
+  `imp.banner.btype` containing `4`, but `btype` is Banner Ad Types
+  (4 = iframe), unrelated to pops. A conflation.
+- **`imp.pop.battr_popup_blocked` (WARNING) added** — fires when a pop slot's
+  `imp.banner.battr` blocks creative attribute `8` (Pop — AdCOM Creative
+  Attributes / IAB List 5.3): the slot wants pop creatives but forbids them.
+  This is the IAB-correct anchor.
+- **`imp.pop.instl_conflict` (WARNING) added** — fires on `imp.instl = 1` on a
+  pop slot; an in-page full-screen interstitial and a separate-window pop are
+  contradictory delivery models.
+- Localised across en/uk/ru; spec-refs added for both new ids.
+- DeepSeek-audit false positives (redundant schain/eids plain-object guards, a
+  `podid` patch that would have accepted negatives) deliberately not applied.
+
+Versions: app **0.51.0 → 0.52.0**, `@kyivtech/spyglass-core` **0.25.0 →
+0.26.0**. 891 tests green; typecheck / format / lint clean.
+
 ### v0.51.0 — feat: URL-style request validator + Pushub decoder (2026-05-23)
 
 Spyglass now accepts URL-style ad requests — clickunder/teaser/pop GETs

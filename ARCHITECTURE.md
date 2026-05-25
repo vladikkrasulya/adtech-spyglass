@@ -12,7 +12,7 @@ A snapshot of what's actually live on `spyglass.kyivtech.com.ua`. Anything below
 
 **Live and working:**
 
-- **Validator core in `packages/core/`** — extracted from `server.js`, used by both the Node server and (planned) the browser. Pure JS, no Node-only APIs. **658 tests pass** (up from 209 — `Phase 1 ✅`; npm publish still gated by API-stability work). Folder-per-rule layout under `packages/core/rules/` makes new rules a small, isolated addition.
+- **Validator core in `packages/core/`** — extracted from `server.js`, used by both the Node server and (planned) the browser. Pure JS, no Node-only APIs. **891 tests pass** (up from 209 — `Phase 1 ✅`; npm publish still gated by API-stability work). Folder-per-rule layout under `packages/core/rules/` makes new rules a small, isolated addition.
 - **3 locales** (`/`, `/uk/`, `/ru/`) with **seamless DOM-morph language switch** (no full reload, preserves analysis state). About pages parallel: `/about`, `/uk/about`, `/ru/about`. SEO via hreflang + sitemap.
 - **Anonymous-first UX**: paste-and-validate works without login. Login is opt-in for the encrypted library (zero-knowledge AES-GCM-256, PBKDF2 600k, recovery key) + partner profiles.
 - **JsonFeed validators** for non-RTB CIS adtech: vendor-specific push, clickunder, single-bid shapes.
@@ -22,7 +22,7 @@ A snapshot of what's actually live on `spyglass.kyivtech.com.ua`. Anything below
 - **Cabinet section-only routing (v0.42.10)** — `/account` is Gmail-style: sidebar click → only that section renders, URL hash drives state, deep-links work (`/account#library`), browser back/forward walks between sections. Inner anchors like `<a href="#privacy">` resolve to the ancestor section + scroll the inner element.
 - **Auto-version of module assets** — `__<MODULE>_BUNDLE_HASH__` tokens in JS get replaced server-side with content-hash of `public/modules/<module>/`. No manual bumps on rule/template changes.
 - **Modular code shape** — `server.js` 2033 → 868 LOC (Phase 7c modularization closed 2026-05-10); both backend and frontend are folder-per-tool under `modules/<name>/` and `public/modules/<name>/` respectively. See [docs/ARCHMAP.md](./docs/ARCHMAP.md) for the authoritative map.
-- **Operations**: SQLite daily backup (kt-backup-\* cron, gzipped, 30-day rotation, off-site rclone to Drive verified fresh 2026-05-10), per-IP rate-limiting (60/min on analyze, 10/15min on login, 5/hour on register), HttpOnly+SameSite+Secure cookies, full `npm run ci` green (format/lint/typecheck/658 tests).
+- **Operations**: SQLite daily backup (kt-backup-\* cron, gzipped, 30-day rotation, off-site rclone to Drive verified fresh 2026-05-10), per-IP rate-limiting (60/min on analyze, 10/15min on login, 5/hour on register), HttpOnly+SameSite+Secure cookies, full `npm run ci` green (format/lint/typecheck/891 tests).
 
 **Recent UX polish wave (2026-05-13 v0.42.1 → v0.42.10):**
 
@@ -198,6 +198,8 @@ Each dialect is an **additive layer** (not a replacement) over the IAB base. A d
 
 Dialects ship in `/dialects/{name}.js` next to the core. Each vendor-specific overlay can become its own `@spyglass/dialect-<name>` package — separate from the core. New dialects follow the same pattern.
 
+Beyond findings, a loaded **user dialect also feeds format detection**: its saved signal mappings let `scanExtForFormatHints` recognise vendor-coded formats (e.g. a numeric pop `ad_type`) with no core change. See §3.7.
+
 ### 3.6 Spec deep-links
 
 Every finding carries a `specRef` pointing into the IAB markdown spec on GitHub:
@@ -209,6 +211,18 @@ https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3210
 We control this via a **section-id table** in the core: `'imp.banner' → '3210-object-banner'`. When IAB ships a new tag (e.g. `2.6-202506`), we bump the table, not the rules.
 
 The IAB does **not publish official JSON Schemas** — Spyglass derives rules from the markdown specs directly. We commit to tracking new tags within 2 weeks of publication.
+
+### 3.7 Non-IAB format detection (pop family)
+
+Pop / popunder / clickunder are not canonical OpenRTB — there is no `imp.pop` field in any version. Vendors signal them through extensions, so detection (`non-iab-formats.js` → `scanExtForFormatHints`, consumed by `format-detect.js` and the `pop-request` / `pop-response` rule plugins) draws on three sources, first-seen-wins per format:
+
+1. **User-dialect mappings (dynamic).** When a payload is validated with a loaded user dialect, each `ext` key is resolved via `userDialect.lookupMapping(signalPath, value)` — `imp[].ext.<key>` for per-imp ext, `ext.<key>` otherwise. A mapping whose `semantic_label` is a recognised non-standard format registers as that hint. This is how a pop vendor that signals with a numeric code (e.g. `ext.ad_type = 40`) is onboarded **without hardcoding the vendor's value in core** — the mapping lives in the user's saved dialect (§3.5). `detectFormat(payload, userDialect)` threads the dialect through; the analyze handler passes the session's default dialect.
+2. **Canonical string + flag hints.** `ext.adtype = "popunder"` and boolean flag keys (`ext.popunder = 1`, etc.).
+3. **Shape heuristics (no dialect required).** The same vendor-shape signals the suggestion engine (`analyzeShape`, `dialects/shape-fingerprint.js`) scores — `allowMT` / `allowLayer` / `allowShock` / `viewOnClick` / `directLink` flags and `sizeID:[0]` — are treated as `pop` hints directly, so format-detect and the pop rules stay aligned with the suggestion engine.
+
+**Response side.** `pop-response` also honours `ctx.req`: if the paired bid request was a pop slot, the response is validated as pop traffic even when a bid carries no ext hint of its own (pop bids commonly ship just a redirect `adm`). `ctx.req` is supplied by `validate(payload, { pairReq })`.
+
+**Pop request rules** assert IAB-correct invariants on a detected pop slot: `imp.pop.battr_popup_blocked` (WARNING — `imp.banner.battr` blocks creative attribute 8 / Pop, AdCOM Creative Attributes / IAB List 5.3, contradicting the pop intent) and `imp.pop.instl_conflict` (WARNING — `imp.instl = 1`, an in-page full-screen interstitial, contradicts a separate-window pop). The earlier `btype:[4]` nudge was removed as a `btype`-vs-`battr` conflation (btype 4 = iframe).
 
 ---
 
