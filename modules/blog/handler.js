@@ -20,7 +20,10 @@ const { sendJson, sendError } = require('../../lib/http');
 const log = require('../../lib/logger').child('blog');
 
 const CONTENT_DIR = path.join(__dirname, '../../content/posts');
-const PUBLIC_BASE = process.env.PUBLIC_BASE_URL || 'https://ortbtools.com';
+// RSS feed links must use the public brand domain (ortbtools.com), NOT the
+// kyivtech proxy host that PUBLIC_BASE_URL points to. Share the one canonical
+// origin with the SEO module.
+const { ORIGIN: PUBLIC_BASE } = require('../../lib/seo');
 
 // ── ClickHouse client (same approach as lib/event-log.js) ─────────────────
 const CH_URL = (process.env.CLICKHOUSE_URL || 'http://clickhouse:8123').replace(/\/+$/, '');
@@ -362,7 +365,7 @@ function createBlogModule() {
 
       const rssItems = items
         .map((p) => {
-          const url = `${PUBLIC_BASE}/${p.lang}/blog/${p.slug}`;
+          const url = `${PUBLIC_BASE}/blog/${p.lang}/${p.slug}`;
           const pubDate = new Date(p.published_at).toUTCString();
           return `    <item>
       <title>${xmlEscape(p.title)}</title>

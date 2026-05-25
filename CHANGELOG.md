@@ -19,6 +19,41 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.55.0 — feat: per-route SEO metadata + blog-post SSR + dynamic sitemap (2026-05-25)
+
+Google was indexing nothing but the homepage ("Alternate page with proper
+canonical tag"): every SPA route — `/blog`, `/docs`, `/live`, individual posts —
+served the same static `index.{en,uk,ru}.html` carrying the homepage's
+`canonical = https://ortbtools.com/`, so Google consolidated everything into the
+root. Post pages were doubly invisible: their content arrived via a client
+`/api/v1/blog` fetch that had been 499-ing during indexing.
+
+- **`lib/seo.js`** (new, pure/no-I/O → unit-tested): `parseRoute` (UI-locale vs
+  post-lang dimensions), `sectionSeo`/`postSeo` (canonical + hreflang + title +
+  description + OG/Twitter), `applySeoToHtml` (formatting-tolerant regex
+  rewrites), `injectPostSsr` + safe Markdown renderer (escape-first → no XSS),
+  `renderSitemap`.
+- **Per-route meta (Option A)**: `server.js` rewrites canonical/hreflang/title/
+  description/OG/Twitter on every served HTML to the actual URL+locale. Unknown
+  paths are left untouched.
+- **Blog-post SSR (Option B)**: `/blog/<lang>/<slug>` server-renders the article
+  body into `#app-root` (+ injects `blog.css`) so crawlers/no-JS get real
+  content without the client fetch. The JS blog module overwrites it for users.
+- **Dynamic `/sitemap.xml`**: home + sections + every published post (markdown ∪
+  `analytics.blog_posts`) with `xhtml:link` hreflang alternates.
+- **ClickHouse read path is graceful**: `blog-service.getPost`/`getAllActivePosts`
+  are markdown-first, cached (5 min TTL), tight-timeout (1.5 s) and never throw —
+  a CH outage degrades to "no SSR body / markdown-only sitemap", never a broken
+  public page.
+- **Canonical domain fix**: SEO origin is `SEO_ORIGIN` (default
+  `https://ortbtools.com`), deliberately NOT `PUBLIC_BASE_URL` (which points at
+  the internal kyivtech proxy host for email links).
+- **RSS feed fix** (`modules/blog/handler.js`): item links were emitting the
+  wrong host AND wrong path shape (`/<lang>/blog/<slug>`) — now
+  `https://ortbtools.com/blog/<lang>/<slug>`.
+- 18 new tests in `tests/seo.test.js`; 935 total green. `server.js` + `lib/` are
+  baked → deployed via `docker compose up -d --build`.
+
 ### v0.54.2 — fix: eliminate section-navigation FOUC (registry awaits module CSS) (2026-05-25)
 
 Switching SPA sections flashed a frame of unstyled content ("a flash of another

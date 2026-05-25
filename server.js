@@ -520,8 +520,39 @@ const LOCALE_REDIRECT_TABLE = {
   '/docs': { uk: '/uk/docs', ru: '/ru/docs' },
 };
 
+// Dynamic sitemap.xml — home + SPA sections + every published post (markdown
+// ∪ analytics.blog_posts) with hreflang alternates. getAllActivePosts() is
+// cached + CH-graceful, so a ClickHouse outage degrades to markdown-only, not
+// a 500. Locale-agnostic → handled before the locale-redirect logic.
+async function serveSitemap(req, res) {
+  try {
+    const posts = await blogService.getAllActivePosts();
+    const xml = seo.renderSitemap(posts);
+    const { body, encoding } = maybeGzip(Buffer.from(xml, 'utf8'), req, 'application/xml');
+    const headers = {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600',
+      Vary: 'Accept-Encoding',
+    };
+    if (encoding) headers['Content-Encoding'] = encoding;
+    res.writeHead(200, headers);
+    res.end(body);
+  } catch (err) {
+    captureException(err, { request: { url: '/sitemap.xml' }, source: 'sitemap' });
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('sitemap error');
+    }
+  }
+}
+
 function serveStaticFile(req, res) {
   const reqPath = req.url.split('?')[0];
+
+  if (reqPath === '/sitemap.xml') {
+    serveSitemap(req, res); // self-contained: own try/catch, never rejects out
+    return;
+  }
 
   // Chrome / Slack / Discord / link-preview bots all request /favicon.ico
   // by default regardless of the <link rel="icon"> tag. A 404 here gets
@@ -583,7 +614,7 @@ function serveStaticFile(req, res) {
     return;
   }
 
-  fs.readFile(filePath, (err, content) => {
+  fs.readFile(filePath, async (err, content) => {
     if (err) {
       res.writeHead(404);
       res.end('Not Found');
@@ -598,6 +629,26 @@ function serveStaticFile(req, res) {
       // the meta tag's content stays as the literal token and the reporter
       // self-disables on `dsn.startsWith('__')`.
       txt = txt.replace(/__SENTRY_DSN_PUBLIC__/g, process.env.SENTRY_DSN_PUBLIC || '');
+      // Per-route SEO: every section/post serves the same static shell, so we
+      // rewrite canonical/hreflang/title/description/OG/Twitter to the actual
+      // URL (Google was consolidating all routes into the homepage canonical).
+      // For /blog/<lang>/<slug> we also server-render the article body into
+      // #app-root so crawlers (and no-JS) get real content without the client
+      // /api/v1/blog fetch (which had been 499-ing during indexing). All
+      // best-effort + CH-graceful — SEO logic must never break a page render.
+      try {
+        const r = seo.parseRoute(reqPath);
+        if (r.isPost) {
+          const post = await blogService.getPost(r.slug, r.postLang);
+          txt = seo.applySeoToHtml(txt, seo.postSeo(r.slug, r.postLang, post));
+          if (post) txt = seo.injectPostSsr(txt, post);
+        } else {
+          const meta = seo.sectionSeo(r.sectionPath, r.uiLang);
+          if (meta) txt = seo.applySeoToHtml(txt, meta);
+        }
+      } catch (seoErr) {
+        captureException(seoErr, { request: { url: req.url }, source: 'seo-rewrite' });
+      }
       body = Buffer.from(txt, 'utf8');
     } else if (ct === 'application/javascript') {
       // .js files get two passes: rewriteAssetVersions for static
@@ -797,6 +848,8 @@ const { createAccountModule } = require('./modules/account/handler');
 const { createAdminModule } = require('./modules/admin/handler');
 const { createAdminBlogModule } = require('./modules/admin/blog');
 const { createBlogModule } = require('./modules/blog/handler');
+const seo = require('./lib/seo');
+const blogService = require('./lib/blog-service');
 const { createProxyModule } = require('./modules/proxy/handler');
 // Stage 5 — Insights Dashboard analytics endpoint
 const analyticsModule = require('./modules/analytics/handler');
