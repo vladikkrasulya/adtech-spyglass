@@ -19,6 +19,17 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.54.1 — fix: news moderator scoring (pass resp.response) + drop dead MediaPost feed (2026-05-25)
+
+The AI news moderator passed the whole Ollama **response object** to
+`extractScore` (which expects the model's text string), so every relevance score
+parsed as `null` → "unparseable score" → all drafts skipped, 0 published.
+`callOllama` returns the Ollama response object with the text in `.response` (and
+already forces `format:'json'`); now we pass `resp.response`. Caught by watching
+the first live moderation cycle — the leave-pending safeguard meant **zero bad
+publishes** despite the bug. Also dropped the MediaPost RSS source
+(`https://www.mediapost.com/rss/` → HTTP 404). 907 tests green.
+
 ### v0.54.0 — feat: deep OpenRTB 3.0 + AdCOM 1.0 validation (proactive 3.0-readiness) (2026-05-25)
 
 Deep request + response validation for the OpenRTB 3.0 envelope and AdCOM 1.0
