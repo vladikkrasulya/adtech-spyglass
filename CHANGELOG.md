@@ -19,6 +19,24 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.54.2 — fix: eliminate section-navigation FOUC (registry awaits module CSS) (2026-05-25)
+
+Switching SPA sections flashed a frame of unstyled content ("a flash of another
+page"): each section's `mount()` injected its `<link rel=stylesheet>`
+asynchronously and wrote `innerHTML` immediately, so for the CSS-load window the
+section rendered raw. The chrome (nav/topbar) avoided this by `await`-ing its CSS
+in `boot()`, and the inspector already awaited its own — but the other 8 sections
+didn't.
+
+Fix (modular / DRY): modules now declare an optional `css` field;
+`registry.activate` `await`s `ensureStylesheet(mod.css)` **before** `mount()` —
+loaded once, persistent, idempotent by resolved href. Removed the duplicated
+async CSS-inject (+ its unmount cleanup) from 8 modules (blog, library, docs,
+dialects, stream, admin-blog, behavior, insights). Inspector unchanged.
+
+907 tests green; format / lint clean. `public/` is bind-mounted — no rebuild;
+hard-refresh to pick up the new shell JS.
+
 ### v0.54.1 — fix: news moderator scoring (pass resp.response) + drop dead MediaPost feed (2026-05-25)
 
 The AI news moderator passed the whole Ollama **response object** to

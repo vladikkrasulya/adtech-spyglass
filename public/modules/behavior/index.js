@@ -201,6 +201,7 @@ async function fetchScenarios(signal) {
 
 export default {
   id: 'behavior',
+  css: '/modules/behavior/behavior.css',
   route: '/behavior',
   manifest: {
     title: { en: 'Behavior Scenarios', uk: 'Behavior-сценарії', ru: 'Behavior-сценарии' },
@@ -208,13 +209,6 @@ export default {
 
   async mount(root, ctx) {
     const lang = ctx.lang || FALLBACK_LANG;
-
-    // Load section CSS
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = '/modules/behavior/behavior.css';
-    document.head.appendChild(cssLink);
-    ctx.addCleanup(() => cssLink.remove());
 
     // Render shell immediately (chips + loading grid)
     root.innerHTML = renderShell(lang);
@@ -302,6 +296,6 @@ export default {
   },
 
   async unmount(_root) {
-    /* registry sweeps DOM; cleanup queue handles cssLink */
+    /* registry sweeps DOM; section CSS persists (loaded once via mod.css) */
   },
 };

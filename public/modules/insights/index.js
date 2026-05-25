@@ -363,17 +363,11 @@ function renderWidgets(data, lang) {
 
 export default {
   id: 'insights',
+  css: '/modules/insights/insights.css',
   route: '/insights',
 
   async mount(container, ctx) {
     const lang = getLang();
-    // Load CSS
-    if (!document.querySelector('link[href*="insights.css"]')) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = '/modules/insights/insights.css';
-      document.head.appendChild(link);
-    }
 
     container.innerHTML = renderShell(lang);
 

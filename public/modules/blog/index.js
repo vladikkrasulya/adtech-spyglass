@@ -76,6 +76,7 @@ function isBlogListRoute(pathname) {
 
 export default {
   id: 'blog',
+  css: '/modules/blog/blog.css',
   route: '/blog',
   manifest: {
     title: { en: 'Blog', uk: 'Блог', ru: 'Блог' },
@@ -88,14 +89,7 @@ export default {
 
   async mount(root, ctx) {
     const lang = ctx.lang || FALLBACK_LANG;
-
-    // Load CSS
-    const cssHref = new URL('./blog.css', import.meta.url).href;
-    const linkEl = document.createElement('link');
-    linkEl.rel = 'stylesheet';
-    linkEl.href = cssHref;
-    document.head.appendChild(linkEl);
-    ctx.addCleanup(() => linkEl.remove());
+    // CSS is loaded + awaited by the registry (mod.css) before mount — no FOUC.
 
     const postMatch = parsePostRoute(location.pathname);
 

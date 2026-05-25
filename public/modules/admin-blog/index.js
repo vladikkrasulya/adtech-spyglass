@@ -63,6 +63,7 @@ function formatDate(s) {
 
 export default {
   id: 'admin-blog',
+  css: '/modules/admin-blog/admin-blog.css',
   route: '/admin/blog',
   manifest: {
     title: { en: 'Blog Admin', uk: 'Адмін блогу', ru: 'Админ блога' },
@@ -70,14 +71,6 @@ export default {
 
   async mount(root, ctx) {
     const lang = ctx.lang || 'en';
-
-    // Load CSS
-    const cssHref = new URL('./admin-blog.css', import.meta.url).href;
-    const linkEl = document.createElement('link');
-    linkEl.rel = 'stylesheet';
-    linkEl.href = cssHref;
-    document.head.appendChild(linkEl);
-    ctx.addCleanup(() => linkEl.remove());
 
     let token = getSavedToken();
 

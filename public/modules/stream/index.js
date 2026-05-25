@@ -16,6 +16,7 @@ const THEME_KEY = 'kt-theme';
 
 export default {
   id: 'stream',
+  css: '/modules/stream/stream.css',
   route: '/live',
   manifest: {
     title: { en: 'Stream', uk: 'Стрім', ru: 'Стрим' },
@@ -60,16 +61,8 @@ export default {
     const rollingEvents = [];
     const ROLLING_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-    // ── 1. Load module-scoped CSS via <link>. addCleanup removes it
-    //       on unmount so the next module's CSS doesn't compete. ────
-    const cssHref = new URL('./stream.css', import.meta.url).href;
-    const linkEl = document.createElement('link');
-    linkEl.rel = 'stylesheet';
-    linkEl.href = cssHref;
-    document.head.appendChild(linkEl);
-    ctx.addCleanup(() => linkEl.remove());
-
-    // ── 2. Load template HTML and inject into root. ────────────────
+    // ── Load template HTML and inject into root. (Module CSS is loaded +
+    //    awaited by the registry via mod.css before mount — no FOUC.) ──
     const tplHref = new URL('./template.html', import.meta.url).href;
     const html = await fetch(tplHref, { signal: ctx.signal }).then((r) => r.text());
     root.innerHTML = html;

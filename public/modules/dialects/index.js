@@ -345,6 +345,7 @@ function showToast(message, type, ctxToast) {
 
 export default {
   id: 'dialects',
+  css: '/modules/dialects/dialects.css',
   route: '/dialects',
   manifest: {
     title: { en: 'Dialect catalog', uk: 'Каталог діалектів', ru: 'Каталог диалектов' },
@@ -352,13 +353,6 @@ export default {
 
   async mount(root, ctx) {
     const lang = ctx.lang || FALLBACK_LANG;
-
-    // Load section CSS
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = '/modules/dialects/dialects.css';
-    document.head.appendChild(cssLink);
-    ctx.addCleanup(() => cssLink.remove());
 
     // Render shell immediately
     root.innerHTML = renderShell(lang);
@@ -440,6 +434,6 @@ export default {
   },
 
   async unmount(_root) {
-    /* registry sweeps DOM; cleanup queue handles cssLink */
+    /* registry sweeps DOM; section CSS persists (loaded once via mod.css) */
   },
 };

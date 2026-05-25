@@ -7,6 +7,11 @@
      export default {
        id:    'stream',                                  // unique id
        route: '/stream.html',                            // optional
+       css:   '/modules/stream/stream.css',              // optional — registry
+                                                         //   awaits it BEFORE
+                                                         //   mount() so the
+                                                         //   section never
+                                                         //   flashes unstyled
        manifest: { title:{en,uk,ru}, icon, ... },        // optional
        async mount(root, ctx) { ... },                   // required
        async unmount(root) { ... },                      // optional
@@ -106,6 +111,10 @@ export async function activate(id, root) {
 
   active = { id: mod.id, mod, root, controller, cleanups };
   try {
+    // Load + apply the module's stylesheet BEFORE mount() writes markup, so
+    // the section never renders a frame of unstyled content (FOUC) on
+    // activation. Idempotent + persistent (see ensureStylesheet).
+    if (mod.css) await ensureStylesheet(mod.css);
     await mod.mount(root, ctx);
   } catch (err) {
     // Mount failed mid-way — tear down whatever did register.
@@ -153,6 +162,51 @@ function runCleanups(list) {
       console.warn('[registry] cleanup threw:', e);
     }
   }
+}
+
+// Load a <link rel="stylesheet"> and resolve once it's applied. Idempotent by
+// resolved href: if the sheet is already in <head> (this session, or from the
+// shell HTML), reuse it. Section CSS is intentionally PERSISTENT — not removed
+// on unmount — so re-entering a section never re-flashes. Never rejects; a CSS
+// failure must not block the section from mounting.
+const _cssReady = new Set();
+function ensureStylesheet(href) {
+  return new Promise((resolve) => {
+    const abs = new URL(href, location.href).href;
+    if (_cssReady.has(abs)) return resolve();
+    const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).find(
+      (l) => l.href === abs,
+    );
+    if (existing) {
+      if (existing.sheet) {
+        _cssReady.add(abs);
+        return resolve();
+      }
+      existing.addEventListener(
+        'load',
+        () => {
+          _cssReady.add(abs);
+          resolve();
+        },
+        { once: true },
+      );
+      existing.addEventListener('error', () => resolve(), { once: true });
+      return;
+    }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = abs;
+    link.addEventListener(
+      'load',
+      () => {
+        _cssReady.add(abs);
+        resolve();
+      },
+      { once: true },
+    );
+    link.addEventListener('error', () => resolve(), { once: true });
+    document.head.appendChild(link);
+  });
 }
 
 function buildCtx(controller, cleanups) {

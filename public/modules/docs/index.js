@@ -352,6 +352,7 @@ async function mountCatalog(root, lang, signal) {
 
 export default {
   id: 'docs',
+  css: '/modules/docs/docs.css',
   route: '/docs',
   manifest: {
     title: { en: 'Docs', uk: 'Документація', ru: 'Документация' },
@@ -359,13 +360,6 @@ export default {
 
   async mount(root, ctx) {
     const lang = ctx.lang || FALLBACK_LANG;
-
-    // Load section CSS (deferred to first mount; cleaned on unmount).
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = '/modules/docs/docs.css';
-    document.head.appendChild(cssLink);
-    ctx.addCleanup(() => cssLink.remove());
 
     // Determine which sub-page to render by pathname.
     const pathname = location.pathname;
@@ -381,6 +375,6 @@ export default {
   },
 
   async unmount(_root) {
-    /* registry sweeps DOM; cleanup queue handles cssLink */
+    /* registry sweeps DOM; section CSS persists (loaded once via mod.css) */
   },
 };

@@ -272,6 +272,7 @@ async function copySampleToClipboard(slug, signal, toast) {
 
 export default {
   id: 'library',
+  css: '/modules/library/library.css',
   route: '/library',
   manifest: {
     title: { en: 'Library', uk: 'Бібліотека', ru: 'Библиотека' },
@@ -279,13 +280,6 @@ export default {
 
   async mount(root, ctx) {
     const lang = ctx.lang || FALLBACK_LANG;
-
-    // Load section CSS (deferred to first mount; cleaned on unmount).
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = '/modules/library/library.css';
-    document.head.appendChild(cssLink);
-    ctx.addCleanup(() => cssLink.remove());
 
     root.innerHTML = renderShell(lang);
     const catalogPanel = root.querySelector('[data-panel="catalog"]');
@@ -350,6 +344,6 @@ export default {
   },
 
   async unmount(_root) {
-    /* registry sweeps DOM; cleanup queue handles cssLink */
+    /* registry sweeps DOM; section CSS persists (loaded once via mod.css) */
   },
 };
