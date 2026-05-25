@@ -17,48 +17,10 @@ const path = require('path');
 const crypto = require('crypto');
 const { sendJson, sendError, readJson } = require('../../lib/http');
 const log = require('../../lib/logger').child('admin-blog');
+const { chQuery, chInsert, chExec, chEsc } = require('../../lib/clickhouse');
+const { publishPost, rejectPost, slugify, nowCh } = require('../../lib/blog-service');
 
 const CONTENT_DIR = path.join(__dirname, '../../content/posts');
-
-const CH_URL = (process.env.CLICKHOUSE_URL || 'http://clickhouse:8123').replace(/\/+$/, '');
-const CH_USER = process.env.CLICKHOUSE_USER || '';
-const CH_PASSWORD = process.env.CLICKHOUSE_PASSWORD || '';
-
-function chHeaders() {
-  const h = { 'Content-Type': 'application/json' };
-  if (CH_USER) h['X-ClickHouse-User'] = CH_USER;
-  if (CH_PASSWORD) h['X-ClickHouse-Key'] = CH_PASSWORD;
-  return h;
-}
-
-async function chQuery(sql) {
-  const url = `${CH_URL}/?query=${encodeURIComponent(sql)}&default_format=JSONEachRow`;
-  const resp = await fetch(url, { headers: chHeaders() });
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    throw new Error(`CH query failed ${resp.status}: ${text.slice(0, 200)}`);
-  }
-  const text = await resp.text();
-  if (!text.trim()) return [];
-  return text
-    .trim()
-    .split('\n')
-    .map((line) => JSON.parse(line));
-}
-
-async function chInsert(table, rows) {
-  const ndjson = rows.map((r) => JSON.stringify(r)).join('\n');
-  const url = `${CH_URL}/?query=${encodeURIComponent(`INSERT INTO ${table} FORMAT JSONEachRow`)}`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { ...chHeaders(), 'Content-Type': 'text/plain' },
-    body: ndjson,
-  });
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    throw new Error(`CH insert failed ${resp.status}: ${text.slice(0, 200)}`);
-  }
-}
 
 function requireAdminToken(req, res) {
   const expected = process.env.ADMIN_STATS_TOKEN;
@@ -73,19 +35,6 @@ function requireAdminToken(req, res) {
     return false;
   }
   return true;
-}
-
-function slugify(str) {
-  return String(str)
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 80);
-}
-
-function nowCh() {
-  // ClickHouse DateTime64 — strip trailing Z (CH doesn't like it)
-  return new Date().toISOString().slice(0, -1);
 }
 
 function createAdminBlogModule() {
@@ -149,28 +98,19 @@ function createAdminBlogModule() {
       const now = nowCh();
 
       if (action === 'publish') {
-        // Write to blog_posts
-        await chInsert('analytics.blog_posts', [
-          {
-            slug,
-            lang: draft.lang,
-            title: draft.title,
-            category: draft.category,
-            summary: draft.summary,
-            body: draft.summary, // draft has no separate body; summary becomes body
-            url: draft.url || null,
-            tags: [],
-            published_at: now,
-            source_draft_id: draft.id,
-          },
-        ]);
-        // Update draft status to published
-        await fetch(
-          `${CH_URL}/?query=${encodeURIComponent(
-            `ALTER TABLE analytics.blog_drafts UPDATE status = 'published', approved_at = '${now}', slug = '${slug.replace(/'/g, '')}' WHERE id = '${id.replace(/'/g, '')}'`,
-          )}`,
-          { headers: chHeaders() },
-        );
+        // Shared publish path — identical to the one the AI moderator uses.
+        await publishPost({
+          slug,
+          lang: draft.lang,
+          title: draft.title,
+          category: draft.category,
+          summary: draft.summary,
+          body: draft.summary,
+          url: draft.url || null,
+          source_draft_id: draft.id,
+          tags: [],
+          approvedBy: 'admin',
+        });
         sendJson(res, 200, { ok: true, action: 'published', slug, lang: draft.lang });
       } else {
         // action === 'promote' — write markdown file to disk
@@ -181,11 +121,8 @@ function createAdminBlogModule() {
         fs.writeFileSync(filePath, frontmatter, 'utf8');
 
         // Update draft status to promoted
-        await fetch(
-          `${CH_URL}/?query=${encodeURIComponent(
-            `ALTER TABLE analytics.blog_drafts UPDATE status = 'promoted', approved_at = '${now}', slug = '${slug.replace(/'/g, '')}' WHERE id = '${id.replace(/'/g, '')}'`,
-          )}`,
-          { headers: chHeaders() },
+        await chExec(
+          `ALTER TABLE analytics.blog_drafts UPDATE status = 'promoted', approved_at = '${now}', slug = '${chEsc(slug)}' WHERE id = '${chEsc(id)}'`,
         );
         sendJson(res, 200, {
           ok: true,
@@ -219,13 +156,7 @@ function createAdminBlogModule() {
       return sendError(res, 400, 'missing_id', 'id required');
     }
     try {
-      const now = nowCh();
-      await fetch(
-        `${CH_URL}/?query=${encodeURIComponent(
-          `ALTER TABLE analytics.blog_drafts UPDATE status = 'rejected', approved_at = '${now}' WHERE id = '${id.replace(/'/g, '')}'`,
-        )}`,
-        { headers: chHeaders() },
-      );
+      await rejectPost(id, { approvedBy: 'admin' });
       sendJson(res, 200, { ok: true, action: 'rejected', id });
     } catch (e) {
       log.error({ err: e }, 'reject failed');

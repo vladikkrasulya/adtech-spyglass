@@ -19,6 +19,47 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.53.0 — feat: AI auto-publisher for the news firehose (Ollama score + DeepSeek translate) (2026-05-25)
+
+The AdTech RSS firehose now auto-publishes. A new moderator scores pending
+drafts for relevance on local Ollama and — for anything that clears the bar —
+translates it to en/uk/ru via OpenRouter DeepSeek and publishes, capped at 3
+articles/day. This **supersedes the manual-only `/admin/blog` gate** (which is
+retained for everything the moderator leaves pending). Decision logged in
+ROADMAP.
+
+Shared services (refactor — kills the ~5×-duplicated ClickHouse plumbing):
+
+- `lib/clickhouse.js` — one CH HTTP client: `chQuery` / `chInsert` / `chExec` +
+  `chEsc` (backslash-then-quote literal escaping) + `isEnabled`. Refactored
+  `lib/news-crawler.js` and `modules/admin/blog.js` onto it.
+- `lib/blog-service.js` — `publishPost()` (insert `blog_posts` + mark draft
+  `published`) and `rejectPost()`. ONE publish path, two callers: the human
+  `/admin/blog` gate and the AI moderator are now identical, no divergence.
+
+AI moderator (`lib/news-moderator.js`):
+
+- Daily limit via `uniqExact(slug)` today vs 3 articles — robust to
+  ReplacingMergeTree duplicate rows and single-row admin posts (raw `rows / 9`
+  would miscount both).
+- Local Ollama relevance score; `< 8` → reject. Ollama / parse failure → left
+  pending (a missing score is never coerced to 0, which would auto-reject).
+- OpenRouter DeepSeek (`lib/openrouter.js`) for translation + slug / category /
+  tags; failure or incomplete JSON → left pending.
+- Batch-cap per run; stops publishing at the daily cap, leaving the rest
+  pending for the next day. Wired into the end of each `crawl()` cycle.
+
+Sources: +Digiday, +IAB Tech Lab, +MediaPost, +MarTech (6 total).
+
+Config (documented in `.env.example`): `OPENROUTER_API_KEY` (+ optional
+`OPENROUTER_MODEL`, `BLOG_MAX_PER_DAY`, `BLOG_RELEVANCE_MIN`,
+`BLOG_MODERATE_BATCH`). `lib/` and `modules/` are baked into the image →
+deploy needs `docker compose up -d --build`.
+
+906 tests green (15 new for the moderator + CH/blog helpers); typecheck /
+format / lint clean. App **0.52.0 → 0.53.0** (engine `packages/core` unchanged
+at 0.26.0).
+
 ### v0.52.0 — feat: dialect-aware + shape-based pop detection; battr:8 / instl pop rules (2026-05-25) — core 0.26.0
 
 Pop / popunder / clickunder traffic that signals intent through vendor
