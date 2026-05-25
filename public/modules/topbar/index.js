@@ -59,6 +59,11 @@ function renderTopbar(authUser) {
     uk: 'увійти',
     ru: 'войти',
   });
+  const searchLabel = pick({
+    en: 'Search',
+    uk: 'Пошук',
+    ru: 'Поиск',
+  });
   const langTitle = pick({
     en: 'Language: English',
     uk: 'Мова: українська',
@@ -103,6 +108,7 @@ function renderTopbar(authUser) {
       />
     </div>
     <div class="kt-topbar__actions">
+      <button type="button" class="kt-topbar__search-btn" data-action="toggle-search" aria-label="${escapeHtml(searchLabel)}" title="${escapeHtml(searchLabel)}">🔎</button>
       <details class="kt-lang-menu">
         <summary class="kt-lang-toggle" title="${escapeHtml(langTitle)}">
           <span class="kt-lang-current">${escapeHtml(langCurrent)}</span><span class="kt-lang-caret">▾</span>
@@ -144,6 +150,22 @@ export function mountTopbar(root, shellRoot) {
     shellRoot.classList.toggle('is-nav-open');
   };
 
+  // ── Mobile search toggle (≤600px): expand the inline input into a
+  // full-width overlay (CSS .is-search-open on .kt-topbar) and focus it,
+  // which opens the existing search dropdown. Declared early — doRender
+  // references it. ───────────────────────────────────────────────────────
+  const closeSearch = () => root.classList.remove('is-search-open');
+  const onToggleSearch = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const opening = !root.classList.contains('is-search-open');
+    root.classList.toggle('is-search-open', opening);
+    if (opening) {
+      const inp = root.querySelector('.kt-topbar__search-input');
+      if (inp) setTimeout(() => inp.focus(), 0);
+    }
+  };
+
   // ── Helpers to wire/unwire the sign-in click on a fresh DOM render ──
   function wireSignIn() {
     const signInBtn = root.querySelector('[data-action="open-auth"]');
@@ -178,6 +200,8 @@ export function mountTopbar(root, shellRoot) {
     // Re-wire toggle (it's a fresh DOM node after innerHTML).
     const newToggle = root.querySelector('[data-action="toggle-nav"]');
     if (newToggle) newToggle.addEventListener('click', onToggle);
+    const newSearchToggle = root.querySelector('[data-action="toggle-search"]');
+    if (newSearchToggle) newSearchToggle.addEventListener('click', onToggleSearch);
     wireSignIn();
   }
 
@@ -282,10 +306,26 @@ export function mountTopbar(root, shellRoot) {
   };
   shellRoot.addEventListener('click', onShellClick);
 
-  // Auto-close drawer on route change.
-  const onRoute = () => shellRoot.classList.remove('is-nav-open');
+  // Auto-close drawer (and the mobile search overlay) on route change.
+  const onRoute = () => {
+    shellRoot.classList.remove('is-nav-open');
+    closeSearch();
+  };
   window.addEventListener('popstate', onRoute);
   window.addEventListener('kt:pushstate', onRoute);
+
+  // Collapse the mobile search overlay on click-outside or Esc.
+  const onDocClickSearch = (e) => {
+    if (!root.classList.contains('is-search-open')) return;
+    if (e.target.closest('.kt-topbar__search')) return; // input + dropdown
+    if (e.target.closest('[data-action="toggle-search"]')) return; // the toggle itself
+    closeSearch();
+  };
+  const onKeySearch = (e) => {
+    if (e.key === 'Escape' && root.classList.contains('is-search-open')) closeSearch();
+  };
+  document.addEventListener('click', onDocClickSearch);
+  document.addEventListener('keydown', onKeySearch);
 
   // Re-check auth on SPA navigation (covers going from /inspector to
   // /library after sign-in — the profile pill must persist).
@@ -337,6 +377,8 @@ export function mountTopbar(root, shellRoot) {
     }
     toggleBtn.removeEventListener('click', onToggle);
     shellRoot.removeEventListener('click', onShellClick);
+    document.removeEventListener('click', onDocClickSearch);
+    document.removeEventListener('keydown', onKeySearch);
     window.removeEventListener('popstate', onRoute);
     window.removeEventListener('kt:pushstate', onRoute);
     window.removeEventListener('kt:pushstate', onPushState);

@@ -82,6 +82,27 @@
   cursor: not-allowed;
 }
 
+/* Mobile-only search toggle (🔎). Hidden on desktop, where the inline input
+   is used. Shown ≤600px where the inline input gets crushed to a ~30px sliver
+   in the crowded topbar row. */
+.kt-topbar__search-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 17px;
+  cursor: pointer;
+  border-radius: var(--r-sm, 10px);
+  flex-shrink: 0;
+}
+.kt-topbar__search-btn:hover {
+  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+}
+
 .kt-topbar__actions {
   display: flex;
   align-items: center;
@@ -164,6 +185,34 @@
   .kt-topbar__search {
     /* Full-width on mobile to give search maximum input space */
     max-width: none;
+  }
+}
+
+/* ── Phone search (≤600px): the inline input gets crushed to a ~30px sliver
+   in the crowded topbar row (hamburger + mini-brand + lang/theme/auth leave
+   flex:1 almost nothing). Swap it for a 🔎 toggle that expands the input to a
+   full-width overlay; focusing it opens the existing search dropdown. The
+   .kt-topbar is position:sticky → it's the containing block for the overlay.
+   Matches the dropdown's own 600px breakpoint in search.css. */
+@media (max-width: 600px) {
+  .kt-topbar__search-btn {
+    display: inline-flex;
+  }
+  .kt-topbar__search {
+    display: none;
+  }
+  .kt-topbar.is-search-open .kt-topbar__search {
+    display: block;
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 7px;
+    z-index: 60;
+    max-width: none;
+  }
+  .kt-topbar.is-search-open .kt-topbar__search-input {
+    width: 100%;
+    box-shadow: var(--shadow-md, 0 6px 18px rgba(24, 24, 27, 0.14));
   }
 }
 

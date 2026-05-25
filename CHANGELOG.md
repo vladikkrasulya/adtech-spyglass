@@ -19,6 +19,31 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.55.1 — fix: mobile audit follow-ups (search, tap targets, analysis-strip) (2026-05-25)
+
+Mobile audit at 390px (visual + code). No page-level horizontal overflow
+anywhere (blog/post/docs/account all clean); issues were concentrated in the
+inspector chrome:
+
+- **F1 — squeezed search box.** In the crowded topbar row the inline search
+  input collapsed to a ~30px sliver (the mystery "," pill). Below 600px it now
+  swaps for a 🔎 toggle that expands the input into a full-width overlay and
+  opens the existing search dropdown on focus (Esc / click-away / route-change
+  collapse it). Desktop inline search unchanged. (`topbar.css`, `topbar/index.js`)
+- **F2 — touch targets.** Inspector icon buttons (`.btn-icon` 27px, history
+  👁/× ~20px, collapse ▾ 23px) were below the ~44px guideline. Bumped to
+  ≥36–38px on phones only (≤720px); desktop density untouched. (`inspector.css`)
+- **F3 — analysis-strip truncation.** The result strip crushed every value to
+  ~32px ("💻…" / "No…" / "Flo…"). It now sizes blocks to content and
+  touch-scrolls horizontally instead of clipping. (`inspector.css`)
+- **F4 — tab-strip scroll hint** strengthened (wider, stronger fade) so the
+  clipped trailing tab reads as scrollable, not broken. (`inspector.css`)
+- **F5 — JSON panels** given more height on phones (180px → 230px, ~5 → ~8
+  visible lines). (`inspector.css`)
+
+Bump 0.55.0 -> 0.55.1. `public/` is bind-mounted (no rebuild needed for the
+CSS/JS — hard-refresh); version strings + about/template fallbacks bumped.
+
 ### v0.55.0 — feat: per-route SEO metadata + blog-post SSR + dynamic sitemap (2026-05-25)
 
 Google was indexing nothing but the homepage ("Alternate page with proper

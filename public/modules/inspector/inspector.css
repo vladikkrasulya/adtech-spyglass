@@ -122,7 +122,9 @@ body {
                                  and crush stacked cards to ~140px each */
   }
   .input-section .input-card {
-    min-height: 180px;
+    /* ~8 lines of JSON visible before scroll (was 180px ≈ 5 lines — too
+       cramped to read a pasted bid on a phone). */
+    min-height: 230px;
   }
   /* Header: stack brand on its own row above the action cluster so the
      title doesn't get squeezed into a 3-line vertical wrap. */
@@ -206,9 +208,11 @@ body {
     position: sticky;
     right: 0;
     top: 0;
-    width: 28px;
+    width: 44px;
     height: 100%;
-    background: linear-gradient(to right, transparent, var(--bg-2));
+    /* Stronger fade so the clipped trailing tab reads as "scroll right",
+       not "broken layout": opaque bg-2 at the edge → transparent. */
+    background: linear-gradient(to right, transparent, var(--bg-2) 70%, var(--bg-2));
     pointer-events: none;
     flex-shrink: 0;
   }
@@ -2861,17 +2865,32 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--text);
   border: 1px solid var(--accent, #ffcc00);
 }
-/* Narrow viewports: hide labels, keep values */
+/* Narrow viewports: hide labels, scroll horizontally. Previously the blocks
+   stayed flex:1 (equal columns), crushing each value to ~32px so "Web (Banner)"
+   / "No Privacy" / "Floor: $0.50" all ellipsis-truncated to "💻…" / "No…" /
+   "Flo…". Now blocks size to content and the strip touch-scrolls instead. */
 @media (max-width: 720px) {
   .analysis-strip-label {
     display: none;
   }
   .analysis-strip-block {
-    padding: 0 var(--space-2);
+    padding: 0 var(--space-3);
     justify-content: center;
+    flex: 0 0 auto;
   }
   .analysis-strip {
     height: 36px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .analysis-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .analysis-strip-value {
+    overflow: visible;
+    text-overflow: clip;
   }
 }
 
@@ -3093,5 +3112,29 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   }
   .quality-status {
     display: none;
+  }
+}
+
+/* ── Mobile tap targets (F2 · mobile audit 2026-05-25) ──────────────────
+   The dense desktop icon buttons (.btn-icon ~27px tall, history 👁/× ~20px,
+   collapse ▾ 23px) sit below the ~44px touch guideline and are fiddly to hit
+   on a phone — Spyglass is a PUBLIC tool, so this matters here more than in
+   admin. Bump them on phones only; desktop density (≥721px) is untouched.
+   Anchored at file end so it wins source-order over the base .btn-icon /
+   .history-act-btn / .btn-collapse-toggle rules defined earlier in the file. */
+@media (max-width: 720px) {
+  .btn-icon {
+    min-height: 38px;
+  }
+  .btn-collapse-toggle {
+    min-width: 38px;
+    min-height: 38px;
+  }
+  .history-act-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .saved-act-btn {
+    min-height: 34px;
   }
 }
