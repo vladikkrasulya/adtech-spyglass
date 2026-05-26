@@ -439,6 +439,31 @@ test('crosscheck: price below floor is crit', () => {
   assert.equal(f.level, 'crit');
 });
 
+test('crosscheck: bid currency ≠ floor currency → floor_currency_mismatch, no numeric verdict', () => {
+  const req = validRequest();
+  req.cur = ['USD', 'EUR'];
+  req.imp[0].bidfloor = 0.5;
+  req.imp[0].bidfloorcur = 'EUR';
+  const res = validResponse();
+  res.cur = 'USD';
+  res.seatbid[0].bid[0].price = 0.6; // numerically > 0.5 but a different currency
+  const findings = crosscheck(req, res);
+  const mm = findings.find((x) => x.id === 'crosscheck.bid.floor_currency_mismatch');
+  assert.ok(mm, 'floor_currency_mismatch should fire when bid cur differs from floor cur');
+  assert.equal(mm.level, 'warn');
+  assert.equal(mm.params.bidCur, 'USD');
+  assert.equal(mm.params.floorCur, 'EUR');
+  // The numeric above/below verdicts are meaningless cross-currency and must be suppressed.
+  assert.equal(
+    findings.find((x) => x.id === 'crosscheck.bid.above_floor'),
+    undefined,
+  );
+  assert.equal(
+    findings.find((x) => x.id === 'crosscheck.bid.below_floor'),
+    undefined,
+  );
+});
+
 test('crosscheck: imp without bidfloor → no_floor_set WARN', () => {
   const req = validRequest();
   delete req.imp[0].bidfloor;

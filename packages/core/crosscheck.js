@@ -166,7 +166,29 @@ function crosscheck(req, res, _ctx) {
           price: price.toFixed(4),
           floor: floor.toFixed(4),
         };
-        if (price >= floor) {
+        // Currency-safety: bid prices settle in the response currency, while the
+        // floor is denominated in imp.bidfloorcur (default = request currency).
+        // Comparing the raw numbers across currencies is meaningless without an
+        // FX rate, so when they differ we flag the mismatch instead of emitting a
+        // bogus above/below-floor verdict. (cur_not_in_request covers res.cur vs
+        // req.cur separately; this catches the floor-vs-bid denomination.)
+        const floorCur =
+          (typeof imp.bidfloorcur === 'string' ? imp.bidfloorcur.toUpperCase() : null) ||
+          reqCurUp[0] ||
+          'USD';
+        const bidCur = resCurUp || reqCurUp[0] || 'USD';
+        if (hasExplicitFloor && floor > 0 && floorCur !== bidCur) {
+          out.push(
+            C('crosscheck.bid.floor_currency_mismatch', false, CROSS_LEVELS.WARN, `${bp}.price`, {
+              ...priceParams,
+              bidCur: bidCur,
+              floorCur: floorCur,
+            }),
+          );
+          // Can't rank against the floor, but the bid is still a winning-bid contender.
+          const cur = winningByImp.get(bid.impid) || 0;
+          if (price > cur) winningByImp.set(bid.impid, price);
+        } else if (price >= floor) {
           bidsAboveFloor++;
           out.push(
             C('crosscheck.bid.above_floor', true, CROSS_LEVELS.OK, `${bp}.price`, priceParams),

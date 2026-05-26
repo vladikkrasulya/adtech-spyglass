@@ -86,6 +86,7 @@
   "crosscheck.bid.impid_unresolved": "Сідбід #{sNum} → ставка #{bNum}: impid \"{impid}\" не відповідає жодному imp.id у запиті — ставка посилається в нікуди, SSP її викине.",
   "crosscheck.bid.above_floor": "Сідбід #{sNum} → ставка #{bNum}: ціна {price} ≥ флор {floor} — ставка проходить аукціон.",
   "crosscheck.bid.below_floor": "Сідбід #{sNum} → ставка #{bNum}: ціна {price} нижча за флор {floor} — ставка відсівається на рівні аукціону. Підніми price або знизь bidfloor у запиті.",
+  "crosscheck.bid.floor_currency_mismatch": "Сідбід #{sNum} → ставка #{bNum}: ставка в {bidCur}, а флор у {floorCur} — ціну {price} не можна порівняти з флором {floor} без курсу обміну. Звірку floor пропущено.",
   "crosscheck.bid.cat_clean": "Сідбід #{sNum} → ставка #{bNum}: жодна з категорій bid.cat не у блоклісті bcat — порядок.",
   "crosscheck.bid.cat_blocked": "Сідбід #{sNum} → ставка #{bNum}: категорії {categories} є у блоклісті bcat запиту — креатив заборонений видавцем, ставка не пройде.",
   "crosscheck.bid.adomain_blocked": "Сідбід #{sNum} → ставка #{bNum}: домен рекламодавця {domains} є у блоклісті badv — видавець забанив цей бренд, ставка не пройде.",

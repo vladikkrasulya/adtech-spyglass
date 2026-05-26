@@ -61,6 +61,7 @@
   "crosscheck.bid.impid_unresolved": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#333-object-bid",
   "crosscheck.bid.above_floor": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#333-object-bid",
   "crosscheck.bid.below_floor": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#333-object-bid",
+  "crosscheck.bid.floor_currency_mismatch": null,
   "crosscheck.bid.cat_clean": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#321-object-bidrequest",
   "crosscheck.bid.cat_blocked": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#321-object-bidrequest",
   "crosscheck.bid.adomain_blocked": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#321-object-bidrequest",

@@ -87,6 +87,7 @@
   "crosscheck.bid.impid_unresolved": "Seatbid #{sNum} → bid #{bNum}: impid \"{impid}\" doesn't match any imp.id in the request. The SSP will drop the bid.",
   "crosscheck.bid.above_floor": "Seatbid #{sNum} → bid #{bNum}: price {price} ≥ floor {floor} — bid clears.",
   "crosscheck.bid.below_floor": "Seatbid #{sNum} → bid #{bNum}: price {price} is below floor {floor} — bid will be rejected.",
+  "crosscheck.bid.floor_currency_mismatch": "Seatbid #{sNum} → bid #{bNum}: bid settles in {bidCur} but the floor is set in {floorCur} — price {price} can't be compared to floor {floor} without an FX rate. Floor check skipped.",
   "crosscheck.bid.cat_clean": "Seatbid #{sNum} → bid #{bNum}: none of bid.cat overlap the request's bcat — bid clears category filter.",
   "crosscheck.bid.cat_blocked": "Seatbid #{sNum} → bid #{bNum}: categories {categories} are in the request's bcat blocklist. The SSP will drop the bid.",
   "crosscheck.bid.adomain_blocked": "Seatbid #{sNum} → bid #{bNum}: advertiser domain {domains} is in the request's badv blocklist. The SSP will drop the bid.",
