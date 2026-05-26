@@ -175,6 +175,7 @@
    inspector code that directly references them by ID. */
 .kt-shell .app-header .kt-lang-menu,
 .kt-shell .app-header .kt-theme-toggle,
+.kt-shell .app-header .theme-toggle,
 .kt-shell .app-header #authWidget {
   display: none !important;
 }
@@ -299,4 +300,15 @@
   font-size: 11px;
   background: var(--surface);
   border-top: 1px solid var(--border);
+}
+
+/* ── Avoid two "● online" indicators on the inspector ──────────────
+   The sidebar footer shows a static "● online" badge on every section.
+   The inspector additionally renders its own *functional* connection
+   status (#statusDot / #statusText — reflects backend online/offline) in
+   its own footer. Hide the static sidebar badge only while the inspector
+   is mounted (#app-root carries .workbench then), so every other section
+   keeps the sidebar indicator. */
+.kt-shell:has(#app-root.workbench) .kt-nav__status {
+  display: none;
 }

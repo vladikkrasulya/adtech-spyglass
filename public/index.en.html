@@ -165,6 +165,11 @@
           // Re-run when inspector module finishes injecting its template
           // — that's when the in-header .kt-theme-toggle button appears.
           window.addEventListener('kt:inspector-ready', inject);
+          // Re-run when the multi-section shell finishes mounting its topbar
+          // (which carries the real .kt-theme-toggle) so any floating fallback
+          // created before the topbar existed gets demoted — otherwise non-
+          // inspector sections (stream/live/library…) show two toggles.
+          window.addEventListener('kt:chrome-ready', inject);
         } catch (e) {}
       })();
     </script>

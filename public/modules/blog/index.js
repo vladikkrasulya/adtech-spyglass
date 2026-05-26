@@ -118,7 +118,10 @@ async function mountListing(root, ctx, lang) {
   ];
 
   let activeCat = '';
-  let activeLang = '';
+  // Default to the current UI locale so the listing shows only the active
+  // language's posts — not all three at once. The user can still widen the
+  // view to "All languages" or pick another via the lang chips below.
+  let activeLang = lang;
 
   root.innerHTML = `
     <section class="blog-section">
@@ -130,7 +133,7 @@ async function mountListing(root, ctx, lang) {
             ${cats.map((c) => `<button type="button" class="blog-chip${c.id === '' ? ' is-active' : ''}" data-cat="${escapeHtml(c.id)}">${escapeHtml(c.label)}</button>`).join('')}
           </div>
           <div class="blog-chips blog-chips--lang" id="langChips">
-            ${langFilters.map((l) => `<button type="button" class="blog-chip${l.id === '' ? ' is-active' : ''}" data-lang="${escapeHtml(l.id)}">${escapeHtml(l.label)}</button>`).join('')}
+            ${langFilters.map((l) => `<button type="button" class="blog-chip${l.id === activeLang ? ' is-active' : ''}" data-lang="${escapeHtml(l.id)}">${escapeHtml(l.label)}</button>`).join('')}
           </div>
         </div>
       </header>
