@@ -3044,7 +3044,13 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   text-transform: uppercase;
   color: var(--text-dim);
   margin-top: 2px;
-  white-space: nowrap;
+  /* Wrap long tier labels (UK "ПОТРЕБУЄ УВАГИ", RU "ТРЕБУЕТ ВНИМАНИЯ",
+     EN "NEEDS ATTENTION") instead of overflowing the pill. max-width keeps
+     the wrap inside the capsule (pill min-width 130 − 2×14 padding). */
+  white-space: normal;
+  text-align: center;
+  max-width: 102px;
+  line-height: 1.2;
 }
 /* Tier-colored status text */
 /* Status text tier colors — descendant of .quality-pill again. */

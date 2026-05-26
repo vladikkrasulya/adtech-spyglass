@@ -1070,6 +1070,21 @@ export async function mountInspector(root, ctx) {
     return 'info';
   }
 
+  // ── Price formatting ────────────────────────────────────────────────────
+  // toFixed(2) reads a real sub-cent bid (e.g. 0.00177 CPM) as "0.00", which
+  // looks like "no bid". Use adaptive precision so any non-zero price shows a
+  // non-zero value: >=0.01 → 2 decimals; sub-cent → up to 6 so the magnitude
+  // is visible; exact 0 / non-finite → "0.00".
+  function formatPrice(p) {
+    const n = Number(p);
+    if (!isFinite(n) || n === 0) return '0.00';
+    if (Math.abs(n) >= 0.01) return n.toFixed(2);
+    // Trim trailing zeros from a 6-decimal render so 0.00177 → "0.001768"-ish
+    // stays compact (e.g. "0.0018", "0.000125").
+    return parseFloat(n.toFixed(6)).toString();
+  }
+  window.formatPrice = formatPrice;
+
   // ── Feature #12: Quality Score Pill ─────────────────────────────────────
   // Computes a 0-100 quality score from findings. Returns {score, errors,
   // warnings, info, deductions} for tooltip use.
@@ -1200,7 +1215,7 @@ export async function mountInspector(root, ctx) {
     let pricingValue = escapeHtml(t('strip.pricing.no_floor'));
     if (imp0 && imp0.bidfloor != null) {
       const cur = imp0.bidfloorcur || (req.cur && req.cur[0]) || 'USD';
-      pricingValue = 'Floor: $' + Number(imp0.bidfloor).toFixed(2) + ' · ' + escapeHtml(cur);
+      pricingValue = 'Floor: $' + formatPrice(imp0.bidfloor) + ' · ' + escapeHtml(cur);
     }
 
     const stripHtml =
@@ -2006,7 +2021,7 @@ export async function mountInspector(root, ctx) {
       } else if (req.imp && req.imp[0] && typeof req.imp[0].bidfloor === 'number') {
         autoPrice = req.imp[0].bidfloor;
       }
-      simPriceEl.value = autoPrice != null ? Number(autoPrice).toFixed(2) : '0.00';
+      simPriceEl.value = autoPrice != null ? formatPrice(autoPrice) : '0.00';
       const simP = simPriceEl.value || '0.00';
 
       if (!fromHist) {
@@ -2054,7 +2069,7 @@ export async function mountInspector(root, ctx) {
       }
       $('mPrice').innerText = adm
         ? bid.price
-          ? '$' + Number(bid.price).toFixed(2)
+          ? '$' + formatPrice(bid.price)
           : 'BID'
         : '$0.00';
       // Banner dimensions: prefer bid.{w,h} (winning creative size), fall back
