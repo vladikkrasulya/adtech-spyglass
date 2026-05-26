@@ -398,6 +398,12 @@ const HTML_TAG_RE = /(<(?:script|link)[^>]*?(?:src|href)=")(\/[^"?]+\.(?:js|css)
 // Backtick template-literal imports are theoretically possible but rare;
 // adding them later is one more alternation if it ever matters.
 const ES_IMPORT_RE = /(\b(?:from|import\s*\()\s*['"])(\/[^'"?]+\.(?:js|css))(?:\?v=[^'"]+)?(['"])/g;
+// Bare '/modules/<mod>/<file>.css' string literals in JS — registry `css:` fields
+// and chrome loadStylesheet() args build runtime <link> hrefs the two passes above
+// don't see (they only catch <link>/<script> tags and from/import()). Without this
+// module-CSS edits ship unversioned and stick behind browser/CDN cache. Strings
+// already carrying ?v=… don't match — the closing quote must immediately follow .css.
+const MODULE_CSS_STR_RE = /(['"])(\/modules\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+\.css)\1/g;
 
 function rewriteAssetVersions(content, sourceType, visited) {
   let result = content;
@@ -416,6 +422,16 @@ function rewriteAssetVersions(content, sourceType, visited) {
     if (!hash) return match;
     return `${prefix}${asset}?v=${hash}${suffix}`;
   });
+  // JS only: version bare module-CSS string literals (registry mod.css fields +
+  // chrome loadStylesheet() calls) so module-CSS edits actually reach browsers.
+  if (sourceType === 'js') {
+    result = result.replace(MODULE_CSS_STR_RE, (match, quote, asset) => {
+      const filepath = path.join(PUBLIC_DIR, asset);
+      const hash = fileHash(filepath, visited);
+      if (!hash) return match;
+      return `${quote}${asset}?v=${hash}${quote}`;
+    });
+  }
   return result;
 }
 
