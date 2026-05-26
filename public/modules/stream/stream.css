@@ -7,8 +7,11 @@
    module the shell's deactivate() removes it — no style bleed.
    ============================================================ */
 
-/* Layout — owned by the module's root container, not body. */
-#app-root {
+/* Layout — scoped to #app-root.stream-view (NOT bare #app-root) so this
+   persistent stylesheet never reshapes #app-root into a stream grid for the
+   NEXT section after we navigate away. stream/index.js adds .stream-view on
+   mount and removes it on unmount. */
+#app-root.stream-view {
   display: grid;
   grid-template-rows: auto 1fr;
   grid-template-columns: minmax(440px, 2fr) 3fr;
@@ -432,7 +435,7 @@
 
 /* ── Stage 2: Grid layout with aggregates row ─────────────────────── */
 /* Override previous 2-row grid to account for the aggregates bar */
-#app-root {
+#app-root.stream-view {
   grid-template-rows: auto auto 1fr;
   grid-template-areas: 'header header' 'aggs aggs' 'feed detail';
 }

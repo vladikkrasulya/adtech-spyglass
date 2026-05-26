@@ -16,7 +16,11 @@ const THEME_KEY = 'kt-theme';
 
 export default {
   id: 'stream',
-  css: '/modules/stream/stream.css',
+  // ?v=bundle-hash so edits to stream.css actually reach browsers — registry
+  // loads mod.css as a runtime <link>, which the import/<link> version-rewrite
+  // passes don't see, so without this it ships unversioned and sticks behind
+  // browser/CDN cache (max-age). Server replaces the token via injectModuleBundleHashes().
+  css: '/modules/stream/stream.css?v=__STREAM_BUNDLE_HASH__',
   route: '/live',
   manifest: {
     title: { en: 'Stream', uk: 'Стрім', ru: 'Стрим' },
@@ -46,6 +50,13 @@ export default {
    * after both channels run, so DOM teardown is free.
    */
   async mount(root, ctx) {
+    // Scope the full-bleed stream grid to this mount. stream.css targets
+    // #app-root.stream-view (not bare #app-root); without this class the
+    // persistent stylesheet would keep #app-root as a 2-column stream grid
+    // for the NEXT section the user navigates to. Removed on unmount.
+    root.classList.add('stream-view');
+    ctx.addCleanup(() => root.classList.remove('stream-view'));
+
     // Per-mount state lives in this closure. A re-mount gets fresh
     // counters / caches automatically.
     let received = 0;
