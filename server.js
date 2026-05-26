@@ -255,11 +255,13 @@ const SPA_SECTIONS = new Set([
 function resolveLocaleRoute(reqUrl) {
   const u = reqUrl.replace(/\/$/, '');
 
-  // Root → 301 → /inspector (canonical). Decided 2026-05-23: single
-  // canonical URL per section; / stays free for a future marketing or
-  // dashboard landing (ROADMAP Decisions log).
+  // Canonical redirects default to 301 (permanent) in the handler below.
+  // Exception: / and /index.html return status:302 (temporary) on purpose —
+  // / stays free for a future marketing/dashboard landing, and a 301 here
+  // would get cached by browsers and pin returning visitors to /inspector
+  // even after that landing ships (ROADMAP Decisions log, 2026-05-23).
   if (u === '' || u === '/index.html') {
-    return u === '' ? { redirect: '/inspector' } : { redirect: '/inspector' };
+    return { redirect: '/inspector', status: 302 };
   }
 
   // Locale roots redirect to the locale's inspector. /uk → /uk/inspector etc.
@@ -597,7 +599,9 @@ function serveStaticFile(req, res) {
       qIdx >= 0 && route.redirect.indexOf('?') === -1
         ? route.redirect + req.url.slice(qIdx)
         : route.redirect;
-    res.writeHead(302, { Location: target, 'Cache-Control': 'no-cache' });
+    // 301 (permanent) by default: locale-root + .html/legacy canonicalisations
+    // are stable. route.status overrides it (root / → 302, see resolveLocaleRoute).
+    res.writeHead(route.status || 301, { Location: target, 'Cache-Control': 'no-cache' });
     res.end();
     return;
   }
