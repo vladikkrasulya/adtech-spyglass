@@ -1083,7 +1083,6 @@ export async function mountInspector(root, ctx) {
     // stays compact (e.g. "0.0018", "0.000125").
     return parseFloat(n.toFixed(6)).toString();
   }
-  window.formatPrice = formatPrice;
 
   // ── Feature #12: Quality Score Pill ─────────────────────────────────────
   // Computes a 0-100 quality score from findings. Returns {score, errors,
@@ -2067,11 +2066,7 @@ export async function mountInspector(root, ctx) {
       } else {
         adm = findAdm(res);
       }
-      $('mPrice').innerText = adm
-        ? bid.price
-          ? '$' + formatPrice(bid.price)
-          : 'BID'
-        : '$0.00';
+      $('mPrice').innerText = adm ? (bid.price ? '$' + formatPrice(bid.price) : 'BID') : '$0.00';
       // Banner dimensions: prefer bid.{w,h} (winning creative size), fall back
       // to req.imp[0].banner.{w,h}, then to format[0] when banner has multi-size.
       // Used by setAdPreview to render at native size and scale-to-fit the

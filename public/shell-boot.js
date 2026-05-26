@@ -94,8 +94,7 @@ async function activateFromUrl() {
   // is already mounted and we're navigating to the inspector, do a full page
   // load — it always boots cleanly that way. Initial boot (no active section
   // yet) still mounts via SPA, which is the normal, working first-load path.
-  const goesToInspector =
-    canonical === '/inspector' || /^\/r\/[0-9a-f]{8,12}$/i.test(canonical);
+  const goesToInspector = canonical === '/inspector' || /^\/r\/[0-9a-f]{8,12}$/i.test(canonical);
   if (goesToInspector && registry.current()) {
     location.assign(location.href);
     return;

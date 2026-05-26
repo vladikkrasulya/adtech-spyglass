@@ -119,7 +119,9 @@ export async function activate(id, root) {
     const imported = await load();
     mod = imported && imported.default;
     if (!mod || typeof mod.mount !== 'function') {
-      throw new Error('registry.activate: lazy module "' + id + '" lacks a default export with mount()');
+      throw new Error(
+        'registry.activate: lazy module "' + id + '" lacks a default export with mount()',
+      );
     }
     modules.set(id, mod);
   }
