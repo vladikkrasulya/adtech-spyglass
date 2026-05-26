@@ -65,7 +65,8 @@ import { emit, on, off } from './events.js';
 // singletons, register() goes to one, match() reads the other (empty).
 export { match, list as listRoutes, register as registerRoute } from './router.js';
 
-const modules = new Map(); // id → module
+const modules = new Map(); // id → module (loaded)
+const loaders = new Map(); // id → () => import() — registered lazily, loaded on first activate
 let active = null; // { id, mod, root, controller, cleanups }
 
 export function register(mod) {
@@ -82,6 +83,18 @@ export function register(mod) {
   if (mod.route) router.register(mod.route, mod.id);
 }
 
+// Lazy registration: record the route → id mapping and an import() loader, but
+// DON'T fetch the module yet. The module code (and its static imports — e.g.
+// the inspector's ~65 KB gz spyglass.app.js) loads only when the section is
+// first activated, keeping the boot payload to chrome + the active section.
+export function registerLazy(id, route, load) {
+  if (!id || typeof load !== 'function') {
+    throw new Error('registry.registerLazy: id and load() function required');
+  }
+  loaders.set(id, load);
+  if (route) router.register(route, id);
+}
+
 export function get(id) {
   return modules.get(id);
 }
@@ -95,9 +108,21 @@ export function current() {
 }
 
 export async function activate(id, root) {
-  const mod = modules.get(id);
-  if (!mod) throw new Error('registry.activate: unknown module "' + id + '"');
   if (!root) throw new Error('registry.activate: root element required');
+
+  // Resolve the module, importing it on first activation if it was registered
+  // lazily. Subsequent activations reuse the cached instance from `modules`.
+  let mod = modules.get(id);
+  if (!mod) {
+    const load = loaders.get(id);
+    if (!load) throw new Error('registry.activate: unknown module "' + id + '"');
+    const imported = await load();
+    mod = imported && imported.default;
+    if (!mod || typeof mod.mount !== 'function') {
+      throw new Error('registry.activate: lazy module "' + id + '" lacks a default export with mount()');
+    }
+    modules.set(id, mod);
+  }
 
   // Tear down whatever's currently mounted before bringing up the new one.
   if (active) await deactivate();

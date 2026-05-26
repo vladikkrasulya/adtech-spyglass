@@ -23,15 +23,10 @@
 'use strict';
 
 import * as registry from '/core/registry.js';
-import inspectorModule from '/modules/inspector/index.js';
-import libraryModule from '/modules/library/index.js';
-import docsModule from '/modules/docs/index.js';
-import dialectsModule from '/modules/dialects/index.js';
-import streamModule from '/modules/stream/index.js';
-import blogModule from '/modules/blog/index.js';
-import adminBlogModule from '/modules/admin-blog/index.js';
-import behaviorModule from '/modules/behavior/index.js';
-import insightsModule from '/modules/insights/index.js';
+// Section modules are NOT imported statically — they are lazy-loaded on first
+// activation via registry.registerLazy() in registerSections(). This keeps the
+// boot payload to chrome + the one active section; the inspector's ~65 KB gz
+// spyglass.app.js no longer loads on /library, /blog, /docs, etc.
 import { createStubModule } from '/modules/stub/index.js';
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
@@ -57,21 +52,23 @@ async function loadStylesheet(href) {
 
 // ── Module registration ──────────────────────────────────────────
 function registerSections() {
-  // Real modules (built across stages).
-  registry.register(inspectorModule);
-  registry.register(libraryModule);
-  registry.register(docsModule);
-  registry.register(dialectsModule);
-  registry.register(streamModule);
-  // Register /docs/findings as an additional route pointing to the same 'docs' module id.
-  // registry.register() already mapped /docs → 'docs'; we add /docs/findings here.
+  // Lazy section registration: route → id + an import() loader. The module
+  // (and its transitive imports) is fetched only when the section is first
+  // activated. Routes mirror each module's own `route` field exactly.
+  registry.registerLazy('inspector', '/inspector', () => import('/modules/inspector/index.js'));
+  registry.registerLazy('library', '/library', () => import('/modules/library/index.js'));
+  registry.registerLazy('docs', '/docs', () => import('/modules/docs/index.js'));
+  registry.registerLazy('dialects', '/dialects', () => import('/modules/dialects/index.js'));
+  registry.registerLazy('stream', '/live', () => import('/modules/stream/index.js'));
+  registry.registerLazy('blog', '/blog', () => import('/modules/blog/index.js'));
+  registry.registerLazy('admin-blog', '/admin/blog', () => import('/modules/admin-blog/index.js'));
+  registry.registerLazy('behavior', '/behavior', () => import('/modules/behavior/index.js'));
+  registry.registerLazy('insights', '/insights', () => import('/modules/insights/index.js'));
+
+  // Additional routes pointing at already-registered module ids.
   registry.registerRoute('/docs/findings', 'docs');
   // Legacy /stream.html URL alias → keep existing share-links working.
   registry.registerRoute('/stream.html', 'stream');
-  registry.register(blogModule);
-  registry.register(adminBlogModule);
-  registry.register(behaviorModule);
-  registry.register(insightsModule);
 
   // Stub sections (yet to be built — see ROADMAP).
   for (const cfg of STUB_SECTIONS) {
@@ -89,6 +86,20 @@ async function activateFromUrl() {
 
   // Canonical route strips /uk or /ru locale prefix.
   const canonical = canonicalize(location.pathname);
+
+  // Inspector's legacy mount (mountInspector in spyglass.app.js) is NOT
+  // re-entrant — its classic scripts boot once per page. SPA-remounting it
+  // from another section (e.g. Live → Inspector, or back/forward onto it)
+  // leaves a corrupted layout and can freeze the renderer. So: if a section
+  // is already mounted and we're navigating to the inspector, do a full page
+  // load — it always boots cleanly that way. Initial boot (no active section
+  // yet) still mounts via SPA, which is the normal, working first-load path.
+  const goesToInspector =
+    canonical === '/inspector' || /^\/r\/[0-9a-f]{8,12}$/i.test(canonical);
+  if (goesToInspector && registry.current()) {
+    location.assign(location.href);
+    return;
+  }
 
   // /r/:hash specimen permalink — route to inspector with pending hash hint.
   const hashMatch = canonical.match(/^\/r\/([0-9a-f]{8,12})$/i);
@@ -150,12 +161,30 @@ async function activateFromUrl() {
   }
 }
 
+// ── Section title ────────────────────────────────────────────────
+// Reflect the active section in document.title from its manifest, in the
+// active locale. Used after SPA navigation + lang-change. Initial page load
+// deliberately keeps the server-rendered (more descriptive) <title> — this
+// only runs on client-side section swaps, which otherwise leave the previous
+// section's title stuck in the tab (e.g. "OpenRTB Inspector" on /library).
+function updateSectionTitle() {
+  const cur = registry.current();
+  if (!cur) return;
+  const mod = registry.get(cur.id);
+  const tmap = mod && mod.manifest && mod.manifest.title;
+  if (!tmap) return;
+  const lang = document.documentElement.lang || 'en';
+  const title = tmap[lang] || tmap.en;
+  if (title) document.title = title + ' | ortbtools';
+}
+
 // ── pushState navigation ─────────────────────────────────────────
-function navigateTo(path) {
+async function navigateTo(path) {
   if (path === location.pathname + location.search) return;
   history.pushState({ path }, '', path);
   window.dispatchEvent(new CustomEvent('kt:pushstate', { detail: { path } }));
-  activateFromUrl();
+  await activateFromUrl();
+  updateSectionTitle();
 }
 
 function isInternalLink(a) {
@@ -206,8 +235,9 @@ function interceptClicks() {
     navigateTo(url.pathname + url.search);
   });
 
-  window.addEventListener('popstate', () => {
-    activateFromUrl();
+  window.addEventListener('popstate', async () => {
+    await activateFromUrl();
+    updateSectionTitle();
   });
 }
 
@@ -249,6 +279,8 @@ function wireLangChange() {
       // document.documentElement.lang so all ctx.lang-derived strings
       // are in the new locale.
       await registry.activate(id, root);
+      // Title follows the new locale too (e.g. Library → Бібліотека).
+      updateSectionTitle();
     } catch (err) {
       console.warn('[shell-boot] kt:lang-change section remount failed:', err);
       // Best-effort fallback: re-activate from URL so the shell
