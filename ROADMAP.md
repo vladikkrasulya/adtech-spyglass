@@ -63,7 +63,7 @@ The decision: Spyglass becomes a multi-section site with a **wide grouped sideba
 - Sidebar: ~220px on desktop; drawer below 1024px breakpoint (tablets 768-1023px get the drawer because the inspector dual-panel needs the horizontal space)
 - Topbar: logo, disabled search slot (`🔎 пошук — скоро`, real search Stage 5+), lang switcher, theme toggle, profile avatar (~44px)
 - Blog: hybrid — editorial posts as `content/posts/{lang}/*.md` with frontmatter (git-versioned); firehose posts in ClickHouse `analytics.blog_drafts` with manual approval gate at `/admin/blog`; default approval publishes to `analytics.blog_posts` DB; opt-in markdown promotion for evergreen content
-- Root URL `ortbtools.com/` issues a 301 redirect to `/inspector` — explicit URL makes section structure clear and keeps `/` free for a future marketing landing
+- Root URL `ortbtools.com/` issues a **302** redirect to `/inspector` (temporary on purpose — a cached 301 would pin returning visitors to `/inspector` even after a future marketing landing reclaims `/`); locale-roots and legacy paths use 301. See Decisions log (revised 2026-05-26).
 
 ---
 
@@ -79,11 +79,11 @@ The goal: wire the URL structure and chrome without building any new feature.
 4. **Inspector into `/inspector` route** — `mountInspector()` in `public/spyglass.app.js` becomes the section handler for the `/inspector` path. `window.toast` and other exposed globals remain, cleaned up on unmount via the existing cleanup list.
 5. **Stub pages** for the 7 sections not yet built — each renders a one-paragraph description of what will be there and its estimated stage. No lorem ipsum.
 6. **Server-side catch-all** — `server.js` must serve the SPA shell HTML for all pushState paths (`/inspector`, `/live`, `/library`, `/dialects`, `/blog`, `/docs`, `/account`, `/behavior`) so direct navigation and browser refresh work.
-7. **Root redirect** — `server.js` route `GET /` issues `301` to `/inspector`.
+7. **Root redirect** — `server.js` route `GET /` issues `302` to `/inspector` (temporary; see Decisions log). Locale-roots (`/en`/`/uk`/`/ru`) and legacy `.html` paths issue `301`.
 
 **Acceptance criteria:**
 
-- `ortbtools.com/` redirects 301 to `ortbtools.com/inspector`
+- `ortbtools.com/` redirects 302 to `ortbtools.com/inspector` (locale-roots `/en`,`/uk`,`/ru` → 301)
 - `ortbtools.com/inspector` loads the full existing inspector; all 715+ tests pass
 - `ortbtools.com/live` renders a stub with Stage 2 copy
 - Browser back/forward works across all 8 paths
@@ -101,7 +101,7 @@ The goal: wire the URL structure and chrome without building any new feature.
 - `public/spyglass.app.js` — guard existing init behind `mountInspector()` route lifecycle
 - `public/index.{en,uk,ru}.html` — strip per-page nav; add SPA shell scaffold
 - `public/spyglass-shell.css` — sidebar and topbar layout tokens
-- `server.js` — `GET /` 301 → `/inspector`; catch-all HTML route for pushState paths
+- `server.js` — `GET /` 302 → `/inspector` (locale-roots/legacy → 301); catch-all HTML route for pushState paths
 
 ---
 
@@ -295,6 +295,10 @@ Ordered by likelihood it will eventually matter:
 
 18. **Chrome-level auth modal (popup on any page)** — current Stage 1 sign-in flow SPA-navigates to /inspector?auth=login when the user clicks because the auth modal depends on the inspector closure-scoped SpyglassSession (DEK + crypto state). To open the modal in place from /library or /docs etc., SpyglassSession must be hoisted to the shell-boot level: a small standalone facade exposing api/setUser/openFromPassword/bootstrap that the inspector and other sections share. Stage 2+ work — ~3-5 days. Until then sign-in from any section opens the modal but routes through /inspector first.
 
+19. **Inspector re-entrant mount (un-block inspector SPA navigation)** — `mountInspector()` in `spyglass.app.js` is not re-entrant (classic scripts boot once per page). SPA-remounting it from another section (Live → Inspector, or back/forward onto it) corrupted its workbench layout and could freeze the renderer. **Mitigated 2026-05-26**: `shell-boot.js` `activateFromUrl()` now forces a full page load when navigating *to* the inspector (or `/r/{hash}`) while another section is already mounted; initial boot still mounts via SPA. The cost is a non-SPA transition onto the flagship section. Proper fix: make `mountInspector` idempotent — guard re-entry, scope all `window`/`document` listeners + the two `setInterval`s to `ctx.signal`/`ctx.addCleanup`, and make layout init recomputable — so the inspector can mount in place like every other section. Pairs naturally with item 9 (modularisation) and item 18 (SpyglassSession hoist).
+
+20. **Module/chrome CSS cache-bust.** Section `mod.css` (8 modules) and chrome `loadStylesheet()` calls (nav/topbar/stub) load CSS as runtime `<link>` hrefs built from `'/modules/x/x.css'` string literals — which the import/`<link>`-tag version-rewrite passes don't see. They ship **unversioned**, so after an edit the browser/CDN serves stale CSS (max-age) and the change doesn't reach users without a hard reload. This is what made the stream-layout bug (see below / fixed 2026-05-26) appear to "need a hard reload". **Mitigated for stream** via a `__STREAM_BUNDLE_HASH__` token on its `css` field. Proper fix: extend `rewriteAssetVersions()` to version `'/modules/**/*.css'` string literals in served JS (one regex — covers all module `css` fields *and* chrome `loadStylesheet()` calls at once), or add the bundle-hash token to every module's `css` field. The regex approach is centralised and future-proof. Also worth scrubbing other `#app-root { … }` bare rules in module CSS for the same cross-section bleed class of bug (stream was the only offender found, now scoped to `#app-root.stream-view`).
+
 ## Decisions log (2026-05-23)
 
 - **Multi-section site with wide grouped sidebar.** The inspector was hitting a single-screen ceiling. A proper navigation shell makes each capability discoverable without crowding the paste surface. 8 sections, 3 groups (РОБОТА / ДАНІ / ЗНАННЯ).
@@ -302,7 +306,7 @@ Ordered by likelihood it will eventually matter:
 - **Stream is Stage 2, not the landing.** The 2026-05-05 stream-platform-pivot doc proposed making the stream the default landing and demoting the inspector to `/playground`. That framing is superseded. Stream is a sibling section; inspector remains default.
 - **Hybrid blog stack.** Editorial posts in git for durability and diff history; firehose-sourced posts in ClickHouse for the automated Mozok news candidate pipeline, with manual approval gate at `/admin/blog`.
 - **Pop-vendor dialects remain reactive.** The cu-pops-audit listed 7 missing dialects as CRITICAL — the audit's own calibration note recalibrated severity as inflated. Policy unchanged: one real sample from a partner integration → one dialect.
-- **Root URL `GET /` → 301 → `/inspector`.** Single canonical URL. Keeps `/` free for a future marketing/dashboard landing. Implemented in `server.js` route table during Stage 0.
+- **Canonical redirect status codes (revised 2026-05-26).** Locale-roots and `.html`/legacy canonicalisations (`/en`, `/uk`, `/ru`, `/playground`, `/stream.html`, `/en/about`…) → **301** (permanent — stable canonical targets, consolidates SEO signals). Root `/` and `/index.html` → **302** (temporary, on purpose): a 301 would be browser-cached and pin returning visitors to `/inspector` even after a future marketing/dashboard landing reclaims `/`. Implemented via a `route.status` override in `server.js` `resolveLocaleRoute()` on top of the redirect handler's 301 default. Supersedes the original Stage 0 "root → 301" plan, whose own rationale ("keep `/` free for a landing") was incompatible with a cached 301.
 - **Mobile breakpoint is `<1024px` (drawer mode).** Tablets (768-1023px) get the drawer because the inspector dual-panel (request|response) needs the horizontal space. Desktop (≥1024px): sidebar always visible.
 - **Global search: disabled slot Stage 0, full build Stage 5+.** Topbar shows a disabled `🔎 пошук — скоро` slot from day one for consistent visual chrome. Full unified search via ClickHouse full-text indexes (TokenBF / NGRAM) after blog (Stage 3) ships and there is content worth indexing. ClickHouse chosen over MeiliSearch — no new container.
 - **`/r/{hash}` route is free.** Verified via grep of `server.js` + `modules/*/handler.js`: no existing route matches `/r/*` or `/r/:hash`. Safe to register in Stage 2.
