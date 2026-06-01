@@ -1259,6 +1259,7 @@ function applyBaselineHeaders(res) {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   res.setHeader('Content-Security-Policy', CSP);
   // Spyglass landing/docs are public — no global X-Robots-Tag. Admin/auth
   // surfaces aren't crawler-relevant (no GET-renders to index), so a global
