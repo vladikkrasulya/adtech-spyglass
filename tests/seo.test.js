@@ -185,7 +185,11 @@ test('renderSitemap: valid XML with home, sections and posts', () => {
   ]);
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
   assert.match(xml, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9"/);
-  assert.match(xml, /<loc>https:\/\/ortbtools\.com\/<\/loc>/); // home
+  // bare '/' is intentionally NOT listed: it 302-redirects → /inspector, and a
+  // redirecting sitemap entry triggers GSC "Page with redirect". /inspector is
+  // the real home.
+  assert.doesNotMatch(xml, /<loc>https:\/\/ortbtools\.com\/<\/loc>/); // no redirecting root
+  assert.match(xml, /<loc>https:\/\/ortbtools\.com\/inspector<\/loc>/); // /inspector is home
   assert.match(xml, /<loc>https:\/\/ortbtools\.com\/blog<\/loc>/); // section
   assert.match(xml, /<loc>https:\/\/ortbtools\.com\/blog\/en\/welcome<\/loc>/); // post
   assert.match(xml, /<loc>https:\/\/ortbtools\.com\/blog\/uk\/welcome<\/loc>/);

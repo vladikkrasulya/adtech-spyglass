@@ -19,6 +19,26 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.55.3 — fix: GSC "Page with redirect" — retarget SEO signals at /inspector (2026-06-02)
+
+Root `/` 302-redirects to `/inspector` (kept free for a future landing — ROADMAP
+Decisions 2026-05-23), but the sitemap listed `/` and the static shells
+self-described with `canonical`/`og:url`/`hreflang`/JSON-LD pointing at `/`, so
+Google Search Console reported "Page with redirect". Every SEO signal now targets
+the real 200 page. The 302 on `/` is unchanged.
+
+- **`lib/seo.js` — sitemap.** `renderSitemap` no longer emits the redirecting `/`
+  entry; `/inspector` (already the first `SECTION_SEO` key) is the home.
+- **`index.{en,uk,ru}.html` — static defaults.** `canonical`, `og:url`,
+  `hreflang` and both JSON-LD `url` fields now point at each locale's
+  `/inspector` (en→`/inspector`, uk→`/uk/inspector`, ru→`/ru/inspector`; JSON-LD
+  uses the en canonical). Fall-through routes (`/docs/findings`, `/r/:hash`,
+  `/admin/blog`) that serve the shell without `applySeoToHtml` no longer carry a
+  redirecting canonical.
+- **Tests.** `seo.test.js` updated (sitemap excludes `/`, lists `/inspector`);
+  new `seo-html.test.js` guards the static shells against any bare-root SEO
+  reference. 945 tests green.
+
 ### v0.55.1 — fix: mobile audit follow-ups (search, tap targets, analysis-strip) (2026-05-25)
 
 Mobile audit at 390px (visual + code). No page-level horizontal overflow
