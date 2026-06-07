@@ -29,8 +29,15 @@ services:
       #                12.0, peaks at 8.44GiB RSS though, so ollama mem limit
       #                bumped 10G → 12G in parallel commit. JSON-mode 3/3 ok
       #                under both sequential and parallel patterns.)
+      #   (undated): → qwen3.5:4b (switch not documented in this history)
+      #   2026-06-07: → gemma4:e4b (8B / effective-4B, Q4_K_M; caps: vision +
+      #                audio + tools + thinking). Benchmarked on vkbox A2000 6GB:
+      #                3.2GB @ 32K ctx, 100% GPU, 47 tok/s, ~2.6GB headroom.
+      #                Cleaner Ukrainian than qwen3.5:4b (qwen emitted a Cyrillic
+      #                glitch on a reasoning prompt); JSON-mode scoring at parity.
+      #                ollama-router's sole backend is vkbox, so this runs on GPU.
       - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=gemma4:e2b
+      - OLLAMA_MODEL=gemma4:e4b
     ports:
       - '127.0.0.1:8090:3000'
     volumes:

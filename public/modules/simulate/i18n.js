@@ -19,9 +19,9 @@
         ru: '🤖 симуляция 3 DSP-стратегий',
       },
       'modal.simbids.hint': {
-        uk: 'Локальна qwen2.5:3b симулює як три типи DSP відповіли б на твій запит. Тільки метадані запиту (формат, розмір, гео, floor) — bid VALUES не передаємо в LLM.',
-        en: 'Local qwen2.5:3b simulates how three DSP types would respond to your request. Metadata only (format, size, geo, floor) — bid VALUES never reach the LLM.',
-        ru: 'Локальная qwen2.5:3b симулирует как три типа DSP ответили бы на твой запрос. Только метаданные (формат, размер, гео, floor) — bid VALUES не передаются в LLM.',
+        uk: 'Локальна gemma4:e4b симулює як три типи DSP відповіли б на твій запит. Тільки метадані запиту (формат, розмір, гео, floor) — bid VALUES не передаємо в LLM.',
+        en: 'Local gemma4:e4b simulates how three DSP types would respond to your request. Metadata only (format, size, geo, floor) — bid VALUES never reach the LLM.',
+        ru: 'Локальная gemma4:e4b симулирует как три типа DSP ответили бы на твой запрос. Только метаданные (формат, размер, гео, floor) — bid VALUES не передаются в LLM.',
       },
       'modal.simbids.loading': {
         uk: 'LLM думає… (3 паралельні prompts, ~15s)',
