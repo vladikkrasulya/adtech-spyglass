@@ -22,7 +22,12 @@
  *
  * Failure modes:
  *   - Ollama unreachable (DNS / connection refused / timeout) →
- *     callOllama() throws OllamaUnavailable. Endpoint maps to 503.
+ *     callOllama() falls back to OpenRouter (lib/openrouter.js) when a
+ *     key is configured, so a gpu-node outage degrades to a slower cloud
+ *     call instead of 503 (the news-moderator path already worked this
+ *     way; intel was the last consumer without a fallback — 2026-06-11).
+ *     Only when the fallback is unavailable or also fails does the
+ *     endpoint see OllamaUnavailable and map it to 503.
  *   - LLM returned invalid JSON → extractStructured() returns null.
  *     Endpoint maps to 502 with reason='unparseable'.
  *   - LLM returned valid JSON but semantically empty / wrong shape →
@@ -33,9 +38,13 @@
  */
 
 const eventLog = require('./lib/event-log');
+const openrouter = require('./lib/openrouter');
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemma4:e2b';
+// Cloud fallback for Ollama outages. deepseek-chat: cheap, non-reasoning,
+// reliable JSON mode — same default the news moderator uses for translation.
+const INTEL_FALLBACK_MODEL = process.env.INTEL_FALLBACK_MODEL || 'deepseek/deepseek-chat';
 
 // ── Training-corpus logging ──────────────────────────────────────
 // Fire-and-forget INSERT into analytics.intel_llm_calls (ClickHouse).
@@ -77,6 +86,62 @@ class OllamaUnavailable extends Error {
  *   parseable (extractStructured handles it).
  */
 async function callOllama(prompt, opts) {
+  try {
+    return await callOllamaDirect(prompt, opts);
+  } catch (e) {
+    if (!(e instanceof OllamaUnavailable) || !openrouter.hasKey()) throw e;
+    return callIntelFallback(prompt, opts, e);
+  }
+}
+
+/**
+ * OpenRouter fallback: same prompt, JSON mode, response re-wrapped into the
+ * Ollama envelope shape ({response, model, eval_count, prompt_eval_count})
+ * so extractStructured() and the training-corpus logger work unchanged.
+ * The `model` field carries the real cloud model — corpus attribution
+ * stays honest.
+ */
+async function callIntelFallback(prompt, opts, cause) {
+  const o = opts || {};
+  const _intelStart = Date.now();
+  eventLog.record({
+    level: 'warn',
+    component: 'intel',
+    msg: 'Ollama unavailable — falling back to OpenRouter',
+    ctx: { reason: cause.message, fallback_model: INTEL_FALLBACK_MODEL },
+  });
+  let result;
+  try {
+    result = await openrouter.callOpenRouter([{ role: 'user', content: prompt }], {
+      model: INTEL_FALLBACK_MODEL,
+      jsonObject: true,
+      temperature: typeof o.temperature === 'number' ? o.temperature : 0.2,
+      maxTokens: o.numPredict || 200,
+      timeoutMs: OLLAMA_TIMEOUT_MS,
+    });
+  } catch (e2) {
+    eventLog.record({
+      level: 'error',
+      component: 'intel',
+      msg: 'OpenRouter fallback failed too',
+      ctx: { ollama: cause.message, openrouter: (e2 && e2.message) || 'unknown' },
+    });
+    throw new OllamaUnavailable(
+      'ollama (' + cause.message + ') and openrouter fallback (' + e2.message + ') both failed',
+      e2
+    );
+  }
+  return {
+    response: result.content,
+    model: result.model,
+    eval_count: (result.usage && result.usage.completion_tokens) || 0,
+    prompt_eval_count: (result.usage && result.usage.prompt_tokens) || 0,
+    _intelLatencyMs: Date.now() - _intelStart,
+    _provider: 'openrouter',
+  };
+}
+
+async function callOllamaDirect(prompt, opts) {
   const o = opts || {};
   const _intelStart = Date.now();
   const url = OLLAMA_URL.replace(/\/+$/, '') + '/api/generate';
@@ -477,6 +542,7 @@ async function suggestName(bucket, fields, opts) {
   const validated = validateNameSuggestion(parsed);
   logIntelCall({
     task: 'suggest_name',
+    model: resp && resp.model,
     prompt,
     response: (resp && resp.response) || '',
     parsedOk: validated != null,
@@ -505,6 +571,7 @@ async function fieldPurpose(path, charClass, bucket) {
     const validated = validatePurposeSuggestion(extractStructured(resp));
     logIntelCall({
       task: 'field_purpose',
+      model: resp && resp.model,
       prompt,
       response: (resp && resp.response) || '',
       parsedOk: validated != null,
@@ -542,6 +609,7 @@ async function suggestPartner(parsedReq, parsedRes) {
   const validated = validatePartnerSuggestion(parsed);
   logIntelCall({
     task: 'partner',
+    model: resp && resp.model,
     prompt,
     response: (resp && resp.response) || '',
     parsedOk: validated != null,
@@ -607,6 +675,7 @@ async function simulateBids(bidReq) {
       const v = validateBidSim(parsed, s);
       logIntelCall({
         task: 'bid_sim',
+        model: resp && resp.model,
         prompt,
         response: (resp && resp.response) || '',
         parsedOk: parsed != null && v.reason !== 'unparseable' && v.reason !== 'price_invalid',
