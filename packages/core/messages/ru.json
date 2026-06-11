@@ -300,5 +300,10 @@
   "response.30.bid.audio_invalid": "Seatbid #{sNum} → bid #{bNum}: bid.media.audio должен быть валидным JSON-объектом.",
   "response.30.bid.audio.markup_required": "Seatbid #{sNum} → bid #{bNum}: bid.media.audio требует наличия adm (аудио разметка) или curl (URL креатива).",
   "response.30.bid.native_invalid": "Seatbid #{sNum} → bid #{bNum}: bid.media.native должен быть валидным JSON-объектом.",
-  "response.30.bid.adomain_missing": "Seatbid #{sNum} → bid #{bNum}: bid.media.adomain отсутствует или не является непустым массивом строк. Домены рекламодателей рекомендуются для прозрачности фильтрации."
+  "response.30.bid.adomain_missing": "Seatbid #{sNum} → bid #{bNum}: bid.media.adomain отсутствует или не является непустым массивом строк. Домены рекламодателей рекомендуются для прозрачности фильтрации.",
+  "payload.ambiguous_both_sides": "Payload содержит И imp[] (сторона запроса), И seatbid[] (сторона ответа). Провалидировано только как {validated} — вторая сторона проигнорирована. Раздели два payload-а и проверь отдельно, или вставь их в панели запрос/ответ для crosscheck.",
+  "payload.ambiguous_envelope": "Payload смешивает конверт OpenRTB 3.0 (openrtb) с корневыми полями 2.x (imp/seatbid). Провалидировано как {validated} — другой слой проигнорирован. Убери лишний слой.",
+  "version.assumed": "Версионных полей не найдено — проверено против базовой 2.5 по предположению, а не детекции. Если целишься в 2.6 или 3.0 — запинь через expectedVersion, чтобы ловить дрейф версии.",
+  "version.single_marker": "Версия 2.6 определена по единственному полю ({signal}). Одно поле тихо подняло цель валидации — если на самом деле целишься в 2.5, запинь expectedVersion, чтобы это флагалось.",
+  "jsonfeed.not_validated": "Распознано как JSON Feed 1.1 по форме (version + items). Структурная валидация этого формата не реализована — поля НЕ проверялись."
 }

@@ -19,6 +19,46 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.0.1 — fix(core 0.28.0): detection-mechanism audit — ambiguity surfaced, silent guesses retired (2026-06-11)
+
+Mechanism audit (Claude deep-read + DeepSeek v4 Pro crossfire, ~$0.02) of
+detect.js / format-detect.js / the validate() dispatch. Theme of every hole:
+the detector resolved ambiguity silently instead of telling the user. Now it
+tells. New findings are additive (core MINOR), no rule behavior changed.
+
+- **`payload.ambiguous_both_sides` (WARNING).** A payload carrying both
+  `imp[]` and `seatbid[]` used to be validated as a BidRequest with the
+  response half silently ignored. Still validated the same way — but now
+  says so.
+- **`payload.ambiguous_envelope` (WARNING).** 3.0 envelope mixed with 2.x
+  root fields — the ignored layer is now named.
+- **3.0 envelope detection hardened** (shared `looksLike30Envelope()` used by
+  both type and version axes so they can't drift): bare `item:["x"]` of
+  primitives is no longer "a 3.0 BidRequest"; an empty `openrtb:{}` key no
+  longer outweighs explicit root `imp[]`/`seatbid[]`; a bare broken envelope
+  without 2.x markers still routes to 3.0 so `request_required` can fire.
+- **`version.assumed` (INFO).** Signal-less payloads are validated against
+  the 2.5 baseline by assumption — that guess is now visible (suppressed
+  when the caller pins `expectedVersion`).
+- **`version.single_marker` (INFO).** The circular-detection flip — one 2.6
+  field upgrading the whole validation target — is now named, with the field
+  in params.
+- **`jsonfeed.not_validated` (INFO).** JSON Feed 1.1 came back
+  `clean/findings:[]` implying it was checked; no JSON-Feed rules exist.
+  Honest now.
+- **Version axis honesty.** Vendor feeds / JSON feeds / unknown payloads no
+  longer carry a fake "v2.5 confidence 0.3" — version is `unknown/0` outside
+  oRTB types.
+- **Anchored VAST sniff in format-detect.** The inline `/<VAST\b/` substring
+  test false-positived on HTML creatives mentioning "<VAST"; now reuses the
+  shared `isVastShape()`/`detectVastVersion()` helpers (the divergence their
+  own doc-comment warned about).
+- **`rollupStatus` exported from core**; the analyze handler's inline copy
+  ("keep in sync") replaced with the injected original.
+- Tests: `tests/detection-mechanism.test.js` (+14), suite 990. Audit FP note:
+  DeepSeek's "add lowercase `clickurl` to detect.js" was rejected — camelCase
+  `clickUrl` is the canonical value-feed key per rules-feed.js.
+
 ### v1.0.0 — inspector-first declared stable (2026-06-11)
 
 The 0.x era ends. Decision A (v0.57.1) committed the product surface; the

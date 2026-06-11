@@ -60,6 +60,7 @@ try {
  *   extractAllCategories: Function,
  *   detectFormat: Function,
  *   unionFormat: Function,
+ *   rollupStatus?: (findings: Array<{level: string}>) => string,
  *   AnalyzeLog: { record: Function },
  *   loadUserDialect?: Function,
  *   getDefaultDialectForUser?: Function,
@@ -81,6 +82,7 @@ function createAnalyzeModule(deps) {
     extractAllCategories,
     detectFormat,
     unionFormat,
+    rollupStatus,
     AnalyzeLog,
     // v8 — User Dialect overlay. Optional; if not injected, fall through
     // to anonymous validation (no per-user suppression of question
@@ -209,15 +211,17 @@ function createAnalyzeModule(deps) {
           );
         }
 
-        // Recompute status from the union — `errors` if any finding is error,
-        // else `warnings` if any warning, else `clean`. (Mirrors the core
-        // rollupStatus helper without importing it; keep in sync.)
-        const levels = new Set((validation.findings || []).map((f) => f.level));
-        validation.status = levels.has('error')
-          ? 'errors'
-          : levels.has('warning')
-            ? 'warnings'
-            : 'clean';
+        // Recompute status from the union of request+response findings using
+        // the core's own rollup (injected via deps) — same semantics as a
+        // single validate() call, no drift. Inline fallback kept only for
+        // tests that construct the module without the dep.
+        validation.status = rollupStatus
+          ? rollupStatus(validation.findings || [])
+          : (validation.findings || []).some((f) => f.level === 'error')
+            ? 'errors'
+            : (validation.findings || []).some((f) => f.level === 'warning')
+              ? 'warnings'
+              : 'clean';
 
         // URL-style request (string bidReq) is not in scope for crosscheck /
         // IAB category extraction / format detection — those all walk oRTB

@@ -58,6 +58,7 @@ const {
   listDialects,
   extractAllCategories,
   detectFormat,
+  rollupStatus,
 } = require('@kyivtech/spyglass-core');
 const { analyze: analyzeBehavior } = require('@kyivtech/spyglass-core/behavior');
 const knowledgeBase = require('@kyivtech/spyglass-core/knowledge-base');
@@ -956,6 +957,7 @@ router.register(
     extractAllCategories,
     detectFormat,
     unionFormat,
+    rollupStatus,
     AnalyzeLog,
     // v8 — User Dialects: analyze handler loads the caller's default
     // dialect per request and passes it into validate() so the

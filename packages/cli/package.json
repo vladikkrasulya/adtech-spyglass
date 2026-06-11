@@ -16,7 +16,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@kyivtech/spyglass-core": "^0.27.2"
+    "@kyivtech/spyglass-core": "^0.28.0"
   },
   "keywords": [
     "openrtb",

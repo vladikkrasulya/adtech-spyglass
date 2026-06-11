@@ -220,11 +220,16 @@ function detectFormat(payload, userDialect) {
           if (!isObj(bid)) continue;
           const mt = MTYPE_TO_FORMAT[bid.mtype];
           if (mt) formats.add(mt);
-          if (typeof bid.adm === 'string' && /<VAST\b/i.test(bid.adm)) {
+          // Anchored sniff via the shared helpers above — this inline block
+          // previously used a bare /<VAST\b/ substring test and its own
+          // version regex, false-positive-ing on HTML creatives that merely
+          // mention "<VAST" and drifting from detectVastVersion (the exact
+          // divergence the helpers' doc-comment warns about).
+          if (isVastShape(bid.adm)) {
             formats.add(FORMATS.VIDEO);
-            const m = bid.adm.match(/<VAST[^>]*\bversion\s*=\s*"(\d)(?:\.(\d))?"/i);
-            if (m) {
-              const major = m[1];
+            const ver = detectVastVersion(bid.adm);
+            if (ver) {
+              const major = ver.split('.')[0];
               if (major === '2') protocols.add(PROTOCOLS.VAST_2);
               else if (major === '3') protocols.add(PROTOCOLS.VAST_3);
               else if (major === '4') protocols.add(PROTOCOLS.VAST_4);

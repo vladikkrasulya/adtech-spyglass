@@ -21,6 +21,7 @@
  */
 
 const { detectType, detectVersion, TYPES, VERSIONS } = require('./detect');
+const { isObj } = require('./helpers');
 const { detectFormat, FORMATS, CONTEXTS, PROTOCOLS } = require('./format-detect');
 const { validateRequest } = require('./rules-request');
 const { validateRequest30 } = require('./rules-request-30');
@@ -155,6 +156,30 @@ function validate(payload, opts) {
   let findings = [];
   let resolvedType = t;
 
+  // ── Ambiguity surfacing (mechanism audit 2026-06-11). The detector
+  // resolves hybrid payloads deterministically (imp[] wins over seatbid[],
+  // a real 3.0 envelope wins over stray 2.x roots) — but resolving silently
+  // hid half the payload from the user. Surface the call that was made.
+  /** @type {any} */
+  const pl = payload;
+  const ambiguity = [];
+  const hasImpArr = Array.isArray(pl.imp);
+  const hasSeatArr = Array.isArray(pl.seatbid);
+  if (hasImpArr && hasSeatArr) {
+    ambiguity.push(
+      makeFinding('payload.ambiguous_both_sides', LEVELS.WARNING, '', {
+        validated: t === TYPES.ORTB_RESPONSE ? 'BidResponse' : 'BidRequest',
+      }),
+    );
+  }
+  if (isObj(pl.openrtb) && (hasImpArr || hasSeatArr)) {
+    ambiguity.push(
+      makeFinding('payload.ambiguous_envelope', LEVELS.WARNING, '', {
+        validated: version && version.version === VERSIONS.V_3_0 ? '3.0' : '2.x',
+      }),
+    );
+  }
+
   if (t === TYPES.ORTB_REQUEST) {
     // 3.0 envelope is structurally distinct from 2.x — `imp[]` becomes
     // `item[]` under `openrtb.request`. Running 2.x rules against a 3.0
@@ -199,14 +224,46 @@ function validate(payload, opts) {
     findings = r.findings;
     resolvedType = r.type;
   } else if (t === TYPES.JSON_FEED) {
+    // Honest non-validation (mechanism audit 2026-06-11): this format used
+    // to come back `status:'clean', findings:[]` — "clean" implied it was
+    // checked when in fact no JSON-Feed rules exist. Say so explicitly; the
+    // INFO level keeps the rollup at 'clean'.
     return finalize(
-      { type: TYPES.JSON_FEED, version, findings: [] },
-      'clean',
+      {
+        type: TYPES.JSON_FEED,
+        version: { version: VERSIONS.UNKNOWN, confidence: 0, signals: [] },
+        findings: [makeFinding('jsonfeed.not_validated', LEVELS.INFO, '')],
+      },
+      null,
       locale,
       disabledRules,
+      strictness,
     );
   } else {
     findings = [makeFinding('payload.unknown_type', LEVELS.ERROR, '')];
+  }
+
+  const isOrtb = t === TYPES.ORTB_REQUEST || t === TYPES.ORTB_RESPONSE;
+  if (isOrtb && ambiguity.length) findings = findings.concat(ambiguity);
+
+  // Version-honesty findings (mechanism audit 2026-06-11). Both are INFO —
+  // they don't change the verdict, they surface the guess the detector made
+  // so the user can pin `expectedVersion` instead of trusting the flip.
+  if (isOrtb && !expectedVersion && version) {
+    if (version.confidence === 0.3) {
+      // No version markers at all — 2.5 is an assumption, not a detection.
+      findings.push(makeFinding('version.assumed', LEVELS.INFO, ''));
+    } else if (
+      version.version === VERSIONS.V_2_6 &&
+      version.confidence === 1 &&
+      version.signals.length === 1
+    ) {
+      // The whole payload was upgraded to 2.6 by exactly one field — the
+      // classic circular-detection flip. Tell the user which field did it.
+      findings.push(
+        makeFinding('version.single_marker', LEVELS.INFO, '', { signal: version.signals[0] }),
+      );
+    }
   }
 
   // Version pinning verdict. Only meaningful for oRTB request/response —
@@ -240,8 +297,13 @@ function validate(payload, opts) {
     );
   }
 
+  // Version honesty: the version axis only exists for oRTB payloads. Feeds
+  // and unknown types used to surface the detector's default ("2.5",
+  // confidence 0.3) — a guess presented as a fact. Zero it out instead.
+  const versionOut = isOrtb ? version : { version: VERSIONS.UNKNOWN, confidence: 0, signals: [] };
+
   return finalize(
-    { type: resolvedType, version, findings },
+    { type: resolvedType, version: versionOut, findings },
     null,
     locale,
     disabledRules,
@@ -389,6 +451,11 @@ module.exports = {
   decodeCategory,
   decodeCategories,
   extractAllCategories,
+  // Status rollup — exported so HTTP handlers that union findings from
+  // several validate() calls recompute status with the SAME semantics
+  // (question-level findings don't block 'clean') instead of inlining a
+  // copy that drifts.
+  rollupStatus,
   // re-exports for advanced usage / testing
   TYPES,
   VERSIONS,

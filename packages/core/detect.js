@@ -156,6 +156,37 @@ function decodeRequestLazy(text) {
   return _decodeRequest(text);
 }
 
+/**
+ * Shared 3.0-envelope shape test — the ONE place that decides "is this
+ * payload a 3.0 attempt". Used by both detectType() and detectVersion() so
+ * the two axes can't drift apart.
+ *
+ * Mechanism-audit 2026-06-11 hardening:
+ *  - bare `item:[…]` of primitives (`{"item":["x"]}`) is NOT 3.0 — any JSON
+ *    can carry an `item` array; only object elements look like AdCOM items.
+ *  - an `openrtb` key with none of the envelope children (request/response/
+ *    ver) does NOT outweigh explicit 2.x root markers (imp[]/seatbid[]) —
+ *    `{"openrtb":{},"imp":[…]}` is a 2.x payload with a stray key, not a
+ *    3.0 attempt. A bare/broken envelope WITHOUT 2.x markers still counts
+ *    as 3.0 so request.30.request_required can fire.
+ */
+function looksLike30Envelope(obj) {
+  if (!isObj(obj)) return false;
+  const has2x = Array.isArray(obj.imp) || Array.isArray(obj.seatbid);
+  const env = obj.openrtb;
+  if (isObj(env)) {
+    if (isObj(env.request) || isObj(env.response) || env.ver != null) return true;
+    return !has2x;
+  }
+  // Bare `item[]` counts only when it carries nothing BUT object entries
+  // (empty array included — `{item:[]}` is still a 3.0 attempt with zero
+  // items). An array of primitives is just somebody's JSON, not AdCOM.
+  if (Array.isArray(obj.item) && !obj.item.some((it) => it != null && !isObj(it)) && !has2x) {
+    return true;
+  }
+  return false;
+}
+
 function detectType(obj) {
   // String inputs are URL-style requests (clickunder/teaser/pop GETs). The
   // analyze pipeline passes pasted text verbatim when JSON.parse fails — we
@@ -179,7 +210,7 @@ function detectType(obj) {
   //   openrtb.response → BidResponse
   // If the envelope has neither (broken), default to REQUEST so the user
   // gets the request-side rules (request.30.request_required will fire).
-  if (Array.isArray(obj.item) || isObj(obj.openrtb)) {
+  if (looksLike30Envelope(obj)) {
     if (isObj(obj.openrtb) && isObj(obj.openrtb.response)) {
       return TYPES.ORTB_RESPONSE;
     }
@@ -247,7 +278,7 @@ function detectVersion(payload) {
   // `item[]` is enough. Catches broken envelopes (ver="" / no
   // request) so the user sees 3.0-specific structural findings
   // instead of "looks like 2.5 with low confidence".
-  if (Array.isArray(p.item) || isObj(p.openrtb)) {
+  if (looksLike30Envelope(p)) {
     const signals = [];
     if (Array.isArray(p.item)) signals.push('item[]');
     if (isObj(p.openrtb)) signals.push('openrtb');
@@ -269,4 +300,4 @@ function detectVersion(payload) {
   return { version: VERSIONS.V_2_5, confidence: 0.3, signals: [] };
 }
 
-module.exports = { detectType, detectVersion, TYPES, VERSIONS };
+module.exports = { detectType, detectVersion, looksLike30Envelope, TYPES, VERSIONS };

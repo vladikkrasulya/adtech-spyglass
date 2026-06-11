@@ -301,5 +301,10 @@
   "err-eids-source-invalid-type": "eid[{idx}].source has wrong type (got {type}, expected string). source must be a string domain name (e.g. \"liveramp.com\").",
   "err-eids-uid-id-invalid-type": "uid[{uidIdx}] in eid[{eidIdx}].id has wrong type (got {type}, expected string). id must be a non-empty string containing the actual user identifier.",
   "err-eids-uid-atype-invalid": "user.ext.eids[{eidIdx}].uids[{uidIdx}].atype = {val} is outside the allowed range. Per spec atype must be 1 (cookie), 2 (device), or 3 (people-based). Unrecognised atypes cause the EID to be ignored or rejected by DSPs.",
-  "warn-currency-conversion-needed": "bid currency {bidCur} differs from floor currency {floorCur} for impid \"{impid}\" (seatbid[{si}].bid[{bi}]). Cross-currency floor comparison requires a rate lookup — Spyglass skips the numeric check. Ensure your exchange converts correctly or use matching currencies."
+  "warn-currency-conversion-needed": "bid currency {bidCur} differs from floor currency {floorCur} for impid \"{impid}\" (seatbid[{si}].bid[{bi}]). Cross-currency floor comparison requires a rate lookup — Spyglass skips the numeric check. Ensure your exchange converts correctly or use matching currencies.",
+  "payload.ambiguous_both_sides": "Payload carries BOTH imp[] (request side) and seatbid[] (response side). It was validated as a {validated} only — the other side was ignored. Split the two payloads and validate them separately, or paste them into the request/response panes for a crosscheck.",
+  "payload.ambiguous_envelope": "Payload mixes an OpenRTB 3.0 envelope (openrtb) with 2.x root fields (imp/seatbid). It was validated as {validated} — the other layer was ignored. Remove the layer that does not belong.",
+  "version.assumed": "No version-specific fields found — validated against the 2.5 baseline by assumption, not detection. If you target 2.6 or 3.0, pin it via expectedVersion to catch version drift.",
+  "version.single_marker": "Version 2.6 was detected from a single field ({signal}). One field silently upgraded the whole validation target — if you actually target 2.5, pin expectedVersion to flag it instead.",
+  "jsonfeed.not_validated": "Recognized as JSON Feed 1.1 by shape (version + items). Structural validation for this format is not implemented — fields were NOT checked."
 }

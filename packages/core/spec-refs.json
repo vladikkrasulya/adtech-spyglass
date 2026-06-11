@@ -279,5 +279,10 @@
   "response.30.bid.audio_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md",
   "response.30.bid.audio.markup_required": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md",
   "response.30.bid.native_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md",
-  "response.30.bid.adomain_missing": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md"
+  "response.30.bid.adomain_missing": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/3.0.md",
+  "payload.ambiguous_both_sides": null,
+  "payload.ambiguous_envelope": null,
+  "version.assumed": null,
+  "version.single_marker": null,
+  "jsonfeed.not_validated": "https://www.jsonfeed.org/version/1.1/"
 }
