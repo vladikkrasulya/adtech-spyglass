@@ -80,8 +80,8 @@ function isObj(v) {
  *   - canonical string hints (`ext.adtype = "popunder"`) + boolean flag keys.
  *   P1 — shape signals shared with analyzeShape (`ext.allowShock`, `sizeID:[0]`
  *        …) → pop. These fire WITHOUT a dialect, so pop networks that signal
- *        only with vendor allow-flags (e.g. Kadam `ext.ad_type` mapped via a
- *        dialect, or bare allow* flags) are no longer invisible to the rules.
+ *        only with vendor allow-flags (e.g. a numeric `ext.ad_type` mapped via
+ *        a dialect, or bare allow* flags) are no longer invisible to the rules.
  *
  * @param {unknown} ext
  * @param {string} [basePath='ext']
@@ -101,14 +101,21 @@ function scanExtForFormatHints(ext, basePath, userDialect) {
     out.push({ format, path: `${base}.${key}` });
   };
 
-  // P0 — user dialect mappings. Signal-path convention matches the dialect
-  // builder: `imp[].ext.<key>` for per-imp ext, `ext.<key>` otherwise.
-  if (userDialect && typeof userDialect.lookupMapping === 'function') {
-    const signalBase = String(basePath || '').startsWith('imp') ? 'imp[].ext' : 'ext';
+  // P0 — user dialect mappings. The dialect builder (rules/dialects-questions)
+  // only ever emits two signal namespaces: `ext.<key>` (request-level ext) and
+  // `imp[].ext.<key>` (per-imp ext). So P0 is meaningful only when the caller
+  // identifies the scanned ext as one of those two — callers pass `basePath`
+  // 'ext' or 'imp[].ext' accordingly. Other ext locations (imp[].banner.ext,
+  // imp[].video.ext, bid[].ext) have no mapping namespace, so we skip P0 there
+  // to avoid cross-namespace false positives. Value is passed RAW: lookupMapping
+  // applies its own stringifyValue (objects → JSON), so passing String(v) here
+  // broke object/array-valued mappings.
+  const signalBase = base === 'imp[].ext' ? 'imp[].ext' : base === 'ext' ? 'ext' : null;
+  if (signalBase && userDialect && typeof userDialect.lookupMapping === 'function') {
     for (const k of Object.keys(ext)) {
       const v = ext[k];
       if (v == null) continue;
-      const mapping = userDialect.lookupMapping(`${signalBase}.${k}`, String(v));
+      const mapping = userDialect.lookupMapping(`${signalBase}.${k}`, v);
       if (!mapping || !mapping.semantic_label) continue;
       const n = normaliseFormatName(mapping.semantic_label);
       if (ALL_NON_STANDARD.has(n)) pushHint(n, k);

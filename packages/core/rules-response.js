@@ -5,7 +5,7 @@
  * macro/header/seat rules layer on top via ctx.dialect.validateResponse.
  */
 
-const { isStr, isNum } = require('./helpers');
+const { isObj, isStr, isNum } = require('./helpers');
 const { LEVELS, makeFinding } = require('./findings');
 // Static creative scan — the same engine that fires `behavior.static.*` from
 // the runtime probe also runs purely from string adm. Plumbed in 2026-05-09:
@@ -52,6 +52,8 @@ function validateResponse(res, ctx) {
   (res.seatbid || []).forEach((sb, i) => {
     const sNum = i + 1;
     const sp = `seatbid[${i}]`;
+    // R4: tolerate `seatbid:[null]` — coerce so `.bid` checks fire instead of throwing.
+    if (!isObj(sb)) sb = {};
     if (!Array.isArray(sb.bid) || !sb.bid.length) {
       findings.push(F('response.seatbid.empty', LEVELS.ERROR, `${sp}.bid`, { num: sNum }));
     }
@@ -61,6 +63,8 @@ function validateResponse(res, ctx) {
       const bp = `${sp}.bid[${j}]`;
       const params = { sNum, bNum };
 
+      // R4: tolerate `bid:[null]` — coerce so id/impid/price checks fire instead of throwing.
+      if (!isObj(b)) b = {};
       if (!isStr(b.id))
         findings.push(F('response.bid.id_required', LEVELS.ERROR, `${bp}.id`, params));
       if (!isStr(b.impid)) {

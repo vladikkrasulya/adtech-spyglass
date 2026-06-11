@@ -340,6 +340,11 @@ function validateImp(imp, i) {
   const p = `imp[${i}]`;
   const num = i + 1;
 
+  // R4: tolerate a null/primitive imp entry (e.g. `imp:[null]`). Coerce to an
+  // empty object so the field checks below fire `imp.id_required` /
+  // `imp.format_required` instead of throwing on `.id`/`.banner`.
+  if (!isObj(imp)) imp = {};
+
   if (!isStr(imp.id)) findings.push(F('imp.id_required', LEVELS.ERROR, `${p}.id`, { num }));
   if (imp.bidfloor != null && !isNum(imp.bidfloor)) {
     findings.push(F('imp.bidfloor_invalid', LEVELS.WARNING, `${p}.bidfloor`, { num }));

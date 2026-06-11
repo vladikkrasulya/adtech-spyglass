@@ -46,6 +46,7 @@
  */
 
 const { LEVELS, makeFinding } = require('../findings');
+const { isObj } = require('../helpers');
 
 const F = makeFinding;
 
@@ -95,7 +96,9 @@ function claimsBid(bid) {
 function validateResponse(res) {
   const findings = [];
   (res.seatbid || []).forEach((sb, sbi) => {
+    if (!isObj(sb)) return; // R4: tolerate `seatbid:[null]`
     (sb.bid || []).forEach((bid, bi) => {
+      if (!isObj(bid)) return; // R4: tolerate `bid:[null]`
       if (!claimsBid(bid)) return;
       const sNum = sbi + 1;
       const bNum = bi + 1;

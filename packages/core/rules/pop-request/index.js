@@ -51,22 +51,26 @@ const F = makeFinding;
 function requestHasPopHint(req, ctx) {
   if (!req || typeof req !== 'object') return false;
   const userDialect = (ctx && ctx.userDialect) || null;
-  if (scanExtForFormatHints(req.ext, '', userDialect).some((h) => isPopFormat(h.format)))
+  if (scanExtForFormatHints(req.ext, 'ext', userDialect).some((h) => isPopFormat(h.format)))
     return true;
   const imps = Array.isArray(req.imp) ? req.imp : [];
   for (const imp of imps) {
     if (!imp || typeof imp !== 'object') continue;
-    if (scanExtForFormatHints(imp.ext, '', userDialect).some((h) => isPopFormat(h.format)))
+    if (scanExtForFormatHints(imp.ext, 'imp[].ext', userDialect).some((h) => isPopFormat(h.format)))
       return true;
     if (
       imp.banner &&
-      scanExtForFormatHints(imp.banner.ext, '', userDialect).some((h) => isPopFormat(h.format))
+      scanExtForFormatHints(imp.banner.ext, 'imp[].banner.ext', userDialect).some((h) =>
+        isPopFormat(h.format),
+      )
     ) {
       return true;
     }
     if (
       imp.video &&
-      scanExtForFormatHints(imp.video.ext, '', userDialect).some((h) => isPopFormat(h.format))
+      scanExtForFormatHints(imp.video.ext, 'imp[].video.ext', userDialect).some((h) =>
+        isPopFormat(h.format),
+      )
     ) {
       return true;
     }

@@ -96,8 +96,10 @@ function crosscheck(req, res, _ctx) {
   const floorNoteEmitted = new Set();
 
   res.seatbid.forEach((sb, sbi) => {
+    if (!isObj(sb)) return; // R4: tolerate `seatbid:[null]`
     const bids = Array.isArray(sb.bid) ? sb.bid : [];
     bids.forEach((bid, bi) => {
+      if (!isObj(bid)) return; // R4: tolerate `bid:[null]`
       totalBids++;
       const bp = `seatbid[${sbi}].bid[${bi}]`;
       const sNum = sbi + 1;
@@ -301,11 +303,13 @@ function crosscheck(req, res, _ctx) {
 
       // 3e. banner size
       if (imp.banner && (bid.w || bid.h)) {
-        const formatList = Array.isArray(imp.banner.format) ? imp.banner.format : [];
+        const formatList = Array.isArray(imp.banner.format)
+          ? imp.banner.format.filter(isObj) // R4: drop null entries in banner.format
+          : [];
         const declared = imp.banner.w && imp.banner.h ? [{ w: imp.banner.w, h: imp.banner.h }] : [];
         const allSizes = [...declared, ...formatList];
         const fits = allSizes.some(
-          (f) => Number(f.w) === Number(bid.w) && Number(f.h) === Number(bid.h),
+          (f) => isObj(f) && Number(f.w) === Number(bid.w) && Number(f.h) === Number(bid.h),
         );
         if (allSizes.length && !fits) {
           out.push(

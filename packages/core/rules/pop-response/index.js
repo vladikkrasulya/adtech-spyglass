@@ -46,7 +46,9 @@ function responseHasPopHint(res, ctx) {
     if (!sb || !Array.isArray(sb.bid)) continue;
     for (const bid of sb.bid) {
       if (!bid || typeof bid !== 'object') continue;
-      if (scanExtForFormatHints(bid.ext, '', userDialect).some((h) => isPopFormat(h.format)))
+      if (
+        scanExtForFormatHints(bid.ext, 'bid[].ext', userDialect).some((h) => isPopFormat(h.format))
+      )
         return true;
     }
   }
@@ -69,7 +71,9 @@ function validate(res, ctx) {
       // Only flag bids that themselves declare pop intent. A response with
       // mixed inventory (one pop bid + one banner bid in different seatbids)
       // would otherwise generate noise on the banner side.
-      if (!scanExtForFormatHints(bid.ext, '', userDialect).some((h) => isPopFormat(h.format)))
+      if (
+        !scanExtForFormatHints(bid.ext, 'bid[].ext', userDialect).some((h) => isPopFormat(h.format))
+      )
         return;
       if (!admLooksLikePop(bid.adm)) {
         findings.push(F('bid.pop.adm_not_redirect', LEVELS.ERROR, `${path}.adm`, { sNum, bNum }));

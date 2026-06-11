@@ -19,7 +19,7 @@ const { decodeRequest, info } = require('@kyivtech/spyglass-core/decoders/reques
 const urlLinkfeed = require('@kyivtech/spyglass-core/decoders/request/url-linkfeed');
 
 const LINKFEED_URL =
-  'http://xml.pushub.net/link?format=json&feed=demo&auth=tk&subid=pub1' +
+  'http://feed.vendor.example/link?format=json&feed=demo&auth=tk&subid=pub1' +
   '&user_ip=192.0.2.1&ua=Mozilla%2F5.0%20Test' +
   '&url=https%3A%2F%2Fexample.com%2F&lang=en';
 
@@ -61,7 +61,7 @@ test('decodeRequest: url-linkfeed URL → canonical with variant=url-linkfeed', 
   const c = decodeRequest(LINKFEED_URL);
   assert.ok(c, 'url-linkfeed URL is claimed');
   assert.equal(c.variant, 'url-linkfeed');
-  assert.equal(c.endpoint, 'xml.pushub.net/link');
+  assert.equal(c.endpoint, 'feed.vendor.example/link');
 });
 
 test('info(): exposes registered decoder metadata', () => {
@@ -73,14 +73,27 @@ test('info(): exposes registered decoder metadata', () => {
 
 // ── url-linkfeed decoder ──────────────────────────────────────────────────
 
-test('url-linkfeed.detect: claims xml.pushub.net/link', () => {
-  assert.equal(urlLinkfeed.detect('', new URL('http://xml.pushub.net/link?a=1')), true);
-  assert.equal(urlLinkfeed.detect('', new URL('https://xml.pushub.net/link')), true);
+test('url-linkfeed.detect: claims the JSON link-feed shape on any host', () => {
+  // Host-agnostic, shape-based: /link + format=json + feed + auth.
+  const q = '?format=json&feed=demo&auth=tk';
+  assert.equal(urlLinkfeed.detect('', new URL(`http://feed.vendor.example/link${q}`)), true);
+  assert.equal(urlLinkfeed.detect('', new URL(`https://another-host.example/link${q}`)), true);
 });
 
-test('url-linkfeed.detect: rejects other hosts/paths', () => {
-  assert.equal(urlLinkfeed.detect('', new URL('http://xml.pushub.net/other')), false);
-  assert.equal(urlLinkfeed.detect('', new URL('http://other.host/link')), false);
+test('url-linkfeed.detect: rejects wrong path or incomplete feed-param shape', () => {
+  const q = '?format=json&feed=demo&auth=tk';
+  // Right shape, wrong path.
+  assert.equal(urlLinkfeed.detect('', new URL(`http://feed.vendor.example/other${q}`)), false);
+  // Right path, missing the auth/feed triad → not a link-feed pull.
+  assert.equal(urlLinkfeed.detect('', new URL('http://feed.vendor.example/link?a=1')), false);
+  assert.equal(
+    urlLinkfeed.detect('', new URL('http://feed.vendor.example/link?format=json')),
+    false,
+  );
+  assert.equal(
+    urlLinkfeed.detect('', new URL('http://feed.vendor.example/link?feed=demo&auth=tk')),
+    false,
+  );
 });
 
 test('url-linkfeed.decode: IPv4 → device.ip, not device.ipv6', () => {
@@ -131,7 +144,8 @@ test('url-linkfeed.decode: _raw preserves every query param verbatim', () => {
 });
 
 test("url-linkfeed.decode: missing optional params don't pollute canonical", () => {
-  const c = decodeRequest('http://xml.pushub.net/link?format=json');
+  // Required feed-param triad present; all optional params (ip/ua/lang/url/subid) absent.
+  const c = decodeRequest('http://feed.vendor.example/link?format=json&feed=demo&auth=tk');
   assert.equal(c.variant, 'url-linkfeed');
   assert.equal(c.device.ip, undefined);
   assert.equal(c.device.ua, undefined);

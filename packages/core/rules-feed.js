@@ -160,6 +160,9 @@ function validatePushMaterialsFeed(arr) {
   arr.forEach((m, i) => {
     const num = i + 1;
     const p = `[${i}]`;
+    // R4: tolerate a null/primitive feed entry (`[null]`) — coerce so the
+    // field checks below fire `feed.push.*_required` instead of throwing.
+    if (!isObj(m)) m = {};
     if (!isStr(m.id)) {
       findings.push(F('feed.push.id_required', LEVELS.ERROR, `${p}.id`, { num }));
     }

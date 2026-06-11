@@ -13,6 +13,7 @@
  */
 
 const { LEVELS, makeFinding } = require('../findings');
+const { isObj } = require('../helpers');
 
 const F = makeFinding;
 
@@ -31,6 +32,7 @@ function validateRequest(req) {
 
   let isPush = false;
   (req.imp || []).forEach((imp, i) => {
+    if (!isObj(imp)) return; // R4: tolerate `imp:[null]`
     const num = i + 1;
     const p = `imp[${i}]`;
     const impExt = imp.ext || {};
@@ -63,7 +65,9 @@ function validateResponse(res) {
   const macroRe = /\$\{(\w+)\}/g;
 
   (res.seatbid || []).forEach((sb, sbi) => {
+    if (!isObj(sb)) return; // R4: tolerate `seatbid:[null]`
     (sb.bid || []).forEach((bid, bi) => {
+      if (!isObj(bid)) return; // R4: tolerate `bid:[null]`
       const sNum = sbi + 1;
       const bNum = bi + 1;
       const bp = `seatbid[${sbi}].bid[${bi}]`;

@@ -197,9 +197,13 @@ function detectFormat(payload, userDialect) {
         // and downstream rules see the same picture detectNonStandardFormats
         // emits as an `imp.non_standard_format` INFO finding.
         const impExtHints = [
-          ...scanExtForFormatHints(imp.ext, '', userDialect),
-          ...(imp.banner ? scanExtForFormatHints(imp.banner.ext, '', userDialect) : []),
-          ...(imp.video ? scanExtForFormatHints(imp.video.ext, '', userDialect) : []),
+          ...scanExtForFormatHints(imp.ext, 'imp[].ext', userDialect),
+          ...(imp.banner
+            ? scanExtForFormatHints(imp.banner.ext, 'imp[].banner.ext', userDialect)
+            : []),
+          ...(imp.video
+            ? scanExtForFormatHints(imp.video.ext, 'imp[].video.ext', userDialect)
+            : []),
         ];
         for (const hint of impExtHints) {
           if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
@@ -231,7 +235,7 @@ function detectFormat(payload, userDialect) {
           // sniff bid.adm — pop creatives ship a window.open / redirect URL,
           // not banner HTML — but only if the request side ALSO smelled
           // like pop, to avoid false-positive on banner clicktrackers.
-          for (const hint of scanExtForFormatHints(bid.ext, '', userDialect)) {
+          for (const hint of scanExtForFormatHints(bid.ext, 'bid[].ext', userDialect)) {
             if (isPopFormat(hint.format)) formats.add(FORMATS.POPS);
             else if (isPushFormat(hint.format)) formats.add(FORMATS.PUSH);
           }

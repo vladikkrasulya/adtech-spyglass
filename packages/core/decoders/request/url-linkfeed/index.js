@@ -1,10 +1,12 @@
 'use strict';
 
 /**
- * Decoder: URL-style link-feed `xml.pushub.net/link` endpoint.
+ * Decoder: URL-style JSON link-feed `GET …/link?format=json&feed=…&auth=…`.
  *
- * URL-style link-feed request signature (observed 2026-05-21):
- *   GET http://xml.pushub.net/link
+ * Detection is host-agnostic and shape-based (per the IAB-pure core policy:
+ * vendors are recognised by request shape, never by a hardcoded vendor host).
+ * The signature is a JSON feed pull carrying a feed id + auth token:
+ *   GET http://<host>/link
  *     ?format=json
  *     &feed=<id>
  *     &auth=<token>
@@ -28,11 +30,15 @@
 const { makeCanonicalUrlRequest } = require('../_canonical');
 
 const ID = 'url-linkfeed';
-const HOST = 'xml.pushub.net';
 const PATH = '/link';
 
 function detect(_text, parsedUrl) {
-  return parsedUrl.hostname === HOST && parsedUrl.pathname === PATH;
+  // Shape fingerprint: the /link path plus the JSON-feed param triad
+  // (format=json + feed id + auth token). Host-independent so any vendor
+  // shipping this URL-feed shape is decoded, and no vendor name lives in code.
+  if (parsedUrl.pathname !== PATH) return false;
+  const q = parsedUrl.searchParams;
+  return q.get('format') === 'json' && q.has('feed') && q.has('auth');
 }
 
 function isIPv6(s) {
