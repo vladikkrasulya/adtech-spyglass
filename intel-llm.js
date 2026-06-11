@@ -85,6 +85,7 @@ async function callOllama(prompt, opts) {
     prompt: prompt,
     stream: false,
     format: 'json',
+    think: false,
     options: {
       // Fewer threads = quieter fan; higher = faster. Server-side
       // override via OLLAMA_NUM_THREAD env if user tuned ollama
@@ -743,6 +744,7 @@ function warmupOllama(opts) {
     prompt: 'hi',
     stream: false,
     keep_alive: o.keepAlive || '10m',
+    think: false,
     options: { num_predict: 1, temperature: 0 },
   });
   // Separate AbortController + tighter timeout (5s) than the regular

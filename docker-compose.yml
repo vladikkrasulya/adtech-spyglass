@@ -87,13 +87,10 @@ services:
     networks:
       # Default per-stack network for the Spyglass container itself.
       - default
-      # Phase 7c cross-stack join: lets `http://ollama:11434` resolve to
-      # the ollama container managed by the separate /srv/DATA/Stacks/ollama
-      # compose project. external:true means we ATTACH to its network
-      # rather than try to manage it.
-      - ollama_default
+      # `http://ollama:11434` resolves via kt-shared → ollama-router → gpu.
+      # (Legacy ollama_default detached 2026-06-07: CPU-ollama decommissioned,
+      #  that net had no ollama container left — only the router on kt-shared.)
       # Phase C-2 — n8n reaches /api/admin/stats here for the morning brief.
-      # `kt-shared` is the cross-stack hub net used by the rest of the stack.
       - kt-shared
     restart: always
     healthcheck:
@@ -111,7 +108,5 @@ services:
 
 networks:
   default:
-  ollama_default:
-    external: true
   kt-shared:
     external: true
