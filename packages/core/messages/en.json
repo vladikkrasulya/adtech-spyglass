@@ -83,7 +83,7 @@
   "crosscheck.id_mismatch": "ids don't match: request \"{reqId}\", response \"{resId}\". The SSP will drop the bid — id pairing is the auction primary key.",
   "crosscheck.cur_allowed": "Currency \"{cur}\" is within the request's allowed list — fine.",
   "crosscheck.cur_not_in_request": "Response currency \"{cur}\" is not in the request's allowed list {allowed}. The SSP may convert (with a fee) or reject the bid.",
-  "crosscheck.bid.impid_resolved": "Seatbid #{sNum} → bid #{bNum}: impid \"{impid}\" resolved to slot imp.id \"{impId}\".",
+  "crosscheck.bid.impid_resolved": "Seatbid #{sNum} → bid #{bNum}: impid \"{impid}\" resolved to slot imp.id \"{impid}\".",
   "crosscheck.bid.impid_unresolved": "Seatbid #{sNum} → bid #{bNum}: impid \"{impid}\" doesn't match any imp.id in the request. The SSP will drop the bid.",
   "crosscheck.bid.above_floor": "Seatbid #{sNum} → bid #{bNum}: price {price} ≥ floor {floor} — bid clears.",
   "crosscheck.bid.below_floor": "Seatbid #{sNum} → bid #{bNum}: price {price} is below floor {floor} — bid will be rejected.",
