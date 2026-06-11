@@ -324,7 +324,7 @@ Ordered by likelihood it will eventually matter:
 - Not a commitment to legal-cleared real traffic ingest — timeline unknown.
 - Not a commitment to any specific pop-vendor dialect — reactive to corpus, not proactive by market share.
 - Not a SaaS pricing or auth-gated feature plan — all current inspector functionality stays free and anonymous.
-- Not a v1.0.0 stability declaration — project stays 0.x until the multi-section shell is stable and settled.
+- ~~Not a v1.0.0 stability declaration — project stays 0.x until the multi-section shell is stable and settled.~~ **Superseded 2026-06-11: v1.0.0 DECLARED** — Decision A committed, `docs/api-v1.md` contract pinned, friction sweep done (legacy `/stream` page retired → 301 `/live`, stub module removed). The multi-section shell has been stable since Stage 0 shipped; the 0.x caveat served its purpose.
 
 ---
 

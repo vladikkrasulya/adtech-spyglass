@@ -1,0 +1,117 @@
+services:
+  spyglass:
+    container_name: adtech-spyglass
+    build:
+      context: /srv/DATA/Stacks/adtech-spyglass
+      dockerfile: Dockerfile
+      args:
+        # Short git SHA — surfaced via /api/health so we can verify which
+        # commit the deployed image was built from. Compose substitutes
+        # ${BUILD_SHA} from the shell env (or .env file). Pass via:
+        #   BUILD_SHA=$(git rev-parse --short HEAD) docker compose build
+        # Falls back to 'dev' inside the Dockerfile if unset.
+        BUILD_SHA: ${BUILD_SHA:-dev}
+    env_file:
+      # Phase 8: NODE_ENV, RESEND_API_KEY, EMAIL_FROM, EMAIL_TOKEN_SECRET,
+      # PUBLIC_BASE_URL. File is gitignored; .env.example documents the keys.
+      - .env
+    environment:
+      # Phase 7c — Spyglass Intelligence bridge. The ollama service lives
+      # on the `ollama_default` network (managed by /srv/DATA/Stacks/ollama/);
+      # we attach below so DNS-by-name resolution (`http://ollama:11434`)
+      # works.
+      # Model history:
+      #   2026-05-08: gemma3:4b (Phase 7c initial)
+      #   2026-05-11: → qwen2.5:3b (gemma3:4b flaky at 3-parallel, 22s worst case;
+      #                qwen 16.8s, better JSON-mode reliability, 1.9GB on disk)
+      #   2026-05-21: → gemma4:e2b (Gemma 4 released April 2026 — runs the same
+      #                3-parallel bid-sim 23% faster than qwen at 13.9 tok/s vs
+      #                12.0, peaks at 8.44GiB RSS though, so ollama mem limit
+      #                bumped 10G → 12G in parallel commit. JSON-mode 3/3 ok
+      #                under both sequential and parallel patterns.)
+      #   (undated): → qwen3.5:4b (switch not documented in this history)
+      #   2026-06-07: → gemma4:e4b (8B / effective-4B, Q4_K_M; caps: vision +
+      #                audio + tools + thinking). Benchmarked on vkbox A2000 6GB:
+      #                3.2GB @ 32K ctx, 100% GPU, 47 tok/s, ~2.6GB headroom.
+      #                Cleaner Ukrainian than qwen3.5:4b (qwen emitted a Cyrillic
+      #                glitch on a reasoning prompt); JSON-mode scoring at parity.
+      #                ollama-router's sole backend is vkbox, so this runs on GPU.
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=gemma4:e4b
+    ports:
+      - '127.0.0.1:8090:3000'
+    volumes:
+      # Live-edit assets: HTML/CSS/JS changes apply on browser refresh, no rebuild.
+      # Not :ro because design-system.css is bind-mounted on top — Docker can't
+      # create a sub-mountpoint inside a read-only parent.
+      - ./public:/app/public
+      # Shared design-system from portal — single source of truth for tokens/primitives.
+      - /srv/DATA/Stacks/kyivtech-portal/public/design-system.css:/app/public/design-system.css:ro
+      # Validator core — bind-mounted so rule changes take effect on `compose
+      # restart` (no `compose build` needed). Without this every validator
+      # tweak required a full image rebuild, slowing iteration to minutes.
+      # :ro because nothing in the container should write to it.
+      - ./packages:/app/packages:ro
+      # HTTP route handlers — bind-mounted same as packages/ so handler edits
+      # take effect on `compose restart` without rebuild. Added 2026-05-21
+      # alongside the URL-style request decoder skeleton (modules/analyze
+      # gained string-bidReq support that was previously baked into the
+      # image). :ro because the container never writes here.
+      - ./modules:/app/modules:ro
+      # server.js — bind-mounted so route table edits take effect on
+      # `compose restart` (no rebuild). Required by Stage 0 multi-section
+      # shell (ROADMAP.md 2026-05-23) — frequent resolveLocaleRoute()
+      # edits otherwise needed a 60s rebuild each. :ro because nothing
+      # in the container should write to it.
+      - ./server.js:/app/server.js:ro
+      # intel-llm.js — Phase 7c LLM bridge. Bind-mounted same as packages
+      # so prompt edits take effect on `compose restart` without rebuild.
+      - ./intel-llm.js:/app/intel-llm.js:ro
+      # Phase 11 — event-log CH backend. Bind-mounted for fast iteration.
+      - ./lib/event-log.js:/app/lib/event-log.js:ro
+      # Stage 5 — validation-log CH writer (stream + analyze hooks).
+      - ./lib/validation-log.js:/app/lib/validation-log.js:ro
+      # Stage blog — news crawler RSS ingester (blog_drafts).
+      - ./lib/news-crawler.js:/app/lib/news-crawler.js:ro
+      # Synthetic specimen corpus. `/api/v1/sample` reads this directory
+      # at request time; bind-mounting means new sample files appear
+      # without `compose up --build`. Was baked-in until 2026-05-09 — see
+      # docs/ARCHMAP.md §4 for the trap that motivated this.
+      - ./samples:/app/samples:ro
+      # Blog editorial markdown posts — bind-mounted so new posts and
+      # promoted drafts appear without a rebuild. NOT :ro because the
+      # promote action writes new .md files.
+      - ./content/posts:/app/content/posts
+      # Persistent SQLite store (partners + saved bid samples).
+      - /srv/DATA/AppData/adtech-spyglass:/data
+    networks:
+      # Default per-stack network for the Spyglass container itself.
+      - default
+      # Phase 7c cross-stack join: lets `http://ollama:11434` resolve to
+      # the ollama container managed by the separate /srv/DATA/Stacks/ollama
+      # compose project. external:true means we ATTACH to its network
+      # rather than try to manage it.
+      - ollama_default
+      # Phase C-2 — n8n reaches /api/admin/stats here for the morning brief.
+      # `kt-shared` is the cross-stack hub net used by the rest of the stack.
+      - kt-shared
+    restart: always
+    healthcheck:
+      # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).
+      # GET (not --spider/HEAD); Spyglass returns 404 on HEAD.
+      test: ['CMD-SHELL', 'wget -qO- --tries=1 --timeout=3 http://127.0.0.1:3000/ > /dev/null']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+networks:
+  default:
+  ollama_default:
+    external: true
+  kt-shared:
+    external: true

@@ -2,8 +2,8 @@
    public/shell-boot.js — Stage 0 SPA shell orchestrator.
 
    Responsibilities:
-     1. Register inspector + 6 stub section modules with the
-        existing core/registry.js.
+     1. Register the section modules (lazy) with the existing
+        core/registry.js.
      2. Mount nav (sidebar) and topbar chrome — once, outside the
         section lifecycle.
      3. Intercept clicks on internal <a> tags: pushState + activate
@@ -27,14 +27,8 @@ import * as registry from '/core/registry.js';
 // activation via registry.registerLazy() in registerSections(). This keeps the
 // boot payload to chrome + the one active section; the inspector's ~65 KB gz
 // spyglass.app.js no longer loads on /library, /blog, /docs, etc.
-import { createStubModule } from '/modules/stub/index.js';
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
-
-// ── Stub section content (one-paragraph "what will be here" copy) ──
-// Locked to ROADMAP.md stage descriptions. Keep these short — the user
-// should immediately see WHAT and WHEN, not read a novel.
-const STUB_SECTIONS = [];
 
 // ── Initial dependency loading ───────────────────────────────────
 async function loadStylesheet(href) {
@@ -77,13 +71,9 @@ function registerSections() {
 
   // Additional routes pointing at already-registered module ids.
   registry.registerRoute('/docs/findings', 'docs');
-  // Legacy /stream.html URL alias → keep existing share-links working.
-  registry.registerRoute('/stream.html', 'stream');
-
-  // Stub sections (yet to be built — see ROADMAP).
-  for (const cfg of STUB_SECTIONS) {
-    registry.register(createStubModule(cfg));
-  }
+  // (Legacy /stream.html + /stream are 301-redirected to /live server-side —
+  // they never reach the client router. Stub sections retired at v1.0.0:
+  // every nav section is a real module now.)
 }
 
 // ── Activation by URL ────────────────────────────────────────────
@@ -319,7 +309,6 @@ async function boot() {
     await Promise.all([
       loadStylesheet('/modules/nav/nav.css'),
       loadStylesheet('/modules/topbar/topbar.css'),
-      loadStylesheet('/modules/stub/stub.css'),
     ]);
   } catch (e) {
     console.warn('[shell-boot] chrome CSS failed to load:', e.message);

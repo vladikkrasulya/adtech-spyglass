@@ -324,9 +324,10 @@ function resolveLocaleRoute(reqUrl) {
   const ruHash = u.match(/^\/ru\/r\/([0-9a-f]{8,12})$/i);
   if (ruHash) return { file: '/index.ru.html' };
 
-  // Existing SSR pages (preserve behaviour) — stream, about, account
-  if (u === '/stream') return { file: '/stream.html' };
-  if (u === '/stream.html') return { redirect: '/stream' };
+  // Legacy standalone stream page retired (Decision A 2026-06-11): /live is
+  // the only stream surface. 301 keeps old share-links working.
+  if (u === '/stream') return { redirect: '/live' };
+  if (u === '/stream.html') return { redirect: '/live' };
   if (u === '/playground' || u === '/playground.html') return { redirect: '/inspector' };
   if (u === '/about') return { file: '/about.en.html' };
   if (u === '/about.html') return { redirect: '/about' };

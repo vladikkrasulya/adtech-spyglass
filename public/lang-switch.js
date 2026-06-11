@@ -407,7 +407,6 @@
     '/',
     '/about',
     '/account',
-    '/stream',
     // Stage 0 multi-section SPA sections (ROADMAP.md 2026-05-23):
     '/inspector',
     '/live',

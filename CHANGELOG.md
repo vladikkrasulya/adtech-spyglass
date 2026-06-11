@@ -19,6 +19,25 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.0.0 — inspector-first declared stable (2026-06-11)
+
+The 0.x era ends. Decision A (v0.57.1) committed the product surface; the
+public API contract is pinned in `docs/api-v1.md`; this release closes the
+friction sweep and declares the contract stable. No breaking changes — the
+MAJOR bump is the stability declaration itself.
+
+- **Legacy `/stream` page retired.** `public/stream.html` (own canonical,
+  pre-SPA standalone page) was a second stream surface contradicting
+  Decision A. `/stream` + `/stream.html` now 301 → `/live`; old share-links
+  keep working. `KNOWN_LANDINGS` and the client-side `/stream.html` route
+  alias dropped.
+- **Stub module removed.** `STUB_SECTIONS` had been empty since every nav
+  section became a real module; the dead "Coming soon" module and its
+  `stub.css` (loaded on every page) are gone. Stale shell-boot header comment
+  fixed.
+- Versioning note: app declares 1.0.0; `@kyivtech/spyglass-core` (0.27.x) and
+  `@ortbtools/cli` (0.1.x) keep their own SemVer tracks.
+
 ### v0.57.1 — docs: Decision A — inspector-first committed + public API contract (2026-06-11)
 
 The primary-surface question open since 2026-05-12 is closed: **Spyglass is the
