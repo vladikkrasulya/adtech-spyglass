@@ -47,23 +47,23 @@ const L = {
     ru: 'Покрытие спецификаций, референс finding-ID, API-гайд и архитектурный обзор.',
   },
   welcomeTitle: {
-    en: 'Welcome to Spyglass Docs',
-    uk: 'Ласкаво просимо до документації Spyglass',
-    ru: 'Добро пожаловать в документацию Spyglass',
+    en: 'Welcome to ortbtools Docs',
+    uk: 'Ласкаво просимо до документації ortbtools',
+    ru: 'Добро пожаловать в документацию ortbtools',
   },
   welcomeBody: {
-    en: 'Spyglass is an OpenRTB 2.x / 3.0 inspector and validator. Use the cards below to navigate documentation topics.',
-    uk: 'Spyglass — інспектор і валідатор OpenRTB 2.x / 3.0. Використовуй картки нижче для навігації темами документації.',
-    ru: 'Spyglass — инспектор и валидатор OpenRTB 2.x / 3.0. Используй карточки ниже для навигации по темам документации.',
+    en: 'ortbtools is an OpenRTB 2.x / 3.0 inspector and validator. Use the cards below to navigate documentation topics.',
+    uk: 'ortbtools — інспектор і валідатор OpenRTB 2.x / 3.0. Використовуй картки нижче для навігації темами документації.',
+    ru: 'ortbtools — инспектор и валидатор OpenRTB 2.x / 3.0. Используй карточки ниже для навигации по темам документации.',
   },
   topicsHeading: { en: 'Topics', uk: 'Теми', ru: 'Темы' },
 
   // Topic cards
   cardAboutTitle: { en: 'About', uk: 'Про проєкт', ru: 'О проекте' },
   cardAboutDesc: {
-    en: 'Full introduction: what Spyglass is, which spec versions it covers, and how it fits your stack.',
-    uk: 'Повне введення: що таке Spyglass, які версії специфікацій підтримуються і як вписується у твій стек.',
-    ru: 'Полное введение: что такое Spyglass, какие версии спецификаций поддерживаются и как вписывается в твой стек.',
+    en: 'Full introduction: what ortbtools is, which spec versions it covers, and how it fits your stack.',
+    uk: 'Повне введення: що таке ortbtools, які версії специфікацій підтримуються і як вписується у твій стек.',
+    ru: 'Полное введение: что такое ortbtools, какие версии спецификаций поддерживаются и как вписывается в твой стек.',
   },
   cardAboutAction: {
     en: 'Open full docs →',

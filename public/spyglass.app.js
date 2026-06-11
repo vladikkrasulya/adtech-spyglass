@@ -1,5 +1,5 @@
 /* ============================================================
-   Spyglass v8 — OpenRTB inspector (IAB 2.5 / 2.6 / 3.0).
+   ortbtools v8 — OpenRTB inspector (IAB 2.5 / 2.6 / 3.0).
    - Inspector: parses BidRequest, shows imp slots, types, floors
    - Validation: structural checks + version detection + crosscheck
    - Diff: deep diff between request and response
@@ -2348,7 +2348,7 @@ export async function mountInspector(root, ctx) {
             at: new Date().toISOString(),
           };
 
-          // Phase 7a — Spyglass Intelligence side-channel observer.
+          // Phase 7a — ortbtools Intelligence side-channel observer.
           // Fire-and-forget: observe() walks ext-fields of req+res into
           // the local IndexedDB index, gated by validation status. Errors
           // are swallowed inside the module; analyze flow is unaffected.
@@ -3388,7 +3388,7 @@ export async function mountInspector(root, ctx) {
   }
 
   // ── Finding-detail expand ────────────────────────────────────────────
-  // Walk a Spyglass-style JSON path ('imp[0].banner.w', 'seatbid[1].bid[0]
+  // Walk a ortbtools-style JSON path ('imp[0].banner.w', 'seatbid[1].bid[0]
   // .price', 'regs.gdpr_consent') against the parsed bidReq/bidRes object
   // and return the value at that path. Returns undefined if the path
   // can't be resolved.
@@ -3528,7 +3528,7 @@ export async function mountInspector(root, ctx) {
 
   // ── Tab-title status ─────────────────────────────────────────────────
   // Reflect analysis verdict in document.title so users running multiple
-  // Spyglass tabs see at a glance which one ended in errors. Reset on
+  // ortbtools tabs see at a glance which one ended in errors. Reset on
   // first input change after analysis (the verdict is stale once user
   // starts editing).
   const _baseTabTitle = document.title;
@@ -3541,7 +3541,7 @@ export async function mountInspector(root, ctx) {
     else if (errs) badge = '⚠ ' + errs + ' error' + (errs === 1 ? '' : 's');
     else if (warns) badge = '! ' + warns + ' warn' + (warns === 1 ? '' : 's');
     else badge = '✓ clean';
-    document.title = 'Spyglass · ' + badge;
+    document.title = 'ortbtools · ' + badge;
   }
   function resetTabStatus() {
     if (typeof document === 'undefined') return;

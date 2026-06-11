@@ -43,9 +43,9 @@ function localePrefix(lang) {
 const L = {
   title: { en: 'Dialect catalog', uk: 'Каталог діалектів', ru: 'Каталог диалектов' },
   subtitle: {
-    en: 'Built-in validation overlays and the user dialect builder — tune Spyglass to your traffic.',
-    uk: 'Вбудовані overlay-валідатори та конструктор діалектів — налаштуй Spyglass під свій трафік.',
-    ru: 'Встроенные overlay-валидаторы и конструктор диалектов — настрой Spyglass под свой трафик.',
+    en: 'Built-in validation overlays and the user dialect builder — tune ortbtools to your traffic.',
+    uk: 'Вбудовані overlay-валідатори та конструктор діалектів — налаштуй ortbtools під свій трафік.',
+    ru: 'Встроенные overlay-валидаторы и конструктор диалектов — настрой ortbtools под свой трафик.',
   },
 
   introTitle: {
@@ -54,9 +54,9 @@ const L = {
     ru: 'Что такое диалекты?',
   },
   introBody: {
-    en: 'A dialect is a named validation overlay that extends or replaces the canonical IAB OpenRTB ruleset. The IAB baseline covers the public spec; dialect overlays add vendor-specific rules, suppress irrelevant warnings, or introduce new finding IDs that only make sense for a given traffic type. Select a dialect in the inspector footer — Spyglass activates the corresponding overlay alongside the base rules.',
-    uk: 'Діалект — це іменований validation overlay, який розширює або замінює канонічний IAB OpenRTB ruleset. Базовий IAB охоплює публічну специфікацію; overlay діалекту додає вендор-специфічні правила, пригнічує нерелевантні попередження або вводить нові finding ID, що мають сенс лише для конкретного типу трафіку. Вибери діалект у підвалі інспектора — Spyglass активує відповідний overlay разом з базовими правилами.',
-    ru: 'Диалект — это именованный validation overlay, который расширяет или заменяет канонический IAB OpenRTB ruleset. Базовый IAB покрывает публичную спецификацию; overlay диалекта добавляет вендор-специфичные правила, подавляет нерелевантные предупреждения или вводит новые finding ID, которые имеют смысл только для конкретного типа трафика. Выбери диалект в подвале инспектора — Spyglass активирует соответствующий overlay вместе с базовыми правилами.',
+    en: 'A dialect is a named validation overlay that extends or replaces the canonical IAB OpenRTB ruleset. The IAB baseline covers the public spec; dialect overlays add vendor-specific rules, suppress irrelevant warnings, or introduce new finding IDs that only make sense for a given traffic type. Select a dialect in the inspector footer — ortbtools activates the corresponding overlay alongside the base rules.',
+    uk: 'Діалект — це іменований validation overlay, який розширює або замінює канонічний IAB OpenRTB ruleset. Базовий IAB охоплює публічну специфікацію; overlay діалекту додає вендор-специфічні правила, пригнічує нерелевантні попередження або вводить нові finding ID, що мають сенс лише для конкретного типу трафіку. Вибери діалект у підвалі інспектора — ortbtools активує відповідний overlay разом з базовими правилами.',
+    ru: 'Диалект — это именованный validation overlay, который расширяет или заменяет канонический IAB OpenRTB ruleset. Базовый IAB покрывает публичную спецификацию; overlay диалекта добавляет вендор-специфичные правила, подавляет нерелевантные предупреждения или вводит новые finding ID, которые имеют смысл только для конкретного типа трафика. Выбери диалект в подвале инспектора — ortbtools активирует соответствующий overlay вместе с базовыми правилами.',
   },
 
   builtinHeading: {

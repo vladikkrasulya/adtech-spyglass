@@ -1,10 +1,10 @@
 /* ============================================================
-   modules/share/index.js — Spyglass fragment-encoded permalink.
+   modules/share/index.js — ortbtools fragment-encoded permalink.
 
    Encodes the current BidRequest / BidResponse panes into a hash
    fragment URL so that the link, when opened, restores both panes
    and re-runs validation. Hash fragments NEVER reach the server,
-   which preserves Spyglass's zero-knowledge posture.
+   which preserves ortbtools's zero-knowledge posture.
 
    URL shape: spyglass.kyivtech.com.ua/?#req=<b64url(deflate(json))>&res=<...>
 

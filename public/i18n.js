@@ -1,5 +1,5 @@
 /* ============================================================
-   Spyglass frontend i18n (Phase 3 — partial).
+   ortbtools frontend i18n (Phase 3 — partial).
    - `t(key, params)` resolves a UI string in the active locale.
    - Active locale: localStorage['kt-lang'] (uk | en); default 'uk'.
    - Missing keys fall back: en → uk → '[key]' placeholder.
@@ -970,9 +970,9 @@
     'cabinet.pill.items': { en: '{n} items', uk: '{n} записів', ru: '{n} записей' },
     'cabinet.pill.empty': { en: 'empty', uk: 'порожньо', ru: 'пусто' },
     'cabinet.recent.empty': {
-      en: 'No saved samples yet — go to Spyglass and save your first bid.',
-      uk: 'Збережених запитів ще немає — перейди у Spyglass і збережи перший bid.',
-      ru: 'Сохранённых запросов ещё нет — перейди в Spyglass и сохрани первый bid.',
+      en: 'No saved samples yet — go to ortbtools and save your first bid.',
+      uk: 'Збережених запитів ще немає — перейди у ortbtools і збережи перший bid.',
+      ru: 'Сохранённых запросов ещё нет — перейди в ortbtools и сохрани первый bid.',
     },
     'cabinet.recent.loading': { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
     'cabinet.untitled': { en: '(untitled)', uk: '(без назви)', ru: '(без названия)' },

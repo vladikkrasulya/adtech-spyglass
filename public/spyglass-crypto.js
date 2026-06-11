@@ -1,5 +1,5 @@
 /* ============================================================
-   Spyglass crypto helpers — Web Crypto API only, no deps.
+   ortbtools crypto helpers — Web Crypto API only, no deps.
    Browser-side primitives for the zero-knowledge encryption layer:
 
      - PBKDF2-SHA-256 (600k iters) password → KEK (key encryption key)

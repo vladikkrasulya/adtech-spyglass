@@ -1,5 +1,5 @@
 /* ============================================================
-   modules/embed/index.js — Spyglass embed mode.
+   modules/embed/index.js — ortbtools embed mode.
 
    Two roles:
 
@@ -54,7 +54,7 @@
       '"\n' +
       '  style="border:1px solid #ccc;border-radius:8px;max-width:100%"\n' +
       '  loading="lazy"\n' +
-      '  title="Spyglass · OpenRTB inspector"\n' +
+      '  title="ortbtools · OpenRTB inspector"\n' +
       '></iframe>'
     );
   }

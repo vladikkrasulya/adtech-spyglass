@@ -1,5 +1,5 @@
 /* ============================================================
-   Spyglass creative-probe — self-contained instrumentation script
+   ortbtools creative-probe — self-contained instrumentation script
    that runs INSIDE the sandboxed iframe, BEFORE the creative HTML.
 
    Purpose: detect click-skim and auto-navigate behaviour without

@@ -23,9 +23,9 @@
         ru: 'Встроить в другой сайт',
       },
       'embed.body': {
-        uk: 'Вставиш цей сніпет у блог, Notion або документ — і він покаже інтерактивний Spyglass з поточним bid. Payload зашитий у hash-фрагмент URL — на сервер не йде.',
-        en: 'Paste this snippet into a blog, Notion or doc — it will render an interactive Spyglass view with the current bid. The payload is in the URL hash fragment — never reaches the server.',
-        ru: 'Вставь этот сниппет в блог, Notion или документ — и он покажет интерактивный Spyglass с текущим bid. Payload зашит в hash-фрагменте URL — на сервер не идёт.',
+        uk: 'Вставиш цей сніпет у блог, Notion або документ — і він покаже інтерактивний ortbtools з поточним bid. Payload зашитий у hash-фрагмент URL — на сервер не йде.',
+        en: 'Paste this snippet into a blog, Notion or doc — it will render an interactive ortbtools view with the current bid. The payload is in the URL hash fragment — never reaches the server.',
+        ru: 'Вставь этот сниппет в блог, Notion или документ — и он покажет интерактивный ortbtools с текущим bid. Payload зашит в hash-фрагменте URL — на сервер не идёт.',
       },
       'embed.label.height': {
         uk: 'Висота (px)',

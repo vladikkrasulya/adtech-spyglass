@@ -83,7 +83,7 @@
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
-      req.onblocked = () => reject(new Error('IDB blocked — close other Spyglass tabs'));
+      req.onblocked = () => reject(new Error('IDB blocked — close other ortbtools tabs'));
     });
     // Defensive: on any rejection, drop the cached promise so the next
     // call retries instead of locking us into a permanent failure.

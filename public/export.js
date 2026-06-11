@@ -1,5 +1,5 @@
 /* ============================================================
-   Spyglass JSON-bundle export.
+   ortbtools JSON-bundle export.
 
    Reads the BidRequest / BidResponse panes + the latest analysis result
    stashed by spyglass.app.js (window.__spyglassLast), packages them

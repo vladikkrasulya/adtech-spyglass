@@ -1,5 +1,5 @@
 /* ============================================================
-   public/modules/intel/index.js — Spyglass Intelligence entry.
+   public/modules/intel/index.js — ortbtools Intelligence entry.
 
    Phase 7a: loads storage + observer + banner, wires init.
    spyglass.app.js calls window.SpyglassIntel.observe(payload, validation)

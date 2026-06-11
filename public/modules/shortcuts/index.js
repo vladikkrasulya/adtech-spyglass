@@ -1,5 +1,5 @@
 /* ============================================================
-   modules/shortcuts/index.js — Spyglass keyboard shortcuts + cheat-sheet modal.
+   modules/shortcuts/index.js — ortbtools keyboard shortcuts + cheat-sheet modal.
 
    Bindings:
      ?              → open cheat-sheet (skipped while typing)

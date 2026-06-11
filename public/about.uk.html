@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Як користуватися Spyglass — документація валідатора OpenRTB</title>
+    <title>Як користуватися ortbtools — документація валідатора OpenRTB</title>
     <meta
       name="description"
-      content="Документація Spyglass: як працює валідатор OpenRTB, що аналізує, що залишається на пристрої (100% локально), що зберігається із шифруванням (ключ є лише у вашому браузері). oRTB 2.5/2.6/3.0, Native, VAST."
+      content="Документація ortbtools: як працює валідатор OpenRTB, що аналізує, що залишається на пристрої (100% локально), що зберігається із шифруванням (ключ є лише у вашому браузері). oRTB 2.5/2.6/3.0, Native, VAST."
     />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href="https://ortbtools.com/uk/about" />
@@ -17,7 +17,7 @@
 
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="ortbtools.com" />
-    <meta property="og:title" content="Документація Spyglass — валідатор OpenRTB" />
+    <meta property="og:title" content="Документація ortbtools — валідатор OpenRTB" />
     <meta
       property="og:description"
       content="Як працює валідатор OpenRTB, що аналізує, що залишається у браузері, а що зберігається з наскрізним шифруванням."
@@ -30,14 +30,14 @@
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="Spyglass — OpenRTB-інспектор. Встав bid, побачиш правду."
+      content="ortbtools — OpenRTB-інспектор. Встав bid, побачиш правду."
     />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Документація Spyglass — валідатор OpenRTB" />
+    <meta name="twitter:title" content="Документація ortbtools — валідатор OpenRTB" />
     <meta
       name="twitter:description"
-      content="Документація Spyglass — безкоштовний валідатор OpenRTB, що працює повністю у браузері."
+      content="Документація ortbtools — безкоштовний валідатор OpenRTB, що працює повністю у браузері."
     />
     <meta name="twitter:image" content="https://ortbtools.com/og-image.png" />
 
@@ -45,13 +45,13 @@
       {
         "@context": "https://schema.org",
         "@type": "TechArticle",
-        "headline": "Як користуватися Spyglass",
-        "description": "Документація OpenRTB-інспектора Spyglass.",
+        "headline": "Як користуватися ortbtools",
+        "description": "Документація OpenRTB-інспектора ortbtools.",
         "url": "https://ortbtools.com/uk/about",
         "inLanguage": "uk",
         "isPartOf": {
           "@type": "WebApplication",
-          "name": "Spyglass · OpenRTB Inspector",
+          "name": "ortbtools · OpenRTB Inspector",
           "url": "https://ortbtools.com/"
         }
       }
@@ -392,7 +392,7 @@
       <div class="kt-container kt-topnav-inner">
         <a href="/uk/" class="kt-brand">
           <span class="kt-brand-spark">K</span>
-          <span>spyglass · docs</span>
+          <span>ortbtools · docs</span>
         </a>
         <nav class="kt-topnav-links">
           <a href="#whats-new">Що нового</a>
@@ -414,7 +414,7 @@
             <a href="/ru/about" role="menuitem" lang="ru">RU · Русский</a>
           </div>
         </details>
-        <a href="/uk/" class="btn btn-ghost btn-sm">← Spyglass</a>
+        <a href="/uk/" class="btn btn-ghost btn-sm">← ortbtools</a>
       </div>
     </header>
 
@@ -422,7 +422,7 @@
       <div class="kt-container">
         <div class="doc-prose">
           <span class="eyebrow">docs · v0.52.0</span>
-          <h1 style="margin-top: var(--space-3)">Як користуватися Spyglass</h1>
+          <h1 style="margin-top: var(--space-3)">Як користуватися ortbtools</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             Приватний інспектор OpenRTB-трафіку. Вставив JSON, отримав розбір: чи правильно
             сформований запит/відповідь, які поля обов'язкові, чи проходить crosscheck
@@ -444,7 +444,7 @@
 
           <h3>🪞 Дзеркало (Mirror) — еталонна пара одним кліком</h3>
           <p>
-            Натисни <strong>дзеркало ↔</strong> у шапці (або hotkey <code>M</code>) — Spyglass
+            Натисни <strong>дзеркало ↔</strong> у шапці (або hotkey <code>M</code>) — ortbtools
             згенерує канонічну пару до твого вставленого payload-у. Якщо вставив BidRequest —
             отримаєш мінімально-валідну BidResponse. Якщо BidResponse — згенерує запит, в якому ця
             відповідь би пройшла. Результат самоперевіряється через існуючий цикл validate() +
@@ -528,7 +528,7 @@
 
           <hr />
 
-          <h2 id="use">Що Spyglass вміє</h2>
+          <h2 id="use">Що ortbtools вміє</h2>
 
           <h3>Розбір BidRequest / BidResponse</h3>
           <ul>
@@ -585,14 +585,14 @@
 
           <h3>Ad preview</h3>
           <p>
-            Якщо в <code>bid.adm</code> є HTML-креатив — Spyglass рендерить його у sandboxed iframe
+            Якщо в <code>bid.adm</code> є HTML-креатив — ortbtools рендерить його у sandboxed iframe
             (<code>sandbox="allow-scripts"</code>, без <code>allow-same-origin</code>). Бачиш як
             виглядає, без ризику для своєї сесії.
           </p>
 
           <h3>Behavior tab — детекція fraud у креативі</h3>
           <p>
-            Spyglass рендерить кожен креатив у sandboxed iframe з instrumentation-probe-ом
+            ortbtools рендерить кожен креатив у sandboxed iframe з instrumentation-probe-ом
             всередині. Probe ловить 11 типів підозрілої поведінки — від невидимих клік-пасток до
             зависання головного потоку — і вкладка <strong>Behavior</strong> поряд з Validation /
             Crosscheck показує структуровані знахідки із severity та URL призначення. Деталі
@@ -639,7 +639,7 @@
 
           <h3>Підтримувані формати реклами</h3>
           <p>
-            Spyglass розпізнає формат payload-у і вішає кольорові chip-и (синій — формат, зелений —
+            ortbtools розпізнає формат payload-у і вішає кольорові chip-и (синій — формат, зелений —
             контекст, бурштиновий — протокол) у лівій панелі підсумку:
           </p>
           <ul>
@@ -666,19 +666,19 @@
             </li>
           </ul>
 
-          <h3>Spyglass Intelligence — локальний AI-асистент</h3>
+          <h3>ortbtools Intelligence — локальний AI-асистент</h3>
           <p>
-            Якщо адмін Spyglass підключив локальний
+            Якщо адмін ortbtools підключив локальний
             <a href="https://github.com/ollama/ollama" target="_blank" rel="noopener">Ollama</a> з
             моделлю <code>gemma4:e2b</code> — ти отримуєш AI-помічника, який вміє
             <strong>називати кластери нових полів</strong> у Discovery-режимі та пояснювати
             призначення окремих <code>ext.*</code>-полів. Все працює
-            <strong>на тій самій машині, що Spyglass</strong>, без публічного інтернету:
+            <strong>на тій самій машині, що ortbtools</strong>, без публічного інтернету:
           </p>
           <ul>
             <li>
               <strong>100% локально</strong> — модель крутиться у Docker-контейнері поряд із
-              Spyglass. Жоден токен не виходить за межі LAN.
+              ortbtools. Жоден токен не виходить за межі LAN.
             </li>
             <li>
               <strong>Тільки шляхи полів</strong> — у промпт ніколи не потрапляють
@@ -696,13 +696,13 @@
             </li>
             <li>
               <strong>Fail-open</strong> — якщо Ollama вимкнено чи ламається, AI-кнопки тихо
-              ховаються. Решта Spyglass працює як завжди. Без AI втрачаєш лише авто-іменування
+              ховаються. Решта ortbtools працює як завжди. Без AI втрачаєш лише авто-іменування
               кластерів — все інше працює.
             </li>
           </ul>
 
           <h3>Safe Demo Mode — блюр для скріншотів</h3>
-          <p>Додаєш <code>?demo=safe</code> до URL — і Spyglass:</p>
+          <p>Додаєш <code>?demo=safe</code> до URL — і ortbtools:</p>
           <ul>
             <li>Накладає CSS-blur на вікно прев'ю креативу (видно силует, не видно змісту)</li>
             <li>
@@ -721,7 +721,7 @@
 
           <h2 id="layers">Як працює аналіз — три шари</h2>
           <p style="font-size: var(--fs-lg); color: var(--text)">
-            Spyglass дивиться на твій payload одночасно з трьох ракурсів. Кожен шар відповідає на
+            ortbtools дивиться на твій payload одночасно з трьох ракурсів. Кожен шар відповідає на
             своє питання; разом вони дають повну картину.
           </p>
 
@@ -773,7 +773,7 @@
 
           <h3>Як це працює</h3>
           <p>
-            Spyglass рендерить креатив у sandboxed iframe з
+            ortbtools рендерить креатив у sandboxed iframe з
             <code>sandbox="allow-scripts"</code> — без <code>allow-same-origin</code>, без
             <code>allow-top-navigation</code>, без <code>allow-popups</code>. Цього достатньо щоб
             <em>заблокувати</em> більшість зловмисних дій. Але блокування ≠ видимість: креатив, який
@@ -906,7 +906,7 @@
 
           <hr />
 
-          <h2 id="wont">Чого Spyglass <strong>не робить</strong></h2>
+          <h2 id="wont">Чого ortbtools <strong>не робить</strong></h2>
           <table class="doc-table">
             <thead>
               <tr>
@@ -982,7 +982,7 @@
 
           <hr />
 
-          <h2 id="data">Які дані Spyglass використовує для аналізу</h2>
+          <h2 id="data">Які дані ortbtools використовує для аналізу</h2>
 
           <h3>Локально (in-process, на нашому сервері)</h3>
           <ol>
@@ -1242,7 +1242,7 @@ findings[]: { id, level, path, params, msg, specRef }
 
           <h2 id="sources">Джерела</h2>
           <p>
-            Spyglass — приватний проєкт з відкритим кодом. Правила валідації виведено з публічно
+            ortbtools — приватний проєкт з відкритим кодом. Правила валідації виведено з публічно
             доступної документації постачальників. Якщо хочеш копнути глибше в конкретний формат —
             ось першоджерела:
           </p>
@@ -1278,7 +1278,7 @@ findings[]: { id, level, path, params, msg, specRef }
             <li>
               <strong>Vendor JSON feed (push + клікандер)</strong> — single-bid push-масив або
               <code>{result: {listing: [...]}}</code> клікандер-обгортка. Структура різна у різних
-              vendors; Spyglass визначає її з кореня відповіді.
+              vendors; ortbtools визначає її з кореня відповіді.
             </li>
             <li><strong>Value-feed (proprietary RTB)</strong> — format reference (private)</li>
             <li><strong>Bid-price feed (per-format)</strong> — format reference (private)</li>
@@ -1313,7 +1313,7 @@ findings[]: { id, level, path, params, msg, specRef }
             <a href="mailto:hi@ortbtools.com">hi@ortbtools.com</a>.
           </p>
           <p>
-            Spyglass — це не комерційний продукт. Це open-tools, що допомагають розбиратись з
+            ortbtools — це не комерційний продукт. Це open-tools, що допомагають розбиратись з
             OpenRTB чесно і прозоро. Якщо щось корисне — користуйся. Якщо знайшов помилку — напиши,
             виправлю.
           </p>
@@ -1328,7 +1328,7 @@ findings[]: { id, level, path, params, msg, specRef }
             "
           >
             <span data-spyglass-version>v1.0.1</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
-            4.x · <a href="/uk/" style="color: var(--text-dim)">↗ Spyglass</a> ·
+            4.x · <a href="/uk/" style="color: var(--text-dim)">↗ ortbtools</a> ·
             <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>
         </div>
