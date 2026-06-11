@@ -251,7 +251,12 @@ async function fetchSavedState(signal) {
   }
 }
 
-async function copySampleToClipboard(slug, signal, toast) {
+const COPY_TOAST = {
+  ok: { en: '✓ Copied', uk: '✓ Скопійовано', ru: '✓ Скопировано' },
+  err: { en: 'Copy failed: ', uk: 'Помилка копіювання: ', ru: 'Ошибка копирования: ' },
+};
+
+async function copySampleToClipboard(slug, signal, toast, lang) {
   try {
     const r = await fetch(`/api/v1/sample?type=${encodeURIComponent(slug)}`, { signal });
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -264,9 +269,9 @@ async function copySampleToClipboard(slug, signal, toast) {
       2,
     );
     await navigator.clipboard.writeText(text);
-    if (toast) toast('✓ скопійовано', 'success');
+    if (toast) toast(pick(COPY_TOAST.ok, lang), 'success');
   } catch (e) {
-    if (e.name !== 'AbortError' && toast) toast('помилка копіювання: ' + e.message, 'error');
+    if (e.name !== 'AbortError' && toast) toast(pick(COPY_TOAST.err, lang) + e.message, 'error');
   }
 }
 
@@ -337,7 +342,7 @@ export default {
         const btn = e.target.closest('[data-action="copy-sample"]');
         if (!btn) return;
         e.preventDefault();
-        copySampleToClipboard(btn.dataset.slug, ctx.signal, ctx.toast);
+        copySampleToClipboard(btn.dataset.slug, ctx.signal, ctx.toast, lang);
       },
       { signal: ctx.signal },
     );

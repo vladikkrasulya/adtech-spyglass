@@ -1,0 +1,39 @@
+{
+  "_note": "Clean OpenRTB 2.5 Native 1.2 BidRequest — used by the /native landing CTA (?sample=native-clean) and the random sample pool. imp[].native.request is a stringified Native 1.2 markup request with title/img/data assets, each with an id the response must echo back.",
+  "id": "synthetic-native-clean-001",
+  "at": 2,
+  "tmax": 150,
+  "cur": ["USD"],
+  "imp": [
+    {
+      "id": "1",
+      "tagid": "native-feed-card",
+      "bidfloor": 0.5,
+      "bidfloorcur": "USD",
+      "secure": 1,
+      "native": {
+        "ver": "1.2",
+        "request": "{\"native\":{\"ver\":\"1.2\",\"context\":1,\"contextsubtype\":11,\"plcmttype\":4,\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"title\":{\"len\":90}},{\"id\":2,\"required\":1,\"img\":{\"type\":3,\"wmin\":1200,\"hmin\":627}},{\"id\":3,\"required\":1,\"data\":{\"type\":1,\"len\":40}},{\"id\":4,\"required\":0,\"data\":{\"type\":2,\"len\":140}}]}}"
+      }
+    }
+  ],
+  "site": {
+    "id": "native-site-1",
+    "domain": "feed.example",
+    "page": "https://feed.example/article/123",
+    "cat": ["IAB12"],
+    "publisher": { "id": "pub-9", "domain": "feed.example" }
+  },
+  "device": {
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "ip": "203.0.113.7",
+    "geo": { "country": "USA", "type": 2 },
+    "language": "en",
+    "devicetype": 2,
+    "os": "Windows"
+  },
+  "user": { "id": "u-native-001" },
+  "source": { "fd": 1, "tid": "txn-native-001" },
+  "regs": { "ext": { "gdpr": 0 } },
+  "ext": {}
+}

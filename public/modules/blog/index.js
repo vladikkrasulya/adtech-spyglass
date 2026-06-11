@@ -45,6 +45,46 @@ function pick(map, lang) {
   return map[lang] || map[FALLBACK_LANG] || Object.values(map)[0] || '';
 }
 
+// Only http(s) hrefs survive — blocks `javascript:`/`data:` schemes in
+// crawled-source URLs (post.url comes from external RSS). Empty → caller omits link.
+function safeHref(url) {
+  const u = String(url || '').trim();
+  return /^https?:\/\//i.test(u) ? u : '';
+}
+
+// SAFE Markdown → HTML for UNTRUSTED (firehose/crawled) post bodies. Escapes
+// FIRST so any raw HTML/<script> in the body is inert, then applies a small set
+// of inline/block rules on the escaped text. Mirrors lib/seo.js renderBodyHtml
+// so client output matches the server SSR. Trusted editorial posts
+// (source==='markdown', admin-authored via git) get full marked instead.
+function inlineMd(s) {
+  return s
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+    .replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" rel="nofollow noopener">$1</a>',
+    );
+}
+function safeRenderMarkdown(src) {
+  const s = escapeHtml(String(src || '')).trim();
+  if (!s) return '';
+  return s
+    .split(/\n{2,}/)
+    .map((block) => {
+      const b = block.trim();
+      if (!b) return '';
+      const h = b.match(/^(#{1,3})\s+(.*)$/);
+      if (h) {
+        const lvl = Math.min(h[1].length + 1, 4); // # → h2, ## → h3, ### → h4
+        return `<h${lvl}>${inlineMd(h[2])}</h${lvl}>`;
+      }
+      return `<p>${inlineMd(b).replace(/\n/g, '<br />')}</p>`;
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
 function localePrefix(lang) {
   return lang === 'en' ? '' : '/' + lang;
 }
@@ -258,18 +298,21 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
     const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
     const dateStr = formatDate(post.published_at, postLang);
 
-    // Lazy-load marked for markdown rendering
+    // Body rendering by trust level. Trusted editorial posts (source==='markdown',
+    // admin-authored via git) get full marked. Firehose/crawled posts are
+    // UNTRUSTED — render through the escape-first safe renderer so stored
+    // HTML/<script> in a crawled body cannot execute (stored-XSS).
     let bodyHtml = '';
-    try {
-      const markedMod = await import('/vendor/marked.esm.min.js');
-      const marked = markedMod.marked || markedMod.default;
-      bodyHtml = marked(post.body || '');
-    } catch {
-      // Fallback: plain text paragraphs
-      bodyHtml = (post.body || '')
-        .split('\n\n')
-        .map((p) => `<p>${escapeHtml(p.trim())}</p>`)
-        .join('');
+    if (post.source === 'markdown') {
+      try {
+        const markedMod = await import('/vendor/marked.esm.min.js');
+        const marked = markedMod.marked || markedMod.default;
+        bodyHtml = marked(post.body || '');
+      } catch {
+        bodyHtml = safeRenderMarkdown(post.body || '');
+      }
+    } else {
+      bodyHtml = safeRenderMarkdown(post.body || '');
     }
 
     root.innerHTML = `
@@ -282,7 +325,7 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
             <div class="blog-post__meta">
               <time>${escapeHtml(dateStr)}</time>
               <span class="blog-card__lang">${escapeHtml((post.lang || '').toUpperCase())}</span>
-              ${post.url ? `<a class="blog-post__src" href="${escapeHtml(post.url)}" target="_blank" rel="noopener">original ↗</a>` : ''}
+              ${safeHref(post.url) ? `<a class="blog-post__src" href="${escapeHtml(safeHref(post.url))}" target="_blank" rel="noopener nofollow">original ↗</a>` : ''}
             </div>
           </header>
           <div class="blog-post__body">${bodyHtml}</div>

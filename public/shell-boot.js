@@ -65,6 +65,16 @@ function registerSections() {
   registry.registerLazy('behavior', '/behavior', () => import('/modules/behavior/index.js'));
   registry.registerLazy('insights', '/insights', () => import('/modules/insights/index.js'));
 
+  // Programmatic-SEO landings — one lightweight module, server-rendered body.
+  // It leaves the SSR #app-root content in place; additional landing routes are
+  // added via registerRoute() below as they ship.
+  registry.registerLazy('landing', '/openrtb/2-6', () => import('/modules/landing/index.js'));
+  registry.registerRoute('/openrtb/2-5', 'landing');
+  registry.registerRoute('/openrtb/3-0', 'landing');
+  registry.registerRoute('/vast', 'landing');
+  registry.registerRoute('/native', 'landing');
+  registry.registerRoute('/iab-categories', 'landing');
+
   // Additional routes pointing at already-registered module ids.
   registry.registerRoute('/docs/findings', 'docs');
   // Legacy /stream.html URL alias → keep existing share-links working.
@@ -96,6 +106,15 @@ async function activateFromUrl() {
   // yet) still mounts via SPA, which is the normal, working first-load path.
   const goesToInspector = canonical === '/inspector' || /^\/r\/[0-9a-f]{8,12}$/i.test(canonical);
   if (goesToInspector && registry.current()) {
+    location.assign(location.href);
+    return;
+  }
+
+  // Landings are server-rendered content pages — their body lives only in the
+  // SSR HTML, so never SPA-remount them. On client-nav onto a landing, hard-load
+  // so the server renders it fresh. First load (no active section yet) proceeds
+  // to activate('landing'), whose mount() leaves the SSR content untouched.
+  if (registry.match(canonical) === 'landing' && registry.current()) {
     location.assign(location.href);
     return;
   }

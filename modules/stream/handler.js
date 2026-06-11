@@ -18,6 +18,16 @@
 
 const crypto = require('crypto');
 
+// Concurrent SSE connections allowed per client IP. The origin is only
+// reachable through the Cloudflare→cloudflared tunnel, which sets
+// X-Forwarded-For, so the first XFF hop is a reliable client key here.
+const MAX_STREAM_CONNS_PER_IP = Number(process.env.STREAM_MAX_CONNS_PER_IP) || 8;
+function streamClientIp(req) {
+  const xff = req.headers && req.headers['x-forwarded-for'];
+  if (xff) return String(xff).split(',')[0].trim();
+  return (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
 /** SQLite-backed specimen cache (Step 2 — persistence).
  *  Survives container restarts so /r/{hash} permalinks remain resolvable.
  *  Lazy-initialized by createStreamModule when db is passed; reads are
@@ -87,7 +97,25 @@ function createStreamModule(deps) {
   const { streamGenerator, streamBuffer, STREAM_REPLAY_MAX, STREAM_HEARTBEAT_MS, db } = deps;
   if (db) initSpecimenStore(db);
 
+  // Per-IP concurrent-connection counter — bounds fd/memory exhaustion from a
+  // single client opening many long-lived SSE streams.
+  const streamConns = new Map();
+
   function handleStream(req, res) {
+    const ip = streamClientIp(req);
+    const cur = streamConns.get(ip) || 0;
+    if (cur >= MAX_STREAM_CONNS_PER_IP) {
+      res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '30' });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: `Too many concurrent stream connections (limit ${MAX_STREAM_CONNS_PER_IP}/IP).`,
+          code: 'too_many_streams',
+        }),
+      );
+      return;
+    }
+    streamConns.set(ip, cur + 1);
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-store',
@@ -117,6 +145,9 @@ function createStreamModule(deps) {
       cleaned = true;
       streamGenerator.off('specimen', onSpecimen);
       clearInterval(heartbeat);
+      const n = (streamConns.get(ip) || 1) - 1;
+      if (n <= 0) streamConns.delete(ip);
+      else streamConns.set(ip, n);
     };
     req.on('close', cleanup);
     req.on('error', cleanup);

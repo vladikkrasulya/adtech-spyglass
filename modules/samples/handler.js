@@ -76,7 +76,10 @@ function createSamplesModule(deps) {
         if (!b.title || !String(b.title).trim()) {
           return sendError(res, 400, 'title_required', 'Sample title is required');
         }
-        const s = Samples.create({ userId: user.id, ...b });
+        // Server-controlled keys MUST win over the request body — spreading
+        // `b` last would let a caller pass `userId`/`id` and write into another
+        // user's library (cross-tenant write / mass-assignment).
+        const s = Samples.create({ ...b, userId: user.id });
         sendJson(res, 200, { success: true, sample: s });
       })
       .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
@@ -103,7 +106,8 @@ function createSamplesModule(deps) {
     }
     return readJson(req)
       .then((b) => {
-        const s = Samples.update({ id, userId: user.id, ...b });
+        // Server-controlled keys MUST win over the request body (see handleCreate).
+        const s = Samples.update({ ...b, id, userId: user.id });
         if (!s) return sendError(res, 404, 'not_found', 'Sample not found');
         sendJson(res, 200, { success: true, sample: s });
       })

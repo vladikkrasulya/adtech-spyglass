@@ -94,7 +94,11 @@ function createAdminBlogModule() {
         return sendError(res, 404, 'draft_not_found', 'Draft not found');
       }
       const draft = rows[0];
-      const slug = providedSlug || slugify(draft.title) || id.slice(0, 8);
+      // Always normalise through slugify — a raw providedSlug flows into a
+      // filesystem path below (promote → `${slug}.md`); slugify strips path
+      // separators / `..` so an admin-supplied slug can't traverse out of
+      // content/posts/<lang>/.
+      const slug = slugify(providedSlug || draft.title) || id.slice(0, 8);
       const now = nowCh();
 
       if (action === 'publish') {

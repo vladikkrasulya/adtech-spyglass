@@ -143,7 +143,25 @@ async function handleSummary(req, res) {
   }
 }
 
-module.exports = {
-  id: 'analytics',
-  routes: [{ method: 'GET', path: '/api/v1/analytics/summary', handler: handleSummary }],
-};
+// Public, ClickHouse-backed read. A per-IP limiter bounds CH load-amplification
+// from an anonymous bot loop. deps optional so it can be constructed bare.
+function createAnalyticsModule(deps = {}) {
+  const { readLimiter, auth, READ_MAX_PER_WINDOW } = deps;
+  async function handler(req, res) {
+    if (readLimiter && auth && !readLimiter(auth.clientIp(req))) {
+      return sendError(
+        res,
+        429,
+        'rate_limited',
+        `Too many requests. Try again shortly (limit: ${READ_MAX_PER_WINDOW}/min/IP).`,
+      );
+    }
+    return handleSummary(req, res);
+  }
+  return {
+    id: 'analytics',
+    routes: [{ method: 'GET', path: '/api/v1/analytics/summary', handler }],
+  };
+}
+
+module.exports = { createAnalyticsModule };

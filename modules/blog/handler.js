@@ -130,12 +130,31 @@ function cacheSet(key, data) {
 }
 
 // ── Handlers ─────────────────────────────────────────────────────────────
-function createBlogModule() {
+function createBlogModule(deps = {}) {
+  // Public, ClickHouse-backed reads. Param-varying requests bypass the in-memory
+  // cache and hit CH, so a per-IP limiter bounds the load-amplification risk
+  // against the shared analytics instance. Optional so tests can construct the
+  // module with no deps.
+  const { readLimiter, auth, READ_MAX_PER_WINDOW } = deps;
+  function rateLimited(req, res) {
+    if (readLimiter && auth && !readLimiter(auth.clientIp(req))) {
+      sendError(
+        res,
+        429,
+        'rate_limited',
+        `Too many requests. Try again shortly (limit: ${READ_MAX_PER_WINDOW}/min/IP).`,
+      );
+      return true;
+    }
+    return false;
+  }
+
   /**
    * GET /api/v1/blog/list?lang=&category=&offset=&limit=
    * Merges editorial + published DB posts, sorted by published_at desc.
    */
   async function handleBlogList(req, res, parsed) {
+    if (rateLimited(req, res)) return;
     const q = parsed.searchParams;
     const filterLang = q.get('lang') || '';
     const filterCategory = q.get('category') || '';
@@ -230,6 +249,7 @@ function createBlogModule() {
    * Tries editorial markdown first, falls back to analytics.blog_posts.
    */
   async function handleBlogPost(req, res, parsed) {
+    if (rateLimited(req, res)) return;
     const q = parsed.searchParams;
     const slug = (q.get('slug') || '').replace(/[^a-z0-9-_]/gi, '');
     const lang = (q.get('lang') || 'en').replace(/[^a-z]/gi, '').slice(0, 4);
@@ -307,6 +327,7 @@ function createBlogModule() {
    * GET /blog/rss.xml — last 20 posts across all langs as RSS 2.0
    */
   async function handleBlogRss(req, res) {
+    if (rateLimited(req, res)) return;
     try {
       // Load editorial posts (all langs)
       let editorial = [];

@@ -442,28 +442,39 @@ export default {
         new Date(activeEnvelope.emittedAt).toISOString() +
         '</div>';
 
+      // Specimen fields are escaped before going into innerHTML: today the feed
+      // is the server's synthetic corpus, but this same renderer also displays
+      // /api/analyze output and is staged for real captured traffic — a string
+      // in any numeric-looking field must not be able to inject markup.
+      const num = (x) => escapeHtml(String(x));
       const rows = [];
-      rows.push(['Type', v.type || '?']);
+      rows.push(['Type', escapeHtml(v.type || '?')]);
       rows.push([
         'Version',
         ver.version
-          ? ver.version + ' <span class="finding-id">conf ' + ver.confidence + '</span>'
+          ? num(ver.version) + ' <span class="finding-id">conf ' + num(ver.confidence) + '</span>'
           : '?',
       ]);
-      rows.push(['Status', v.status || '?']);
-      rows.push(['Format', '<span class="pill">' + fmt + '</span>']);
+      rows.push(['Status', escapeHtml(v.status || '?')]);
+      rows.push(['Format', '<span class="pill">' + escapeHtml(fmt) + '</span>']);
       if (banner.format && banner.format.length) {
         rows.push([
           'Banner sizes',
-          banner.format.map((f) => `<span class="pill">${f.w}×${f.h}</span>`).join(''),
+          banner.format
+            .filter((f) => f && typeof f === 'object')
+            .map((f) => `<span class="pill">${num(f.w)}×${num(f.h)}</span>`)
+            .join(''),
         ]);
       } else if (banner.w && banner.h) {
-        rows.push(['Banner size', `<span class="pill">${banner.w}×${banner.h}</span>`]);
+        rows.push(['Banner size', `<span class="pill">${num(banner.w)}×${num(banner.h)}</span>`]);
       }
       if (video.w && video.h) {
-        rows.push(['Video size', `<span class="pill">${video.w}×${video.h}</span>`]);
+        rows.push(['Video size', `<span class="pill">${num(video.w)}×${num(video.h)}</span>`]);
         if (video.maxduration) {
-          rows.push(['Video duration', `${video.minduration || 0}–${video.maxduration}s`]);
+          rows.push([
+            'Video duration',
+            `${num(video.minduration || 0)}–${num(video.maxduration)}s`,
+          ]);
         }
       }
       rows.push(['Context', sp.site ? 'site' : sp.app ? 'app' : '?']);
@@ -476,7 +487,12 @@ export default {
         ]);
       }
       if (imp0.bidfloor != null) {
-        rows.push(['Bid floor', imp0.bidfloor + ' ' + (imp0.bidfloorcur || '<em>(no cur)</em>')]);
+        rows.push([
+          'Bid floor',
+          num(imp0.bidfloor) +
+            ' ' +
+            (imp0.bidfloorcur ? num(imp0.bidfloorcur) : '<em>(no cur)</em>'),
+        ]);
       }
       rows.push(['Request id', escapeHtml(sp.id || '?')]);
 

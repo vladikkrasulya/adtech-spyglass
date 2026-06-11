@@ -108,6 +108,11 @@ const analyzeLimiter = makeAnalyzeLimiter(ANALYZE_MAX_PER_WINDOW);
 const BEHAVIOR_MAX_PER_WINDOW = 20;
 const behaviorLimiter = makeAnalyzeLimiter(BEHAVIOR_MAX_PER_WINDOW);
 
+// Public ClickHouse-backed reads (blog list/post/rss, analytics summary).
+// Generous human cap; bounds a bot loop from amplifying into CH load.
+const READ_MAX_PER_WINDOW = Number(process.env.READ_MAX_PER_WINDOW) || 120;
+const readLimiter = makeAnalyzeLimiter(READ_MAX_PER_WINDOW);
+
 // Intel (LLM-bridge) limiter — slower service, smaller per-IP allowance.
 const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
 const INTEL_WINDOW_MS = 60_000;
@@ -333,6 +338,16 @@ function resolveLocaleRoute(reqUrl) {
   if (u === '/uk/account') return { file: '/account.uk.html' };
   if (u === '/ru/about') return { file: '/about.ru.html' };
   if (u === '/ru/account') return { file: '/account.ru.html' };
+
+  // Programmatic-SEO landing pages (/openrtb/2-6, /vast, /native, …). Single-
+  // or multi-segment; matched against the known landing set in lib/landings.js.
+  // en lives at the bare path, uk/ru under their locale prefix — same shell,
+  // body server-rendered by injectLanding() in the request handler.
+  if (landings.isLanding(u)) return { file: '/index.en.html' };
+  const ukLanding = u.match(/^\/uk(\/.+)$/);
+  if (ukLanding && landings.isLanding(ukLanding[1])) return { file: '/index.uk.html' };
+  const ruLanding = u.match(/^\/ru(\/.+)$/);
+  if (ruLanding && landings.isLanding(ruLanding[1])) return { file: '/index.ru.html' };
   return null;
 }
 
@@ -636,6 +651,14 @@ function serveStaticFile(req, res) {
 
   fs.readFile(filePath, async (err, content) => {
     if (err) {
+      // Unmatched /api/* paths get a JSON 404 envelope, consistent with the
+      // API's own error responses, instead of the bare-text static 404.
+      const reqPath = (req.url || '').split('?')[0];
+      if (reqPath.startsWith('/api/')) {
+        res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ success: false, error: 'Not found', code: 'not_found' }));
+        return;
+      }
       res.writeHead(404);
       res.end('Not Found');
       return;
@@ -665,6 +688,12 @@ function serveStaticFile(req, res) {
         } else {
           const meta = seo.sectionSeo(r.sectionPath, r.uiLang);
           if (meta) txt = seo.applySeoToHtml(txt, meta);
+          // Landing pages also server-render their body into #app-root so
+          // crawlers/no-JS get real content (the SECTION_SEO entry already
+          // gave them per-route canonical/title above).
+          if (landings.isLanding(r.sectionPath)) {
+            txt = landings.injectLanding(txt, r.sectionPath, r.uiLang);
+          }
         }
       } catch (seoErr) {
         captureException(seoErr, { request: { url: req.url }, source: 'seo-rewrite' });
@@ -869,10 +898,11 @@ const { createAdminModule } = require('./modules/admin/handler');
 const { createAdminBlogModule } = require('./modules/admin/blog');
 const { createBlogModule } = require('./modules/blog/handler');
 const seo = require('./lib/seo');
+const landings = require('./lib/landings');
 const blogService = require('./lib/blog-service');
 const { createProxyModule } = require('./modules/proxy/handler');
 // Stage 5 — Insights Dashboard analytics endpoint
-const analyticsModule = require('./modules/analytics/handler');
+const { createAnalyticsModule } = require('./modules/analytics/handler');
 // Stage 5 — validation-log helper (stream + analyze hooks)
 const { logValidation, fmtFromSpecimen } = require('./lib/validation-log');
 // v8 — User Dialects feature
@@ -909,7 +939,7 @@ router.register(
 );
 router.register(sampleModule);
 router.register(findingsModule);
-router.register(analyticsModule);
+router.register(createAnalyticsModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));
 router.register(
   createAnalyzeModule({
     analyzeLimiter,
@@ -954,7 +984,7 @@ router.register(createAccountModule({ auth, AnalyzeLog }));
 router.register(createDialectsModule({ auth, db }));
 router.register(createAdminModule({ db, Users, auth }));
 router.register(createAdminBlogModule());
-router.register(createBlogModule());
+router.register(createBlogModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));
 router.register(createProxyModule({ auth }));
 
 // Wave 3 modules (auth bundle, library, stream)

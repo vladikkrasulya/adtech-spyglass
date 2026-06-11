@@ -77,7 +77,10 @@ function createPartnersModule(deps) {
         if (!b.name || !String(b.name).trim()) {
           return sendError(res, 400, 'name_required', 'Partner name is required');
         }
-        const p = Partners.create({ userId: user.id, ...b });
+        // Server-controlled keys MUST win over the request body — spreading
+        // `b` last would let a caller pass `userId`/`id` and write into another
+        // user's partners (cross-tenant write / mass-assignment).
+        const p = Partners.create({ ...b, userId: user.id });
         sendJson(res, 200, { success: true, partner: p });
       })
       .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
@@ -92,7 +95,8 @@ function createPartnersModule(deps) {
     }
     return readJson(req)
       .then((b) => {
-        const p = Partners.update({ id, userId: user.id, ...b });
+        // Server-controlled keys MUST win over the request body (see handleCreate).
+        const p = Partners.update({ ...b, id, userId: user.id });
         if (!p) return sendError(res, 404, 'not_found', 'Partner not found');
         sendJson(res, 200, { success: true, partner: p });
       })

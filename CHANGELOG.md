@@ -19,6 +19,31 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.56.0 — feat: programmatic-SEO landing pages (Track B) + public-read hardening (2026-06-11)
+
+- **Landings.** `lib/landings.js` (pure, no I/O) + `public/modules/landing/` — server-rendered
+  spec explainers at `/openrtb/2-5`, `/openrtb/2-6`, `/openrtb/3-0`, `/vast`, `/native`,
+  `/iab-categories` ×3 locales, each with live "open in validator" deep-links. Wired into
+  `SECTION_SEO` so dynamic sitemap + canonical/hreflang cover them with no extra plumbing.
+  New `samples/synthetic-native-clean.json`. `lang-switch.js`/`shell-boot.js` hard-navigate on
+  landing routes (SSR-only body — an in-place SPA switch would blank the page).
+  Tests: `tests/landings.test.js`.
+- **Public read-limiter.** ClickHouse-backed public reads (blog list/post/rss, analytics
+  summary) now behind a per-IP `readLimiter` (default 120/min, `READ_MAX_PER_WINDOW`);
+  blog/analytics modules take optional `{readLimiter, auth}` deps.
+- **API 404 envelope.** Unmatched `/api/*` paths return the JSON error envelope
+  (`{success:false, code:'not_found'}`) instead of the bare-text static 404.
+- **Admin blog slug hardening.** Provided slug is always normalised through `slugify` —
+  an admin-supplied slug can no longer traverse out of `content/posts/<lang>/`.
+- **Client blog XSS hardening.** Crawled-source post bodies render through escape-first
+  safe-Markdown; external `post.url` filtered to http(s) only (`safeHref`).
+- **core 0.27.1 — R4 null-tolerance.** `imp:[null]`, `seatbid:[null]`, `bid:[null]` and null
+  `banner.format` entries are coerced instead of throwing, across rules/dialects/decoders/
+  crosscheck.
+- **Ops.** Compose: legacy `ollama_default` external net detached (CPU-ollama decommissioned
+  2026-06-06; `ollama` resolves via kt-shared → router → GPU node). intel-llm: `think:false`
+  for gemma4 (thinking model returns empty `response` otherwise).
+
 ### v0.55.3 — fix: GSC "Page with redirect" — retarget SEO signals at /inspector (2026-06-02)
 
 Root `/` 302-redirects to `/inspector` (kept free for a future landing — ROADMAP

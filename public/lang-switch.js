@@ -252,6 +252,15 @@
     // The legacy fetch+morph path (below) is preserved for non-SPA pages
     // such as about.html where .kt-shell is absent.
     const hasSpaShell = !!document.querySelector('.kt-shell');
+    // Programmatic-SEO landings are server-rendered ONLY — their body lives in
+    // the SSR HTML, not in a client module. An in-place SPA lang switch sweeps
+    // #app-root and the landing module renders nothing → blank page. So for a
+    // landing route, hard-navigate to the localized URL and let the server
+    // render it fresh (mirrors the shell-boot.js landing guard).
+    if (hasSpaShell && LANDING_ROUTES.has(stripLocale(location.pathname))) {
+      location.assign(targetUrl);
+      return;
+    }
     if (hasSpaShell) {
       // Update document-level lang attributes immediately.
       document.documentElement.lang = newLangFromUrl;
@@ -379,6 +388,21 @@
   //   /uk/about          + en → /about
   // Unknown deep paths fall back to the locale root (`/`, `/uk`, `/ru`)
   // so we don't link to a 404.
+  // Programmatic-SEO landing routes (server-rendered only). Kept as a Set so
+  // both localizePath() and the SPA-switch guard agree on what's a landing.
+  const LANDING_ROUTES = new Set([
+    '/openrtb/2-6',
+    '/openrtb/2-5',
+    '/openrtb/3-0',
+    '/vast',
+    '/native',
+    '/iab-categories',
+  ]);
+  function stripLocale(p) {
+    const cur = (p || '/').replace(/\/$/, '') || '/';
+    if (cur.startsWith('/uk') || cur.startsWith('/ru')) return cur.slice(3) || '/';
+    return cur;
+  }
   const KNOWN_LANDINGS = [
     '/',
     '/about',
@@ -392,6 +416,10 @@
     '/dialects',
     '/blog',
     '/docs',
+    '/insights',
+    // Programmatic-SEO landings — so a lang switch builds the localized URL
+    // (/uk/openrtb/2-6) instead of falling back to the bare locale root.
+    ...LANDING_ROUTES,
   ];
   function localizePath(currentPath, targetLang) {
     const cur = (currentPath || '/').replace(/\/$/, '') || '/';
