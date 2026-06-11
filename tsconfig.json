@@ -33,6 +33,7 @@
     "email.js",
     "tokens.js",
     "packages/core/**/*.js",
+    "packages/cli/**/*.js",
     "tests/**/*.js"
   ],
   "exclude": ["node_modules", "public", "dist", "build", "coverage"]

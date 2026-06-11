@@ -19,6 +19,28 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.57.0 — feat: @ortbtools/cli 0.1.0 — the validator as a command-line tool (Track C) (2026-06-11)
+
+New workspace package `packages/cli` — `@ortbtools/cli`, bin `ortbtools`. The
+core engine with a scriptable surface; zero runtime deps beyond
+`@kyivtech/spyglass-core`, no network calls.
+
+- **Commands.** `validate <file|->` (BidRequest/BidResponse/feed/URL-request,
+  autodetect), `crosscheck <req> <res>`, `detect`, `dialects`, `locales`,
+  `help`, `version`. stdin via `-`.
+- **Options.** `--json`, `--locale en|uk|ru` (CLI defaults to en), `--dialect`,
+  `--expect-version` (version pinning), `--fail-on error|warn|never`, `--refs`,
+  `--no-color` (+`NO_COLOR` env).
+- **Exit codes.** 0 = clean at threshold, 1 = findings at/above threshold,
+  2 = usage/IO/parse error — CI-pipeable.
+- **core 0.27.2.** en message `crosscheck.bid.impid_resolved` had an
+  unsubstituted `{impId}` placeholder (param is `{impid}`) — surfaced by the
+  CLI's plain-text output.
+- Tests: `tests/cli.test.js` (in-process `run(argv, io)` + one real bin spawn).
+  `packages/cli` added to the typecheck include set.
+- Publish: both packages are publish-ready (`publishConfig.access=public`);
+  npm auth + `npm publish -w packages/core -w packages/cli` pending (owner).
+
 ### v0.56.0 — feat: programmatic-SEO landing pages (Track B) + public-read hardening (2026-06-11)
 
 - **Landings.** `lib/landings.js` (pure, no I/O) + `public/modules/landing/` — server-rendered
