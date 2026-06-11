@@ -19,6 +19,22 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v0.57.1 — docs: Decision A — inspector-first committed + public API contract (2026-06-11)
+
+The primary-surface question open since 2026-05-12 is closed: **Spyglass is the
+paste-JSON inspector/validator** (web + CLI + API). User-confirmed.
+
+- **ROADMAP Decisions log** — Decision A recorded: stream stays a sibling
+  preview on synthetic traffic, no further 0.x build-out; stream-first remains
+  the v10.0 vector behind partner legal approval. Path to v1.0.0: API contract
+  (this release) → friction sweep → declare.
+- **`docs/api-v1.md`** — public HTTP contract pinned: `POST /api/analyze`
+  (query params, body opts incl. `disabledRules`/`expectedVersion`, full
+  response shape, error envelope + codes, rate limits, privacy note) and
+  `POST /api/analyze-behavior`. Additive-only stability promise.
+- **Nav** — stream section label is now honest: `Live (preview)` /
+  `Стрім (прев'ю)` / `Стрим (превью)`.
+
 ### v0.57.0 — feat: @ortbtools/cli 0.1.0 — the validator as a command-line tool (Track C) (2026-06-11)
 
 New workspace package `packages/cli` — `@ortbtools/cli`, bin `ortbtools`. The

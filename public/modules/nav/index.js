@@ -33,7 +33,9 @@ export const SECTIONS = [
     id: 'live',
     route: '/live',
     icon: '📡',
-    label: { en: 'Live', uk: 'Стрім', ru: 'Стрим' },
+    // Decision A (ROADMAP 2026-06-11): inspector-first; the stream is an
+    // explicitly-labeled preview on synthetic traffic, not the headline.
+    label: { en: 'Live (preview)', uk: 'Стрім (прев’ю)', ru: 'Стрим (превью)' },
   },
   {
     group: 'work',
