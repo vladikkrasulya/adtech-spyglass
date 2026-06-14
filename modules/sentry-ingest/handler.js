@@ -27,6 +27,7 @@ const http = require('http');
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 60;
 const UPSTREAM_TIMEOUT_MS = 5_000;
+const MAX_BODY_BYTES = 256 * 1024;
 const ALLOWED_PATH_RE = /^\/api\/\d+\/(envelope|store|security)\/?(\?.*)?$/;
 
 function createSentryIngestModule({ logger }) {
@@ -101,6 +102,19 @@ function createSentryIngestModule({ logger }) {
       }
     });
 
+    // 256KB body cap — the docstring promised it; req.pipe alone never enforced it.
+    let bodyBytes = 0;
+    req.on('data', (chunk) => {
+      bodyBytes += chunk.length;
+      if (bodyBytes > MAX_BODY_BYTES) {
+        req.destroy();
+        proxyReq.destroy(new Error('body_too_large'));
+        if (!res.headersSent) {
+          res.writeHead(413, { 'Content-Type': 'text/plain' });
+          res.end('payload_too_large');
+        }
+      }
+    });
     req.pipe(proxyReq);
   }
 

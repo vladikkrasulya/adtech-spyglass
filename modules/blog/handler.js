@@ -20,6 +20,10 @@ const { sendJson, sendError } = require('../../lib/http');
 const log = require('../../lib/logger').child('blog');
 
 const CONTENT_DIR = path.join(__dirname, '../../content/posts');
+// Editorial langs are a FIXED whitelist. `lang` becomes a path segment
+// (content/posts/{lang}); without this guard the public blog list accepted
+// `?lang=../../docs` and leaked docs/*.md (path traversal — fixed 2026-06-14).
+const LANGS = ['uk', 'en', 'ru'];
 // RSS feed links must use the public brand domain (ortbtools.com), NOT the
 // kyivtech proxy host that PUBLIC_BASE_URL points to. Share the one canonical
 // origin with the SEO module.
@@ -29,6 +33,8 @@ const { ORIGIN: PUBLIC_BASE } = require('../../lib/seo');
 const CH_URL = (process.env.CLICKHOUSE_URL || 'http://clickhouse:8123').replace(/\/+$/, '');
 const CH_USER = process.env.CLICKHOUSE_USER || '';
 const CH_PASSWORD = process.env.CLICKHOUSE_PASSWORD || '';
+// Bound CH reads so a hung ClickHouse can't hang public blog list/post/rss.
+const CH_TIMEOUT_MS = Number(process.env.BLOG_CH_TIMEOUT_MS) || 8000;
 
 function chHeaders() {
   const h = { 'Content-Type': 'application/json' };
@@ -39,7 +45,14 @@ function chHeaders() {
 
 async function chQuery(sql) {
   const url = `${CH_URL}/?query=${encodeURIComponent(sql)}&default_format=JSONEachRow`;
-  const resp = await fetch(url, { headers: chHeaders() });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), CH_TIMEOUT_MS);
+  let resp;
+  try {
+    resp = await fetch(url, { headers: chHeaders(), signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
     throw new Error(`CH query failed ${resp.status}: ${text.slice(0, 200)}`);
@@ -83,7 +96,10 @@ function parseFrontmatter(content) {
 
 // ── Editorial post reader ───────────────────────────────────────────────────
 function readMarkdownPosts(lang) {
-  const dir = path.join(CONTENT_DIR, lang);
+  if (!LANGS.includes(lang)) return []; // traversal guard: lang is a path segment
+  const dir = path.resolve(CONTENT_DIR, lang);
+  // defense-in-depth: never escape CONTENT_DIR even if LANGS ever changes
+  if (!dir.startsWith(path.resolve(CONTENT_DIR) + path.sep)) return [];
   let files;
   try {
     files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
@@ -168,8 +184,9 @@ function createBlogModule(deps = {}) {
     }
 
     try {
-      // Editorial posts
-      const langs = filterLang ? [filterLang] : ['uk', 'en', 'ru'];
+      // Editorial posts — whitelist `lang`: an unknown value yields no editorial
+      // posts (and the DB clause below won't match), instead of a path segment.
+      const langs = filterLang ? (LANGS.includes(filterLang) ? [filterLang] : []) : LANGS;
       let editorial = [];
       for (const l of langs) {
         editorial = editorial.concat(readMarkdownPosts(l));
@@ -331,7 +348,7 @@ function createBlogModule(deps = {}) {
     try {
       // Load editorial posts (all langs)
       let editorial = [];
-      for (const l of ['uk', 'en', 'ru']) {
+      for (const l of LANGS) {
         editorial = editorial.concat(readMarkdownPosts(l));
       }
 

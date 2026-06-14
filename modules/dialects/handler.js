@@ -26,6 +26,7 @@
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
+const { clearCacheForDb } = require('../../packages/core/dialects/user-dialect-runtime');
 const log = require('../../lib/logger').child('dialects');
 
 const SEMANTIC_LABELS = new Set([
@@ -298,6 +299,7 @@ function createDialectsModule(deps) {
           body.notes || null,
           now,
         );
+        clearCacheForDb(db, d.id); // analyze must see the new mapping immediately, not after 60s TTL
         sendJson(res, 200, {
           success: true,
           mapping: serializeMapping({
@@ -351,6 +353,7 @@ function createDialectsModule(deps) {
           merged.notes,
           m.id,
         );
+        clearCacheForDb(db, m.dialect_id); // invalidate cached mappings for this dialect
         const fresh = stmts.getMappingWithOwner.get(m.id);
         sendJson(res, 200, { success: true, mapping: serializeMapping(fresh) });
       })
@@ -369,6 +372,7 @@ function createDialectsModule(deps) {
     if (!m) return sendError(res, 404, 'not_found', 'Mapping not found');
     if (m.owner_user_id !== user.id) return sendError(res, 403, 'forbidden', 'Not your mapping');
     stmts.deleteMapping.run(m.id);
+    clearCacheForDb(db, m.dialect_id); // drop cached mappings so analyze stops using the deleted one
     sendJson(res, 200, { success: true });
   }
 

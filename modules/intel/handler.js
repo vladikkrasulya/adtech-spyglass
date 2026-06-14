@@ -6,7 +6,7 @@ const log = require('../../lib/logger').child('intel');
  * modules/intel/handler.js — POST /api/intel/* route module.
  *
  * Bundles the four Phase 7c/10b LLM-bridge endpoints that hit a locally
- * hosted Ollama (gemma3:4b) instance via http://ollama:11434:
+ * hosted Ollama (gemma4-prod) instance via http://ollama:11434:
  *   - /api/intel/suggest-name     → cluster-name suggestion (few-shot when format known)
  *   - /api/intel/suggest-partner  → vendor brand inference from bid_req/bid_res (auth-gated)
  *   - /api/intel/field-purpose    → one-line purpose hint for a single field path
@@ -202,7 +202,7 @@ function createIntelModule(deps) {
   // ── /api/intel/simulate-bids — Bid simulator demo ─────────────────────────
   //
   // Given a parsed BidRequest, fan out 3 strategies (aggressive /
-  // conservative / quality) to gemma3:4b in parallel. Each strategy gets a
+  // conservative / quality) to gemma4-prod in parallel. Each strategy gets a
   // metadata-only summary (no bid VALUES) and decides bid yes/no, price,
   // and a one-sentence rationale. Demonstrates the AI-bridge as more than
   // just naming/classification — it's also useful for "what would

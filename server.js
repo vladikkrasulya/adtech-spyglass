@@ -154,7 +154,11 @@ const router = new Router();
 router.register(
   createHealthModule({ db, auth, Users, sendJson, sentryReady: _logger.sentryReady }),
 );
-router.register(createSentryIngestModule({ logger: _logger }));
+// GlitchTip was decommissioned 2026-06-02; only expose the public /glitchtip-ingest
+// proxy when an upstream is actually configured, so we don't keep a dead public endpoint.
+if (process.env.GLITCHTIP_INGEST_HOST || process.env.SENTRY_DSN_PUBLIC) {
+  router.register(createSentryIngestModule({ logger: _logger }));
+}
 
 // ── Process-level safety net ────────────────────────────────────────────────
 // Throttled per-tag so a tight crash loop doesn't burn through Telegram's
@@ -166,6 +170,9 @@ process.on('uncaughtException', (err) => {
     `Uncaught exception\n<pre>${notifyEscape(String((err && err.stack) || err).slice(0, 800))}</pre>`,
     { tag: 'uncaught-exception', level: 'error' },
   );
+  // Corrupted state after an uncaught throw — flush logs/alert, then exit so
+  // `restart: always` brings up a clean process (Node production best practice).
+  setTimeout(() => process.exit(1), 2000);
 });
 process.on('unhandledRejection', (reason) => {
   log.fatal({ err: reason }, 'unhandledRejection');
@@ -174,6 +181,8 @@ process.on('unhandledRejection', (reason) => {
     `Unhandled rejection\n<pre>${notifyEscape(String((reason instanceof Error && reason.stack) || reason).slice(0, 800))}</pre>`,
     { tag: 'unhandled-rejection', level: 'error' },
   );
+  // Same rationale as uncaughtException: don't limp on after a fatal — exit clean.
+  setTimeout(() => process.exit(1), 2000);
 });
 
 // ── Static file serving ─────────────────────────────────────────────────────
@@ -640,7 +649,15 @@ function serveStaticFile(req, res) {
   }
 
   const rawUrl = (route && route.file) || reqPath;
-  const sanitized = decodeURIComponent(rawUrl).replace(/\\/g, '/');
+  let sanitized;
+  try {
+    sanitized = decodeURIComponent(rawUrl).replace(/\\/g, '/');
+  } catch {
+    // malformed percent-encoding (e.g. /%E0%A4%A) is a client error, not a 500
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    res.end('bad_request');
+    return;
+  }
   const normalized = path.normalize(sanitized).replace(/^(\.\.(\/|\\))+/, '');
   const filePath = path.join(PUBLIC_DIR, normalized);
   const resolved = path.resolve(filePath);
@@ -1139,7 +1156,7 @@ function unionFormat(a, b) {
 // ── /api/intel/simulate-bids — Bid simulator demo ─────────────────────────
 //
 // Given a parsed BidRequest, fan out 3 strategies (aggressive /
-// conservative / quality) to gemma3:4b in parallel. Each strategy gets a
+// conservative / quality) to the configured OLLAMA_MODEL (gemma4-prod) in parallel. Each strategy gets a
 // metadata-only summary (no bid VALUES) and decides bid yes/no, price,
 // and a one-sentence rationale. Demonstrates the AI-bridge as more than
 // just naming/classification — it's also useful for "what would

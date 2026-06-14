@@ -53,7 +53,7 @@
     "url": "git+https://github.com/vladikkrasulya/adtech-spyglass.git",
     "directory": "packages/core"
   },
-  "homepage": "https://spyglass.kyivtech.com.ua",
+  "homepage": "https://ortbtools.com",
   "bugs": {
     "url": "https://github.com/vladikkrasulya/adtech-spyglass/issues"
   },
