@@ -72,6 +72,13 @@ No Redis, no PostgreSQL. Ring buffer in same Node process. **If/when scale deman
 - TTL: 90 days from `last_accessed_at`
 - Separate from existing `samples` table (which is user-saved encrypted)
 
+> **AS-BUILT (2026-06-14):** the shipped storage layer in
+> `modules/stream/handler.js` differs from this never-implemented plan. Real
+> contract: hash = `sha1(JSON.stringify(specimen)).slice(0, 8)`; table
+> `cached_specimens(hash, envelope_json, created_at)`; **FIFO eviction at
+> 10,000 rows**, no `last_accessed_at` and no TTL. See ROADMAP.md Stage 2 for
+> the canonical as-built description.
+
 **Patterns + directory (Phase 2+):**
 
 - Patterns: hourly/daily aggregation jobs over the ring-buffer-archived specimens (separate SQLite table for time-bucketed counts)

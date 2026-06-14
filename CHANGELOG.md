@@ -19,6 +19,29 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.0.3 — chore: retire write-only dialect_question_log + align permalink-contract docs (2026-06-14)
+
+Closes the two LOW items deferred from the 2026-06-14 audit (both were
+product decisions, now decided):
+
+- **Removed the unused dialect question-dismissal log.** The
+  `POST /api/dialects/questions/dismiss` endpoint and its `insertQuestionLog`
+  write were never wired to any UI, and the `dialect_question_log` table had
+  no read path — write-only dead code. Dropped the endpoint, the write, and
+  the table (schema **v9 → v10**: `DROP TABLE IF EXISTS dialect_question_log`).
+  The validator still emits dialect question findings (core
+  `dialects-questions` plugin); only the dead persistence layer is gone.
+- **Aligned the specimen-permalink contract docs to the shipped code.** The
+  ROADMAP Stage-2 plan and the superseded stream-pivot doc described
+  `sha256[0:12]` / `last_accessed` / 90-day TTL; the as-built `cached_specimens`
+  cache uses `sha1[0:8]` / `created_at` / FIFO at 10,000 rows. Docs were
+  aligned to the code — re-aligning the code would break already-cached
+  `/api/v1/specimen/:hash` links for a preview-only feature. Also fixed an
+  internally-stale comment in `modules/stream/handler.js` ("Map, capped 1000"
+  → SQLite, capped 10000).
+
+No user-facing behavior change. Test suite green at 990.
+
 ### v1.0.1 — fix(core 0.28.0): detection-mechanism audit — ambiguity surfaced, silent guesses retired (2026-06-11)
 
 Mechanism audit (Claude deep-read + DeepSeek v4 Pro crossfire, ~$0.02) of

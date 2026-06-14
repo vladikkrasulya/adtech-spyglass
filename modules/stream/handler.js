@@ -11,7 +11,9 @@
  * Stage 2 additions:
  *   - Each emitted envelope gets a deterministic sha1[0..8] hash of the
  *     canonical specimen JSON. Same specimen content → same hash (de-dup).
- *   - Hash → envelope stored in specimenStore Map (FIFO, capped at 1000).
+ *   - Hash → envelope persisted in the `cached_specimens` SQLite table
+ *     (FIFO eviction at MAX_SPECIMEN_STORE = 10000, oldest ~10% by
+ *     created_at). Survives restarts so permalinks stay resolvable.
  *   - GET /api/v1/specimen/:hash — returns cached envelope or 404.
  *     Cache-Control: public, max-age=3600 (content-hashed, safe to cache).
  */

@@ -23,7 +23,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 
 const DATA_DIR = process.env.SPYGLASS_DATA_DIR || '/data';
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -257,6 +257,8 @@ function migrate(db, fromVersion) {
       CREATE INDEX IF NOT EXISTS idx_dialect_mappings_lookup
         ON dialect_mappings(dialect_id, signal_path, signal_value);
 
+      -- NOTE: dropped in v10 (feature never wired to a UI). Kept here as
+      -- migration history; fresh DBs create then immediately drop it below.
       CREATE TABLE IF NOT EXISTS dialect_question_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         dialect_id INTEGER,
@@ -311,6 +313,16 @@ function migrate(db, fromVersion) {
       CREATE INDEX IF NOT EXISTS idx_event_log_component_ts ON event_log(component, ts DESC);
       CREATE INDEX IF NOT EXISTS idx_event_log_user_ts ON event_log(user_id, ts DESC);
     `);
+  }
+
+  // v9 → v10 (2026-06-14): drop dialect_question_log. The "dismiss dialect
+  // question" affordance was never wired to a UI — the table was write-only
+  // (no read path) and no client ever POSTed /api/dialects/questions/dismiss.
+  // Removed cleanly; the validator still emits question findings (core
+  // dialects-questions plugin) — only the unused persistent dismissal log is
+  // gone. DROP cascades the table's index. (See spyglass-audit-2026-06-14.)
+  if (fromVersion < 10) {
+    db.exec(`DROP TABLE IF EXISTS dialect_question_log;`);
   }
 }
 

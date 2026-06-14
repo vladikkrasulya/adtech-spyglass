@@ -3,7 +3,7 @@
 /**
  * modules/dialects/handler.js — /api/dialects route module.
  *
- * Per-user dialects + their mappings + a question-dismissal log.
+ * Per-user dialects + their mappings.
  * Auth-gated; anonymous → 401. Hard deletes (no soft-delete).
  * IDs are INTEGER (matches users/partners/samples convention).
  *
@@ -18,7 +18,6 @@
  *   DELETE /api/dialects/:id/mappings/:mapping_id
  *   GET    /api/dialects/:id/export
  *   POST   /api/dialects/import
- *   POST   /api/dialects/questions/dismiss
  *
  * Wiring (in server.js):
  *   const { createDialectsModule } = require('./modules/dialects/handler');
@@ -102,11 +101,6 @@ function createDialectsModule(deps) {
        WHERE id = ?`,
     ),
     deleteMapping: db.prepare(`DELETE FROM dialect_mappings WHERE id = ?`),
-    insertQuestionLog: db.prepare(
-      `INSERT INTO dialect_question_log
-         (dialect_id, user_id, signal_path, signal_value, payload_shape_sig, asked_at, action)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ),
   };
 
   function requireUser(req, res) {
@@ -376,7 +370,7 @@ function createDialectsModule(deps) {
     sendJson(res, 200, { success: true });
   }
 
-  // ── export / import / dismiss ──
+  // ── export / import ──
 
   function handleExport(req, res, _parsed, match) {
     const user = requireUser(req, res);
@@ -455,39 +449,6 @@ function createDialectsModule(deps) {
       });
   }
 
-  function handleDismissQuestion(req, res) {
-    const user = requireUser(req, res);
-    if (!user) return;
-    return readJson(req)
-      .then((body) => {
-        if (typeof body.signal_path !== 'string' || typeof body.signal_value !== 'string') {
-          return sendError(res, 400, 'invalid_input', 'signal_path & signal_value required');
-        }
-        if (typeof body.payload_shape_sig !== 'string') {
-          return sendError(res, 400, 'invalid_input', 'payload_shape_sig required');
-        }
-        if (body.action !== 'dismissed_once' && body.action !== 'dismissed_forever') {
-          return sendError(
-            res,
-            400,
-            'invalid_input',
-            "action must be 'dismissed_once' or 'dismissed_forever'",
-          );
-        }
-        stmts.insertQuestionLog.run(
-          null,
-          user.id,
-          body.signal_path,
-          body.signal_value,
-          body.payload_shape_sig,
-          Date.now(),
-          body.action,
-        );
-        sendJson(res, 200, { success: true });
-      })
-      .catch((e) => sendError(res, 400, e.code || 'bad_request', e.message));
-  }
-
   function safeParse(s) {
     try {
       return JSON.parse(s);
@@ -501,7 +462,6 @@ function createDialectsModule(deps) {
     routes: [
       // Static paths BEFORE :id paths to avoid placeholder swallowing.
       { method: 'POST', path: '/api/dialects/import', handler: handleImport },
-      { method: 'POST', path: '/api/dialects/questions/dismiss', handler: handleDismissQuestion },
 
       { method: 'GET', path: '/api/dialects', handler: handleList },
       { method: 'POST', path: '/api/dialects', handler: handleCreate },
