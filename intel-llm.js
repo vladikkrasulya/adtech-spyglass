@@ -128,7 +128,7 @@ async function callIntelFallback(prompt, opts, cause) {
     });
     throw new OllamaUnavailable(
       'ollama (' + cause.message + ') and openrouter fallback (' + e2.message + ') both failed',
-      e2
+      e2,
     );
   }
   return {
