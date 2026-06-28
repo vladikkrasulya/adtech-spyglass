@@ -376,26 +376,34 @@ process consumes the backups**, so locking them down breaks nothing.
 The live **data dir** (`/srv/DATA/AppData/adtech-spyglass`) has three container
 consumers — keep this in mind before tightening its modes:
 
-| Consumer          | In-container uid | Access           | Needs                                             |
-| ----------------- | ---------------- | ---------------- | ------------------------------------------------- |
-| `adtech-spyglass` | `node` = 1000    | `/data` **rw**   | owner (uid 1000 = `vk`) read+write                |
-| `kyivtech-portal` | 0 (root)         | ro `spyglass.db` | root — bypasses host modes                        |
-| `grafana`         | 472              | ro `spyglass.db` | **`o+r` on the live DB** (Spyglass SQLite source) |
+| Consumer          | In-container uid | Access           | Needs                                           |
+| ----------------- | ---------------- | ---------------- | ----------------------------------------------- |
+| `adtech-spyglass` | `node` = 1000    | `/data` **rw**   | owner (uid 1000 = `vk`) read+write              |
+| `kyivtech-portal` | 0 (root)         | ro `spyglass.db` | root — bypasses host modes                      |
+| `grafana`         | 472              | ro `spyglass.db` | read via the `spyglass-ro` **group** (GID 2472) |
 
-Because grafana (uid 472) reads `spyglass.db`/`-wal`/`-shm` via "other", the live
-DB **must stay group/other-readable** — `0600` there would break the dashboard and
-would not survive the app's next WAL rewrite anyway. The exposure is closed on the
-**backups** instead (above). Live-DB modes: `spyglass.db` `0644`, the stale empty
-`db.sqlite` `0600`, `.env` and `deploy-state.env` `0600`, the dir `0755`
-(`vk:vk`, not world-writable). A fuller lock of the live DB (container `umask 027`
+**Since v1.1.7 the live DB is no longer world-readable.** A dedicated group
+`spyglass-ro` (fixed **GID 2472**) replaces the "other" read bit:
 
-- a shared read group for uid 472) is a future, deploy-time change.
+- AppData dir → `1000:spyglass-ro` mode **`2710`** (setgid; group `--x` traverses
+  to a known path but cannot list the dir);
+- `spyglass.db`/`-wal`/`-shm` → `1000:spyglass-ro` **`0640`** (no "other");
+- the app runs **`umask 027`** (v1.1.7 image) so recreated WAL/SHM stay `0640`;
+- Grafana joins the group via `group_add: ["2472"]` (grafana-stack repo) and reads
+  via the group — uid/mounts/networks unchanged;
+- `deploy-state.env` and the stale `db.sqlite` stay `0600`; content-posts and
+  backups are untouched (the chgrp/chmod is NON-recursive).
 
-**Deploy preflight.** `deploy.sh` calls `check_perms` (in `deploy-lib.sh`) before
-any seeding or transition and **aborts with exit 5** if `.env`/`deploy-state.env`
-are not `0600` or if the data dir / live DB are world-writable. It deliberately
-does **not** require the live DB to be unreadable (grafana). It prints only file
-names + octal modes — never secrets or DB contents.
+Provision with **`scripts/provision-spyglass-ro.sh`** (root; dry-run default,
+`--apply`/`--rollback`; backs up first, GID-collision guard, never `chgrp -R`).
+Rollback restores `1000:1000`/`0644`/`0755` (also non-recursive).
+
+**Deploy preflight.** `deploy.sh` runs `check_perms` (**exit 5** if
+`.env`/`deploy-state.env` ≠ `0600` or data-dir/DB world-writable) AND, since
+v1.1.7, `check_db_perms` (**exit 6** if the AppData/DB owner·group·mode don't match
+the `spyglass-ro 0640`/`2710` contract — set `SPYGLASS_DB_GID=""` to skip on
+pre-v1.1.7 hosts). Both run before any build/seed/transition and print only file
+names + numeric owner/group/mode — never secrets or DB contents.
 
 ### 6.2 AppData restic snapshot (systemd timer)
 

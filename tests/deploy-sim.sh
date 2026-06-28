@@ -91,6 +91,7 @@ PATH="$BIN:$PATH" \
   SPYGLASS_DEPLOY_ENV_FILE="$WORK/.env" \
   SMOKE_CMD="$BIN/mock-smoke.sh" \
   SPYGLASS_SEED_UID="$(id -u)" \
+  SPYGLASS_DB_GID="" \
   READY_TIMEOUT=6 \
   bash "$REPO/scripts/deploy.sh" >/dev/null 2>&1
 rc=$?

@@ -58,6 +58,20 @@ if ! check_perms "$ENV_FILE" "$STATE_FILE" "$DATA_DIR"; then
   exit 5
 fi
 
+# 1c. SQLite group/mode contract (v1.1.7+): the live DB must be owner 1000, group
+#     spyglass-ro (GID 2472), 0640 — no "other" access; Grafana reads via the
+#     group. Set SPYGLASS_DB_GID="" to skip (pre-v1.1.7 hosts / sims that can't
+#     provision a group). Abort BEFORE build/recreate so we never ship the umask
+#     027 image onto an un-provisioned host (which would break the Grafana read).
+SPYGLASS_DB_GID="${SPYGLASS_DB_GID-2472}" # unset → 2472; set-empty → "" (skip, for sims/pre-v1.1.7)
+SPYGLASS_DIR_MODE="${SPYGLASS_DIR_MODE:-2710}"
+if [ -n "$SPYGLASS_DB_GID" ]; then
+  if ! check_db_perms "$DATA_DIR" 1000 "$SPYGLASS_DB_GID" "$SPYGLASS_DIR_MODE"; then
+    echo "ABORT: SQLite group/mode contract not provisioned — run scripts/provision-spyglass-ro.sh (root) first (see UNSAFE: lines)"
+    exit 6
+  fi
+fi
+
 # 2. Idempotent content seed BEFORE launching the new image. rsync --ignore-existing
 #    never overwrites runtime-promoted posts; the dir must be writable by the
 #    container's uid (SEED_UID, default 1000).

@@ -163,10 +163,17 @@ test('.dockerignore keeps the build context clean (docs/.bak/.claude/.Jules/ops)
 });
 
 test('deploy/rollback/smoke/backup/lib/sim scripts are valid bash (bash -n)', () => {
-  const scripts = ['deploy-lib.sh', 'deploy.sh', 'rollback.sh', 'smoke.sh', 'backup-db.sh'].map(
-    (s) => path.join(ROOT, 'scripts', s),
-  );
-  scripts.push(path.join(ROOT, 'tests', 'deploy-sim.sh'));
+  const scripts = [
+    'deploy-lib.sh',
+    'deploy.sh',
+    'rollback.sh',
+    'smoke.sh',
+    'backup-db.sh',
+    'provision-spyglass-ro.sh',
+  ].map((s) => path.join(ROOT, 'scripts', s));
+  for (const t of ['deploy-sim.sh', 'backup-sim.sh', 'grafana-ro-sim.sh']) {
+    scripts.push(path.join(ROOT, 'tests', t));
+  }
   for (const p of scripts) {
     assert.ok(fs.existsSync(p), `${p} must exist`);
     assert.doesNotThrow(
@@ -405,4 +412,71 @@ test('deploy-sim: unsafe .env permissions block the deploy before any transition
   assert.equal(r.code, 5, r.out);
   assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must be untouched when the preflight blocks');
   assert.match(r.out, /\(no state\)/, 'no deploy-state may be written on an unsafe-perms abort');
+});
+
+// ── secure Grafana SQLite access (fix/secure-grafana-sqlite-access, v1.1.7) ───
+
+test('Dockerfile runs the app with umask 027 via exec (so SIGTERM reaches node)', () => {
+  const d = read('Dockerfile');
+  assert.match(
+    d,
+    /CMD \["sh", "-c", "umask 027 && exec node server\.js"\]/,
+    'CMD must set umask 027 and `exec node server.js` (node stays PID 1)',
+  );
+});
+
+test('deploy-lib check_db_perms enforces owner/group/mode exactly (pass + fail, rootless)', () => {
+  const lib = read('scripts/deploy-lib.sh');
+  assert.match(lib, /check_db_perms\(\)/, 'deploy-lib must define check_db_perms');
+  // Disposable: use the test user's OWN uid/gid (no root) to exercise the logic.
+  const harness = [
+    'set -e',
+    `cd ${JSON.stringify(ROOT)}`,
+    '. scripts/deploy-lib.sh',
+    'd="$(mktemp -d)"; U="$(id -u)"; G="$(id -g)"',
+    'chgrp "$G" "$d" 2>/dev/null; chmod 2710 "$d"',
+    'umask 027; : > "$d/spyglass.db"; : > "$d/spyglass.db-wal"; : > "$d/spyglass.db-shm"',
+    'chgrp "$G" "$d"/spyglass.db* 2>/dev/null',
+    'check_db_perms "$d" "$U" "$G" 2710 || { echo PASS-CASE-FAILED; exit 1; }',
+    'chmod 0644 "$d/spyglass.db-wal"', // re-introduce 'other' read
+    'if check_db_perms "$d" "$U" "$G" 2710 >/dev/null 2>&1; then echo OTHER-BIT-NOT-CAUGHT; exit 1; fi',
+    'chmod 0640 "$d/spyglass.db-wal"',
+    'chmod 0750 "$d"', // drop setgid
+    'if check_db_perms "$d" "$U" "$G" 2710 >/dev/null 2>&1; then echo DIRMODE-NOT-CAUGHT; exit 1; fi',
+    'rm -rf "$d"',
+  ].join('\n');
+  assert.doesNotThrow(
+    () => execFileSync('bash', ['-c', harness], { stdio: 'pipe' }),
+    'check_db_perms logic simulation failed',
+  );
+});
+
+test('deploy.sh runs check_db_perms before build (abort exit 6, skippable)', () => {
+  const d = read('scripts/deploy.sh');
+  assert.match(
+    d,
+    /check_db_perms "\$DATA_DIR" 1000 "\$SPYGLASS_DB_GID"/,
+    'deploy must call check_db_perms (uid 1000, GID, dir mode)',
+  );
+  assert.match(d, /exit 6/, 'SQLite contract mismatch must abort exit 6');
+  const buildIdx = d.indexOf('docker compose build');
+  const chkIdx = d.indexOf('check_db_perms "$DATA_DIR"');
+  assert.ok(chkIdx > 0 && chkIdx < buildIdx, 'check_db_perms must run BEFORE the build/recreate');
+});
+
+test('provision-spyglass-ro.sh is root-only, backup-first, NON-recursive, dry-run default', () => {
+  const p = read('scripts/provision-spyglass-ro.sh');
+  assert.match(p, /require_root/, 'must be root-only');
+  assert.match(p, /backup-db\.sh/, 'must back up before changing perms');
+  assert.match(p, /collision/, 'must guard against a GID collision');
+  assert.match(p, /DRY-RUN/, 'must default to a dry-run');
+  assert.match(p, /--rollback/, 'must provide a rollback path');
+  assert.ok(
+    !/chgrp\s+-R|chmod\s+-R/.test(p),
+    'must NEVER recurse over AppData (no chgrp -R / chmod -R)',
+  );
+  assert.ok(
+    /content-posts (NOT|untouched|never)/i.test(p),
+    'must explicitly leave content-posts untouched',
+  );
 });

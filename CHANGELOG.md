@@ -19,6 +19,33 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.7 — security: Grafana SQLite read-only via shared group (no world read) (2026-06-29)
+
+The live SQLite (`spyglass.db`/`-wal`/`-shm`) was `0644` so the Grafana datasource
+(uid 472) read it via "other" — i.e. world-readable (bcrypt hashes, tokens). This
+closes "other" access while keeping Grafana's read, via a dedicated shared group
+instead of the world bit.
+
+- **App runs `umask 027`** (Dockerfile `CMD ["sh","-c","umask 027 && exec node server.js"]`)
+  so the app creates the DB and recreates WAL/SHM as `0640` (owner rw, group r, no
+  other). `exec` keeps node as PID 1 for signal delivery. core 0.29.0 / CLI 0.1.0
+  unchanged; **no runtime/API contract change**.
+- **Access contract:** AppData `1000:spyglass-ro` mode `2710` (setgid; group can
+  traverse to a known path but not list); `spyglass.db`/`-wal`/`-shm`
+  `1000:spyglass-ro 0640`; `deploy-state.env`/`.env` stay `0600`; content-posts and
+  backups unchanged. Group `spyglass-ro` = fixed **GID 2472**; Grafana joins it via
+  `group_add` (separate grafana-stack repo). Provisioning is **NON-RECURSIVE**.
+- **`scripts/provision-spyglass-ro.sh`** — idempotent root tool (dry-run default,
+  `--apply`/`--rollback`): backs up first, GID-collision guard, `groupadd` only if
+  needed, touches **only** the AppData dir + DB trio (never `chgrp -R`), forces
+  `deploy-state.env` `0600`, verifies uid-1000 / uid-472+group / stranger access.
+- **`deploy.sh` preflight `check_db_perms`** (deploy-lib): aborts **exit 6** before
+  build/recreate unless AppData + DB trio match the contract exactly (owner/group/
+  mode, not just "no other bit"). Skippable via `SPYGLASS_DB_GID=""` for pre-v1.1.7
+  hosts / sims.
+- Regression: `check_db_perms` pass/fail unit, Dockerfile-umask guard, provision
+  guards, durable `tests/grafana-ro-sim.sh` (setgid/umask/setpriv proof).
+
 ### v1.1.6 — infra: remove transitional design-system.css mount (2026-06-28)
 
 Stage 2 (final) of the immutable-image migration. v1.1.5 baked a byte-for-byte

@@ -36,4 +36,8 @@ COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
 USER node
 EXPOSE 3000
-CMD ["node", "server.js"]
+# umask 027 so the app creates the SQLite WAL/SHM (and DB) without "other" perms
+# (mode 0640) — the Grafana datasource reads them via the shared `spyglass-ro`
+# group instead. `exec` makes node PID 1 so SIGTERM/SIGINT reach it for graceful
+# shutdown. See scripts/provision-spyglass-ro.sh + docs/OPERATIONS.md.
+CMD ["sh", "-c", "umask 027 && exec node server.js"]

@@ -8,8 +8,19 @@
 # _stat_owner FILE  → "uid:gid" (portable across GNU + BSD stat)
 _stat_owner() { stat -c '%u:%g' "$1" 2>/dev/null || stat -f '%u:%g' "$1" 2>/dev/null; }
 
-# _stat_mode FILE  → octal mode like "600" / "755" (portable across GNU + BSD stat)
-_stat_mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null; }
+# _stat_mode FILE  → octal mode like "600" / "755" / "2710" (incl. setgid),
+#   portable across GNU + BSD stat. BSD `%Mp%Lp` keeps the special bits but renders
+#   a 4-digit "0NNN" for plain files; normalize that to GNU's "NNN".
+_stat_mode() {
+  local m
+  m="$(stat -c '%a' "$1" 2>/dev/null || stat -f '%Mp%Lp' "$1" 2>/dev/null)"
+  case "$m" in 0???) m="${m#0}" ;; esac
+  printf '%s' "$m"
+}
+
+# _stat_uid / _stat_gid FILE  → numeric owner / group (portable across GNU + BSD)
+_stat_uid() { stat -c '%u' "$1" 2>/dev/null || stat -f '%u' "$1" 2>/dev/null; }
+_stat_gid() { stat -c '%g' "$1" 2>/dev/null || stat -f '%g' "$1" 2>/dev/null; }
 
 # _world_writable FILE  → 0 (true) if the path is writable by "other".
 #   Tests the last octal digit (the "other" perms) so it is independent of the
@@ -61,6 +72,38 @@ check_perms() {
       }
     done
   fi
+  return "$bad"
+}
+
+# check_db_perms DATA_DIR EXPECT_UID GID [DIR_MODE]  → 0 ok / 1 unsafe (prints UNSAFE:)
+#   Enforces the v1.1.7 "Grafana read-only via shared group" contract EXACTLY —
+#   not just "no other bit". Prints only names + numeric owner/group/mode, never
+#   secrets or DB contents. EXPECT_UID is a parameter (prod = 1000) so the check
+#   is unit-testable without root.
+#     • DATA_DIR : owner EXPECT_UID, group = GID, mode = DIR_MODE (default 2710 —
+#                  setgid + owner rwx + group --x; group can traverse to a known
+#                  path but NOT list the dir). 2750 only if proven necessary.
+#     • spyglass.db/-wal/-shm : owner EXPECT_UID, group = GID, mode 0640 (the app's
+#                  umask 027 + the setgid dir keep recreated WAL/SHM at this).
+#   The DB files may not yet exist on a first provision — those are skipped; the
+#   DIR contract is always required once GID-mode security is in effect.
+check_db_perms() {
+  local dir="$1" uid="$2" gid="$3" dir_mode="${4:-2710}" bad=0 u g m
+  u="$(_stat_uid "$dir")"
+  g="$(_stat_gid "$dir")"
+  m="$(_stat_mode "$dir")"
+  [ "$u" = "$uid" ] || { echo "UNSAFE: ${dir} owner uid ${u} (want ${uid})"; bad=1; }
+  [ "$g" = "$gid" ] || { echo "UNSAFE: ${dir} group gid ${g} (want ${gid})"; bad=1; }
+  [ "$m" = "$dir_mode" ] || { echo "UNSAFE: ${dir} mode ${m} (want ${dir_mode} setgid)"; bad=1; }
+  for f in spyglass.db spyglass.db-wal spyglass.db-shm; do
+    [ -e "$dir/$f" ] || continue
+    u="$(_stat_uid "$dir/$f")"
+    g="$(_stat_gid "$dir/$f")"
+    m="$(_stat_mode "$dir/$f")"
+    [ "$u" = "$uid" ] || { echo "UNSAFE: ${f} owner uid ${u} (want ${uid})"; bad=1; }
+    [ "$g" = "$gid" ] || { echo "UNSAFE: ${f} group gid ${g} (want ${gid})"; bad=1; }
+    [ "$m" = 640 ] || { echo "UNSAFE: ${f} mode ${m} (want 640 — no 'other', group read)"; bad=1; }
+  done
   return "$bad"
 }
 
