@@ -71,6 +71,17 @@ for safe rollback — this is Stage 1; the design-system mount is removed in v1.
   `bash -n`.
 - **OPERATIONS.md** rewritten to the immutable model (mounts, deploy, rollback,
   `gemma4-prod`, BUILD_SHA label).
+- **Secure backup & runtime permissions** (pre-deploy hardening). `backup-db.sh`
+  now sets `umask 077`, `chmod 700` the backup dir and `chmod 600` every archive
+  — the `.db.gz`/`tar.gz` are full SQLite dumps (password hashes, token secrets)
+  and have no non-root consumer, so the prior world-readable `0644` is closed.
+  `deploy.sh` gained a `check_perms` preflight (in `deploy-lib.sh`) that **aborts
+  (exit 5)** before any transition if `.env`/`deploy-state.env` aren't `0600` or
+  the data dir / live DB are world-writable. The live `spyglass.db` is left
+  group/other-**readable** on purpose — the grafana datasource (uid 472) reads it,
+  and the app rewrites WAL/SHM with its own umask — so the lockdown targets the
+  backups, not the live DB. Disposable regression sims (`tests/backup-sim.sh`,
+  `tests/deploy-sim.sh unsafe-perms`) assert the archive modes and the preflight.
 
 ### v1.1.4 — docs(privacy): close final gaps — OG/behavior/preferences + architecture docs (2026-06-28)
 

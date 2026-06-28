@@ -49,6 +49,15 @@ GIT_SHA="$HEAD"
 SHA="$(git rev-parse --short HEAD)"
 echo "==> Deploying ${VER}  (full=${GIT_SHA}  short=${SHA})"
 
+# 1b. Permission preflight — refuse to deploy if a deploy-critical file has unsafe
+#     permissions (.env not 0600, deploy-state not 0600, AppData/live-DB
+#     world-writable). Runs BEFORE any seeding or transition. Prints only file
+#     names + modes, never secrets or DB contents.
+if ! check_perms "$ENV_FILE" "$STATE_FILE" "$DATA_DIR"; then
+  echo "ABORT: unsafe permissions on deploy-critical files (see UNSAFE: lines above) — fix before deploying"
+  exit 5
+fi
+
 # 2. Idempotent content seed BEFORE launching the new image. rsync --ignore-existing
 #    never overwrites runtime-promoted posts; the dir must be writable by the
 #    container's uid (SEED_UID, default 1000).
