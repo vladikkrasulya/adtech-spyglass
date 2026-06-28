@@ -153,3 +153,37 @@ test("url-linkfeed.decode: missing optional params don't pollute canonical", () 
   assert.equal(c.site.page, undefined);
   assert.equal(c.user.id, undefined);
 });
+
+// ── url-clickunder-feed (Track: clickunder/pop URL feed) ────────────────────
+
+const CLICKUNDER_URL =
+  'https://ads.vendor.example/feed?sid=123&format=cu&ua=Mozilla%2F5.0' +
+  '&ip=192.0.2.1&uid=u1&language=en&page=https%3A%2F%2Fpub.example%2Fa';
+
+test('decodeRequest: url-clickunder-feed URL → canonical with variant=url-clickunder-feed', () => {
+  const c = decodeRequest(CLICKUNDER_URL);
+  assert.ok(c, 'clickunder /feed?format=cu URL is claimed');
+  assert.equal(c.variant, 'url-clickunder-feed');
+  assert.equal(c.format, 'pops');
+  assert.equal(c.endpoint, 'ads.vendor.example/feed');
+});
+
+test('decodeRequest: all clickunder format aliases are claimed', () => {
+  for (const fmt of ['cu', 'pop', 'pops', 'popup', 'popunder', 'clickunder']) {
+    const c = decodeRequest(`https://ads.vendor.example/feed?sid=1&format=${fmt}`);
+    assert.ok(c && c.variant === 'url-clickunder-feed', `${fmt} → clickunder`);
+  }
+});
+
+test('decodeRequest: generic /feed without a pop format is NOT claimed as clickunder', () => {
+  // Path alone must not trigger the clickunder decoder. A non-pop `/feed`
+  // (e.g. an RSS-ish JSON pull) has no pop signal, so no decoder claims it.
+  assert.equal(decodeRequest('https://news.example/feed?format=json&id=1'), null);
+  assert.equal(decodeRequest('https://news.example/feed'), null);
+});
+
+test('decodeRequest: clickunder and link-feed do not intercept each other', () => {
+  // Disjoint paths: clickunder gates on /feed + pop format, link-feed on /link.
+  assert.equal(decodeRequest(CLICKUNDER_URL).variant, 'url-clickunder-feed');
+  assert.equal(decodeRequest(LINKFEED_URL).variant, 'url-linkfeed');
+});

@@ -224,8 +224,9 @@ function createAnalyzeModule(deps) {
               : 'clean';
 
         // URL-style request (string bidReq) is not in scope for crosscheck /
-        // IAB category extraction / format detection — those all walk oRTB
-        // JSON paths. Gate them on hasReqObj, not hasReq.
+        // IAB category extraction — those walk oRTB JSON paths. Format
+        // detection can use the decoded canonical URL request attached by
+        // validate(), so clickunder/pop GETs still get visible format chips.
         const cross =
           hasReqObj && hasRes ? crosscheck(bidReq, bidRes, { locale, dialect, disabledRules }) : [];
 
@@ -239,10 +240,15 @@ function createAnalyzeModule(deps) {
         // Phase 10b — third detection axis (banner/video/audio/native/push/…
         // + web/inapp/ctv/dooh + vast-N/daast). Compute on whichever payloads
         // were sent and union the results; the request side carries
-        // imp[].banner|video|audio|native + context, the response side
-        // carries mtype + adm sniffing. A null/empty `format` is a valid
-        // outcome — the frontend gates rendering on `confidence`.
-        const formatReq = hasReqObj ? detectFormat(bidReq, userDialect) : null;
+        // imp[].banner|video|audio|native + context, URL requests carry a
+        // canonical decoder format, and the response side carries mtype +
+        // adm/feed sniffing. A null/empty `format` is a valid outcome — the
+        // frontend gates rendering on `confidence`.
+        const formatReq = hasReqObj
+          ? detectFormat(bidReq, userDialect)
+          : hasReqStr && validation && validation.urlRequest
+            ? detectFormat(validation.urlRequest, userDialect)
+            : null;
         const formatRes = hasRes ? detectFormat(bidRes, userDialect) : null;
         const format = unionFormat(formatReq, formatRes);
 

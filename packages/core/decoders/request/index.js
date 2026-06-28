@@ -23,7 +23,7 @@
 
 const logger = require('../../logger');
 
-const DECODERS = [require('./url-linkfeed')];
+const DECODERS = [require('./url-clickunder-feed'), require('./url-linkfeed')];
 
 /**
  * Try to decode a URL-style request payload. Returns the first decoder's

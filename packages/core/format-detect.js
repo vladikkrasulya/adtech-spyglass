@@ -39,6 +39,7 @@ const {
   isPopFormat,
   isPushFormat,
   admLooksLikePop,
+  normaliseFormatName,
 } = require('./non-iab-formats');
 
 const FORMATS = {
@@ -95,6 +96,22 @@ function isObj(x) {
   return x != null && typeof x === 'object' && !Array.isArray(x);
 }
 
+function isPopFeedFormatName(value) {
+  const n = normaliseFormatName(value);
+  return n === 'cu' || n === 'pops' || isPopFormat(n);
+}
+
+function isCanonicalUrlRequest(o) {
+  return (
+    isObj(o) &&
+    typeof o.variant === 'string' &&
+    o.method === 'GET' &&
+    isObj(o.meta) &&
+    typeof o.meta.detectedVariant === 'string' &&
+    isObj(o._raw)
+  );
+}
+
 /**
  * Tiny VAST helpers — exported so rule files share one anchored regex
  * instead of each inventing their own. The previous codebase had three
@@ -120,6 +137,15 @@ function detectVastVersion(s) {
   return m ? m[1] : null;
 }
 
+function hasPopBidRowShape(row) {
+  return isObj(row) && 'url' in row && 'bid' in row;
+}
+
+function hasPopBidCollectionShape(value) {
+  if (Array.isArray(value)) return value.some(hasPopBidRowShape);
+  return hasPopBidRowShape(value);
+}
+
 /**
  * Single-object JSON-feed signatures. The push-materials feed and the
  * bid-redirect-style popunder have unique enough shapes that one or two
@@ -128,6 +154,31 @@ function detectVastVersion(s) {
  */
 function detectFeedFormat(o, tags) {
   if (!isObj(o)) return;
+  if (isObj(o.result)) {
+    const r = o.result;
+    if (hasPopBidCollectionShape(r.listing)) {
+      tags.add(FORMATS.POPS);
+      return;
+    }
+    if (hasPopBidCollectionShape(r.link)) {
+      tags.add(FORMATS.POPS);
+      return;
+    }
+    // A NOBID is a pop signal only when the wrapper ALSO carries the
+    // clickunder/link-feed fingerprint (a `listing` or `link` key — empty on
+    // a no-bid). A bare `{result:{status:'NOBID'}}` is too generic to claim:
+    // NOBID is a normal auction outcome many vendor feeds report, so tagging
+    // POPS on the status word alone would be a silent guess. Real pop traffic
+    // is still tagged request-side by the clickunder decoder (analyze union).
+    if (
+      typeof r.status === 'string' &&
+      r.status.toUpperCase() === 'NOBID' &&
+      ('listing' in r || 'link' in r)
+    ) {
+      tags.add(FORMATS.POPS);
+      return;
+    }
+  }
   const hasClick = 'clickurl' in o || 'clickUrl' in o || 'click_url' in o || 'redirectUrl' in o;
   const hasImage = 'image' in o || 'icon' in o;
   const hasTitle = 'title' in o || 'name' in o;
@@ -168,6 +219,19 @@ function detectFormat(payload, userDialect) {
   } else if (typeof payload === 'object') {
     /** @type {any} */
     const p = payload;
+
+    // URL-style ad request canonicalised by decoders/request/*. Clickunder
+    // feeds have no oRTB `imp` slot to inspect, so the declared URL format
+    // is the authoritative format signal.
+    if (isCanonicalUrlRequest(p)) {
+      const declared =
+        p.format || p._raw.format || p._raw.ad_format || p._raw.type || p._raw.adtype || p.variant;
+      if (isPopFeedFormatName(declared) || String(p.variant).includes('clickunder')) {
+        formats.add(FORMATS.POPS);
+      } else if (isPushFormat(declared)) {
+        formats.add(FORMATS.PUSH);
+      }
+    }
 
     // ── BidRequest path
     if (Array.isArray(p.imp)) {

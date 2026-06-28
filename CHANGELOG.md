@@ -19,6 +19,49 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.0 — feat(core 0.29.0): clickunder/pop URL-feed detection + demand-gated synthetic stream (2026-06-28)
+
+Ships the clickunder/pop feed detection track and finishes the synthetic-stream
+cost work. Built on a WIP stack that had been live in production via bind-mounts
+but never committed; reviewed, hardened, and version-stamped before landing.
+
+- **Clickunder/pop URL-feed format detection (core MINOR 0.28.0 -> 0.29.0).** New
+  `url-clickunder-feed` request decoder for `GET /feed?format=cu|pop|pops|popup|popunder|clickunder`.
+  Host-independent and shape-gated: it only claims a request when the path is
+  `/feed` AND a pop-format query value is present, so stray `/feed` pulls (e.g.
+  an RSS-ish `?format=json`) are not intercepted. `url-linkfeed` (`/link`) is
+  unaffected -- disjoint paths, no cross-interception. `detectFormat()` now also
+  recognises the pop-feed response wrappers (`result.listing` / `result.link`
+  carrying `{url,bid}` rows) and tags `pops`. The analyze handler surfaces format
+  chips for URL-style requests via the decoded canonical request
+  (`validation.urlRequest`).
+- **NOBID classification tightened (review fix).** `{result:{status:"NOBID"}}` no
+  longer resolves to `pops` on the status word alone -- it now also requires the
+  clickunder/link-feed wrapper fingerprint (a `listing`/`link` key). A bare NOBID
+  is a generic auction outcome many vendor feeds report; tagging `pops` without a
+  corroborating signal would be a silent guess (consistent with the v1.0.1
+  "retire silent guesses" audit). Real pop traffic is still tagged request-side
+  by the decoder and unioned in analyze.
+- **Synthetic stream generator demand-gated (perf/ops).** The `/api/v1/stream`
+  (live) generator now starts on the first SSE subscriber and stops when the last
+  one disconnects, instead of ticking 24/7. Connection cleanup is idempotent --
+  `close` and `error` both firing on one connection cannot double-decrement the
+  active-subscriber count or stop the generator out from under other viewers.
+  Eliminates a constant ~1 CPU-core background load for a rarely-watched preview
+  surface.
+- **ClickHouse hygiene.** Synthetic stream specimens are no longer written to
+  `analytics.validation_logs` -- all-zero, round-robined rows were drowning the
+  table in single-row parts and driving constant background-merge load. Only real
+  `/api/analyze` calls are logged now (the analyze hot path is unchanged).
+- **Ops.** Local LLM backend `OLLAMA_MODEL` switched to `gemma4-prod` (alias of
+  `gemma4:e4b`); verified reachable at the configured Ollama endpoint.
+- **Typecheck fix.** Typed the stream module's `streamGenerator` dependency so
+  `.start()/.stop()` resolve under `tsc --noEmit` (`npm run ci` had been red).
+
+Test suite green at 1001 passed / 10 skipped (+10 new: stream demand-gating &
+idempotent cleanup, clickunder decoder claims + non-interception, NOBID negative
+cases). prettier + eslint (0 errors) + tsc clean.
+
 ### v1.0.3 — chore: retire write-only dialect_question_log + align permalink-contract docs (2026-06-14)
 
 Closes the two LOW items deferred from the 2026-06-14 audit (both were

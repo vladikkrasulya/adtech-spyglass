@@ -30,6 +30,8 @@
  * @property {string} method             'GET' (only one observed today).
  * @property {string} endpoint           Vendor endpoint identifier (host + path).
  * @property {string} url                Original URL verbatim.
+ * @property {string} [format]           Normalised ad format when the URL
+ *                                       request declares one.
  * @property {Object} device
  * @property {string} [device.ip]        IPv4 (when user_ip is v4).
  * @property {string} [device.ipv6]      IPv6 (when user_ip is v6).

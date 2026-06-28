@@ -53,9 +53,51 @@ test('detectType: vendor feed (push array)', () => {
   assert.equal(detectType([{ id: 'm1' }]), TYPES.VENDOR_FEED);
 });
 
+test('detectType: URL request (clickunder feed)', () => {
+  const url =
+    'https://ads.example/feed?sid=123&format=cu&ua=Mozilla%2F5.0&ip=192.0.2.1&uid=u1&limit=1&language=en&pid=p1&page=https%3A%2F%2Fpub.example%2Fa';
+  assert.equal(detectType(url), TYPES.URL_REQUEST);
+});
+
 test('detectType: garbage', () => {
   assert.equal(detectType('not an object'), TYPES.UNKNOWN);
   assert.equal(detectType(42), TYPES.UNKNOWN);
+});
+
+test('valid URL request clickunder feed: status clean and canonical format pops', () => {
+  const url =
+    'https://ads.example/feed?sid=123&format=cu&ua=Mozilla%2F5.0&ip=192.0.2.1&uid=u1&limit=1&language=en&pid=p1&page=https%3A%2F%2Fpub.example%2Fa';
+  const result = validate(url);
+  assert.equal(result.type, TYPES.URL_REQUEST);
+  assert.equal(result.status, 'clean');
+  assert.equal(result.urlRequest.variant, 'url-clickunder-feed');
+  assert.equal(result.urlRequest.format, 'pops');
+  assert.equal(result.urlRequest.device.ip, '192.0.2.1');
+  assert.equal(result.urlRequest.device.ua, 'Mozilla/5.0');
+  assert.equal(result.urlRequest.device.language, 'en');
+  assert.equal(result.urlRequest.site.page, 'https://pub.example/a');
+  assert.equal(result.urlRequest.user.id, 'u1');
+});
+
+test('valid URL request clickunder feed: trailing slash path and aliases decode', () => {
+  for (const format of ['clickunder', 'popunder', 'popup']) {
+    const url = `https://ads.example/feed/?sid=123&format=${format}&ip=192.0.2.1`;
+    const result = validate(url);
+    assert.equal(result.type, TYPES.URL_REQUEST);
+    assert.equal(result.status, 'clean');
+    assert.equal(result.urlRequest.variant, 'url-clickunder-feed');
+    assert.equal(result.urlRequest.format, 'pops');
+  }
+});
+
+test('valid URL request link-feed: canonical format pops', () => {
+  const url =
+    'https://ads.example/link?format=json&feed=abc&auth=tok&subid=u1&user_ip=192.0.2.1&ua=Mozilla%2F5.0&url=https%3A%2F%2Fpub.example%2Fa&lang=en';
+  const result = validate(url);
+  assert.equal(result.type, TYPES.URL_REQUEST);
+  assert.equal(result.status, 'clean');
+  assert.equal(result.urlRequest.variant, 'url-linkfeed');
+  assert.equal(result.urlRequest.format, 'pops');
 });
 
 // ── validate on a valid BidRequest (default IAB dialect) ─────────────────

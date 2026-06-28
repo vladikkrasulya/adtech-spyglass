@@ -88,7 +88,7 @@ function specimenStoreGet(hash) {
 
 /**
  * @param {{
- *   streamGenerator: import('events').EventEmitter,
+ *   streamGenerator: import('events').EventEmitter & { start(): void; stop(): void },
  *   streamBuffer: Array<unknown>,
  *   STREAM_REPLAY_MAX: number,
  *   STREAM_HEARTBEAT_MS: number,
@@ -102,6 +102,13 @@ function createStreamModule(deps) {
   // Per-IP concurrent-connection counter — bounds fd/memory exhaustion from a
   // single client opening many long-lived SSE streams.
   const streamConns = new Map();
+
+  // Demand-gating: the synthetic generator only ticks while at least one
+  // /live viewer is connected. This counts subscribers across all IPs so the
+  // first one starts the generator and the last one to leave stops it. Idle —
+  // the common case, since /live is a preview surface — means zero generator
+  // work and zero ClickHouse churn.
+  let activeStreamSubs = 0;
 
   function handleStream(req, res) {
     const ip = streamClientIp(req);
@@ -118,6 +125,11 @@ function createStreamModule(deps) {
       return;
     }
     streamConns.set(ip, cur + 1);
+    // First viewer in → spin the generator up.
+    activeStreamSubs += 1;
+    if (activeStreamSubs === 1 && typeof streamGenerator.start === 'function') {
+      streamGenerator.start();
+    }
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-store',
@@ -150,6 +162,11 @@ function createStreamModule(deps) {
       const n = (streamConns.get(ip) || 1) - 1;
       if (n <= 0) streamConns.delete(ip);
       else streamConns.set(ip, n);
+      // Last viewer out → stop the generator so it isn't ticking for nobody.
+      activeStreamSubs = Math.max(0, activeStreamSubs - 1);
+      if (activeStreamSubs === 0 && typeof streamGenerator.stop === 'function') {
+        streamGenerator.stop();
+      }
     };
     req.on('close', cleanup);
     req.on('error', cleanup);

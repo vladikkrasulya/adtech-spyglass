@@ -37,7 +37,7 @@ services:
       #                glitch on a reasoning prompt); JSON-mode scoring at parity.
       #                ollama-router's sole backend is vkbox, so this runs on GPU.
       - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=gemma4:e4b
+      - OLLAMA_MODEL=gemma4-prod
     ports:
       - '127.0.0.1:8090:3000'
     volumes:

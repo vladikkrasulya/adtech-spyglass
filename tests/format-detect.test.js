@@ -14,6 +14,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { detectFormat, FORMATS, CONTEXTS, PROTOCOLS } = require('@kyivtech/spyglass-core');
+const { makeCanonicalUrlRequest } = require('@kyivtech/spyglass-core/decoders/request/_canonical');
 const kb = require('../packages/core/knowledge-base');
 
 test('detectFormat: returns empty shape for null / non-object input', () => {
@@ -135,6 +136,83 @@ test('detectFormat: push-materials feed array → PUSH', () => {
 test('detectFormat: redirect-only single object → POPS', () => {
   const pop = { id: 'p', redirecturl: 'https://lp.example' };
   const r = detectFormat(pop);
+  assert.ok(r.formats.includes(FORMATS.POPS));
+});
+
+test('detectFormat: clickunder result.listing wrapper → POPS', () => {
+  const feed = { result: { status: 'BID', listing: { url: 'https://lp.example', bid: 0.25 } } };
+  const r = detectFormat(feed);
+  assert.ok(r.formats.includes(FORMATS.POPS));
+});
+
+test('detectFormat: link-feed result.link wrapper → POPS', () => {
+  const feed = { result: { link: [{ url: 'https://lp.example', bid: 0.25, seat: 's1' }] } };
+  const r = detectFormat(feed);
+  assert.ok(r.formats.includes(FORMATS.POPS));
+});
+
+test('detectFormat: generic result.listing/link wrappers do not imply POPS', () => {
+  for (const feed of [
+    { result: { listing: [{ title: 'Search result', link: 'https://search.example/a' }] } },
+    { result: { link: [{ title: 'Native card', image: 'https://cdn.example/img.jpg' }] } },
+  ]) {
+    const r = detectFormat(feed);
+    assert.ok(!r.formats.includes(FORMATS.POPS));
+    assert.equal(r.confidence, 0);
+  }
+});
+
+test('detectFormat: NOBID WITH feed-wrapper fingerprint → POPS', () => {
+  // A no-bid response that still carries the clickunder/link-feed wrapper
+  // shape (a `listing`/`link` key, empty on a no-bid) is a pop feed.
+  for (const feed of [
+    { result: { status: 'NOBID', listing: [] } },
+    { result: { status: 'NOBID', link: [] } },
+  ]) {
+    const r = detectFormat(feed);
+    assert.ok(r.formats.includes(FORMATS.POPS));
+  }
+});
+
+test('detectFormat: bare NOBID without a pop wrapper does NOT imply POPS', () => {
+  // `status:'NOBID'` alone is a generic auction outcome — many non-pop
+  // vendor feeds report it. Claiming POPS here would be a silent guess.
+  const r = detectFormat({ result: { status: 'NOBID' } });
+  assert.ok(!r.formats.includes(FORMATS.POPS));
+  assert.equal(r.confidence, 0);
+});
+
+test('detectFormat: canonical clickunder URL request → POPS', () => {
+  const req = makeCanonicalUrlRequest(
+    'url-clickunder-feed',
+    'https://ads.example/feed?sid=123&format=cu',
+  );
+  req.format = 'pops';
+  req._raw = { sid: '123', format: 'cu' };
+  const r = detectFormat(req);
+  assert.ok(r.formats.includes(FORMATS.POPS));
+});
+
+test('detectFormat: canonical clickunder URL request aliases → POPS', () => {
+  for (const format of ['popunder', 'popup', 'clickunder']) {
+    const req = makeCanonicalUrlRequest(
+      'url-clickunder-feed',
+      `https://ads.example/feed?sid=123&format=${format}`,
+    );
+    req._raw = { sid: '123', format };
+    const r = detectFormat(req);
+    assert.ok(r.formats.includes(FORMATS.POPS), `${format} should resolve to POPS`);
+  }
+});
+
+test('detectFormat: canonical link-feed URL request → POPS', () => {
+  const req = makeCanonicalUrlRequest(
+    'url-linkfeed',
+    'https://ads.example/link?format=json&feed=abc&auth=tok',
+  );
+  req.format = 'pops';
+  req._raw = { format: 'json', feed: 'abc', auth: 'tok' };
+  const r = detectFormat(req);
   assert.ok(r.formats.includes(FORMATS.POPS));
 });
 
