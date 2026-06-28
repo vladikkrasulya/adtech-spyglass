@@ -6,7 +6,7 @@
     <title>ortbtools — акаунт</title>
     <meta
       name="description"
-      content="Ваш акаунт ortbtools: профіль, статистика бібліотеки, шифрування, аналітика користування. Дані зашифровані вашим паролем — оператор не може їх прочитати."
+      content="Ваш акаунт ortbtools: профіль, статистика бібліотеки, шифрування, аналітика користування. Збережена бібліотека зашифрована вашим паролем — оператор не може її прочитати."
     />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="canonical" href="https://ortbtools.com/uk/account" />
@@ -804,10 +804,10 @@
             <section class="cab-card" id="privacy">
               <h2>Що відстежується, а що ні</h2>
               <p class="lead">
-                ortbtools — zero-knowledge для payload'ів. Статистика «Активність» у кабінеті
-                береться з маленького per-user логу що зберігає ЛИШЕ метадані нижче. Тіла bid
-                request і bid response НІКОЛИ не зберігаються до цього логу — вони лише проходять
-                через валідатор, findings виходять, тіла відкидаються.
+                Статистика «Активність» у кабінеті береться з маленького per-user логу, що зберігає
+                ЛИШЕ метадані нижче. Тіла bid request і bid response НІКОЛИ не зберігаються до цього
+                логу — вони лише проходять через валідатор, findings виходять, тіла відкидаються.
+                (Збережені зразки бібліотеки окремо наскрізно зашифровані; див. Security.)
               </p>
               <div class="cab-row">
                 <span class="label">Зберігається</span>
@@ -817,15 +817,25 @@
                 </span>
               </div>
               <div class="cab-row">
-                <span class="label">Не зберігається</span>
+                <span class="label">Немає в цьому лозі</span>
                 <span class="value" style="text-align: right; max-width: 60%">
                   тіла payload · ID окремих findings · IP · user-agent · ідентифікатор партнера ·
                   timestamps з точністю меншою за день у агрегатах
                 </span>
               </div>
               <div class="cab-row">
-                <span class="label">Анонімні дзвінки</span>
-                <span class="value">не логуються</span>
+                <span class="label">Операційний лог запитів</span>
+                <span class="value" style="text-align: right; max-width: 60%">
+                  окремий лог фіксує час · метод · шлях · статус · твій IP (кожну помилку плюс
+                  вибірку успішних) — ніколи не payload
+                </span>
+              </div>
+              <div class="cab-row">
+                <span class="label">Анонімні виклики</span>
+                <span class="value" style="text-align: right; max-width: 60%">
+                  немає per-user рядка активності; операційний лог запитів і знеособлена аналітика
+                  все одно застосовуються
+                </span>
               </div>
               <div class="cab-row">
                 <span class="label">Видалення акаунту</span>

@@ -6,7 +6,7 @@
     <title>How to Use ortbtools — OpenRTB Validator Documentation</title>
     <meta
       name="description"
-      content="ortbtools documentation: how the OpenRTB validator works, what it analyzes, what stays on your device (100% client-side), what is stored with end-to-end encryption (key only on your browser). oRTB 2.5/2.6/3.0, Native, VAST."
+      content="ortbtools documentation: how the OpenRTB validator works, what it analyzes, how your pasted bid data is handled (sent over HTTPS, analyzed on the server, never stored), and what is saved with end-to-end encryption (key only in your browser). oRTB 2.5/2.6/3.0, Native, VAST."
     />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href="https://ortbtools.com/about" />
@@ -37,7 +37,7 @@
     <meta name="twitter:title" content="ortbtools Docs — OpenRTB Validator" />
     <meta
       name="twitter:description"
-      content="ortbtools documentation — the free OpenRTB validator that runs entirely in your browser."
+      content="ortbtools documentation — the free OpenRTB validator. Paste a bid; it's analyzed on the server and never stored."
     />
     <meta name="twitter:image" content="https://ortbtools.com/og-image.png" />
 
@@ -898,9 +898,10 @@
           </ul>
 
           <p style="color: var(--text-muted); font-size: var(--fs-sm); margin-top: var(--space-5)">
-            All of this runs client-side, zero backend load. The engine in
-            <code>packages/core/behavior/</code> is pure-data; findings render in the
-            <strong>Behavior</strong> tab alongside Validation / Crosscheck. The sandbox blocks the
+            The probe runs in your browser's sandboxed iframe; the behavior events it captures (plus
+            the creative markup) are sent to <code>/api/analyze-behavior</code> and scored on the
+            server, which stores nothing. The engine in <code>packages/core/behavior/</code> is a
+            pure-data function — it returns findings and keeps no state. The sandbox blocks the
             fraud action itself; we make the <em>attempt</em> visible — so you can attach it to a
             bug ticket and go back to the creative supplier with a screenshot.
           </p>
@@ -968,8 +969,11 @@
                 <td>Anonymous = lives in the browser tab only; reload = empty.</td>
               </tr>
               <tr>
-                <td>Doesn't log IP/UA on <code>/api/analyze</code></td>
-                <td>Without auth — minimal trace (CF Tunnel access-log, not our backend).</td>
+                <td>Doesn't store your pasted payload</td>
+                <td>
+                  Bodies are validated in memory and discarded; only derived metadata plus a sampled
+                  request log (which includes your IP) are kept — never the bid payload.
+                </td>
               </tr>
               <tr>
                 <td>Doesn't optimise bid strategy / eCPM / yield</td>
@@ -1035,8 +1039,10 @@ findings[]: { id, level, path, params, msg, specRef }
     ↓
 server formats localised text and returns 200 JSON</code></pre>
           <p>
-            Everything happens <strong>synchronously in a single Node.js process</strong>, with no
-            DB access, no external fetch, nothing leaving the box.
+            The validation itself happens <strong>synchronously in a single Node.js process</strong>
+            — no external service is consulted to grade your bid. After the response is sent, only
+            derived metadata (format, oRTB version, finding counts) is written to our analytics and
+            request logs; the request and response bodies are never written anywhere.
           </p>
 
           <hr />
@@ -1045,9 +1051,13 @@ server formats localised text and returns 200 JSON</code></pre>
 
           <h3>Anonymous visitors</h3>
           <p>
-            <strong>Nothing.</strong> <code>/api/analyze</code> doesn't write to the DB, doesn't log
-            payloads, doesn't store call history. Cloudflare Tunnel in front of us records the
-            request itself (IP, path, status) — that's a standard access-log, not our backend.
+            <strong>Your bid payload — nothing.</strong> The request and response bodies are
+            validated in memory and discarded; <code>/api/analyze</code> never writes them to a
+            database or log. We do keep non-identifying analytics (detected format, oRTB version,
+            finding counts) and an operational request log that records request metadata — time,
+            method, path, status and your IP address (every error plus a sample of successful calls)
+            — but never the payload. The Cloudflare Tunnel in front of us keeps its own standard
+            access log as well.
           </p>
 
           <h3>Registered users</h3>
@@ -1065,7 +1075,10 @@ server formats localised text and returns 200 JSON</code></pre>
               </tr>
               <tr>
                 <td>Session</td>
-                <td>in-memory (TTL 30 days). Server restart → everyone signs out</td>
+                <td>
+                  Token + expiry persisted in SQLite, rehydrated on boot (TTL 30 days). The row also
+                  stores your IP and browser user-agent.
+                </td>
               </tr>
               <tr>
                 <td>Saved samples (<code>bid_req</code>, <code>bid_res</code>)</td>
@@ -1092,11 +1105,12 @@ server formats localised text and returns 200 JSON</code></pre>
             </tbody>
           </table>
           <p>
-            Implementation: password on the client → PBKDF2 600k SHA-256 → KEK → unwraps the stored
-            DEK → DEK encrypts content.
-            <strong>The server never sees your password and cannot derive the DEK.</strong> When you
-            change your password the DEK gets re-wrapped (not regenerated), so old samples stay
-            accessible.
+            Implementation: in your browser, your password runs through PBKDF2 600k SHA-256 → KEK →
+            unwraps the stored DEK → DEK encrypts content. Your password is also sent to the server
+            over HTTPS to verify your login with bcrypt — the server keeps only the bcrypt hash,
+            never the plaintext, and the KEK and unwrapped DEK never leave your browser.
+            <strong>So the server cannot decrypt your saved samples.</strong> When you change your
+            password the DEK gets re-wrapped (not regenerated), so old samples stay accessible.
           </p>
 
           <hr />

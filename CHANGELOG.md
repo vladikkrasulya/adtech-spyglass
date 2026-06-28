@@ -19,6 +19,56 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.2 — docs(privacy): align privacy claims with the real network flow (2026-06-28)
+
+Public copy and documentation overstated the privacy posture. The marketing
+hero, SEO/meta tags, the `/about` FAQ, the account cabinet, and several docs
+claimed the tool was "100% client-side", that bid data "never leaves the
+browser", and that there were "no logs / no servers" — none of which matches how
+the Inspector actually works. This release rewrites every such claim to the
+true, code-verified contract, consistently across EN/UK/RU. **No runtime, API,
+or database behaviour changed** (no new logging, no payload logging, no schema
+or naming migration).
+
+The real flow (verified against the source, not the prior copy):
+
+- **Inspector** (`POST /api/analyze`) sends the pasted `bidReq`/`bidRes` over
+  HTTPS and validates it **server-side**. Raw payload bodies are processed
+  transiently and never stored. Derived metadata _is_ kept: anonymous analytics
+  (ClickHouse `validation_logs` — format, oRTB version, finding counts), a
+  per-user `analyze_log` row for signed-in users (metadata only), and an
+  operational request log (ClickHouse `event_log`) that records request metadata
+  **including the client IP**, sampled (every 4xx/5xx + a 1-in-N sample of 2xx).
+  No log stores the payload.
+- **Login**: the password is sent over TLS and hashed with bcrypt (12 rounds)
+  **server-side**; only the hash is stored. Sessions persist to SQLite and store
+  the client IP + user-agent.
+- **Zero-knowledge** is real but scoped to **saved-library sample bodies + the
+  DEK** (PBKDF2-600k → KEK, AES-GCM; the server holds ciphertext + a wrapped key
+  it cannot open). It does **not** cover the Inspector or login. Genuinely
+  client-side features keep their — accurate — claims: share/embed URL-hash
+  payloads, the Discovery walker, the on-prem LLM (`100% local`, no token leaves
+  the LAN), temporary dialects, and the offline `@ortbtools/cli`.
+
+Changed surfaces:
+
+- Landing pages `public/index.{en,uk,ru}.html` — `<title>`, meta description,
+  Open Graph, Twitter card, JSON-LD, and the pre-render hero.
+- `/about` FAQ `public/about.{en,uk,ru}.html` — meta, the "what's stored on the
+  server" section, the anonymous-visitor answer, the behavior-tab note, the
+  comparison table, the session row, and the encryption/password explanation.
+- Account cabinet `public/account.{en,uk,ru}.html` — meta + the "what's tracked,
+  what isn't" disclosure now lists the operational request log and its IP
+  capture, and no longer says anonymous calls are "not logged".
+- Docs: `README.md`, `docs/PRIVACY.md`, `docs/USER_GUIDE.md`.
+- New regression test `tests/privacy-claims.test.js` fails CI if a forbidden
+  absolute claim ("100% client-side", bid data "never leaves the browser",
+  "no servers", "no logs", "password never leaves") reappears in the public UI
+  or user docs. Historical changelog/audit notes and the offline CLI README are
+  exempt via an explicit allowlist.
+
+Patch release — app 1.1.1 → 1.1.2, core stays 0.29.0, CLI stays 0.1.0.
+
 ### v1.1.1 — fix(stream): Live corpus loads only synthetic-_/iab-_ fixtures, not UI metadata (2026-06-28)
 
 Production defect: `/api/v1/stream` (Live) periodically emitted

@@ -12,10 +12,13 @@ encrypted library of saved samples per partner.
 ([UK](https://spyglass.kyivtech.com.ua/uk/) · [EN](https://spyglass.kyivtech.com.ua/) · [RU](https://spyglass.kyivtech.com.ua/ru/))
 
 **No account required** to inspect bids — paste-and-validate works
-anonymously, no logs of your payloads are kept (a per-tab in-memory
-history is the only retention). Login is **opt-in** for the
-encrypted library of saved samples and partner profiles. The whole
-surface lives on a single domain by design — see [decision log in
+anonymously. Your pasted payload is sent over HTTPS, analyzed on the
+server, and never stored; the only payload retention is a per-tab
+in-memory history in your own browser. The server does keep derived
+analytics and a sampled request log (which includes your IP), but never
+the payload bodies. Login is **opt-in** for the encrypted library of
+saved samples and partner profiles. The whole surface lives on a single
+domain by design — see [decision log in
 ROADMAP.md](./ROADMAP.md#decision-log-live).
 
 ## What it does
@@ -47,7 +50,8 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
   `?dialect=<vendor>` (a couple of vendor-specific overlays ship by default).
   Authors can
   also build **temporary client-side dialects** from discovered fields via
-  the in-UI Dialect Builder — these stay local and never leave the browser.
+  the in-UI Dialect Builder — these stay in your browser and are not sent to
+  the server.
 - **Ad preview** — renders `bid.adm` HTML, native JSON cards, and VAST
   fragments in a sandboxed iframe (`sandbox="allow-scripts"`, no
   `allow-same-origin`). Native bids are synthesized into a stand-alone HTML
@@ -63,8 +67,9 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
 
 Phase 7a–7c built an **opt-in, browser-local discovery layer** that watches
 for unknown vendor extension fields under `*.ext.*` and clusters them by
-co-occurrence into candidate dialects. Everything runs **inside the user's
-browser** (IndexedDB) — payload values never leave the tab. Highlights:
+co-occurrence into candidate dialects. The discovery walker runs **inside the
+user's browser** (IndexedDB) — only field paths and character-class shapes are
+kept; bid values are dropped in the browser, not sent to the server. Highlights:
 
 - **Discovery walker** — descent capped at depth 4 with a strict PII
   denylist (`buyeruid`, `ifa`, `idfa`, `ip`, `consent`, `gpp`, `geo.lat`,
@@ -89,10 +94,11 @@ browser** (IndexedDB) — payload values never leave the tab. Highlights:
   rather than priors). License-clean ingestion plan in
   [SOURCES.md](./packages/core/knowledge_base/SOURCES.md).
 
-The privacy posture is consistent across the whole stack: **no
-bid-stream payload values leave the user's browser** unless the user is
-logged in and explicitly saves a sample (in which case they're encrypted
-end-to-end before transmission).
+The privacy posture across the stack: the discovery layer keeps bid
+**values** in your browser (only field paths are persisted). When you run the
+Inspector, the pasted payload is sent over HTTPS and analyzed on the server —
+transiently, never stored. Saving a sample to your account encrypts it
+end-to-end in the browser before upload.
 
 ## Safe Public Mode
 
