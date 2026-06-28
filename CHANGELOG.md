@@ -19,6 +19,51 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.4 — docs(privacy): close final gaps — OG/behavior/preferences + architecture docs (2026-06-28)
+
+Closes the residuals from v1.1.2/v1.1.3 plus deeper drift found by a full
+EN/UK/RU + active-Markdown audit. **No runtime / API / database behaviour
+changed** — copy, docs and the regression test only. Every claim below was
+verified against the source before editing.
+
+- **`about.{en,uk,ru}.html` OG descriptions** now split the two flows explicitly
+  — "what it analyzes **on the server**, and how your saved library is
+  end-to-end encrypted **in your browser**" — instead of the ambiguous "what
+  stays on your device / в браузере".
+- **Behavior-engine wording** (`about.*`) corrected: the probe runs in the
+  sandboxed iframe, the captured events are POSTed to `/api/analyze-behavior`,
+  and the engine runs **server-side** behind that endpoint. Dropped the
+  self-contradictory "browser-compatible: runs in the browser via the API".
+- **`account.{en,uk,ru}.html` preferences** rewritten to the real **mixed**
+  storage (verified in `public/account.js` + `modules/auth/handler.js`): theme
+  and default dialect are `localStorage`-only (no cross-device sync); the
+  **default findings locale is also saved server-side** (`users.preferred_locale`
+  via `POST /api/auth/preferences`) and follows you across devices. The old
+  "Browser-side only … the server does not track preferences; no cross-device
+  sync" was false.
+- **`docs/ARCHMAP.md`** — the validator-card row claimed "client-side validation
+  via webpack/inline-bundled core (matters for 'no phoning home' promise)".
+  Verified false: `public/spyglass.app.js` POSTs to `/api/analyze`; the bundled
+  core is not even loaded in the page. Replaced with the real server-side flow.
+- **`ARCHITECTURE.md`** — fixed three drift points: the diagram annotation
+  (detectVersion "runs in browser + CI" → "server-side + CI/CLI"), the "Why this
+  split" bullet ("the public demo runs validation **client-side** — no bid JSON
+  ever leaves the browser" → server-side via `/api/analyze`), and the §5.4
+  Privacy-posture line that quoted the demo as saying "validation runs in your
+  browser, nothing is uploaded". Added a deployment note. Other active arch docs
+  (`api-v1`, `OPERATIONS`, `TESTING`) audited — no similar drift.
+- **`tests/privacy-claims.test.js` expanded**: now scans **every active
+  user/architecture Markdown doc** (root + `docs/`, recursive) in addition to
+  `public/**` + `lib/seo.js` + `lib/landings.js`; historical/dated/superseded and
+  offline-package docs are exempt via an explicit, documented ALLOWLIST. New
+  forbidden patterns: "client-side validation", "validation runs client-side / in
+  the browser", "no phoning home". New **positive** assertions: the behavior flow
+  (`/api/analyze-behavior` + server-side) and the mixed preference storage
+  (`/api/auth/preferences` server-side locale) must be present; arch docs must
+  describe the server-side `/api/analyze` path.
+
+Patch release — app 1.1.3 → 1.1.4, core stays 0.29.0, CLI stays 0.1.0.
+
 ### v1.1.3 — docs(privacy): fix server-side SEO + landing copy missed in v1.1.2 (2026-06-28)
 
 Follow-up to v1.1.2. The v1.1.2 sweep corrected the static HTML but missed two

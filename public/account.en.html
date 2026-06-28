@@ -933,8 +933,10 @@
             <section class="cab-card">
               <h2>Preferences</h2>
               <p class="lead">
-                Browser-side only — stored on this device. The server does not track preferences; no
-                cross-device sync.
+                Mixed storage. Theme and default dialect live only in this browser (localStorage),
+                with no cross-device sync. Your default findings locale is also saved to your
+                account when you're signed in (server-side, via <code>/api/auth/preferences</code>),
+                so it follows you across devices.
               </p>
               <div class="cab-row">
                 <span class="label">Theme</span>

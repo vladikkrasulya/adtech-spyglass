@@ -66,6 +66,34 @@ const FORBIDDEN = [
   { label: 'RU "данные не покидают …"', re: /данные\s+не\s+покидают/i },
   { label: 'UK "без логів, без серверів"', re: /без\s+логів,?\s*без\s+серверів/i },
   { label: 'RU "без логов, без серверов"', re: /без\s+логов,?\s*без\s+серверов/i },
+  {
+    // "client-side validation" — validation actually runs server-side via
+    // /api/analyze. Note: this matches "client-side validation" but NOT the
+    // legitimate "validation findings ... applied client-side" (the temp-dialect
+    // overlay genuinely IS merged in the browser), nor "client-side encryption".
+    label: '"client-side validation"',
+    re: /client[-\s]?side\s+validation/i,
+  },
+  {
+    // "runs/does validation client-side" / "validation runs client-side".
+    label: 'validation "runs client-side"',
+    re: /(?:\b(?:runs?|does|performs?)\s+validat\w*\s+client[-\s]?side|\bvalidat\w*\s+(?:runs?|happens?|done|performed|executed)\s+client[-\s]?side)/i,
+  },
+  {
+    // "no phoning home" as a product promise — the hosted app DOES POST to
+    // /api/analyze. (Accurate only for the offline core lib / CLI, which are
+    // out of this scan's scope / allowlisted.)
+    label: '"no phoning home"',
+    re: /\bno\s+phoning\s+home\b/i,
+  },
+  {
+    // "validation runs in your browser" — validation runs server-side. Requires
+    // a run-verb between "validat…" and "in the/your browser" so it does NOT
+    // match the legitimate "validation findings render in the browser" (UI) or
+    // "the key derivation happens in your browser".
+    label: 'validation "runs in the/your browser"',
+    re: /\bvalidat\w*\s+(?:runs?|happens?|performed|done|executed|occurs?)\s+in\s+(?:the|your)\s+browser\b/i,
+  },
 ];
 
 // Surfaces intentionally exempt from the policy. Historical changelog / dated
@@ -73,15 +101,29 @@ const FORBIDDEN = [
 // network calls). To exempt a file, add its repo-relative path here WITH a
 // documented reason in this comment.
 const ALLOWLIST = new Set([
+  // Internal (not user-facing) docs — exempt by policy.
   'CHANGELOG.md', // historical: quotes past claims verbatim
   'ROADMAP.md', // internal roadmap / decision log
   'CONTRIBUTING.md', // internal contributor doc
   'CLAUDE.md', // internal agent instructions
-  'packages/cli/README.md', // offline CLI: "never leave the machine" is accurate (no network calls)
+  // Offline packages — "no phoning home" / "runs in browser AND Node" are
+  // accurate for the network-free core library + CLI (verified: zero fetch).
+  'packages/cli/README.md',
+  'packages/core/README.md',
+  'packages/core/knowledge_base/README.md',
+  // Dated / historical / superseded — describe a past state verbatim. New
+  // dated docs must be added here explicitly (the scan picks up every
+  // root/docs Markdown file by default).
   'docs/audit-2026-05-12.md',
+  'docs/cu-pops-audit-2026-05-12.md',
   'docs/functional-audit-2026-05-12.md',
   'docs/tech-debt-2026-05-04.md',
+  'docs/tech-debt-2026-05-12.md',
   'docs/jsfiddle-comparison-2026-05-04.md',
+  'docs/jsonfeed-research-adkernel-2026-05-04.md',
+  'docs/next-chapters-2026-05-09.md',
+  'docs/validator-roadmap-2026-05-09.md',
+  'docs/sonnet-orchestration-plan.md',
   'docs/superseded/stream-platform-pivot-2026-05-05.md',
 ]);
 
@@ -92,6 +134,8 @@ const ALLOWLIST = new Set([
 // supplements the static HTML).
 function collectFiles() {
   const files = [];
+
+  // 1. The served UI — every .html + .js under public/.
   (function walk(dir) {
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
       const abs = path.join(dir, ent.name);
@@ -100,18 +144,25 @@ function collectFiles() {
     }
   })(path.join(ROOT, 'public'));
 
-  for (const doc of [
-    'README.md',
-    'SECURITY.md',
-    'docs/PRIVACY.md',
-    'docs/USER_GUIDE.md',
-    'lib/seo.js',
-    'lib/landings.js',
-  ]) {
-    files.push(path.join(ROOT, doc));
-  }
+  // 2. Server-side copy emitters (inject public meta + landing copy).
+  files.push(path.join(ROOT, 'lib', 'seo.js'), path.join(ROOT, 'lib', 'landings.js'));
 
-  return files.filter((abs) => !ALLOWLIST.has(path.relative(ROOT, abs)));
+  // 3. Every current user / architecture doc: root-level *.md (non-recursive,
+  //    so we skip node_modules/packages) + everything under docs/ (recursive,
+  //    to include docs/superseded/). Historical/internal docs are removed by
+  //    the ALLOWLIST below — so a NEW active doc is policed automatically.
+  for (const ent of fs.readdirSync(ROOT, { withFileTypes: true })) {
+    if (ent.isFile() && ent.name.endsWith('.md')) files.push(path.join(ROOT, ent.name));
+  }
+  (function walkMd(dir) {
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, ent.name);
+      if (ent.isDirectory()) walkMd(abs);
+      else if (ent.name.endsWith('.md')) files.push(abs);
+    }
+  })(path.join(ROOT, 'docs'));
+
+  return [...new Set(files)].filter((abs) => !ALLOWLIST.has(path.relative(ROOT, abs)));
 }
 
 const FILES = collectFiles();
@@ -132,6 +183,9 @@ test('scan set covers the public marketing surfaces', () => {
     'public/about.ru.html',
     'public/account.en.html',
     'docs/PRIVACY.md',
+    'docs/ARCHMAP.md',
+    'docs/api-v1.md',
+    'ARCHITECTURE.md',
     'lib/seo.js',
     'lib/landings.js',
   ]) {
@@ -196,5 +250,50 @@ for (const rel of ['lib/seo.js', 'lib/landings.js']) {
           : '',
       );
     }
+  });
+}
+
+// Positive assertions — lock in the accurate flows so a silent revert fails CI.
+
+// Behavior flow: the about page must describe probe-in-iframe → POST
+// /api/analyze-behavior → engine runs SERVER-SIDE (not "in the browser").
+const BEHAVIOR_FLOW = {
+  'public/about.en.html': [/\/api\/analyze-behavior/, /server-side/i],
+  'public/about.uk.html': [/\/api\/analyze-behavior/, /на сервері/],
+  'public/about.ru.html': [/\/api\/analyze-behavior/, /на сервере/],
+};
+for (const [rel, regexes] of Object.entries(BEHAVIOR_FLOW)) {
+  test(`${rel} describes the behavior engine running server-side`, () => {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    for (const re of regexes) {
+      assert.match(text, re, `${rel} lost the accurate behavior-flow description (${re})`);
+    }
+  });
+}
+
+// Mixed preference storage: the account page must disclose that the locale
+// preference is persisted server-side (cross-device) via /api/auth/preferences,
+// i.e. NOT all-preferences-are-local.
+for (const rel of ['public/account.en.html', 'public/account.uk.html', 'public/account.ru.html']) {
+  test(`${rel} discloses server-side (cross-device) locale preference`, () => {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.match(
+      text,
+      /\/api\/auth\/preferences/,
+      `${rel} no longer discloses that the locale preference syncs server-side (/api/auth/preferences)`,
+    );
+  });
+}
+
+// Architecture docs must describe the real server-side validation path.
+const SERVER_SIDE_VALIDATION = {
+  'docs/ARCHMAP.md':
+    /\/api\/analyze[\s\S]{0,160}server-side|server-side[\s\S]{0,160}\/api\/analyze/i,
+  'ARCHITECTURE.md': /validate[sd]?\s+\*\*server-side\*\*|server-side[\s\S]{0,120}\/api\/analyze/i,
+};
+for (const [rel, re] of Object.entries(SERVER_SIDE_VALIDATION)) {
+  test(`${rel} describes server-side /api/analyze validation`, () => {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.match(text, re, `${rel} lost its accurate server-side /api/analyze description`);
   });
 }
