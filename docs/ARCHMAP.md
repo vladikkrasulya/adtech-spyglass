@@ -408,9 +408,11 @@ bind-mounts. `./public/`, `./packages/`, `./modules/`, `server.js`, `lib/`,
 image. A `compose restart` no longer reloads any source — every change goes
 through a rebuild+redeploy (`scripts/deploy.sh`, see docs/OPERATIONS.md §9).
 
-The only mounts left are persistent data (`/data`, which now also holds
-`content-posts/`) and the **transitional** portal `design-system.css` overlay
-(removed in v1.1.6; the real CSS is vendored into `public/design-system.css`).
+The only mount left (since v1.1.6) is persistent data (`/data`, which now also
+holds `content-posts/`). The design-system CSS is vendored into
+`public/design-system.css` and **baked into the image** (`design-system.vendor.json`);
+the transitional portal overlay was removed in v1.1.6, so the container is fully
+self-contained with a single `/data` mount and no cross-project runtime dependency.
 
 _Historical (pre-v1.1.5): `./public`, `./packages`, `./intel-llm.js` and
 `./samples` were bind-mounted for live edit, while `server.js`/`lib/`/`modules/`
@@ -441,13 +443,13 @@ Browser (https://spyglass.kyivtech.com.ua)
 
 ### 2.3 Cross-stack dependencies of Spyglass
 
-| Spyglass needs...            | From...            | How it connects                                                                        |
-| ---------------------------- | ------------------ | -------------------------------------------------------------------------------------- |
-| LLM (intel)                  | `ollama` container | shared docker network `ollama_default`, `OLLAMA_URL=http://ollama:11434`               |
-| Design system CSS            | `kyivtech-portal`  | bind mount `kyivtech-portal/public/design-system.css:/app/public/design-system.css:ro` |
-| Persistent SQLite            | host fs            | `/srv/DATA/AppData/adtech-spyglass:/data`                                              |
-| Email (recovery key, verify) | Resend             | `RESEND_API_KEY` from `.env` (gitignored)                                              |
-| Health monitoring            | `uptime-kuma`      | HTTP probe of public URL                                                               |
+| Spyglass needs...            | From...               | How it connects                                                                                                                         |
+| ---------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| LLM (intel)                  | `ollama` container    | shared docker network `ollama_default`, `OLLAMA_URL=http://ollama:11434`                                                                |
+| Design system CSS            | vendored (build-time) | baked from `public/design-system.css` (`design-system.vendor.json`) — **no runtime mount / no kyivtech-portal dependency** since v1.1.6 |
+| Persistent SQLite            | host fs               | `/srv/DATA/AppData/adtech-spyglass:/data`                                                                                               |
+| Email (recovery key, verify) | Resend                | `RESEND_API_KEY` from `.env` (gitignored)                                                                                               |
+| Health monitoring            | `uptime-kuma`         | HTTP probe of public URL                                                                                                                |
 
 ### 2.4 SemVer bump locations (9 files, do all in one commit)
 

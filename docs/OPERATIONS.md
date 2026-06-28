@@ -71,12 +71,11 @@ longer change production out of band and the deployed image is a complete
 snapshot of the release. To change source: commit to `main`, then redeploy (§9).
 `docker compose restart` no longer reloads source.
 
-Only two host paths are mounted:
+Since v1.1.6 exactly **one** host path is mounted:
 
-| Host path                                                   | Container path                  | RW  | Purpose                                                             |
-| ----------------------------------------------------------- | ------------------------------- | --- | ------------------------------------------------------------------- |
-| `/srv/DATA/AppData/adtech-spyglass`                         | `/data`                         | RW  | Persistent SQLite + `content-posts/` (blog) — **never lose this**   |
-| `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` | `/app/public/design-system.css` | ro  | **TRANSITIONAL** (removed v1.1.6) — overlays the baked vendored CSS |
+| Host path                           | Container path | RW  | Purpose                                                           |
+| ----------------------------------- | -------------- | --- | ----------------------------------------------------------------- |
+| `/srv/DATA/AppData/adtech-spyglass` | `/data`        | RW  | Persistent SQLite + `content-posts/` (blog) — **never lose this** |
 
 **The `/data` mount** holds `spyglass.db` + `-wal`/`-shm` (live SQLite WAL state)
 and `content-posts/` (persistent blog content; the container reads it via
@@ -85,10 +84,11 @@ files. The backup script archives both (§7).
 
 **`design-system.css`** is vendored byte-for-byte into the image
 (`public/design-system.css`; provenance + update procedure in
-`design-system.vendor.json`). The portal mount above is kept for ONE release so a
-rollback to the v1.1.4 image (which still carries the 783-byte stub) serves real
-CSS; it is removed in v1.1.6. To update the design system, re-vendor per the
-manifest, bump the patch version, and redeploy.
+`design-system.vendor.json`) and served from the baked copy — there is **no portal
+bind-mount** any more (the transitional overlay was removed in v1.1.6; the rollback
+target, the v1.1.5 image, also bakes the full CSS). The container is fully
+self-contained. To update the design system, re-vendor per the manifest, bump the
+patch version, and redeploy (§9.3) — production never follows the portal copy live.
 
 ---
 
@@ -99,12 +99,12 @@ gotcha (an atomic host edit to a bind-mounted source file not being visible in t
 container) **no longer applies to source** — source changes ship only via a
 rebuild+redeploy (§9).
 
-The **only** remaining bind-mount that can still hit this is the **transitional**
-`design-system.css` overlay (`/srv/DATA/Stacks/kyivtech-portal/public/design-system.css`,
-removed in v1.1.6): an atomic edit to the portal's copy needs a
-`docker compose restart` to re-open the fd. Historically this also bit `./public`,
-`./packages`, `./intel-llm.js` and `./samples` (v0.42.5 / v0.42.8) — none of which
-are mounted any more.
+Since v1.1.6 there are **no file-level bind-mounts at all** — the transitional
+`design-system.css` overlay was removed, so the inode trap is fully retired. The
+single remaining mount is the `/data` **directory** (persistent SQLite + content),
+which is not subject to this gotcha. Historically the trap bit `./public`,
+`./packages`, `./intel-llm.js`, `./samples` (v0.42.5 / v0.42.8) and the portal
+`design-system.css` (through v1.1.5) — none are mounted any more.
 
 ---
 
@@ -112,9 +112,9 @@ are mounted any more.
 
 ### 4.1 Restart (no rebuild)
 
-Use only to recover from a transient crash, or after editing the **transitional**
-`design-system.css` portal overlay (the only remaining bind-mount). It does **not**
-pick up source changes — those are baked into the image.
+Use only to recover from a transient crash. It does **not** pick up source or CSS
+changes — everything is baked into the image (there are no bind-mounts left except
+the `/data` data directory).
 
 ```bash
 cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
