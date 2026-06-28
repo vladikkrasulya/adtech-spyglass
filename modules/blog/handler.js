@@ -19,7 +19,9 @@ const path = require('path');
 const { sendJson, sendError } = require('../../lib/http');
 const log = require('../../lib/logger').child('blog');
 
-const CONTENT_DIR = path.join(__dirname, '../../content/posts');
+// Env-overridable (prod: /data/content-posts persistent volume). Default = repo
+// seed / baked copy. Mirrors lib/blog-service.js + modules/admin/blog.js.
+const CONTENT_DIR = process.env.CONTENT_DIR || path.join(__dirname, '../../content/posts');
 // Editorial langs are a FIXED whitelist. `lang` becomes a path segment
 // (content/posts/{lang}); without this guard the public blog list accepted
 // `?lang=../../docs` and leaked docs/*.md (path traversal — fixed 2026-06-14).

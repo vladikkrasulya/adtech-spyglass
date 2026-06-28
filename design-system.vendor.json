@@ -1,0 +1,20 @@
+{
+  "file": "public/design-system.css",
+  "description": "Byte-for-byte vendored snapshot of the shared kyivtech design system. Committed into this repo so the Docker image is a self-contained, reproducible release that does NOT read from a sibling host repo at build time.",
+  "upstream": {
+    "repo": "kyivtech-portal",
+    "path": "/srv/DATA/Stacks/kyivtech-portal/public/design-system.css"
+  },
+  "sha256": "689992fa01d41a7dc23655da0d883b061a6cb0e44be89359060e9ad1aa4192ea",
+  "bytes": 35012,
+  "vendored_at": "2026-06-28",
+  "vendored_for": "v1.1.5",
+  "no_url_asset_deps": true,
+  "update_procedure": [
+    "1. cp /srv/DATA/Stacks/kyivtech-portal/public/design-system.css public/design-system.css",
+    "2. shasum -a 256 public/design-system.css  -> update sha256 + bytes here",
+    "3. bump app patch version (package.json, package-lock.json, public/version.js) + CHANGELOG",
+    "4. npm run ci ; rebuild + redeploy via scripts/deploy.sh",
+    "NOTE: the Docker build never reads the portal path; it bakes public/design-system.css from this checkout."
+  ]
+}

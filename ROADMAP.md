@@ -187,7 +187,7 @@ The Mozok news pipeline surfaces adtech articles daily. A subset should become S
 Admin page `/admin/blog` (auth-gated): lists unapproved candidates; two actions per draft:
 
 - **Approve + publish to DB** (default, faster, auto-refreshable, no git): draft moves from `analytics.blog_drafts` → `analytics.blog_posts` (published table), served from DB. Status set to `published`.
-- **Approve + promote to markdown** (for evergreen / lasting content): writes `content/posts/{lang}/{slug}.md` from the draft; marks CH row as `promoted` (kept as audit trail). Requires manual `git add && git commit` after — surfaced in admin UI as a hint. Default UI choice = DB publish; markdown promotion is opt-in per post.
+- **Approve + promote to markdown** (for evergreen / lasting content): writes `{lang}/{slug}.md` under `CONTENT_DIR` from the draft; marks CH row as `promoted` (kept as audit trail). Default UI choice = DB publish; markdown promotion is opt-in per post. **Since v1.1.5** (immutable image) `CONTENT_DIR=/data/content-posts` is a persistent volume, so promoted posts survive container recreate and are **no longer** committed to git — the old `git add && git commit` hint is gone.
 
 **Additional deliverables:**
 

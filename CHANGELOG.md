@@ -19,6 +19,59 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.5 — infra: immutable, reproducible production image (2026-06-28)
+
+Production previously bind-mounted `server.js`, `modules/`, `public/`,
+`packages/`, `samples/`, `lib/*.js` and `content/posts` from the host. That let a
+host edit change prod out of band, made the image an incomplete snapshot, and —
+because mounts override the image — meant a rollback image **could not** restore
+a prior release. This release makes the running container a self-contained,
+reproducible snapshot. **No runtime/API contract change** (no findings/IDs/spec
+refs touched, no naming migration, core 0.29.0 / CLI 0.1.0 unchanged). **Staged**
+for safe rollback — this is Stage 1; the design-system mount is removed in v1.1.6.
+
+- **No source bind-mounts.** All 9 source mounts dropped from `docker-compose.yml`;
+  the image already baked the source (`COPY . .`) so it is now authoritative.
+- **`design-system.css` vendored.** Byte-for-byte snapshot of the portal's
+  `design-system.css` (35012 B, sha256 `689992fa…4192ea`, no `url()` deps)
+  committed to `public/design-system.css` + provenance in
+  `design-system.vendor.json`. The Docker build no longer reads
+  `/srv/DATA/Stacks/kyivtech-portal` — it builds from a clean checkout. The
+  portal mount is **kept this one release** so a rollback to the v1.1.4 image
+  (which carries the 783 B stub) still serves real CSS; removed in v1.1.6.
+- **Blog content persisted (Model A).** `CONTENT_DIR` is now env-driven
+  (`lib/blog-service.js`, `modules/blog/handler.js`, `modules/admin/blog.js`;
+  default = baked seed). Production sets `CONTENT_DIR=/data/content-posts` — a
+  persistent subdir of the existing `/data` volume (no second mount), seeded
+  idempotently from the repo at deploy. Promoted posts survive recreate and no
+  longer touch the git working tree; the promote API hint dropped the stale
+  `git add content/posts` workflow.
+- **Reproducible build.** `build.context: .` (was an absolute host path); image
+  tag pinned via `image: adtech-spyglass:${SPYGLASS_TAG:?…}` (no silent
+  `local`/`dev` fallback) — `SPYGLASS_TAG` is written to `.env` by the deploy
+  script and auto-read by compose, so a reboot / plain `up -d` re-runs the same
+  image.
+- **OCI image labels** wired from build-args: `org.opencontainers.image.version`
+  ← `APP_VERSION` (package.json), `…revision` ← full `GIT_SHA`; short `BUILD_SHA`
+  stays in `/api/health`. Nothing hardcoded.
+- **`.dockerignore` hardened** (proven via image `find`): excludes `docs/`
+  (57 baked `.md`), `**/*.bak` (6 stale source backups), `.claude/`, `.Jules/`,
+  `Dockerfile*`, `docker-compose*.yml` — while keeping the blog seed
+  `content/posts/**/*.md`. No secrets ever entered the image.
+- **Deploy tooling** (`scripts/deploy.sh`, `rollback.sh`, `smoke.sh`): deploy
+  only from clean `main == origin/main`; build → tag → smoke → **auto-rollback**
+  to the previous self-contained image on failure (verifying the specific
+  previous `BUILD_SHA`; `CRITICAL` + non-zero if rollback also fails). Rollback
+  never touches git, source mounts, `/data`, or content. `scripts/backup-db.sh`
+  now also archives `content-posts` atomically with the same 30-day retention.
+- **CI guard** `tests/immutable-image.test.js`: fails if production compose
+  re-introduces a source bind-mount, if the tag isn't pinned, if the CSS is the
+  stub (hash-checked against the manifest), if the OCI labels aren't wired from
+  args, if `.dockerignore` regresses, or if the shell scripts don't pass
+  `bash -n`.
+- **OPERATIONS.md** rewritten to the immutable model (mounts, deploy, rollback,
+  `gemma4-prod`, BUILD_SHA label).
+
 ### v1.1.4 — docs(privacy): close final gaps — OG/behavior/preferences + architecture docs (2026-06-28)
 
 Closes the residuals from v1.1.2/v1.1.3 plus deeper drift found by a full
