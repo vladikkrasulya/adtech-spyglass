@@ -1,16 +1,906 @@
 /* ============================================================
-   PLACEHOLDER — DO NOT EDIT.
-
-   At runtime this file is **bind-mount-overridden** by docker-compose
-   from /srv/DATA/Stacks/kyivtech-portal/public/design-system.css
-   (see ../docker-compose.yml `volumes:` entry).
-
-   Edits made here have NO runtime effect — the container will keep
-   serving the portal's copy. To change tokens or chrome, edit the
-   portal's design-system.css; this file stays as a marker so Docker's
-   single-file bind mount has a target to overlay.
-
-   If you delete this file, `docker compose up` may create an empty
-   target on first run; subsequent edits to the portal copy still
-   propagate via the read-only mount.
+   kyivtech-portal — Design System v2
+   "Confident craft" — warm light base + industrial yellow accent
+   References: Apple (whitespace + display type), Anthropic (warmth),
+               build.nvidia.com (live stats), Dewalt (industrial accent).
    ============================================================ */
+
+/* Fonts are loaded via <link rel="stylesheet"> in each HTML head with
+   matching <link rel="preconnect"> for fonts.googleapis.com and
+   fonts.gstatic.com — that way the browser fetches the font CSS in
+   parallel with this stylesheet, instead of serially after parsing it.
+   Keep the font set in sync there if you change weights/families. */
+
+/* ============================================================
+   DUAL-LAYER DESIGN TOKEN SYSTEM — shadcn HSL Layer
+   ============================================================
+   WHY DUAL LAYER: The existing "legacy" tokens (--bg, --text,
+   --accent, --border, etc.) have 271 call sites across KyivTech
+   and Spyglass (ortbtools.com). Renaming them would break all
+   consumers. Instead, a NEW shadcn-style HSL layer is added
+   alongside them — no existing code is touched.
+
+   NAMING CONVENTION:
+     --c-*   = NEW component tokens (shadcn pattern, HSL triplets)
+     --*     = LEGACY tokens (hex/rgba, unchanged — do not remove)
+
+   HOW TO USE (new code only):
+     background:   hsl(var(--c-card));
+     border-color: hsl(var(--c-border) / 0.5);   (opacity mixing via CSS4 syntax)
+     color:        hsl(var(--c-foreground));
+
+   MIGRATION PLAN:
+     New UI modules (widgets, panels, dialogs) adopt --c-* tokens.
+     Existing consumers continue using --bg / --text / etc.
+     When a component is fully rewritten, swap its legacy vars last.
+
+   NOTE: --c-accent and --c-border are DIFFERENT from --accent and
+   --border: they are unitless HSL triplets (no hsl() wrapper),
+   enabling the opacity-mix pattern above.
+   ============================================================ */
+
+/* shadcn HSL tokens — light theme (default, no data-theme attr)
+   2026-06-11 «Signal Light»: chalk-blue base + sky accent (тема Signal,
+   спека у vault «Дизайн — тема Signal»). Жовтий #FFCC00 виведено з бренду. */
+:root {
+  --c-background:             210 25% 97%;    /* chalk-blue      ≈ #F6F8FA */
+  --c-foreground:             217 49% 10%;    /* navy ink        ≈ #0D1726 */
+  --c-muted:                  210 28% 94%;
+  --c-muted-foreground:       217 21% 35%;
+  --c-card:                   0 0% 100%;
+  --c-card-foreground:        217 49% 10%;
+  --c-border:                 214 22% 91%;
+  --c-input:                  214 22% 91%;
+  --c-primary:                201 98% 39%;    /* sky-600 #0284C7 */
+  --c-primary-foreground:     0 0% 100%;
+  --c-accent:                 201 98% 39%;
+  --c-accent-foreground:      0 0% 100%;
+  --c-destructive:            0 72% 50%;
+  --c-destructive-foreground: 0 0% 100%;
+  --c-warning:                38 92% 50%;
+  --c-info:                   217 91% 60%;
+  --c-radius:                 8px;
+}
+
+:root {
+  /* ── Color tokens ─────────────────────────────────────── */
+  --bg:              #F6F8FA;   /* chalk-blue, page base (Signal Light) */
+  --bg-2:            #ECF1F6;   /* slightly deeper, alt sections */
+  --surface:         #FFFFFF;   /* card surface */
+  /* Card-elevation aliases — used by /account cabinet cards. Added 2026-05-13
+     after a GPT-5.5 dark/light parity audit ($0.075) flagged the cabinet
+     panels as losing elevation in dark mode because these tokens were
+     referenced by var() but never declared, falling back to transparent
+     and erasing the visual lift the light theme had via --surface. */
+  --bg-elev:         #FFFFFF;   /* primary card surface (= --surface) */
+  --bg-elev-2:       #ECF1F6;   /* sub-card / inner block (= --bg-2) */
+  /* Text-selection highlight. Yellow accent at ~55% on cream gives a
+     clearly visible "you are selecting THIS" cue without burning the
+     eye. Token was referenced from spyglass-shell.css::selection
+     since day one but never declared — fixed 2026-05-13 in the same
+     pattern as the --bg-elev gap (Edit reviewer caught both). */
+  --selection-bg:    rgba(56,189,248,0.40);  /* electric sky highlight */
+  --surface-ink:     #0D1726;   /* navy "ink pill" surface */
+  --surface-ink-2:   #1B2A42;   /* navy surface, slightly lifted */
+
+  --text:            #0D1726;   /* navy ink on light bg */
+  --text-muted:      #46556B;   /* secondary text */
+  --text-dim:        #5C6B82;   /* labels, footnotes — WCAG AA on bg-2 */
+  --text-inv:        #F6F8FA;   /* on dark/accent surfaces */
+  --text-on-accent:  #FFFFFF;   /* white text on sky-600 accent (light theme) */
+
+  --border:          rgba(13,23,38,0.08);
+  --border-strong:   rgba(13,23,38,0.16);
+  --border-ink:      rgba(255,255,255,0.10);
+
+  --accent:          #0284C7;   /* sky-600 — Signal blue, AA on white */
+  --accent-hover:    #0E96DC;
+  --accent-soft:     rgba(2,132,199,0.12);
+  --accent-ink:      #0D1726;
+  --accent-electric: #38BDF8;   /* sky-400 — глоу/деталі, спільний з dark */
+
+  --success:         #15803D;
+  --warning:         #F59E0B;
+  --danger:          #DC2626;
+
+  /* ── Spacing scale (8-based) ─────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+  --space-10: 128px;
+
+  /* ── Radius (chunky / friendly) ─────────────────────── */
+  --r-sm:  10px;   /* inputs */
+  --r-md:  16px;   /* small cards, dropdowns */
+  --r-lg:  22px;   /* main cards */
+  --r-xl:  32px;   /* hero cards, demo blocks */
+  --r-2xl: 40px;   /* large featured surfaces */
+  --r-pill: 999px;
+
+  /* ── Shadows ─────────────────────────────────────────── */
+  --shadow-sm:    0 1px 2px rgba(24,24,27,0.04);
+  --shadow-md:    0 4px 12px rgba(24,24,27,0.06), 0 2px 4px rgba(24,24,27,0.04);
+  --shadow-lg:    0 12px 32px rgba(24,24,27,0.08), 0 4px 8px rgba(24,24,27,0.04);
+  /* ім'я лишається --shadow-yellow (271 call-site), значення — синій глоу */
+  --shadow-yellow: 0 8px 24px rgba(2,132,199,0.28);
+  --inset-line:   inset 0 -1px 0 var(--border);
+
+  /* ── Typography scale ────────────────────────────────── */
+  --font-display: 'Geologica', 'Onest', system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body:    'Onest', system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --fs-mono:    11px;   /* labels, footnotes */
+  --fs-sm:      13px;   /* small body */
+  --fs-base:    15px;   /* body */
+  --fs-md:      17px;   /* lead paragraphs */
+  --fs-lg:      20px;   /* card titles */
+  --fs-xl:      28px;   /* section h2 */
+  --fs-2xl:     40px;   /* section heroes */
+  --fs-3xl:     56px;   /* page hero (mobile) */
+  --fs-4xl:     80px;   /* page hero (desktop) */
+  --fs-5xl:     112px;  /* mega display, sparingly */
+
+  /* ── Motion ──────────────────────────────────────────── */
+  --ease:       cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast:     150ms;
+  --t-base:     250ms;
+  --t-slow:     420ms;
+
+  /* ── Layout ──────────────────────────────────────────── */
+  --maxw-prose:    640px;
+  --maxw-content:  960px;
+  --maxw-wide:     1200px;
+
+  color-scheme: light;
+}
+
+/* ── Reset-ish ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); scroll-behavior: smooth; overflow-x: clip; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+/* Belt + suspenders: every section never wider than its container. */
+section, header, footer, main { max-width: 100%; min-width: 0; }
+img, iframe, video, svg { max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; cursor: pointer; }
+img, svg { display: block; max-width: 100%; }
+
+/* ── Typography ────────────────────────────────────────── */
+h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -0.02em; line-height: 1.06; font-weight: 700; }
+h1 { font-size: var(--fs-3xl); }
+@media (min-width: 768px) { h1 { font-size: var(--fs-4xl); } }
+h2 { font-size: var(--fs-2xl); letter-spacing: -0.025em; line-height: 1.1; }
+h3 { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
+h4 { font-size: var(--fs-md); font-weight: 600; line-height: 1.3; }
+p  { margin: 0; }
+
+.lead { font-size: var(--fs-md); color: var(--text-muted); line-height: 1.55; }
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+.eyebrow::before {
+  content: "";
+  width: 24px;
+  height: 1px;
+  background: var(--text-dim);
+}
+
+.display-num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── Layout helpers ────────────────────────────────────── */
+.kt-section { padding: var(--space-8) 0; }
+@media (min-width: 1024px) { .kt-section { padding: var(--space-9) 0; } }
+
+.kt-container { width: 100%; max-width: var(--maxw-wide); margin-inline: auto; padding-inline: var(--space-5); }
+@media (min-width: 768px) { .kt-container { padding-inline: var(--space-6); } }
+
+.kt-grid { display: grid; gap: var(--space-5); }
+
+/* ── Card ──────────────────────────────────────────────── */
+.kt-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--space-5);
+  /* Grid/flex children with nowrap text otherwise blow out the column. */
+  min-width: 0;
+  transition: transform var(--t-base) var(--ease-out), box-shadow var(--t-base) var(--ease-out), border-color var(--t-base);
+}
+.kt-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+.kt-card-lg { padding: var(--space-6); border-radius: var(--r-xl); }
+.kt-card-xl { padding: var(--space-7); border-radius: var(--r-2xl); }
+
+.kt-card-ink {
+  background: var(--surface-ink);
+  color: var(--text-inv);
+  border: 1px solid var(--border-ink);
+}
+.kt-card-ink:hover { border-color: rgba(255,255,255,0.18); }
+
+.kt-card-accent {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: 1px solid transparent;
+}
+.kt-card-accent:hover {
+  box-shadow: var(--shadow-yellow);
+  transform: translateY(-2px);
+}
+
+/* ── Buttons ───────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 12px 20px;
+  border-radius: var(--r-pill);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color var(--t-fast), border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-base);
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-yellow);
+}
+.btn-ink {
+  background: var(--surface-ink);
+  color: var(--text-inv);
+}
+.btn-ink:hover { background: var(--surface-ink-2); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.btn-ghost:hover { background: var(--surface); border-color: var(--text); }
+
+.btn-sm { padding: 8px 14px; font-size: var(--fs-mono); letter-spacing: 0.06em; }
+.btn-lg { padding: 16px 28px; font-size: var(--fs-base); }
+
+/* ── Pill / badge ──────────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.pill-accent { background: var(--accent-soft); border-color: rgba(2,132,199,0.32); color: var(--text); }
+.pill-ink { background: var(--surface-ink); color: var(--text-inv); border-color: transparent; }
+.pill-live::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 999px;
+  background: var(--success);
+  box-shadow: 0 0 0 4px rgba(22,163,74,0.16);
+  animation: pulse-live 2s ease-in-out infinite;
+}
+@keyframes pulse-live { 50% { box-shadow: 0 0 0 6px rgba(22,163,74,0.06); } }
+
+/* ── Stat ──────────────────────────────────────────────── */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.stat-num {
+  font-family: var(--font-mono);
+  font-size: var(--fs-3xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.stat-num-sm { font-size: var(--fs-2xl); }
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+/* ── Form field ───────────────────────────────────────── */
+.field-label { display: block; font-family: var(--font-mono); font-size: var(--fs-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-dim); margin-bottom: 8px; }
+.field-input,
+input, select, textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 11px 14px;
+  border-radius: var(--r-sm);
+  font: inherit;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+input::placeholder, textarea::placeholder { color: var(--text-dim); }
+input:hover, select:hover, textarea:hover { border-color: var(--text-dim); }
+input:focus, select:focus, textarea:focus, .field-input:focus {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+/* ── Bar (progress / telemetry) ───────────────────────── */
+.bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--text);
+  border-radius: 999px;
+  transition: width 600ms var(--ease-out);
+}
+.bar-accent > span { background: var(--accent); }
+
+/* ── Tab nav (admin) ──────────────────────────────────── */
+.tabs {
+  display: inline-flex;
+  background: var(--bg-2);
+  padding: 4px;
+  border-radius: var(--r-pill);
+  gap: 2px;
+}
+.tab {
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  transition: background-color var(--t-fast), color var(--t-fast);
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] {
+  background: var(--surface-ink);
+  color: var(--text-inv);
+}
+
+/* ── Section header ───────────────────────────────────── */
+.section-head { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); max-width: var(--maxw-content); }
+.section-head .eyebrow { color: var(--text-dim); }
+
+/* ── Reveal on scroll ─────────────────────────────────── */
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity var(--t-slow) var(--ease-out), transform var(--t-slow) var(--ease-out); }
+.reveal.in  { opacity: 1; transform: none; }
+
+/* ── Live ticker ──────────────────────────────────────── */
+.ticker {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  border-block: 1px solid var(--border);
+  background: var(--bg);
+}
+.ticker-track {
+  display: inline-flex;
+  gap: 48px;
+  animation: ticker-scroll 60s linear infinite;
+  padding-block: var(--space-3);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-dim);
+}
+.ticker-track:hover { animation-play-state: paused; }
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* ── Top-of-page hairline ─────────────────────────────── */
+.hairline { height: 1px; background: var(--border); }
+
+/* ── Lists with row dividers (services, news) ────────── */
+.kt-list { display: flex; flex-direction: column; }
+.kt-list > * + * { border-top: 1px solid var(--border); }
+
+.kt-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  transition: background-color var(--t-fast);
+  text-decoration: none;
+  color: inherit;
+}
+.kt-list-item:hover { background: var(--bg); }
+.kt-list-item .arrow { color: var(--text-dim); transition: transform var(--t-fast), color var(--t-fast); }
+.kt-list-item:hover .arrow { transform: translateX(4px); color: var(--text); }
+
+/* Icon square */
+.kt-icon {
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.kt-icon-accent { background: var(--accent); color: var(--text-on-accent); }
+
+/* FAQ */
+.kt-faq {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--space-5);
+  transition: border-color var(--t-base);
+}
+.kt-faq[open] { border-color: var(--text-dim); }
+.kt-faq summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  cursor: pointer; list-style: none;
+  font-weight: 600; font-size: var(--fs-md); color: var(--text);
+}
+.kt-faq summary::-webkit-details-marker { display: none; }
+.kt-faq-icon {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  font-size: 18px;
+  transition: transform var(--t-fast), background-color var(--t-fast);
+  flex-shrink: 0;
+}
+.kt-faq[open] .kt-faq-icon { transform: rotate(45deg); background: var(--accent); color: var(--text-on-accent); }
+.kt-faq-body { margin-top: var(--space-3); color: var(--text-muted); line-height: 1.6; }
+
+/* Chip / filter */
+.chip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.chip:hover { color: var(--text); border-color: var(--text); }
+.chip.active { background: var(--surface-ink); color: var(--text-inv); border-color: transparent; }
+
+/* News-specific */
+.lang-badge {
+  display: inline-flex; align-items: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.lang-badge.active { background: var(--accent); color: var(--text-on-accent); }
+.hot-tag {
+  display: inline-flex; align-items: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+/* Topnav */
+.kt-topnav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(246,248,250,0.78);   /* chalk-blue (Signal) — був кремовий, «жовтив» хедер */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.kt-topnav-inner {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-5);
+  padding: var(--space-3) 0;
+}
+.kt-topnav-links { display: none; gap: var(--space-5); }
+@media (min-width: 768px) { .kt-topnav-links { display: flex; } }
+.kt-topnav-links a {
+  font-size: var(--fs-sm); color: var(--text-muted); transition: color var(--t-fast);
+}
+.kt-topnav-links a:hover { color: var(--text); }
+.kt-brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; letter-spacing: -0.04em; font-size: var(--fs-md); }
+.kt-brand-spark { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+
+/* Hover spotlight on cards */
+.kt-spotlight { position: relative; overflow: hidden; }
+.kt-spotlight::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: radial-gradient(420px circle at var(--px,50%) var(--py,50%), var(--accent-soft), transparent 60%);
+  opacity: 0;
+  transition: opacity var(--t-base);
+}
+.kt-spotlight:hover::before { opacity: 1; }
+
+/* Hide on mobile / desktop */
+.hide-sm { display: none; }
+@media (min-width: 768px) { .hide-sm { display: initial; } .hide-md { display: none; } }
+
+/* ============================================================
+   Dark theme — opt-in via <html data-theme="dark">.
+   FOUC-safe IIFE in <head> sets the attribute before paint.
+   Default (no attribute) = light theme above.
+   ============================================================ */
+[data-theme="dark"] {
+  /* 2026-06-11 «Signal» dark: глибока синь + електрик #38BDF8 (vault-спека) */
+  --bg:              #0A111F;
+  --bg-2:            #0C1424;
+  --surface:         #0E1626;
+  /* Card-elevation aliases. In dark mode the cabinet cards need a
+     clearly-lighter surface than --bg / --bg-2 to read as elevated
+     panels; otherwise the GPT-5.5 audit found them blending into
+     the page background. Set one step above --surface so cabinet
+     cards pop without straying off the "warm graphite" palette. */
+  --bg-elev:         #121C30;   /* primary card surface, one step above bg */
+  --bg-elev-2:       #182441;   /* sub-card / inner block */
+  /* Selection highlight — same yellow but slightly lower opacity so
+     the cream-on-graphite text remains readable through the tint.
+     The ::selection rule pins text color to --text-on-accent (dark)
+     which works against this yellow bg in both themes. */
+  --selection-bg:    rgba(56,189,248,0.35);
+  /* surface-ink stays dark — same "industrial pill" identity. Slightly
+     LIFTED above bg in dark mode so the pill reads as elevated rather
+     than sunken (opposite of the light-mode "deep black on cream" feel). */
+  --surface-ink:     #121C30;
+  --surface-ink-2:   #1B2A42;
+
+  --text:            #E9EEF7;
+  --text-muted:      #93A5C1;
+  /* Bumped from #8A8478 (≈53% L*) to #9B968C (≈60% L*) on 2026-05-13 —
+     GPT-5.5 parity audit flagged dark placeholders, footnotes, and
+     sidebar labels as reading noticeably dimmer than their light
+     counterparts. The light --text-dim is #5F5F66 (zinc-600,
+     ~40% L*); the new dark value lands at a perceptually matched
+     "two steps brighter than --bg" rather than a hard zinc inversion. */
+  --text-dim:        #8FA0BC;
+  /* text-inv is text-on-DARK-pill (.btn-ink, .pill-ink, active .tab/.chip).
+     Surfaces it sits on stay dark in both themes → text-inv stays LIGHT. */
+  --text-inv:        #E9EEF7;
+  /* у dark акцент світлий (#38BDF8) → текст на ньому темний */
+  --text-on-accent:  #0A111F;
+
+  --border:          rgba(233,238,247,0.10);
+  --border-strong:   rgba(233,238,247,0.22);
+  --border-ink:      rgba(255,255,255,0.10);
+
+  --accent:          #38BDF8;   /* sky-400 electric на глибокій сині */
+  --accent-hover:    #5FCBFA;
+  --accent-soft:     rgba(56,189,248,0.16);
+  --accent-electric: #38BDF8;
+  --success:         #4ADE80;
+
+  --shadow-sm:    0 1px 2px rgba(0,0,0,0.30);
+  --shadow-md:    0 4px 12px rgba(0,0,0,0.40), 0 2px 4px rgba(0,0,0,0.28);
+  --shadow-lg:    0 12px 32px rgba(0,0,0,0.50), 0 4px 8px rgba(0,0,0,0.30);
+  --shadow-yellow: 0 8px 24px rgba(56,189,248,0.22);
+  --inset-line:   inset 0 -1px 0 var(--border);
+
+  color-scheme: dark;
+}
+
+/* shadcn HSL tokens — dark theme override */
+[data-theme="dark"] {
+  --c-background:             221 51% 8%;     /* deep navy ≈ #0A111F */
+  --c-foreground:             220 33% 94%;    /* ≈ #E9EEF7 */
+  --c-muted:                  220 45% 12%;
+  --c-muted-foreground:       217 25% 67%;
+  --c-card:                   221 46% 10%;    /* ≈ #0E1626 */
+  --c-card-foreground:        220 33% 92%;
+  --c-border:                 218 42% 18%;    /* ≈ #1B2A42 */
+  --c-input:                  218 42% 18%;
+  --c-primary:                199 93% 60%;    /* sky-400 #38BDF8 */
+  --c-primary-foreground:     221 51% 8%;
+  --c-accent:                 199 93% 60%;
+  --c-accent-foreground:      221 51% 8%;
+  --c-destructive:            6 78% 57%;
+  --c-destructive-foreground: 0 0% 100%;
+  --c-warning:                38 92% 50%;
+  --c-info:                   217 91% 60%;
+}
+
+
+/* Topnav background tracks theme. Light value above is rgba(246,248,250,0.78). */
+[data-theme="dark"] .kt-topnav { background: rgba(10,17,31,0.82); }
+
+/* Floating theme toggle (injected by IIFE on every surface).
+   Uses tokens so it adapts in both directions automatically. */
+.kt-theme-toggle {
+  position: fixed;
+  right: var(--space-4, 16px);
+  bottom: var(--space-4, 16px);
+  z-index: 9999;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: transform var(--t-fast) var(--ease-out), background-color var(--t-fast), border-color var(--t-fast);
+  padding: 0;
+}
+.kt-theme-toggle:hover { transform: translateY(-1px); border-color: var(--text-dim); }
+.kt-theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* У топбар-слоті адмінки тогл — звичайна інлайн-кнопка поряд із logout.
+   position:fixed тут ламається: топбар має backdrop-filter і стає containing
+   block → «fixed» якорився до топбару й наїжджав на logout (баг 2026-06-11). */
+.kt-admin-topbar-theme-slot .kt-theme-toggle {
+  position: static;
+  width: 36px;
+  height: 36px;
+  box-shadow: none;
+}
+
+/* Floating language toggle (Spyglass uses this; other surfaces can opt-in by
+   injecting a `.kt-lang-toggle` button via their own IIFE). Sits to the left
+   of the theme toggle so both fit a thumb-reach area in the bottom-right. */
+.kt-lang-toggle {
+  position: fixed;
+  right: calc(var(--space-4, 16px) + 48px);
+  bottom: var(--space-4, 16px);
+  z-index: 9999;
+  height: 40px;
+  min-width: 40px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: transform var(--t-fast) var(--ease-out), background-color var(--t-fast), border-color var(--t-fast);
+}
+.kt-lang-toggle:hover { transform: translateY(-1px); border-color: var(--text-dim); }
+.kt-lang-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ============================================================
+   SIGNAL MOTION PACK — геометричні анімації теми Signal (2026-06-11)
+   CSS-only. Усі ефекти вимикаються через prefers-reduced-motion.
+   Утиліти спільні для лендінга / адмінки / Spyglass.
+   ============================================================ */
+
+/* ── креслярська сітка з повільним дрейфом (фон секції) ── */
+.kt-blueprint {
+  position: relative;
+}
+.kt-blueprint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-line, rgba(13,23,38,0.045)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line, rgba(13,23,38,0.045)) 1px, transparent 1px);
+  background-size: 44px 44px;
+  animation: kt-grid-drift 22s ease-in-out infinite alternate;
+}
+[data-theme="dark"] .kt-blueprint::before {
+  --grid-line: rgba(233,238,247,0.035);
+}
+@keyframes kt-grid-drift {
+  to { background-position: 32px 18px; }
+}
+
+/* ── радіальне сяйво, що повільно дихає (поверх сітки) ── */
+.kt-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(900px 480px at 82% -8%, var(--glow, rgba(2,132,199,0.07)), transparent 58%);
+  animation: kt-glow-drift 11s ease-in-out infinite alternate;
+}
+[data-theme="dark"] .kt-glow::after { --glow: rgba(56,189,248,0.12); }
+@keyframes kt-glow-drift {
+  to { transform: translate(-36px, 16px) scale(1.05); }
+}
+
+/* ── ping-пульс для live-індикаторів (додати .kt-live до крапки) ── */
+.kt-live {
+  position: relative;
+}
+.kt-live::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  animation: kt-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes kt-ping {
+  0%        { transform: scale(0.5); opacity: 0.9; }
+  80%, 100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* ── сегментоване кільце-декор (обертається; ставити як <i class="kt-ring">) ── */
+.kt-ring {
+  position: absolute;
+  width: var(--ring-size, 340px);
+  height: var(--ring-size, 340px);
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    conic-gradient(from 0deg,
+      var(--ring-c, rgba(2,132,199,0.20)) 0 28deg,  transparent 28deg 90deg,
+      var(--ring-c, rgba(2,132,199,0.20)) 90deg 118deg, transparent 118deg 180deg,
+      var(--ring-c, rgba(2,132,199,0.20)) 180deg 208deg, transparent 208deg 270deg,
+      var(--ring-c, rgba(2,132,199,0.20)) 270deg 298deg, transparent 298deg 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px));
+  animation: kt-spin 38s linear infinite;
+}
+.kt-ring.kt-ring-fast { animation-duration: 18s; animation-direction: reverse; }
+[data-theme="dark"] .kt-ring { --ring-c: rgba(56,189,248,0.22); }
+@keyframes kt-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── кутові «дужки креслення» на картках при ховері ── */
+.kt-corners {
+  position: relative;
+}
+.kt-corners::before,
+.kt-corners::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
+  pointer-events: none;
+}
+.kt-corners::before {
+  top: 10px; left: 10px;
+  border-right: 0; border-bottom: 0;
+  transform: translate(6px, 6px);
+}
+.kt-corners::after {
+  bottom: 10px; right: 10px;
+  border-left: 0; border-top: 0;
+  transform: translate(-6px, -6px);
+}
+.kt-corners:hover::before,
+.kt-corners:hover::after { opacity: 1; transform: translate(0, 0); }
+
+/* ── sheen-перелив для display-заголовків (hero) ── */
+.kt-sheen {
+  background: linear-gradient(100deg,
+    var(--text) 38%, var(--accent) 50%, var(--text) 62%);
+  background-size: 230% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: kt-sheen 7s ease-in-out infinite;
+}
+@keyframes kt-sheen {
+  50% { background-position: 100% 0; }
+}
+
+/* ── каскадна поява блоків при завантаженні ── */
+.kt-rise {
+  animation: kt-rise 0.7s var(--ease-out) both;
+}
+.kt-rise:nth-child(2) { animation-delay: 0.08s; }
+.kt-rise:nth-child(3) { animation-delay: 0.16s; }
+.kt-rise:nth-child(4) { animation-delay: 0.24s; }
+.kt-rise:nth-child(5) { animation-delay: 0.32s; }
+@keyframes kt-rise {
+  from { opacity: 0; transform: translateY(18px); }
+}
+
+/* ── плавне заповнення прогрес-барів (спрацьовує на зміні width із JS) ── */
+.bar > span, .bar > i { transition: width 0.9s var(--ease-out); }
+
+/* ── reduced motion: все геометричне статичне ── */
+@media (prefers-reduced-motion: reduce) {
+  .kt-blueprint::before,
+  .kt-glow::after,
+  .kt-live::after,
+  .kt-ring,
+  .kt-sheen,
+  .kt-rise { animation: none !important; }
+  .kt-rise { opacity: 1; transform: none; }
+}

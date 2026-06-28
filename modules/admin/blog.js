@@ -20,7 +20,9 @@ const log = require('../../lib/logger').child('admin-blog');
 const { chQuery, chInsert, chExec, chEsc } = require('../../lib/clickhouse');
 const { publishPost, rejectPost, slugify, nowCh } = require('../../lib/blog-service');
 
-const CONTENT_DIR = path.join(__dirname, '../../content/posts');
+// Env-overridable (prod: /data/content-posts persistent volume — promoted posts
+// persist across container recreate). Default = repo seed / baked copy.
+const CONTENT_DIR = process.env.CONTENT_DIR || path.join(__dirname, '../../content/posts');
 
 function requireAdminToken(req, res) {
   const expected = process.env.ADMIN_STATS_TOKEN;
@@ -133,8 +135,11 @@ function createAdminBlogModule() {
           action: 'promoted',
           slug,
           lang: draft.lang,
-          file: `content/posts/${draft.lang}/${slug}.md`,
-          hint: 'Run: git add content/posts/ && git commit -m "blog: promote ' + slug + '"',
+          file: `${draft.lang}/${slug}.md`,
+          // Persistent storage (CONTENT_DIR volume) since v1.1.5 — the post is
+          // written to the data volume and survives container recreate. No git
+          // commit step (content no longer lives in the git working tree).
+          storage: 'persistent CONTENT_DIR volume',
         });
       }
     } catch (e) {

@@ -402,27 +402,24 @@ modules during the backend migration.
 
 ### 2.1 What rebuilds vs what doesn't
 
-**Bind-mounted** (live edit, `compose restart` if Node-cached, browser refresh otherwise):
+**Since v1.1.5 (immutable image): EVERYTHING is baked.** There are no source
+bind-mounts. `./public/`, `./packages/`, `./modules/`, `server.js`, `lib/`,
+`intel-llm.js`, `./samples/`, and the `content/posts` seed all ship inside the
+image. A `compose restart` no longer reloads any source — every change goes
+through a rebuild+redeploy (`scripts/deploy.sh`, see docs/OPERATIONS.md §9).
 
-- `./public/` → `/app/public/`
-- `./packages/` → `/app/packages/` (read-only)
-- `./intel-llm.js` → `/app/intel-llm.js` (read-only)
-- `./samples/` → `/app/samples/` (read-only) — added 2026-05-09 after the trap below
+The only mounts left are persistent data (`/data`, which now also holds
+`content-posts/`) and the **transitional** portal `design-system.css` overlay
+(removed in v1.1.6; the real CSS is vendored into `public/design-system.css`).
 
-**Baked into image** (requires `docker compose up -d --build`):
+_Historical (pre-v1.1.5): `./public`, `./packages`, `./intel-llm.js` and
+`./samples` were bind-mounted for live edit, while `server.js`/`lib/`/`modules/`
+were baked — the asymmetry was a frequent "edit not visible" trap. The immutable
+image removes the asymmetry entirely._
 
-- `server.js` ← BIG TRAP. Edit it → must rebuild.
-- `lib/` ← same trap. Router / http / replay / corpus-matrix all
-  baked in; touch them → rebuild.
-- `modules/` ← also baked. Adding a new backend module (or editing
-  an existing handler) needs a rebuild before it goes live.
-- `tests/` (not consumed at runtime, but worth knowing)
-- `Dockerfile`-installed deps
-- Anything else not in the bind-mount list above
-
-> If you edit ANY non-`public/` file, you MUST `compose up -d --build`.
-> `compose restart` won't pick it up. The pre-push hook runs CI but
-> doesn't rebuild — the container is your responsibility.
+> If you edit ANY file, commit to `main` and redeploy
+> (`./scripts/deploy.sh`). `compose restart` no longer picks up source — the
+> image is immutable. The pre-push hook runs CI but doesn't rebuild.
 
 ### 2.2 Public exposure
 

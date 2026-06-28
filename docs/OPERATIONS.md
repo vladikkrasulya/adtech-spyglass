@@ -63,75 +63,48 @@ For deep architectural context see `ARCHITECTURE.md` (especially §0 Current Sta
 All volumes are defined in `docker-compose.yml`. Each one has different operational
 implications — know these before touching files.
 
-| Host path                                                   | Container path                  | RW  | Purpose                                                   |
-| ----------------------------------------------------------- | ------------------------------- | --- | --------------------------------------------------------- |
-| `./public`                                                  | `/app/public`                   | RW  | HTML/CSS/JS — live-edit, applies on browser refresh       |
-| `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` | `/app/public/design-system.css` | ro  | Shared design tokens — single source of truth with portal |
-| `./packages`                                                | `/app/packages`                 | ro  | Validator core — rule changes apply on `compose restart`  |
-| `./intel-llm.js`                                            | `/app/intel-llm.js`             | ro  | LLM bridge — prompt edits apply on `compose restart`      |
-| `./samples`                                                 | `/app/samples`                  | ro  | Synthetic specimen corpus for `/api/v1/sample`            |
-| `/srv/DATA/AppData/adtech-spyglass`                         | `/data`                         | RW  | SQLite home — **never lose this dir**                     |
+**Immutable image (v1.1.5+).** ALL source — `server.js`, `db.js`, `auth.js`,
+`modules/`, `packages/`, `public/`, `samples/`, `lib/`, and the `content/posts`
+seed — is **baked into the image** at build time (`COPY . .`, filtered by
+`.dockerignore`). There are **no source bind-mounts**, so a host edit can no
+longer change production out of band and the deployed image is a complete
+snapshot of the release. To change source: commit to `main`, then redeploy (§9).
+`docker compose restart` no longer reloads source.
 
-**The `./public` mount is RW**, not `:ro`, because `design-system.css` is mounted as
-a sub-path on top of it. Docker cannot create a sub-mountpoint inside a read-only
-parent, so the whole `public/` tree must be writable.
+Only two host paths are mounted:
 
-**The `/data` mount** holds `spyglass.db`, `spyglass.db-shm`, and `spyglass.db-wal`.
-All three files are live SQLite WAL state. Never copy only `spyglass.db` without the
-WAL files — you'll get a partial snapshot. The backup script handles this correctly via
-`sqlite3 .backup` (see §7).
+| Host path                                                   | Container path                  | RW  | Purpose                                                             |
+| ----------------------------------------------------------- | ------------------------------- | --- | ------------------------------------------------------------------- |
+| `/srv/DATA/AppData/adtech-spyglass`                         | `/data`                         | RW  | Persistent SQLite + `content-posts/` (blog) — **never lose this**   |
+| `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` | `/app/public/design-system.css` | ro  | **TRANSITIONAL** (removed v1.1.6) — overlays the baked vendored CSS |
 
-`server.js` is **not** bind-mounted. It is baked into the image at build time. Edits to
-`server.js`, `db.js`, `auth.js`, `email.js`, `notify.js`, the `modules/` tree, or any
-other file outside the volumes listed above are **silently ignored** until you run
-`docker compose up -d --build`.
+**The `/data` mount** holds `spyglass.db` + `-wal`/`-shm` (live SQLite WAL state)
+and `content-posts/` (persistent blog content; the container reads it via
+`CONTENT_DIR=/data/content-posts`). Never copy only `spyglass.db` without the WAL
+files. The backup script archives both (§7).
+
+**`design-system.css`** is vendored byte-for-byte into the image
+(`public/design-system.css`; provenance + update procedure in
+`design-system.vendor.json`). The portal mount above is kept for ONE release so a
+rollback to the v1.1.4 image (which still carries the 783-byte stub) serves real
+CSS; it is removed in v1.1.6. To update the design system, re-vendor per the
+manifest, bump the patch version, and redeploy.
 
 ---
 
-## 3. The Bind-Mount Inode Gotcha
+## 3. The Bind-Mount Inode Gotcha (mostly historical)
 
-**What happens.** Editors that do atomic writes (Vim `:w`, most GUI editors, the
-`Edit` tool in Claude Code) save a new file at a temp path, then rename it over the
-original. The rename creates a **new inode**. The container's bind-mount fd still
-points to the old inode. From the host the file looks updated; inside the container
-the old bytes are served.
+Since v1.1.5 the image is immutable and all source is baked, so the classic inode
+gotcha (an atomic host edit to a bind-mounted source file not being visible in the
+container) **no longer applies to source** — source changes ship only via a
+rebuild+redeploy (§9).
 
-**Symptom.** You edit a file in `./public/`, `./packages/`, `./intel-llm.js`, or
-`./samples/`, verify the change on the host, then curl the running app or refresh the
-browser and see no change.
-
-**Detection.** Compare inodes:
-
-```bash
-# On the host
-stat /srv/DATA/Stacks/adtech-spyglass/public/spyglass.app.js
-
-# Inside the container
-docker exec adtech-spyglass stat /app/public/spyglass.app.js
-```
-
-If the `Inode:` numbers differ, the container holds the old file.
-
-**Also applies to `design-system.css`.** That file lives in the portal repo
-(`/srv/DATA/Stacks/kyivtech-portal/public/design-system.css`). Any atomic write to it
-— including the `Edit` tool — will produce a new inode. The container will keep serving
-the old CSS until restarted. This bit during v0.42.8 (dark-theme parity) and v0.42.5.
-
-**Fix.** A plain restart re-opens the bind-mount fd and picks up the new inode:
-
-```bash
-cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
-```
-
-Takes 5–10 s. No data loss, no rebuild. The healthcheck (`start_period: 15s`) means
-`docker ps` will briefly show `(health: starting)` — that's expected.
-
-**Real-world examples:**
-
-- v0.42.5 (2026-05-13): mobile cabinet CSS fix applied via `Edit`, verified on host,
-  not visible in browser → `compose restart` resolved it.
-- v0.42.8 (2026-05-13): `design-system.css` dark-theme tokens added via `Edit`,
-  container kept serving old CSS → `compose restart` resolved it.
+The **only** remaining bind-mount that can still hit this is the **transitional**
+`design-system.css` overlay (`/srv/DATA/Stacks/kyivtech-portal/public/design-system.css`,
+removed in v1.1.6): an atomic edit to the portal's copy needs a
+`docker compose restart` to re-open the fd. Historically this also bit `./public`,
+`./packages`, `./intel-llm.js` and `./samples` (v0.42.5 / v0.42.8) — none of which
+are mounted any more.
 
 ---
 
@@ -139,24 +112,28 @@ Takes 5–10 s. No data loss, no rebuild. The healthcheck (`start_period: 15s`) 
 
 ### 4.1 Restart (no rebuild)
 
-Use after editing any bind-mounted file, or to recover from a transient crash.
+Use only to recover from a transient crash, or after editing the **transitional**
+`design-system.css` portal overlay (the only remaining bind-mount). It does **not**
+pick up source changes — those are baked into the image.
 
 ```bash
 cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
 ```
 
-### 4.2 Rebuild after `server.js` or dependency change
+### 4.2 Any source / dependency / CSS change → redeploy (§9)
 
-Required when you edit `server.js`, `db.js`, `auth.js`, `email.js`, `notify.js`,
-anything in `modules/`, `lib/`, or whenever `package.json` deps change.
+Since v1.1.5 every change to `server.js`, `db.js`, `auth.js`, `modules/`,
+`packages/`, `public/`, `samples/`, `lib/`, `package.json`, or the vendored
+`design-system.css` ships only by building a new immutable image. Use the deploy
+script (gate + build + smoke + auto-rollback):
 
 ```bash
 cd /srv/DATA/Stacks/adtech-spyglass
-BUILD_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
+git checkout main && git pull --ff-only
+./scripts/deploy.sh
 ```
 
-The `BUILD_SHA` arg is optional but surfaces the commit in `/api/health` — useful for
-confirming which version is live after a deploy.
+See §9 for the full flow and rollback.
 
 ### 4.3 View logs
 
@@ -666,68 +643,73 @@ cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
 
 ---
 
-## 9. Deployment / Release Flow
+## 9. Deployment / Release Flow (immutable image, v1.1.5+)
 
-This is not a CI/CD pipeline — it is `git pull` on the host plus the appropriate
-restart command depending on what changed.
+Since v1.1.5 there is **one** deploy path regardless of what changed (frontend,
+validator, server, deps, CSS): build a new immutable image and run it. There are
+no source bind-mounts, so `git pull` + `docker compose restart` no longer applies
+to source — everything ships in the image.
 
-### 9.1 Frontend-only change (anything under `./public/`)
-
-```bash
-cd /srv/DATA/Stacks/adtech-spyglass
-git pull
-# No restart needed. The bind-mount is live.
-# Exception: if the editor did an atomic rename, restart to pick up the new inode.
-# When in doubt: docker compose restart
-```
-
-### 9.2 Validator or LLM bridge change (`./packages/` or `./intel-llm.js`)
+### 9.1 Deploy
 
 ```bash
 cd /srv/DATA/Stacks/adtech-spyglass
-git pull
-docker compose restart
-# Restart re-reads bind-mounted packages/ and intel-llm.js. No rebuild.
+git checkout main && git pull --ff-only        # clean main == origin/main
+./scripts/deploy.sh
 ```
 
-### 9.3 Server change (`server.js`, `db.js`, `auth.js`, any `modules/` file)
+`scripts/deploy.sh` does the whole thing safely:
+
+1. Refuses to run unless the tree is clean and `HEAD == main == origin/main`.
+2. Tags the currently-running image as `adtech-spyglass:rollback-pre-v<version>`
+   and records the previous `BUILD_SHA`.
+3. Builds the image with `BUILD_SHA` (short), `GIT_SHA` (full → OCI revision
+   label) and `APP_VERSION` (package.json → OCI version label), tagging it
+   `adtech-spyglass:<short-sha>` + `adtech-spyglass:v<version>`.
+4. Writes `SPYGLASS_TAG=<short-sha>` to `.env` (auto-read by compose, so a reboot
+   or a plain `docker compose up -d` starts the SAME image) and brings it up with
+   `--no-build`.
+5. Runs `scripts/smoke.sh` against production. **On smoke failure it auto-rolls
+   back** to `rollback-pre-v<version>` and re-smokes the previous `BUILD_SHA`;
+   prints `CRITICAL` and exits non-zero if the rollback also fails.
+
+The deploy is reproducible from any clean checkout (GitHub Actions builds the same
+image) — the build context is `.`, the CSS is vendored into `public/design-system.css`,
+and nothing is read from `/srv/DATA/Stacks/kyivtech-portal` at build time.
+
+### 9.2 Rollback
 
 ```bash
 cd /srv/DATA/Stacks/adtech-spyglass
-git pull
-BUILD_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
+./scripts/rollback.sh                 # → the rollback-pre-v<version> image from the last deploy
+# or pin an explicit image:  ./scripts/rollback.sh <tag>
 ```
 
-### 9.4 Dependency change (`package.json` or `package-lock.json`)
+Rollback selects a previous **self-contained** image, pins it in `.env`, and runs
+`docker compose up -d --no-build` (no silent rebuild). It does **not** touch git,
+does **not** re-add source bind-mounts, and does **not** touch `/data` or
+`content-posts`. It verifies the expected previous `BUILD_SHA` and prints
+`CRITICAL` if the smoke fails.
 
-Same as §9.3 — deps are baked into the image. A rebuild is required.
+### 9.3 Updating the vendored `design-system.css`
 
-### 9.5 Shared `design-system.css` change (edit comes from portal repo)
+The CSS is baked from `public/design-system.css` (no longer auto-propagated from
+the portal). To pull a new portal version, follow `design-system.vendor.json`:
+re-copy the file, recompute the sha256 into the manifest, bump the app patch
+version, and deploy (§9.1). The CI guard (`tests/immutable-image.test.js`) fails
+if the CSS is left as the stub or the hash drifts from the manifest.
 
-The CSS file lives at `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css`
-and is bind-mounted into the Spyglass container. After editing in the portal repo:
+### 9.4 Verifying the deployed commit
 
 ```bash
-# Restart Spyglass to pick up the new inode (see §3 for why)
-cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
+curl -s http://127.0.0.1:8090/api/health | python3 -m json.tool   # → "build":{"sha":"<short>"}
+docker image inspect adtech-spyglass:$(curl -s http://127.0.0.1:8090/api/health \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["build"]["sha"])') \
+  --format '{{json .Config.Labels}}'                               # → version + revision labels
 ```
 
-If the portal also needs a rebuild (e.g. `design-system.css` is baked into the portal
-image), rebuild the portal separately:
-
-```bash
-cd /srv/DATA/Stacks/kyivtech-portal && docker compose up -d --build
-```
-
-### 9.6 Verifying the deployed commit
-
-```bash
-curl -s http://127.0.0.1:3000/api/health | python3 -m json.tool
-# → "build": {"sha": "<7-char commit hash>"}
-```
-
-Compare against `git rev-parse --short HEAD` in the repo. If they differ, you need a
-rebuild.
+The `/api/health` `build.sha` must equal `git rev-parse --short HEAD`; the image's
+`org.opencontainers.image.revision` label must equal the full `git rev-parse HEAD`.
 
 ---
 

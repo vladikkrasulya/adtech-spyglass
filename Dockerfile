@@ -13,15 +13,25 @@ RUN npm ci --omit=dev
 # No build tools, no dev deps, runs as the non-root `node` user (uid 1000).
 # The host's /srv/DATA/AppData/adtech-spyglass is also uid 1000 (vk:vk),
 # so the SQLite WAL/shm files are writable without an explicit chown step.
-# .dockerignore filters .env / .git / node_modules / docs out of the build context.
+# .dockerignore filters .env / .git / node_modules / docs / *.bak / ops files
+# out of the build context (see tests/immutable-image.test.js for the policy).
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-# BUILD_SHA — short git SHA injected at build time. Surfaced via /api/health
-# so monitoring + smoke tests can verify the deployed image matches HEAD.
-# Defaults to 'dev' if the build context didn't pass --build-arg BUILD_SHA=…
+# Build provenance, all injected via --build-arg (NOTHING hardcoded here):
+#   BUILD_SHA   — short git SHA, surfaced via /api/health for monitoring/smoke.
+#   GIT_SHA     — full git SHA, baked as the OCI image revision label.
+#   APP_VERSION — package.json version, baked as the OCI image version label.
+# scripts/deploy.sh computes all three from the clean checkout. They default to
+# 'dev' so a manual `docker build` without args still succeeds (non-prod).
 ARG BUILD_SHA=dev
+ARG GIT_SHA=dev
+ARG APP_VERSION=dev
 ENV BUILD_SHA=${BUILD_SHA}
+LABEL org.opencontainers.image.title="adtech-spyglass" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      org.opencontainers.image.source="https://github.com/vladikkrasulya/adtech-spyglass"
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
 USER node

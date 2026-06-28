@@ -1,25 +1,47 @@
-# Don't ship git history into the image
+# ── Build-context filter for the runtime image ──────────────────────────────
+# Policy enforced by tests/immutable-image.test.js. The image must be a clean,
+# self-contained snapshot: source + node_modules + the blog seed, nothing else.
+
+# Git history / CI config
 .git/
 .gitignore
 .github/
 
-# Don't ship docs / planning into the image
-*.md
-ARCHITECTURE.md
-ROADMAP.md
-README.md
+# Markdown: exclude ALL docs/READMEs/planning. The root-only `*.md` rule does
+# NOT match nested files, so without `**/*.md` ~57 doc .md were baked. Keep ONLY
+# the blog seed under content/posts (read at runtime via CONTENT_DIR default).
+**/*.md
+!content/posts/**/*.md
+docs/
 
-# Don't ship dev-only files
-.env*
-!.env.example
+# Agent / IDE metadata — never needed at runtime
+.claude/
+.Jules/
 .vscode/
 .idea/
 *.swp
 
-# Don't ship dependency caches — Dockerfile re-installs cleanly
+# Stale in-tree source backups (event-log.js.bak, handler.js.bak, intel-llm.js.bak*,
+# docker-compose.yml.bak*) — these were baking OLD copies of source into the image.
+**/*.bak
+**/*.bak-*
+**/*.bak.*
+
+# Ops / build artifacts — not needed inside the runtime image
+Dockerfile*
+docker-compose*.yml
+compose*.yml
+.dockerignore
+design-system.vendor.json
+
+# Secrets + dev env (keep the documented example only)
+.env*
+!.env.example
+
+# Dependency caches — the builder stage re-installs cleanly
 node_modules/
 
-# Don't ship local data
+# Local data — must come from the /data volume, never the image
 *.db*
 *.sqlite*
 data/
@@ -27,10 +49,10 @@ backups/
 logs/
 *.log
 
-# Don't ship test artifacts
+# Test artifacts + tests (the suite runs in CI, not in the image)
 coverage/
 .nyc_output/
 tests/
 
-# Scripts directory contains ops tooling (backup etc.) — runs on host, not container
+# Host-only ops tooling (deploy/rollback/smoke/backup run on the host)
 scripts/
