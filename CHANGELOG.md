@@ -19,6 +19,30 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.6 — infra: remove transitional design-system.css mount (2026-06-28)
+
+Stage 2 (final) of the immutable-image migration. v1.1.5 baked a byte-for-byte
+vendored `public/design-system.css` but kept the portal bind-mount for ONE release
+so a rollback to the v1.1.4 image (which carried only a 783-byte stub) still served
+real CSS. Now that the rollback target is the v1.1.5 image — which **bakes the full
+CSS** (sha256 `689992fa…`, 35012 B) — the overlay is no longer needed.
+
+- **Removed** the `…/kyivtech-portal/public/design-system.css:/app/public/design-system.css:ro`
+  bind-mount from `docker-compose.yml`. Production now mounts **exactly one** path:
+  `/srv/DATA/AppData/adtech-spyglass:/data`. The container is fully self-contained
+  with no cross-project / `kyivtech-portal` runtime dependency. Served CSS is
+  byte-identical (baked == previously-mounted == `689992fa…`), so **no visual change**.
+- **CI guard** (`tests/immutable-image.test.js`): new assertion that the production
+  compose declares exactly one volume, targeting only `/data`, with no
+  `kyivtech-portal` / cross-project / `design-system.css` mount. The vendored-CSS
+  hash/manifest guard is retained.
+- **Version hygiene:** bumped app `1.1.5 → 1.1.6` across all surfaces and added
+  `tests/version-consistency.test.js` — `package.json` is the source of truth, and
+  `public/version.js` + the six static HTML/template `data-spyglass-version`
+  fallbacks (about + inspector × en/uk/ru, which had drifted to `v1.1.1`) must all
+  equal `v${package.version}`; the test fails on the next incomplete bump. core
+  0.29.0 / CLI 0.1.0 unchanged. **No runtime/API contract change.**
+
 ### v1.1.5 — infra: immutable, reproducible production image (2026-06-28)
 
 Production previously bind-mounted `server.js`, `modules/`, `public/`,

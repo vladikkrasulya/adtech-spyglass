@@ -16,6 +16,10 @@ This is the canonical roadmap for Spyglass / ortbtools.com. Single source of tru
 
 ## Mini-tasks (not stage-bound)
 
+### Immutable production image — DONE (v1.1.6)
+
+Status: **complete**. Production runs a fully self-contained, reproducible image — ALL source plus the vendored `design-system.css` (provenance in `design-system.vendor.json`) are baked at build time; the **only** mount is the persistent `/data` volume (SQLite + `content-posts/`). No source or cross-project bind-mounts remain — the transitional portal `design-system.css` overlay was removed in v1.1.6 (its rollback target, the v1.1.5 image, also bakes the full CSS, so styling is never lost). Deploy/rollback via `scripts/deploy.sh` / `scripts/rollback.sh` with image-tag pinning (`SPYGLASS_TAG` in `.env`) + readiness/smoke + auto-rollback; CI (`tests/immutable-image.test.js`) enforces exactly one `/data` mount and the vendored-CSS hash. NOTE: this supersedes the dated "Docker bind-mounts cover `./packages` and `./modules`" line in the "Where we are" snapshot below — handler/validator edits now require a rebuild+redeploy, not just a `compose restart`.
+
 ### Domain migration — spyglass.kyivtech.com.ua → ortbtools.com
 
 Status: pending. Configure 301 redirect from `spyglass.kyivtech.com.ua` to `ortbtools.com` for 60-90 days, then drop the subdomain DNS record. Verify via Cloudflare page rules or the cloudflared tunnel config (check `~/server/cloudflared/` or `/srv/DATA/Stacks/cloudflared/` on OptiPlex for the right approach). ~1 hour config + 60-90 days passive monitoring.

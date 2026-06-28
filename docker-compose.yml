@@ -45,16 +45,10 @@ services:
     ports:
       - '127.0.0.1:8090:3000'
     volumes:
-      # ── TRANSITIONAL (removed in the next release, v1.1.6) ────────────────
-      # Shared design-system.css from the portal, overlaid on the baked copy.
-      # The image now also BAKES a byte-for-byte vendored snapshot of this file
-      # (public/design-system.css, see design-system.vendor.json), so the image
-      # is self-contained. This mount is kept for ONE release only: it lets a
-      # rollback to the v1.1.4 image (which still carries the 783-byte stub)
-      # serve the real CSS. It is dropped once the rollback target also bakes
-      # the full CSS.
-      - /srv/DATA/Stacks/kyivtech-portal/public/design-system.css:/app/public/design-system.css:ro
-      # Persistent runtime data: SQLite store + blog content (content-posts/).
+      # The ONLY mount: persistent runtime data — SQLite store + blog content
+      # (content-posts/). All source AND the vendored design-system.css are baked
+      # into the image (see design-system.vendor.json), so the container is fully
+      # self-contained; the transitional portal CSS overlay was removed in v1.1.6.
       - /srv/DATA/AppData/adtech-spyglass:/data
     networks:
       - default

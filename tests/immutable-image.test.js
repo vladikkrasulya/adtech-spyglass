@@ -51,6 +51,38 @@ test('docker-compose.yml keeps the persistent /data volume + CONTENT_DIR under i
   );
 });
 
+test('production compose mounts ONLY the persistent /data volume (no cross-project mount) — v1.1.6', () => {
+  const c = read('docker-compose.yml');
+  // The service `volumes:` block, up to the next 4-space key (networks:).
+  // Comment-safe: we only count real list entries (`- ...`).
+  const block = c.match(/\n {4}volumes:\n([\s\S]*?)\n {4}\w/);
+  assert.ok(block, 'compose must declare a service volumes: block');
+  const mounts = block[1]
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('- '));
+  assert.equal(
+    mounts.length,
+    1,
+    `production must mount exactly ONE volume, found ${mounts.length}: ${mounts.join(' | ')}`,
+  );
+  assert.match(
+    mounts[0],
+    /^- \/srv\/DATA\/AppData\/adtech-spyglass:\/data\b/,
+    'the only mount must be the persistent /data volume',
+  );
+  // No runtime dependency on the sibling portal repo, and the transitional
+  // design-system.css overlay must be gone (the CSS is baked + hash-guarded).
+  assert.ok(
+    !/kyivtech-portal/.test(c),
+    'production compose must not depend on kyivtech-portal at runtime',
+  );
+  assert.ok(
+    !/design-system\.css:/.test(c),
+    'the transitional design-system.css mount must be removed in v1.1.6',
+  );
+});
+
 test('docker-compose.yml pins the image tag with NO silent fallback + relative build context', () => {
   const c = read('docker-compose.yml');
   assert.match(
