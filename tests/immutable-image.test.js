@@ -130,13 +130,16 @@ test('.dockerignore keeps the build context clean (docs/.bak/.claude/.Jules/ops)
   );
 });
 
-test('deploy/rollback/smoke/backup/lib scripts are valid bash (bash -n)', () => {
-  for (const s of ['deploy-lib.sh', 'deploy.sh', 'rollback.sh', 'smoke.sh', 'backup-db.sh']) {
-    const p = path.join(ROOT, 'scripts', s);
-    assert.ok(fs.existsSync(p), `scripts/${s} must exist`);
+test('deploy/rollback/smoke/backup/lib/sim scripts are valid bash (bash -n)', () => {
+  const scripts = ['deploy-lib.sh', 'deploy.sh', 'rollback.sh', 'smoke.sh', 'backup-db.sh'].map(
+    (s) => path.join(ROOT, 'scripts', s),
+  );
+  scripts.push(path.join(ROOT, 'tests', 'deploy-sim.sh'));
+  for (const p of scripts) {
+    assert.ok(fs.existsSync(p), `${p} must exist`);
     assert.doesNotThrow(
       () => execFileSync('bash', ['-n', p], { stdio: 'pipe' }),
-      `bash -n reported a syntax error in scripts/${s}`,
+      `bash -n reported a syntax error in ${p}`,
     );
   }
 });
@@ -211,7 +214,16 @@ test('deploy seeds content-posts idempotently before launch and aborts on failur
     /rsync -a --ignore-existing content\/posts\//,
     'deploy must idempotently seed content-posts',
   );
-  assert.match(d, /uid 1000/, 'deploy must check the seed dir is owned by uid 1000');
+  assert.match(
+    d,
+    /SEED_UID="\$\{SPYGLASS_SEED_UID:-1000\}"/,
+    'seed owner must be checked against uid 1000 by default',
+  );
+  assert.match(
+    d,
+    /container runs as uid \$\{SEED_UID\}/,
+    'deploy must abort if the seed dir owner != container uid',
+  );
   assert.match(d, /ABORT: content seed failed/, 'deploy must abort if the seed fails');
 });
 
@@ -241,9 +253,12 @@ test('deploy-lib set_env/write_state are atomic, 0600, secret-preserving (dispos
     '. scripts/deploy-lib.sh',
     'd="$(mktemp -d)"; f="$d/.env"',
     'printf \'NODE_ENV=production\\nSECRET_X=topsecret\\nSPYGLASS_TAG=old\\n\' > "$f"; chmod 664 "$f"',
+    'o1="$(stat -c %u "$f" 2>/dev/null || stat -f %u "$f")"',
     'set_env SPYGLASS_TAG newtag "$f" >/dev/null',
     'grep -qx "SPYGLASS_TAG=newtag" "$f" || { echo tag-not-updated; exit 1; }',
     'grep -qx "SECRET_X=topsecret" "$f" || { echo secret-lost; exit 1; }',
+    'o2="$(stat -c %u "$f" 2>/dev/null || stat -f %u "$f")"',
+    '[ "$o1" = "$o2" ] || { echo owner-changed; exit 1; }',
     'case "$(ls -l "$f")" in -rw-------*) ;; *) echo env-not-600; exit 1;; esac',
     'ls "$d"/.env.tmp.* >/dev/null 2>&1 && { echo temp-left; exit 1; }',
     'set_env NEWKEY val "$f" >/dev/null',
@@ -256,5 +271,53 @@ test('deploy-lib set_env/write_state are atomic, 0600, secret-preserving (dispos
   assert.doesNotThrow(
     () => execFileSync('bash', ['-c', harness], { stdio: 'pipe' }),
     'deploy-lib disposable set_env/write_state simulation failed',
+  );
+});
+
+// ── deploy.sh flow simulation (mocked docker/git/curl, real deploy.sh) ───────
+function runSim(scenario) {
+  try {
+    const out = execFileSync('bash', [path.join(ROOT, 'tests', 'deploy-sim.sh'), scenario], {
+      encoding: 'utf8',
+    });
+    return { code: 0, out };
+  } catch (e) {
+    return { code: e.status, out: `${e.stdout || ''}${e.stderr || ''}` };
+  }
+}
+
+test('deploy-sim: happy path → STATUS=ACTIVE, exit 0', () => {
+  const r = runSim('happy');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /STATUS=ACTIVE/);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=abc1234/);
+});
+
+test('deploy-sim: candidate `compose up` failure → auto-rollback (STATUS=ROLLED_BACK, exit 1)', () => {
+  const r = runSim('candidate-up-fail');
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /STATUS=ROLLED_BACK/);
+  assert.match(r.out, /ACTIVE_TAG=rollback-pre-/, 'rollback image must be ACTIVE');
+  assert.match(r.out, /LAST_FAILED_TAG=abc1234/, 'failed candidate must be LAST_FAILED');
+});
+
+test('deploy-sim: rollback `compose up` failure → STATUS=CRITICAL, exit 3', () => {
+  const r = runSim('rollback-up-fail');
+  assert.equal(r.code, 3, r.out);
+  assert.match(r.out, /STATUS=CRITICAL/);
+  assert.match(r.out, /ACTIVE_TAG=UNKNOWN/);
+});
+
+test('deploy-sim: missing previous BUILD_SHA aborts before activation (exit 2, .env unchanged)', () => {
+  const r = runSim('missing-prev-sha');
+  assert.equal(r.code, 2, r.out);
+  assert.match(
+    r.out,
+    /ENV_SPYGLASS_TAG=old/,
+    '.env must NOT be switched on a pre-activation abort',
+  );
+  assert.ok(
+    !/STATUS=(ACTIVE|ROLLED_BACK)/.test(r.out),
+    'must not reach an active/rolled-back state',
   );
 });

@@ -5,25 +5,42 @@
 # and .env writes are atomic (temp-in-same-dir + mv) and 0600; secret values are
 # never printed.
 
+# _stat_owner FILE  → "uid:gid" (portable across GNU + BSD stat)
+_stat_owner() { stat -c '%u:%g' "$1" 2>/dev/null || stat -f '%u:%g' "$1" 2>/dev/null; }
+
 # set_env KEY VALUE ENV_FILE
 #   Atomic, owner-preserving, 0600 upsert of KEY=VALUE in ENV_FILE. The temp file
 #   is created in the SAME directory (so `mv` is atomic on the same filesystem)
-#   and removed via a RETURN trap if anything fails before the mv. Never prints
-#   the value.
+#   and removed via a RETURN trap if anything fails before the mv. The existing
+#   file's uid:gid is captured and re-applied to the temp before the mv; if the
+#   owner CANNOT be preserved (e.g. running as a different non-root user) the
+#   function ABORTS rather than silently changing ownership. Never prints the
+#   value.
 set_env() {
-  local k="$1" v="$2" f="$3" dir tmp
+  local k="$1" v="$2" f="$3" dir tmp own
   dir="$(dirname "$f")"
   tmp="$(mktemp "${dir}/.env.tmp.XXXXXX")"
   trap 'rm -f "${tmp}" 2>/dev/null' RETURN
-  if [ -f "$f" ] && grep -qE "^${k}=" "$f"; then
-    sed "s|^${k}=.*|${k}=${v}|" "$f" >"$tmp"
+  if [ -f "$f" ]; then
+    own="$(_stat_owner "$f")"
+    if grep -qE "^${k}=" "$f"; then
+      sed "s|^${k}=.*|${k}=${v}|" "$f" >"$tmp"
+    else
+      cat "$f" >"$tmp"
+      printf '%s=%s\n' "$k" "$v" >>"$tmp"
+    fi
+    if [ -n "$own" ]; then
+      chown "$own" "$tmp" 2>/dev/null || {
+        echo "    set_env: ABORT — cannot preserve owner ${own} on $(basename "$f")"
+        return 1
+      }
+    fi
   else
-    [ -f "$f" ] && cat "$f" >"$tmp"
     printf '%s=%s\n' "$k" "$v" >>"$tmp"
   fi
   chmod 600 "$tmp"
   mv -f "$tmp" "$f" # tmp gone after mv → RETURN trap rm is a no-op
-  echo "    set_env: ${k} written to $(basename "$f") (0600, value hidden)"
+  echo "    set_env: ${k} written to $(basename "$f") (0600, owner preserved, value hidden)"
 }
 
 # write_state STATE_FILE   (reads KEY=VALUE lines from stdin)
