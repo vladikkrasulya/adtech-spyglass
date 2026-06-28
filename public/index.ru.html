@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="index,follow" />
-    <title>Бесплатный валидатор OpenRTB 2.5/2.6/3.0 — локально</title>
+    <title>Бесплатный валидатор OpenRTB 2.5/2.6/3.0 — мгновенно, без регистрации</title>
     <meta
       name="description"
-      content="Валидация OpenRTB BidRequest/BidResponse JSON прямо в браузере. oRTB 2.5/2.6/3.0, Native, VAST. Перекрёстная проверка request↔response, декодирование IAB-категорий, превью креатива. 100% локально — ваши данные не покидают устройство. Бесплатно, без регистрации."
+      content="Валидация OpenRTB BidRequest/BidResponse JSON онлайн. oRTB 2.5/2.6/3.0, Native, VAST. Перекрёстная проверка request↔response, декодирование IAB-категорий, превью креатива. Ваши данные отправляются по HTTPS, анализируются на сервере и не сохраняются. Бесплатно, без регистрации."
     />
     <meta
       name="keywords"
@@ -26,7 +26,7 @@
     <meta property="og:title" content="ortbtools — бесплатный валидатор OpenRTB (2.5, 2.6, 3.0)" />
     <meta
       property="og:description"
-      content="Бесплатный валидатор OpenRTB в браузере. Вставьте BidRequest/BidResponse JSON — мгновенная валидация, перекрёстная проверка, декодирование IAB, превью креатива. 100% локально — данные не покидают браузер."
+      content="Бесплатный валидатор OpenRTB. Вставьте BidRequest/BidResponse JSON — мгновенная валидация, перекрёстная проверка, декодирование IAB, превью креатива. Данные отправляются по HTTPS, анализируются на сервере и не сохраняются."
     />
     <meta property="og:url" content="https://ortbtools.com/ru/inspector" />
     <meta property="og:locale" content="ru_RU" />
@@ -45,7 +45,7 @@
     <meta name="twitter:title" content="ortbtools — бесплатный валидатор OpenRTB (2.5, 2.6, 3.0)" />
     <meta
       name="twitter:description"
-      content="Бесплатный валидатор OpenRTB в браузере. oRTB 2.5/2.6/3.0, Native, VAST. 100% локально — данные не покидают браузер."
+      content="Бесплатный валидатор OpenRTB. oRTB 2.5/2.6/3.0, Native, VAST. Данные отправляются по HTTPS, анализируются на сервере и не сохраняются."
     />
     <meta name="twitter:image" content="https://ortbtools.com/og-image.png" />
 
@@ -56,7 +56,7 @@
         "@type": "WebApplication",
         "name": "ortbtools — OpenRTB Validator",
         "url": "https://ortbtools.com/inspector",
-        "description": "Free browser-based OpenRTB validator with request↔response crosscheck, IAB Content Taxonomy decoding, and creative preview. 100% client-side — your data never leaves the browser.",
+        "description": "Free OpenRTB validator with request↔response crosscheck, IAB Content Taxonomy decoding, and creative preview. Your bid data is sent over HTTPS, analyzed on the server, and never stored.",
         "applicationCategory": "DeveloperApplication",
         "applicationSubCategory": "AdTech tooling",
         "operatingSystem": "Any (browser)",
@@ -204,11 +204,14 @@
            mount() writes innerHTML here once it loads, replacing this. -->
           <section class="pre-render-hero">
             <h1>Бесплатный валидатор OpenRTB BidRequest и BidResponse</h1>
-            <p><strong>🔒 100% локально</strong> — ваши данные не покидают браузер.</p>
+            <p>
+              <strong>🔒 Приватность по умолчанию</strong> — ваши данные отправляются по HTTPS,
+              анализируются на сервере и не сохраняются.
+            </p>
             <p>
               Вставьте JSON BidRequest или BidResponse — получите мгновенную валидацию, перекрёстную
               проверку request ↔ response, декодирование IAB-категорий и превью креатива. Без
-              регистрации, без логов, без серверов.
+              регистрации — ваш вставленный payload не сохраняется.
             </p>
             <ul>
               <li>Валидация oRTB 2.5 / 2.6 / 3.0 + Native 1.x + VAST 4.x</li>

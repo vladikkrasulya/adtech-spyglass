@@ -9,9 +9,12 @@ for an auditor who wants to verify the claims against the source code.
 
 ## TL;DR
 
-- **Anonymous use (no login) never persists your payloads server-side.** Per-tab
-  analysis history lives in the browser's in-memory state only. Your `BidRequest`
-  and `BidResponse` JSON never touches a database.
+- **Anonymous use (no login) never persists your payload bodies.** Your `BidRequest`
+  and `BidResponse` JSON is sent over HTTPS, analyzed on the server, and discarded — it
+  never touches a database. The server does keep _derived_ records: anonymous analytics
+  (detected format, oRTB version, finding counts) and an operational request log that
+  records request metadata including your IP address (sampled). Neither contains the
+  payload itself.
 - **Signed-in users' saved samples are encrypted in the browser before they leave
   your machine.** The server stores AES-GCM-256 ciphertext. It cannot decrypt the
   contents.
@@ -31,26 +34,30 @@ for an auditor who wants to verify the claims against the source code.
 
 ### Anonymous use (no login)
 
-| Data                              | Stored?                         | Notes                                                      |
-| --------------------------------- | ------------------------------- | ---------------------------------------------------------- |
-| `BidRequest` / `BidResponse` JSON | No                              | Used transiently for validation; not written to DB or logs |
-| Per-tab analysis history          | Browser only                    | `localStorage` — never sent to the server                  |
-| IP address                        | Rate-limit bucket (memory only) | Not persisted to DB; buckets sweep on a 1-hour interval    |
+| Data                              | Stored?                         | Notes                                                                                                                                                                                                                |
+| --------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BidRequest` / `BidResponse` JSON | Body: no. Derived metadata: yes | Body is validated transiently and discarded — never written to DB or logs. Derived analytics (format, version, finding counts) go to ClickHouse `validation_logs`.                                                   |
+| Per-tab analysis history          | Browser only                    | `localStorage` — never sent to the server                                                                                                                                                                            |
+| IP address                        | Yes — sampled request log       | In-memory rate-limit buckets (swept hourly) plus an operational request log (ClickHouse `event_log`) that records your IP with request metadata for every error and a sample of successful calls. Never the payload. |
 
-Reverse proxies and CDNs between your browser and the server (Cloudflare, the
-kyivtech-portal proxy) may have their own access logs. That is outside Spyglass's
-control. The Spyglass application itself does not log payload bodies.
+Spyglass keeps two derived records for anonymous analyses: an anonymous analytics row
+(detected format, oRTB version, and finding counts — ClickHouse `validation_logs`) and
+an operational request log (`event_log`) that records request metadata including your
+IP address, sampled. Neither contains the payload bodies. Reverse proxies and CDNs
+between your browser and the server (Cloudflare, the kyivtech-portal proxy) may have
+their own access logs as well. The Spyglass application itself does not log payload
+bodies.
 
 ### Account creation
 
-| Data                        | Stored?                          | Notes                                            |
-| --------------------------- | -------------------------------- | ------------------------------------------------ |
-| Email address               | Yes (plaintext)                  | Used for login and optional recovery-link emails |
-| Password                    | Never (bcrypt hash, 12 rounds)   | `auth.js:BCRYPT_ROUNDS = 12`                     |
-| KDF salt                    | Yes (base64, 16 bytes)           | Per-user random; used client-side to derive KEK  |
-| Wrapped DEK                 | Yes (AES-GCM-256 ciphertext)     | Opaque blob; useless without KEK                 |
-| Recovery wrapped DEK + salt | Yes (ciphertext + separate salt) | For password-reset path                          |
-| Name, phone, card           | Not collected                    | None of these fields exist                       |
+| Data                        | Stored?                           | Notes                                                                                                                                     |
+| --------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Email address               | Yes (plaintext)                   | Used for login and optional recovery-link emails                                                                                          |
+| Password                    | Only as a bcrypt hash (12 rounds) | Sent to the server over TLS and hashed with bcrypt **server-side**; the plaintext is never stored or logged. `auth.js:BCRYPT_ROUNDS = 12` |
+| KDF salt                    | Yes (base64, 16 bytes)            | Per-user random; used client-side to derive KEK                                                                                           |
+| Wrapped DEK                 | Yes (AES-GCM-256 ciphertext)      | Opaque blob; useless without KEK                                                                                                          |
+| Recovery wrapped DEK + salt | Yes (ciphertext + separate salt)  | For password-reset path                                                                                                                   |
+| Name, phone, card           | Not collected                     | None of these fields exist                                                                                                                |
 
 ### Saved samples (authenticated)
 
@@ -94,8 +101,9 @@ the same approach used by 1Password and Bitwarden.
 
 1. **Password → KEK.** Your password is fed into PBKDF2-SHA-256 with 600,000
    iterations and a fresh 16-byte random salt (`pwSalt`) inside your browser.
-   The output is a 256-bit AES-GCM key (the KEK). The password and KEK never leave
-   the browser.
+   The output is a 256-bit AES-GCM key (the KEK). The KEK never leaves the browser.
+   (Your password itself _is_ sent to the server over TLS to verify your login with
+   bcrypt — see step 5 — but only the bcrypt hash is stored, never the plaintext.)
    Source: `public/spyglass-crypto.js`, `deriveKEK()`, constant `PBKDF2_ITERATIONS = 600000`.
 
 2. **Generate DEK.** A 256-bit random Data Encryption Key is generated with
@@ -111,11 +119,12 @@ the same approach used by 1Password and Bitwarden.
    - `wrappedRk` = AES-GCM-256(KEK from recovery key, DEK bytes), with a separate IV.
 
 5. **POST to server.** The browser sends the registration payload:
-   `{ email, password_hash_hint (handled server-side), kdf_salt, dek_wrapped, dek_iv,
-recovery_salt, recovery_dek_wrapped, recovery_dek_iv }`. The server stores these
-   six crypto fields. The server never sees the password in plaintext (bcrypt hashing
-   happens client-side before the request, or server-side — the bcrypt hash is what
-   is persisted).
+   `{ email, password, kdf_salt, dek_wrapped, dek_iv, recovery_salt,
+recovery_dek_wrapped, recovery_dek_iv }`. The server stores the email and the six
+   crypto fields. The password is transmitted over TLS and hashed with bcrypt
+   **server-side** (`auth.js`, `bcrypt.hash`, 12 rounds); only the resulting hash is
+   persisted — the plaintext is never written to disk or logs. The KEK and DEK, by
+   contrast, are never sent to the server, which is why it cannot decrypt your samples.
 
 6. **Recovery key shown once.** The 32-hex recovery key is displayed in a modal. It
    is never sent to the server and never stored. If you lose it, the recovery wrap
@@ -203,6 +212,12 @@ events, session lifecycle, and error stack traces. **It does not log request bod
 at any level — there is no debug/trace handler that dumps the `bidReq`/`bidRes`
 payload.** The analyze handler at `modules/analyze/handler.js` logs only parse errors
 and rate-limit events, not the payload content.
+
+Separately, an operational request log (`lib/event-log.js`, ClickHouse `event_log`)
+records one row per `/api/*` request — every 4xx/5xx and a 1-in-N sample of successful
+requests — capturing method, path, status, latency, the user id when signed in, and the
+client IP. It never captures the request or response body. Error events are also sent to
+Sentry/GlitchTip (`lib/logger.js`), again without payload bodies.
 
 Test mode runs with `LOG_LEVEL=silent` (see `package.json` `npm test` script).
 

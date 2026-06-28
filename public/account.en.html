@@ -6,7 +6,7 @@
     <title>ortbtools — Account</title>
     <meta
       name="description"
-      content="Your ortbtools account: profile, library stats, encryption status, insights, and preferences. End-to-end encrypted with your password — the operator can't read your data."
+      content="Your ortbtools account: profile, library stats, encryption status, insights, and preferences. Your saved library is end-to-end encrypted with your password — the operator can't read it."
     />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="canonical" href="https://ortbtools.com/account" />
@@ -831,9 +831,10 @@
             <section class="cab-card" id="privacy">
               <h2>What's tracked, what isn't</h2>
               <p class="lead">
-                Payloads are zero-knowledge. Activity stats come from a per-user log that records
-                only the metadata listed below. Bid request and response bodies are never persisted
-                to that log — they pass through the validator, generate findings, and are discarded.
+                Activity stats come from a small per-user log that records only the metadata listed
+                below. Your bid request and response bodies are never persisted to that log — they
+                pass through the validator, generate findings, and are discarded. (Saved library
+                samples are separately end-to-end encrypted; see Security.)
               </p>
               <div class="cab-row">
                 <span class="label">Tracked</span>
@@ -843,15 +844,25 @@
                 </span>
               </div>
               <div class="cab-row">
-                <span class="label">Not tracked</span>
+                <span class="label">Not in this log</span>
                 <span class="value" style="text-align: right; max-width: 60%">
                   payload bodies · individual finding ids · IP · user-agent · partner identity ·
                   timestamps below day-resolution in aggregates
                 </span>
               </div>
               <div class="cab-row">
+                <span class="label">Operational request log</span>
+                <span class="value" style="text-align: right; max-width: 60%">
+                  a separate log records time · method · path · status · your IP (every error plus
+                  sampled successes) — never the payload
+                </span>
+              </div>
+              <div class="cab-row">
                 <span class="label">Anonymous calls</span>
-                <span class="value">not logged</span>
+                <span class="value" style="text-align: right; max-width: 60%">
+                  no per-user activity row; the operational request log and anonymous analytics
+                  still apply
+                </span>
               </div>
               <div class="cab-row">
                 <span class="label">Account deletion</span>

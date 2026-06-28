@@ -6,7 +6,7 @@
     <title>ortbtools — аккаунт</title>
     <meta
       name="description"
-      content="Ваш аккаунт ortbtools: профиль, статистика библиотеки, шифрование, аналитика использования. Данные зашифрованы вашим паролем — оператор не может их прочитать."
+      content="Ваш аккаунт ortbtools: профиль, статистика библиотеки, шифрование, аналитика использования. Сохранённая библиотека зашифрована вашим паролем — оператор не может её прочитать."
     />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="canonical" href="https://ortbtools.com/ru/account" />
@@ -806,10 +806,11 @@
             <section class="cab-card" id="privacy">
               <h2>Что отслеживается, а что нет</h2>
               <p class="lead">
-                ortbtools — zero-knowledge для payload'ов. Статистика «Активность» в кабинете
-                берётся из маленького per-user лога, который сохраняет ТОЛЬКО метаданные ниже. Тела
-                bid request и bid response НИКОГДА не сохраняются в этот лог — они только проходят
-                через валидатор, findings выходят, тела отбрасываются.
+                Статистика «Активность» в кабинете берётся из маленького per-user лога, который
+                сохраняет ТОЛЬКО метаданные ниже. Тела bid request и bid response НИКОГДА не
+                сохраняются в этот лог — они только проходят через валидатор, findings выходят, тела
+                отбрасываются. (Сохранённые образцы библиотеки отдельно сквозно зашифрованы; см.
+                Security.)
               </p>
               <div class="cab-row">
                 <span class="label">Сохраняется</span>
@@ -819,15 +820,25 @@
                 </span>
               </div>
               <div class="cab-row">
-                <span class="label">Не сохраняется</span>
+                <span class="label">Нет в этом логе</span>
                 <span class="value" style="text-align: right; max-width: 60%">
                   тела payload · ID отдельных findings · IP · user-agent · идентификатор партнёра ·
                   timestamps с точностью меньше дня в агрегатах
                 </span>
               </div>
               <div class="cab-row">
+                <span class="label">Операционный лог запросов</span>
+                <span class="value" style="text-align: right; max-width: 60%">
+                  отдельный лог фиксирует время · метод · путь · статус · твой IP (каждую ошибку
+                  плюс выборку успешных) — никогда payload
+                </span>
+              </div>
+              <div class="cab-row">
                 <span class="label">Анонимные вызовы</span>
-                <span class="value">не логируются</span>
+                <span class="value" style="text-align: right; max-width: 60%">
+                  нет per-user строки активности; операционный лог запросов и обезличенная аналитика
+                  всё равно применяются
+                </span>
               </div>
               <div class="cab-row">
                 <span class="label">Удаление аккаунта</span>
