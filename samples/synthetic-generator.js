@@ -3,9 +3,10 @@
 /**
  * Spyglass — Phase 1 synthetic generator.
  *
- * Loads JSON fixtures from `samples/` (peer files), then on a timer emits
- * mutated copies as if they were a live RTB feed. Consumers subscribe to
- * the `'specimen'` event to receive `{ source, specimen, emittedAt }`.
+ * Loads the eligible stream fixtures (`synthetic-*.json` / `iab-*.json`)
+ * from `samples/`, then on a timer emits mutated copies as if they were a
+ * live RTB feed. Consumers subscribe to the `'specimen'` event to receive
+ * `{ source, specimen, emittedAt }`.
  *
  * Why this exists: until commercial-traffic approval clears (Risk B in
  * docs/stream-platform-pivot-2026-05-05.md), the public Stream surface
@@ -40,11 +41,22 @@ const { pickCreative } = require('./creative-picker');
 
 const DEFAULT_INTERVAL_MS = 1000;
 
+// Stream corpus naming contract. Only files named `synthetic-*.json` or
+// `iab-*.json` are eligible stream fixtures. Everything else under samples/ —
+// e.g. `behavior-scenarios.json` (UI metadata for the /behavior section),
+// future config/metadata JSON — is deliberately NOT a specimen and must never
+// reach the generator, the stream buffer, or the SQLite specimen cache. The
+// gate is the FILENAME, not the payload shape: a valid fixture may legitimately
+// be a JSON array at its root (pop/feed responses), so a `root must be an
+// object` check would wrongly exclude them.
+const CORPUS_FIXTURE_RE = /^(?:synthetic|iab)-.+\.json$/;
+
 class SyntheticGenerator extends EventEmitter {
   /**
    * @param {object} [opts]
-   * @param {string} [opts.corpusDir]  Directory with `.json` fixtures.
-   *                                   Defaults to this file's directory.
+   * @param {string} [opts.corpusDir]  Directory with `synthetic-*.json` /
+   *                                   `iab-*.json` stream fixtures. Defaults
+   *                                   to this file's directory.
    * @param {number} [opts.intervalMs] Emit cadence. Defaults to 2000ms.
    */
   constructor(opts = {}) {
@@ -58,20 +70,25 @@ class SyntheticGenerator extends EventEmitter {
   }
 
   /**
-   * Read all `.json` files from corpusDir into memory. Idempotent.
+   * Read the eligible stream fixtures (`synthetic-*.json` / `iab-*.json`)
+   * from corpusDir into memory. Files that don't match the naming contract
+   * (e.g. `behavior-scenarios.json` UI metadata) are skipped, so non-specimen
+   * JSON never reaches the stream. Idempotent.
    * @returns {number} corpus size
    */
   loadCorpus() {
     const files = fs
       .readdirSync(this.corpusDir)
-      .filter((f) => f.endsWith('.json'))
+      .filter((f) => CORPUS_FIXTURE_RE.test(f))
       .sort(); // deterministic order for round-robin
     this.corpus = files.map((name) => {
       const raw = fs.readFileSync(path.join(this.corpusDir, name), 'utf8');
       return { name, base: JSON.parse(raw) };
     });
     if (this.corpus.length === 0) {
-      throw new Error(`SyntheticGenerator: no .json fixtures in ${this.corpusDir}`);
+      throw new Error(
+        `SyntheticGenerator: no eligible stream fixtures (synthetic-*.json / iab-*.json) in ${this.corpusDir}`,
+      );
     }
     return this.corpus.length;
   }

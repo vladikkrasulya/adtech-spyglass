@@ -19,6 +19,34 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.1 — fix(stream): Live corpus loads only synthetic-_/iab-_ fixtures, not UI metadata (2026-06-28)
+
+Production defect: `/api/v1/stream` (Live) periodically emitted
+`behavior-scenarios.json` — an 11-item metadata array for the /behavior UI
+section — as if it were an OpenRTB specimen. `SyntheticGenerator.loadCorpus()`
+loaded every `samples/*.json`, so the metadata array entered the stream buffer
+and the SQLite specimen cache; opening such a record made the Inspector analyse
+UI metadata as a Vendor Feed and surface meaningless findings. Core Analyze was
+unaffected — only Live produced bad data.
+
+- **Naming-contract filter.** `loadCorpus()` now loads only files matching
+  `synthetic-*.json` / `iab-*.json` (the eligible stream fixtures) via an
+  explicit `CORPUS_FIXTURE_RE`, not a one-off `behavior-scenarios.json`
+  special-case. The gate is the filename, not the payload shape — valid
+  fixtures may be JSON arrays at the root (pop/feed responses), so no
+  "root must be an object" check is used. Invalid JSON in an eligible fixture
+  still fails fast; an all-metadata directory throws a clear
+  "no eligible stream fixtures (synthetic-_.json / iab-_.json)" error.
+- All 28 real specimens already follow the contract; only the metadata file is
+  newly excluded. No file renames, no DB/schema migration.
+- Updated generator comments + `samples/README.md` (naming contract +
+  adding-samples guidance) to match.
+
+Test suite green at 1010 passed / 10 skipped (+9 new: contract load/exclude,
+array-root allowed, empty-dir throws, eligible-invalid fail-fast, real-corpus
+excludes the metadata file, next() never emits it). prettier + eslint
+(0 errors) + tsc clean. Patch release — core stays 0.29.0, CLI stays 0.1.0.
+
 ### v1.1.0 — feat(core 0.29.0): clickunder/pop URL-feed detection + demand-gated synthetic stream (2026-06-28)
 
 Ships the clickunder/pop feed detection track and finishes the synthetic-stream
