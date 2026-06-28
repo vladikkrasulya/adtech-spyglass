@@ -43,9 +43,12 @@ fi
 if [ -d "$CONTENT_DIR" ]; then
   ARCHIVE="$DEST_DIR/content-posts-$DATE.tar.gz"
   TMP="$(mktemp "$DEST_DIR/.content-posts-$DATE.XXXXXX.tmp")"
+  # Remove a half-written temp archive if tar/mv fails (set -e would exit mid-run).
+  trap 'rm -f "${TMP:-}" 2>/dev/null' EXIT
   # Atomic: write to temp, then move into place.
   tar czf "$TMP" -C "$DATA_DIR" content-posts
-  mv -f "$TMP" "$ARCHIVE"
+  mv -f "$TMP" "$ARCHIVE" # TMP gone after mv → the EXIT trap rm is a no-op
+  trap - EXIT
   find "$DEST_DIR" -maxdepth 1 -name "content-posts-*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
   echo "$(date -Is) content backup ok: $ARCHIVE ($(stat -c%s "$ARCHIVE") bytes)"
 else
