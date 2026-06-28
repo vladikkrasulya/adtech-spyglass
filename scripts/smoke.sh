@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 #
-# Smoke test for a Spyglass deployment — production OR an isolated candidate.
-# Read-only: it never modifies containers, files, or data.
+# NON-DESTRUCTIVE smoke test for a Spyglass deployment — production OR an isolated
+# candidate. It does NOT mutate source, config, the container, the SQLite tables a
+# user owns, or content-posts. It DOES cause two benign, by-design derived writes,
+# the same a normal visitor would:
+#   - POST /api/analyze   → a derived-telemetry row (ClickHouse validation_logs +
+#                           spyglass_events; never the payload, no /data SQLite row).
+#   - GET  /api/v1/stream → warms the in-memory + SQLite synthetic-specimen cache.
+# These are product side-effects, not test artifacts.
 #
 # Usage: smoke.sh <base_url> <expected_build_sha> [container_name]
 #   base_url            e.g. http://127.0.0.1:8090   (candidate: http://127.0.0.1:8099)
@@ -46,9 +52,19 @@ for p in /inspector /uk/inspector /ru/inspector /about /uk/about /ru/about /acco
   [ "$c" = 200 ] && ok "page $p -> 200" || bad "page $p -> $c"
 done
 
-# 5. content posts (blog list reads CONTENT_DIR)
-B=$(curl -fsS --max-time 8 "$BASE/api/v1/blog/list" 2>/dev/null || echo '')
-echo "$B" | grep -qiE 'welcome|"slug"|"posts"|\[' && ok "/api/v1/blog/list serves content" || bad "blog list empty/failed: ${B:0:140}"
+# 5. content posts — REQUIRE the markdown `welcome` post per language. This
+#    proves CONTENT_DIR (/data/content-posts in prod) is seeded AND served from
+#    markdown, not from a DB row or an empty list.
+for lang in en uk ru; do
+  P=$(curl -fsS --max-time 8 "$BASE/api/v1/blog/post?slug=welcome&lang=$lang" 2>/dev/null || echo '')
+  if echo "$P" | grep -q '"ok":true' &&
+    echo "$P" | grep -q '"slug":"welcome"' &&
+    echo "$P" | grep -q '"source":"markdown"'; then
+    ok "blog welcome ($lang) served from markdown"
+  else
+    bad "blog welcome ($lang) not ok/markdown: ${P:0:140}"
+  fi
+done
 
 # 6. container health (production stage only)
 if [ -n "$CONTAINER" ]; then
