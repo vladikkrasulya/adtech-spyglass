@@ -86,7 +86,10 @@ const ALLOWLIST = new Set([
 ]);
 
 // Current, user-facing surfaces that must stay accurate: the served UI under
-// public/ (.html + .js) plus the live user docs.
+// public/ (.html + .js), the live user docs, and the server-side copy emitters
+// (lib/seo.js builds the per-route SEO meta tags; lib/landings.js builds the
+// /docs/openrtb-* landing pages — both inject public copy that overrides or
+// supplements the static HTML).
 function collectFiles() {
   const files = [];
   (function walk(dir) {
@@ -97,7 +100,14 @@ function collectFiles() {
     }
   })(path.join(ROOT, 'public'));
 
-  for (const doc of ['README.md', 'SECURITY.md', 'docs/PRIVACY.md', 'docs/USER_GUIDE.md']) {
+  for (const doc of [
+    'README.md',
+    'SECURITY.md',
+    'docs/PRIVACY.md',
+    'docs/USER_GUIDE.md',
+    'lib/seo.js',
+    'lib/landings.js',
+  ]) {
     files.push(path.join(ROOT, doc));
   }
 
@@ -122,6 +132,8 @@ test('scan set covers the public marketing surfaces', () => {
     'public/about.ru.html',
     'public/account.en.html',
     'docs/PRIVACY.md',
+    'lib/seo.js',
+    'lib/landings.js',
   ]) {
     assert.ok(rels.has(must), `scan set must include ${must}`);
   }
@@ -155,5 +167,34 @@ for (const [rel, re] of Object.entries(CONTRACT)) {
   test(`${rel} states the accurate server-side contract`, () => {
     const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
     assert.match(text, re, `${rel} lost its accurate "analyzed on the server" contract line`);
+  });
+}
+
+// Stricter check for the two server-side copy emitters. lib/seo.js (per-route
+// meta descriptions) and lib/landings.js (the /docs/openrtb-* landing pages) are
+// pure marketing copy: validation runs SERVER-SIDE, so any "client-side / in the
+// browser / у браузері / в браузере" phrasing there is necessarily false. This is
+// scoped to these two files only — public/*.js and other docs legitimately use
+// "client-side" in code comments and "in the browser" for UI rendering, so the
+// global FORBIDDEN list above stays narrower.
+const MARKETING_LOCALITY = [
+  { label: '"client-side"', re: /\bclient[-\s]?side\b/i },
+  { label: '"in the/your browser"', re: /\bin\s+(?:the|your)\s+browser\b/i },
+  { label: 'UK "у/в браузері"', re: /\b[ув]\s+браузер[іе]\b/i },
+  { label: 'RU "в браузере"', re: /\bв\s+браузере\b/i },
+];
+for (const rel of ['lib/seo.js', 'lib/landings.js']) {
+  test(`${rel} makes no browser-side validation claim`, () => {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    for (const { label, re } of MARKETING_LOCALITY) {
+      const m = re.exec(text);
+      assert.equal(
+        m,
+        null,
+        m
+          ? `${rel}:${lineOf(text, m.index)} claims browser-side processing ${label} — "${m[0]}" (validation is server-side)`
+          : '',
+      );
+    }
   });
 }
