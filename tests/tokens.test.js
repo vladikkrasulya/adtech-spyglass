@@ -63,7 +63,12 @@ test('verifyToken: tampered signature is rejected', () => {
     expirySeconds: 60,
   });
   const [payloadB64u, sigB64u] = tok.split('.');
-  const flipped = sigB64u.slice(0, -1) + (sigB64u.endsWith('A') ? 'B' : 'A');
+  // Flip the FIRST base64url char — every one of its 6 bits maps to real
+  // signature bytes. (Flipping the LAST char is flaky: a 32-byte HMAC is 43
+  // base64url chars = 258 bits, so the final char's low 2 bits are zero-padding;
+  // when the signature ends in A/B/C/D, flipping it changes only padding and the
+  // signature still verifies — ~6% false-pass rate.)
+  const flipped = (sigB64u[0] === 'A' ? 'B' : 'A') + sigB64u.slice(1);
   assert.throws(
     () => verifyToken(`${payloadB64u}.${flipped}`, 'verify'),
     (e) => e instanceof TokenError && e.code === 'tampered',
