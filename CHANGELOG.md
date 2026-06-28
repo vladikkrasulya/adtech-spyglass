@@ -19,6 +19,34 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.3 — docs(privacy): fix server-side SEO + landing copy missed in v1.1.2 (2026-06-28)
+
+Follow-up to v1.1.2. The v1.1.2 sweep corrected the static HTML but missed two
+**server-side copy emitters** that inject public copy at request time:
+
+- `lib/seo.js` — the per-route SEO `<meta name="description">` / `og:` / `twitter:`
+  tags. For `/inspector` (EN) it still rendered **"100% client-side."** (and
+  "100% у браузері" / "100% в браузере" for UK/RU), and the five doc-landing
+  routes (oRTB 2.6/2.5/3.0, VAST, Native) rendered "… in your browser … Free,
+  client-side." across all three languages. These tags **override** the static
+  shell's meta, so the live page showed the false claim even though the static
+  `index.*.html` was already fixed.
+- `lib/landings.js` — the `/docs/openrtb-*` landing pages. Each `lede` claimed the
+  bid was validated "in the browser" / "прямо в браузері" / "в браузере".
+
+All of it now states the accurate contract: validation runs on the server, the
+payload is analyzed transiently and never stored. Phrasing changed to "online" /
+"analyzed on the server, never stored" / "онлайн … аналіз на сервері … не
+зберігається". No runtime / API / database behaviour changed.
+
+The regression test `tests/privacy-claims.test.js` now also scans `lib/seo.js`
+and `lib/landings.js`, with a stricter rule for those two emitters (no
+"client-side" / "in the/your browser" / "у браузері" / "в браузере" at all —
+they are pure marketing copy where validation is always server-side). This is
+the gap that let v1.1.2 ship incomplete.
+
+Patch release — app 1.1.2 → 1.1.3, core stays 0.29.0, CLI stays 0.1.0.
+
 ### v1.1.2 — docs(privacy): align privacy claims with the real network flow (2026-06-28)
 
 Public copy and documentation overstated the privacy posture. The marketing
