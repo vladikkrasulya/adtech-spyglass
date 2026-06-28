@@ -20,7 +20,7 @@
     <meta property="og:title" content="Документация ortbtools — валидатор OpenRTB" />
     <meta
       property="og:description"
-      content="Как работает валидатор OpenRTB, что анализирует, что остаётся в браузере, а что хранится со сквозным шифрованием."
+      content="Как работает валидатор OpenRTB, что он анализирует на сервере, и как ваша сохранённая библиотека сквозно шифруется в браузере."
     />
     <meta property="og:url" content="https://ortbtools.com/ru/about" />
     <meta property="og:locale" content="ru_RU" />
@@ -796,12 +796,14 @@
             центрированные синтетические клики от pixelbot-ов.
           </p>
           <p>
-            Родительское окно прогоняет события через <strong>engine</strong> в
-            <code>packages/core/behavior/</code> — pure-data функцию, которая матчит шаблоны и
-            выдаёт структурированные находки с severity (error / warning / info), URL назначения,
-            метаданными (gesture lineage, threshold breached, и т.п.). Engine browser-and-Node
-            compatible: запускается в браузере через <code>/api/analyze-behavior</code> и на сервере
-            для replay архивных специменов.
+            Родительское окно собирает события и POST-ит их на
+            <code>/api/analyze-behavior</code>, где <strong>engine</strong> в
+            <code>packages/core/behavior/</code> — pure-data функция — матчит шаблоны и выдаёт
+            структурированные находки с severity (error / warning / info), URL назначения,
+            метаданными (gesture lineage, threshold breached, и т.п.). Engine изоморфный
+            (browser-and-Node compatible), но в этом деплое выполняется <strong>на сервере</strong>
+            за этим endpoint-ом — тот же код также обрабатывает replay архивных специменов на
+            сервере.
           </p>
 
           <h3>Четыре вектора защиты</h3>

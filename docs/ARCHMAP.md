@@ -367,13 +367,13 @@ label?}`. Empty samples skip with `reason: 'empty_sample'`.
 
 ### 1.4 Consumers
 
-| Consumer                        | File                                                              | What it uses                                                                                   |
-| ------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `server.js` (Spyglass HTTP API) | top of [server.js:50-52](../server.js#L50)                        | full `validate` / `crosscheck` + `behavior.analyze` + `knowledge-base`                         |
-| Browser (validator card)        | [`public/spyglass.app.js`](../public/spyglass.app.js)             | client-side validation via webpack/inline-bundled core (matters for "no phoning home" promise) |
-| Browser (behavior tab)          | [`public/modules/behavior/index.js`](../public/modules/behavior/) | `behavior` subpath — server-side proxy, but UI consumes findings                               |
-| Tests                           | `tests/{validator,dialects,format-detect,behavior,intel}.test.js` | every public surface                                                                           |
-| `intel-llm.js`                  | [intel-llm.js](../intel-llm.js)                                   | uses LLM-bridge primitives from `core/intel`                                                   |
+| Consumer                        | File                                                              | What it uses                                                                                                                                                             |
+| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server.js` (Spyglass HTTP API) | top of [server.js:50-52](../server.js#L50)                        | full `validate` / `crosscheck` + `behavior.analyze` + `knowledge-base`                                                                                                   |
+| Browser (validator card)        | [`public/spyglass.app.js`](../public/spyglass.app.js)             | POSTs the payload to `POST /api/analyze` — validation runs **server-side** (core is NOT bundled into the page; the browser only renders the findings the server returns) |
+| Browser (behavior tab)          | [`public/modules/behavior/index.js`](../public/modules/behavior/) | `behavior` subpath — server-side proxy, but UI consumes findings                                                                                                         |
+| Tests                           | `tests/{validator,dialects,format-detect,behavior,intel}.test.js` | every public surface                                                                                                                                                     |
+| `intel-llm.js`                  | [intel-llm.js](../intel-llm.js)                                   | uses LLM-bridge primitives from `core/intel`                                                                                                                             |
 
 ### 1.5 Tests by surface (so changes know where to look)
 

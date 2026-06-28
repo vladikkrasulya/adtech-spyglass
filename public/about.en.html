@@ -20,7 +20,7 @@
     <meta property="og:title" content="ortbtools Docs — OpenRTB Validator" />
     <meta
       property="og:description"
-      content="How the OpenRTB validator works, what it analyzes, what stays on your device, and what is stored end-to-end encrypted."
+      content="How the OpenRTB validator works, what it analyzes on the server, and how your saved library is end-to-end encrypted in your browser."
     />
     <meta property="og:url" content="https://ortbtools.com/about" />
     <meta property="og:locale" content="en_US" />
@@ -796,12 +796,13 @@
             pixel-perfect synthetic clicks from pixelbots.
           </p>
           <p>
-            The parent window runs these events through the <strong>engine</strong> in
-            <code>packages/core/behavior/</code> — a pure-data function that matches patterns and
-            emits structured findings with severity (error / warning / info), destination URL, and
-            metadata (gesture lineage, threshold breached, etc.). Engine is browser- and-Node
-            compatible: it runs in the browser via <code>/api/analyze-behavior</code>
-            and on the server for archive replay.
+            The parent window collects these events and POSTs them to
+            <code>/api/analyze-behavior</code>, where the <strong>engine</strong> in
+            <code>packages/core/behavior/</code> — a pure-data function — matches patterns and emits
+            structured findings with severity (error / warning / info), destination URL, and
+            metadata (gesture lineage, threshold breached, etc.). The engine is isomorphic (browser-
+            and Node-compatible), but in this deployment it runs <strong>server-side</strong> behind
+            that endpoint — the same code also handles archive replay on the server.
           </p>
 
           <h3>Four detection vectors</h3>

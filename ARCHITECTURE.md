@@ -86,7 +86,7 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 │                    │                                             │
 │  ┌─────────────────▼──────────────────┐                          │
 │  │ @spyglass/core (validator engine)  │  ← pure JS, no Node deps │
-│  │   - detectVersion(payload)         │     runs in browser + CI │
+│  │   - detectVersion(payload)         │     server-side + CI/CLI │
 │  │   - validate(payload, opts)        │     published to npm     │
 │  │   - crosscheck(req, res)           │                          │
 │  │   - dialects: iab | ext-rtb | …    │                          │
@@ -102,9 +102,11 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+> **Deployment note:** on ortbtools.com both the public demo and the auth'd workspace validate **server-side** — the browser POSTs the payload to `POST /api/analyze` and renders the findings the server returns. The core runs in-process only in the CLI (`@ortbtools/cli`, fully offline) and in CI/tests. "server-side + CI/CLI" / "published to npm" above describe the core's portability (pure, dependency-free JS); the website itself never validates the bid in your browser.
+
 **Why this split:** the validator core is the thing every surface consumes. Putting it in a single browser-+-Node module means:
 
-- the public demo runs validation **client-side** (no bid JSON ever leaves the browser — privacy is table-stakes for ad-tech)
+- the public demo validates **server-side** — the browser POSTs the bid JSON to `/api/analyze` over HTTPS and renders the findings the server returns (it is **not** validated locally in the browser); the bodies are processed transiently and never stored
 - the auth'd backend reuses the same engine for `/api/analyze`
 - the CLI wraps it for CI pipelines (`npx spyglass validate req.json resp.json --dialect=iab --version=auto`)
 - a future browser extension can `import` it directly
@@ -312,7 +314,7 @@ Planned additions:
 
 ### 5.4 Privacy posture
 
-- Bid JSON is potentially sensitive (deal IDs, user IDs, supply paths). The product surfaces this loudly: public demo says "validation runs in your browser, nothing is uploaded"; auth'd version says "your saved samples are visible only to your workspace".
+- Bid JSON is potentially sensitive (deal IDs, user IDs, supply paths). The product is explicit about how it is handled: the public demo POSTs the pasted bid over HTTPS to `/api/analyze`, validates it **server-side**, and never stores the payload (only derived metadata + a sampled operational request log that includes the client IP — never the bodies); saved samples in the auth'd workspace are encrypted end-to-end and visible only to your workspace.
 - No analytics SDK that captures input fields.
 - `Content-Security-Policy` disallows third-party script and frame sources.
 - Creative previews iframe-sandboxed.
