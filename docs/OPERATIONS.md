@@ -359,6 +359,44 @@ Current backup inventory (verified 2026-05-13):
 /srv/DATA/Backups/adtech-spyglass/spyglass-2026-04-30.db.gz  … spyglass-2026-05-13.db.gz
 ```
 
+#### Permissions — backups & data dir (security, since v1.1.5)
+
+The backup archives are **full copies of the SQLite store** (bcrypt password
+hashes, session/email-token secrets, encrypted samples), so they are the most
+concentrated secret-at-rest on the box. `backup-db.sh` therefore:
+
+- sets `umask 077` at the top (every file/dir it creates is owner-only),
+- `chmod 700` the backup directory (`/srv/DATA/Backups/adtech-spyglass`) — fixing
+  any older `0755`,
+- `chmod 600` every `*.db.gz` and `content-posts-*.tar.gz` (fixing any older `0644`).
+
+The cron job runs as **root**; the archives are `root:root 0600`. **No non-root
+process consumes the backups**, so locking them down breaks nothing.
+
+The live **data dir** (`/srv/DATA/AppData/adtech-spyglass`) has three container
+consumers — keep this in mind before tightening its modes:
+
+| Consumer          | In-container uid | Access           | Needs                                             |
+| ----------------- | ---------------- | ---------------- | ------------------------------------------------- |
+| `adtech-spyglass` | `node` = 1000    | `/data` **rw**   | owner (uid 1000 = `vk`) read+write                |
+| `kyivtech-portal` | 0 (root)         | ro `spyglass.db` | root — bypasses host modes                        |
+| `grafana`         | 472              | ro `spyglass.db` | **`o+r` on the live DB** (Spyglass SQLite source) |
+
+Because grafana (uid 472) reads `spyglass.db`/`-wal`/`-shm` via "other", the live
+DB **must stay group/other-readable** — `0600` there would break the dashboard and
+would not survive the app's next WAL rewrite anyway. The exposure is closed on the
+**backups** instead (above). Live-DB modes: `spyglass.db` `0644`, the stale empty
+`db.sqlite` `0600`, `.env` and `deploy-state.env` `0600`, the dir `0755`
+(`vk:vk`, not world-writable). A fuller lock of the live DB (container `umask 027`
+
+- a shared read group for uid 472) is a future, deploy-time change.
+
+**Deploy preflight.** `deploy.sh` calls `check_perms` (in `deploy-lib.sh`) before
+any seeding or transition and **aborts with exit 5** if `.env`/`deploy-state.env`
+are not `0600` or if the data dir / live DB are world-writable. It deliberately
+does **not** require the live DB to be unreadable (grafana). It prints only file
+names + octal modes — never secrets or DB contents.
+
 ### 6.2 AppData restic snapshot (systemd timer)
 
 Script: `/srv/DATA/Ops/backup/scripts/kt-backup-appdata.sh`

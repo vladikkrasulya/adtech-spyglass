@@ -8,6 +8,62 @@
 # _stat_owner FILE  → "uid:gid" (portable across GNU + BSD stat)
 _stat_owner() { stat -c '%u:%g' "$1" 2>/dev/null || stat -f '%u:%g' "$1" 2>/dev/null; }
 
+# _stat_mode FILE  → octal mode like "600" / "755" (portable across GNU + BSD stat)
+_stat_mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null; }
+
+# _world_writable FILE  → 0 (true) if the path is writable by "other".
+#   Tests the last octal digit (the "other" perms) so it is independent of the
+#   shell's octal-literal handling and of any file-type prefix from stat.
+_world_writable() {
+  local m
+  m="$(_stat_mode "$1")"
+  [ -n "$m" ] || return 1
+  case "${m: -1}" in
+    2 | 3 | 6 | 7) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# check_perms ENV_FILE STATE_FILE DATA_DIR  → 0 safe / 1 unsafe (prints UNSAFE: …)
+#   Pre-deploy gate over the deploy-critical files the DEPLOYING user owns/sees.
+#   Never prints secrets or DB contents — only file names + octal modes.
+#     • .env            MUST be 0600 (it holds API keys / token secrets).
+#     • deploy-state    MUST be 0600 if present.
+#     • AppData dir     MUST NOT be world-writable (corruption / tamper).
+#     • live SQLite     MUST NOT be world-writable. World-READ is intentionally
+#                       allowed: the grafana datasource (uid 472) reads it via
+#                       "other", and the app rewrites -wal/-shm with its own
+#                       umask, so 0600 there is neither stable nor compatible.
+#                       The secret-at-rest exposure is closed on the BACKUPS
+#                       (0600, see backup-db.sh), which have no non-root consumer.
+check_perms() {
+  local env_file="$1" state_file="$2" data_dir="$3" bad=0 m
+  if [ -f "$env_file" ]; then
+    m="$(_stat_mode "$env_file")"
+    [ "$m" = 600 ] || { echo "UNSAFE: $(basename "$env_file") mode ${m} (want 600)"; bad=1; }
+  else
+    echo "UNSAFE: env file missing: ${env_file}"
+    bad=1
+  fi
+  if [ -f "$state_file" ]; then
+    m="$(_stat_mode "$state_file")"
+    [ "$m" = 600 ] || { echo "UNSAFE: $(basename "$state_file") mode ${m} (want 600)"; bad=1; }
+  fi
+  if [ -d "$data_dir" ]; then
+    _world_writable "$data_dir" && {
+      echo "UNSAFE: ${data_dir} is world-writable (mode $(_stat_mode "$data_dir"))"
+      bad=1
+    }
+    for db in "$data_dir"/spyglass.db "$data_dir"/spyglass.db-wal "$data_dir"/spyglass.db-shm; do
+      [ -e "$db" ] && _world_writable "$db" && {
+        echo "UNSAFE: $(basename "$db") is world-writable (mode $(_stat_mode "$db"))"
+        bad=1
+      }
+    done
+  fi
+  return "$bad"
+}
+
 # set_env KEY VALUE ENV_FILE
 #   Atomic, owner-preserving, 0600 upsert of KEY=VALUE in ENV_FILE. The temp file
 #   is created in the SAME directory (so `mv` is atomic on the same filesystem)

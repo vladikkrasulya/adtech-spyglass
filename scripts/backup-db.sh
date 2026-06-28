@@ -16,23 +16,33 @@
 #   DB:            gunzip -c $DEST_DIR/spyglass-YYYY-MM-DD.db.gz > /srv/DATA/AppData/adtech-spyglass/spyglass.db
 #                 (stop the container first; remove stale -wal/-shm)
 #   content-posts: tar xzf $DEST_DIR/content-posts-YYYY-MM-DD.tar.gz -C /srv/DATA/AppData/adtech-spyglass
+#
+# SECURITY: the archives are full copies of the SQLite store (bcrypt password
+# hashes, session/email tokens, encrypted samples). They have NO non-root
+# consumer, so every file this script creates is 0600 and the backup directory
+# is 0700 — `umask 077` makes that the default, and we additionally chmod the
+# directory + each archive so a pre-existing 0644/0755 from older runs is fixed.
 
 set -euo pipefail
+umask 077 # every file/dir created below is owner-only (0600 / 0700) by default
 
-DATA_DIR=/srv/DATA/AppData/adtech-spyglass
+# Paths are overridable for tests (disposable dirs); prod defaults unchanged.
+DATA_DIR="${SPYGLASS_BACKUP_DATA_DIR:-/srv/DATA/AppData/adtech-spyglass}"
+DEST_DIR="${SPYGLASS_BACKUP_DEST_DIR:-/srv/DATA/Backups/adtech-spyglass}"
 SRC="$DATA_DIR/spyglass.db"
 CONTENT_DIR="$DATA_DIR/content-posts"
-DEST_DIR=/srv/DATA/Backups/adtech-spyglass
 RETENTION_DAYS=30
 DATE=$(date +%Y-%m-%d)
 
 mkdir -p "$DEST_DIR"
+chmod 700 "$DEST_DIR" # restrictive even if an older run created it 0755
 
 # ── SQLite ──────────────────────────────────────────────────────────────────
 if [ -f "$SRC" ]; then
   DEST="$DEST_DIR/spyglass-$DATE.db"
   sqlite3 "$SRC" ".backup '$DEST'"
   gzip -f "$DEST"
+  chmod 600 "$DEST.gz" # explicit: never inherit a stale 0644 when overwriting same-day
   find "$DEST_DIR" -maxdepth 1 -name "spyglass-*.db.gz" -mtime +"$RETENTION_DAYS" -delete
   echo "$(date -Is) db backup ok: $DEST.gz ($(stat -c%s "$DEST.gz") bytes)"
 else
@@ -48,6 +58,7 @@ if [ -d "$CONTENT_DIR" ]; then
   # Atomic: write to temp, then move into place.
   tar czf "$TMP" -C "$DATA_DIR" content-posts
   mv -f "$TMP" "$ARCHIVE" # TMP gone after mv → the EXIT trap rm is a no-op
+  chmod 600 "$ARCHIVE" # explicit: never inherit a stale 0644 when overwriting same-day
   trap - EXIT
   find "$DEST_DIR" -maxdepth 1 -name "content-posts-*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
   echo "$(date -Is) content backup ok: $ARCHIVE ($(stat -c%s "$ARCHIVE") bytes)"

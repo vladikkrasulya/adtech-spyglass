@@ -321,3 +321,56 @@ test('deploy-sim: missing previous BUILD_SHA aborts before activation (exit 2, .
     'must not reach an active/rolled-back state',
   );
 });
+
+// ── secure runtime/backup permissions (fix/secure-runtime-backup-permissions) ─
+
+test('backup-db.sh sets umask 077 and forces restrictive dir/archive modes', () => {
+  const b = read('scripts/backup-db.sh');
+  assert.match(b, /^umask 077\b/m, 'backup-db.sh must set umask 077');
+  assert.match(b, /chmod 700 "\$DEST_DIR"/, 'backup dir must be chmod 700 (fix stale 0755)');
+  assert.match(b, /chmod 600 "\$DEST\.gz"/, 'db archive must be chmod 600');
+  assert.match(b, /chmod 600 "\$ARCHIVE"/, 'content archive must be chmod 600');
+});
+
+test('backup-sim: generated archives are 0600 and the dir is 0700 even if it pre-existed 0755', () => {
+  const out = execFileSync('bash', [path.join(ROOT, 'tests', 'backup-sim.sh')], {
+    encoding: 'utf8',
+  });
+  assert.match(out, /DEST_DIR_MODE=700/, 'backup dir must end up 0700');
+  assert.match(out, /DB_GZ_MODE=600/, 'db archive must be 0600 (full DB dump — secret at rest)');
+  assert.match(out, /CONTENT_GZ_MODE=600/, 'content archive must be 0600');
+});
+
+test('deploy-lib defines a permission preflight that allows grafana read but forbids world-write', () => {
+  const lib = read('scripts/deploy-lib.sh');
+  assert.match(lib, /check_perms\(\)/, 'deploy-lib must define check_perms');
+  assert.match(lib, /_world_writable\(\)/, 'deploy-lib must define _world_writable');
+  // The live SQLite is intentionally allowed to be group/other READABLE (grafana
+  // datasource uid 472) — the preflight only forbids world-WRITE there.
+  assert.match(lib, /spyglass\.db-wal/, 'preflight must cover the live -wal');
+  assert.ok(
+    !/spyglass\.db.*world-readable/.test(lib),
+    'preflight must NOT require the live DB to be non-readable (would break grafana)',
+  );
+});
+
+test('deploy.sh runs the permission preflight before any transition (abort exit 5)', () => {
+  const d = read('scripts/deploy.sh');
+  assert.match(
+    d,
+    /check_perms "\$ENV_FILE" "\$STATE_FILE" "\$DATA_DIR"/,
+    'deploy must call check_perms',
+  );
+  assert.match(d, /exit 5/, 'unsafe permissions must abort with exit 5');
+  // It must run before the content seed / state write.
+  const preIdx = d.indexOf('check_perms "$ENV_FILE"');
+  const seedIdx = d.indexOf('rsync -a --ignore-existing');
+  assert.ok(preIdx > 0 && preIdx < seedIdx, 'preflight must run before the content seed');
+});
+
+test('deploy-sim: unsafe .env permissions block the deploy before any transition (exit 5)', () => {
+  const r = runSim('unsafe-perms');
+  assert.equal(r.code, 5, r.out);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must be untouched when the preflight blocks');
+  assert.match(r.out, /\(no state\)/, 'no deploy-state may be written on an unsafe-perms abort');
+});

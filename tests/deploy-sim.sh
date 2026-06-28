@@ -7,7 +7,8 @@
 # auto-rollback, STATUS state machine) is exercised without docker or git.
 #
 # Usage: deploy-sim.sh <scenario>
-#   scenario ∈ { happy, candidate-up-fail, rollback-up-fail, missing-prev-sha }
+#   scenario ∈ { happy, candidate-up-fail, rollback-up-fail, missing-prev-sha,
+#                unsafe-perms }
 # Prints:  EXIT=<code> and the resulting deploy-state.env (or "(no state)").
 
 set -u
@@ -76,9 +77,14 @@ EOC
 printf '#!/bin/sh\nexit 0\n' >"$BIN/mock-smoke.sh"
 chmod +x "$BIN/git" "$BIN/docker" "$BIN/curl" "$BIN/mock-smoke.sh"
 
-# Pre-create a fake .env (mode 664) so set_env exercises the owner-preserve path.
+# Pre-create a fake .env. Normal scenarios use 0600 so the permission preflight
+# passes (and set_env still exercises the owner-preserve path); `unsafe-perms`
+# uses 0664 to prove the preflight blocks the deploy before any transition.
 printf 'SPYGLASS_TAG=old\n' >"$WORK/.env"
-chmod 664 "$WORK/.env"
+case "$SCEN" in
+  unsafe-perms) chmod 664 "$WORK/.env" ;;
+  *) chmod 600 "$WORK/.env" ;;
+esac
 
 PATH="$BIN:$PATH" \
   SPYGLASS_DEPLOY_DATA_DIR="$DATA" \
