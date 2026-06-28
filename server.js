@@ -922,8 +922,10 @@ const blogService = require('./lib/blog-service');
 const { createProxyModule } = require('./modules/proxy/handler');
 // Stage 5 — Insights Dashboard analytics endpoint
 const { createAnalyticsModule } = require('./modules/analytics/handler');
-// Stage 5 — validation-log helper (stream + analyze hooks)
-const { logValidation, fmtFromSpecimen } = require('./lib/validation-log');
+// Stage 5 — validation-log helper. Only the /api/analyze hot path logs to
+// analytics.validation_logs now (see modules/analyze/handler.js, which requires
+// this lazily); the synthetic stream path intentionally does not — see the
+// note in streamBufferPush below.
 // v8 — User Dialects feature
 const { createDialectsModule } = require('./modules/dialects/handler');
 const {
@@ -1197,24 +1199,14 @@ function streamBufferPush(envelope) {
   enrichAndStore(envelope);
   streamBuffer.push(envelope);
   if (streamBuffer.length > STREAM_BUFFER_MAX) streamBuffer.shift();
-  // Stage 5: log to analytics.validation_logs — fire-and-forget, never blocks stream.
-  // Stream specimens are unanalyzed so error/warning counts are set to 0 (source='stream').
-  Promise.resolve().then(() => {
-    try {
-      const sp = envelope && envelope.specimen;
-      logValidation({
-        format: fmtFromSpecimen(sp),
-        version: sp && sp.at ? '3.0' : sp && sp.ver ? String(sp.ver) : 'unknown',
-        has_errors: 0,
-        error_count: 0,
-        warning_count: 0,
-        info_count: 0,
-        source: 'stream',
-      });
-    } catch (_) {
-      /* silent — never break stream */
-    }
-  });
+  // NOTE: synthetic stream specimens are intentionally NOT logged to
+  // analytics.validation_logs. They carry no validation signal (all-zero
+  // error/warning counts, round-robined corpus) yet at 1 insert/sec, 24/7,
+  // they buried ClickHouse under single-row parts (>99.99% of the table) and
+  // drove a constant background-merge load that pinned ~1 CPU core for weeks.
+  // Only real /api/analyze calls are logged now. The generator is also
+  // demand-gated (modules/stream/handler.js) so this path runs only while a
+  // /live viewer is actually connected.
 }
 
 const streamGenerator = new SyntheticGenerator({
@@ -1228,7 +1220,10 @@ streamGenerator.loadCorpus();
 streamGenerator.setMaxListeners(0);
 streamGenerator.on('specimen', streamBufferPush);
 streamGenerator.on('error', (err) => log.error({ err }, 'stream generator error'));
-streamGenerator.start();
+// Demand-gated: the generator is deliberately NOT started here.
+// modules/stream/handler.js starts it on the first /live SSE subscriber and
+// stops it when the last one disconnects. /live is a rarely-watched preview
+// surface, so a 24/7 generator burned CPU + ClickHouse merge load for nobody.
 
 // Stream module registers here — needs streamGenerator + streamBuffer in scope.
 router.register(
@@ -1246,7 +1241,7 @@ log.info(
     samples: streamGenerator.corpus.length,
     bufferMax: STREAM_BUFFER_MAX,
   },
-  'stream generator running',
+  'stream generator ready (demand-gated; starts on first /live subscriber)',
 );
 
 // ── News Crawler — AdTech RSS feed ingester (Stage blog) ────────────────────

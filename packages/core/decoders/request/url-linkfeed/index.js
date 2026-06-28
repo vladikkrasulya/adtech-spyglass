@@ -48,6 +48,7 @@ function isIPv6(s) {
 function decode(text, parsedUrl) {
   const can = makeCanonicalUrlRequest(ID, text);
   can.endpoint = `${parsedUrl.hostname}${parsedUrl.pathname}`;
+  can.format = 'pops';
 
   const q = parsedUrl.searchParams;
   const raw = {};
