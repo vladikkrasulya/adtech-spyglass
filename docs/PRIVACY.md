@@ -219,6 +219,12 @@ requests — capturing method, path, status, latency, the user id when signed in
 client IP. It never captures the request or response body. Error events are also sent to
 Sentry/GlitchTip (`lib/logger.js`), again without payload bodies.
 
+Authentication events (login outcomes) are recorded as a coarse, non-identifying
+signal only — an `outcome` (`success`/`failure`) and a finite `reason_code` — with
+**no email address, IP address, or user id**. This allowlist is enforced at the
+event-log boundary (`lib/event-log.js`), so an auth event physically cannot carry an
+identifier even if a future caller passes one (v1.2.1).
+
 Test mode runs with `LOG_LEVEL=silent` (see `package.json` `npm test` script).
 
 ---

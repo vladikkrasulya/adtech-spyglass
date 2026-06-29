@@ -273,12 +273,13 @@ function createAuth({ Users, Sessions, logger }) {
     // per-account catches one identity getting hammered from many IPs.
     // Any failure to either bucket → 429 (without saying which one).
     if (!loginLimiter(ip) || !loginEmailLimiter(emailKey)) {
+      // CP1A.1 — auth telemetry carries NO PII: no email, no ip, no user_id;
+      // only a finite outcome + reason_code (boundary-guarded in event-log.js).
       eventLog.record({
         level: 'warn',
         component: 'auth',
         msg: 'login rate-limited',
-        ip,
-        ctx: { email: emailKey, reason: 'rate_limited' },
+        ctx: { outcome: 'failure', reason_code: 'rate_limited' },
       });
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Too many login attempts. Try again in 15 minutes.')
@@ -304,8 +305,7 @@ function createAuth({ Users, Sessions, logger }) {
         level: 'warn',
         component: 'auth',
         msg: 'login failed: invalid credentials',
-        ip,
-        ctx: { email: emailKey, reason: userRow ? 'wrong_password' : 'no_such_user' },
+        ctx: { outcome: 'failure', reason_code: userRow ? 'wrong_password' : 'no_such_user' },
       });
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Wrong email or password')
@@ -318,9 +318,7 @@ function createAuth({ Users, Sessions, logger }) {
       level: 'info',
       component: 'auth',
       msg: 'login success',
-      ip,
-      user_id: userRow.id,
-      ctx: { email: userRow.email },
+      ctx: { outcome: 'success', reason_code: 'ok' },
     });
     return { id: userRow.id, email: userRow.email, created_at: userRow.created_at };
   }
