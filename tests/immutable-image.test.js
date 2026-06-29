@@ -513,6 +513,11 @@ test('provision verify FAILS CLOSED, aborts on missing setpriv, and rolls back w
     !/chgrp "\$APP_UID" "\$APPDATA"/.test(p),
     'rollback must NOT chgrp AppData to APP_UID (gid≠uid)',
   );
+  assert.match(
+    p,
+    /chmod g-s/,
+    'rollback must clear the dir setgid symbolically (numeric chmod cannot clear a dir setgid on GNU)',
+  );
   // 1-byte read probe, never a full DB read.
   assert.match(
     p,

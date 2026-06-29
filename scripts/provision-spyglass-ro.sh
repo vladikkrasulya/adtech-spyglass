@@ -134,7 +134,8 @@ rollback() {
     [ -e "$APPDATA/$f" ] && { chgrp "$APP_GID" "$APPDATA/$f"; chmod 0644 "$APPDATA/$f"; echo "    ${f} -> 0644 ${APP_UID}:${APP_GID}"; }
   done
   chgrp "$APP_GID" "$APPDATA" # APP_GID (1000), NOT APP_UID
-  chmod 0755 "$APPDATA"       # clears setgid
+  chmod 0755 "$APPDATA"
+  chmod g-s "$APPDATA" # numeric chmod CANNOT clear a dir's setgid on GNU — use symbolic
   echo "    deploy-state.env left 0600; content-posts untouched; group ${GROUP} left intact (groupdel ${GROUP} manually if abandoning)"
 }
 
