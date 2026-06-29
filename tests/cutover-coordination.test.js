@@ -54,6 +54,8 @@ const CASES = [
   { s: 'interrupted-applying', code: 2, status: 'APPLYING' },
   { s: 'recovery-gate-fail', code: 2, noState: true },
   { s: 'deploy-nonzero-target-active', code: 1, status: 'DEGRADED', perms: 'APPLIED' },
+  // deploy reports 0 but the target build is NOT active → rolled back, never success
+  { s: 'deploy-zero-not-active', code: 8, status: 'ROLLED_BACK', perms: 'BASELINE', db: 644 },
 ];
 
 for (const c of CASES) {
@@ -111,4 +113,21 @@ test('cutover wrapper: precise secure/baseline checks, full verify, fail-closed 
   assert.ok(!/gate \|\| true/.test(w), '--recover must keep the minimum gates fail-closed');
   assert.ok(!/chgrp\s+-R|chmod\s+-R/.test(w), 'must never recurse');
   assert.ok(!/\bcp\b.*spyglass\.db|\bmv\b.*spyglass\.db/.test(w), 'must never copy/replace the DB');
+  // snapshot() must sanitize LAST_ERROR into a single shell/dotenv-safe token
+  assert.match(w, /ST_LAST_ERROR\/\/;\/-/, 'snapshot must strip ";" from LAST_ERROR');
+  assert.match(w, /le\/\/ \/-/, 'snapshot must strip spaces from LAST_ERROR');
+});
+
+test('cutover LAST_ERROR is always a single token (no spaces, no ";")', () => {
+  // exercise paths that build multi-part error strings
+  for (const s of [
+    'host-rollback-fail',
+    'provision-fail-rollback-fail',
+    'deploy-zero-not-active',
+  ]) {
+    const r = runCutover(s);
+    const m = r.out.match(/^LAST_ERROR=(.*)$/m);
+    assert.ok(m, `expected a LAST_ERROR line for ${s}: ${r.out}`);
+    assert.doesNotMatch(m[1], /[ ;]/, `LAST_ERROR must be a single token for ${s}, got "${m[1]}"`);
+  }
 });

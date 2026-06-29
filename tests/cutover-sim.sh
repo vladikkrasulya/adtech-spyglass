@@ -9,6 +9,7 @@
 #   deploy-preflight-fail deploy-candidate-fail deploy-critical host-rollback-fail
 #   repeated-success partial-perms wrong-umask grafana-read-fail incomplete-baseline
 #   interrupted-applying recovery-gate-fail deploy-nonzero-target-active
+#   deploy-zero-not-active
 
 set -u
 SCEN="${1:?scenario required}"
@@ -94,6 +95,7 @@ case "\$SCEN" in
   deploy-candidate-fail) echo oldsha6 > "$DATA/.active_sha"; exit 1 ;;
   deploy-critical|host-rollback-fail) echo UNKNOWN > "$DATA/.active_sha"; exit 3 ;;
   deploy-nonzero-target-active) echo newsha7 > "$DATA/.active_sha"; exit 1 ;;
+  deploy-zero-not-active) echo oldsha6 > "$DATA/.active_sha"; exit 0 ;;
   *) echo newsha7 > "$DATA/.active_sha"; exit 0 ;;
 esac
 EOM

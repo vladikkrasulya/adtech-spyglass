@@ -9,7 +9,8 @@
 #   • target active but deploy non-zero OR secure verify incomplete → DEGRADED
 #     (perms NOT rolled back — the app is on target), return rc (or 8 if rc was 0)
 #   • target NOT active → roll host perms to baseline; confirm baseline + Grafana
-#     read → ROLLED_BACK, return the deploy's original code
+#     read → ROLLED_BACK, return the deploy's original code (8 if it was 0 — a
+#     deploy must NEVER report success while the target build isn't active)
 #   • provision --apply fails → state is potentially PARTIAL: roll back + confirm
 #     baseline; if confirmed → ABORTED (2), else → CRITICAL (9)
 #   • any baseline/rollback NOT confirmed → CRITICAL, exit 9
@@ -52,6 +53,11 @@ ST_STATUS=NONE ST_HOST_PERMS=UNKNOWN ST_APP_DEPLOY=NONE
 ST_ACTIVE_SHA="" ST_PREV_SHA="" ST_DEPLOY_RC="" ST_LAST_ERROR="" ST_STARTED_AT=""
 now() { date -Is 2>/dev/null || date; }
 snapshot() {
+  # LAST_ERROR is ALWAYS a single dotenv/shell-safe token: strip ';' and spaces
+  # so the state file stays safe to `source` (a space/';' would split the value
+  # and run the tail as a command).
+  local le="${ST_LAST_ERROR//;/-}"
+  le="${le// /-}"
   write_state "$STATE" <<EOF
 STATUS=${ST_STATUS}
 TARGET=${TARGET_VER}
@@ -60,7 +66,7 @@ APP_DEPLOY=${ST_APP_DEPLOY}
 ACTIVE_BUILD_SHA=${ST_ACTIVE_SHA}
 PREV_BUILD_SHA=${ST_PREV_SHA}
 DEPLOY_RC=${ST_DEPLOY_RC}
-LAST_ERROR=${ST_LAST_ERROR}
+LAST_ERROR=${le}
 STARTED_AT=${ST_STARTED_AT}
 UPDATED_AT=$(now)
 EOF
@@ -150,7 +156,7 @@ cutover() {
       echo "ABORT: provision --apply failed; perms restored to baseline. Deploy NOT started."
       return 2
     fi
-    ST_STATUS=CRITICAL ST_HOST_PERMS=UNKNOWN ST_LAST_ERROR="provision-apply-failed; baseline NOT restored"
+    ST_STATUS=CRITICAL ST_HOST_PERMS=UNKNOWN ST_LAST_ERROR="provision-apply-failed-baseline-not-restored"
     snapshot
     echo "CRITICAL: provision --apply failed AND baseline not restored — manual intervention."
     return 9
@@ -184,15 +190,22 @@ cutover() {
 
   # target NOT active → restore host baseline (coordinated rollback)
   echo "==> deploy rc=${rc}, target not active (active='${active}') — rolling host perms to baseline."
-  ST_STATUS=ROLLING_BACK ST_LAST_ERROR="deploy-rc-${rc};target-not-active"
+  ST_STATUS=ROLLING_BACK ST_LAST_ERROR="deploy-rc-${rc}-target-not-active"
   snapshot
   if restore_baseline; then
     ST_STATUS=ROLLED_BACK ST_HOST_PERMS=BASELINE ST_APP_DEPLOY=ROLLED_BACK
     snapshot
-    echo "==> host perms restored to baseline (Grafana still reads). Returning deploy code ${rc}."
-    return "$rc"
+    # Return the deploy's own code — but rc=0 here means the deploy LIED (it
+    # reported success while the target build is NOT active). Never propagate a
+    # success: surface it as 8.
+    if [ "$rc" != 0 ]; then
+      echo "==> host perms restored to baseline (Grafana still reads). Returning deploy code ${rc}."
+      return "$rc"
+    fi
+    echo "==> host perms restored to baseline, but deploy reported 0 while target is NOT active — failing 8."
+    return 8
   fi
-  ST_STATUS=CRITICAL ST_HOST_PERMS=UNKNOWN ST_LAST_ERROR="host rollback failed / baseline not confirmed (deploy-rc-${rc})"
+  ST_STATUS=CRITICAL ST_HOST_PERMS=UNKNOWN ST_LAST_ERROR="host-rollback-failed-baseline-not-confirmed-deploy-rc-${rc}"
   snapshot
   echo "==> CRITICAL: host permission rollback FAILED / baseline not confirmed — manual intervention."
   return 9
