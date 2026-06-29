@@ -50,14 +50,27 @@ test('source-nav i18n: {placeholder} sets match across uk/en/ru', () => {
   }
 });
 
-test('source-nav i18n: registers via both queue push and registerI18nModule', () => {
+test('source-nav i18n: either-or registration — direct when booted, NOT also queued', () => {
+  // /i18n.js already booted (registerI18nModule present): register directly and
+  // do NOT also push to the queue (a simultaneous push + register double-registers).
   let registered = /** @type {any} */ (null);
   const win = { kt_i18n_modules: [], registerI18nModule: (s) => (registered = s) };
   // eslint-disable-next-line no-new-func
   new Function('window', SRC)(win);
   assert.ok(
     registered && registered.id === 'inspector-nav',
-    'late-load path calls registerI18nModule',
+    'booted path registers directly via registerI18nModule',
   );
-  assert.equal(win.kt_i18n_modules.length, 1, 'also pushed to the boot-drain queue');
+  assert.equal(win.kt_i18n_modules.length, 0, 'must NOT also queue — no double registration');
+});
+
+test('source-nav i18n: queue path when /i18n.js has not booted yet', () => {
+  // No registerI18nModule yet → push to the boot-drain queue exactly once.
+  let registered = /** @type {any} */ (null);
+  const win = { registerI18nModule: undefined };
+  // eslint-disable-next-line no-new-func
+  new Function('window', SRC)(win);
+  assert.equal(registered, null, 'no direct registration when not booted');
+  assert.equal(win.kt_i18n_modules.length, 1, 'queued exactly once');
+  assert.equal(win.kt_i18n_modules[0].id, 'inspector-nav');
 });

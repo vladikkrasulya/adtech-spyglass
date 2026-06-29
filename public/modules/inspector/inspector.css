@@ -2412,6 +2412,31 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   margin-top: 2px;
   letter-spacing: 0.04em;
 }
+/* CP3.2: a locatable crosscheck path renders as a button (same goto-path
+   contract as .finding-path). Keep the .cross-path look; add the interactive
+   affordance + an accessible focus ring. */
+button.cross-path,
+.cross-path-btn {
+  display: inline-block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+button.cross-path:hover,
+.cross-path-btn:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+button.cross-path:focus-visible,
+.cross-path-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 .cross-detail {
   font-family: var(--font-mono);
   font-size: 10px;

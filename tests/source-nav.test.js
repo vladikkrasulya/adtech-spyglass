@@ -333,3 +333,96 @@ test('failed analyze: resetNavigation() at analyze start leaves no stale jump', 
   assert.equal(w.SpyglassSourceNav.navigate(loc), false, 'no stale jump without a fresh analysis');
   assert.equal(w.document.getElementById('srcNavBar').hidden, true);
 });
+
+// ── CP3.2: clickable crosscheck (data-loc), Esc-status, toolbar aria, geometry ──
+
+test('CP3.2: Esc clears the highlight AND drops the stale active-location status', () => {
+  const res = { seatbid: [{ bid: [{ price: 1 }] }] };
+  const w = setup('', PRETTY(res));
+  const loc = FL.buildNormalLocation(
+    { id: 'x', path: 'seatbid[0].bid[0].price' },
+    { side: 'response', kind: 'ortb' },
+  );
+  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  assert.ok(w.SpyglassSourceNav.navigate(loc));
+  const active = w.SpyglassSourceNav.__test.status();
+  assert.ok(active && /:\d+:\d+$/.test(active), 'status shows the active location (…:line:col)');
+  // Esc dispatched FROM the focused textarea (bubbles to the document handler)
+  const el = w.document.getElementById('bidRes');
+  el.focus();
+  el.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(marks(overlay(w, 'response')).length, 0, 'highlight cleared');
+  const after = w.SpyglassSourceNav.__test.status();
+  assert.notEqual(after, active, 'status no longer the stale active location');
+  assert.match(after, /locatable/, 'status returned to the neutral list state');
+});
+
+test('CP3.2: buildControls localizes the toolbar aria-label on init', () => {
+  const w = setup('{"a":1}', '');
+  const bar = w.document.getElementById('srcNavBar');
+  // window.t is absent in the harness → tr() resolves to the EN default; the key
+  // exists in uk/en/ru per source-nav-i18n.test.js (locale parity).
+  assert.equal(bar.getAttribute('aria-label'), 'Finding source navigation');
+});
+
+test('CP3.2: window resize refreshes overlay geometry while active; teardown stops it', () => {
+  const res = { seatbid: [{ bid: [{ price: 1 }] }] };
+  const w = setup('', PRETTY(res));
+  const loc = FL.buildNormalLocation(
+    { id: 'x', path: 'seatbid[0].bid[0].price' },
+    { side: 'response', kind: 'ortb' },
+  );
+  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  assert.ok(w.SpyglassSourceNav.navigate(loc));
+  const before = w.SpyglassSourceNav.__test.geometryRefreshes();
+  w.dispatchEvent(new w.Event('resize'));
+  const afterResize = w.SpyglassSourceNav.__test.geometryRefreshes();
+  assert.equal(afterResize, before + 1, 'exactly one geometry refresh per resize');
+  // teardown aborts the signal → the window listener is removed
+  w.SpyglassSourceNav.teardown();
+  w.dispatchEvent(new w.Event('resize'));
+  assert.equal(
+    w.SpyglassSourceNav.__test.geometryRefreshes(),
+    afterResize,
+    'no geometry refresh fires after teardown',
+  );
+});
+
+test('CP3.2: crosscheck data-loc round-trips through HTML parsing and navigates (quote-safe)', () => {
+  const req = { id: 'r1', cur: ['EUR'], imp: [{ id: 'i1' }] };
+  const res = { id: 'r1', cur: 'USD', seatbid: [{ bid: [{ impid: 'i1', price: 1 }] }] };
+  const w = setup(PRETTY(req), PRETTY(res));
+  const loc = FL.buildCrosscheckLocation(
+    { id: 'crosscheck.cur_not_in_request', path: 'cur' },
+    req,
+    res,
+  );
+  w.SpyglassSourceNav.onAnalyzed([{ id: 'crosscheck.cur_not_in_request', location: loc }]);
+  // Replicate the app's exact serialization: escapeHtml (& < >) THEN &quot;-escape,
+  // embedded in a DOUBLE-quoted data-loc, parsed back by the browser. Guards the
+  // bug where unescaped quotes truncate the attribute at the first " so
+  // JSON.parse(el.dataset.loc) fails and the click silently no-ops.
+  const escapeHtml = (s) => {
+    const d = w.document.createElement('div');
+    d.appendChild(w.document.createTextNode(String(s)));
+    return d.innerHTML;
+  };
+  const dataLoc = escapeHtml(JSON.stringify(loc)).replace(/"/g, '&quot;');
+  const host = w.document.createElement('div');
+  host.innerHTML =
+    '<button type="button" class="cross-path cross-path-btn" data-action="goto-path"' +
+    ' data-loc="' +
+    dataLoc +
+    '" title="t">cur</button>';
+  const btn = host.querySelector('button[data-action="goto-path"]');
+  assert.ok(btn, 'clickable goto-path button rendered');
+  assert.equal(btn.getAttribute('data-jsonpath'), null, 'crosscheck nav carries no data-jsonpath');
+  // the goto-path dispatcher does navigate(JSON.parse(el.dataset.loc)) — must succeed
+  const parsed = JSON.parse(btn.dataset.loc);
+  assert.ok(w.SpyglassSourceNav.navigate(parsed), 'data-loc round-trips and navigates');
+  assert.equal(marks(overlay(w, 'response'))[0].textContent, '"USD"', 'primary: response cur');
+  assert.ok(
+    marks(overlay(w, 'request'))[0].textContent.includes('EUR'),
+    'related: request cur highlighted cross-pane',
+  );
+});

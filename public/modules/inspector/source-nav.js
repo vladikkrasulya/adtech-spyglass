@@ -55,6 +55,8 @@
   let statusEl = null;
   let analyzed = null; // { texts:{request,response}, maps:{}, list:[], cursor }
   let highlightActive = false;
+  let resizeObs = null; // CP3.2 ResizeObserver — re-aligns the overlay on geometry change
+  let geometryRefreshCount = 0; // test-observable: number of overlay geometry refreshes
 
   function djb2(s) {
     let h = 5381;
@@ -195,6 +197,19 @@
     p.overlay.scrollTop = p.el.scrollTop;
     p.overlay.scrollLeft = p.el.scrollLeft;
   }
+  // CP3.2: re-align the EXISTING overlay to its textarea after a geometry
+  // change. Re-applies geometry/scroll only — never rebuilds the source map.
+  // No-op unless a highlight is currently active.
+  function refreshOverlayGeometry() {
+    geometryRefreshCount++;
+    if (!panes || !highlightActive) return;
+    ['request', 'response'].forEach(function (side) {
+      if (panes[side]) {
+        alignOverlay(side);
+        syncScroll(side);
+      }
+    });
+  }
   function clearHighlights() {
     highlightActive = false;
     if (!panes) return;
@@ -230,6 +245,20 @@
   }
   function setStatus(msg) {
     if (statusEl) statusEl.textContent = msg;
+  }
+  // Neutral/list status: how many findings are locatable (or idle when there is
+  // no analyzed revision). Used after analyze AND after Esc dismisses a jump, so
+  // the toolbar never lingers on a stale active-location string.
+  function setListStatus() {
+    if (!analyzed) {
+      setStatus(tr('inspector.nav.idle', '—'));
+      return;
+    }
+    setStatus(
+      analyzed.list.length
+        ? tr('inspector.nav.locatable', '{n} locatable', { n: analyzed.list.length })
+        : tr('inspector.nav.none_locatable', 'none locatable'),
+    );
   }
 
   // ── navigate ───────────────────────────────────────────────────────────────
@@ -320,11 +349,7 @@
     analyzed.list = list;
     clearHighlights();
     if (bar) bar.hidden = list.length === 0;
-    setStatus(
-      list.length
-        ? tr('inspector.nav.locatable', '{n} locatable', { n: list.length })
-        : tr('inspector.nav.none_locatable', 'none locatable'),
-    );
+    setListStatus();
   }
 
   // edit / stale: any change to a pane invalidates the analyzed revision.
@@ -350,6 +375,16 @@
         /* */
       }
       controller = null;
+    }
+    // CP3.2: the window listeners detach via controller.abort() (signal); the
+    // ResizeObserver has no signal, so disconnect it explicitly here.
+    if (resizeObs) {
+      try {
+        resizeObs.disconnect();
+      } catch (_e) {
+        /* */
+      }
+      resizeObs = null;
     }
     if (panes) {
       ['request', 'response'].forEach(function (s) {
@@ -427,11 +462,30 @@
     bar = document.getElementById('srcNavBar');
     if (bar) buildControls(bar, signal);
     document.addEventListener('keydown', onKeydown, { signal: signal });
+    // CP3.2: keep the EXISTING overlay aligned to its textarea after any geometry
+    // change — input-section drag-resize, window resize/orientation, a responsive
+    // breakpoint, or a textarea/card resize. Re-aligns the overlay only; it never
+    // rebuilds the source map. Lifecycle-owned: the ResizeObserver is disconnected
+    // in teardown() and the window listeners detach via this instance's signal, so
+    // a remount starts fresh with no stale callbacks.
+    if (typeof ResizeObserver === 'function') {
+      resizeObs = new ResizeObserver(refreshOverlayGeometry);
+      ['request', 'response'].forEach(function (side) {
+        if (panes[side] && panes[side].el) resizeObs.observe(panes[side].el);
+      });
+    }
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('resize', refreshOverlayGeometry, { signal: signal });
+      window.addEventListener('orientationchange', refreshOverlayGeometry, { signal: signal });
+    }
     return true;
   }
 
   function buildControls(host, signal) {
     while (host.firstChild) host.removeChild(host.firstChild);
+    // CP3.2: localize the toolbar's accessible name (the template ships a static
+    // English aria-label across all locales; drive it from i18n at mount time).
+    host.setAttribute('aria-label', tr('inspector.nav.toolbar', 'Finding source navigation'));
     host.appendChild(
       btn(
         tr('inspector.nav.prev', '‹ prev'),
@@ -478,7 +532,14 @@
     }
     // Esc clears an ACTIVE highlight — including while the textarea has focus
     // (no isTyping guard); when no highlight is active it stays out of the way.
-    if (e.key === 'Escape' && highlightActive) clearHighlights();
+    // CP3.2: also drop the stale active-location status — return the toolbar to
+    // the neutral list state ("{n} locatable") so no old location lingers, and
+    // reset the cursor so the next prev/next starts a fresh cycle.
+    if (e.key === 'Escape' && highlightActive) {
+      clearHighlights();
+      if (analyzed) analyzed.cursor = -1;
+      setListStatus();
+    }
   }
 
   window.SpyglassSourceNav = {
@@ -508,6 +569,12 @@
       },
       panes: function () {
         return panes;
+      },
+      status: function () {
+        return statusEl ? statusEl.textContent : null;
+      },
+      geometryRefreshes: function () {
+        return geometryRefreshCount;
       },
     },
   };

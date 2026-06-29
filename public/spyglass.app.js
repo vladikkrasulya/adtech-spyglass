@@ -1365,7 +1365,10 @@ export async function mountInspector(root, ctx) {
         ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
           escapeHtml(f.path) +
           '" data-loc="' +
-          escapeHtml(f.location ? JSON.stringify(f.location) : '') +
+          // &quot;-escape: data-loc holds JSON (full of quotes) in a double-quoted
+          // attribute; escapeHtml alone leaves the quotes raw → the attribute
+          // truncates at the first " and JSON.parse fails (the jump silently no-ops).
+          (f.location ? escapeHtml(JSON.stringify(f.location)).replace(/"/g, '&quot;') : '') +
           '" title="Jump to this path in the JSON">[' +
           escapeHtml(f.path) +
           ']</button>'
@@ -2453,6 +2456,27 @@ export async function mountInspector(root, ctx) {
           crit || warn
             ? `<div class="mono-label" style="margin-bottom:var(--space-3)">${escapeHtml(t('crosscheck.summary', { crit, warn, ok: cross.length - crit - warn }))}</div>`
             : `<div class="mono-label" style="color:var(--success);margin-bottom:var(--space-3)">${escapeHtml(t('crosscheck.all_passed', { count: cross.length }))}</div>`;
+        // CP3.2: locatable crosscheck paths are clickable, reusing the EXISTING
+        // finding→source contract — data-loc carries the finding-location and the
+        // goto-path dispatcher calls SpyglassSourceNav.navigate(). No data-jsonpath,
+        // no indexOf, no size→w alias: the source map resolves the exact key/value
+        // (incl. size→/w + /h related) from the server-attached location. Non-
+        // locatable crosschecks (precision 'none' / no primary) stay plain text.
+        const crossPathHtml = (c) => {
+          if (!c.path) return '';
+          const loc = c.location;
+          const navigable = loc && loc.precision !== 'none' && loc.primary;
+          if (!navigable) return `<div class="cross-path">${escapeHtml(c.path)}</div>`;
+          return (
+            `<button type="button" class="cross-path cross-path-btn" data-action="goto-path"` +
+            // data-loc holds JSON (full of quotes) inside a double-quoted attribute:
+            // escapeHtml handles & < > but NOT quotes, so &quot;-escape too or the
+            // attribute truncates at the first " and JSON.parse fails (no jump).
+            ` data-loc="${escapeHtml(JSON.stringify(loc)).replace(/"/g, '&quot;')}"` +
+            ` title="${escapeHtml(t('inspector.nav.jump', 'Jump to this location in the source'))}">` +
+            `${escapeHtml(c.path)}</button>`
+          );
+        };
         crossEl.innerHTML =
           summaryRow +
           cross
@@ -2466,7 +2490,7 @@ export async function mountInspector(root, ctx) {
               <span class="cross-icon">${ic}</span>
               <div style="flex:1;min-width:0">
                 <div>${escapeHtml(c.msg)}</div>
-                ${c.path ? `<div class="cross-path">${escapeHtml(c.path)}</div>` : ''}
+                ${crossPathHtml(c)}
                 ${detailHtml}
               </div>
             </div>`;
