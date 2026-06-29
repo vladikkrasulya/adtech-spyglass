@@ -11,6 +11,10 @@
  *     context). No id/path regex side-guessing anywhere here.
  *   • XSS-safe: payload text enters the overlay ONLY via document.createTextNode
  *     — never innerHTML. The only element built around it is <mark>.
+ *   • Idempotent lifecycle: every listener (pane input/scroll, document keydown,
+ *     toolbar clicks) is bound to a per-instance AbortController; init() fully
+ *     removes the previous instance; teardown() removes listeners, overlays,
+ *     the live region and toolbar state. No listener stacking across remounts.
  *   • Honest fallback: a pointer that doesn't resolve against the CURRENT text
  *     (edited / stale / invalid / >2MB / unknown provenance) → NO jump.
  *   • Privacy: nothing here is logged or transmitted; pure local DOM.
@@ -28,13 +32,29 @@
     if (!SM) SM = (typeof window !== 'undefined' && window.SpyglassSourceMap) || null;
     return SM;
   }
+  // localized string (UK/EN/RU via the central i18n table); safe fallback if t() absent
+  function tr(key, fallback, params) {
+    if (typeof window !== 'undefined' && typeof window.t === 'function') {
+      const s = window.t(key, params);
+      if (s && s !== '[' + key + ']') return s;
+    }
+    if (!params) return fallback;
+    return String(fallback).replace(/\{(\w+)\}/g, function (_, k) {
+      return params[k] != null ? String(params[k]) : '{' + k + '}';
+    });
+  }
+  function sideLabel(side) {
+    return tr('inspector.nav.side.' + side, side);
+  }
 
-  // ── module state ──────────────────────────────────────────────────────────
+  // ── per-instance state ──────────────────────────────────────────────────────
+  let controller = null; // AbortController — owns ALL listeners for this instance
   let panes = null; // { request:{el,card,overlay}, response:{el,card,overlay} }
-  let live = null; // aria-live region
-  let bar = null; // prev/next controls element
+  let live = null; // aria-live region (created/owned by this instance)
+  let bar = null; // #srcNavBar toolbar (template-owned; we only fill/clear it)
   let statusEl = null;
   let analyzed = null; // { texts:{request,response}, maps:{}, list:[], cursor }
+  let highlightActive = false;
 
   function djb2(s) {
     let h = 5381;
@@ -115,7 +135,6 @@
       ov.style.display = 'none';
       return;
     }
-    // sort + drop overlaps (earliest wins)
     const ordered = segs
       .filter(function (s) {
         return s.range && s.range.end > s.range.start;
@@ -139,9 +158,6 @@
     ov.style.display = 'block';
     syncScroll(side);
   }
-  // Mirror the textarea's geometry + typography so the backdrop lines up. The
-  // textarea is made transparent (CSS) and the overlay carries its background,
-  // so only the <mark> backgrounds show through behind the editable text.
   function alignOverlay(side) {
     const el = panes[side].el;
     const ov = panes[side].overlay;
@@ -174,12 +190,13 @@
     ov.style.height = el.clientHeight + 'px';
   }
   function syncScroll(side) {
-    const p = panes[side];
+    const p = panes && panes[side];
     if (!p || !p.overlay) return;
     p.overlay.scrollTop = p.el.scrollTop;
     p.overlay.scrollLeft = p.el.scrollLeft;
   }
   function clearHighlights() {
+    highlightActive = false;
     if (!panes) return;
     ['request', 'response'].forEach(function (s) {
       if (panes[s]) paintRanges(s, []);
@@ -220,14 +237,18 @@
     if (!panes || !analyzed) return false;
     clearHighlights();
     if (!location || !location.primary) {
-      announce('No source location for this finding.');
-      setStatus('—');
+      announce(tr('inspector.nav.no_source', 'No source location for this finding.'));
+      setStatus(tr('inspector.nav.idle', '—'));
       return false;
     }
     const pr = resolvePart(location.primary, location.dialect);
     if (!pr.ok) {
-      announce('No precise source location (' + pr.reason + ').');
-      setStatus('no precise location');
+      announce(
+        tr('inspector.nav.no_precise', 'No precise source location ({reason}).', {
+          reason: pr.reason,
+        }),
+      );
+      setStatus(tr('inspector.nav.no_location', 'no precise location'));
       return false;
     }
     const bySide = { request: [], response: [] };
@@ -243,21 +264,19 @@
       if (bySide[side].length) expand(side);
       paintRanges(side, bySide[side]);
     });
+    highlightActive = true;
     focusAndScroll(pr.side, pr.range, pr.line);
     if (typeof index === 'number') analyzed.cursor = index;
-    const rel = bySide.request.length + bySide.response.length - 1;
+    const relCount = bySide.request.length + bySide.response.length - 1;
     announce(
-      'Jumped to ' +
-        location.primary.display +
-        ' on ' +
-        pr.side +
-        ', line ' +
-        pr.line +
-        ' column ' +
-        pr.col +
-        (rel > 0 ? ' (' + rel + ' related)' : ''),
+      tr('inspector.nav.jumped', 'Jumped to {display} on {side}, line {line} column {col}', {
+        display: location.primary.display,
+        side: sideLabel(pr.side),
+        line: pr.line,
+        col: pr.col,
+      }) + (relCount > 0 ? tr('inspector.nav.related', ' ({n} related)', { n: relCount }) : ''),
     );
-    setStatus(location.primary.display + '  ' + pr.side + ':' + pr.line + ':' + pr.col);
+    setStatus(location.primary.display + '  ' + sideLabel(pr.side) + ':' + pr.line + ':' + pr.col);
     return true;
   }
 
@@ -270,6 +289,16 @@
   }
 
   // ── lifecycle ──────────────────────────────────────────────────────────────
+  // Clear the CURRENT navigation (highlight + analyzed revision) WITHOUT
+  // removing the instance. Called at the START of every runAnalysis() so a
+  // failed/aborted analyze never leaves a stale jump active.
+  function resetNavigation() {
+    clearHighlights();
+    analyzed = null;
+    if (bar) bar.hidden = true;
+    setStatus(tr('inspector.nav.idle', '—'));
+  }
+
   function onAnalyzed(items) {
     if (!panes) return;
     analyzed = {
@@ -278,7 +307,6 @@
       list: [],
       cursor: -1,
     };
-    // eager build for small panes; lazy (build-on-first-resolve) for 1–2MB.
     ['request', 'response'].forEach(function (side) {
       if (paneText(side).length <= EAGER_MAX) analyzed.maps[side] = buildMap(side);
     });
@@ -292,7 +320,11 @@
     analyzed.list = list;
     clearHighlights();
     if (bar) bar.hidden = list.length === 0;
-    setStatus(list.length ? list.length + ' locatable' : 'none locatable');
+    setStatus(
+      list.length
+        ? tr('inspector.nav.locatable', '{n} locatable', { n: list.length })
+        : tr('inspector.nav.none_locatable', 'none locatable'),
+    );
   }
 
   // edit / stale: any change to a pane invalidates the analyzed revision.
@@ -304,15 +336,38 @@
       analyzed.list = [];
       analyzed.cursor = -1;
       if (bar) bar.hidden = true;
-      setStatus('edited — re-run analyze');
+      setStatus(tr('inspector.nav.edited', 'edited — re-run analyze'));
     }
   }
 
+  // Full instance removal: abort every listener, remove overlays + live region,
+  // reset the toolbar, drop all state. Safe to call repeatedly (idempotent).
   function teardown() {
-    clearHighlights();
+    if (controller) {
+      try {
+        controller.abort();
+      } catch (_e) {
+        /* */
+      }
+      controller = null;
+    }
+    if (panes) {
+      ['request', 'response'].forEach(function (s) {
+        const p = panes[s];
+        if (p && p.overlay && p.overlay.remove) p.overlay.remove();
+      });
+    }
+    if (live && live.remove) live.remove();
+    if (bar) {
+      while (bar.firstChild) bar.removeChild(bar.firstChild);
+      bar.hidden = true;
+    }
+    panes = null;
+    live = null;
+    bar = null;
+    statusEl = null;
     analyzed = null;
-    if (bar) bar.hidden = true;
-    setStatus('');
+    highlightActive = false;
   }
 
   // ── init / DOM ──────────────────────────────────────────────────────────────
@@ -328,60 +383,84 @@
     if (el.parentNode) el.parentNode.insertBefore(ov, el);
     return ov;
   }
-  function bindPane(side, el) {
+  function bindPane(side, el, signal) {
     if (!el) return null;
     const card = el.closest ? el.closest('.input-card') : null;
     const overlay = makeOverlay(el);
-    el.addEventListener('input', function () {
-      markStale(side);
-    });
-    el.addEventListener('scroll', function () {
-      syncScroll(side);
-    });
+    el.addEventListener(
+      'input',
+      function () {
+        markStale(side);
+      },
+      { signal: signal },
+    );
+    el.addEventListener(
+      'scroll',
+      function () {
+        syncScroll(side);
+      },
+      { signal: signal },
+    );
     return { el: el, card: card, overlay: overlay };
   }
 
   function init(opts) {
     opts = opts || {};
+    // Fully remove any previous instance FIRST → idempotent, no listener stacking.
+    teardown();
     const reqEl = document.getElementById(opts.requestId || 'bidReq');
     const resEl = document.getElementById(opts.responseId || 'bidRes');
     if (!reqEl && !resEl) return false;
-    panes = { request: bindPane('request', reqEl), response: bindPane('response', resEl) };
-    live = document.getElementById('srcNavLive');
-    if (!live) {
-      live = document.createElement('div');
-      live.id = 'srcNavLive';
-      live.className = 'sr-only';
-      live.setAttribute('aria-live', 'polite');
-      document.body.appendChild(live);
-    }
+    controller =
+      typeof AbortController === 'function'
+        ? new AbortController()
+        : { abort: function () {}, signal: undefined };
+    const signal = controller.signal;
+    panes = {
+      request: bindPane('request', reqEl, signal),
+      response: bindPane('response', resEl, signal),
+    };
+    live = document.createElement('div');
+    live.className = 'sr-only';
+    live.setAttribute('aria-live', 'polite');
+    document.body.appendChild(live);
     bar = document.getElementById('srcNavBar');
-    if (bar) buildControls(bar);
-    bindKeys();
+    if (bar) buildControls(bar, signal);
+    document.addEventListener('keydown', onKeydown, { signal: signal });
     return true;
   }
 
-  function buildControls(host) {
+  function buildControls(host, signal) {
     while (host.firstChild) host.removeChild(host.firstChild);
-    const prev = btn('‹ prev', function () {
-      step(-1);
-    });
-    const next = btn('next ›', function () {
-      step(1);
-    });
+    host.appendChild(
+      btn(
+        tr('inspector.nav.prev', '‹ prev'),
+        function () {
+          step(-1);
+        },
+        signal,
+      ),
+    );
+    host.appendChild(
+      btn(
+        tr('inspector.nav.next', 'next ›'),
+        function () {
+          step(1);
+        },
+        signal,
+      ),
+    );
     statusEl = document.createElement('span');
     statusEl.className = 'src-nav-status';
-    host.appendChild(prev);
-    host.appendChild(next);
     host.appendChild(statusEl);
     host.hidden = true;
   }
-  function btn(label, fn) {
+  function btn(label, fn, signal) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'btn-icon src-nav-btn';
     b.textContent = label;
-    b.addEventListener('click', fn);
+    b.addEventListener('click', fn, { signal: signal });
     return b;
   }
 
@@ -390,22 +469,23 @@
     const t = (el.tagName || '').toLowerCase();
     return t === 'textarea' || t === 'input' || t === 'select' || el.isContentEditable;
   }
-  function bindKeys() {
-    document.addEventListener('keydown', function (e) {
-      // Alt+↓ / Alt+↑ cycle findings even from inside the editor; Esc clears.
-      if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-        e.preventDefault();
-        step(e.key === 'ArrowDown' ? 1 : -1);
-        return;
-      }
-      if (e.key === 'Escape' && analyzed && !isTyping(e.target)) clearHighlights();
-    });
+  function onKeydown(e) {
+    // Alt+↓ / Alt+↑ cycle findings even from inside the editor.
+    if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault();
+      step(e.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+    // Esc clears an ACTIVE highlight — including while the textarea has focus
+    // (no isTyping guard); when no highlight is active it stays out of the way.
+    if (e.key === 'Escape' && highlightActive) clearHighlights();
   }
 
   window.SpyglassSourceNav = {
     init: init,
     onAnalyzed: onAnalyzed,
     navigate: navigate,
+    resetNavigation: resetNavigation,
     next: function () {
       step(1);
     },
@@ -419,6 +499,10 @@
       resolvePart: resolvePart,
       paintRanges: paintRanges,
       djb2: djb2,
+      isTyping: isTyping,
+      highlightActive: function () {
+        return highlightActive;
+      },
       state: function () {
         return analyzed;
       },

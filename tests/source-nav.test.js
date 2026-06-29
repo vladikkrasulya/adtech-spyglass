@@ -242,3 +242,94 @@ test('invalid JSON pane → no jump (honest fallback)', () => {
   w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
   assert.equal(w.SpyglassSourceNav.navigate(loc), false);
 });
+
+// ── CP3.1: lifecycle / idempotency / focused-Esc / stale-after-failed-analyze ──
+
+const itemsFor = (paths, side) =>
+  paths.map((p, i) => ({
+    id: 'f' + i,
+    location: FL.buildNormalLocation({ id: 'f' + i, path: p }, { side: side, kind: 'ortb' }),
+  }));
+
+test('remount: after repeated init/teardown, ONE keypress performs exactly ONE step', () => {
+  const req = { id: 'r', imp: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }] };
+  const w = setup(PRETTY(req), '');
+  // simulate several SPA remounts — each init() must fully clean the prior one
+  w.SpyglassSourceNav.init({});
+  w.SpyglassSourceNav.init({});
+  w.SpyglassSourceNav.init({});
+  w.SpyglassSourceNav.onAnalyzed(
+    itemsFor(['imp[0].id', 'imp[1].id', 'imp[2].id', 'imp[3].id'], 'request'),
+  );
+  w.document.dispatchEvent(
+    new w.KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }),
+  );
+  // stacked listeners would advance the cursor N times; exactly one listener → cursor 0
+  assert.equal(
+    w.SpyglassSourceNav.__test.state().cursor,
+    0,
+    'exactly one step → no stacked listeners',
+  );
+  assert.equal(
+    w.document.querySelectorAll('.src-hl-overlay').length,
+    2,
+    'exactly one overlay per pane',
+  );
+  assert.equal(w.document.querySelectorAll('[aria-live]').length, 1, 'exactly one live region');
+});
+
+test('teardown removes document keydown, overlays, live region + toolbar state', () => {
+  const w = setup('{"a":1}', '');
+  w.SpyglassSourceNav.onAnalyzed(itemsFor(['a'], 'request'));
+  assert.ok(w.document.querySelector('.src-hl-overlay'));
+  assert.ok(w.document.querySelector('[aria-live]'));
+  w.SpyglassSourceNav.teardown();
+  // listener gone → keypress is inert, no throw, no state
+  w.document.dispatchEvent(
+    new w.KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }),
+  );
+  assert.equal(w.SpyglassSourceNav.__test.state(), null);
+  assert.equal(w.SpyglassSourceNav.__test.panes(), null);
+  assert.equal(w.document.querySelector('.src-hl-overlay'), null, 'overlays removed');
+  assert.equal(w.document.querySelector('[aria-live]'), null, 'live region removed');
+  assert.equal(w.document.getElementById('srcNavBar').children.length, 0, 'toolbar emptied');
+  assert.equal(w.document.getElementById('srcNavBar').hidden, true, 'toolbar hidden');
+});
+
+test('Esc clears the active highlight even while the textarea HAS focus', () => {
+  const res = { seatbid: [{ bid: [{ price: 1 }] }] };
+  const w = setup('', PRETTY(res));
+  const loc = FL.buildNormalLocation(
+    { id: 'x', path: 'seatbid[0].bid[0].price' },
+    { side: 'response', kind: 'ortb' },
+  );
+  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  assert.ok(w.SpyglassSourceNav.navigate(loc));
+  const el = w.document.getElementById('bidRes');
+  el.focus();
+  assert.equal(w.SpyglassSourceNav.__test.isTyping(el), true, 'textarea IS a typing target');
+  assert.equal(w.SpyglassSourceNav.__test.highlightActive(), true);
+  // Esc dispatched FROM the focused textarea (e.target = textarea, bubbles to document)
+  el.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(marks(overlay(w, 'response')).length, 0, 'highlight cleared despite focus');
+  assert.equal(w.SpyglassSourceNav.__test.highlightActive(), false);
+});
+
+test('failed analyze: resetNavigation() at analyze start leaves no stale jump', () => {
+  const res = { seatbid: [{ bid: [{ price: 1 }] }] };
+  const w = setup('', PRETTY(res));
+  const loc = FL.buildNormalLocation(
+    { id: 'x', path: 'seatbid[0].bid[0].price' },
+    { side: 'response', kind: 'ortb' },
+  );
+  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  w.SpyglassSourceNav.navigate(loc);
+  assert.equal(marks(overlay(w, 'response')).length, 1);
+  // a NEW runAnalysis() begins → resetNavigation(); then the analyze FAILS
+  // (onAnalyzed is never called)
+  w.SpyglassSourceNav.resetNavigation();
+  assert.equal(marks(overlay(w, 'response')).length, 0, 'prior highlight dropped at analyze start');
+  assert.equal(w.SpyglassSourceNav.__test.state(), null, 'navigation revision cleared');
+  assert.equal(w.SpyglassSourceNav.navigate(loc), false, 'no stale jump without a fresh analysis');
+  assert.equal(w.document.getElementById('srcNavBar').hidden, true);
+});

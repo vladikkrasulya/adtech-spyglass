@@ -1929,6 +1929,16 @@ export async function mountInspector(root, ctx) {
 
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
+    // Stage-1: drop any prior finding→source jump at the START of every analyze.
+    // A failed/aborted analyze must not leave a stale highlight pointing at the
+    // previous payload; onAnalyzed() re-arms navigation only on success.
+    if (window.SpyglassSourceNav) {
+      try {
+        window.SpyglassSourceNav.resetNavigation();
+      } catch (_e) {
+        /* navigator is optional */
+      }
+    }
     if (_analyzeAbort) {
       try {
         _analyzeAbort.abort();
