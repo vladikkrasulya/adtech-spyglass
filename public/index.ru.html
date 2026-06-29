@@ -226,6 +226,11 @@
     <script src="/spyglass-crypto.js?v=1"></script>
     <script src="/i18n.js?v=30"></script>
     <script src="/lang-switch.js?v=2"></script>
+    <!-- Stage-1 finding→source navigation: canonical core (sha256 parity-guarded
+         copy of packages/core/source-map.js) + the client navigator. -->
+    <script src="/core/source-map.js?v=1" defer></script>
+    <script src="/modules/inspector/source-nav.i18n.js?v=1" defer></script>
+    <script src="/modules/inspector/source-nav.js?v=1" defer></script>
     <script type="module" src="/shell-boot.js"></script>
     <!-- Classic <script> utilities. They wait for `kt:inspector-ready`
          (emitted by inspector mount() once template DOM is injected)

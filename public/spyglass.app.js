@@ -52,6 +52,24 @@ export async function mountInspector(root, ctx) {
     },
     { signal: ctx.signal },
   );
+  // Stage-1: wire the exact finding→source navigator. Markup (#bidReq/#bidRes)
+  // is already injected by /modules/inspector/index.js before this mount runs.
+  // Idempotent per mount; teardown on unmount via ctx.signal.
+  if (window.SpyglassSourceNav) {
+    try {
+      window.SpyglassSourceNav.init({});
+      ctx.signal.addEventListener('abort', () => {
+        try {
+          window.SpyglassSourceNav.teardown();
+        } catch (_e) {
+          /* */
+        }
+      });
+    } catch (_e) {
+      /* navigator is optional; never block the mount */
+    }
+  }
+
   window.addEventListener(
     'unhandledrejection',
     (e) => {
@@ -845,54 +863,11 @@ export async function mountInspector(root, ctx) {
     return '***' + sld.slice(-3) + '.' + tld;
   }
 
-  // Phase 8: clickable JSONPath in findings — best-effort scroll-to.
-  // Picks the LAST property name in the path (e.g. `seatbid[0].bid[0].impid`
-  // → 'impid'), searches the textarea for `"impid"`, focuses + scrolls
-  // to that line. Won't disambiguate when the same key appears multiple
-  // times (we hit the FIRST occurrence) — adequate for "basic mechanism"
-  // per Phase 8 brief; precise multi-occurrence resolution is a future
-  // enhancement that requires JSON-AST source-mapping.
-  function jsonPathToTextarea(path) {
-    if (!path) return null;
-    // Path side: response paths begin with `seatbid` / `bid` / `cur`;
-    // request paths begin with `imp` / `site` / `app` / `device` /
-    // `user` / `regs` / `source` / `cur` (ambiguous — bias to req when
-    // unknown).
-    if (/\b(?:seatbid|bidid|nbr)\b/.test(path)) return 'bidRes';
-    return 'bidReq';
-  }
-  function scrollToPath(path) {
-    const targetId = jsonPathToTextarea(path);
-    if (!targetId) return;
-    // Auto-expand the panel if it was collapsed.
-    const cardId = targetId === 'bidReq' ? 'cardReq' : 'cardRes';
-    const card = document.getElementById(cardId);
-    if (card && card.classList.contains('is-collapsed')) {
-      card.classList.remove('is-collapsed');
-    }
-    const ta = document.getElementById(targetId);
-    if (!ta) return;
-    // Pick the last identifier-shaped segment from the path.
-    const m = path.match(/([a-zA-Z_][a-zA-Z0-9_]*)(?:\[\d+\])?$/);
-    const key = m && m[1];
-    if (!key) return;
-    const needle = '"' + key + '"';
-    const idx = ta.value.indexOf(needle);
-    if (idx < 0) return;
-    ta.focus();
-    try {
-      ta.setSelectionRange(idx, idx + needle.length);
-    } catch (_e) {
-      /* */
-    }
-    // setSelectionRange doesn't reliably scroll the textarea into view —
-    // approximate with line-height arithmetic. Off by a couple of lines
-    // is fine; the highlighted selection draws the eye anyway.
-    const before = ta.value.slice(0, idx);
-    const linesAbove = (before.match(/\n/g) || []).length;
-    const lh = parseFloat(getComputedStyle(ta).lineHeight) || 16;
-    ta.scrollTop = Math.max(0, linesAbove * lh - 60);
-  }
+  // Stage-1 (CP3): the old best-effort `jsonPathToTextarea`/`scrollToPath`
+  // (regex side-guess + first-`"key"` substring match) is REMOVED. Exact
+  // navigation now flows through the `location` contract → window.
+  // SpyglassSourceNav (explicit side, RFC 6901 pointer, source-map resolved).
+  // See the `goto-path` action handler.
 
   function setAdPreview(adm, simPrice, dims) {
     const el = $('creativePreview');
@@ -1389,6 +1364,11 @@ export async function mountInspector(root, ctx) {
       const pathBtn = f.path
         ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
           escapeHtml(f.path) +
+          '" data-loc="' +
+          // &quot;-escape: data-loc holds JSON (full of quotes) in a double-quoted
+          // attribute; escapeHtml alone leaves the quotes raw → the attribute
+          // truncates at the first " and JSON.parse fails (the jump silently no-ops).
+          (f.location ? escapeHtml(JSON.stringify(f.location)).replace(/"/g, '&quot;') : '') +
           '" title="Jump to this path in the JSON">[' +
           escapeHtml(f.path) +
           ']</button>'
@@ -1952,6 +1932,16 @@ export async function mountInspector(root, ctx) {
 
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
+    // Stage-1: drop any prior finding→source jump at the START of every analyze.
+    // A failed/aborted analyze must not leave a stale highlight pointing at the
+    // previous payload; onAnalyzed() re-arms navigation only on success.
+    if (window.SpyglassSourceNav) {
+      try {
+        window.SpyglassSourceNav.resetNavigation();
+      } catch (_e) {
+        /* navigator is optional */
+      }
+    }
     if (_analyzeAbort) {
       try {
         _analyzeAbort.abort();
@@ -2348,6 +2338,19 @@ export async function mountInspector(root, ctx) {
             at: new Date().toISOString(),
           };
 
+          // Stage-1: hand the located findings (request + response + crosscheck,
+          // each carrying the additive `location` contract) to the source
+          // navigator. It snapshots the current pane text as the analyzed
+          // revision and builds the prev/next list. No payload values are
+          // passed — only the location contract + live textarea text (local).
+          if (window.SpyglassSourceNav) {
+            try {
+              window.SpyglassSourceNav.onAnalyzed((validation.findings || []).concat(cross || []));
+            } catch (_e) {
+              /* navigator is defensive; analyze flow must never break on it */
+            }
+          }
+
           // Phase 7a — ortbtools Intelligence side-channel observer.
           // Fire-and-forget: observe() walks ext-fields of req+res into
           // the local IndexedDB index, gated by validation status. Errors
@@ -2453,6 +2456,27 @@ export async function mountInspector(root, ctx) {
           crit || warn
             ? `<div class="mono-label" style="margin-bottom:var(--space-3)">${escapeHtml(t('crosscheck.summary', { crit, warn, ok: cross.length - crit - warn }))}</div>`
             : `<div class="mono-label" style="color:var(--success);margin-bottom:var(--space-3)">${escapeHtml(t('crosscheck.all_passed', { count: cross.length }))}</div>`;
+        // CP3.2: locatable crosscheck paths are clickable, reusing the EXISTING
+        // finding→source contract — data-loc carries the finding-location and the
+        // goto-path dispatcher calls SpyglassSourceNav.navigate(). No data-jsonpath,
+        // no indexOf, no size→w alias: the source map resolves the exact key/value
+        // (incl. size→/w + /h related) from the server-attached location. Non-
+        // locatable crosschecks (precision 'none' / no primary) stay plain text.
+        const crossPathHtml = (c) => {
+          if (!c.path) return '';
+          const loc = c.location;
+          const navigable = loc && loc.precision !== 'none' && loc.primary;
+          if (!navigable) return `<div class="cross-path">${escapeHtml(c.path)}</div>`;
+          return (
+            `<button type="button" class="cross-path cross-path-btn" data-action="goto-path"` +
+            // data-loc holds JSON (full of quotes) inside a double-quoted attribute:
+            // escapeHtml handles & < > but NOT quotes, so &quot;-escape too or the
+            // attribute truncates at the first " and JSON.parse fails (no jump).
+            ` data-loc="${escapeHtml(JSON.stringify(loc)).replace(/"/g, '&quot;')}"` +
+            ` title="${escapeHtml(t('inspector.nav.jump', 'Jump to this location in the source'))}">` +
+            `${escapeHtml(c.path)}</button>`
+          );
+        };
         crossEl.innerHTML =
           summaryRow +
           cross
@@ -2466,7 +2490,7 @@ export async function mountInspector(root, ctx) {
               <span class="cross-icon">${ic}</span>
               <div style="flex:1;min-width:0">
                 <div>${escapeHtml(c.msg)}</div>
-                ${c.path ? `<div class="cross-path">${escapeHtml(c.path)}</div>` : ''}
+                ${crossPathHtml(c)}
                 ${detailHtml}
               </div>
             </div>`;
@@ -4574,9 +4598,16 @@ export async function mountInspector(root, ctx) {
             return;
           }
           case 'goto-path': {
-            // Phase 8: clickable finding path. Auto-expands the
-            // collapsed JSON panel and scrolls to the matching key.
-            scrollToPath(el.dataset.jsonpath);
+            // Stage-1: exact finding→source navigation via the location
+            // contract (explicit side + RFC 6901 pointer). No regex side-guess,
+            // no approximate jump — an unresolved/stale location simply no-ops.
+            if (window.SpyglassSourceNav && el.dataset.loc) {
+              try {
+                window.SpyglassSourceNav.navigate(JSON.parse(el.dataset.loc));
+              } catch (_e) {
+                /* malformed location → honest no-jump */
+              }
+            }
             return;
           }
 

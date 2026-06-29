@@ -2412,6 +2412,31 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   margin-top: 2px;
   letter-spacing: 0.04em;
 }
+/* CP3.2: a locatable crosscheck path renders as a button (same goto-path
+   contract as .finding-path). Keep the .cross-path look; add the interactive
+   affordance + an accessible focus ring. */
+button.cross-path,
+.cross-path-btn {
+  display: inline-block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+button.cross-path:hover,
+.cross-path-btn:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+button.cross-path:focus-visible,
+.cross-path-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 .cross-detail {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -3143,4 +3168,73 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   .saved-act-btn {
     min-height: 34px;
   }
+}
+
+/* ── Stage-1: finding→source highlight overlay (source-nav.js) ─────────────
+   Backdrop-mirror technique: the overlay sits BEHIND the textarea carrying its
+   exact geometry/typography/background (set inline by alignOverlay); the
+   textarea is transparent on top so only the <mark> backgrounds show through.
+   The overlay is decorative (aria-hidden) and never intercepts input. */
+.input-card {
+  position: relative;
+}
+.input-card .json-input {
+  position: relative;
+  z-index: 1;
+  background-color: transparent;
+}
+.src-hl-overlay {
+  position: absolute;
+  z-index: 0;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  color: transparent;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  font-family: var(--font-mono);
+}
+.src-hl {
+  color: transparent;
+  border-radius: 2px;
+}
+.src-hl--exact {
+  background: rgba(255, 206, 84, 0.45);
+  box-shadow: 0 0 0 1px rgba(245, 171, 53, 0.85);
+}
+.src-hl--container {
+  background: rgba(120, 170, 255, 0.28);
+}
+.src-hl--related {
+  background: rgba(120, 170, 255, 0.18);
+  outline: 1px dashed rgba(120, 170, 255, 0.6);
+}
+
+/* prev/next finding controls */
+.src-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+.src-nav-bar[hidden] {
+  display: none;
+}
+.src-nav-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
