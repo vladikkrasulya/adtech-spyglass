@@ -20,7 +20,6 @@ const SRC = fs.readFileSync(
 
 function loadSpec() {
   const win = { kt_i18n_modules: [] };
-  // eslint-disable-next-line no-new-func
   new Function('window', SRC)(win);
   assert.equal(win.kt_i18n_modules.length, 1, 'exactly one i18n spec pushed');
   return win.kt_i18n_modules[0];
@@ -55,7 +54,6 @@ test('source-nav i18n: either-or registration — direct when booted, NOT also q
   // do NOT also push to the queue (a simultaneous push + register double-registers).
   let registered = /** @type {any} */ (null);
   const win = { kt_i18n_modules: [], registerI18nModule: (s) => (registered = s) };
-  // eslint-disable-next-line no-new-func
   new Function('window', SRC)(win);
   assert.ok(
     registered && registered.id === 'inspector-nav',
@@ -66,9 +64,8 @@ test('source-nav i18n: either-or registration — direct when booted, NOT also q
 
 test('source-nav i18n: queue path when /i18n.js has not booted yet', () => {
   // No registerI18nModule yet → push to the boot-drain queue exactly once.
-  let registered = /** @type {any} */ (null);
+  const registered = /** @type {any} */ (null);
   const win = { registerI18nModule: undefined };
-  // eslint-disable-next-line no-new-func
   new Function('window', SRC)(win);
   assert.equal(registered, null, 'no direct registration when not booted');
   assert.equal(win.kt_i18n_modules.length, 1, 'queued exactly once');
