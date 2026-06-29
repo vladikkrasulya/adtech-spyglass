@@ -219,11 +219,15 @@ requests — capturing method, path, status, latency, the user id when signed in
 client IP. It never captures the request or response body. Error events are also sent to
 Sentry/GlitchTip (`lib/logger.js`), again without payload bodies.
 
-Authentication events (login outcomes) are recorded as a coarse, non-identifying
-signal only — an `outcome` (`success`/`failure`) and a finite `reason_code` — with
-**no email address, IP address, or user id**. This allowlist is enforced at the
-event-log boundary (`lib/event-log.js`), so an auth event physically cannot carry an
-identifier even if a future caller passes one (v1.2.1).
+Authentication telemetry stores a fixed event label, severity (`level`), a
+timestamp, and a finite `outcome` (`success`/`failure`) + `reason_code`. The
+event-log boundary (`lib/event-log.js`) **reconstructs** the whole row from that
+contract: the caller-provided message, email, IP address, user id, request id,
+URL / method / status / latency and any other context are discarded, and the
+message label is derived internally from `reason_code` (it deliberately does not
+reveal which accounts exist). A malformed auth event is dropped. So an auth row
+physically cannot carry an identifier or free-form text even if a future caller
+passes one (v1.2.1).
 
 Test mode runs with `LOG_LEVEL=silent` (see `package.json` `npm test` script).
 
