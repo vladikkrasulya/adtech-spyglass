@@ -50,10 +50,19 @@ instead of the world bit.
   match the contract exactly (owner/group/mode, not just "no other bit"). The
   uid/gid/group/mode params exist only so disposable tests can target a test-owned
   dir/group — they cannot disable the check.
+- **`scripts/cutover-spyglass-ro.sh`** — coordinated security cutover (runs as the
+  host user, `sudo -n` only for provisioning; dry-run default). Gates → host perms
+  (`provision --apply`) → app deploy. If the deploy fails and v1.1.7 isn't active
+  it rolls the host perms back to **baseline** so Grafana keeps reading and no
+  half-secured state remains, returning the deploy's original code; a failed host
+  rollback is `STATUS=CRITICAL` exit 9. State in `cutover-state.env` (0600). The
+  first v1.1.7 deploy runs this wrapper, not a bare `deploy.sh` (OPERATIONS §9.1.1).
 - Regression: `check_group` + `check_db_perms` pass/fail units, Dockerfile-umask
   guard, provision guards (fail-closed, setpriv-abort, `APP_GID` rollback,
   no-recursion), `deploy-sim` `empty-gid`/`wrong-group` (empty never bypasses),
-  durable `tests/grafana-ro-sim.sh` (setgid/umask/setpriv proof).
+  durable `tests/grafana-ro-sim.sh` (setgid/umask/setpriv proof), 7 coordinated
+  `tests/cutover-sim.sh` scenarios (provision-fail / success / preflight-fail /
+  candidate-rollback / critical / host-rollback-fail / idempotent-repeat).
 
 ### v1.1.6 — infra: remove transitional design-system.css mount (2026-06-28)
 

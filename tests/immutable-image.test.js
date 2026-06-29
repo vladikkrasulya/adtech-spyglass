@@ -170,8 +170,9 @@ test('deploy/rollback/smoke/backup/lib/sim scripts are valid bash (bash -n)', ()
     'smoke.sh',
     'backup-db.sh',
     'provision-spyglass-ro.sh',
+    'cutover-spyglass-ro.sh',
   ].map((s) => path.join(ROOT, 'scripts', s));
-  for (const t of ['deploy-sim.sh', 'backup-sim.sh', 'grafana-ro-sim.sh']) {
+  for (const t of ['deploy-sim.sh', 'backup-sim.sh', 'grafana-ro-sim.sh', 'cutover-sim.sh']) {
     scripts.push(path.join(ROOT, 'tests', t));
   }
   for (const p of scripts) {

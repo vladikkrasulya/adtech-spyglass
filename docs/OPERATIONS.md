@@ -730,6 +730,47 @@ The deploy is reproducible from any clean checkout (GitHub Actions builds the sa
 image) — the build context is `.`, the CSS is vendored into `public/design-system.css`,
 and nothing is read from `/srv/DATA/Stacks/kyivtech-portal` at build time.
 
+### 9.1.1 Security cutover (v1.1.7 — Grafana read-only SQLite permissions)
+
+The **first** v1.1.7 deploy must change host file permissions (lock the live
+SQLite to `0640 spyglass-ro`) in lock-step with the app gaining `umask 027`. Run
+the **coordinated wrapper**, NOT a bare `deploy.sh`, as the host user `vk`
+(prereq: CP3A done — Grafana joined to group 2472):
+
+```bash
+cd /srv/DATA/Stacks/adtech-spyglass
+git checkout main && git pull --ff-only
+./scripts/cutover-spyglass-ro.sh            # dry-run: gates + plan, no changes
+./scripts/cutover-spyglass-ro.sh --apply    # perform the cutover
+```
+
+It gates (clean tree, Grafana in group 2472, `sudo -n`, expected current
+`BUILD_SHA`, backups) → `sudo -n scripts/provision-spyglass-ro.sh --apply`
+(group + chgrp/setgid the DB trio to `0640`) → `scripts/deploy.sh` (build/deploy
+v1.1.7). **Coordinated rollback:** if the deploy fails and v1.1.7 isn't active, the
+wrapper rolls the host permissions back to baseline (`0644`/`0755`) so Grafana
+keeps reading and no half-secured state remains, then returns the deploy's exit
+code; if that host rollback ALSO fails it records `STATUS=CRITICAL` and exits 9.
+
+State at `/srv/DATA/AppData/adtech-spyglass/cutover-state.env` (0600):
+`STATUS=SECURITY_CUTOVER|ROLLED_BACK|CRITICAL|ABORTED`,
+`HOST_PERMS=APPLIED|BASELINE|UNKNOWN`, `APP_DEPLOY=ACTIVE|ROLLED_BACK|FAILED`.
+
+**Manual recovery runbook**
+
+- _Wrapper non-zero, `HOST_PERMS=BASELINE`_: app is back on v1.1.6, DB `0644`
+  (Grafana reads via "other"). Fix the deploy cause, re-run `--apply`.
+- _Half-state (perms `0640` but app v1.1.6)_: Grafana still reads via the group,
+  but a v1.1.6 restart recreates WAL at `0644`. Run
+  `./scripts/cutover-spyglass-ro.sh --recover` to re-deploy v1.1.7.
+- _`STATUS=CRITICAL` (host rollback failed)_: `sudo scripts/provision-spyglass-ro.sh`
+  (dry-run shows modes), then `sudo scripts/provision-spyglass-ro.sh --rollback`
+  (non-recursive → AppData `0755 1000:1000`, DB trio `0644 1000:1000`); confirm
+  `docker exec -u 472 grafana dd if=/var/lib/grafana/spyglass-data/spyglass.db bs=1 count=1`
+  succeeds. **Never `cp`/`mv` the live DB.**
+- Later releases (v1.1.8+) use the normal `./scripts/deploy.sh` — the group +
+  perms are already in place and `check_group`/`check_db_perms` enforce them.
+
 ### 9.2 Rollback
 
 ```bash
