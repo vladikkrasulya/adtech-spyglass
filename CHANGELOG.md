@@ -19,6 +19,60 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.1.7 — security: Grafana SQLite read-only via shared group (no world read) (2026-06-29)
+
+The live SQLite (`spyglass.db`/`-wal`/`-shm`) was `0644` so the Grafana datasource
+(uid 472) read it via "other" — i.e. world-readable (bcrypt hashes, tokens). This
+closes "other" access while keeping Grafana's read, via a dedicated shared group
+instead of the world bit.
+
+- **App runs `umask 027`** (Dockerfile `CMD ["sh","-c","umask 027 && exec node server.js"]`)
+  so the app creates the DB and recreates WAL/SHM as `0640` (owner rw, group r, no
+  other). `exec` keeps node as PID 1 for signal delivery. core 0.29.0 / CLI 0.1.0
+  unchanged; **no runtime/API contract change**.
+- **Access contract:** AppData `1000:spyglass-ro` mode `2710` (setgid; group can
+  traverse to a known path but not list); `spyglass.db`/`-wal`/`-shm`
+  `1000:spyglass-ro 0640`; `deploy-state.env`/`.env` stay `0600`. **`content-posts/`
+  is NOT chgrp'd** — stays `1000:1000`, Grafana never reads it; the shared group is
+  only for AppData traversal + the DB trio. Group `spyglass-ro` = fixed **GID 2472**;
+  Grafana joins it via `group_add` (separate grafana-stack repo). NON-RECURSIVE.
+- **`scripts/provision-spyglass-ro.sh`** — idempotent root tool (dry-run default,
+  `--apply`/`--rollback`): backs up first, GID-collision guard, `groupadd` only if
+  needed, touches **only** the AppData dir + DB trio (never `chgrp -R`), forces
+  `deploy-state.env` `0600`. **Verify FAILS CLOSED** (`VERIFY FAILED` + non-zero;
+  `--apply` never claims success on mismatch) and proves uid-1000-write /
+  uid-472+group-read / no-group·stranger·deploy-state-deny via 1-byte probes;
+  **aborts if `setpriv` is missing** (never skips). Rollback uses `APP_GID=1000`
+  (separate from `APP_UID`).
+- **`deploy.sh` preflight `check_group` + `check_db_perms`** (deploy-lib) —
+  **always enforced, no bypass**: aborts **exit 6** before build/recreate if the
+  `spyglass-ro` group (GID 2472) is missing/mismatched, or AppData + DB trio don't
+  match the contract exactly (owner/group/mode, not just "no other bit"). The
+  uid/gid/group/mode params exist only so disposable tests can target a test-owned
+  dir/group — they cannot disable the check.
+- **`scripts/cutover-spyglass-ro.sh`** — coordinated security cutover (runs as the
+  host user, `sudo -n` only for provisioning + the stranger-read probe; dry-run
+  default). Gates → host perms (`provision --apply`) → app deploy. **Success
+  requires FULL verification**: target SHA active, PID1 `Umask 0027`, precise
+  `is_secure_state` (AppData `1000:2472/2710` + the whole DB/WAL/SHM trio `0640`),
+  Grafana reads, and a **stranger UID denied**. Outcomes: target active +
+  verified → `SECURITY_CUTOVER`; target active but deploy non-zero or verify
+  incomplete → **`DEGRADED`** (perms kept, original exit code, or 8 if the deploy
+  was 0); target not active → roll perms to baseline confirmed by `is_baseline_state`
+  → `ROLLED_BACK` (original code); any unconfirmed rollback/baseline → `CRITICAL`
+  exit 9. A failed `provision --apply` is treated as possibly partial — it rolls
+  back + confirms baseline (else CRITICAL). State `cutover-state.env` is a **full
+  snapshot** every write (0600): `STATUS TARGET HOST_PERMS APP_DEPLOY
+ACTIVE/PREV_BUILD_SHA DEPLOY_RC LAST_ERROR` + timestamps. `--recover` keeps the
+  minimum gates fail-closed; a re-run after success aborts (idempotent). The first
+  v1.1.7 deploy runs this wrapper, not a bare `deploy.sh` (OPERATIONS §9.1.1).
+- Regression: `check_group` + `check_db_perms` pass/fail units, Dockerfile-umask
+  guard, provision guards (fail-closed, setpriv-abort, `APP_GID` rollback,
+  no-recursion), `deploy-sim` `empty-gid`/`wrong-group` (empty never bypasses),
+  durable `tests/grafana-ro-sim.sh` (setgid/umask/setpriv proof), 7 coordinated
+  `tests/cutover-sim.sh` scenarios (provision-fail / success / preflight-fail /
+  candidate-rollback / critical / host-rollback-fail / idempotent-repeat).
+
 ### v1.1.6 — infra: remove transitional design-system.css mount (2026-06-28)
 
 Stage 2 (final) of the immutable-image migration. v1.1.5 baked a byte-for-byte

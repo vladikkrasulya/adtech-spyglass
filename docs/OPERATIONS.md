@@ -376,26 +376,41 @@ process consumes the backups**, so locking them down breaks nothing.
 The live **data dir** (`/srv/DATA/AppData/adtech-spyglass`) has three container
 consumers — keep this in mind before tightening its modes:
 
-| Consumer          | In-container uid | Access           | Needs                                             |
-| ----------------- | ---------------- | ---------------- | ------------------------------------------------- |
-| `adtech-spyglass` | `node` = 1000    | `/data` **rw**   | owner (uid 1000 = `vk`) read+write                |
-| `kyivtech-portal` | 0 (root)         | ro `spyglass.db` | root — bypasses host modes                        |
-| `grafana`         | 472              | ro `spyglass.db` | **`o+r` on the live DB** (Spyglass SQLite source) |
+| Consumer          | In-container uid | Access           | Needs                                           |
+| ----------------- | ---------------- | ---------------- | ----------------------------------------------- |
+| `adtech-spyglass` | `node` = 1000    | `/data` **rw**   | owner (uid 1000 = `vk`) read+write              |
+| `kyivtech-portal` | 0 (root)         | ro `spyglass.db` | root — bypasses host modes                      |
+| `grafana`         | 472              | ro `spyglass.db` | read via the `spyglass-ro` **group** (GID 2472) |
 
-Because grafana (uid 472) reads `spyglass.db`/`-wal`/`-shm` via "other", the live
-DB **must stay group/other-readable** — `0600` there would break the dashboard and
-would not survive the app's next WAL rewrite anyway. The exposure is closed on the
-**backups** instead (above). Live-DB modes: `spyglass.db` `0644`, the stale empty
-`db.sqlite` `0600`, `.env` and `deploy-state.env` `0600`, the dir `0755`
-(`vk:vk`, not world-writable). A fuller lock of the live DB (container `umask 027`
+**Since v1.1.7 the live DB is no longer world-readable.** A dedicated group
+`spyglass-ro` (fixed **GID 2472**) replaces the "other" read bit:
 
-- a shared read group for uid 472) is a future, deploy-time change.
+- AppData dir → `1000:spyglass-ro` mode **`2710`** (setgid; group `--x` traverses
+  to a known path but cannot list the dir);
+- `spyglass.db`/`-wal`/`-shm` → `1000:spyglass-ro` **`0640`** (no "other");
+- the app runs **`umask 027`** (v1.1.7 image) so recreated WAL/SHM stay `0640`;
+- Grafana joins the group via `group_add: ["2472"]` (grafana-stack repo) and reads
+  via the group — uid/mounts/networks unchanged;
+- `deploy-state.env` and the stale `db.sqlite` stay `0600`; backups are untouched.
+- **`content-posts/` is NOT chgrp'd** — it stays `1000:1000` and Grafana never
+  reads it. The shared group governs **only** AppData traversal (`--x`) and the DB
+  trio; `content-posts/` is a non-setgid subdir, so blog files the app writes there
+  keep group `1000`. The provisioning is **NON-RECURSIVE** by design.
 
-**Deploy preflight.** `deploy.sh` calls `check_perms` (in `deploy-lib.sh`) before
-any seeding or transition and **aborts with exit 5** if `.env`/`deploy-state.env`
-are not `0600` or if the data dir / live DB are world-writable. It deliberately
-does **not** require the live DB to be unreadable (grafana). It prints only file
-names + octal modes — never secrets or DB contents.
+Provision with **`scripts/provision-spyglass-ro.sh`** (root; dry-run default,
+`--apply`/`--rollback`; backs up first, GID-collision guard, never `chgrp -R`,
+`setpriv`-missing aborts, verify FAILS CLOSED). Rollback restores
+`1000:1000`/`0644`/`0755` (also non-recursive; uses `APP_GID=1000`, not `APP_UID`).
+
+**Deploy preflight.** `deploy.sh` runs `check_perms` (**exit 5** if
+`.env`/`deploy-state.env` ≠ `0600` or data-dir/DB world-writable) AND, since
+v1.1.7, `check_group` + `check_db_perms` — **always enforced, no bypass** —
+aborting **exit 6** if the `spyglass-ro` group (GID 2472) is missing/mismatched or
+the AppData/DB owner·group·mode don't match the `0640`/`2710` contract. (The
+`SPYGLASS_APP_UID`/`SPYGLASS_DB_GID`/`SPYGLASS_DB_GROUP`/`SPYGLASS_DIR_MODE` params
+exist only so disposable tests can point at a test-owned dir/group; they cannot
+disable the check.) Both run before any build/seed/transition and print only file
+names + numeric owner/group/mode — never secrets or DB contents.
 
 ### 6.2 AppData restic snapshot (systemd timer)
 
@@ -714,6 +729,52 @@ git checkout main && git pull --ff-only        # clean main == origin/main
 The deploy is reproducible from any clean checkout (GitHub Actions builds the same
 image) — the build context is `.`, the CSS is vendored into `public/design-system.css`,
 and nothing is read from `/srv/DATA/Stacks/kyivtech-portal` at build time.
+
+### 9.1.1 Security cutover (v1.1.7 — Grafana read-only SQLite permissions)
+
+The **first** v1.1.7 deploy must change host file permissions (lock the live
+SQLite to `0640 spyglass-ro`) in lock-step with the app gaining `umask 027`. Run
+the **coordinated wrapper**, NOT a bare `deploy.sh`, as the host user `vk`
+(prereq: CP3A done — Grafana joined to group 2472):
+
+```bash
+cd /srv/DATA/Stacks/adtech-spyglass
+git checkout main && git pull --ff-only
+./scripts/cutover-spyglass-ro.sh            # dry-run: gates + plan, no changes
+./scripts/cutover-spyglass-ro.sh --apply    # perform the cutover
+```
+
+It gates (clean tree, Grafana in group 2472, `sudo -n`, expected current
+`BUILD_SHA`, backups) → `sudo -n scripts/provision-spyglass-ro.sh --apply`
+(group + chgrp/setgid the DB trio to `0640`) → `scripts/deploy.sh` (build/deploy
+v1.1.7). **Success requires full verification:** target SHA active, PID1
+`Umask 0027`, the exact secure state (AppData `1000:2472/2710` + the whole
+DB/WAL/SHM trio `0640`), Grafana reads, and a stranger UID denied. **Coordinated
+rollback:** if v1.1.7 isn't active after a failed deploy, the wrapper rolls the
+host permissions back to baseline (`0644`/`0755`), confirms baseline + Grafana
+read, then returns the deploy's exit code; if v1.1.7 IS active but verification is
+incomplete it records `DEGRADED` and **keeps** the perms (the app is on target);
+any unconfirmed rollback/baseline is `STATUS=CRITICAL`, exit 9.
+
+State at `/srv/DATA/AppData/adtech-spyglass/cutover-state.env` (full snapshot,
+0600): `STATUS=SECURITY_CUTOVER|DEGRADED|ROLLED_BACK|CRITICAL|ABORTED|APPLYING`,
+`HOST_PERMS=APPLIED|PARTIAL|BASELINE|UNKNOWN`, `APP_DEPLOY=ACTIVE|ROLLED_BACK|FAILED`,
+`ACTIVE/PREV_BUILD_SHA`, `DEPLOY_RC`, `LAST_ERROR`, timestamps.
+
+**Manual recovery runbook**
+
+- _Wrapper non-zero, `HOST_PERMS=BASELINE`_: app is back on v1.1.6, DB `0644`
+  (Grafana reads via "other"). Fix the deploy cause, re-run `--apply`.
+- _Half-state (perms `0640` but app v1.1.6)_: Grafana still reads via the group,
+  but a v1.1.6 restart recreates WAL at `0644`. Run
+  `./scripts/cutover-spyglass-ro.sh --recover` to re-deploy v1.1.7.
+- _`STATUS=CRITICAL` (host rollback failed)_: `sudo scripts/provision-spyglass-ro.sh`
+  (dry-run shows modes), then `sudo scripts/provision-spyglass-ro.sh --rollback`
+  (non-recursive → AppData `0755 1000:1000`, DB trio `0644 1000:1000`); confirm
+  `docker exec -u 472 grafana dd if=/var/lib/grafana/spyglass-data/spyglass.db bs=1 count=1`
+  succeeds. **Never `cp`/`mv` the live DB.**
+- Later releases (v1.1.8+) use the normal `./scripts/deploy.sh` — the group +
+  perms are already in place and `check_group`/`check_db_perms` enforce them.
 
 ### 9.2 Rollback
 

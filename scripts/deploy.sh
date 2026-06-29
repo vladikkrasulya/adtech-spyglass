@@ -58,6 +58,26 @@ if ! check_perms "$ENV_FILE" "$STATE_FILE" "$DATA_DIR"; then
   exit 5
 fi
 
+# 1c. SQLite group/mode contract (v1.1.7+) — ALWAYS enforced, no bypass. The live
+#     DB must be owner 1000, group spyglass-ro (GID 2472), 0640 (no "other"); the
+#     group must exist with the canonical name. Defaults are the production
+#     contract; the four params exist ONLY so disposable tests can point at a
+#     test-owned dir/group — they cannot DISABLE the check. Abort BEFORE
+#     build/recreate so the umask 027 image never ships onto an un-provisioned host
+#     (which would break Grafana's read).
+SPYGLASS_APP_UID="${SPYGLASS_APP_UID:-1000}"
+SPYGLASS_DB_GID="${SPYGLASS_DB_GID:-2472}"
+SPYGLASS_DB_GROUP="${SPYGLASS_DB_GROUP:-spyglass-ro}"
+SPYGLASS_DIR_MODE="${SPYGLASS_DIR_MODE:-2710}"
+if ! check_group "$SPYGLASS_DB_GID" "$SPYGLASS_DB_GROUP"; then
+  echo "ABORT: group ${SPYGLASS_DB_GROUP} (GID ${SPYGLASS_DB_GID}) missing or mismatched — run scripts/provision-spyglass-ro.sh (root) first"
+  exit 6
+fi
+if ! check_db_perms "$DATA_DIR" "$SPYGLASS_APP_UID" "$SPYGLASS_DB_GID" "$SPYGLASS_DIR_MODE"; then
+  echo "ABORT: SQLite group/mode contract not provisioned — run scripts/provision-spyglass-ro.sh (root) first (see UNSAFE: lines)"
+  exit 6
+fi
+
 # 2. Idempotent content seed BEFORE launching the new image. rsync --ignore-existing
 #    never overwrites runtime-promoted posts; the dir must be writable by the
 #    container's uid (SEED_UID, default 1000).
