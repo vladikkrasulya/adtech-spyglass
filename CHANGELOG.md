@@ -19,6 +19,32 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.2.1 — auth telemetry PII boundary (2026-06-29)
+
+Privacy bug fix. Authentication operational events (`component='auth'` in the
+ClickHouse `spyglass_events` log) previously recorded the submitted email in
+`ctx` on login success/failure/rate-limit, plus the client IP and (on success)
+the user id. Auth telemetry now carries only a coarse, non-identifying signal.
+
+- **The event-log boundary reconstructs the whole auth row** from a minimal
+  contract: a validated `level`, an internal timestamp, a fixed event label
+  derived from `reason_code` (never the caller's message), and a ctx of exactly
+  `outcome` (`success`/`failure`) + `reason_code` (`ok`/`rate_limited`/
+  `wrong_password`/`no_such_user`). Every caller-controlled field — message,
+  email, IP, user id, request id, method, path, status, latency and any other
+  ctx key — is discarded. A malformed auth event is dropped (fail closed).
+  Omission is preferred over hashing (a stable hash is still an identifier).
+- **Defense in depth:** the three `auth.js` `login()` call sites were corrected
+  AND the contract is enforced centrally at the boundary (`lib/event-log.js`),
+  so a future regressed producer still cannot leak PII. Scoped to
+  `component='auth'` only — http and every other event family are byte-unchanged
+  and remain non-blocking on insert error.
+- `docs/PRIVACY.md` updated to disclose the auth-event contract precisely.
+- New boundary + serialization tests (`tests/auth-event-pii.test.js`).
+- **No database or schema migration.** Historical rows are NOT mutated by this
+  release; purging the existing affected rows remains a separately gated
+  operational action (see the deploy/runbook).
+
 ### v1.2.0 — exact finding-to-source navigation (2026-06-29)
 
 Additive feature release: clicking a validation finding or a crosscheck now

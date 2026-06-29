@@ -273,12 +273,13 @@ function createAuth({ Users, Sessions, logger }) {
     // per-account catches one identity getting hammered from many IPs.
     // Any failure to either bucket → 429 (without saying which one).
     if (!loginLimiter(ip) || !loginEmailLimiter(emailKey)) {
+      // Auth telemetry carries NO PII: the event-log boundary reconstructs the
+      // whole row from this finite ctx (no email/ip/user_id, and the msg label
+      // is derived internally from reason_code — caller fields are discarded).
       eventLog.record({
         level: 'warn',
         component: 'auth',
-        msg: 'login rate-limited',
-        ip,
-        ctx: { email: emailKey, reason: 'rate_limited' },
+        ctx: { outcome: 'failure', reason_code: 'rate_limited' },
       });
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Too many login attempts. Try again in 15 minutes.')
@@ -303,9 +304,7 @@ function createAuth({ Users, Sessions, logger }) {
       eventLog.record({
         level: 'warn',
         component: 'auth',
-        msg: 'login failed: invalid credentials',
-        ip,
-        ctx: { email: emailKey, reason: userRow ? 'wrong_password' : 'no_such_user' },
+        ctx: { outcome: 'failure', reason_code: userRow ? 'wrong_password' : 'no_such_user' },
       });
       const e = /** @type {Error & {code?: string, status?: number}} */ (
         new Error('Wrong email or password')
@@ -317,10 +316,7 @@ function createAuth({ Users, Sessions, logger }) {
     eventLog.record({
       level: 'info',
       component: 'auth',
-      msg: 'login success',
-      ip,
-      user_id: userRow.id,
-      ctx: { email: userRow.email },
+      ctx: { outcome: 'success', reason_code: 'ok' },
     });
     return { id: userRow.id, email: userRow.email, created_at: userRow.created_at };
   }
