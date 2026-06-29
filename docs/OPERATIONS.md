@@ -391,18 +391,25 @@ consumers — keep this in mind before tightening its modes:
 - the app runs **`umask 027`** (v1.1.7 image) so recreated WAL/SHM stay `0640`;
 - Grafana joins the group via `group_add: ["2472"]` (grafana-stack repo) and reads
   via the group — uid/mounts/networks unchanged;
-- `deploy-state.env` and the stale `db.sqlite` stay `0600`; content-posts and
-  backups are untouched (the chgrp/chmod is NON-recursive).
+- `deploy-state.env` and the stale `db.sqlite` stay `0600`; backups are untouched.
+- **`content-posts/` is NOT chgrp'd** — it stays `1000:1000` and Grafana never
+  reads it. The shared group governs **only** AppData traversal (`--x`) and the DB
+  trio; `content-posts/` is a non-setgid subdir, so blog files the app writes there
+  keep group `1000`. The provisioning is **NON-RECURSIVE** by design.
 
 Provision with **`scripts/provision-spyglass-ro.sh`** (root; dry-run default,
-`--apply`/`--rollback`; backs up first, GID-collision guard, never `chgrp -R`).
-Rollback restores `1000:1000`/`0644`/`0755` (also non-recursive).
+`--apply`/`--rollback`; backs up first, GID-collision guard, never `chgrp -R`,
+`setpriv`-missing aborts, verify FAILS CLOSED). Rollback restores
+`1000:1000`/`0644`/`0755` (also non-recursive; uses `APP_GID=1000`, not `APP_UID`).
 
 **Deploy preflight.** `deploy.sh` runs `check_perms` (**exit 5** if
 `.env`/`deploy-state.env` ≠ `0600` or data-dir/DB world-writable) AND, since
-v1.1.7, `check_db_perms` (**exit 6** if the AppData/DB owner·group·mode don't match
-the `spyglass-ro 0640`/`2710` contract — set `SPYGLASS_DB_GID=""` to skip on
-pre-v1.1.7 hosts). Both run before any build/seed/transition and print only file
+v1.1.7, `check_group` + `check_db_perms` — **always enforced, no bypass** —
+aborting **exit 6** if the `spyglass-ro` group (GID 2472) is missing/mismatched or
+the AppData/DB owner·group·mode don't match the `0640`/`2710` contract. (The
+`SPYGLASS_APP_UID`/`SPYGLASS_DB_GID`/`SPYGLASS_DB_GROUP`/`SPYGLASS_DIR_MODE` params
+exist only so disposable tests can point at a test-owned dir/group; they cannot
+disable the check.) Both run before any build/seed/transition and print only file
 names + numeric owner/group/mode — never secrets or DB contents.
 
 ### 6.2 AppData restic snapshot (systemd timer)

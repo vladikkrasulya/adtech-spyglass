@@ -22,6 +22,32 @@ _stat_mode() {
 _stat_uid() { stat -c '%u' "$1" 2>/dev/null || stat -f '%u' "$1" 2>/dev/null; }
 _stat_gid() { stat -c '%g' "$1" 2>/dev/null || stat -f '%g' "$1" 2>/dev/null; }
 
+# _group_name GID  → the group's name (getent on Linux; falls back to the current
+#   process's gid name where getent is unavailable, e.g. macOS). Empty if unknown.
+_group_name() {
+  local n
+  n="$(getent group "$1" 2>/dev/null | cut -d: -f1)"
+  if [ -z "$n" ] && [ "$1" = "$(id -g)" ]; then n="$(id -gn)"; fi
+  [ -n "$n" ] && printf '%s' "$n"
+}
+
+# check_group GID EXPECT_NAME  → 0 if GID exists AND its name == EXPECT_NAME.
+#   Aborts (1) on a MISSING group or a NAME/GID collision — so a deploy never
+#   ships onto a host where the shared group isn't the expected one.
+check_group() {
+  local gid="$1" expect="$2" name
+  name="$(_group_name "$gid")"
+  if [ -z "$name" ]; then
+    echo "UNSAFE: group GID ${gid} does not exist"
+    return 1
+  fi
+  if [ "$name" != "$expect" ]; then
+    echo "UNSAFE: GID ${gid} is group '${name}', expected '${expect}' (collision)"
+    return 1
+  fi
+  return 0
+}
+
 # _world_writable FILE  → 0 (true) if the path is writable by "other".
 #   Tests the last octal digit (the "other" perms) so it is independent of the
 #   shell's octal-literal handling and of any file-type prefix from stat.

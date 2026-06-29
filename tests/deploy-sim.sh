@@ -8,8 +8,13 @@
 #
 # Usage: deploy-sim.sh <scenario>
 #   scenario ∈ { happy, candidate-up-fail, rollback-up-fail, missing-prev-sha,
-#                unsafe-perms }
+#                unsafe-perms, empty-gid, wrong-group }
 # Prints:  EXIT=<code> and the resulting deploy-state.env (or "(no state)").
+#
+# The v1.1.7 SQLite group/mode contract is ALWAYS enforced (no bypass). The sim
+# points deploy.sh at a TEST-owned dir/group via the SPYGLASS_APP_UID /
+# SPYGLASS_DB_GID / SPYGLASS_DB_GROUP / SPYGLASS_DIR_MODE params (test uid/gid),
+# and provisions the DATA dir to mode 2710 — it never disables the check.
 
 set -u
 SCEN="${1:?scenario required}"
@@ -19,6 +24,7 @@ WORK="$(mktemp -d)"
 BIN="$WORK/bin"
 DATA="$WORK/data"
 mkdir -p "$BIN" "$DATA"
+chmod 2710 "$DATA" # satisfy the (always-on) check_db_perms dir contract
 trap 'rm -rf "$WORK"' EXIT
 
 # ── mock git: clean tree, HEAD == main == origin/main, short = abc1234 ──
@@ -86,12 +92,25 @@ case "$SCEN" in
   *) chmod 600 "$WORK/.env" ;;
 esac
 
+# Point the ALWAYS-ON v1.1.7 contract at the test user's own uid/gid/group + the
+# 2710 DATA dir above. `empty-gid` proves an empty value does NOT disable the
+# check (it falls back to the real GID 2472, which is absent on the test host →
+# exit 6); `wrong-group` proves a name mismatch aborts.
+DB_GID="$(id -g)"
+DB_GROUP="$(id -gn)"
+case "$SCEN" in
+  empty-gid) DB_GID="" ;; # → deploy.sh defaults to 2472 (missing here) → exit 6
+  wrong-group) DB_GROUP="sg-bogus-$$" ;; # name mismatch → exit 6
+esac
 PATH="$BIN:$PATH" \
   SPYGLASS_DEPLOY_DATA_DIR="$DATA" \
   SPYGLASS_DEPLOY_ENV_FILE="$WORK/.env" \
   SMOKE_CMD="$BIN/mock-smoke.sh" \
   SPYGLASS_SEED_UID="$(id -u)" \
-  SPYGLASS_DB_GID="" \
+  SPYGLASS_APP_UID="$(id -u)" \
+  SPYGLASS_DB_GID="$DB_GID" \
+  SPYGLASS_DB_GROUP="$DB_GROUP" \
+  SPYGLASS_DIR_MODE="2710" \
   READY_TIMEOUT=6 \
   bash "$REPO/scripts/deploy.sh" >/dev/null 2>&1
 rc=$?

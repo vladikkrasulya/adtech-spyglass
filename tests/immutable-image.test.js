@@ -451,14 +451,24 @@ test('deploy-lib check_db_perms enforces owner/group/mode exactly (pass + fail, 
   );
 });
 
-test('deploy.sh runs check_db_perms before build (abort exit 6, skippable)', () => {
+test('deploy.sh ALWAYS runs check_group + check_db_perms before build (exit 6, no bypass)', () => {
   const d = read('scripts/deploy.sh');
   assert.match(
     d,
-    /check_db_perms "\$DATA_DIR" 1000 "\$SPYGLASS_DB_GID"/,
-    'deploy must call check_db_perms (uid 1000, GID, dir mode)',
+    /check_group "\$SPYGLASS_DB_GID" "\$SPYGLASS_DB_GROUP"/,
+    'deploy must verify the group',
   );
-  assert.match(d, /exit 6/, 'SQLite contract mismatch must abort exit 6');
+  assert.match(
+    d,
+    /check_db_perms "\$DATA_DIR" "\$SPYGLASS_APP_UID" "\$SPYGLASS_DB_GID" "\$SPYGLASS_DIR_MODE"/,
+    'deploy must call check_db_perms with the 4 contract params',
+  );
+  assert.match(d, /exit 6/, 'a contract mismatch must abort exit 6');
+  // No bypass: the check must NOT be wrapped in an "if GID is set" skip.
+  assert.ok(
+    !/if \[ -n "\$SPYGLASS_DB_GID" \]/.test(d),
+    'the SQLite contract must be unconditional (no SPYGLASS_DB_GID="" skip)',
+  );
   const buildIdx = d.indexOf('docker compose build');
   const chkIdx = d.indexOf('check_db_perms "$DATA_DIR"');
   assert.ok(chkIdx > 0 && chkIdx < buildIdx, 'check_db_perms must run BEFORE the build/recreate');
@@ -479,4 +489,67 @@ test('provision-spyglass-ro.sh is root-only, backup-first, NON-recursive, dry-ru
     /content-posts (NOT|untouched|never)/i.test(p),
     'must explicitly leave content-posts untouched',
   );
+});
+
+test('provision verify FAILS CLOSED, aborts on missing setpriv, and rolls back with APP_GID (not APP_UID)', () => {
+  const p = read('scripts/provision-spyglass-ro.sh');
+  // verify returns non-zero on any mismatch and apply must not claim success.
+  assert.match(p, /VERIFY FAILED/, 'verify must print VERIFY FAILED on mismatch');
+  assert.match(
+    p,
+    /PROVISION FAILED[\s\S]*exit 1/,
+    'apply must exit non-zero (no success claim) on verify failure',
+  );
+  assert.match(p, /require_setpriv/, 'must abort (not skip) when setpriv is missing');
+  assert.match(p, /setpriv not available/, 'missing setpriv must abort with a clear message');
+  // A distinct app group is defined and used for rollback chgrp (never APP_UID).
+  assert.match(p, /APP_GID=/, 'must define a separate APP_GID');
+  assert.match(
+    p,
+    /chgrp "\$APP_GID" "\$APPDATA"/,
+    'rollback must chgrp AppData to APP_GID, not APP_UID',
+  );
+  assert.ok(
+    !/chgrp "\$APP_UID" "\$APPDATA"/.test(p),
+    'rollback must NOT chgrp AppData to APP_UID (gid≠uid)',
+  );
+  // 1-byte read probe, never a full DB read.
+  assert.match(
+    p,
+    /dd if=.*bs=1 count=1/,
+    'access probe must read at most 1 byte (no full DB read)',
+  );
+});
+
+test('deploy-lib check_group requires the GID to exist with the canonical name', () => {
+  assert.match(
+    read('scripts/deploy-lib.sh'),
+    /check_group\(\)/,
+    'deploy-lib must define check_group',
+  );
+  const harness = [
+    'set -e',
+    `cd ${JSON.stringify(ROOT)}`,
+    '. scripts/deploy-lib.sh',
+    'G="$(id -g)"; N="$(id -gn)"',
+    'check_group "$G" "$N" || { echo CORRECT-REJECTED; exit 1; }', // exists + right name → ok
+    'if check_group "$G" "sg-nope-$$" >/dev/null 2>&1; then echo WRONGNAME-NOT-CAUGHT; exit 1; fi',
+    'if check_group 99999 "spyglass-ro" >/dev/null 2>&1; then echo MISSING-NOT-CAUGHT; exit 1; fi',
+  ].join('\n');
+  assert.doesNotThrow(
+    () => execFileSync('bash', ['-c', harness], { stdio: 'pipe' }),
+    'check_group logic simulation failed',
+  );
+});
+
+test('deploy-sim: empty SPYGLASS_DB_GID does NOT bypass the contract (falls back to 2472 → exit 6)', () => {
+  const r = runSim('empty-gid');
+  assert.equal(r.code, 6, r.out);
+  assert.match(r.out, /\(no state\)/, 'must abort before any transition');
+});
+
+test('deploy-sim: a wrong group name aborts (exit 6)', () => {
+  const r = runSim('wrong-group');
+  assert.equal(r.code, 6, r.out);
+  assert.match(r.out, /\(no state\)/, 'must abort before any transition');
 });

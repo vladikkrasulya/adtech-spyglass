@@ -32,19 +32,28 @@ instead of the world bit.
   unchanged; **no runtime/API contract change**.
 - **Access contract:** AppData `1000:spyglass-ro` mode `2710` (setgid; group can
   traverse to a known path but not list); `spyglass.db`/`-wal`/`-shm`
-  `1000:spyglass-ro 0640`; `deploy-state.env`/`.env` stay `0600`; content-posts and
-  backups unchanged. Group `spyglass-ro` = fixed **GID 2472**; Grafana joins it via
-  `group_add` (separate grafana-stack repo). Provisioning is **NON-RECURSIVE**.
+  `1000:spyglass-ro 0640`; `deploy-state.env`/`.env` stay `0600`. **`content-posts/`
+  is NOT chgrp'd** — stays `1000:1000`, Grafana never reads it; the shared group is
+  only for AppData traversal + the DB trio. Group `spyglass-ro` = fixed **GID 2472**;
+  Grafana joins it via `group_add` (separate grafana-stack repo). NON-RECURSIVE.
 - **`scripts/provision-spyglass-ro.sh`** — idempotent root tool (dry-run default,
   `--apply`/`--rollback`): backs up first, GID-collision guard, `groupadd` only if
   needed, touches **only** the AppData dir + DB trio (never `chgrp -R`), forces
-  `deploy-state.env` `0600`, verifies uid-1000 / uid-472+group / stranger access.
-- **`deploy.sh` preflight `check_db_perms`** (deploy-lib): aborts **exit 6** before
-  build/recreate unless AppData + DB trio match the contract exactly (owner/group/
-  mode, not just "no other bit"). Skippable via `SPYGLASS_DB_GID=""` for pre-v1.1.7
-  hosts / sims.
-- Regression: `check_db_perms` pass/fail unit, Dockerfile-umask guard, provision
-  guards, durable `tests/grafana-ro-sim.sh` (setgid/umask/setpriv proof).
+  `deploy-state.env` `0600`. **Verify FAILS CLOSED** (`VERIFY FAILED` + non-zero;
+  `--apply` never claims success on mismatch) and proves uid-1000-write /
+  uid-472+group-read / no-group·stranger·deploy-state-deny via 1-byte probes;
+  **aborts if `setpriv` is missing** (never skips). Rollback uses `APP_GID=1000`
+  (separate from `APP_UID`).
+- **`deploy.sh` preflight `check_group` + `check_db_perms`** (deploy-lib) —
+  **always enforced, no bypass**: aborts **exit 6** before build/recreate if the
+  `spyglass-ro` group (GID 2472) is missing/mismatched, or AppData + DB trio don't
+  match the contract exactly (owner/group/mode, not just "no other bit"). The
+  uid/gid/group/mode params exist only so disposable tests can target a test-owned
+  dir/group — they cannot disable the check.
+- Regression: `check_group` + `check_db_perms` pass/fail units, Dockerfile-umask
+  guard, provision guards (fail-closed, setpriv-abort, `APP_GID` rollback,
+  no-recursion), `deploy-sim` `empty-gid`/`wrong-group` (empty never bypasses),
+  durable `tests/grafana-ro-sim.sh` (setgid/umask/setpriv proof).
 
 ### v1.1.6 — infra: remove transitional design-system.css mount (2026-06-28)
 
