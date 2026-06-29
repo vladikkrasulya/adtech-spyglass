@@ -18,6 +18,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "source-map:sync": "node scripts/sync-browser-source-map.js",
     "typecheck": "tsc --noEmit",
     "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage"
   },
@@ -33,6 +34,7 @@
     "@types/node": "^25.6.0",
     "eslint": "^9.14.0",
     "globals": "^15.12.0",
+    "jsdom": "^26.1.0",
     "pino-pretty": "^13.1.3",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3"
