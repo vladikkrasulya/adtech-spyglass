@@ -28,8 +28,6 @@
 
 // Note: ?v=… is auto-injected by server.js rewriteAssetVersions() — no manual bump needed.
 import { mountInspector } from '/spyglass.app.js';
-import './source-map.js';
-import { setupSourceLocator } from './source-locator.js';
 
 // Bundle hash for the inspector module. The literal `__INSPECTOR_BUNDLE_HASH__`
 // is replaced at serve time by server.js → injectModuleBundleHashes() with the
@@ -116,7 +114,6 @@ export default {
     //    dispatcher, auth widget, history list, etc. against the
     //    DOM we just injected.
     await mountInspector(root, ctx);
-    setupSourceLocator(root, ctx.signal, lang);
 
     // 5. Notify classic <script> files (share.js etc.) that the
     //    inspector DOM is ready. Listeners use { once: true } so a

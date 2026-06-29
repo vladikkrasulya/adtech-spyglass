@@ -1386,14 +1386,13 @@ export async function mountInspector(root, ctx) {
           escapeHtml(f.specRef) +
           '" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px;text-decoration:none" title="OpenRTB spec reference">spec ↗</a>'
         : '';
-      const pathBtn =
-        f.location && f.location.primary
-          ? ' <button type="button" class="finding-path" data-finding-location="' +
-            escapeHtml(JSON.stringify(f.location)) +
-            '" title="Jump to this path in the JSON">[' +
-            escapeHtml(f.path) +
-            ']</button>'
-          : '';
+      const pathBtn = f.path
+        ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
+          escapeHtml(f.path) +
+          '" title="Jump to this path in the JSON">[' +
+          escapeHtml(f.path) +
+          ']</button>'
+        : '';
       return (
         '<details class="validation-item ' +
         cls +
@@ -2467,16 +2466,7 @@ export async function mountInspector(root, ctx) {
               <span class="cross-icon">${ic}</span>
               <div style="flex:1;min-width:0">
                 <div>${escapeHtml(c.msg)}</div>
-                ${
-                  c.location && c.location.primary
-                    ? `<button type="button" class="finding-path cross-path"
-                         data-finding-location="${escapeHtml(JSON.stringify(c.location))}">
-                         ${escapeHtml(c.location.primary.display || c.path || '')}
-                       </button>`
-                    : c.path
-                      ? `<div class="cross-path">${escapeHtml(c.path)}</div>`
-                      : ''
-                }
+                ${c.path ? `<div class="cross-path">${escapeHtml(c.path)}</div>` : ''}
                 ${detailHtml}
               </div>
             </div>`;
@@ -2489,7 +2479,6 @@ export async function mountInspector(root, ctx) {
       } else {
         setTabBadge('crossBadge', { text: '—', severity: null });
       }
-      window.dispatchEvent(new CustomEvent('spyglass:analysis-rendered'));
 
       // History — push to the in-memory ring + persist to localStorage so
       // it survives reload. Drop overflow past HISTORY_MAX to keep the

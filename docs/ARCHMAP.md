@@ -367,13 +367,13 @@ label?}`. Empty samples skip with `reason: 'empty_sample'`.
 
 ### 1.4 Consumers
 
-| Consumer                        | File                                                              | What it uses                                                                                                                                                  |
-| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `server.js` (Spyglass HTTP API) | top of [server.js:50-52](../server.js#L50)                        | full `validate` / `crosscheck` + `behavior.analyze` + `knowledge-base`                                                                                        |
-| Browser (validator card)        | [`public/spyglass.app.js`](../public/spyglass.app.js)             | POSTs the payload to `POST /api/analyze` — validation stays server-side; the browser renders findings and resolves their additive `location` contract locally |
-| Browser (behavior tab)          | [`public/modules/behavior/index.js`](../public/modules/behavior/) | `behavior` subpath — server-side proxy, but UI consumes findings                                                                                              |
-| Tests                           | `tests/{validator,dialects,format-detect,behavior,intel}.test.js` | every public surface                                                                                                                                          |
-| `intel-llm.js`                  | [intel-llm.js](../intel-llm.js)                                   | uses LLM-bridge primitives from `core/intel`                                                                                                                  |
+| Consumer                        | File                                                              | What it uses                                                                                                                                                             |
+| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server.js` (Spyglass HTTP API) | top of [server.js:50-52](../server.js#L50)                        | full `validate` / `crosscheck` + `behavior.analyze` + `knowledge-base`                                                                                                   |
+| Browser (validator card)        | [`public/spyglass.app.js`](../public/spyglass.app.js)             | POSTs the payload to `POST /api/analyze` — validation runs **server-side** (core is NOT bundled into the page; the browser only renders the findings the server returns) |
+| Browser (behavior tab)          | [`public/modules/behavior/index.js`](../public/modules/behavior/) | `behavior` subpath — server-side proxy, but UI consumes findings                                                                                                         |
+| Tests                           | `tests/{validator,dialects,format-detect,behavior,intel}.test.js` | every public surface                                                                                                                                                     |
+| `intel-llm.js`                  | [intel-llm.js](../intel-llm.js)                                   | uses LLM-bridge primitives from `core/intel`                                                                                                                             |
 
 ### 1.5 Tests by surface (so changes know where to look)
 
@@ -390,20 +390,6 @@ label?}`. Empty samples skip with `reason: 'empty_sample'`.
 | `lib/corpus-matrix.js`   | `tests/corpus-matrix.test.js` (9 cases — perfect P+R, 50% precision, missed-fraud, ambiguous-skip, within-entry dedup, sort tiebreak, divbyzero, corrupt JSON, empty corpus) |
 | `lib/replay.js`          | `tests/replay.test.js` (16 cases — input validation, pipeline routing, status rollup, severity counts, topFindings, maxSamples cap, label echo)                              |
 | Any new message key      | manually check 3 locales (`messages/{en,uk,ru}.json`) — there's no test that enforces this; _yet_                                                                            |
-| Finding source location  | `tests/{source-map,finding-location,finding-location-corpus,analyze-location-api,source-locator-ui}.test.js`                                                                 |
-
-### 1.6 Finding source navigation (Stage 1)
-
-- `packages/core/source-map.js` is the canonical dependency-free source index.
-  `npm run source-map:sync` deterministically copies it to
-  `public/modules/inspector/source-map.js`; the UI test enforces SHA-256 parity.
-- `modules/analyze/handler.js` attaches the additive location contract. The
-  browser resolves it against the current editor revision; payload values never
-  enter the contract.
-- `public/modules/inspector/source-locator.js` owns exact/container navigation,
-  request↔response related-location cycling, the text-node-only mirror overlay,
-  keyboard controls, the 1 MB eager cache threshold, 2 MB hard ceiling, and
-  stale-revision teardown.
 
 **Total suite**: 469 tests (as of 2026-05-10 post-modularization). Run
 `node --test tests/` from repo root, ~8s. The extra 13 cases (vs 456)
