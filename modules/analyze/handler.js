@@ -36,6 +36,10 @@ const log = require('../../lib/logger').child('analyze');
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
+// Stage-1 finding→source navigation — additive `finding.location` candidate.
+// Pure core module (no payload values, no side regex); side comes from the
+// per-pane validate() call context below.
+const { attachLocations } = require('../../packages/core/finding-location');
 // Stage 5 — Insights: fire-and-forget logging of validation results.
 let _logValidation = null;
 try {
@@ -180,6 +184,12 @@ function createAnalyzeModule(deps) {
             expectedVersion,
             userDialect,
           });
+          // Side = request (call context), kind = url for string GET requests.
+          attachLocations(validation.findings, {
+            side: 'request',
+            kind: typeof bidReq === 'string' ? 'url' : 'ortb',
+            canonical: validation.urlRequest,
+          });
           if (hasRes) {
             const resValidation = validate(bidRes, {
               locale,
@@ -189,6 +199,7 @@ function createAnalyzeModule(deps) {
               userDialect,
               pairReq: bidReq, // inject paired request for floor/currency mismatch plugins
             });
+            attachLocations(resValidation.findings, { side: 'response', kind: 'ortb' });
             if (resValidation.findings && resValidation.findings.length) {
               validation.findings = validation.findings.concat(
                 resValidation.findings.map((f) =>
@@ -206,6 +217,7 @@ function createAnalyzeModule(deps) {
             expectedVersion,
             userDialect,
           });
+          attachLocations(validation.findings, { side: 'response', kind: 'ortb' });
           validation.findings = validation.findings.map((f) =>
             Object.assign({}, f, { msg: '[response] ' + f.msg }),
           );
@@ -229,6 +241,9 @@ function createAnalyzeModule(deps) {
         // validate(), so clickunder/pop GETs still get visible format chips.
         const cross =
           hasReqObj && hasRes ? crosscheck(bidReq, bidRes, { locale, dialect, disabledRules }) : [];
+        // Crosscheck findings declare primary/related explicitly (per-id
+        // descriptors); related pointers derive from the real req/res structure.
+        attachLocations(cross, { crosscheck: true, req: bidReq, res: bidRes });
 
         // Decode IAB Content Taxonomy codes (cat / bcat / pcat / sectioncat
         // / pagecat / bid.cat) into English labels so the frontend can render
