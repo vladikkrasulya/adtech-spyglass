@@ -365,6 +365,61 @@ label?}`. Empty samples skip with `reason: 'empty_sample'`.
 - **Use cases**: CI test fixtures, archive replay (Stream Pivot
   consumer), partner audit batches, regression grading.
 
+### 1.3.8 Exact finding→source navigation (CP2–CP3.2; core 0.30.0 / app 1.2.0)
+
+Clicking a validation finding or a crosscheck highlights the exact key/value in
+the user's pasted JSON, in the correct pane. The whole chain is **additive** —
+legacy finding fields and validation/crosscheck output are unchanged.
+
+- **Canonical source-map** — [`packages/core/source-map.js`](../packages/core/source-map.js):
+  dependency-free JSON parser; `buildSourceMap(text)` resolves an RFC-6901
+  pointer to an exact character range (`key` / `value` / `node`), `positionAt`
+  gives line/column. Pure + isomorphic.
+- **Generated browser copy** — [`public/core/source-map.js`](../public/core/source-map.js):
+  a byte-for-byte copy shipped to the page (the engine is otherwise NOT bundled
+  into the browser — see 1.4).
+- **Generator + parity guard** — [`scripts/gen-browser-core.js`](../scripts/gen-browser-core.js)
+  regenerates the browser copy; [`tests/browser-core-parity.test.js`](../tests/browser-core-parity.test.js)
+  fails the build if the two diverge (SHA-256 byte parity). `--check` is a CI gate.
+- **Location contract** — [`packages/core/finding-location.js`](../packages/core/finding-location.js)
+  builds the additive `finding.location` (`buildNormalLocation` /
+  `buildCrosscheckLocation` / `attachLocations`);
+  [`modules/analyze/handler.js`](../modules/analyze/handler.js) attaches it to
+  findings + crosschecks at analyze time. Pane **side comes only from the
+  validation call context** — no id/path regex side-guessing.
+- **Browser navigation** — [`public/modules/inspector/source-nav.js`](../public/modules/inspector/source-nav.js)
+  (`window.SpyglassSourceNav`): resolves the pointer against the live pane text,
+  paints exact / container / related overlays, prev/next + Alt+↑/↓ with
+  wrap-around.
+  [`source-nav.i18n.js`](../public/modules/inspector/source-nav.i18n.js) registers
+  EN/UK/RU strings (standard queue-or-direct).
+- **Rendering / integration** — [`public/spyglass.app.js`](../public/spyglass.app.js):
+  findings and crosscheck paths render the **`data-loc` / `goto-path`** contract;
+  the click dispatcher calls `SourceNav.navigate(JSON.parse(el.dataset.loc))`;
+  `SourceNav.onAnalyzed(findings ∪ crosschecks)` arms the toolbar;
+  `SourceNav.resetNavigation()` runs at the start of every analyze. Request ↔
+  response related highlights.
+- **Lifecycle** — a per-instance `AbortController` owns every listener; a
+  lifecycle-owned `ResizeObserver` re-aligns the overlay on geometry change and
+  is `disconnect()`-ed on teardown; editing a pane invalidates the analyzed
+  revision (stale → highlight torn down); inspector unmount calls `teardown()`.
+  Idempotent across SPA remounts (no listener stacking).
+- **Security / privacy** — the location contract carries only
+  `side / pointer / display / target / precision / role / dialect` — **no payload
+  values**. The overlay inserts payload text only through
+  `document.createTextNode` (the only built element is `<mark>` — never
+  `innerHTML`). Navigation makes **no** additional network calls, beacons, or
+  storage writes; no telemetry.
+- **Size policy** — ≤1 MB panes build the source-map eagerly at analyze; 1–2 MB
+  build a lazy full index on first jump; >2 MB is disabled (honest no-jump).
+- **Tests** — [`source-map`](../tests/source-map.test.js),
+  [`finding-location`](../tests/finding-location.test.js) +
+  [`corpus`](../tests/finding-location-corpus.test.js),
+  [`analyze-location-api`](../tests/analyze-location-api.test.js),
+  [`browser-core-parity`](../tests/browser-core-parity.test.js),
+  [`source-nav`](../tests/source-nav.test.js) (jsdom),
+  [`source-nav-i18n`](../tests/source-nav-i18n.test.js).
+
 ### 1.4 Consumers
 
 | Consumer                        | File                                                              | What it uses                                                                                                                                                             |
