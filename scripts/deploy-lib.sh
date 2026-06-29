@@ -145,7 +145,7 @@ set_env() {
   local k="$1" v="$2" f="$3" dir tmp own
   dir="$(dirname "$f")"
   tmp="$(mktemp "${dir}/.env.tmp.XXXXXX")"
-  trap 'rm -f "${tmp}" 2>/dev/null' RETURN
+  trap 'rm -f "${tmp:-}" 2>/dev/null; trap - RETURN' RETURN
   if [ -f "$f" ]; then
     own="$(_stat_owner "$f")"
     if grep -qE "^${k}=" "$f"; then
@@ -174,7 +174,7 @@ write_state() {
   local f="$1" dir tmp
   dir="$(dirname "$f")"
   tmp="$(mktemp "${dir}/.deploy-state.tmp.XXXXXX")"
-  trap 'rm -f "${tmp}" 2>/dev/null' RETURN
+  trap 'rm -f "${tmp:-}" 2>/dev/null; trap - RETURN' RETURN
   cat >"$tmp"
   chmod 600 "$tmp"
   mv -f "$tmp" "$f"

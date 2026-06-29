@@ -747,14 +747,19 @@ git checkout main && git pull --ff-only
 It gates (clean tree, Grafana in group 2472, `sudo -n`, expected current
 `BUILD_SHA`, backups) → `sudo -n scripts/provision-spyglass-ro.sh --apply`
 (group + chgrp/setgid the DB trio to `0640`) → `scripts/deploy.sh` (build/deploy
-v1.1.7). **Coordinated rollback:** if the deploy fails and v1.1.7 isn't active, the
-wrapper rolls the host permissions back to baseline (`0644`/`0755`) so Grafana
-keeps reading and no half-secured state remains, then returns the deploy's exit
-code; if that host rollback ALSO fails it records `STATUS=CRITICAL` and exits 9.
+v1.1.7). **Success requires full verification:** target SHA active, PID1
+`Umask 0027`, the exact secure state (AppData `1000:2472/2710` + the whole
+DB/WAL/SHM trio `0640`), Grafana reads, and a stranger UID denied. **Coordinated
+rollback:** if v1.1.7 isn't active after a failed deploy, the wrapper rolls the
+host permissions back to baseline (`0644`/`0755`), confirms baseline + Grafana
+read, then returns the deploy's exit code; if v1.1.7 IS active but verification is
+incomplete it records `DEGRADED` and **keeps** the perms (the app is on target);
+any unconfirmed rollback/baseline is `STATUS=CRITICAL`, exit 9.
 
-State at `/srv/DATA/AppData/adtech-spyglass/cutover-state.env` (0600):
-`STATUS=SECURITY_CUTOVER|ROLLED_BACK|CRITICAL|ABORTED`,
-`HOST_PERMS=APPLIED|BASELINE|UNKNOWN`, `APP_DEPLOY=ACTIVE|ROLLED_BACK|FAILED`.
+State at `/srv/DATA/AppData/adtech-spyglass/cutover-state.env` (full snapshot,
+0600): `STATUS=SECURITY_CUTOVER|DEGRADED|ROLLED_BACK|CRITICAL|ABORTED|APPLYING`,
+`HOST_PERMS=APPLIED|PARTIAL|BASELINE|UNKNOWN`, `APP_DEPLOY=ACTIVE|ROLLED_BACK|FAILED`,
+`ACTIVE/PREV_BUILD_SHA`, `DEPLOY_RC`, `LAST_ERROR`, timestamps.
 
 **Manual recovery runbook**
 

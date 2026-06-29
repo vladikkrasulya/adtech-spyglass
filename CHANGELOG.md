@@ -51,12 +51,21 @@ instead of the world bit.
   uid/gid/group/mode params exist only so disposable tests can target a test-owned
   dir/group — they cannot disable the check.
 - **`scripts/cutover-spyglass-ro.sh`** — coordinated security cutover (runs as the
-  host user, `sudo -n` only for provisioning; dry-run default). Gates → host perms
-  (`provision --apply`) → app deploy. If the deploy fails and v1.1.7 isn't active
-  it rolls the host perms back to **baseline** so Grafana keeps reading and no
-  half-secured state remains, returning the deploy's original code; a failed host
-  rollback is `STATUS=CRITICAL` exit 9. State in `cutover-state.env` (0600). The
-  first v1.1.7 deploy runs this wrapper, not a bare `deploy.sh` (OPERATIONS §9.1.1).
+  host user, `sudo -n` only for provisioning + the stranger-read probe; dry-run
+  default). Gates → host perms (`provision --apply`) → app deploy. **Success
+  requires FULL verification**: target SHA active, PID1 `Umask 0027`, precise
+  `is_secure_state` (AppData `1000:2472/2710` + the whole DB/WAL/SHM trio `0640`),
+  Grafana reads, and a **stranger UID denied**. Outcomes: target active +
+  verified → `SECURITY_CUTOVER`; target active but deploy non-zero or verify
+  incomplete → **`DEGRADED`** (perms kept, original exit code, or 8 if the deploy
+  was 0); target not active → roll perms to baseline confirmed by `is_baseline_state`
+  → `ROLLED_BACK` (original code); any unconfirmed rollback/baseline → `CRITICAL`
+  exit 9. A failed `provision --apply` is treated as possibly partial — it rolls
+  back + confirms baseline (else CRITICAL). State `cutover-state.env` is a **full
+  snapshot** every write (0600): `STATUS TARGET HOST_PERMS APP_DEPLOY
+ACTIVE/PREV_BUILD_SHA DEPLOY_RC LAST_ERROR` + timestamps. `--recover` keeps the
+  minimum gates fail-closed; a re-run after success aborts (idempotent). The first
+  v1.1.7 deploy runs this wrapper, not a bare `deploy.sh` (OPERATIONS §9.1.1).
 - Regression: `check_group` + `check_db_perms` pass/fail units, Dockerfile-umask
   guard, provision guards (fail-closed, setpriv-abort, `APP_GID` rollback,
   no-recursion), `deploy-sim` `empty-gid`/`wrong-group` (empty never bypasses),

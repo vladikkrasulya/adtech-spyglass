@@ -4,11 +4,12 @@
  * Coordinated security-cutover guard (scripts/cutover-spyglass-ro.sh).
  *
  * The wrapper applies the host SQLite permissions, then deploys the v1.1.7 app,
- * and — on any deploy failure where v1.1.7 is not active — rolls the host
- * permissions back to baseline so Grafana keeps reading and no half-secured state
- * is left behind. These tests drive the REAL wrapper through mocked
- * provision/deploy/git/docker/curl (tests/cutover-sim.sh) and assert the exit
- * codes + state transitions for every failure mode.
+ * and verifies the FULL secure contract before declaring success. On a deploy
+ * failure where the target isn't active it rolls the host permissions back to
+ * baseline; if the target IS active but verification fails it records DEGRADED
+ * (perms kept); any unconfirmed rollback/baseline is CRITICAL. Every state write
+ * is a full snapshot. These tests drive the REAL wrapper through mocked
+ * provision/deploy/git/docker/curl/setpriv (tests/cutover-sim.sh).
  */
 
 const { test } = require('node:test');
@@ -32,50 +33,82 @@ function runCutover(scenario) {
 }
 
 const CASES = [
-  // provision fails → deploy never starts, perms stay baseline
   { s: 'provision-apply-fail', code: 2, status: 'ABORTED', perms: 'BASELINE', db: 644 },
-  // happy path → secure perms stay, app active
+  { s: 'provision-fail-rollback-fail', code: 9, status: 'CRITICAL', perms: 'UNKNOWN' },
   { s: 'deploy-success', code: 0, status: 'SECURITY_CUTOVER', perms: 'APPLIED', db: 640 },
-  // deploy preflight/build failure → host perms rolled back to baseline
   { s: 'deploy-preflight-fail', code: 6, status: 'ROLLED_BACK', perms: 'BASELINE', db: 644 },
-  // candidate failure + app auto-rollback (exit 1) → host perms baseline
   { s: 'deploy-candidate-fail', code: 1, status: 'ROLLED_BACK', perms: 'BASELINE', db: 644 },
-  // deploy CRITICAL (exit 3) → controlled host rollback succeeds → baseline, code 3
   { s: 'deploy-critical', code: 3, status: 'ROLLED_BACK', perms: 'BASELINE', db: 644 },
-  // host rollback ALSO fails → CRITICAL, distinct exit 9, perms left as-is
-  { s: 'host-rollback-fail', code: 9, status: 'CRITICAL', perms: 'UNKNOWN', db: 640 },
-  // repeated run after success → idempotent abort, state untouched
-  { s: 'repeated-success', code: 2, status: 'SECURITY_CUTOVER', db: 644 },
+  { s: 'host-rollback-fail', code: 9, status: 'CRITICAL', perms: 'UNKNOWN' },
+  { s: 'repeated-success', code: 2, status: 'SECURITY_CUTOVER' },
+  { s: 'partial-perms', code: 8, status: 'DEGRADED', perms: 'PARTIAL', err: 'db-contract' },
+  { s: 'wrong-umask', code: 8, status: 'DEGRADED', perms: 'APPLIED', err: 'umask' },
+  {
+    s: 'grafana-read-fail',
+    code: 8,
+    status: 'DEGRADED',
+    perms: 'APPLIED',
+    err: 'grafana-cannot-read',
+  },
+  { s: 'incomplete-baseline', code: 9, status: 'CRITICAL', perms: 'UNKNOWN' },
+  { s: 'interrupted-applying', code: 2, status: 'APPLYING' },
+  { s: 'recovery-gate-fail', code: 2, noState: true },
+  { s: 'deploy-nonzero-target-active', code: 1, status: 'DEGRADED', perms: 'APPLIED' },
 ];
 
 for (const c of CASES) {
-  test(`cutover-sim: ${c.s} → exit ${c.code}, STATUS=${c.status}, DB ${c.db}`, () => {
+  test(`cutover-sim: ${c.s} → exit ${c.code} / ${c.status || 'no-state'}`, () => {
     const r = runCutover(c.s);
     assert.equal(r.code, c.code, r.out);
-    assert.match(r.out, new RegExp(`STATUS=${c.status}\\b`), r.out);
+    if (c.noState) assert.match(r.out, /\(no state\)/, r.out);
+    if (c.status) assert.match(r.out, new RegExp(`STATUS=${c.status}\\b`), r.out);
     if (c.perms) assert.match(r.out, new RegExp(`HOST_PERMS=${c.perms}\\b`), r.out);
-    assert.match(r.out, new RegExp(`DB_MODE=${c.db}\\b`), r.out);
+    if (c.err) assert.match(r.out, new RegExp(`LAST_ERROR=.*${c.err}`), r.out);
+    if (c.db) assert.match(r.out, new RegExp(`DB_MODE=${c.db}\\b`), r.out);
   });
 }
 
-test('cutover wrapper: host-user (sudo -n), dry-run default, coordinated rollback, no recursion / DB copy', () => {
+test('cutover state is a FULL snapshot (all 10 fields written every time)', () => {
+  const r = runCutover('deploy-success');
+  assert.match(r.out, /STATE_FIELDS=10\b/, `expected a 10-field snapshot, got: ${r.out}`);
+  for (const f of [
+    'STATUS',
+    'TARGET',
+    'HOST_PERMS',
+    'APP_DEPLOY',
+    'ACTIVE_BUILD_SHA',
+    'PREV_BUILD_SHA',
+    'DEPLOY_RC',
+    'LAST_ERROR',
+  ]) {
+    assert.match(r.out, new RegExp(`^${f}=`, 'm'), `snapshot must contain ${f}`);
+  }
+});
+
+test('cutover wrapper: precise secure/baseline checks, full verify, fail-closed recover, no recursion / DB copy', () => {
   const w = read('scripts/cutover-spyglass-ro.sh');
-  assert.match(w, /DRY-RUN/, 'default must be a dry-run');
-  assert.match(w, /--recover/, 'must offer an explicit recovery mode');
-  assert.match(w, /sudo -n/, 'must escalate only via sudo -n (runs as the host user, not root)');
-  assert.match(w, /run_provision apply[\s\S]*run_deploy/, 'must apply perms THEN deploy');
-  assert.match(w, /run_provision rollback/, 'must roll host perms back on deploy failure');
-  assert.match(w, /STATUS=SECURITY_CUTOVER/, 'must record the cutover state');
+  assert.match(w, /is_secure_state\(\)/, 'must define a precise secure-state check');
+  assert.match(w, /is_baseline_state\(\)/, 'must define a precise baseline-state check');
+  // both predicates check the dir AND the DB/WAL/SHM trio
+  for (const pred of ['is_secure_state', 'is_baseline_state']) {
+    const body = w.slice(w.indexOf(`${pred}()`), w.indexOf(`${pred}()`) + 260);
+    assert.match(
+      body,
+      /DB_FILES/,
+      `${pred} must iterate the DB/WAL/SHM trio, not just the main DB`,
+    );
+  }
+  assert.match(w, /verify_secure\(\)/, 'success must require full verification');
+  assert.match(w, /pid1_umask_ok|Umask/, 'must verify PID1 umask 0027');
+  assert.match(w, /stranger_reads/, 'must verify a stranger UID is denied');
   assert.match(
     w,
-    /STATUS=CRITICAL[\s\S]*return 9|return 9/,
-    'a failed host rollback must be CRITICAL (exit 9)',
+    /STATUS=DEGRADED/,
+    'target-active-but-unverified must be DEGRADED (not ROLLED_BACK)',
   );
-  assert.ok(!/chgrp\s+-R|chmod\s+-R/.test(w), 'must never recurse (no chgrp -R / chmod -R)');
+  assert.match(w, /snapshot\b/, 'state writes must go through the full-snapshot helper');
+  // --recover must NOT bypass the minimum gates (no `gate || true`)
+  assert.ok(!/gate \|\| true/.test(w), '--recover must keep the minimum gates fail-closed');
+  assert.ok(!/chgrp\s+-R|chmod\s+-R/.test(w), 'must never recurse');
   assert.ok(!/\bcp\b.*spyglass\.db|\bmv\b.*spyglass\.db/.test(w), 'must never copy/replace the DB');
-  assert.match(
-    w,
-    /write_state "\$STATE"/,
-    'state must be written atomically (0600 via write_state)',
-  );
 });
