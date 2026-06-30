@@ -216,3 +216,51 @@ image_build_sha() {
   [ -n "$sha" ] || return 1
   printf '%s' "$sha"
 }
+
+# image_git_revision IMAGE
+#   Print the Git revision the given image was built with, read from OCI label
+#   org.opencontainers.image.revision.
+#   Returns 1 if the image is missing, has no such label, or if the label
+#   is not a 40-hex Git SHA.
+image_git_revision() {
+  local ref="$1" rev
+  docker image inspect "$ref" >/dev/null 2>&1 || return 1
+  rev="$(docker image inspect "$ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null)"
+  [ -n "$rev" ] || return 1
+  if echo "$rev" | grep -qE '^[0-9a-fA-F]{40}$'; then
+    printf '%s' "$rev"
+  else
+    return 1
+  fi
+}
+
+# image_contains_privacy_floor IMAGE FLOOR
+#   Check if the given IMAGE contains the privacy floor commit FLOOR.
+#   Contract:
+#     - floor absent/empty -> allow (return 0)
+#     - floor short SHA resolves correctly via Git
+#     - candidate revision is read from OCI label org.opencontainers.image.revision
+#     - candidate revision must be a full 40-hex Git SHA
+#     - check is done only via: git merge-base --is-ancestor FLOOR CANDIDATE
+#     - candidate == floor -> allow (0)
+#     - descendant -> allow (0)
+#     - ancestor -> reject (1)
+#     - unrelated -> reject (1)
+#     - malformed/missing label or Git object -> fail closed (1)
+#     - no timestamp/version/lexical comparison is performed
+image_contains_privacy_floor() {
+  local img="$1"
+  local floor="${2:-}"
+  if [ -z "$floor" ]; then
+    return 0
+  fi
+  local candidate
+  candidate="$(image_git_revision "$img")" || return 1
+  local floor_resolved candidate_resolved
+  floor_resolved="$(git rev-parse --verify "${floor}^{commit}" 2>/dev/null)" || return 1
+  candidate_resolved="$(git rev-parse --verify "${candidate}^{commit}" 2>/dev/null)" || return 1
+  if git merge-base --is-ancestor "$floor_resolved" "$candidate_resolved" 2>/dev/null; then
+    return 0
+  fi
+  return 1
+}

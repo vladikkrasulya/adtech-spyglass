@@ -172,7 +172,13 @@ test('deploy/rollback/smoke/backup/lib/sim scripts are valid bash (bash -n)', ()
     'provision-spyglass-ro.sh',
     'cutover-spyglass-ro.sh',
   ].map((s) => path.join(ROOT, 'scripts', s));
-  for (const t of ['deploy-sim.sh', 'backup-sim.sh', 'grafana-ro-sim.sh', 'cutover-sim.sh']) {
+  for (const t of [
+    'deploy-sim.sh',
+    'backup-sim.sh',
+    'grafana-ro-sim.sh',
+    'cutover-sim.sh',
+    'rollback-floor-sim.sh',
+  ]) {
     scripts.push(path.join(ROOT, 'tests', t));
   }
   for (const p of scripts) {
@@ -558,4 +564,142 @@ test('deploy-sim: a wrong group name aborts (exit 6)', () => {
   const r = runSim('wrong-group');
   assert.equal(r.code, 6, r.out);
   assert.match(r.out, /\(no state\)/, 'must abort before any transition');
+});
+
+// ── rollback.sh privacy floor guard flow simulation ─────────────────────────
+function runRollbackSim(scenario, tagArg = '') {
+  try {
+    const out = execFileSync(
+      'bash',
+      [path.join(ROOT, 'tests', 'rollback-floor-sim.sh'), scenario, tagArg],
+      {
+        encoding: 'utf8',
+      },
+    );
+    return { code: 0, out };
+  } catch (e) {
+    return { code: e.status, out: `${e.stdout || ''}${e.stderr || ''}` };
+  }
+}
+
+test('rollback-sim: floor empty → legacy rollback allowed', () => {
+  const r = runRollbackSim('floor-empty');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /STATUS=ROLLED_BACK/);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=targettag/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=\s*$/m, 'floor should be empty in state');
+});
+
+test('rollback-sim: candidate == floor → allowed', () => {
+  const r = runRollbackSim('candidate-eq-floor');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /STATUS=ROLLED_BACK/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=targettag/);
+});
+
+test('rollback-sim: candidate descendant → allowed', () => {
+  const r = runRollbackSim('candidate-descendant');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /STATUS=ROLLED_BACK/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=targettag/);
+});
+
+test('rollback-sim: candidate ancestor → rejected (no mutation)', () => {
+  const r = runRollbackSim('candidate-ancestor');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ABORT: target image/);
+  assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+});
+
+test('rollback-sim: unrelated candidate → rejected (no mutation)', () => {
+  const r = runRollbackSim('unrelated-candidate');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ABORT: target image/);
+  assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+});
+
+test('rollback-sim: missing OCI revision → rejected (no mutation)', () => {
+  const r = runRollbackSim('missing-label');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ABORT: target image/);
+  assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+});
+
+test('rollback-sim: malformed OCI revision → rejected (no mutation)', () => {
+  const r = runRollbackSim('malformed-label');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ABORT: target image/);
+  assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+});
+
+test('rollback-sim: missing Git object → rejected (fail closed, no mutation)', () => {
+  const r = runRollbackSim('missing-git-object');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ABORT: target image/);
+  assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+});
+
+test('rollback-sim: critical failure → floor preserved in critical state', () => {
+  const r = runRollbackSim('rollback-up-fail');
+  assert.equal(r.code, 3, r.out);
+  assert.match(r.out, /STATUS=CRITICAL/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+});
+
+test('deploy-lib image_contains_privacy_floor with production-shaped parameters (real git, mock docker)', () => {
+  const harness = [
+    'set -e',
+    `cd ${JSON.stringify(ROOT)}`,
+    '. scripts/deploy-lib.sh',
+    'd="$(mktemp -d)"; BIN="$d/bin"; mkdir -p "$BIN"',
+    'cat >"$BIN/docker" <<\'EOD\'',
+    '#!/bin/sh',
+    'if [ "$1" = "image" ] && [ "$2" = "inspect" ]; then',
+    '  case "$*" in',
+    '    *Labels*org.opencontainers.image.revision*)',
+    '      echo "24376462c3fd1988447b26ee69a897190bdeac1a"',
+    '      exit 0',
+    '      ;;',
+    '    *)',
+    '      exit 0',
+    '      ;;',
+    '  esac',
+    'fi',
+    'exit 0',
+    'EOD',
+    'chmod +x "$BIN/docker"',
+    'export PATH="$BIN:$PATH"',
+    'image_contains_privacy_floor "adtech-spyglass:candidate" "2437646" || { echo "Failed: candidate == floor should be allowed"; exit 1; }',
+    'image_contains_privacy_floor "adtech-spyglass:candidate" "a43adad" || { echo "Failed: ancestor floor should be allowed"; exit 1; }',
+    'cat >"$BIN/docker" <<\'EOD\'',
+    '#!/bin/sh',
+    'if [ "$1" = "image" ] && [ "$2" = "inspect" ]; then',
+    '  case "$*" in',
+    '    *Labels*org.opencontainers.image.revision*)',
+    '      echo "a43adad666b8eb8601391fa95c6a2b4aad699f63"',
+    '      exit 0',
+    '      ;;',
+    '    *)',
+    '      exit 0',
+    '      ;;',
+    '  esac',
+    'fi',
+    'exit 0',
+    'EOD',
+    'if image_contains_privacy_floor "adtech-spyglass:candidate" "2437646" 2>/dev/null; then',
+    '  echo "Failed: candidate ancestor of floor should be rejected"; exit 1;',
+    'fi',
+    'rm -rf "$d"',
+  ].join('\n');
+  assert.doesNotThrow(
+    () => execFileSync('bash', ['-c', harness], { stdio: 'pipe' }),
+    'production-shaped floor guard verification failed',
+  );
 });

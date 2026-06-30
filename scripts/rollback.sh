@@ -29,6 +29,7 @@ READY_TIMEOUT="${READY_TIMEOUT:-120}"
 
 # Resolve the target tag: explicit arg, else ROLLBACK_TAG from the deploy state.
 ROLLBACK_TAG=""
+PRIVACY_FLOOR_BUILD_SHA=""
 if [ -f "$STATE_FILE" ]; then
   # shellcheck disable=SC1090
   . "$STATE_FILE"
@@ -40,11 +41,18 @@ TAG="${1:-${ROLLBACK_TAG:-}}"
 EXPECT="$(image_build_sha "adtech-spyglass:${TAG}" || true)"
 [ -n "$EXPECT" ] || { echo "ABORT: adtech-spyglass:${TAG} missing or carries no BUILD_SHA metadata"; exit 2; }
 
+# Guard against rollback to an image that does not contain the privacy floor commit
+if ! image_contains_privacy_floor "adtech-spyglass:${TAG}" "${PRIVACY_FLOOR_BUILD_SHA:-}"; then
+  echo "ABORT: target image adtech-spyglass:${TAG} does not satisfy the privacy floor ${PRIVACY_FLOOR_BUILD_SHA}"
+  exit 2
+fi
+
 echo "==> Rolling back to adtech-spyglass:${TAG} (image BUILD_SHA=${EXPECT})"
 write_state "$STATE_FILE" <<EOF
 STATUS=ROLLING_BACK
 ATTEMPTING_TAG=${TAG}
 ATTEMPTING_BUILD_SHA=${EXPECT}
+PRIVACY_FLOOR_BUILD_SHA=${PRIVACY_FLOOR_BUILD_SHA:-}
 STARTED_AT=$(date -Is)
 EOF
 
@@ -64,6 +72,7 @@ STATUS=ROLLED_BACK
 ACTIVE_TAG=${TAG}
 ACTIVE_BUILD_SHA=${EXPECT}
 ROLLBACK_TAG=${ROLLBACK_TAG:-}
+PRIVACY_FLOOR_BUILD_SHA=${PRIVACY_FLOOR_BUILD_SHA:-}
 ROLLED_BACK_AT=$(date -Is)
 EOF
   echo "==> ROLLBACK OK: ${TAG} is live (BUILD_SHA=${EXPECT})."
@@ -74,6 +83,7 @@ STATUS=CRITICAL
 ACTIVE_TAG=UNKNOWN
 ATTEMPTING_TAG=${TAG}
 ATTEMPTING_BUILD_SHA=${EXPECT}
+PRIVACY_FLOOR_BUILD_SHA=${PRIVACY_FLOOR_BUILD_SHA:-}
 FAILED_AT=$(date -Is)
 EOF
   echo "==> CRITICAL: rollback FAILED for ${TAG} (expected BUILD_SHA=${EXPECT}) — manual intervention required."
