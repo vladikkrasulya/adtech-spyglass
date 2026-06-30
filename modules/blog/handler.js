@@ -30,6 +30,9 @@ const LANGS = ['uk', 'en', 'ru'];
 // kyivtech proxy host that PUBLIC_BASE_URL points to. Share the one canonical
 // origin with the SEO module.
 const { ORIGIN: PUBLIC_BASE } = require('../../lib/seo');
+// RSS is restricted to the indexable (approved-markdown) surface — the public
+// list/post endpoints below still serve the full corpus unchanged.
+const { listIndexablePosts } = require('../../lib/blog-service');
 
 // ── ClickHouse client (same approach as lib/event-log.js) ─────────────────
 const CH_URL = (process.env.CLICKHOUSE_URL || 'http://clickhouse:8123').replace(/\/+$/, '');
@@ -343,57 +346,23 @@ function createBlogModule(deps = {}) {
   }
 
   /**
-   * GET /blog/rss.xml — last 20 posts across all langs as RSS 2.0
+   * GET /blog/rss.xml — last 20 INDEXABLE (approved-markdown) posts as RSS 2.0.
+   * The firehose/DB corpus is deliberately excluded so the feed never advertises
+   * thin, noindex posts to crawlers. With zero approved posts this returns a
+   * valid EMPTY feed. The public /api/v1/blog list/post endpoints are unchanged
+   * and still serve every post — nothing is removed.
    */
   async function handleBlogRss(req, res) {
     if (rateLimited(req, res)) return;
     try {
-      // Load editorial posts (all langs)
-      let editorial = [];
-      for (const l of LANGS) {
-        editorial = editorial.concat(readMarkdownPosts(l));
-      }
-
-      // Load DB posts
-      let dbPosts = [];
+      let items = [];
       try {
-        const rows = await chQuery(
-          `SELECT slug, lang, title, category, summary, published_at
-           FROM analytics.blog_posts FINAL
-           ORDER BY published_at DESC
-           LIMIT 20`,
-        );
-        dbPosts = rows.map((r) => ({
-          slug: r.slug,
-          lang: r.lang,
-          title: r.title,
-          summary: r.summary,
-          published_at: r.published_at,
-          source: 'db',
-        }));
+        items = await listIndexablePosts();
       } catch {
-        // CH unavailable — RSS from editorial only
+        items = []; // never break the feed — degrade to empty
       }
-
-      // Merge deduplicated
-      const seen = new Set();
-      const allItems = [];
-      for (const p of editorial) {
-        const key = `${p.slug}:${p.lang}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          allItems.push(p);
-        }
-      }
-      for (const p of dbPosts) {
-        const key = `${p.slug}:${p.lang}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          allItems.push(p);
-        }
-      }
-      allItems.sort((a, b) => (b.published_at > a.published_at ? 1 : -1));
-      const items = allItems.slice(0, 20);
+      items.sort((a, b) => (b.published_at > a.published_at ? 1 : -1));
+      items = items.slice(0, 20);
 
       function xmlEscape(s) {
         return String(s || '')
@@ -406,12 +375,19 @@ function createBlogModule(deps = {}) {
       const rssItems = items
         .map((p) => {
           const url = `${PUBLIC_BASE}/blog/${p.lang}/${p.slug}`;
-          const pubDate = new Date(p.published_at).toUTCString();
+          // pubDate is OPTIONAL in RSS 2.0 but MUST be a valid RFC-822 date when
+          // present. isIndexable() does not require a frontmatter date, so emit
+          // the element only when the date parses — otherwise
+          // `new Date('').toUTCString()` is the literal "Invalid Date", which
+          // makes the feed non-conformant. A missing pubDate is valid.
+          const d = new Date(p.published_at);
+          const pubDate = Number.isNaN(d.getTime())
+            ? ''
+            : `\n      <pubDate>${xmlEscape(d.toUTCString())}</pubDate>`;
           return `    <item>
       <title>${xmlEscape(p.title)}</title>
       <link>${xmlEscape(url)}</link>
-      <guid isPermaLink="true">${xmlEscape(url)}</guid>
-      <pubDate>${xmlEscape(pubDate)}</pubDate>
+      <guid isPermaLink="true">${xmlEscape(url)}</guid>${pubDate}
       <description>${xmlEscape(p.summary)}</description>
     </item>`;
         })

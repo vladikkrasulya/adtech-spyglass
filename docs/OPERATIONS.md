@@ -276,6 +276,45 @@ The Ollama container is managed by the separate stack at `/srv/DATA/Stacks/ollam
 
 ---
 
+### 4.9 Pause / resume the news+blog pipeline (whole-pipeline kill-switch)
+
+`NEWS_CRAWLER_DISABLED=1` is an **emergency whole-pipeline kill-switch**: it stops
+the hourly scheduler that does RSS crawl → draft ingest → AI moderation →
+auto-publish (all of it, not just publishing). It is the supported way to stop
+new thin/auto-news posts from appearing. It leaves existing drafts and posts
+untouched and rejects nothing.
+
+> Do **not** use `BLOG_MAX_PER_DAY=0` to pause — `Number('0') || 3 === 3`, so it
+> is a no-op (same falsy-default bug on `BLOG_RELEVANCE_MIN`/`BLOG_MODERATE_BATCH`).
+
+The flag is read once at boot (`server.js`), passed into the container via the
+`.env` `env_file`, so toggling it requires a **container recreate** (not a bare
+restart). It is NOT an image rebuild.
+
+```bash
+cd /srv/DATA/Stacks/adtech-spyglass
+# PAUSE — set the flag atomically (preserves .env 0600/owner) and recreate
+. scripts/deploy-lib.sh && set_env NEWS_CRAWLER_DISABLED 1 .env
+SPYGLASS_TAG="$(grep -E '^SPYGLASS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+
+# VERIFY paused
+docker inspect adtech-spyglass --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^NEWS_CRAWLER_DISABLED='
+docker logs adtech-spyglass 2>&1 | grep -c 'news crawler scheduled'   # expect 0 (scheduler never started)
+
+# RESUME — set the flag back to 0 atomically (preserves .env 0600/owner) and recreate.
+# `0` resumes because server.js gates on `NEWS_CRAWLER_DISABLED !== '1'`, so 0 is
+# equivalent to removing the line — but set_env keeps perms/owner and never leaves
+# a half-written .env, unlike an in-place `sed -i`.
+. scripts/deploy-lib.sh && set_env NEWS_CRAWLER_DISABLED 0 .env
+SPYGLASS_TAG="$(grep -E '^SPYGLASS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+```
+
+To pause ONLY publishing while keeping crawl/ingest running, a separate
+`BLOG_AUTO_PUBLISH_DISABLED` flag (gating just `moderatePendingDrafts()`) would be
+needed — not yet implemented.
+
+---
+
 ## 5. Secrets Management
 
 ### 5.1 Vault location

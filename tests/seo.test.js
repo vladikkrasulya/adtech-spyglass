@@ -80,6 +80,39 @@ test('parseRoute: UI-prefixed post keeps post-lang from path', () => {
   assert.equal(r.slug, 'welcome');
 });
 
+// ── slug-length boundary ─────────────────────────────────────────────────────
+// parseRoute, blog-service SLUG_RE and server.js resolveLocaleRoute's three
+// blog-deep regexes all share ONE slug grammar: `[a-z0-9][a-z0-9-]{0,120}` (max
+// 121 chars). resolveLocaleRoute boots the whole HTTP server on require (no
+// module.exports), so it can't be unit-tested in isolation — parseRoute is the
+// pure, exported parser those regexes are kept byte-identical to, so it guards
+// the shared bound. At 121 chars a path is a post route; at 122 it is NOT, so
+// the server's blog-deep regexes likewise miss and never serve a self-canonical
+// shell for an overlong slug (it falls through to a real 404). Cover the three
+// UI-prefix variants (no-prefix → en shell, /uk/ → uk shell, /ru/ → ru shell).
+const SLUG_MAX = 'a'.repeat(121); // 1 + 120 → matches
+const SLUG_OVER = 'a'.repeat(122); // 122 → no match
+for (const [label, prefix, uiLang] of [
+  ['no-prefix (en shell)', '', 'en'],
+  ['/uk/ prefix', '/uk', 'uk'],
+  ['/ru/ prefix', '/ru', 'ru'],
+]) {
+  test(`parseRoute: ${label} — 121-char slug IS a post route`, () => {
+    const r = seo.parseRoute(`${prefix}/blog/en/${SLUG_MAX}`);
+    assert.equal(r.uiLang, uiLang);
+    assert.equal(r.isPost, true);
+    assert.equal(r.postLang, 'en');
+    assert.equal(r.slug, SLUG_MAX);
+    assert.equal(r.slug.length, 121);
+  });
+  test(`parseRoute: ${label} — 122-char slug is NOT a post route (server serves no shell)`, () => {
+    const r = seo.parseRoute(`${prefix}/blog/en/${SLUG_OVER}`);
+    assert.equal(r.uiLang, uiLang);
+    assert.equal(r.isPost, false);
+    assert.equal(r.slug, undefined);
+  });
+}
+
 // ── sectionSeo ──────────────────────────────────────────────────────────────
 test('sectionSeo: canonical/alternates per UI lang', () => {
   const s = seo.sectionSeo('/blog', 'uk');
@@ -177,29 +210,57 @@ test('escapeHtml: covers the five entities', () => {
 });
 
 // ── renderSitemap ────────────────────────────────────────────────────────────
-test('renderSitemap: valid XML with home, sections and posts', () => {
+test('renderSitemap: indexable sections + /about + approved posts only; no xhtml; T5 excluded', () => {
+  // arg is listIndexablePostRefs() output (approved markdown only); here a
+  // 3-locale approved post stands in for that.
   const xml = seo.renderSitemap([
     { slug: 'welcome', lang: 'en' },
     { slug: 'welcome', lang: 'uk' },
     { slug: 'welcome', lang: 'ru' },
   ]);
   assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
-  assert.match(xml, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9"/);
-  // bare '/' is intentionally NOT listed: it 302-redirects → /inspector, and a
-  // redirecting sitemap entry triggers GSC "Page with redirect". /inspector is
-  // the real home.
-  assert.doesNotMatch(xml, /<loc>https:\/\/ortbtools\.com\/<\/loc>/); // no redirecting root
-  assert.match(xml, /<loc>https:\/\/ortbtools\.com\/inspector<\/loc>/); // /inspector is home
-  assert.match(xml, /<loc>https:\/\/ortbtools\.com\/blog<\/loc>/); // section
-  assert.match(xml, /<loc>https:\/\/ortbtools\.com\/blog\/en\/welcome<\/loc>/); // post
-  assert.match(xml, /<loc>https:\/\/ortbtools\.com\/blog\/uk\/welcome<\/loc>/);
-  // post langs cross-link via xhtml alternates
-  assert.match(
-    xml,
-    /<xhtml:link rel="alternate" hreflang="ru" href="https:\/\/ortbtools\.com\/blog\/ru\/welcome"\/>/,
-  );
-  // balanced url tags
+  assert.match(xml, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
+  // Single source of hreflang reciprocity = the HTML <head>. The sitemap carries
+  // NO xhtml namespace and NO xhtml:link.
+  assert.ok(!/xhtml/.test(xml), 'no xhtml namespace/link');
+  // bare '/' stays excluded (302 → /inspector).
+  assert.ok(!xml.includes('<loc>https://ortbtools.com/</loc>'), 'no redirecting root');
+  // every indexable concept present once, per locale (incl. /about + /library)
+  for (const loc of [
+    'https://ortbtools.com/inspector',
+    'https://ortbtools.com/uk/inspector',
+    'https://ortbtools.com/ru/inspector',
+    'https://ortbtools.com/about',
+    'https://ortbtools.com/uk/about',
+    'https://ortbtools.com/ru/about',
+    'https://ortbtools.com/library',
+    'https://ortbtools.com/uk/library',
+    'https://ortbtools.com/docs',
+    'https://ortbtools.com/dialects',
+    'https://ortbtools.com/behavior',
+    'https://ortbtools.com/openrtb/2-6',
+    'https://ortbtools.com/uk/openrtb/2-6',
+    'https://ortbtools.com/iab-categories',
+  ]) {
+    const needle = `<loc>${loc}</loc>`;
+    assert.equal(xml.split(needle).length - 1, 1, `${loc} present exactly once`);
+  }
+  // noindex sections (T5) are NEVER advertised.
+  for (const p of ['/blog', '/insights', '/live', '/uk/blog', '/ru/insights', '/uk/live']) {
+    assert.ok(!xml.includes(`<loc>https://ortbtools.com${p}</loc>`), `${p} excluded`);
+  }
+  // approved posts appear as plain per-locale <loc> (no xhtml cluster).
+  assert.ok(xml.includes('<loc>https://ortbtools.com/blog/en/welcome</loc>'));
+  assert.ok(xml.includes('<loc>https://ortbtools.com/blog/ru/welcome</loc>'));
+  // 12 indexable concepts × 3 locales = 36 + 3 approved post locs = 39.
+  assert.equal((xml.match(/<loc>/g) || []).length, 39);
   assert.equal((xml.match(/<url>/g) || []).length, (xml.match(/<\/url>/g) || []).length);
+});
+
+test('renderSitemap: exactly 36 locs on a corpus with zero approved posts', () => {
+  const xml = seo.renderSitemap([]);
+  assert.equal((xml.match(/<loc>/g) || []).length, 36);
+  assert.ok(!/xhtml/.test(xml));
 });
 
 test('renderSitemap: ignores malformed post rows', () => {
