@@ -453,6 +453,48 @@ modules during the backend migration.
 
 ---
 
+## 1.6 Blog / SEO / sitemap / news indexing flow (since app 1.2.2)
+
+Two post sources, one indexing contract.
+
+- **Sources.** Editorial = markdown at `CONTENT_DIR/<lang>/<slug>.md` (prod
+  `CONTENT_DIR=/data/content-posts`, a persistent volume seeded from the repo's
+  `content/posts/`). Firehose = `analytics.blog_posts` (ClickHouse), written by
+  the AI auto-publisher `lib/news-moderator.js` ← `lib/news-crawler.js` (RSS
+  ingest → `analytics.blog_drafts` → score/translate → publish). Firehose posts
+  store `body == summary` (thin by construction).
+- **Read/SEO layer (`lib/blog-service.js`).** `getPost()` is tri-state
+  (`found` / `confirmed_absent` / `unavailable`) — absence comes ONLY from a
+  fresh authoritative CH query, never a cached list. `listAllPublishedRefs()` =
+  availability (markdown ∪ CH) for hreflang; `listIndexablePostRefs()` /
+  `listIndexablePosts()` = approved-markdown-only for sitemap + RSS;
+  `langsForSlug()` = existing-locale set. `isIndexable(post)` is the
+  default-deny quality gate (markdown source + frontmatter `indexable: true` +
+  real body + `body != summary` + word floor).
+- **Emitter (`lib/seo.js`, pure/no-I/O).** `parseRoute` → `sectionSeo`/`postSeo`
+  return canonical/hreflang/title/desc/OG + a `robots` field; `applySeoToHtml`
+  rewrites them into the served shell (replaces the robots meta, never appends).
+  `NOINDEX_SECTIONS = {/blog,/insights,/live}` keep a per-route canonical but emit
+  `noindex,follow`. `renderSitemap()` is a flat `<loc>` list (no `xhtml:link`);
+  hreflang is HTML-head only (single source). `EXTRA_SITEMAP_PATHS=['/about']`.
+- **Serving (`server.js`).** `serveSitemap` (`/sitemap.xml`, intercepted before
+  the static handler — the static `public/sitemap.xml` was removed in 1.2.2) →
+  `renderSitemap(listIndexablePostRefs())`. Per-route HTML rewrite in
+  `serveStaticFile`'s `text/html` branch: blog posts use the `getPost` tri-state
+  (`confirmed_absent` → 404; `unavailable` → 200 noindex shell; `found` → SSR +
+  per-`isIndexable` robots). `resolveLocaleRoute` blog-deep locale is
+  `(en|uk|ru)` case-insensitive (in sync with `parseRoute`), so `/blog/<other>/…`
+  → 404. Non-HTML static assets get `X-Robots-Tag: noindex`. `/blog/rss.xml` →
+  `modules/blog/handler.js` (RSS = indexable-only; list/post = full corpus).
+- **Gotchas.** Firehose posts are NEVER indexable (no persisted review-state yet)
+  — `source==='db'` fails `isIndexable` first. Do not delete `SECTION_SEO` keys
+  to drop a section from the sitemap (that re-introduces the homepage-canonical
+  leak); use `NOINDEX_SECTIONS` + the `indexable`-skip in `renderSitemap`. The
+  news pipeline is paused in prod via `NEWS_CRAWLER_DISABLED=1` (see OPERATIONS
+  §4.9) — that gate is read at boot, so it needs a container recreate.
+
+---
+
 ## 2. Deploy chain (the stuff that bites you)
 
 ### 2.1 What rebuilds vs what doesn't

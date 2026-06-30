@@ -305,13 +305,17 @@ function resolveLocaleRoute(reqUrl) {
   const ruSub = u.match(/^\/ru\/([a-z][a-z0-9-]*)\/([a-z][a-z0-9-]*)$/);
   if (ruSub && SPA_SECTIONS.has(ruSub[1])) return { file: '/index.ru.html' };
 
-  // Blog deep routes: /blog/{lang}/{slug} and /uk/blog/{lang}/{slug} style
-  // Pattern: /blog/<lang>/<slug> (3-segment, section=blog)
-  const blogDeep = u.match(/^\/blog\/([a-z]{2})\/([a-z0-9][a-z0-9-]*)$/);
+  // Blog deep routes: /blog/<lang>/<slug>. Locale is restricted to the SUPPORTED
+  // set (en|uk|ru), case-insensitive, kept in sync with seo.parseRoute. An
+  // unsupported locale like /blog/de/foo must NOT serve a shell (that would ship
+  // the raw homepage canonical — a v0.55.0-class consolidation leak); it falls
+  // through to a real 404. A nonexistent supported-locale slug is 404'd later by
+  // the getPost tri-state, not here.
+  const blogDeep = u.match(/^\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]*)$/i);
   if (blogDeep) return { file: '/index.en.html' };
-  const ukBlogDeep = u.match(/^\/uk\/blog\/([a-z]{2})\/([a-z0-9][a-z0-9-]*)$/);
+  const ukBlogDeep = u.match(/^\/uk\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]*)$/i);
   if (ukBlogDeep) return { file: '/index.uk.html' };
-  const ruBlogDeep = u.match(/^\/ru\/blog\/([a-z]{2})\/([a-z0-9][a-z0-9-]*)$/);
+  const ruBlogDeep = u.match(/^\/ru\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]*)$/i);
   if (ruBlogDeep) return { file: '/index.ru.html' };
 
   // Admin blog: /admin/blog → serve en shell (no locale prefix for admin)
@@ -339,6 +343,9 @@ function resolveLocaleRoute(reqUrl) {
   if (u === '/stream') return { redirect: '/live' };
   if (u === '/stream.html') return { redirect: '/live' };
   if (u === '/playground' || u === '/playground.html') return { redirect: '/inspector' };
+  // Legacy app path retired → canonical /dialects (301 recovers any link equity;
+  // GSC had it as a hard 404).
+  if (u === '/app/dialects') return { redirect: '/dialects' };
   if (u === '/about') return { file: '/about.en.html' };
   if (u === '/about.html') return { redirect: '/about' };
   if (u === '/account') return { file: '/account.en.html' };
@@ -564,14 +571,15 @@ const LOCALE_REDIRECT_TABLE = {
   '/docs': { uk: '/uk/docs', ru: '/ru/docs' },
 };
 
-// Dynamic sitemap.xml — home + SPA sections + every published post (markdown
-// ∪ analytics.blog_posts) with hreflang alternates. getAllActivePosts() is
-// cached + CH-graceful, so a ClickHouse outage degrades to markdown-only, not
-// a 500. Locale-agnostic → handled before the locale-redirect logic.
+// Dynamic sitemap.xml — indexable sections + /about + APPROVED markdown posts
+// (listIndexablePostRefs), one flat <loc> per locale URL; hreflang lives in each
+// page's HTML <head> only. CH-graceful: markdown is local and DB posts are never
+// indexable, so a ClickHouse outage can't change the sitemap. Locale-agnostic →
+// handled before the locale-redirect logic.
 async function serveSitemap(req, res) {
   try {
-    const posts = await blogService.getAllActivePosts();
-    const xml = seo.renderSitemap(posts);
+    const postRefs = await blogService.listIndexablePostRefs();
+    const xml = seo.renderSitemap(postRefs);
     const { body, encoding } = maybeGzip(Buffer.from(xml, 'utf8'), req, 'application/xml');
     const headers = {
       'Content-Type': 'application/xml; charset=utf-8',
@@ -698,12 +706,28 @@ function serveStaticFile(req, res) {
       // #app-root so crawlers (and no-JS) get real content without the client
       // /api/v1/blog fetch (which had been 499-ing during indexing). All
       // best-effort + CH-graceful — SEO logic must never break a page render.
+      let blogNotFound = false;
       try {
         const r = seo.parseRoute(reqPath);
         if (r.isPost) {
-          const post = await blogService.getPost(r.slug, r.postLang);
-          txt = seo.applySeoToHtml(txt, seo.postSeo(r.slug, r.postLang, post));
-          if (post) txt = seo.injectPostSsr(txt, post);
+          const lookup = await blogService.getPost(r.slug, r.postLang);
+          if (lookup.status === 'confirmed_absent') {
+            // Slug genuinely does not exist (fresh authoritative miss) → a REAL
+            // 404, NOT a 200 self-canonical shell that would manufacture a Soft 404.
+            blogNotFound = true;
+          } else {
+            // 'found' → SSR + per-indexability robots/hreflang. 'unavailable'
+            // (ClickHouse down) → 200 noindex shell, NEVER a false 404. Firehose
+            // posts are found-but-not-indexable → 200 SSR + noindex.
+            const post = lookup.status === 'found' ? lookup.post : null;
+            const indexable = post ? blogService.isIndexable(post) : false;
+            const existingLangs = post ? await blogService.langsForSlug(r.slug) : [];
+            txt = seo.applySeoToHtml(
+              txt,
+              seo.postSeo(r.slug, r.postLang, post, { indexable, existingLangs }),
+            );
+            if (post) txt = seo.injectPostSsr(txt, post);
+          }
         } else {
           const meta = seo.sectionSeo(r.sectionPath, r.uiLang);
           if (meta) txt = seo.applySeoToHtml(txt, meta);
@@ -716,6 +740,14 @@ function serveStaticFile(req, res) {
         }
       } catch (seoErr) {
         captureException(seoErr, { request: { url: req.url }, source: 'seo-rewrite' });
+      }
+      if (blogNotFound) {
+        res.writeHead(404, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        });
+        res.end('Not Found');
+        return;
       }
       body = Buffer.from(txt, 'utf8');
     } else if (ct === 'application/javascript') {
@@ -752,6 +784,12 @@ function serveStaticFile(req, res) {
       'Cache-Control': cacheControl,
       Vary: 'Accept-Encoding',
     };
+    // Non-HTML static assets (versioned .js/.css, .json, images, .svg) must not
+    // be indexed — Google was crawling /core/*.js?v= and module bundles. HTML
+    // pages are excluded (they carry their own per-route robots meta); the
+    // dynamic sitemap.xml + RSS are served by their own handlers and never reach
+    // this static-file branch.
+    if (ct !== 'text/html') headers['X-Robots-Tag'] = 'noindex';
     if (encoding) headers['Content-Encoding'] = encoding;
     res.writeHead(200, headers);
     res.end(outBody);

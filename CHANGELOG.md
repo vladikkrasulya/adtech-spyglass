@@ -19,6 +19,55 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.2.2 — indexing policy: noindex thin/firehose blog + sitemap/robots/routing hardening (CP2)
+
+GSC drilldown showed 95% of the non-indexed surface was the auto-news blog: the
+firehose publishes 3 thin articles/day × 3 locales whose stored `body` equals
+`summary`, so every post SSR's a duplicated ~430-char blurb → Soft 404. This
+change makes indexability an explicit, default-deny contract and shrinks the
+indexable surface to substantive pages, **without deleting any content** (all
+posts stay reachable via the public list/post API; they are just `noindex` +
+excluded from the sitemap). The news pipeline is paused separately at runtime
+via `NEWS_CRAWLER_DISABLED=1` (CP2.0); this is the code half.
+
+- **Quality contract (`lib/blog-service.js`).** New deterministic, default-deny
+  `isIndexable(post)`: requires `source==='markdown'` (DB/firehose is never
+  indexable until a persisted review-state exists), an explicit frontmatter
+  opt-in `indexable: true` (human review + topical attestation), a real body,
+  `body !== summary` (normalized), and a substantive word floor
+  (`INDEXABLE_WORD_FLOOR` — a necessary-not-sufficient guard, not an SEO claim).
+  `welcome` does not opt in → not indexable. **0 posts qualify today.**
+- **Post APIs split (no availability/filtering conflation).** `getAllActivePosts`
+  → `listAllPublishedRefs()` (availability/hreflang only — still markdown ∪ CH);
+  new `listIndexablePostRefs()` / `listIndexablePosts()` (approved markdown only —
+  sitemap + RSS); new `langsForSlug()` (existing-only hreflang).
+- **Tri-state lookup.** `getPost()` returns `found` / `confirmed_absent` /
+  `unavailable`. Absence is confirmed ONLY by a fresh authoritative per-(slug,
+  lang) query — a cached list never confirms absence, and absence is never cached.
+- **Routing (`server.js`).** A nonexistent supported-locale slug → real **404**
+  (was 200 + self-canonical shell, a Soft-404 generator). ClickHouse unavailable
+  → **200 noindex shell, never a false 404.** Blog-deep locale tightened to
+  `(en|uk|ru)` case-insensitive (in sync with `parseRoute`), so `/blog/de/foo`
+  404s instead of shipping the raw homepage canonical. Legacy `/app/dialects` →
+  **301 `/dialects`**. Non-HTML static assets carry `X-Robots-Tag: noindex`
+  (HTML, sitemap, RSS excluded).
+- **SEO emitter (`lib/seo.js`).** Per-route `robots` contract: `/blog`,
+  `/insights`, `/live` → `noindex,follow` (their `SECTION_SEO` keys retained so
+  they keep a per-route canonical — no homepage-consolidation leak); all other
+  sections + `/about` + landings → `index,follow`. `applySeoToHtml` replaces
+  (never appends) the robots meta → exactly one tag; `/account` shells untouched.
+  HTML-head hreflang is the single reciprocity source — existing-locales only,
+  and a noindex post emits no alternate cluster.
+- **Sitemap.** Dynamic `/sitemap.xml` is a flat list of one `<loc>` per indexable
+  locale URL with **no `xhtml:link` and no xhtml namespace**. Members: indexable
+  sections ×3 + `/about` ×3 + approved posts → exactly **36** URLs on the current
+  corpus (was 309). The dead static `public/sitemap.xml` (shadowed by the dynamic
+  route) is removed.
+- **RSS (`modules/blog/handler.js`).** `/blog/rss.xml` advertises only
+  `listIndexablePosts()` (valid empty feed at zero approved); `/api/v1/blog`
+  list/post endpoints unchanged and still serve every post.
+- App version → 1.2.2; core unchanged (0.30.0).
+
 ### v1.2.1 — auth telemetry PII boundary (2026-06-29)
 
 Privacy bug fix. Authentication operational events (`component='auth'` in the
