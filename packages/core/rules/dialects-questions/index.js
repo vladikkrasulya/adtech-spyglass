@@ -102,18 +102,15 @@ module.exports = {
             impFingerprint = shapeFingerprint(imp);
           }
 
+          const findingPath = `imp[${i}].ext.${key}`;
           findings.push(
-            makeFinding(
-              'dialects.question.unknown_ext_signal',
-              'question',
-              `imp[${i}].ext.${key}`,
-              {
-                value: valueStr,
-                candidates: impCandidates,
-                recommended: impRecommended,
-                shape_signature: impFingerprint,
-              },
-            ),
+            makeFinding('dialects.question.unknown_ext_signal', 'question', findingPath, {
+              path: findingPath,
+              value: valueStr,
+              candidates: impCandidates,
+              recommended: impRecommended,
+              shape_signature: impFingerprint,
+            }),
           );
           count += 1;
         }
@@ -144,8 +141,10 @@ module.exports = {
         const signalPath = `ext.${key}`;
         if (userDialect && userDialect.lookupMapping(signalPath, valueStr)) continue;
 
+        const findingPath = `ext.${key}`;
         findings.push(
-          makeFinding('dialects.question.unknown_ext_signal', 'question', `ext.${key}`, {
+          makeFinding('dialects.question.unknown_ext_signal', 'question', findingPath, {
+            path: findingPath,
             value: valueStr,
             candidates: [],
             recommended: null,

@@ -18,7 +18,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const core = require('../packages/core');
 const plugin = require('../packages/core/rules/dialects-questions');
+const { validRequest } = require('./fixtures');
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -27,6 +29,36 @@ const ALWAYS_MAPPED = { lookupMapping: () => ({ semantic_label: 'pop' }) };
 
 function ctx(userDialect) {
   return { dialect: null, version: null, userDialect: userDialect || null };
+}
+
+function popFamilyImpRequest() {
+  const req = validRequest();
+  req.imp[0].ext = {
+    allowMT: true,
+    allowLayer: true,
+    allowShock: true,
+    sizeID: [0],
+    mystery: 'foo',
+  };
+  return req;
+}
+
+function reqExtUnknownRequest() {
+  const req = validRequest();
+  req.ext = { mystery_req: 'value' };
+  return req;
+}
+
+function assertNoInterpolationArtifacts(msg, locale) {
+  assert.ok(!msg.includes('{path}'), `${locale}: literal {path}`);
+  assert.ok(!msg.includes('{recommended}'), `${locale}: literal {recommended}`);
+  assert.ok(!msg.includes('[object Object]'), `${locale}: object stringified`);
+}
+
+function dialectQuestionFinding(result, path) {
+  return result.findings.find(
+    (f) => f.id === 'dialects.question.unknown_ext_signal' && (!path || f.path === path),
+  );
 }
 
 // ── shape ────────────────────────────────────────────────────────────
@@ -105,6 +137,8 @@ test('finding params include value, candidates, recommended, shape_signature', (
   const findings = plugin.validate(req, ctx(NO_MAPPINGS));
   assert.ok(findings.length > 0);
   const f = findings[0];
+  assert.ok('path' in f.params);
+  assert.strictEqual(f.params.path, f.path);
   assert.ok('value' in f.params);
   assert.ok('candidates' in f.params);
   assert.ok(Array.isArray(f.params.candidates));
@@ -132,4 +166,41 @@ test('pop-family payload → recommended populated with high confidence', () => 
   assert.ok(mystery);
   assert.ok(mystery.params.recommended);
   assert.strictEqual(mystery.params.recommended.format, 'pop-family');
+});
+
+// ── end-to-end message resolution ───────────────────────────────────
+
+test('unknown imp.ext with high-confidence recommendation resolves messages (en/uk/ru)', () => {
+  const req = popFamilyImpRequest();
+  const expectedPath = 'imp[0].ext.mystery';
+
+  for (const locale of ['en', 'uk', 'ru']) {
+    const result = core.validate(req, { locale, userDialect: NO_MAPPINGS });
+    const f = dialectQuestionFinding(result, expectedPath);
+    assert.ok(f, locale);
+    assert.strictEqual(f.path, expectedPath, locale);
+    assert.strictEqual(f.params.path, f.path, locale);
+    assert.ok(f.params.recommended);
+    assert.strictEqual(f.params.recommended.format, 'pop-family', locale);
+    assert.ok(f.msg.includes(expectedPath), `${locale}: path in msg`);
+    assert.ok(f.msg.includes('foo'), `${locale}: value in msg`);
+    assertNoInterpolationArtifacts(f.msg, locale);
+  }
+});
+
+test('unknown req.ext with recommended:null resolves messages (en/uk/ru)', () => {
+  const req = reqExtUnknownRequest();
+  const expectedPath = 'ext.mystery_req';
+
+  for (const locale of ['en', 'uk', 'ru']) {
+    const result = core.validate(req, { locale, userDialect: NO_MAPPINGS });
+    const f = dialectQuestionFinding(result, expectedPath);
+    assert.ok(f, locale);
+    assert.strictEqual(f.path, expectedPath, locale);
+    assert.strictEqual(f.params.path, f.path, locale);
+    assert.strictEqual(f.params.recommended, null, locale);
+    assert.ok(f.msg.includes(expectedPath), `${locale}: path in msg`);
+    assert.ok(f.msg.includes('value'), `${locale}: value in msg`);
+    assertNoInterpolationArtifacts(f.msg, locale);
+  }
 });
