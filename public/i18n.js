@@ -802,9 +802,9 @@
   // Ad-preview empty hint — was hardcoded UK in spyglass.app.js setAdPreview;
   // 2026-05-06 i18n hotfix surfaced it as a leak when EN/RU users saw "у
   // відповіді немає adm/nurl" instead of their locale.
-  I18N.en['preview.no_adm'] = 'No adm/nurl in response';
-  I18N.uk['preview.no_adm'] = 'У відповіді немає adm/nurl';
-  I18N.ru['preview.no_adm'] = 'В ответе нет adm/nurl';
+  I18N.en['preview.no_adm'] = 'No renderable creative (adm/iurl) in response';
+  I18N.uk['preview.no_adm'] = 'У відповіді немає креативу для показу (adm/iurl)';
+  I18N.ru['preview.no_adm'] = 'В ответе нет креатива для показа (adm/iurl)';
 
   // ── Tier-2 i18n batch (2026-05-09 v0.15.0) ──
   // 21 strings that were still hardcoded UK in spyglass.app.js after the

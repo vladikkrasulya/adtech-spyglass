@@ -3222,6 +3222,18 @@ button.cross-path:focus-visible,
 .src-nav-bar[hidden] {
   display: none;
 }
+/* prev/next buttons carry a glyph+text label ("‹ назад" / "далі ›"). They only
+   had the generic .btn-icon (built for single-glyph icon buttons), so the angle
+   glyph sat off the text baseline and read as "crooked". Center the content
+   vertically and use the mono face (consistent glyph metrics) so the chevron and
+   the label line up. */
+.src-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
 .src-nav-status {
   font-family: var(--font-mono);
   font-size: 11px;

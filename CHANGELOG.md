@@ -19,6 +19,25 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.2.3 — fix: creative preview for adm-less bids + source-nav arrow alignment
+
+Two prod UI fixes, unrelated to CP2:
+
+- **Creative preview broke for `adm`-less bids.** `findAdm()` fell back to
+  wrapping `nurl` (an oRTB win-NOTICE beacon, not a creative) in `<img src>` —
+  `nurl` returns HTML/204/JSON, never image bytes, so the preview painted a
+  broken-image icon (ORB-blocked). The adm-less fallback now uses `iurl` (the
+  Bid object's "sample image URL … for content checking", an actual image);
+  `nurl`/`burl` are never rendered. A bid with neither `adm` nor `iurl` shows a
+  clear "no renderable creative (adm/iurl)" message instead of a broken image.
+  `preview.no_adm` copy updated (en/uk/ru). Root cause confirmed by prod repro
+  (broken icon was `ERR_BLOCKED_BY_ORB` on the nurl fetch); the CSP/mixed-content
+  theory was ruled out (Chromium auto-upgrades http→https images).
+- **Source-nav `‹ назад` / `далі ›` buttons read as "crooked".** They only had
+  the generic `.btn-icon` (built for single-glyph icon buttons), so the angle
+  glyph sat off the label baseline. Added a `.src-nav-btn` rule (inline-flex
+  centering + mono face) so the chevron and label align.
+
 ### v1.2.2 — indexing policy: noindex thin/firehose blog + sitemap/robots/routing hardening (CP2)
 
 GSC drilldown showed 95% of the non-indexed surface was the auto-news blog: the
