@@ -47,7 +47,7 @@ LOG_LEVEL=debug npm test
 To run a single test or a named subset, use the `--test-name-pattern` filter:
 
 ```bash
-node --test --test-name-pattern="crosscheck" tests/
+node --test --test-name-pattern="crosscheck" tests/*.test.js
 node --test --test-name-pattern="pop-request" tests/pop-fixtures.test.js
 ```
 
@@ -58,8 +58,10 @@ passed to `test(...)`.
 
 ## Where tests live
 
-All tests are under `tests/` at the repo root. Node's discovery glob is
-`tests/` — every `*.test.js` file there is picked up automatically.
+All tests are under `tests/` at the repo root. npm scripts pass `tests/*.test.js`
+to `node --test` — every `*.test.js` file there is picked up (55 files as of
+v1.2.1). Do not pass the `tests/` directory as a positional argument: Node 22
+treats it as a file path and fails to discover tests.
 
 | File                               | What it covers                                                                                             |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -116,7 +118,7 @@ All four steps must pass. A failure in any one blocks the push.
 | `format:check` | Prettier formatting — fails if any file would be reformatted |
 | `lint`         | ESLint — `no-var`, no unused catch bindings, custom rules    |
 | `typecheck`    | `tsc --noEmit` over JSDoc annotations (no `.ts` files)       |
-| `test`         | Full `node --test tests/` suite                              |
+| `test`         | Full `node --test tests/*.test.js` suite                     |
 
 ---
 
@@ -272,7 +274,7 @@ Then add `imp.my_check.field_required` to `packages/core/spec-refs.json`
 **Filter by name** to isolate the failure:
 
 ```bash
-node --test --test-name-pattern="my-check" tests/
+node --test --test-name-pattern="my-check" tests/*.test.js
 # or target a specific file directly:
 node --test tests/my-check.test.js
 ```
@@ -281,7 +283,7 @@ node --test tests/my-check.test.js
 server/module log lines during the failing test, run:
 
 ```bash
-LOG_LEVEL=debug node --test --test-name-pattern="my-check" tests/
+LOG_LEVEL=debug node --test --test-name-pattern="my-check" tests/*.test.js
 ```
 
 **Check the spec-refs gate separately** if you get a cryptic failure in
