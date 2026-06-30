@@ -39,6 +39,12 @@ READY_TIMEOUT="${READY_TIMEOUT:-120}"
 APP_VERSION="$(node -p "require('./package.json').version")"
 VER="v${APP_VERSION}"
 
+if [ -f "$STATE_FILE" ]; then
+  FLOOR="$(grep -E '^PRIVACY_FLOOR_BUILD_SHA=' "$STATE_FILE" 2>/dev/null | cut -d= -f2 || true)"
+else
+  FLOOR=""
+fi
+
 # 1. Gate — deploy only from a clean main == origin/main.
 git fetch -q origin
 [ -z "$(git status --porcelain)" ] || { echo "ABORT: working tree is dirty"; exit 2; }
@@ -103,12 +109,21 @@ if [ -n "$PREV_IMG" ]; then
   docker tag "$PREV_IMG" "adtech-spyglass:${ROLLBACK_TAG}"
   PREV_SHA="$(image_build_sha "adtech-spyglass:${ROLLBACK_TAG}" || true)"
   [ -n "$PREV_SHA" ] || { echo "ABORT: previous image carries no verifiable BUILD_SHA — refusing to deploy without a checkable rollback target"; exit 2; }
+  if ! image_contains_privacy_floor "adtech-spyglass:${ROLLBACK_TAG}" "$FLOOR"; then
+    echo "ABORT: previous image does not contain privacy floor ${FLOOR} — refusing to deploy"
+    exit 2
+  fi
   echo "    rollback target adtech-spyglass:${ROLLBACK_TAG} (BUILD_SHA=${PREV_SHA})"
 fi
 
 # 4. Build the immutable image (provenance via build-args), tag short-sha + version.
 BUILD_SHA="$SHA" GIT_SHA="$GIT_SHA" APP_VERSION="$APP_VERSION" SPYGLASS_TAG="$SHA" docker compose build
 docker tag "adtech-spyglass:${SHA}" "adtech-spyglass:${VER}"
+
+if ! image_contains_privacy_floor "adtech-spyglass:${SHA}" "$FLOOR"; then
+  echo "ABORT: candidate image does not contain privacy floor ${FLOOR} — refusing to deploy"
+  exit 2
+fi
 
 # 5. Record intent BEFORE the transition (survives a kill/reboot mid-deploy).
 write_state "$STATE_FILE" <<EOF
@@ -119,6 +134,7 @@ ATTEMPTING_GIT_SHA=${GIT_SHA}
 PREV_TAG=${PREV_TAG}
 PREV_BUILD_SHA=${PREV_SHA}
 ROLLBACK_TAG=${ROLLBACK_TAG}
+PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
 STARTED_AT=$(date -Is)
 EOF
 
@@ -147,6 +163,7 @@ PREV_TAG=${PREV_TAG}
 PREV_BUILD_SHA=${PREV_SHA}
 ROLLBACK_TAG=${ROLLBACK_TAG}
 LAST_FAILED_TAG=
+PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
 DEPLOYED_AT=$(date -Is)
 EOF
   echo "==> DEPLOY OK: ${VER} (${SHA}) is live."
@@ -156,14 +173,18 @@ fi
 # 7. Auto-rollback to the previous self-contained image. The rollback `up` is
 #    ALSO guarded.
 echo "==> DEPLOY FAILED — auto-rolling back to ${ROLLBACK_TAG} (expect BUILD_SHA=${PREV_SHA:-unknown})"
-set_env SPYGLASS_TAG "$ROLLBACK_TAG" "$ENV_FILE"
 rollback_ok=0
-if [ -n "$PREV_SHA" ] && SPYGLASS_TAG="$ROLLBACK_TAG" docker compose up -d --no-build; then
-  if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT" && "$SMOKE_CMD" "$BASE" "$PREV_SHA" "$CONTAINER"; then
-    rollback_ok=1
-  fi
+if ! image_contains_privacy_floor "adtech-spyglass:${ROLLBACK_TAG}" "$FLOOR"; then
+  echo "==> CRITICAL: rollback target tampered/unsafe (missing privacy floor) — aborting rollback"
 else
-  echo "==> docker compose up FAILED for the rollback image"
+  set_env SPYGLASS_TAG "$ROLLBACK_TAG" "$ENV_FILE"
+  if [ -n "$PREV_SHA" ] && SPYGLASS_TAG="$ROLLBACK_TAG" docker compose up -d --no-build; then
+    if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT" && "$SMOKE_CMD" "$BASE" "$PREV_SHA" "$CONTAINER"; then
+      rollback_ok=1
+    fi
+  else
+    echo "==> docker compose up FAILED for the rollback image"
+  fi
 fi
 
 if [ "$rollback_ok" = 1 ]; then
@@ -174,6 +195,7 @@ ACTIVE_BUILD_SHA=${PREV_SHA}
 ROLLBACK_TAG=${ROLLBACK_TAG}
 LAST_FAILED_TAG=${SHA}
 LAST_FAILED_BUILD_SHA=${SHA}
+PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
 ROLLED_BACK_AT=$(date -Is)
 EOF
   echo "==> ROLLBACK OK: restored ${ROLLBACK_TAG} (BUILD_SHA=${PREV_SHA}). DEPLOY FAILED."
@@ -186,6 +208,7 @@ ACTIVE_BUILD_SHA=UNKNOWN
 ROLLBACK_TAG=${ROLLBACK_TAG}
 LAST_FAILED_TAG=${SHA}
 LAST_FAILED_BUILD_SHA=${SHA}
+PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
 FAILED_AT=$(date -Is)
 EOF
   echo "==> CRITICAL: deploy AND rollback failed — manual intervention required."

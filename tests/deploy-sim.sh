@@ -27,6 +27,29 @@ mkdir -p "$BIN" "$DATA"
 chmod 2710 "$DATA" # satisfy the (always-on) check_db_perms dir contract
 trap 'rm -rf "$WORK"' EXIT
 
+export DATA="$WORK/data"
+export CANDIDATE_REV="cafe000000000000000000000000000000000000"
+export PREV_REV="cafe000000000000000000000000000000000000"
+FLOOR=""
+case "$SCEN" in
+  floor-absent) ;;
+  floor-safe|floor-rollback-tampered|floor-auto-rollback-success) FLOOR="2437646" ;;
+  floor-unsafe-candidate) FLOOR="2437646"; export CANDIDATE_REV="dead000000000000000000000000000000000000" ;;
+  floor-unsafe-rollback) FLOOR="2437646"; export PREV_REV="dead000000000000000000000000000000000000" ;;
+  floor-candidate-ancestor) FLOOR="2437646"; export CANDIDATE_REV="a43adad666b8eb8601391fa95c6a2b4aad699f63" ;;
+  floor-candidate-unrelated) FLOOR="2437646"; export CANDIDATE_REV="bbbb000000000000000000000000000000000000" ;;
+  floor-candidate-missing-oci) FLOOR="2437646"; export CANDIDATE_REV="" ;;
+  floor-candidate-missing-git) FLOOR="2437646"; export CANDIDATE_REV="beef000000000000000000000000000000000000" ;;
+esac
+if [ -n "$FLOOR" ]; then
+  cat > "$DATA/deploy-state.env" <<EOF
+STATUS=ACTIVE
+ACTIVE_TAG=old
+PRIVACY_FLOOR_BUILD_SHA=$FLOOR
+EOF
+  chmod 600 "$DATA/deploy-state.env"
+fi
+
 # ── mock git: clean tree, HEAD == main == origin/main, short = abc1234 ──
 cat >"$BIN/git" <<'EOG'
 #!/bin/sh
@@ -36,6 +59,21 @@ case "$*" in
   "rev-parse HEAD"|"rev-parse main"|"rev-parse origin/main")
     echo "ffffffffffffffffffffffffffffffffffffffff" ;;
   "rev-parse --short HEAD") echo "abc1234" ;;
+  *"rev-parse --verify"*)
+    case "$*" in
+      *2437646*) echo "24376462c3fd1988447b26ee69a897190bdeac1a" ;;
+      *cafe00*) echo "cafe000000000000000000000000000000000000" ;;
+      *dead00*) echo "dead000000000000000000000000000000000000" ;;
+      *a43adad*) echo "a43adad666b8eb8601391fa95c6a2b4aad699f63" ;;
+      *bbbb00*) echo "bbbb000000000000000000000000000000000000" ;;
+      *beef00*) exit 128 ;;
+      *) echo "defaultrev" ;;
+    esac
+    ;;
+  *"merge-base --is-ancestor"*)
+    if echo "$*" | grep -q "24376462c3fd1988447b26ee69a897190bdeac1a cafe000000000000000000000000000000000000"; then exit 0; fi
+    exit 1
+    ;;
   *) exit 0 ;;
 esac
 EOG
@@ -47,8 +85,9 @@ cat >"$BIN/docker" <<'EOD'
 case "$1 $2" in
   "compose build") exit 0 ;;
   "compose up")
+    echo "COMPOSE_UP_CALLED" >> "$DATA/compose-trace"
     if [ "${SPYGLASS_TAG:-}" = "abc1234" ]; then
-      case "$SCEN" in candidate-up-fail|rollback-up-fail) exit 1 ;; *) exit 0 ;; esac
+      case "$SCEN" in candidate-up-fail|rollback-up-fail|floor-rollback-tampered|floor-auto-rollback-success) exit 1 ;; *) exit 0 ;; esac
     else
       case "$SCEN" in rollback-up-fail) exit 1 ;; *) exit 0 ;; esac
     fi ;;
@@ -63,6 +102,17 @@ case "$1" in
     esac ;;
   image)
     case "$*" in
+      *--format*org.opencontainers.image.revision*)
+         if echo "$*" | grep -q "rollback-pre"; then
+           if [ "$SCEN" = "floor-rollback-tampered" ] && grep -q DEPLOYING "$DATA/deploy-state.env" 2>/dev/null; then
+             echo "dead000000000000000000000000000000000000"
+           else
+             echo "${PREV_REV}"
+           fi
+         else
+           echo "${CANDIDATE_REV}"
+         fi
+         ;;
       *--format*) case "$SCEN" in missing-prev-sha) : ;; *) echo "BUILD_SHA=prevsha0" ;; esac ;;
       *) : ;;
     esac ;;
@@ -118,4 +168,5 @@ rc=$?
 echo "EXIT=$rc"
 if [ -f "$DATA/deploy-state.env" ]; then cat "$DATA/deploy-state.env"; else echo "(no state)"; fi
 echo "ENV_SPYGLASS_TAG=$(grep -E '^SPYGLASS_TAG=' "$WORK/.env" | cut -d= -f2)"
+echo "COMPOSE_UP_CALLS=$(cat "$DATA/compose-trace" 2>/dev/null | wc -l | tr -d ' ')"
 exit "$rc"

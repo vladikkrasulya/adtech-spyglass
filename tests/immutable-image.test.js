@@ -368,6 +368,88 @@ test('deploy-sim: missing previous BUILD_SHA aborts before activation (exit 2, .
   );
 });
 
+test('deploy-sim: floor absent → legacy happy path', () => {
+  const r = runSim('floor-absent');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /STATUS=ACTIVE/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=\n/);
+});
+
+test('deploy-sim: safe candidate + safe rollback → deploy allowed', () => {
+  const r = runSim('floor-safe');
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /STATUS=ACTIVE/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+});
+
+test('deploy-sim: candidate ancestor → exit 2, state untouched, 0 compose up', () => {
+  const r = runSim('floor-candidate-ancestor');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /STATUS=ACTIVE/);
+  assert.match(r.out, /ACTIVE_TAG=old/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+  assert.match(r.out, /COMPOSE_UP_CALLS=0/);
+});
+
+test('deploy-sim: candidate unrelated → exit 2, state untouched, 0 compose up', () => {
+  const r = runSim('floor-candidate-unrelated');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /STATUS=ACTIVE/);
+  assert.match(r.out, /ACTIVE_TAG=old/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+  assert.match(r.out, /COMPOSE_UP_CALLS=0/);
+});
+
+test('deploy-sim: candidate missing OCI revision → exit 2, state untouched, 0 compose up', () => {
+  const r = runSim('floor-candidate-missing-oci');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /STATUS=ACTIVE/);
+  assert.match(r.out, /ACTIVE_TAG=old/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+  assert.match(r.out, /COMPOSE_UP_CALLS=0/);
+});
+
+test('deploy-sim: candidate valid 40-hex but missing Git object → exit 2, state untouched, 0 compose up', () => {
+  const r = runSim('floor-candidate-missing-git');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /STATUS=ACTIVE/);
+  assert.match(r.out, /ACTIVE_TAG=old/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+  assert.match(r.out, /COMPOSE_UP_CALLS=0/);
+});
+
+test('deploy-sim: unsafe rollback target → exit 2 до transition, 0 compose up', () => {
+  const r = runSim('floor-unsafe-rollback');
+  assert.equal(r.code, 2, r.out);
+  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /STATUS=ACTIVE/);
+  assert.match(r.out, /ACTIVE_TAG=old/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+  assert.match(r.out, /COMPOSE_UP_CALLS=0/);
+});
+
+test('deploy-sim: rollback target підмінено перед auto-rollback → exit 3, rollback compose не викликаний', () => {
+  const r = runSim('floor-rollback-tampered');
+  assert.equal(r.code, 3, r.out);
+  assert.match(r.out, /STATUS=CRITICAL/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/, 'floor збережений у CRITICAL');
+  assert.match(r.out, /COMPOSE_UP_CALLS=1/, 'лише candidate compose up, rollback відсутній');
+});
+
+test('deploy-sim: floor-enabled successful auto-rollback', () => {
+  const r = runSim('floor-auto-rollback-success');
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out, /STATUS=ROLLED_BACK/);
+  assert.match(r.out, /ACTIVE_TAG=rollback-pre-/);
+  assert.match(r.out, /LAST_FAILED_TAG=abc1234/);
+  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
+  assert.match(r.out, /COMPOSE_UP_CALLS=2/);
+});
+
 // ── secure runtime/backup permissions (fix/secure-runtime-backup-permissions) ─
 
 test('backup-db.sh sets umask 077 and forces restrictive dir/archive modes', () => {
