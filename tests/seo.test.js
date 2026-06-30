@@ -80,6 +80,39 @@ test('parseRoute: UI-prefixed post keeps post-lang from path', () => {
   assert.equal(r.slug, 'welcome');
 });
 
+// ── slug-length boundary ─────────────────────────────────────────────────────
+// parseRoute, blog-service SLUG_RE and server.js resolveLocaleRoute's three
+// blog-deep regexes all share ONE slug grammar: `[a-z0-9][a-z0-9-]{0,120}` (max
+// 121 chars). resolveLocaleRoute boots the whole HTTP server on require (no
+// module.exports), so it can't be unit-tested in isolation — parseRoute is the
+// pure, exported parser those regexes are kept byte-identical to, so it guards
+// the shared bound. At 121 chars a path is a post route; at 122 it is NOT, so
+// the server's blog-deep regexes likewise miss and never serve a self-canonical
+// shell for an overlong slug (it falls through to a real 404). Cover the three
+// UI-prefix variants (no-prefix → en shell, /uk/ → uk shell, /ru/ → ru shell).
+const SLUG_MAX = 'a'.repeat(121); // 1 + 120 → matches
+const SLUG_OVER = 'a'.repeat(122); // 122 → no match
+for (const [label, prefix, uiLang] of [
+  ['no-prefix (en shell)', '', 'en'],
+  ['/uk/ prefix', '/uk', 'uk'],
+  ['/ru/ prefix', '/ru', 'ru'],
+]) {
+  test(`parseRoute: ${label} — 121-char slug IS a post route`, () => {
+    const r = seo.parseRoute(`${prefix}/blog/en/${SLUG_MAX}`);
+    assert.equal(r.uiLang, uiLang);
+    assert.equal(r.isPost, true);
+    assert.equal(r.postLang, 'en');
+    assert.equal(r.slug, SLUG_MAX);
+    assert.equal(r.slug.length, 121);
+  });
+  test(`parseRoute: ${label} — 122-char slug is NOT a post route (server serves no shell)`, () => {
+    const r = seo.parseRoute(`${prefix}/blog/en/${SLUG_OVER}`);
+    assert.equal(r.uiLang, uiLang);
+    assert.equal(r.isPost, false);
+    assert.equal(r.slug, undefined);
+  });
+}
+
 // ── sectionSeo ──────────────────────────────────────────────────────────────
 test('sectionSeo: canonical/alternates per UI lang', () => {
   const s = seo.sectionSeo('/blog', 'uk');

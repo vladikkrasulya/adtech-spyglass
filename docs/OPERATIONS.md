@@ -301,8 +301,11 @@ SPYGLASS_TAG="$(grep -E '^SPYGLASS_TAG=' .env | cut -d= -f2)" docker compose up 
 docker inspect adtech-spyglass --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^NEWS_CRAWLER_DISABLED='
 docker logs adtech-spyglass 2>&1 | grep -c 'news crawler scheduled'   # expect 0 (scheduler never started)
 
-# RESUME — remove the line (or set to 0) and recreate
-sed -i '/^NEWS_CRAWLER_DISABLED=/d' .env
+# RESUME — set the flag back to 0 atomically (preserves .env 0600/owner) and recreate.
+# `0` resumes because server.js gates on `NEWS_CRAWLER_DISABLED !== '1'`, so 0 is
+# equivalent to removing the line — but set_env keeps perms/owner and never leaves
+# a half-written .env, unlike an in-place `sed -i`.
+. scripts/deploy-lib.sh && set_env NEWS_CRAWLER_DISABLED 0 .env
 SPYGLASS_TAG="$(grep -E '^SPYGLASS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
 ```
 

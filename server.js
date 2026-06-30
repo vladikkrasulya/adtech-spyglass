@@ -310,12 +310,15 @@ function resolveLocaleRoute(reqUrl) {
   // unsupported locale like /blog/de/foo must NOT serve a shell (that would ship
   // the raw homepage canonical — a v0.55.0-class consolidation leak); it falls
   // through to a real 404. A nonexistent supported-locale slug is 404'd later by
-  // the getPost tri-state, not here.
-  const blogDeep = u.match(/^\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]*)$/i);
+  // the getPost tri-state, not here. The slug is byte-identical to
+  // seo.parseRoute / blog-service SLUG_RE — `[a-z0-9][a-z0-9-]{0,120}` (max 121
+  // chars). A 122+-char path is not a post route here and falls through to 404,
+  // so an overlong slug never serves a self-canonical shell.
+  const blogDeep = u.match(/^\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]{0,120})$/i);
   if (blogDeep) return { file: '/index.en.html' };
-  const ukBlogDeep = u.match(/^\/uk\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]*)$/i);
+  const ukBlogDeep = u.match(/^\/uk\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]{0,120})$/i);
   if (ukBlogDeep) return { file: '/index.uk.html' };
-  const ruBlogDeep = u.match(/^\/ru\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]*)$/i);
+  const ruBlogDeep = u.match(/^\/ru\/blog\/(en|uk|ru)\/([a-z0-9][a-z0-9-]{0,120})$/i);
   if (ruBlogDeep) return { file: '/index.ru.html' };
 
   // Admin blog: /admin/blog → serve en shell (no locale prefix for admin)
