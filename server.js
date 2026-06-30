@@ -724,7 +724,11 @@ function serveStaticFile(req, res) {
             // posts are found-but-not-indexable → 200 SSR + noindex.
             const post = lookup.status === 'found' ? lookup.post : null;
             const indexable = post ? blogService.isIndexable(post) : false;
-            const existingLangs = post ? await blogService.langsForSlug(r.slug) : [];
+            // hreflang only for an indexable post, and only over locales where
+            // the slug is ITSELF indexable (no noindex/DB alternates — Google
+            // drops non-reciprocal pairs). Gated on `indexable` so non-indexable
+            // posts skip the lookup entirely (no wasted work).
+            const existingLangs = indexable ? await blogService.indexableLangsForSlug(r.slug) : [];
             txt = seo.applySeoToHtml(
               txt,
               seo.postSeo(r.slug, r.postLang, post, { indexable, existingLangs }),

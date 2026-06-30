@@ -375,12 +375,19 @@ function createBlogModule(deps = {}) {
       const rssItems = items
         .map((p) => {
           const url = `${PUBLIC_BASE}/blog/${p.lang}/${p.slug}`;
-          const pubDate = new Date(p.published_at).toUTCString();
+          // pubDate is OPTIONAL in RSS 2.0 but MUST be a valid RFC-822 date when
+          // present. isIndexable() does not require a frontmatter date, so emit
+          // the element only when the date parses — otherwise
+          // `new Date('').toUTCString()` is the literal "Invalid Date", which
+          // makes the feed non-conformant. A missing pubDate is valid.
+          const d = new Date(p.published_at);
+          const pubDate = Number.isNaN(d.getTime())
+            ? ''
+            : `\n      <pubDate>${xmlEscape(d.toUTCString())}</pubDate>`;
           return `    <item>
       <title>${xmlEscape(p.title)}</title>
       <link>${xmlEscape(url)}</link>
-      <guid isPermaLink="true">${xmlEscape(url)}</guid>
-      <pubDate>${xmlEscape(pubDate)}</pubDate>
+      <guid isPermaLink="true">${xmlEscape(url)}</guid>${pubDate}
       <description>${xmlEscape(p.summary)}</description>
     </item>`;
         })

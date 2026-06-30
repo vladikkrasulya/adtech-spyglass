@@ -119,9 +119,16 @@ test('listIndexablePostRefs returns ONLY approved markdown', async () => {
   assert.ok(!set.has('welcome:en'));
   assert.ok(!set.has('thin-optin:en'));
 });
-test('langsForSlug returns only the locales that exist (existing-only hreflang source)', async () => {
+test('langsForSlug returns ALL locales that exist (availability — NOT the hreflang source)', async () => {
   assert.deepEqual(await blog.langsForSlug('real-guide'), ['en', 'uk']);
-  assert.deepEqual(await blog.langsForSlug('welcome'), ['en']);
+  assert.deepEqual(await blog.langsForSlug('welcome'), ['en']); // exists but non-indexable
+});
+test('indexableLangsForSlug returns ONLY locales where the slug is itself indexable (hreflang source)', async () => {
+  assert.deepEqual(await blog.indexableLangsForSlug('real-guide'), ['en', 'uk']);
+  // welcome EXISTS (langsForSlug → ['en']) but is opt-out → never an hreflang alternate.
+  assert.deepEqual(await blog.indexableLangsForSlug('welcome'), []);
+  // thin-optin opts in but is below the word floor → not an alternate either.
+  assert.deepEqual(await blog.indexableLangsForSlug('thin-optin'), []);
 });
 
 // ── getPost tri-state ────────────────────────────────────────────────────────
@@ -219,4 +226,8 @@ test('RSS advertises only indexable (approved) posts, never the firehose/non-app
   assert.ok(xml.includes('/blog/en/real-guide'), 'approved post present');
   assert.ok(!xml.includes('/blog/en/welcome'), 'non-approved post absent');
   assert.ok(!xml.includes('thin-optin'), 'thin opt-in absent');
+  // real-guide has no frontmatter date → its <pubDate> must be OMITTED, never
+  // the literal "Invalid Date" (which would make the feed non-conformant).
+  assert.ok(!xml.includes('Invalid Date'), 'no Invalid Date in feed');
+  assert.ok(!/<pubDate>/.test(xml), 'date-less indexable post omits pubDate');
 });
