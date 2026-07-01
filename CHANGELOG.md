@@ -19,6 +19,33 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.2.5 — inspector: re-entrant SPA mount (ROADMAP #19)
+
+Front-end-only patch — no backend (`server.js`) and no `packages/core` change;
+`packages/core` version is unchanged (`0.30.0`).
+
+- **Re-entrant `mountInspector()`.** The inspector is now idempotent and mounts
+  **in place** via SPA from any other section (Live → Inspector, back/forward,
+  `/r/{hash}`) like every other section. Previously classic-script boot-once
+  semantics meant SPA-remounting it corrupted the workbench layout and could
+  freeze the renderer.
+- **Lifecycle scoping.** Every `window`/`document` listener (drag handlers, the
+  global error boundary, the analyze abort) and both `setInterval` watchdogs are
+  registered against `ctx.signal` / `ctx.addCleanup` and torn down LIFO on
+  unmount; layout init is recomputable — a remount rebuilds cleanly with no
+  listener stacking.
+- **Stale-continuation guards.** The in-flight `analyze` is aborted on unmount,
+  and the secondary read/mutation/boot paths (auth/partners/samples reads,
+  delete/corpus mutations, `loadSample`, boot sequence) guard on
+  `ctx.signal.aborted` so a torn-down mount can never paint or toast into its
+  successor.
+- **Forced-reload mitigation removed.** `shell-boot.js` `activateFromUrl()` no
+  longer forces a full document load when navigating _to_ the inspector; the
+  2026-05-26 non-SPA transition onto the flagship section is gone.
+- **Tests.** New `tests/inspector-reentrant.test.js` — 10× mount→unmount cycles
+  (no listener/timer/facade leak), stale-continuation guards, idempotent
+  teardown, plus static assertions that the guards are present in source.
+
 ### v1.2.4 — security/deploy: privacy floor guard + crash-safe deploy state machine
 
 Deploy-infrastructure-only patch — no application code (`server.js`, `public/`,

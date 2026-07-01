@@ -87,18 +87,13 @@ async function activateFromUrl() {
   // Canonical route strips /uk or /ru locale prefix.
   const canonical = canonicalize(location.pathname);
 
-  // Inspector's legacy mount (mountInspector in spyglass.app.js) is NOT
-  // re-entrant — its classic scripts boot once per page. SPA-remounting it
-  // from another section (e.g. Live → Inspector, or back/forward onto it)
-  // leaves a corrupted layout and can freeze the renderer. So: if a section
-  // is already mounted and we're navigating to the inspector, do a full page
-  // load — it always boots cleanly that way. Initial boot (no active section
-  // yet) still mounts via SPA, which is the normal, working first-load path.
-  const goesToInspector = canonical === '/inspector' || /^\/r\/[0-9a-f]{8,12}$/i.test(canonical);
-  if (goesToInspector && registry.current()) {
-    location.assign(location.href);
-    return;
-  }
+  // (ROADMAP #19, resolved) The inspector used to force a full page load when
+  // SPA-navigating onto it (or /r/{hash}) while another section was mounted,
+  // because mountInspector() wasn't re-entrant. mountInspector is now re-entrant
+  // — every listener/timer is scoped to ctx.signal/ctx.addCleanup and the
+  // globals sweep + watchdog stop run on deactivate() — so it mounts in place
+  // like every other section. The reload mitigation is gone; /inspector routes
+  // through registry.match() below and /r/{hash} through the hash branch.
 
   // Landings are server-rendered content pages — their body lives only in the
   // SSR HTML, so never SPA-remount them. On client-nav onto a landing, hard-load
