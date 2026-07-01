@@ -33,7 +33,7 @@ jobs:
       # its tests) cannot function at all without full history. The production
       # host's checkout is a persistent `git clone` + `git pull --ff-only`
       # (full history already), so this only needed fixing here in CI.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
