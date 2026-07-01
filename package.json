@@ -11,9 +11,9 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test tests/",
-    "test:watch": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --watch tests/",
-    "test:coverage": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --experimental-test-coverage tests/",
+    "test": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test tests/*.test.js",
+    "test:watch": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --watch tests/*.test.js",
+    "test:coverage": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --experimental-test-coverage tests/*.test.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
