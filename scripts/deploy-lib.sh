@@ -5,6 +5,56 @@
 # and .env writes are atomic (temp-in-same-dir + mv) and 0600; secret values are
 # never printed.
 
+# ── Privacy floor baseline (IMMUTABLE, fail-closed) ──────────────────────────
+# The minimum privacy-safe commit, baked into the SCRIPT (source of truth = git),
+# NOT read from the mutable deploy-state. This is v1.2.1 (commit 2437646) — the
+# release that removed PII from auth telemetry (#24, tests/auth-event-pii.test.js).
+# Consequences:
+#   • Deleting/resetting deploy-state.env can NEVER lower the bar below this SHA.
+#   • A runtime floor in deploy-state may only RAISE the bar (must be a descendant
+#     of the baseline); a missing/empty/malformed/weaker/unrelated runtime floor
+#     is ignored and the baseline stands.
+#   • The guard is FAIL-CLOSED: anything it cannot positively verify is rejected.
+# There is deliberately NO env override — the baseline must not be weakenable.
+# Tests exercise it against this repo's real git history.
+PRIVACY_BASELINE_SHA="24376462c3fd1988447b26ee69a897190bdeac1a"
+
+# ── Threat model / ancestry semantics (READ BEFORE CHANGING THE FLOOR) ────────
+# The floor guard proves ANCESTRY, not BEHAVIOUR: it verifies (via
+# `git merge-base --is-ancestor`) that the image was built from a commit that is
+# the baseline or a descendant of it. It CANNOT prove the privacy fix is still
+# present — a commit that descends from the baseline but REVERTS the PII removal
+# would satisfy ancestry yet be privacy-unsafe. Closing that gap requires a
+# behavioural check, which is a SEPARATE system: the CI privacy-regression gate
+# `tests/auth-event-pii.test.js` (added with the baseline commit) asserts the
+# actual invariant — auth telemetry emits no PII — and runs on every PR/push.
+# So the deploy-time floor stops ACCIDENTAL rollback to a pre-privacy image, and
+# CI stops a privacy-reverting commit from ever becoming a descendant that ships.
+# Second limitation: the candidate revision is read from the image's OCI
+# `org.opencontainers.image.revision` label, a build-arg. The guard therefore
+# protects against ACCIDENTAL regression, not a maliciously forged label — that
+# is out of scope for a build-arg-based guard and would need image signing.
+
+# state_get FILE KEY  → prints the sanitized value of the LAST `KEY=` line in FILE.
+#   The state file is parsed as DATA and is NEVER sourced/evaluated, so a crafted
+#   value like `$(cmd)` / `; rm -rf /` / backticks cannot execute. It also:
+#     • refuses to read a SYMLINK (path-swap / symlink attack) — returns empty;
+#     • strips every byte outside the safe set [A-Za-z0-9._:-] so no shell
+#       metacharacter, whitespace, newline or quote can survive into a caller;
+#     • takes the LAST matching line (deterministic if a key is duplicated).
+#   deploy.sh and rollback.sh BOTH read state through this one function → identical
+#   parsing policy. Prints nothing for an absent key / missing / unsafe file.
+state_get() {
+  local f="$1" key="$2" raw
+  [ -f "$f" ] || return 0
+  if [ -L "$f" ]; then
+    echo "UNSAFE: refusing to read deploy-state via symlink: $f" >&2
+    return 0
+  fi
+  raw="$(grep -E "^${key}=" "$f" 2>/dev/null | tail -n1 | cut -d= -f2- || true)"
+  printf '%s' "$raw" | LC_ALL=C tr -cd 'A-Za-z0-9._:-'
+}
+
 # _stat_owner FILE  → "uid:gid" (portable across GNU + BSD stat)
 _stat_owner() { stat -c '%u:%g' "$1" 2>/dev/null || stat -f '%u:%g' "$1" 2>/dev/null; }
 
@@ -144,6 +194,10 @@ check_db_perms() {
 set_env() {
   local k="$1" v="$2" f="$3" dir tmp own
   dir="$(dirname "$f")"
+  if [ -L "$f" ]; then
+    echo "    set_env: ABORT — refusing to write through symlink $(basename "$f")"
+    return 1
+  fi
   tmp="$(mktemp "${dir}/.env.tmp.XXXXXX")"
   trap 'rm -f "${tmp:-}" 2>/dev/null; trap - RETURN' RETURN
   if [ -f "$f" ]; then
@@ -173,6 +227,10 @@ set_env() {
 write_state() {
   local f="$1" dir tmp
   dir="$(dirname "$f")"
+  if [ -L "$f" ]; then
+    echo "write_state: ABORT — refusing to write deploy-state through symlink: $f" >&2
+    return 1
+  fi
   tmp="$(mktemp "${dir}/.deploy-state.tmp.XXXXXX")"
   trap 'rm -f "${tmp:-}" 2>/dev/null; trap - RETURN' RETURN
   cat >"$tmp"
@@ -234,32 +292,53 @@ image_git_revision() {
   fi
 }
 
-# image_contains_privacy_floor IMAGE FLOOR
-#   Check if the given IMAGE contains the privacy floor commit FLOOR.
-#   Contract:
-#     - floor absent/empty -> allow (return 0)
-#     - floor short SHA resolves correctly via Git
+# effective_privacy_floor [RUNTIME_FLOOR]  → prints the effective floor SHA (full
+#   40-hex), fail-closed. The floor is the STRONGER of two inputs:
+#     • PRIVACY_BASELINE_SHA — the immutable, in-code minimum (always applies).
+#     • RUNTIME_FLOOR         — an optional value from deploy-state; it may only
+#                               RAISE the bar, i.e. it is honoured ONLY when it is
+#                               the baseline itself or a descendant of it.
+#   A missing / empty / malformed / unresolvable / weaker (ancestor) / unrelated
+#   runtime floor is IGNORED and the baseline stands — never a downgrade, never an
+#   "allow-any". Returns 1 (prints nothing) ONLY if the baseline cannot be resolved
+#   in the local git repo (a broken/incomplete checkout) — callers then reject.
+effective_privacy_floor() {
+  local runtime="${1:-}" baseline_resolved runtime_resolved
+  baseline_resolved="$(git rev-parse --verify "${PRIVACY_BASELINE_SHA}^{commit}" 2>/dev/null)" || return 1
+  if [ -n "$runtime" ]; then
+    runtime_resolved="$(git rev-parse --verify "${runtime}^{commit}" 2>/dev/null || true)"
+    # Honour the runtime floor only if it is baseline-or-newer (strengthens).
+    if [ -n "$runtime_resolved" ] &&
+      git merge-base --is-ancestor "$baseline_resolved" "$runtime_resolved" 2>/dev/null; then
+      printf '%s' "$runtime_resolved"
+      return 0
+    fi
+  fi
+  printf '%s' "$baseline_resolved"
+}
+
+# image_contains_privacy_floor IMAGE [RUNTIME_FLOOR]  → 0 if the image's baked git
+#   revision is at or newer than the EFFECTIVE floor (baseline, possibly raised by
+#   a valid runtime floor); 1 otherwise.
+#   FAIL-CLOSED contract:
+#     - effective floor = max(baseline, valid-runtime-floor); baseline ALWAYS applies
+#     - empty/missing/malformed/weaker/unrelated RUNTIME_FLOOR does NOT weaken it
 #     - candidate revision is read from OCI label org.opencontainers.image.revision
-#     - candidate revision must be a full 40-hex Git SHA
+#       and must be a full 40-hex Git SHA (image_git_revision enforces this)
 #     - check is done only via: git merge-base --is-ancestor FLOOR CANDIDATE
-#     - candidate == floor -> allow (0)
-#     - descendant -> allow (0)
-#     - ancestor -> reject (1)
-#     - unrelated -> reject (1)
-#     - malformed/missing label or Git object -> fail closed (1)
+#     - candidate == floor / descendant -> allow (0)
+#     - candidate ancestor (pre-floor) / unrelated -> reject (1)
+#     - unresolvable baseline, missing/malformed label, missing Git object -> reject (1)
 #     - no timestamp/version/lexical comparison is performed
 image_contains_privacy_floor() {
   local img="$1"
-  local floor="${2:-}"
-  if [ -z "$floor" ]; then
-    return 0
-  fi
-  local candidate
+  local runtime="${2:-}"
+  local floor candidate candidate_resolved
+  floor="$(effective_privacy_floor "$runtime")" || return 1
+  [ -n "$floor" ] || return 1
   candidate="$(image_git_revision "$img")" || return 1
-  local floor_resolved candidate_resolved
-  floor_resolved="$(git rev-parse --verify "${floor}^{commit}" 2>/dev/null)" || return 1
   candidate_resolved="$(git rev-parse --verify "${candidate}^{commit}" 2>/dev/null)" || return 1
-  if git merge-base --is-ancestor "$floor_resolved" "$candidate_resolved" 2>/dev/null; then
+  if git merge-base --is-ancestor "$floor" "$candidate_resolved" 2>/dev/null; then
     return 0
   fi
   return 1

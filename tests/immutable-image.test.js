@@ -664,12 +664,20 @@ function runRollbackSim(scenario, tagArg = '') {
   }
 }
 
-test('rollback-sim: floor empty → legacy rollback allowed', () => {
+test('rollback-sim: empty runtime floor → baseline enforced; a baseline-DESCENDANT target is allowed', () => {
+  // Fail-closed: an empty runtime floor no longer means "allow-any" — the immutable
+  // baseline still applies. floor-empty uses a baseline-descendant candidate, so it
+  // is allowed; the PRE-baseline case is covered by rollback-sim floor-empty-prefloor
+  // (tests/privacy-floor.test.js).
   const r = runRollbackSim('floor-empty');
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /STATUS=ROLLED_BACK/);
   assert.match(r.out, /ENV_SPYGLASS_TAG=targettag/);
-  assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=\s*$/m, 'floor should be empty in state');
+  assert.match(
+    r.out,
+    /PRIVACY_FLOOR_BUILD_SHA=\s*$/m,
+    'runtime floor stays empty in state (baseline is in code)',
+  );
 });
 
 test('rollback-sim: candidate == floor → allowed', () => {

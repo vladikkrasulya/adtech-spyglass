@@ -39,11 +39,11 @@ READY_TIMEOUT="${READY_TIMEOUT:-120}"
 APP_VERSION="$(node -p "require('./package.json').version")"
 VER="v${APP_VERSION}"
 
-if [ -f "$STATE_FILE" ]; then
-  FLOOR="$(grep -E '^PRIVACY_FLOOR_BUILD_SHA=' "$STATE_FILE" 2>/dev/null | cut -d= -f2 || true)"
-else
-  FLOOR=""
-fi
+# RUNTIME floor from the deploy-state (parsed as DATA via state_get — never
+# sourced, symlink-refusing, charset-sanitized). This may only RAISE the bar; the
+# immutable PRIVACY_BASELINE_SHA (deploy-lib.sh) is ALWAYS enforced even when this
+# is empty/missing/malformed. So a wiped or reset state can never disable the floor.
+FLOOR="$(state_get "$STATE_FILE" PRIVACY_FLOOR_BUILD_SHA)"
 
 # 1. Gate — deploy only from a clean main == origin/main.
 git fetch -q origin

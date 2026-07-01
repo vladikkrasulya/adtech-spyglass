@@ -6,9 +6,16 @@
 # throwaway DATA_DIR + .env.
 #
 # Usage: rollback-floor-sim.sh <scenario> [rollback_tag_override]
-#   scenario ∈ { floor-empty, candidate-eq-floor, candidate-descendant,
-#                candidate-ancestor, unrelated-candidate, missing-label,
-#                malformed-label, missing-git-object, rollback-up-fail }
+#   scenario ∈ { floor-empty, floor-empty-prefloor, candidate-eq-floor,
+#                candidate-descendant, candidate-ancestor, unrelated-candidate,
+#                missing-label, malformed-label, missing-git-object,
+#                rollback-up-fail }
+#
+# NOTE: the guard is FAIL-CLOSED against an immutable baseline
+# (PRIVACY_BASELINE_SHA in scripts/deploy-lib.sh). An empty/absent RUNTIME floor
+# does NOT mean "allow-any" — the baseline still applies. `floor-empty` therefore
+# uses a baseline-DESCENDANT candidate (allowed); `floor-empty-prefloor` uses a
+# PRE-baseline candidate that must be REJECTED even with no runtime floor.
 
 set -u
 SCEN="${1:?scenario required}"
@@ -22,13 +29,20 @@ DATA="$WORK/data"
 mkdir -p "$BIN" "$DATA"
 trap 'rm -rf "$WORK"' EXIT
 
-# Floor commit revision to simulate
-FLOOR_REV="2437646243764624376462437646243764624376"
+# The immutable privacy baseline — MUST equal PRIVACY_BASELINE_SHA in
+# scripts/deploy-lib.sh so the mock git resolves the in-code baseline.
+FLOOR_REV="24376462c3fd1988447b26ee69a897190bdeac1a"
 
 # Candidate OCI revision commit based on scenario
 case "$SCEN" in
   floor-empty)
-    # Floor is empty, candidate revision doesn't matter (we can use ancestor)
+    # Empty RUNTIME floor → baseline still applies. Candidate is a baseline
+    # DESCENDANT → must be ALLOWED (empty floor never blocks a good image).
+    CANDIDATE_REV="ffffffffffffffffffffffffffffffffffffffff"
+    ;;
+  floor-empty-prefloor)
+    # Empty RUNTIME floor + a PRE-baseline candidate → must be REJECTED
+    # (fail-closed: omitting the floor line can never disable the baseline).
     CANDIDATE_REV="a43adada43adada43adada43adada43adada43ad"
     ;;
   candidate-eq-floor)
@@ -89,6 +103,10 @@ case "\$1" in
         exit 1
         ;;
       unrelated-candidate)
+        exit 1
+        ;;
+      floor-empty-prefloor)
+        # baseline vs pre-baseline candidate → NOT an ancestor → reject
         exit 1
         ;;
       missing-git-object)
@@ -166,9 +184,10 @@ ROLLBACK_TAG=targettag
 STATUS=ACTIVE
 EOF
 
-if [ "$SCEN" != "floor-empty" ]; then
-  echo "PRIVACY_FLOOR_BUILD_SHA=$FLOOR_REV" >> "$DATA/deploy-state.env"
-fi
+case "$SCEN" in
+  floor-empty | floor-empty-prefloor) : ;; # leave the RUNTIME floor UNSET
+  *) echo "PRIVACY_FLOOR_BUILD_SHA=$FLOOR_REV" >> "$DATA/deploy-state.env" ;;
+esac
 
 # Run the real rollback.sh
 PATH="$BIN:$PATH" \

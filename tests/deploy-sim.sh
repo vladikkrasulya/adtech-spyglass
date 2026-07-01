@@ -40,6 +40,10 @@ case "$SCEN" in
   floor-candidate-unrelated) FLOOR="2437646"; export CANDIDATE_REV="bbbb000000000000000000000000000000000000" ;;
   floor-candidate-missing-oci) FLOOR="2437646"; export CANDIDATE_REV="" ;;
   floor-candidate-missing-git) FLOOR="2437646"; export CANDIDATE_REV="beef000000000000000000000000000000000000" ;;
+  # State WIPED (no PRIVACY_FLOOR line at all) + a PRE-baseline candidate. Proves
+  # the immutable baseline is enforced even with an empty runtime floor: a deleted
+  # /reset deploy-state can NOT disable the floor and re-open a pre-privacy image.
+  floor-reset-prefloor) export CANDIDATE_REV="a43adad666b8eb8601391fa95c6a2b4aad699f63" ;;
 esac
 if [ -n "$FLOOR" ]; then
   cat > "$DATA/deploy-state.env" <<EOF

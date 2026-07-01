@@ -28,12 +28,14 @@ STATE_FILE="$DATA_DIR/deploy-state.env"
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
 
 # Resolve the target tag: explicit arg, else ROLLBACK_TAG from the deploy state.
-ROLLBACK_TAG=""
-PRIVACY_FLOOR_BUILD_SHA=""
-if [ -f "$STATE_FILE" ]; then
-  # shellcheck disable=SC1090
-  . "$STATE_FILE"
-fi
+# The state file is PARSED as data via state_get (deploy-lib.sh) — identical policy
+# to deploy.sh — and is NEVER sourced. Sourcing would execute arbitrary shell from
+# a crafted `KEY=$(cmd)` line; state_get also refuses a symlinked state file and
+# strips every shell metacharacter. The RUNTIME floor read here can only RAISE the
+# immutable baseline (deploy-lib.sh PRIVACY_BASELINE_SHA); an empty/missing/malformed
+# value cannot disable the floor.
+ROLLBACK_TAG="$(state_get "$STATE_FILE" ROLLBACK_TAG)"
+PRIVACY_FLOOR_BUILD_SHA="$(state_get "$STATE_FILE" PRIVACY_FLOOR_BUILD_SHA)"
 TAG="${1:-${ROLLBACK_TAG:-}}"
 [ -n "$TAG" ] || { echo "ABORT: no rollback tag given and none recorded in ${STATE_FILE}"; exit 2; }
 
