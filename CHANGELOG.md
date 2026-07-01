@@ -19,6 +19,26 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.3.2 — SEO: canonical route normalization + real SPA subroute 404s
+
+Front-end shell only — `packages/core` unchanged (`0.30.1`).
+
+- **Canonical path normalization.** `resolveLocaleRoute()` (now in
+  `lib/locale-routes.js`) lowercases paths and strips trailing slashes in a
+  single 301 hop; root `/` keeps its existing 302 → `/inspector`.
+- **Incomplete blog redirects.** `/blog/{lang}`, `/uk/blog/{lang}`,
+  `/ru/blog/{lang}` (lang ∈ en|uk|ru) 301 to the locale blog list — including
+  when combined with uppercase/trailing-slash normalization (`/BLOG/EN/` →
+  `/blog` in one redirect).
+- **SPA sub-route allowlist.** Replaced the broad `/<section>/<sub>` shell
+  contract with an explicit allowlist (`docs/findings` only). Unknown subroutes
+  like `/docs/unknown` fall through to a real HTTP 404 — no client-side noindex
+  substitute.
+- **Cross-locale blog deep routes preserved.** `/uk/blog/ru/<slug>` and
+  `/ru/blog/uk/<slug>` remain valid 200 shells.
+- **Tests.** `tests/locale-routes.test.js` — uppercase/trailing-slash redirects,
+  incomplete blog paths, allowlist 200/404 matrix, query stability.
+
 ### v1.3.1 — core: dialect question message interpolation
 
 `packages/core` patch (`0.30.0` → `0.30.1`) — front-end shell unchanged except
