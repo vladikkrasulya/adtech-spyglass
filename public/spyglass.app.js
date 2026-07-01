@@ -679,8 +679,14 @@ export async function mountInspector(root, ctx) {
   function findAdm(obj) {
     if (!obj || typeof obj !== 'object') return null;
     if (obj.adm) return obj.adm;
-    if (obj.nurl && typeof obj.nurl === 'string')
-      return '<img src="' + escapeHtml(obj.nurl) + '" style="width:100%"/>';
+    // adm-less fallback: `iurl` is the oRTB Bid object's "sample image URL …
+    // for content checking" — a real static image, the correct thing to render.
+    // We deliberately DO NOT fall back to `nurl`/`burl`: those are win/billing
+    // NOTICE urls (tracking beacons fired by the exchange), not creatives — they
+    // return HTML/204/JSON, never image bytes, so `<img src=nurl>` only paints a
+    // broken-image icon (ORB-blocked). A nurl-only bid → no renderable creative.
+    if (obj.iurl && typeof obj.iurl === 'string')
+      return '<img src="' + escapeHtml(obj.iurl) + '" style="width:100%"/>';
     for (const k in obj) {
       if (typeof obj[k] === 'object' && obj[k] !== null) {
         const f = findAdm(obj[k]);
