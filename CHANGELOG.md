@@ -19,6 +19,35 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.3.0 — session: shell-level SpyglassSession + chrome auth modal (ROADMAP #18)
+
+Front-end-only minor — no backend (`server.js`) and no `packages/core` change;
+`packages/core` version is unchanged (`0.30.0`).
+
+- **Shell-level session service.** [`public/core/session.js`](../public/core/session.js)
+  owns authenticated user, DEK (`CryptoKey`), pending-unlock, the authenticated
+  `api()` helper, DEK persist/restore, crypto lifecycle
+  (`openFromPassword` / `bootstrap` / `importDEKFromBytes` / `clearDEK` /
+  `clearSession`), canonical `/api/auth/me` boot, and `auth:changed`
+  notification — installed once by [`public/shell-boot.js`](../public/shell-boot.js)
+  for the whole page lifecycle, independent of which section is mounted.
+- **Compatibility facade.** `installSessionFacade()` exposes
+  `window.SpyglassSession` (`__shellOwned`) with the same consumer surface;
+  inspector-specific getters/renderers route through a generation-safe adapter
+  registered on mount (no-op when unmounted — auth works from every section).
+- **Chrome modal host.** [`public/core/modal-host.js`](../public/core/modal-host.js)
+  owns the single `#modalRoot` node (declared once in `index.{en,uk,ru}.html`,
+  sibling of `#app-root`) for auth/unlock/recovery/password-reset and related
+  modal dispatch — sign-in from `/docs`, `/library`, or `/live` opens in place
+  with zero route change (the old `/inspector?auth=login` bounce is gone).
+- **Zero-knowledge invariants preserved.** DEK never leaves the service module;
+  password is never cached; logout wipes memory + `sessionStorage`; stale
+  `/api/auth/me` responses are gen-guarded; Inspector unmount does not destroy
+  the shell session.
+- **Tests.** New [`tests/session-hoist.test.js`](../tests/session-hoist.test.js)
+  — runtime (jsdom + fresh ESM instances), static wiring assertions, and
+  inspector-reentrant test updates for the new ownership split.
+
 ### v1.2.5 — inspector: re-entrant SPA mount (ROADMAP #19)
 
 Front-end-only patch — no backend (`server.js`) and no `packages/core` change;

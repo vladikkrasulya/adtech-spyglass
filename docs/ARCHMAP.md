@@ -8,9 +8,8 @@ shifts a connection.
 > **Never trust this doc 100%** — verify with grep. But if a grep result
 > contradicts the map, fix the map.
 
-Last touched: 2026-05-13 (post the UX-polish wave v0.42.1 → v0.42.10
-that closed the 2026-05-12 GPT-5.5 vision audit; modularization
-state unchanged from 2026-05-10).
+Last touched: 2026-07-01 (ROADMAP #18 session hoist v1.3.0; #19 re-entrant
+inspector v1.2.5).
 
 ## 0.1 What changed 2026-05-10 → 2026-05-13
 
@@ -93,22 +92,34 @@ public/modules/                frontend tool folders (loaded eager via <script>
 ├── mirror/ live/ simulate/    dispatcher in public/spyglass.app.js)
 │   corpus-save/ partners/     each folder has index.js + i18n.js + README.md.
 │   auth/ unlock/ recovery/    Crypto goes through window.SpyglassSession facade
-│   password-reset/            so DEK never leaves the spyglass.app.js closure.
-│   save-sample/ edit-sample/
-├── inspector/                 workbench template + mount lifecycle
+│   password-reset/            (owned by public/core/session.js — DEK never
+│   save-sample/ edit-sample/  leaves the service module).
+├── inspector/                 workbench template + mount lifecycle; registers
+│                              an inspector adapter with the shell session on
+│                              mount (sample/dirty/partner + DOM renderers).
 ├── intel/ behavior/           pre-modularization split (banner/builder/observer/…)
 └── README.md                  module contract: folder layout, lifecycle, comms
+
+public/core/                   chrome-level services (installed once by shell-boot)
+├── session.js                 shell-level SpyglassSession + zero-knowledge crypto
+│                              (user, DEK, api(), ensureBooted, auth:changed,
+│                              installSessionFacade → window.SpyglassSession)
+├── modal-host.js              single #modalRoot owner + modal dispatch for auth/
+│                              unlock/recovery/password-reset (sibling of #app-root)
+├── registry.js                section lazy-load registry
+└── utils.js                   toast, t() helpers
 
 server.js                      ~868 LOC shell. Reads top-level deps, builds the
                                 Router, registers all 14 backend modules, runs the
                                 static-file fallback, owns the auth + crypto
                                 closure that backend modules access via DI.
 
-public/spyglass.app.js         ~4467 LOC inspector shell. Dispatcher routes
+public/spyglass.app.js         inspector workbench shell. Dispatcher routes
                                 `data-action="..."` clicks to module lazy stubs.
-                                window.SpyglassSession exposes encryptBlob /
+                                Session/crypto → public/core/session.js via the
+                                window.SpyglassSession facade (encryptBlob /
                                 decryptBlob / bootstrap / openFromPassword
-                                without leaking the DEK bytes.
+                                without leaking the DEK bytes).
 ```
 
 **Rule of thumb when fixing a bug**:
@@ -117,8 +128,9 @@ public/spyglass.app.js         ~4467 LOC inspector shell. Dispatcher routes
 2. Back-end API broken → look in `modules/<tool>/handler.js` first.
 3. Both → start from the front-end module; back-end route name is right
    there in the `fetch(...)` call.
-4. Auth or crypto → `server.js` IIFE owns `_sessionDEK` + auth lifecycle.
-   `window.SpyglassSession` facade is the docs.
+4. Auth or crypto → `public/core/session.js` owns DEK + auth lifecycle for the
+   whole page; `window.SpyglassSession` facade is the browser docs. Backend auth
+   still lives in `server.js` IIFE (`_sessionDEK` + auth routes).
 
 ---
 
@@ -444,6 +456,39 @@ section, instead of forcing a full page reload.
   10× mount→unmount cycles (no listener/timer/facade leak), stale-continuation
   guards, idempotent teardown, and static assertions that the guards are present
   in source.
+
+### 1.3.10 Shell-level session + chrome modal host (app 1.3.0)
+
+ROADMAP #18 — `SpyglassSession` hoisted from the `mountInspector()` closure to a
+shell-level service so auth/DEK exist for the whole page lifecycle.
+
+- **Session ownership** — [`public/core/session.js`](../public/core/session.js)
+  owns authenticated user, DEK (`CryptoKey`), pending-unlock, the authenticated
+  `api()` helper, DEK persist/restore (`sessionStorage` key `kt-dek-v1`), crypto
+  lifecycle (`openFromPassword` / `bootstrap` / `importDEKFromBytes` / `clearDEK`
+  / `clearSession`), canonical `/api/auth/me` boot (`ensureBooted`), and
+  `auth:changed` notification. Installed once by
+  [`public/shell-boot.js`](../public/shell-boot.js) via `installSessionFacade()`.
+- **State machine / stale-guard** — module-private `_authGen` bumps on every
+  `setUser` / `clearSession`; `ensureBooted()` captures the generation at start
+  and refuses to apply a stale `/api/auth/me` response if login/logout raced
+  meanwhile. Inspector adapter uses a separate `_adapterGen` token so unmount
+  cannot clear a newer mount's adapter.
+- **Facade + adapter split** — `window.SpyglassSession` (`__shellOwned`) exposes
+  session/crypto surface unchanged; inspector-specific getters/renderers
+  (`currentSampleId`, `refreshSamples`, `renderAuthWidget`, …) route through
+  `registerAdapter` / `adapt()` — no-op when Inspector is unmounted, so auth
+  works from every section without DOM errors.
+- **Modal lifecycle** — [`public/core/modal-host.js`](../public/core/modal-host.js)
+  owns the single `#modalRoot` node (declared once in `index.{en,uk,ru}.html`,
+  sibling of `#app-root`, outside section mount/unmount). Delegates modal
+  `data-action` clicks to existing `window.*` globals (`doLogin`, `confirmSave`,
+  …); `lazyOpenAuth()` lets topbar/sections open auth in place with zero route
+  change.
+- **Zero-knowledge invariants** — DEK never exported raw; password never cached;
+  `signOut()` / `clearSession()` wipe memory + persisted DEK; no secrets logged.
+- **Tests** — [`session-hoist`](../tests/session-hoist.test.js): runtime (jsdom +
+  fresh ESM instances), static wiring assertions across the import boundary.
 
 ### 1.4 Consumers
 
