@@ -10,7 +10,11 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveLocaleRoute, SAME_ORIGIN_REDIRECT_RE } = require('../lib/locale-routes');
+const {
+  resolveLocaleRoute,
+  SAME_ORIGIN_REDIRECT_RE,
+  ASCII_REDIRECT_RE,
+} = require('../lib/locale-routes');
 
 function expectFile(path, shell) {
   const r = resolveLocaleRoute(path);
@@ -26,6 +30,8 @@ function expectRedirect(path, location, status) {
   if (status !== undefined) assert.equal(r.status, status, `${path}: status`);
   else assert.equal(r.status, undefined, `${path}: default 301`);
   assert.equal(r.file, undefined, `${path}: no file`);
+  assert.doesNotMatch(r.redirect, /%/, `${path}: redirect must not contain %`);
+  assert.match(r.redirect, ASCII_REDIRECT_RE, `${path}: redirect must be ASCII`);
 }
 
 function expect404(path) {
@@ -203,5 +209,41 @@ test('every redirect in matrix satisfies /^\\/(?!\\/)/', () => {
       SAME_ORIGIN_REDIRECT_RE,
       `${path} → ${r.redirect}: must be same-origin relative`,
     );
+    assert.doesNotMatch(r.redirect, /%/, `${path}: redirect must not contain %`);
+    assert.match(r.redirect, ASCII_REDIRECT_RE, `${path}: redirect must be ASCII`);
   }
+});
+
+// ── encoded-path alias hardening (raw ASCII routing only) ───────────────────
+
+const ENCODED_ALIAS_PATHS = [
+  '/docs%2Ffindings',
+  '/docs%252Ffindings',
+  '/%64ocs',
+  '/docs/%E2%98%83',
+  '/%68ttp://evil.com',
+  '/%5Cevil.com',
+  '/%5cevil.com',
+  '/uk/%64ocs/findings',
+];
+
+test('percent-encoded path aliases → null (real 404, no decoded routing)', () => {
+  for (const path of ENCODED_ALIAS_PATHS) {
+    expect404(path);
+  }
+});
+
+test('canonical ASCII routes still work after encoded-alias hardening', () => {
+  expectFile('/docs/findings', '/index.en.html');
+  expectRedirect('/DOCS', '/docs');
+  expectRedirect('/docs/', '/docs');
+  expectRedirect('/UK/DOCS/FINDINGS/', '/uk/docs/findings');
+});
+
+test('query string ignored for pathname validation (encoded alias in path only)', () => {
+  expect404('/docs%2Ffindings?foo=bar');
+  const r = resolveLocaleRoute('/DOCS/?foo=bar');
+  assert.ok(r);
+  assert.equal(r.redirect, '/docs');
+  assert.doesNotMatch(r.redirect, /%/);
 });
