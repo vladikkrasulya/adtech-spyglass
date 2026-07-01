@@ -10,7 +10,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveLocaleRoute } = require('../lib/locale-routes');
+const { resolveLocaleRoute, SAME_ORIGIN_REDIRECT_RE } = require('../lib/locale-routes');
 
 function expectFile(path, shell) {
   const r = resolveLocaleRoute(path);
@@ -137,4 +137,71 @@ test('canonical redirects default to 301; root stays 302', () => {
   expectRedirect('/DOCS', '/docs');
   assert.equal(resolveLocaleRoute('/DOCS').status, undefined);
   expectRedirect('/', '/inspector', 302);
+});
+
+// ── same-origin redirect invariant (open-redirect hardening) ────────────────
+
+const MALFORMED_PATHS = [
+  '//evil.com/',
+  '//evil.com',
+  '///evil.com',
+  'http://evil.com/',
+  'https://evil.com/',
+  '/\\evil.com',
+  '/\\evil.com/',
+  '/%2Fevil.com',
+  '/%2fevil.com',
+  '/%252Fevil.com',
+  '/docs%2F%2Fevil.com',
+];
+
+test('malformed/absolute-form paths → null (real 404, no external Location)', () => {
+  for (const path of MALFORMED_PATHS) {
+    expect404(path);
+  }
+});
+
+test('empty path resolves as root (302 → /inspector, explicit sentinel)', () => {
+  expectRedirect('', '/inspector', 302);
+});
+
+test('query in input preserves safe redirect target only', () => {
+  const r = resolveLocaleRoute('/DOCS/?foo=bar');
+  assert.ok(r);
+  assert.equal(r.redirect, '/docs');
+  assert.match(r.redirect, SAME_ORIGIN_REDIRECT_RE);
+});
+
+test('every redirect in matrix satisfies /^\\/(?!\\/)/', () => {
+  const matrix = [
+    '/',
+    '/DOCS',
+    '/UK/DOCS/FINDINGS',
+    '/Blog/EN/Welcome',
+    '/docs/',
+    '/uk/docs/findings/',
+    '/inspector///',
+    '/uk/blog///',
+    '/BLOG/EN/',
+    '/UK/BLOG/RU/',
+    '/blog/en',
+    '/uk/blog/ru',
+    '/ru/blog/uk',
+    '/en/docs',
+    '/stream.html',
+    '/playground',
+    '/about.html',
+    '/account.html',
+    '/en/about',
+    '',
+  ];
+  for (const path of matrix) {
+    const r = resolveLocaleRoute(path);
+    assert.ok(r && r.redirect, `${path}: expected redirect`);
+    assert.match(
+      r.redirect,
+      SAME_ORIGIN_REDIRECT_RE,
+      `${path} → ${r.redirect}: must be same-origin relative`,
+    );
+  }
 });
