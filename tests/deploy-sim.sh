@@ -97,7 +97,14 @@ case "$1 $2" in
     fi ;;
 esac
 case "$1" in
-  tag) exit 0 ;;
+  tag)
+    # Trace every `docker tag SRC DST` call so tests can inspect the EXACT tag
+    # names used across separate deploy attempts (SHA-keyed rollback retention —
+    # asserts two attempts with different PREV_BUILD_SHA_OVERRIDE never reuse the
+    # same rollback-pre-* name, so a retagged pointer never clobbers a distinct
+    # prior rollback target).
+    echo "TAG $2 -> $3" >> "$DATA/tag-trace"
+    exit 0 ;;
   inspect)
     case "$*" in
       *Health*) echo healthy ;;
@@ -122,7 +129,11 @@ case "$1" in
            echo "${CANDIDATE_REV}"
          fi
          ;;
-      *--format*) case "$SCEN" in missing-prev-sha) : ;; *) echo "BUILD_SHA=prevsha0" ;; esac ;;
+      *--format*)
+        case "$SCEN" in
+          missing-prev-sha) : ;;
+          *) echo "BUILD_SHA=${PREV_BUILD_SHA_OVERRIDE:-prevsha0}" ;;
+        esac ;;
       *) : ;;
     esac ;;
 esac

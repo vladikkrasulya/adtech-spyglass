@@ -121,14 +121,23 @@ echo "    seed ok (en/uk/ru welcome.md present, owner uid ${SEED_UID})"
 #    previous container exists but we CANNOT read a verifiable BUILD_SHA from its
 #    image, ABORT before touching .env or the running container — never deploy
 #    without a verifiable rollback target.
+#
+#    ROLLBACK_TAG is keyed by the PREVIOUS image's own immutable BUILD_SHA, NOT
+#    by APP_VERSION. Two deploys under an unchanged/unbumped version (e.g. a
+#    same-version retry after a failed attempt, or a hotfix that forgot to bump
+#    SemVer) must never collide on the same tag name and silently overwrite a
+#    DIFFERENT commit's rollback target. A SHA-keyed name is unique per distinct
+#    build: retagging the SAME commit again is a harmless no-op, and retagging a
+#    DIFFERENT commit never clobbers an existing distinct rollback pointer.
 PREV_TAG="$(grep -E '^SPYGLASS_TAG=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || true)"
 PREV_IMG="$(docker inspect "$CONTAINER" --format '{{.Image}}' 2>/dev/null || echo '')"
 PREV_SHA=""
-ROLLBACK_TAG="rollback-pre-${VER}"
+ROLLBACK_TAG=""
 if [ -n "$PREV_IMG" ]; then
-  docker tag "$PREV_IMG" "adtech-spyglass:${ROLLBACK_TAG}"
-  PREV_SHA="$(image_build_sha "adtech-spyglass:${ROLLBACK_TAG}" || true)"
+  PREV_SHA="$(image_build_sha "$PREV_IMG" || true)"
   [ -n "$PREV_SHA" ] || { echo "ABORT: previous image carries no verifiable BUILD_SHA — refusing to deploy without a checkable rollback target"; exit 2; }
+  ROLLBACK_TAG="rollback-pre-${PREV_SHA}"
+  docker tag "$PREV_IMG" "adtech-spyglass:${ROLLBACK_TAG}"
   if ! image_contains_privacy_floor "adtech-spyglass:${ROLLBACK_TAG}" "$FLOOR"; then
     echo "ABORT: previous image does not contain privacy floor ${FLOOR} — refusing to deploy"
     exit 2
