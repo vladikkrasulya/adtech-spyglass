@@ -19,6 +19,20 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.3.1 — core: dialect question message interpolation
+
+`packages/core` patch (`0.30.0` → `0.30.1`) — front-end shell unchanged except
+version surfaces.
+
+- **Finding params contract.** `dialects-questions` mirrors `finding.path` into
+  `params.path` so locale templates can interpolate `{path}` without reaching
+  into the finding envelope.
+- **Structured `recommended`.** `params.recommended` stays `{format, confidence, …}|null`;
+  EN/UK/RU message templates no longer carry a `{recommended}` placeholder, so
+  resolved `msg` never shows `[object Object]` or raw `{placeholder}` artifacts.
+- **Tests.** `tests/rules-dialects-questions.test.js` — end-to-end message
+  resolution for pop-family imp.ext and req.ext unknown signals across en/uk/ru.
+
 ### v1.3.0 — session: shell-level SpyglassSession + chrome auth modal (ROADMAP #18)
 
 Front-end-only minor — no backend (`server.js`) and no `packages/core` change;

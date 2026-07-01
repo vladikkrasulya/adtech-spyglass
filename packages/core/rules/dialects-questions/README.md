@@ -47,6 +47,22 @@ The shape heuristic decides `params.recommended` — if it's `null`, the
 UI shows "label manually". If it's `{format, confidence:'high'}`, the
 UI shows that format as the pre-selected option.
 
+## Finding params contract
+
+Each `dialects.question.unknown_ext_signal` finding carries:
+
+| param             | type                            | notes                                                        |
+| ----------------- | ------------------------------- | ------------------------------------------------------------ |
+| `path`            | `string`                        | Same as `finding.path`; duplicated for message interpolation |
+| `value`           | `string`                        | JSON-stringified signal value                                |
+| `candidates`      | `Array`                         | Shape-based format candidates (imp-level only)               |
+| `recommended`     | `{format, confidence, …}\|null` | Structured object or `null`; never stringified into `msg`    |
+| `shape_signature` | `string`                        | Fingerprint for dialect recognition                          |
+
+`finding.path` remains the canonical location. `params.path` mirrors it so
+the locale resolver can interpolate `{path}` without reaching into the
+finding envelope.
+
 ## Cap
 
 20 question findings per payload max. Payloads with many vendor fields
