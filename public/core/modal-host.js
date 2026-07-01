@@ -122,6 +122,14 @@ function bindModalDispatcher(modalRoot) {
         return;
 
       // — auth / unlock / recovery / reset action verbs —
+      // 'open-auth' is dual-subtree, same reasoning as 'signout' below: the
+      // auth modal's own login↔register mode-switch link carries
+      // data-action="open-auth" and renders INSIDE #modalRoot, so it needs a
+      // copy here — Inspector's inline auth-widget button (data-action=
+      // "open-auth" too, but living in its own template inside #app-root)
+      // keeps the copy in Inspector's own dispatcher.
+      case 'open-auth':
+        return window.lazyOpenAuth(el.dataset.mode || 'login');
       case 'do-auth':
         return el.dataset.mode === 'register'
           ? window.doRegister && window.doRegister()

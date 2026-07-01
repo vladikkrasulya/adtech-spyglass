@@ -26,7 +26,7 @@
    ============================================================ */
 'use strict';
 
-import { toast, t } from '/core/utils.js';
+import { toast, t } from './utils.js';
 
 // SpyglassCrypto is a browser global (loaded via <script> in the shell); it is
 // the SAME primitive the inspector used — crypto behaviour is byte-for-byte
