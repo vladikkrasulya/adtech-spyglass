@@ -3064,12 +3064,17 @@ export async function mountInspector(root, ctx) {
     }
   }
 
-  async function api(method, url, body) {
+  async function api(method, url, body, opts = {}) {
     const init = {
       method,
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
     };
+    // Re-entrancy: a caller reading on behalf of THIS mount passes ctx.signal so
+    // its GET is aborted on unmount. Mutations and cross-section callers (the
+    // SpyglassSession.api facade, used by auth from other sections) omit it so
+    // they always run to completion — never abort a mutation mid-flight.
+    if (opts.signal) init.signal = opts.signal;
     if (body !== undefined) init.body = JSON.stringify(body);
     // Force absolute path so calls work after seamless lang-switch shifts
     // pathname to /uk/ or /ru/ (callers pass 'api/...' historically).
@@ -3104,7 +3109,8 @@ export async function mountInspector(root, ctx) {
 
   async function bootAuth() {
     try {
-      const j = await api('GET', 'api/auth/me');
+      const j = await api('GET', 'api/auth/me', undefined, { signal: ctx.signal });
+      if (ctx.signal.aborted) return; // unmounted during the request
       _currentUser = j.user || null;
       // Locale stickiness: if the user has a server-stored
       // preferred_locale that differs from the URL we're on, soft-
@@ -3141,6 +3147,7 @@ export async function mountInspector(root, ctx) {
       // the DEK was cleared), surface the unlock CTA in the saved-list.
       if (j.user && j.encryption) {
         const restored = await loadPersistedDEK();
+        if (ctx.signal.aborted) return; // unmounted during DEK restore
         if (restored) {
           _sessionDEK = restored;
           _pendingUnlock = false;
@@ -3154,6 +3161,7 @@ export async function mountInspector(root, ctx) {
         clearPersistedDEK();
       }
     } catch {
+      if (ctx.signal.aborted) return; // unmounted mid-boot — don't paint auth chrome
       _currentUser = null;
       _sessionDEK = null;
       _pendingUnlock = false;
@@ -3636,7 +3644,8 @@ export async function mountInspector(root, ctx) {
       return;
     }
     try {
-      const j = await api('GET', 'api/partners');
+      const j = await api('GET', 'api/partners', undefined, { signal: ctx.signal });
+      if (ctx.signal.aborted) return; // unmounted during the request
       _partnerCache = j.partners || [];
       const sel = $('partnerFilter');
       const cur = sel.value;
@@ -3652,6 +3661,7 @@ export async function mountInspector(root, ctx) {
           .join('');
       if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
     } catch (e) {
+      if (ctx.signal.aborted) return; // unmounted — don't paint/toast into a remount
       if (e.status === 401) {
         // session expired — fall back to anonymous state cleanly
         _currentUser = null;
@@ -3695,7 +3705,8 @@ export async function mountInspector(root, ctx) {
     const v = sel.value;
     const qs = v === '' ? '' : '?partner_id=' + encodeURIComponent(v);
     try {
-      const j = await api('GET', 'api/samples' + qs);
+      const j = await api('GET', 'api/samples' + qs, undefined, { signal: ctx.signal });
+      if (ctx.signal.aborted) return; // unmounted during the request
       const list = j.samples || [];
       if (!list.length) {
         // No saved samples — keep the wrapper visible only when the user
@@ -3755,6 +3766,7 @@ export async function mountInspector(root, ctx) {
         })
         .join('');
     } catch (e) {
+      if (ctx.signal.aborted) return; // unmounted — don't paint/toast into a remount
       if (e.status === 401) {
         _currentUser = null;
         renderAuthWidget();
@@ -3982,11 +3994,12 @@ export async function mountInspector(root, ctx) {
       }
     }
     try {
-      const j = await api('GET', 'api/samples/' + id);
+      const j = await api('GET', 'api/samples/' + id, undefined, { signal: ctx.signal });
       const s = j.sample;
       // Decrypt locally — server returned opaque ciphertext + IVs.
       const reqText = await SpyglassCrypto.decryptBlob(_sessionDEK, s.req_iv, s.bid_req);
       const resText = await SpyglassCrypto.decryptBlob(_sessionDEK, s.res_iv, s.bid_res);
+      if (ctx.signal.aborted) return; // unmounted during fetch/decrypt — don't fill a remount's editors
       $('bidReq').value = reqText;
       $('bidRes').value = resText;
       updateCharCount('bidReq');
@@ -4007,6 +4020,7 @@ export async function mountInspector(root, ctx) {
       // back in" — fixes both legitimate causes (rotated DEK, stale
       // session DEK reference). Don't echo the raw exception name —
       // 'OperationError' is meaningless to non-cryptographers.
+      if (ctx.signal.aborted) return; // unmounted — swallow the abort, don't toast into a remount
       console.error('[loadSample]', e);
       toast(t('toast.decrypt_failed_with_hint'), 'error');
     }
@@ -4025,7 +4039,8 @@ export async function mountInspector(root, ctx) {
     }
     try {
       const url = '/api/v1/sample' + (type ? '?type=' + encodeURIComponent(type) : '');
-      const j = await fetch(url).then((r) => r.json());
+      const j = await fetch(url, { signal: ctx.signal }).then((r) => r.json());
+      if (ctx.signal.aborted) return; // unmounted during the request
       if (!j || !j.success) throw new Error(j && j.error ? j.error : 'unexpected');
       $('bidReq').value = JSON.stringify(j.bid_request, null, 2);
       $('bidRes').value = JSON.stringify(j.bid_response, null, 2);
@@ -4038,6 +4053,7 @@ export async function mountInspector(root, ctx) {
       // Auto-close the dropdown after pick.
       document.querySelectorAll('.kt-example-menu[open]').forEach((d) => d.removeAttribute('open'));
     } catch (e) {
+      if (ctx.signal.aborted) return; // unmounted — swallow the abort, don't toast into a remount
       console.error('[loadDemoSample]', e);
       toast(t('toast.sample_load_failed'), 'error');
     }
@@ -4046,7 +4062,10 @@ export async function mountInspector(root, ctx) {
   async function deleteSample(id) {
     if (!confirm(t('confirm.delete_sample'))) return;
     try {
+      // Mutation: NOT aborted on unmount (let the delete complete server-side);
+      // we only guard the response so it can't refresh/toast into a remount.
       await api('DELETE', 'api/samples/' + id);
+      if (ctx.signal.aborted) return;
       // If the deleted sample is the one currently loaded, drop the anchor
       // so the next save creates a fresh record (not a 404 PATCH).
       if (_currentSampleId === id) {
@@ -4056,6 +4075,7 @@ export async function mountInspector(root, ctx) {
       toast(t('toast.deleted'), 'success');
       refreshSamples();
     } catch (e) {
+      if (ctx.signal.aborted) return;
       toast(t('toast.delete_failed', { error: e.message }), 'error');
     }
   }
@@ -4400,14 +4420,20 @@ export async function mountInspector(root, ctx) {
             const id = Number(el.dataset.corpusId);
             if (!id) return;
             if (!confirm(t('confirm.corpus_delete'))) return;
+            // Mutation: the DELETE runs to completion; guard the response so an
+            // unmount can't refresh/toast the corpus into a remount.
             fetch('/api/behavior/corpus/' + id, { method: 'DELETE' })
               .then((r) => r.json())
               .then((j) => {
+                if (ctx.signal.aborted) return;
                 if (!j.success) throw new Error(j.error || 'delete_failed');
                 if (window.refreshCorpus) window.refreshCorpus();
                 toast(t('toast.corpus_deleted'), 'success');
               })
-              .catch((e) => toast(t('toast.corpus_delete_failed', { error: e.message }), 'error'));
+              .catch((e) => {
+                if (ctx.signal.aborted) return;
+                toast(t('toast.corpus_delete_failed', { error: e.message }), 'error');
+              });
             return;
           }
           case 'live-pause':
@@ -4920,8 +4946,12 @@ export async function mountInspector(root, ctx) {
       { capture: true, signal: ctx.signal },
     );
 
+    // Initial boot sequence — halt if the mount was torn down during any step
+    // so we don't run later refresh steps (or paint) against a remount.
     await bootAuth();
+    if (ctx.signal.aborted) return;
     await refreshPartners();
+    if (ctx.signal.aborted) return;
     refreshSamples();
 
     // F5-survival for the recovery-key modal: if a key was on screen but
@@ -4944,7 +4974,10 @@ export async function mountInspector(root, ctx) {
         if (pending) {
           // queueMicrotask so the inspector template has a moment to mount
           // (the module writes into #modalRoot which is shell-level).
-          queueMicrotask(() => openRecoveryKeyModalLazy(pending));
+          queueMicrotask(() => {
+            if (ctx.signal.aborted) return; // unmounted before the microtask ran
+            openRecoveryKeyModalLazy(pending);
+          });
         }
       } else if (pending) {
         // User isn't authed anymore — no point keeping a stale key.

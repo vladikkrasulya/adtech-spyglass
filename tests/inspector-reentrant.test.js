@@ -214,12 +214,15 @@ test('stale async continuation from mount N is guarded by ctx.signal.aborted and
 
 test('contract contrast: a listener NOT bound to ctx.signal leaks past deactivate (why drag handlers must pass {signal})', async () => {
   let leaked = 0;
+  // Keep a stable reference: removeEventListener only detaches when handed the
+  // SAME function object (a fresh arrow removes nothing).
+  const leakyHandler = () => leaked++;
   registry.register({
     id: 'reentrant-leaky',
     async mount() {
       // Deliberately UNSCOPED — no {signal}, no addCleanup. This is the bug
       // class fixed in mountInspector's window mousemove/mouseup drag handlers.
-      global.window.addEventListener('kt:leak-ping', () => leaked++);
+      global.window.addEventListener('kt:leak-ping', leakyHandler);
     },
   });
   await registry.activate('reentrant-leaky', root());
@@ -230,8 +233,10 @@ test('contract contrast: a listener NOT bound to ctx.signal leaks past deactivat
     1,
     'unscoped listener survives deactivate — registry cleans ONLY contract-bound resources',
   );
-  // Clean it up so it can't bleed into other tests.
-  global.window.removeEventListener('kt:leak-ping', () => {});
+  // Detach by the same reference so it can't bleed into other tests.
+  global.window.removeEventListener('kt:leak-ping', leakyHandler);
+  global.window.dispatchEvent(new global.CustomEvent('kt:leak-ping'));
+  assert.equal(leaked, 1, 'removeEventListener with the saved reference actually detached it');
 });
 
 // ── STATIC: the specific mountInspector / shell-boot fixes are present ───────
@@ -286,4 +291,111 @@ test('static: shell-boot no longer force-reloads onto the inspector (mitigation 
   // The only remaining hard-load is the SSR-landing one; the inspector route
   // now flows through registry.activate() with no reload.
   assert.match(SHELL, /registry\.activate\('inspector'/, 'inspector mounts via registry.activate');
+});
+
+// ── RUNTIME: secondary async guard shape ────────────────────────────────────
+// The real read/mutation/boot functions (api/bootAuth/refresh*/loadSample/
+// loadDemoSample/deleteSample/corpus-delete) all share one shape:
+//   await <fetch/op>;  if (ctx.signal.aborted) return;  <DOM|global|toast|refresh>
+// registry.deactivate() sets ctx.signal.aborted (proven above); these prove the
+// guard then suppresses the stale effect. Modeled directly with an
+// AbortController so the timing (unmount WHILE the op is in flight) is exact.
+
+test('delayed READ response from a torn-down mount does not paint (bootAuth/refresh*/loadSample pattern)', async () => {
+  const c = new AbortController();
+  let painted = null;
+  let release = (_v) => {}; // typed callable; the Promise executor (runs sync) reassigns it
+  const pending = new Promise((r) => (release = r));
+  const read = (async () => {
+    const data = await pending; // models `const j = await api('GET', …, {signal})`
+    if (c.signal.aborted) return; // the guard we added after every read await
+    painted = data; // the DOM/global write that must NOT reach a remount
+  })();
+  c.abort(); // unmount while the read is in flight
+  release('LIST');
+  await read;
+  assert.equal(painted, null, 'a read resolving after unmount must not paint');
+});
+
+test('delayed MUTATION response after unmount does not refresh or toast (deleteSample/corpus-delete pattern)', async () => {
+  const c = new AbortController();
+  let toasts = 0;
+  let refreshes = 0;
+  let release = (_v) => {}; // typed callable; the Promise executor (runs sync) reassigns it
+  const pending = new Promise((r) => (release = r));
+  const del = (async () => {
+    await pending; // the mutation itself is NOT aborted — it runs to completion
+    if (c.signal.aborted) return; // guard only the response handling
+    toasts++;
+    refreshes++;
+  })();
+  c.abort(); // user navigated away before the server replied
+  release('OK');
+  await del;
+  assert.equal(toasts, 0, 'no toast into a remount');
+  assert.equal(refreshes, 0, 'no refresh into a remount');
+});
+
+test('abort during the initial boot sequence halts subsequent steps (bootAuth→refreshPartners→refreshSamples)', async () => {
+  const c = new AbortController();
+  const steps = [];
+  let releaseBoot = (_v) => {}; // typed callable; the Promise executor (runs sync) reassigns it
+  const bootAuthP = new Promise((r) => (releaseBoot = r));
+  const boot = (async () => {
+    await bootAuthP; // bootAuth()
+    if (c.signal.aborted) return;
+    steps.push('refreshPartners');
+    if (c.signal.aborted) return;
+    steps.push('refreshSamples');
+  })();
+  c.abort(); // unmounted DURING bootAuth
+  releaseBoot();
+  await boot;
+  assert.deepEqual(steps, [], 'no refresh steps run when the mount aborts during boot');
+});
+
+// ── STATIC: the secondary async guards are present in the real functions ─────
+
+test('static: secondary read/mutation/boot paths guard on ctx.signal.aborted', () => {
+  // api() takes an optional signal — inspector reads pass ctx.signal, mutations
+  // + the cross-section SpyglassSession.api facade omit it.
+  assert.match(APP, /async function api\(method, url, body, opts = \{\}\)/, 'api() accepts opts');
+  assert.match(
+    APP,
+    /if \(opts\.signal\) init\.signal = opts\.signal;/,
+    'api() wires opts.signal into fetch',
+  );
+  // every inspector-owned read passes ctx.signal
+  for (const re of [
+    /api\('GET', 'api\/auth\/me', undefined, \{ signal: ctx\.signal \}\)/,
+    /api\('GET', 'api\/partners', undefined, \{ signal: ctx\.signal \}\)/,
+    /api\('GET', 'api\/samples' \+ qs, undefined, \{ signal: ctx\.signal \}\)/,
+    /api\('GET', 'api\/samples\/' \+ id, undefined, \{ signal: ctx\.signal \}\)/,
+    /fetch\(url, \{ signal: ctx\.signal \}\)/, // loadDemoSample
+  ]) {
+    assert.match(APP, re, 'inspector read must pass ctx.signal: ' + re);
+  }
+  // boot sequence halts on abort between the awaited steps
+  assert.match(
+    APP,
+    /await bootAuth\(\);\s*if \(ctx\.signal\.aborted\) return;/,
+    'boot halts after bootAuth',
+  );
+  assert.match(
+    APP,
+    /await refreshPartners\(\);\s*if \(ctx\.signal\.aborted\) return;/,
+    'boot halts after refreshPartners',
+  );
+  // corpus-delete mutation response guards on abort
+  assert.match(
+    APP,
+    /\.then\(\(j\) => \{\s*if \(ctx\.signal\.aborted\) return;/,
+    'corpus-delete response guards on abort',
+  );
+  // defensive lower bound: the guard is applied broadly, not in one spot
+  const guards = (APP.match(/ctx\.signal\.aborted/g) || []).length;
+  assert.ok(
+    guards >= 15,
+    'expected many ctx.signal.aborted guards across async paths, found ' + guards,
+  );
 });
