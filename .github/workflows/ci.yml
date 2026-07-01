@@ -23,7 +23,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # fetch-depth: 0 — full history, not the default shallow (depth 1) clone.
+      # The privacy-floor guard (scripts/deploy-lib.sh) and its tests resolve a
+      # historical commit (PRIVACY_BASELINE_SHA, several commits behind any given
+      # tip) via `git rev-parse --verify`/`git merge-base --is-ancestor`, which
+      # requires that commit's object to be present. A shallow clone doesn't have
+      # it, so ancestry resolution fails closed (empty result) — this is what the
+      # guard is DESIGNED to do when it can't verify, but it means the guard (and
+      # its tests) cannot function at all without full history. The production
+      # host's checkout is a persistent `git clone` + `git pull --ff-only`
+      # (full history already), so this only needed fixing here in CI.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node 20
         uses: actions/setup-node@v4
