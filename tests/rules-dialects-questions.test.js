@@ -204,3 +204,35 @@ test('unknown req.ext with recommended:null resolves messages (en/uk/ru)', () =>
     assertNoInterpolationArtifacts(f.msg, locale);
   }
 });
+
+test('locale null/undefined falls back without raw placeholders', () => {
+  const req = { imp: [{ ext: { mystery: 'foo' } }] };
+
+  for (const locale of [null, undefined]) {
+    const result = core.validate(req, { locale, userDialect: NO_MAPPINGS });
+    const f = dialectQuestionFinding(result, 'imp[0].ext.mystery');
+    assert.ok(f, String(locale));
+    assert.ok(f.msg.includes('imp[0].ext.mystery'), `${locale}: path in msg`);
+    assert.ok(f.msg.includes('foo'), `${locale}: value in msg`);
+    assertNoInterpolationArtifacts(f.msg, String(locale));
+  }
+});
+
+test('object/array vendor ext values serialize cleanly in messages (en/uk/ru)', () => {
+  const cases = [
+    { value: { foo: 'bar', n: 1 }, expected: '{"foo":"bar","n":1}' },
+    { value: [1, 2], expected: '[1,2]' },
+  ];
+
+  for (const { value, expected } of cases) {
+    for (const locale of ['en', 'uk', 'ru']) {
+      const req = { imp: [{ ext: { mystery: value } }] };
+      const result = core.validate(req, { locale, userDialect: NO_MAPPINGS });
+      const f = dialectQuestionFinding(result, 'imp[0].ext.mystery');
+      assert.ok(f, locale);
+      assert.strictEqual(f.params.value, expected, locale);
+      assert.ok(f.msg.includes(expected), `${locale}: serialized value in msg`);
+      assertNoInterpolationArtifacts(f.msg, locale);
+    }
+  }
+});
