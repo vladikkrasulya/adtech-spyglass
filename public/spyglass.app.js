@@ -316,10 +316,15 @@ export async function mountInspector(root, ctx) {
       startY = y;
       startH = section.getBoundingClientRect().height;
       document.body.setAttribute('data-resizing', 'input-section');
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
-      window.addEventListener('touchmove', onMove, { passive: false });
-      window.addEventListener('touchend', onUp);
+      // {signal: ctx.signal} so an unmount MID-DRAG (mouse still down) detaches
+      // these window-level move/up listeners with the rest of the module — otherwise
+      // onUp (which normally removes them) never fires and they leak past
+      // deactivate(), holding this mount's onMove/onUp closures. onUp still removes
+      // them on a normal drag-end; both paths are clean.
+      window.addEventListener('mousemove', onMove, { signal: ctx.signal });
+      window.addEventListener('mouseup', onUp, { signal: ctx.signal });
+      window.addEventListener('touchmove', onMove, { passive: false, signal: ctx.signal });
+      window.addEventListener('touchend', onUp, { signal: ctx.signal });
       ev.preventDefault();
     }
     handle.addEventListener('mousedown', onDown);
@@ -1334,6 +1339,9 @@ export async function mountInspector(root, ctx) {
       const frameMs = 16; // ~60fps via setTimeout
       const startTime = Date.now();
       function tickQuality() {
+        // Stop the self-rescheduling chain once the module unmounts — otherwise
+        // it keeps ticking for up to `duration` ms against a detached numberEl.
+        if (ctx.signal.aborted) return;
         const elapsed = Date.now() - startTime;
         const t = Math.min(1, elapsed / duration);
         const eased = 1 - Math.pow(1 - t, 3);
@@ -1935,6 +1943,20 @@ export async function mountInspector(root, ctx) {
   // With AbortController, mashing "analyze" or fast-typing into the
   // textareas cancels the previous fetch on the wire.
   let _analyzeAbort = null;
+  // Re-entrancy: on unmount, cancel any in-flight analyze. Its seq guard
+  // (`_analyzeReqSeq`) is per-mount, so without this the old fetch would resolve
+  // after a remount, pass its (stale-but-unbumped) seq check, and paint the
+  // previous payload's findings into the NEW mount via $()/getElementById. The
+  // render paths below also bail on ctx.signal.aborted as a belt-and-braces guard.
+  ctx.addCleanup(() => {
+    if (_analyzeAbort) {
+      try {
+        _analyzeAbort.abort();
+      } catch (_) {
+        /* idempotent */
+      }
+    }
+  });
 
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
@@ -2266,9 +2288,10 @@ export async function mountInspector(root, ctx) {
           signal: _analyzeAbort ? _analyzeAbort.signal : undefined,
         });
         const j = await r.json().catch(() => ({}));
-        // Drop stale: a newer analyze started while we were waiting. Don't
-        // overwrite the UI with our (outdated) findings.
-        if (myReqId !== _analyzeReqSeq) return;
+        // Drop stale: a newer analyze started while we were waiting, OR the
+        // module unmounted (ctx.signal.aborted) — don't overwrite the UI with
+        // our (outdated) findings, and never paint into a subsequent remount.
+        if (myReqId !== _analyzeReqSeq || ctx.signal.aborted) return;
         // Surface server-side errors (4xx/5xx) explicitly. Pre-v0.20.0 we
         // only handled NETWORK failures via the catch below — structured
         // server errors (rate-limit, empty-payload, invalid-JSON) returned
@@ -2374,6 +2397,10 @@ export async function mountInspector(root, ctx) {
           }
         }
       } catch (e) {
+        // Module unmounted while the analyze was in flight (incl. our own abort
+        // on unmount) — bail before painting "backend offline" (and the
+        // validation-tab render below) into a possible remount.
+        if (ctx.signal.aborted) return;
         console.warn('Backend unavailable:', e);
         $('stEntity').innerText = entity + ' · ' + t('status.local');
         $('stEntity').dataset.status = ''; // backend unreachable — no canonical status
