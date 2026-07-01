@@ -1,6 +1,6 @@
 {
   "name": "adtech-spyglass",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "OpenRTB inspector — paste a BidRequest/BidResponse, get human-readable validation, semantic crosscheck, creative preview.",
   "private": true,
   "workspaces": [

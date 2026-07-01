@@ -910,7 +910,7 @@ State at `/srv/DATA/AppData/adtech-spyglass/cutover-state.env` (full snapshot,
 
 ```bash
 cd /srv/DATA/Stacks/adtech-spyglass
-./scripts/rollback.sh                 # → the rollback-pre-v<version> image from the last deploy
+./scripts/rollback.sh                 # → the rollback-pre-<BUILD_SHA> image from the last deploy
 # or pin an explicit image:  ./scripts/rollback.sh <tag>
 ```
 
