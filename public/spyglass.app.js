@@ -27,6 +27,13 @@ import {
   severityFromFindings,
   severityFromCrosschecks,
 } from '/core/utils.js';
+// ROADMAP #18: session/DEK/auth-api are now a shell-level service
+// (public/core/session.js), created once at shell boot and surviving every
+// section mount/unmount. mountInspector no longer owns any of that state —
+// it registers an ADAPTER (below) for the Inspector-only bits (sample/dirty/
+// partner state + renderers) that the shell service delegates to when
+// Inspector happens to be mounted.
+import { session } from '/core/session.js';
 
 export async function mountInspector(root, ctx) {
   'use strict';
@@ -35,6 +42,55 @@ export async function mountInspector(root, ctx) {
   // severityFromFindings, severityFromCrosschecks) imported above from
   // /core/utils.js. Behaviour identical to the previous inline copies
   // — this file no longer redefines them.
+
+  // ── ROADMAP #18: register this mount as the session service's Inspector
+  // adapter ──────────────────────────────────────────────────────────────
+  // Session/DEK/auth-api live in the shell (/core/session.js) independent of
+  // any section; the handful of things that are genuinely Inspector-only
+  // (sample/dirty/partner state + their DOM renderers) are exposed here so
+  // window.SpyglassSession's facade methods have somewhere to delegate WHILE
+  // this mount is alive. registerAdapter returns a generation token;
+  // unregisterAdapter only clears the slot if the token still matches
+  // (guards against a stale/aborted mount racing a fresh one and wiping the
+  // NEW mount's adapter — see also ctx.addCleanup below). The functions named
+  // here (refreshPartners, refreshSamples, renderAuthWidget, renderVerifyBanner,
+  // partnerOptionsHtml) are hoisted declarations defined later in this same
+  // scope — safe to close over now since nothing can INVOKE them before the
+  // rest of this synchronous mount() body (incl. the `let` state below) runs.
+  const _adapterToken = session.registerAdapter({
+    getCurrentSampleId: () => _currentSampleId,
+    setCurrentSampleId: (v) => {
+      _currentSampleId = v;
+    },
+    getCurrentSampleMeta: () => _currentSampleMeta,
+    setCurrentSampleMeta: (v) => {
+      _currentSampleMeta = v;
+    },
+    getIsDirty: () => _isDirty,
+    setDirty: (v) => {
+      _isDirty = !!v;
+    },
+    getPartnerCache: () => _partnerCache,
+    setPartnerCache: (v) => {
+      _partnerCache = v;
+    },
+    refreshPartners: () => refreshPartners(),
+    refreshSamples: () => refreshSamples(),
+    renderAuthWidget: () => renderAuthWidget(),
+    renderVerifyBanner: () => renderVerifyBanner(),
+    partnerOptionsHtml: (sel) => partnerOptionsHtml(sel),
+    // Called by session.clearSession() (logout) — bundles the Inspector-side
+    // reset + repaint so signOut's behaviour is identical to before the hoist.
+    clearInspectorState: () => {
+      _partnerCache = [];
+      _currentSampleId = null;
+      _currentSampleMeta = null;
+      _isDirty = false;
+      renderAuthWidget();
+      refreshSamples();
+    },
+  });
+  ctx.addCleanup(() => session.unregisterAdapter(_adapterToken));
 
   // ── Global error boundary ──────────────────────────────────────
   // One bug in a handler shouldn't kill the page. Catch synchronous errors
@@ -1597,7 +1653,7 @@ export async function mountInspector(root, ctx) {
   // require coordinating with public/modules/behavior/index.js.
   function injectCorpusBar(tab, events) {
     if (!tab || !events || !events.length) return;
-    if (!_currentUser) return;
+    if (!session.user) return;
     // Renderer fires on every probe heartbeat. Reuse the existing bar if
     // event count hasn't changed; only update / re-create when the count
     // actually changed. Pre-fix removed+re-injected the bar 10×/sec under
@@ -1917,7 +1973,7 @@ export async function mountInspector(root, ctx) {
     const peekLoadBtn = $('peekLoadBtn');
     if (peekLoadBtn) {
       peekLoadBtn.addEventListener('click', () => {
-        closeModal();
+        window.closeModal();
         loadFromHistory(idx);
       });
     }
@@ -3006,14 +3062,13 @@ export async function mountInspector(root, ctx) {
     `;
   }
 
-  // ── Auth state + saved samples library ────────────────────────
+  // ── Inspector-owned library state ──────────────────────────────
   // The library is per-account: anonymous users see a "Sign in to save"
   // panel; logged-in users get partners/samples scoped to their user_id.
-  //
-  // Phase 7 (zero-knowledge): _sessionDEK is the live AES-GCM key derived
-  // from the user's password. It lives only in this closure — never in
-  // localStorage, never on window, never sent to the server. Cleared on
-  // signOut. Server stores only ciphertext + wrapped DEK + salt.
+  // Auth/DEK/api now live in the shell-level session service
+  // (public/core/session.js) — this is ONLY the Inspector-specific state
+  // (sample/dirty/partner cache), registered below as a session adapter so
+  // it survives exactly as long as this mount does.
   let _partnerCache = [];
   let _currentSampleId = null;
   // Metadata of the currently-loaded sample (so the Save modal can pre-fill
@@ -3023,72 +3078,6 @@ export async function mountInspector(root, ctx) {
   // Dirty flag — set on input into bidReq/bidRes after a successful load.
   // Used to: (a) warn before clobber on loadSample, (b) reset after save.
   let _isDirty = false;
-  let _currentUser = null;
-  let _sessionDEK = null;
-
-  // sessionStorage scope: per-tab, dies on tab close. XSS that can
-  // read sessionStorage already has full DEK access via _sessionDEK
-  // in module scope — same threat surface, no new vector. Buys F5
-  // survival; doesn't survive tab close (matches DEK-in-memory model).
-  const DEK_STORAGE_KEY = 'kt-dek-v1';
-
-  async function persistDEK(dekKey) {
-    if (!dekKey) return;
-    try {
-      const b64 = await SpyglassCrypto.serializeDEK(dekKey);
-      sessionStorage.setItem(DEK_STORAGE_KEY, b64);
-    } catch (e) {
-      // exportKey('raw') fails if the key wasn't created with
-      // extractable=true. Soft-fail so F5 falls back to unlock prompt
-      // instead of breaking the active session.
-      console.warn('[spyglass] DEK persist failed:', e && e.message);
-    }
-  }
-
-  async function loadPersistedDEK() {
-    try {
-      const b64 = sessionStorage.getItem(DEK_STORAGE_KEY);
-      if (!b64) return null;
-      return await SpyglassCrypto.deserializeDEK(b64);
-    } catch {
-      sessionStorage.removeItem(DEK_STORAGE_KEY);
-      return null;
-    }
-  }
-
-  function clearPersistedDEK() {
-    try {
-      sessionStorage.removeItem(DEK_STORAGE_KEY);
-    } catch (_) {
-      /* sessionStorage may be blocked by Safari private mode — ignore */
-    }
-  }
-
-  async function api(method, url, body, opts = {}) {
-    const init = {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-    };
-    // Re-entrancy: a caller reading on behalf of THIS mount passes ctx.signal so
-    // its GET is aborted on unmount. Mutations and cross-section callers (the
-    // SpyglassSession.api facade, used by auth from other sections) omit it so
-    // they always run to completion — never abort a mutation mid-flight.
-    if (opts.signal) init.signal = opts.signal;
-    if (body !== undefined) init.body = JSON.stringify(body);
-    // Force absolute path so calls work after seamless lang-switch shifts
-    // pathname to /uk/ or /ru/ (callers pass 'api/...' historically).
-    const absUrl = /^https?:|^\//.test(url) ? url : '/' + url;
-    const r = await fetch(absUrl, init);
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || j.success === false) {
-      const err = new Error(j.error || 'http ' + r.status);
-      err.status = r.status;
-      err.code = j.code;
-      throw err;
-    }
-    return j;
-  }
 
   // ── Auth widget ───────────────────────────────────────────────
 
@@ -3096,10 +3085,10 @@ export async function mountInspector(root, ctx) {
     const signInBtn = $('authSignInBtn');
     const userBlock = $('authUserBlock');
     const emailEl = $('authEmail');
-    if (_currentUser) {
+    if (session.user) {
       signInBtn.style.display = 'none';
       userBlock.style.display = 'inline-flex';
-      emailEl.textContent = _currentUser.email;
+      emailEl.textContent = session.user.email;
     } else {
       signInBtn.style.display = 'inline-flex';
       userBlock.style.display = 'none';
@@ -3107,70 +3096,11 @@ export async function mountInspector(root, ctx) {
     }
   }
 
-  async function bootAuth() {
-    try {
-      const j = await api('GET', 'api/auth/me', undefined, { signal: ctx.signal });
-      if (ctx.signal.aborted) return; // unmounted during the request
-      _currentUser = j.user || null;
-      // Locale stickiness: if the user has a server-stored
-      // preferred_locale that differs from the URL we're on, soft-
-      // redirect to the right localized path. Catches:
-      //   - returning user on a different device (no localStorage)
-      //   - bookmark to bare URL (/, /about, /account)
-      //   - first login redirected back to /
-      // We only fire on the canonical landing routes (/, /uk, /ru,
-      // /about, /uk/about, /ru/about, /account, /uk/account, /ru/account)
-      // and only when the preference is set and mismatches.
-      try {
-        if (j.user && j.user.preferred_locale) {
-          const want = j.user.preferred_locale;
-          const path = location.pathname.replace(/\/$/, '') || '/';
-          const here = path.startsWith('/uk') ? 'uk' : path.startsWith('/ru') ? 'ru' : 'en';
-          if (want !== here) {
-            // Build the equivalent path in the wanted locale.
-            const enPart = path.replace(/^\/(uk|ru)/, '') || '/';
-            const target = want === 'en' ? enPart : '/' + want + (enPart === '/' ? '' : enPart);
-            // Only landing pages (avoid touching deep app paths).
-            if (['/', '/about', '/account'].includes(enPart) && target !== path) {
-              location.replace(target);
-              return; // boot continues on the new page
-            }
-          }
-        }
-      } catch (_e) {
-        /* never block boot on a redirect heuristic */
-      }
-      // F5 survival: cookie keeps the user logged in, and sessionStorage
-      // (this tab only) holds the DEK from the last unlock. If both are
-      // alive, restore silently — no "Sign in to unlock" prompt. If the
-      // cookie is alive but sessionStorage is empty (different tab, or
-      // the DEK was cleared), surface the unlock CTA in the saved-list.
-      if (j.user && j.encryption) {
-        const restored = await loadPersistedDEK();
-        if (ctx.signal.aborted) return; // unmounted during DEK restore
-        if (restored) {
-          _sessionDEK = restored;
-          _pendingUnlock = false;
-        } else {
-          _sessionDEK = null;
-          _pendingUnlock = true;
-        }
-      } else {
-        _sessionDEK = null;
-        _pendingUnlock = false;
-        clearPersistedDEK();
-      }
-    } catch {
-      if (ctx.signal.aborted) return; // unmounted mid-boot — don't paint auth chrome
-      _currentUser = null;
-      _sessionDEK = null;
-      _pendingUnlock = false;
-      clearPersistedDEK();
-    }
-    renderAuthWidget();
-    renderVerifyBanner();
-  }
-  let _pendingUnlock = false;
+  // Auth boot (session/DEK restore, locale-stickiness redirect) is now the
+  // shell-level session.ensureBooted() — canonical, shared with topbar and
+  // any other consumer, gen-guarded against a stale response overwriting a
+  // newer login/logout. mountInspector calls it in the boot sequence below
+  // and paints renderAuthWidget()/renderVerifyBanner() once it resolves.
 
   // The unlock modal (re-derive DEK from password against the live
   // cookie session) lives in /modules/unlock/. The dispatcher's
@@ -3180,14 +3110,12 @@ export async function mountInspector(root, ctx) {
 
   // ── Auth modal: lazy-loaded module ──────────────────────────
   // openAuthModal / doLogin / doRegister live in /modules/auth/.
-  // The dispatcher case 'open-auth' calls lazyOpenAuth() (below)
-  // which lazy-imports the module then invokes window.openAuthModal(mode).
-  // doLogin / doRegister are reached only after the modal is on screen,
-  // by which point the module is loaded and its window.* assignments ran.
-  //
-  // The module talks to this closure via window.SpyglassSession
-  // (the facade defined further down) — DEK + _currentUser stay
-  // here. Two non-facade hooks the module consumes:
+  // window.lazyOpenAuth (installed at shell boot by /core/modal-host.js)
+  // lazy-imports the module then invokes window.openAuthModal(mode) — chrome-
+  // level now, ROADMAP #18, so it works regardless of which section is
+  // mounted. The module talks to session state via window.SpyglassSession
+  // (the shell-owned facade, /core/session.js) — DEK + user never touch this
+  // closure anymore. Two Inspector-owned hooks the module still consumes:
   //   - window.snapshotPendingHistoryMerge — sets the closure-private
   //     _pendingHistoryMerge flag (mirrors historyStore.length > 0
   //     at call time) before the recovery modal opens, so
@@ -3202,38 +3130,12 @@ export async function mountInspector(root, ctx) {
     _pendingHistoryMerge = historyStore.length > 0;
   };
 
-  // Lazy-loader for the auth module. Used by dispatcher case
-  // 'open-auth' (header button + auth-modal mode-toggle), the
-  // openSaveModal guest gate, the open-corpus-save guest gate, and
-  // the open-unlock guest fallback. All of those used to call
-  // window.openAuthModal directly; now they go through this helper
-  // so the module is fetched on demand.
-  async function lazyOpenAuth(mode) {
-    if (typeof window.openAuthModal === 'function') {
-      return window.openAuthModal(mode);
-    }
-    try {
-      await Promise.all([import('/modules/auth/i18n.js'), import('/modules/auth/index.js')]);
-      window.openAuthModal(mode);
-    } catch (err) {
-      console.error('[auth] lazy import failed:', err);
-      toast(t('toast.error_generic', { error: 'auth module load failed' }), 'error');
-    }
-  }
-  // Exposed for sibling lazy modules (save-sample, future ones) that
-  // need to redirect guests to the auth modal — they reach for
-  // window.openAuthModal first (synchronous best-case if auth was
-  // already activated this session) and fall back to this when it's
-  // not yet defined. See modules/save-sample/index.js openSaveModal
-  // guest gate for the migrated call pattern.
-  window.lazyOpenAuth = lazyOpenAuth;
-
   // ── Recovery-key modal: lazy-loaded module ──────────────────
   // The full implementation (modal HTML, copy handler, confirm-gated
   // close, sessionStorage persistence) lives in /modules/recovery/.
   // It's loaded on demand because it's only needed:
   //   - immediately after register (one path: bootstrapNewCrypto)
-  //   - on F5-survival re-show (one path: bootAuth post-init below)
+  //   - on F5-survival re-show (one path: session.ensureBooted() post-init below)
   // — never during normal use of the tool.
   //
   // Single-show invariant: server stores the *wrap* of the DEK under
@@ -3312,13 +3214,13 @@ export async function mountInspector(root, ctx) {
       const target = ev.target.closest('[data-action]');
       if (!target) return;
       const action = target.dataset.action;
-      if (action === 'merge-skip') return closeModal();
+      if (action === 'merge-skip') return window.closeModal();
       if (action === 'merge-import') return runHistoryMerge();
     });
   }
 
   async function runHistoryMerge() {
-    if (!_sessionDEK) {
+    if (!session.hasSession()) {
       toast(t('toast.crypto_session_lost'), 'error');
       return;
     }
@@ -3345,9 +3247,9 @@ export async function mountInspector(root, ctx) {
       }
       const e = entries[i];
       try {
-        const encReq = await SpyglassCrypto.encryptBlob(_sessionDEK, e.req || '');
-        const encRes = await SpyglassCrypto.encryptBlob(_sessionDEK, e.res || '');
-        await api('POST', 'api/samples', {
+        const encReq = await session.encryptBlob(e.req || '');
+        const encRes = await session.encryptBlob(e.res || '');
+        await session.api('POST', 'api/samples', {
           title: e.title || 'imported sample',
           partner_id: null,
           notes: '',
@@ -3375,7 +3277,7 @@ export async function mountInspector(root, ctx) {
     // Final repaint of the sidebar after batch completion.
     if (typeof renderHistory === 'function') renderHistory();
 
-    closeModal();
+    window.closeModal();
     if (failed === 0) {
       toast(t('toast.merge_done', { count: imported }), 'success');
     } else if (imported === 0) {
@@ -3386,46 +3288,28 @@ export async function mountInspector(root, ctx) {
     refreshSamples();
   }
 
-  window.signOut = async function () {
-    try {
-      await api('POST', 'api/auth/logout');
-    } catch {
-      /* logout is idempotent — ignore failures */
-    }
-    _currentUser = null;
-    _partnerCache = [];
-    _sessionDEK = null; // wipe DEK from memory on logout
-    clearPersistedDEK(); // wipe DEK from sessionStorage too
-    _currentSampleId = null;
-    _currentSampleMeta = null;
-    _isDirty = false;
-    renderAuthWidget();
-    refreshSamples();
-    // Notify chrome that auth state changed (user → null) so topbar
-    // immediately reverts profile pill → sign-in pill.
-    try {
-      window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: null } }));
-    } catch (_) {
-      /* non-fatal */
-    }
-    toast(t('toast.signed_out'), 'success');
-  };
+  // window.signOut now lives in /core/session.js (chrome-level: it must work
+  // regardless of which section — or none — is mounted, e.g. the unlock
+  // modal's escape route reaches it even when Inspector state is stale).
+  // It calls session.clearSession(), which notifies THIS mount's adapter via
+  // clearInspectorState (registered below) so refreshSamples()/
+  // renderAuthWidget() still run on logout exactly as before.
 
   // ── Phase 8: forgot/reset password + email verification ──────────────
   // The forgot/reset password flow lives in /modules/password-reset/
   // (lazy-loaded). Triggers:
   //   - 'open-forgot' data-action          → window.openForgotPasswordFlow
   //   - ?reset=<token> URL boot detection  → window.openPasswordResetFlow
-  // The dispatcher cases below handle lazy-import-on-first-use.
+  // The dispatcher cases live in /core/modal-host.js (modal-content actions).
   // The shell's closeModal() reads window.__spyglassResetActive to know
   // when to strip ?reset= from the URL on Esc/backdrop close. The DEK
   // installed after a successful reset goes through
   // SpyglassSession.importDEKFromBytes() — raw DEK bytes never touch
-  // the shell scope.
+  // this closure.
 
   window.requestVerifyEmail = async function () {
     try {
-      const j = await api('POST', 'api/auth/verify-email/request');
+      const j = await session.api('POST', 'api/auth/verify-email/request');
       // Server returns 200 even when delivery fails (Cloudflare edge would
       // otherwise swallow a 5xx body). Inspect the flag to surface the
       // truth instead of always celebrating.
@@ -3433,7 +3317,7 @@ export async function mountInspector(root, ctx) {
         toast(t('toast.send_failed', { error: j.email_error || '' }), 'error');
       } else {
         toast(
-          t('toast.verify_email_sent', { email: (_currentUser && _currentUser.email) || '' }),
+          t('toast.verify_email_sent', { email: (session.user && session.user.email) || '' }),
           'success',
         );
       }
@@ -3445,7 +3329,7 @@ export async function mountInspector(root, ctx) {
   function renderVerifyBanner() {
     const banner = $('verifyBanner');
     if (!banner) return;
-    if (_currentUser && !_currentUser.email_verified_at) {
+    if (session.user && !session.user.email_verified_at) {
       banner.style.display = 'flex';
     } else {
       banner.style.display = 'none';
@@ -3632,7 +3516,7 @@ export async function mountInspector(root, ctx) {
   window.humanStatus = humanStatus;
 
   async function refreshPartners() {
-    if (!_currentUser) {
+    if (!session.user) {
       _partnerCache = [];
       const sel = $('partnerFilter');
       sel.innerHTML =
@@ -3644,7 +3528,7 @@ export async function mountInspector(root, ctx) {
       return;
     }
     try {
-      const j = await api('GET', 'api/partners', undefined, { signal: ctx.signal });
+      const j = await session.api('GET', 'api/partners', undefined, { signal: ctx.signal });
       if (ctx.signal.aborted) return; // unmounted during the request
       _partnerCache = j.partners || [];
       const sel = $('partnerFilter');
@@ -3664,7 +3548,7 @@ export async function mountInspector(root, ctx) {
       if (ctx.signal.aborted) return; // unmounted — don't paint/toast into a remount
       if (e.status === 401) {
         // session expired — fall back to anonymous state cleanly
-        _currentUser = null;
+        session.setUser(null);
         renderAuthWidget();
         return;
       }
@@ -3681,7 +3565,7 @@ export async function mountInspector(root, ctx) {
   async function refreshSamples() {
     const el = $('savedList');
     const wrap = $('libraryWrap');
-    if (!_currentUser) {
+    if (!session.user) {
       // Anonymous: hide the whole Library block — save action lives in
       // the bid-request toolbar; signing in surfaces the section once
       // there are samples to show.
@@ -3691,7 +3575,7 @@ export async function mountInspector(root, ctx) {
     }
     // Logged-in but DEK is gone (page reload): surface unlock CTA inside
     // the Library wrapper so the user sees something actionable.
-    if (_pendingUnlock && !_sessionDEK) {
+    if (session.pendingUnlock && !session.hasSession()) {
       if (wrap) wrap.hidden = false;
       el.innerHTML =
         '<div class="anon-cta">' +
@@ -3705,7 +3589,7 @@ export async function mountInspector(root, ctx) {
     const v = sel.value;
     const qs = v === '' ? '' : '?partner_id=' + encodeURIComponent(v);
     try {
-      const j = await api('GET', 'api/samples' + qs, undefined, { signal: ctx.signal });
+      const j = await session.api('GET', 'api/samples' + qs, undefined, { signal: ctx.signal });
       if (ctx.signal.aborted) return; // unmounted during the request
       const list = j.samples || [];
       if (!list.length) {
@@ -3768,7 +3652,7 @@ export async function mountInspector(root, ctx) {
     } catch (e) {
       if (ctx.signal.aborted) return; // unmounted — don't paint/toast into a remount
       if (e.status === 401) {
-        _currentUser = null;
+        session.setUser(null);
         renderAuthWidget();
         refreshSamples(); // re-render anonymous state
         return;
@@ -3777,46 +3661,10 @@ export async function mountInspector(root, ctx) {
     }
   }
 
-  function closeModal() {
-    // Recovery-key modal has special "really?" gate — route Esc/backdrop
-    // closures through it instead of the silent close path. The flag +
-    // the close fn live in /modules/recovery/ (lazy-loaded). When the
-    // module isn't loaded the flag is undefined → falsy → normal close.
-    if (
-      typeof window.isRecoveryKeyModalActive === 'function' &&
-      window.isRecoveryKeyModalActive()
-    ) {
-      window.closeRecoveryKeyModal();
-      return;
-    }
-    $('modalRoot').innerHTML = '';
-    // If the user closes the reset-password modal via Esc or backdrop click
-    // (rather than the cancel button), still strip the `?reset=...` query
-    // so a refresh doesn't silently re-trigger the same flow. The flag is
-    // owned by /modules/password-reset/ — undefined when the module isn't
-    // loaded → falsy → normal close.
-    if (window.__spyglassResetActive && new URLSearchParams(location.search).has('reset')) {
-      if (typeof window.cancelPasswordReset === 'function') {
-        window.cancelPasswordReset();
-      }
-      history.replaceState({}, '', location.pathname);
-    }
-  }
-
-  // Wire Enter-to-submit on a modal text input so the user can hit ⏎ from
-  // the title / name field and not have to mouse over to the primary button.
-  // Pass the input id and the action to fire (confirmSave, confirmAddPartner,
-  // etc.). Skips Shift+Enter so multiline textareas behave normally.
-  function wireEnterSubmit(inputId, action) {
-    const el = $(inputId);
-    if (!el) return;
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-        e.preventDefault();
-        action();
-      }
-    });
-  }
+  // closeModal() and wireEnterSubmit() now live at chrome level
+  // (/core/modal-host.js and /core/session.js respectively, ROADMAP #18) —
+  // #modalRoot is shell-owned, so modal lifecycle can't be Inspector-mount-
+  // scoped. Callers here use window.closeModal() / session.wireEnterSubmit().
 
   function partnerOptionsHtml(selectedId) {
     // Coerce to Number for the equality check — JSON.parse may surface
@@ -3843,120 +3691,13 @@ export async function mountInspector(root, ctx) {
     );
   }
 
-  // ── window.SpyglassSession — facade for lazy modules ─────────────────
-  // Modules under /modules/ that need authenticated state, sample state,
-  // partner cache, HTTP helper, or crypto operations talk through this
-  // facade instead of reaching into the IIFE closure (they can't anyway —
-  // ES module boundary). The DEK never leaves this scope: callers
-  // request operations (encryptBlob, decryptBlob, openFromPassword, …)
-  // and the facade performs them internally using _sessionDEK.
-  //
-  // Why this exists: pre-Phase-A modules either had no auth-state needs
-  // (mirror, live, simulate, etc.) or got auth-gated at the dispatcher
-  // layer (corpus-save). Once we started extracting save-sample +
-  // edit-sample + auth-lifecycle modals, the closure-state coupling
-  // became unworkable without either weakening security (DEK on window)
-  // or duplicating dozens of helpers in every module. The facade is the
-  // narrow waist: ~14 methods, fully documented, single source of truth.
-  window.SpyglassSession = {
-    // ── Non-secret state ──────────────────────────────────────────────
-    get user() {
-      return _currentUser;
-    },
-    setUser(u) {
-      _currentUser = u;
-      // Notify chrome (topbar) that auth state changed so it can
-      // re-render the sign-in pill → profile pill without a page reload.
-      try {
-        window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: u } }));
-      } catch (_) {
-        /* never block auth on event dispatch */
-      }
-    },
-    get currentSampleId() {
-      return _currentSampleId;
-    },
-    setCurrentSampleId(v) {
-      _currentSampleId = v;
-    },
-    get currentSampleMeta() {
-      return _currentSampleMeta;
-    },
-    setCurrentSampleMeta(v) {
-      _currentSampleMeta = v;
-    },
-    get isDirty() {
-      return _isDirty;
-    },
-    setDirty(v) {
-      _isDirty = !!v;
-    },
-    get partnerCache() {
-      return _partnerCache;
-    },
-    setPartnerCache(v) {
-      _partnerCache = v;
-    },
-
-    // ── Helpers (non-secret) ──────────────────────────────────────────
-    api: (method, url, body) => api(method, url, body),
-    refreshPartners: () => refreshPartners(),
-    refreshSamples: () => refreshSamples(),
-    renderAuthWidget: () => renderAuthWidget(),
-    partnerOptionsHtml: (sel) => partnerOptionsHtml(sel),
-    wireEnterSubmit: (id, fn) => wireEnterSubmit(id, fn),
-
-    // ── Crypto operations (DEK stays in closure) ──────────────────────
-    hasSession: () => !!_sessionDEK,
-    encryptBlob: async (plain) => SpyglassCrypto.encryptBlob(_sessionDEK, plain),
-    decryptBlob: async (ivB64, ctB64) => SpyglassCrypto.decryptBlob(_sessionDEK, ivB64, ctB64),
-
-    // ── Crypto lifecycle (for auth-modal / unlock-modal / etc.) ───────
-    // These accept and produce metadata (state, recoveryKey) but never
-    // expose raw DEK bytes to the caller. Wrapping/unwrapping happens
-    // inside the facade using the closure-private _sessionDEK.
-    async openFromPassword(password, encState, opts) {
-      _sessionDEK = await SpyglassCrypto.openWithPassword(password, encState, opts || {});
-      await persistDEK(_sessionDEK);
-    },
-    async bootstrap(password) {
-      // Register flow: derives a fresh DEK + recovery key, returns the
-      // wrap-state for the server to persist + the recovery key to show
-      // to the user once.
-      const result = await SpyglassCrypto.bootstrap(password, { extractable: true });
-      _sessionDEK = result.dekKey;
-      await persistDEK(_sessionDEK);
-      return { state: result.state, recoveryKey: result.recoveryKey };
-    },
-    clearSession() {
-      _sessionDEK = null;
-      clearPersistedDEK();
-      _currentUser = null;
-      _currentSampleId = null;
-      _currentSampleMeta = null;
-      _isDirty = false;
-    },
-    async importDEKFromBytes(dekBytes) {
-      // For recovery + password-reset: caller has unwrapped raw DEK
-      // bytes via SpyglassCrypto.unwrapWithRecoveryKey/etc. We import
-      // them as a CryptoKey and store. Bytes themselves stay with the
-      // caller for the duration of the call; facade doesn't retain.
-      _sessionDEK = await SpyglassCrypto.importDEK(dekBytes, { extractable: true });
-      await persistDEK(_sessionDEK);
-    },
-    clearDEK() {
-      // Wipe just the DEK (in-memory + persisted) without touching the
-      // user record. Used by the wipe branch of password-reset, where
-      // the user remains signed in but the encrypted blobs are gone
-      // server-side and a fresh bootstrap is required on next save.
-      _sessionDEK = null;
-      clearPersistedDEK();
-    },
-    setPendingUnlock(v) {
-      _pendingUnlock = !!v;
-    },
-    renderVerifyBanner: () => renderVerifyBanner(),
-  };
+  // window.SpyglassSession is now installed ONCE at shell boot
+  // (public/core/session.js's installSessionFacade()) — session/crypto
+  // methods delegate to the shell service; the Inspector-specific ones
+  // (currentSampleId, isDirty, partnerCache, refreshPartners/Samples,
+  // renderAuthWidget/VerifyBanner, partnerOptionsHtml) delegate to whichever
+  // Inspector adapter is currently registered (see registerAdapter below) —
+  // a safe no-op when Inspector isn't mounted. DEK never leaves session.js.
 
   // ── Save-sample modal — MOVED to modules/save-sample/ (lazy) ─────────
   // openSaveModal + suggestPartnerForSave + _spy_pickPartner +
@@ -3982,7 +3723,7 @@ export async function mountInspector(root, ctx) {
   // helpers inside the module. ~25KB stays out of the initial JS
   // bundle until a user actually opens mirror.
   async function loadSample(id) {
-    if (!_sessionDEK) {
+    if (!session.hasSession()) {
       toast(t('toast.crypto_session_lost'), 'error');
       return;
     }
@@ -3994,11 +3735,11 @@ export async function mountInspector(root, ctx) {
       }
     }
     try {
-      const j = await api('GET', 'api/samples/' + id, undefined, { signal: ctx.signal });
+      const j = await session.api('GET', 'api/samples/' + id, undefined, { signal: ctx.signal });
       const s = j.sample;
       // Decrypt locally — server returned opaque ciphertext + IVs.
-      const reqText = await SpyglassCrypto.decryptBlob(_sessionDEK, s.req_iv, s.bid_req);
-      const resText = await SpyglassCrypto.decryptBlob(_sessionDEK, s.res_iv, s.bid_res);
+      const reqText = await session.decryptBlob(s.req_iv, s.bid_req);
+      const resText = await session.decryptBlob(s.res_iv, s.bid_res);
       if (ctx.signal.aborted) return; // unmounted during fetch/decrypt — don't fill a remount's editors
       $('bidReq').value = reqText;
       $('bidRes').value = resText;
@@ -4064,7 +3805,7 @@ export async function mountInspector(root, ctx) {
     try {
       // Mutation: NOT aborted on unmount (let the delete complete server-side);
       // we only guard the response so it can't refresh/toast into a remount.
-      await api('DELETE', 'api/samples/' + id);
+      await session.api('DELETE', 'api/samples/' + id);
       if (ctx.signal.aborted) return;
       // If the deleted sample is the one currently loaded, drop the anchor
       // so the next save creates a fresh record (not a 404 PATCH).
@@ -4085,7 +3826,8 @@ export async function mountInspector(root, ctx) {
   // 'confirm-edit' calls window.confirmEdit which the module
   // self-registers on first load.
 
-  window.closeModal = closeModal;
+  // window.closeModal is installed ONCE at shell boot by /core/modal-host.js
+  // (ROADMAP #18) — no per-mount assignment here anymore.
 
   // Sidebar visibility toggles. Click ◀ in the tab-bar to hide the left
   // sidebar (summary/library/history); click ▶ at the right end to hide
@@ -4265,19 +4007,10 @@ export async function mountInspector(root, ctx) {
     const pf = $('partnerFilter');
     if (pf) pf.addEventListener('change', () => refreshSamples());
 
-    // Global Esc closes any open modal. Modals each had their own Enter
-    // handler before; consolidating Esc here covers all of them.
-    // {signal: ctx.signal} auto-detaches on module unmount; otherwise a
-    // remount would stack a second Esc handler that double-closes.
-    document.addEventListener(
-      'keydown',
-      (e) => {
-        if (e.key === 'Escape' && $('modalRoot') && $('modalRoot').children.length) {
-          closeModal();
-        }
-      },
-      { signal: ctx.signal },
-    );
+    // Global Esc-closes-modal now lives in /core/modal-host.js (permanent,
+    // installed once at shell boot — ROADMAP #18): #modalRoot is shell-owned
+    // chrome, not Inspector-mount-scoped, so this can't be a ctx.signal-bound
+    // per-mount listener anymore without missing Esc on every other section.
 
     // Prefetch the creative-probe source so it's ready when the first
     // adm renders. Fire-and-forget — setAdPreview gracefully renders
@@ -4389,9 +4122,9 @@ export async function mountInspector(root, ctx) {
           case 'open-corpus-save': {
             // Auth-gate BEFORE lazy-loading — guests can't save corpus,
             // no point fetching the module for them.
-            if (!_currentUser) {
+            if (!session.user) {
               toast(t('toast.signin_to_save'), 'info');
-              lazyOpenAuth('login');
+              window.lazyOpenAuth('login');
               return;
             }
             if (typeof window.openCorpusSaveModal === 'function') {
@@ -4436,26 +4169,9 @@ export async function mountInspector(root, ctx) {
               });
             return;
           }
-          case 'live-pause':
-            return window.__spyglassLivePauseToggle && window.__spyglassLivePauseToggle();
-          case 'live-load': {
-            const id = Number(el.dataset.rowId);
-            const map = window.__spyglassLiveSpecimens;
-            const spec = map && map.get ? map.get(id) : null;
-            if (!spec) {
-              toast(t('toast.live_load_failed'), 'error');
-              return;
-            }
-            const isReq = Array.isArray(spec.imp);
-            const target = isReq ? 'bidReq' : 'bidRes';
-            const ta = $(target);
-            if (!ta) return;
-            ta.value = JSON.stringify(spec, null, 2);
-            updateCharCount(target);
-            closeModal();
-            toast(t('toast.live_loaded'), 'success');
-            return;
-          }
+          // 'live-pause' / 'live-load' moved to /core/modal-host.js — their
+          // buttons render inside the live modal, which lives in #modalRoot
+          // (shell-owned, outside root's reach — ROADMAP #18).
           case 'mirror': {
             // Lazy-load the mirror module on first click. Subsequent
             // clicks hit the browser's ES module cache for free.
@@ -4476,59 +4192,9 @@ export async function mountInspector(root, ctx) {
             })();
             return;
           }
-          case 'mirror-copy': {
-            const out = $('mMirrorOutput');
-            if (!out) return;
-            navigator.clipboard.writeText(out.value).then(
-              () => toast(t('toast.mirror_copied'), 'success'),
-              () => toast(t('toast.mirror_copy_failed'), 'error'),
-            );
-            return;
-          }
-          case 'mirror-load': {
-            const out = $('mMirrorOutput');
-            const target = el.dataset.target;
-            if (!out || !target) return;
-            const ta = $(target);
-            if (!ta) return;
-            ta.value = out.value;
-            updateCharCount(target);
-            closeModal();
-            toast(t('toast.mirror_loaded'), 'success');
-            return;
-          }
-          case 'mirror-mode-change': {
-            const newMode = el.value;
-            if (typeof window.__spyglassMirrorRefetch === 'function') {
-              window.__spyglassMirrorRefetch(newMode);
-            }
-            return;
-          }
-          case 'mirror-share': {
-            const out = $('mMirrorOutput');
-            if (!out || typeof window.buildShareUrl !== 'function') return;
-            // Pair the mirror output with the user's source pane so the
-            // recipient gets BOTH halves and can run analysis immediately.
-            // Direction is inferred from which source pane was non-empty
-            // when openMirrorModal ran — recover via the mirror-load
-            // button's data-target (the EMPTY pane that gets the output).
-            const loadBtn = document.querySelector('[data-action="mirror-load"]');
-            const target = loadBtn ? loadBtn.dataset.target : 'bidRes';
-            const source = target === 'bidRes' ? 'bidReq' : 'bidRes';
-            const sourceText = $(source) ? $(source).value : '';
-            const reqText = target === 'bidRes' ? sourceText : out.value;
-            const resText = target === 'bidRes' ? out.value : sourceText;
-            (async () => {
-              try {
-                const url = await window.buildShareUrl(reqText, resText);
-                await navigator.clipboard.writeText(url);
-                toast(t('toast.mirror_share_copied'), 'success');
-              } catch (e) {
-                toast(t('toast.mirror_share_failed', { error: e.message }), 'error');
-              }
-            })();
-            return;
-          }
+          // 'mirror-copy' / 'mirror-load' / 'mirror-mode-change' / 'mirror-share'
+          // moved to /core/modal-host.js — same reasoning as live-pause/live-load
+          // above; their buttons render inside the mirror modal (#modalRoot).
           case 'save-sample': {
             // Lazy-load the save-sample module on first click. Subsequent
             // clicks hit the browser's ES module cache for free. The
@@ -4558,23 +4224,26 @@ export async function mountInspector(root, ctx) {
           case 'verify-email':
             return window.requestVerifyEmail && window.requestVerifyEmail();
           case 'signout':
-            // Used by header button (no modal) AND unlock-modal escape
-            // route. closeModal() is a no-op if no modal is open.
-            closeModal();
+            // Reachable from Inspector's own inline auth-widget button (this
+            // copy) AND the unlock modal's escape route (a duplicate copy in
+            // /core/modal-host.js — the two dispatchers cover disjoint DOM
+            // subtrees, #app-root vs #modalRoot, so no double-fire). closeModal
+            // is a no-op if no modal is open.
+            window.closeModal();
             return window.signOut && window.signOut();
           case 'open-auth':
-            // Auth is a lazy module since 2026-05-10. lazyOpenAuth
-            // imports /modules/auth/ on first activation, then re-
-            // dispatches to window.openAuthModal(mode). Subsequent
-            // clicks hit the synchronous-best-case branch (module
-            // already loaded → direct call).
-            return lazyOpenAuth(el.dataset.mode || 'login');
+            // Auth is a lazy module since 2026-05-10. window.lazyOpenAuth
+            // (chrome-level, installed at shell boot — ROADMAP #18) imports
+            // /modules/auth/ on first activation, then re-dispatches to
+            // window.openAuthModal(mode). Subsequent clicks hit the
+            // synchronous-best-case branch (module already loaded → direct call).
+            return window.lazyOpenAuth(el.dataset.mode || 'login');
           case 'open-unlock': {
             // Guests: short-circuit to auth modal — no point fetching
             // the unlock module if there's no cookie session to
             // re-derive against.
-            if (!_currentUser) {
-              return lazyOpenAuth('login');
+            if (!session.user) {
+              return window.lazyOpenAuth('login');
             }
             if (typeof window.openUnlockModal === 'function') {
               return window.openUnlockModal();
@@ -4730,86 +4399,14 @@ export async function mountInspector(root, ctx) {
             ev.stopPropagation();
             return deleteSample(Number(el.dataset.id));
 
-          // — modals (Etap 3 — generic close paths) —
-          case 'modal-backdrop-close':
-            // Only fire when the click is directly on the backdrop,
-            // not on a child element (otherwise clicks inside the
-            // modal card would close it).
-            if (ev.target === el) closeModal();
-            return;
-          case 'modal-backdrop-close-recovery':
-            if (ev.target === el) window.closeRecoveryKeyModal();
-            return;
-          case 'modal-close':
-            return closeModal();
-          case 'close-recovery':
-            return window.closeRecoveryKeyModal();
-          case 'reset-cancel':
-            // Cancel reset-password modal: close + strip ?reset=
-            // query + clear in-flight ctx in /modules/password-reset/
-            // so a refresh doesn't re-trigger the same flow.
-            if (typeof window.cancelPasswordReset === 'function') {
-              window.cancelPasswordReset();
-            }
-            closeModal();
-            history.replaceState({}, '', location.pathname);
-            return;
-
-          // — modals (Etap 3 — auth/unlock/recovery/reset action verbs) —
-          case 'do-auth':
-            return el.dataset.mode === 'register'
-              ? window.doRegister && window.doRegister()
-              : window.doLogin && window.doLogin();
-          case 'do-unlock':
-            return window.doUnlock && window.doUnlock();
-          case 'do-forgot':
-            // /modules/password-reset/ is already loaded at this point
-            // (the modal is on screen, which means open-forgot ran the
-            // lazy-import). doForgotPassword is on window from the
-            // module's self-registration.
-            return window.doForgotPassword && window.doForgotPassword();
-          case 'do-reset':
-            // Same: /modules/password-reset/ already loaded (URL boot
-            // or open-forgot path). doResetPassword is on window.
-            return window.doResetPassword && window.doResetPassword();
-          case 'open-forgot': {
-            // Lazy-load /modules/password-reset/ on first click of the
-            // "forgot password?" link in login or unlock modals.
-            if (typeof window.openForgotPasswordFlow === 'function') {
-              return window.openForgotPasswordFlow();
-            }
-            (async () => {
-              try {
-                await Promise.all([
-                  import('/modules/password-reset/i18n.js'),
-                  import('/modules/password-reset/index.js'),
-                ]);
-                window.openForgotPasswordFlow();
-              } catch (err) {
-                console.error('[password-reset] lazy import failed:', err);
-                toast(
-                  t('toast.error_generic', { error: 'password-reset module load failed' }),
-                  'error',
-                );
-              }
-            })();
-            return;
-          }
-          case 'copy-recovery':
-            // Key lives in /modules/recovery/'s closure — never on
-            // window, never in a DOM attribute. The module's
-            // copyRecoveryKey() pulls it from its own scope.
-            return window.copyRecoveryKey && window.copyRecoveryKey();
-
-          // — modals (Etap 3 — sample / partner CRUD verbs) —
-          case 'confirm-save':
-            return window.confirmSave({ asNew: el.dataset.asNew === '1' });
-          case 'confirm-edit':
-            return window.confirmEdit(Number(el.dataset.id));
-          case 'confirm-add-partner':
-            return window.confirmAddPartner && window.confirmAddPartner();
-          case 'delete-partner':
-            return window.deletePartner && window.deletePartner(Number(el.dataset.id));
+          // Modal generic-close paths (modal-backdrop-close(-recovery),
+          // modal-close, close-recovery, reset-cancel), auth/unlock/recovery/
+          // reset action verbs (do-auth, do-unlock, do-forgot, do-reset,
+          // open-forgot, copy-recovery), and sample/partner CRUD verbs
+          // (confirm-save, confirm-edit, confirm-add-partner, delete-partner)
+          // all moved to /core/modal-host.js — every one of those buttons
+          // renders inside a modal, which lives in the shell-owned #modalRoot
+          // (outside root's reach), not in Inspector's own DOM (ROADMAP #18).
 
           // — Vendor reference templates (paste-from-docs buttons) —
           case 'vendor-paste-req':
@@ -4948,7 +4545,13 @@ export async function mountInspector(root, ctx) {
 
     // Initial boot sequence — halt if the mount was torn down during any step
     // so we don't run later refresh steps (or paint) against a remount.
-    await bootAuth();
+    // session.ensureBooted() is the ONE canonical /api/auth/me — shared with
+    // topbar and any other concurrent consumer (ROADMAP #18); it resolves to
+    // an anonymous result on any failure, so this can never reject.
+    await session.ensureBooted();
+    if (ctx.signal.aborted) return;
+    renderAuthWidget();
+    renderVerifyBanner();
     if (ctx.signal.aborted) return;
     await refreshPartners();
     if (ctx.signal.aborted) return;
@@ -4970,7 +4573,7 @@ export async function mountInspector(root, ctx) {
       } catch (_e) {
         /* sessionStorage unavailable — non-fatal, no F5 survival */
       }
-      if (_currentUser) {
+      if (session.user) {
         if (pending) {
           // queueMicrotask so the inspector template has a moment to mount
           // (the module writes into #modalRoot which is shell-level).
@@ -4996,7 +4599,7 @@ export async function mountInspector(root, ctx) {
     // populated. URL is cleaned so a refresh doesn't re-trigger.
     try {
       const params = new URLSearchParams(location.search);
-      if (params.get('open') === 'partners' && _currentUser) {
+      if (params.get('open') === 'partners' && session.user) {
         // Partners is a lazy module — synthesize a click on the same
         // dispatcher case so the deep-link goes through the same lazy
         // import path as the topnav button. Avoids racing the cache.
@@ -5164,8 +4767,14 @@ export async function mountInspector(root, ctx) {
     } else if (qp.get('verified') === '1') {
       toast(t('toast.email_verified'), 'success');
       history.replaceState({}, '', location.pathname);
-      // Refresh /api/auth/me so banner clears
-      bootAuth();
+      // Force a fresh /api/auth/me (email_verified_at just flipped
+      // server-side) so the verify banner clears without a reload.
+      (async () => {
+        await session.ensureBooted(true);
+        if (ctx.signal.aborted) return;
+        renderAuthWidget();
+        renderVerifyBanner();
+      })();
     } else if (qp.get('verify_error')) {
       const code = qp.get('verify_error');
       const msg =
@@ -5186,8 +4795,8 @@ export async function mountInspector(root, ctx) {
       // re-open the modal.
       const mode = qp.get('auth') === 'signup' ? 'register' : 'login';
       history.replaceState({}, '', location.pathname);
-      if (!_currentUser) {
-        lazyOpenAuth(mode);
+      if (!session.user) {
+        window.lazyOpenAuth(mode);
       }
     }
   }
@@ -5218,7 +4827,6 @@ export async function mountInspector(root, ctx) {
       'clearInput',
       'handleKeydown',
       'updateCharCount',
-      'closeModal',
       'toggleSidebar',
       'resetLayout',
       // analysis + history (loadFromHistory/peekHistoryItem/deleteHistoryItem
@@ -5240,8 +4848,9 @@ export async function mountInspector(root, ctx) {
       // + isRecoveryKeyModalActive live in /modules/recovery/ (lazy);
       // managed by the module loader, not by this sweep. Same for the
       // shell hook __spyglassRecoveryClosed which we install above.
+      // window.signOut is shell-owned (installed once at boot by
+      // /core/session.js, ROADMAP #18) — never swept here.
       '__spyglassRecoveryClosed',
-      'signOut',
       // openForgotPasswordFlow + openPasswordResetFlow + doForgotPassword
       // + doResetPassword + updateResetModeUI + cancelPasswordReset live
       // in /modules/password-reset/ (lazy); managed by the module loader,
@@ -5273,12 +4882,12 @@ export async function mountInspector(root, ctx) {
         /* non-configurable, ignore */
       }
     }
-    // NOTE: we deliberately do NOT clearPersistedDEK() here. Module
-    // unmount fires when the user switches modules (inspector → stream
-    // → inspector), and we want the DEK to survive that round-trip so
-    // the user isn't asked to unlock twice in one tab. DEK lifetime is
-    // tied to the cookie session + sessionStorage scope, not to the
-    // inspector module mount lifetime.
+    // NOTE: the DEK is NOT wiped here. It lives in the shell-level session
+    // service (/core/session.js, ROADMAP #18) now, not this closure, so
+    // module unmount (inspector → stream → inspector) structurally can't
+    // touch it — the user isn't asked to unlock twice in one tab. DEK
+    // lifetime is tied to the cookie session + sessionStorage scope, not to
+    // any section's mount lifetime.
 
     // Phase 4: stop the freeze watchdog so the next mount starts clean
     // (otherwise a setInterval would keep ticking against a stale
