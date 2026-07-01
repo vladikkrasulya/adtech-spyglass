@@ -53,6 +53,20 @@ services:
     networks:
       - default
       - kt-shared
+    # `always` is the NORMAL, base-file policy — a plain `docker compose up -d`
+    # (routine ops, manual recovery, a host reboot bringing dockerd back) must
+    # keep behaving exactly as documented: it recreates/resumes THIS service with
+    # auto-heal, unaffected by anything deploy-specific.
+    #
+    # scripts/deploy.sh / scripts/rollback.sh do NOT rely on this default while
+    # bringing up an UNVERIFIED candidate/rollback image: they additionally pass
+    # `-f docker-compose.deploy-transition.yml` (see that file), which overrides
+    # this to 'no' for THAT invocation only, then arm `docker update
+    # --restart=always` in place ONLY after wait_ready + smoke both pass — so an
+    # unverified image is never silently resurrected by Docker's own
+    # restart-manager, while every OTHER caller of plain `docker compose up -d`
+    # keeps the normal always-restart behavior. See scripts/deploy-lib.sh
+    # COMPOSE_TRANSITION_FILES / arm_restart_policy() and docs/OPERATIONS.md.
     restart: always
     healthcheck:
       # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).

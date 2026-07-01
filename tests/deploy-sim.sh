@@ -27,6 +27,33 @@ mkdir -p "$BIN" "$DATA"
 chmod 2710 "$DATA" # satisfy the (always-on) check_db_perms dir contract
 trap 'rm -rf "$WORK"' EXIT
 
+export DATA="$WORK/data"
+export CANDIDATE_REV="cafe000000000000000000000000000000000000"
+export PREV_REV="cafe000000000000000000000000000000000000"
+FLOOR=""
+case "$SCEN" in
+  floor-absent) ;;
+  floor-safe|floor-rollback-tampered|floor-auto-rollback-success) FLOOR="2437646" ;;
+  floor-unsafe-candidate) FLOOR="2437646"; export CANDIDATE_REV="dead000000000000000000000000000000000000" ;;
+  floor-unsafe-rollback) FLOOR="2437646"; export PREV_REV="dead000000000000000000000000000000000000" ;;
+  floor-candidate-ancestor) FLOOR="2437646"; export CANDIDATE_REV="a43adad666b8eb8601391fa95c6a2b4aad699f63" ;;
+  floor-candidate-unrelated) FLOOR="2437646"; export CANDIDATE_REV="bbbb000000000000000000000000000000000000" ;;
+  floor-candidate-missing-oci) FLOOR="2437646"; export CANDIDATE_REV="" ;;
+  floor-candidate-missing-git) FLOOR="2437646"; export CANDIDATE_REV="beef000000000000000000000000000000000000" ;;
+  # State WIPED (no PRIVACY_FLOOR line at all) + a PRE-baseline candidate. Proves
+  # the immutable baseline is enforced even with an empty runtime floor: a deleted
+  # /reset deploy-state can NOT disable the floor and re-open a pre-privacy image.
+  floor-reset-prefloor) export CANDIDATE_REV="a43adad666b8eb8601391fa95c6a2b4aad699f63" ;;
+esac
+if [ -n "$FLOOR" ]; then
+  cat > "$DATA/deploy-state.env" <<EOF
+STATUS=ACTIVE
+ACTIVE_TAG=old
+PRIVACY_FLOOR_BUILD_SHA=$FLOOR
+EOF
+  chmod 600 "$DATA/deploy-state.env"
+fi
+
 # ── mock git: clean tree, HEAD == main == origin/main, short = abc1234 ──
 cat >"$BIN/git" <<'EOG'
 #!/bin/sh
@@ -36,6 +63,21 @@ case "$*" in
   "rev-parse HEAD"|"rev-parse main"|"rev-parse origin/main")
     echo "ffffffffffffffffffffffffffffffffffffffff" ;;
   "rev-parse --short HEAD") echo "abc1234" ;;
+  *"rev-parse --verify"*)
+    case "$*" in
+      *2437646*) echo "24376462c3fd1988447b26ee69a897190bdeac1a" ;;
+      *cafe00*) echo "cafe000000000000000000000000000000000000" ;;
+      *dead00*) echo "dead000000000000000000000000000000000000" ;;
+      *a43adad*) echo "a43adad666b8eb8601391fa95c6a2b4aad699f63" ;;
+      *bbbb00*) echo "bbbb000000000000000000000000000000000000" ;;
+      *beef00*) exit 128 ;;
+      *) echo "defaultrev" ;;
+    esac
+    ;;
+  *"merge-base --is-ancestor"*)
+    if echo "$*" | grep -q "24376462c3fd1988447b26ee69a897190bdeac1a cafe000000000000000000000000000000000000"; then exit 0; fi
+    exit 1
+    ;;
   *) exit 0 ;;
 esac
 EOG
@@ -44,17 +86,37 @@ EOG
 #    returns a prev image + healthy; image inspect yields BUILD_SHA (or none) ──
 cat >"$BIN/docker" <<'EOD'
 #!/bin/sh
-case "$1 $2" in
-  "compose build") exit 0 ;;
-  "compose up")
-    if [ "${SPYGLASS_TAG:-}" = "abc1234" ]; then
-      case "$SCEN" in candidate-up-fail|rollback-up-fail) exit 1 ;; *) exit 0 ;; esac
-    else
-      case "$SCEN" in rollback-up-fail) exit 1 ;; *) exit 0 ;; esac
-    fi ;;
-esac
+# Match the SUBCOMMAND as a word anywhere in "$*", not just "$1 $2" — deploy.sh's
+# candidate/rollback `up` calls now pass `-f docker-compose.yml -f
+# docker-compose.deploy-transition.yml` BEFORE `up`, shifting its position.
+if [ "$1" = "compose" ]; then
+  case " $* " in
+    *" up "*)
+      echo "COMPOSE_UP_CALLED" >> "$DATA/compose-trace"
+      # Separate trace (never affects COMPOSE_UP_CALLS) confirming every
+      # candidate/rollback `up` carries the deploy-transition override.
+      case " $* " in
+        *"docker-compose.deploy-transition.yml"*) echo "OVERRIDE_PRESENT" >> "$DATA/override-trace" ;;
+        *) echo "OVERRIDE_MISSING" >> "$DATA/override-trace" ;;
+      esac
+      if [ "${SPYGLASS_TAG:-}" = "abc1234" ]; then
+        case "$SCEN" in candidate-up-fail|rollback-up-fail|floor-rollback-tampered|floor-auto-rollback-success) exit 1 ;; *) exit 0 ;; esac
+      else
+        case "$SCEN" in rollback-up-fail) exit 1 ;; *) exit 0 ;; esac
+      fi
+      ;;
+    *" build "*) exit 0 ;;
+  esac
+fi
 case "$1" in
-  tag) exit 0 ;;
+  tag)
+    # Trace every `docker tag SRC DST` call so tests can inspect the EXACT tag
+    # names used across separate deploy attempts (SHA-keyed rollback retention —
+    # asserts two attempts with different PREV_BUILD_SHA_OVERRIDE never reuse the
+    # same rollback-pre-* name, so a retagged pointer never clobbers a distinct
+    # prior rollback target).
+    echo "TAG $2 -> $3" >> "$DATA/tag-trace"
+    exit 0 ;;
   inspect)
     case "$*" in
       *Health*) echo healthy ;;
@@ -63,7 +125,27 @@ case "$1" in
     esac ;;
   image)
     case "$*" in
-      *--format*) case "$SCEN" in missing-prev-sha) : ;; *) echo "BUILD_SHA=prevsha0" ;; esac ;;
+      *--format*org.opencontainers.image.revision*)
+         if echo "$*" | grep -q "rollback-pre"; then
+           # "mid-attempt" == deploy.sh has written its intent state (CANDIDATE_STARTING/
+           # CANDIDATE_READY — the state-machine's pre-commit phases; DEPLOYING kept for
+           # back-compat with an old state file) but hasn't reached a terminal STATUS yet.
+           # Simulates the rollback-pre-* tag being tampered with BETWEEN deploy.sh's
+           # early floor check (§3, before this write) and its later re-check (§7).
+           if [ "$SCEN" = "floor-rollback-tampered" ] && grep -qE '^STATUS=(CANDIDATE_STARTING|CANDIDATE_READY|DEPLOYING)' "$DATA/deploy-state.env" 2>/dev/null; then
+             echo "dead000000000000000000000000000000000000"
+           else
+             echo "${PREV_REV}"
+           fi
+         else
+           echo "${CANDIDATE_REV}"
+         fi
+         ;;
+      *--format*)
+        case "$SCEN" in
+          missing-prev-sha) : ;;
+          *) echo "BUILD_SHA=${PREV_BUILD_SHA_OVERRIDE:-prevsha0}" ;;
+        esac ;;
       *) : ;;
     esac ;;
 esac
@@ -118,4 +200,7 @@ rc=$?
 echo "EXIT=$rc"
 if [ -f "$DATA/deploy-state.env" ]; then cat "$DATA/deploy-state.env"; else echo "(no state)"; fi
 echo "ENV_SPYGLASS_TAG=$(grep -E '^SPYGLASS_TAG=' "$WORK/.env" | cut -d= -f2)"
+echo "COMPOSE_UP_CALLS=$(cat "$DATA/compose-trace" 2>/dev/null | wc -l | tr -d ' ')"
+echo "--- override-trace ---"
+cat "$DATA/override-trace" 2>/dev/null
 exit "$rc"

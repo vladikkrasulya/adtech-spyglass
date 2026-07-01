@@ -19,6 +19,62 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.2.4 — security/deploy: privacy floor guard + crash-safe deploy state machine
+
+Deploy-infrastructure-only patch — no application code (`server.js`, `public/`,
+`packages/core`) changed. `packages/core` version is unchanged (`0.30.0`).
+
+- **Privacy floor guard.** `scripts/deploy.sh` / `scripts/rollback.sh` refuse to
+  deploy or roll back to any image that does not descend from an immutable
+  baseline commit (v1.2.1, `2437646` — the PII-removal release), hardcoded in
+  `scripts/deploy-lib.sh` (`PRIVACY_BASELINE_SHA`). A prior version of this guard
+  read its floor only from the mutable `deploy-state.env`, so an absent/reset
+  state file made the guard a silent no-op (fail-open) — including on the
+  currently-running production host. Fixed: the baseline is always enforced; a
+  runtime floor in `deploy-state.env` may only RAISE the bar (a missing, empty,
+  malformed, weaker, or unrelated runtime value is ignored, never disables the
+  floor). Documented scope limit: the guard proves git ancestry, not behavior — a
+  descendant commit that reverted the PII fix would still pass; the compensating
+  control is the existing CI gate `tests/auth-event-pii.test.js`.
+- **Removed state-file sourcing (shell-injection hardening).** `rollback.sh`
+  previously `source`d `deploy-state.env` directly, which would execute arbitrary
+  shell from a crafted `KEY=$(cmd)` line. Both scripts now parse the state file
+  as data via a new `state_get()` (deploy-lib.sh) that strips every shell
+  metacharacter and refuses a symlinked state file.
+- **Crash-safe deploy state machine.** New explicit phases —
+  `CANDIDATE_STARTING` → `CANDIDATE_READY` → `ACTIVE` (or `ROLLING_BACK` →
+  `ROLLED_BACK` / `CRITICAL` on failure) — replace the previous single coarse
+  `DEPLOYING` marker. `deploy.sh` gained a preflight check (exit 7) that refuses
+  to start a new deploy on top of a state left mid-transition by a prior
+  crash/reboot, with an explicit operator-action message; `rollback.sh` is
+  deliberately not gated by this, since it is the designated recovery action.
+- **Crash-safe restart-policy transition.** The base `docker-compose.yml` keeps
+  its normal `restart: always` (a plain `docker compose up -d` — routine ops,
+  manual recovery, a host reboot — is unaffected). A new
+  `docker-compose.deploy-transition.yml` overrides that to `restart: 'no'` for
+  the single window a container holds an unverified candidate/rollback image,
+  applied only by `deploy.sh`/`rollback.sh`'s own `up` calls via a shared
+  `$COMPOSE_TRANSITION_FILES` variable. Only after `wait_ready` + smoke both pass
+  do the scripts pin `.env` and `docker update --restart=always` the container in
+  place (no recreate) — so Docker's own restart-manager can never silently
+  resurrect an unverified image after a crash, while every other caller of
+  `docker compose up -d` keeps normal auto-heal.
+- **SHA-keyed rollback tag retention.** The rollback image tag changed from
+  `rollback-pre-v<app-version>` to `rollback-pre-<BUILD_SHA>` (the previous
+  image's own immutable build SHA). Two deploys under an unchanged/unbumped
+  version could previously collide on the same tag name and silently overwrite a
+  different commit's rollback target; a SHA-keyed name is unique per distinct
+  build.
+- **Docs.** `docs/OPERATIONS.md` §9.1/§9.1.2/§9.2/§9.4 updated with the state
+  diagram, a per-phase recovery table, the `docker inspect ... RestartPolicy.Name`
+  verification command, and an explicit rule against bypassing
+  `deploy.sh`/`rollback.sh` with a bare `docker compose`/`docker` command while a
+  transition is in progress.
+- **Tests.** New `tests/privacy-floor.test.js`, `tests/crash-recovery.test.js`,
+  `tests/rollback-tag-retention.test.js`, `tests/crash-recovery-sim.sh`, plus
+  extensions to `tests/immutable-image.test.js`, `tests/deploy-sim.sh`,
+  `tests/rollback-floor-sim.sh`.
+
 ### v1.2.3 — fix: creative preview for adm-less bids + source-nav arrow alignment
 
 Two prod UI fixes, unrelated to CP2:

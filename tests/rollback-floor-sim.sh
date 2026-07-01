@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+#
+# Disposable rollback.sh flow simulator (used by tests/immutable-image.test.js).
+#
+# Mocks docker/git/curl on PATH and runs the REAL scripts/rollback.sh against a
+# throwaway DATA_DIR + .env.
+#
+# Usage: rollback-floor-sim.sh <scenario> [rollback_tag_override]
+#   scenario ∈ { floor-empty, floor-empty-prefloor, candidate-eq-floor,
+#                candidate-descendant, candidate-ancestor, unrelated-candidate,
+#                missing-label, malformed-label, missing-git-object,
+#                rollback-up-fail }
+#
+# NOTE: the guard is FAIL-CLOSED against an immutable baseline
+# (PRIVACY_BASELINE_SHA in scripts/deploy-lib.sh). An empty/absent RUNTIME floor
+# does NOT mean "allow-any" — the baseline still applies. `floor-empty` therefore
+# uses a baseline-DESCENDANT candidate (allowed); `floor-empty-prefloor` uses a
+# PRE-baseline candidate that must be REJECTED even with no runtime floor.
+
+set -u
+SCEN="${1:?scenario required}"
+TAG_ARG="${2:-}"
+export SCEN
+
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+WORK="$(mktemp -d)"
+BIN="$WORK/bin"
+DATA="$WORK/data"
+mkdir -p "$BIN" "$DATA"
+trap 'rm -rf "$WORK"' EXIT
+
+# The immutable privacy baseline — MUST equal PRIVACY_BASELINE_SHA in
+# scripts/deploy-lib.sh so the mock git resolves the in-code baseline.
+FLOOR_REV="24376462c3fd1988447b26ee69a897190bdeac1a"
+
+# Candidate OCI revision commit based on scenario
+case "$SCEN" in
+  floor-empty)
+    # Empty RUNTIME floor → baseline still applies. Candidate is a baseline
+    # DESCENDANT → must be ALLOWED (empty floor never blocks a good image).
+    CANDIDATE_REV="ffffffffffffffffffffffffffffffffffffffff"
+    ;;
+  floor-empty-prefloor)
+    # Empty RUNTIME floor + a PRE-baseline candidate → must be REJECTED
+    # (fail-closed: omitting the floor line can never disable the baseline).
+    CANDIDATE_REV="a43adada43adada43adada43adada43adada43ad"
+    ;;
+  candidate-eq-floor)
+    CANDIDATE_REV="$FLOOR_REV"
+    ;;
+  candidate-descendant)
+    CANDIDATE_REV="ffffffffffffffffffffffffffffffffffffffff"
+    ;;
+  candidate-ancestor)
+    CANDIDATE_REV="a43adada43adada43adada43adada43adada43ad"
+    ;;
+  unrelated-candidate)
+    CANDIDATE_REV="1111111111111111111111111111111111111111"
+    ;;
+  missing-label|malformed-label)
+    CANDIDATE_REV=""
+    ;;
+  missing-git-object)
+    CANDIDATE_REV="ffffffffffffffffffffffffffffffffffffffff"
+    ;;
+  rollback-up-fail)
+    CANDIDATE_REV="$FLOOR_REV"
+    ;;
+  *)
+    CANDIDATE_REV="$FLOOR_REV"
+    ;;
+esac
+
+# ── mock git ──
+cat >"$BIN/git" <<EOG
+#!/bin/sh
+case "\$1" in
+  rev-parse)
+    # git rev-parse --verify sha^{commit}
+    sha_arg="\$3"
+    sha="\${sha_arg%%^*}"
+    if [ "$SCEN" = "missing-git-object" ] && [ "\$sha" = "ffffffffffffffffffffffffffffffffffffffff" ]; then
+      echo "fatal: Not a valid commit name \$sha" >&2
+      exit 128
+    fi
+    if [ -n "\$sha" ]; then
+      echo "\$sha"
+    else
+      exit 1
+    fi
+    ;;
+  merge-base)
+    # git merge-base --is-ancestor floor candidate
+    # \$3 is floor, \$4 is candidate
+    case "$SCEN" in
+      candidate-eq-floor)
+        if [ "\$3" = "\$4" ]; then exit 0; else exit 1; fi
+        ;;
+      candidate-descendant)
+        exit 0
+        ;;
+      candidate-ancestor)
+        exit 1
+        ;;
+      unrelated-candidate)
+        exit 1
+        ;;
+      floor-empty-prefloor)
+        # baseline vs pre-baseline candidate → NOT an ancestor → reject
+        exit 1
+        ;;
+      missing-git-object)
+        exit 128
+        ;;
+      *)
+        exit 0
+        ;;
+    esac
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+EOG
+
+# ── mock docker ──
+cat >"$BIN/docker" <<EOD
+#!/bin/sh
+# Match the subcommand as a word anywhere in "\$*" — rollback.sh's \`up\` call now
+# passes \`-f docker-compose.yml -f docker-compose.deploy-transition.yml\` BEFORE
+# \`up\`, shifting its position out of \$1/\$2.
+if [ "\$1" = "compose" ]; then
+  case " \$* " in
+    *" up "*)
+      case " \$* " in
+        *"docker-compose.deploy-transition.yml"*) echo "OVERRIDE_PRESENT" >> "$DATA/override-trace" ;;
+        *) echo "OVERRIDE_MISSING" >> "$DATA/override-trace" ;;
+      esac
+      case "$SCEN" in
+        rollback-up-fail) exit 1 ;;
+        *) exit 0 ;;
+      esac
+      ;;
+  esac
+fi
+case "\$1" in
+  inspect)
+    case "\$*" in
+      *Health*) echo healthy ;;
+      *) echo "" ;;
+    esac
+    ;;
+  image)
+    case "\$*" in
+      *Labels*org.opencontainers.image.revision*)
+        case "$SCEN" in
+          missing-label) echo "" ;;
+          malformed-label) echo "not-a-40-hex-sha" ;;
+          *) echo "$CANDIDATE_REV" ;;
+        esac
+        ;;
+      *Env*)
+        echo "BUILD_SHA=candidate-build-sha"
+        ;;
+      *)
+        exit 0
+        ;;
+    esac
+    ;;
+esac
+exit 0
+EOD
+
+# ── mock curl: any /api/health → status ok ──
+cat >"$BIN/curl" <<'EOC'
+#!/bin/sh
+for a in "$@"; do
+  case "$a" in *api/health*) echo '{"success":true,"status":"ok","build":{"sha":"candidate-build-sha"}}'; exit 0 ;; esac
+done
+exit 0
+EOC
+
+# ── mock smoke ──
+printf '#!/bin/sh\nexit 0\n' >"$BIN/mock-smoke.sh"
+chmod +x "$BIN/git" "$BIN/docker" "$BIN/curl" "$BIN/mock-smoke.sh"
+
+# Pre-create env file and state file
+printf 'SPYGLASS_TAG=old\n' >"$WORK/.env"
+chmod 600 "$WORK/.env"
+
+cat >"$DATA/deploy-state.env" <<EOF
+ROLLBACK_TAG=targettag
+STATUS=ACTIVE
+EOF
+
+case "$SCEN" in
+  floor-empty | floor-empty-prefloor) : ;; # leave the RUNTIME floor UNSET
+  *) echo "PRIVACY_FLOOR_BUILD_SHA=$FLOOR_REV" >> "$DATA/deploy-state.env" ;;
+esac
+
+# Run the real rollback.sh
+PATH="$BIN:$PATH" \
+  SPYGLASS_DEPLOY_DATA_DIR="$DATA" \
+  SPYGLASS_DEPLOY_ENV_FILE="$WORK/.env" \
+  SMOKE_CMD="$BIN/mock-smoke.sh" \
+  SPYGLASS_BASE_URL="http://127.0.0.1:8090" \
+  SPYGLASS_CONTAINER="adtech-spyglass" \
+  READY_TIMEOUT=6 \
+  bash "$REPO/scripts/rollback.sh" "$TAG_ARG" >"$WORK/stdout.log" 2>"$WORK/stderr.log"
+rc=$?
+
+# Print results for JS verification
+echo "EXIT=$rc"
+if [ -f "$DATA/deploy-state.env" ]; then cat "$DATA/deploy-state.env"; else echo "(no state)"; fi
+echo "ENV_SPYGLASS_TAG=$(grep -E '^SPYGLASS_TAG=' "$WORK/.env" | cut -d= -f2)"
+echo "--- override-trace ---"
+cat "$DATA/override-trace" 2>/dev/null
+echo "--- STDOUT ---"
+cat "$WORK/stdout.log"
+echo "--- STDERR ---"
+cat "$WORK/stderr.log"
+
+exit "$rc"

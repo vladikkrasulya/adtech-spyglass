@@ -28,11 +28,14 @@ STATE_FILE="$DATA_DIR/deploy-state.env"
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
 
 # Resolve the target tag: explicit arg, else ROLLBACK_TAG from the deploy state.
-ROLLBACK_TAG=""
-if [ -f "$STATE_FILE" ]; then
-  # shellcheck disable=SC1090
-  . "$STATE_FILE"
-fi
+# The state file is PARSED as data via state_get (deploy-lib.sh) — identical policy
+# to deploy.sh — and is NEVER sourced. Sourcing would execute arbitrary shell from
+# a crafted `KEY=$(cmd)` line; state_get also refuses a symlinked state file and
+# strips every shell metacharacter. The RUNTIME floor read here can only RAISE the
+# immutable baseline (deploy-lib.sh PRIVACY_BASELINE_SHA); an empty/missing/malformed
+# value cannot disable the floor.
+ROLLBACK_TAG="$(state_get "$STATE_FILE" ROLLBACK_TAG)"
+PRIVACY_FLOOR_BUILD_SHA="$(state_get "$STATE_FILE" PRIVACY_FLOOR_BUILD_SHA)"
 TAG="${1:-${ROLLBACK_TAG:-}}"
 [ -n "$TAG" ] || { echo "ABORT: no rollback tag given and none recorded in ${STATE_FILE}"; exit 2; }
 
@@ -40,17 +43,28 @@ TAG="${1:-${ROLLBACK_TAG:-}}"
 EXPECT="$(image_build_sha "adtech-spyglass:${TAG}" || true)"
 [ -n "$EXPECT" ] || { echo "ABORT: adtech-spyglass:${TAG} missing or carries no BUILD_SHA metadata"; exit 2; }
 
+# Guard against rollback to an image that does not contain the privacy floor commit
+if ! image_contains_privacy_floor "adtech-spyglass:${TAG}" "${PRIVACY_FLOOR_BUILD_SHA:-}"; then
+  echo "ABORT: target image adtech-spyglass:${TAG} does not satisfy the privacy floor ${PRIVACY_FLOOR_BUILD_SHA}"
+  exit 2
+fi
+
 echo "==> Rolling back to adtech-spyglass:${TAG} (image BUILD_SHA=${EXPECT})"
 write_state "$STATE_FILE" <<EOF
 STATUS=ROLLING_BACK
 ATTEMPTING_TAG=${TAG}
 ATTEMPTING_BUILD_SHA=${EXPECT}
+PRIVACY_FLOOR_BUILD_SHA=${PRIVACY_FLOOR_BUILD_SHA:-}
 STARTED_AT=$(date -Is)
 EOF
 
-set_env SPYGLASS_TAG "$TAG" "$ENV_FILE"
+# `.env` and restart:always are committed ONLY after wait_ready + smoke both
+# pass — same discipline as deploy.sh. Recovery-on-boot from a crash during THIS
+# attempt: nothing runs (the target container, if created before the crash, has
+# no restart policy armed — docker-compose.yml default is 'no'), which is
+# correct: an unverified rollback attempt must not be silently promoted either.
 rollback_ok=0
-if SPYGLASS_TAG="$TAG" docker compose up -d --no-build; then
+if SPYGLASS_TAG="$TAG" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build; then
   if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT" && "$SMOKE_CMD" "$BASE" "$EXPECT" "$CONTAINER"; then
     rollback_ok=1
   fi
@@ -59,11 +73,14 @@ else
 fi
 
 if [ "$rollback_ok" = 1 ]; then
+  set_env SPYGLASS_TAG "$TAG" "$ENV_FILE"
+  arm_restart_policy "$CONTAINER" always
   write_state "$STATE_FILE" <<EOF
 STATUS=ROLLED_BACK
 ACTIVE_TAG=${TAG}
 ACTIVE_BUILD_SHA=${EXPECT}
 ROLLBACK_TAG=${ROLLBACK_TAG:-}
+PRIVACY_FLOOR_BUILD_SHA=${PRIVACY_FLOOR_BUILD_SHA:-}
 ROLLED_BACK_AT=$(date -Is)
 EOF
   echo "==> ROLLBACK OK: ${TAG} is live (BUILD_SHA=${EXPECT})."
@@ -74,6 +91,7 @@ STATUS=CRITICAL
 ACTIVE_TAG=UNKNOWN
 ATTEMPTING_TAG=${TAG}
 ATTEMPTING_BUILD_SHA=${EXPECT}
+PRIVACY_FLOOR_BUILD_SHA=${PRIVACY_FLOOR_BUILD_SHA:-}
 FAILED_AT=$(date -Is)
 EOF
   echo "==> CRITICAL: rollback FAILED for ${TAG} (expected BUILD_SHA=${EXPECT}) — manual intervention required."
