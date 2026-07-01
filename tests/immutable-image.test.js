@@ -178,6 +178,7 @@ test('deploy/rollback/smoke/backup/lib/sim scripts are valid bash (bash -n)', ()
     'grafana-ro-sim.sh',
     'cutover-sim.sh',
     'rollback-floor-sim.sh',
+    'crash-recovery-sim.sh',
   ]) {
     scripts.push(path.join(ROOT, 'tests', t));
   }

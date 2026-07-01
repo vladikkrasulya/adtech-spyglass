@@ -58,7 +58,11 @@ PRIVACY_FLOOR_BUILD_SHA=${PRIVACY_FLOOR_BUILD_SHA:-}
 STARTED_AT=$(date -Is)
 EOF
 
-set_env SPYGLASS_TAG "$TAG" "$ENV_FILE"
+# `.env` and restart:always are committed ONLY after wait_ready + smoke both
+# pass — same discipline as deploy.sh. Recovery-on-boot from a crash during THIS
+# attempt: nothing runs (the target container, if created before the crash, has
+# no restart policy armed — docker-compose.yml default is 'no'), which is
+# correct: an unverified rollback attempt must not be silently promoted either.
 rollback_ok=0
 if SPYGLASS_TAG="$TAG" docker compose up -d --no-build; then
   if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT" && "$SMOKE_CMD" "$BASE" "$EXPECT" "$CONTAINER"; then
@@ -69,6 +73,8 @@ else
 fi
 
 if [ "$rollback_ok" = 1 ]; then
+  set_env SPYGLASS_TAG "$TAG" "$ENV_FILE"
+  arm_restart_policy "$CONTAINER" always
   write_state "$STATE_FILE" <<EOF
 STATUS=ROLLED_BACK
 ACTIVE_TAG=${TAG}

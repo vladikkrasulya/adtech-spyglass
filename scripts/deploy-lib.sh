@@ -238,6 +238,35 @@ write_state() {
   mv -f "$tmp" "$f"
 }
 
+# arm_restart_policy CONTAINER POLICY
+#   Set the restart policy on an EXISTING container IN PLACE (no recreate, no
+#   downtime) via `docker update`. Used to arm `always` ONLY after a candidate
+#   or rollback image has passed wait_ready + smoke — see the docker-compose.yml
+#   `restart: 'no'` comment for why this must happen AFTER verification, never
+#   at container-creation time.
+arm_restart_policy() {
+  local container="$1" policy="$2"
+  docker update --restart="$policy" "$container" >/dev/null 2>&1
+}
+
+# is_inflight_status STATUS
+#   0 (true) if STATUS represents a deploy/rollback attempt that was left
+#   mid-transition (we do not know what, if anything, is actually running).
+#   Terminal/safe-to-proceed states are ACTIVE, ROLLED_BACK, CRITICAL, or no
+#   state at all (first-ever deploy) — CRITICAL is terminal-but-bad: it already
+#   demands manual intervention, and a fresh deploy.sh run re-derives PREV_IMG
+#   from whatever is ACTUALLY running via `docker inspect`, so it is safe to
+#   allow a retry from CRITICAL. The legacy value DEPLOYING (pre-state-machine
+#   deploy.sh) is treated as in-flight too, so an old stale state file left by a
+#   not-yet-upgraded host still fails closed here rather than being silently
+#   treated as terminal.
+is_inflight_status() {
+  case "$1" in
+    DEPLOYING | CANDIDATE_STARTING | CANDIDATE_READY | ROLLING_BACK) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # wait_ready CONTAINER BASE_URL [TIMEOUT_SECONDS=120]
 #   Poll until BOTH `/api/health` reports status=ok AND docker reports
 #   health=healthy. Aborts early on a terminal `unhealthy`, or on timeout. Logs

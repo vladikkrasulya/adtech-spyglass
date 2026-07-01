@@ -45,6 +45,26 @@ VER="v${APP_VERSION}"
 # is empty/missing/malformed. So a wiped or reset state can never disable the floor.
 FLOOR="$(state_get "$STATE_FILE" PRIVACY_FLOOR_BUILD_SHA)"
 
+# 0. Crash-safety preflight — refuse to start a NEW deploy on top of a state left
+#    mid-transition by a crash/reboot/kill during a PRIOR attempt. We do not know
+#    what, if anything, is actually running in that case, and piling a new deploy
+#    attempt on unknown container state is exactly the silent-candidate risk this
+#    guard exists to prevent. This is a FAIL-CLOSED, EXPLICIT-OPERATOR-ACTION gate:
+#    the fix is to investigate (`docker ps`, `cat deploy-state.env`, `curl
+#    /api/health`) and run `scripts/rollback.sh` to restore a known-good image
+#    before retrying deploy.sh — never to silently proceed. See docs/OPERATIONS.md
+#    "crash-safe deploy state machine".
+PRIOR_STATUS="$(state_get "$STATE_FILE" STATUS)"
+if is_inflight_status "$PRIOR_STATUS"; then
+  echo "ABORT: deploy-state.env STATUS=${PRIOR_STATUS} — a prior deploy/rollback was left mid-transition."
+  echo "       Do NOT retry blindly. Investigate what is actually running:"
+  echo "         docker ps --filter name=${CONTAINER:-adtech-spyglass}"
+  echo "         cat ${STATE_FILE}"
+  echo "         curl -fsS ${SPYGLASS_BASE_URL:-http://127.0.0.1:8090}/api/health"
+  echo "       Then restore a known-good image explicitly: ./scripts/rollback.sh"
+  exit 7
+fi
+
 # 1. Gate — deploy only from a clean main == origin/main.
 git fetch -q origin
 [ -z "$(git status --porcelain)" ] || { echo "ABORT: working tree is dirty"; exit 2; }
@@ -126,8 +146,16 @@ if ! image_contains_privacy_floor "adtech-spyglass:${SHA}" "$FLOOR"; then
 fi
 
 # 5. Record intent BEFORE the transition (survives a kill/reboot mid-deploy).
+#    State machine: LAST_GOOD(=ACTIVE) → CANDIDATE_STARTING → CANDIDATE_READY →
+#    ACTIVE. The candidate container is brought up WITHOUT pinning .env and
+#    WITHOUT arming restart:always — see docker-compose.yml `restart: 'no'`.
+#    Recovery-on-boot from THIS phase: nothing runs. `.env` still names the
+#    LAST_GOOD tag (unchanged until verified below), and the candidate container
+#    (if it was even created before the crash) has NO restart policy armed, so
+#    Docker's own restart-manager brings nothing back — a crash/reboot here fails
+#    closed, never silently promoting an unverified candidate.
 write_state "$STATE_FILE" <<EOF
-STATUS=DEPLOYING
+STATUS=CANDIDATE_STARTING
 ATTEMPTING_TAG=${SHA}
 ATTEMPTING_BUILD_SHA=${SHA}
 ATTEMPTING_GIT_SHA=${GIT_SHA}
@@ -138,12 +166,25 @@ PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
 STARTED_AT=$(date -Is)
 EOF
 
-# 6. Pin the active tag (atomic, 0600) and bring it up. The `up` is GUARDED so a
-#    non-zero exit drops us into the rollback path instead of killing the script.
-set_env SPYGLASS_TAG "$SHA" "$ENV_FILE"
+# 6. Bring the candidate up (tag passed inline — `.env` is NOT touched yet). The
+#    `up` is GUARDED so a non-zero exit drops us into the rollback path instead
+#    of killing the script.
 deploy_failed=0
 if SPYGLASS_TAG="$SHA" docker compose up -d --no-build; then
   if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT"; then
+    # CANDIDATE_READY: healthy, but NOT yet smoke-verified or committed. Same
+    # recovery-on-boot as CANDIDATE_STARTING — restart policy is still 'no'.
+    write_state "$STATE_FILE" <<EOF
+STATUS=CANDIDATE_READY
+ATTEMPTING_TAG=${SHA}
+ATTEMPTING_BUILD_SHA=${SHA}
+ATTEMPTING_GIT_SHA=${GIT_SHA}
+PREV_TAG=${PREV_TAG}
+PREV_BUILD_SHA=${PREV_SHA}
+ROLLBACK_TAG=${ROLLBACK_TAG}
+PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
+STARTED_AT=$(date -Is)
+EOF
     "$SMOKE_CMD" "$BASE" "$SHA" "$CONTAINER" || { echo "==> smoke failed"; deploy_failed=1; }
   else
     echo "==> NOT READY within ${READY_TIMEOUT}s"; deploy_failed=1
@@ -153,6 +194,14 @@ else
 fi
 
 if [ "$deploy_failed" = 0 ]; then
+  # COMMIT to ACTIVE: only NOW — after wait_ready AND smoke both passed — do we
+  # pin `.env` (so a manual/scripted `docker compose up -d` recovery reconstructs
+  # THIS verified image) and arm restart:always in place (so Docker's own
+  # restart-manager may auto-heal THIS verified image after a future crash).
+  # Recovery-on-boot from ACTIVE: safe and automatic — this is the only phase
+  # where that is true.
+  set_env SPYGLASS_TAG "$SHA" "$ENV_FILE"
+  arm_restart_policy "$CONTAINER" always
   write_state "$STATE_FILE" <<EOF
 STATUS=ACTIVE
 ACTIVE_TAG=${SHA}
@@ -171,13 +220,25 @@ EOF
 fi
 
 # 7. Auto-rollback to the previous self-contained image. The rollback `up` is
-#    ALSO guarded.
+#    ALSO guarded. Same discipline as the candidate: `.env` and restart:always
+#    are committed ONLY after wait_ready + smoke both pass on the ROLLBACK image
+#    too — a crash mid-rollback-attempt must fail closed exactly like a crash
+#    mid-candidate-deploy, never silently promoting an unverified rollback image.
 echo "==> DEPLOY FAILED — auto-rolling back to ${ROLLBACK_TAG} (expect BUILD_SHA=${PREV_SHA:-unknown})"
 rollback_ok=0
 if ! image_contains_privacy_floor "adtech-spyglass:${ROLLBACK_TAG}" "$FLOOR"; then
   echo "==> CRITICAL: rollback target tampered/unsafe (missing privacy floor) — aborting rollback"
 else
-  set_env SPYGLASS_TAG "$ROLLBACK_TAG" "$ENV_FILE"
+  write_state "$STATE_FILE" <<EOF
+STATUS=ROLLING_BACK
+ATTEMPTING_TAG=${ROLLBACK_TAG}
+ATTEMPTING_BUILD_SHA=${PREV_SHA}
+PREV_TAG=${PREV_TAG}
+ROLLBACK_TAG=${ROLLBACK_TAG}
+LAST_FAILED_TAG=${SHA}
+PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
+STARTED_AT=$(date -Is)
+EOF
   if [ -n "$PREV_SHA" ] && SPYGLASS_TAG="$ROLLBACK_TAG" docker compose up -d --no-build; then
     if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT" && "$SMOKE_CMD" "$BASE" "$PREV_SHA" "$CONTAINER"; then
       rollback_ok=1
@@ -188,6 +249,8 @@ else
 fi
 
 if [ "$rollback_ok" = 1 ]; then
+  set_env SPYGLASS_TAG "$ROLLBACK_TAG" "$ENV_FILE"
+  arm_restart_policy "$CONTAINER" always
   write_state "$STATE_FILE" <<EOF
 STATUS=ROLLED_BACK
 ACTIVE_TAG=${ROLLBACK_TAG}

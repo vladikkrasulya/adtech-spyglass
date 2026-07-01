@@ -53,7 +53,17 @@ services:
     networks:
       - default
       - kt-shared
-    restart: always
+    # Restart policy is NOT static "always". Docker's restart-manager resurrects
+    # an EXISTING container object independent of .env/compose (it does not
+    # re-read SPYGLASS_TAG on a daemon/host restart) — so a container created
+    # with `always` would be silently resurrected by Docker itself even if it is
+    # an unverified deploy candidate that never passed health/smoke. deploy.sh
+    # and rollback.sh instead arm `docker update --restart=always` in place, ONLY
+    # after wait_ready + smoke both pass. Until armed, a candidate is born with
+    # this "no" default, so a crash/reboot during an unverified deploy brings
+    # nothing back automatically — fail-closed, never a silent unverified image.
+    # See scripts/deploy-lib.sh arm_restart_policy() and docs/OPERATIONS.md.
+    restart: 'no'
     healthcheck:
       # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).
       test: ['CMD-SHELL', 'wget -qO- --tries=1 --timeout=3 http://127.0.0.1:3000/ > /dev/null']

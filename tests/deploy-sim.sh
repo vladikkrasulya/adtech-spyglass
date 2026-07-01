@@ -108,7 +108,12 @@ case "$1" in
     case "$*" in
       *--format*org.opencontainers.image.revision*)
          if echo "$*" | grep -q "rollback-pre"; then
-           if [ "$SCEN" = "floor-rollback-tampered" ] && grep -q DEPLOYING "$DATA/deploy-state.env" 2>/dev/null; then
+           # "mid-attempt" == deploy.sh has written its intent state (CANDIDATE_STARTING/
+           # CANDIDATE_READY — the state-machine's pre-commit phases; DEPLOYING kept for
+           # back-compat with an old state file) but hasn't reached a terminal STATUS yet.
+           # Simulates the rollback-pre-* tag being tampered with BETWEEN deploy.sh's
+           # early floor check (§3, before this write) and its later re-check (§7).
+           if [ "$SCEN" = "floor-rollback-tampered" ] && grep -qE '^STATUS=(CANDIDATE_STARTING|CANDIDATE_READY|DEPLOYING)' "$DATA/deploy-state.env" 2>/dev/null; then
              echo "dead000000000000000000000000000000000000"
            else
              echo "${PREV_REV}"
