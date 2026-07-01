@@ -24,7 +24,16 @@
 #                restart-armed-only-on-full-success,
 #                restart-not-armed-on-candidate-up-fail,
 #                restart-not-armed-on-total-failure,
-#                env-never-pinned-to-failed-candidate }
+#                env-never-pinned-to-failed-candidate,
+#                plain-compose-up-uses-always }
+#
+# restart-policy-state: a ONE-LINE file the mock docker maintains to simulate
+# `docker inspect --format '{{.HostConfig.RestartPolicy.Name}}'` — set to 'no'
+# whenever `up` runs WITH the deploy-transition override, 'always' whenever `up`
+# runs WITHOUT it (a plain/bystander compose invocation), and to the arg of
+# `docker update --restart=X` whenever that runs. policy-trace additionally
+# records EVERY such transition (value + source + STATUS-on-disk at that
+# moment), so tests can assert ordering, not just the final value.
 
 set -u
 SCEN="${1:?scenario required}"
@@ -64,29 +73,49 @@ EOG
 #    not just final state ──────────────────────────────────────────────────────
 cat >"$BIN/docker" <<EOD
 #!/bin/sh
-case "\$1 \$2" in
-  "compose build") exit 0 ;;
-  "compose up")
-    echo "COMPOSE_UP \${SPYGLASS_TAG:-} STATUS=\$(grep -E '^STATUS=' "$DATA/deploy-state.env" 2>/dev/null | tail -1)" >> "$DATA/compose-trace"
-    case "$SCEN" in
-      restart-not-armed-on-candidate-up-fail|env-never-pinned-to-failed-candidate)
-        if [ "\${SPYGLASS_TAG:-}" = "abc1234" ]; then exit 1; else exit 0; fi ;;
-      restart-not-armed-on-total-failure) exit 1 ;;
-      *) exit 0 ;;
-    esac
-    ;;
-esac
+cur_status() { grep -E '^STATUS=' "$DATA/deploy-state.env" 2>/dev/null | tail -1; }
+# Match the subcommand as a word anywhere in "\$*" — deploy.sh/rollback.sh's
+# candidate/rollback \`up\` calls pass \`-f docker-compose.yml -f
+# docker-compose.deploy-transition.yml\` BEFORE \`up\`, shifting its position.
+if [ "\$1" = "compose" ]; then
+  case " \$* " in
+    *" up "*)
+      echo "COMPOSE_UP \${SPYGLASS_TAG:-} STATUS=\$(cur_status)" >> "$DATA/compose-trace"
+      # Stateful restart-policy simulation: WITH the deploy-transition override
+      # → container is (re)created with 'no'; WITHOUT it (a plain/bystander
+      # \`docker compose up -d\`) → container is (re)created with the BASE
+      # file's 'always'. Traced (not just set) so ordering is provable.
+      case " \$* " in
+        *"docker-compose.deploy-transition.yml"*) pol=no ;;
+        *) pol=always ;;
+      esac
+      echo "\$pol" > "$DATA/restart-policy-state"
+      echo "POLICY \$pol SRC=up STATUS=\$(cur_status)" >> "$DATA/policy-trace"
+      case "$SCEN" in
+        restart-not-armed-on-candidate-up-fail|env-never-pinned-to-failed-candidate)
+          if [ "\${SPYGLASS_TAG:-}" = "abc1234" ]; then exit 1; else exit 0; fi ;;
+        restart-not-armed-on-total-failure) exit 1 ;;
+        *) exit 0 ;;
+      esac
+      ;;
+    *" build "*) exit 0 ;;
+  esac
+fi
 case "\$1" in
   tag) exit 0 ;;
   update)
-    # docker update --restart=<policy> <container>  → trace policy + container +
-    # the STATUS on disk AT THE MOMENT of arming (proves ordering, not just result)
+    # docker update --restart=<policy> <container>  → arms IN PLACE (no
+    # recreate). Traced with the STATUS on disk AT THE MOMENT of arming (proves
+    # ordering: verify → arm → THEN commit STATUS, never the reverse).
     pol="\${2#--restart=}"
-    echo "ARM \$pol \$3 STATUS=\$(grep -E '^STATUS=' "$DATA/deploy-state.env" 2>/dev/null | tail -1)" >> "$DATA/restart-trace"
+    echo "\$pol" > "$DATA/restart-policy-state"
+    echo "ARM \$pol \$3 STATUS=\$(cur_status)" >> "$DATA/restart-trace"
+    echo "POLICY \$pol SRC=arm-update STATUS=\$(cur_status)" >> "$DATA/policy-trace"
     exit 0
     ;;
   inspect)
     case "\$*" in
+      *RestartPolicy*) cat "$DATA/restart-policy-state" 2>/dev/null || echo "" ;;
       *Health*) echo healthy ;;
       *Image*)  echo "sha256:previmage" ;;
       *)        echo "" ;;
@@ -178,6 +207,14 @@ case "$SCEN" in
     [ -n "$TAG_ARG" ] || TAG_ARG="rollback-pre-oldsha"
     rc="$(run_rollback)"
     ;;
+  plain-compose-up-uses-always)
+    # Simulates a BYSTANDER/manual command — an operator (or whatever brings the
+    # daemon back after a host reboot) running a PLAIN `docker compose up -d`,
+    # with NO -f override — completely OUTSIDE deploy.sh/rollback.sh. Must use
+    # the base file's restart: always, unaffected by anything deploy-specific.
+    PATH="$BIN:$PATH" SPYGLASS_TAG=old docker compose up -d >"$WORK/stdout.log" 2>&1
+    rc=$?
+    ;;
   *)
     rc="$(run_deploy)"
     ;;
@@ -195,6 +232,9 @@ echo "--- compose-trace ---"
 cat "$DATA/compose-trace" 2>/dev/null
 echo "--- restart-trace ---"
 cat "$DATA/restart-trace" 2>/dev/null
+echo "--- policy-trace ---"
+cat "$DATA/policy-trace" 2>/dev/null
+echo "RESTART_POLICY_STATE=$(cat "$DATA/restart-policy-state" 2>/dev/null)"
 echo "--- stdout ---"
 cat "$WORK/stdout.log"
 exit "$rc"

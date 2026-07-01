@@ -752,22 +752,113 @@ git checkout main && git pull --ff-only        # clean main == origin/main
 
 `scripts/deploy.sh` does the whole thing safely:
 
-1. Refuses to run unless the tree is clean and `HEAD == main == origin/main`.
-2. Tags the currently-running image as `adtech-spyglass:rollback-pre-v<version>`
-   and records the previous `BUILD_SHA`.
+1. **Preflight** — refuses to run if a prior attempt was left mid-transition
+   (`deploy-state.env` `STATUS` is `CANDIDATE_STARTING`/`CANDIDATE_READY`/
+   `ROLLING_BACK`/legacy `DEPLOYING`; exit 7 with an explicit next-step message).
+   Also refuses unless the tree is clean and `HEAD == main == origin/main`, and
+   unless the candidate/previous image both satisfy the **privacy floor** (§9.1.2).
+2. Tags the currently-running image as `adtech-spyglass:rollback-pre-<BUILD_SHA>`
+   — keyed by the **previous image's own immutable BUILD_SHA**, not the app
+   version (§9.1.2 "SHA-keyed rollback tags") — and records that `BUILD_SHA`.
 3. Builds the image with `BUILD_SHA` (short), `GIT_SHA` (full → OCI revision
    label) and `APP_VERSION` (package.json → OCI version label), tagging it
    `adtech-spyglass:<short-sha>` + `adtech-spyglass:v<version>`.
-4. Writes `SPYGLASS_TAG=<short-sha>` to `.env` (auto-read by compose, so a reboot
-   or a plain `docker compose up -d` starts the SAME image) and brings it up with
-   `--no-build`.
-5. Runs `scripts/smoke.sh` against production. **On smoke failure it auto-rolls
-   back** to `rollback-pre-v<version>` and re-smokes the previous `BUILD_SHA`;
-   prints `CRITICAL` and exits non-zero if the rollback also fails.
+4. Brings the candidate up via `docker compose -f docker-compose.yml -f
+docker-compose.deploy-transition.yml up -d --no-build` — the transition
+   override forces `restart:'no'` for this UNVERIFIED image only (§9.1.2). `.env`
+   is **not yet** touched.
+5. Runs `scripts/smoke.sh` against production. **Only once wait_ready +
+   smoke both pass** does it write `SPYGLASS_TAG=<short-sha>` to `.env` and run
+   `docker update --restart=always` on the now-verified container in place (no
+   recreate) — re-arming the exact behavior the base `docker-compose.yml`
+   documents (a reboot or a plain `docker compose up -d` resumes the SAME,
+   verified image). **On smoke failure it auto-rolls back** to
+   `rollback-pre-<BUILD_SHA>` through the SAME transition override, and only
+   pins `.env`/arms `always` once THAT image is verified too; prints `CRITICAL`
+   and exits non-zero if the rollback also fails.
 
 The deploy is reproducible from any clean checkout (GitHub Actions builds the same
 image) — the build context is `.`, the CSS is vendored into `public/design-system.css`,
 and nothing is read from `/srv/DATA/Stacks/kyivtech-portal` at build time.
+
+### 9.1.2 Crash-safe deploy state machine, privacy floor, and rollback identity
+
+Added by the privacy-floor-guard work (v1.2.4-line hardening). Three related
+mechanisms, all in `scripts/deploy-lib.sh` / `scripts/deploy.sh` /
+`scripts/rollback.sh` / `docker-compose.yml` + `docker-compose.deploy-transition.yml`:
+
+**State machine**
+
+```
+LAST_GOOD(=ACTIVE) ──deploy──▶ CANDIDATE_STARTING ──health──▶ CANDIDATE_READY ──smoke──▶ ACTIVE
+        ▲                          restart:'no'                  restart:'no'              │ arm restart:always
+        │                          (fail-closed)                 (fail-closed)              │ THEN commit STATUS
+        │                                                                                    ▼
+        └──────────────────────────────── ROLLING_BACK ──smoke──▶ ROLLED_BACK | CRITICAL
+                                           restart:'no' (fail-closed)   arm always   restart:'no' (fail-closed)
+```
+
+`LAST_GOOD` is the conceptual name for the resting state; the persisted
+`deploy-state.env` field stays the literal `STATUS=ACTIVE` (kept for
+backward-compatible tooling/log greps).
+
+**Recovery per phase, if the host/dockerd/deploy.sh is killed or the box reboots:**
+
+| `STATUS` at crash time   | What comes back on its own                                                                                                                                  | How to recover                                                                                                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACTIVE` / `ROLLED_BACK` | **Automatic and safe** — Docker's restart-manager resurrects exactly this verified container (armed `always`).                                              | Nothing to do.                                                                                                                                                                                              |
+| `CANDIDATE_STARTING`     | **Nothing.** The container (if it even exists) was created via the deploy-transition override, so it carries `restart:'no'` — Docker will not resurrect it. | Investigate (`docker ps`, `cat deploy-state.env`, `curl /api/health`), then run `./scripts/rollback.sh` to restore the last verified image. Re-running `deploy.sh` directly is refused (preflight, exit 7). |
+| `CANDIDATE_READY`        | **Nothing** — same as above; the candidate passed health but was never smoke-verified or committed.                                                         | Same as above.                                                                                                                                                                                              |
+| `ROLLING_BACK`           | **Nothing** — the rollback attempt's own container also carries `restart:'no'` until ITS smoke passes.                                                      | Same as above — `./scripts/rollback.sh` remains the correct action even when the state already says `ROLLING_BACK`; it re-derives its target fresh.                                                         |
+| `CRITICAL`               | Nothing (by design — both the candidate and rollback attempts failed).                                                                                      | Manual intervention: identify a known-good tag, `./scripts/rollback.sh <tag>`.                                                                                                                              |
+
+**Verifying a container's ACTUAL restart policy** (do this whenever the STATUS
+above looks stale, or before trusting that a host reboot will self-heal):
+
+```bash
+docker inspect adtech-spyglass --format '{{.HostConfig.RestartPolicy.Name}}'
+# → "always"  : verified, self-healing (expected steady state)
+# → "no"      : an UNVERIFIED transition is in progress or was interrupted —
+#               do NOT assume a reboot will bring the app back; check
+#               deploy-state.env STATUS and run ./scripts/rollback.sh
+```
+
+**Never bypass `deploy.sh`/`rollback.sh` while a transition is in progress.** A
+bare `docker compose up -d` (no `-f` override) issued by a human WHILE
+deploy.sh's own transitional container is up can cause compose to detect a
+restart-policy mismatch against the base file and force an unwanted recreate,
+interrupting the script's own verification. There is no lock file — this is an
+operational rule, not a technical guard: **if `deploy-state.env` `STATUS` is not
+`ACTIVE`/`ROLLED_BACK`/`CRITICAL`, do not run any bare `docker compose`/`docker`
+command against this service** — use `scripts/rollback.sh` only, and let
+`scripts/deploy.sh`'s own preflight gate a retry.
+
+**Deploy-transition compose override.** `docker-compose.yml` (base) keeps
+`restart: always` — a plain `docker compose up -d` (routine ops, manual
+recovery, whatever brings dockerd back after a reboot) is completely
+unaffected. `docker-compose.deploy-transition.yml` overrides that to `'no'` and
+is passed ONLY by `deploy.sh`/`rollback.sh`'s own `up` calls (via
+`$COMPOSE_TRANSITION_FILES` in `scripts/deploy-lib.sh`) while bringing up an
+unverified image. It is deliberately **not** named `docker-compose.override.yml`
+— that literal filename is auto-merged by Compose on every plain invocation,
+which would silently apply `restart:'no'` everywhere and defeat the whole point.
+
+**SHA-keyed rollback tags.** The rollback image tag is
+`adtech-spyglass:rollback-pre-<BUILD_SHA>` — the _previous_ image's own
+immutable build SHA, not `v<app-version>`. Two deploys under an unchanged/
+unbumped version (a same-version retry, or a hotfix that forgot to bump SemVer)
+therefore never collide on the same tag name and silently overwrite a different
+commit's rollback target; a genuinely repeated deploy of the identical commit
+re-tags the identical name (harmless).
+
+**Privacy floor.** `deploy.sh`/`rollback.sh` refuse to deploy/roll back to any
+image that does not descend from the immutable `PRIVACY_BASELINE_SHA` (v1.2.1,
+commit `2437646` — the PII-removal release) baked into `scripts/deploy-lib.sh`.
+This baseline is **not** read from `deploy-state.env` and cannot be weakened by
+deleting/resetting that file; a runtime floor there may only raise the bar. See
+`scripts/deploy-lib.sh`'s "Threat model / ancestry semantics" comment for the
+guard's scope (it proves ancestry, not behavior — the compensating control is
+the CI gate `tests/auth-event-pii.test.js`).
 
 ### 9.1.1 Security cutover (v1.1.7 — Grafana read-only SQLite permissions)
 
@@ -823,11 +914,19 @@ cd /srv/DATA/Stacks/adtech-spyglass
 # or pin an explicit image:  ./scripts/rollback.sh <tag>
 ```
 
-Rollback selects a previous **self-contained** image, pins it in `.env`, and runs
-`docker compose up -d --no-build` (no silent rebuild). It does **not** touch git,
-does **not** re-add source bind-mounts, and does **not** touch `/data` or
-`content-posts`. It verifies the expected previous `BUILD_SHA` and prints
-`CRITICAL` if the smoke fails.
+Rollback selects a previous **self-contained** image (by its SHA-keyed
+`rollback-pre-<BUILD_SHA>` tag — see §9.1.2) and runs it through the SAME
+crash-safe path as `deploy.sh`: `docker compose -f docker-compose.yml -f
+docker-compose.deploy-transition.yml up -d --no-build` (restart:'no' until
+verified; no silent rebuild), then pins `.env` and arms `docker update
+--restart=always` ONLY after wait_ready + smoke both pass. It does **not** touch
+git, does **not** re-add source bind-mounts, and does **not** touch `/data` or
+`content-posts`. It also enforces the privacy floor (§9.1.2) — refuses to
+roll back to any image older than `PRIVACY_BASELINE_SHA`. It verifies the
+expected previous `BUILD_SHA` and prints `CRITICAL` if the smoke fails.
+`rollback.sh` is the designated recovery action for a stuck/mid-transition
+`deploy-state.env` — it is intentionally NOT gated by `deploy.sh`'s own
+preflight check.
 
 ### 9.3 Updating the vendored `design-system.css`
 
@@ -848,6 +947,14 @@ docker image inspect adtech-spyglass:$(curl -s http://127.0.0.1:8090/api/health 
 
 The `/api/health` `build.sha` must equal `git rev-parse --short HEAD`; the image's
 `org.opencontainers.image.revision` label must equal the full `git rev-parse HEAD`.
+
+Also confirm the container is self-healing (armed, not mid-transition):
+
+```bash
+docker inspect adtech-spyglass --format '{{.HostConfig.RestartPolicy.Name}}'   # expect: always
+```
+
+See §9.1.2 if this ever prints `no` outside of an in-progress deploy/rollback.
 
 ---
 

@@ -86,16 +86,28 @@ EOG
 #    returns a prev image + healthy; image inspect yields BUILD_SHA (or none) ──
 cat >"$BIN/docker" <<'EOD'
 #!/bin/sh
-case "$1 $2" in
-  "compose build") exit 0 ;;
-  "compose up")
-    echo "COMPOSE_UP_CALLED" >> "$DATA/compose-trace"
-    if [ "${SPYGLASS_TAG:-}" = "abc1234" ]; then
-      case "$SCEN" in candidate-up-fail|rollback-up-fail|floor-rollback-tampered|floor-auto-rollback-success) exit 1 ;; *) exit 0 ;; esac
-    else
-      case "$SCEN" in rollback-up-fail) exit 1 ;; *) exit 0 ;; esac
-    fi ;;
-esac
+# Match the SUBCOMMAND as a word anywhere in "$*", not just "$1 $2" — deploy.sh's
+# candidate/rollback `up` calls now pass `-f docker-compose.yml -f
+# docker-compose.deploy-transition.yml` BEFORE `up`, shifting its position.
+if [ "$1" = "compose" ]; then
+  case " $* " in
+    *" up "*)
+      echo "COMPOSE_UP_CALLED" >> "$DATA/compose-trace"
+      # Separate trace (never affects COMPOSE_UP_CALLS) confirming every
+      # candidate/rollback `up` carries the deploy-transition override.
+      case " $* " in
+        *"docker-compose.deploy-transition.yml"*) echo "OVERRIDE_PRESENT" >> "$DATA/override-trace" ;;
+        *) echo "OVERRIDE_MISSING" >> "$DATA/override-trace" ;;
+      esac
+      if [ "${SPYGLASS_TAG:-}" = "abc1234" ]; then
+        case "$SCEN" in candidate-up-fail|rollback-up-fail|floor-rollback-tampered|floor-auto-rollback-success) exit 1 ;; *) exit 0 ;; esac
+      else
+        case "$SCEN" in rollback-up-fail) exit 1 ;; *) exit 0 ;; esac
+      fi
+      ;;
+    *" build "*) exit 0 ;;
+  esac
+fi
 case "$1" in
   tag)
     # Trace every `docker tag SRC DST` call so tests can inspect the EXACT tag
@@ -189,4 +201,6 @@ echo "EXIT=$rc"
 if [ -f "$DATA/deploy-state.env" ]; then cat "$DATA/deploy-state.env"; else echo "(no state)"; fi
 echo "ENV_SPYGLASS_TAG=$(grep -E '^SPYGLASS_TAG=' "$WORK/.env" | cut -d= -f2)"
 echo "COMPOSE_UP_CALLS=$(cat "$DATA/compose-trace" 2>/dev/null | wc -l | tr -d ' ')"
+echo "--- override-trace ---"
+cat "$DATA/override-trace" 2>/dev/null
 exit "$rc"

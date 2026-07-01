@@ -53,17 +53,21 @@ services:
     networks:
       - default
       - kt-shared
-    # Restart policy is NOT static "always". Docker's restart-manager resurrects
-    # an EXISTING container object independent of .env/compose (it does not
-    # re-read SPYGLASS_TAG on a daemon/host restart) — so a container created
-    # with `always` would be silently resurrected by Docker itself even if it is
-    # an unverified deploy candidate that never passed health/smoke. deploy.sh
-    # and rollback.sh instead arm `docker update --restart=always` in place, ONLY
-    # after wait_ready + smoke both pass. Until armed, a candidate is born with
-    # this "no" default, so a crash/reboot during an unverified deploy brings
-    # nothing back automatically — fail-closed, never a silent unverified image.
-    # See scripts/deploy-lib.sh arm_restart_policy() and docs/OPERATIONS.md.
-    restart: 'no'
+    # `always` is the NORMAL, base-file policy — a plain `docker compose up -d`
+    # (routine ops, manual recovery, a host reboot bringing dockerd back) must
+    # keep behaving exactly as documented: it recreates/resumes THIS service with
+    # auto-heal, unaffected by anything deploy-specific.
+    #
+    # scripts/deploy.sh / scripts/rollback.sh do NOT rely on this default while
+    # bringing up an UNVERIFIED candidate/rollback image: they additionally pass
+    # `-f docker-compose.deploy-transition.yml` (see that file), which overrides
+    # this to 'no' for THAT invocation only, then arm `docker update
+    # --restart=always` in place ONLY after wait_ready + smoke both pass — so an
+    # unverified image is never silently resurrected by Docker's own
+    # restart-manager, while every OTHER caller of plain `docker compose up -d`
+    # keeps the normal always-restart behavior. See scripts/deploy-lib.sh
+    # COMPOSE_TRANSITION_FILES / arm_restart_policy() and docs/OPERATIONS.md.
+    restart: always
     healthcheck:
       # IPv4 explicit (alpine resolves "localhost" as ::1 first; app listens IPv4 only).
       test: ['CMD-SHELL', 'wget -qO- --tries=1 --timeout=3 http://127.0.0.1:3000/ > /dev/null']

@@ -126,14 +126,23 @@ EOG
 # ── mock docker ──
 cat >"$BIN/docker" <<EOD
 #!/bin/sh
-case "\$1 \$2" in
-  "compose up")
-    case "$SCEN" in
-      rollback-up-fail) exit 1 ;;
-      *) exit 0 ;;
-    esac
-    ;;
-esac
+# Match the subcommand as a word anywhere in "\$*" — rollback.sh's \`up\` call now
+# passes \`-f docker-compose.yml -f docker-compose.deploy-transition.yml\` BEFORE
+# \`up\`, shifting its position out of \$1/\$2.
+if [ "\$1" = "compose" ]; then
+  case " \$* " in
+    *" up "*)
+      case " \$* " in
+        *"docker-compose.deploy-transition.yml"*) echo "OVERRIDE_PRESENT" >> "$DATA/override-trace" ;;
+        *) echo "OVERRIDE_MISSING" >> "$DATA/override-trace" ;;
+      esac
+      case "$SCEN" in
+        rollback-up-fail) exit 1 ;;
+        *) exit 0 ;;
+      esac
+      ;;
+  esac
+fi
 case "\$1" in
   inspect)
     case "\$*" in
@@ -204,6 +213,8 @@ rc=$?
 echo "EXIT=$rc"
 if [ -f "$DATA/deploy-state.env" ]; then cat "$DATA/deploy-state.env"; else echo "(no state)"; fi
 echo "ENV_SPYGLASS_TAG=$(grep -E '^SPYGLASS_TAG=' "$WORK/.env" | cut -d= -f2)"
+echo "--- override-trace ---"
+cat "$DATA/override-trace" 2>/dev/null
 echo "--- STDOUT ---"
 cat "$WORK/stdout.log"
 echo "--- STDERR ---"

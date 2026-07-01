@@ -64,7 +64,7 @@ EOF
 # no restart policy armed — docker-compose.yml default is 'no'), which is
 # correct: an unverified rollback attempt must not be silently promoted either.
 rollback_ok=0
-if SPYGLASS_TAG="$TAG" docker compose up -d --no-build; then
+if SPYGLASS_TAG="$TAG" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build; then
   if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT" && "$SMOKE_CMD" "$BASE" "$EXPECT" "$CONTAINER"; then
     rollback_ok=1
   fi

@@ -19,6 +19,17 @@
 # Tests exercise it against this repo's real git history.
 PRIVACY_BASELINE_SHA="24376462c3fd1988447b26ee69a897190bdeac1a"
 
+# ── Deploy-transition compose files (restart:'no' for UNVERIFIED images only) ─
+# Passed by deploy.sh/rollback.sh's OWN `docker compose ... up` calls while
+# bringing up a CANDIDATE or ROLLBACK image that has not yet passed wait_ready +
+# smoke. Layers docker-compose.deploy-transition.yml (restart:'no') over the
+# base docker-compose.yml (restart: always) for THAT invocation only. A plain
+# `docker compose up -d` — routine ops, manual recovery, whatever a host reboot
+# runs — never passes these flags and always gets the base file's restart:
+# always, unaffected. Defined ONCE here so deploy.sh and rollback.sh apply
+# IDENTICAL policy; never construct this string per call-site.
+COMPOSE_TRANSITION_FILES="-f docker-compose.yml -f docker-compose.deploy-transition.yml"
+
 # ── Threat model / ancestry semantics (READ BEFORE CHANGING THE FLOOR) ────────
 # The floor guard proves ANCESTRY, not BEHAVIOUR: it verifies (via
 # `git merge-base --is-ancestor`) that the image was built from a commit that is

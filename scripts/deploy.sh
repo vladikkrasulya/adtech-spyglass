@@ -179,7 +179,7 @@ EOF
 #    `up` is GUARDED so a non-zero exit drops us into the rollback path instead
 #    of killing the script.
 deploy_failed=0
-if SPYGLASS_TAG="$SHA" docker compose up -d --no-build; then
+if SPYGLASS_TAG="$SHA" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build; then
   if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT"; then
     # CANDIDATE_READY: healthy, but NOT yet smoke-verified or committed. Same
     # recovery-on-boot as CANDIDATE_STARTING — restart policy is still 'no'.
@@ -248,7 +248,7 @@ LAST_FAILED_TAG=${SHA}
 PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
 STARTED_AT=$(date -Is)
 EOF
-  if [ -n "$PREV_SHA" ] && SPYGLASS_TAG="$ROLLBACK_TAG" docker compose up -d --no-build; then
+  if [ -n "$PREV_SHA" ] && SPYGLASS_TAG="$ROLLBACK_TAG" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build; then
     if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT" && "$SMOKE_CMD" "$BASE" "$PREV_SHA" "$CONTAINER"; then
       rollback_ok=1
     fi

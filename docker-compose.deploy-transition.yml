@@ -1,0 +1,21 @@
+# Deploy-transition override — NOT auto-merged by a plain `docker compose`
+# invocation (that only happens for the literal filename
+# docker-compose.override.yml, which this deliberately is NOT named). Applied
+# ONLY by scripts/deploy.sh and scripts/rollback.sh's OWN `up` calls, via
+#   docker compose -f docker-compose.yml -f docker-compose.deploy-transition.yml up ...
+# (see COMPOSE_TRANSITION_FILES in scripts/deploy-lib.sh — both scripts source
+# the SAME variable so they apply identical policy).
+#
+# It forces restart:'no' for the single window where the container holds an
+# UNVERIFIED candidate or rollback image, so Docker's own restart-manager can
+# never resurrect that container on a crash/reboot before it has passed
+# wait_ready + smoke. Once verified, the scripts arm `docker update
+# --restart=always` on the SAME container IN PLACE (no recreate) — which
+# re-establishes exactly the base docker-compose.yml's normal policy.
+#
+# A plain `docker compose up -d` (no -f flags — routine ops, manual recovery,
+# whatever brings the daemon back after a host reboot) NEVER sees this file and
+# is completely unaffected: it always uses the base file's restart: always.
+services:
+  spyglass:
+    restart: 'no'
