@@ -420,6 +420,31 @@ legacy finding fields and validation/crosscheck output are unchanged.
   [`source-nav`](../tests/source-nav.test.js) (jsdom),
   [`source-nav-i18n`](../tests/source-nav-i18n.test.js).
 
+### 1.3.9 Re-entrant inspector mount (app 1.2.5)
+
+`mountInspector()` in [`public/spyglass.app.js`](../public/spyglass.app.js) is now
+idempotent and re-entrant — the flagship section mounts **in place** via SPA from
+any other section (Live → Inspector, back/forward, `/r/{hash}`) like every other
+section, instead of forcing a full page reload.
+
+- **Lifecycle ownership** — every `window`/`document` listener (drag handlers,
+  the global error boundary, the analyze abort) plus both `setInterval`
+  watchdogs are registered against `ctx.signal` / `ctx.addCleanup` and torn down
+  LIFO on unmount; layout init is recomputable, so a remount rebuilds the
+  workbench cleanly with no listener stacking.
+- **Stale-continuation guards** — the in-flight `analyze` is aborted on unmount,
+  and all secondary async paths (auth/partners/samples reads, delete/corpus
+  mutations, `loadSample`, and the boot sequence) guard on
+  `ctx.signal.aborted` so a torn-down mount can never paint or toast into its
+  successor.
+- **Forced-reload mitigation removed** — [`public/shell-boot.js`](../public/shell-boot.js)
+  `activateFromUrl()` no longer forces a full document load when navigating _to_
+  the inspector; the earlier (2026-05-26) non-SPA transition is gone.
+- **Tests** — [`inspector-reentrant`](../tests/inspector-reentrant.test.js):
+  10× mount→unmount cycles (no listener/timer/facade leak), stale-continuation
+  guards, idempotent teardown, and static assertions that the guards are present
+  in source.
+
 ### 1.4 Consumers
 
 | Consumer                        | File                                                              | What it uses                                                                                                                                                             |
