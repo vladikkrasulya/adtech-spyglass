@@ -29,6 +29,11 @@ import * as registry from '/core/registry.js';
 // spyglass.app.js no longer loads on /library, /blog, /docs, etc.
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
+// ROADMAP #18: session/auth + the modal host are chrome-level services, not
+// Inspector-owned — installed once here, alongside nav/topbar, so they exist
+// for the whole page lifecycle regardless of which section is mounted.
+import { session, installSessionFacade } from '/core/session.js';
+import { installModalHost } from '/core/modal-host.js';
 
 // ── Initial dependency loading ───────────────────────────────────
 async function loadStylesheet(href) {
@@ -251,6 +256,14 @@ function mountChrome() {
     console.error('[shell-boot] .kt-shell root not found');
     return;
   }
+  // Session/auth + modal host FIRST — nav/topbar and the (lazy) auth/unlock/
+  // recovery modules all reach for window.SpyglassSession / window.closeModal
+  // / window.lazyOpenAuth, so these must exist before anything else mounts.
+  // installSessionFacade() is synchronous (just wires the facade + the
+  // window.signOut global); ensureBooted() is the actual /api/auth/me
+  // request and is deliberately NOT awaited here — see boot() below.
+  installSessionFacade();
+  installModalHost();
   const navRoot = document.getElementById('kt-nav-root');
   const topbarRoot = document.getElementById('kt-topbar-root');
   if (navRoot) mountNav(navRoot);
@@ -313,6 +326,13 @@ async function boot() {
   mountChrome();
   interceptClicks();
   wireLangChange();
+  // Kick off the canonical session boot (one shared /api/auth/me — topbar's
+  // own updateAuthArea() and Inspector's mount both call ensureBooted() too
+  // and share this SAME in-flight promise, per the module's dedup contract).
+  // Deliberately NOT awaited: a slow or unreachable auth endpoint must never
+  // block the initial section from mounting. ensureBooted() already resolves
+  // to an anonymous state on any failure, so this can't reject.
+  session.ensureBooted();
   await activateFromUrl();
 }
 

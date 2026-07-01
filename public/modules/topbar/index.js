@@ -20,6 +20,13 @@
    ============================================================ */
 'use strict';
 
+// ROADMAP #18: session boot is now canonical + shared (public/core/session.js)
+// — topbar no longer runs its own separate /api/auth/me; it awaits the SAME
+// in-flight/cached request shell-boot.js and Inspector's mount also share, so
+// there's exactly one boot fetch per page load regardless of how many
+// consumers ask for it.
+import { session } from '/core/session.js';
+
 function lang() {
   return document.documentElement.getAttribute('lang') || 'en';
 }
@@ -125,20 +132,6 @@ function renderTopbar(authUser) {
   `;
 }
 
-// Fetch /api/auth/me and return the user object, or null on 401/error.
-// Used by updateAuthArea to drive the profile pill vs sign-in button.
-async function fetchAuthUser() {
-  try {
-    const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-    if (res.status === 401) return null;
-    if (!res.ok) return null;
-    const j = await res.json();
-    return j && j.user ? j.user : null;
-  } catch (_) {
-    return null;
-  }
-}
-
 export function mountTopbar(root, shellRoot) {
   // Tracked auth user for the current render cycle. Starts null (anon);
   // updateAuthArea() fetches /api/auth/me and re-renders the action area.
@@ -215,7 +208,10 @@ export function mountTopbar(root, shellRoot) {
       // Caller already knows the new user (from auth:changed event detail).
       user = userOverride;
     } else {
-      user = await fetchAuthUser();
+      // Shares the ONE canonical boot request (session.ensureBooted() is
+      // idempotent — concurrent/repeat callers get the same promise/result).
+      const result = await session.ensureBooted();
+      user = result.user;
     }
     _authUser = user;
 
@@ -275,15 +271,12 @@ export function mountTopbar(root, shellRoot) {
       .catch((e) => console.warn('[topbar] search module load failed:', e));
   }
 
-  // Wire the sign-in pill. The auth modal lives in /modules/auth/ but
-  // depends on the inspector's closure-scoped SpyglassSession (DEK +
-  // crypto state). Until that dependency is hoisted to the shell level
-  // (backlog item: chrome-level auth), sign-in from any section
-  // navigates to /inspector?auth=login — the inspector's bootAuth
-  // reads the query and opens the modal once mounted.
-  //
-  // If the inspector is already the active section (modal can open
-  // in place), call window.openAuthModal directly.
+  // Wire the sign-in pill. ROADMAP #18: session/DEK is now a shell-level
+  // service (public/core/session.js) and window.lazyOpenAuth is installed at
+  // shell boot (public/core/modal-host.js) — independent of Inspector, so the
+  // modal opens IN PLACE on whichever section is active. onSignIn's
+  // /inspector?auth=login branch is now unreachable in practice (kept only as
+  // a defensive fallback if the shell globals somehow aren't installed yet).
   wireSignIn();
 
   // Hook up the nav drawer toggle. Adds/removes is-nav-open on the shell root.
