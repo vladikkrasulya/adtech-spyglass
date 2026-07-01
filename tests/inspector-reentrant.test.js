@@ -243,6 +243,9 @@ test('contract contrast: a listener NOT bound to ctx.signal leaks past deactivat
 
 const APP = fs.readFileSync(path.join(ROOT, 'public/spyglass.app.js'), 'utf8');
 const SHELL = fs.readFileSync(path.join(ROOT, 'public/shell-boot.js'), 'utf8');
+// ROADMAP #18 moved api()/ensureBooted() out of spyglass.app.js into the
+// shell-level session service — these static checks follow the code there.
+const SESSION = fs.readFileSync(path.join(ROOT, 'public/core/session.js'), 'utf8');
 
 test('static: all four drag window-listeners are scoped to ctx.signal', () => {
   for (const ev of ['mousemove', 'mouseup', 'touchmove', 'touchend']) {
@@ -357,29 +360,42 @@ test('abort during the initial boot sequence halts subsequent steps (bootAuth→
 // ── STATIC: the secondary async guards are present in the real functions ─────
 
 test('static: secondary read/mutation/boot paths guard on ctx.signal.aborted', () => {
-  // api() takes an optional signal — inspector reads pass ctx.signal, mutations
-  // + the cross-section SpyglassSession.api facade omit it.
-  assert.match(APP, /async function api\(method, url, body, opts = \{\}\)/, 'api() accepts opts');
+  // api() (ROADMAP #18: moved to /core/session.js) takes an optional signal —
+  // inspector reads pass ctx.signal, mutations + the cross-section
+  // SpyglassSession.api facade omit it.
   assert.match(
-    APP,
-    /if \(opts\.signal\) init\.signal = opts\.signal;/,
-    'api() wires opts.signal into fetch',
+    SESSION,
+    /async function api\(method, url, body, opts = \{\}\)/,
+    'session.api() accepts opts',
   );
-  // every inspector-owned read passes ctx.signal
+  assert.match(
+    SESSION,
+    /if \(opts\.signal\) init\.signal = opts\.signal;/,
+    'session.api() wires opts.signal into fetch',
+  );
+  // every inspector-owned read passes ctx.signal via session.api(...) — the
+  // auth/me boot read itself moved into session.ensureBooted() (SESSION),
+  // shared/canonical and NOT per-mount-abortable by design (a stale boot is
+  // guarded by the gen check instead — see the runtime tests above).
   for (const re of [
-    /api\('GET', 'api\/auth\/me', undefined, \{ signal: ctx\.signal \}\)/,
-    /api\('GET', 'api\/partners', undefined, \{ signal: ctx\.signal \}\)/,
-    /api\('GET', 'api\/samples' \+ qs, undefined, \{ signal: ctx\.signal \}\)/,
-    /api\('GET', 'api\/samples\/' \+ id, undefined, \{ signal: ctx\.signal \}\)/,
+    /session\.api\('GET', 'api\/partners', undefined, \{ signal: ctx\.signal \}\)/,
+    /session\.api\('GET', 'api\/samples' \+ qs, undefined, \{ signal: ctx\.signal \}\)/,
+    /session\.api\('GET', 'api\/samples\/' \+ id, undefined, \{ signal: ctx\.signal \}\)/,
     /fetch\(url, \{ signal: ctx\.signal \}\)/, // loadDemoSample
   ]) {
     assert.match(APP, re, 'inspector read must pass ctx.signal: ' + re);
   }
-  // boot sequence halts on abort between the awaited steps
+  assert.match(
+    SESSION,
+    /me = await api\('GET', 'api\/auth\/me'\);/,
+    'session.ensureBooted() reads api/auth/me (shared, gen-guarded, not ctx.signal-scoped)',
+  );
+  // boot sequence halts on abort between the awaited steps (ROADMAP #18:
+  // bootAuth() is now the shell-canonical session.ensureBooted())
   assert.match(
     APP,
-    /await bootAuth\(\);\s*if \(ctx\.signal\.aborted\) return;/,
-    'boot halts after bootAuth',
+    /await session\.ensureBooted\(\);\s*if \(ctx\.signal\.aborted\) return;/,
+    'boot halts after session.ensureBooted()',
   );
   assert.match(
     APP,

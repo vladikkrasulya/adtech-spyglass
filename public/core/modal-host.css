@@ -1,0 +1,123 @@
+/* ============================================================
+   public/core/modal-host.css — chrome-level modal + toast chrome.
+
+   ROADMAP #18. Moved out of public/modules/inspector/inspector.css: the
+   auth/unlock/recovery/password-reset modals (and toasts) now render into
+   the SHELL-owned #modalRoot/#toastContainer (see index.{en,uk,ru}.html),
+   which exists on every section, not just Inspector — so this base chrome
+   must load at shell-boot, not only when Inspector mounts.
+
+   Design tokens (--space-*, --text-dim, --font-mono, --r-sm, --shadow-lg,
+   etc.) all come from /design-system.css, already loaded on every page.
+
+   Inspector-only modal variants (mirror/corpus-save specific overrides,
+   .modal-hint) stay in inspector.css — those modals only ever open while
+   Inspector is mounted, so inspector.css is guaranteed loaded by then.
+   ============================================================ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 20, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--space-5);
+  width: min(440px, 92vw);
+  box-shadow: var(--shadow-lg);
+}
+.modal-card-wide {
+  width: min(720px, 96vw);
+}
+.modal-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: var(--space-3);
+}
+.modal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--space-3);
+}
+.modal-row label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.modal-row input,
+.modal-row select,
+.modal-row textarea {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.modal-row textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+.modal-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+
+/* ── Toast ── */
+.toast-container {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  animation: spy-slide-in 0.25s ease-out;
+}
+.toast.error {
+  background: var(--surface);
+  color: var(--danger);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+.toast.success {
+  background: var(--surface);
+  color: var(--success);
+  border: 1px solid rgba(22, 163, 74, 0.3);
+}
+@keyframes spy-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

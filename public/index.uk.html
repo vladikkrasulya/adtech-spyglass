@@ -227,6 +227,14 @@
         </main>
       </div>
     </div>
+    <!-- ROADMAP #18: chrome-level modal host + toast chrome. Shell-owned,
+         permanent — outside #app-root so the auth/unlock/recovery/
+         password-reset modals (and toasts) work on every section, not
+         just when Inspector happens to be mounted. Single owner: this is
+         the ONLY #modalRoot/#toastContainer in the DOM (the inspector
+         template no longer declares its own copy). See /core/modal-host.js. -->
+    <div id="modalRoot"></div>
+    <div class="toast-container" id="toastContainer"></div>
     <script src="/version.js?v=1"></script>
     <script src="/spyglass-crypto.js?v=1"></script>
     <script src="/i18n.js?v=30"></script>
