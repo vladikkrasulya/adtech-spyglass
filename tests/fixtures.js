@@ -59,7 +59,7 @@ const validResponse = () => ({
   ],
 });
 
-// Native 1.1 request fragment for crosscheck tests.
+// Native crosscheck fixture: imp.native.ver "1.1" with a Native 1.0 wrapped request ({ native: { assets } }).
 /** @returns {any} */
 const nativeRequest = () => ({
   id: 'req-native',

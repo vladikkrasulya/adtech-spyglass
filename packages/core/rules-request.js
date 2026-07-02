@@ -15,6 +15,8 @@ const { scanExtForFormatHints, ALL_NON_STANDARD } = require('./non-iab-formats')
 
 const F = makeFinding;
 
+const NATIVE_ASSET_SUBTYPES = ['title', 'img', 'video', 'data'];
+
 function validateRequest(req, ctx) {
   const findings = [];
   const dialect = (ctx && ctx.dialect) || null;
@@ -403,10 +405,34 @@ function validateImp(imp, i) {
         typeof imp.native.request === 'string'
           ? JSON.parse(imp.native.request)
           : imp.native.request;
-      if (!isObj(native) || !isObj(native.native) || !Array.isArray(native.native.assets)) {
+      if (!isObj(native)) {
         findings.push(
           F('imp.native.assets_required', LEVELS.ERROR, `${p}.native.request`, { num }),
         );
+      } else {
+        const inner = isObj(native.native) ? native.native : native;
+        const assets = inner.assets;
+        if (!Array.isArray(assets) || assets.length === 0) {
+          findings.push(
+            F('imp.native.assets_required', LEVELS.ERROR, `${p}.native.request`, { num }),
+          );
+        } else {
+          assets.forEach((asset, m) => {
+            const assetPath = `${p}.native.request.assets[${m}]`;
+            if (!isObj(asset)) {
+              findings.push(
+                F('imp.native.asset_type_required', LEVELS.ERROR, assetPath, { num, asset: m }),
+              );
+              return;
+            }
+            const present = NATIVE_ASSET_SUBTYPES.filter((t) => asset[t] != null);
+            if (present.length !== 1 || !isObj(asset[present[0]])) {
+              findings.push(
+                F('imp.native.asset_type_required', LEVELS.ERROR, assetPath, { num, asset: m }),
+              );
+            }
+          });
+        }
       }
       if (!imp.native.ver) {
         findings.push(F('imp.native.ver_missing', LEVELS.WARNING, `${p}.native.ver`, { num }));

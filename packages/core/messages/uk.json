@@ -25,6 +25,7 @@
   "imp.video.protocols_missing": "Слот #{num}: бажано додати video.protocols — список версій VAST (наприклад [2,3,5,6,7,11] для VAST 2-4.1). Без цього біддер припускає найпоширеніший і може промахнутись.",
   "imp.video.protocols_unknown": "Слот #{num}: video.protocols містить невідомі коди {values}. Допустимі: 1-14 (VAST 1.0 → 4.2 Wrapper, DAAST), або 500+ для exchange-specific. Інші значення біддер ігнорує.",
   "imp.native.assets_required": "Слот #{num}: native запит без assets[]. Native 1.1 вимагає список ассетів (title, image, data) — без них креатив зібрати неможливо.",
+  "imp.native.asset_type_required": "Слот #{num}, ассет [{asset}]: кожен native-ассет має бути обʼєктом з рівно одним із title, img, video або data.",
   "imp.native.ver_missing": "Слот #{num}: не вказано native.ver. Рекомендується \"1.1\" або \"1.2\", щоб біддер знав яку версію специфікації використовувати.",
   "imp.native.invalid_json": "Слот #{num}: native.request — не валідний JSON ({error}). Це поле має бути JSON-рядком зі структурою native, або вже розпарсеним обʼєктом.",
   "response.id_required": "У відповіді немає id. Має бути той самий, що й у BidRequest.id — інакше SSP не зможе сматчити пару запит/відповідь і відкине ставку.",
