@@ -18,13 +18,13 @@ This is the canonical roadmap for Spyglass / ortbtools.com. Single source of tru
 
 **Supersedes the dated “Where we are” paragraph below for operational facts.**
 
-| Surface | Version / state                                             |
-| ------- | ----------------------------------------------------------- |
+| Surface | Version / state                                                                |
+| ------- | ------------------------------------------------------------------------------ |
 | App     | `1.3.6` (branch `fix/privacy-selfhost-v1.3.6`; production `1.3.5` @ `6ae0e12`) |
-| Core    | `0.30.3` (this branch); production `0.30.2`                 |
-| CLI     | `0.1.0` (unpublished)                                       |
-| Runtime | Node `>=22.13.0`; production Node `22.22.x`                 |
-| CI      | full suite + Docker production smoke gate                   |
+| Core    | `0.30.3` (this branch); production `0.30.2`                                    |
+| CLI     | `0.1.0` (unpublished)                                                          |
+| Runtime | Node `>=22.13.0`; production Node `22.22.x`                                    |
+| CI      | full suite + Docker production smoke gate                                      |
 
 **Shipped since v1.3.3 (validator + routing wave):**
 

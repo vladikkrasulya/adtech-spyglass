@@ -241,10 +241,10 @@ Test mode runs with `LOG_LEVEL=silent` (see `package.json` `npm test` script).
 
 Spyglass writes **derived** analytics to ClickHouse when credentials are configured:
 
-| Table / module | What it stores | Env gate |
-| --- | --- | --- |
-| `analytics.validation_logs` (`lib/validation-log.js`) | Format, oRTB version, finding counts per analyze | `CLICKHOUSE_USER` + not `SPYGLASS_ANALYTICS_DISABLED=1` |
-| `analytics.spyglass_events` (`lib/event-log.js`) | Sampled request metadata (path, status, IP, latency) | same |
+| Table / module                                        | What it stores                                       | Env gate                                                |
+| ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| `analytics.validation_logs` (`lib/validation-log.js`) | Format, oRTB version, finding counts per analyze     | `CLICKHOUSE_USER` + not `SPYGLASS_ANALYTICS_DISABLED=1` |
+| `analytics.spyglass_events` (`lib/event-log.js`)      | Sampled request metadata (path, status, IP, latency) | same                                                    |
 
 **Option A — no ClickHouse (simplest):** leave `CLICKHOUSE_USER` empty in `.env`
 (default in `.env.example`). Both modules no-op; the app boots normally.
