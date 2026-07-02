@@ -26,6 +26,7 @@
   "imp.video.protocols_missing": "Slot #{num}: consider adding video.protocols — the list of VAST versions accepted (e.g. [2,3,7]). Without it the bidder defaults conservatively.",
   "imp.video.protocols_unknown": "Slot #{num}: video.protocols contains unknown codes {values}. Allowed: 1-14 (VAST 1.0 through 4.2 wrappers) or 500+ for exchange-specific. Anything else is malformed.",
   "imp.native.assets_required": "Slot #{num}: native request has no assets[]. Native 1.1 requires the asset list (title, image, data...). Without it the bidder can't render anything.",
+  "imp.native.asset_type_required": "Slot #{num}, asset [{asset}]: each native asset must be an object with exactly one of title, img, video, or data.",
   "imp.native.ver_missing": "Slot #{num}: native.ver is unset. Recommended \"1.1\" or \"1.2\" so the bidder knows which spec to follow when shaping the response.",
   "imp.native.invalid_json": "Slot #{num}: native.request is not valid JSON ({error}). This field must be a JSON-encoded native request (string or object) — fix the encoding.",
   "response.id_required": "Response has no id. It must be the same as BidRequest.id — otherwise the SSP can't match the response to the request.",
