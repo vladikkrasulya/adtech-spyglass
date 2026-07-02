@@ -32,11 +32,7 @@ test('npm pack @kyivtech/spyglass-core includes runtime modules', () => {
     }).trim();
     const listing = execFileSync('tar', ['-tzf', path.join(tmp, tgz)], { encoding: 'utf8' });
     for (const entry of REQUIRED_IN_TARBALL) {
-      assert.match(
-        listing,
-        new RegExp(entry.replace(/\./g, '\\.')),
-        `tarball missing ${entry}`,
-      );
+      assert.match(listing, new RegExp(entry.replace(/\./g, '\\.')), `tarball missing ${entry}`);
     }
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
