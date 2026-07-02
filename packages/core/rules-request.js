@@ -135,6 +135,18 @@ function validateRequest(req, ctx) {
   } else if (!dev.language) {
     findings.push(F('request.device.language_missing', LEVELS.INFO, 'device.language'));
   }
+  if (isObj(req.device) && 'ifa' in req.device) {
+    if (!isStr(dev.ifa) || !dev.ifa.length) {
+      findings.push(F('request.device.ifa_invalid', LEVELS.ERROR, 'device.ifa'));
+    }
+  }
+  if (isObj(req.device) && 'lmt' in req.device) {
+    if (dev.lmt === 1) {
+      findings.push(F('request.device.lmt_enabled', LEVELS.INFO, 'device.lmt'));
+    } else if (dev.lmt !== 0) {
+      findings.push(F('request.device.lmt_invalid', LEVELS.ERROR, 'device.lmt'));
+    }
+  }
 
   // ── User ─────────────────────────────────────────────────────────────────
   if (req.user && req.user.gender && !['M', 'F', 'O'].includes(req.user.gender)) {
