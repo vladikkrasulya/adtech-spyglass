@@ -6,6 +6,20 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.3.6 — privacy contract closure + self-host analytics opt-out
+
+App patch only — `packages/core` and CLI unchanged.
+
+- **Privacy contract (Phase 2A).** Public UI, SEO emitters, and `docs/PRIVACY.md`
+  already describe server-transient `/api/analyze` (guarded by
+  `tests/privacy-claims.test.js`, 106 tests). This release documents the closure
+  and adds an explicit operator control.
+- **`SPYGLASS_ANALYTICS_DISABLED=1`.** Disables ClickHouse `validation_logs` and
+  `event_log` even when `CLICKHOUSE_USER` is set. Unset `CLICKHOUSE_USER` still
+  no-ops both modules (existing behaviour). Per-user SQLite `analyze_log` unaffected.
+- **Docs:** `docs/PRIVACY.md` self-host section, `docs/OPERATIONS.md` §4.10,
+  `.env.example`. Tests: `tests/analytics-enabled.test.js`.
+
 ### v1.3.5 — device privacy signals + banner.pos/mimes validation
 
 `packages/core` patch (`0.30.2` → `0.30.3`) — CLI unchanged (`0.1.0`).
