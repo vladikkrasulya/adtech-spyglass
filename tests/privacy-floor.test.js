@@ -18,7 +18,7 @@
  *      payloads, symlinks and malformed values cannot execute or weaken the floor.
  *
  * Real git (this repo's history) + a mock `docker` shell function. Runs
- * identically on Node 20 (CI runtime) and Node 22 — it invokes each test file by
+ * identically on Node 22 (CI runtime) — it invokes each test file by
  * explicit path (node:test builtins + bash), so it does NOT depend on the
  * `node --test tests/` directory-argument behaviour that differs across versions.
  */

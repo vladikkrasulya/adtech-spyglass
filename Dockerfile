@@ -2,7 +2,7 @@
 # Install prod deps with the native-build toolchain (better-sqlite3 compiles
 # bindings at install). The toolchain is *only* in this stage — runtime image
 # stays small and surface-minimal.
-FROM node:20.19-alpine AS builder
+FROM node:22.22-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
 COPY package*.json ./
@@ -15,7 +15,7 @@ RUN npm ci --omit=dev
 # so the SQLite WAL/shm files are writable without an explicit chown step.
 # .dockerignore filters .env / .git / node_modules / docs / *.bak / ops files
 # out of the build context (see tests/immutable-image.test.js for the policy).
-FROM node:20.19-alpine
+FROM node:22.22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 # Build provenance, all injected via --build-arg (NOTHING hardcoded here):

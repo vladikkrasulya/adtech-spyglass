@@ -4,6 +4,28 @@ All notable changes to Spyglass are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning is
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### v1.3.3 — Node 22 runtime migration + Docker CI gate
+
+Runtime/toolchain only — `packages/core` unchanged (`0.30.1`), CLI unchanged
+(`0.1.0`). Native deps unchanged (`better-sqlite3@11.10.0`, `bcrypt@6.0.0`).
+
+- **Node 22 production runtime.** Dockerfile builder + runtime images move from
+  `node:20.19-alpine` to `node:22.22-alpine`. Root `engines.node` is now
+  `>=22.13.0` (ESLint 10 + current native prebuilds).
+- **CI on Node 22.** `actions/setup-node` uses Node 22 for format/lint/tsc/test.
+- **Docker production smoke gate.** New `scripts/ci-docker-smoke.sh` builds the
+  production Dockerfile, runs a throwaway container with an ephemeral `/data`
+  volume, waits for `/api/health`, smoke-tests `/api/analyze`, and verifies
+  Node 22 plus `better-sqlite3`/`bcrypt` load inside the image — no production
+  secrets required. Container/image/volume are always torn down.
+- **cached_specimens regression tests.** `tests/cached-specimens.test.js` covers
+  init/store/read, persistence across DB reopen, and FIFO eviction over cap on a
+  temp SQLite file.
+- **Docs.** `CONTRIBUTING.md` and `docs/TESTING.md` baseline Node 22; normative
+  test comments updated.
+
 ## [Unreleased] — Vendor-name scrub
 
 - Feed validator finding IDs renamed to format-descriptive identifiers: `feed.pushub.*` → `feed.linkfeed.*`, `feed.exoclick.*` → `feed.valuefeed.*`, `feed.richads.*` → `feed.bidprice.*`, `feed.zeropark.*` → `feed.bidredirect.*`
