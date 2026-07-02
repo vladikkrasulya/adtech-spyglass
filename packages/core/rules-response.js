@@ -6,6 +6,7 @@
  */
 
 const { isObj, isStr, isNum } = require('./helpers');
+const { isValidDomain } = require('./utils/domain');
 const { LEVELS, makeFinding } = require('./findings');
 // Static creative scan — the same engine that fires `behavior.static.*` from
 // the runtime probe also runs purely from string adm. Plumbed in 2026-05-09:
@@ -88,6 +89,17 @@ function validateResponse(res, ctx) {
       }
       if (!Array.isArray(b.adomain) || !b.adomain.length) {
         findings.push(F('response.bid.adomain_missing', LEVELS.WARNING, `${bp}.adomain`, params));
+      } else {
+        b.adomain.forEach((domain, k) => {
+          if (!isValidDomain(domain)) {
+            findings.push(
+              F('response.bid.adomain_invalid', LEVELS.ERROR, `${bp}.adomain[${k}]`, {
+                ...params,
+                domain: domain == null ? '' : String(domain),
+              }),
+            );
+          }
+        });
       }
 
       if (isStr(b.adm) && b.adm.length) {
