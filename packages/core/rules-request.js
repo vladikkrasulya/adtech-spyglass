@@ -380,6 +380,26 @@ function validateImp(imp, i) {
     if ((!isNum(b.w) || !isNum(b.h)) && !hasFormatArr) {
       findings.push(F('imp.banner.size_required', LEVELS.ERROR, `${p}.banner`, { num }));
     }
+    if ('pos' in b) {
+      if (!Number.isInteger(b.pos) || b.pos < 0 || b.pos > 7) {
+        findings.push(
+          F('imp.banner.pos_nonstandard', LEVELS.WARNING, `${p}.banner.pos`, { num, pos: b.pos }),
+        );
+      }
+    }
+    if ('mimes' in b) {
+      if (!Array.isArray(b.mimes) || !b.mimes.length) {
+        findings.push(F('imp.banner.mimes_invalid', LEVELS.ERROR, `${p}.banner.mimes`, { num }));
+      } else {
+        b.mimes.forEach((mime, m) => {
+          if (!isStr(mime) || !mime.trim()) {
+            findings.push(
+              F('imp.banner.mimes_invalid', LEVELS.ERROR, `${p}.banner.mimes[${m}]`, { num }),
+            );
+          }
+        });
+      }
+    }
   }
 
   if (imp.video) {

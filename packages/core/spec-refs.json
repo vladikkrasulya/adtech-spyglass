@@ -22,6 +22,8 @@
   "imp.bidfloor_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
   "imp.format_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324-object-imp",
   "imp.banner.size_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#326-object-banner",
+  "imp.banner.pos_nonstandard": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/main/AdCOM%20v1.0%20FINAL.md#list-placement-positions",
+  "imp.banner.mimes_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#326-object-banner",
   "imp.video.mimes_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "imp.video.protocols_missing": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "imp.video.protocols_unknown": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#58--video-bid-response-protocols-",

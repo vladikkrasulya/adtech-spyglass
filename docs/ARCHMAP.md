@@ -8,8 +8,31 @@ shifts a connection.
 > **Never trust this doc 100%** — verify with grep. But if a grep result
 > contradicts the map, fix the map.
 
-Last touched: 2026-07-01 (ROADMAP #18 session hoist v1.3.0; #19 re-entrant
-inspector v1.2.5).
+Last touched: 2026-07-02 (v1.3.5 doc sync — locale-routes security, validator
+wave #35–#40, banner.pos/mimes; prior: ROADMAP #18 session hoist v1.3.0; #19
+re-entrant inspector v1.2.5).
+
+## 0.2 What changed 2026-06-17 → 2026-07-02
+
+Validator + routing wave (app `1.3.2`–`1.3.5`, core `0.30.1`–`0.30.3`):
+
+- **`lib/locale-routes.js`** — extracted from `server.js`; owns
+  `resolveLocaleRoute()` (canonical lowercase/trailing-slash 301s, incomplete
+  blog redirects, SPA sub-route allowlist `docs/findings` only). Security:
+  raw-path routing only, encoded-path aliases → 404, `safeRedirect()` enforces
+  same-origin relative `Location` targets. Tests: `tests/locale-routes.test.js`.
+- **`packages/core/rules/adpod/`** — OpenRTB 2.6 `podseq` `{-1,0,1}`,
+  `minduration >= 0`, `rqddurs` array + conflict with min/maxduration.
+- **`packages/core/rules-request.js`** — Native 1.1/1.2 bare `{ assets }` roots;
+  per-asset subtype guard; `device.ifa` / `device.lmt`; `banner.pos` /
+  `banner.mimes`.
+- **`packages/core/rules-response.js`** — per-element `bid.adomain[]` bare-domain
+  validation (`response.bid.adomain_invalid`).
+- **Runtime** — production + CI on Node `>=22.13.0` (`v1.3.3`); Docker CI smoke
+  gate (`scripts/ci-docker-smoke.sh`).
+- **Tests added** — `locale-routes`, `device-ifa-lmt`, `banner-pos-mimes`,
+  `native-request`, `response-adomain`, AdPod/`rqddurs` suites (see
+  `tests/*.test.js`).
 
 ## 0.1 What changed 2026-05-10 → 2026-05-13
 
@@ -83,6 +106,8 @@ modules/                      backend handler folders (require'd by server.js)
 │
 lib/
 ├── router.js                  pattern-based dispatcher (exact / `:id` / trailing-*)
+├── locale-routes.js           SPA locale path resolution + canonical 301/404 matrix
+│                              (imported by server.js static fallback)
 ├── http.js                    readJson, sendJson, sendError, makeError
 ├── replay.js                  DI'd bulk-pipeline engine (consumed by modules/replay)
 └── corpus-matrix.js           confusion matrix runner (consumed by modules/corpus)
@@ -505,8 +530,8 @@ shell-level service so auth/DEK exist for the whole page lifecycle.
 | Touching...              | Run these                                                                                                                                                                    |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `findings.js`            | `tests/api-stability.test.js` + `tests/validator.test.js` (snapshots)                                                                                                        |
-| `rules-request.js`       | `tests/validator.test.js` (~50 cases) + `tests/dialects.test.js`                                                                                                             |
-| `rules-response.js`      | `tests/validator.test.js`                                                                                                                                                    |
+| `rules-request.js`       | `tests/validator.test.js` + `tests/dialects.test.js` + `tests/native-request.test.js` + `tests/device-ifa-lmt.test.js` + `tests/banner-pos-mimes.test.js`                    |
+| `rules-response.js`      | `tests/validator.test.js` + `tests/response-adomain.test.js`                                                                                                                 |
 | `crosscheck.js`          | `tests/validator.test.js` (crosscheck section, ~40 cases)                                                                                                                    |
 | `format-detect.js`       | `tests/format-detect.test.js` (~30 cases)                                                                                                                                    |
 | `behavior/`              | `tests/behavior.test.js`                                                                                                                                                     |

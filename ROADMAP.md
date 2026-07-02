@@ -14,6 +14,35 @@ This is the canonical roadmap for Spyglass / ortbtools.com. Single source of tru
 
 ---
 
+## Current release snapshot (2026-07-02)
+
+**Supersedes the dated “Where we are” paragraph below for operational facts.**
+
+| Surface | Version / state                                             |
+| ------- | ----------------------------------------------------------- |
+| App     | `1.3.5` (this branch; production today `1.3.4` @ `f70b5a6`) |
+| Core    | `0.30.3` (this branch); production `0.30.2`                 |
+| CLI     | `0.1.0` (unpublished)                                       |
+| Runtime | Node `>=22.13.0`; production Node `22.22.x`                 |
+| CI      | full suite + Docker production smoke gate                   |
+
+**Shipped since v1.3.3 (validator + routing wave):**
+
+- PR #35 — AdPod `podseq` / `minduration` (OpenRTB 2.6)
+- PR #36 — `rqddurs` validation + min/maxduration conflict
+- PR #37 — Native 1.1/1.2 request roots + asset subtype guard
+- PR #38 — `bid.adomain[]` bare-domain validation
+- PR #39 — release `v1.3.4`
+- PR #40 — `device.ifa` / `device.lmt` privacy signals (in `v1.3.5` CHANGELOG; shipped on main pre-bump)
+- PR #32 amendments — encoded-path alias 404 + same-origin redirect invariant (documented under v1.3.2 in CHANGELOG)
+- **This branch (`chore/docs-sync-v1.3.5`)** — `banner.pos` / `banner.mimes` + doc/version sync to `v1.3.5`
+
+**Docs debt closed in v1.3.5 doc-sync:** CHANGELOG gap for #40, SEO security notes, ARCHMAP §0.2, this snapshot block, Obsidian vault sync.
+
+**Still open:** npm publish for core/CLI; privacy-claims vs server-transient analyze flow; ROADMAP backlog items #14 severity tabs marked stale below (shipped `88065f3`).
+
+---
+
 ## Mini-tasks (not stage-bound)
 
 ### Immutable production image — DONE (v1.1.6)
@@ -22,7 +51,7 @@ Status: **complete**. Production runs a fully self-contained, reproducible image
 
 ### Domain migration — spyglass.kyivtech.com.ua → ortbtools.com
 
-Status: pending. Configure 301 redirect from `spyglass.kyivtech.com.ua` to `ortbtools.com` for 60-90 days, then drop the subdomain DNS record. Verify via Cloudflare page rules or the cloudflared tunnel config (check `~/server/cloudflared/` or `/srv/DATA/Stacks/cloudflared/` on OptiPlex for the right approach). ~1 hour config + 60-90 days passive monitoring.
+Status: **DONE (verified 2026-07-02).** `spyglass.kyivtech.com.ua/*` returns `301` to the matching `https://ortbtools.com/*` path. Passive monitoring continues; DNS record removal is an operational follow-up after 60–90 days, not a code task.
 
 ---
 
@@ -288,7 +317,7 @@ Ordered by likelihood it will eventually matter:
 
 13. **Request Analysis summary strip** — **SHIPPED (live 2026-05-26 reality-audit).** The `.analysis-strip` renders `ВЕРСІЯ · ТРАФІК · ПРИСТРІЙ · ПРИВАТНІСТЬ · ЦІНА · ЯКІСТЬ` blocks above the tabs. Competitor parity: openrtb.ovh shows a structured metadata strip above findings: `OpenRTB Version · Traffic Type · Device Category · Privacy Signals · Ad Formats`. We have format-chips today but not the structured strip with device/privacy/traffic. Strip lives in inspector section between editors and Inspector/Validation/Crosscheck/Behavior tabs. ~1 day in `public/spyglass.app.js` `renderSummaryStrip()` + small helpers in `packages/core/`.
 
-14. **Severity tabs in findings panel** — openrtb.ovh splits findings into `Errors (N) | Warnings (N) | Info (N)` tabs with counters. We use semantic tabs (Inspector/Validation/Crosscheck/Behavior) which group by _domain_; layer a severity filter on top. Empty-state with friendly tone (`No errors detected! 🎉`). ~0.5 day, mostly CSS + small DOM rewrite.
+14. **Severity tabs in findings panel** — **SHIPPED (`88065f3`, 2026-05-24; confirmed live 2026-05-26).** `renderSeverityTabs()` provides `All / Errors / Warnings / Info` chips with counters and empty states. Optional future polish: `aria-pressed`, delayed-render abort guard, regression tests — not a greenfield build.
 
 15. **Test Cases public gallery (Stage 1 expansion)** — **SHIPPED (live 2026-05-26 reality-audit).** `/library` renders a public catalog (IAB fixtures / clean baselines / attack patterns) with Open-in-inspector + Copy JSON per card, via `GET /api/v1/sample/list`; authed users get their ZK saves in a separate tab. Competitor parity: openrtb.ovh `/testcases` is a public-facing catalog of curated valid/invalid samples with copy + download. Their best SEO + onboarding surface. We have ~25 synthetic specimens hidden in the `приклад` dropdown. Promote them to `/library` Stage 1 as a public catalog (no auth required) sectioned as: Valid Cases (banner / video / native / pop / 3.0 / inpage-push) vs Invalid Cases (attack patterns, malformed shapes). Each card: title, description, Valid|Invalid badge, Copy, Download. Authenticated users see their own ZK-encrypted saves in a separate tab on the same page. This expands the original Stage 1 scope.
 

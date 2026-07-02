@@ -24,6 +24,8 @@
   "imp.bidfloor_invalid": "Слот #{num}: bidfloor должен быть числом (например 0.05). Сейчас — другой тип, аукцион пройдёт без флора.",
   "imp.format_required": "Слот #{num}: не указан формат креатива. Нужен хотя бы один: banner, video, native или audio — иначе биддеру нечего предложить.",
   "imp.banner.size_required": "Слот #{num}: баннер без размеров. Укажи w и h (например 300×250) или массив format[{w,h},...] — без этого креатив некуда вставить.",
+  "imp.banner.pos_nonstandard": "Слот #{num}: banner.pos = {pos} вне стандартных позиций 0–7 (IAB AdCOM). Биржи могут игнорировать или переназначать нестандартные значения.",
+  "imp.banner.mimes_invalid": "Слот #{num}: banner.mimes должен быть непустым массивом непустых MIME-строк (например [\"image/jpeg\",\"image/png\"]).",
   "imp.video.mimes_required": "Слот #{num}: видео без video.mimes. Перечисли MIME-типы которые принимает плеер (например [\"video/mp4\"]) — иначе биддер не знает чем отвечать.",
   "imp.video.protocols_missing": "Слот #{num}: желательно добавить video.protocols — список версий VAST (например [2,3,5,6,7,11] для VAST 2-4.1). Без этого биддер предполагает наиболее распространённый и может промахнуться.",
   "imp.video.protocols_unknown": "Слот #{num}: video.protocols содержит неизвестные коды {values}. Допустимы: 1-14 (VAST 1.0 → 4.2 Wrapper, DAAST), или 500+ для exchange-specific. Другие значения биддер игнорирует.",
