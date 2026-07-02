@@ -2920,15 +2920,15 @@ link to `/uk/account#corpus` lands you straight in the corpus view.
 
 **7 sections**
 
-| #   | Section            | Cards                                     |
-| --- | ------------------ | ----------------------------------------- |
-| 1   | 👤 Профіль         | Profile                                   |
-| 2   | 📚 Бібліотека      | Library stats · Insights · Recent samples |
-| 3   | 📊 Активність      | Heatmap+stats · Privacy footnote          |
+| #   | Section           | Cards                                     |
+| --- | ----------------- | ----------------------------------------- |
+| 1   | 👤 Профіль        | Profile                                   |
+| 2   | 📚 Бібліотека     | Library stats · Insights · Recent samples |
+| 3   | 📊 Активність     | Heatmap+stats · Privacy footnote          |
 | 4   | 🛡 Behavior corpus | Corpus list · Confusion matrix            |
-| 5   | ⚙ Налаштування     | Theme · Locale · Dialect                  |
-| 6   | 🔐 Безпека         | Encryption & Recovery                     |
-| 7   | ⚠ Danger zone      | Account actions                           |
+| 5   | ⚙ Налаштування    | Theme · Locale · Dialect                  |
+| 6   | 🔐 Безпека        | Encryption & Recovery                     |
+| 7   | ⚠ Danger zone     | Account actions                           |
 
 **Layout**
 
@@ -4225,28 +4225,31 @@ shape; deeper AdCOM 1.0 placement validation deferred until production
 **12 new rules** (`packages/core/rules-request-30.js`)
 
 Envelope:
-| Rule id | Level | Fires when |
-|---|---|---|
-| `request.30.envelope_required` | ERROR | `payload.openrtb` missing |
-| `request.30.ver_required` | ERROR | `openrtb.ver` missing |
-| `request.30.ver_invalid` | ERROR | `openrtb.ver` not 3.x |
-| `request.30.request_required` | ERROR | `openrtb.request` missing |
-| `request.30.id_required` | ERROR | `openrtb.request.id` missing |
-| `request.30.item_required` | ERROR | `openrtb.request.item[]` missing/empty |
-| `request.30.context_recommended` | WARN | `openrtb.request.context` missing |
+
+| Rule id                          | Level | Fires when                             |
+| -------------------------------- | ----- | -------------------------------------- |
+| `request.30.envelope_required`   | ERROR | `payload.openrtb` missing              |
+| `request.30.ver_required`        | ERROR | `openrtb.ver` missing                  |
+| `request.30.ver_invalid`         | ERROR | `openrtb.ver` not 3.x                  |
+| `request.30.request_required`    | ERROR | `openrtb.request` missing              |
+| `request.30.id_required`         | ERROR | `openrtb.request.id` missing           |
+| `request.30.item_required`       | ERROR | `openrtb.request.item[]` missing/empty |
+| `request.30.context_recommended` | WARN  | `openrtb.request.context` missing      |
 
 Per-item:
-| Rule id | Level | Fires when |
-|---|---|---|
-| `request.30.item.invalid` | ERROR | item entry isn't a plain object |
-| `request.30.item.id_required` | ERROR | item without `id` |
-| `request.30.item.qty_invalid` | WARN | `qty` present but ≤ 0 |
-| `request.30.item.spec_required` | ERROR | item without `spec` |
+
+| Rule id                         | Level | Fires when                      |
+| ------------------------------- | ----- | ------------------------------- |
+| `request.30.item.invalid`       | ERROR | item entry isn't a plain object |
+| `request.30.item.id_required`   | ERROR | item without `id`               |
+| `request.30.item.qty_invalid`   | WARN  | `qty` present but ≤ 0           |
+| `request.30.item.spec_required` | ERROR | item without `spec`             |
 
 Always-fire:
-| Rule id | Level | Purpose |
-|---|---|---|
-| `request.30.deep_validation_limited` | INFO | tells the user envelope-only validation is by design; deeper coverage deferred |
+
+| Rule id                              | Level | Purpose                                                                        |
+| ------------------------------------ | ----- | ------------------------------------------------------------------------------ |
+| `request.30.deep_validation_limited` | INFO  | tells the user envelope-only validation is by design; deeper coverage deferred |
 
 **Architecture**
 
