@@ -20,7 +20,7 @@ This is the canonical roadmap for Spyglass / ortbtools.com. Single source of tru
 
 | Surface | Version / state                                             |
 | ------- | ----------------------------------------------------------- |
-| App     | `1.3.5` (this branch; production today `1.3.4` @ `f70b5a6`) |
+| App     | `1.3.6` (branch `fix/privacy-selfhost-v1.3.6`; production `1.3.5` @ `6ae0e12`) |
 | Core    | `0.30.3` (this branch); production `0.30.2`                 |
 | CLI     | `0.1.0` (unpublished)                                       |
 | Runtime | Node `>=22.13.0`; production Node `22.22.x`                 |
@@ -39,7 +39,9 @@ This is the canonical roadmap for Spyglass / ortbtools.com. Single source of tru
 
 **Docs debt closed in v1.3.5 doc-sync:** CHANGELOG gap for #40, SEO security notes, ARCHMAP §0.2, this snapshot block, Obsidian vault sync.
 
-**Still open:** npm publish for core/CLI; privacy-claims vs server-transient analyze flow; ROADMAP backlog items #14 severity tabs marked stale below (shipped `88065f3`).
+**Still open:** npm publish for core/CLI; browser-local validation (Phase 2B — deferred); ROADMAP backlog items #14 severity tabs marked stale below (shipped `88065f3`).
+
+**Closed in v1.3.6 (privacy Phase 2A):** public copy matches server-transient `/api/analyze` (`privacy-claims.test.js`); `SPYGLASS_ANALYTICS_DISABLED` + self-host docs.
 
 ---
 
