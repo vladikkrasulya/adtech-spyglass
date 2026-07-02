@@ -313,6 +313,26 @@ To pause ONLY publishing while keeping crawl/ingest running, a separate
 `BLOG_AUTO_PUBLISH_DISABLED` flag (gating just `moderatePendingDrafts()`) would be
 needed — not yet implemented.
 
+### 4.10 Disable ClickHouse-derived telemetry (self-host / privacy)
+
+Anonymous analyze metadata (`validation_logs`) and the operational request log
+(`event_log`) write to ClickHouse only when `CLICKHOUSE_USER` is set **and**
+`SPYGLASS_ANALYTICS_DISABLED` is not `1`.
+
+```bash
+cd /srv/DATA/Stacks/adtech-spyglass
+# Option A: leave CLICKHOUSE_USER empty in .env (default for local dev).
+
+# Option B: explicit opt-out on production-like stacks:
+. scripts/deploy-lib.sh && set_env SPYGLASS_ANALYTICS_DISABLED 1 .env
+SPYGLASS_TAG="$(grep -E '^SPYGLASS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+```
+
+Verify: run an analyze, then confirm no new rows in `analytics.validation_logs` for
+that window. Cabinet `analyze_log` (signed-in users) still records metadata in SQLite.
+
+Full contract: `docs/PRIVACY.md` → "Self-hosting: disabling derived telemetry".
+
 ---
 
 ## 5. Secrets Management

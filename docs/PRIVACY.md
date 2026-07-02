@@ -27,6 +27,10 @@ for an auditor who wants to verify the claims against the source code.
 - **The `/api/analyze` endpoint reads your payload transiently.** The validator runs
   server-side, returns findings, and drops the payload. It does not write the payload
   to the database. See "What the validator pipeline does" below.
+- **Self-hosters can disable ClickHouse-derived telemetry.** Leave `CLICKHOUSE_USER`
+  unset, or set `SPYGLASS_ANALYTICS_DISABLED=1` in the container env. See
+  "Self-hosting: disabling derived telemetry" below. This does not remove per-account
+  Cabinet activity metadata in SQLite for signed-in users.
 
 ---
 
@@ -230,6 +234,39 @@ physically cannot carry an identifier or free-form text even if a future caller
 passes one (v1.2.1).
 
 Test mode runs with `LOG_LEVEL=silent` (see `package.json` `npm test` script).
+
+---
+
+## Self-hosting: disabling derived telemetry
+
+Spyglass writes **derived** analytics to ClickHouse when credentials are configured:
+
+| Table / module                                        | What it stores                                       | Env gate                                                |
+| ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| `analytics.validation_logs` (`lib/validation-log.js`) | Format, oRTB version, finding counts per analyze     | `CLICKHOUSE_USER` + not `SPYGLASS_ANALYTICS_DISABLED=1` |
+| `analytics.spyglass_events` (`lib/event-log.js`)      | Sampled request metadata (path, status, IP, latency) | same                                                    |
+
+**Option A — no ClickHouse (simplest):** leave `CLICKHOUSE_USER` empty in `.env`
+(default in `.env.example`). Both modules no-op; the app boots normally.
+
+**Option B — explicit kill-switch:** set `SPYGLASS_ANALYTICS_DISABLED=1` in the
+container environment even when ClickHouse credentials exist (useful when CH is
+shared with other services on the same host).
+
+```bash
+# In /srv/DATA/Stacks/adtech-spyglass/.env (then recreate container):
+SPYGLASS_ANALYTICS_DISABLED=1
+```
+
+```bash
+cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
+```
+
+**Not disabled by either option:** per-user `analyze_log` rows in SQLite (Cabinet →
+Activity for signed-in users), bcrypt auth, encrypted library storage, and stdout
+pino logs. Payload bodies are never persisted regardless of these settings.
+
+See also `docs/OPERATIONS.md` §4.10.
 
 ---
 
