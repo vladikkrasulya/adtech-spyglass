@@ -461,6 +461,31 @@ body {
   font-weight: 600;
 }
 
+/* First-visit onboarding — subtle banner + pulse on the example menu. */
+.kt-onboarding-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(96, 165, 250, 0.1);
+  border-bottom: 1px solid rgba(96, 165, 250, 0.35);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.kt-onboarding-pulse > summary {
+  animation: kt-onboarding-pulse 2s ease-in-out 3;
+}
+@keyframes kt-onboarding-pulse {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.45);
+  }
+}
+
 .auth-widget {
   display: flex;
   align-items: center;

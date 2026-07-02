@@ -263,6 +263,10 @@
       'sample.btn.signin': 'увійти або створити акаунт',
       'sample.btn.unlock': 'розблокувати',
 
+      // ── first-visit inspector onboarding ─────────────────
+      'onboarding.banner.text': 'Немає JSON? Натисни 🎲 приклад — завантажиться синтетична пара bid request/response.',
+      'onboarding.banner.dismiss': 'зрозуміло',
+
       // ── partner modal ─────────────────────────────────────
 
       // forgot.* + reset.* keys live in modules/password-reset/i18n.js
@@ -530,6 +534,10 @@
       'sample.btn.signin': 'sign in or create account',
       'sample.btn.unlock': 'unlock',
 
+      // ── first-visit inspector onboarding ─────────────────
+      'onboarding.banner.text': 'No JSON yet? Click 🎲 example to load a synthetic bid request/response pair.',
+      'onboarding.banner.dismiss': 'got it',
+
       // ── partner modal ─────────────────────────────────────
 
       // forgot.* + reset.* keys live in modules/password-reset/i18n.js
@@ -776,6 +784,11 @@
       'sample.unlock_cta': 'Библиотека зашифрована. Введи пароль чтобы разблокировать.',
       'sample.btn.signin': 'войти или создать аккаунт',
       'sample.btn.unlock': 'разблокировать',
+
+      // ── first-visit inspector onboarding ─────────────────
+      'onboarding.banner.text': 'Нет JSON? Нажми 🎲 пример — загрузится синтетическая пара bid request/response.',
+      'onboarding.banner.dismiss': 'понятно',
+
       // forgot.* + reset.* keys live in modules/password-reset/i18n.js
       // (lazy). Three exceptions stay here for the shell-level
       // ?verify_error= boot path:
