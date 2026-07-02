@@ -61,5 +61,8 @@ jobs:
       - name: Tests
         run: npm test
 
+      - name: npm pack smoke
+        run: bash scripts/npm-pack-smoke.sh
+
       - name: Docker production smoke
         run: bash scripts/ci-docker-smoke.sh

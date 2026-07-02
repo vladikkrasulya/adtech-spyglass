@@ -147,7 +147,7 @@ runs cleanly without it — AI affordances hide on first 503.
 
 ## Layout
 
-```
+````
 server.js                 vanilla node:http server, REST API
 db.js                     SQLite store (partners + encrypted samples)
 auth.js                   bcrypt + per-IP / per-account rate-limiter
@@ -185,16 +185,37 @@ behavior/                 in-iframe creative-probe scanner + engine
 
 intel-llm.js              server-side LLM bridge (Ollama)
 
-public/index.{en,uk,ru}.html   UI per locale (EN at /, others under /uk/, /ru/)
-public/about.{en,uk,ru}.html   docs per locale
-public/spyglass.app.js         UI behaviours
-public/spyglass-crypto.js      zero-knowledge crypto (browser-only)
-public/lang-switch.js          seamless DOM-morph language switch (shared by index + about)
-public/i18n.js                 ~140-key UK/EN/RU dictionary
+## CLI (`@ortbtools/cli`)
 
-docker-compose.yml        service definition (ports + bind mounts)
-Dockerfile                multi-stage alpine + node + better-sqlite3 build
+Validate OpenRTB JSON from the terminal — same engine as ortbtools.com, no network
+calls (payloads stay on your machine).
+
+```bash
+npm install -g @ortbtools/cli
+ortbtools validate path/to/bidrequest.json
+ortbtools crosscheck request.json response.json --json
+````
+
+Library use:
+
+```bash
+npm install @kyivtech/spyglass-core
 ```
+
+See `packages/cli/README.md` and `packages/core/README.md`. Publish procedure:
+`docs/NPM_PUBLISH.md`.
+
+public/index.{en,uk,ru}.html UI per locale (EN at /, others under /uk/, /ru/)
+public/about.{en,uk,ru}.html docs per locale
+public/spyglass.app.js UI behaviours
+public/spyglass-crypto.js zero-knowledge crypto (browser-only)
+public/lang-switch.js seamless DOM-morph language switch (shared by index + about)
+public/i18n.js ~140-key UK/EN/RU dictionary
+
+docker-compose.yml service definition (ports + bind mounts)
+Dockerfile multi-stage alpine + node + better-sqlite3 build
+
+````
 
 ## Tests
 
@@ -205,7 +226,7 @@ npm test          # 658 tests at v0.42.10 — validator, crosscheck, auth,
                   # dispatch, health endpoint, spec-refs coverage gate
 npm run ci        # prettier:check → eslint → typecheck → tests; what the
                   # pre-push hook enforces
-```
+````
 
 ## Configuration
 
