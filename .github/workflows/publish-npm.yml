@@ -1,0 +1,73 @@
+name: Publish npm packages
+
+# Publishes @kyivtech/spyglass-core then @ortbtools/cli to the public npm registry.
+# Prerequisites: GitHub secret NPM_TOKEN (Automation token with publish access to
+# @kyivtech and @ortbtools scopes). See docs/NPM_PUBLISH.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_core:
+        description: Publish @kyivtech/spyglass-core
+        type: boolean
+        default: true
+      publish_cli:
+        description: Publish @ortbtools/cli (requires core on registry)
+        type: boolean
+        default: true
+      dry_run:
+        description: npm publish --dry-run only (no upload)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install root deps (workspace link smoke)
+        run: npm ci
+
+      - name: npm pack smoke
+        run: bash scripts/npm-pack-smoke.sh
+
+      - name: Publish @kyivtech/spyglass-core
+        if: inputs.publish_core
+        working-directory: packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "::error::NPM_TOKEN secret is not configured. See docs/NPM_PUBLISH.md"
+            exit 1
+          fi
+          EXTRA=()
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then EXTRA+=(--dry-run); fi
+          npm publish --access public "${EXTRA[@]}"
+
+      - name: Publish @ortbtools/cli
+        if: inputs.publish_cli
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "::error::NPM_TOKEN secret is not configured. See docs/NPM_PUBLISH.md"
+            exit 1
+          fi
+          EXTRA=()
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then EXTRA+=(--dry-run); fi
+          npm publish --access public "${EXTRA[@]}"

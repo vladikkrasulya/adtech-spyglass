@@ -18,13 +18,13 @@ This is the canonical roadmap for Spyglass / ortbtools.com. Single source of tru
 
 **Supersedes the dated “Where we are” paragraph below for operational facts.**
 
-| Surface | Version / state                                                                |
-| ------- | ------------------------------------------------------------------------------ |
-| App     | `1.3.6` (branch `fix/privacy-selfhost-v1.3.6`; production `1.3.5` @ `6ae0e12`) |
-| Core    | `0.30.3` (this branch); production `0.30.2`                                    |
-| CLI     | `0.1.0` (unpublished)                                                          |
-| Runtime | Node `>=22.13.0`; production Node `22.22.x`                                    |
-| CI      | full suite + Docker production smoke gate                                      |
+| Surface | Version / state                                                                     |
+| ------- | ----------------------------------------------------------------------------------- |
+| App     | `1.3.6` (production `b45c437`); npm pipeline in flight (`chore/npm-publish-v1.3.7`) |
+| Core    | `0.30.3` (this branch); production `0.30.2`                                         |
+| CLI     | `0.1.0` (unpublished)                                                               |
+| Runtime | Node `>=22.13.0`; production Node `22.22.x`                                         |
+| CI      | full suite + Docker production smoke gate                                           |
 
 **Shipped since v1.3.3 (validator + routing wave):**
 
@@ -39,9 +39,9 @@ This is the canonical roadmap for Spyglass / ortbtools.com. Single source of tru
 
 **Docs debt closed in v1.3.5 doc-sync:** CHANGELOG gap for #40, SEO security notes, ARCHMAP §0.2, this snapshot block, Obsidian vault sync.
 
-**Still open:** npm publish for core/CLI; browser-local validation (Phase 2B — deferred); ROADMAP backlog items #14 severity tabs marked stale below (shipped `88065f3`).
+**Still open:** first `npm publish` run (needs `NPM_TOKEN` + org scopes); browser-local validation (Phase 2B — deferred); ROADMAP backlog items #14 severity tabs marked stale below (shipped `88065f3`).
 
-**Closed in v1.3.6 (privacy Phase 2A):** public copy matches server-transient `/api/analyze` (`privacy-claims.test.js`); `SPYGLASS_ANALYTICS_DISABLED` + self-host docs.
+**In flight (Phase 3):** `npm-pack-smoke` CI gate + `publish-npm` workflow + `docs/NPM_PUBLISH.md` on branch `chore/npm-publish-v1.3.7`.
 
 ---
 

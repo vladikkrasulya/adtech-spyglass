@@ -6,6 +6,16 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### Tooling — npm publish pipeline (Phase 3, no app deploy)
+
+- **`scripts/npm-pack-smoke.sh`** — pack core + CLI tarballs, clean install, run
+  `ortbtools validate` (CI gate on every PR).
+- **`.github/workflows/publish-npm.yml`** — workflow_dispatch publish for
+  `@kyivtech/spyglass-core` and `@ortbtools/cli` (requires `NPM_TOKEN` secret).
+- **`docs/NPM_PUBLISH.md`** — one-time npm org/token setup and release procedure.
+- **README** — CLI install section; remove stale `types` entry from core package
+  (no `index.d.ts` yet).
+
 ### v1.3.6 — privacy contract closure + self-host analytics opt-out
 
 App patch only — `packages/core` and CLI unchanged.
