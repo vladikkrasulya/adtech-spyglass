@@ -36,6 +36,8 @@ docker build -t "$TAG" \
 
 echo "==> docker run (ephemeral /data volume)"
 docker volume create "$VOLUME" >/dev/null
+docker run --rm -v "${VOLUME}:/data" --user root "$TAG" \
+  sh -c 'mkdir -p /data && chown -R node:node /data' >/dev/null
 docker run -d --name "$CONTAINER" \
   -p "${PORT}:3000" \
   -v "${VOLUME}:/data" \
