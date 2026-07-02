@@ -4,7 +4,7 @@
  * Crypto round-trip tests for public/spyglass-crypto.js.
  *
  * The module is browser-targeted (it puts `SpyglassCrypto` on `window`),
- * but its primitives are pure Web Crypto. We can run it under Node 20+ by
+ * but its primitives are pure Web Crypto. We can run it under Node 22+ by
  * polyfilling `window`, `crypto`, `btoa`/`atob`, and the encoders. No fake
  * crypto — we use Node's actual `crypto.webcrypto`, which is the same impl
  * the browser would use.
@@ -18,10 +18,10 @@ const path = require('node:path');
 let SC;
 
 before(() => {
-  // Node 20+ already has globalThis.crypto = webcrypto, so we don't override
+  // Node 22+ already has globalThis.crypto = webcrypto, so we don't override
   // it. We just need to provide the browser-only globals the module expects:
-  // window (for the export), btoa/atob (Node has these in 20+ but be safe),
-  // and TextEncoder/TextDecoder (also in Node 20).
+  // window (for the export), btoa/atob (Node has these in 22+ but be safe),
+  // and TextEncoder/TextDecoder (also in Node 22).
   if (typeof globalThis.window === 'undefined') {
     /** @type {any} */ (globalThis).window = globalThis;
   }

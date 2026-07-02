@@ -8,7 +8,7 @@ read [ARCHMAP](./ARCHMAP.md) first.
 
 ## Test stack
 
-Spyglass uses **Node 20's built-in `node --test`** runner. No Jest, no Mocha,
+Spyglass uses **Node 22's built-in `node --test`** runner. No Jest, no Mocha,
 no Vitest. Zero extra test-runner dependencies — the same Node binary that runs
 the server runs the tests.
 
@@ -151,7 +151,7 @@ in the v0.41.3 batch after several sessions without running `npm run ci`):
    actual usage, or a `// @ts-check` file has a type mismatch. Fix: align
    the annotation with the actual shape.
 4. **Unused catch-variable warnings** — `catch (e) { }` where `e` is never
-   used. Fix: `catch (_e)` or `catch { }` (Node 20+ bare catch).
+   used. Fix: `catch (_e)` or `catch { }` (Node 22+ bare catch).
 
 Run them individually to triage which step is failing rather than running
 `npm run ci` and scrolling back through combined output.

@@ -8,7 +8,7 @@ For the codebase map read [ARCHMAP](./docs/ARCHMAP.md) first.
 
 ## Prerequisites
 
-- **Node 20.19+** — ESLint 10 and the test runner (`node --test`) require it.
+- **Node 22.13+** — production Docker image, ESLint 10, and the test runner (`node --test`) require it.
 - **Docker + Docker Compose** — the runtime is container-only; no native
   `node server.js` path for non-trivial local dev.
 - **Git** — standard workflow, PR against `main`.

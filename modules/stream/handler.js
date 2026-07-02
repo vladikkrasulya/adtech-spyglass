@@ -213,4 +213,4 @@ function enrichAndStore(envelope) {
   return envelope;
 }
 
-module.exports = { createStreamModule, enrichAndStore };
+module.exports = { createStreamModule, enrichAndStore, initSpecimenStore, specimenStoreGet };

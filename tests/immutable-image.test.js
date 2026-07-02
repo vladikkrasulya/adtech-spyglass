@@ -168,6 +168,7 @@ test('deploy/rollback/smoke/backup/lib/sim scripts are valid bash (bash -n)', ()
     'deploy.sh',
     'rollback.sh',
     'smoke.sh',
+    'ci-docker-smoke.sh',
     'backup-db.sh',
     'provision-spyglass-ro.sh',
     'cutover-spyglass-ro.sh',
