@@ -2285,7 +2285,7 @@ export async function mountInspector(root, ctx) {
               ip = u.searchParams.get('user_ip') || '';
               ua = u.searchParams.get('ua') || '';
               page = u.searchParams.get('url') || '';
-            } catch (e) {
+            } catch (_e) {
               endpoint = req.slice(0, 80);
             }
             const uaShort = ua.length > 80 ? ua.slice(0, 80) + '…' : ua;
@@ -3773,6 +3773,51 @@ export async function mountInspector(root, ctx) {
   // the dice menu gives them random or specific attack patterns.
   // Optional `type` selects a specific specimen (e.g. 'clean-banner',
   // 'frame-bust-form'); omitted = random.
+  const INSPECTOR_ONBOARD_KEY = 'themis.inspectorOnboardingDismissed';
+
+  function dismissInspectorOnboarding() {
+    try {
+      localStorage.setItem(INSPECTOR_ONBOARD_KEY, '1');
+    } catch (_e) {
+      /* */
+    }
+    root.querySelectorAll('.kt-onboarding-banner').forEach((el) => el.remove());
+    root.querySelectorAll('.kt-onboarding-pulse').forEach((el) => {
+      el.classList.remove('kt-onboarding-pulse');
+    });
+  }
+
+  function maybeShowInspectorOnboarding() {
+    try {
+      if (localStorage.getItem(INSPECTOR_ONBOARD_KEY)) return;
+    } catch (_e) {
+      return;
+    }
+    const reqEl = $('bidReq');
+    const resEl = $('bidRes');
+    if (!reqEl || !resEl) return;
+    if ((reqEl.value || '').trim() || (resEl.value || '').trim()) return;
+    if (root.querySelector('.kt-onboarding-banner')) return;
+
+    const exampleMenu = root.querySelector('.kt-example-menu');
+    if (exampleMenu) exampleMenu.classList.add('kt-onboarding-pulse');
+
+    const banner = document.createElement('div');
+    banner.className = 'kt-onboarding-banner';
+    banner.setAttribute('role', 'status');
+    const text = document.createElement('span');
+    text.textContent = t('onboarding.banner.text');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-ghost btn-sm';
+    btn.dataset.action = 'dismiss-onboarding';
+    btn.textContent = t('onboarding.banner.dismiss');
+    banner.append(text, btn);
+
+    const header = root.querySelector('.app-header');
+    if (header) header.insertAdjacentElement('afterend', banner);
+  }
+
   async function loadDemoSample(type) {
     const hasContent = ($('bidReq').value || '').trim() || ($('bidRes').value || '').trim();
     if (_isDirty && hasContent) {
@@ -3791,6 +3836,7 @@ export async function mountInspector(root, ctx) {
       _currentSampleMeta = null;
       _isDirty = false;
       toast('🎲 ' + j.label, 'success');
+      dismissInspectorOnboarding();
       // Auto-close the dropdown after pick.
       document.querySelectorAll('.kt-example-menu[open]').forEach((d) => d.removeAttribute('open'));
     } catch (e) {
@@ -3989,6 +4035,7 @@ export async function mountInspector(root, ctx) {
     updateCharCount('bidReq');
     updateCharCount('bidRes');
     setupSidebarToggles();
+    maybeShowInspectorOnboarding();
 
     // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
     // input events (per HTML spec), so loadSample / clearInput don't
@@ -4367,6 +4414,8 @@ export async function mountInspector(root, ctx) {
           // behavior, no data-action on it).
           case 'load-demo':
             return loadDemoSample(el.dataset.type || undefined);
+          case 'dismiss-onboarding':
+            return dismissInspectorOnboarding();
 
           // — saved samples (merged from Etap 1 #savedList scoped dispatcher) —
           case 'sample-load':

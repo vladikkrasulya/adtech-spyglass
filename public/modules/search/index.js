@@ -301,7 +301,6 @@ function badgeText(item) {
 // ── Render dropdown ──────────────────────────────────────────────
 
 function renderDropdown(state, query, groups) {
-  const lang = getLang();
   const tokens = query ? query.toLowerCase().trim().split(/\s+/).filter(Boolean) : [];
 
   if (state === 'loading') {
@@ -368,7 +367,7 @@ function renderDropdown(state, query, groups) {
 
 // ── Main initSearch ──────────────────────────────────────────────
 
-export function initSearch(inputEl, shellRoot) {
+export function initSearch(inputEl, _shellRoot) {
   const lang = getLang();
   inputEl.placeholder = PLACEHOLDERS[lang] || PLACEHOLDERS.en;
 
@@ -390,7 +389,6 @@ export function initSearch(inputEl, shellRoot) {
 
   let indexLoaded = false;
   let selectedIndex = -1;
-  let currentGroups = [];
   let debounceTimer = null;
 
   function getAllRows() {
@@ -434,12 +432,11 @@ export function initSearch(inputEl, shellRoot) {
       return;
     }
     const groups = search(query);
-    currentGroups = groups;
     openDropdown(renderDropdown('ready', query, groups));
   }
 
   // ── Index load ───────────────────────────────────────────────
-  async function ensureIndex(query) {
+  async function ensureIndex(_query) {
     if (indexLoaded) return;
     // Show loading state
     if (!dropdownEl.hidden) {

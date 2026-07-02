@@ -58,7 +58,7 @@ function loadJson(filePath) {
   if (!_cache[filePath]) {
     try {
       _cache[filePath] = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch (e) {
+    } catch (_e) {
       _cache[filePath] = {};
     }
   }

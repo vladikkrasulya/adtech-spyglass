@@ -109,11 +109,6 @@ function parsePostRoute(pathname) {
   return null;
 }
 
-function isBlogListRoute(pathname) {
-  // /blog or /uk/blog or /ru/blog
-  return /^(\/(uk|ru))?\/blog$/.test(pathname);
-}
-
 export default {
   id: 'blog',
   css: '/modules/blog/blog.css',

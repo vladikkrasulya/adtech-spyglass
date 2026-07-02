@@ -305,7 +305,6 @@ async function mountCatalog(root, lang, signal) {
   let activeFilter = 'all';
 
   const statsEl = root.querySelector('[data-stats]');
-  const contentArea = root.querySelector('.docs-loading');
 
   // Container for the table — replaces loading spinner once
   const contentWrap = document.createElement('div');

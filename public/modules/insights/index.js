@@ -262,7 +262,7 @@ function renderWidget2(data, lang) {
 
 // ── Widget 3 — Spec Mix ─────────────────────────────────────────
 
-function renderBars(rows, colorFn, lang) {
+function renderBars(rows, colorFn, _lang) {
   if (!rows || rows.length === 0) return '<p style="font-size:13px;color:var(--text-muted)">—</p>';
   return rows
     .map(
@@ -404,7 +404,7 @@ export default {
           gridRoot.innerHTML = renderWidgets(data, lang);
         }
         updateAgoLabel();
-      } catch (e) {
+      } catch (_e) {
         if (gridRoot.children.length === 0 || gridRoot.firstElementChild.tagName !== 'DIV') {
           gridRoot.innerHTML = `<div class="ins-empty"><p>${escapeHtml(pick(L.errFetch, lang))}</p></div>`;
         }
