@@ -227,6 +227,8 @@
   "warn-tmax-too-small": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
   "warn-tmax-too-large": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
   "err-podid-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
+  "err-rqddurs-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
+  "err-rqddurs-conflict": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#328-object-audio",
   "err-schain-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
   "err-schain-node-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
   "err-eids-entry-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md",

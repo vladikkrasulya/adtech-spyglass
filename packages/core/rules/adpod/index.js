@@ -4,7 +4,7 @@
  * AdPod / multi-bid video+audio validation — IAB OpenRTB 2.6 §3.2.7 / §3.2.8.
  *
  * AdPod fields (`podid`, `podseq`, `poddur`, `maxseq`, `minduration`,
- * `maxduration`) on imp.video and imp.audio govern multi-bid ad pod auctions.
+ * `maxduration`, `rqddurs`) on imp.video and imp.audio govern multi-bid ad pod auctions.
  * Misconfigured pod fields cause the exchange to treat the impression as a
  * standalone slot and silently ignore pod logic.
  *
@@ -18,12 +18,22 @@
  *   err-podseq-invalid     — podseq not one of -1 (last), 0 (any), 1 (first)
  *   err-podid-invalid      — podid is present but not a non-empty string or
  *                            positive integer
+ *   err-rqddurs-invalid    — rqddurs not a non-empty array of positive integers
+ *   err-rqddurs-conflict   — rqddurs present with minduration or maxduration
  */
 
 const { LEVELS, makeFinding } = require('../../findings');
 
 const F = makeFinding;
 const VALID_PODSEQ = new Set([-1, 0, 1]);
+
+function isValidRqddurs(value) {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  for (const item of value) {
+    if (!Number.isInteger(item) || item <= 0) return false;
+  }
+  return true;
+}
 
 /**
  * Validate pod-related fields on a single video/audio object.
@@ -94,6 +104,19 @@ function validatePodFields(media, path, findings) {
       );
     }
   }
+
+  if (media.rqddurs != null) {
+    if (!isValidRqddurs(media.rqddurs)) {
+      findings.push(
+        F('err-rqddurs-invalid', LEVELS.ERROR, `${path}.rqddurs`, {
+          val: JSON.stringify(media.rqddurs),
+        }),
+      );
+    }
+    if (media.minduration != null || media.maxduration != null) {
+      findings.push(F('err-rqddurs-conflict', LEVELS.ERROR, path, {}));
+    }
+  }
 }
 
 function validate(req /*, ctx */) {
@@ -117,7 +140,7 @@ function validate(req /*, ctx */) {
 module.exports = {
   id: 'adpod',
   description:
-    'Validates AdPod fields on imp.video/imp.audio: minduration >= 0, maxduration/poddur/maxseq positive integers, podseq in {-1,0,1}.',
+    'Validates AdPod fields on imp.video/imp.audio: minduration >= 0, maxduration/poddur/maxseq positive integers, podseq in {-1,0,1}, rqddurs array.',
   appliesTo: ['ORTB_REQUEST'],
   validate,
 };

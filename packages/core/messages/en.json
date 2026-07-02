@@ -294,6 +294,8 @@
   "warn-tmax-too-small": "req.tmax = {val}ms is below {min}ms. At this latency budget almost no DSP will respond in time — the auction will likely time out with no valid bids.",
   "warn-tmax-too-large": "req.tmax = {val}ms exceeds {max}ms. Very long timeouts increase auction latency for publishers and are unusual in programmatic RTB. Verify this is intentional.",
   "err-podid-invalid": "podid = \"{val}\" is invalid. podid must be a non-empty string or a positive integer identifying the ad pod group. Fix or remove the podid field.",
+  "err-rqddurs-invalid": "rqddurs = {val} is invalid. rqddurs must be a non-empty array of positive integers (seconds per slot).",
+  "err-rqddurs-conflict": "rqddurs cannot be used with minduration or maxduration on the same video/audio object — OpenRTB 2.6 §3.2.7/§3.2.8 defines them as mutually exclusive.",
   "err-schain-invalid": "schain value at {path} is not a plain object (type: {type}). The SChain object must be a JSON object — not a string, array, or null.",
   "err-schain-node-invalid": "schain.nodes[{idx}] is not a plain object (type: {type}). Every node in the SupplyChain nodes array must be a JSON object.",
   "err-eids-entry-invalid": "{path}[{idx}] is not a plain object (type: {type}). Every entry in the EIDs array must be a JSON object with source and uids fields.",
