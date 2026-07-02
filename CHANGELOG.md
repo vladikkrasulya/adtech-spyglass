@@ -6,6 +6,25 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.3.4 — OpenRTB 2.6 AdPod + Native/request-response validation
+
+`packages/core` patch (`0.30.1` → `0.30.2`) — CLI unchanged (`0.1.0`).
+
+- **AdPod constraints (OpenRTB 2.6).** `podseq` restricted to `{-1, 0, 1}`;
+  `minduration` must be `>= 0`.
+- **`rqddurs` validation.** Positive-integer array; conflicts with
+  `min/maxduration` surfaced as dedicated findings.
+- **Native request roots.** Accept Native 1.0 wrapped (`{ native: { assets } }`)
+  and Native 1.1/1.2 bare (`{ assets }`) shapes; `assets_required` when missing,
+  non-array, or empty.
+- **Native asset subtypes.** Each asset must be an object with exactly one of
+  `title`, `img`, `video`, or `data`.
+- **`bid.adomain[]` validation.** Each non-empty array element must be a valid
+  bare domain (no scheme, path, port, or whitespace).
+- **i18n + spec refs + tests.** New EN/UK/RU messages and specRefs for the
+  findings above; regression tests for AdPod, `rqddurs`, native request/assets,
+  and response `adomain`.
+
 ### v1.3.3 — Node 22 runtime migration + Docker CI gate
 
 Runtime/toolchain only — `packages/core` unchanged (`0.30.1`), CLI unchanged
