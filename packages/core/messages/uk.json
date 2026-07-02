@@ -36,6 +36,7 @@
   "response.bid.price_required": "Сідбід #{sNum} → ставка #{bNum}: немає або не число bid.price. Це сама ставка в CPM/CPC — без неї аукціон не зможе її врахувати.",
   "response.bid.payload_missing": "Сідбід #{sNum} → ставка #{bNum}: ні adm, ні nurl. Один з них обовʼязковий: adm — інлайн-креатив (HTML/VAST/Native JSON), nurl — URL за яким SSP підтягне креатив.",
   "response.bid.adomain_missing": "Сідбід #{sNum} → ставка #{bNum}: немає adomain[]. Це список доменів рекламодавця — без нього SSP не може звірити з блокліст-доменами видавця і може забанити ставку.",
+  "response.bid.adomain_invalid": "Сідбід #{sNum} → ставка #{bNum}: елемент adomain \"{domain}\" не є валідним bare domain — вкажіть hostname на кшталт advertiser.com без scheme, path, port чи пробілів.",
   "extrtb.ext.bsection_invalid": "ext.bsection — vendor-розширення для блокування секцій. Має бути масивом цілих чисел, інакше ігнорується і блок не діє.",
   "extrtb.ext.btags_invalid": "ext.btags — vendor-розширення для блокування тегів. Має бути масивом цілих чисел, інакше ігнорується і блок не діє.",
   "extrtb.imp.subage_missing": "Слот #{num}: для push-показу не вказано ext.subage (вік підписки в днях). Без нього SSP трактує підписника як \"невідомого\" і знижує ставку — додай число.",
