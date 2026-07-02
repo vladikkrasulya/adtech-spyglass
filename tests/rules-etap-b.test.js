@@ -19,6 +19,7 @@ const schain = require('@kyivtech/spyglass-core/rules/schain');
 const eids = require('@kyivtech/spyglass-core/rules/eids');
 const adpod = require('@kyivtech/spyglass-core/rules/adpod');
 const { listPlugins } = require('@kyivtech/spyglass-core/rules');
+const { validate } = require('@kyivtech/spyglass-core');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,12 @@ const reqWithEids = (eidsArr) => ({
   user: { ext: { eids: eidsArr !== undefined ? eidsArr : validEids() } },
 });
 
+/** Minimal BidRequest shell for validate() integration tests */
+const reqWithVideo = (video) => ({
+  id: 'r1',
+  imp: [{ id: 'i1', video }],
+});
+
 /** Build a valid imp.video with pod fields */
 const validVideoWithPod = () => ({
   id: 'imp-1',
@@ -58,6 +65,12 @@ const validVideoWithPod = () => ({
     maxduration: 30,
   },
 });
+
+function adpodIdsFromValidate(req) {
+  return validate(req)
+    .findings.map((f) => f.id)
+    .filter((id) => id.startsWith('err-pod'));
+}
 
 // ─── SChain plugin registration ─────────────────────────────────────────────
 
@@ -400,11 +413,9 @@ test('adpod: podid present alone → no err-pod-id-seq-mismatch (removed)', () =
   assert.ok(!out.find((x) => x.id === 'err-pod-id-seq-mismatch'));
 });
 
-test('adpod: podseq present alone → no err-pod-id-seq-mismatch (removed)', () => {
-  // err-pod-id-seq-mismatch removed — podid/podseq are independent optional fields
+test('adpod: podseq present alone with invalid value → err-podseq-invalid', () => {
   const req = { imp: [{ id: 'i1', video: { podseq: 2 } }] };
-  const out = adpod.validate(req);
-  assert.ok(!out.find((x) => x.id === 'err-pod-id-seq-mismatch'));
+  assert.ok(adpod.validate(req).find((x) => x.id === 'err-podseq-invalid'));
 });
 
 test('adpod: both podid and podseq present → no findings', () => {
@@ -412,15 +423,30 @@ test('adpod: both podid and podseq present → no findings', () => {
   assert.ok(!adpod.validate(req).find((x) => x.id === 'err-pod-id-seq-mismatch'));
 });
 
-// ─── AdPod podseq validity ───────────────────────────────────────────────────
+// ─── AdPod podseq validity (OpenRTB 2.6: -1 last, 0 any, 1 first) ─────────
 
-test('adpod: podseq = 0 → no err-podseq-invalid (0 is valid)', () => {
+test('adpod: podseq = -1 → no err-podseq-invalid (last pod)', () => {
+  const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: -1 } }] };
+  assert.ok(!adpod.validate(req).find((x) => x.id === 'err-podseq-invalid'));
+});
+
+test('adpod: podseq = 0 → no err-podseq-invalid (any pod)', () => {
   const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: 0 } }] };
   assert.ok(!adpod.validate(req).find((x) => x.id === 'err-podseq-invalid'));
 });
 
-test('adpod: podseq = -1 → err-podseq-invalid', () => {
-  const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: -1 } }] };
+test('adpod: podseq = 1 → no err-podseq-invalid (first pod)', () => {
+  const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: 1 } }] };
+  assert.ok(!adpod.validate(req).find((x) => x.id === 'err-podseq-invalid'));
+});
+
+test('adpod: podseq = 2 → err-podseq-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: 2 } }] };
+  assert.ok(adpod.validate(req).find((x) => x.id === 'err-podseq-invalid'));
+});
+
+test('adpod: podseq = -2 → err-podseq-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: -2 } }] };
   assert.ok(adpod.validate(req).find((x) => x.id === 'err-podseq-invalid'));
 });
 
@@ -431,6 +457,11 @@ test('adpod: podseq = "first" (string) → err-podseq-invalid', () => {
 
 test('adpod: podseq = 1.5 (float) → err-podseq-invalid', () => {
   const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: 1.5 } }] };
+  assert.ok(adpod.validate(req).find((x) => x.id === 'err-podseq-invalid'));
+});
+
+test('adpod: podseq = "1" (numeric string) → err-podseq-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { podid: 'pod-1', podseq: '1' } }] };
   assert.ok(adpod.validate(req).find((x) => x.id === 'err-podseq-invalid'));
 });
 
@@ -455,8 +486,18 @@ test('adpod: minduration < maxduration → no mismatch', () => {
   assert.ok(!adpod.validate(req).find((x) => x.id === 'err-pod-len-mismatch'));
 });
 
-test('adpod: minduration = 0 → err-pod-len-invalid', () => {
+test('adpod: minduration = 0 → no err-pod-len-invalid (OpenRTB 2.6)', () => {
   const req = { imp: [{ id: 'i1', video: { minduration: 0 } }] };
+  assert.ok(!adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid'));
+});
+
+test('adpod: minduration = 1 → no err-pod-len-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { minduration: 1 } }] };
+  assert.ok(!adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid'));
+});
+
+test('adpod: minduration = -1 → err-pod-len-invalid', () => {
+  const req = { imp: [{ id: 'i1', video: { minduration: -1 } }] };
   const f = adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid');
   assert.ok(f);
   assert.equal(f.params.field, 'minduration');
@@ -482,7 +523,7 @@ test('adpod: imp.audio podid alone → no mismatch finding (coupling removed)', 
 
 test('adpod: imp.audio valid pod fields → no findings', () => {
   const req = {
-    imp: [{ id: 'i1', audio: { podid: 'p1', podseq: 2, minduration: 10, maxduration: 60 } }],
+    imp: [{ id: 'i1', audio: { podid: 'p1', podseq: 1, minduration: 10, maxduration: 60 } }],
   };
   assert.deepEqual(adpod.validate(req), []);
 });
@@ -492,8 +533,8 @@ test('adpod: imp.audio valid pod fields → no findings', () => {
 test('adpod: second imp[1].video with invalid minduration → path is correct in finding', () => {
   const req = {
     imp: [
-      { id: 'i0', video: { mimes: ['video/mp4'] } }, // clean
-      { id: 'i1', video: { minduration: 0 } }, // invalid (0 not allowed)
+      { id: 'i0', video: { mimes: ['video/mp4'] } },
+      { id: 'i1', video: { minduration: -1 } },
     ],
   };
   const f = adpod.validate(req).find((x) => x.id === 'err-pod-len-invalid');
@@ -547,6 +588,34 @@ test('adpod: podid = 0 (zero int) → err-podid-invalid', () => {
 test('adpod: podid = 5 (positive int) → no err-podid-invalid', () => {
   const req = { imp: [{ id: 'i1', video: { podid: 5 } }] };
   assert.ok(!adpod.validate(req).find((x) => x.id === 'err-podid-invalid'));
+});
+
+// ─── AdPod via public validate() ─────────────────────────────────────────────
+
+test('validate(): podseq -1/0/1 → no err-podseq-invalid', () => {
+  for (const podseq of [-1, 0, 1]) {
+    const ids = adpodIdsFromValidate(reqWithVideo({ podseq, mimes: ['video/mp4'] }));
+    assert.ok(!ids.includes('err-podseq-invalid'), `podseq=${podseq} should be valid`);
+  }
+});
+
+test('validate(): podseq 2/-2/1.5/"1" → err-podseq-invalid', () => {
+  for (const podseq of [2, -2, 1.5, '1']) {
+    const ids = adpodIdsFromValidate(reqWithVideo({ podseq, mimes: ['video/mp4'] }));
+    assert.ok(ids.includes('err-podseq-invalid'), `podseq=${podseq} should be invalid`);
+  }
+});
+
+test('validate(): minduration 0/1 → no err-pod-len-invalid; -1 → invalid', () => {
+  assert.ok(
+    !adpodIdsFromValidate(reqWithVideo({ minduration: 0 })).includes('err-pod-len-invalid'),
+  );
+  assert.ok(
+    !adpodIdsFromValidate(reqWithVideo({ minduration: 1 })).includes('err-pod-len-invalid'),
+  );
+  assert.ok(
+    adpodIdsFromValidate(reqWithVideo({ minduration: -1 })).includes('err-pod-len-invalid'),
+  );
 });
 
 // ─── NEW: schain native path (source.schain oRTB 2.6) ───────────────────────
