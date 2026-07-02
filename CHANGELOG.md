@@ -6,6 +6,25 @@ All notable changes to Spyglass are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.3.5 — device privacy signals + banner.pos/mimes validation
+
+`packages/core` patch (`0.30.2` → `0.30.3`) — CLI unchanged (`0.1.0`).
+
+- **`device.ifa` type validation.** When present, must be a non-empty string;
+  null/number/object/empty → `request.device.ifa_invalid` (ERROR).
+- **`device.lmt` value validation.** `0` valid (no finding); `1` →
+  `request.device.lmt_enabled` (INFO); any other value →
+  `request.device.lmt_invalid` (ERROR). No `ifa_missing` / `lmt_missing` /
+  ifa↔lmt conflict rules (spec does not define them).
+- **`banner.pos` placement check.** When present, integers `0–7` pass; non-integer
+  or out-of-range (incl. vendor-specific `500+`) → `imp.banner.pos_nonstandard`
+  (WARNING).
+- **`banner.mimes` array check.** When present, must be a non-empty array of
+  non-empty MIME strings; malformed array or element → `imp.banner.mimes_invalid`
+  (ERROR) with per-element paths.
+- **i18n + spec refs + tests.** EN/UK/RU messages and specRefs for all four
+  findings; `tests/device-ifa-lmt.test.js` and `tests/banner-pos-mimes.test.js`.
+
 ### v1.3.4 — OpenRTB 2.6 AdPod + Native/request-response validation
 
 `packages/core` patch (`0.30.1` → `0.30.2`) — CLI unchanged (`0.1.0`).
@@ -79,6 +98,11 @@ Front-end shell only — `packages/core` unchanged (`0.30.1`).
   `/ru/blog/uk/<slug>` remain valid 200 shells.
 - **Tests.** `tests/locale-routes.test.js` — uppercase/trailing-slash redirects,
   incomplete blog paths, allowlist 200/404 matrix, query stability.
+- **Security hardening (PR #32 amendments).** Routing and canonical redirects
+  operate on the raw pathname only — percent-encoded aliases (`/docs%2Ffindings`,
+  `/%64ocs`, decoded Unicode) fail closed with real HTTP 404. `safeRedirect()`
+  enforces same-origin relative targets only (no `//evil.com`, no scheme-form
+  input, no `%` or non-ASCII in `Location`).
 
 ### v1.3.1 — core: dialect question message interpolation
 

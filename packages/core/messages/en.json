@@ -25,6 +25,8 @@
   "imp.bidfloor_invalid": "Slot #{num}: bidfloor must be a number (e.g. 0.05). It's another type now, so the auction can't determine whether bids clear the floor.",
   "imp.format_required": "Slot #{num}: no creative format specified. Add at least one of: banner, video, native, audio. Without it the bidder doesn't know what format to bid.",
   "imp.banner.size_required": "Slot #{num}: banner has no dimensions. Specify w and h (e.g. 300×250) or a format[] array of allowed sizes.",
+  "imp.banner.pos_nonstandard": "Slot #{num}: banner.pos = {pos} is outside the standard 0–7 placement positions (IAB AdCOM). Exchanges may ignore or remap nonstandard values.",
+  "imp.banner.mimes_invalid": "Slot #{num}: banner.mimes must be a non-empty array of non-empty MIME type strings (e.g. [\"image/jpeg\",\"image/png\"]).",
   "imp.video.mimes_required": "Slot #{num}: video has no video.mimes. List the MIME types the player accepts (e.g. [\"video/mp4\",\"video/webm\"]). Without it the bidder doesn't know what to send.",
   "imp.video.protocols_missing": "Slot #{num}: consider adding video.protocols — the list of VAST versions accepted (e.g. [2,3,7]). Without it the bidder defaults conservatively.",
   "imp.video.protocols_unknown": "Slot #{num}: video.protocols contains unknown codes {values}. Allowed: 1-14 (VAST 1.0 through 4.2 wrappers) or 500+ for exchange-specific. Anything else is malformed.",
