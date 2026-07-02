@@ -54,6 +54,11 @@ const reqWithVideo = (video) => ({
   imp: [{ id: 'i1', video }],
 });
 
+const reqWithAudio = (audio) => ({
+  id: 'r1',
+  imp: [{ id: 'i1', audio }],
+});
+
 /** Build a valid imp.video with pod fields */
 const validVideoWithPod = () => ({
   id: 'imp-1',
@@ -69,7 +74,7 @@ const validVideoWithPod = () => ({
 function adpodIdsFromValidate(req) {
   return validate(req)
     .findings.map((f) => f.id)
-    .filter((id) => id.startsWith('err-pod'));
+    .filter((id) => id.startsWith('err-pod') || id.startsWith('err-rqddurs'));
 }
 
 // ─── SChain plugin registration ─────────────────────────────────────────────
@@ -590,6 +595,66 @@ test('adpod: podid = 5 (positive int) → no err-podid-invalid', () => {
   assert.ok(!adpod.validate(req).find((x) => x.id === 'err-podid-invalid'));
 });
 
+// ─── AdPod rqddurs (OpenRTB 2.6 §3.2.7 / §3.2.8) ───────────────────────────
+
+test('adpod: video rqddurs [15, 30] → no rqddurs findings', () => {
+  const req = { imp: [{ id: 'i1', video: { rqddurs: [15, 30] } }] };
+  const out = adpod.validate(req);
+  assert.ok(!out.find((x) => x.id === 'err-rqddurs-invalid'));
+  assert.ok(!out.find((x) => x.id === 'err-rqddurs-conflict'));
+});
+
+test('adpod: audio rqddurs [15, 30] → no rqddurs findings', () => {
+  const req = { imp: [{ id: 'i1', audio: { rqddurs: [15, 30] } }] };
+  const out = adpod.validate(req);
+  assert.ok(!out.find((x) => x.id === 'err-rqddurs-invalid'));
+  assert.ok(!out.find((x) => x.id === 'err-rqddurs-conflict'));
+});
+
+test('adpod: rqddurs invalid values → err-rqddurs-invalid', () => {
+  const invalid = [[], 0, '15', [0], [-1], [1.5], ['15'], {}];
+  for (const rqddurs of invalid) {
+    const req = { imp: [{ id: 'i1', video: { rqddurs } }] };
+    assert.ok(
+      adpod.validate(req).find((x) => x.id === 'err-rqddurs-invalid'),
+      `rqddurs=${JSON.stringify(rqddurs)} should be invalid`,
+    );
+  }
+});
+
+test('adpod: rqddurs with minduration → single err-rqddurs-conflict', () => {
+  const req = { imp: [{ id: 'i1', video: { rqddurs: [15], minduration: 5 } }] };
+  const out = adpod.validate(req);
+  const conflicts = out.filter((x) => x.id === 'err-rqddurs-conflict');
+  assert.equal(conflicts.length, 1);
+  assert.equal(conflicts[0].path, 'imp[0].video');
+});
+
+test('adpod: rqddurs with maxduration → single err-rqddurs-conflict', () => {
+  const req = { imp: [{ id: 'i1', audio: { rqddurs: [30], maxduration: 60 } }] };
+  const out = adpod.validate(req);
+  assert.equal(out.filter((x) => x.id === 'err-rqddurs-conflict').length, 1);
+});
+
+test('adpod: rqddurs with minduration and maxduration → one conflict finding', () => {
+  const req = {
+    imp: [{ id: 'i1', video: { rqddurs: [15, 30], minduration: 5, maxduration: 60 } }],
+  };
+  assert.equal(adpod.validate(req).filter((x) => x.id === 'err-rqddurs-conflict').length, 1);
+});
+
+test('adpod: second imp[1].video invalid rqddurs → path on imp[1].video.rqddurs', () => {
+  const req = {
+    imp: [
+      { id: 'i0', video: { rqddurs: [15] } },
+      { id: 'i1', video: { rqddurs: [] } },
+    ],
+  };
+  const f = adpod.validate(req).find((x) => x.id === 'err-rqddurs-invalid');
+  assert.ok(f);
+  assert.equal(f.path, 'imp[1].video.rqddurs');
+});
+
 // ─── AdPod via public validate() ─────────────────────────────────────────────
 
 test('validate(): podseq -1/0/1 → no err-podseq-invalid', () => {
@@ -616,6 +681,20 @@ test('validate(): minduration 0/1 → no err-pod-len-invalid; -1 → invalid', (
   assert.ok(
     adpodIdsFromValidate(reqWithVideo({ minduration: -1 })).includes('err-pod-len-invalid'),
   );
+});
+
+test('validate(): rqddurs [15, 30] valid; [] and conflict with minduration', () => {
+  assert.ok(
+    !adpodIdsFromValidate(reqWithVideo({ rqddurs: [15, 30], mimes: ['video/mp4'] })).includes(
+      'err-rqddurs-invalid',
+    ),
+  );
+  assert.ok(adpodIdsFromValidate(reqWithAudio({ rqddurs: [] })).includes('err-rqddurs-invalid'));
+  const ids = adpodIdsFromValidate(
+    reqWithVideo({ rqddurs: [15], minduration: 5, mimes: ['video/mp4'] }),
+  );
+  assert.ok(ids.includes('err-rqddurs-conflict'));
+  assert.equal(ids.filter((id) => id === 'err-rqddurs-conflict').length, 1);
 });
 
 // ─── NEW: schain native path (source.schain oRTB 2.6) ───────────────────────
