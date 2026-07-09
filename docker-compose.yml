@@ -28,9 +28,8 @@ services:
         GIT_SHA: ${GIT_SHA:-dev}
         APP_VERSION: ${APP_VERSION:-dev}
     env_file:
-      # Secrets + runtime config (gitignored; .env.example documents the keys).
-      # SPYGLASS_TAG also lives here so compose interpolation + plain `up -d`
-      # resolve the deployed image tag after a reboot.
+      # Secrets from vault; runtime tag/non-secret config in gitignored .env
+      - /srv/DATA/.secrets/spyglass.env
       - .env
     environment:
       # On-prem LLM bridge. `http://ollama:11434` resolves via kt-shared →

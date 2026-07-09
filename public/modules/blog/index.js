@@ -37,6 +37,7 @@ const L = {
   backToList: { en: '← Back to blog', uk: '← До блогу', ru: '← К блогу' },
   editorial: { en: 'editorial', uk: 'редакційне', ru: 'редакционное' },
   firehose: { en: 'firehose', uk: 'firehose', ru: 'firehose' },
+  mozok: { en: 'Mozok', uk: 'Mozok', ru: 'Mozok' },
   notFound: { en: 'Post not found.', uk: 'Пост не знайдено.', ru: 'Пост не найден.' },
 };
 
@@ -244,9 +245,15 @@ function renderCard(post, uiLang) {
   const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
   const dateStr = formatDate(post.published_at, post.lang || uiLang);
   const sourceLabel =
-    post.source === 'markdown' ? pick(L.editorial, uiLang) : pick(L.firehose, uiLang);
-  const sourceIcon = post.source === 'markdown' ? '📝' : '📰';
-  const postUrl = `/blog/${post.lang}/${post.slug}`;
+    post.source === 'markdown'
+      ? pick(L.editorial, uiLang)
+      : post.source === 'mozok'
+        ? pick(L.mozok, uiLang)
+        : pick(L.firehose, uiLang);
+  const sourceIcon = post.source === 'markdown' ? '📝' : post.source === 'mozok' ? '⚡' : '📰';
+  const externalUrl = post.source === 'mozok' ? safeHref(post.url) : '';
+  const postUrl = externalUrl || `/blog/${post.lang}/${post.slug}`;
+  const linkRel = externalUrl ? ' rel="nofollow noopener" target="_blank"' : '';
   return `
     <article class="blog-card" data-href="${escapeHtml(postUrl)}">
       <div class="blog-card__head">
@@ -254,7 +261,7 @@ function renderCard(post, uiLang) {
         <span class="blog-source" title="${escapeHtml(sourceLabel)}">${sourceIcon}</span>
       </div>
       <h2 class="blog-card__title">
-        <a href="${escapeHtml(postUrl)}">${escapeHtml(post.title)}</a>
+        <a href="${escapeHtml(postUrl)}"${linkRel}>${escapeHtml(post.title)}</a>
       </h2>
       <p class="blog-card__summary">${escapeHtml(post.summary)}</p>
       <footer class="blog-card__foot">

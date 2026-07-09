@@ -33,6 +33,7 @@ const { ORIGIN: PUBLIC_BASE } = require('../../lib/seo');
 // RSS is restricted to the indexable (approved-markdown) surface — the public
 // list/post endpoints below still serve the full corpus unchanged.
 const { listIndexablePosts } = require('../../lib/blog-service');
+const { fetchMozokNews } = require('../../lib/mozok-news-feed');
 
 // ── ClickHouse client (same approach as lib/event-log.js) ─────────────────
 const CH_URL = (process.env.CLICKHOUSE_URL || 'http://clickhouse:8123').replace(/\/+$/, '');
@@ -242,6 +243,26 @@ function createBlogModule(deps = {}) {
         }
       }
 
+      // Mozok pipeline news (CH) — when crawler is paused, keeps /blog?category=news fresh.
+      if (!filterCategory || filterCategory === 'news') {
+        try {
+          const mozok = await fetchMozokNews({
+            lang: filterLang,
+            limit: Math.max(limit + offset, 50),
+          });
+          const seenUrls = new Set(
+            allItems.filter((p) => p.url).map((p) => p.url),
+          );
+          for (const p of mozok) {
+            if (p.url && seenUrls.has(p.url)) continue;
+            if (p.url) seenUrls.add(p.url);
+            allItems.push(p);
+          }
+        } catch (e) {
+          log.warn({ err: e }, 'blog list: Mozok news query failed');
+        }
+      }
+
       // Apply category filter to editorial (DB query already filtered)
       let filtered = allItems;
       if (filterCategory) {
@@ -419,11 +440,44 @@ ${rssItems}
     }
   }
 
+  /**
+   * GET /api/v1/mozok-news.json?lang=&limit=
+   * Adtech-filtered Mozok feed (analytics.news_events) — external links only.
+   */
+  async function handleMozokNews(req, res, parsed) {
+    if (rateLimited(req, res)) return;
+    const q = parsed.searchParams;
+    const filterLang = q.get('lang') || '';
+    const limit = Math.min(100, Math.max(1, parseInt(q.get('limit'), 10) || 50));
+
+    const cacheKey = `mozok:${filterLang}:${limit}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      return sendJson(res, 200, cached);
+    }
+
+    try {
+      const items = await fetchMozokNews({ lang: filterLang, limit });
+      const result = {
+        ok: true,
+        count: items.length,
+        generated_epoch: Math.floor(Date.now() / 1000),
+        items,
+      };
+      cacheSet(cacheKey, result);
+      sendJson(res, 200, result);
+    } catch (e) {
+      log.error({ err: e }, 'mozok news failed');
+      sendError(res, 500, 'mozok_news_failed', e.message);
+    }
+  }
+
   return {
     id: 'blog',
     routes: [
       { method: 'GET', path: '/api/v1/blog/list', handler: handleBlogList },
       { method: 'GET', path: '/api/v1/blog/post', handler: handleBlogPost },
+      { method: 'GET', path: '/api/v1/mozok-news.json', handler: handleMozokNews },
       { method: 'GET', path: '/blog/rss.xml', handler: handleBlogRss },
     ],
   };

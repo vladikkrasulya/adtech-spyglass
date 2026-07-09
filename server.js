@@ -1170,15 +1170,21 @@ log.info(
   'stream generator ready (demand-gated; starts on first /live subscriber)',
 );
 
-// ── News Crawler — AdTech RSS feed ingester (Stage blog) ────────────────────
-// Fetches AdExchanger + ExchangeWire RSS feeds hourly and inserts new items
-// as pending blog_drafts for moderation at /admin/blog.
-// Disabled via NEWS_CRAWLER_DISABLED=1 in .env for dev/test runs.
-const { startScheduled: startNewsCrawler } = require('./lib/news-crawler');
-if (process.env.NEWS_CRAWLER_DISABLED !== '1') {
-  startNewsCrawler();
-  log.info({ component: 'news-crawler' }, 'news crawler scheduled (run on +5s, then hourly)');
-}
+// ── News pipeline — semcore ingest + optional RSS + moderation ─────────────
+// Semcore ingest + moderation always run. RSS crawl is optional (kill-switch).
+// See lib/news-pipeline.js and OPERATIONS.md §4.9.
+const { startScheduled: startNewsPipeline } = require('./lib/news-pipeline');
+startNewsPipeline();
+log.info({ component: 'news-pipeline', rss: process.env.NEWS_CRAWLER_DISABLED !== '1' }, 'news pipeline scheduled (run on +5s, then hourly)');
+
+// ── Mozok display enricher — Ollama blurbs for ortbtools news cards ─────────
+// Independent of NEWS_CRAWLER_DISABLED: enriches CH news_events → display cache.
+const { startScheduled: startMozokDisplayEnricher } = require('./lib/mozok-display-enricher');
+startMozokDisplayEnricher();
+log.info(
+  { component: 'mozok-display-enricher' },
+  'mozok display enricher scheduled (run on +10s, then hourly)',
+);
 
 // ── /api/v1/sample — one synthetic example for the Playground "🎲 приклад" ─
 // First-time-visitor onboarding: empty Playground is intimidating, "what do
