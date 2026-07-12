@@ -16,6 +16,18 @@ All notable changes to Spyglass are documented here. Format follows
 - **README** — CLI install section; remove stale `types` entry from core package
   (no `index.d.ts` yet).
 
+### v1.3.7 — global search: fix dropdown-close crash
+
+App patch only — `packages/core` and CLI unchanged.
+
+- **Fix:** `closeDropdown()` in `public/modules/search/index.js` assigned the
+  undeclared leftover variable `currentGroups`, throwing `ReferenceError` on
+  every dropdown close (Escape / Tab / click-outside / result selection). The
+  global error handler surfaced it to users as an "internal UI error" toast,
+  and the throw inside `navigate()` aborted result navigation (Enter/click on
+  a search result went nowhere) and skipped `cleanup()` teardown on shell
+  page changes. Present since the Global Search ship (`d7f929d`, 2026-05-23).
+
 ### v1.3.6 — privacy contract closure + self-host analytics opt-out
 
 App patch only — `packages/core` and CLI unchanged.
@@ -3009,15 +3021,15 @@ link to `/uk/account#corpus` lands you straight in the corpus view.
 
 **7 sections**
 
-| #   | Section           | Cards                                     |
-| --- | ----------------- | ----------------------------------------- |
-| 1   | 👤 Профіль        | Profile                                   |
-| 2   | 📚 Бібліотека     | Library stats · Insights · Recent samples |
-| 3   | 📊 Активність     | Heatmap+stats · Privacy footnote          |
+| #   | Section            | Cards                                     |
+| --- | ------------------ | ----------------------------------------- |
+| 1   | 👤 Профіль         | Profile                                   |
+| 2   | 📚 Бібліотека      | Library stats · Insights · Recent samples |
+| 3   | 📊 Активність      | Heatmap+stats · Privacy footnote          |
 | 4   | 🛡 Behavior corpus | Corpus list · Confusion matrix            |
-| 5   | ⚙ Налаштування    | Theme · Locale · Dialect                  |
-| 6   | 🔐 Безпека        | Encryption & Recovery                     |
-| 7   | ⚠ Danger zone     | Account actions                           |
+| 5   | ⚙ Налаштування     | Theme · Locale · Dialect                  |
+| 6   | 🔐 Безпека         | Encryption & Recovery                     |
+| 7   | ⚠ Danger zone      | Account actions                           |
 
 **Layout**
 
