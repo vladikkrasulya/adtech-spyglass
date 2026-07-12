@@ -3021,15 +3021,15 @@ link to `/uk/account#corpus` lands you straight in the corpus view.
 
 **7 sections**
 
-| #   | Section            | Cards                                     |
-| --- | ------------------ | ----------------------------------------- |
-| 1   | 👤 Профіль         | Profile                                   |
-| 2   | 📚 Бібліотека      | Library stats · Insights · Recent samples |
-| 3   | 📊 Активність      | Heatmap+stats · Privacy footnote          |
+| #   | Section           | Cards                                     |
+| --- | ----------------- | ----------------------------------------- |
+| 1   | 👤 Профіль        | Profile                                   |
+| 2   | 📚 Бібліотека     | Library stats · Insights · Recent samples |
+| 3   | 📊 Активність     | Heatmap+stats · Privacy footnote          |
 | 4   | 🛡 Behavior corpus | Corpus list · Confusion matrix            |
-| 5   | ⚙ Налаштування     | Theme · Locale · Dialect                  |
-| 6   | 🔐 Безпека         | Encryption & Recovery                     |
-| 7   | ⚠ Danger zone      | Account actions                           |
+| 5   | ⚙ Налаштування    | Theme · Locale · Dialect                  |
+| 6   | 🔐 Безпека        | Encryption & Recovery                     |
+| 7   | ⚠ Danger zone     | Account actions                           |
 
 **Layout**
 
