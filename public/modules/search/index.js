@@ -423,7 +423,6 @@ export function initSearch(inputEl, _shellRoot) {
     dropdownEl.hidden = true;
     dropdownEl.innerHTML = '';
     selectedIndex = -1;
-    currentGroups = [];
   }
 
   function renderCurrent(query) {
