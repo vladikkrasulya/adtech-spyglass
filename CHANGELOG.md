@@ -16,6 +16,37 @@ All notable changes to Spyglass are documented here. Format follows
 - **README** — CLI install section; remove stale `types` entry from core package
   (no `index.d.ts` yet).
 
+### v1.3.8 — Signal design wave 1: stop-yellow
+
+App patch only — `packages/core` and CLI unchanged. First of three design-debt
+waves from the 2026-07-13 design audit (vault: «2026-07-13 — ortbtools.com
+дизайн-аудит (Signal)»): removes every place the retired brand yellow #FFCC00
+still _rendered_ on the live product.
+
+- **Favicon/icon → Signal.** `public/icon.svg` + `public/favicon.svg` redrawn as
+  a navy `#0D1726` tile with the `#38BDF8` ◆ mark (matches the sidebar brand);
+  `mask-icon` `color` attribute `#FFCC00` → `#0284C7` in all 9 shells.
+- **og-image.png regenerated** (was 2026-05-04, pre-Signal cream/yellow): navy
+  blueprint-grid card, ◆ tile, Onest headline, JetBrains Mono meta row.
+- **Undeclared tokens no longer fall back to yellow.** `--accent-rgb` and
+  `--bg-elev-rgb` are now declared per-theme in `inspector.css` (`:root` +
+  `[data-theme='dark']`) — priv-badge / ver-badge / severity-chip hover had been
+  rendering `rgba(255,204,0,…)` live. `--accent-bg` (never declared) replaced
+  with `var(--accent-soft)` in `account.{en,uk,ru}.html` — the cabinet's active
+  nav item rendered pale yellow, and `.cab-radio.active` lost its tint entirely.
+- **Quality pill `q-good` → accent family.** Was hardcoded yellow fill/glow
+  against an already-blue border; tier scale now reads green → blue → orange →
+  red. Status text: `#0369a1` light (5.9:1) / `var(--accent)` dark (8.8:1).
+- **Search dropdown dark glass → navy.** `rgba(42,38,34,.88)` (pre-Signal warm
+  graphite — a brown panel over the navy theme) → `rgba(18,28,48,.88)` from
+  `--bg-elev`; `@supports` fallback literal updated to `#121c30`.
+- **Blog fixes:** code/pre/lang-badge backgrounds used undeclared
+  `--surface-alt` (fell back to dark `#27272a` — unreadable in light theme) →
+  `var(--bg-elev-2)`; active filter chip `color: #000` → `var(--text-on-accent)`.
+- **Yellow fallback literals updated to Signal values** in the specific rules
+  touched above (severity-chip active/hover, ver-badge border, blog chip). The
+  repo-wide sweep of ~290 dormant legacy fallbacks stays scheduled for wave 3.
+
 ### v1.3.7 — global search: fix dropdown-close crash
 
 App patch only — `packages/core` and CLI unchanged.

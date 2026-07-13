@@ -56,9 +56,10 @@
   animation: sg-dropdown-in var(--t-fast, 150ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
 
-/* Dark theme glass */
+/* Dark theme glass — navy from --bg-elev #121C30. Was the pre-Signal
+   warm-graphite rgba(42,38,34,…), a brown panel on the navy theme. */
 [data-theme='dark'] .sg-search-dropdown {
-  background: rgba(42, 38, 34, 0.88);
+  background: rgba(18, 28, 48, 0.88);
 }
 
 /* Fallback: no backdrop-filter support */
@@ -67,7 +68,7 @@
     background: var(--bg-elev, #ffffff);
   }
   [data-theme='dark'] .sg-search-dropdown {
-    background: var(--bg-elev, #2a2622);
+    background: var(--bg-elev, #121c30);
   }
 }
 

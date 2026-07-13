@@ -18,9 +18,17 @@
          win the cascade by default. */
 :root {
   --text-warning: #92400e;
+  /* RGB triplets for rgba(var(--…-rgb), α) mixing. Neither token exists in
+     design-system.css — without these declarations the call sites below fell
+     back to the retired brand yellow (255, 204, 0). Values mirror --accent
+     (#0284C7 / #38BDF8) and --bg-elev (#FFFFFF / #121C30) per theme. */
+  --accent-rgb: 2, 132, 199;
+  --bg-elev-rgb: 255, 255, 255;
 }
 [data-theme='dark'] {
   --text-warning: #fcd34d;
+  --accent-rgb: 56, 189, 248;
+  --bg-elev-rgb: 18, 28, 48;
 }
 
 html,
@@ -2805,9 +2813,9 @@ button.cross-path:focus-visible,
   font-size: 10px;
   font-weight: 700;
   margin-right: 3px;
-  background: rgba(var(--accent-rgb, 255, 204, 0), 0.15);
+  background: rgba(var(--accent-rgb, 2, 132, 199), 0.15);
   color: var(--text);
-  border: 1px solid rgba(var(--accent-rgb, 255, 204, 0), 0.4);
+  border: 1px solid rgba(var(--accent-rgb, 2, 132, 199), 0.4);
 }
 /* Version badge accent */
 .analysis-strip-value .ver-badge {
@@ -2816,9 +2824,9 @@ button.cross-path:focus-visible,
   border-radius: 3px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(var(--accent-rgb, 255, 204, 0), 0.2);
+  background: rgba(var(--accent-rgb, 2, 132, 199), 0.2);
   color: var(--text);
-  border: 1px solid var(--accent, #ffcc00);
+  border: 1px solid var(--accent, #0284c7);
 }
 /* Narrow viewports: hide labels, scroll horizontally. Previously the blocks
    stayed flex:1 (equal columns), crushing each value to ~32px so "Web (Banner)"
@@ -2878,14 +2886,14 @@ button.cross-path:focus-visible,
   background: rgba(255, 255, 255, 0.04);
 }
 .severity-chip:hover {
-  background: rgba(var(--accent-rgb, 255, 204, 0), 0.1);
-  border-color: var(--accent, #ffcc00);
+  background: rgba(var(--accent-rgb, 2, 132, 199), 0.1);
+  border-color: var(--accent, #0284c7);
   color: var(--text);
 }
 .severity-chip.active {
-  background: var(--accent, #ffcc00);
-  border-color: var(--accent, #ffcc00);
-  color: var(--accent-ink, #18181b);
+  background: var(--accent, #0284c7);
+  border-color: var(--accent, #0284c7);
+  color: var(--text-on-accent, #ffffff);
 }
 .severity-chip .chip-dot {
   display: inline-block;
@@ -2964,12 +2972,15 @@ button.cross-path:focus-visible,
     0 0 6px 0 rgba(22, 163, 74, 0.35) inset,
     0 0 4px rgba(22, 163, 74, 0.25);
 }
+/* q-good tier rides the Signal accent (blue) — scale reads
+   green → blue → orange → red. Was retired brand yellow, which left a
+   yellow fill against an already-blue border after the Signal migration. */
 .quality-pill.q-good {
-  background: rgba(255, 204, 0, 0.18);
-  border-color: var(--accent, #ffcc00);
+  background: rgba(var(--accent-rgb, 2, 132, 199), 0.16);
+  border-color: var(--accent, #0284c7);
   box-shadow:
-    0 0 6px 0 rgba(255, 204, 0, 0.35) inset,
-    0 0 4px rgba(255, 204, 0, 0.25);
+    0 0 6px 0 rgba(var(--accent-rgb, 2, 132, 199), 0.32) inset,
+    0 0 4px rgba(var(--accent-rgb, 2, 132, 199), 0.22);
 }
 .quality-pill.q-needs-attention {
   background: rgba(234, 88, 12, 0.18);
@@ -3013,10 +3024,11 @@ button.cross-path:focus-visible,
   color: #16a34a;
 }
 .quality-pill.q-good .quality-status {
-  color: #b8960a;
+  /* sky-700 — 5.9:1 on white; --accent itself is only 4.1:1 as text */
+  color: #0369a1;
 }
 [data-theme='dark'] .quality-pill.q-good .quality-status {
-  color: var(--accent, #ffcc00);
+  color: var(--accent, #38bdf8);
 }
 .quality-pill.q-needs-attention .quality-status {
   color: #ea580c;
