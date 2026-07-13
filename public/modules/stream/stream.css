@@ -456,7 +456,7 @@
   border-radius: 6px;
   border: 1px solid var(--accent, #6366f1);
   background: transparent;
-  color: var(--accent, #6366f1);
+  color: var(--text-accent, #0369a1);
   font-size: 0.78rem;
   cursor: pointer;
   font-family: inherit;
@@ -465,8 +465,8 @@
     color 0.15s;
 }
 .stream-action-btn:hover {
-  background: var(--accent, #6366f1);
-  color: #fff;
+  background: var(--accent, #0284c7);
+  color: var(--text-on-accent, #ffffff);
 }
 .stream-action-btn--secondary {
   border-color: var(--border);

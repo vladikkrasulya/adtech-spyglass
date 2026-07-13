@@ -117,7 +117,7 @@
   text-decoration: none;
 }
 .blog-card__title a:hover {
-  color: var(--accent, #ffcc00);
+  color: var(--text-accent, #0369a1);
 }
 .blog-card__summary {
   flex: 1;

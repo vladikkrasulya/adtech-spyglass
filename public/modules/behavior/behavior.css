@@ -128,8 +128,10 @@
   letter-spacing: 0.04em;
 }
 .bhv-card__badge--baseline {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
-  color: #78640a;
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  /* sky-700 on the accent tint — was dark-yellow #78640a, a pre-Signal
+     leftover pairing yellow text with the now-blue --accent-soft bg */
+  color: #0369a1;
 }
 .bhv-card__badge--privacy {
   background: rgba(59, 130, 246, 0.12);
@@ -146,6 +148,27 @@
 .bhv-card__badge--malicious {
   background: rgba(239, 68, 68, 0.12);
   color: #b91c1c;
+}
+/* Dark theme: the 700-level light colors above drop to 2.3–2.5:1 on navy
+   (2026-07-13 audit) — brighten per the search.css badge precedent. */
+[data-theme='dark'] .bhv-card__badge--baseline {
+  color: var(--accent, #38bdf8);
+}
+[data-theme='dark'] .bhv-card__badge--privacy {
+  background: rgba(59, 130, 246, 0.22);
+  color: #93c5fd;
+}
+[data-theme='dark'] .bhv-card__badge--creative {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+}
+[data-theme='dark'] .bhv-card__badge--crosscheck {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fdba74;
+}
+[data-theme='dark'] .bhv-card__badge--malicious {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
 }
 
 .bhv-card__desc {

@@ -119,7 +119,7 @@
   margin-top: auto;
   font-size: 13px;
   font-weight: 500;
-  color: var(--accent-hover, #ffd633);
+  color: var(--text-accent, #0369a1);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -161,9 +161,9 @@
   color: var(--text);
 }
 .docs-chip.is-active {
-  background: var(--accent, #ffcc00);
-  border-color: var(--accent, #ffcc00);
-  color: var(--accent-ink, #18181b);
+  background: var(--accent, #0284c7);
+  border-color: var(--accent, #0284c7);
+  color: var(--text-on-accent, #ffffff);
 }
 
 /* Stats bar */
@@ -247,15 +247,26 @@
 }
 .docs-badge--error {
   background: rgba(220, 38, 38, 0.12);
-  color: #dc2626;
+  /* red-700: #dc2626 was 4.01:1 on the red tint — just under AA */
+  color: #b91c1c;
 }
 .docs-badge--warning {
   background: rgba(245, 158, 11, 0.12);
   color: #b45309;
 }
 .docs-badge--info {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
-  color: var(--text-muted, #52525b);
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  color: var(--text-muted, #46556b);
+}
+/* Dark theme: light 700-level text fell to 2.99–3.49:1 on navy
+   (2026-07-13 audit) — search.css badge precedent. */
+[data-theme='dark'] .docs-badge--error {
+  background: rgba(220, 38, 38, 0.22);
+  color: #f87171;
+}
+[data-theme='dark'] .docs-badge--warning {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fbbf24;
 }
 
 /* Loading / empty states */

@@ -18,6 +18,10 @@
          win the cascade by default. */
 :root {
   --text-warning: #92400e;
+  /* Green counterpart of --text-warning: success/ok as TEXT. The mirror/diff
+     UI previously hardcoded GitHub-green #2ea043 — 3.4:1 on white, below AA.
+     Light gets --success-grade #15803d (5.0:1); dark keeps the old hue. */
+  --text-ok: #15803d;
   /* RGB triplets for rgba(var(--…-rgb), α) mixing. Neither token exists in
      design-system.css — without these declarations the call sites below fell
      back to the retired brand yellow (255, 204, 0). Values mirror --accent
@@ -27,6 +31,7 @@
 }
 [data-theme='dark'] {
   --text-warning: #fcd34d;
+  --text-ok: #2ea043;
   --accent-rgb: 56, 189, 248;
   --bg-elev-rgb: 18, 28, 48;
 }
@@ -812,7 +817,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .char-count.warn {
-  color: var(--warning);
+  color: var(--text-warning);
 }
 .json-badge {
   font-family: var(--font-mono);
@@ -1091,19 +1096,23 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--text);
   white-space: nowrap;
 }
+/* Chip text: 600/700-level hues for the LIGHT (default) theme — the old
+   unscoped 400-level pastels measured 1.45–2.39:1 on light tints (2026-07-13
+   audit). The [data-theme='dark'] block below restores the pastels, where
+   they sit at 5–10:1 on the navy surfaces. */
 .format-chip--format {
   border-color: rgba(59, 130, 246, 0.5);
-  color: #60a5fa;
+  color: #1d4ed8;
   background: rgba(59, 130, 246, 0.08);
 }
 .format-chip--context {
   border-color: rgba(34, 197, 94, 0.5);
-  color: #4ade80;
+  color: #15803d;
   background: rgba(34, 197, 94, 0.08);
 }
 .format-chip--protocol {
   border-color: rgba(234, 179, 8, 0.5);
-  color: #facc15;
+  color: #a16207;
   background: rgba(234, 179, 8, 0.08);
 }
 /* Pop family (popunder / popup / clickunder) — purple so it's instantly
@@ -1113,18 +1122,36 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
    from pops, distinct from banner. */
 .format-chip--format[data-fmt='pops'] {
   border-color: rgba(168, 85, 247, 0.5);
-  color: #c084fc;
+  color: #7e22ce;
   background: rgba(168, 85, 247, 0.08);
 }
 .format-chip--format[data-fmt='push'] {
   border-color: rgba(244, 114, 182, 0.5);
-  color: #f9a8d4;
+  color: #be185d;
   background: rgba(244, 114, 182, 0.08);
 }
 .format-chip--format[data-fmt='inpage'] {
   border-color: rgba(251, 146, 60, 0.5);
-  color: #fdba74;
+  color: #c2410c;
   background: rgba(251, 146, 60, 0.08);
+}
+[data-theme='dark'] .format-chip--format {
+  color: #60a5fa;
+}
+[data-theme='dark'] .format-chip--context {
+  color: #4ade80;
+}
+[data-theme='dark'] .format-chip--protocol {
+  color: #facc15;
+}
+[data-theme='dark'] .format-chip--format[data-fmt='pops'] {
+  color: #c084fc;
+}
+[data-theme='dark'] .format-chip--format[data-fmt='push'] {
+  color: #f9a8d4;
+}
+[data-theme='dark'] .format-chip--format[data-fmt='inpage'] {
+  color: #fdba74;
 }
 .info-row:last-child {
   border-bottom: none;
@@ -1367,12 +1394,12 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .kt-chip-ok {
   background: rgba(46, 160, 67, 0.16);
-  color: #2ea043;
+  color: var(--text-ok);
   border: 1px solid rgba(46, 160, 67, 0.4);
 }
 .kt-chip-warn {
   background: rgba(217, 119, 6, 0.16);
-  color: #d97706;
+  color: var(--text-warning);
   border: 1px solid rgba(217, 119, 6, 0.4);
 }
 .kt-mirror-notes {
@@ -1465,29 +1492,29 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--text-dim, var(--text));
 }
 .kt-diff-yours {
-  color: #d97706;
+  color: var(--text-warning);
 }
 .kt-diff-canon {
-  color: #2ea043;
+  color: var(--text-ok);
 }
 .kt-diff-arrow {
   text-align: center;
   color: var(--text-dim, var(--text));
 }
 .kt-diff-changed .kt-diff-marker {
-  color: #d97706;
+  color: var(--text-warning);
 }
 .kt-diff-added {
   grid-template-columns: 18px 120px 1fr;
 }
 .kt-diff-added .kt-diff-marker {
-  color: #2ea043;
+  color: var(--text-ok);
 }
 .kt-diff-missing {
   grid-template-columns: 18px 120px 1fr;
 }
 .kt-diff-missing .kt-diff-marker {
-  color: #d97706;
+  color: var(--text-warning);
 }
 .kt-mirror-diff-legend {
   font-size: 10px;
@@ -1519,7 +1546,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   margin-left: 6px;
 }
 .kt-live-status-on {
-  color: #2ea043;
+  color: var(--text-ok);
 }
 .kt-live-controls {
   display: flex;
@@ -1590,11 +1617,11 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .kt-live-kind-req {
   background: rgba(46, 160, 67, 0.15);
-  color: #2ea043;
+  color: var(--text-ok);
 }
 .kt-live-kind-res {
   background: rgba(217, 119, 6, 0.15);
-  color: #d97706;
+  color: var(--text-warning);
 }
 .kt-live-kind-\? {
   background: rgba(127, 127, 127, 0.15);
@@ -1629,7 +1656,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   background: var(--bg-2);
 }
 .sim-bid-yes {
-  border-left: 3px solid #2ea043;
+  border-left: 3px solid var(--text-ok);
   background: rgba(46, 160, 67, 0.05);
 }
 .sim-bid-no {
@@ -2084,7 +2111,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .slot-type.audio {
   background: rgba(245, 158, 11, 0.1);
-  color: var(--warning);
+  color: var(--text-warning);
 }
 .slot-type.unknown {
   background: var(--bg-2);
@@ -2377,7 +2404,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--success);
 }
 .cross-item.warn .cross-icon {
-  color: var(--warning);
+  color: var(--text-warning);
 }
 .cross-item.crit .cross-icon {
   color: var(--danger);

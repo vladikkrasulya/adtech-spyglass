@@ -175,6 +175,8 @@
   white-space: nowrap;
 }
 .dlc-sev-chip--error {
+  /* --danger flips per theme since the dark override landed in
+     design-system.css (wave 2) — no local dark rule needed. */
   background: rgba(220, 38, 38, 0.1);
   color: var(--danger, #dc2626);
 }
@@ -185,6 +187,16 @@
 .dlc-sev-chip--info {
   background: rgba(59, 130, 246, 0.1);
   color: #2563eb;
+}
+/* Dark theme: #a16207 is 2.98:1 and #2563eb 3.11:1 on navy (2026-07-13
+   audit) — brighten per the search.css badge precedent. */
+[data-theme='dark'] .dlc-sev-chip--warning {
+  background: rgba(234, 179, 8, 0.2);
+  color: #fbbf24;
+}
+[data-theme='dark'] .dlc-sev-chip--info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
 }
 
 /* ── Card actions ── */

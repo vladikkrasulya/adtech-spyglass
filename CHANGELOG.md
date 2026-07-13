@@ -16,6 +16,44 @@ All notable changes to Spyglass are documented here. Format follows
 - **README** — CLI install section; remove stale `types` entry from core package
   (no `index.d.ts` yet).
 
+### v1.3.9 — Signal design wave 2: contrast AA
+
+App patch only — `packages/core` and CLI unchanged. Second design-debt wave
+from the 2026-07-13 audit: WCAG AA for text in BOTH themes at the flagged
+call sites.
+
+- **Format chips readable in light theme.** The six `.format-chip` variants
+  hardcoded dark-tuned 400-level colors (`#facc15` measured 1.45:1 on the
+  light tint — effectively invisible); light (default) theme now gets
+  600/700-level hues, `[data-theme='dark']` overrides restore the pastels.
+- **Dark `--danger` override — SHARED design-system.css change, landed
+  byte-identically in BOTH repos** (kyivtech-portal + vendored copy here).
+  Dark theme inherited light `#DC2626` (3.5:1 on navy); now `#F87171` per
+  the original Signal palette note. Portal side is live immediately
+  (bind-mounted); Spyglass ships with this release.
+- **Badge dark-theme overrides** for behavior / docs / dialects, copying the
+  proven `search.css` precedent (`#f87171`/`#fbbf24`/`#93c5fd`/`#c084fc`/
+  `#fdba74` on 0.2–0.22 tints — the light 700-level values measured
+  2.3–3.5:1 on navy). Behavior `baseline` badge also dropped its pre-Signal
+  dark-yellow `#78640a` text on the now-blue `--accent-soft` tint.
+- **New `--text-accent` token** (spyglass-shell.css, mirrors the
+  `--text-warning` pattern): `#0369a1` light / `#38bdf8` dark. The shared
+  `--accent` is a fill color — 4.10:1 as text on white, below AA. Applied to
+  docs card actions, stream action buttons, blog title hover, landing refs
+  and IAB-table code cells. Shared kyivtech token values untouched.
+- **New `--text-ok` token** (inspector.css): mirror/diff UI hardcoded
+  GitHub-green `#2ea043` (3.4:1 on white) in 11 places → token, `#15803d`
+  light / `#2ea043` dark. Amber `#d97706` (2.7:1) → existing
+  `--text-warning`.
+- **`--warning` no longer used as text color** (2.15:1 on white): char-count
+  warn, audio slot-type, crosscheck warn icon → `--text-warning`.
+- **Buttons on accent fixed to `--text-on-accent`:** landing CTA
+  (`--accent-ink` — navy on sky-600), docs active chip, stream action hover
+  (`#fff` on sky-400 in dark — 2.1:1), admin-blog primary (rest `#000`,
+  hover was legacy yellow `#ffd94d` → `--accent-hover`).
+- Version: PATCH bump v1.3.9 in package.json, version.js and the six guarded
+  static fallbacks.
+
 ### v1.3.8 — Signal design wave 1: stop-yellow
 
 App patch only — `packages/core` and CLI unchanged. First of three design-debt

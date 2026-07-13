@@ -77,13 +77,13 @@
   border-color: var(--text-muted);
 }
 .ablog-btn--primary {
-  background: var(--accent, #ffcc00);
-  border-color: var(--accent, #ffcc00);
-  color: #000;
+  background: var(--accent, #0284c7);
+  border-color: var(--accent, #0284c7);
+  color: var(--text-on-accent, #ffffff);
 }
 .ablog-btn--primary:hover {
-  background: #ffd94d;
-  border-color: #ffd94d;
+  background: var(--accent-hover, #0e96dc);
+  border-color: var(--accent-hover, #0e96dc);
 }
 .ablog-btn--ghost {
   background: transparent;

@@ -9,6 +9,18 @@
      by inspector module's mount() once JS boots)
    ============================================================ */
 
+/* Accent as TEXT. The shared --accent (#0284C7) is a fill colour: as
+   normal-size text on light surfaces it measures 4.10:1 — below AA 4.5:1
+   (2026-07-13 audit). Spyglass-local token, mirrors the --text-warning
+   pattern in inspector.css; the shared kyivtech token value is untouched.
+   Light: sky-700 (5.9:1 on white). Dark: --accent itself is 8.8:1 — fine. */
+:root {
+  --text-accent: #0369a1;
+}
+[data-theme='dark'] {
+  --text-accent: #38bdf8;
+}
+
 /* Scrollbars — palette-aligned in BOTH themes. Width identical across
    themes (10px) so theme toggle never reflows content. */
 * {
