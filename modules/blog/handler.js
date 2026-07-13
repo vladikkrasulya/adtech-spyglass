@@ -396,7 +396,7 @@ function createBlogModule(deps = {}) {
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>Spyglass Blog</title>
+    <title>ortbtools Blog</title>
     <link>${PUBLIC_BASE}/blog</link>
     <description>OpenRTB internals, adtech news, and integration guides</description>
     <language>mul</language>

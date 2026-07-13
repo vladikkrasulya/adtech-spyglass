@@ -16,6 +16,35 @@ All notable changes to Spyglass are documented here. Format follows
 - **README** — CLI install section; remove stale `types` entry from core package
   (no `index.d.ts` yet).
 
+### v1.4.2 — brand scrub: "Spyglass" removed from every user-visible surface
+
+`packages/core` patch (`0.30.3` → `0.30.4`) — one message string; CLI
+unchanged. Naming canon (vault, Themis note): internal codename Themis,
+public brand ortbtools, Spyglass retired — but the retired name still
+leaked to users in 11 places. GSC screenshots (2026-07-13) surfaced it:
+stale SERP titles said "How to Use Spyglass".
+
+- **Emails** (email.js): verify/reset subjects and bodies said "Spyglass";
+  sender fallback `spyglass@` → `ortbtools@kyivtech.com.ua` (prod
+  `EMAIL_FROM` in `.env` updated the same way — Resend domain unchanged).
+- **RSS feed** title `Spyglass Blog` → `ortbtools Blog`
+  (modules/blog/handler.js).
+- **Export filename** `spyglass-{date}-{hash}.json` →
+  `ortbtools-{date}-{hash}.json` (public/export.js) + the three /about
+  pages that document it.
+- **Validator message** `warn-currency-conversion-needed` (EN/UK/RU) said
+  "Spyglass skips the numeric check" → ortbtools (core 0.30.4).
+- **Operator-facing:** Telegram error alert tag and OpenRouter `X-Title`
+  → ortbtools; **README.md** (GitHub-public) fully re-branded.
+- NOT in scope (staged Themis migration per the vault Етап 0 plan —
+  internal contracts needing compatibility aliases): `SPYGLASS_*` env
+  vars, `adtech-spyglass` container/repo/package names,
+  `@kyivtech/spyglass-core`, `window.Spyglass*` globals, localStorage
+  keys, `spyglass-shell.css`/`spyglass-crypto.js`/`spyglass.app.js`
+  filenames, `data-spyglass-version` attribute, ClickHouse
+  `spyglass_events`.
+- Version: PATCH bump v1.4.2 across the 8 canonical spots + core 0.30.4.
+
 ### v1.4.1 — Signal wave-3 tails: /about refresh, TOC, ticker, code-num tokens
 
 App patch — closes the four deliberately-deferred tails from the 2026-07-13

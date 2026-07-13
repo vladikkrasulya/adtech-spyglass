@@ -17,7 +17,7 @@
        "meta": <object | null>
      }
 
-   Filename: spyglass-{YYYY-MM-DD}-{6 hex}.json (hex is the leading 24 bits
+   Filename: ortbtools-{YYYY-MM-DD}-{6 hex}.json (hex is the leading 24 bits
    of SHA-256 over the request text — collision-resistant enough for a
    stable name, short enough to be readable).
    ============================================================ */
@@ -82,7 +82,7 @@
     const json = JSON.stringify(bundle, null, 2);
     const date = new Date().toISOString().slice(0, 10);
     const hash = await shortHash(reqText || resText);
-    const filename = 'spyglass-' + date + '-' + hash + '.json';
+    const filename = 'ortbtools-' + date + '-' + hash + '.json';
 
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

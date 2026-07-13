@@ -30,7 +30,7 @@ function isDevMode() {
 }
 
 function getFrom() {
-  return process.env.EMAIL_FROM || 'spyglass@kyivtech.com.ua';
+  return process.env.EMAIL_FROM || 'ortbtools@kyivtech.com.ua';
 }
 
 function getBaseUrl(override) {
@@ -96,17 +96,17 @@ function verifyTemplate(user, link) {
   const safeEmail = escapeHtml(user.email);
   const safeLink = escapeHtml(link);
   return {
-    subject: 'Підтвердіть свою адресу — Spyglass',
+    subject: 'Підтвердіть свою адресу — ortbtools',
     html: `<!DOCTYPE html>
 <html><body style="font-family: system-ui, -apple-system, sans-serif; color: #1a1a1a; max-width: 560px; margin: 24px auto; padding: 0 16px;">
 <h2 style="margin: 0 0 16px;">Підтвердження адреси</h2>
-<p>Вітаємо в Spyglass, ${safeEmail}.</p>
+<p>Вітаємо в ortbtools, ${safeEmail}.</p>
 <p>Натисніть кнопку нижче протягом 7 днів, щоб підтвердити цю адресу:</p>
 <p style="margin: 24px 0;"><a href="${safeLink}" style="display:inline-block; padding:12px 24px; background:#0066cc; color:#fff; text-decoration:none; border-radius:6px; font-weight:600;">Підтвердити адресу</a></p>
 <p style="font-size:12px; color:#666;">Або скопіюйте URL в браузер:<br><code style="word-break:break-all;">${safeLink}</code></p>
 <p style="font-size:12px; color:#666; margin-top:32px;">Якщо ви не реєструвались — просто проігноруйте цей лист.</p>
 </body></html>`,
-    text: `Підтвердження адреси Spyglass\n\nПерейдіть за посиланням протягом 7 днів:\n${link}\n\nЯкщо ви не реєструвались — проігноруйте.`,
+    text: `Підтвердження адреси ortbtools\n\nПерейдіть за посиланням протягом 7 днів:\n${link}\n\nЯкщо ви не реєструвались — проігноруйте.`,
   };
 }
 
@@ -114,7 +114,7 @@ function resetTemplate(user, link) {
   const safeEmail = escapeHtml(user.email);
   const safeLink = escapeHtml(link);
   return {
-    subject: 'Скидання паролю — Spyglass',
+    subject: 'Скидання паролю — ortbtools',
     html: `<!DOCTYPE html>
 <html><body style="font-family: system-ui, -apple-system, sans-serif; color: #1a1a1a; max-width: 560px; margin: 24px auto; padding: 0 16px;">
 <h2 style="margin: 0 0 16px;">Скидання паролю</h2>
@@ -124,7 +124,7 @@ function resetTemplate(user, link) {
 <p style="font-size:12px; color:#666;">Або скопіюйте URL в браузер:<br><code style="word-break:break-all;">${safeLink}</code></p>
 <p style="font-size:12px; color:#666; margin-top:32px;">Якщо ви не запитували скидання — просто проігноруйте лист, з вашим акаунтом нічого не станеться.</p>
 </body></html>`,
-    text: `Скидання паролю Spyglass\n\nПерейдіть за посиланням протягом 15 хвилин:\n${link}\n\nЯкщо ви не запитували скидання — проігноруйте.`,
+    text: `Скидання паролю ortbtools\n\nПерейдіть за посиланням протягом 15 хвилин:\n${link}\n\nЯкщо ви не запитували скидання — проігноруйте.`,
   };
 }
 

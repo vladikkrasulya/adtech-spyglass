@@ -1,4 +1,4 @@
-# Spyglass
+# ortbtools
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -63,7 +63,7 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
   500 events per session (rolling window) to keep parent-tab memory bounded
   during long monitoring runs.
 
-## Spyglass Intelligence (Discovery + Local AI)
+## ortbtools Intelligence (Discovery + Local AI)
 
 Phase 7a–7c built an **opt-in, browser-local discovery layer** that watches
 for unknown vendor extension fields under `*.ext.*` and clusters them by
@@ -85,7 +85,7 @@ kept; bid values are dropped in the browser, not sent to the server. Highlights:
   (default model `gemma4:e2b` since 2026-05-21; previously `qwen2.5:3b`)
   provides cluster naming + per-field purpose hints. The LLM call is
   fail-open: if Ollama is unreachable, the AI affordances quietly hide
-  and the rest of Spyglass continues unaffected. See
+  and the rest of ortbtools continues unaffected. See
   [LLM_SETUP.md](./LLM_SETUP.md) for deployment.
 - **Knowledge Base** (Phase 10): a curated set of OpenRTB / JsonFeed
   reference fixtures under [packages/core/knowledge_base/](./packages/core/knowledge_base/).
@@ -103,7 +103,7 @@ end-to-end in the browser before upload.
 ## Safe Public Mode
 
 When the URL contains `?demo=safe` (used for the public landing strip and
-shareable links), Spyglass renders ad creatives behind a CSS blur filter
+shareable links), ortbtools renders ad creatives behind a CSS blur filter
 and masks domains in the summary panel. The validator still runs at full
 fidelity; only the visual surfaces change. This lets us screenshot the
 tool in marketing material without leaking real-publisher branding from
@@ -142,7 +142,7 @@ the path above is served on top.
 
 **Optional: Local AI**. Discovery cluster naming + per-field purpose hints
 require a local Ollama instance reachable on the `ollama_default` Docker
-network. See [LLM_SETUP.md](./LLM_SETUP.md) for the full setup. Spyglass
+network. See [LLM_SETUP.md](./LLM_SETUP.md) for the full setup. ortbtools
 runs cleanly without it — AI affordances hide on first 503.
 
 ## Layout
