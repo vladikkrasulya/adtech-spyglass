@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-AdKernel is a **white-label adtech engine**, not a destination network. It does **not publish a public dev portal** (`docs.adkernel.com` / `wiki.adkernel.com` do not resolve). The de-facto public spec is the **Prebid adapter source** (Prebid.js + Prebid Server), referenced from AdKernel's own marketing. Wire format is **standard OpenRTB 2.5 over HTTPS POST, gzipped, with a per-tenant host and `?zone={zoneId}` query param** — there is no AdKernel-specific JsonFeed envelope. Each tenant (49 Prebid aliases) shows up as a different `host`; the body is vanilla oRTB. **Implication for Spyglass:** AdKernel is _not_ a separate dialect like the vendor-specific JSON feeds we already cover — it's "oRTB 2.5 + host/zoneId macros." One preset covers all 49 tenants for free.
+AdKernel is a **white-label adtech engine**, not a destination network. It does **not publish a public dev portal** (`docs.adkernel.com` / `wiki.adkernel.com` do not resolve). The de-facto public spec is the **Prebid adapter source** (Prebid.js + Prebid Server), referenced from AdKernel's own marketing. Wire format is **standard OpenRTB 2.5 over HTTPS POST, gzipped, with a per-tenant host and `?zone={zoneId}` query param** — there is no AdKernel-specific JsonFeed envelope. Each tenant (49 Prebid aliases) shows up as a different `host`; the body is vanilla oRTB. **Implication for ortbtools:** AdKernel is _not_ a separate dialect like the vendor-specific JSON feeds we already cover — it's "oRTB 2.5 + host/zoneId macros." One preset covers all 49 tenants for free.
 
 ## 1. Doc URL
 
@@ -27,7 +27,7 @@ AdKernel runs **two distinct stacks**:
 | **RTB Suite**                         | `/rtb-suite/`     | OpenRTB 2.5 JSON (this is what Prebid talks to — documentable)                          |
 | **PPC / XML / JSON Performance Feed** | `/xml-ad-server/` | XML feeds + bespoke JSON + "OpenRTB-inspired" — **per-partner, not publicly specified** |
 
-For Spyglass, only the RTB Suite is documentable. The PPC suite (push, pop, search, smartlink) requires partner deck.
+For ortbtools, only the RTB Suite is documentable. The PPC suite (push, pop, search, smartlink) requires partner deck.
 
 ## 3. JSON-RTB Format
 

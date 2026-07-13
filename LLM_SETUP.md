@@ -1,6 +1,6 @@
-# Local LLM Setup — Ollama for Spyglass Intelligence
+# Local LLM Setup — Ollama for ortbtools Intelligence
 
-Spyglass uses a **self-hosted, local LLM** for two narrow tasks in the
+ortbtools uses a **self-hosted, local LLM** for two narrow tasks in the
 Discovery flow:
 
 1. **Cluster naming** — `/api/intel/suggest-name` proposes a `snake_case`
@@ -11,12 +11,12 @@ Discovery flow:
    `image_url`, `tracker_pixel`, `segment_id`, …).
 
 Both are **opt-in**, **server-side**, and **fail-open**: if Ollama is
-unreachable, Spyglass quietly hides the AI affordances and the rest of
+unreachable, ortbtools quietly hides the AI affordances and the rest of
 the tool keeps working. The LLM endpoints are rate-limited at 30/min/IP.
 
 ## Why local
 
-The privacy posture of the rest of Spyglass requires that **no values from
+The privacy posture of the rest of ortbtools requires that **no values from
 the bid stream ever cross the user's tab boundary**. A hosted LLM (OpenAI,
 Anthropic, Mistral) would mean shipping field paths and char-class hints
 to a third party. Even though those carry no values, we'd need a separate
@@ -43,13 +43,13 @@ set via `OLLAMA_MODEL` env in
 - Docker + Docker Compose v2.
 - A box with at least **16 GB RAM** and **20 GB free disk**. CPU-only is
   fine (no GPU required); generation runs at ~10 tokens/sec on an i7-7700.
-- The Spyglass repo (`/srv/DATA/Stacks/adtech-spyglass/` in the canonical
+- The ortbtools repo (`/srv/DATA/Stacks/adtech-spyglass/` in the canonical
   deploy).
 
 ## Step 1 — Bring up Ollama as a separate Compose stack
 
 The architectural choice is to run Ollama in its **own** compose project so
-it can be shared across multiple consumers (Spyglass today, future tools
+it can be shared across multiple consumers (ortbtools today, future tools
 tomorrow) without one compose file becoming a mega-stack.
 
 Create `/srv/DATA/Stacks/ollama/docker-compose.yml`:
@@ -81,7 +81,7 @@ services:
 
 # When Compose creates this stack it auto-generates a network named
 # "<project>_default" — i.e. "ollama_default" when the directory is
-# called "ollama". Spyglass joins this network as `external: true`.
+# called "ollama". ortbtools joins this network as `external: true`.
 ```
 
 Bring it up:
@@ -113,16 +113,16 @@ docker exec ollama ollama run gemma4:e2b "Say hello in one word."
 # Expected: "Hello"
 ```
 
-If this prints a sensible reply, the model is healthy and Spyglass can
+If this prints a sensible reply, the model is healthy and ortbtools can
 talk to it.
 
-## Step 4 — Wire Spyglass to Ollama
+## Step 4 — Wire ortbtools to Ollama
 
-Spyglass's `docker-compose.yml` already declares the cross-stack join:
+ortbtools's `docker-compose.yml` already declares the cross-stack join:
 
 ```yaml
 services:
-  spyglass:
+  ortbtools:
     environment:
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=gemma4:e2b
@@ -135,7 +135,7 @@ networks:
     external: true # ← created by /srv/DATA/Stacks/ollama
 ```
 
-Restart Spyglass to pick up the network attachment if it wasn't already
+Restart ortbtools to pick up the network attachment if it wasn't already
 joined:
 
 ```bash
@@ -143,14 +143,14 @@ cd /srv/DATA/Stacks/adtech-spyglass
 docker compose up -d --force-recreate
 ```
 
-DNS resolution is by container name: from inside the Spyglass container,
+DNS resolution is by container name: from inside the ortbtools container,
 `http://ollama:11434` resolves to the Ollama service. No host networking,
-no published port on the Spyglass side, no firewall change needed.
+no published port on the ortbtools side, no firewall change needed.
 
-## Step 5 — Smoke test from inside Spyglass
+## Step 5 — Smoke test from inside ortbtools
 
 ```bash
-docker exec adtech-spyglass \
+docker exec ortbtools \
   wget -qO- --post-data='{"model":"gemma4:e2b","prompt":"hi","stream":false}' \
   --header='Content-Type: application/json' \
   http://ollama:11434/api/generate
@@ -160,7 +160,7 @@ If you see a JSON envelope with `"response": "..."`, the bridge is live.
 Open the inspector, paste a payload, switch to the Discovery tab, and the
 🤖 Suggest button should now produce names instead of staying hidden.
 
-## Configuration knobs (env vars on the Spyglass side)
+## Configuration knobs (env vars on the ortbtools side)
 
 | Var                    | Default               | Effect                                                                                                                                                                   |
 | ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -194,7 +194,7 @@ Models drift. To bump:
 ```bash
 docker exec ollama ollama pull gemma3:8b      # try a bigger tag
 docker exec ollama ollama list
-# Update Spyglass: edit OLLAMA_MODEL in docker-compose.yml + restart
+# Update ortbtools: edit OLLAMA_MODEL in docker-compose.yml + restart
 ```
 
 The cluster-name and field-purpose validators in `intel-llm.js` are
@@ -204,9 +204,9 @@ that goes off-script gets rejected at the validator and degrades to
 
 ## Removing the LLM bridge entirely
 
-Spyglass runs cleanly without Ollama. To opt out:
+ortbtools runs cleanly without Ollama. To opt out:
 
-1. Remove the `ollama_default` network attachment from Spyglass's
+1. Remove the `ollama_default` network attachment from ortbtools's
    `docker-compose.yml`.
 2. Optionally unset `OLLAMA_URL` / `OLLAMA_MODEL`.
 3. Restart. The 🤖 Suggest button hides on first call (503), and the

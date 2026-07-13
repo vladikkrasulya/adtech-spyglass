@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Spyglass — Phase 1 synthetic generator.
+ * ortbtools — Phase 1 synthetic generator.
  *
  * Loads the eligible stream fixtures (`synthetic-*.json` / `iab-*.json`)
  * from `samples/`, then on a timer emits mutated copies as if they were a

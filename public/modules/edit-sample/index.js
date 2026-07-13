@@ -8,26 +8,26 @@
    /api/samples/:id with metadata only.
 
    Loaded ONLY when the user clicks the ✎ pencil button on a
-   library row — see the lazy stub in spyglass.app.js dispatcher
+   library row — see the lazy stub in ortbtools.app.js dispatcher
    (case 'sample-edit'). On first click: ~3KB across this file +
    i18n.js. On subsequent clicks: cached by the module loader, zero
    extra fetch.
 
-   Exposed window APIs (consumed by spyglass.app.js dispatcher):
+   Exposed window APIs (consumed by ortbtools.app.js dispatcher):
      - window.editSample(id)    — entry point, called by 'sample-edit'.
      - window.confirmEdit(id)   — called by 'confirm-edit' from
                                    the modal's primary button.
 
-   Consumes (via /core/utils.js ES imports + SpyglassSession facade):
+   Consumes (via /core/utils.js ES imports + OrtbtoolsSession facade):
      - $, escapeHtml, toast, t                — DOM + i18n helpers
-     - SpyglassSession.api                    — auth-cookied fetch
-     - SpyglassSession.partnerOptionsHtml(s)  — <select> for picker
-     - SpyglassSession.wireEnterSubmit        — ⏎ submits the title
-     - SpyglassSession.currentSampleId        — sync-meta check
-     - SpyglassSession.setCurrentSampleMeta   — keep loaded-meta in
+     - OrtbtoolsSession.api                    — auth-cookied fetch
+     - OrtbtoolsSession.partnerOptionsHtml(s)  — <select> for picker
+     - OrtbtoolsSession.wireEnterSubmit        — ⏎ submits the title
+     - OrtbtoolsSession.currentSampleId        — sync-meta check
+     - OrtbtoolsSession.setCurrentSampleMeta   — keep loaded-meta in
                                                  sync if user just
                                                  edited the open record
-     - SpyglassSession.refreshSamples()       — re-render Library
+     - OrtbtoolsSession.refreshSamples()       — re-render Library
      - window.closeModal()                    — modal lifecycle
 
    Auth gate: edit only fires from a library row, which only
@@ -38,7 +38,7 @@
 import { $, escapeHtml, toast, t } from '/core/utils.js';
 
 export async function editSample(id) {
-  const S = window.SpyglassSession;
+  const S = window.OrtbtoolsSession;
   try {
     const j = await S.api('GET', 'api/samples/' + id);
     const s = j.sample;
@@ -85,7 +85,7 @@ export async function editSample(id) {
 }
 
 export async function confirmEdit(id) {
-  const S = window.SpyglassSession;
+  const S = window.OrtbtoolsSession;
   const title = $('mTitle').value.trim() || 'sample';
   const partnerId = $('mPartner').value || null;
   const notes = $('mNotes').value.trim();
@@ -111,7 +111,7 @@ export async function confirmEdit(id) {
   }
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/edit-sample/index.js'); window.editSample(id);
 // — first call: fetches + evaluates + these assignments run.
 // Subsequent calls: cached by the module loader, the assignments are no-ops.

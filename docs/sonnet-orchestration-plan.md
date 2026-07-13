@@ -1,4 +1,4 @@
-# Spyglass — sub-agent orchestration setup plan (next session)
+# ortbtools — sub-agent orchestration setup plan (next session)
 
 Goal: turn the main thread (Opus) into an **orchestrator**. Sonnet sub-agents do the work. Quality preserved by my review-gates on every returned diff.
 
@@ -12,13 +12,13 @@ Each agent is a markdown file with frontmatter + system prompt. Template:
 
 ```markdown
 ---
-name: spyglass-<role>
+name: ortbtools-<role>
 description: <when to use, ~12 words>
 tools: Read, Edit, Bash # restrict per role
 model: sonnet # default; bump to opus only when role demands
 ---
 
-You are a Spyglass <role>. Repo root: /srv/DATA/Stacks/adtech-spyglass.
+You are a ortbtools <role>. Repo root: /srv/DATA/Stacks/adtech-spyglass.
 
 ## Strict constraints
 
@@ -45,30 +45,30 @@ You are a Spyglass <role>. Repo root: /srv/DATA/Stacks/adtech-spyglass.
 
 The 10 agents to create, in order (easiest → hardest):
 
-| #   | name                           | tools                     | one-line role                                              |
-| --- | ------------------------------ | ------------------------- | ---------------------------------------------------------- |
-| 1   | spyglass-prober                | Read, Grep, Bash          | Read-only investigator: "where is X defined / used?"       |
-| 2   | spyglass-deps-updater          | Read, Bash                | npm update minor/patch + verify tests; revert on fail      |
-| 3   | spyglass-i18n-translator       | Read, Edit, Bash          | Add/translate i18n keys × 3 locales; never touch logic     |
-| 4   | spyglass-doc-writer            | Read, Edit, Write         | Update /about + ROADMAP + README in 3 locales              |
-| 5   | spyglass-css-cleaner           | Read, Edit                | CSS dedup + format fixes; JS off-limits                    |
-| 6   | spyglass-tech-debt-resolver    | Read, Edit, Write, Bash   | Pick ONE item from tech-debt audit; surgical fix           |
-| 7   | spyglass-security-reviewer     | Read, Grep, Bash          | READ-ONLY audit: XSS/CSRF/injection sniffing               |
-| 8   | spyglass-test-writer           | Read, Edit, Write, Bash   | Add test fixtures + assertions following existing patterns |
-| 9   | spyglass-validator-rule-author | Read, Edit, Write, Bash   | New rules in packages/core/rules-\*.js                     |
-| 10  | spyglass-uxqa-tester           | Bash, mcp**playwright**\* | Functional smoke-tests on prod via Playwright              |
+| #   | name                            | tools                     | one-line role                                              |
+| --- | ------------------------------- | ------------------------- | ---------------------------------------------------------- |
+| 1   | ortbtools-prober                | Read, Grep, Bash          | Read-only investigator: "where is X defined / used?"       |
+| 2   | ortbtools-deps-updater          | Read, Bash                | npm update minor/patch + verify tests; revert on fail      |
+| 3   | ortbtools-i18n-translator       | Read, Edit, Bash          | Add/translate i18n keys × 3 locales; never touch logic     |
+| 4   | ortbtools-doc-writer            | Read, Edit, Write         | Update /about + ROADMAP + README in 3 locales              |
+| 5   | ortbtools-css-cleaner           | Read, Edit                | CSS dedup + format fixes; JS off-limits                    |
+| 6   | ortbtools-tech-debt-resolver    | Read, Edit, Write, Bash   | Pick ONE item from tech-debt audit; surgical fix           |
+| 7   | ortbtools-security-reviewer     | Read, Grep, Bash          | READ-ONLY audit: XSS/CSRF/injection sniffing               |
+| 8   | ortbtools-test-writer           | Read, Edit, Write, Bash   | Add test fixtures + assertions following existing patterns |
+| 9   | ortbtools-validator-rule-author | Read, Edit, Write, Bash   | New rules in packages/core/rules-\*.js                     |
+| 10  | ortbtools-uxqa-tester           | Bash, mcp**playwright**\* | Functional smoke-tests on prod via Playwright              |
 
 ### Step B — Validate fleet with one read-only smoke task
 
-Spawn `spyglass-prober` with: _"Find every place where the i18n.js key 'btn.close' is referenced. Report file:line for each. Don't change anything."_
+Spawn `ortbtools-prober` with: _"Find every place where the i18n.js key 'btn.close' is referenced. Report file:line for each. Don't change anything."_
 
 Expected: 5-10 lines of references. Tests our agent wiring without risk.
 
 ### Step C — First real parallel batch (single message, 3 Agent calls)
 
-1. **spyglass-tech-debt-resolver** → migrate the 18× `onclick=` in `public/spyglass.app.js` to `addEventListener`. Behavior identical. Tests pass.
-2. **spyglass-css-cleaner** → identify duplicated `<style>` blocks across the 6 HTML files in `public/`. Extract common parts to `public/app-styles.css`. Link from each HTML.
-3. **spyglass-deps-updater** → `npm outdated` survey. List packages where Wanted < Latest with major-gap (don't update those — flag for human). Update the safe rest.
+1. **ortbtools-tech-debt-resolver** → migrate the 18× `onclick=` in `public/ortbtools.app.js` to `addEventListener`. Behavior identical. Tests pass.
+2. **ortbtools-css-cleaner** → identify duplicated `<style>` blocks across the 6 HTML files in `public/`. Extract common parts to `public/app-styles.css`. Link from each HTML.
+3. **ortbtools-deps-updater** → `npm outdated` survey. List packages where Wanted < Latest with major-gap (don't update those — flag for human). Update the safe rest.
 
 I (Opus) review the 3 returned diffs in parallel, commit each separately. **ONE round = three features done.**
 

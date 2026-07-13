@@ -255,8 +255,8 @@ function heavyAdNetwork(events) {
  * behavior.malicious.frozen_thread
  *
  * Synthesized BY THE PARENT (not the probe — a frozen probe can't
- * send postMessages). The parent watchdog in spyglass.app.js injects a
- * `kind:'frozen_thread'` event into __spyglassBehavior.events when the
+ * send postMessages). The parent watchdog in ortbtools.app.js injects a
+ * `kind:'frozen_thread'` event into __ortbtoolsBehavior.events when the
  * heartbeat lag exceeds FROZEN_THRESHOLD_MS (currently 6000ms; bumped
  * from 3500ms in v0.24.0 after the audit found false-positives on
  * heavy creatives). This rule promotes the synthetic event to a

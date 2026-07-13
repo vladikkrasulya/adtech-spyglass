@@ -1,7 +1,7 @@
 # Public API contract — v1
 
 The validation engine behind [ortbtools.com](https://ortbtools.com) is reachable
-three ways; all three run the exact same `@kyivtech/spyglass-core` pipeline:
+three ways; all three run the exact same `@ortbtools/core` pipeline:
 
 | Surface                      | Best for                           |
 | ---------------------------- | ---------------------------------- |
@@ -164,7 +164,7 @@ Run the behavior/anti-fraud engine over probe events captured by the in-iframe
 
 ## Versioning
 
-- The engine is `@kyivtech/spyglass-core` (SemVer). The site footer and
+- The engine is `@ortbtools/core` (SemVer). The site footer and
   `ortbtools version` (CLI) report the running versions.
 - Rule ids are stable identifiers: renames/removals are MAJOR-version events
   in core; additions are MINOR.

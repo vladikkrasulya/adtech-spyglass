@@ -1,5 +1,5 @@
 /* ============================================================
-   Spyglass v9 — Monolith Indigo + behavior-tab UI.
+   ortbtools v9 — Monolith Indigo + behavior-tab UI.
    Layout: workbench (header / inputs / 3-col main / footer).
    Most chrome derives from design-system.css tokens; the inline
    <style> block in each shell overrides palette colours, and this
@@ -74,7 +74,7 @@ body {
 }
 
 /* ── Responsive breakpoints ────────────────────────────────────────
-         Spyglass was desktop-only until 2026-05-02. Mobile is rare for an
+         ortbtools was desktop-only until 2026-05-02. Mobile is rare for an
          oRTB inspector but useful for "peek at a copied JSON on the train".
          Two breakpoints:
            ≤1024px → main 3-column grid stacks vertically (left sidebar
@@ -312,7 +312,7 @@ body {
   flex-wrap: wrap;
 }
 /* The lang + theme toggles default to fixed-position floating circles
-         (design-system.css). In Spyglass we render them inline in the header
+         (design-system.css). In ortbtools we render them inline in the header
          instead — so users can see the active locale/theme alongside the
          primary actions. Override layout/sizing here, keep colours/states. */
 .app-header-actions .kt-lang-toggle,
@@ -878,7 +878,7 @@ textarea.json-input::placeholder {
   color: var(--text);
 }
 /* Action confirmation: green outline + label for ~1.5s after a
-   successful clear / format / copy. JS in spyglass.app.js toggles
+   successful clear / format / copy. JS in ortbtools.app.js toggles
    .btn-icon--ok via flashButtonStatus(). Override :hover so the
    colour persists even if the cursor is still on the button. */
 .btn-icon--ok,
@@ -3137,7 +3137,7 @@ button.cross-path:focus-visible,
 /* ── Mobile tap targets (F2 · mobile audit 2026-05-25) ──────────────────
    The dense desktop icon buttons (.btn-icon ~27px tall, history 👁/× ~20px,
    collapse ▾ 23px) sit below the ~44px touch guideline and are fiddly to hit
-   on a phone — Spyglass is a PUBLIC tool, so this matters here more than in
+   on a phone — ortbtools is a PUBLIC tool, so this matters here more than in
    admin. Bump them on phones only; desktop density (≥721px) is untouched.
    Anchored at file end so it wins source-order over the base .btn-icon /
    .history-act-btn / .btn-collapse-toggle rules defined earlier in the file. */

@@ -10,12 +10,12 @@
 
    Loaded ONLY when the user clicks the "розблокувати" CTA in
    the saved-list shell or hits 'open-unlock' from anywhere — see
-   the lazy stub in spyglass.app.js dispatcher (cases
+   the lazy stub in ortbtools.app.js dispatcher (cases
    'open-unlock' + 'do-unlock'). On first click: ~3KB across
    this file + i18n.js. On subsequent clicks: cached by the
    module loader, zero extra fetch.
 
-   Exposed window APIs (consumed by spyglass.app.js dispatcher):
+   Exposed window APIs (consumed by ortbtools.app.js dispatcher):
      - window.openUnlockModal()  — entry point, called by
                                     'open-unlock'.
      - window.doUnlock()         — submit handler, called by
@@ -27,29 +27,29 @@
      - window.closeModal                  modal lifecycle
      - window.openAuthModal               fallback when guest hits
                                           unlock without a session
-     - window.SpyglassSession.user        currently signed-in user
-     - window.SpyglassSession.api         HTTP helper (for /auth/me)
-     - window.SpyglassSession.openFromPassword
+     - window.OrtbtoolsSession.user        currently signed-in user
+     - window.OrtbtoolsSession.api         HTTP helper (for /auth/me)
+     - window.OrtbtoolsSession.openFromPassword
                                           re-derives DEK + persists
                                           it (DEK never crosses the
                                           module boundary)
-     - window.SpyglassSession.refreshSamples
+     - window.OrtbtoolsSession.refreshSamples
                                           re-render saved-list once
                                           the DEK is back
-     - window.SpyglassSession.wireEnterSubmit
+     - window.OrtbtoolsSession.wireEnterSubmit
                                           ⏎-to-submit on the input
 
    Auth gate: the dispatcher's 'open-unlock' case is responsible
    for the guest fallback (it's a UX courtesy — falling through to
    openAuthModal means the user can sign in fresh). Inside this
    module, openUnlockModal() also re-checks via
-   SpyglassSession.user as a defensive guard — if the cookie
+   OrtbtoolsSession.user as a defensive guard — if the cookie
    evaporated between dispatcher and modal open, we redirect.
    ============================================================ */
 import { $, escapeHtml, toast, t } from '/core/utils.js';
 
 export function openUnlockModal() {
-  const user = window.SpyglassSession && window.SpyglassSession.user;
+  const user = window.OrtbtoolsSession && window.OrtbtoolsSession.user;
   if (!user) {
     return window.openAuthModal && window.openAuthModal('login');
   }
@@ -81,13 +81,13 @@ export function openUnlockModal() {
     const el = $('unlockPwInput');
     if (el) el.focus();
   }, 0);
-  if (window.SpyglassSession && typeof window.SpyglassSession.wireEnterSubmit === 'function') {
-    window.SpyglassSession.wireEnterSubmit('unlockPwInput', () => window.doUnlock());
+  if (window.OrtbtoolsSession && typeof window.OrtbtoolsSession.wireEnterSubmit === 'function') {
+    window.OrtbtoolsSession.wireEnterSubmit('unlockPwInput', () => window.doUnlock());
   }
 }
 
 export async function doUnlock() {
-  const session = window.SpyglassSession;
+  const session = window.OrtbtoolsSession;
   const pwEl = $('unlockPwInput');
   const errEl = $('unlockError');
   if (!pwEl || !errEl || !session) return;
@@ -112,7 +112,7 @@ export async function doUnlock() {
   }
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/unlock/index.js'); window.openUnlockModal();
 // — first call: fetches + evaluates + these assignments run.
 // Subsequent calls: cached by the module loader, the assignments are no-ops.

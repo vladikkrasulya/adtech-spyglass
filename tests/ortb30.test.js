@@ -17,7 +17,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { validate, detectType, detectVersion, TYPES, VERSIONS } = require('@kyivtech/spyglass-core');
+const { validate, detectType, detectVersion, TYPES, VERSIONS } = require('@ortbtools/core');
 const { validateRequest30 } = require('../packages/core/rules-request-30');
 const { validateResponse30 } = require('../packages/core/rules-response-30');
 

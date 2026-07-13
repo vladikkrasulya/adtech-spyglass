@@ -8,17 +8,17 @@
    modal.
 
    Loaded ONLY when the user clicks the "live" button — see the
-   lazy stub in spyglass.app.js dispatcher (case 'live'). On first
+   lazy stub in ortbtools.app.js dispatcher (case 'live'). On first
    click: ~7KB across this file + i18n.js. On subsequent clicks:
    cached by the module loader, zero extra fetch.
 
-   Exposed window APIs (consumed by spyglass.app.js dispatcher
+   Exposed window APIs (consumed by ortbtools.app.js dispatcher
    cases 'live-pause' and 'live-load'):
      - window.openLiveModal()              — entry point
-     - window.__spyglassLivePauseToggle    — toggles paused state
+     - window.__ortbtoolsLivePauseToggle    — toggles paused state
                                              from outside the modal
                                              body. Cleared on close.
-     - window.__spyglassLiveSpecimens      — Map<rowId, specimen>
+     - window.__ortbtoolsLiveSpecimens      — Map<rowId, specimen>
                                              so the dispatcher's
                                              'live-load' case can
                                              resolve a clicked row
@@ -32,7 +32,7 @@
                                     the EventSource)
 
    Note: toast() lives in the dispatcher's 'live-load' case (in
-   spyglass.app.js, which already imports it). The modal body
+   ortbtools.app.js, which already imports it). The modal body
    itself never toasts — connection failures show up inline in
    #mLiveStatus.
    ============================================================ */
@@ -90,7 +90,7 @@ export function openLiveModal() {
   }
   // Expose the lookup so the dispatcher's 'live-load' case can resolve
   // a row id to its specimen (cleaned up on tearDownLive).
-  window.__spyglassLiveSpecimens = specimens;
+  window.__ortbtoolsLiveSpecimens = specimens;
 
   function renderShell() {
     $('modalRoot').innerHTML =
@@ -182,8 +182,8 @@ export function openLiveModal() {
     }
     specimens.clear();
     window.closeModal = origClose;
-    window.__spyglassLivePauseToggle = null;
-    window.__spyglassLiveSpecimens = null;
+    window.__ortbtoolsLivePauseToggle = null;
+    window.__ortbtoolsLiveSpecimens = null;
   }
   window.closeModal = function () {
     tearDownLive();
@@ -191,7 +191,7 @@ export function openLiveModal() {
   };
 
   // Pause/resume toggle exposed for the dispatcher.
-  window.__spyglassLivePauseToggle = () => {
+  window.__ortbtoolsLivePauseToggle = () => {
     paused = !paused;
     const btn = $('mLivePauseBtn');
     const status = $('mLiveStatus');
@@ -203,7 +203,7 @@ export function openLiveModal() {
   };
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/live/index.js'); window.openLiveModal();
 // — first call: fetches + evaluates + this assignment runs.
 // Subsequent calls: cached by the module loader, this assignment is a no-op.

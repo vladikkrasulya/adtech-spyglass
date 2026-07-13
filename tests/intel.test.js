@@ -22,7 +22,7 @@ const {
   classifyString,
   applyDecay,
   isLearnable,
-} = require('@kyivtech/spyglass-core/intel');
+} = require('@ortbtools/core/intel');
 
 // ── walker.extractFields ──────────────────────────────────────────────
 
@@ -332,7 +332,7 @@ const {
   resolvePath,
   generateTempDialectId,
   isTempDialectId,
-} = require('@kyivtech/spyglass-core/intel');
+} = require('@ortbtools/core/intel');
 
 function obs(path, score, lastSeenAt) {
   return {

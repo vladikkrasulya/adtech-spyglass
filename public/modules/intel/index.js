@@ -2,7 +2,7 @@
    public/modules/intel/index.js — ortbtools Intelligence entry.
 
    Phase 7a: loads storage + observer + banner, wires init.
-   spyglass.app.js calls window.SpyglassIntel.observe(payload, validation)
+   ortbtools.app.js calls window.OrtbtoolsIntel.observe(payload, validation)
    after every analyze; the observer gates and persists.
 
    Why a thin entry: the three submodules are loaded as classic
@@ -12,7 +12,7 @@
 (function () {
   'use strict';
 
-  if (window.SpyglassIntel) return;
+  if (window.OrtbtoolsIntel) return;
 
   function ready(fn) {
     if (document.readyState === 'loading') {
@@ -23,8 +23,8 @@
   }
 
   ready(function () {
-    if (window.SpyglassIntelObserver && typeof window.SpyglassIntelObserver.init === 'function') {
-      window.SpyglassIntelObserver.init();
+    if (window.OrtbtoolsIntelObserver && typeof window.OrtbtoolsIntelObserver.init === 'function') {
+      window.OrtbtoolsIntelObserver.init();
     }
   });
 
@@ -139,8 +139,8 @@
   let _activeId = null;
 
   async function getActiveSpec() {
-    if (!window.SpyglassIntelStorage) return null;
-    // Caller (spyglass.app.js) gives us the dialect ID via activate(),
+    if (!window.OrtbtoolsIntelStorage) return null;
+    // Caller (ortbtools.app.js) gives us the dialect ID via activate(),
     // but on first paint we may not have it yet — derive from URL/storage
     // via the same activeDialect() the inspector uses.
     if (!_activeId) {
@@ -149,7 +149,7 @@
         const fromUrl = qp.get('dialect');
         if (fromUrl && fromUrl.startsWith('temp:')) _activeId = fromUrl;
         else {
-          const fromLs = localStorage.getItem('spyglass_dialect_v1');
+          const fromLs = localStorage.getItem('ortbtools_dialect_v1');
           if (fromLs && fromLs.startsWith('temp:')) _activeId = fromLs;
         }
       } catch (_e) {
@@ -159,7 +159,7 @@
     if (!_activeId) return null;
     if (_activeSpec && _activeSpec.id === _activeId) return _activeSpec;
     try {
-      _activeSpec = await window.SpyglassIntelStorage.getTempDialect(_activeId);
+      _activeSpec = await window.OrtbtoolsIntelStorage.getTempDialect(_activeId);
       return _activeSpec || null;
     } catch (_e) {
       return null;
@@ -171,18 +171,18 @@
     _activeSpec = null; // force re-fetch
     // Bubble out so the inspector can re-paint its selector and re-run
     // analysis on the new dialect. Carries no payload — listeners pull
-    // state via SpyglassIntel.list / activeDialectId.
+    // state via OrtbtoolsIntel.list / activeDialectId.
     try {
-      window.dispatchEvent(new CustomEvent('spyglass:intel-dialect-changed', { detail: { id } }));
+      window.dispatchEvent(new CustomEvent('ortbtools:intel-dialect-changed', { detail: { id } }));
     } catch (_e) {
       /* CustomEvent may be unavailable in unusual runtimes */
     }
   }
 
   async function listTempDialects() {
-    if (!window.SpyglassIntelStorage) return [];
+    if (!window.OrtbtoolsIntelStorage) return [];
     try {
-      const list = await window.SpyglassIntelStorage.listTempDialects();
+      const list = await window.OrtbtoolsIntelStorage.listTempDialects();
       return list || [];
     } catch (_e) {
       return [];
@@ -205,7 +205,7 @@
         }
       }
     } catch (e) {
-      console.warn('[spyglass-intel] applyTempDialect failed', e);
+      console.warn('[ortbtools-intel] applyTempDialect failed', e);
     }
     return validation;
   }
@@ -245,7 +245,7 @@
       if (r.status === 503) {
         _llmUnavailable = true;
         try {
-          window.dispatchEvent(new CustomEvent('spyglass:intel-llm-unavailable'));
+          window.dispatchEvent(new CustomEvent('ortbtools:intel-llm-unavailable'));
         } catch (_e) {
           /* */
         }
@@ -276,9 +276,9 @@
     // confident name when format is known to be 'push' than zero-shot).
     const cleanFormat = typeof format === 'string' ? format : '';
     const key = cacheKey(['suggest-name', bucket || '', cleanFormat, ...sortedFields]);
-    if (window.SpyglassIntelStorage) {
+    if (window.OrtbtoolsIntelStorage) {
       try {
-        const cached = await window.SpyglassIntelStorage.getLlmCache(key);
+        const cached = await window.OrtbtoolsIntelStorage.getLlmCache(key);
         if (cached && cached.kind === 'name') return cached;
       } catch (_e) {
         /* cache miss is fine */
@@ -296,9 +296,9 @@
       description: r.body.suggestion.description,
       cachedAt: Date.now(),
     };
-    if (window.SpyglassIntelStorage) {
+    if (window.OrtbtoolsIntelStorage) {
       try {
-        await window.SpyglassIntelStorage.putLlmCache(key, out);
+        await window.OrtbtoolsIntelStorage.putLlmCache(key, out);
       } catch (_e) {
         /* */
       }
@@ -314,9 +314,9 @@
   async function fieldPurpose(path, charClass, bucket) {
     if (_llmUnavailable) return null;
     const key = cacheKey(['field-purpose', path || '', charClass || '', bucket || '']);
-    if (window.SpyglassIntelStorage) {
+    if (window.OrtbtoolsIntelStorage) {
       try {
-        const cached = await window.SpyglassIntelStorage.getLlmCache(key);
+        const cached = await window.OrtbtoolsIntelStorage.getLlmCache(key);
         if (cached && cached.kind === 'purpose') return cached;
       } catch (_e) {
         /* */
@@ -334,9 +334,9 @@
       confidence: r.body.purpose.confidence,
       cachedAt: Date.now(),
     };
-    if (window.SpyglassIntelStorage) {
+    if (window.OrtbtoolsIntelStorage) {
       try {
-        await window.SpyglassIntelStorage.putLlmCache(key, out);
+        await window.OrtbtoolsIntelStorage.putLlmCache(key, out);
       } catch (_e) {
         /* */
       }
@@ -344,29 +344,29 @@
     return out;
   }
 
-  window.SpyglassIntel = {
+  window.OrtbtoolsIntel = {
     /**
      * Observe a (payload, validation) pair. No-ops when discovery is
      * disabled or the gate rejects. Errors are swallowed.
      */
     observe: function (payload, validation) {
-      if (!window.SpyglassIntelObserver) return;
-      window.SpyglassIntelObserver.observe(payload, validation);
+      if (!window.OrtbtoolsIntelObserver) return;
+      window.OrtbtoolsIntelObserver.observe(payload, validation);
     },
     /**
      * Pull the current banner summary on demand (settings UI, debug).
      */
     summary: function () {
-      if (!window.SpyglassIntelObserver) return Promise.resolve({ total: 0, byBucket: {} });
-      return window.SpyglassIntelObserver.summariseForBanner();
+      if (!window.OrtbtoolsIntelObserver) return Promise.resolve({ total: 0, byBucket: {} });
+      return window.OrtbtoolsIntelObserver.summariseForBanner();
     },
     /**
      * Wipe the field-observation index. Settings UI / privacy reset.
      */
     clear: async function () {
-      if (window.SpyglassIntelStorage) await window.SpyglassIntelStorage.clearAll();
-      if (window.SpyglassIntelBanner) {
-        window.SpyglassIntelBanner.refresh({ total: 0, byBucket: {} });
+      if (window.OrtbtoolsIntelStorage) await window.OrtbtoolsIntelStorage.clearAll();
+      if (window.OrtbtoolsIntelBanner) {
+        window.OrtbtoolsIntelBanner.refresh({ total: 0, byBucket: {} });
       }
     },
     // Phase 7b

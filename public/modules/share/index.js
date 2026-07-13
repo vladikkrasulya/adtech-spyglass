@@ -6,7 +6,7 @@
    and re-runs validation. Hash fragments NEVER reach the server,
    which preserves ortbtools's zero-knowledge posture.
 
-   URL shape: spyglass.kyivtech.com.ua/?#req=<b64url(deflate(json))>&res=<...>
+   URL shape: ortbtools.com/?#req=<b64url(deflate(json))>&res=<...>
 
    Encoding pipeline:
      text → UTF-8 → CompressionStream('deflate-raw') → bytes → base64url
@@ -25,7 +25,7 @@
      - window.copyShareLink()       — wired to topnav share button
      - window.buildShareUrl(req,res) — used by mirror module to build
                                         permalinks for the canonical pair
-     - window.spyglassShareSupported() — feature-detect for embed.js
+     - window.ortbtoolsShareSupported() — feature-detect for embed.js
 
    Listens for: kt:inspector-ready (workbench DOM mounted async).
    ============================================================ */
@@ -189,5 +189,5 @@
   // Exposed so embed.js + mirror module can build URLs without
   // duplicating the compress + base64url pipeline.
   window.buildShareUrl = buildShareUrl;
-  window.spyglassShareSupported = hasCompressionStream;
+  window.ortbtoolsShareSupported = hasCompressionStream;
 })();

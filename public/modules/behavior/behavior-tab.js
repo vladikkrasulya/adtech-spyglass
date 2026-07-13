@@ -7,16 +7,16 @@
 
    Architecture (see Behavior R&D doc):
      - public/creative-probe.js         → captures events INSIDE sandbox
-     - public/spyglass.app.js           → receives postMessage, validates
+     - public/ortbtools.app.js           → receives postMessage, validates
                                           source, stores in
-                                          __spyglassBehavior.events,
+                                          __ortbtoolsBehavior.events,
                                           calls our render()
      - this module                      → fetches engine analysis,
                                           renders findings + timeline
      - packages/core/behavior/          → pure analysis (Node + browser
                                           via /api/analyze-behavior)
 
-   Module contract: classic <script>, exposes window.SpyglassBehavior =
+   Module contract: classic <script>, exposes window.OrtbtoolsBehavior =
    { render }. Loaded alongside the legacy script chain (share.js,
    shortcuts.js, embed.js, export.js) — no ES-module ceremony, runs as
    soon as parsed.
@@ -159,13 +159,13 @@
   function fetchAnalysis(events, locale) {
     // Phase 6: piggy-back the current creative's adm so the engine can
     // run static-payload scans (obfuscation, miners, XSS markers, entropy).
-    // setAdPreview parks a (truncated) copy on __spyglassBehavior so we
+    // setAdPreview parks a (truncated) copy on __ortbtoolsBehavior so we
     // don't have to wire a new function-arg pipeline through the parent.
     // Empty string when no preview is mounted — engine treats that as
     // "skip static analysis" and runs runtime-only rules.
     let adm = '';
     try {
-      const ctx = window.__spyglassBehavior;
+      const ctx = window.__ortbtoolsBehavior;
       if (ctx && typeof ctx.creative_adm === 'string') adm = ctx.creative_adm;
     } catch (_e) {
       /* noop */
@@ -189,7 +189,7 @@
   /**
    * Render the Behavior tab body.
    *
-   * Called from spyglass.app.js's renderBehaviorTab on every probe event
+   * Called from ortbtools.app.js's renderBehaviorTab on every probe event
    * arrival + every preview reset. The first render paints the timeline
    * synchronously (no findings yet) so users see *something* before the
    * engine round-trip resolves; the engine response then re-paints with
@@ -234,7 +234,7 @@
         // The container may have been re-rendered for a *newer* set of
         // events while the request was in flight; only paint if the
         // visible event count still matches what we requested.
-        const current = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
+        const current = (window.__ortbtoolsBehavior && window.__ortbtoolsBehavior.events) || [];
         if (current.length !== eventsSnapshot.length) return;
         paint(container, data.findings || [], events, opts);
       });
@@ -243,5 +243,5 @@
     _lastEventCount = events.length;
   }
 
-  window.SpyglassBehavior = { render: render };
+  window.OrtbtoolsBehavior = { render: render };
 })();

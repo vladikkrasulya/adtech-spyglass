@@ -12,8 +12,8 @@
 # Prints:  EXIT=<code> and the resulting deploy-state.env (or "(no state)").
 #
 # The v1.1.7 SQLite group/mode contract is ALWAYS enforced (no bypass). The sim
-# points deploy.sh at a TEST-owned dir/group via the SPYGLASS_APP_UID /
-# SPYGLASS_DB_GID / SPYGLASS_DB_GROUP / SPYGLASS_DIR_MODE params (test uid/gid),
+# points deploy.sh at a TEST-owned dir/group via the ORTBTOOLS_APP_UID /
+# ORTBTOOLS_DB_GID / ORTBTOOLS_DB_GROUP / ORTBTOOLS_DIR_MODE params (test uid/gid),
 # and provisions the DATA dir to mode 2710 — it never disables the check.
 
 set -u
@@ -82,7 +82,7 @@ case "$*" in
 esac
 EOG
 
-# ── mock docker: build/tag ok; `up` driven by SCEN + SPYGLASS_TAG; inspect
+# ── mock docker: build/tag ok; `up` driven by SCEN + ORTBTOOLS_TAG; inspect
 #    returns a prev image + healthy; image inspect yields BUILD_SHA (or none) ──
 cat >"$BIN/docker" <<'EOD'
 #!/bin/sh
@@ -99,7 +99,7 @@ if [ "$1" = "compose" ]; then
         *"docker-compose.deploy-transition.yml"*) echo "OVERRIDE_PRESENT" >> "$DATA/override-trace" ;;
         *) echo "OVERRIDE_MISSING" >> "$DATA/override-trace" ;;
       esac
-      if [ "${SPYGLASS_TAG:-}" = "abc1234" ]; then
+      if [ "${ORTBTOOLS_TAG:-}" = "abc1234" ]; then
         case "$SCEN" in candidate-up-fail|rollback-up-fail|floor-rollback-tampered|floor-auto-rollback-success) exit 1 ;; *) exit 0 ;; esac
       else
         case "$SCEN" in rollback-up-fail) exit 1 ;; *) exit 0 ;; esac
@@ -168,7 +168,7 @@ chmod +x "$BIN/git" "$BIN/docker" "$BIN/curl" "$BIN/mock-smoke.sh"
 # Pre-create a fake .env. Normal scenarios use 0600 so the permission preflight
 # passes (and set_env still exercises the owner-preserve path); `unsafe-perms`
 # uses 0664 to prove the preflight blocks the deploy before any transition.
-printf 'SPYGLASS_TAG=old\n' >"$WORK/.env"
+printf 'ORTBTOOLS_TAG=old\n' >"$WORK/.env"
 case "$SCEN" in
   unsafe-perms) chmod 664 "$WORK/.env" ;;
   *) chmod 600 "$WORK/.env" ;;
@@ -185,21 +185,21 @@ case "$SCEN" in
   wrong-group) DB_GROUP="sg-bogus-$$" ;; # name mismatch → exit 6
 esac
 PATH="$BIN:$PATH" \
-  SPYGLASS_DEPLOY_DATA_DIR="$DATA" \
-  SPYGLASS_DEPLOY_ENV_FILE="$WORK/.env" \
+  ORTBTOOLS_DEPLOY_DATA_DIR="$DATA" \
+  ORTBTOOLS_DEPLOY_ENV_FILE="$WORK/.env" \
   SMOKE_CMD="$BIN/mock-smoke.sh" \
-  SPYGLASS_SEED_UID="$(id -u)" \
-  SPYGLASS_APP_UID="$(id -u)" \
-  SPYGLASS_DB_GID="$DB_GID" \
-  SPYGLASS_DB_GROUP="$DB_GROUP" \
-  SPYGLASS_DIR_MODE="2710" \
+  ORTBTOOLS_SEED_UID="$(id -u)" \
+  ORTBTOOLS_APP_UID="$(id -u)" \
+  ORTBTOOLS_DB_GID="$DB_GID" \
+  ORTBTOOLS_DB_GROUP="$DB_GROUP" \
+  ORTBTOOLS_DIR_MODE="2710" \
   READY_TIMEOUT=6 \
   bash "$REPO/scripts/deploy.sh" >/dev/null 2>&1
 rc=$?
 
 echo "EXIT=$rc"
 if [ -f "$DATA/deploy-state.env" ]; then cat "$DATA/deploy-state.env"; else echo "(no state)"; fi
-echo "ENV_SPYGLASS_TAG=$(grep -E '^SPYGLASS_TAG=' "$WORK/.env" | cut -d= -f2)"
+echo "ENV_ORTBTOOLS_TAG=$(grep -E '^ORTBTOOLS_TAG=' "$WORK/.env" | cut -d= -f2)"
 echo "COMPOSE_UP_CALLS=$(cat "$DATA/compose-trace" 2>/dev/null | wc -l | tr -d ' ')"
 echo "--- override-trace ---"
 cat "$DATA/override-trace" 2>/dev/null

@@ -29,9 +29,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { detectFormat, FORMATS } = require('@kyivtech/spyglass-core/format-detect');
-const popReq = require('@kyivtech/spyglass-core/rules/pop-request');
-const popResp = require('@kyivtech/spyglass-core/rules/pop-response');
+const { detectFormat, FORMATS } = require('@ortbtools/core/format-detect');
+const popReq = require('@ortbtools/core/rules/pop-request');
+const popResp = require('@ortbtools/core/rules/pop-response');
 
 const SAMPLES = path.join(__dirname, '..', 'samples');
 const load = (name) => JSON.parse(fs.readFileSync(path.join(SAMPLES, name), 'utf8'));

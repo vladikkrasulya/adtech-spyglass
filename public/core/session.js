@@ -28,13 +28,13 @@
 
 import { toast, t } from './utils.js';
 
-// SpyglassCrypto is a browser global (loaded via <script> in the shell); it is
+// OrtbtoolsCrypto is a browser global (loaded via <script> in the shell); it is
 // the SAME primitive the inspector used — crypto behaviour is byte-for-byte
-// unchanged, only its owner moved. index.{en,uk,ru}.html load spyglass-crypto.js
+// unchanged, only its owner moved. index.{en,uk,ru}.html load ortbtools-crypto.js
 // as a plain blocking <script> BEFORE shell-boot.js (type=module, deferred), so
-// window.SpyglassCrypto is always defined by the time any crypto op below runs —
+// window.OrtbtoolsCrypto is always defined by the time any crypto op below runs —
 // verified structurally, not just hoped for.
-const CRYPTO = () => (typeof window !== 'undefined' ? window.SpyglassCrypto : undefined);
+const CRYPTO = () => (typeof window !== 'undefined' ? window.OrtbtoolsCrypto : undefined);
 
 // ── Session state (module-private; never exported raw) ──────────────────────
 let _user = null;
@@ -315,19 +315,19 @@ export const session = {
   adapt,
 };
 
-// ── Compatibility facade: window.SpyglassSession ────────────────────────────
+// ── Compatibility facade: window.OrtbtoolsSession ────────────────────────────
 // Same shape consumers already use. Session/crypto → the service; inspector-
 // specific getters/renderers → the registered adapter (no-op when unmounted).
 // Installed once by shell boot; idempotent.
 export function installSessionFacade() {
   if (typeof window === 'undefined') return;
-  if (window.SpyglassSession && window.SpyglassSession.__shellOwned) return;
+  if (window.OrtbtoolsSession && window.OrtbtoolsSession.__shellOwned) return;
   // Top-level global (not under the facade object) — matches the pre-existing
   // call convention every consumer already uses: window.signOut(), not
-  // window.SpyglassSession.signOut(). Idempotent: re-running installSessionFacade
+  // window.OrtbtoolsSession.signOut(). Idempotent: re-running installSessionFacade
   // just reassigns the same function.
   window.signOut = signOut;
-  window.SpyglassSession = {
+  window.OrtbtoolsSession = {
     __shellOwned: true,
     // session state
     get user() {
@@ -372,5 +372,5 @@ export function installSessionFacade() {
     renderVerifyBanner: () => adapt('renderVerifyBanner'),
     partnerOptionsHtml: (sel) => adapt('partnerOptionsHtml', [sel], ''),
   };
-  return window.SpyglassSession;
+  return window.OrtbtoolsSession;
 }

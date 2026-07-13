@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Spyglass validator — public API.
+ * ortbtools validator — public API.
  *
  *   validate(payload, { dialect, locale })   → { type, status, findings }
  *   crosscheck(req, res, { locale })         → [findings]
@@ -17,7 +17,7 @@
  * Why this surface:
  *   - Browser-side validation in the public demo (no Node-only deps)
  *   - Server-side `/api/analyze` (this module is what server.js requires)
- *   - CLI / CI mode in Phase 6 (same module wrapped by @spyglass/cli)
+ *   - CLI / CI mode in Phase 6 (same module wrapped by @ortbtools/cli)
  */
 
 const { detectType, detectVersion, TYPES, VERSIONS } = require('./detect');

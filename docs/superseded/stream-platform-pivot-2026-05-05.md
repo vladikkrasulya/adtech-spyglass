@@ -10,15 +10,15 @@
 
 ## Position statement
 
-Spyglass — **public observability platform for the OpenRTB ecosystem**. Conceptual reference: Wireshark + Sentry + httpbin, applied to programmatic ad tech.
+ortbtools — **public observability platform for the OpenRTB ecosystem**. Conceptual reference: Wireshark + Sentry + httpbin, applied to programmatic ad tech.
 
 Three differentiators that don't exist in the market today:
 
 1. **Live feed as default landing.** Visitor sees moving traffic before any action — the product demonstrates itself.
 2. **Permalink culture.** Every analyzed specimen (single request or req+resp pair) is shareable as a stable URL. Engineers DM each other links, links spread on Slack/LinkedIn.
-3. **Sandboxed creative iframe is a first-class diagnostic primitive.** Reproduce ad-fraud / click-without-click in a controlled environment. Validated 2026-05-04 by senior eng who used Spyglass to isolate an SSP-3027 click-without-click complaint to publisher-side environment vs. creative.
+3. **Sandboxed creative iframe is a first-class diagnostic primitive.** Reproduce ad-fraud / click-without-click in a controlled environment. Validated 2026-05-04 by senior eng who used ortbtools to isolate an SSP-3027 click-without-click complaint to publisher-side environment vs. creative.
 
-Existing competitors (IAB OpenRTB Validator, Postman SSP collections) are form-inspectors and integration helpers — they don't stream, don't aggregate, don't catalog partners. Spyglass occupies an empty category.
+Existing competitors (IAB OpenRTB Validator, Postman SSP collections) are form-inspectors and integration helpers — they don't stream, don't aggregate, don't catalog partners. ortbtools occupies an empty category.
 
 ## What we are NOT (yet)
 
@@ -102,7 +102,7 @@ Default landing. Live ring-buffer playback, sampling-aware. First impression of 
 
 ### 2. Specimen `/r/{id}`
 
-Single specimen deep-dive. The current Spyglass UI as a permalink-able detail page.
+Single specimen deep-dive. The current ortbtools UI as a permalink-able detail page.
 
 **This is the existing inspector** moved under a stable URL. Its tabs (Inspector / Validation / Crosscheck / Categories / Behavior / AD PREVIEW) are second-level views of the SAME specimen, not separate top-level pages.
 
@@ -154,7 +154,7 @@ This is the **SEO magnet**. Engineer Googles "smaato openrtb missing device.ifa"
 
 ### 5. Playground `/playground` (legacy, secondary)
 
-The current main Spyglass UI moves here. Manual JSON paste for users who want to test their own traffic, edge cases, partner-pre-integration.
+The current main ortbtools UI moves here. Manual JSON paste for users who want to test their own traffic, edge cases, partner-pre-integration.
 
 **Not the default landing anymore.** Linked from header as a secondary action.
 
@@ -221,7 +221,7 @@ Honest dates. Each milestone closes with a working surface, not a half-built one
 - Public landing rewrite around "Wireshark for OpenRTB"
 - Phase 5 of original roadmap closes: public/private split done
 - Open-source: README, CONTRIBUTING.md, good-first-issues labeled
-- Initial blog post: "Why Spyglass exists" + Show HN attempt
+- Initial blog post: "Why ortbtools exists" + Show HN attempt
 - Submit to AdTech newsletters (Marketecture, AdExchanger if possible)
 
 ## Phase 1 breakdown — concrete next steps (next 2 weeks)

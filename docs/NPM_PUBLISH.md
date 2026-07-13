@@ -1,14 +1,14 @@
-# npm publish — @kyivtech/spyglass-core + @ortbtools/cli
+# npm publish — @ortbtools/core + @ortbtools/cli
 
 First-time setup and release procedure for the public npm packages that power
 [ortbtools.com](https://ortbtools.com).
 
 ## Packages
 
-| Package                   | Version source               | Install                               |
-| ------------------------- | ---------------------------- | ------------------------------------- |
-| `@kyivtech/spyglass-core` | `packages/core/package.json` | `npm install @kyivtech/spyglass-core` |
-| `@ortbtools/cli`          | `packages/cli/package.json`  | `npm install -g @ortbtools/cli`       |
+| Package           | Version source               | Install                         |
+| ----------------- | ---------------------------- | ------------------------------- |
+| `@ortbtools/core` | `packages/core/package.json` | `npm install @ortbtools/core`   |
+| `@ortbtools/cli`  | `packages/cli/package.json`  | `npm install -g @ortbtools/cli` |
 
 **Publish order:** core first, then CLI (CLI depends on core).
 
@@ -22,7 +22,7 @@ First-time setup and release procedure for the public npm packages that power
    - Permissions: Read and Write for both packages (or the whole orgs)
    - Bypass 2FA if your account requires it for CI publishes
 
-3. **GitHub secret** — repo `adtech-spyglass` → Settings → Secrets → Actions:
+3. **GitHub secret** — repo `ortbtools` → Settings → Secrets → Actions:
    - Name: `NPM_TOKEN`
    - Value: the granular token
 
@@ -57,7 +57,7 @@ Requires `npm login` on the maintainer machine with publish rights to both scope
 
 - **Core:** bump `packages/core/package.json` when validator rules/messages change.
 - **CLI:** bump `packages/cli/package.json` when CLI flags/output change; update
-  `dependencies.@kyivtech/spyglass-core` range to match.
+  `dependencies.@ortbtools/core` range to match.
 - App (`package.json` at repo root) version is independent — ortbtools.com deploy
   does not auto-publish npm packages.
 
@@ -74,6 +74,6 @@ From a clean directory (no monorepo checkout):
 ```bash
 mkdir /tmp/ortbtools-smoke && cd /tmp/ortbtools-smoke
 npm init -y
-npm install @kyivtech/spyglass-core
-node -e "const c=require('@kyivtech/spyglass-core'); console.log(typeof c.validate)"
+npm install @ortbtools/core
+node -e "const c=require('@ortbtools/core'); console.log(typeof c.validate)"
 ```

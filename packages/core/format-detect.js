@@ -8,7 +8,7 @@
  * intentionally has zero fs / network dependencies so it can fire on
  * every paste, before validation, before LLM, before anything.
  *
- * This is the third axis of detection in Spyglass core:
+ * This is the third axis of detection in ortbtools core:
  *   detectType()    — request / response / feed / unknown          (detect.js)
  *   detectVersion() — 2.5 / 2.6 / 3.0 / unknown                    (detect.js)
  *   detectFormat()  — banner / video / audio / native / push / …   (this file)

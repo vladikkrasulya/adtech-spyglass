@@ -28,7 +28,7 @@
 (function () {
   'use strict';
 
-  if (window.SpyglassIntelBuilder) return;
+  if (window.OrtbtoolsIntelBuilder) return;
 
   // ── Inlined pure-helper shims (KEEP IN SYNC: packages/core/intel/*) ──
 
@@ -113,14 +113,14 @@
     if (_stylesInjected) return;
     _stylesInjected = true;
     const css = [
-      '.spyglass-intel-modal-bg{',
+      '.ortbtools-intel-modal-bg{',
       '  position:fixed;inset:0;z-index:9500;',
       '  background:rgba(0,0,0,0.5);',
       '  display:flex;align-items:center;justify-content:center;',
       '  padding:20px;',
       '}',
-      '.spyglass-intel-modal-bg[hidden]{display:none}',
-      '.spyglass-intel-modal{',
+      '.ortbtools-intel-modal-bg[hidden]{display:none}',
+      '.ortbtools-intel-modal{',
       '  background:var(--surface, #fff);',
       '  color:var(--text, #1a1a1a);',
       '  border-radius:10px;',
@@ -130,120 +130,120 @@
       '  box-shadow:0 10px 40px rgba(0,0,0,0.25);',
       '  font:13px/1.45 var(--font-body, system-ui, sans-serif);',
       '}',
-      '.spyglass-intel-modal__header{',
+      '.ortbtools-intel-modal__header{',
       '  padding:16px 20px;',
       '  border-bottom:1px solid var(--border, #e0e0e0);',
       '  display:flex;align-items:center;gap:10px;',
       '}',
-      '.spyglass-intel-modal__title{font-weight:600;font-size:14px;flex:1}',
-      '.spyglass-intel-modal__close{',
+      '.ortbtools-intel-modal__title{font-weight:600;font-size:14px;flex:1}',
+      '.ortbtools-intel-modal__close{',
       '  background:transparent;border:none;cursor:pointer;',
       '  font-size:20px;line-height:1;color:var(--text-dim, #999);',
       '  padding:4px 8px;border-radius:4px;',
       '}',
-      '.spyglass-intel-modal__close:hover{background:var(--bg-2, #f3f3f3);color:var(--text)}',
-      '.spyglass-intel-modal__body{padding:16px 20px;overflow-y:auto;flex:1}',
-      '.spyglass-intel-modal__field{',
+      '.ortbtools-intel-modal__close:hover{background:var(--bg-2, #f3f3f3);color:var(--text)}',
+      '.ortbtools-intel-modal__body{padding:16px 20px;overflow-y:auto;flex:1}',
+      '.ortbtools-intel-modal__field{',
       '  display:block;font-size:12px;color:var(--text-muted, #666);',
       '  margin-bottom:6px;',
       '}',
-      '.spyglass-intel-modal__name-row{',
+      '.ortbtools-intel-modal__name-row{',
       '  display:flex;gap:8px;align-items:center;margin-bottom:14px;',
       '}',
-      '.spyglass-intel-modal__name-input{',
+      '.ortbtools-intel-modal__name-input{',
       '  flex:1;padding:6px 10px;font:13px var(--font-body, system-ui, sans-serif);',
       '  background:var(--surface);border:1px solid var(--border, #e0e0e0);',
       '  border-radius:4px;color:var(--text);',
       '}',
-      '.spyglass-intel-modal__name-input:focus{outline:none;border-color:var(--accent, #ffc83d)}',
-      '.spyglass-intel-modal__suggest-btn{',
+      '.ortbtools-intel-modal__name-input:focus{outline:none;border-color:var(--accent, #ffc83d)}',
+      '.ortbtools-intel-modal__suggest-btn{',
       '  flex-shrink:0;padding:6px 12px;font:12px var(--font-body, system-ui, sans-serif);',
       '  background:var(--bg-2, #f8f8f8);color:var(--text);',
       '  border:1px solid var(--border, #e0e0e0);border-radius:4px;cursor:pointer;',
       '  white-space:nowrap;',
       '}',
-      '.spyglass-intel-modal__suggest-btn:hover{',
+      '.ortbtools-intel-modal__suggest-btn:hover{',
       '  background:var(--accent-soft, #fff4d4);border-color:var(--accent, #ffc83d);',
       '}',
-      '.spyglass-intel-modal__suggest-btn:disabled{',
+      '.ortbtools-intel-modal__suggest-btn:disabled{',
       '  opacity:0.6;cursor:wait;',
       '}',
-      '.spyglass-intel-modal__section-title{',
+      '.ortbtools-intel-modal__section-title{',
       '  font:11px/1 var(--font-mono, ui-monospace, monospace);',
       '  letter-spacing:.05em;text-transform:uppercase;',
       '  color:var(--text-dim, #999);',
       '  margin:16px 0 8px;',
       '}',
-      '.spyglass-intel-cluster{',
+      '.ortbtools-intel-cluster{',
       '  background:var(--bg-2, #f8f8f8);',
       '  border:1px solid var(--border, #e0e0e0);',
       '  border-radius:6px;padding:10px 12px;margin-bottom:8px;',
       '}',
-      '.spyglass-intel-cluster__head{',
+      '.ortbtools-intel-cluster__head{',
       '  display:flex;align-items:center;gap:8px;',
       '  font-size:11px;color:var(--text-muted, #666);',
       '  margin-bottom:6px;',
       '}',
-      '.spyglass-intel-cluster__use-btn{',
+      '.ortbtools-intel-cluster__use-btn{',
       '  background:var(--accent, #ffc83d);color:var(--text);',
       '  border:none;border-radius:4px;padding:5px 12px;',
       '  font:12px var(--font-body);font-weight:600;cursor:pointer;',
       '  margin-left:auto;',
       '}',
-      '.spyglass-intel-cluster__use-btn:hover{filter:brightness(1.05)}',
-      '.spyglass-intel-cluster__fields{',
+      '.ortbtools-intel-cluster__use-btn:hover{filter:brightness(1.05)}',
+      '.ortbtools-intel-cluster__fields{',
       '  font:11px var(--font-mono, ui-monospace, monospace);',
       '  color:var(--text);',
       '  display:flex;flex-wrap:wrap;gap:6px;',
       '}',
-      '.spyglass-intel-cluster__fields span{',
+      '.ortbtools-intel-cluster__fields span{',
       '  background:var(--surface);padding:2px 6px;border-radius:3px;',
       '  border:1px solid var(--border);',
       '}',
-      '.spyglass-intel-fieldlist{display:flex;flex-direction:column;gap:2px}',
-      '.spyglass-intel-fieldlist__row{',
+      '.ortbtools-intel-fieldlist{display:flex;flex-direction:column;gap:2px}',
+      '.ortbtools-intel-fieldlist__row{',
       '  display:grid;grid-template-columns:16px 1fr;',
       '  column-gap:10px;row-gap:2px;',
       '  padding:6px 8px;border-radius:4px;cursor:pointer;',
       '}',
-      '.spyglass-intel-fieldlist__row:hover{background:var(--bg-2, #f8f8f8)}',
-      '.spyglass-intel-fieldlist__row input[type=checkbox]{',
+      '.ortbtools-intel-fieldlist__row:hover{background:var(--bg-2, #f8f8f8)}',
+      '.ortbtools-intel-fieldlist__row input[type=checkbox]{',
       '  grid-column:1;grid-row:1 / span 2;',
       '  margin:3px 0 0;align-self:start;cursor:pointer;',
       '}',
-      '.spyglass-intel-fieldlist__path{',
+      '.ortbtools-intel-fieldlist__path{',
       '  grid-column:2;',
       '  font:12px/1.35 var(--font-mono, ui-monospace, monospace);',
       '  color:var(--text);',
       '  word-break:break-all;',
       '}',
-      '.spyglass-intel-fieldlist__meta{',
+      '.ortbtools-intel-fieldlist__meta{',
       '  grid-column:2;',
       '  font:10px/1.3 var(--font-mono);color:var(--text-dim);',
       '}',
-      '.spyglass-intel-modal__footer{',
+      '.ortbtools-intel-modal__footer{',
       '  padding:12px 20px;border-top:1px solid var(--border, #e0e0e0);',
       '  display:flex;justify-content:flex-end;gap:8px;align-items:center;',
       '}',
-      '.spyglass-intel-modal__footer-info{',
+      '.ortbtools-intel-modal__footer-info{',
       '  font:11px var(--font-mono);color:var(--text-dim);',
       '  margin-right:auto;',
       '}',
-      '.spyglass-intel-modal__btn{',
+      '.ortbtools-intel-modal__btn{',
       '  padding:6px 14px;font:13px var(--font-body);',
       '  border-radius:4px;cursor:pointer;',
       '  border:1px solid var(--border, #e0e0e0);',
       '  background:var(--surface);color:var(--text);',
       '}',
-      '.spyglass-intel-modal__btn:hover{background:var(--bg-2)}',
-      '.spyglass-intel-modal__btn--primary{',
+      '.ortbtools-intel-modal__btn:hover{background:var(--bg-2)}',
+      '.ortbtools-intel-modal__btn--primary{',
       '  background:var(--accent, #ffc83d);border-color:var(--accent);',
       '  color:var(--text);font-weight:600;',
       '}',
-      '.spyglass-intel-modal__btn--primary:disabled{',
+      '.ortbtools-intel-modal__btn--primary:disabled{',
       '  opacity:0.5;cursor:not-allowed;',
       '}',
-      '.spyglass-intel-modal__empty{',
+      '.ortbtools-intel-modal__empty{',
       '  text-align:center;padding:30px;',
       '  color:var(--text-dim);font-size:12px;',
       '}',
@@ -257,21 +257,21 @@
     if (_root && document.body.contains(_root)) return _root;
     injectStyles();
     _root = document.createElement('div');
-    _root.className = 'spyglass-intel-modal-bg';
-    _root.id = 'spyglassIntelBuilder';
+    _root.className = 'ortbtools-intel-modal-bg';
+    _root.id = 'ortbtoolsIntelBuilder';
     _root.hidden = true;
     _root.innerHTML = [
-      '<div class="spyglass-intel-modal" role="dialog" aria-modal="true" aria-labelledby="spyglassIntelBuilderTitle">',
-      '  <div class="spyglass-intel-modal__header">',
+      '<div class="ortbtools-intel-modal" role="dialog" aria-modal="true" aria-labelledby="ortbtoolsIntelBuilderTitle">',
+      '  <div class="ortbtools-intel-modal__header">',
       '    <span aria-hidden="true">🧬</span>',
-      '    <span class="spyglass-intel-modal__title" id="spyglassIntelBuilderTitle"></span>',
-      '    <button class="spyglass-intel-modal__close" aria-label="Close" data-builder-close>×</button>',
+      '    <span class="ortbtools-intel-modal__title" id="ortbtoolsIntelBuilderTitle"></span>',
+      '    <button class="ortbtools-intel-modal__close" aria-label="Close" data-builder-close>×</button>',
       '  </div>',
-      '  <div class="spyglass-intel-modal__body" data-builder-body></div>',
-      '  <div class="spyglass-intel-modal__footer">',
-      '    <span class="spyglass-intel-modal__footer-info" data-builder-info></span>',
-      '    <button class="spyglass-intel-modal__btn" data-builder-cancel></button>',
-      '    <button class="spyglass-intel-modal__btn spyglass-intel-modal__btn--primary" data-builder-create disabled></button>',
+      '  <div class="ortbtools-intel-modal__body" data-builder-body></div>',
+      '  <div class="ortbtools-intel-modal__footer">',
+      '    <span class="ortbtools-intel-modal__footer-info" data-builder-info></span>',
+      '    <button class="ortbtools-intel-modal__btn" data-builder-cancel></button>',
+      '    <button class="ortbtools-intel-modal__btn ortbtools-intel-modal__btn--primary" data-builder-create disabled></button>',
       '  </div>',
       '</div>',
     ].join('');
@@ -317,7 +317,7 @@
   async function open() {
     ensureRoot();
     const t = localised();
-    _root.querySelector('#spyglassIntelBuilderTitle').textContent = t.title;
+    _root.querySelector('#ortbtoolsIntelBuilderTitle').textContent = t.title;
     _root.querySelector('[data-builder-cancel]').textContent = t.cancel;
     _root.querySelector('[data-builder-create]').textContent = t.create;
     _root.hidden = false;
@@ -330,7 +330,7 @@
   }
 
   async function render() {
-    const storage = window.SpyglassIntelStorage;
+    const storage = window.OrtbtoolsIntelStorage;
     if (!storage) return;
     const t = localised();
     const observations = await storage.listObservations();
@@ -340,7 +340,8 @@
     const body = _root.querySelector('[data-builder-body]');
 
     if (!observations || !observations.length) {
-      body.innerHTML = '<div class="spyglass-intel-modal__empty">' + escapeHtml(t.empty) + '</div>';
+      body.innerHTML =
+        '<div class="ortbtools-intel-modal__empty">' + escapeHtml(t.empty) + '</div>';
       _root.querySelector('[data-builder-create]').disabled = true;
       _root.querySelector('[data-builder-info]').textContent = '';
       return;
@@ -354,12 +355,12 @@
     // keeps name + button on the same line so the input doesn't shift
     // when the button appears/disappears.
     parts.push(
-      '<label class="spyglass-intel-modal__field">' + escapeHtml(t.nameLabel) + '</label>',
-      '<div class="spyglass-intel-modal__name-row">',
-      '  <input type="text" class="spyglass-intel-modal__name-input" data-builder-name placeholder="' +
+      '<label class="ortbtools-intel-modal__field">' + escapeHtml(t.nameLabel) + '</label>',
+      '<div class="ortbtools-intel-modal__name-row">',
+      '  <input type="text" class="ortbtools-intel-modal__name-input" data-builder-name placeholder="' +
         escapeHtml(t.namePlaceholder) +
         '">',
-      '  <button class="spyglass-intel-modal__suggest-btn" data-suggest-name title="' +
+      '  <button class="ortbtools-intel-modal__suggest-btn" data-suggest-name title="' +
         escapeHtml(t.suggestNameTooltip || 'Suggest name with local LLM') +
         '">🤖 ' +
         escapeHtml(t.suggestName || 'Suggest') +
@@ -370,26 +371,26 @@
     // Cluster suggestions
     if (clusters.length > 0) {
       parts.push(
-        '<div class="spyglass-intel-modal__section-title">' +
+        '<div class="ortbtools-intel-modal__section-title">' +
           escapeHtml(t.clustersHeading) +
           '</div>',
       );
       for (const cl of clusters.slice(0, 5)) {
         parts.push(
-          '<div class="spyglass-intel-cluster">',
-          '  <div class="spyglass-intel-cluster__head">',
+          '<div class="ortbtools-intel-cluster">',
+          '  <div class="ortbtools-intel-cluster__head">',
           '    <span>' +
             cl.fields.length +
             ' fields · score ' +
             cl.totalCount.toFixed(0) +
             '</span>',
-          '    <button class="spyglass-intel-cluster__use-btn" data-cluster-pick="' +
+          '    <button class="ortbtools-intel-cluster__use-btn" data-cluster-pick="' +
             escapeAttr(cl.fields.join('|')) +
             '">' +
             escapeHtml(t.useCluster) +
             '</button>',
           '  </div>',
-          '  <div class="spyglass-intel-cluster__fields">',
+          '  <div class="ortbtools-intel-cluster__fields">',
           ...cl.fields.map((f) => '<span>' + escapeHtml(f) + '</span>'),
           '  </div>',
           '</div>',
@@ -399,12 +400,12 @@
 
     // All fields
     parts.push(
-      '<div class="spyglass-intel-modal__section-title">' +
+      '<div class="ortbtools-intel-modal__section-title">' +
         escapeHtml(t.fieldsHeading) +
         ' (' +
         observations.length +
         ')</div>',
-      '<div class="spyglass-intel-fieldlist" data-fieldlist>',
+      '<div class="ortbtools-intel-fieldlist" data-fieldlist>',
     );
     // Sort by decayed score, descending.
     const now = Date.now();
@@ -417,14 +418,14 @@
       const decayed = applyDecay(r.decayedScore || 0, r.lastSeenAt || 0, now);
       const charClass = (r.valueShape && r.valueShape.charClass) || r.type || '?';
       parts.push(
-        '<label class="spyglass-intel-fieldlist__row">',
+        '<label class="ortbtools-intel-fieldlist__row">',
         '  <input type="checkbox" data-field-toggle="' +
           escapeAttr(r.path) +
           '" data-bucket="' +
           escapeAttr(r.bucket) +
           '">',
-        '  <span class="spyglass-intel-fieldlist__path">' + escapeHtml(r.path) + '</span>',
-        '  <span class="spyglass-intel-fieldlist__meta">[' +
+        '  <span class="ortbtools-intel-fieldlist__path">' + escapeHtml(r.path) + '</span>',
+        '  <span class="ortbtools-intel-fieldlist__meta">[' +
           escapeHtml(r.bucket) +
           '] ' +
           escapeHtml(charClass) +
@@ -475,7 +476,7 @@
     const suggestBtn = body.querySelector('[data-suggest-name]');
     if (suggestBtn) {
       // Hide proactively if a previous /api/intel call already hit 503.
-      if (window.SpyglassIntel && !window.SpyglassIntel.isLlmAvailable()) {
+      if (window.OrtbtoolsIntel && !window.OrtbtoolsIntel.isLlmAvailable()) {
         suggestBtn.style.display = 'none';
       }
       suggestBtn.addEventListener('click', async (ev) => {
@@ -500,7 +501,7 @@
         // detector returned no formats — graceful by design.
         let detectedFormat = '';
         try {
-          const last = window.__spyglassLast;
+          const last = window.__ortbtoolsLast;
           const fmt = last && last.meta && last.meta.format;
           if (fmt && Array.isArray(fmt.formats) && fmt.formats.length > 0) {
             detectedFormat = String(fmt.formats[0]);
@@ -510,8 +511,8 @@
         }
         let suggestion = null;
         try {
-          if (window.SpyglassIntel) {
-            suggestion = await window.SpyglassIntel.suggestName(bucket, fields, detectedFormat);
+          if (window.OrtbtoolsIntel) {
+            suggestion = await window.OrtbtoolsIntel.suggestName(bucket, fields, detectedFormat);
           }
         } catch (_e) {
           /* swallow — graceful degradation */
@@ -523,7 +524,7 @@
           if (suggestion.description) {
             nameInput.title = suggestion.description; // tooltip with full description
           }
-        } else if (window.SpyglassIntel && !window.SpyglassIntel.isLlmAvailable()) {
+        } else if (window.OrtbtoolsIntel && !window.OrtbtoolsIntel.isLlmAvailable()) {
           // 503 latched: hide the button quietly. No toast, no alarm.
           suggestBtn.style.display = 'none';
         }
@@ -535,19 +536,19 @@
     // tooltip via title attribute. Cached for 30 days client-side
     // (storage layer), so a hover storm doesn't burn LLM calls.
     body.querySelectorAll('[data-field-toggle]').forEach((cb) => {
-      const row = cb.closest('.spyglass-intel-fieldlist__row');
+      const row = cb.closest('.ortbtools-intel-fieldlist__row');
       if (!row) return;
       let purposeFetched = false;
       const onEnter = async () => {
         if (purposeFetched) return;
         purposeFetched = true; // mark BEFORE fetch so re-entry doesn't double-fire
-        if (!window.SpyglassIntel || !window.SpyglassIntel.isLlmAvailable()) return;
+        if (!window.OrtbtoolsIntel || !window.OrtbtoolsIntel.isLlmAvailable()) return;
         const path = cb.getAttribute('data-field-toggle');
         const bucket = cb.getAttribute('data-bucket');
         try {
-          const r = await window.SpyglassIntel.fieldPurpose(path, '', bucket);
+          const r = await window.OrtbtoolsIntel.fieldPurpose(path, '', bucket);
           if (r && r.purpose) {
-            const meta = row.querySelector('.spyglass-intel-fieldlist__meta');
+            const meta = row.querySelector('.ortbtools-intel-fieldlist__meta');
             if (meta) {
               const ai = ' · 🤖 ' + r.purpose + (r.confidence === 'low' ? '?' : '');
               if (!meta.dataset.aiAdded) {
@@ -580,7 +581,7 @@
   }
 
   async function create() {
-    const storage = window.SpyglassIntelStorage;
+    const storage = window.OrtbtoolsIntelStorage;
     if (!storage || _selection.size === 0) return;
     const nameInput = _root.querySelector('[data-builder-name]');
     const name =
@@ -615,12 +616,12 @@
     try {
       await storage.putTempDialect(spec);
     } catch (e) {
-      console.warn('[spyglass-intel] putTempDialect failed', e);
+      console.warn('[ortbtools-intel] putTempDialect failed', e);
       return;
     }
     // Activate the new dialect immediately + sync UI selector.
-    if (window.SpyglassIntel && typeof window.SpyglassIntel.activate === 'function') {
-      window.SpyglassIntel.activate(id);
+    if (window.OrtbtoolsIntel && typeof window.OrtbtoolsIntel.activate === 'function') {
+      window.OrtbtoolsIntel.activate(id);
     }
     close();
   }
@@ -643,5 +644,5 @@
     return String(s).replace(/[^a-zA-Z0-9_-]/g, (m) => '\\' + m);
   }
 
-  window.SpyglassIntelBuilder = { open, close };
+  window.OrtbtoolsIntelBuilder = { open, close };
 })();

@@ -12,7 +12,7 @@ the maintainer has had a chance to ship a fix.
 
 - Anything in this repo: server, validator, auth, tokens, crypto, UI, build.
 - Any vulnerability that affects the live deploy at
-  <https://spyglass.kyivtech.com.ua/>.
+  <https://ortbtools.com/>.
 
 ## What's out of scope
 
@@ -20,7 +20,7 @@ the maintainer has had a chance to ship a fix.
 - Issues caused by users running modified forks with their own
   configuration.
 - Theoretical attacks on bcrypt / PBKDF2 / AES-GCM / Web Crypto themselves
-  (those are kernel concerns, not Spyglass concerns).
+  (those are kernel concerns, not ortbtools concerns).
 
 ## What I commit to
 
@@ -31,7 +31,7 @@ the maintainer has had a chance to ship a fix.
 
 ## Zero-knowledge crypto threat model
 
-Spyglass encrypts saved samples in the browser with a key derived from the
+ortbtools encrypts saved samples in the browser with a key derived from the
 user's password (PBKDF2-SHA-256, 600 000 iterations). The server stores
 opaque AES-GCM ciphertext + a wrapped DEK + IVs.
 

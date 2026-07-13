@@ -1,6 +1,6 @@
-# Spyglass — Privacy and Zero-Knowledge Encryption
+# ortbtools — Privacy and Zero-Knowledge Encryption
 
-This document explains exactly what data Spyglass collects, what it encrypts,
+This document explains exactly what data ortbtools collects, what it encrypts,
 what the server can and cannot read, and the threat model behind the
 "zero-knowledge encryption" claim. Written for an end user who is skeptical and
 for an auditor who wants to verify the claims against the source code.
@@ -19,7 +19,7 @@ for an auditor who wants to verify the claims against the source code.
   your machine.** The server stores AES-GCM-256 ciphertext. It cannot decrypt the
   contents.
 - **The Key Encryption Key (KEK) is derived from your password using PBKDF2 and
-  never leaves the browser.** Spyglass the server never sees it.
+  never leaves the browser.** ortbtools the server never sees it.
 - **A 32-character hex recovery key is shown once at registration.** It is the only
   way to regain access to your library if you forget your password. If both your
   password and recovery key are lost, the encrypted library can only be wiped — there
@@ -28,7 +28,7 @@ for an auditor who wants to verify the claims against the source code.
   server-side, returns findings, and drops the payload. It does not write the payload
   to the database. See "What the validator pipeline does" below.
 - **Self-hosters can disable ClickHouse-derived telemetry.** Leave `CLICKHOUSE_USER`
-  unset, or set `SPYGLASS_ANALYTICS_DISABLED=1` in the container env. See
+  unset, or set `ORTBTOOLS_ANALYTICS_DISABLED=1` in the container env. See
   "Self-hosting: disabling derived telemetry" below. This does not remove per-account
   Cabinet activity metadata in SQLite for signed-in users.
 
@@ -44,12 +44,12 @@ for an auditor who wants to verify the claims against the source code.
 | Per-tab analysis history          | Browser only                    | `localStorage` — never sent to the server                                                                                                                                                                            |
 | IP address                        | Yes — sampled request log       | In-memory rate-limit buckets (swept hourly) plus an operational request log (ClickHouse `event_log`) that records your IP with request metadata for every error and a sample of successful calls. Never the payload. |
 
-Spyglass keeps two derived records for anonymous analyses: an anonymous analytics row
+ortbtools keeps two derived records for anonymous analyses: an anonymous analytics row
 (detected format, oRTB version, and finding counts — ClickHouse `validation_logs`) and
 an operational request log (`event_log`) that records request metadata including your
 IP address, sampled. Neither contains the payload bodies. Reverse proxies and CDNs
 between your browser and the server (Cloudflare, the kyivtech-portal proxy) may have
-their own access logs as well. The Spyglass application itself does not log payload
+their own access logs as well. The ortbtools application itself does not log payload
 bodies.
 
 ### Account creation
@@ -82,7 +82,7 @@ If the title itself is sensitive, treat it like you would a filename on a shared
 
 ### Activity log (Cabinet → Activity)
 
-Spyglass records a metadata row in `analyze_log` each time you run an analysis while
+ortbtools records a metadata row in `analyze_log` each time you run an analysis while
 logged in. The row contains: `user_id`, timestamp, `payload_type`
 (request / response / both), detected oRTB version and format, finding status
 (`clean` / `warnings` / `errors`), number of findings by level, and whether the
@@ -108,7 +108,7 @@ the same approach used by 1Password and Bitwarden.
    The output is a 256-bit AES-GCM key (the KEK). The KEK never leaves the browser.
    (Your password itself _is_ sent to the server over TLS to verify your login with
    bcrypt — see step 5 — but only the bcrypt hash is stored, never the plaintext.)
-   Source: `public/spyglass-crypto.js`, `deriveKEK()`, constant `PBKDF2_ITERATIONS = 600000`.
+   Source: `public/ortbtools-crypto.js`, `deriveKEK()`, constant `PBKDF2_ITERATIONS = 600000`.
 
 2. **Generate DEK.** A 256-bit random Data Encryption Key is generated with
    `crypto.getRandomValues()`. This key will encrypt your actual sample payloads.
@@ -138,7 +138,7 @@ recovery_dek_wrapped, recovery_dek_iv }`. The server stores the email and the si
 
 When you click "save" on an analysis:
 
-1. The browser retrieves the live DEK from the `window.SpyglassSession` closure (it
+1. The browser retrieves the live DEK from the `window.OrtbtoolsSession` closure (it
    was unwrapped from `dek_wrapped` at login time using your password-derived KEK).
 2. `encryptBlob(dekKey, bidReqJSON)` → `{ iv, ct }` (fresh 12-byte IV per blob).
 3. Same for `bidResJSON`.
@@ -187,7 +187,7 @@ path to decrypt the library. The "wipe" mode in the reset flow deletes the encry
 samples and creates a fresh crypto state — your data is gone but your account
 (email, metadata) can continue.
 
-Source: `public/spyglass-crypto.js`, `openWithRecoveryKey()`;
+Source: `public/ortbtools-crypto.js`, `openWithRecoveryKey()`;
 `public/modules/password-reset/index.js` (rotate / recover / wipe modes).
 
 ---
@@ -211,7 +211,7 @@ a crosscheck. It never includes `bid_req` or `bid_res` body content.
 ### Logging
 
 The server uses pino-based structured logging (`lib/logger.js`). The default log
-level in production is `'info'`. At `info` level, Spyglass logs request routing
+level in production is `'info'`. At `info` level, ortbtools logs request routing
 events, session lifecycle, and error stack traces. **It does not log request bodies
 at any level — there is no debug/trace handler that dumps the `bidReq`/`bidRes`
 payload.** The analyze handler at `modules/analyze/handler.js` logs only parse errors
@@ -239,23 +239,23 @@ Test mode runs with `LOG_LEVEL=silent` (see `package.json` `npm test` script).
 
 ## Self-hosting: disabling derived telemetry
 
-Spyglass writes **derived** analytics to ClickHouse when credentials are configured:
+ortbtools writes **derived** analytics to ClickHouse when credentials are configured:
 
-| Table / module                                        | What it stores                                       | Env gate                                                |
-| ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
-| `analytics.validation_logs` (`lib/validation-log.js`) | Format, oRTB version, finding counts per analyze     | `CLICKHOUSE_USER` + not `SPYGLASS_ANALYTICS_DISABLED=1` |
-| `analytics.spyglass_events` (`lib/event-log.js`)      | Sampled request metadata (path, status, IP, latency) | same                                                    |
+| Table / module                                        | What it stores                                       | Env gate                                                 |
+| ----------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------- |
+| `analytics.validation_logs` (`lib/validation-log.js`) | Format, oRTB version, finding counts per analyze     | `CLICKHOUSE_USER` + not `ORTBTOOLS_ANALYTICS_DISABLED=1` |
+| `analytics.ortbtools_events` (`lib/event-log.js`)     | Sampled request metadata (path, status, IP, latency) | same                                                     |
 
 **Option A — no ClickHouse (simplest):** leave `CLICKHOUSE_USER` empty in `.env`
 (default in `.env.example`). Both modules no-op; the app boots normally.
 
-**Option B — explicit kill-switch:** set `SPYGLASS_ANALYTICS_DISABLED=1` in the
+**Option B — explicit kill-switch:** set `ORTBTOOLS_ANALYTICS_DISABLED=1` in the
 container environment even when ClickHouse credentials exist (useful when CH is
 shared with other services on the same host).
 
 ```bash
 # In /srv/DATA/Stacks/adtech-spyglass/.env (then recreate container):
-SPYGLASS_ANALYTICS_DISABLED=1
+ORTBTOOLS_ANALYTICS_DISABLED=1
 ```
 
 ```bash
@@ -272,7 +272,7 @@ See also `docs/OPERATIONS.md` §4.10.
 
 ## Threat model
 
-### What Spyglass protects against
+### What ortbtools protects against
 
 **Server-side data breach (full DB dump).** An attacker who reads the SQLite database
 file sees bcrypt hashes, ciphertext blobs, and metadata. Without the user's password
@@ -290,7 +290,7 @@ different service cannot be used to brute-force the DEK without also obtaining t
 `kdf_salt` from this database. The 600,000-iteration cost makes offline brute-force
 expensive even then.
 
-### What Spyglass does NOT protect against
+### What ortbtools does NOT protect against
 
 **Compromised user device.** If a browser extension or malware on your machine has
 access to the browser's memory or can intercept keystrokes, it can extract the
@@ -298,16 +298,16 @@ plaintext password or the live DEK. No server-side architecture can protect agai
 a compromised client.
 
 **Active attacker with persistent server access (code injection).** A determined
-attacker who can modify the JavaScript files served by Spyglass could replace
-`spyglass-crypto.js` to exfiltrate the password at the next login. This is not a
-weakness specific to Spyglass — it applies to any web-delivered encryption. The
+attacker who can modify the JavaScript files served by ortbtools could replace
+`ortbtools-crypto.js` to exfiltrate the password at the next login. This is not a
+weakness specific to ortbtools — it applies to any web-delivered encryption. The
 mitigation is source integrity: the source code is public at
-`github.com/vladikkrasulya/adtech-spyglass`, and a hash-verified deployment process
+`github.com/vladikkrasulya/ortbtools`, and a hash-verified deployment process
 would close this gap.
 
-**Your bid stream through ad networks.** Spyglass inspects a _copy_ of the payload
+**Your bid stream through ad networks.** ortbtools inspects a _copy_ of the payload
 you paste. The original bid transaction still passed through the SSP, DSP, and any
-intermediaries. Spyglass protects the copy you saved; it has no effect on what the ad
+intermediaries. ortbtools protects the copy you saved; it has no effect on what the ad
 networks logged.
 
 **Plaintext metadata (title, status, timestamps).** As noted above, `title` and
@@ -321,8 +321,8 @@ identifiers in the title field if that would be a concern.
 The following proof points are available without access to the production server:
 
 1. **Source code.** The repository is public at
-   `https://github.com/vladikkrasulya/adtech-spyglass`. The crypto module is at
-   `public/spyglass-crypto.js`. The KEK derivation parameters (`PBKDF2_ITERATIONS`,
+   `https://github.com/vladikkrasulya/ortbtools`. The crypto module is at
+   `public/ortbtools-crypto.js`. The KEK derivation parameters (`PBKDF2_ITERATIONS`,
    `PBKDF2_HASH`, `KEY_BITS`, `SALT_BYTES`, `IV_BYTES`) are declared at the top of
    that file. As of this writing: 600,000 iterations, SHA-256, 256-bit key, 16-byte
    salt, 12-byte IV.
@@ -335,7 +335,7 @@ The following proof points are available without access to the production server
    the six crypto-state fields and stores them. `GET /api/auth/me` returns the
    crypto state to the browser so the client can derive the KEK without a second
    round-trip. You can verify with `curl -b <session-cookie>
-https://spyglass.kyivtech.com.ua/api/auth/me` — the response includes
+https://ortbtools.com/api/auth/me` — the response includes
    `kdf_salt`, `dek_wrapped`, `dek_iv` (ciphertext blobs) and no password field.
 
 4. **Samples endpoint.** `GET /api/samples` returns the list of saved samples for
@@ -345,7 +345,7 @@ https://spyglass.kyivtech.com.ua/api/auth/me` — the response includes
 
 5. **No server-side decryption code.** Search the repository for `decryptBlob`,
    `unwrapBytes`, `openWithPassword` — these functions exist only in
-   `public/spyglass-crypto.js` (browser) and `tests/crypto.test.js`. They are
+   `public/ortbtools-crypto.js` (browser) and `tests/crypto.test.js`. They are
    absent from `server.js`, `db.js`, and all `modules/` handlers.
 
 6. **Analyze handler.** `modules/analyze/handler.js` processes the payload and

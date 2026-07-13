@@ -1,4 +1,4 @@
-# Spyglass — Testing
+# ortbtools — Testing
 
 This document covers the test stack, how to run tests, where they live,
 CI gate configuration, and how to add new tests. For the codebase map
@@ -8,7 +8,7 @@ read [ARCHMAP](./ARCHMAP.md) first.
 
 ## Test stack
 
-Spyglass uses **Node 22's built-in `node --test`** runner. No Jest, no Mocha,
+ortbtools uses **Node 22's built-in `node --test`** runner. No Jest, no Mocha,
 no Vitest. Zero extra test-runner dependencies — the same Node binary that runs
 the server runs the tests.
 
@@ -96,7 +96,7 @@ treats it as a file path and fails to discover tests.
 | `vast.test.js`                     | VAST 2.x/3.x/4.x rules (~34 cases)                                                                         |
 | `fixtures.js`                      | Not a test file — exports reusable payload factories (`validRequest()`, `validResponse()`, etc.)           |
 
-Most tests are integration-style: they import `@kyivtech/spyglass-core`
+Most tests are integration-style: they import `@ortbtools/core`
 directly and call the public API. They don't mock the validator internals.
 Server-level tests (auth, health, router, db) spin up the relevant module
 in isolation with injected dependencies, not a full HTTP server.
@@ -169,7 +169,7 @@ never used; all equality is `===` / structural deep-equal.
 ```js
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { validate, TYPES } = require('@kyivtech/spyglass-core');
+const { validate, TYPES } = require('@ortbtools/core');
 
 test('validate: missing imp returns error', () => {
   const result = validate({ id: 'r1', site: { domain: 'x.com' } });
@@ -214,7 +214,7 @@ generator.
 
 - **Production SQLite**: `tests/db.test.js` creates a temporary database via
   the existing test setup (Node test isolation). Never point at the real
-  `/data/spyglass.db` in a test.
+  `/data/ortbtools.db` in a test.
 - **External network**: Ollama, Resend, and Sentry are either fail-open by
   design or mocked in tests. Don't write tests that require a live external
   service to pass.
@@ -235,9 +235,9 @@ Example: you've added a plugin rule `rules/my-check/` that emits
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const myCheck = require('@kyivtech/spyglass-core/rules/my-check');
+const myCheck = require('@ortbtools/core/rules/my-check');
 // OR test via the full validate() pass:
-// const { validate } = require('@kyivtech/spyglass-core');
+// const { validate } = require('@ortbtools/core');
 
 test('my-check: emits field_required when field absent', () => {
   const req = {

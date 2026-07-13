@@ -17,5 +17,5 @@
 # whatever brings the daemon back after a host reboot) NEVER sees this file and
 # is completely unaffected: it always uses the base file's restart: always.
 services:
-  spyglass:
+  ortbtools:
     restart: 'no'

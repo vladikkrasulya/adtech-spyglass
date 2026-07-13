@@ -1,7 +1,7 @@
 /* ============================================================
    public/modules/intel/observer.js — Discovery observer.
 
-   Phase 7a foundation. Hooks into spyglass.app.js's analyze flow as a
+   Phase 7a foundation. Hooks into ortbtools.app.js's analyze flow as a
    side-channel observer: walks the parsed payload, records ext-field
    shapes into IndexedDB, applies decay, and asks the banner module to
    refresh its summary.
@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  if (window.SpyglassIntelObserver) return;
+  if (window.OrtbtoolsIntelObserver) return;
 
   // ── Bucketize / walker / fingerprint / decay / gate ──────────────
   // Inlined from packages/core/intel/* so the browser doesn't need a
@@ -230,12 +230,15 @@
     if (_refreshTimer) return;
     _refreshTimer = setTimeout(async () => {
       _refreshTimer = null;
-      if (window.SpyglassIntelBanner && typeof window.SpyglassIntelBanner.refresh === 'function') {
+      if (
+        window.OrtbtoolsIntelBanner &&
+        typeof window.OrtbtoolsIntelBanner.refresh === 'function'
+      ) {
         try {
           const summary = await summariseForBanner();
-          window.SpyglassIntelBanner.refresh(summary);
+          window.OrtbtoolsIntelBanner.refresh(summary);
         } catch (e) {
-          console.warn('[spyglass-intel] banner refresh failed', e);
+          console.warn('[ortbtools-intel] banner refresh failed', e);
         }
       }
     }, 200);
@@ -248,8 +251,8 @@
    * "new" = (firstSeenAt within last 24h) AND (decayedScore ≥ threshold).
    */
   async function summariseForBanner() {
-    if (!window.SpyglassIntelStorage) return { total: 0, byBucket: {} };
-    const all = await window.SpyglassIntelStorage.listObservations();
+    if (!window.OrtbtoolsIntelStorage) return { total: 0, byBucket: {} };
+    const all = await window.OrtbtoolsIntelStorage.listObservations();
     const now = Date.now();
     const byBucket = {};
     let total = 0;
@@ -280,7 +283,7 @@
    * recordOne, but keyed by (bucket, sortedPair).
    */
   async function recordCoOccurrence(bucket, pathA, pathB) {
-    const storage = window.SpyglassIntelStorage;
+    const storage = window.OrtbtoolsIntelStorage;
     if (!storage) return;
     const [a, b] = pathA < pathB ? [pathA, pathB] : [pathB, pathA];
     const key = coKey(bucket, a, b);
@@ -306,7 +309,7 @@
     try {
       await storage.putCoOccurrence(next);
     } catch (e) {
-      console.warn('[spyglass-intel] putCoOccurrence failed', e);
+      console.warn('[ortbtools-intel] putCoOccurrence failed', e);
     }
   }
 
@@ -315,7 +318,7 @@
    * applies decay, increments score, writes back.
    */
   async function recordOne(bucket, path, type, valueShape) {
-    const storage = window.SpyglassIntelStorage;
+    const storage = window.OrtbtoolsIntelStorage;
     if (!storage) return;
     const key = bucket + '::' + path;
     const now = Date.now();
@@ -343,12 +346,12 @@
     try {
       await storage.putObservation(next);
     } catch (e) {
-      console.warn('[spyglass-intel] putObservation failed', e);
+      console.warn('[ortbtools-intel] putObservation failed', e);
     }
   }
 
   /**
-   * Public entrypoint. Called by spyglass.app.js after /api/analyze
+   * Public entrypoint. Called by ortbtools.app.js after /api/analyze
    * returns. `payload` is the parsed BidRequest OR BidResponse (we run
    * once for each); `validation` is the analyze() result envelope.
    *
@@ -359,8 +362,8 @@
     try {
       // Phase 7a default: discovery is ON. Respect a meta opt-out flag
       // so future Settings UI can toggle without code changes.
-      if (window.SpyglassIntelStorage) {
-        const flag = await window.SpyglassIntelStorage.getMeta('discovery_enabled');
+      if (window.OrtbtoolsIntelStorage) {
+        const flag = await window.OrtbtoolsIntelStorage.getMeta('discovery_enabled');
         if (flag === false) return;
       }
       const gate = isLearnable(validation);
@@ -392,7 +395,7 @@
 
       scheduleBannerRefresh();
     } catch (e) {
-      console.warn('[spyglass-intel] observe failed', e);
+      console.warn('[ortbtools-intel] observe failed', e);
     }
   }
 
@@ -402,20 +405,20 @@
    */
   async function init() {
     try {
-      if (!window.SpyglassIntelStorage) return;
-      const enabled = await window.SpyglassIntelStorage.getMeta('discovery_enabled');
+      if (!window.OrtbtoolsIntelStorage) return;
+      const enabled = await window.OrtbtoolsIntelStorage.getMeta('discovery_enabled');
       if (enabled === undefined) {
         // First-run default per Phase 7a: ON. User can toggle later.
-        await window.SpyglassIntelStorage.setMeta('discovery_enabled', true);
+        await window.OrtbtoolsIntelStorage.setMeta('discovery_enabled', true);
       }
       // Initial banner paint based on any historical observations.
       scheduleBannerRefresh();
     } catch (e) {
-      console.warn('[spyglass-intel] init failed', e);
+      console.warn('[ortbtools-intel] init failed', e);
     }
   }
 
-  window.SpyglassIntelObserver = {
+  window.OrtbtoolsIntelObserver = {
     observe,
     init,
     summariseForBanner,

@@ -7,7 +7,7 @@
    Best run with a non-trivial request loaded in #bidReq.
 
    Loaded ONLY when the user clicks the "🤖 симуляція" button — see
-   the lazy stub in spyglass.app.js dispatcher (case 'sim-bids'). On
+   the lazy stub in ortbtools.app.js dispatcher (case 'sim-bids'). On
    first click: ~6KB across this file + i18n.js. On subsequent clicks:
    cached by the module loader, zero extra fetch.
 
@@ -17,7 +17,7 @@
    Consumes (via /core/utils.js ES imports + globals):
      - $, escapeHtml, toast, t   — DOM + i18n helpers
      - window.closeModal          — modal lifecycle (Esc handler in
-                                    spyglass.app.js + data-action
+                                    ortbtools.app.js + data-action
                                     'modal-close' / 'modal-backdrop-close')
 
    Backend: /api/intel/simulate-bids — handler delegates to local
@@ -133,7 +133,7 @@ export async function openSimBidsModal() {
     '</button></div></div></div>';
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/simulate/index.js'); window.openSimBidsModal();
 // — first call: fetches + evaluates + this assignment runs.
 // Subsequent calls: cached by the module loader, this assignment is a no-op.

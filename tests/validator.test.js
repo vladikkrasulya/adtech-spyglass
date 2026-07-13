@@ -19,7 +19,7 @@ const {
   nativeAssetCrosscheck,
   TYPES,
   VERSIONS,
-} = require('@kyivtech/spyglass-core');
+} = require('@ortbtools/core');
 
 const {
   validRequest,
@@ -930,11 +930,7 @@ test('adkernel: alias key without zoneId is NOT flagged (avoids false positives)
 
 // ── IAB Content Taxonomy decoder ─────────────────────────────────────────
 
-const {
-  decodeCategory,
-  decodeCategories,
-  extractAllCategories,
-} = require('@kyivtech/spyglass-core');
+const { decodeCategory, decodeCategories, extractAllCategories } = require('@ortbtools/core');
 
 test('decodeCategory: known sub-code resolves to "Top → Sub"', () => {
   assert.equal(decodeCategory('IAB9-11'), 'Hobbies & Interests → Comic Books');

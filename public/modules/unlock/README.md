@@ -11,11 +11,11 @@ login dance.
 
 **Lazy.** Fetched only when the user clicks the "розблокувати" CTA in
 the saved-list shell, or hits any `data-action="open-unlock"` button
-(case `'open-unlock'` in spyglass.app.js dispatcher). On first click:
+(case `'open-unlock'` in ortbtools.app.js dispatcher). On first click:
 ~3KB across `index.js` + `i18n.js`. On subsequent clicks: cached by the
 browser's ES module loader, zero extra fetch.
 
-The dispatcher's `'do-unlock'` case stays in spyglass.app.js — it
+The dispatcher's `'do-unlock'` case stays in ortbtools.app.js — it
 fires AFTER the modal is open (from the modal's primary button or
 ⏎-to-submit), by which point this module is already loaded and
 `window.doUnlock` is wired up.
@@ -41,25 +41,25 @@ fires AFTER the modal is open (from the modal's primary button or
 
 ## Window APIs (consumes)
 
-- `window.closeModal` — modal lifecycle (provided by spyglass.app.js).
-- `window.openAuthModal` — guest fallback (provided by spyglass.app.js;
+- `window.closeModal` — modal lifecycle (provided by ortbtools.app.js).
+- `window.openAuthModal` — guest fallback (provided by ortbtools.app.js;
   the unlock modal is for signed-in-but-locked users only).
-- `window.SpyglassSession.user` — currently signed-in user (read for
+- `window.OrtbtoolsSession.user` — currently signed-in user (read for
   the email-in-subtitle + presence guard).
-- `window.SpyglassSession.api` — HTTP helper (for `/api/auth/me`).
-- `window.SpyglassSession.openFromPassword(password, encState, opts)` —
+- `window.OrtbtoolsSession.api` — HTTP helper (for `/api/auth/me`).
+- `window.OrtbtoolsSession.openFromPassword(password, encState, opts)` —
   re-derives KEK from password, unwraps DEK, persists it. The raw
   CryptoKey never crosses the module boundary; the facade keeps it
   in the shell closure.
-- `window.SpyglassSession.refreshSamples` — re-renders the saved-list
+- `window.OrtbtoolsSession.refreshSamples` — re-renders the saved-list
   once the DEK is back in place.
-- `window.SpyglassSession.wireEnterSubmit` — ⏎-to-submit on the
+- `window.OrtbtoolsSession.wireEnterSubmit` — ⏎-to-submit on the
   password input.
 
 ## Auth gate
 
 The dispatcher's `'open-unlock'` case lazy-loads this module
-unconditionally (no cookie ⇒ `SpyglassSession.user` is null ⇒ the
+unconditionally (no cookie ⇒ `OrtbtoolsSession.user` is null ⇒ the
 modal redirects to `openAuthModal('login')` itself). `doUnlock()`
 relies on the live cookie for the `/api/auth/me` round-trip; if the
 cookie has expired between modal-open and submit, the API call fails
@@ -74,7 +74,7 @@ inside the modal.
 
 ## Dispatcher cases
 
-Two `data-action` cases are wired through spyglass.app.js's central
+Two `data-action` cases are wired through ortbtools.app.js's central
 dispatcher:
 
 - `open-unlock` — lazy-loads this module and calls

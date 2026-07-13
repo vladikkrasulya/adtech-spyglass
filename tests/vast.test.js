@@ -18,7 +18,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { validate } = require('@kyivtech/spyglass-core');
+const { validate } = require('@ortbtools/core');
 const { validateVast, isVastShape } = require('../packages/core/rules-vast');
 const { isVastShape: detectShape, detectVastVersion } = require('../packages/core/format-detect');
 

@@ -19,7 +19,7 @@
  *     (edited / stale / invalid / >2MB / unknown provenance) → NO jump.
  *   • Privacy: nothing here is logged or transmitted; pure local DOM.
  *
- * No bundler: plain IIFE attaching window.SpyglassSourceNav.
+ * No bundler: plain IIFE attaching window.OrtbtoolsSourceNav.
  * ========================================================================== */
 (function () {
   'use strict';
@@ -27,9 +27,9 @@
   const EAGER_MAX = 1024 * 1024; // ≤1MB → build the index eagerly at analyze time
   const HARD_MAX = 2 * 1024 * 1024; // >2MB → disabled (matches server body cap)
 
-  let SM = null; // window.SpyglassSourceMap (resolved lazily)
+  let SM = null; // window.OrtbtoolsSourceMap (resolved lazily)
   function sm() {
-    if (!SM) SM = (typeof window !== 'undefined' && window.SpyglassSourceMap) || null;
+    if (!SM) SM = (typeof window !== 'undefined' && window.OrtbtoolsSourceMap) || null;
     return SM;
   }
   // localized string (UK/EN/RU via the central i18n table); safe fallback if t() absent
@@ -542,7 +542,7 @@
     }
   }
 
-  window.SpyglassSourceNav = {
+  window.OrtbtoolsSourceNav = {
     init: init,
     onAnalyzed: onAnalyzed,
     navigate: navigate,

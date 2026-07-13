@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# cutover-spyglass-ro.sh — coordinated security cutover for the Grafana read-only
+# cutover-ortbtools-ro.sh — coordinated security cutover for the Grafana read-only
 # SQLite contract (v1.1.7). Runs as the HOST user (e.g. vk), NOT root; escalates
 # only via `sudo -n` for the provisioning + the stranger-read probe.
 #
@@ -15,7 +15,7 @@
 #     baseline; if confirmed → ABORTED (2), else → CRITICAL (9)
 #   • any baseline/rollback NOT confirmed → CRITICAL, exit 9
 #
-# Usage:  cutover-spyglass-ro.sh [--dry-run|--apply|--recover]
+# Usage:  cutover-ortbtools-ro.sh [--dry-run|--apply|--recover]
 # State:  $DATA_DIR/cutover-state.env — ALWAYS a full snapshot (0600, no secrets):
 #   STATUS TARGET HOST_PERMS APP_DEPLOY ACTIVE_BUILD_SHA PREV_BUILD_SHA DEPLOY_RC
 #   LAST_ERROR STARTED_AT UPDATED_AT
@@ -27,25 +27,25 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=scripts/deploy-lib.sh
 . "$REPO/scripts/deploy-lib.sh"
 
-DATA_DIR="${SPYGLASS_DEPLOY_DATA_DIR:-/srv/DATA/AppData/adtech-spyglass}"
+DATA_DIR="${ORTBTOOLS_DEPLOY_DATA_DIR:-/srv/DATA/AppData/ortbtools}"
 STATE="$DATA_DIR/cutover-state.env"
-BASE="${SPYGLASS_BASE_URL:-http://127.0.0.1:8090}"
-GRAFANA="${SPYGLASS_GRAFANA_CONTAINER:-grafana}"
-GRAFANA_DB="${SPYGLASS_GRAFANA_DB:-/var/lib/grafana/spyglass-data/spyglass.db}"
-SPY_CONTAINER="${SPYGLASS_CONTAINER:-adtech-spyglass}"
-DB_GID="${SPYGLASS_DB_GID:-2472}"
-DIR_MODE="${SPYGLASS_DIR_MODE:-2710}"
-APP_UID="${SPYGLASS_APP_UID:-1000}"
-APP_GID="${SPYGLASS_APP_GID:-1000}"
-EXPECT_PREV_SHA="${SPYGLASS_EXPECT_PREV_SHA:-7715045}" # v1.1.6, pre-cutover
-EXPECT_UMASK="${SPYGLASS_EXPECT_UMASK:-0027}"
-STRANGER_UID="${SPYGLASS_STRANGER_UID:-65533}"
+BASE="${ORTBTOOLS_BASE_URL:-http://127.0.0.1:8090}"
+GRAFANA="${ORTBTOOLS_GRAFANA_CONTAINER:-grafana}"
+GRAFANA_DB="${ORTBTOOLS_GRAFANA_DB:-/var/lib/grafana/ortbtools-data/ortbtools.db}"
+SPY_CONTAINER="${ORTBTOOLS_CONTAINER:-ortbtools}"
+DB_GID="${ORTBTOOLS_DB_GID:-2472}"
+DIR_MODE="${ORTBTOOLS_DIR_MODE:-2710}"
+APP_UID="${ORTBTOOLS_APP_UID:-1000}"
+APP_GID="${ORTBTOOLS_APP_GID:-1000}"
+EXPECT_PREV_SHA="${ORTBTOOLS_EXPECT_PREV_SHA:-7715045}" # v1.1.6, pre-cutover
+EXPECT_UMASK="${ORTBTOOLS_EXPECT_UMASK:-0027}"
+STRANGER_UID="${ORTBTOOLS_STRANGER_UID:-65533}"
 TARGET_VER="v$(node -p "require('$REPO/package.json').version" 2>/dev/null || echo 1.1.7)"
-DB_FILES="spyglass.db spyglass.db-wal spyglass.db-shm"
+DB_FILES="ortbtools.db ortbtools.db-wal ortbtools.db-shm"
 
-SUDO="${SPYGLASS_SUDO-sudo -n}"
-PROVISION="${SPYGLASS_PROVISION_CMD:-$REPO/scripts/provision-spyglass-ro.sh}"
-DEPLOY="${SPYGLASS_DEPLOY_CMD:-$REPO/scripts/deploy.sh}"
+SUDO="${ORTBTOOLS_SUDO-sudo -n}"
+PROVISION="${ORTBTOOLS_PROVISION_CMD:-$REPO/scripts/provision-ortbtools-ro.sh}"
+DEPLOY="${ORTBTOOLS_DEPLOY_CMD:-$REPO/scripts/deploy.sh}"
 MODE="${1:-}"
 
 # ── state (FULL snapshot every write — never drop a field) ───────────────────
@@ -100,7 +100,7 @@ is_baseline_state() {
 }
 pid1_umask_ok() { docker exec "$SPY_CONTAINER" cat /proc/1/status 2>/dev/null | grep -qE "Umask:[[:space:]]*${EXPECT_UMASK}"; }
 grafana_reads() { docker exec "$GRAFANA" sh -c "dd if='$GRAFANA_DB' bs=1 count=1 >/dev/null 2>&1"; }
-stranger_reads() { $SUDO setpriv --reuid "$STRANGER_UID" --regid "$STRANGER_UID" --groups "$STRANGER_UID" dd if="$DATA_DIR/spyglass.db" bs=1 count=1 >/dev/null 2>&1; }
+stranger_reads() { $SUDO setpriv --reuid "$STRANGER_UID" --regid "$STRANGER_UID" --groups "$STRANGER_UID" dd if="$DATA_DIR/ortbtools.db" bs=1 count=1 >/dev/null 2>&1; }
 
 # verify the FULL secure contract; echoes the first failed check ('' = all ok)
 verify_secure() {
@@ -176,7 +176,7 @@ cutover() {
     if [ "$rc" = 0 ] && [ -z "$err" ]; then
       ST_STATUS=SECURITY_CUTOVER ST_HOST_PERMS=APPLIED ST_APP_DEPLOY=ACTIVE ST_LAST_ERROR=""
       snapshot
-      echo "==> CUTOVER OK: ${TARGET_VER} (${active}) active; DB locked 0640 spyglass-ro; Grafana reads, others denied."
+      echo "==> CUTOVER OK: ${TARGET_VER} (${active}) active; DB locked 0640 ortbtools-ro; Grafana reads, others denied."
       return 0
     fi
     ST_STATUS=DEGRADED ST_APP_DEPLOY=ACTIVE

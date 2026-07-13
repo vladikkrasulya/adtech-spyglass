@@ -336,7 +336,7 @@ export default {
       inspectBtn.addEventListener(
         'click',
         () => {
-          window.SpyglassShell.navigateTo('/' + lang + '/r/' + hash);
+          window.OrtbtoolsShell.navigateTo('/' + lang + '/r/' + hash);
         },
         { signal: ctx.signal },
       );

@@ -19,7 +19,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { validate, listDialects } = require('@kyivtech/spyglass-core');
+const { validate, listDialects } = require('@ortbtools/core');
 
 // ── Registry ────────────────────────────────────────────────────────────
 

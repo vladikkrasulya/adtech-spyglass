@@ -1,4 +1,4 @@
-# Spyglass frontend modules
+# ortbtools frontend modules
 
 Each user-facing tool is its own folder under `public/modules/`. Add
 the folder, wire it in the shell (or the lazy stub in the dispatcher),

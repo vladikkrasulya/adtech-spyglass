@@ -9,7 +9,7 @@
  * `setSelectionRange`); astral characters count as their two UTF-16 units.
  *
  * Pure + isomorphic: this single canonical source runs unchanged in Node
- * (`module.exports`) and the browser (`window.SpyglassSourceMap`). It has NO
+ * (`module.exports`) and the browser (`window.OrtbtoolsSourceMap`). It has NO
  * dependencies and performs NO I/O, DOM, or network access. (Stage-1 CP2:
  * the browser overlay is not wired yet; this module is the shared core.)
  *
@@ -21,7 +21,7 @@
 (function (root, factory) {
   'use strict';
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.SpyglassSourceMap = factory();
+  else root.OrtbtoolsSourceMap = factory();
 })(globalThis, function () {
   'use strict';
 

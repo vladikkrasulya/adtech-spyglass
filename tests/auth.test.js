@@ -15,8 +15,8 @@ const { join } = require('node:path');
 
 // Auth module needs Users; we use the real one over a temp DB so we exercise
 // the actual query path.
-const TMP = mkdtempSync(join(tmpdir(), 'spyglass-auth-test-'));
-process.env.SPYGLASS_DATA_DIR = TMP;
+const TMP = mkdtempSync(join(tmpdir(), 'ortbtools-auth-test-'));
+process.env.ORTBTOOLS_DATA_DIR = TMP;
 
 const { Users } = require('../db');
 const { createAuth } = require('../auth');
@@ -58,7 +58,7 @@ function fakeRes() {
 }
 
 function cookieFromSetCookie(setCookieHeader) {
-  // Extract the spy_session=<token> piece for use as inbound Cookie header
+  // Extract the ot_session=<token> piece for use as inbound Cookie header
   if (!setCookieHeader) return '';
   const first = String(setCookieHeader).split(';')[0];
   return first;
@@ -128,8 +128,10 @@ test('createSession + getCurrentUser round-trip', async () => {
   );
   const res = fakeRes();
   auth.createSession(fakeReq(), res, user);
-  const setCookie = res.getHeader('Set-Cookie');
-  assert.match(setCookie, /spy_session=/);
+  // Set-Cookie is an array since the rename shim also expires the legacy
+  // cookie name in the same response. legacy-spyglass-ok
+  const setCookie = [].concat(res.getHeader('Set-Cookie')).join('\n');
+  assert.match(setCookie, /ot_session=/);
   assert.match(setCookie, /HttpOnly/);
   assert.match(setCookie, /SameSite=Lax/);
   // Round-trip: include the cookie in a fresh request, getCurrentUser should resolve

@@ -5,15 +5,15 @@
    The library "save / update" modal: title + partner picker + notes,
    plus the live partner-inference banner that asks the LLM to identify
    the SSP / vendor based on the current bid_req / bid_res. Encrypts
-   blobs locally via the SpyglassSession facade BEFORE POSTing — the
+   blobs locally via the OrtbtoolsSession facade BEFORE POSTing — the
    server never sees plaintext.
 
    Loaded ONLY when the user clicks the "💾 зберегти" button — see
-   the lazy stub in spyglass.app.js dispatcher (case 'save-sample').
+   the lazy stub in ortbtools.app.js dispatcher (case 'save-sample').
    On first click: ~6KB across this file + i18n.js. On subsequent
    clicks: cached by the module loader, zero extra fetch.
 
-   Exposed window APIs (consumed by spyglass.app.js dispatcher):
+   Exposed window APIs (consumed by ortbtools.app.js dispatcher):
      - window.openSaveModal()        — entry point, called by
                                         case 'save-sample'.
      - window.confirmSave(opts)      — called by case 'confirm-save'
@@ -28,11 +28,11 @@
      - $, escapeHtml, toast, t       — DOM + i18n helpers
      - window.closeModal             — modal lifecycle
      - window.openAuthModal          — auth-gate fallback for guests
-     - window.SpyglassSession        — round-5 facade (commit 42130f6).
+     - window.OrtbtoolsSession        — round-5 facade (commit 42130f6).
                                         Provides ALL state + crypto
                                         access (no closure imports).
 
-   SpyglassSession surface used (~12 methods):
+   OrtbtoolsSession surface used (~12 methods):
      user, currentSampleId / setCurrentSampleId,
      currentSampleMeta / setCurrentSampleMeta,
      setDirty, partnerCache,
@@ -43,7 +43,7 @@
    IMPORTANT: never asks for raw DEK bytes — encryptBlob() runs the
    AES-GCM op inside the facade with the closure-private key.
 
-   Auth gate: openSaveModal() checks SpyglassSession.user up front
+   Auth gate: openSaveModal() checks OrtbtoolsSession.user up front
    and bounces guests through openAuthModal('login') — guests never
    see the modal. confirmSave() additionally verifies hasSession()
    before encrypting (defence in depth: if the DEK was cleared mid-
@@ -53,7 +53,7 @@
 import { $, escapeHtml, toast, t } from '/core/utils.js';
 
 export function openSaveModal() {
-  const S = window.SpyglassSession;
+  const S = window.OrtbtoolsSession;
   if (!S.user) {
     // Phase 9b auth-gate: surface an explanatory toast BEFORE opening
     // the auth modal so guests understand WHY they're being redirected
@@ -61,7 +61,7 @@ export function openSaveModal() {
     // Toast is non-blocking; auth modal still takes focus immediately.
     toast(t('toast.signin_to_save'), 'info');
     // Auth is itself a lazy module since 2026-05-10 — prefer the
-    // lazy entrypoint exposed by spyglass.app.js so guests don't
+    // lazy entrypoint exposed by ortbtools.app.js so guests don't
     // hit a no-op when window.openAuthModal isn't wired yet. Falls
     // back to the direct call if (somehow) lazyOpenAuth is missing.
     if (typeof window.lazyOpenAuth === 'function') {
@@ -170,7 +170,7 @@ export function openSaveModal() {
 // new one. Failures (no signal, Ollama down) silently leave the banner
 // hidden — never disrupt the save flow.
 async function suggestPartnerForSave() {
-  const S = window.SpyglassSession;
+  const S = window.OrtbtoolsSession;
   const banner = $('mPartnerHint');
   if (!banner) return;
   const bid_req = $('bidReq').value || '';
@@ -226,7 +226,7 @@ export function pickPartner(id) {
 // suggestion. POSTs the new partner, refreshes the cache, re-renders
 // the <select> with the new partner pre-selected.
 export async function createPartnerFromHint(name) {
-  const S = window.SpyglassSession;
+  const S = window.OrtbtoolsSession;
   try {
     await S.api('POST', 'api/partners', { name });
     // Refresh the shared partner cache so other surfaces (library
@@ -246,7 +246,7 @@ export async function createPartnerFromHint(name) {
 }
 
 export async function confirmSave(opts) {
-  const S = window.SpyglassSession;
+  const S = window.OrtbtoolsSession;
   if (!S.hasSession()) {
     toast(t('toast.crypto_session_lost'), 'error');
     return;
@@ -329,7 +329,7 @@ export async function confirmSave(opts) {
   }
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/save-sample/index.js'); window.openSaveModal();
 // — first call: fetches + evaluates + these assignments run.
 // Subsequent calls: cached by the module loader, the assignments are no-ops.

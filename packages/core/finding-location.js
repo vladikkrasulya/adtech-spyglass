@@ -19,14 +19,14 @@
  * default. Crosscheck findings declare primary/related explicitly via the
  * per-id descriptor table below.
  *
- * Pure + isomorphic (Node `module.exports` + browser `window.SpyglassFindingLocation`),
+ * Pure + isomorphic (Node `module.exports` + browser `window.OrtbtoolsFindingLocation`),
  * dependency-free. Privacy: derives only from `id`/`path`/`params` + the
  * request/response STRUCTURE — never copies payload values into the contract.
  */
 (function (root, factory) {
   'use strict';
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.SpyglassFindingLocation = factory();
+  else root.OrtbtoolsFindingLocation = factory();
 })(globalThis, function () {
   'use strict';
 

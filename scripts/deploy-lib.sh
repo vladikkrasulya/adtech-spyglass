@@ -152,7 +152,7 @@ check_perms() {
       echo "UNSAFE: ${data_dir} is world-writable (mode $(_stat_mode "$data_dir"))"
       bad=1
     }
-    for db in "$data_dir"/spyglass.db "$data_dir"/spyglass.db-wal "$data_dir"/spyglass.db-shm; do
+    for db in "$data_dir"/ortbtools.db "$data_dir"/ortbtools.db-wal "$data_dir"/ortbtools.db-shm; do
       [ -e "$db" ] && _world_writable "$db" && {
         echo "UNSAFE: $(basename "$db") is world-writable (mode $(_stat_mode "$db"))"
         bad=1
@@ -170,7 +170,7 @@ check_perms() {
 #     • DATA_DIR : owner EXPECT_UID, group = GID, mode = DIR_MODE (default 2710 —
 #                  setgid + owner rwx + group --x; group can traverse to a known
 #                  path but NOT list the dir). 2750 only if proven necessary.
-#     • spyglass.db/-wal/-shm : owner EXPECT_UID, group = GID, mode 0640 (the app's
+#     • ortbtools.db/-wal/-shm : owner EXPECT_UID, group = GID, mode 0640 (the app's
 #                  umask 027 + the setgid dir keep recreated WAL/SHM at this).
 #   The DB files may not yet exist on a first provision — those are skipped; the
 #   DIR contract is always required once GID-mode security is in effect.
@@ -182,7 +182,7 @@ check_db_perms() {
   [ "$u" = "$uid" ] || { echo "UNSAFE: ${dir} owner uid ${u} (want ${uid})"; bad=1; }
   [ "$g" = "$gid" ] || { echo "UNSAFE: ${dir} group gid ${g} (want ${gid})"; bad=1; }
   [ "$m" = "$dir_mode" ] || { echo "UNSAFE: ${dir} mode ${m} (want ${dir_mode} setgid)"; bad=1; }
-  for f in spyglass.db spyglass.db-wal spyglass.db-shm; do
+  for f in ortbtools.db ortbtools.db-wal ortbtools.db-shm; do
     [ -e "$dir/$f" ] || continue
     u="$(_stat_uid "$dir/$f")"
     g="$(_stat_gid "$dir/$f")"

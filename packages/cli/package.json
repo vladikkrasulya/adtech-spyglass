@@ -1,6 +1,6 @@
 {
   "name": "@ortbtools/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Validate OpenRTB BidRequest/BidResponse payloads from the command line — the same engine that powers ortbtools.com. Version/format autodetect, IAB-spec findings, request↔response crosscheck.",
   "license": "MIT",
   "bin": {
@@ -16,7 +16,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@kyivtech/spyglass-core": "^0.30.3"
+    "@ortbtools/core": "^0.31.0"
   },
   "keywords": [
     "openrtb",
@@ -32,12 +32,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vladikkrasulya/adtech-spyglass.git",
+    "url": "git+https://github.com/vladikkrasulya/ortbtools.git",
     "directory": "packages/cli"
   },
   "homepage": "https://ortbtools.com",
   "bugs": {
-    "url": "https://github.com/vladikkrasulya/adtech-spyglass/issues"
+    "url": "https://github.com/vladikkrasulya/ortbtools/issues"
   },
   "publishConfig": {
     "access": "public"

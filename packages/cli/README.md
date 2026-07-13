@@ -65,7 +65,7 @@ ortbtools detect payload.json
 - **Crosscheck**: impid resolution, floor clearance, currency, deal
   consistency between a request and its response
 
-The engine is [`@kyivtech/spyglass-core`](https://www.npmjs.com/package/@kyivtech/spyglass-core) —
+The engine is [`@ortbtools/core`](https://www.npmjs.com/package/@ortbtools/core) —
 the validator behind the [ortbtools.com](https://ortbtools.com) web inspector,
 where you also get creative preview, behavior analysis and shareable reports.
 

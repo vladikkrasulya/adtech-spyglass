@@ -10,7 +10,7 @@
      - Each card: title, category badge, description, expected
        findings strip, "Run & Inspect" button, "Details" toggle
      - "Run & Inspect" navigates to /<lang>/inspector?sample=SLUG
-       via SpyglassShell.navigateTo — Stage 1 inspector handles
+       via OrtbtoolsShell.navigateTo — Stage 1 inspector handles
        ?sample= pre-fill automatically.
 
    Patterns copied from:
@@ -267,14 +267,14 @@ export default {
           return;
         }
 
-        // Run & Inspect — SPA navigation via SpyglassShell
+        // Run & Inspect — SPA navigation via OrtbtoolsShell
         const runBtn = e.target.closest('[data-action="run-inspect"]');
         if (runBtn) {
           e.preventDefault();
           const href = runBtn.getAttribute('href');
           if (!href) return;
-          if (window.SpyglassShell && typeof window.SpyglassShell.navigateTo === 'function') {
-            window.SpyglassShell.navigateTo(href);
+          if (window.OrtbtoolsShell && typeof window.OrtbtoolsShell.navigateTo === 'function') {
+            window.OrtbtoolsShell.navigateTo(href);
           } else {
             window.location.href = href;
           }

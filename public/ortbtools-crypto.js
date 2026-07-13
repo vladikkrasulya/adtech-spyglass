@@ -10,7 +10,7 @@
    plaintext DEK, never sees the password beyond bcrypt-verify, and
    never sees decrypted bid_req/bid_res payloads.
 
-   Exposed on window.SpyglassCrypto. Pure functions, browser-only.
+   Exposed on window.OrtbtoolsCrypto. Pure functions, browser-only.
    ============================================================ */
 (function () {
   'use strict';
@@ -93,7 +93,7 @@
   // opts.extractable=true is required if the caller wants to later
   // exportKey('raw') the key (e.g. to mirror it into sessionStorage so
   // F5 doesn't force a re-unlock — see /core docs and the kt-dek-v1
-  // sessionStorage contract in spyglass.app.js). Default stays false,
+  // sessionStorage contract in ortbtools.app.js). Default stays false,
   // matching the original threat model where XSS can OPERATE the key
   // but cannot dump its raw bytes.
   async function importDEK(dekBytes, opts) {
@@ -193,7 +193,7 @@
   }
 
   // Public surface
-  window.SpyglassCrypto = {
+  window.OrtbtoolsCrypto = {
     deriveKEK,
     importDEK,
     wrapBytes,

@@ -3,19 +3,19 @@
 The library "save / update" modal: title + partner picker + notes,
 plus the live partner-inference banner that asks the LLM to identify
 the SSP / vendor based on the current bid_req / bid_res. Encrypts
-blobs locally via the SpyglassSession facade BEFORE POSTing — the
+blobs locally via the OrtbtoolsSession facade BEFORE POSTing — the
 server never sees plaintext.
 
 ## Loading
 
 **Lazy.** This module is fetched only when the user clicks the
-"💾 зберегти" button (case `'save-sample'` in spyglass.app.js
+"💾 зберегти" button (case `'save-sample'` in ortbtools.app.js
 dispatcher). On first click: ~6KB across `index.js` + `i18n.js`. On
 subsequent clicks: cached by the browser's ES module loader, zero
 extra fetch.
 
 The dispatcher's `'confirm-save'`, `'hint-pick-partner'`, and
-`'hint-create-partner'` cases stay in spyglass.app.js — they only
+`'hint-create-partner'` cases stay in ortbtools.app.js — they only
 fire AFTER the modal is open, by which point this module is already
 loaded and the window APIs below are wired up.
 
@@ -48,7 +48,7 @@ loaded and the window APIs below are wired up.
 
 ## Window APIs (consumes)
 
-- `window.SpyglassSession` — round-5 facade (added 2026-05-XX in
+- `window.OrtbtoolsSession` — round-5 facade (added 2026-05-XX in
   commit 42130f6). Provides ALL state + crypto access — this module
   never touches closure-private symbols (`_sessionDEK`, `_currentUser`,
   `_partnerCache`, `_currentSampleId`, `_currentSampleMeta`,
@@ -60,15 +60,15 @@ loaded and the window APIs below are wired up.
     `partnerOptionsHtml()`, `wireEnterSubmit()`
   - `hasSession()`, `encryptBlob()` — crypto ops; raw DEK bytes
     NEVER cross the facade.
-- `window.closeModal` — modal lifecycle (provided by spyglass.app.js).
+- `window.closeModal` — modal lifecycle (provided by ortbtools.app.js).
 - `window.openAuthModal` — auth-gate fallback for guests.
 
 ## Auth gate
 
-`openSaveModal()` checks `SpyglassSession.user` up front and bounces
+`openSaveModal()` checks `OrtbtoolsSession.user` up front and bounces
 guests through `openAuthModal('login')` with an explanatory toast —
 guests never see the modal. `confirmSave()` additionally verifies
-`SpyglassSession.hasSession()` before encrypting (defence in depth:
+`OrtbtoolsSession.hasSession()` before encrypting (defence in depth:
 if the DEK was cleared mid-flight, e.g. by a sign-out from another
 tab, fail loud rather than POST plaintext).
 
@@ -90,7 +90,7 @@ reads `#bidReq` / `#bidRes` / `#stEntity` (contracts owned by
 
 ## Dispatcher cases
 
-Four `data-action` cases are wired through spyglass.app.js's central
+Four `data-action` cases are wired through ortbtools.app.js's central
 dispatcher:
 
 - `save-sample` — auth-gate is INSIDE openSaveModal() (guests see

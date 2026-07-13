@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Spyglass Intelligence — LLM bridge.
+ * ortbtools Intelligence — LLM bridge.
  *
  * Phase 7c. Server-side helper that calls a locally-hosted Ollama
  * instance (`http://ollama:11434/api/generate`) for two narrow

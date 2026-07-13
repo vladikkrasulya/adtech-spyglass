@@ -85,7 +85,7 @@ export function register(mod) {
 
 // Lazy registration: record the route → id mapping and an import() loader, but
 // DON'T fetch the module yet. The module code (and its static imports — e.g.
-// the inspector's ~65 KB gz spyglass.app.js) loads only when the section is
+// the inspector's ~65 KB gz ortbtools.app.js) loads only when the section is
 // first activated, keeping the boot payload to chrome + the active section.
 export function registerLazy(id, route, load) {
   if (!id || typeof load !== 'function') {

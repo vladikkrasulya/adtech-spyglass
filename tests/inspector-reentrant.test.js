@@ -241,9 +241,9 @@ test('contract contrast: a listener NOT bound to ctx.signal leaks past deactivat
 
 // ── STATIC: the specific mountInspector / shell-boot fixes are present ───────
 
-const APP = fs.readFileSync(path.join(ROOT, 'public/spyglass.app.js'), 'utf8');
+const APP = fs.readFileSync(path.join(ROOT, 'public/ortbtools.app.js'), 'utf8');
 const SHELL = fs.readFileSync(path.join(ROOT, 'public/shell-boot.js'), 'utf8');
-// ROADMAP #18 moved api()/ensureBooted() out of spyglass.app.js into the
+// ROADMAP #18 moved api()/ensureBooted() out of ortbtools.app.js into the
 // shell-level session service — these static checks follow the code there.
 const SESSION = fs.readFileSync(path.join(ROOT, 'public/core/session.js'), 'utf8');
 
@@ -362,7 +362,7 @@ test('abort during the initial boot sequence halts subsequent steps (bootAuth→
 test('static: secondary read/mutation/boot paths guard on ctx.signal.aborted', () => {
   // api() (ROADMAP #18: moved to /core/session.js) takes an optional signal —
   // inspector reads pass ctx.signal, mutations + the cross-section
-  // SpyglassSession.api facade omit it.
+  // OrtbtoolsSession.api facade omit it.
   assert.match(
     SESSION,
     /async function api\(method, url, body, opts = \{\}\)/,

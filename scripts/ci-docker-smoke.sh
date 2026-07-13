@@ -12,9 +12,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-TAG="${1:-spyglass-ci-smoke:local}"
-CONTAINER="spyglass-ci-smoke-$$"
-VOLUME="spyglass-ci-data-$$"
+TAG="${1:-ortbtools-ci-smoke:local}"
+CONTAINER="ortbtools-ci-smoke-$$"
+VOLUME="ortbtools-ci-data-$$"
 PORT="${CI_DOCKER_SMOKE_PORT:-13000}"
 APP_VERSION="$(node -p "require('./package.json').version")"
 BUILD_SHA="${GITHUB_SHA:-ci}"

@@ -52,11 +52,11 @@ const HTML_FALLBACKS = [
 for (const f of HTML_FALLBACKS) {
   test(`${f} static version fallback === ${EXPECTED}`, () => {
     const html = read(f);
-    // Each file carries exactly one runtime-painted span: `data-spyglass-version>vX.Y.Z`.
-    const matches = [...html.matchAll(/data-spyglass-version>\s*(v\d+\.\d+\.\d+)/g)].map(
+    // Each file carries exactly one runtime-painted span: `data-ortbtools-version>vX.Y.Z`.
+    const matches = [...html.matchAll(/data-ortbtools-version>\s*(v\d+\.\d+\.\d+)/g)].map(
       (m) => m[1],
     );
-    assert.ok(matches.length >= 1, `${f} must contain a data-spyglass-version fallback`);
+    assert.ok(matches.length >= 1, `${f} must contain a data-ortbtools-version fallback`);
     for (const v of matches) {
       assert.equal(
         v,

@@ -1,6 +1,6 @@
 name: Publish npm packages
 
-# Publishes @kyivtech/spyglass-core then @ortbtools/cli to the public npm registry.
+# Publishes @ortbtools/core then @ortbtools/cli to the public npm registry.
 # Prerequisites: GitHub secret NPM_TOKEN (Automation token with publish access to
 # @kyivtech and @ortbtools scopes). See docs/NPM_PUBLISH.md.
 
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_core:
-        description: Publish @kyivtech/spyglass-core
+        description: Publish @ortbtools/core
         type: boolean
         default: true
       publish_cli:
@@ -42,7 +42,7 @@ jobs:
       - name: npm pack smoke
         run: bash scripts/npm-pack-smoke.sh
 
-      - name: Publish @kyivtech/spyglass-core
+      - name: Publish @ortbtools/core
         if: inputs.publish_core
         working-directory: packages/core
         env:

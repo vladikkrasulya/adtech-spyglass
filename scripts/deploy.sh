@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Immutable production deploy for Spyglass.
+# Immutable production deploy for ortbtools.
 #
 # Builds a self-contained image from a CLEAN main == origin/main checkout, seeds
 # the persistent blog content, records intent (STATUS=DEPLOYING) BEFORE switching
@@ -13,12 +13,12 @@
 # Run on the host: ./scripts/deploy.sh
 #
 # Env overrides (for tests / non-default hosts):
-#   SPYGLASS_DEPLOY_DATA_DIR  default /srv/DATA/AppData/adtech-spyglass
-#   SPYGLASS_DEPLOY_ENV_FILE  default <repo>/.env
+#   ORTBTOOLS_DEPLOY_DATA_DIR  default /srv/DATA/AppData/ortbtools
+#   ORTBTOOLS_DEPLOY_ENV_FILE  default <repo>/.env
 #   SMOKE_CMD                 default <repo>/scripts/smoke.sh
-#   SPYGLASS_SEED_UID         default 1000 (expected owner uid of the content dir)
-#   SPYGLASS_BASE_URL         default http://127.0.0.1:8090
-#   SPYGLASS_CONTAINER        default adtech-spyglass
+#   ORTBTOOLS_SEED_UID         default 1000 (expected owner uid of the content dir)
+#   ORTBTOOLS_BASE_URL         default http://127.0.0.1:8090
+#   ORTBTOOLS_CONTAINER        default ortbtools
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -26,12 +26,12 @@ REPO="$(pwd)"
 # shellcheck source=scripts/deploy-lib.sh
 . "$REPO/scripts/deploy-lib.sh"
 
-DATA_DIR="${SPYGLASS_DEPLOY_DATA_DIR:-/srv/DATA/AppData/adtech-spyglass}"
-ENV_FILE="${SPYGLASS_DEPLOY_ENV_FILE:-$REPO/.env}"
+DATA_DIR="${ORTBTOOLS_DEPLOY_DATA_DIR:-/srv/DATA/AppData/ortbtools}"
+ENV_FILE="${ORTBTOOLS_DEPLOY_ENV_FILE:-$REPO/.env}"
 SMOKE_CMD="${SMOKE_CMD:-$REPO/scripts/smoke.sh}"
-SEED_UID="${SPYGLASS_SEED_UID:-1000}"
-BASE="${SPYGLASS_BASE_URL:-http://127.0.0.1:8090}"
-CONTAINER="${SPYGLASS_CONTAINER:-adtech-spyglass}"
+SEED_UID="${ORTBTOOLS_SEED_UID:-1000}"
+BASE="${ORTBTOOLS_BASE_URL:-http://127.0.0.1:8090}"
+CONTAINER="${ORTBTOOLS_CONTAINER:-ortbtools}"
 STATE_FILE="$DATA_DIR/deploy-state.env" # OUT of the git working tree
 CONTENT_DST="$DATA_DIR/content-posts"
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
@@ -58,9 +58,9 @@ PRIOR_STATUS="$(state_get "$STATE_FILE" STATUS)"
 if is_inflight_status "$PRIOR_STATUS"; then
   echo "ABORT: deploy-state.env STATUS=${PRIOR_STATUS} — a prior deploy/rollback was left mid-transition."
   echo "       Do NOT retry blindly. Investigate what is actually running:"
-  echo "         docker ps --filter name=${CONTAINER:-adtech-spyglass}"
+  echo "         docker ps --filter name=${CONTAINER:-ortbtools}"
   echo "         cat ${STATE_FILE}"
-  echo "         curl -fsS ${SPYGLASS_BASE_URL:-http://127.0.0.1:8090}/api/health"
+  echo "         curl -fsS ${ORTBTOOLS_BASE_URL:-http://127.0.0.1:8090}/api/health"
   echo "       Then restore a known-good image explicitly: ./scripts/rollback.sh"
   exit 7
 fi
@@ -85,22 +85,22 @@ if ! check_perms "$ENV_FILE" "$STATE_FILE" "$DATA_DIR"; then
 fi
 
 # 1c. SQLite group/mode contract (v1.1.7+) — ALWAYS enforced, no bypass. The live
-#     DB must be owner 1000, group spyglass-ro (GID 2472), 0640 (no "other"); the
+#     DB must be owner 1000, group ortbtools-ro (GID 2472), 0640 (no "other"); the
 #     group must exist with the canonical name. Defaults are the production
 #     contract; the four params exist ONLY so disposable tests can point at a
 #     test-owned dir/group — they cannot DISABLE the check. Abort BEFORE
 #     build/recreate so the umask 027 image never ships onto an un-provisioned host
 #     (which would break Grafana's read).
-SPYGLASS_APP_UID="${SPYGLASS_APP_UID:-1000}"
-SPYGLASS_DB_GID="${SPYGLASS_DB_GID:-2472}"
-SPYGLASS_DB_GROUP="${SPYGLASS_DB_GROUP:-spyglass-ro}"
-SPYGLASS_DIR_MODE="${SPYGLASS_DIR_MODE:-2710}"
-if ! check_group "$SPYGLASS_DB_GID" "$SPYGLASS_DB_GROUP"; then
-  echo "ABORT: group ${SPYGLASS_DB_GROUP} (GID ${SPYGLASS_DB_GID}) missing or mismatched — run scripts/provision-spyglass-ro.sh (root) first"
+ORTBTOOLS_APP_UID="${ORTBTOOLS_APP_UID:-1000}"
+ORTBTOOLS_DB_GID="${ORTBTOOLS_DB_GID:-2472}"
+ORTBTOOLS_DB_GROUP="${ORTBTOOLS_DB_GROUP:-ortbtools-ro}"
+ORTBTOOLS_DIR_MODE="${ORTBTOOLS_DIR_MODE:-2710}"
+if ! check_group "$ORTBTOOLS_DB_GID" "$ORTBTOOLS_DB_GROUP"; then
+  echo "ABORT: group ${ORTBTOOLS_DB_GROUP} (GID ${ORTBTOOLS_DB_GID}) missing or mismatched — run scripts/provision-ortbtools-ro.sh (root) first"
   exit 6
 fi
-if ! check_db_perms "$DATA_DIR" "$SPYGLASS_APP_UID" "$SPYGLASS_DB_GID" "$SPYGLASS_DIR_MODE"; then
-  echo "ABORT: SQLite group/mode contract not provisioned — run scripts/provision-spyglass-ro.sh (root) first (see UNSAFE: lines)"
+if ! check_db_perms "$DATA_DIR" "$ORTBTOOLS_APP_UID" "$ORTBTOOLS_DB_GID" "$ORTBTOOLS_DIR_MODE"; then
+  echo "ABORT: SQLite group/mode contract not provisioned — run scripts/provision-ortbtools-ro.sh (root) first (see UNSAFE: lines)"
   exit 6
 fi
 
@@ -129,7 +129,11 @@ echo "    seed ok (en/uk/ru welcome.md present, owner uid ${SEED_UID})"
 #    DIFFERENT commit's rollback target. A SHA-keyed name is unique per distinct
 #    build: retagging the SAME commit again is a harmless no-op, and retagging a
 #    DIFFERENT commit never clobbers an existing distinct rollback pointer.
-PREV_TAG="$(grep -E '^SPYGLASS_TAG=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || true)"
+PREV_TAG="$(grep -E '^ORTBTOOLS_TAG=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || true)"
+# legacy-spyglass-ok: the first post-rename deploy reads the tag written by the old key
+if [ -z "$PREV_TAG" ]; then
+  PREV_TAG="$(grep -E '^SPYGLASS_TAG=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || true)" # legacy-spyglass-ok
+fi
 PREV_IMG="$(docker inspect "$CONTAINER" --format '{{.Image}}' 2>/dev/null || echo '')"
 PREV_SHA=""
 ROLLBACK_TAG=""
@@ -137,19 +141,19 @@ if [ -n "$PREV_IMG" ]; then
   PREV_SHA="$(image_build_sha "$PREV_IMG" || true)"
   [ -n "$PREV_SHA" ] || { echo "ABORT: previous image carries no verifiable BUILD_SHA — refusing to deploy without a checkable rollback target"; exit 2; }
   ROLLBACK_TAG="rollback-pre-${PREV_SHA}"
-  docker tag "$PREV_IMG" "adtech-spyglass:${ROLLBACK_TAG}"
-  if ! image_contains_privacy_floor "adtech-spyglass:${ROLLBACK_TAG}" "$FLOOR"; then
+  docker tag "$PREV_IMG" "ortbtools:${ROLLBACK_TAG}"
+  if ! image_contains_privacy_floor "ortbtools:${ROLLBACK_TAG}" "$FLOOR"; then
     echo "ABORT: previous image does not contain privacy floor ${FLOOR} — refusing to deploy"
     exit 2
   fi
-  echo "    rollback target adtech-spyglass:${ROLLBACK_TAG} (BUILD_SHA=${PREV_SHA})"
+  echo "    rollback target ortbtools:${ROLLBACK_TAG} (BUILD_SHA=${PREV_SHA})"
 fi
 
 # 4. Build the immutable image (provenance via build-args), tag short-sha + version.
-BUILD_SHA="$SHA" GIT_SHA="$GIT_SHA" APP_VERSION="$APP_VERSION" SPYGLASS_TAG="$SHA" docker compose build
-docker tag "adtech-spyglass:${SHA}" "adtech-spyglass:${VER}"
+BUILD_SHA="$SHA" GIT_SHA="$GIT_SHA" APP_VERSION="$APP_VERSION" ORTBTOOLS_TAG="$SHA" docker compose build
+docker tag "ortbtools:${SHA}" "ortbtools:${VER}"
 
-if ! image_contains_privacy_floor "adtech-spyglass:${SHA}" "$FLOOR"; then
+if ! image_contains_privacy_floor "ortbtools:${SHA}" "$FLOOR"; then
   echo "ABORT: candidate image does not contain privacy floor ${FLOOR} — refusing to deploy"
   exit 2
 fi
@@ -179,7 +183,7 @@ EOF
 #    `up` is GUARDED so a non-zero exit drops us into the rollback path instead
 #    of killing the script.
 deploy_failed=0
-if SPYGLASS_TAG="$SHA" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build; then
+if ORTBTOOLS_TAG="$SHA" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build --remove-orphans; then
   if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT"; then
     # CANDIDATE_READY: healthy, but NOT yet smoke-verified or committed. Same
     # recovery-on-boot as CANDIDATE_STARTING — restart policy is still 'no'.
@@ -209,7 +213,7 @@ if [ "$deploy_failed" = 0 ]; then
   # restart-manager may auto-heal THIS verified image after a future crash).
   # Recovery-on-boot from ACTIVE: safe and automatic — this is the only phase
   # where that is true.
-  set_env SPYGLASS_TAG "$SHA" "$ENV_FILE"
+  set_env ORTBTOOLS_TAG "$SHA" "$ENV_FILE"
   arm_restart_policy "$CONTAINER" always
   write_state "$STATE_FILE" <<EOF
 STATUS=ACTIVE
@@ -235,7 +239,7 @@ fi
 #    mid-candidate-deploy, never silently promoting an unverified rollback image.
 echo "==> DEPLOY FAILED — auto-rolling back to ${ROLLBACK_TAG} (expect BUILD_SHA=${PREV_SHA:-unknown})"
 rollback_ok=0
-if ! image_contains_privacy_floor "adtech-spyglass:${ROLLBACK_TAG}" "$FLOOR"; then
+if ! image_contains_privacy_floor "ortbtools:${ROLLBACK_TAG}" "$FLOOR"; then
   echo "==> CRITICAL: rollback target tampered/unsafe (missing privacy floor) — aborting rollback"
 else
   write_state "$STATE_FILE" <<EOF
@@ -248,7 +252,7 @@ LAST_FAILED_TAG=${SHA}
 PRIVACY_FLOOR_BUILD_SHA=${FLOOR}
 STARTED_AT=$(date -Is)
 EOF
-  if [ -n "$PREV_SHA" ] && SPYGLASS_TAG="$ROLLBACK_TAG" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build; then
+  if [ -n "$PREV_SHA" ] && ORTBTOOLS_TAG="$ROLLBACK_TAG" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build --remove-orphans; then
     if wait_ready "$CONTAINER" "$BASE" "$READY_TIMEOUT" && "$SMOKE_CMD" "$BASE" "$PREV_SHA" "$CONTAINER"; then
       rollback_ok=1
     fi
@@ -258,7 +262,7 @@ EOF
 fi
 
 if [ "$rollback_ok" = 1 ]; then
-  set_env SPYGLASS_TAG "$ROLLBACK_TAG" "$ENV_FILE"
+  set_env ORTBTOOLS_TAG "$ROLLBACK_TAG" "$ENV_FILE"
   arm_restart_policy "$CONTAINER" always
   write_state "$STATE_FILE" <<EOF
 STATUS=ROLLED_BACK

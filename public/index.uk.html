@@ -69,7 +69,7 @@
         "inLanguage": ["uk", "en", "ru"],
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-        "codeRepository": "https://github.com/vladikkrasulya/adtech-spyglass",
+        "codeRepository": "https://github.com/vladikkrasulya/ortbtools",
         "license": "https://opensource.org/licenses/MIT",
         "creator": {
           "@type": "Organization",
@@ -186,7 +186,7 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="/spyglass-shell.css" />
+    <link rel="stylesheet" href="/ortbtools-shell.css" />
   </head>
   <body>
     <!-- Stage 0 multi-section shell (ROADMAP.md). kt-shell hosts the
@@ -230,7 +230,7 @@
     <div id="modalRoot"></div>
     <div class="toast-container" id="toastContainer"></div>
     <script src="/version.js?v=1"></script>
-    <script src="/spyglass-crypto.js?v=1"></script>
+    <script src="/ortbtools-crypto.js?v=1"></script>
     <script src="/i18n.js?v=30"></script>
     <script src="/lang-switch.js?v=2"></script>
     <!-- Stage-1 finding→source navigation: canonical core (sha256 parity-guarded
@@ -252,8 +252,8 @@
     <script src="/modules/behavior/behavior-tab.js" defer></script>
     <!-- Phase 7a — ortbtools Intelligence (Discovery Mode). Loads in order:
          storage → banner → observer → entry. All four expose IIFE-scoped
-         globals (SpyglassIntelStorage / SpyglassIntelBanner /
-         SpyglassIntelObserver / SpyglassIntel) and are no-ops when
+         globals (OrtbtoolsIntelStorage / OrtbtoolsIntelBanner /
+         OrtbtoolsIntelObserver / OrtbtoolsIntel) and are no-ops when
          IndexedDB is unavailable (private mode etc.). -->
     <script src="/modules/intel/storage.js?v=3" defer></script>
     <script src="/modules/intel/banner.js?v=3" defer></script>

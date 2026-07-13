@@ -1,9 +1,9 @@
 // SKIP NOTICE (2026-05-23): lib/event-log.js migrated from SQLite to ClickHouse
-// on 2026-05-22 (project_spyglass_event_log_ch.md). Ten tests that relied on
+// on 2026-05-22 (project_ortbtools_event_log_ch.md). Ten tests that relied on
 // direct db.prepare()/SQLite access are marked test.skip until a CH-backed
 // integration harness exists. The passing test ('empty msg is dropped') is
 // implementation-agnostic (returns before any DB write). To rewrite: mock
-// fetch() for analytics.spyglass_events or spin up a CH test container.
+// fetch() for analytics.ortbtools_events or spin up a CH test container.
 
 'use strict';
 
@@ -24,8 +24,8 @@ const { join } = require('node:path');
 
 // Steer db.js to a temp dir before requiring it. db.js runs init() at
 // require-time and would otherwise try to mkdir('/data') on the test host.
-const TMP = mkdtempSync(join(tmpdir(), 'spyglass-event-log-'));
-process.env.SPYGLASS_DATA_DIR = TMP;
+const TMP = mkdtempSync(join(tmpdir(), 'ortbtools-event-log-'));
+process.env.ORTBTOOLS_DATA_DIR = TMP;
 
 let db, eventLog;
 before(() => {

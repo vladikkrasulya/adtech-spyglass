@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * @kyivtech/spyglass-core/behavior — public API.
+ * @ortbtools/core/behavior — public API.
  *
  *   analyze(events, { locale }) → { findings, status, eventCount }
  *
  * Consumes raw probe events emitted by the in-iframe creative-probe.js
- * (postMessage payloads with `type: 'spyglass-probe'`) and produces
+ * (postMessage payloads with `type: 'ortbtools-probe'`) and produces
  * decorated findings in the same shape as the validator:
  *   { id, level, path, params, msg, specRef }
  *

@@ -5,10 +5,10 @@
     "repo": "kyivtech-portal",
     "path": "/srv/DATA/Stacks/kyivtech-portal/public/design-system.css"
   },
-  "sha256": "cf9962371aa913dcd542508f9a67f3a729edd2a6f4075da0de5417e9b074e3d0",
-  "bytes": 41642,
+  "sha256": "ca5b83b93528a4e429d4571d4fe4ebd35770090a9431677a3d7b9822b9d73e83",
+  "bytes": 41640,
   "vendored_at": "2026-07-13",
-  "vendored_for": "v1.4.1",
+  "vendored_for": "v1.5.0",
   "no_url_asset_deps": true,
   "update_procedure": [
     "1. cp /srv/DATA/Stacks/kyivtech-portal/public/design-system.css public/design-system.css",

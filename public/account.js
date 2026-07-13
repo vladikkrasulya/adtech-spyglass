@@ -468,10 +468,10 @@
         location.href = target;
       }
     });
-    // Dialect = the SAME `spyglass_dialect_v1` key the main app reads.
+    // Dialect = the SAME `ortbtools_dialect_v1` key the main app reads.
     // Previously this wrote to `kt-default-dialect` which the main app
     // never consulted (dead-code preference).
-    setRadio('prefDialect', 'spyglass_dialect_v1', 'iab', null);
+    setRadio('prefDialect', 'ortbtools_dialect_v1', 'iab', null);
   }
 
   async function signOut() {

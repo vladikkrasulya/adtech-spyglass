@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Coordinated security-cutover guard (scripts/cutover-spyglass-ro.sh).
+ * Coordinated security-cutover guard (scripts/cutover-ortbtools-ro.sh).
  *
  * The wrapper applies the host SQLite permissions, then deploys the v1.1.7 app,
  * and verifies the FULL secure contract before declaring success. On a deploy
@@ -88,7 +88,7 @@ test('cutover state is a FULL snapshot (all 10 fields written every time)', () =
 });
 
 test('cutover wrapper: precise secure/baseline checks, full verify, fail-closed recover, no recursion / DB copy', () => {
-  const w = read('scripts/cutover-spyglass-ro.sh');
+  const w = read('scripts/cutover-ortbtools-ro.sh');
   assert.match(w, /is_secure_state\(\)/, 'must define a precise secure-state check');
   assert.match(w, /is_baseline_state\(\)/, 'must define a precise baseline-state check');
   // both predicates check the dir AND the DB/WAL/SHM trio
@@ -112,7 +112,10 @@ test('cutover wrapper: precise secure/baseline checks, full verify, fail-closed 
   // --recover must NOT bypass the minimum gates (no `gate || true`)
   assert.ok(!/gate \|\| true/.test(w), '--recover must keep the minimum gates fail-closed');
   assert.ok(!/chgrp\s+-R|chmod\s+-R/.test(w), 'must never recurse');
-  assert.ok(!/\bcp\b.*spyglass\.db|\bmv\b.*spyglass\.db/.test(w), 'must never copy/replace the DB');
+  assert.ok(
+    !/\bcp\b.*ortbtools\.db|\bmv\b.*ortbtools\.db/.test(w),
+    'must never copy/replace the DB',
+  );
   // snapshot() must sanitize LAST_ERROR into a single shell/dotenv-safe token
   assert.match(w, /ST_LAST_ERROR\/\/;\/-/, 'snapshot must strip ";" from LAST_ERROR');
   assert.match(w, /le\/\/ \/-/, 'snapshot must strip spaces from LAST_ERROR');

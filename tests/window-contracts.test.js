@@ -3,7 +3,7 @@
  * tests/window-contracts.test.js
  *
  * Guards the cross-module window.* contract between:
- *   - ES-module provider: spyglass.app.js (mountInspector exposes globals on window)
+ *   - ES-module provider: ortbtools.app.js (mountInspector exposes globals on window)
  *   - IIFE consumers: share/index.js, embed/index.js, export.js, shortcuts/index.js,
  *     behavior/index.js — classic scripts that can't import ES modules directly.
  *
@@ -45,14 +45,14 @@ const IIFE_CONSUMERS = [
 ];
 
 // window.X = assignments in mountInspector that are intentionally NOT in
-// exposed[] (e.g. __spyglassBehavior is reset on each probe start, not
+// exposed[] (e.g. __ortbtoolsBehavior is reset on each probe start, not
 // set once at mount — so it doesn't belong in the cleanup sweep).
 const CLEANUP_SKIP = new Set([
   // Set during probe lifecycle, not at mount-time:
-  '__spyglassBehavior',
+  '__ortbtoolsBehavior',
   // Set by lazy modules and managed by the module loader, not this sweep:
-  'SpyglassIntelBuilder',
-  'SpyglassSession',
+  'OrtbtoolsIntelBuilder',
+  'OrtbtoolsSession',
   'getJsonAtPath',
   'setTabStatus',
   'humanStatus',
@@ -65,7 +65,7 @@ const CLEANUP_SKIP = new Set([
   'updateCharCount',
   'snapshotPendingHistoryMerge',
   'lazyOpenAuth',
-  '__spyglassRecoveryClosed',
+  '__ortbtoolsRecoveryClosed',
   'requestVerifyEmail',
   'openAuthModal',
   'doLogin',
@@ -79,7 +79,7 @@ const CLEANUP_SKIP = new Set([
   'confirmAddPartner',
   'deletePartner',
   '_vendorRef',
-  '__spyglassLast',
+  '__ortbtoolsLast',
   'clearHistory',
   'historyStore',
   'closeModal',
@@ -126,7 +126,7 @@ function extractAssignments(src) {
 
 /**
  * Extract names from `typeof window.X === 'function'` guards.
- * This is the most explicit "I need this Spyglass global" pattern.
+ * This is the most explicit "I need this ortbtools global" pattern.
  */
 function extractTypeofGuards(src) {
   const names = new Set();
@@ -142,7 +142,7 @@ function extractTypeofGuards(src) {
 }
 
 /**
- * Extract the `exposed[]` cleanup array names from spyglass.app.js.
+ * Extract the `exposed[]` cleanup array names from ortbtools.app.js.
  * Matches: const exposed = [ ... ];
  */
 function extractExposedArray(src) {
@@ -208,7 +208,7 @@ test('every window.X guard in an IIFE consumer has a provider in public/', () =>
 });
 
 test('every window.X = in mountInspector is listed in the cleanup exposed[] array', () => {
-  const src = read('public/spyglass.app.js');
+  const src = read('public/ortbtools.app.js');
   const assigned = extractMountAssignments(src);
   const exposed = extractExposedArray(src);
 
@@ -224,13 +224,13 @@ test('every window.X = in mountInspector is listed in the cleanup exposed[] arra
     [],
     `Cleanup parity violations — these window globals will leak past module deactivate:\n\n` +
       `${missing.join('\n')}\n\n` +
-      `Either add the name to the exposed[] array in spyglass.app.js, ` +
+      `Either add the name to the exposed[] array in ortbtools.app.js, ` +
       `or add it to CLEANUP_SKIP in this test file if the omission is intentional.`,
   );
 });
 
 test('exposed[] array has no phantom entries (every listed name is assigned somewhere in public/)', () => {
-  const appSrc = read('public/spyglass.app.js');
+  const appSrc = read('public/ortbtools.app.js');
   const exposed = extractExposedArray(appSrc);
 
   // Build provider set from ALL .js files in public/ (lazy modules, IIFE scripts, ES modules).

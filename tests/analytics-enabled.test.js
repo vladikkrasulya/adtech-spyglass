@@ -27,7 +27,7 @@ test('analytics enabled when ClickHouse creds present', () => {
       CLICKHOUSE_URL: 'http://clickhouse:8123',
       CLICKHOUSE_USER: 'admin',
       CLICKHOUSE_PASSWORD: 'secret',
-      SPYGLASS_ANALYTICS_DISABLED: undefined,
+      ORTBTOOLS_ANALYTICS_DISABLED: undefined,
     }),
     '1',
   );
@@ -38,19 +38,19 @@ test('analytics disabled when CLICKHOUSE_USER unset', () => {
     probeEnabled({
       CLICKHOUSE_URL: 'http://clickhouse:8123',
       CLICKHOUSE_USER: '',
-      SPYGLASS_ANALYTICS_DISABLED: undefined,
+      ORTBTOOLS_ANALYTICS_DISABLED: undefined,
     }),
     '0',
   );
 });
 
-test('analytics disabled when SPYGLASS_ANALYTICS_DISABLED=1', () => {
+test('analytics disabled when ORTBTOOLS_ANALYTICS_DISABLED=1', () => {
   assert.equal(
     probeEnabled({
       CLICKHOUSE_URL: 'http://clickhouse:8123',
       CLICKHOUSE_USER: 'admin',
       CLICKHOUSE_PASSWORD: 'secret',
-      SPYGLASS_ANALYTICS_DISABLED: '1',
+      ORTBTOOLS_ANALYTICS_DISABLED: '1',
     }),
     '0',
   );

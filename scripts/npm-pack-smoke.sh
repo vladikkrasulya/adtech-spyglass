@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # npm-pack-smoke.sh — simulate a clean npm install from packed tarballs.
-# Verifies @kyivtech/spyglass-core and @ortbtools/cli ship installable artifacts
+# Verifies @ortbtools/core and @ortbtools/cli ship installable artifacts
 # before registry publish (Phase 3 gate).
 #
 # Usage: scripts/npm-pack-smoke.sh
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORKDIR="$(mktemp -d -t spyglass-npm-smoke-XXXXXX)"
+WORKDIR="$(mktemp -d -t ortbtools-npm-smoke-XXXXXX)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
 echo "==> npm pack smoke (workdir=$WORKDIR)"
@@ -22,7 +22,7 @@ echo "    core: $CORE_PACK"
 cd "$ROOT/packages/cli"
 cp package.json package.json.smoke-bak
 # Point CLI at the packed core tarball so `npm install cli.tgz` does not hit registry.
-npm pkg set "dependencies.@kyivtech/spyglass-core=file:${WORKDIR}/${CORE_PACK}"
+npm pkg set "dependencies.@ortbtools/core=file:${WORKDIR}/${CORE_PACK}"
 CLI_PACK="$(npm pack --pack-destination "$WORKDIR" --silent)"
 mv package.json.smoke-bak package.json
 echo "    cli:  $CLI_PACK"

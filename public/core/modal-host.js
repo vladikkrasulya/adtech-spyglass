@@ -49,7 +49,7 @@ function loadModalHostCss() {
 }
 
 // ── closeModal ───────────────────────────────────────────────────────────
-// Moved verbatim from mountInspector (spyglass.app.js). Recovery-key modal
+// Moved verbatim from mountInspector (ortbtools.app.js). Recovery-key modal
 // has a "really?" confirm gate — Esc/backdrop/close all route through it
 // instead of a silent close.
 function closeModal() {
@@ -63,7 +63,7 @@ function closeModal() {
   // than the cancel button), still strip ?reset=... so a refresh doesn't
   // silently re-trigger the same flow. Flag owned by /modules/password-reset/
   // — undefined when the module isn't loaded → falsy → normal close.
-  if (window.__spyglassResetActive && new URLSearchParams(location.search).has('reset')) {
+  if (window.__ortbtoolsResetActive && new URLSearchParams(location.search).has('reset')) {
     if (typeof window.cancelPasswordReset === 'function') {
       window.cancelPasswordReset();
     }
@@ -180,10 +180,10 @@ function bindModalDispatcher(modalRoot) {
       // — live modal (Inspector-toolbar-triggered only, but its content now
       // renders into #modalRoot, outside root's dispatch reach) —
       case 'live-pause':
-        return window.__spyglassLivePauseToggle && window.__spyglassLivePauseToggle();
+        return window.__ortbtoolsLivePauseToggle && window.__ortbtoolsLivePauseToggle();
       case 'live-load': {
         const id = Number(el.dataset.rowId);
-        const map = window.__spyglassLiveSpecimens;
+        const map = window.__ortbtoolsLiveSpecimens;
         const spec = map && map.get ? map.get(id) : null;
         if (!spec) return;
         const isReq = Array.isArray(spec.imp);
@@ -216,8 +216,8 @@ function bindModalDispatcher(modalRoot) {
       }
       case 'mirror-mode-change': {
         const newMode = el.value;
-        if (typeof window.__spyglassMirrorRefetch === 'function') {
-          window.__spyglassMirrorRefetch(newMode);
+        if (typeof window.__ortbtoolsMirrorRefetch === 'function') {
+          window.__ortbtoolsMirrorRefetch(newMode);
         }
         return;
       }

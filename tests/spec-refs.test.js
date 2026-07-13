@@ -6,7 +6,7 @@
  * Every finding id emitted by rules code must have an entry in
  * spec-refs.json. The value can be either:
  *   - a string URL (IAB spec anchor or vendor doc), or
- *   - null / "" (explicit "no spec ref" — used for Spyglass-own
+ *   - null / "" (explicit "no spec ref" — used for ortbtools-own
  *     checks like behavior.* and dialect-specific findings)
  *
  * Missing entries are a fail: when someone adds a new finding to

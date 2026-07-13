@@ -117,7 +117,7 @@
 }
 
 /* Auth profile pill — shown when user is logged in. Mirrors the
-   sign-in pill geometry (.kt-topbar__signin in spyglass-shell.css)
+   sign-in pill geometry (.kt-topbar__signin in ortbtools-shell.css)
    so the topbar's right edge stays visually consistent regardless
    of auth state. Avatar circle hosts user's initial; the email
    prefix sits to the right, truncated on narrow viewports. */

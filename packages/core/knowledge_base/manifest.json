@@ -11,7 +11,7 @@
       "tags": ["display", "300x250", "300x600", "web"],
       "file": "ortb-2.5/request/banner/iab-display-300x250.json",
       "source": "synthesized from IAB OpenRTB 2.5 §3.2.6 + §3.2.7",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "Minimal display banner request, multi-size (300x250 + 300x600), web context"
     },
     {
@@ -22,7 +22,7 @@
       "tags": ["instream", "vast-2", "vast-3", "linear", "skippable"],
       "file": "ortb-2.5/request/video/instream-vast.json",
       "source": "synthesized from IAB OpenRTB 2.5 §3.2.7 (Video)",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "In-stream linear video, VAST 2/3, skippable, 640x480"
     },
     {
@@ -33,7 +33,7 @@
       "tags": ["native-1.2", "feed-card", "title-image-data"],
       "file": "ortb-2.5/request/native/native-card.json",
       "source": "synthesized from IAB OpenRTB Native 1.2 spec",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "Native 1.2 feed card with title + main image + body asset"
     },
     {
@@ -44,7 +44,7 @@
       "tags": ["inapp", "mobile", "android", "320x50", "mraid"],
       "file": "ortb-2.5/request/inapp/banner-mobile.json",
       "source": "synthesized from IAB OpenRTB 2.5 §3.2.14 (App)",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "Mobile in-app banner, 320x50 with 300x250 fallback, MRAID-capable"
     },
     {
@@ -55,7 +55,7 @@
       "tags": ["audio", "podcast", "daast"],
       "file": "ortb-2.5/request/audio/audio-podcast.json",
       "source": "synthesized from IAB OpenRTB 2.5 §3.2.8 (Audio)",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "Audio ad slot for podcast inventory, DAAST protocols"
     },
     {
@@ -66,7 +66,7 @@
       "tags": ["ctv", "rewarded", "vast-4", "rwdd", "sua", "gpp"],
       "file": "ortb-2.6/request/video/ctv-rewarded.json",
       "source": "synthesized from IAB OpenRTB 2.6 §3.2.4 (rwdd) + §3.2.18 (sua)",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "CTV rewarded video on Roku, VAST 4 protocols, SUA + GPP"
     },
     {
@@ -77,7 +77,7 @@
       "tags": ["dooh", "billboard", "qty"],
       "file": "ortb-2.6/request/dooh/billboard-roadside.json",
       "source": "synthesized from IAB OpenRTB 2.6 §3.2.16 (DOOH) + §3.2.5 (Qty)",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "DOOH billboard with qty.multiplier audience expansion"
     },
     {
@@ -88,7 +88,7 @@
       "tags": ["mtype", "cattax", "300x250", "html-adm"],
       "file": "ortb-2.6/response/banner/mtype-banner.json",
       "source": "synthesized from IAB OpenRTB 2.6 §5.30 (mtype)",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "Banner BidResponse with mtype=1 + cattax=6 + HTML adm"
     },
     {
@@ -99,7 +99,7 @@
       "tags": ["push", "vendor-style", "title-image-clickurl"],
       "file": "jsonfeed/push/push-materials.json",
       "source": "synthesized to match a canonical vendor push feed shape",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "Vendor-style push notification material (single-item array)"
     },
     {
@@ -110,7 +110,7 @@
       "tags": ["popunder", "redirecturl"],
       "file": "jsonfeed/pops/popunder.json",
       "source": "synthesized from common popunder feed shape (bid-redirect-class)",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "Popunder redirect-only payload, no creative"
     },
     {
@@ -121,7 +121,7 @@
       "tags": ["inpage", "widget", "native-card"],
       "file": "jsonfeed/inpage/inpage-card.json",
       "source": "synthesized to match in-page recommendation widget shape",
-      "license": "MIT (Spyglass)",
+      "license": "MIT (ortbtools)",
       "description": "In-page native widget card (zone + widget IDs)"
     }
   ]

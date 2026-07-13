@@ -1,4 +1,4 @@
-# Spyglass — Functional Audit (2026-05-12)
+# ortbtools — Functional Audit (2026-05-12)
 
 > **Source**: DeepSeek v4 Pro via OpenRouter, single 247k-token pass against
 > ~22k LOC of source + ROADMAP/README/ARCHMAP/about-pages.
@@ -48,7 +48,7 @@
 
 **Should:** Every finding carries a `specRef` link to the exact IAB paragraph; UI surfaces them as “see spec ↗”. (ROADMAP Phase 2, ARCHMAP §1.3)
 
-**Does:** `specRefs.json` maps finding IDs to URLs. `findings.js` and the UI rendering in `spyglass.app.js` include the link when `specRef` is non‑null. However, not all findings have specRef entries yet — some map to placeholder/null. ROADMAP notes this as “live” but a full mapping may not be complete for all rules (the `spec-refs.json` file may have gaps).
+**Does:** `specRefs.json` maps finding IDs to URLs. `findings.js` and the UI rendering in `ortbtools.app.js` include the link when `specRef` is non‑null. However, not all findings have specRef entries yet — some map to placeholder/null. ROADMAP notes this as “live” but a full mapping may not be complete for all rules (the `spec-refs.json` file may have gaps).
 
 **Gap:** Some recent or plugin‑authored rules (e.g., client‑hints, imp-secure) might lack specRefs. The code does not enforce that every finding must have one.
 
@@ -58,7 +58,7 @@
 
 **Should:** Classify payload ad format, runtime context (web/inapp/ctv/dooh), and creative protocol (vast‑N/daast). Show colour‑coded chips in the summary panel. (README, ROADMAP Phase 10)
 
-**Does:** `format-detect.js` implements heuristic detection: inspects `imp[].banner/video/audio/native`, `site/app` context, `device.devicetype`, `video.protocols`, response adm shape, and JSON feed keys. Returns `{ formats, contexts, protocols, tags, confidence }`. The UI paints chips in `paintFormatSummary()` in `spyglass.app.js`. (`packages/core/format-detect.js`, `public/spyglass.app.js` line ~1233‑1247)
+**Does:** `format-detect.js` implements heuristic detection: inspects `imp[].banner/video/audio/native`, `site/app` context, `device.devicetype`, `video.protocols`, response adm shape, and JSON feed keys. Returns `{ formats, contexts, protocols, tags, confidence }`. The UI paints chips in `paintFormatSummary()` in `ortbtools.app.js`. (`packages/core/format-detect.js`, `public/ortbtools.app.js` line ~1233‑1247)
 
 **Gap:** JSON‑feed detection is intentionally narrow; some vendor shapes (e.g., value-feed vendor’s `clickUrl`) are detected, but not all possible JSON‑feed variants will be tagged. The format‑detection heuristic sometimes yields low confidence or no tag for edge cases.
 
@@ -68,7 +68,7 @@
 
 **Should:** Opt‑in vendor‑specific rules layered over IAB baseline via `?dialect=<vendor>`. Dialect modules add extra validation findings and may suppress IAB rules (e.g., payload_missing when bid.ext carries creative). (README, ARCHMAP)
 
-**Does:** Dialects are registered in `DIALECTS` map in `index.js`. `dialects/ext-rtb.js` adds checks for ext-rtb vendor macros and feed‑specific fields; `dialects/inpage-push.js` defines `claimsBid()` to suppress payload_missing when the bid’s ext contains title/image/url. The server resolves `?dialect=` and passes it to `validate`. Temporary client‑side dialects from the Discovery layer are applied via `SpyglassIntel.applyToFindings()`. (`packages/core/index.js` line ~42‑47, `packages/core/dialects/inpage-push.js`, `public/spyglass.app.js` line ~2874‑2888)
+**Does:** Dialects are registered in `DIALECTS` map in `index.js`. `dialects/ext-rtb.js` adds checks for ext-rtb vendor macros and feed‑specific fields; `dialects/inpage-push.js` defines `claimsBid()` to suppress payload_missing when the bid’s ext contains title/image/url. The server resolves `?dialect=` and passes it to `validate`. Temporary client‑side dialects from the Discovery layer are applied via `OrtbtoolsIntel.applyToFindings()`. (`packages/core/index.js` line ~42‑47, `packages/core/dialects/inpage-push.js`, `public/ortbtools.app.js` line ~2874‑2888)
 
 **Gap:** The dialect selection via `?dialect=ext-rtb` is stored in localStorage but not mirrored back to the URL for sharing (see later note). The `claimsBid` mechanism is dialect‑specific; not all dialects use it, and adding new dialects requires both a server‑side module and possibly a front‑end <option>.
 
@@ -128,7 +128,7 @@
 
 **Should:** Decode `cat`/`bcat`/`pcat` codes to English labels, surface in a tab. (README)
 
-**Does:** `categories.js` loads `iab-categories.json`, provides `decodeCategory`, `decodeCategories`, and `extractAllCategories`. The UI renders the result via `renderCategories`. (`packages/core/categories.js`, `public/spyglass.app.js` line ~1204‑1240)
+**Does:** `categories.js` loads `iab-categories.json`, provides `decodeCategory`, `decodeCategories`, and `extractAllCategories`. The UI renders the result via `renderCategories`. (`packages/core/categories.js`, `public/ortbtools.app.js` line ~1204‑1240)
 
 **Gap:** Decoding is English‑only; no locale‑specific labels. The “Categories” tab renders codes and labels but does not link back to the IAB taxonomy page.
 
@@ -150,7 +150,7 @@
 
 **Should:** No inline `onclick`/event handlers in HTML; all actions routed through a central `data‑action` dispatcher, satisfying Content‑Security‑Policy without `unsafe‑inline` for scripts (but currently requires it for inline `<script>` blocks). (server.js CSP comment, ARCHMAP §2)
 
-**Does:** The UI uses a single `click` event listener on `#app-root` with a `switch(action)` that covers all modal triggers, toolbar buttons, tab switches, etc. Inline `<script>` blocks remain (theme init, JSON‑LD, module bootstrap). (`public/spyglass.app.js` line ~5000‑5400). The CSP allows `'unsafe‑inline'` for `script‑src` because of these inline scripts and the srcdoc iframe for ad previews.
+**Does:** The UI uses a single `click` event listener on `#app-root` with a `switch(action)` that covers all modal triggers, toolbar buttons, tab switches, etc. Inline `<script>` blocks remain (theme init, JSON‑LD, module bootstrap). (`public/ortbtools.app.js` line ~5000‑5400). The CSP allows `'unsafe‑inline'` for `script‑src` because of these inline scripts and the srcdoc iframe for ad previews.
 
 **Gap:** The inline `<script>` blocks still exist, violating the desired strict CSP without `'unsafe‑inline'`. The comment in `server.js` acknowledges this as tech debt.
 
@@ -160,7 +160,7 @@
 
 **Should:** Modules like mirror, live, simulate, save‑sample, partners, edit‑sample, auth, unlock, recovery, password‑reset loaded lazily via `import()` to keep initial bundle size small. (ARCHMAP)
 
-**Does:** These modules are lazy‑loaded in the dispatcher via `await import(...)`. After first load, they’re cached by the browser. The pattern is consistent. (`public/spyglass.app.js` dispatcher lines for each case)
+**Does:** These modules are lazy‑loaded in the dispatcher via `await import(...)`. After first load, they’re cached by the browser. The pattern is consistent. (`public/ortbtools.app.js` dispatcher lines for each case)
 
 **Gap:** Some modules (share, embed, shortcuts) are still loaded eagerly as classic scripts because they need to bind early (e.g., keyboard shortcuts). This is reasonable, but the lazy‑loading strategy is incomplete for those; they could be converted with lazy `import()` after DOM ready.
 
@@ -170,7 +170,7 @@
 
 **Should:** Sidebar visibility toggles (left summary, right preview) persist to localStorage and survive refreshes. A stale‑preference health‑check reclaims panels for users who accidentally hid them. (ROADMAP / ARCHMAP §? not explicitly, but implemented)
 
-**Does:** Toggle calls `toggleSidebar(side)` which flips a body class and stores in localStorage with a timestamp. `setupSidebarToggles()` on init checks stored preference; if saved > 7 days ago and viewport ≥1280px, it expires the preference and resets to visible. Additionally, if `bidRes` is populated, the right panel is forced visible (override). (`public/spyglass.app.js` line ~4600‑4710)
+**Does:** Toggle calls `toggleSidebar(side)` which flips a body class and stores in localStorage with a timestamp. `setupSidebarToggles()` on init checks stored preference; if saved > 7 days ago and viewport ≥1280px, it expires the preference and resets to visible. Additionally, if `bidRes` is populated, the right panel is forced visible (override). (`public/ortbtools.app.js` line ~4600‑4710)
 
 **Gap:** Works as described. The health‑check might be slightly aggressive on desktops where a user intentionally keeps preview hidden; but the 7‑day window mitigates that.
 
@@ -180,7 +180,7 @@
 
 **Should:** Live JSON validity badge next to each editor, updating on input. (README)
 
-**Does:** `updateJsonBadge(id)` is called from `updateCharCount` on every input. It sets badge text and class accordingly. (`public/spyglass.app.js` line ~1130‑1140)
+**Does:** `updateJsonBadge(id)` is called from `updateCharCount` on every input. It sets badge text and class accordingly. (`public/ortbtools.app.js` line ~1130‑1140)
 
 **Gap:** matches intent
 
@@ -190,7 +190,7 @@
 
 **Should:** Show character count below editor, turn red when >50k. (README)
 
-**Does:** `updateCharCount` updates the count span, adds class `warn` if length >50000, and hides it when empty. (`public/spyglass.app.js` line ~1100‑1114)
+**Does:** `updateCharCount` updates the count span, adds class `warn` if length >50000, and hides it when empty. (`public/ortbtools.app.js` line ~1100‑1114)
 
 **Gap:** matches intent
 
@@ -200,7 +200,7 @@
 
 **Should:** Show counts of banner/video/native/audio imps in the left sidebar after analysis. (README)
 
-**Does:** `runAnalysis` computes these counts from `imp` array and renders them via `statBox`. (`public/spyglass.app.js` line ~1540‑1550)
+**Does:** `runAnalysis` computes these counts from `imp` array and renders them via `statBox`. (`public/ortbtools.app.js` line ~1540‑1550)
 
 **Gap:** matches intent
 
@@ -210,7 +210,7 @@
 
 **Should:** Tab badges reflect the severity of findings (error/warning/clean). (README)
 
-**Does:** `setTabBadge` (in `utils.js`) accepts `severity` and applies appropriate class. The analysis flow calls `setTabBadge` for validation, crosscheck, categories, behavior. (`public/spyglass.app.js` calls to `setTabBadge`)
+**Does:** `setTabBadge` (in `utils.js`) accepts `severity` and applies appropriate class. The analysis flow calls `setTabBadge` for validation, crosscheck, categories, behavior. (`public/ortbtools.app.js` calls to `setTabBadge`)
 
 **Gap:** The “Categories” badge does not show severity colors; it only shows count. The behavior badge severity is determined by the engine, but the fallback in `renderBehaviorTab` uses a simple count. That’s acceptable.
 
@@ -220,7 +220,7 @@
 
 **Should:** Allow collapsing `bidReq`/`bidRes` panels to show only a summary, with toggle buttons. (ARCHMAP mentioned)
 
-**Does:** CSS class `.is-collapsed` is toggled by `toggle-card` data‑action; the panel shows a summary bar. `paintCardSummary` updates the summary content. (`public/spyglass.app.js` line ~1148‑1160, ~4600)
+**Does:** CSS class `.is-collapsed` is toggled by `toggle-card` data‑action; the panel shows a summary bar. `paintCardSummary` updates the summary content. (`public/ortbtools.app.js` line ~1148‑1160, ~4600)
 
 **Gap:** matches intent
 
@@ -230,9 +230,9 @@
 
 **Should:** Each finding is a `<details>` element; on open, show JSON path, current value, severity meaning, spec link, rule id. (ARCHMAP §1.3.4)
 
-**Does:** The UI wraps validation findings in `<details class="finding-detail">`. A `toggle` event listener at capture renders the body via `buildFindingDetailHtml(ds)`, which resolves value using `getJsonAtPath` and shows severity copy. (`public/spyglass.app.js` line ~2100‑2200)
+**Does:** The UI wraps validation findings in `<details class="finding-detail">`. A `toggle` event listener at capture renders the body via `buildFindingDetailHtml(ds)`, which resolves value using `getJsonAtPath` and shows severity copy. (`public/ortbtools.app.js` line ~2100‑2200)
 
-**Gap:** For response‑only analysis, `window.__spyglassLast.res` might be missing and the path resolution may incorrectly fallback to the request side. The code uses `resolveFindingValue` which checks `findingId` prefix; it works but could be more robust. There is no handling for paths that involve array indices beyond a single index (e.g., `imp[1].banner` works, but `imp[0].banner.format[0].w` might not be resolved because `getJsonAtPath` does not handle nested array indices inside the path; only top‑level array brackets like `[0]` are supported). This is a known limitation.
+**Gap:** For response‑only analysis, `window.__ortbtoolsLast.res` might be missing and the path resolution may incorrectly fallback to the request side. The code uses `resolveFindingValue` which checks `findingId` prefix; it works but could be more robust. There is no handling for paths that involve array indices beyond a single index (e.g., `imp[1].banner` works, but `imp[0].banner.format[0].w` might not be resolved because `getJsonAtPath` does not handle nested array indices inside the path; only top‑level array brackets like `[0]` are supported). This is a known limitation.
 
 **Recommendation:** Enhance `getJsonAtPath` to support nested array indices (e.g., `a[0].b[1]`), perhaps using a JSONPath library.
 
@@ -240,7 +240,7 @@
 
 **Should:** Allow user to declare which oRTB version they are targeting; validation emits `version.mismatch` if detection differs. (ARCHMAP §3.3.3)
 
-**Does:** A `<select id="versionPinSelector">` is present in the toolbar (likely). The handler on change persists to localStorage and re‑runs analysis. The analyze request includes `opts.expectedVersion`. The core’s `validate` uses that to emit mismatch findings. (`public/spyglass.app.js` line ~2878‑2895)
+**Does:** A `<select id="versionPinSelector">` is present in the toolbar (likely). The handler on change persists to localStorage and re‑runs analysis. The analyze request includes `opts.expectedVersion`. The core’s `validate` uses that to emit mismatch findings. (`public/ortbtools.app.js` line ~2878‑2895)
 
 **Gap:** matches intent
 
@@ -250,7 +250,7 @@
 
 **Should:** Dropdown to choose dialect; change persists and re‑runs analysis. (README)
 
-**Does:** `dialectSelector` is populated with built‑in and temporary dialects; change triggers `setActiveDialect` and `runAnalysis`. (`public/spyglass.app.js` line ~2876‑2888)
+**Does:** `dialectSelector` is populated with built‑in and temporary dialects; change triggers `setActiveDialect` and `runAnalysis`. (`public/ortbtools.app.js` line ~2876‑2888)
 
 **Gap:** matches intent
 
@@ -260,7 +260,7 @@
 
 **Should:** In safe mode, blur creative previews and mask domains in history for screenshots. (README)
 
-**Does:** In analytics flow, `setAdPreview` always adds blur class initially; user can reveal per creative. History rendering uses `maskDomain()` that masks adult/casino tokens. No special `?demo=safe` parameter is needed because the reveal‑per‑creative approach covers the use case; but there is also a `?demo=safe` mode that could apply to embedding. The CSS for `?.preview-safe:not(.is-revealed)` blurs content. (`public/spyglass.app.js` line ~1313‑1317, `maskDomain` function)
+**Does:** In analytics flow, `setAdPreview` always adds blur class initially; user can reveal per creative. History rendering uses `maskDomain()` that masks adult/casino tokens. No special `?demo=safe` parameter is needed because the reveal‑per‑creative approach covers the use case; but there is also a `?demo=safe` mode that could apply to embedding. The CSS for `?.preview-safe:not(.is-revealed)` blurs content. (`public/ortbtools.app.js` line ~1313‑1317, `maskDomain` function)
 
 **Gap:** The `?demo=safe` parameter is not explicitly handled in the static file routing; but the current behavior (blur until reveal) already provides screenshot safety. However, the domain masking is only applied in history, not in the summary panel or inspector. The README mentions masking domains in summary panel; that’s not fully implemented.
 
@@ -272,7 +272,7 @@
 
 **Should:** Instrument sandboxed iframe to report navigation attempts, click‑skim, bot patterns, heavy ads, frozen thread, permission abuse. (README, ARCHMAP §1.3)
 
-**Does:** `creative-probe.js` is injected into the iframe srcdoc. It hooks `window.open`, `Location.href`, `addEventListener`, on‑property setters, `click` geometry analysis, `PerformanceObserver`, `requestFullscreen`, geolocation, etc. Events are sent via `postMessage` to parent. The receiver in `spyglass.app.js` validates `event.source`, applies cap, and resets watchdog. (`public/creative-probe.js`, `public/spyglass.app.js` line ~1400‑1450, ~1500‑)
+**Does:** `creative-probe.js` is injected into the iframe srcdoc. It hooks `window.open`, `Location.href`, `addEventListener`, on‑property setters, `click` geometry analysis, `PerformanceObserver`, `requestFullscreen`, geolocation, etc. Events are sent via `postMessage` to parent. The receiver in `ortbtools.app.js` validates `event.source`, applies cap, and resets watchdog. (`public/creative-probe.js`, `public/ortbtools.app.js` line ~1400‑1450, ~1500‑)
 
 **Gap:** The sandbox does not include `allow-same-origin`; the probe is fetched from the same origin and runs fine. However, some APIs (e.g., `navigator.mediaDevices.getUserMedia`) are allowed in the sandbox? The probe hooks them but the underlying call may be rejected by the sandbox, which is fine. The probe’s coverage of frame‑bust via `<base target=_top>` was added after an audit, so it’s present. The heavy‑ad CPU detection relies on `PerformanceObserver` for `longtask`; that’s not available in Safari or older Chrome, which is acceptable.
 
@@ -284,7 +284,7 @@
 
 **Should:** Receive probe events, run static and runtime rules, return structured findings with severity. (ARCHMAP §1.3)
 
-**Does:** `packages/core/behavior/` contains the engine (likely imported via `require('@kyivtech/spyglass-core/behavior')`). The endpoint `POST /api/analyze-behavior` accepts `events` and optional `adm`, invokes `analyzeBehavior(capped, {locale, adm})`, and returns findings with severity and localized messages. (`modules/analyze/handler.js` handleAnalyzeBehavior, `packages/core/behavior/index.js` not shown but referenced)
+**Does:** `packages/core/behavior/` contains the engine (likely imported via `require('@ortbtools/core/behavior')`). The endpoint `POST /api/analyze-behavior` accepts `events` and optional `adm`, invokes `analyzeBehavior(capped, {locale, adm})`, and returns findings with severity and localized messages. (`modules/analyze/handler.js` handleAnalyzeBehavior, `packages/core/behavior/index.js` not shown but referenced)
 
 **Gap:** matches intent
 
@@ -294,7 +294,7 @@
 
 **Should:** Render threats and raw event timeline in the behavior tab, with localized kind labels. Engine fetch debounced. (ARCHMAP §1.3, README)
 
-**Does:** `modules/behavior/index.js` provides `render(container, allEvents, opts)`. It renders timeline immediately, then fetches `/api/analyze-behavior` debounced 150ms and paints findings on success. The UI uses `SpyglassBehavior.render`. (`public/modules/behavior/index.js`)
+**Does:** `modules/behavior/index.js` provides `render(container, allEvents, opts)`. It renders timeline immediately, then fetches `/api/analyze-behavior` debounced 150ms and paints findings on success. The UI uses `OrtbtoolsBehavior.render`. (`public/modules/behavior/index.js`)
 
 **Gap:** The finding rendering does not display a `specRef` link, because behavior findings lack specRefs (they are not IAB‑spec related). That’s fine. The `render` function replaces the container’s innerHTML, causing a flash; could be improved with a request‑animation‑frame commit but not a bug.
 
@@ -358,7 +358,7 @@
 
 **Does:** `setLocaleCookie()` in `server.js` sets a 1‑year cookie. The UI `lang-switch.js` writes cookie, localStorage, and POSTs to `/api/auth/preferences` to update the DB when logged in. The server reads cookie for bare‑URL redirect. (`server.js` resolveLocaleRoute), (`public/lang-switch.js`), (`modules/auth/handler.js` handlePreferences)
 
-**Gap:** The `/about` and `/account` pages rely on the cookie but do not read `preferred_locale` from server (they are static). However, bootAuth in `spyglass.app.js` redirects if `user.preferred_locale` differs from URL. This work‑around is OK.
+**Gap:** The `/about` and `/account` pages rely on the cookie but do not read `preferred_locale` from server (they are static). However, bootAuth in `ortbtools.app.js` redirects if `user.preferred_locale` differs from URL. This work‑around is OK.
 
 **Recommendation:** Implement server‑side redirection for `/about` and `/account` as well, but not essential.
 
@@ -368,7 +368,7 @@
 
 **Should:** Encrypt samples client‑side with AES‑GCM using a DEK derived from password via PBKDF2 (600k iterations). Server stores ciphertext, IV, and wrapped DEK (under KEK). Recovery key derived from a separate random 16‑byte key, displayed once. (README, ARCHMAP §1.2, docstring in crypto.js)
 
-**Does:** `public/spyglass-crypto.js` implements the whole KP: `bootstrap`, `openWithPassword`, `openWithRecoveryKey`, `encryptBlob`, `decryptBlob`. `SpyglassSession` facade manages the DEK CryptoKey in memory (closure), persists to sessionStorage for F5 survival. The server stores `kdf_salt`, `dek_wrapped`, `dek_iv`, and recovery equivalents. The recovery key is shown once and never stored on server. (`public/spyglass-crypto.js`, `public/spyglass.app.js` `SpyglassSession`, `db.js` schema)
+**Does:** `public/ortbtools-crypto.js` implements the whole KP: `bootstrap`, `openWithPassword`, `openWithRecoveryKey`, `encryptBlob`, `decryptBlob`. `OrtbtoolsSession` facade manages the DEK CryptoKey in memory (closure), persists to sessionStorage for F5 survival. The server stores `kdf_salt`, `dek_wrapped`, `dek_iv`, and recovery equivalents. The recovery key is shown once and never stored on server. (`public/ortbtools-crypto.js`, `public/ortbtools.app.js` `OrtbtoolsSession`, `db.js` schema)
 
 **Gap:** matches intent
 
@@ -378,7 +378,7 @@
 
 **Should:** Recovery key generated at registration, displayed once, used to unwrap DEK when password is forgotten. (README)
 
-**Does:** The key is generated in `bootstrap` and shown in `openRecoveryKeyModalLazy`. It can re‑show if pending in sessionStorage on refresh. The key is never stored on server; only the wrapped DEK under recovery KEY is stored. (`public/modules/recovery/index.js`, `public/spyglass.app.js` `openRecoveryKeyModalLazy`)
+**Does:** The key is generated in `bootstrap` and shown in `openRecoveryKeyModalLazy`. It can re‑show if pending in sessionStorage on refresh. The key is never stored on server; only the wrapped DEK under recovery KEY is stored. (`public/modules/recovery/index.js`, `public/ortbtools.app.js` `openRecoveryKeyModalLazy`)
 
 **Gap:** If the user loses the recovery key and password, they must wipe data. The UI warning correctly conveys this.
 
@@ -388,7 +388,7 @@
 
 **Should:** When saving a sample, encrypt both bid_req and bid_res with separate IVs using the DEK; on load, decrypt client‑side. (README)
 
-**Does:** `confirmSave` in `save-sample` module encrypts via `encryptBlob` and sends `{bid_req: ct, req_iv: iv}`. `loadSample` decrypts with `decryptBlob`. (`modules/save-sample/index.js`, `public/spyglass.app.js` `loadSample`)
+**Does:** `confirmSave` in `save-sample` module encrypts via `encryptBlob` and sends `{bid_req: ct, req_iv: iv}`. `loadSample` decrypts with `decryptBlob`. (`modules/save-sample/index.js`, `public/ortbtools.app.js` `loadSample`)
 
 **Gap:** matches intent
 
@@ -430,7 +430,7 @@
 
 **Should:** Allow changing theme (light/dark/auto), locale, and default dialect from the cabinet; these should persist to localStorage and where possible sync to server. (ROADMAP Phase 3)
 
-**Does:** `setupPreferences()` in `public/account.js` wires radio buttons for theme, locale, dialect. Theme uses `kt-theme` key and updates `data-theme`. Locale writes `kt-lang` cookie and POSTs to preferences. Dialect uses `spyglass_dialect_v1`. The pickers reflect current values. (`public/account.js`)
+**Does:** `setupPreferences()` in `public/account.js` wires radio buttons for theme, locale, dialect. Theme uses `kt-theme` key and updates `data-theme`. Locale writes `kt-lang` cookie and POSTs to preferences. Dialect uses `ortbtools_dialect_v1`. The pickers reflect current values. (`public/account.js`)
 
 **Gap:** The dialect picker offers only `iab`, `ext-rtb`, `inpage-push`; it does not list temporary dialects, which the main app’s dialect selector does. That’s minor.
 
@@ -496,7 +496,7 @@
 
 **Should:** Provide an iframe snippet that strips chrome and shows the shared bid with validation results. (README)
 
-**Does:** `modules/embed/index.js` builds an iframe URL with `?embed=1#req=…&res=…`. The CSS hides header/input/sidebar when `data-embed="1"` is on `<html>`. The share module uses deflate+base64url to pack. The code checks `spyglassShareSupported()` before enabling. (`modules/embed/index.js`, `public/spyglass.app.js` embed detection)
+**Does:** `modules/embed/index.js` builds an iframe URL with `?embed=1#req=…&res=…`. The CSS hides header/input/sidebar when `data-embed="1"` is on `<html>`. The share module uses deflate+base64url to pack. The code checks `ortbtoolsShareSupported()` before enabling. (`modules/embed/index.js`, `public/ortbtools.app.js` embed detection)
 
 **Gap:** The embed mode does not hide the “Behavior tab” or other tabs; it just hides chrome. It still shows tabs and perhaps the footer. Not a critical gap.
 
@@ -554,7 +554,7 @@
 
 **Should:** Click on language link morphs the page without full reload, keeps analysis state, updates URL, sets cookie, re‑fires analysis. About/account pages share same morph logic. (README, ROADMAP Phase 3)
 
-**Does:** `public/lang-switch.js` intercepts clicks on lang menu, fetches target HTML, morphs body via `langMorph`, updates head metadata, pushes history, dispatches `kt:lang-change` event. Inspector listens on that event and re‑runs analysis, refreshes placeholders. About/account pages also include lang‑switch. (`public/lang-switch.js`, `public/spyglass.app.js` listener)
+**Does:** `public/lang-switch.js` intercepts clicks on lang menu, fetches target HTML, morphs body via `langMorph`, updates head metadata, pushes history, dispatches `kt:lang-change` event. Inspector listens on that event and re‑runs analysis, refreshes placeholders. About/account pages also include lang‑switch. (`public/lang-switch.js`, `public/ortbtools.app.js` listener)
 
 **Gap:** matches intent
 
@@ -586,7 +586,7 @@
 
 **Should:** Watch for unknown ext‑fields across multiple analyses, cluster by co‑occurrence, surface in a Dialect Builder. (README Phase 7a‑7b)
 
-**Does:** `observer.js` records field observations into IndexedDB, applies decay, and triggers co‑occurrence recording. `builder.js` provides the Dialect Builder modal that shows clusters and lets user create temporary dialect. Temporary dialect is applied client‑side via `applyTempDialect`. (`public/modules/intel/observer.js`, `public/modules/intel/builder.js`, `public/spyglass.app.js` `SpyglassIntel` facade)
+**Does:** `observer.js` records field observations into IndexedDB, applies decay, and triggers co‑occurrence recording. `builder.js` provides the Dialect Builder modal that shows clusters and lets user create temporary dialect. Temporary dialect is applied client‑side via `applyTempDialect`. (`public/modules/intel/observer.js`, `public/modules/intel/builder.js`, `public/ortbtools.app.js` `OrtbtoolsIntel` facade)
 
 **Gap:** The Discovery walker and cluster detection are in‑browser only; no server‑side aggregation across users (by design for privacy). The observer runs on every analysis; it respects a gate (`validation.status clean/warnings`). The cluster detection algorithm is basic; it may miss weaker signals. That’s acceptable.
 

@@ -48,7 +48,7 @@ export async function mountInspector(root, ctx) {
   // Session/DEK/auth-api live in the shell (/core/session.js) independent of
   // any section; the handful of things that are genuinely Inspector-only
   // (sample/dirty/partner state + their DOM renderers) are exposed here so
-  // window.SpyglassSession's facade methods have somewhere to delegate WHILE
+  // window.OrtbtoolsSession's facade methods have somewhere to delegate WHILE
   // this mount is alive. registerAdapter returns a generation token;
   // unregisterAdapter only clears the slot if the token still matches
   // (guards against a stale/aborted mount racing a fresh one and wiping the
@@ -103,7 +103,7 @@ export async function mountInspector(root, ctx) {
     (e) => {
       // Resource-load errors (img/script 404) come through here too — skip.
       if (!e.error) return;
-      console.error('[spyglass:error]', e.error);
+      console.error('[ortbtools:error]', e.error);
       toast(t('toast.internal_ui_error', { error: e.error.message || 'unknown' }), 'error');
     },
     { signal: ctx.signal },
@@ -111,12 +111,12 @@ export async function mountInspector(root, ctx) {
   // Stage-1: wire the exact finding→source navigator. Markup (#bidReq/#bidRes)
   // is already injected by /modules/inspector/index.js before this mount runs.
   // Idempotent per mount; teardown on unmount via ctx.signal.
-  if (window.SpyglassSourceNav) {
+  if (window.OrtbtoolsSourceNav) {
     try {
-      window.SpyglassSourceNav.init({});
+      window.OrtbtoolsSourceNav.init({});
       ctx.signal.addEventListener('abort', () => {
         try {
-          window.SpyglassSourceNav.teardown();
+          window.OrtbtoolsSourceNav.teardown();
         } catch (_e) {
           /* */
         }
@@ -129,7 +129,7 @@ export async function mountInspector(root, ctx) {
   window.addEventListener(
     'unhandledrejection',
     (e) => {
-      console.error('[spyglass:unhandledrejection]', e.reason);
+      console.error('[ortbtools:unhandledrejection]', e.reason);
       const msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
       toast(t('toast.uncaught_error', { error: msg }), 'error');
     },
@@ -242,7 +242,7 @@ export async function mountInspector(root, ctx) {
     // breaking API access from non-root locales. serverSideDialect()
     // collapses temp dialects to their IAB parent so the server runs the
     // canonical ruleset; the temp-dialect findings are merged client-side
-    // by SpyglassIntel.applyToFindings() after the response lands.
+    // by OrtbtoolsIntel.applyToFindings() after the response lands.
     return (
       '/api/analyze?locale=' +
       encodeURIComponent(activeLocale()) +
@@ -261,7 +261,7 @@ export async function mountInspector(root, ctx) {
   //      user's saved choice without permanent persistence
   //   2. localStorage — survives reloads
   //   3. 'iab' — safe default
-  const DIALECT_STORAGE_KEY = 'spyglass_dialect_v1';
+  const DIALECT_STORAGE_KEY = 'ortbtools_dialect_v1';
   const KNOWN_DIALECTS = new Set(['iab', 'ext-rtb', 'inpage-push']);
 
   function isTempDialect(value) {
@@ -430,16 +430,16 @@ export async function mountInspector(root, ctx) {
     // applyToFindings reaches for the right spec on the next analyze.
     if (
       isTempDialect(dialect) &&
-      window.SpyglassIntel &&
-      typeof window.SpyglassIntel.activate === 'function'
+      window.OrtbtoolsIntel &&
+      typeof window.OrtbtoolsIntel.activate === 'function'
     ) {
-      window.SpyglassIntel.activate(dialect);
+      window.OrtbtoolsIntel.activate(dialect);
     } else if (
       !isTempDialect(dialect) &&
-      window.SpyglassIntel &&
-      typeof window.SpyglassIntel.activate === 'function'
+      window.OrtbtoolsIntel &&
+      typeof window.OrtbtoolsIntel.activate === 'function'
     ) {
-      window.SpyglassIntel.activate(null);
+      window.OrtbtoolsIntel.activate(null);
     }
     // Keep the URL in sync for the current tab so a refresh and a
     // shared-link copy both surface the active dialect, but ONLY for
@@ -776,8 +776,8 @@ export async function mountInspector(root, ctx) {
   // Reference to the iframe currently hosting the probed creative. Used
   // by the postMessage receiver (further below) to verify event.source —
   // any other frame on the page (other ad slots, GTM, third-party widgets)
-  // could otherwise send forged `spyglass-probe` messages and poison
-  // __spyglassBehavior.events. Cleared on every new preview; set only
+  // could otherwise send forged `ortbtools-probe` messages and poison
+  // __ortbtoolsBehavior.events. Cleared on every new preview; set only
   // when the banner-iframe branch actually mounts a probed iframe (VAST
   // and native preview branches don't get a probe → null guard rejects
   // their events too).
@@ -788,7 +788,7 @@ export async function mountInspector(root, ctx) {
   // _lastHeartbeatAt on every probe message it accepts. _watchdogTimer
   // ticks WATCHDOG_INTERVAL_MS and, if lag exceeds FROZEN_THRESHOLD_MS,
   // injects a synthetic kind:'frozen_thread' event into
-  // __spyglassBehavior.events — bypassing postMessage because a frozen
+  // __ortbtoolsBehavior.events — bypassing postMessage because a frozen
   // iframe can't send messages itself. Engine then promotes that event
   // to a behavior.malicious.frozen_thread finding (ERROR).
   //
@@ -816,10 +816,10 @@ export async function mountInspector(root, ctx) {
   // wire-send; this cap is purely about parent-tab memory hygiene.
   const BEHAVIOR_EVENTS_MAX = 500;
   function pushBehaviorEvent(evt) {
-    if (!window.__spyglassBehavior) {
-      window.__spyglassBehavior = { events: [], startedAt: Date.now() };
+    if (!window.__ortbtoolsBehavior) {
+      window.__ortbtoolsBehavior = { events: [], startedAt: Date.now() };
     }
-    const list = window.__spyglassBehavior.events;
+    const list = window.__ortbtoolsBehavior.events;
     list.push(evt);
     if (list.length > BEHAVIOR_EVENTS_MAX) {
       // Drop oldest. .splice keeps the same array reference so any
@@ -850,7 +850,7 @@ export async function mountInspector(root, ctx) {
       if (lag <= FROZEN_THRESHOLD_MS) return;
       _frozenAlerted = true;
       const evt = {
-        type: 'spyglass-probe-watchdog',
+        type: 'ortbtools-probe-watchdog',
         v: 1,
         ts: Date.now(),
         kind: 'frozen_thread',
@@ -886,7 +886,7 @@ export async function mountInspector(root, ctx) {
   }
 
   function resetBehavior() {
-    window.__spyglassBehavior = { events: [], startedAt: Date.now() };
+    window.__ortbtoolsBehavior = { events: [], startedAt: Date.now() };
     renderBehaviorTab();
   }
 
@@ -933,7 +933,7 @@ export async function mountInspector(root, ctx) {
   // Stage-1 (CP3): the old best-effort `jsonPathToTextarea`/`scrollToPath`
   // (regex side-guess + first-`"key"` substring match) is REMOVED. Exact
   // navigation now flows through the `location` contract → window.
-  // SpyglassSourceNav (explicit side, RFC 6901 pointer, source-map resolved).
+  // OrtbtoolsSourceNav (explicit side, RFC 6901 pointer, source-map resolved).
   // See the `goto-path` action handler.
 
   function setAdPreview(adm, simPrice, dims) {
@@ -982,14 +982,14 @@ export async function mountInspector(root, ctx) {
       setDims(0, 0);
       return;
     }
-    // Phase 6: park the creative source on __spyglassBehavior so that
+    // Phase 6: park the creative source on __ortbtoolsBehavior so that
     // modules/behavior/index.js can include it in the /api/analyze-behavior
     // POST body. Truncated to ADM_TRANSPORT_LIMIT — the engine's scanner
     // truncates internally too, but bounding wire size keeps the per-render
     // round-trip fast (Behavior tab re-fetches on every probe event).
     try {
       const admStr = String(adm);
-      window.__spyglassBehavior.creative_adm =
+      window.__ortbtoolsBehavior.creative_adm =
         admStr.length > ADM_TRANSPORT_LIMIT ? admStr.slice(0, ADM_TRANSPORT_LIMIT) : admStr;
     } catch (_e) {
       /* defensive — shouldn't fail, but the rest of preview must run */
@@ -1057,7 +1057,7 @@ export async function mountInspector(root, ctx) {
         // Logging lets us see ReferenceErrors / parse failures / asset shape
         // mismatches immediately. Falls through to the banner-iframe branch
         // below so the user still sees *something* (even if just raw JSON).
-        console.error('[spyglass] native render failed, falling back to banner branch', err);
+        console.error('[ortbtools] native render failed, falling back to banner branch', err);
       }
     }
 
@@ -1071,7 +1071,7 @@ export async function mountInspector(root, ctx) {
     // Pin THIS iframe as the only legitimate probe source. The receiver
     // below rejects every postMessage whose `event.source` doesn't match
     // this contentWindow — so even on a page with multiple iframes, only
-    // our just-mounted creative can populate __spyglassBehavior.events.
+    // our just-mounted creative can populate __ortbtoolsBehavior.events.
     _currentProbedIframe = iframe;
     // Phase 9: responsive sizing replaces the JS scale-to-fit math.
     // .preview-safe sizes itself via aspect-ratio + max-width:100% from
@@ -1162,7 +1162,7 @@ export async function mountInspector(root, ctx) {
     // 1. Version — precedence:
     //    a) oRTB 3.0 envelope (req.openrtb.ver)
     //    b) explicit ext.openrtb_version declaration in the payload
-    //    c) high-confidence (≥0.8) engine detection from __spyglassLast
+    //    c) high-confidence (≥0.8) engine detection from __ortbtoolsLast
     //    d) low-confidence engine fallback (prefixed with ≈)
     //    e) '?' if nothing found
     let version = '?';
@@ -1174,9 +1174,9 @@ export async function mountInspector(root, ctx) {
     } else {
       // Use validation result from last analysis if available
       const lastVer =
-        window.__spyglassLast &&
-        window.__spyglassLast.validation &&
-        window.__spyglassLast.validation.version;
+        window.__ortbtoolsLast &&
+        window.__ortbtoolsLast.validation &&
+        window.__ortbtoolsLast.validation.version;
       if (lastVer && lastVer.version && lastVer.version !== 'unknown') {
         const cf = lastVer.confidence || 0;
         const cfTag = cf >= 0.8 ? '' : ' (≈)';
@@ -1558,7 +1558,7 @@ export async function mountInspector(root, ctx) {
     const tab = $('tBehavior');
     const badge = $('behaviorBadge');
     if (!tab || !badge) return;
-    const all = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
+    const all = (window.__ortbtoolsBehavior && window.__ortbtoolsBehavior.events) || [];
     // probe_ready is an internal signal, not user-visible.
     const events = all.filter((e) => e.kind !== 'probe_ready');
     setTabBadge('behaviorBadge', { text: events.length || '' });
@@ -1568,8 +1568,8 @@ export async function mountInspector(root, ctx) {
     // the raw event timeline. Fallback below remains for boot-order
     // resilience — if the module script hasn't parsed yet, we still
     // render the timeline so the tab isn't blank.
-    if (window.SpyglassBehavior && typeof window.SpyglassBehavior.render === 'function') {
-      window.SpyglassBehavior.render(tab, all, {
+    if (window.OrtbtoolsBehavior && typeof window.OrtbtoolsBehavior.render === 'function') {
+      window.OrtbtoolsBehavior.render(tab, all, {
         emptyMessage: t('behavior.empty'),
         findingsHeading: t('behavior.heading.findings'),
         timelineHeading: t('behavior.heading.timeline'),
@@ -1757,7 +1757,7 @@ export async function mountInspector(root, ctx) {
   // the entry shape incompatibly, bump to `_v2` and the v1 data is
   // ignored. Within the v1 schema, individual entries are validated on
   // load so a single corrupted row doesn't poison the whole list.
-  const HISTORY_KEY = 'spyglass_history_v1';
+  const HISTORY_KEY = 'ortbtools_history_v1';
   const HISTORY_MAX = 50;
   const historyStore = (() => {
     try {
@@ -2019,9 +2019,9 @@ export async function mountInspector(root, ctx) {
     // Stage-1: drop any prior finding→source jump at the START of every analyze.
     // A failed/aborted analyze must not leave a stale highlight pointing at the
     // previous payload; onAnalyzed() re-arms navigation only on success.
-    if (window.SpyglassSourceNav) {
+    if (window.OrtbtoolsSourceNav) {
       try {
-        window.SpyglassSourceNav.resetNavigation();
+        window.OrtbtoolsSourceNav.resetNavigation();
       } catch (_e) {
         /* navigator is optional */
       }
@@ -2399,12 +2399,12 @@ export async function mountInspector(root, ctx) {
           // status if any new ERROR appeared. No-op when no temp dialect
           // is active.
           if (
-            window.SpyglassIntel &&
-            typeof window.SpyglassIntel.applyToFindings === 'function' &&
+            window.OrtbtoolsIntel &&
+            typeof window.OrtbtoolsIntel.applyToFindings === 'function' &&
             isTempDialect(activeDialect())
           ) {
             try {
-              await window.SpyglassIntel.applyToFindings({ req, res }, validation);
+              await window.OrtbtoolsIntel.applyToFindings({ req, res }, validation);
             } catch (_e) {
               /* defensive — never block the analyze flow */
             }
@@ -2414,7 +2414,7 @@ export async function mountInspector(root, ctx) {
           // AND for finding-detail panel value extraction. `req`/`res` are
           // the parsed inputs, kept here so the panel can resolve a
           // finding's path back to the actual user-pasted value.
-          window.__spyglassLast = {
+          window.__ortbtoolsLast = {
             validation: validation,
             crosscheck: cross,
             meta: j.meta || null,
@@ -2428,9 +2428,9 @@ export async function mountInspector(root, ctx) {
           // navigator. It snapshots the current pane text as the analyzed
           // revision and builds the prev/next list. No payload values are
           // passed — only the location contract + live textarea text (local).
-          if (window.SpyglassSourceNav) {
+          if (window.OrtbtoolsSourceNav) {
             try {
-              window.SpyglassSourceNav.onAnalyzed((validation.findings || []).concat(cross || []));
+              window.OrtbtoolsSourceNav.onAnalyzed((validation.findings || []).concat(cross || []));
             } catch (_e) {
               /* navigator is defensive; analyze flow must never break on it */
             }
@@ -2443,10 +2443,10 @@ export async function mountInspector(root, ctx) {
           // Discovery is disabled cleanly when the script tag isn't
           // loaded (e.g. in /embed view) — the global guard makes this
           // a one-line no-op there.
-          if (window.SpyglassIntel && typeof window.SpyglassIntel.observe === 'function') {
+          if (window.OrtbtoolsIntel && typeof window.OrtbtoolsIntel.observe === 'function') {
             try {
-              window.SpyglassIntel.observe(req, validation);
-              window.SpyglassIntel.observe(res, validation);
+              window.OrtbtoolsIntel.observe(req, validation);
+              window.OrtbtoolsIntel.observe(res, validation);
             } catch (_e) {
               /* observe() is already defensive; this is belt-and-braces */
             }
@@ -2497,7 +2497,7 @@ export async function mountInspector(root, ctx) {
         );
       })();
       // Render analysis strip (Feature #13) — uses validation.version which
-      // is now stashed in window.__spyglassLast after the try-block above.
+      // is now stashed in window.__ortbtoolsLast after the try-block above.
       renderAnalysisStrip(req, findings);
 
       if (validation && findings && findings.length) {
@@ -2547,7 +2547,7 @@ export async function mountInspector(root, ctx) {
             : `<div class="mono-label" style="color:var(--success);margin-bottom:var(--space-3)">${escapeHtml(t('crosscheck.all_passed', { count: cross.length }))}</div>`;
         // CP3.2: locatable crosscheck paths are clickable, reusing the EXISTING
         // finding→source contract — data-loc carries the finding-location and the
-        // goto-path dispatcher calls SpyglassSourceNav.navigate(). No data-jsonpath,
+        // goto-path dispatcher calls OrtbtoolsSourceNav.navigate(). No data-jsonpath,
         // no indexOf, no size→w alias: the source map resolves the exact key/value
         // (incl. size→/w + /h related) from the server-attached location. Non-
         // locatable crosschecks (precision 'none' / no primary) stay plain text.
@@ -3113,7 +3113,7 @@ export async function mountInspector(root, ctx) {
   // window.lazyOpenAuth (installed at shell boot by /core/modal-host.js)
   // lazy-imports the module then invokes window.openAuthModal(mode) — chrome-
   // level now, ROADMAP #18, so it works regardless of which section is
-  // mounted. The module talks to session state via window.SpyglassSession
+  // mounted. The module talks to session state via window.OrtbtoolsSession
   // (the shell-owned facade, /core/session.js) — DEK + user never touch this
   // closure anymore. Two Inspector-owned hooks the module still consumes:
   //   - window.snapshotPendingHistoryMerge — sets the closure-private
@@ -3149,7 +3149,7 @@ export async function mountInspector(root, ctx) {
   // cheap synchronous check without paying the import cost in the
   // 99.99% case where nothing is pending. Module owns the same
   // constant; both must agree.
-  const RECOVERY_PENDING_KEY = 'spyglass_recovery_pending_v1';
+  const RECOVERY_PENDING_KEY = 'ortbtools_recovery_pending_v1';
 
   // Shell hook: module calls this after the user clicks "I saved it"
   // (post-confirm). We clear #modalRoot here (instead of inside the
@@ -3157,7 +3157,7 @@ export async function mountInspector(root, ctx) {
   // modalRoot ID, and we chain the history-merge prompt only after
   // the user has explicitly acknowledged — otherwise the merge modal
   // would obscure the key before they had a chance to copy.
-  window.__spyglassRecoveryClosed = function () {
+  window.__ortbtoolsRecoveryClosed = function () {
     $('modalRoot').innerHTML = '';
     if (_pendingHistoryMerge) {
       _pendingHistoryMerge = false;
@@ -3301,10 +3301,10 @@ export async function mountInspector(root, ctx) {
   //   - 'open-forgot' data-action          → window.openForgotPasswordFlow
   //   - ?reset=<token> URL boot detection  → window.openPasswordResetFlow
   // The dispatcher cases live in /core/modal-host.js (modal-content actions).
-  // The shell's closeModal() reads window.__spyglassResetActive to know
+  // The shell's closeModal() reads window.__ortbtoolsResetActive to know
   // when to strip ?reset= from the URL on Esc/backdrop close. The DEK
   // installed after a successful reset goes through
-  // SpyglassSession.importDEKFromBytes() — raw DEK bytes never touch
+  // OrtbtoolsSession.importDEKFromBytes() — raw DEK bytes never touch
   // this closure.
 
   window.requestVerifyEmail = async function () {
@@ -3371,7 +3371,7 @@ export async function mountInspector(root, ctx) {
   // JSON. Tries bidReq first (most paths live there), falls back to
   // bidRes for response-side findings (`response.*`, `seatbid*`).
   function resolveFindingValue(path, findingId) {
-    const last = window.__spyglassLast;
+    const last = window.__ortbtoolsLast;
     if (!last) return { found: false };
     const isResponseSide =
       (findingId && /^response\b|^crosscheck\.bid\b/.test(findingId)) || /^seatbid\b/.test(path);
@@ -3691,7 +3691,7 @@ export async function mountInspector(root, ctx) {
     );
   }
 
-  // window.SpyglassSession is now installed ONCE at shell boot
+  // window.OrtbtoolsSession is now installed ONCE at shell boot
   // (public/core/session.js's installSessionFacade()) — session/crypto
   // methods delegate to the shell service; the Inspector-specific ones
   // (currentSampleId, isDirty, partnerCache, refreshPartners/Samples,
@@ -3704,7 +3704,7 @@ export async function mountInspector(root, ctx) {
   // _spy_createPartner + confirmSave (≈265 LOC) now live in
   // /modules/save-sample/index.js and are fetched on first click of
   // the "💾 зберегти" button (case 'save-sample' in the dispatcher
-  // below). State + crypto access goes through the SpyglassSession
+  // below). State + crypto access goes through the OrtbtoolsSession
   // facade — no closure-private references in the module.
 
   // ── Live + Simulate modals — MOVED to modules/{live,simulate}/ (lazy) ──
@@ -4069,14 +4069,14 @@ export async function mountInspector(root, ctx) {
     // can't filter on origin. We pin to the contentWindow reference of
     // the iframe we just mounted (set inside setAdPreview) and reject
     // anything else. Without this any frame on the page could fabricate
-    // `spyglass-probe` events and poison the analysis pipeline.
+    // `ortbtools-probe` events and poison the analysis pipeline.
     // {signal: ctx.signal} so a remount detaches the previous handler,
     // otherwise probe events could fan-out to stale closures.
     window.addEventListener(
       'message',
       (e) => {
         const d = e.data;
-        if (!d || d.type !== 'spyglass-probe') return;
+        if (!d || d.type !== 'ortbtools-probe') return;
         // Spoof-protection: only accept messages from the currently-mounted
         // probed iframe. Drops events when no iframe is active (VAST/native
         // previews, between-creative gap) and from any unrelated frame.
@@ -4334,9 +4334,9 @@ export async function mountInspector(root, ctx) {
             // sidebar). Falls back gracefully when the intel module
             // isn't loaded (embed mode, private browsing).
             return (
-              window.SpyglassIntelBuilder &&
-              typeof window.SpyglassIntelBuilder.open === 'function' &&
-              window.SpyglassIntelBuilder.open()
+              window.OrtbtoolsIntelBuilder &&
+              typeof window.OrtbtoolsIntelBuilder.open === 'function' &&
+              window.OrtbtoolsIntelBuilder.open()
             );
           // Phase C-1 — partner-inference banner in save modal.
           case 'hint-pick-partner':
@@ -4376,9 +4376,9 @@ export async function mountInspector(root, ctx) {
             // Stage-1: exact finding→source navigation via the location
             // contract (explicit side + RFC 6901 pointer). No regex side-guess,
             // no approximate jump — an unresolved/stale location simply no-ops.
-            if (window.SpyglassSourceNav && el.dataset.loc) {
+            if (window.OrtbtoolsSourceNav && el.dataset.loc) {
               try {
-                window.SpyglassSourceNav.navigate(JSON.parse(el.dataset.loc));
+                window.OrtbtoolsSourceNav.navigate(JSON.parse(el.dataset.loc));
               } catch (_e) {
                 /* malformed location → honest no-jump */
               }
@@ -4527,8 +4527,8 @@ export async function mountInspector(root, ctx) {
           // body via the analyze fetch — see the body construction
           // near the analyzeUrl call.
           try {
-            if (el.value) localStorage.setItem('spyglass_version_pin', el.value);
-            else localStorage.removeItem('spyglass_version_pin');
+            if (el.value) localStorage.setItem('ortbtools_version_pin', el.value);
+            else localStorage.removeItem('ortbtools_version_pin');
           } catch {
             /* storage disabled / quota — pin stays in-memory only */
           }
@@ -4701,7 +4701,7 @@ export async function mountInspector(root, ctx) {
     // detector decide. Stale values that don't match an <option> are
     // silently ignored — the <select> falls back to its first option.
     try {
-      const savedPin = localStorage.getItem('spyglass_version_pin');
+      const savedPin = localStorage.getItem('ortbtools_version_pin');
       const pinEl = $('versionPinSelector');
       if (pinEl && savedPin && ['2.5', '2.6', '3.0'].includes(savedPin)) {
         pinEl.value = savedPin;
@@ -4711,11 +4711,11 @@ export async function mountInspector(root, ctx) {
     }
 
     // Phase 7b: append <option>s for every temporary dialect the user
-    // has saved in IndexedDB. Re-runs on `spyglass:intel-dialect-changed`
+    // has saved in IndexedDB. Re-runs on `ortbtools:intel-dialect-changed`
     // (fired when builder creates a new dialect) so the dropdown stays
     // current without a page reload.
     async function repaintDialectOptions() {
-      if (!dialectSel || !window.SpyglassIntel) return;
+      if (!dialectSel || !window.OrtbtoolsIntel) return;
       // Strip prior temp options — keep the first three built-ins.
       const built = ['iab', 'ext-rtb', 'inpage-push'];
       Array.from(dialectSel.options)
@@ -4723,7 +4723,7 @@ export async function mountInspector(root, ctx) {
         .forEach((o) => o.remove());
       let temps = [];
       try {
-        temps = await window.SpyglassIntel.listTempDialects();
+        temps = await window.OrtbtoolsIntel.listTempDialects();
       } catch (_e) {
         /* */
       }
@@ -4741,7 +4741,7 @@ export async function mountInspector(root, ctx) {
     repaintDialectOptions();
     paintFooterDialect();
     window.addEventListener(
-      'spyglass:intel-dialect-changed',
+      'ortbtools:intel-dialect-changed',
       () => {
         repaintDialectOptions();
         paintFooterDialect();
@@ -4861,7 +4861,7 @@ export async function mountInspector(root, ctx) {
   // JS-generated modals — every interaction routes through the
   // central data-action dispatcher above. window.X is preserved
   // only for external script callers (share.js → runAnalysis,
-  // shortcuts.js → openSaveModal, export.js → __spyglassLast,
+  // shortcuts.js → openSaveModal, export.js → __ortbtoolsLast,
   // creative-probe.js iframe → renderBehaviorTab via postMessage).
   //
   // On unmount the registry calls our addCleanup. We delete every name
@@ -4896,14 +4896,14 @@ export async function mountInspector(root, ctx) {
       // showRecoveryKeyModal + closeRecoveryKeyModal + copyRecoveryKey
       // + isRecoveryKeyModalActive live in /modules/recovery/ (lazy);
       // managed by the module loader, not by this sweep. Same for the
-      // shell hook __spyglassRecoveryClosed which we install above.
+      // shell hook __ortbtoolsRecoveryClosed which we install above.
       // window.signOut is shell-owned (installed once at boot by
       // /core/session.js, ROADMAP #18) — never swept here.
-      '__spyglassRecoveryClosed',
+      '__ortbtoolsRecoveryClosed',
       // openForgotPasswordFlow + openPasswordResetFlow + doForgotPassword
       // + doResetPassword + updateResetModeUI + cancelPasswordReset live
       // in /modules/password-reset/ (lazy); managed by the module loader,
-      // not by this sweep. Same for window.__spyglassResetActive.
+      // not by this sweep. Same for window.__ortbtoolsResetActive.
       'requestVerifyEmail',
       // save / partner / sample / embed (loadSample/deleteSample are
       // local — driven by delegated handler on #savedList; editSample
@@ -4917,8 +4917,8 @@ export async function mountInspector(root, ctx) {
       'deletePartner',
       'refreshSamples',
       // ephemeral state
-      '__spyglassLast',
-      '__spyglassBehavior',
+      '__ortbtoolsLast',
+      '__ortbtoolsBehavior',
       // Feature #12 + #13 + #14 helpers
       'computeQualityScore',
       'renderAnalysisStrip',

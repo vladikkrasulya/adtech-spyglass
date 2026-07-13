@@ -1,8 +1,8 @@
-# Spyglass — AI Agent Context
+# ortbtools — AI Agent Context
 
 ## What this project is
 
-Spyglass is a public OpenRTB inspector: paste a `BidRequest` / `BidResponse` JSON
+ortbtools is a public OpenRTB inspector: paste a `BidRequest` / `BidResponse` JSON
 and get human-readable validation findings, semantic request↔response crosscheck,
 IAB-category decoding, and a sandboxed creative preview. Authenticated users get a
 zero-knowledge encrypted library of saved samples per partner. It ships in three
@@ -62,8 +62,8 @@ public/                           Static assets — bind-mounted, live-edit OK
   index.{en,uk,ru}.html           Shell per locale (EN at /, others at /uk/, /ru/)
   about.{en,uk,ru}.html           Docs per locale
   account.{en,uk,ru}.html         Cabinet (logged-in workspace)
-  spyglass.app.js                 Inspector shell (~4467 LOC); owns SpyglassSession facade
-  spyglass-crypto.js              Zero-knowledge crypto (browser-only, Web Crypto API)
+  ortbtools.app.js                 Inspector shell (~4467 LOC); owns OrtbtoolsSession facade
+  ortbtools-crypto.js              Zero-knowledge crypto (browser-only, Web Crypto API)
   i18n.js                         ~140-key UK/EN/RU dictionary + window.t() helper
   lang-switch.js                  Seamless DOM-morph language switch
   version.js                      Browser-side VERSION constant (bump with package.json)
@@ -133,7 +133,7 @@ in the UI.
    (it was `0.26.0` when the app was `0.52.0`); bump it on its own MINOR/PATCH
    merits at the same tier as the app, not the same number.
 3. `public/version.js` — `const VERSION`. **Live source of truth for the version
-   shown in chrome**: on load it repaints every `[data-spyglass-version]` span.
+   shown in chrome**: on load it repaints every `[data-ortbtools-version]` span.
 
 **Inline fallbacks — repainted by version.js at runtime, but bump them in the
 same commit so view-source and the pre-JS render are correct.** They are easy to
@@ -141,7 +141,7 @@ forget: they had drifted (about `v0.41.4`, engineVer `v0.39.0`) for ~10 releases
 before being re-synced in v0.52.0.
 
 4–6. `public/about.{en,uk,ru}.html` — `docs · vX.Y.Z` eyebrow + footer
-`[data-spyglass-version]` span (`replace_all` the old version string covers both).
+`[data-ortbtools-version]` span (`replace_all` the old version string covers both).
 7–9. `public/modules/inspector/template.{en,uk,ru}.html` — `#engineVer` span.
 
 See `docs/ARCHMAP.md §2.4` for the canonical list.
@@ -174,7 +174,7 @@ See `public/modules/README.md`. Summary:
 
 - Create `public/modules/<name>/index.js` (IIFE, strict mode, no cross-module imports).
 - Add `public/modules/<name>/i18n.js` (pushes keys to `window.kt_i18n_modules`).
-- Wire in `public/spyglass.app.js` dispatcher or a `<script>` tag in the shell.
+- Wire in `public/ortbtools.app.js` dispatcher or a `<script>` tag in the shell.
 - Module-local tests go in `tests/modules/<name>.test.js`.
 
 ### New translation key
@@ -197,10 +197,10 @@ rename creates a new inode. Docker's bind-mount held the old inode's file descri
 so the container still reads the previous version.
 
 **Detection.** Compare inodes: `stat <file>` on the host vs `docker compose exec
-adtech-spyglass stat /app/public/<file>` inside the container. Different inode number
+ortbtools stat /app/public/<file>` inside the container. Different inode number
 confirms the stale-mount condition.
 
-**Fix.** `docker compose restart adtech-spyglass`. A plain restart re-opens the bind
+**Fix.** `docker compose restart ortbtools`. A plain restart re-opens the bind
 mount's directory entry, picks up the new inode, and serves the updated file.
 
 **Affected files.** Any file in `./public/` and the portal's `design-system.css`
@@ -260,18 +260,18 @@ output. Code written by DS must be reviewed by Claude before committing.
 Pre-built specialized agents live in `.claude/agents/`. Invoke them for their specific
 scope rather than writing ad-hoc prompts:
 
-| Agent file                          | Purpose                                                                                                                                       |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `spyglass-css-cleaner.md`           | CSS deduplication, token alignment, `[hidden]` regressions. JS is off-limits.                                                                 |
-| `spyglass-deps-updater.md`          | Safe `npm update` (minor/patch only); verifies tests + lint; reverts on failure.                                                              |
-| `spyglass-doc-writer.md`            | Updates `/about` pages, README, ROADMAP, ARCHITECTURE in all 3 locales after a feature ships. Never touches code.                             |
-| `spyglass-i18n-translator.md`       | Adds / modifies keys in `public/i18n.js` and `packages/core/messages/`. Enforces UK/EN/RU parity. Never touches logic.                        |
-| `spyglass-prober.md`                | Read-only code investigator: "where is X?", "why is Y broken?". Produces a structured findings report. Never modifies files.                  |
-| `spyglass-security-reviewer.md`     | Read-only security audit (XSS, CSRF, injection, sandbox escape, timing, CSP). Rates findings CRITICAL/RED/YELLOW/GREEN. Never modifies files. |
-| `spyglass-tech-debt-resolver.md`    | Applies ONE specific tech-debt fix surgically. Single-issue scope; escalates if scope creeps.                                                 |
-| `spyglass-test-writer.md`           | Adds test fixtures + assertions to the node:test runner. Never modifies application code.                                                     |
-| `spyglass-uxqa-tester.md`           | Playwright smoke-tests on prod (or local). QA-mode: hard-stop on first functional failure; visual bugs out of scope.                          |
-| `spyglass-validator-rule-author.md` | Adds a new validation rule: logic + spec-ref + i18n messages + tests. Escalates on version-gating questions.                                  |
+| Agent file                           | Purpose                                                                                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ortbtools-css-cleaner.md`           | CSS deduplication, token alignment, `[hidden]` regressions. JS is off-limits.                                                                 |
+| `ortbtools-deps-updater.md`          | Safe `npm update` (minor/patch only); verifies tests + lint; reverts on failure.                                                              |
+| `ortbtools-doc-writer.md`            | Updates `/about` pages, README, ROADMAP, ARCHITECTURE in all 3 locales after a feature ships. Never touches code.                             |
+| `ortbtools-i18n-translator.md`       | Adds / modifies keys in `public/i18n.js` and `packages/core/messages/`. Enforces UK/EN/RU parity. Never touches logic.                        |
+| `ortbtools-prober.md`                | Read-only code investigator: "where is X?", "why is Y broken?". Produces a structured findings report. Never modifies files.                  |
+| `ortbtools-security-reviewer.md`     | Read-only security audit (XSS, CSRF, injection, sandbox escape, timing, CSP). Rates findings CRITICAL/RED/YELLOW/GREEN. Never modifies files. |
+| `ortbtools-tech-debt-resolver.md`    | Applies ONE specific tech-debt fix surgically. Single-issue scope; escalates if scope creeps.                                                 |
+| `ortbtools-test-writer.md`           | Adds test fixtures + assertions to the node:test runner. Never modifies application code.                                                     |
+| `ortbtools-uxqa-tester.md`           | Playwright smoke-tests on prod (or local). QA-mode: hard-stop on first functional failure; visual bugs out of scope.                          |
+| `ortbtools-validator-rule-author.md` | Adds a new validation rule: logic + spec-ref + i18n messages + tests. Escalates on version-gating questions.                                  |
 
 ---
 

@@ -7,15 +7,15 @@
    canonical one when both panes are populated.
 
    Loaded ONLY when the user clicks the "дзеркало ↔" button — see
-   the lazy stub in spyglass.app.js dispatcher (case 'mirror').
+   the lazy stub in ortbtools.app.js dispatcher (case 'mirror').
    On first click: ~30KB across this file + i18n.js. On subsequent
    clicks: cached by the module loader, zero extra fetch.
 
-   Exposed window APIs (consumed by spyglass.app.js dispatcher for
+   Exposed window APIs (consumed by ortbtools.app.js dispatcher for
    the modal's mirror-copy / mirror-load / mirror-mode-change /
    mirror-share buttons):
      - window.openMirrorModal()        — entry point
-     - window.__spyglassMirrorRefetch  — closure called when user
+     - window.__ortbtoolsMirrorRefetch  — closure called when user
                                           flips mode radio (minimal /
                                           best-practice). Exposed as
                                           a getter — spy gets the
@@ -305,10 +305,10 @@ export async function openMirrorModal() {
       '</div></div>';
   }
 
-  // Mode change handler is dispatched through spyglass.app.js's central
+  // Mode change handler is dispatched through ortbtools.app.js's central
   // data-action listener (case 'mirror-mode-change'). We expose the
   // refetch function on a closure so the dispatcher can trigger it.
-  window.__spyglassMirrorRefetch = (newMode) => {
+  window.__ortbtoolsMirrorRefetch = (newMode) => {
     currentMode = newMode === 'best-practice' ? 'best-practice' : 'minimal';
     fetchAndRender();
   };
@@ -316,7 +316,7 @@ export async function openMirrorModal() {
   await fetchAndRender();
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/mirror/index.js'); window.openMirrorModal();
 // — first call: fetches + evaluates + this assignment runs.
 // Subsequent calls: cached by the module loader, this assignment is a no-op.

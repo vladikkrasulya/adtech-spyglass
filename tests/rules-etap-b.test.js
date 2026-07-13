@@ -15,11 +15,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const schain = require('@kyivtech/spyglass-core/rules/schain');
-const eids = require('@kyivtech/spyglass-core/rules/eids');
-const adpod = require('@kyivtech/spyglass-core/rules/adpod');
-const { listPlugins } = require('@kyivtech/spyglass-core/rules');
-const { validate } = require('@kyivtech/spyglass-core');
+const schain = require('@ortbtools/core/rules/schain');
+const eids = require('@ortbtools/core/rules/eids');
+const adpod = require('@ortbtools/core/rules/adpod');
+const { listPlugins } = require('@ortbtools/core/rules');
+const { validate } = require('@ortbtools/core');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

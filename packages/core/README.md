@@ -1,8 +1,8 @@
-# @kyivtech/spyglass-core
+# @ortbtools/core
 
 OpenRTB inspector engine — paste a `BidRequest` / `BidResponse` JSON, get **stable, structured findings** with stable IDs, IAB spec deep-links, and human-readable messages. Bundles version detection (2.5 / 2.6 / 3.0), strict IAB validation, and semantic crosscheck (id alignment, price vs floor, bcat enforcement, native asset back-reference, VAST detection, auction summary).
 
-Pure JavaScript, no Node-only APIs. **Runs identically in Node and the browser** — privacy-first by design (the public Spyglass demo at [spyglass.kyivtech.com.ua](https://spyglass.kyivtech.com.ua) validates entirely client-side; nothing leaves the browser).
+Pure JavaScript, no Node-only APIs. **Runs identically in Node and the browser** — privacy-first by design (the public ortbtools demo at [ortbtools.com](https://ortbtools.com) validates entirely client-side; nothing leaves the browser).
 
 ## Why this exists
 
@@ -11,13 +11,13 @@ Existing OpenRTB validators are dead npm packages stuck on 2.3, JSON-schema lint
 ## Install
 
 ```bash
-npm install @kyivtech/spyglass-core
+npm install @ortbtools/core
 ```
 
 ## Usage
 
 ```js
-const { validate, crosscheck, detectVersion, listDialects } = require('@kyivtech/spyglass-core');
+const { validate, crosscheck, detectVersion, listDialects } = require('@ortbtools/core');
 
 const result = validate(bidRequest, {
   dialect: 'iab', // 'iab' | 'ext-rtb'

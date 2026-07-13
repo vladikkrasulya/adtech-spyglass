@@ -10,7 +10,7 @@
         copies the slug to clipboard.
      3. User dialect builder — logged-in users get an "Open builder"
         card that navigates to /uk/inspector and triggers
-        window.SpyglassIntelBuilder.open() if available.
+        window.OrtbtoolsIntelBuilder.open() if available.
         Anonymous users see a sign-in CTA.
 
    Backend endpoints used:
@@ -407,18 +407,18 @@ export default {
           e.preventDefault();
           const localeP = localePrefix(lang);
           const inspectorPath = (localeP || '') + '/inspector';
-          // Try SpyglassIntelBuilder first (from spyglass.app.js Phase 9).
+          // Try OrtbtoolsIntelBuilder first (from ortbtools.app.js Phase 9).
           // If not available (SPA context), navigate to inspector.
           if (
-            window.SpyglassIntelBuilder &&
-            typeof window.SpyglassIntelBuilder.open === 'function'
+            window.OrtbtoolsIntelBuilder &&
+            typeof window.OrtbtoolsIntelBuilder.open === 'function'
           ) {
-            window.SpyglassIntelBuilder.open();
+            window.OrtbtoolsIntelBuilder.open();
           } else if (
-            window.SpyglassShell &&
-            typeof window.SpyglassShell.navigateTo === 'function'
+            window.OrtbtoolsShell &&
+            typeof window.OrtbtoolsShell.navigateTo === 'function'
           ) {
-            window.SpyglassShell.navigateTo(inspectorPath);
+            window.OrtbtoolsShell.navigateTo(inspectorPath);
             // Dispatch the custom event after navigation settles
             setTimeout(() => {
               window.dispatchEvent(new CustomEvent('kt:open-dialect-builder'));

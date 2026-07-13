@@ -1,4 +1,4 @@
-# Spyglass · OpenRTB Inspector — robots.txt
+# ortbtools · OpenRTB Inspector — robots.txt
 # Public landing + docs are open for indexing. Auth-gated API endpoints + the
 # /api/proxy harness aren't worth crawling.
 

@@ -3,7 +3,7 @@
 Captures global hotkeys (`?`, `Ctrl/Cmd+S`, bare `M`) and renders a
 cheat-sheet modal listing the bindings. Self-contained: injects its own
 `<style>` on first use; reuses the shared `modalRoot` / `closeModal()` /
-`t()` primitives from `spyglass.app.js` and `i18n.js`.
+`t()` primitives from `ortbtools.app.js` and `i18n.js`.
 
 ## Files
 
@@ -13,7 +13,7 @@ cheat-sheet modal listing the bindings. Self-contained: injects its own
 
 ## Loading
 
-EAGER — script-tag IIFE in the HTML shell, after `spyglass.app.js` and
+EAGER — script-tag IIFE in the HTML shell, after `ortbtools.app.js` and
 `i18n.js`. No `kt:inspector-ready` wait: hotkeys bind on
 `document` and the modal target (`#modalRoot`) is in the shell, not the
 inspector template.
@@ -38,7 +38,7 @@ inspector template.
 | `M` / `m`      | `openMirrorModal()` (skipped while typing, or modal open) |
 
 `Ctrl/Cmd+Enter` (run analysis) and `Esc` (close modal) live in
-`spyglass.app.js` and aren't owned by this module — only displayed.
+`ortbtools.app.js` and aren't owned by this module — only displayed.
 
 ## Events
 

@@ -39,7 +39,7 @@ function openDb(dbPath) {
 }
 
 function makeTempDbPath() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spyglass-specimens-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ortbtools-specimens-'));
   return { dir, dbPath: path.join(dir, 'specimens.db') };
 }
 

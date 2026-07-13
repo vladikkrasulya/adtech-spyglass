@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * lib/cli.js — `ortbtools` command-line interface over @kyivtech/spyglass-core.
+ * lib/cli.js — `ortbtools` command-line interface over @ortbtools/core.
  *
  * Pure-ish by design: run(argv, io) does all the work and RETURNS the exit
  * code; the bin wrapper assigns it to process.exitCode. io carries the output
@@ -14,7 +14,7 @@
  */
 
 const fs = require('fs');
-const core = require('@kyivtech/spyglass-core');
+const core = require('@ortbtools/core');
 const pkg = require('../package.json');
 
 const EXIT_OK = 0;
@@ -278,7 +278,7 @@ function run(argv, io) {
     case 'version':
       io.out(
         `@ortbtools/cli ${pkg.version} ` +
-          `(engine @kyivtech/spyglass-core ${require('@kyivtech/spyglass-core/package.json').version})`,
+          `(engine @ortbtools/core ${require('@ortbtools/core/package.json').version})`,
       );
       return EXIT_OK;
     case 'help':

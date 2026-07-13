@@ -16,11 +16,11 @@
      - hint.partner.* / toast.partner_created / toast.partner_gone
        — also used by the partner-suggest banner outside this modal.
      - toast.signin_to_save — also used by 'open-corpus-save' guard
-       in spyglass.app.js dispatcher.
+       in ortbtools.app.js dispatcher.
      - toast.saved / toast.updated / toast.save_failed
        / toast.crypto_session_lost / toast.send_failed
        / toast.nothing_to_save — also used by confirmEdit / loadSample
-       / other save-adjacent flows in spyglass.app.js.
+       / other save-adjacent flows in ortbtools.app.js.
      - btn.save / btn.update / btn.save_as_new / btn.cancel
        — generic UI vocabulary, reused everywhere.
    ============================================================ */

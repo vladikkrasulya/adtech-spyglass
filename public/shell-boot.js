@@ -26,7 +26,7 @@ import * as registry from '/core/registry.js';
 // Section modules are NOT imported statically — they are lazy-loaded on first
 // activation via registry.registerLazy() in registerSections(). This keeps the
 // boot payload to chrome + the one active section; the inspector's ~65 KB gz
-// spyglass.app.js no longer loads on /library, /blog, /docs, etc.
+// ortbtools.app.js no longer loads on /library, /blog, /docs, etc.
 import { mountNav, canonicalize } from '/modules/nav/index.js';
 import { mountTopbar } from '/modules/topbar/index.js';
 // ROADMAP #18: session/auth + the modal host are chrome-level services, not
@@ -257,7 +257,7 @@ function mountChrome() {
     return;
   }
   // Session/auth + modal host FIRST — nav/topbar and the (lazy) auth/unlock/
-  // recovery modules all reach for window.SpyglassSession / window.closeModal
+  // recovery modules all reach for window.OrtbtoolsSession / window.closeModal
   // / window.lazyOpenAuth, so these must exist before anything else mounts.
   // installSessionFacade() is synchronous (just wires the facade + the
   // window.signOut global); ensureBooted() is the actual /api/auth/me
@@ -343,4 +343,4 @@ if (document.readyState === 'loading') {
 }
 
 // Expose for debugging / lang-switch interop.
-window.SpyglassShell = { navigateTo, activateFromUrl };
+window.OrtbtoolsShell = { navigateTo, activateFromUrl };

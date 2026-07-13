@@ -2,12 +2,12 @@
    ortbtools JSON-bundle export.
 
    Reads the BidRequest / BidResponse panes + the latest analysis result
-   stashed by spyglass.app.js (window.__spyglassLast), packages them
+   stashed by ortbtools.app.js (window.__ortbtoolsLast), packages them
    into a single JSON file, and triggers a browser download.
 
    Bundle shape:
      {
-       "spyglass_version": "v8.0.0",
+       "ortbtools_version": "v8.0.0",
        "captured_at": "<ISO>",
        "url": "https://ortbtools.com/...",
        "bid_request": <object | string>,
@@ -67,9 +67,11 @@
       return;
     }
 
-    const last = window.__spyglassLast || null;
+    const last = window.__ortbtoolsLast || null;
     const bundle = {
-      spyglass_version: getEngineVersion(),
+      ortbtools_version: getEngineVersion(),
+      // legacy-spyglass-ok: duplicate key for downstream parsers, drop ~v1.6
+      spyglass_version: getEngineVersion(), // legacy-spyglass-ok
       captured_at: new Date().toISOString(),
       url: location.href,
       bid_request: dataField(reqText),

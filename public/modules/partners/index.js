@@ -6,17 +6,17 @@
    labels attached to saved samples. Lists existing partners with
    delete buttons; one input row to add a new one. POSTs/DELETEs
    against /api/partners; on every mutation re-pulls the cache via
-   window.refreshPartners() (owned by spyglass.app.js — `_partnerCache`
+   window.refreshPartners() (owned by ortbtools.app.js — `_partnerCache`
    is shared with the partner-suggest banner and the save modal's
    <select>, so the cache cannot move into this module).
 
    Loaded ONLY when the user clicks the "👥 партнери" button or
    the cabinet's "Manage partners" deep-link (?open=partners) — see
-   the lazy stub in spyglass.app.js dispatcher (case 'open-partners').
+   the lazy stub in ortbtools.app.js dispatcher (case 'open-partners').
    On first click: ~3KB across this file + i18n.js. On subsequent
    clicks: cached by the module loader, zero extra fetch.
 
-   Exposed window APIs (consumed by spyglass.app.js dispatcher cases
+   Exposed window APIs (consumed by ortbtools.app.js dispatcher cases
    'confirm-add-partner' and 'delete-partner', plus the cabinet
    deep-link guard):
      - window.openPartnerModal()   — entry point
@@ -38,7 +38,7 @@
    ============================================================ */
 import { $, escapeHtml, toast, t } from '/core/utils.js';
 
-// Local copy of wireEnterSubmit — spyglass.app.js's helper isn't
+// Local copy of wireEnterSubmit — ortbtools.app.js's helper isn't
 // exported. Submitting a one-input modal with ⏎ saves the user a
 // mouse trip to the primary button.
 function wireEnterSubmit(inputId, action) {
@@ -77,7 +77,7 @@ function partnerListHtml() {
     .join('');
 }
 
-// Tiny fetch wrapper that mirrors spyglass.app.js's local api()
+// Tiny fetch wrapper that mirrors ortbtools.app.js's local api()
 // helper — same error shape (status + code on the thrown Error)
 // so the `partner_not_found` / 401 paths still surface meaningfully.
 async function api(method, url, body) {
@@ -185,7 +185,7 @@ export async function deletePartner(id) {
   }
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/partners/index.js'); window.openPartnerModal();
 // — first call: fetches + evaluates + these assignments run.
 // Subsequent calls: cached by the module loader, assignments are no-ops.

@@ -34,7 +34,7 @@
   // Most are inspector-specific; on surfaces that don't have them (e.g.
   // /about) the matches just return false and the morph proceeds normally.
   //
-  // Synced with current spyglass.app.js DOM 2026-05-05. Previous list had
+  // Synced with current ortbtools.app.js DOM 2026-05-05. Previous list had
   // 11 stale IDs (#historyList, #libList, #partnersList, #savedSamplesList,
   // #partnerOptions, #tCrosscheck, #tSlots, #tSummary, #tRaw, #crosscheckBadge,
   // #slotsBadge) that no longer matched anything — meaning the morph was
@@ -245,7 +245,7 @@
     // SPA shell detection: every section page uses the multi-section SPA
     // shell (.kt-shell). When the shell is present we do an in-place SPA
     // lang switch: update metadata + localStorage/cookie, snapshot textarea
-    // content, navigate via SpyglassShell.navigateTo(), then fire
+    // content, navigate via OrtbtoolsShell.navigateTo(), then fire
     // kt:lang-change so nav + topbar + the current section all re-render in
     // the new locale. No server roundtrip or hard reload needed.
     //
@@ -287,10 +287,10 @@
       try {
         const reqEl = document.getElementById('bidReq');
         const resEl = document.getElementById('bidRes');
-        if (reqEl && reqEl.value) sessionStorage.setItem('_sg_restore_bidReq', reqEl.value);
-        else sessionStorage.removeItem('_sg_restore_bidReq');
-        if (resEl && resEl.value) sessionStorage.setItem('_sg_restore_bidRes', resEl.value);
-        else sessionStorage.removeItem('_sg_restore_bidRes');
+        if (reqEl && reqEl.value) sessionStorage.setItem('_ot_restore_bidReq', reqEl.value);
+        else sessionStorage.removeItem('_ot_restore_bidReq');
+        if (resEl && resEl.value) sessionStorage.setItem('_ot_restore_bidRes', resEl.value);
+        else sessionStorage.removeItem('_ot_restore_bidRes');
       } catch (_) {
         /* storage disabled — acceptable */
       }
@@ -299,8 +299,8 @@
       if (menuEl) menuEl.removeAttribute('open');
       // SPA navigation: updates URL without server roundtrip, fires
       // kt:pushstate so shell listeners re-activate the correct section.
-      if (window.SpyglassShell && typeof window.SpyglassShell.navigateTo === 'function') {
-        window.SpyglassShell.navigateTo(targetUrl);
+      if (window.OrtbtoolsShell && typeof window.OrtbtoolsShell.navigateTo === 'function') {
+        window.OrtbtoolsShell.navigateTo(targetUrl);
       } else {
         // Shell not ready yet (extremely unlikely) — fall back to hard nav.
         location.assign(targetUrl);
@@ -489,17 +489,17 @@
       bindThemeTooltipI18n();
       // Restore textarea content saved before a lang-switch full navigation.
       try {
-        const reqVal = sessionStorage.getItem('_sg_restore_bidReq');
-        const resVal = sessionStorage.getItem('_sg_restore_bidRes');
+        const reqVal = sessionStorage.getItem('_ot_restore_bidReq');
+        const resVal = sessionStorage.getItem('_ot_restore_bidRes');
         if (reqVal !== null) {
           const el = document.getElementById('bidReq');
           if (el) el.value = reqVal;
-          sessionStorage.removeItem('_sg_restore_bidReq');
+          sessionStorage.removeItem('_ot_restore_bidReq');
         }
         if (resVal !== null) {
           const el = document.getElementById('bidRes');
           if (el) el.value = resVal;
-          sessionStorage.removeItem('_sg_restore_bidRes');
+          sessionStorage.removeItem('_ot_restore_bidRes');
         }
       } catch (_) {
         /* storage disabled */

@@ -30,14 +30,14 @@ const SHELL = `<!doctype html>
 <link rel="alternate" hreflang="en" href="https://ortbtools.com/" />
 <link rel="alternate" hreflang="x-default" href="https://ortbtools.com/" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Spyglass — Free OpenRTB Validator" />
+<meta property="og:title" content="ortbtools — Free OpenRTB Validator" />
 <meta
   property="og:description"
   content="Free browser-based OpenRTB validator."
 />
 <meta property="og:url" content="https://ortbtools.com/" />
 <meta property="og:locale" content="en_US" />
-<meta name="twitter:title" content="Spyglass — Free OpenRTB Validator" />
+<meta name="twitter:title" content="ortbtools — Free OpenRTB Validator" />
 <meta
   name="twitter:description"
   content="Free browser-based OpenRTB validator."

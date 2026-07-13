@@ -12,12 +12,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {
-  makeCanonical,
-  makeItem,
-  decoderError,
-} = require('@kyivtech/spyglass-core/decoders/_canonical');
-const decoders = require('@kyivtech/spyglass-core/decoders');
+const { makeCanonical, makeItem, decoderError } = require('@ortbtools/core/decoders/_canonical');
+const decoders = require('@ortbtools/core/decoders');
 
 // ── Canonical shape ─────────────────────────────────────────────────────────
 

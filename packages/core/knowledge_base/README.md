@@ -1,11 +1,11 @@
-# Spyglass Knowledge Base
+# ortbtools Knowledge Base
 
 Curated reference fixtures for OpenRTB and JsonFeed payloads, organized by
 spec version, side, and ad format.
 
 ## Why this exists
 
-Spyglass already ships TYPE detection (`detectType` → request/response/feed)
+ortbtools already ships TYPE detection (`detectType` → request/response/feed)
 and VERSION detection (`detectVersion` → 2.5 / 2.6 / 3.0). What was missing
 is FORMAT detection — answering "is this a banner, a VAST in-stream video,
 an audio podcast slot, a native card, a CTV reward video, a vendor push feed?"
@@ -62,7 +62,7 @@ it parses cleanly).
   "tags": ["ctv", "rewarded", "vast-4"],
   "file": "ortb-2.6/request/video/ctv-rewarded.json",
   "source": "synthesized from IAB 2.6 §3.2.7 (rwdd) + §5.30 (mtype)",
-  "license": "MIT (Spyglass)",
+  "license": "MIT (ortbtools)",
   "description": "CTV rewarded VAST 4 video, mtype-tagged response pair",
 }
 ```

@@ -16,9 +16,9 @@
 (function () {
   'use strict';
 
-  if (window.SpyglassIntelBanner) return;
+  if (window.OrtbtoolsIntelBanner) return;
 
-  const DISMISS_KEY = 'spyglass_intel_banner_dismissed_until';
+  const DISMISS_KEY = 'ortbtools_intel_banner_dismissed_until';
   const DISMISS_DURATION_MS = 24 * 3600 * 1000; // 24h
 
   let _root = null;
@@ -29,7 +29,7 @@
     _stylesInjected = true;
     const style = document.createElement('style');
     style.textContent = [
-      '.spyglass-intel-chip{',
+      '.ortbtools-intel-chip{',
       '  position:fixed;bottom:20px;right:20px;',
       '  z-index:9000;',
       '  display:flex;align-items:center;gap:10px;',
@@ -43,36 +43,36 @@
       '  max-width:340px;',
       '  transition:opacity 200ms ease, transform 200ms ease;',
       '}',
-      '.spyglass-intel-chip[hidden]{display:none}',
-      '.spyglass-intel-chip__icon{',
+      '.ortbtools-intel-chip[hidden]{display:none}',
+      '.ortbtools-intel-chip__icon{',
       '  font-size:14px;line-height:1;',
       '  flex-shrink:0;',
       '}',
-      '.spyglass-intel-chip__body{flex:1;min-width:0}',
-      '.spyglass-intel-chip__title{',
+      '.ortbtools-intel-chip__body{flex:1;min-width:0}',
+      '.ortbtools-intel-chip__title{',
       '  font-weight:600;',
       '  font-size:12px;',
       '  color:var(--text, #1a1a1a);',
       '  margin-bottom:2px;',
       '}',
-      '.spyglass-intel-chip__sub{',
+      '.ortbtools-intel-chip__sub{',
       '  font-size:11px;',
       '  color:var(--text-muted, #666);',
       '  font-family:var(--font-mono, ui-monospace, monospace);',
       '  letter-spacing:0.02em;',
       '}',
-      '.spyglass-intel-chip__close{',
+      '.ortbtools-intel-chip__close{',
       '  background:transparent;border:none;cursor:pointer;',
       '  color:var(--text-dim, #999);',
       '  font-size:14px;line-height:1;',
       '  padding:2px 6px;border-radius:3px;',
       '}',
-      '.spyglass-intel-chip__close:hover{',
+      '.ortbtools-intel-chip__close:hover{',
       '  background:var(--bg-2, #f3f3f3);',
       '  color:var(--text, #1a1a1a);',
       '}',
       '@media (prefers-reduced-motion: reduce){',
-      '  .spyglass-intel-chip{transition:none}',
+      '  .ortbtools-intel-chip{transition:none}',
       '}',
     ].join('');
     document.head.appendChild(style);
@@ -82,18 +82,18 @@
     if (_root && document.body.contains(_root)) return _root;
     injectStyles();
     _root = document.createElement('div');
-    _root.className = 'spyglass-intel-chip';
-    _root.id = 'spyglassIntelChip';
+    _root.className = 'ortbtools-intel-chip';
+    _root.id = 'ortbtoolsIntelChip';
     _root.setAttribute('role', 'status');
     _root.setAttribute('aria-live', 'polite');
     _root.hidden = true;
     _root.innerHTML = [
-      '<span class="spyglass-intel-chip__icon" aria-hidden="true">🧬</span>',
-      '<div class="spyglass-intel-chip__body" data-intel-open style="cursor:pointer">',
-      '  <div class="spyglass-intel-chip__title" data-intel-title></div>',
-      '  <div class="spyglass-intel-chip__sub" data-intel-sub></div>',
+      '<span class="ortbtools-intel-chip__icon" aria-hidden="true">🧬</span>',
+      '<div class="ortbtools-intel-chip__body" data-intel-open style="cursor:pointer">',
+      '  <div class="ortbtools-intel-chip__title" data-intel-title></div>',
+      '  <div class="ortbtools-intel-chip__sub" data-intel-sub></div>',
       '</div>',
-      '<button class="spyglass-intel-chip__close" aria-label="Dismiss" title="Dismiss for 24h" data-intel-close>×</button>',
+      '<button class="ortbtools-intel-chip__close" aria-label="Dismiss" title="Dismiss for 24h" data-intel-close>×</button>',
     ].join('');
     document.body.appendChild(_root);
     _root.querySelector('[data-intel-close]').addEventListener('click', dismiss);
@@ -101,8 +101,8 @@
     // Stops propagation so it doesn't also trigger the dismiss button.
     _root.querySelector('[data-intel-open]').addEventListener('click', (ev) => {
       ev.stopPropagation();
-      if (window.SpyglassIntelBuilder && typeof window.SpyglassIntelBuilder.open === 'function') {
-        window.SpyglassIntelBuilder.open();
+      if (window.OrtbtoolsIntelBuilder && typeof window.OrtbtoolsIntelBuilder.open === 'function') {
+        window.OrtbtoolsIntelBuilder.open();
       }
     });
     return _root;
@@ -166,7 +166,7 @@
     return parts.join(' · ');
   }
 
-  window.SpyglassIntelBanner = {
+  window.OrtbtoolsIntelBanner = {
     refresh,
     dismiss,
   };

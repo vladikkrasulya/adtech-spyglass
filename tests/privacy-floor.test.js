@@ -344,9 +344,9 @@ test('write_state and set_env REFUSE to write through a symlink (no partial writ
       'if printf "STATUS=X\\n" | write_state "$d/state-link" 2>/dev/null; then echo WS-WROTE; else echo WS-REFUSED; fi',
       'grep -qx ORIGINAL "$d/state-real" && echo WS-INTACT || echo WS-CLOBBERED',
       // set_env via symlink
-      'printf "SPYGLASS_TAG=old\\n" > "$d/env-real"; chmod 600 "$d/env-real"; ln -s "$d/env-real" "$d/env-link"',
-      'if set_env SPYGLASS_TAG new "$d/env-link" >/dev/null 2>&1; then echo SE-WROTE; else echo SE-REFUSED; fi',
-      'grep -qx "SPYGLASS_TAG=old" "$d/env-real" && echo SE-INTACT || echo SE-CLOBBERED',
+      'printf "ORTBTOOLS_TAG=old\\n" > "$d/env-real"; chmod 600 "$d/env-real"; ln -s "$d/env-real" "$d/env-link"',
+      'if set_env ORTBTOOLS_TAG new "$d/env-link" >/dev/null 2>&1; then echo SE-WROTE; else echo SE-REFUSED; fi',
+      'grep -qx "ORTBTOOLS_TAG=old" "$d/env-real" && echo SE-INTACT || echo SE-CLOBBERED',
       'rm -rf "$d"',
     ].join('\n'),
   );
@@ -433,7 +433,7 @@ test('deploy-sim: WIPED state (no floor line) + pre-baseline candidate → REJEC
   const r = deploySim('floor-reset-prefloor');
   assert.equal(r.code, 2, r.out);
   assert.match(r.out, /\(no state\)/, 'must abort before writing any state');
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must be untouched');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must be untouched');
   assert.match(r.out, /COMPOSE_UP_CALLS=0/, 'nothing may be brought up');
 });
 
@@ -448,5 +448,5 @@ test('rollback-sim: empty runtime floor + PRE-baseline target → REJECT (exit 2
   assert.equal(r.code, 2, r.out);
   assert.match(r.out, /ABORT: target image/);
   assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must not be mutated');
 });

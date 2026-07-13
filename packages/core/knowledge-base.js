@@ -23,7 +23,7 @@
  *
  * Failure posture: if manifest or any sample fails to load, the
  * loader returns an empty list rather than throwing. The KB is
- * supplementary — Spyglass must work when it's missing.
+ * supplementary — ortbtools must work when it's missing.
  */
 
 const fs = require('fs');

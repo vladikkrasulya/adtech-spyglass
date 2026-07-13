@@ -22,7 +22,7 @@ Two roles:
 ## Loading
 
 EAGER — both `i18n.js` and `index.js` are loaded at boot from the
-HTML shells (after `modules/share/`, before `spyglass.app.js`).
+HTML shells (after `modules/share/`, before `ortbtools.app.js`).
 Unlike `mirror`, `live`, or `simulate` (lazy on tab activation), the
 embed modal is reachable from the topnav/share menu, so it has to be
 ready as soon as the workbench mounts.
@@ -37,7 +37,7 @@ ready as soon as the workbench mounts.
 
 - `window.buildShareUrl(reqText, resText) → Promise<string>` — from
   `modules/share/index.js`
-- `window.spyglassShareSupported() → boolean` — feature-detect from
+- `window.ortbtoolsShareSupported() → boolean` — feature-detect from
   `modules/share/index.js`
 - `window.t(key, params)` — i18n lookup
 - `window.toast(msg, type)` — toast surface
@@ -52,7 +52,7 @@ ready as soon as the workbench mounts.
 ## URL shape produced
 
 ```
-https://spyglass.kyivtech.com.ua/?embed=1#req=<b64url(deflate(json))>&res=<...>
+https://ortbtools.com/?embed=1#req=<b64url(deflate(json))>&res=<...>
 ```
 
 `?embed=1` is the chrome-stripper flag; the hash fragment carries

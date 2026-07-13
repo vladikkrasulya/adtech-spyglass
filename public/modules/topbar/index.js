@@ -179,8 +179,8 @@ export function mountTopbar(root, shellRoot) {
     const langAttr = document.documentElement.getAttribute('lang') || 'en';
     const prefix = langAttr === 'en' ? '' : '/' + langAttr;
     const target = prefix + '/inspector?auth=login';
-    if (window.SpyglassShell && typeof window.SpyglassShell.navigateTo === 'function') {
-      window.SpyglassShell.navigateTo(target);
+    if (window.OrtbtoolsShell && typeof window.OrtbtoolsShell.navigateTo === 'function') {
+      window.OrtbtoolsShell.navigateTo(target);
     } else {
       window.location.assign(target);
     }
@@ -351,7 +351,7 @@ export function mountTopbar(root, shellRoot) {
   window.addEventListener('kt:lang-change', onLang);
 
   // ── Auth state sync ────────────────────────────────────────────────────
-  // Listen to auth:changed dispatched by SpyglassSession.setUser and
+  // Listen to auth:changed dispatched by OrtbtoolsSession.setUser and
   // window.signOut. Detail carries {user} (null on logout).
   const onAuthChanged = (e) => {
     const user = e && e.detail && e.detail.user ? e.detail.user : null;

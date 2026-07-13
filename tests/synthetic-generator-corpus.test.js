@@ -21,7 +21,7 @@ const path = require('path');
 const SyntheticGenerator = require('../samples/synthetic-generator');
 
 function tmpCorpus(files) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'spyglass-corpus-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ortbtools-corpus-'));
   for (const [name, contents] of Object.entries(files)) {
     fs.writeFileSync(
       path.join(dir, name),

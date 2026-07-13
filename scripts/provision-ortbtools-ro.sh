@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
-# provision-spyglass-ro.sh — idempotent host setup for the Grafana read-only
-# shared-group SQLite access contract (adtech-spyglass v1.1.7+).
+# provision-ortbtools-ro.sh — idempotent host setup for the Grafana read-only
+# shared-group SQLite access contract (ortbtools v1.1.7+).
 #
-# Grants Grafana (uid 472, joined to group spyglass-ro via the grafana-stack
+# Grants Grafana (uid 472, joined to group ortbtools-ro via the grafana-stack
 # `group_add`) READ access to the live SQLite while removing world ("other")
-# access. NON-RECURSIVE by construction: ONLY the AppData dir + spyglass.db/-wal/
+# access. NON-RECURSIVE by construction: ONLY the AppData dir + ortbtools.db/-wal/
 # -shm are touched. content-posts stays 1000:1000 (Grafana never reads it) and
 # deploy-state.env stays 0600 — neither is ever opened up.
 #
 # Usage (run as root on core):
-#   provision-spyglass-ro.sh             # DRY-RUN (default): show plan + state, change nothing
-#   provision-spyglass-ro.sh --apply     # apply (backup first); FAILS CLOSED if verify mismatches
-#   provision-spyglass-ro.sh --rollback  # revert to 1000:1000 / 0644 / 0755 (NON-RECURSIVE)
+#   provision-ortbtools-ro.sh             # DRY-RUN (default): show plan + state, change nothing
+#   provision-ortbtools-ro.sh --apply     # apply (backup first); FAILS CLOSED if verify mismatches
+#   provision-ortbtools-ro.sh --rollback  # revert to 1000:1000 / 0644 / 0755 (NON-RECURSIVE)
 #
 # Never prints DB contents (access probes read at most 1 byte, discarded).
 
@@ -20,14 +20,14 @@ set -euo pipefail
 # shellcheck source=scripts/deploy-lib.sh
 . "$(dirname "$0")/deploy-lib.sh" # _stat_uid/_stat_gid/_stat_mode/_group_name
 
-GID="${SPYGLASS_DB_GID:-2472}"
-GROUP="${SPYGLASS_DB_GROUP:-spyglass-ro}"
-APPDATA="${SPYGLASS_APPDATA:-/srv/DATA/AppData/adtech-spyglass}"
-APP_UID="${SPYGLASS_APP_UID:-1000}"
-APP_GID="${SPYGLASS_APP_GID:-1000}" # the app's OWN group — used for rollback (NOT the same as APP_UID)
-DIR_MODE="${SPYGLASS_DIR_MODE:-2710}"
-GRAFANA_UID="${SPYGLASS_GRAFANA_UID:-472}"
-DB_FILES=(spyglass.db spyglass.db-wal spyglass.db-shm)
+GID="${ORTBTOOLS_DB_GID:-2472}"
+GROUP="${ORTBTOOLS_DB_GROUP:-ortbtools-ro}"
+APPDATA="${ORTBTOOLS_APPDATA:-/srv/DATA/AppData/ortbtools}"
+APP_UID="${ORTBTOOLS_APP_UID:-1000}"
+APP_GID="${ORTBTOOLS_APP_GID:-1000}" # the app's OWN group — used for rollback (NOT the same as APP_UID)
+DIR_MODE="${ORTBTOOLS_DIR_MODE:-2710}"
+GRAFANA_UID="${ORTBTOOLS_GRAFANA_UID:-472}"
+DB_FILES=(ortbtools.db ortbtools.db-wal ortbtools.db-shm)
 MODE="${1:-}"
 
 require_root() { [ "$(id -u)" = 0 ] || { echo "ABORT: must run as root"; exit 1; }; }
@@ -89,14 +89,14 @@ verify() {
       bad=1
     }
   fi
-  if [ -e "$APPDATA/spyglass.db" ]; then
-    _probe "$GRAFANA_UID" "$GRAFANA_UID" "$GID" "$APPDATA/spyglass.db" && echo "  OK   grafana+group read DB" || { echo "  FAIL grafana+group read DB (expected ALLOW)"; bad=1; }
-    _probe "$GRAFANA_UID" "$GRAFANA_UID" "$GRAFANA_UID" "$APPDATA/spyglass.db" && { echo "  FAIL grafana NO-group read DB (expected DENY)"; bad=1; } || echo "  OK   grafana NO-group read DB denied"
-    _probe 65533 65533 65533 "$APPDATA/spyglass.db" && { echo "  FAIL stranger read DB (expected DENY)"; bad=1; } || echo "  OK   stranger read DB denied"
+  if [ -e "$APPDATA/ortbtools.db" ]; then
+    _probe "$GRAFANA_UID" "$GRAFANA_UID" "$GID" "$APPDATA/ortbtools.db" && echo "  OK   grafana+group read DB" || { echo "  FAIL grafana+group read DB (expected ALLOW)"; bad=1; }
+    _probe "$GRAFANA_UID" "$GRAFANA_UID" "$GRAFANA_UID" "$APPDATA/ortbtools.db" && { echo "  FAIL grafana NO-group read DB (expected DENY)"; bad=1; } || echo "  OK   grafana NO-group read DB denied"
+    _probe 65533 65533 65533 "$APPDATA/ortbtools.db" && { echo "  FAIL stranger read DB (expected DENY)"; bad=1; } || echo "  OK   stranger read DB denied"
     if [ -e "$APPDATA/deploy-state.env" ]; then
       _probe "$GRAFANA_UID" "$GRAFANA_UID" "$GID" "$APPDATA/deploy-state.env" && { echo "  FAIL grafana read deploy-state (expected DENY)"; bad=1; } || echo "  OK   grafana read deploy-state denied"
     fi
-    setpriv --reuid "$APP_UID" --regid "$APP_GID" --groups "$APP_GID" sh -c "printf '' >> '$APPDATA/spyglass.db'" 2>/dev/null && echo "  OK   app uid ${APP_UID} write DB" || { echo "  FAIL app uid ${APP_UID} write DB"; bad=1; }
+    setpriv --reuid "$APP_UID" --regid "$APP_GID" --groups "$APP_GID" sh -c "printf '' >> '$APPDATA/ortbtools.db'" 2>/dev/null && echo "  OK   app uid ${APP_UID} write DB" || { echo "  FAIL app uid ${APP_UID} write DB"; bad=1; }
   fi
   if [ "$bad" = 0 ]; then echo "  VERIFY OK"; else echo "VERIFY FAILED"; fi
   return "$bad"

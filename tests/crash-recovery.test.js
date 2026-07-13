@@ -159,7 +159,7 @@ test('preflight BLOCKS a new deploy when STATUS is CANDIDATE_STARTING (crash bef
   assert.equal(r.code, 7, r.out);
   assert.match(r.out, /ABORT: deploy-state\.env STATUS=CANDIDATE_STARTING/);
   assert.match(r.out, /STATUS=CANDIDATE_STARTING/, 'state must be left untouched for inspection');
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be touched');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must not be touched');
   assert.match(r.out, /COMPOSE_UP_CALLS=0/, 'must not attempt any new transition');
   assert.match(
     r.out,
@@ -172,7 +172,7 @@ test('preflight BLOCKS a new deploy when STATUS is CANDIDATE_READY (crash after 
   const r = runSim('preflight-blocks-candidate-ready');
   assert.equal(r.code, 7, r.out);
   assert.match(r.out, /STATUS=CANDIDATE_READY/);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/);
   assert.match(r.out, /COMPOSE_UP_CALLS=0/);
 });
 
@@ -211,7 +211,7 @@ test('rollback.sh is NOT blocked by an in-flight STATUS (it is the designated re
   assert.match(r.out, /STATUS=ROLLED_BACK/, 'rollback must succeed and reach a terminal state');
   assert.match(
     r.out,
-    /ENV_SPYGLASS_TAG=rollback-pre-oldsha/,
+    /ENV_ORTBTOOLS_TAG=rollback-pre-oldsha/,
     '.env must be pinned to the restored image',
   );
 });
@@ -274,11 +274,7 @@ test('restart:always is armed exactly once, AFTER verification, immediately befo
   assert.equal(r.code, 0, r.out);
   const armLines = r.out.split('\n').filter((l) => l.startsWith('ARM '));
   assert.equal(armLines.length, 1, 'exactly one arm call on a fully successful deploy');
-  assert.match(
-    armLines[0],
-    /^ARM always adtech-spyglass /,
-    'must arm "always" on the app container',
-  );
+  assert.match(armLines[0], /^ARM always ortbtools /, 'must arm "always" on the app container');
   // At the moment `docker update` ran, the state file still showed CANDIDATE_READY
   // (the write to ACTIVE happens AFTER arming) — proves the ordering: verify →
   // arm restart:always → THEN commit STATUS=ACTIVE, never the reverse.
@@ -332,12 +328,12 @@ test('.env is NEVER pinned to a candidate that failed — only to the verified r
   assert.equal(r.code, 1, r.out);
   assert.doesNotMatch(
     r.out,
-    /ENV_SPYGLASS_TAG=abc1234/,
+    /ENV_ORTBTOOLS_TAG=abc1234/,
     '.env must never point at the failed candidate SHA',
   );
   assert.match(
     r.out,
-    /ENV_SPYGLASS_TAG=rollback-pre-/,
+    /ENV_ORTBTOOLS_TAG=rollback-pre-/,
     '.env must point at the verified rollback image',
   );
 });

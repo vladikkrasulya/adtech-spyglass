@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Discovery / Spyglass Intelligence — pure helpers.
+ * Discovery / ortbtools Intelligence — pure helpers.
  *
  * The browser-only orchestration (IndexedDB storage, banner UI, observer
  * wiring) lives in public/modules/intel/. The pieces here are pure JS

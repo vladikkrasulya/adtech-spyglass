@@ -13,8 +13,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { validateUrlRequest } = require('@kyivtech/spyglass-core/rules-request-url');
-const { makeCanonicalUrlRequest } = require('@kyivtech/spyglass-core/decoders/request/_canonical');
+const { validateUrlRequest } = require('@ortbtools/core/rules-request-url');
+const { makeCanonicalUrlRequest } = require('@ortbtools/core/decoders/request/_canonical');
 
 function baseCanonical(extra) {
   const c = makeCanonicalUrlRequest('url-linkfeed', 'http://feed.vendor.example/link?x=1');

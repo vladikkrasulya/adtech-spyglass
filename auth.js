@@ -13,7 +13,7 @@
  * sides. On boot we load all non-expired sessions from DB into the Map.
  *
  * Cookie:
- *   spy_session = <64-char hex token>
+ *   ot_session = <64-char hex token>
  *   HttpOnly · SameSite=Lax · Secure (when behind https) · Max-Age=30d
  *
  * Rate limits (per IP):
@@ -25,7 +25,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const eventLog = require('./lib/event-log');
 
-const COOKIE_NAME = 'spy_session';
+const COOKIE_NAME = 'ot_session';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const BCRYPT_ROUNDS = 12;
@@ -128,11 +128,13 @@ function createAuth({ Users, Sessions, logger }) {
 
   function getCookieToken(req) {
     const cookie = req.headers.cookie || '';
+    let legacy = null;
     for (const part of cookie.split(';')) {
       const [k, v] = part.trim().split('=');
       if (k === COOKIE_NAME) return v;
+      if (k === 'spy_session') legacy = v; // legacy-spyglass-ok: pre-rename cookie, drop shim ~v1.6
     }
-    return null;
+    return legacy;
   }
 
   function getCurrentUser(req) {
@@ -177,7 +179,12 @@ function createAuth({ Users, Sessions, logger }) {
       `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
     ];
     if (isHttps(req)) parts.push('Secure');
-    res.setHeader('Set-Cookie', parts.join('; '));
+    // Also expire the pre-rename cookie so browsers converge on the new name.
+    // legacy-spyglass-ok: drop together with the read shim ~v1.6.
+    res.setHeader('Set-Cookie', [
+      parts.join('; '),
+      'spy_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0', // legacy-spyglass-ok
+    ]);
   }
 
   function createSession(req, res, user) {
@@ -217,7 +224,12 @@ function createAuth({ Users, Sessions, logger }) {
     }
     const parts = [`${COOKIE_NAME}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
     if (isHttps(req)) parts.push('Secure');
-    res.setHeader('Set-Cookie', parts.join('; '));
+    // Also expire the pre-rename cookie so browsers converge on the new name.
+    // legacy-spyglass-ok: drop together with the read shim ~v1.6.
+    res.setHeader('Set-Cookie', [
+      parts.join('; '),
+      'spy_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0', // legacy-spyglass-ok
+    ]);
   }
 
   async function register({ email, password }, req) {

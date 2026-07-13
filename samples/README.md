@@ -1,4 +1,4 @@
-# Spyglass Synthetic Samples — Phase 1 Corpus
+# ortbtools Synthetic Samples — Phase 1 Corpus
 
 This directory holds base JSON fixtures used by the synthetic generator that powers the public Stream surface (per `docs/stream-platform-pivot-2026-05-05.md`, Phase 1).
 

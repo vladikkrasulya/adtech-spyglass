@@ -1,7 +1,7 @@
 /* ============================================================
    public/core/utils.js — shared technical utilities (ES module).
 
-   Extracted from spyglass.app.js on 2026-05-05 as the first step of
+   Extracted from ortbtools.app.js on 2026-05-05 as the first step of
    the modular-architecture migration (Phase A of the plan in
    docs/stream-platform-pivot-2026-05-05.md). Behaviour is identical
    to the inlined originals; this is a pure code-organisation move.

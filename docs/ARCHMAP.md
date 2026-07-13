@@ -1,4 +1,4 @@
-# Spyglass — Architectural Map
+# ortbtools — Architectural Map
 
 **Purpose**: living dependency map. Read this BEFORE touching any subsystem.
 For each entry: where it lives, who uses it, who depends on it, deploy chain,
@@ -49,7 +49,7 @@ pure CSS/HTML/JS-inside-existing-modules polish + one IA refactor:
   sidebar nav row (was 7/8 — Dialects section existed but had no
   nav). Added `.cab-nav::after` sticky fade gradient on mobile so
   clipped tabs don't read as broken layout.
-- **`public/spyglass.app.js`** — `updateFormatBar()` now paints
+- **`public/ortbtools.app.js`** — `updateFormatBar()` now paints
   status pill with icon + finding count; `paintFooterDialect()`
   reflects active dialect in footer state-chip;
   `?auth=login|signup` URL handler routes to the auth modal in
@@ -61,7 +61,7 @@ pure CSS/HTML/JS-inside-existing-modules polish + one IA refactor:
   end-of-file mobile letter-spacing block behind a SOURCE-ORDER
   ANCHOR comment.
 - **`/srv/DATA/Stacks/kyivtech-portal/public/design-system.css`**
-  (shared, bind-mounted into Spyglass) — added `--bg-elev` and
+  (shared, bind-mounted into ortbtools) — added `--bg-elev` and
   `--bg-elev-2` token declarations that the cabinet referenced
   via `var()` but were never declared (both themes fell back to
   transparent → cabinet cards lost elevation). Dark `--text-dim`
@@ -114,9 +114,9 @@ lib/
 
 public/modules/                frontend tool folders (loaded eager via <script>
 ├── share/ embed/ shortcuts/   in shell, or lazy via `await import()` from the
-├── mirror/ live/ simulate/    dispatcher in public/spyglass.app.js)
+├── mirror/ live/ simulate/    dispatcher in public/ortbtools.app.js)
 │   corpus-save/ partners/     each folder has index.js + i18n.js + README.md.
-│   auth/ unlock/ recovery/    Crypto goes through window.SpyglassSession facade
+│   auth/ unlock/ recovery/    Crypto goes through window.OrtbtoolsSession facade
 │   password-reset/            (owned by public/core/session.js — DEK never
 │   save-sample/ edit-sample/  leaves the service module).
 ├── inspector/                 workbench template + mount lifecycle; registers
@@ -126,9 +126,9 @@ public/modules/                frontend tool folders (loaded eager via <script>
 └── README.md                  module contract: folder layout, lifecycle, comms
 
 public/core/                   chrome-level services (installed once by shell-boot)
-├── session.js                 shell-level SpyglassSession + zero-knowledge crypto
+├── session.js                 shell-level OrtbtoolsSession + zero-knowledge crypto
 │                              (user, DEK, api(), ensureBooted, auth:changed,
-│                              installSessionFacade → window.SpyglassSession)
+│                              installSessionFacade → window.OrtbtoolsSession)
 ├── modal-host.js              single #modalRoot owner + modal dispatch for auth/
 │                              unlock/recovery/password-reset (sibling of #app-root)
 ├── registry.js                section lazy-load registry
@@ -139,10 +139,10 @@ server.js                      ~868 LOC shell. Reads top-level deps, builds the
                                 static-file fallback, owns the auth + crypto
                                 closure that backend modules access via DI.
 
-public/spyglass.app.js         inspector workbench shell. Dispatcher routes
+public/ortbtools.app.js         inspector workbench shell. Dispatcher routes
                                 `data-action="..."` clicks to module lazy stubs.
                                 Session/crypto → public/core/session.js via the
-                                window.SpyglassSession facade (encryptBlob /
+                                window.OrtbtoolsSession facade (encryptBlob /
                                 decryptBlob / bootstrap / openFromPassword
                                 without leaking the DEK bytes).
 ```
@@ -154,7 +154,7 @@ public/spyglass.app.js         inspector workbench shell. Dispatcher routes
 3. Both → start from the front-end module; back-end route name is right
    there in the `fetch(...)` call.
 4. Auth or crypto → `public/core/session.js` owns DEK + auth lifecycle for the
-   whole page; `window.SpyglassSession` facade is the browser docs. Backend auth
+   whole page; `window.OrtbtoolsSession` facade is the browser docs. Backend auth
    still lives in `server.js` IIFE (`_sessionDEK` + auth routes).
 
 ---
@@ -187,10 +187,10 @@ helpers.js ─┤    rules-response.js ─┼──> findings.js ──> index.j
 
 **Subpath exports** (per `packages/core/package.json` "exports" field):
 
-- `@kyivtech/spyglass-core` → main API
-- `@kyivtech/spyglass-core/behavior` → `behavior/index.js` (event-stream analyzer + static creative scan)
-- `@kyivtech/spyglass-core/intel` → LLM-bridge primitives (used by `intel-llm.js`)
-- `@kyivtech/spyglass-core/knowledge-base` → KB query helpers
+- `@ortbtools/core` → main API
+- `@ortbtools/core/behavior` → `behavior/index.js` (event-stream analyzer + static creative scan)
+- `@ortbtools/core/intel` → LLM-bridge primitives (used by `intel-llm.js`)
+- `@ortbtools/core/knowledge-base` → KB query helpers
 
 ### 1.2 Public contract guarantees (since core 0.11.0)
 
@@ -207,12 +207,12 @@ helpers.js ─┤    rules-response.js ─┼──> findings.js ──> index.j
 Anchored regex (`^\s*(<\?xml|<VAST)`); HTML mentioning `<VAST` deep inside
 does NOT false-positive.
 
-| File                                                    | Lines              | Sniff     | Used for                                             | Status                                                                                                     |
-| ------------------------------------------------------- | ------------------ | --------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| [`format-detect.js`](../packages/core/format-detect.js) | helper exports     | canonical | format-detect itself + rules-vast.js                 | ✅ canonical                                                                                               |
-| [`rules-vast.js`](../packages/core/rules-vast.js)       | imports helpers    | reuses    | 8 VAST validation rules                              | ✅ canonical                                                                                               |
-| [`crosscheck.js`](../packages/core/crosscheck.js#L258)  | 258 (inline regex) | local     | emits `crosscheck.bid.video_vast` / `video_not_vast` | ⚠ deferred consolidation — works, has tests, separate refactor when there's a reason                       |
-| [`spyglass.app.js`](../public/spyglass.app.js#L816)     | 816 (inline regex) | local     | UI-side preview branching                            | ⚠ same; the UI already loads the bundled core, could switch to `SpyglassCore.isVastShape` in a future pass |
+| File                                                    | Lines              | Sniff     | Used for                                             | Status                                                                                                      |
+| ------------------------------------------------------- | ------------------ | --------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| [`format-detect.js`](../packages/core/format-detect.js) | helper exports     | canonical | format-detect itself + rules-vast.js                 | ✅ canonical                                                                                                |
+| [`rules-vast.js`](../packages/core/rules-vast.js)       | imports helpers    | reuses    | 8 VAST validation rules                              | ✅ canonical                                                                                                |
+| [`crosscheck.js`](../packages/core/crosscheck.js#L258)  | 258 (inline regex) | local     | emits `crosscheck.bid.video_vast` / `video_not_vast` | ⚠ deferred consolidation — works, has tests, separate refactor when there's a reason                        |
+| [`ortbtools.app.js`](../public/ortbtools.app.js#L816)   | 816 (inline regex) | local     | UI-side preview branching                            | ⚠ same; the UI already loads the bundled core, could switch to `OrtbtoolsCore.isVastShape` in a future pass |
 
 **Rule for new code**: import `isVastShape` / `detectVastVersion` from
 `format-detect.js`. Don't write a 4th sniff regex.
@@ -264,9 +264,9 @@ does NOT false-positive.
   is well-formed. Both can fire on the same bid.
 - **Sniffer consolidation (since 0.14.0)**: `crosscheck.js` now imports
   `isVastShape` from `format-detect.js` instead of inline regex. Browser
-  `public/spyglass.app.js` regex aligned but still inline (browser
+  `public/ortbtools.app.js` regex aligned but still inline (browser
   doesn't have direct access to bundled core helpers; future
-  `window.SpyglassCore` exposure would let us drop the duplication).
+  `window.OrtbtoolsCore` exposure would let us drop the duplication).
 
 ### 1.3.2 Mirror generator (since 0.15.0; modes + diff added 0.16.0)
 
@@ -308,7 +308,7 @@ does NOT false-positive.
 - **SSE endpoint** `/api/v1/stream` — synthetic RTB specimens emitted at
   ~1Hz from `samples/synthetic-generator.js`. Existed since Stream
   Pivot foundation; UI shipped 0.27.0.
-- **Modal frontend** in `public/spyglass.app.js` (`window.openLiveModal`).
+- **Modal frontend** in `public/ortbtools.app.js` (`window.openLiveModal`).
   EventSource connect on open, captured envelopes rendered as
   newest-on-top rows; cap of 50 (matches server replay window).
   Pause/resume gates DOM appends without dropping the connection.
@@ -320,8 +320,8 @@ does NOT false-positive.
   spec from the map. Map cleared on cap-trim and on tearDownLive.
 - **Cleanup**: closeModal is patched on open, restored on teardown.
   Any close path (Esc / backdrop / button / follow-up modal) tears
-  down the EventSource and clears the map. `__spyglassLivePauseToggle`
-  / `__spyglassLiveSpecimens` are nulled afterwards so there's no
+  down the EventSource and clears the map. `__ortbtoolsLivePauseToggle`
+  / `__ortbtoolsLiveSpecimens` are nulled afterwards so there's no
   reference to the closed stream.
 
 ### 1.3.4 Finding-detail expand panel (since 0.28.0)
@@ -333,7 +333,7 @@ does NOT false-positive.
 - Body shows: JSON path · user's value at path · severity meaning
   (error/warning/info → consequence copy) · spec URL · canonical
   rule id.
-- **Path resolution**: `window.__spyglassLast` stashes the parsed
+- **Path resolution**: `window.__ortbtoolsLast` stashes the parsed
   `req` and `res`. `getJsonAtPath(obj, path)` walks paths like
   `imp[0].banner.w` or `seatbid[0].bid[1].price`. Returns
   `undefined` for absent paths (which is the legit case for
@@ -425,12 +425,12 @@ legacy finding fields and validation/crosscheck output are unchanged.
   findings + crosschecks at analyze time. Pane **side comes only from the
   validation call context** — no id/path regex side-guessing.
 - **Browser navigation** — [`public/modules/inspector/source-nav.js`](../public/modules/inspector/source-nav.js)
-  (`window.SpyglassSourceNav`): resolves the pointer against the live pane text,
+  (`window.OrtbtoolsSourceNav`): resolves the pointer against the live pane text,
   paints exact / container / related overlays, prev/next + Alt+↑/↓ with
   wrap-around.
   [`source-nav.i18n.js`](../public/modules/inspector/source-nav.i18n.js) registers
   EN/UK/RU strings (standard queue-or-direct).
-- **Rendering / integration** — [`public/spyglass.app.js`](../public/spyglass.app.js):
+- **Rendering / integration** — [`public/ortbtools.app.js`](../public/ortbtools.app.js):
   findings and crosscheck paths render the **`data-loc` / `goto-path`** contract;
   the click dispatcher calls `SourceNav.navigate(JSON.parse(el.dataset.loc))`;
   `SourceNav.onAnalyzed(findings ∪ crosschecks)` arms the toolbar;
@@ -459,7 +459,7 @@ legacy finding fields and validation/crosscheck output are unchanged.
 
 ### 1.3.9 Re-entrant inspector mount (app 1.2.5)
 
-`mountInspector()` in [`public/spyglass.app.js`](../public/spyglass.app.js) is now
+`mountInspector()` in [`public/ortbtools.app.js`](../public/ortbtools.app.js) is now
 idempotent and re-entrant — the flagship section mounts **in place** via SPA from
 any other section (Live → Inspector, back/forward, `/r/{hash}`) like every other
 section, instead of forcing a full page reload.
@@ -484,7 +484,7 @@ section, instead of forcing a full page reload.
 
 ### 1.3.10 Shell-level session + chrome modal host (app 1.3.0)
 
-ROADMAP #18 — `SpyglassSession` hoisted from the `mountInspector()` closure to a
+ROADMAP #18 — `OrtbtoolsSession` hoisted from the `mountInspector()` closure to a
 shell-level service so auth/DEK exist for the whole page lifecycle.
 
 - **Session ownership** — [`public/core/session.js`](../public/core/session.js)
@@ -499,7 +499,7 @@ shell-level service so auth/DEK exist for the whole page lifecycle.
   and refuses to apply a stale `/api/auth/me` response if login/logout raced
   meanwhile. Inspector adapter uses a separate `_adapterGen` token so unmount
   cannot clear a newer mount's adapter.
-- **Facade + adapter split** — `window.SpyglassSession` (`__shellOwned`) exposes
+- **Facade + adapter split** — `window.OrtbtoolsSession` (`__shellOwned`) exposes
   session/crypto surface unchanged; inspector-specific getters/renderers
   (`currentSampleId`, `refreshSamples`, `renderAuthWidget`, …) route through
   `registerAdapter` / `adapt()` — no-op when Inspector is unmounted, so auth
@@ -517,13 +517,13 @@ shell-level service so auth/DEK exist for the whole page lifecycle.
 
 ### 1.4 Consumers
 
-| Consumer                        | File                                                              | What it uses                                                                                                                                                             |
-| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `server.js` (Spyglass HTTP API) | top of [server.js:50-52](../server.js#L50)                        | full `validate` / `crosscheck` + `behavior.analyze` + `knowledge-base`                                                                                                   |
-| Browser (validator card)        | [`public/spyglass.app.js`](../public/spyglass.app.js)             | POSTs the payload to `POST /api/analyze` — validation runs **server-side** (core is NOT bundled into the page; the browser only renders the findings the server returns) |
-| Browser (behavior tab)          | [`public/modules/behavior/index.js`](../public/modules/behavior/) | `behavior` subpath — server-side proxy, but UI consumes findings                                                                                                         |
-| Tests                           | `tests/{validator,dialects,format-detect,behavior,intel}.test.js` | every public surface                                                                                                                                                     |
-| `intel-llm.js`                  | [intel-llm.js](../intel-llm.js)                                   | uses LLM-bridge primitives from `core/intel`                                                                                                                             |
+| Consumer                         | File                                                              | What it uses                                                                                                                                                             |
+| -------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server.js` (ortbtools HTTP API) | top of [server.js:50-52](../server.js#L50)                        | full `validate` / `crosscheck` + `behavior.analyze` + `knowledge-base`                                                                                                   |
+| Browser (validator card)         | [`public/ortbtools.app.js`](../public/ortbtools.app.js)           | POSTs the payload to `POST /api/analyze` — validation runs **server-side** (core is NOT bundled into the page; the browser only renders the findings the server returns) |
+| Browser (behavior tab)           | [`public/modules/behavior/index.js`](../public/modules/behavior/) | `behavior` subpath — server-side proxy, but UI consumes findings                                                                                                         |
+| Tests                            | `tests/{validator,dialects,format-detect,behavior,intel}.test.js` | every public surface                                                                                                                                                     |
+| `intel-llm.js`                   | [intel-llm.js](../intel-llm.js)                                   | uses LLM-bridge primitives from `core/intel`                                                                                                                             |
 
 ### 1.5 Tests by surface (so changes know where to look)
 
@@ -618,34 +618,34 @@ image removes the asymmetry entirely._
 ### 2.2 Public exposure
 
 ```
-Browser (https://spyglass.kyivtech.com.ua)
+Browser (https://ortbtools.com)
     │
     ▼  Cloudflare (DNS + edge)
     │
     ▼  CF Tunnel → 192.168.1.4
     │
     ▼  kyivtech-portal (host network) — proxies admin tiles
-    │  PUBLIC_PROXIES=Set(['spyglass']) anon-allowed
+    │  PUBLIC_PROXIES=Set(['ortbtools']) anon-allowed
     │  src/routes/admin/proxies.js, src/config.js (PROXY_TARGETS)
     │
-    ▼  127.0.0.1:8090 → adtech-spyglass container :3000
+    ▼  127.0.0.1:8090 → ortbtools container :3000
 ```
 
-**So**: any URL change in spyglass affects portal's proxy paths. Re-test BOTH `localhost:8090/...` (direct) AND `https://spyglass.kyivtech.com.ua/...` (full chain) after deploy.
+**So**: any URL change in ortbtools affects portal's proxy paths. Re-test BOTH `localhost:8090/...` (direct) AND `https://ortbtools.com/...` (full chain) after deploy.
 
-### 2.3 Cross-stack dependencies of Spyglass
+### 2.3 Cross-stack dependencies of ortbtools
 
-| Spyglass needs...            | From...               | How it connects                                                                                                                         |
+| ortbtools needs...           | From...               | How it connects                                                                                                                         |
 | ---------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | LLM (intel)                  | `ollama` container    | shared docker network `ollama_default`, `OLLAMA_URL=http://ollama:11434`                                                                |
 | Design system CSS            | vendored (build-time) | baked from `public/design-system.css` (`design-system.vendor.json`) — **no runtime mount / no kyivtech-portal dependency** since v1.1.6 |
-| Persistent SQLite            | host fs               | `/srv/DATA/AppData/adtech-spyglass:/data`                                                                                               |
+| Persistent SQLite            | host fs               | `/srv/DATA/AppData/ortbtools:/data`                                                                                                     |
 | Email (recovery key, verify) | Resend                | `RESEND_API_KEY` from `.env` (gitignored)                                                                                               |
 | Health monitoring            | `uptime-kuma`         | HTTP probe of public URL                                                                                                                |
 
 ### 2.4 SemVer bump locations (9 files, do all in one commit)
 
-Per `feedback_spyglass_semver_bump.md`:
+Per `feedback_ortbtools_semver_bump.md`:
 
 1. `package.json` (root, app version)
 2. `packages/core/package.json` (engine version)
@@ -653,7 +653,7 @@ Per `feedback_spyglass_semver_bump.md`:
    4-6. `public/about.{en,uk,ru}.html` (eyebrow + footer span × 2 each = 2 spots × 3 locales, but search is `v9.X.Y`)
    7-9. `public/modules/inspector/template.{en,uk,ru}.html` (topnav brand + footer #engineVer × 3 locales)
 
-Use `version.js` for runtime paint via `data-spyglass-version`, but the static fallback strings in HTML still need to bump (browsers without JS see them, and bundle metadata in `export.js` reads `#engineVer.textContent`).
+Use `version.js` for runtime paint via `data-ortbtools-version`, but the static fallback strings in HTML still need to bump (browsers without JS see them, and bundle metadata in `export.js` reads `#engineVer.textContent`).
 
 ---
 
@@ -662,10 +662,10 @@ Use `version.js` for runtime paint via `data-spyglass-version`, but the static f
 ### 3.1 Validator-aware components elsewhere
 
 - **kyivtech-portal**:
-  - `src/services/stats.js:96` — `Spyglass RTB` health tile
-  - `src/routes/admin/proxies.js` — `PUBLIC_PROXIES = new Set(['spyglass'])` makes the tile anon-public
-  - `src/routes/bot/index.js:49` — Telegram bot status command lists `adtech-spyglass`
-- **uptime-kuma** monitor on `https://spyglass.kyivtech.com.ua`
+  - `src/services/stats.js:96` — `ortbtools RTB` health tile
+  - `src/routes/admin/proxies.js` — `PUBLIC_PROXIES = new Set(['ortbtools'])` makes the tile anon-public
+  - `src/routes/bot/index.js:49` — Telegram bot status command lists `ortbtools`
+- **uptime-kuma** monitor on `https://ortbtools.com`
 - **n8n**: no direct integration today (Mozok bot doesn't call validator)
 
 ### 3.2 Schema / migration reminders for adjacent data
@@ -689,7 +689,7 @@ Use `version.js` for runtime paint via `data-spyglass-version`, but the static f
 
 ## 5. Time-estimate calibration
 
-Estimates that ignore the connection-audit + regression-test + rollback verification phases are wrong by 1.5-2×. For Spyglass, multiply pure-coding estimates by 1.5 minimum, plus add:
+Estimates that ignore the connection-audit + regression-test + rollback verification phases are wrong by 1.5-2×. For ortbtools, multiply pure-coding estimates by 1.5 minimum, plus add:
 
 - +0.5h connection-audit BEFORE (grep callers + tests + deploy chain)
 - +0.5h SemVer bump + CHANGELOG + map update

@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * Crypto round-trip tests for public/spyglass-crypto.js.
+ * Crypto round-trip tests for public/ortbtools-crypto.js.
  *
- * The module is browser-targeted (it puts `SpyglassCrypto` on `window`),
+ * The module is browser-targeted (it puts `OrtbtoolsCrypto` on `window`),
  * but its primitives are pure Web Crypto. We can run it under Node 22+ by
  * polyfilling `window`, `crypto`, `btoa`/`atob`, and the encoders. No fake
  * crypto — we use Node's actual `crypto.webcrypto`, which is the same impl
@@ -32,12 +32,12 @@ before(() => {
     globalThis.atob = (b64) => Buffer.from(b64, 'base64').toString('binary');
   }
 
-  // Loading the module attaches SpyglassCrypto onto window. It's not a
+  // Loading the module attaches OrtbtoolsCrypto onto window. It's not a
   // CommonJS module (it's a browser IIFE), so eval rather than require.
-  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'spyglass-crypto.js'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'ortbtools-crypto.js'), 'utf8');
 
   (0, eval)(src);
-  SC = globalThis.SpyglassCrypto;
+  SC = globalThis.OrtbtoolsCrypto;
 });
 
 // ── helpers + base64 ─────────────────────────────────────────────────────

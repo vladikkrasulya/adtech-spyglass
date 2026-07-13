@@ -1,4 +1,4 @@
-# Spyglass — Next Chapters
+# ortbtools — Next Chapters
 
 End-of-day 2026-05-09 strategic doc. Validator coverage is mature
 (v0.14.0): IAB 2.5/2.6 full + 3.0 envelope routing + VAST 12 rules + 12
@@ -22,12 +22,12 @@ The canonical brief is in `MEMORY.md`. The architecture map is in
   malicious / static creative scan
 - API stability: deterministic order, dedup, disabledRules option
 - 463 tests (count refreshed 2026-05-10), 3 locales (en/uk/ru), public site through CF tunnel
-- LLM bridge (Spyglass Intel) using gemma3:4b on Ollama
+- LLM bridge (ortbtools Intel) using gemma3:4b on Ollama
 
 **Where it's still 0.x**:
 
 - AdCOM 1.0 deep validation (3.0 placement specs, bid.media)
-- i18n debt — ~30 hardcoded UK strings in `spyglass.app.js`
+- i18n debt — ~30 hardcoded UK strings in `ortbtools.app.js`
 - Real-world precision/recall on behavior — only synthetic corpus
 - Inspector pattern (paste → findings) only; no continuous monitoring
 
@@ -38,7 +38,7 @@ The canonical brief is in `MEMORY.md`. The architecture map is in
 > Currently: user pastes JSON, gets findings. Next: feed live traffic in,
 > get a stream of findings + dashboards.
 
-The Stream Pivot from 2026-05-05 framed this — Spyglass becomes a public
+The Stream Pivot from 2026-05-05 framed this — ortbtools becomes a public
 RTB observability platform, not just a one-off paste tool. Foundations
 are in place (samples lib, /api/v1/sample, format detection, behavior
 analyzer is browser+Node compat).
@@ -111,7 +111,7 @@ asked" bucket, not a sprint.
 ## Chapter D — **i18n technical debt** (~3-4 days, mechanical)
 
 Memory `spyglass_i18n_debt.md` flags ~30 hardcoded UK strings in
-`spyglass.app.js`. Pre-existing, never bucketed. The reason it's not
+`ortbtools.app.js`. Pre-existing, never bucketed. The reason it's not
 done yet: tedious, low ROI, no business pressure.
 
 **Sizing**: 3-4 days dedicated. Best done as a clean sprint — find
@@ -131,10 +131,10 @@ other tools integrate with:
 
 1. Authenticated API keys (per-account rate-limits, usage logs)
 2. Webhook on findings (notify a channel when X finding fires)
-3. CLI package (`@kyivtech/spyglass-cli`) — reads stdin, outputs
+3. CLI package (`@kyivtech/ortbtools-cli`) — reads stdin, outputs
    JSON. CI integration.
 4. GitHub Action wrapper around the CLI — PR comments with findings
-5. SDK (`@kyivtech/spyglass-client` for Node/browser) wrapping the
+5. SDK (`@kyivtech/ortbtools-client` for Node/browser) wrapping the
    HTTP API with typings
 
 **Risk**: this is "build a SaaS" energy. Only worth doing if user has
@@ -159,7 +159,7 @@ clear demand from at least 2-3 external users. Don't speculate.
 
 ## What's NOT in this doc (intentional)
 
-- **Spyglass Intel (LLM bridge)** — separate roadmap. Phase 7c shipped
+- **ortbtools Intel (LLM bridge)** — separate roadmap. Phase 7c shipped
   with gemma3:4b; few-shot wiring + format-badge done in v9.8.0. Next
   steps belong in a separate doc when user wants to expand.
 - **Stream platform launch & marketing** — strategic, not technical.

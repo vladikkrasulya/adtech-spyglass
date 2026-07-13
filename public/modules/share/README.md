@@ -2,7 +2,7 @@
 
 Encodes the current BidRequest / BidResponse panes into a hash-fragment
 URL so the link, when opened, restores both panes and re-runs analysis.
-Hash fragments never reach the server — preserves Spyglass's
+Hash fragments never reach the server — preserves ortbtools's
 zero-knowledge posture.
 
 ## Files
@@ -16,7 +16,7 @@ zero-knowledge posture.
 - `window.copyShareLink()` — wired to the topnav share button
 - `window.buildShareUrl(reqText, resText) → Promise<string>` — used by
   the mirror module to build permalinks for the canonical pair
-- `window.spyglassShareSupported() → boolean` — feature-detect for
+- `window.ortbtoolsShareSupported() → boolean` — feature-detect for
   `embed.js`
 
 ## Window APIs (consumes)
@@ -38,7 +38,7 @@ On older browsers, surfaces a toast pointing the user at Download.
 ## URL shape
 
 ```
-https://spyglass.kyivtech.com.ua/?#req=<b64url(deflate(json))>&res=<...>
+https://ortbtools.com/?#req=<b64url(deflate(json))>&res=<...>
 ```
 
 URL_BUDGET = 7000 chars (chat clients truncate longer links).

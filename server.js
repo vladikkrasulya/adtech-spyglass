@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Spyglass HTTP server. Thin wrapper around the validator core (validator/),
+ * ortbtools HTTP server. Thin wrapper around the validator core (validator/),
  * the SQLite store (db.js), and the auth module (auth.js).
  *
  * Public (no auth):
@@ -59,9 +59,9 @@ const {
   extractAllCategories,
   detectFormat,
   rollupStatus,
-} = require('@kyivtech/spyglass-core');
-const { analyze: analyzeBehavior } = require('@kyivtech/spyglass-core/behavior');
-const knowledgeBase = require('@kyivtech/spyglass-core/knowledge-base');
+} = require('@ortbtools/core');
+const { analyze: analyzeBehavior } = require('@ortbtools/core/behavior');
+const knowledgeBase = require('@ortbtools/core/knowledge-base');
 const SyntheticGenerator = require('./samples/synthetic-generator');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -1233,7 +1233,7 @@ function applyBaselineHeaders(res) {
   res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
   res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
   res.setHeader('Content-Security-Policy', CSP);
-  // Spyglass landing/docs are public — no global X-Robots-Tag. Admin/auth
+  // ortbtools landing/docs are public — no global X-Robots-Tag. Admin/auth
   // surfaces aren't crawler-relevant (no GET-renders to index), so a global
   // noindex would just hurt the public demo's discoverability.
 }
@@ -1332,7 +1332,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  log.info({ port: PORT, addr: 'http://0.0.0.0:' + PORT }, 'spyglass backend listening');
+  log.info({ port: PORT, addr: 'http://0.0.0.0:' + PORT }, 'ortbtools backend listening');
 });
 
 // Daily event_log prune. Opportunistic prune also runs every N writes inside

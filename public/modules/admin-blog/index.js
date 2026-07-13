@@ -13,7 +13,7 @@
 
 import { escapeHtml } from '/core/utils.js';
 
-const TOKEN_KEY = 'spyglass_admin_token';
+const TOKEN_KEY = 'ortbtools_admin_token';
 
 const L = {
   title: { en: 'Blog Admin', uk: 'Адмін блогу', ru: 'Админ блога' },

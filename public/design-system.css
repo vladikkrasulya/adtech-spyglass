@@ -163,7 +163,7 @@
    ============================================================
    WHY DUAL LAYER: The existing "legacy" tokens (--bg, --text,
    --accent, --border, etc.) have 271 call sites across KyivTech
-   and Spyglass (ortbtools.com). Renaming them would break all
+   and ortbtools (ortbtools.com). Renaming them would break all
    consumers. Instead, a NEW shadcn-style HSL layer is added
    alongside them — no existing code is touched.
 
@@ -223,7 +223,7 @@
   --bg-elev-2:       #ECF1F6;   /* sub-card / inner block (= --bg-2) */
   /* Text-selection highlight. Yellow accent at ~55% on cream gives a
      clearly visible "you are selecting THIS" cue without burning the
-     eye. Token was referenced from spyglass-shell.css::selection
+     eye. Token was referenced from ortbtools-shell.css::selection
      since day one but never declared — fixed 2026-05-13 in the same
      pattern as the --bg-elev gap (Edit reviewer caught both). */
   --selection-bg:    rgba(56,189,248,0.40);  /* electric sky highlight */
@@ -810,7 +810,7 @@ input:focus, select:focus, textarea:focus, .field-input:focus {
   /* Signal-палітра (vault-нота 2026-06-11) визначала dark-err #F87171, але
      override тут ніколи не існував — dark успадковував світлий #DC2626
      (3.5:1 на темних поверхнях, нижче AA). Додано 2026-07-13 (аудит, хвиля 2)
-     синхронно в обох репо: kyivtech-portal і adtech-spyglass. */
+     синхронно в обох репо: kyivtech-portal і ortbtools. */
   --danger:          #F87171;
   --code-num:        #F6C177;
 
@@ -883,7 +883,7 @@ input:focus, select:focus, textarea:focus, .field-input:focus {
   box-shadow: none;
 }
 
-/* Floating language toggle (Spyglass uses this; other surfaces can opt-in by
+/* Floating language toggle (ortbtools uses this; other surfaces can opt-in by
    injecting a `.kt-lang-toggle` button via their own IIFE). Sits to the left
    of the theme toggle so both fit a thumb-reach area in the bottom-right. */
 .kt-lang-toggle {
@@ -915,7 +915,7 @@ input:focus, select:focus, textarea:focus, .field-input:focus {
 /* ============================================================
    SIGNAL MOTION PACK — геометричні анімації теми Signal (2026-06-11)
    CSS-only. Усі ефекти вимикаються через prefers-reduced-motion.
-   Утиліти спільні для лендінга / адмінки / Spyglass.
+   Утиліти спільні для лендінга / адмінки / ortbtools.
    ============================================================ */
 
 /* ── креслярська сітка з повільним дрейфом (фон секції) ── */

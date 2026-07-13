@@ -9,11 +9,11 @@ or update its notes — without touching the encrypted payload
 
 **Lazy.** This module is fetched only when the user clicks the ✎
 pencil button on a library row (case `'sample-edit'` in
-spyglass.app.js dispatcher). On first click: ~3KB across
+ortbtools.app.js dispatcher). On first click: ~3KB across
 `index.js` and `i18n.js`. On subsequent clicks: cached by the
 browser's ES module loader, zero extra fetch.
 
-The dispatcher's `'confirm-edit'` case stays in spyglass.app.js —
+The dispatcher's `'confirm-edit'` case stays in ortbtools.app.js —
 it only fires AFTER the modal is open (from the modal's primary
 button), by which point this module is already loaded and
 `window.confirmEdit` is wired up.
@@ -40,8 +40,8 @@ button), by which point this module is already loaded and
 
 ## Window APIs (consumes)
 
-- `window.SpyglassSession` — the closure-state facade defined in
-  spyglass.app.js. Methods used:
+- `window.OrtbtoolsSession` — the closure-state facade defined in
+  ortbtools.app.js. Methods used:
   - `api(method, url, body)` — auth-cookied HTTP wrapper.
   - `partnerOptionsHtml(selectedId)` — renders the partner
     `<select>` from the closure-private `_partnerCache`.
@@ -53,7 +53,7 @@ button), by which point this module is already loaded and
   - `refreshSamples()` — re-render the Library after PATCH so the
     new title/partner/notes show immediately.
 - `window.closeModal` — modal lifecycle (provided by
-  spyglass.app.js; triggered by `data-action="modal-close"` and
+  ortbtools.app.js; triggered by `data-action="modal-close"` and
   `data-action="modal-backdrop-close"` plus the global Esc handler).
 
 ## Auth gate
@@ -79,13 +79,13 @@ Talks to:
 - `GET /api/samples/:id` — fetch current metadata (no decrypt).
 - `PATCH /api/samples/:id` — update title/partner_id/notes only.
 
-Both go through `SpyglassSession.api(...)` so cookie-auth + the
+Both go through `OrtbtoolsSession.api(...)` so cookie-auth + the
 shared error shape (`status` + `code` on the thrown Error) are
 identical to the rest of the app.
 
 ## Dispatcher cases
 
-Two `data-action` cases are wired through spyglass.app.js's central
+Two `data-action` cases are wired through ortbtools.app.js's central
 dispatcher:
 
 - `sample-edit` — lazy-loads this module and calls

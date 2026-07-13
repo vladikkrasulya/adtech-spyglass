@@ -13,8 +13,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { detectFormat, FORMATS, CONTEXTS, PROTOCOLS } = require('@kyivtech/spyglass-core');
-const { makeCanonicalUrlRequest } = require('@kyivtech/spyglass-core/decoders/request/_canonical');
+const { detectFormat, FORMATS, CONTEXTS, PROTOCOLS } = require('@ortbtools/core');
+const { makeCanonicalUrlRequest } = require('@ortbtools/core/decoders/request/_canonical');
 const kb = require('../packages/core/knowledge-base');
 
 test('detectFormat: returns empty shape for null / non-object input', () => {

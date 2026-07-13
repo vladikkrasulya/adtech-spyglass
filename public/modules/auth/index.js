@@ -5,37 +5,37 @@
    The two-tab modal that swaps between "sign in" and "create
    account" — entry point for the whole authenticated experience.
    POSTs against /api/auth/{login,register}; on success delegates
-   the DEK lifecycle to window.SpyglassSession (the closure-scoped
-   facade in spyglass.app.js — the DEK never leaves that scope).
+   the DEK lifecycle to window.OrtbtoolsSession (the closure-scoped
+   facade in ortbtools.app.js — the DEK never leaves that scope).
 
    Loaded ONLY when the user clicks the "увійти" button (header,
    data-action="open-auth"), or when an auth-gated action fires
    on a guest (save-sample, save-corpus, etc.) — see the lazy stub
-   in spyglass.app.js dispatcher (case 'open-auth'). On first
+   in ortbtools.app.js dispatcher (case 'open-auth'). On first
    click: ~3.5KB across this file + i18n.js. On subsequent
    activations: cached by the browser's ES module loader.
 
    Crypto contract — DEK NEVER touched directly:
-     - LOGIN  → SpyglassSession.openFromPassword(password, encState)
-                or SpyglassSession.bootstrap(password) for legacy
+     - LOGIN  → OrtbtoolsSession.openFromPassword(password, encState)
+                or OrtbtoolsSession.bootstrap(password) for legacy
                 accounts that pre-date Phase 7 (no encryption blob
                 yet on /api/auth/me).
-     - REGISTER → SpyglassSession.bootstrap(password) returns
+     - REGISTER → OrtbtoolsSession.bootstrap(password) returns
                   { state, recoveryKey }; we POST the state to
                   /api/auth/setup-encryption ourselves and hand the
                   recoveryKey to window.showRecoveryKeyModal — that
-                  modal is still closure-private in spyglass.app.js
+                  modal is still closure-private in ortbtools.app.js
                   (recovery-key flow is its own future migration).
 
-   Exposed window APIs (consumed by spyglass.app.js dispatcher cases
+   Exposed window APIs (consumed by ortbtools.app.js dispatcher cases
    'open-auth' and 'do-auth', plus the auth-gate fallbacks in
-   openSaveModal / open-corpus-save / SpyglassSession.requireAuth):
+   openSaveModal / open-corpus-save / OrtbtoolsSession.requireAuth):
      - window.openAuthModal(mode)  — 'login' | 'register'
      - window.doLogin()            — POST /api/auth/login
      - window.doRegister()         — POST /api/auth/register
 
-   Consumes (via SpyglassSession + /core/utils.js + window globals):
-     - SpyglassSession.{api, refreshPartners, refreshSamples,
+   Consumes (via OrtbtoolsSession + /core/utils.js + window globals):
+     - OrtbtoolsSession.{api, refreshPartners, refreshSamples,
                         renderAuthWidget, setUser,
                         openFromPassword, bootstrap}
      - $, escapeHtml, toast, t              — DOM + i18n helpers
@@ -43,7 +43,7 @@
      - window.showRecoveryKeyModal          — recovery-key reveal
                                               (post-register only;
                                               still closure-private
-                                              in spyglass.app.js)
+                                              in ortbtools.app.js)
      - window.snapshotPendingHistoryMerge() — sets the closure-
                                               private flag that
                                               chains the import-
@@ -145,7 +145,7 @@ export function openAuthModal(mode) {
 }
 
 export async function doLogin() {
-  const session = window.SpyglassSession;
+  const session = window.OrtbtoolsSession;
   const email = $('authEmailInput').value.trim();
   const password = $('authPasswordInput').value;
   const errEl = $('authError');
@@ -174,7 +174,7 @@ export async function doLogin() {
 }
 
 export async function doRegister() {
-  const session = window.SpyglassSession;
+  const session = window.OrtbtoolsSession;
   const email = $('authEmailInput').value.trim();
   const password = $('authPasswordInput').value;
   const errEl = $('authError');
@@ -185,7 +185,7 @@ export async function doRegister() {
     // Snapshot history-presence BEFORE bootstrap modal opens.
     // closeRecoveryKeyModal checks this flag and chains the
     // import-history modal once the recovery key is acknowledged.
-    // Flag itself stays closure-private in spyglass.app.js — we
+    // Flag itself stays closure-private in ortbtools.app.js — we
     // call a tiny window helper to set it.
     if (typeof window.snapshotPendingHistoryMerge === 'function') {
       window.snapshotPendingHistoryMerge();
@@ -215,7 +215,7 @@ export async function doRegister() {
 // imports /modules/recovery/ on first use and then calls
 // window.showRecoveryKeyModal — recovery has its own module already.
 async function bootstrapAndShowRecovery(password) {
-  const session = window.SpyglassSession;
+  const session = window.OrtbtoolsSession;
   const { state, recoveryKey } = await session.bootstrap(password);
   await session.api('POST', 'api/auth/setup-encryption', state);
   if (typeof window.openRecoveryKeyModalLazy === 'function') {
@@ -227,7 +227,7 @@ async function bootstrapAndShowRecovery(password) {
   }
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/auth/index.js'); window.openAuthModal(mode);
 // — first call: fetches + evaluates + these assignments run.
 // Subsequent calls: cached by the module loader, assignments are no-ops.

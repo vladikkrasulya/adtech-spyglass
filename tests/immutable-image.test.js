@@ -43,7 +43,7 @@ test('docker-compose.yml does NOT bind-mount any source path', () => {
 
 test('docker-compose.yml keeps the persistent /data volume + CONTENT_DIR under it', () => {
   const c = read('docker-compose.yml');
-  assert.match(c, /\/srv\/DATA\/AppData\/adtech-spyglass:\/data\b/, 'must mount the /data volume');
+  assert.match(c, /\/srv\/DATA\/AppData\/ortbtools:\/data\b/, 'must mount the /data volume');
   assert.match(
     c,
     /CONTENT_DIR=\/data\/content-posts/,
@@ -68,7 +68,7 @@ test('production compose mounts ONLY the persistent /data volume (no cross-proje
   );
   assert.match(
     mounts[0],
-    /^- \/srv\/DATA\/AppData\/adtech-spyglass:\/data\b/,
+    /^- \/srv\/DATA\/AppData\/ortbtools:\/data\b/,
     'the only mount must be the persistent /data volume',
   );
   // No runtime dependency on the sibling portal repo, and the transitional
@@ -87,12 +87,12 @@ test('docker-compose.yml pins the image tag with NO silent fallback + relative b
   const c = read('docker-compose.yml');
   assert.match(
     c,
-    /image:\s*adtech-spyglass:\$\{SPYGLASS_TAG:\?/,
-    'image must be adtech-spyglass:${SPYGLASS_TAG:?...} (forbid silent fallback)',
+    /image:\s*ortbtools:\$\{ORTBTOOLS_TAG:\?/,
+    'image must be ortbtools:${ORTBTOOLS_TAG:?...} (forbid silent fallback)',
   );
   assert.ok(
-    !/\$\{SPYGLASS_TAG:-/.test(c),
-    'must NOT use ${SPYGLASS_TAG:-default} (silent local/dev)',
+    !/\$\{ORTBTOOLS_TAG:-/.test(c),
+    'must NOT use ${ORTBTOOLS_TAG:-default} (silent local/dev)',
   );
   assert.match(
     c,
@@ -170,8 +170,8 @@ test('deploy/rollback/smoke/backup/lib/sim scripts are valid bash (bash -n)', ()
     'smoke.sh',
     'ci-docker-smoke.sh',
     'backup-db.sh',
-    'provision-spyglass-ro.sh',
-    'cutover-spyglass-ro.sh',
+    'provision-ortbtools-ro.sh',
+    'cutover-ortbtools-ro.sh',
   ].map((s) => path.join(ROOT, 'scripts', s));
   for (const t of [
     'deploy-sim.sh',
@@ -231,7 +231,7 @@ test('rollback verifies the SELECTED image BUILD_SHA (not a stale PREV)', () => 
   const r = read('scripts/rollback.sh');
   assert.match(
     r,
-    /EXPECT="\$\(image_build_sha "adtech-spyglass:\$\{TAG\}"/,
+    /EXPECT="\$\(image_build_sha "ortbtools:\$\{TAG\}"/,
     'rollback must read BUILD_SHA from the selected image',
   );
   assert.match(
@@ -264,7 +264,7 @@ test('deploy seeds content-posts idempotently before launch and aborts on failur
   );
   assert.match(
     d,
-    /SEED_UID="\$\{SPYGLASS_SEED_UID:-1000\}"/,
+    /SEED_UID="\$\{ORTBTOOLS_SEED_UID:-1000\}"/,
     'seed owner must be checked against uid 1000 by default',
   );
   assert.match(
@@ -286,10 +286,10 @@ test('smoke requires the markdown welcome post per language + is documented non-
   assert.match(s, /NON-DESTRUCTIVE/, 'smoke header must declare it non-destructive');
 });
 
-test('.env.example leaves SPYGLASS_TAG empty (compose :? fails on empty)', () => {
+test('.env.example leaves ORTBTOOLS_TAG empty (compose :? fails on empty)', () => {
   const e = read('.env.example');
-  assert.match(e, /^SPYGLASS_TAG=\s*$/m, 'SPYGLASS_TAG must be empty in .env.example');
-  assert.ok(!/^SPYGLASS_TAG=(dev|local)/m.test(e), 'SPYGLASS_TAG must not default to dev/local');
+  assert.match(e, /^ORTBTOOLS_TAG=\s*$/m, 'ORTBTOOLS_TAG must be empty in .env.example');
+  assert.ok(!/^ORTBTOOLS_TAG=(dev|local)/m.test(e), 'ORTBTOOLS_TAG must not default to dev/local');
 });
 
 test('deploy-lib set_env/write_state are atomic, 0600, secret-preserving (disposable sim)', () => {
@@ -300,10 +300,10 @@ test('deploy-lib set_env/write_state are atomic, 0600, secret-preserving (dispos
     `cd ${JSON.stringify(ROOT)}`,
     '. scripts/deploy-lib.sh',
     'd="$(mktemp -d)"; f="$d/.env"',
-    'printf \'NODE_ENV=production\\nSECRET_X=topsecret\\nSPYGLASS_TAG=old\\n\' > "$f"; chmod 664 "$f"',
+    'printf \'NODE_ENV=production\\nSECRET_X=topsecret\\nORTBTOOLS_TAG=old\\n\' > "$f"; chmod 664 "$f"',
     'o1="$(stat -c %u "$f" 2>/dev/null || stat -f %u "$f")"',
-    'set_env SPYGLASS_TAG newtag "$f" >/dev/null',
-    'grep -qx "SPYGLASS_TAG=newtag" "$f" || { echo tag-not-updated; exit 1; }',
+    'set_env ORTBTOOLS_TAG newtag "$f" >/dev/null',
+    'grep -qx "ORTBTOOLS_TAG=newtag" "$f" || { echo tag-not-updated; exit 1; }',
     'grep -qx "SECRET_X=topsecret" "$f" || { echo secret-lost; exit 1; }',
     'o2="$(stat -c %u "$f" 2>/dev/null || stat -f %u "$f")"',
     '[ "$o1" = "$o2" ] || { echo owner-changed; exit 1; }',
@@ -338,7 +338,7 @@ test('deploy-sim: happy path → STATUS=ACTIVE, exit 0', () => {
   const r = runSim('happy');
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /STATUS=ACTIVE/);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=abc1234/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=abc1234/);
 });
 
 test('deploy-sim: candidate `compose up` failure → auto-rollback (STATUS=ROLLED_BACK, exit 1)', () => {
@@ -361,7 +361,7 @@ test('deploy-sim: missing previous BUILD_SHA aborts before activation (exit 2, .
   assert.equal(r.code, 2, r.out);
   assert.match(
     r.out,
-    /ENV_SPYGLASS_TAG=old/,
+    /ENV_ORTBTOOLS_TAG=old/,
     '.env must NOT be switched on a pre-activation abort',
   );
   assert.ok(
@@ -387,7 +387,7 @@ test('deploy-sim: safe candidate + safe rollback → deploy allowed', () => {
 test('deploy-sim: candidate ancestor → exit 2, state untouched, 0 compose up', () => {
   const r = runSim('floor-candidate-ancestor');
   assert.equal(r.code, 2, r.out);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/);
   assert.match(r.out, /STATUS=ACTIVE/);
   assert.match(r.out, /ACTIVE_TAG=old/);
   assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
@@ -397,7 +397,7 @@ test('deploy-sim: candidate ancestor → exit 2, state untouched, 0 compose up',
 test('deploy-sim: candidate unrelated → exit 2, state untouched, 0 compose up', () => {
   const r = runSim('floor-candidate-unrelated');
   assert.equal(r.code, 2, r.out);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/);
   assert.match(r.out, /STATUS=ACTIVE/);
   assert.match(r.out, /ACTIVE_TAG=old/);
   assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
@@ -407,7 +407,7 @@ test('deploy-sim: candidate unrelated → exit 2, state untouched, 0 compose up'
 test('deploy-sim: candidate missing OCI revision → exit 2, state untouched, 0 compose up', () => {
   const r = runSim('floor-candidate-missing-oci');
   assert.equal(r.code, 2, r.out);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/);
   assert.match(r.out, /STATUS=ACTIVE/);
   assert.match(r.out, /ACTIVE_TAG=old/);
   assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
@@ -417,7 +417,7 @@ test('deploy-sim: candidate missing OCI revision → exit 2, state untouched, 0 
 test('deploy-sim: candidate valid 40-hex but missing Git object → exit 2, state untouched, 0 compose up', () => {
   const r = runSim('floor-candidate-missing-git');
   assert.equal(r.code, 2, r.out);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/);
   assert.match(r.out, /STATUS=ACTIVE/);
   assert.match(r.out, /ACTIVE_TAG=old/);
   assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
@@ -427,7 +427,7 @@ test('deploy-sim: candidate valid 40-hex but missing Git object → exit 2, stat
 test('deploy-sim: unsafe rollback target → exit 2 до transition, 0 compose up', () => {
   const r = runSim('floor-unsafe-rollback');
   assert.equal(r.code, 2, r.out);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/);
   assert.match(r.out, /STATUS=ACTIVE/);
   assert.match(r.out, /ACTIVE_TAG=old/);
   assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
@@ -477,9 +477,9 @@ test('deploy-lib defines a permission preflight that allows grafana read but for
   assert.match(lib, /_world_writable\(\)/, 'deploy-lib must define _world_writable');
   // The live SQLite is intentionally allowed to be group/other READABLE (grafana
   // datasource uid 472) — the preflight only forbids world-WRITE there.
-  assert.match(lib, /spyglass\.db-wal/, 'preflight must cover the live -wal');
+  assert.match(lib, /ortbtools\.db-wal/, 'preflight must cover the live -wal');
   assert.ok(
-    !/spyglass\.db.*world-readable/.test(lib),
+    !/ortbtools\.db.*world-readable/.test(lib),
     'preflight must NOT require the live DB to be non-readable (would break grafana)',
   );
 });
@@ -501,7 +501,7 @@ test('deploy.sh runs the permission preflight before any transition (abort exit 
 test('deploy-sim: unsafe .env permissions block the deploy before any transition (exit 5)', () => {
   const r = runSim('unsafe-perms');
   assert.equal(r.code, 5, r.out);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must be untouched when the preflight blocks');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must be untouched when the preflight blocks');
   assert.match(r.out, /\(no state\)/, 'no deploy-state may be written on an unsafe-perms abort');
 });
 
@@ -526,12 +526,12 @@ test('deploy-lib check_db_perms enforces owner/group/mode exactly (pass + fail, 
     '. scripts/deploy-lib.sh',
     'd="$(mktemp -d)"; U="$(id -u)"; G="$(id -g)"',
     'chgrp "$G" "$d" 2>/dev/null; chmod 2710 "$d"',
-    'umask 027; : > "$d/spyglass.db"; : > "$d/spyglass.db-wal"; : > "$d/spyglass.db-shm"',
-    'chgrp "$G" "$d"/spyglass.db* 2>/dev/null',
+    'umask 027; : > "$d/ortbtools.db"; : > "$d/ortbtools.db-wal"; : > "$d/ortbtools.db-shm"',
+    'chgrp "$G" "$d"/ortbtools.db* 2>/dev/null',
     'check_db_perms "$d" "$U" "$G" 2710 || { echo PASS-CASE-FAILED; exit 1; }',
-    'chmod 0644 "$d/spyglass.db-wal"', // re-introduce 'other' read
+    'chmod 0644 "$d/ortbtools.db-wal"', // re-introduce 'other' read
     'if check_db_perms "$d" "$U" "$G" 2710 >/dev/null 2>&1; then echo OTHER-BIT-NOT-CAUGHT; exit 1; fi',
-    'chmod 0640 "$d/spyglass.db-wal"',
+    'chmod 0640 "$d/ortbtools.db-wal"',
     'chmod 0750 "$d"', // drop setgid
     'if check_db_perms "$d" "$U" "$G" 2710 >/dev/null 2>&1; then echo DIRMODE-NOT-CAUGHT; exit 1; fi',
     'rm -rf "$d"',
@@ -546,27 +546,27 @@ test('deploy.sh ALWAYS runs check_group + check_db_perms before build (exit 6, n
   const d = read('scripts/deploy.sh');
   assert.match(
     d,
-    /check_group "\$SPYGLASS_DB_GID" "\$SPYGLASS_DB_GROUP"/,
+    /check_group "\$ORTBTOOLS_DB_GID" "\$ORTBTOOLS_DB_GROUP"/,
     'deploy must verify the group',
   );
   assert.match(
     d,
-    /check_db_perms "\$DATA_DIR" "\$SPYGLASS_APP_UID" "\$SPYGLASS_DB_GID" "\$SPYGLASS_DIR_MODE"/,
+    /check_db_perms "\$DATA_DIR" "\$ORTBTOOLS_APP_UID" "\$ORTBTOOLS_DB_GID" "\$ORTBTOOLS_DIR_MODE"/,
     'deploy must call check_db_perms with the 4 contract params',
   );
   assert.match(d, /exit 6/, 'a contract mismatch must abort exit 6');
   // No bypass: the check must NOT be wrapped in an "if GID is set" skip.
   assert.ok(
-    !/if \[ -n "\$SPYGLASS_DB_GID" \]/.test(d),
-    'the SQLite contract must be unconditional (no SPYGLASS_DB_GID="" skip)',
+    !/if \[ -n "\$ORTBTOOLS_DB_GID" \]/.test(d),
+    'the SQLite contract must be unconditional (no ORTBTOOLS_DB_GID="" skip)',
   );
   const buildIdx = d.indexOf('docker compose build');
   const chkIdx = d.indexOf('check_db_perms "$DATA_DIR"');
   assert.ok(chkIdx > 0 && chkIdx < buildIdx, 'check_db_perms must run BEFORE the build/recreate');
 });
 
-test('provision-spyglass-ro.sh is root-only, backup-first, NON-recursive, dry-run default', () => {
-  const p = read('scripts/provision-spyglass-ro.sh');
+test('provision-ortbtools-ro.sh is root-only, backup-first, NON-recursive, dry-run default', () => {
+  const p = read('scripts/provision-ortbtools-ro.sh');
   assert.match(p, /require_root/, 'must be root-only');
   assert.match(p, /backup-db\.sh/, 'must back up before changing perms');
   assert.match(p, /collision/, 'must guard against a GID collision');
@@ -583,7 +583,7 @@ test('provision-spyglass-ro.sh is root-only, backup-first, NON-recursive, dry-ru
 });
 
 test('provision verify FAILS CLOSED, aborts on missing setpriv, and rolls back with APP_GID (not APP_UID)', () => {
-  const p = read('scripts/provision-spyglass-ro.sh');
+  const p = read('scripts/provision-ortbtools-ro.sh');
   // verify returns non-zero on any mismatch and apply must not claim success.
   assert.match(p, /VERIFY FAILED/, 'verify must print VERIFY FAILED on mismatch');
   assert.match(
@@ -630,7 +630,7 @@ test('deploy-lib check_group requires the GID to exist with the canonical name',
     'G="$(id -g)"; N="$(id -gn)"',
     'check_group "$G" "$N" || { echo CORRECT-REJECTED; exit 1; }', // exists + right name → ok
     'if check_group "$G" "sg-nope-$$" >/dev/null 2>&1; then echo WRONGNAME-NOT-CAUGHT; exit 1; fi',
-    'if check_group 99999 "spyglass-ro" >/dev/null 2>&1; then echo MISSING-NOT-CAUGHT; exit 1; fi',
+    'if check_group 99999 "ortbtools-ro" >/dev/null 2>&1; then echo MISSING-NOT-CAUGHT; exit 1; fi',
   ].join('\n');
   assert.doesNotThrow(
     () => execFileSync('bash', ['-c', harness], { stdio: 'pipe' }),
@@ -638,7 +638,7 @@ test('deploy-lib check_group requires the GID to exist with the canonical name',
   );
 });
 
-test('deploy-sim: empty SPYGLASS_DB_GID does NOT bypass the contract (falls back to 2472 → exit 6)', () => {
+test('deploy-sim: empty ORTBTOOLS_DB_GID does NOT bypass the contract (falls back to 2472 → exit 6)', () => {
   const r = runSim('empty-gid');
   assert.equal(r.code, 6, r.out);
   assert.match(r.out, /\(no state\)/, 'must abort before any transition');
@@ -674,7 +674,7 @@ test('rollback-sim: empty runtime floor → baseline enforced; a baseline-DESCEN
   const r = runRollbackSim('floor-empty');
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /STATUS=ROLLED_BACK/);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=targettag/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=targettag/);
   assert.match(
     r.out,
     /PRIVACY_FLOOR_BUILD_SHA=\s*$/m,
@@ -687,7 +687,7 @@ test('rollback-sim: candidate == floor → allowed', () => {
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /STATUS=ROLLED_BACK/);
   assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=targettag/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=targettag/);
 });
 
 test('rollback-sim: candidate descendant → allowed', () => {
@@ -695,7 +695,7 @@ test('rollback-sim: candidate descendant → allowed', () => {
   assert.equal(r.code, 0, r.out);
   assert.match(r.out, /STATUS=ROLLED_BACK/);
   assert.match(r.out, /PRIVACY_FLOOR_BUILD_SHA=2437646/);
-  assert.match(r.out, /ENV_SPYGLASS_TAG=targettag/);
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=targettag/);
 });
 
 test('rollback-sim: candidate ancestor → rejected (no mutation)', () => {
@@ -703,7 +703,7 @@ test('rollback-sim: candidate ancestor → rejected (no mutation)', () => {
   assert.equal(r.code, 2, r.out);
   assert.match(r.out, /ABORT: target image/);
   assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must not be mutated');
 });
 
 test('rollback-sim: unrelated candidate → rejected (no mutation)', () => {
@@ -711,7 +711,7 @@ test('rollback-sim: unrelated candidate → rejected (no mutation)', () => {
   assert.equal(r.code, 2, r.out);
   assert.match(r.out, /ABORT: target image/);
   assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must not be mutated');
 });
 
 test('rollback-sim: missing OCI revision → rejected (no mutation)', () => {
@@ -719,7 +719,7 @@ test('rollback-sim: missing OCI revision → rejected (no mutation)', () => {
   assert.equal(r.code, 2, r.out);
   assert.match(r.out, /ABORT: target image/);
   assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must not be mutated');
 });
 
 test('rollback-sim: malformed OCI revision → rejected (no mutation)', () => {
@@ -727,7 +727,7 @@ test('rollback-sim: malformed OCI revision → rejected (no mutation)', () => {
   assert.equal(r.code, 2, r.out);
   assert.match(r.out, /ABORT: target image/);
   assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must not be mutated');
 });
 
 test('rollback-sim: missing Git object → rejected (fail closed, no mutation)', () => {
@@ -735,7 +735,7 @@ test('rollback-sim: missing Git object → rejected (fail closed, no mutation)',
   assert.equal(r.code, 2, r.out);
   assert.match(r.out, /ABORT: target image/);
   assert.match(r.out, /STATUS=ACTIVE/, 'state must not be mutated');
-  assert.match(r.out, /ENV_SPYGLASS_TAG=old/, '.env must not be mutated');
+  assert.match(r.out, /ENV_ORTBTOOLS_TAG=old/, '.env must not be mutated');
 });
 
 test('rollback-sim: critical failure → floor preserved in critical state', () => {
@@ -768,8 +768,8 @@ test('deploy-lib image_contains_privacy_floor with production-shaped parameters 
     'EOD',
     'chmod +x "$BIN/docker"',
     'export PATH="$BIN:$PATH"',
-    'image_contains_privacy_floor "adtech-spyglass:candidate" "2437646" || { echo "Failed: candidate == floor should be allowed"; exit 1; }',
-    'image_contains_privacy_floor "adtech-spyglass:candidate" "a43adad" || { echo "Failed: ancestor floor should be allowed"; exit 1; }',
+    'image_contains_privacy_floor "ortbtools:candidate" "2437646" || { echo "Failed: candidate == floor should be allowed"; exit 1; }',
+    'image_contains_privacy_floor "ortbtools:candidate" "a43adad" || { echo "Failed: ancestor floor should be allowed"; exit 1; }',
     'cat >"$BIN/docker" <<\'EOD\'',
     '#!/bin/sh',
     'if [ "$1" = "image" ] && [ "$2" = "inspect" ]; then',
@@ -785,7 +785,7 @@ test('deploy-lib image_contains_privacy_floor with production-shaped parameters 
     'fi',
     'exit 0',
     'EOD',
-    'if image_contains_privacy_floor "adtech-spyglass:candidate" "2437646" 2>/dev/null; then',
+    'if image_contains_privacy_floor "ortbtools:candidate" "2437646" 2>/dev/null; then',
     '  echo "Failed: candidate ancestor of floor should be rejected"; exit 1;',
     'fi',
     'rm -rf "$d"',

@@ -11,7 +11,7 @@ RUN npm ci --omit=dev
 
 # ── Runtime ──────────────────────────────────────────────────────────
 # No build tools, no dev deps, runs as the non-root `node` user (uid 1000).
-# The host's /srv/DATA/AppData/adtech-spyglass is also uid 1000 (vk:vk),
+# The host's /srv/DATA/AppData/ortbtools is also uid 1000 (vk:vk),
 # so the SQLite WAL/shm files are writable without an explicit chown step.
 # .dockerignore filters .env / .git / node_modules / docs / *.bak / ops files
 # out of the build context (see tests/immutable-image.test.js for the policy).
@@ -28,16 +28,16 @@ ARG BUILD_SHA=dev
 ARG GIT_SHA=dev
 ARG APP_VERSION=dev
 ENV BUILD_SHA=${BUILD_SHA}
-LABEL org.opencontainers.image.title="adtech-spyglass" \
+LABEL org.opencontainers.image.title="ortbtools" \
       org.opencontainers.image.version="${APP_VERSION}" \
       org.opencontainers.image.revision="${GIT_SHA}" \
-      org.opencontainers.image.source="https://github.com/vladikkrasulya/adtech-spyglass"
+      org.opencontainers.image.source="https://github.com/vladikkrasulya/ortbtools"
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
 USER node
 EXPOSE 3000
 # umask 027 so the app creates the SQLite WAL/SHM (and DB) without "other" perms
-# (mode 0640) — the Grafana datasource reads them via the shared `spyglass-ro`
+# (mode 0640) — the Grafana datasource reads them via the shared `ortbtools-ro`
 # group instead. `exec` makes node PID 1 so SIGTERM/SIGINT reach it for graceful
-# shutdown. See scripts/provision-spyglass-ro.sh + docs/OPERATIONS.md.
+# shutdown. See scripts/provision-ortbtools-ro.sh + docs/OPERATIONS.md.
 CMD ["sh", "-c", "umask 027 && exec node server.js"]

@@ -1,4 +1,4 @@
-# Spyglass — CU + Pops support audit (2026-05-12)
+# ortbtools — CU + Pops support audit (2026-05-12)
 
 > **Source**: DeepSeek v4 Pro via OpenRouter, single 15.7k-token pass against
 > all pops/CU touchpoints in `packages/core/` + UI surface + samples list +
@@ -11,7 +11,7 @@
 
 ---
 
-## 1. Format detection — does Spyglass correctly identify CU/Pops in payloads?
+## 1. Format detection — does ortbtools correctly identify CU/Pops in payloads?
 
 **Gap:** oRTB request pop/clickunder format not detected  
 **Severity:** 🔴 CRITICAL  
@@ -235,7 +235,7 @@
 
 **Gap:** Behavior-probe findings not linked to pop format  
 **Severity:** 🟠 HIGH  
-**Evidence from snapshot:** User statement: “Spyglass behavior-probe catches some of this (frame*bust*\*, click_burst, etc.) but doesn't tie back to pop-specific findings.” No code in snapshot shows such linkage.  
+**Evidence from snapshot:** User statement: “ortbtools behavior-probe catches some of this (frame*bust*\*, click_burst, etc.) but doesn't tie back to pop-specific findings.” No code in snapshot shows such linkage.  
 **What's missing for proper CU/Pops support:** When a creative is a pop, the probe should expect `window.open` calls and user-gesture triggers. Without linking, generic probe findings are not contextualized as pop issues.  
 **Proposed fix:** In the behavior-probe module, if the format is detected as pops, add specific checks: expect `window.open` presence, expect a user-gesture event; if missing, emit a pop-specific finding.  
 **Test angle:** Serve a pop creative that uses a meta-refresh instead of `window.open`; verify a behavior-probe finding like “pop_missing_window_open”.
@@ -268,6 +268,6 @@
 **Gap:** No documentation in snapshot about pops as a supported format  
 **Severity:** 🟡 MEDIUM  
 **Evidence from snapshot:** The snapshot does not include README or docs, but the absence of any mention in the provided code (e.g., no comment in `format-detect.js` stating “pops is a first-class format”) suggests it may not be documented.  
-**What's missing for proper CU/Pops support:** Users need to know that Spyglass supports pops/clickunder; otherwise they may not use it for those formats.  
+**What's missing for proper CU/Pops support:** Users need to know that ortbtools supports pops/clickunder; otherwise they may not use it for those formats.  
 **Proposed fix:** Update README and ROADMAP to list “Popunder / Clickunder / Pops” as a supported format, and add a section in the about page.  
 **Test angle:** Check the project’s public documentation for the string “popunder” or “clickunder”.

@@ -1,4 +1,4 @@
-# Contributing to Spyglass
+# Contributing to ortbtools
 
 This document covers the full contributor workflow: local setup, the dev loop,
 code conventions, adding rules / modules / routes, and the commit protocol.
@@ -19,13 +19,13 @@ For the codebase map read [ARCHMAP](./docs/ARCHMAP.md) first.
 ## Cloning + first run
 
 ```bash
-git clone <repo-url> adtech-spyglass
-cd adtech-spyglass
+git clone <repo-url> ortbtools
+cd ortbtools
 npm install          # installs root deps + all workspace packages
 ```
 
 This repo is an **npm workspace**. The only package currently is
-`packages/core/` (the `@kyivtech/spyglass-core` validator engine). The root
+`packages/core/` (the `@ortbtools/core` validator engine). The root
 `package.json` aggregates it; `npm install` at the root covers everything.
 You never need to `cd packages/core && npm install` separately.
 
@@ -36,7 +36,7 @@ docker compose up -d --build
 ```
 
 The UI is at **http://127.0.0.1:8090**. The container name is
-`adtech-spyglass`; the app listens on port 3000 inside and is forwarded to
+`ortbtools`; the app listens on port 3000 inside and is forwarded to
 8090 on the host.
 
 `docker compose up -d --build` is required on first run and whenever you edit
@@ -45,7 +45,7 @@ UI-only edits a plain browser refresh is enough.
 
 ### SQLite database
 
-The compose file bind-mounts `/srv/DATA/AppData/adtech-spyglass:/data` for
+The compose file bind-mounts `/srv/DATA/AppData/ortbtools:/data` for
 persistent SQLite. That path is the maintainer's production path. On a fork or
 contributor machine, change the left side of that bind mount to any directory
 you own — the container only cares about `/data` inside. Alternatively, add a
@@ -53,7 +53,7 @@ you own — the container only cares about `/data` inside. Alternatively, add a
 
 ```yaml
 services:
-  spyglass:
+  ortbtools:
     volumes:
       - ./data:/data
 ```
@@ -70,7 +70,7 @@ the register/verify/reset flow; `PUBLIC_BASE_URL` for the production domain.
 
 ## The dev loop
 
-Spyglass has three categories of files with different hot-reload behaviour.
+ortbtools has three categories of files with different hot-reload behaviour.
 
 ### 1. `public/` — browser refresh, no restart
 
@@ -85,7 +85,7 @@ trap" gotcha below.
 ### 2. `packages/` — `docker compose restart`
 
 `./packages/` is bind-mounted read-only. Changes to validator rules and core
-logic take effect after `docker compose restart adtech-spyglass`. No rebuild.
+logic take effect after `docker compose restart ortbtools`. No rebuild.
 
 Same applies to `intel-llm.js` and `samples/`.
 
@@ -114,7 +114,7 @@ full bind-mount inventory.
 When you edit `design-system.css` (or any single-file bind-mount) with an
 editor that atomically replaces the file (write-to-temp + rename), a new inode
 is created. The running container keeps a file descriptor to the old inode. The
-correct fix is `docker compose restart adtech-spyglass` — that restarts Node
+correct fix is `docker compose restart ortbtools` — that restarts Node
 and the new inode gets picked up. This is distinct from a full `--build`; the
 image hasn't changed, only the container's view of the bind-mounted file needs
 refreshing. This trap was first hit in v0.42.8; it's documented in CHANGELOG
@@ -253,7 +253,7 @@ tokens in the shell HTML with a content hash of all files under
 by hand.
 
 To register a new lazy module in the dispatcher, add a case to the
-`data-action` switch in `public/spyglass.app.js` that does:
+`data-action` switch in `public/ortbtools.app.js` that does:
 
 ```js
 case 'open-mytool':
@@ -403,7 +403,7 @@ request a review explicitly.
 
 - **Bind-mount inode trap**: edited a single-file bind-mount (e.g.
   `design-system.css`) and the change isn't live? The editor created a new
-  inode. Run `docker compose restart adtech-spyglass`.
+  inode. Run `docker compose restart ortbtools`.
 
 - **CSS source-order trap**: added a media-query override and it doesn't fire?
   The unconditional desktop rule is declared later in the file and wins on

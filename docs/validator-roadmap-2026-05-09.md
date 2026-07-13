@@ -176,7 +176,7 @@ Update будь-які SQL queries в:
 
 - `Mozok News Daily Digest` workflow
 - Portal `services/news.js`, `services/digest.js`, `services/goodNews.js`
-- Spyglass admin stats? (ні, це інша БД)
+- ortbtools admin stats? (ні, це інша БД)
 
 Пошуковий рядок: `grep -rn 'hot_score[^_]' /srv/DATA/Stacks/`
 
@@ -194,13 +194,13 @@ docker exec postgres psql -U postgres -d news -c "\d items" | grep hot_score
 
 ### SemVer
 
-Це **PATCH** для портала (1.x.y → 1.x.y+1). Spyglass не зачіпається.
+Це **PATCH** для портала (1.x.y → 1.x.y+1). ortbtools не зачіпається.
 
 ---
 
 ## ③ VAST validation — **1-2 дні**
 
-**Чому третім:** найбільший impact на product differentiation. Spyglass
+**Чому третім:** найбільший impact на product differentiation. ortbtools
 позиціонується як oRTB-валідатор; video creative — це VAST XML, і
 ми НЕ перевіряємо нічого крім факту "це VAST" чи ні. Кожен серйозний
 SSP має VAST-validator; це базовий feature який зараз відсутній.
@@ -458,7 +458,7 @@ oRTB 3.0 (2018) — переробка протоколу від 2.x. Ключо
 | `device` flat                    | `context.device`                         |
 | Banner/Video/Native inline       | AdCOM placement spec separate            |
 
-Сьогодні Spyglass `index.js` route'ить 3.0 через звичайний
+Сьогодні ortbtools `index.js` route'ить 3.0 через звичайний
 `validateRequest` — який припускає 2.x shape — і нічого корисного не
 повертає. Треба окрему гілку.
 

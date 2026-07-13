@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * ROADMAP #18 — SpyglassSession hoist to shell level. Regression tests.
+ * ROADMAP #18 — OrtbtoolsSession hoist to shell level. Regression tests.
  *
  * Three layers, same split as tests/inspector-reentrant.test.js (ROADMAP #19):
  *
@@ -105,16 +105,16 @@ async function withSession(ctxObj, fn) {
   }
 }
 
-// ── 1. SpyglassSession exists before Inspector mounts ───────────────────────
+// ── 1. OrtbtoolsSession exists before Inspector mounts ───────────────────────
 test('installSessionFacade() works standalone — no Inspector/registry involvement needed', async () => {
   const ctx = await freshSession();
   await withSession(ctx, () => {
-    assert.equal(ctx.w.SpyglassSession, undefined, 'facade not installed yet');
+    assert.equal(ctx.w.OrtbtoolsSession, undefined, 'facade not installed yet');
     ctx.installSessionFacade();
-    assert.ok(ctx.w.SpyglassSession, 'facade installed');
-    assert.equal(ctx.w.SpyglassSession.__shellOwned, true);
+    assert.ok(ctx.w.OrtbtoolsSession, 'facade installed');
+    assert.equal(ctx.w.OrtbtoolsSession.__shellOwned, true);
     assert.equal(
-      ctx.w.SpyglassSession.user,
+      ctx.w.OrtbtoolsSession.user,
       null,
       'anonymous by default, no adapter/section involved',
     );
@@ -345,10 +345,10 @@ test('a fresh Inspector adapter registered AFTER login immediately sees user + D
   const ctx = await freshSession();
   await withSession(ctx, async () => {
     ctx.session.setUser({ id: 1, email: 'a@x.com' });
-    // openFromPassword needs window.SpyglassCrypto — stub the ONE call this
+    // openFromPassword needs window.OrtbtoolsCrypto — stub the ONE call this
     // test exercises (openWithPassword), matching the module's contract:
     // returns a DEK-like object; real crypto is out of scope for this test.
-    ctx.w.SpyglassCrypto = {
+    ctx.w.OrtbtoolsCrypto = {
       openWithPassword: async () => ({ __fakeDek: true }),
       serializeDEK: async () => 'b64',
     };
@@ -369,7 +369,7 @@ test('a fresh Inspector adapter registered AFTER login immediately sees user + D
 test('clearSession() (logout) wipes the live DEK AND the sessionStorage-persisted copy', async () => {
   const ctx = await freshSession();
   await withSession(ctx, async () => {
-    ctx.w.SpyglassCrypto = {
+    ctx.w.OrtbtoolsCrypto = {
       openWithPassword: async () => ({ __fakeDek: true }),
       serializeDEK: async () => 'b64-blob',
     };
@@ -394,7 +394,7 @@ test('signOut() POSTs /api/auth/logout, then wipes the session regardless of the
     },
   });
   await withSession(ctx, async () => {
-    ctx.w.SpyglassCrypto = { openWithPassword: async () => ({}), serializeDEK: async () => 'b64' };
+    ctx.w.OrtbtoolsCrypto = { openWithPassword: async () => ({}), serializeDEK: async () => 'b64' };
     ctx.session.setUser({ id: 1, email: 'a@x.com' });
     await ctx.session.openFromPassword('pw', {}, {});
     await ctx.session.signOut(); // logout POST throws — must still wipe locally
@@ -404,16 +404,16 @@ test('signOut() POSTs /api/auth/logout, then wipes the session regardless of the
 });
 
 // ── 13. Raw DEK/CryptoKey is never reachable through the facade ─────────────
-test('the DEK never appears anywhere on window.SpyglassSession — only encrypt/decrypt operations do', async () => {
+test('the DEK never appears anywhere on window.OrtbtoolsSession — only encrypt/decrypt operations do', async () => {
   const ctx = await freshSession();
   await withSession(ctx, async () => {
     ctx.installSessionFacade();
-    ctx.w.SpyglassCrypto = {
+    ctx.w.OrtbtoolsCrypto = {
       openWithPassword: async () => ({ __secretKeyMarker: 'THE_RAW_DEK_MUST_NEVER_LEAK' }),
       serializeDEK: async () => 'b64',
     };
     await ctx.session.openFromPassword('pw', {}, {});
-    const facade = ctx.w.SpyglassSession;
+    const facade = ctx.w.OrtbtoolsSession;
     const serialized = JSON.stringify(facade, (k, v) => (typeof v === 'function' ? '[fn]' : v));
     assert.ok(
       !serialized.includes('THE_RAW_DEK_MUST_NEVER_LEAK'),
@@ -471,7 +471,7 @@ test('static: topbar onSignIn tries window.openAuthModal / window.lazyOpenAuth B
   );
   const idxModal = onSignIn.indexOf("typeof window.openAuthModal === 'function'");
   const idxLazy = onSignIn.indexOf("typeof window.lazyOpenAuth === 'function'");
-  const idxNavigate = onSignIn.indexOf('SpyglassShell.navigateTo');
+  const idxNavigate = onSignIn.indexOf('OrtbtoolsShell.navigateTo');
   assert.ok(idxModal > -1 && idxLazy > -1 && idxNavigate > -1, 'all three branches present');
   assert.ok(
     idxModal < idxNavigate && idxLazy < idxNavigate,
@@ -500,7 +500,7 @@ test('static: topbar dedupes auth boot through session.ensureBooted() — no sep
 
 // ── 16. Legacy ?auth=login|signup still works ────────────────────────────────
 test('static: legacy ?auth=login|signup deep-link is preserved and reads the shell session', () => {
-  const app = fs.readFileSync(path.join(ROOT, 'public/spyglass.app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(ROOT, 'public/ortbtools.app.js'), 'utf8');
   assert.match(app, /qp\.get\('auth'\) === 'login' \|\| qp\.get\('auth'\) === 'signup'/);
   assert.match(app, /if \(!session\.user\) \{\s*window\.lazyOpenAuth\(mode\);/);
 });
@@ -602,16 +602,16 @@ test('static: password-reset/unlock/save-sample still call the SAME facade metho
   ];
   for (const [file, methods] of /** @type {[string, string[]][]} */ (consumers)) {
     const src = fs.readFileSync(path.join(ROOT, 'public', file), 'utf8');
-    // Consumers either call window.SpyglassSession.method(...) directly, or
-    // alias it first (`const S = window.SpyglassSession;` / `const session =
-    // window.SpyglassSession;`) and call S.method(...) — both are legitimate,
+    // Consumers either call window.OrtbtoolsSession.method(...) directly, or
+    // alias it first (`const S = window.OrtbtoolsSession;` / `const session =
+    // window.OrtbtoolsSession;`) and call S.method(...) — both are legitimate,
     // pre-existing patterns (verified per-file while reading them earlier).
-    assert.match(src, /window\.SpyglassSession/, `${file} references window.SpyglassSession`);
+    assert.match(src, /window\.OrtbtoolsSession/, `${file} references window.OrtbtoolsSession`);
     for (const m of methods) {
       assert.match(
         src,
         new RegExp('\\.' + m + '\\b'),
-        `${file} calls .${m} (direct or via a SpyglassSession alias)`,
+        `${file} calls .${m} (direct or via a OrtbtoolsSession alias)`,
       );
       assert.match(facadeBody, new RegExp('\\b' + m + '\\b'), `facade still provides .${m}`);
     }

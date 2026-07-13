@@ -8,7 +8,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { validate } = require('@kyivtech/spyglass-core');
+const { validate } = require('@ortbtools/core');
 
 const findById = (findings, id) => findings.find((f) => f.id === id);
 const findAllById = (findings, id) => findings.filter((f) => f.id === id);

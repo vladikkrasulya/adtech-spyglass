@@ -513,8 +513,8 @@ export function initSearch(inputEl, _shellRoot) {
   function navigate(url) {
     closeDropdown();
     inputEl.value = '';
-    if (window.SpyglassShell && typeof window.SpyglassShell.navigateTo === 'function') {
-      window.SpyglassShell.navigateTo(url);
+    if (window.OrtbtoolsShell && typeof window.OrtbtoolsShell.navigateTo === 'function') {
+      window.OrtbtoolsShell.navigateTo(url);
     } else {
       window.location.assign(url);
     }

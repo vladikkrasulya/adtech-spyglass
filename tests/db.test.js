@@ -7,8 +7,8 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 
 // Steer db.js to a temp dir before requiring it (db.js runs init() at require-time).
-const TMP = mkdtempSync(join(tmpdir(), 'spyglass-test-'));
-process.env.SPYGLASS_DATA_DIR = TMP;
+const TMP = mkdtempSync(join(tmpdir(), 'ortbtools-test-'));
+process.env.ORTBTOOLS_DATA_DIR = TMP;
 
 let db, Users, Partners, Samples, AnalyzeLog, Sessions, BehaviorCorpus, SCHEMA_VERSION;
 let userA, userB;

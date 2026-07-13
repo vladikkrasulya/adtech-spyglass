@@ -38,7 +38,7 @@
  * What this dialect does NOT do:
  *   - Render the In-Page Push creative. That belongs to the frontend
  *     preview pipeline (analogous to renderNativeToHtml in
- *     spyglass.app.js) and is intentionally out of scope here — the
+ *     ortbtools.app.js) and is intentionally out of scope here — the
  *     engine's job is validation, not preview.
  *   - Validate request-side ext fields. Extended-RTB request-side rules
  *     (bsection / btags / push detection) live in dialects/ext-rtb.js;

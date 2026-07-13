@@ -4,11 +4,11 @@
    Bindings:
      ?              → open cheat-sheet (skipped while typing)
      Ctrl/Cmd+S     → save current sample to library (auth-gated by openSaveModal)
-     Ctrl/Cmd+Enter → already wired via spyglass.app.js#handleKeydown
-     Esc            → already wired via spyglass.app.js DOMContentLoaded handler
+     Ctrl/Cmd+Enter → already wired via ortbtools.app.js#handleKeydown
+     Esc            → already wired via ortbtools.app.js DOMContentLoaded handler
 
    Self-contained: injects its own <style> on first use. Reuses the existing
-   `modalRoot` / `closeModal()` / `t()` primitives from spyglass.app.js +
+   `modalRoot` / `closeModal()` / `t()` primitives from ortbtools.app.js +
    i18n.js. Loads after both, so all globals are present.
    ============================================================ */
 (function () {

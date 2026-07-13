@@ -7,9 +7,9 @@ human-readable validation, semantic request↔response crosscheck, IAB-category
 decoding, and a sandboxed creative preview. With an account: zero-knowledge
 encrypted library of saved samples per partner.
 
-**Live**: <https://spyglass.kyivtech.com.ua/> · **Docs**:
-[/about](https://spyglass.kyivtech.com.ua/about) · 🇺🇦 / 🇬🇧 / 🇷🇺
-([UK](https://spyglass.kyivtech.com.ua/uk/) · [EN](https://spyglass.kyivtech.com.ua/) · [RU](https://spyglass.kyivtech.com.ua/ru/))
+**Live**: <https://ortbtools.com/> · **Docs**:
+[/about](https://ortbtools.com/about) · 🇺🇦 / 🇬🇧 / 🇷🇺
+([UK](https://ortbtools.com/uk/) · [EN](https://ortbtools.com/) · [RU](https://ortbtools.com/ru/))
 
 **No account required** to inspect bids — paste-and-validate works
 anonymously. Your pasted payload is sent over HTTPS, analyzed on the
@@ -117,7 +117,7 @@ stores AES-GCM-256 ciphertext + a wrapped DEK + IVs — it cannot decrypt
 samples, partners, or notes even with full DB access. A 32-hex recovery key is
 shown at register-time as the only way to regain access on lost-password.
 
-This is verifiable: read [public/spyglass-crypto.js](./public/spyglass-crypto.js)
+This is verifiable: read [public/ortbtools-crypto.js](./public/ortbtools-crypto.js)
 and the `Phase 7 — Zero-knowledge encryption` section of [CHANGELOG.md](./CHANGELOG.md).
 
 ## Run locally
@@ -133,7 +133,7 @@ The container bind-mounts:
 - `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` for the shared
   design system (this is an artefact of how I deploy it — replace the path
   with your own design-system.css source if you fork)
-- `/srv/DATA/AppData/adtech-spyglass` for persistent SQLite
+- `/srv/DATA/AppData/ortbtools` for persistent SQLite
 - `./intel-llm.js` (live-edit of the LLM bridge without container rebuild)
 
 The `public/design-system.css` file in this repo is an **empty placeholder** —
@@ -199,7 +199,7 @@ ortbtools crosscheck request.json response.json --json
 Library use:
 
 ```bash
-npm install @kyivtech/spyglass-core
+npm install @ortbtools/core
 ```
 
 See `packages/cli/README.md` and `packages/core/README.md`. Publish procedure:
@@ -207,8 +207,8 @@ See `packages/cli/README.md` and `packages/core/README.md`. Publish procedure:
 
 public/index.{en,uk,ru}.html UI per locale (EN at /, others under /uk/, /ru/)
 public/about.{en,uk,ru}.html docs per locale
-public/spyglass.app.js UI behaviours
-public/spyglass-crypto.js zero-knowledge crypto (browser-only)
+public/ortbtools.app.js UI behaviours
+public/ortbtools-crypto.js zero-knowledge crypto (browser-only)
 public/lang-switch.js seamless DOM-morph language switch (shared by index + about)
 public/i18n.js ~140-key UK/EN/RU dictionary
 

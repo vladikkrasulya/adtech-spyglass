@@ -19,10 +19,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { runRulePlugins, listPlugins } = require('@kyivtech/spyglass-core/rules');
-const clientHints = require('@kyivtech/spyglass-core/rules/client-hints');
-const impSecure = require('@kyivtech/spyglass-core/rules/imp-secure');
-const { validate } = require('@kyivtech/spyglass-core');
+const { runRulePlugins, listPlugins } = require('@ortbtools/core/rules');
+const clientHints = require('@ortbtools/core/rules/client-hints');
+const impSecure = require('@ortbtools/core/rules/imp-secure');
+const { validate } = require('@ortbtools/core');
 
 // ── Registry ────────────────────────────────────────────────────────────────
 
@@ -289,7 +289,7 @@ test('imp-secure: plugin is registered with correct metadata', () => {
 
 // ── pop-request plugin ─────────────────────────────────────────────────────
 
-const popReq = require('@kyivtech/spyglass-core/rules/pop-request');
+const popReq = require('@ortbtools/core/rules/pop-request');
 
 test('pop-request: non-pop request → no findings', () => {
   const req = { imp: [{ id: '1', banner: { w: 300, h: 250 } }] };
@@ -367,7 +367,7 @@ test('pop-request: plugin metadata registered', () => {
 
 // ── pop-response plugin ────────────────────────────────────────────────────
 
-const popResp = require('@kyivtech/spyglass-core/rules/pop-response');
+const popResp = require('@ortbtools/core/rules/pop-response');
 
 test('pop-response: non-pop response → no findings', () => {
   const res = { seatbid: [{ bid: [{ impid: '1', price: 1, adm: '<img src=x>' }] }] };

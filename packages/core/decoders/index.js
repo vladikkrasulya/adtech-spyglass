@@ -76,7 +76,7 @@ function decode(payload, opts) {
 
 /**
  * Returns metadata for every registered decoder. Used by future
- * UI surfaces ("which formats can Spyglass read?") and by docs.
+ * UI surfaces ("which formats can ortbtools read?") and by docs.
  */
 function listDecoders() {
   return DECODERS.map((d) => ({

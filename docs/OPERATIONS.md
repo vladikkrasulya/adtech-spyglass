@@ -1,4 +1,4 @@
-# Spyglass — Operations Runbook
+# ortbtools — Operations Runbook
 
 Maintainer: Vladik. Machine: Optiplex 7050 Micro, Debian 13, LAN `192.168.1.4`,
 Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/adtech-spyglass/`.
@@ -7,16 +7,16 @@ Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/adtech-spyglass/`.
 
 ## TL;DR — Quick Reference
 
-- **Public URL**: `https://spyglass.kyivtech.com.ua/`
+- **Public URL**: `https://ortbtools.com/`
 - **Health endpoint**: `curl -s http://127.0.0.1:3000/api/health | python3 -m json.tool`
   — returns `{"success": true, "status": "ok", "checks": {"db": true}, "build": {"sha": "..."}}`
-- **Container name**: `adtech-spyglass` — check: `docker ps --filter name=adtech-spyglass`
-- **App is down → first command**: `docker logs adtech-spyglass --tail 100`
-- **Logs**: `docker logs adtech-spyglass --tail 200 -f` (container stdout/stderr via pino)
-- **SQLite DB**: `/srv/DATA/AppData/adtech-spyglass/spyglass.db` (WAL mode — also
-  `spyglass.db-shm` + `spyglass.db-wal` in the same dir, all three are live state)
-- **Latest backup**: `/srv/DATA/Backups/adtech-spyglass/spyglass-$(date +%Y-%m-%d).db.gz`
-  — daily at 03:30 via `/etc/cron.d/spyglass-backup`
+- **Container name**: `ortbtools` — check: `docker ps --filter name=ortbtools`
+- **App is down → first command**: `docker logs ortbtools --tail 100`
+- **Logs**: `docker logs ortbtools --tail 200 -f` (container stdout/stderr via pino)
+- **SQLite DB**: `/srv/DATA/AppData/ortbtools/ortbtools.db` (WAL mode — also
+  `ortbtools.db-shm` + `ortbtools.db-wal` in the same dir, all three are live state)
+- **Latest backup**: `/srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz`
+  — daily at 03:30 via `/etc/cron.d/ortbtools-backup`
 - **Restart**: `cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart`
 - **Secrets vault**: `/srv/DATA/.secrets/api-tokens.env` (mode 0600, owner vk)
 
@@ -24,24 +24,24 @@ Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/adtech-spyglass/`.
 
 ## 1. Architecture Overview
 
-Single container `adtech-spyglass` built from the local repo. No external DB, no
+Single container `ortbtools` built from the local repo. No external DB, no
 Redis, no queue. Dependencies:
 
 ```
 [internet] → CF Tunnel → kyivtech-portal (host net, port 80)
-                            │ PORTAL_PROXY_TARGETS: spyglass=http://127.0.0.1:8090
-                            └→ adtech-spyglass (127.0.0.1:8090 → container :3000)
+                            │ PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090
+                            └→ ortbtools (127.0.0.1:8090 → container :3000)
 ```
 
-The portal exposes Spyglass in two ways:
+The portal exposes ortbtools in two ways:
 
-1. **`/spyglass-proxy/*`** — public reverse-proxy mount (no auth gate, since 2026-05-09).
-   This is what `spyglass.kyivtech.com.ua` resolves to through Cloudflare Tunnel.
-2. **`/api/admin/spyglass`** — admin-only data surface used by the portal admin dashboard
-   (reads Spyglass's SQLite read-only via bind-mount at `/app/spyglass-data/`).
+1. **`/ortbtools-proxy/*`** — public reverse-proxy mount (no auth gate, since 2026-05-09).
+   This is what `ortbtools.com` resolves to through Cloudflare Tunnel.
+2. **`/api/admin/ortbtools`** — admin-only data surface used by the portal admin dashboard
+   (reads ortbtools's SQLite read-only via bind-mount at `/app/ortbtools-data/`).
 
 `kyivtech-portal` runs with `network_mode: host` so `http://127.0.0.1:8090` resolves
-directly. Spyglass is on Docker's default bridge and publishes only to
+directly. ortbtools is on Docker's default bridge and publishes only to
 `127.0.0.1:8090` — never to `0.0.0.0`.
 
 **SQLite** is the only persistent store — one file, WAL mode, no migration tooling
@@ -73,13 +73,13 @@ snapshot of the release. To change source: commit to `main`, then redeploy (§9)
 
 Since v1.1.6 exactly **one** host path is mounted:
 
-| Host path                           | Container path | RW  | Purpose                                                           |
-| ----------------------------------- | -------------- | --- | ----------------------------------------------------------------- |
-| `/srv/DATA/AppData/adtech-spyglass` | `/data`        | RW  | Persistent SQLite + `content-posts/` (blog) — **never lose this** |
+| Host path                     | Container path | RW  | Purpose                                                           |
+| ----------------------------- | -------------- | --- | ----------------------------------------------------------------- |
+| `/srv/DATA/AppData/ortbtools` | `/data`        | RW  | Persistent SQLite + `content-posts/` (blog) — **never lose this** |
 
-**The `/data` mount** holds `spyglass.db` + `-wal`/`-shm` (live SQLite WAL state)
+**The `/data` mount** holds `ortbtools.db` + `-wal`/`-shm` (live SQLite WAL state)
 and `content-posts/` (persistent blog content; the container reads it via
-`CONTENT_DIR=/data/content-posts`). Never copy only `spyglass.db` without the WAL
+`CONTENT_DIR=/data/content-posts`). Never copy only `ortbtools.db` without the WAL
 files. The backup script archives both (§7).
 
 **`design-system.css`** is vendored byte-for-byte into the image
@@ -138,13 +138,13 @@ See §9 for the full flow and rollback.
 ### 4.3 View logs
 
 ```bash
-docker logs adtech-spyglass --tail 200 -f
+docker logs ortbtools --tail 200 -f
 ```
 
 Logs are JSON (pino). For a specific time window:
 
 ```bash
-docker logs adtech-spyglass --since 1h 2>&1 | grep -i "error\|warn"
+docker logs ortbtools --since 1h 2>&1 | grep -i "error\|warn"
 ```
 
 The container does not write to any host log file. All output goes to Docker's default
@@ -154,7 +154,7 @@ json-file log driver. If you need persistent log files, add a `logging:` stanza 
 ### 4.4 Open SQLite shell
 
 ```bash
-sqlite3 /srv/DATA/AppData/adtech-spyglass/spyglass.db
+sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db
 ```
 
 Useful commands inside the shell:
@@ -166,7 +166,7 @@ SELECT count(*) FROM users;
 SELECT count(*) FROM sessions WHERE expires_at > strftime('%s','now')*1000;
 ```
 
-The DB runs in WAL mode. The `spyglass.db-shm` and `spyglass.db-wal` files in the
+The DB runs in WAL mode. The `ortbtools.db-shm` and `ortbtools.db-wal` files in the
 same directory are part of the live state. `sqlite3` handles WAL transparently — you
 do not need to stop the container to run read queries, but be aware that writes from
 the shell while the container is running can race with the app.
@@ -213,7 +213,7 @@ Sessions expire naturally — `expires_at` is checked on every request. But afte
 security incident you may want to force-invalidate immediately.
 
 ```bash
-sqlite3 /srv/DATA/AppData/adtech-spyglass/spyglass.db
+sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db
 ```
 
 ```sql
@@ -232,7 +232,7 @@ browser cookie. You need the token value — either from the cookie itself (if y
 access to the victim's browser dev tools) or from DB inspection.
 
 ```bash
-sqlite3 /srv/DATA/AppData/adtech-spyglass/spyglass.db
+sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db
 ```
 
 ```sql
@@ -295,18 +295,18 @@ restart). It is NOT an image rebuild.
 cd /srv/DATA/Stacks/adtech-spyglass
 # PAUSE — set the flag atomically (preserves .env 0600/owner) and recreate
 . scripts/deploy-lib.sh && set_env NEWS_CRAWLER_DISABLED 1 .env
-SPYGLASS_TAG="$(grep -E '^SPYGLASS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
 
 # VERIFY paused
-docker inspect adtech-spyglass --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^NEWS_CRAWLER_DISABLED='
-docker logs adtech-spyglass 2>&1 | grep -c 'news crawler scheduled'   # expect 0 (scheduler never started)
+docker inspect ortbtools --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^NEWS_CRAWLER_DISABLED='
+docker logs ortbtools 2>&1 | grep -c 'news crawler scheduled'   # expect 0 (scheduler never started)
 
 # RESUME — set the flag back to 0 atomically (preserves .env 0600/owner) and recreate.
 # `0` resumes because server.js gates on `NEWS_CRAWLER_DISABLED !== '1'`, so 0 is
 # equivalent to removing the line — but set_env keeps perms/owner and never leaves
 # a half-written .env, unlike an in-place `sed -i`.
 . scripts/deploy-lib.sh && set_env NEWS_CRAWLER_DISABLED 0 .env
-SPYGLASS_TAG="$(grep -E '^SPYGLASS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
 ```
 
 To pause ONLY publishing while keeping crawl/ingest running, a separate
@@ -317,15 +317,15 @@ needed — not yet implemented.
 
 Anonymous analyze metadata (`validation_logs`) and the operational request log
 (`event_log`) write to ClickHouse only when `CLICKHOUSE_USER` is set **and**
-`SPYGLASS_ANALYTICS_DISABLED` is not `1`.
+`ORTBTOOLS_ANALYTICS_DISABLED` is not `1`.
 
 ```bash
 cd /srv/DATA/Stacks/adtech-spyglass
 # Option A: leave CLICKHOUSE_USER empty in .env (default for local dev).
 
 # Option B: explicit opt-out on production-like stacks:
-. scripts/deploy-lib.sh && set_env SPYGLASS_ANALYTICS_DISABLED 1 .env
-SPYGLASS_TAG="$(grep -E '^SPYGLASS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+. scripts/deploy-lib.sh && set_env ORTBTOOLS_ANALYTICS_DISABLED 1 .env
+ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
 ```
 
 Verify: run an analyze, then confirm no new rows in `analytics.validation_logs` for
@@ -350,7 +350,7 @@ This file is sourced by `.bashrc` for interactive shells. The backup job
 (`kt-backup-appdata.sh`) includes `/srv/DATA/.secrets` in the restic snapshot so the
 vault rides the daily AppData backup and off-site sync.
 
-### 5.2 What Spyglass reads
+### 5.2 What ortbtools reads
 
 From `docker-compose.yml`, the container loads `env_file: - .env` (the per-project
 `.env` at `/srv/DATA/Stacks/adtech-spyglass/.env`, git-ignored). Additional env vars
@@ -399,23 +399,23 @@ Order matters — kill the old credential at the provider before updating the co
 
 Script: `/srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh`
 
-Cron entry (`/etc/cron.d/spyglass-backup`):
+Cron entry (`/etc/cron.d/ortbtools-backup`):
 
 ```
-30 3 * * * root /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh >> /var/log/spyglass-backup.log 2>&1
+30 3 * * * root /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
 ```
 
 The script uses `sqlite3 "$SRC" ".backup '$DEST'"` — this is the correct WAL-aware
-backup method. It is NOT a file copy. A bare `cp spyglass.db` taken while the app is
+backup method. It is NOT a file copy. A bare `cp ortbtools.db` taken while the app is
 running risks a torn page or a snapshot that doesn't include WAL-flushed transactions.
 
-Retention: 30 days. Output: `/srv/DATA/Backups/adtech-spyglass/spyglass-YYYY-MM-DD.db.gz`.
-Check the log at `/var/log/spyglass-backup.log` for failures.
+Retention: 30 days. Output: `/srv/DATA/Backups/ortbtools/ortbtools-YYYY-MM-DD.db.gz`.
+Check the log at `/var/log/ortbtools-backup.log` for failures.
 
 Current backup inventory (verified 2026-05-13):
 
 ```
-/srv/DATA/Backups/adtech-spyglass/spyglass-2026-04-30.db.gz  … spyglass-2026-05-13.db.gz
+/srv/DATA/Backups/ortbtools/ortbtools-2026-04-30.db.gz  … ortbtools-2026-05-13.db.gz
 ```
 
 #### Permissions — backups & data dir (security, since v1.1.5)
@@ -425,28 +425,28 @@ hashes, session/email-token secrets, encrypted samples), so they are the most
 concentrated secret-at-rest on the box. `backup-db.sh` therefore:
 
 - sets `umask 077` at the top (every file/dir it creates is owner-only),
-- `chmod 700` the backup directory (`/srv/DATA/Backups/adtech-spyglass`) — fixing
+- `chmod 700` the backup directory (`/srv/DATA/Backups/ortbtools`) — fixing
   any older `0755`,
 - `chmod 600` every `*.db.gz` and `content-posts-*.tar.gz` (fixing any older `0644`).
 
 The cron job runs as **root**; the archives are `root:root 0600`. **No non-root
 process consumes the backups**, so locking them down breaks nothing.
 
-The live **data dir** (`/srv/DATA/AppData/adtech-spyglass`) has three container
+The live **data dir** (`/srv/DATA/AppData/ortbtools`) has three container
 consumers — keep this in mind before tightening its modes:
 
-| Consumer          | In-container uid | Access           | Needs                                           |
-| ----------------- | ---------------- | ---------------- | ----------------------------------------------- |
-| `adtech-spyglass` | `node` = 1000    | `/data` **rw**   | owner (uid 1000 = `vk`) read+write              |
-| `kyivtech-portal` | 0 (root)         | ro `spyglass.db` | root — bypasses host modes                      |
-| `grafana`         | 472              | ro `spyglass.db` | read via the `spyglass-ro` **group** (GID 2472) |
+| Consumer          | In-container uid | Access            | Needs                                            |
+| ----------------- | ---------------- | ----------------- | ------------------------------------------------ |
+| `ortbtools`       | `node` = 1000    | `/data` **rw**    | owner (uid 1000 = `vk`) read+write               |
+| `kyivtech-portal` | 0 (root)         | ro `ortbtools.db` | root — bypasses host modes                       |
+| `grafana`         | 472              | ro `ortbtools.db` | read via the `ortbtools-ro` **group** (GID 2472) |
 
 **Since v1.1.7 the live DB is no longer world-readable.** A dedicated group
-`spyglass-ro` (fixed **GID 2472**) replaces the "other" read bit:
+`ortbtools-ro` (fixed **GID 2472**) replaces the "other" read bit:
 
-- AppData dir → `1000:spyglass-ro` mode **`2710`** (setgid; group `--x` traverses
+- AppData dir → `1000:ortbtools-ro` mode **`2710`** (setgid; group `--x` traverses
   to a known path but cannot list the dir);
-- `spyglass.db`/`-wal`/`-shm` → `1000:spyglass-ro` **`0640`** (no "other");
+- `ortbtools.db`/`-wal`/`-shm` → `1000:ortbtools-ro` **`0640`** (no "other");
 - the app runs **`umask 027`** (v1.1.7 image) so recreated WAL/SHM stay `0640`;
 - Grafana joins the group via `group_add: ["2472"]` (grafana-stack repo) and reads
   via the group — uid/mounts/networks unchanged;
@@ -456,7 +456,7 @@ consumers — keep this in mind before tightening its modes:
   trio; `content-posts/` is a non-setgid subdir, so blog files the app writes there
   keep group `1000`. The provisioning is **NON-RECURSIVE** by design.
 
-Provision with **`scripts/provision-spyglass-ro.sh`** (root; dry-run default,
+Provision with **`scripts/provision-ortbtools-ro.sh`** (root; dry-run default,
 `--apply`/`--rollback`; backs up first, GID-collision guard, never `chgrp -R`,
 `setpriv`-missing aborts, verify FAILS CLOSED). Rollback restores
 `1000:1000`/`0644`/`0755` (also non-recursive; uses `APP_GID=1000`, not `APP_UID`).
@@ -464,9 +464,9 @@ Provision with **`scripts/provision-spyglass-ro.sh`** (root; dry-run default,
 **Deploy preflight.** `deploy.sh` runs `check_perms` (**exit 5** if
 `.env`/`deploy-state.env` ≠ `0600` or data-dir/DB world-writable) AND, since
 v1.1.7, `check_group` + `check_db_perms` — **always enforced, no bypass** —
-aborting **exit 6** if the `spyglass-ro` group (GID 2472) is missing/mismatched or
+aborting **exit 6** if the `ortbtools-ro` group (GID 2472) is missing/mismatched or
 the AppData/DB owner·group·mode don't match the `0640`/`2710` contract. (The
-`SPYGLASS_APP_UID`/`SPYGLASS_DB_GID`/`SPYGLASS_DB_GROUP`/`SPYGLASS_DIR_MODE` params
+`ORTBTOOLS_APP_UID`/`ORTBTOOLS_DB_GID`/`ORTBTOOLS_DB_GROUP`/`ORTBTOOLS_DIR_MODE` params
 exist only so disposable tests can point at a test-owned dir/group; they cannot
 disable the check.) Both run before any build/seed/transition and print only file
 names + numeric owner/group/mode — never secrets or DB contents.
@@ -476,7 +476,7 @@ names + numeric owner/group/mode — never secrets or DB contents.
 Script: `/srv/DATA/Ops/backup/scripts/kt-backup-appdata.sh`
 
 Runs daily at 03:00 via `kt-backup-appdata.timer`. Snapshots `/srv/DATA/AppData`
-(which includes `/srv/DATA/AppData/adtech-spyglass/`) and `/srv/DATA/.secrets` into
+(which includes `/srv/DATA/AppData/ortbtools/`) and `/srv/DATA/.secrets` into
 the restic repo at `/srv/DATA/Backups/restic-repo`. Password file:
 `/etc/kt-backup.password`.
 
@@ -490,8 +490,8 @@ Off-site replica confirmed fresh as of 2026-05-10.
 
 | Data                                        | Mechanism                               | Recovery path                   |
 | ------------------------------------------- | --------------------------------------- | ------------------------------- |
-| `spyglass.db` + WAL                         | Both: cron `.backup` + restic           | `.gz` files or `restic restore` |
-| `spyglass.db-shm`, `-wal`                   | restic (file-level)                     | `restic restore`                |
+| `ortbtools.db` + WAL                        | Both: cron `.backup` + restic           | `.gz` files or `restic restore` |
+| `ortbtools.db-shm`, `-wal`                  | restic (file-level)                     | `restic restore`                |
 | `./public` bind-mount                       | git repo (source of truth)              | `git checkout`                  |
 | `./packages`, `./samples`, `./intel-llm.js` | git repo                                | `git checkout`                  |
 | `.env` secrets                              | `/srv/DATA/.secrets` included in restic | `restic restore`                |
@@ -503,7 +503,7 @@ Losing it is a `git checkout` away.
 
 ```bash
 /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh
-# Output: /srv/DATA/Backups/adtech-spyglass/spyglass-$(date +%Y-%m-%d).db.gz
+# Output: /srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz
 ```
 
 If a file for today already exists, `gzip -f` will overwrite it.
@@ -517,21 +517,21 @@ If a file for today already exists, `gzip -f` will overwrite it.
 cd /srv/DATA/Stacks/adtech-spyglass && docker compose stop
 
 # 2. Identify the backup to restore from
-ls -lh /srv/DATA/Backups/adtech-spyglass/
+ls -lh /srv/DATA/Backups/ortbtools/
 
 # 3. Copy the live DB aside (keep it until restore is confirmed good)
-cp /srv/DATA/AppData/adtech-spyglass/spyglass.db /tmp/spyglass-broken-$(date +%s).db
+cp /srv/DATA/AppData/ortbtools/ortbtools.db /tmp/ortbtools-broken-$(date +%s).db
 
 # 4. Remove WAL sidecar files (stale WAL on top of a fresh DB = corruption)
-rm -f /srv/DATA/AppData/adtech-spyglass/spyglass.db-shm
-rm -f /srv/DATA/AppData/adtech-spyglass/spyglass.db-wal
+rm -f /srv/DATA/AppData/ortbtools/ortbtools.db-shm
+rm -f /srv/DATA/AppData/ortbtools/ortbtools.db-wal
 
 # 5. Restore
-gunzip -c /srv/DATA/Backups/adtech-spyglass/spyglass-2026-05-12.db.gz \
-  > /srv/DATA/AppData/adtech-spyglass/spyglass.db
+gunzip -c /srv/DATA/Backups/ortbtools/ortbtools-2026-05-12.db.gz \
+  > /srv/DATA/AppData/ortbtools/ortbtools.db
 
 # 6. Verify the restored DB is not corrupt
-sqlite3 /srv/DATA/AppData/adtech-spyglass/spyglass.db "PRAGMA integrity_check;"
+sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db "PRAGMA integrity_check;"
 # Expected: ok
 
 # 7. Start the container
@@ -546,7 +546,7 @@ curl -s http://127.0.0.1:3000/api/health | python3 -m json.tool
 ```bash
 # 1. Clone the repo
 cd /srv/DATA/Stacks
-git clone <repo_url> adtech-spyglass
+git clone <repo_url> ortbtools
 
 # 2. Restore .env and secrets from restic
 restic --repo /srv/DATA/Backups/restic-repo \
@@ -560,7 +560,7 @@ restic --repo /srv/DATA/Backups/restic-repo \
 # 3. Restore AppData
 restic --repo /srv/DATA/Backups/restic-repo \
        --password-file /etc/kt-backup.password \
-       restore latest --include /srv/DATA/AppData/adtech-spyglass --target /
+       restore latest --include /srv/DATA/AppData/ortbtools --target /
 
 # 4. Rebuild and start
 cd /srv/DATA/Stacks/adtech-spyglass
@@ -574,7 +574,7 @@ BUILD_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
 ### 7.1 Beszel (container metrics)
 
 Hub + agent compose at `/srv/DATA/Stacks/beszel/`. Hub UI: `http://127.0.0.1:8190`
-(or via Tailscale at `100.86.20.34:8190`). Container `adtech-spyglass` should appear
+(or via Tailscale at `100.86.20.34:8190`). Container `ortbtools` should appear
 in the system list. CPU, RAM, and network are tracked by the agent via Docker socket.
 
 ### 7.2 Docker healthcheck
@@ -591,7 +591,7 @@ healthcheck:
 ```
 
 Note: the check hits `/` not `/api/health` — the docker-compose comment explains that
-Spyglass returns 404 on HEAD requests, so wget's GET against the root is used instead.
+ortbtools returns 404 on HEAD requests, so wget's GET against the root is used instead.
 `/api/health` does a live DB ping and is the better liveness probe for manual checks:
 
 ```bash
@@ -603,20 +603,20 @@ curl -s http://127.0.0.1:3000/api/health
 Check Docker's view of the health state:
 
 ```bash
-docker inspect adtech-spyglass --format '{{.State.Health.Status}}'
+docker inspect ortbtools --format '{{.State.Health.Status}}'
 # healthy | unhealthy | starting
 ```
 
 ### 7.3 n8n morning brief
 
 The n8n workflow (at `/srv/DATA/Stacks/n8n/`) calls `GET /api/admin/stats` with a
-bearer token (`ADMIN_STATS_TOKEN` env) to include Spyglass stats in the morning
+bearer token (`ADMIN_STATS_TOKEN` env) to include ortbtools stats in the morning
 report. If `ADMIN_STATS_TOKEN` is unset or wrong, the endpoint returns 503 and n8n
-will log a workflow error — Spyglass itself is unaffected.
+will log a workflow error — ortbtools itself is unaffected.
 
 ### 7.4 Telegram alerts
 
-Spyglass fires `notifyAdmin()` via `notify.js` for: uncaught exceptions, unhandled
+ortbtools fires `notifyAdmin()` via `notify.js` for: uncaught exceptions, unhandled
 promise rejections, and 5xx handler crashes. Rate-limited to one message per tag per
 5 minutes (in-memory throttle, resets on container restart). Requires `TG_BOT_TOKEN`
 and `TG_ADMIN_CHAT_ID` in `.env`. If either is missing, alerts log to stderr only.
@@ -629,16 +629,16 @@ and `TG_ADMIN_CHAT_ID` in `.env`. If either is missing, alerts log to stderr onl
 
 ```bash
 # Check status
-docker ps --filter name=adtech-spyglass
+docker ps --filter name=ortbtools
 
 # Check last 100 log lines for the error
-docker logs adtech-spyglass --tail 100
+docker logs ortbtools --tail 100
 
 # Attempt restart
 cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
 
 # If still unhealthy after ~30s, look at exit reason
-docker inspect adtech-spyglass --format '{{.State.ExitCode}} {{.State.Error}}'
+docker inspect ortbtools --format '{{.State.ExitCode}} {{.State.Error}}'
 
 # Hard reset (stop + start without rebuild)
 docker compose down && docker compose up -d
@@ -659,11 +659,11 @@ Signs: `/api/health` returns `"db": false`, container logs show `SQLITE_CORRUPT`
 cd /srv/DATA/Stacks/adtech-spyglass && docker compose stop
 
 # 2. Copy the corrupt DB aside for post-mortem
-cp /srv/DATA/AppData/adtech-spyglass/spyglass.db /tmp/spyglass-corrupt-$(date +%s).db
+cp /srv/DATA/AppData/ortbtools/ortbtools.db /tmp/ortbtools-corrupt-$(date +%s).db
 
 # 3. Run WAL recovery on the corrupt DB first (may be enough)
-sqlite3 /srv/DATA/AppData/adtech-spyglass/spyglass.db "PRAGMA wal_checkpoint(TRUNCATE);"
-sqlite3 /srv/DATA/AppData/adtech-spyglass/spyglass.db "PRAGMA integrity_check;"
+sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db "PRAGMA wal_checkpoint(TRUNCATE);"
+sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db "PRAGMA integrity_check;"
 
 # If still corrupt, restore from backup (see §6.4)
 ```
@@ -674,16 +674,16 @@ Storage layout: `/srv/DATA` → `/srv/DATA` (symlink to `/srv/DATA` on the host 
 
 Safe to delete first:
 
-- `/var/log/spyglass-backup.log` — rotates manually, can grow large if cron floods
+- `/var/log/ortbtools-backup.log` — rotates manually, can grow large if cron floods
 - Old gz backups beyond 30 days (the cron handles this, but you can purge manually):
-  `find /srv/DATA/Backups/adtech-spyglass -name '*.db.gz' -mtime +30 -delete`
+  `find /srv/DATA/Backups/ortbtools -name '*.db.gz' -mtime +30 -delete`
 - Container log files: `docker system prune` (removes stopped containers + dangling
   images — do NOT use `-v` unless you intend to delete volumes)
 
 **Never delete:**
 
-- `/srv/DATA/AppData/adtech-spyglass/` — live DB
-- `/srv/DATA/Backups/adtech-spyglass/` — only backup copies
+- `/srv/DATA/AppData/ortbtools/` — live DB
+- `/srv/DATA/Backups/ortbtools/` — only backup copies
 - `/srv/DATA/.secrets/` — credentials, vault
 
 Check disk usage breakdown:
@@ -703,7 +703,7 @@ inspector without dialect naming / field-purpose hints.
 Verify from inside the container:
 
 ```bash
-docker exec adtech-spyglass wget -qO- --tries=1 --timeout=3 http://ollama:11434/api/tags
+docker exec ortbtools wget -qO- --tries=1 --timeout=3 http://ollama:11434/api/tags
 ```
 
 If that returns `{}` or a model list — Ollama is up, DNS resolution via `ollama_default`
@@ -723,7 +723,7 @@ cd /srv/DATA/Stacks/ollama && docker compose restart
 ```
 
 If `ollama_default` network doesn't exist at all (Ollama stack was removed), the
-adtech-spyglass container won't start because the network is declared `external: true`
+ortbtools container won't start because the network is declared `external: true`
 in `docker-compose.yml`. Start the Ollama stack first:
 
 ```bash
@@ -738,7 +738,7 @@ cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
 2. **Invalidate all active user sessions** (the token may not be a session token, but
    do this as a precaution if there's any possibility of account compromise):
    ```bash
-   sqlite3 /srv/DATA/AppData/adtech-spyglass/spyglass.db "DELETE FROM sessions;"
+   sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db "DELETE FROM sessions;"
    ```
 3. **Update the vault** with the new token:
    Edit `/srv/DATA/.secrets/api-tokens.env`, then update `.env`.
@@ -748,7 +748,7 @@ cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
    ```
 5. **Audit logs** for the exposure window:
    ```bash
-   docker logs adtech-spyglass --since <ISO_timestamp_of_push> 2>&1 | grep -E "error|warn|5[0-9][0-9]"
+   docker logs ortbtools --since <ISO_timestamp_of_push> 2>&1 | grep -E "error|warn|5[0-9][0-9]"
    ```
 6. **Rotate `EMAIL_TOKEN_SECRET` if exposed** — all outstanding reset/verify tokens
    are invalidated. Users mid-reset need to re-request. Accept this trade-off.
@@ -777,18 +777,18 @@ git checkout main && git pull --ff-only        # clean main == origin/main
    `ROLLING_BACK`/legacy `DEPLOYING`; exit 7 with an explicit next-step message).
    Also refuses unless the tree is clean and `HEAD == main == origin/main`, and
    unless the candidate/previous image both satisfy the **privacy floor** (§9.1.2).
-2. Tags the currently-running image as `adtech-spyglass:rollback-pre-<BUILD_SHA>`
+2. Tags the currently-running image as `ortbtools:rollback-pre-<BUILD_SHA>`
    — keyed by the **previous image's own immutable BUILD_SHA**, not the app
    version (§9.1.2 "SHA-keyed rollback tags") — and records that `BUILD_SHA`.
 3. Builds the image with `BUILD_SHA` (short), `GIT_SHA` (full → OCI revision
    label) and `APP_VERSION` (package.json → OCI version label), tagging it
-   `adtech-spyglass:<short-sha>` + `adtech-spyglass:v<version>`.
+   `ortbtools:<short-sha>` + `ortbtools:v<version>`.
 4. Brings the candidate up via `docker compose -f docker-compose.yml -f
 docker-compose.deploy-transition.yml up -d --no-build` — the transition
    override forces `restart:'no'` for this UNVERIFIED image only (§9.1.2). `.env`
    is **not yet** touched.
 5. Runs `scripts/smoke.sh` against production. **Only once wait_ready +
-   smoke both pass** does it write `SPYGLASS_TAG=<short-sha>` to `.env` and run
+   smoke both pass** does it write `ORTBTOOLS_TAG=<short-sha>` to `.env` and run
    `docker update --restart=always` on the now-verified container in place (no
    recreate) — re-arming the exact behavior the base `docker-compose.yml`
    documents (a reboot or a plain `docker compose up -d` resumes the SAME,
@@ -836,7 +836,7 @@ backward-compatible tooling/log greps).
 above looks stale, or before trusting that a host reboot will self-heal):
 
 ```bash
-docker inspect adtech-spyglass --format '{{.HostConfig.RestartPolicy.Name}}'
+docker inspect ortbtools --format '{{.HostConfig.RestartPolicy.Name}}'
 # → "always"  : verified, self-healing (expected steady state)
 # → "no"      : an UNVERIFIED transition is in progress or was interrupted —
 #               do NOT assume a reboot will bring the app back; check
@@ -864,7 +864,7 @@ unverified image. It is deliberately **not** named `docker-compose.override.yml`
 which would silently apply `restart:'no'` everywhere and defeat the whole point.
 
 **SHA-keyed rollback tags.** The rollback image tag is
-`adtech-spyglass:rollback-pre-<BUILD_SHA>` — the _previous_ image's own
+`ortbtools:rollback-pre-<BUILD_SHA>` — the _previous_ image's own
 immutable build SHA, not `v<app-version>`. Two deploys under an unchanged/
 unbumped version (a same-version retry, or a hotfix that forgot to bump SemVer)
 therefore never collide on the same tag name and silently overwrite a different
@@ -883,19 +883,19 @@ the CI gate `tests/auth-event-pii.test.js`).
 ### 9.1.1 Security cutover (v1.1.7 — Grafana read-only SQLite permissions)
 
 The **first** v1.1.7 deploy must change host file permissions (lock the live
-SQLite to `0640 spyglass-ro`) in lock-step with the app gaining `umask 027`. Run
+SQLite to `0640 ortbtools-ro`) in lock-step with the app gaining `umask 027`. Run
 the **coordinated wrapper**, NOT a bare `deploy.sh`, as the host user `vk`
 (prereq: CP3A done — Grafana joined to group 2472):
 
 ```bash
 cd /srv/DATA/Stacks/adtech-spyglass
 git checkout main && git pull --ff-only
-./scripts/cutover-spyglass-ro.sh            # dry-run: gates + plan, no changes
-./scripts/cutover-spyglass-ro.sh --apply    # perform the cutover
+./scripts/cutover-ortbtools-ro.sh            # dry-run: gates + plan, no changes
+./scripts/cutover-ortbtools-ro.sh --apply    # perform the cutover
 ```
 
 It gates (clean tree, Grafana in group 2472, `sudo -n`, expected current
-`BUILD_SHA`, backups) → `sudo -n scripts/provision-spyglass-ro.sh --apply`
+`BUILD_SHA`, backups) → `sudo -n scripts/provision-ortbtools-ro.sh --apply`
 (group + chgrp/setgid the DB trio to `0640`) → `scripts/deploy.sh` (build/deploy
 v1.1.7). **Success requires full verification:** target SHA active, PID1
 `Umask 0027`, the exact secure state (AppData `1000:2472/2710` + the whole
@@ -906,7 +906,7 @@ read, then returns the deploy's exit code; if v1.1.7 IS active but verification 
 incomplete it records `DEGRADED` and **keeps** the perms (the app is on target);
 any unconfirmed rollback/baseline is `STATUS=CRITICAL`, exit 9.
 
-State at `/srv/DATA/AppData/adtech-spyglass/cutover-state.env` (full snapshot,
+State at `/srv/DATA/AppData/ortbtools/cutover-state.env` (full snapshot,
 0600): `STATUS=SECURITY_CUTOVER|DEGRADED|ROLLED_BACK|CRITICAL|ABORTED|APPLYING`,
 `HOST_PERMS=APPLIED|PARTIAL|BASELINE|UNKNOWN`, `APP_DEPLOY=ACTIVE|ROLLED_BACK|FAILED`,
 `ACTIVE/PREV_BUILD_SHA`, `DEPLOY_RC`, `LAST_ERROR`, timestamps.
@@ -917,11 +917,11 @@ State at `/srv/DATA/AppData/adtech-spyglass/cutover-state.env` (full snapshot,
   (Grafana reads via "other"). Fix the deploy cause, re-run `--apply`.
 - _Half-state (perms `0640` but app v1.1.6)_: Grafana still reads via the group,
   but a v1.1.6 restart recreates WAL at `0644`. Run
-  `./scripts/cutover-spyglass-ro.sh --recover` to re-deploy v1.1.7.
-- _`STATUS=CRITICAL` (host rollback failed)_: `sudo scripts/provision-spyglass-ro.sh`
-  (dry-run shows modes), then `sudo scripts/provision-spyglass-ro.sh --rollback`
+  `./scripts/cutover-ortbtools-ro.sh --recover` to re-deploy v1.1.7.
+- _`STATUS=CRITICAL` (host rollback failed)_: `sudo scripts/provision-ortbtools-ro.sh`
+  (dry-run shows modes), then `sudo scripts/provision-ortbtools-ro.sh --rollback`
   (non-recursive → AppData `0755 1000:1000`, DB trio `0644 1000:1000`); confirm
-  `docker exec -u 472 grafana dd if=/var/lib/grafana/spyglass-data/spyglass.db bs=1 count=1`
+  `docker exec -u 472 grafana dd if=/var/lib/grafana/ortbtools-data/ortbtools.db bs=1 count=1`
   succeeds. **Never `cp`/`mv` the live DB.**
 - Later releases (v1.1.8+) use the normal `./scripts/deploy.sh` — the group +
   perms are already in place and `check_group`/`check_db_perms` enforce them.
@@ -960,7 +960,7 @@ if the CSS is left as the stub or the hash drifts from the manifest.
 
 ```bash
 curl -s http://127.0.0.1:8090/api/health | python3 -m json.tool   # → "build":{"sha":"<short>"}
-docker image inspect adtech-spyglass:$(curl -s http://127.0.0.1:8090/api/health \
+docker image inspect ortbtools:$(curl -s http://127.0.0.1:8090/api/health \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["build"]["sha"])') \
   --format '{{json .Config.Labels}}'                               # → version + revision labels
 ```
@@ -971,7 +971,7 @@ The `/api/health` `build.sha` must equal `git rev-parse --short HEAD`; the image
 Also confirm the container is self-healing (armed, not mid-transition):
 
 ```bash
-docker inspect adtech-spyglass --format '{{.HostConfig.RestartPolicy.Name}}'   # expect: always
+docker inspect ortbtools --format '{{.HostConfig.RestartPolicy.Name}}'   # expect: always
 ```
 
 See §9.1.2 if this ever prints `no` outside of an in-progress deploy/rollback.
@@ -983,12 +983,12 @@ See §9.1.2 if this ever prints `no` outside of an in-progress deploy/rollback.
 ### 10.1 Cloudflare Tunnel (public ingress)
 
 The tunnel terminates at `kyivtech-portal` (host port 80). All of `*.kyivtech.com.ua`
-routes through it. `spyglass.kyivtech.com.ua` is not a separate tunnel route — it's
+routes through it. `ortbtools.com` is not a separate tunnel route — it's
 a subdomain that the portal handles at the application layer via
-`PORTAL_PROXY_TARGETS: spyglass=http://127.0.0.1:8090`.
+`PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090`.
 
 If the public URL is unreachable but `http://127.0.0.1:3000/api/health` returns OK:
-the problem is in the Cloudflare Tunnel or the portal proxy, not in Spyglass. Check
+the problem is in the Cloudflare Tunnel or the portal proxy, not in ortbtools. Check
 the `kyivtech-portal` container:
 
 ```bash
@@ -1004,7 +1004,7 @@ The Cloudflare Tunnel config lives at `/home/vk/.cloudflared/` (tunnel ID
 
 Used for: email verification at signup, password-reset links.
 
-If Resend is down or the API key is invalid, Spyglass catches the error and logs it at
+If Resend is down or the API key is invalid, ortbtools catches the error and logs it at
 `warn` level. It will also fire a Telegram alert via `notifyAdmin()` with tag
 `email-send-fail`. The user's registration/reset request will return an error
 explaining that the email could not be sent. No crash, no data loss.
@@ -1014,16 +1014,16 @@ To test Resend connectivity without a real user:
 ```bash
 curl -s http://127.0.0.1:3000/api/health
 # Then check docker logs for any email-related warnings in the last run
-docker logs adtech-spyglass --since 10m 2>&1 | grep -i "email\|resend"
+docker logs ortbtools --since 10m 2>&1 | grep -i "email\|resend"
 ```
 
 Resend dashboard: `https://resend.com/` — use the account tied to `EMAIL_FROM`:
-`spyglass@kyivtech.com.ua`. Domain verification is via Cloudflare TXT record on
+`ortbtools@kyivtech.com.ua`. Domain verification is via Cloudflare TXT record on
 `kyivtech.com.ua`.
 
 ### 10.3 Telegram bot (admin alerts)
 
-Spyglass pings the bot for: uncaught exceptions, unhandled rejections, 5xx crashes.
+ortbtools pings the bot for: uncaught exceptions, unhandled rejections, 5xx crashes.
 If `TG_BOT_TOKEN` or `TG_ADMIN_CHAT_ID` is missing from `.env`, alerts go to stderr
 only — no crash, no impact on users.
 
@@ -1037,22 +1037,22 @@ curl "https://api.telegram.org/bot${TG_BOT_TOKEN}/getMe"
 ### 10.4 n8n morning brief
 
 n8n stack at `/srv/DATA/Stacks/n8n/`. The workflow calls `GET /api/admin/stats` with
-`Authorization: Bearer <ADMIN_STATS_TOKEN>`. If the token is wrong or unset, Spyglass
-returns 503 and the workflow logs an error — Spyglass is unaffected. Fix: ensure
+`Authorization: Bearer <ADMIN_STATS_TOKEN>`. If the token is wrong or unset, ortbtools
+returns 503 and the workflow logs an error — ortbtools is unaffected. Fix: ensure
 `ADMIN_STATS_TOKEN` in `.env` matches what the n8n workflow credential has.
 
 ### 10.5 GlitchTip (error tracking)
 
 GlitchTip runs at `/srv/DATA/Stacks/glitchtip/`. As of the ARCHITECTURE.md "Current
-State" note, Sentry/GlitchTip integration in Spyglass is on the backlog (Phase 8 ⏸️
-partial — not yet wired in). Spyglass does not currently send error events to
+State" note, Sentry/GlitchTip integration in ortbtools is on the backlog (Phase 8 ⏸️
+partial — not yet wired in). ortbtools does not currently send error events to
 GlitchTip. The Telegram alert path (`notify.js`) is the active incident signal.
 
 ---
 
 ## Appendix: Container Network Summary
 
-Spyglass attaches to three Docker networks:
+ortbtools attaches to three Docker networks:
 
 | Network                 | Type                               | Purpose                                 |
 | ----------------------- | ---------------------------------- | --------------------------------------- |
@@ -1073,4 +1073,4 @@ cd /srv/DATA/Stacks/ollama && docker compose up -d
 
 ---
 
-_Last updated: 2026-05-13. Reflects Spyglass v0.42.10._
+_Last updated: 2026-05-13. Reflects ortbtools v0.42.10._

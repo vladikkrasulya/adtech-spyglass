@@ -1,4 +1,4 @@
-# Palette journal — Spyglass
+# Palette journal — ortbtools
 
 ## Repo facts (don't re-discover these)
 

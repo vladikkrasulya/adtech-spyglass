@@ -9,7 +9,7 @@ let logger;
 if (typeof process !== 'undefined' && process.versions && process.versions.node) {
   try {
     const pino = require('pino');
-    logger = pino({ level: process.env.LOG_LEVEL || 'info', name: 'spyglass-core' });
+    logger = pino({ level: process.env.LOG_LEVEL || 'info', name: 'ortbtools-core' });
   } catch (_) {
     logger = makeConsoleStub();
   }

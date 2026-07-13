@@ -8,7 +8,7 @@ rationale. Best run with a non-trivial request loaded in `#bidReq`.
 ## Loading
 
 **Lazy.** This module is fetched only when the user clicks the
-"🤖 симуляція" button (case `'sim-bids'` in spyglass.app.js
+"🤖 симуляція" button (case `'sim-bids'` in ortbtools.app.js
 dispatcher). On first click: ~6KB across `index.js` + `i18n.js`. On
 subsequent clicks: cached by the browser's ES module loader, zero
 extra fetch.
@@ -27,7 +27,7 @@ extra fetch.
 
 ## Window APIs (consumes)
 
-- `window.closeModal` — modal lifecycle (provided by spyglass.app.js;
+- `window.closeModal` — modal lifecycle (provided by ortbtools.app.js;
   triggered by the `data-action="modal-close"` /
   `data-action="modal-backdrop-close"` buttons rendered by this
   module, plus the global Esc handler).
@@ -48,7 +48,7 @@ modal renders a translated friendly error
 
 ## Dispatcher cases
 
-Only one `data-action` case is handled by spyglass.app.js's central
+Only one `data-action` case is handled by ortbtools.app.js's central
 dispatcher:
 
 - `sim-bids` — opens the modal (lazy-loads this module, then calls

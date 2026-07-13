@@ -16,6 +16,47 @@ All notable changes to Spyglass are documented here. Format follows
 - **README** — CLI install section; remove stale `types` entry from core package
   (no `index.d.ts` yet).
 
+### v1.5.0 — Themis rename migration: Spyglass identifiers retired everywhere
+
+`packages/core` MINOR (`0.30.4` → `0.31.0`, package renamed to
+`@ortbtools/core` BEFORE first npm publish — no registry contract existed);
+CLI `0.1.1` (engine dependency rename). Naming canon executed in full:
+internal codename Themis (vault/planning only), technical + public
+identifiers ortbtools, Spyglass retired. ~205 files swept; a `brand-guard`
+test now fails the build on any new `spyglass` outside a small allowlist
+(historical docs, vault-note pointers, `legacy-spyglass-ok` shim lines).
+
+Compatibility shims (drop ~v1.6):
+
+- **Session cookie** `spy_session` → `ot_session`: dual-read accepts the old
+  cookie; every Set-Cookie also expires the old name — nobody gets logged out.
+- **SQLite**: `/data/spyglass.db` → `/data/ortbtools.db` via one-time boot
+  move (db + WAL + SHM together, only if the new name is free).
+- **Env vars** `SPYGLASS_*` → `ORTBTOOLS_*`: runtime reads
+  (`ORTBTOOLS_DATA_DIR`, `ORTBTOOLS_ANALYTICS_DISABLED`) fall back to the old
+  names; deploy.sh reads the previous image tag from either key.
+- **Browser storage**: 5 localStorage + 1 sessionStorage keys migrate
+  old→new on load (version.js, runs on every shell); the IndexedDB discovery
+  corpus `spyglass_intel_v1` is copied store-by-store into
+  `ortbtools_intel_v1` on first open, then the old DB is deleted.
+- **Export bundles** dual-write `spyglass_version` next to
+  `ortbtools_version` for downstream parsers.
+- **Docker**: service/container/image → `ortbtools`
+  (`ORTBTOOLS_TAG`); the old container DNS name `adtech-spyglass` stays as a
+  network alias on both networks for cross-stack consumers (prometheus, n8n
+  brief, portal, exec-sidecar) until each updates.
+
+Hard renames (atomic in this release): `window.Spyglass*` → `Ortbtools*`
+(14 globals, ~190 refs; console alias kept for `SpyglassVersion`),
+`__spyglass*` → `__ortbtools*`, `spyglass-intel-*` CSS/DOM/event names,
+probe postMessage types, `data-spyglass-version` → `data-ortbtools-version`,
+public assets `spyglass.app.js`/`spyglass-shell.css`/`spyglass-crypto.js` →
+`ortbtools.*`, ops scripts `*-spyglass-ro.sh` → `*-ortbtools-ro.sh`,
+`.claude/agents/spyglass-*` → `ortbtools-*`, ClickHouse writer targets
+`analytics.ortbtools_events` (table renamed at cutover with a
+`spyglass_events` VIEW alias), logger names, mirror/crawler user-agents,
+knowledge-base license strings, docs/CLAUDE.md/ARCHMAP.
+
 ### v1.4.2 — brand scrub: "Spyglass" removed from every user-visible surface
 
 `packages/core` patch (`0.30.3` → `0.30.4`) — one message string; CLI

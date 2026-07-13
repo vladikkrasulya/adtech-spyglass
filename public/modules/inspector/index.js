@@ -18,7 +18,7 @@
      2. fetch the locale-matched template (ctx.lang → template.${lang}.html),
         fall back to template.en.html if the locale file is missing.
      3. Inject template HTML into root.innerHTML.
-     4. Hand off to legacy mountInspector() in /spyglass.app.js — it
+     4. Hand off to legacy mountInspector() in /ortbtools.app.js — it
         binds handlers / dispatcher / DEK state to the now-existing DOM.
      5. emit('kt:inspector-ready', { lang }) so classic <script> files
         (share.js etc.) that need #bidReq / #bidRes can boot without
@@ -27,7 +27,7 @@
 'use strict';
 
 // Note: ?v=… is auto-injected by server.js rewriteAssetVersions() — no manual bump needed.
-import { mountInspector } from '/spyglass.app.js';
+import { mountInspector } from '/ortbtools.app.js';
 
 // Bundle hash for the inspector module. The literal `__INSPECTOR_BUNDLE_HASH__`
 // is replaced at serve time by server.js → injectModuleBundleHashes() with the

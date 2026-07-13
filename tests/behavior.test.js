@@ -13,17 +13,17 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { analyze } = require('@kyivtech/spyglass-core/behavior');
+const { analyze } = require('@ortbtools/core/behavior');
 
 function probeReady() {
-  return { type: 'spyglass-probe', v: 1, ts: Date.now(), kind: 'probe_ready' };
+  return { type: 'ortbtools-probe', v: 1, ts: Date.now(), kind: 'probe_ready' };
 }
 
 function invisibleOverlayClickEvent(opts) {
   const o = opts || {};
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'invisible_overlay_click',
@@ -43,7 +43,7 @@ function invisibleOverlayAggregateClickEvent(opts) {
   const o = opts || {};
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'invisible_overlay_aggregate_click',
@@ -63,7 +63,7 @@ function invisibleOverlayAggregateClickEvent(opts) {
 function centerSynthClickEvent(opts) {
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'center_synth_click',
@@ -81,7 +81,7 @@ function centerSynthClickEvent(opts) {
 function clickBurstEvent(opts) {
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'click_burst',
@@ -98,7 +98,7 @@ function clickBurstEvent(opts) {
 function phantomClickEvent(opts) {
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'phantom_click',
@@ -118,7 +118,7 @@ function phantomClickEvent(opts) {
 function frameBustAnchorEvent(opts) {
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'frame_bust_anchor',
@@ -141,7 +141,7 @@ function frameBustAnchorEvent(opts) {
 function frameBustFormEvent(opts) {
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'frame_bust_form',
@@ -164,7 +164,7 @@ function autoNavigateEvent(opts) {
   // is empty. Phase 3 refinement attaches navContext metadata.
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'auto_navigate',
@@ -184,7 +184,7 @@ function autoNavigateEvent(opts) {
 function heavyAdCpuEvent(opts) {
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'heavy_ad_cpu',
@@ -202,7 +202,7 @@ function heavyAdCpuEvent(opts) {
 function heavyAdNetworkEvent(opts) {
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'heavy_ad_network',
@@ -218,12 +218,12 @@ function heavyAdNetworkEvent(opts) {
 
 function frozenThreadEvent(opts) {
   // The parent watchdog injects this synthetic event directly into
-  // __spyglassBehavior.events when the heartbeat lag crosses the
+  // __ortbtoolsBehavior.events when the heartbeat lag crosses the
   // FROZEN_THRESHOLD_MS bar. Same shape as a probe event, distinct
-  // `type` tag (`spyglass-probe-watchdog`) for source attribution.
+  // `type` tag (`ortbtools-probe-watchdog`) for source attribution.
   return Object.assign(
     {
-      type: 'spyglass-probe-watchdog',
+      type: 'ortbtools-probe-watchdog',
       v: 1,
       ts: Date.now(),
       kind: 'frozen_thread',
@@ -242,7 +242,7 @@ function frozenThreadEvent(opts) {
 function permissionAbuseEvent(opts) {
   return Object.assign(
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       v: 1,
       ts: Date.now(),
       kind: 'permission_abuse',
@@ -357,14 +357,14 @@ test('analyze() — unrelated probe events are ignored by the rule', () => {
   const events = [
     probeReady(),
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       kind: 'window_open',
       method: 'window.open',
       url: 'https://example.com',
       trigger: 'click',
     },
     {
-      type: 'spyglass-probe',
+      type: 'ortbtools-probe',
       kind: 'click_skim_suspect',
       method: 'window.open',
       url: 'https://shady.example',
@@ -547,7 +547,7 @@ test('analyze() — non-auto_navigate kinds (window_open with gesture) do NOT tr
   // window_open with a real click in stack is a normal user-driven flow.
   // The auto/late rules only fire on kind === 'auto_navigate' (empty stack).
   const ev = {
-    type: 'spyglass-probe',
+    type: 'ortbtools-probe',
     kind: 'window_open',
     method: 'window.open',
     url: 'https://example.com',
@@ -782,7 +782,7 @@ test('analyze() — Phase 5 finding carries decorated msg + nullable specRef', (
 
 // ── Phase 6 (static / payload analysis) rules ──────────────────────────────
 
-const { scanCreative, shannonEntropy } = require('@kyivtech/spyglass-core/behavior/rules/static');
+const { scanCreative, shannonEntropy } = require('@ortbtools/core/behavior/rules/static');
 
 test('shannonEntropy — empty / falsy input returns 0', () => {
   assert.equal(shannonEntropy(''), 0);

@@ -10,11 +10,11 @@
 
    Loaded ONLY when the user clicks the "зберегти як corpus"
    button in the behavior tab — see the lazy stub in
-   spyglass.app.js dispatcher (case 'open-corpus-save'). On first
+   ortbtools.app.js dispatcher (case 'open-corpus-save'). On first
    click: ~5KB across this file + i18n.js. On subsequent clicks:
    cached by the module loader, zero extra fetch.
 
-   Exposed window APIs (consumed by spyglass.app.js dispatcher):
+   Exposed window APIs (consumed by ortbtools.app.js dispatcher):
      - window.openCorpusSaveModal()    — entry point, called by
                                           'open-corpus-save'.
      - window.confirmCorpusSave()      — called by
@@ -24,7 +24,7 @@
    Consumes (via /core/utils.js ES imports + globals):
      - $, escapeHtml, toast, t   — DOM + i18n helpers
      - window.closeModal          — modal lifecycle
-     - window.__spyglassBehavior  — { events: [...] } captured by
+     - window.__ortbtoolsBehavior  — { events: [...] } captured by
                                      the behavior probe
      - window._currentSampleId    — optional anchor to the current
                                      library sample (passed through
@@ -38,13 +38,13 @@
 
    Backend: POST /api/behavior/corpus (handler appends an entry
    keyed by the signed-in user; DELETE /api/behavior/corpus/:id is
-   handled by the 'corpus-delete' dispatcher case in spyglass.app.js
+   handled by the 'corpus-delete' dispatcher case in ortbtools.app.js
    and stays there — it's a one-shot fetch, no modal needed).
    ============================================================ */
 import { $, escapeHtml, toast, t } from '/core/utils.js';
 
 export function openCorpusSaveModal() {
-  const events = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
+  const events = (window.__ortbtoolsBehavior && window.__ortbtoolsBehavior.events) || [];
   const usable = events.filter((e) => e.kind !== 'probe_ready');
   if (!usable.length) {
     toast(t('toast.corpus_no_events'), 'error');
@@ -91,7 +91,7 @@ export function openCorpusSaveModal() {
 }
 
 export async function confirmCorpusSave() {
-  const events = (window.__spyglassBehavior && window.__spyglassBehavior.events) || [];
+  const events = (window.__ortbtoolsBehavior && window.__ortbtoolsBehavior.events) || [];
   const usable = events.filter((e) => e.kind !== 'probe_ready');
   const labelEl = document.querySelector('input[name="corpusLabel"]:checked');
   const label = labelEl ? labelEl.value : 'fraud';
@@ -113,7 +113,7 @@ export async function confirmCorpusSave() {
   }
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher does:
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/corpus-save/index.js'); window.openCorpusSaveModal();
 // — first call: fetches + evaluates + these assignments run.
 // Subsequent calls: cached by the module loader, the assignments are no-ops.

@@ -28,7 +28,7 @@ const DEFAULT_CUR = 'USD';
 const DEFAULT_DOMAIN = 'example.com';
 const DEFAULT_ADV_DOMAIN = 'advertiser.example';
 const DEFAULT_IP = '203.0.113.1';
-const DEFAULT_UA = 'Mozilla/5.0 (compatible; Spyglass-Mirror/1.0)';
+const DEFAULT_UA = 'Mozilla/5.0 (compatible; ortbtools-Mirror/1.0)';
 const DEFAULT_LANG = 'en';
 const DEFAULT_TMAX = 500;
 
@@ -261,7 +261,7 @@ function pickBannerSize(banner) {
 }
 
 function bannerHtml(w, h) {
-  return `<a href="https://${DEFAULT_ADV_DOMAIN}"><img src="https://cdn.${DEFAULT_ADV_DOMAIN}/creative-${w}x${h}.png" width="${w}" height="${h}" alt="Spyglass Mirror creative ${w}x${h}"/></a>`;
+  return `<a href="https://${DEFAULT_ADV_DOMAIN}"><img src="https://cdn.${DEFAULT_ADV_DOMAIN}/creative-${w}x${h}.png" width="${w}" height="${h}" alt="ortbtools Mirror creative ${w}x${h}"/></a>`;
 }
 
 function vastTemplate(video) {
@@ -271,7 +271,7 @@ function vastTemplate(video) {
     '<VAST version="4.0">',
     '  <Ad id="mirror-ad-1">',
     '    <InLine>',
-    `      <AdSystem>Spyglass Mirror</AdSystem>`,
+    `      <AdSystem>ortbtools Mirror</AdSystem>`,
     '      <AdTitle>Mirror Demo Ad</AdTitle>',
     '      <Impression><![CDATA[https://' + DEFAULT_ADV_DOMAIN + '/imp]]></Impression>',
     '      <Creatives>',

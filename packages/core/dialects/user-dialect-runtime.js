@@ -6,7 +6,7 @@
  * static DIALECTS registry in packages/core/index.js can dispatch to it
  * via `'user:<dialect_id>'` lookup.
  *
- * IDs are INTEGER (matching the rest of the Spyglass schema: users.id,
+ * IDs are INTEGER (matching the rest of the ortbtools schema: users.id,
  * partners.id, samples.id are all INTEGER PRIMARY KEY AUTOINCREMENT).
  */
 

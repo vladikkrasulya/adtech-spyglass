@@ -13,13 +13,13 @@
         unwrap the existing DEK *locally* (KEK derived from old
         password OR from recovery key), re-wrap under a freshly-derived
         new KEK, ship the new wrap-state to the server, then install
-        the live DEK via SpyglassSession.importDEKFromBytes() so the
+        the live DEK via OrtbtoolsSession.importDEKFromBytes() so the
         user is unlocked immediately. For wipe we just send the new
         password and nuke our local DEK.
 
    ── Loading ─────────────────────────────────────────────────
    Lazy. Three triggers:
-     a) URL boot: ?reset=<token> detected by shell (spyglass.app.js)
+     a) URL boot: ?reset=<token> detected by shell (ortbtools.app.js)
         → shell awaits import(), then calls window.openPasswordResetFlow.
      b) "Forgot password?" link in login modal / unlock modal →
         dispatcher case 'open-forgot' → calls window.openForgotPasswordFlow.
@@ -27,8 +27,8 @@
 
    ── DEK isolation invariants (DO NOT VIOLATE) ───────────────
    • Raw DEK bytes appear ONLY as a local `const dekBytes` inside
-     doResetPassword(). They are produced by SpyglassCrypto.unwrapBytes
-     and consumed by SpyglassCrypto.wrapBytes + SpyglassSession.
+     doResetPassword(). They are produced by OrtbtoolsCrypto.unwrapBytes
+     and consumed by OrtbtoolsCrypto.wrapBytes + OrtbtoolsSession.
      importDEKFromBytes(), then go out of scope when the function
      returns.
    • DEK bytes are NEVER stored on `window`, NEVER in module-level
@@ -47,10 +47,10 @@
                                                 MUST stay on window)
 
    Consumes:
-     - window.SpyglassSession (api, wireEnterSubmit, importDEKFromBytes,
+     - window.OrtbtoolsSession (api, wireEnterSubmit, importDEKFromBytes,
        setUser, setPendingUnlock, clearDEK, renderAuthWidget,
        renderVerifyBanner, refreshSamples)
-     - window.SpyglassCrypto (deriveKEK, wrapBytes, unwrapBytes,
+     - window.OrtbtoolsCrypto (deriveKEK, wrapBytes, unwrapBytes,
        _b64ToBytes, _bytesToB64)
      - window.closeModal
      - $, escapeHtml, toast, t   from /core/utils.js
@@ -70,9 +70,9 @@ let _resetCtx = null;
 // lives in the shell and can't import from a module.
 function setResetActive(v) {
   if (v) {
-    window.__spyglassResetActive = true;
+    window.__ortbtoolsResetActive = true;
   } else {
-    delete window.__spyglassResetActive;
+    delete window.__ortbtoolsResetActive;
   }
 }
 
@@ -127,7 +127,7 @@ export async function doForgotPassword() {
   msgEl.style.color = 'var(--text-dim)';
   msgEl.textContent = t('forgot.sending');
   try {
-    await window.SpyglassSession.api('POST', 'api/auth/forgot-password', { email });
+    await window.OrtbtoolsSession.api('POST', 'api/auth/forgot-password', { email });
     msgEl.style.color = 'var(--success, green)';
     msgEl.textContent = t('forgot.sent');
   } catch (e) {
@@ -141,7 +141,9 @@ export async function openPasswordResetFlow(token) {
   // Fetch crypto state (proves token is valid via server) before showing UI.
   let stateRes;
   try {
-    stateRes = await window.SpyglassSession.api('POST', 'api/auth/reset-password/state', { token });
+    stateRes = await window.OrtbtoolsSession.api('POST', 'api/auth/reset-password/state', {
+      token,
+    });
   } catch (e) {
     toast(t('reset.err.link_invalid', { error: e.message || '' }), 'error');
     // Strip ?reset= from URL so refresh doesn't re-trigger.
@@ -262,8 +264,8 @@ export async function doResetPassword() {
     errEl.textContent = t('reset.err.session_lost');
     return;
   }
-  const Crypto = window.SpyglassCrypto;
-  const Session = window.SpyglassSession;
+  const Crypto = window.OrtbtoolsCrypto;
+  const Session = window.OrtbtoolsSession;
   try {
     let body;
     // dekBytes lives ONLY as a local const in this scope. It is produced

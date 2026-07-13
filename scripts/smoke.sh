@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# NON-DESTRUCTIVE smoke test for a Spyglass deployment — production OR an isolated
+# NON-DESTRUCTIVE smoke test for a ortbtools deployment — production OR an isolated
 # candidate. It does NOT mutate source, config, the container, the SQLite tables a
 # user owns, or content-posts. It DOES cause two benign, by-design derived writes,
 # the same a normal visitor would:
 #   - POST /api/analyze   → a derived-telemetry row (ClickHouse validation_logs +
-#                           spyglass_events; never the payload, no /data SQLite row).
+#                           ortbtools_events; never the payload, no /data SQLite row).
 #   - GET  /api/v1/stream → warms the in-memory + SQLite synthetic-specimen cache.
 # These are product side-effects, not test artifacts.
 #

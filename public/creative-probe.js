@@ -56,8 +56,8 @@
        - mouseover / mouseenter / mousemove (and pointer- variants) → SKIM
        - empty stack (auto-redirect, setTimeout) → AUTO-NAVIGATE
 
-   Events go to parent via postMessage with type='spyglass-probe'.
-   The parent (spyglass.app.js) collates and renders them in the
+   Events go to parent via postMessage with type='ortbtools-probe'.
+   The parent (ortbtools.app.js) collates and renders them in the
    "Behavior" tab.
 
    Notes:
@@ -74,8 +74,8 @@
 (function () {
   'use strict';
 
-  if (window.__spyglassProbe) return;
-  window.__spyglassProbe = true;
+  if (window.__ortbtoolsProbe) return;
+  window.__ortbtoolsProbe = true;
 
   const PROBE_VERSION = 1;
 
@@ -160,7 +160,7 @@
   // 4s within any 30s window of `longtask` PerformanceObserver entries).
   // Network threshold mirrors IAB display ad weight cap (4MB across all
   // sub-resources). Heartbeat lets the parent watchdog detect a frozen
-  // thread — see modules/behavior + spyglass.app.js receiver for the
+  // thread — see modules/behavior + ortbtools.app.js receiver for the
   // parent half of this protocol.
   const HEAVY_CPU_TOTAL_MS = 60000;
   const HEAVY_CPU_WINDOW_MS = 30000;
@@ -179,7 +179,7 @@
   function send(payload) {
     try {
       const msg = Object.assign(
-        { type: 'spyglass-probe', v: PROBE_VERSION, ts: Date.now() },
+        { type: 'ortbtools-probe', v: PROBE_VERSION, ts: Date.now() },
         payload || {},
       );
       parent.postMessage(msg, '*');
@@ -931,10 +931,10 @@
   //     postMessage), so this signal exists *for the parent* — a missed
   //     heartbeat is the only available evidence that the iframe's JS
   //     thread is no longer servicing tasks. Parent half lives in
-  //     spyglass.app.js's message receiver: it updates _lastHeartbeatAt
+  //     ortbtools.app.js's message receiver: it updates _lastHeartbeatAt
   //     on every probe message (heartbeat or otherwise), and a setInterval
   //     watchdog injects a synthetic kind:'frozen_thread' event into
-  //     __spyglassBehavior.events when lag exceeds FROZEN_THRESHOLD_MS.
+  //     __ortbtoolsBehavior.events when lag exceeds FROZEN_THRESHOLD_MS.
   try {
     setInterval(function () {
       try {

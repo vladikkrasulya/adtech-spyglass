@@ -10,12 +10,12 @@ matching editor (BidRequest if `imp[]` is present, BidResponse if
 ## Loading
 
 **Lazy.** This module is fetched only when the user clicks the
-"live" button (case `'live'` in spyglass.app.js dispatcher). On first
+"live" button (case `'live'` in ortbtools.app.js dispatcher). On first
 click: ~7KB across `index.js` + `i18n.js`. On subsequent clicks:
 cached by the browser's ES module loader, zero extra fetch.
 
 The dispatcher cases `'live-pause'` and `'live-load'` stay in
-spyglass.app.js — they only fire AFTER the modal is open, by which
+ortbtools.app.js — they only fire AFTER the modal is open, by which
 point this module is already loaded and the window APIs below are
 wired up.
 
@@ -31,16 +31,16 @@ wired up.
 ## Window APIs (provides)
 
 - `window.openLiveModal()` — entry point, called by dispatcher
-- `window.__spyglassLivePauseToggle()` — toggles paused state from
+- `window.__ortbtoolsLivePauseToggle()` — toggles paused state from
   outside the modal body. Consumed by the `'live-pause'` dispatcher
   case. Set to `null` on close.
-- `window.__spyglassLiveSpecimens` — `Map<rowId, specimen>` so the
+- `window.__ortbtoolsLiveSpecimens` — `Map<rowId, specimen>` so the
   dispatcher's `'live-load'` case can resolve a clicked row id back to
   its raw JSON. Cleared and set to `null` on close.
 
 ## Window APIs (consumes)
 
-- `window.closeModal` — modal lifecycle (provided by spyglass.app.js).
+- `window.closeModal` — modal lifecycle (provided by ortbtools.app.js).
   Patched on open so any close path (Esc, backdrop, button, follow-up
   modal) tears down the `EventSource` and clears the maps. Restored on
   close.
@@ -55,7 +55,7 @@ wired up.
 
 ## Dispatcher cases
 
-Three `data-action` cases are handled by spyglass.app.js's central
+Three `data-action` cases are handled by ortbtools.app.js's central
 dispatcher (NOT by this module — they manipulate DOM that exists only
 after the modal is open, so they don't need to be inside the lazy
 module):
@@ -63,6 +63,6 @@ module):
 - `live` — opens the modal (lazy-loads this module, then calls
   `window.openLiveModal()`)
 - `live-pause` — toggles pause/resume via
-  `window.__spyglassLivePauseToggle()`
+  `window.__ortbtoolsLivePauseToggle()`
 - `live-load` — loads the clicked row's specimen into the matching
   editor and closes the modal

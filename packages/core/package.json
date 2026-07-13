@@ -1,6 +1,6 @@
 {
-  "name": "@kyivtech/spyglass-core",
-  "version": "0.30.4",
+  "name": "@ortbtools/core",
+  "version": "0.31.0",
   "description": "OpenRTB inspector engine — version + format detection, IAB-spec validation, semantic crosscheck, knowledge base. Pure JavaScript, runs in Node and the browser.",
   "license": "MIT",
   "main": "index.js",
@@ -38,12 +38,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vladikkrasulya/adtech-spyglass.git",
+    "url": "git+https://github.com/vladikkrasulya/ortbtools.git",
     "directory": "packages/core"
   },
   "homepage": "https://ortbtools.com",
   "bugs": {
-    "url": "https://github.com/vladikkrasulya/adtech-spyglass/issues"
+    "url": "https://github.com/vladikkrasulya/ortbtools/issues"
   },
   "publishConfig": {
     "access": "public"

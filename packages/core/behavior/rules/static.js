@@ -190,7 +190,7 @@ function scanCreative(adm) {
   for (const { id, re } of OBFUSCATION_PATTERNS) {
     if (re.test(src)) {
       events.push({
-        type: 'spyglass-static',
+        type: 'ortbtools-static',
         v: 1,
         ts: ts,
         kind: 'static_obfuscation',
@@ -204,7 +204,7 @@ function scanCreative(adm) {
   for (const { id, re } of MINER_PATTERNS) {
     if (re.test(src)) {
       events.push({
-        type: 'spyglass-static',
+        type: 'ortbtools-static',
         v: 1,
         ts: ts,
         kind: 'static_miner',
@@ -218,7 +218,7 @@ function scanCreative(adm) {
   for (const { id, re } of XSS_PATTERNS) {
     if (re.test(src)) {
       events.push({
-        type: 'spyglass-static',
+        type: 'ortbtools-static',
         v: 1,
         ts: ts,
         kind: 'static_xss_marker',
@@ -231,7 +231,7 @@ function scanCreative(adm) {
 
   for (const blob of findHighEntropyBlobs(src)) {
     events.push({
-      type: 'spyglass-static',
+      type: 'ortbtools-static',
       v: 1,
       ts: ts,
       kind: 'static_high_entropy',

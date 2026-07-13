@@ -29,9 +29,9 @@
 (function () {
   'use strict';
 
-  if (window.SpyglassIntelStorage) return;
+  if (window.OrtbtoolsIntelStorage) return;
 
-  const DB_NAME = 'spyglass_intel_v1';
+  const DB_NAME = 'ortbtools_intel_v1';
   const DB_VERSION = 3; // 7c: + intel_llm_cache
   const STORE_OBSERVATIONS = 'field_observations';
   const STORE_META = 'discovery_meta';
@@ -40,6 +40,80 @@
   const STORE_LLM_CACHE = 'intel_llm_cache';
 
   let _dbPromise = null;
+
+  // 2026-07-13 rename migration: the discovery corpus used to live in the
+  // the 'spyglass_intel_v1' IndexedDB (legacy-spyglass-ok). Rows copy into the new DB
+  // once (skip if the old DB does not exist), then delete the old DB.
+  // legacy-spyglass-ok: drop the whole function ~v1.6.
+  const LEGACY_DB_NAME = 'spyglass_intel_v1'; // legacy-spyglass-ok
+  function migrateLegacyDb(db) {
+    return new Promise((resolve) => {
+      let hasLegacy = false;
+      // databases() is not universal; fall back to a versionless open probe.
+      const probe = indexedDB.open(LEGACY_DB_NAME);
+      probe.onupgradeneeded = () => {
+        // DB did not exist — abort creation so we do not leave an empty husk.
+        probe.transaction.abort();
+      };
+      probe.onsuccess = () => {
+        const oldDb = probe.result;
+        hasLegacy = oldDb.objectStoreNames.length > 0;
+        if (!hasLegacy) {
+          oldDb.close();
+          try {
+            indexedDB.deleteDatabase(LEGACY_DB_NAME);
+          } catch (_e) {}
+          return resolve(db);
+        }
+        const names = Array.from(oldDb.objectStoreNames).filter((n) =>
+          db.objectStoreNames.contains(n),
+        );
+        let pending = names.length;
+        if (!pending) {
+          oldDb.close();
+          return resolve(db);
+        }
+        for (const name of names) {
+          const rows = [];
+          const cur = oldDb.transaction(name, 'readonly').objectStore(name).openCursor();
+          cur.onsuccess = (ev) => {
+            const c = ev.target.result;
+            if (c) {
+              rows.push(c.value);
+              c.continue();
+            } else {
+              const tx = db.transaction(name, 'readwrite');
+              const store = tx.objectStore(name);
+              for (const row of rows) {
+                try {
+                  // put(): new-DB rows (if any) win only when keys collide —
+                  // fresh writes are newer than the migrated snapshot.
+                  store.put(row);
+                } catch (_e) {}
+              }
+              tx.oncomplete = tx.onerror = () => {
+                if (--pending === 0) {
+                  oldDb.close();
+                  try {
+                    indexedDB.deleteDatabase(LEGACY_DB_NAME);
+                  } catch (_e) {}
+                  resolve(db);
+                }
+              };
+            }
+          };
+          cur.onerror = () => {
+            if (--pending === 0) {
+              oldDb.close();
+              resolve(db);
+            }
+          };
+        }
+      };
+      probe.onerror = () => resolve(db);
+      probe.onblocked = () => resolve(db);
+    });
+  }
 
   function openDb() {
     if (_dbPromise) return _dbPromise;
@@ -84,7 +158,7 @@
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
       req.onblocked = () => reject(new Error('IDB blocked — close other ortbtools tabs'));
-    });
+    }).then(migrateLegacyDb);
     // Defensive: on any rejection, drop the cached promise so the next
     // call retries instead of locking us into a permanent failure.
     _dbPromise.catch(() => {
@@ -228,7 +302,7 @@
     );
   }
 
-  window.SpyglassIntelStorage = {
+  window.OrtbtoolsIntelStorage = {
     DB_NAME,
     DB_VERSION,
     openDb,

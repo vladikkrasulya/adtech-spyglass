@@ -14,9 +14,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { makeCanonicalUrlRequest } = require('@kyivtech/spyglass-core/decoders/request/_canonical');
-const { decodeRequest, info } = require('@kyivtech/spyglass-core/decoders/request');
-const urlLinkfeed = require('@kyivtech/spyglass-core/decoders/request/url-linkfeed');
+const { makeCanonicalUrlRequest } = require('@ortbtools/core/decoders/request/_canonical');
+const { decodeRequest, info } = require('@ortbtools/core/decoders/request');
+const urlLinkfeed = require('@ortbtools/core/decoders/request/url-linkfeed');
 
 const LINKFEED_URL =
   'http://feed.vendor.example/link?format=json&feed=demo&auth=tk&subid=pub1' +

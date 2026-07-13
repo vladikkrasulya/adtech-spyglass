@@ -11,7 +11,7 @@
 
      - sample.label.title, sample.label.partner,
        sample.label.notes_short — shared with the save-sample modal
-       (still inline in spyglass.app.js, lines ~3765-3770) which uses
+       (still inline in ortbtools.app.js, lines ~3765-3770) which uses
        identical labels for the same metadata fields.
      - toast.saved, toast.save_changes_failed — shared with the
        save-sample modal's confirmSave handler (line ~3946).

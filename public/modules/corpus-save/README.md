@@ -9,12 +9,12 @@ labeled training sample for the confusion matrix in the cabinet.
 
 **Lazy.** This module is fetched only when the user clicks the
 "зберегти як corpus" button in the behavior tab (case
-`'open-corpus-save'` in spyglass.app.js dispatcher). On first click:
+`'open-corpus-save'` in ortbtools.app.js dispatcher). On first click:
 ~5KB across `index.js` + `i18n.js`. On subsequent clicks: cached by
 the browser's ES module loader, zero extra fetch.
 
 The dispatcher's `'confirm-corpus-save'` case stays in
-spyglass.app.js — it only fires AFTER the modal is open (from the
+ortbtools.app.js — it only fires AFTER the modal is open (from the
 modal's primary button), by which point this module is already
 loaded and the window APIs below are wired up.
 
@@ -39,8 +39,8 @@ loaded and the window APIs below are wired up.
 
 ## Window APIs (consumes)
 
-- `window.closeModal` — modal lifecycle (provided by spyglass.app.js).
-- `window.__spyglassBehavior.events` — array of probe events
+- `window.closeModal` — modal lifecycle (provided by ortbtools.app.js).
+- `window.__ortbtoolsBehavior.events` — array of probe events
   (provided by `modules/behavior/`); the modal filters out
   `kind === 'probe_ready'` markers and saves the rest.
 - `window._currentSampleId` — optional id of the library sample the
@@ -51,7 +51,7 @@ loaded and the window APIs below are wired up.
 
 The dispatcher's `'open-corpus-save'` case is responsible for the
 "signed in?" check (it has access to the closure `_currentUser` in
-spyglass.app.js). If the user is signed out, the dispatcher toasts
+ortbtools.app.js). If the user is signed out, the dispatcher toasts
 `toast.signin_to_save` and opens the auth modal — this module is
 NOT lazy-loaded in that path. By the time `openCorpusSaveModal()`
 runs, sign-in is guaranteed; `confirmCorpusSave()` inherits that
@@ -61,19 +61,19 @@ already-open modal.
 ## DOM events / contracts
 
 This module neither dispatches nor listens to any `kt:*` events. It
-reads `window.__spyglassBehavior.events` (a contract owned by
+reads `window.__ortbtoolsBehavior.events` (a contract owned by
 `modules/behavior/`) and writes its modal into `#modalRoot`.
 
 ## Backend
 
 Talks to `POST /api/behavior/corpus`. Each entry is keyed by the
 signed-in user. Deletion of an existing entry is handled by the
-`'corpus-delete'` dispatcher case in spyglass.app.js (one-shot
+`'corpus-delete'` dispatcher case in ortbtools.app.js (one-shot
 fetch, no modal needed) — it stays there.
 
 ## Dispatcher cases
 
-Two `data-action` cases are wired through spyglass.app.js's central
+Two `data-action` cases are wired through ortbtools.app.js's central
 dispatcher:
 
 - `open-corpus-save` — auth-gates, then lazy-loads this module and
@@ -81,7 +81,7 @@ dispatcher:
 - `confirm-corpus-save` — calls `window.confirmCorpusSave()` (the
   module is already loaded by this point).
 
-The unrelated `'corpus-delete'` case stays in spyglass.app.js — it
+The unrelated `'corpus-delete'` case stays in ortbtools.app.js — it
 neither needs a modal nor migrates with this one. The eager
 `injectCorpusBar` helper (which renders the "save as corpus" button
 into the behavior tab) also stays — it lives in the inspector

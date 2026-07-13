@@ -31,10 +31,10 @@ function setup(reqText, resText) {
   w.eval(NAV_SRC);
   w.document.getElementById('bidReq').value = reqText || '';
   w.document.getElementById('bidRes').value = resText || '';
-  assert.ok(w.SpyglassSourceNav.init({}));
+  assert.ok(w.OrtbtoolsSourceNav.init({}));
   return w;
 }
-const overlay = (w, side) => w.SpyglassSourceNav.__test.panes()[side].overlay;
+const overlay = (w, side) => w.OrtbtoolsSourceNav.__test.panes()[side].overlay;
 const marks = (ov) => Array.from(ov.querySelectorAll('mark'));
 
 const PRETTY = (o) => JSON.stringify(o, null, 2);
@@ -46,8 +46,8 @@ test('exact highlight: overlay <mark> covers the exact value range (text-node on
     { id: 'x', path: 'imp[1].id' },
     { side: 'request', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-  assert.ok(w.SpyglassSourceNav.navigate(loc));
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
   const ov = overlay(w, 'request');
   const m = marks(ov);
   assert.equal(m.length, 1);
@@ -65,8 +65,8 @@ test('XSS: payload HTML in a value never creates DOM/script — only inert text 
     { id: 'vast.x', path: 'seatbid[0].bid[0].adm' },
     { side: 'response', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'vast.x', location: loc }]);
-  w.SpyglassSourceNav.navigate(loc);
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'vast.x', location: loc }]);
+  w.OrtbtoolsSourceNav.navigate(loc);
   const ov = overlay(w, 'response');
   assert.equal(ov.querySelector('script'), null, 'no <script> created');
   assert.equal(ov.querySelector('img'), null, 'no <img> created');
@@ -84,9 +84,9 @@ test('container precision (VAST adm) → kind container, spans the whole adm val
     { id: 'vast.version_missing', path: 'seatbid[0].bid[0].adm' },
     { side: 'response', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.navigate(loc);
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'vast', location: loc }]);
-  w.SpyglassSourceNav.navigate(loc);
+  w.OrtbtoolsSourceNav.navigate(loc);
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'vast', location: loc }]);
+  w.OrtbtoolsSourceNav.navigate(loc);
   const m = marks(overlay(w, 'response'))[0];
   assert.equal(m.className, 'src-hl src-hl--container');
   assert.ok(m.textContent.includes('<VAST'));
@@ -101,8 +101,8 @@ test('cross-pane currency: primary RESPONSE /cur highlighted, related REQUEST /c
     req,
     res,
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'crosscheck.cur_not_in_request', location: loc }]);
-  assert.ok(w.SpyglassSourceNav.navigate(loc));
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'crosscheck.cur_not_in_request', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
   assert.equal(marks(overlay(w, 'response'))[0].textContent, '"USD"'); // primary
   // related = the request `cur` array node (pretty-printed → multi-line span)
   assert.ok(marks(overlay(w, 'request'))[0].textContent.includes('EUR'));
@@ -118,8 +118,8 @@ test('cross-pane size: response /w exact + /h related, request banner.format rel
     req,
     res,
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'size', location: loc }]);
-  assert.ok(w.SpyglassSourceNav.navigate(loc));
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'size', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
   const resMarks = marks(overlay(w, 'response')).map((m) => m.textContent);
   assert.deepEqual(resMarks, ['728', '90']); // w (exact) + h (related), in source order
   assert.ok(marks(overlay(w, 'request'))[0].textContent.includes('300')); // banner.format
@@ -134,9 +134,9 @@ test('cross-pane price↔floor: response price exact + request bidfloor related'
     req,
     res,
   );
-  w.SpyglassSourceNav.navigate(loc);
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'p', location: loc }]);
-  assert.ok(w.SpyglassSourceNav.navigate(loc));
+  w.OrtbtoolsSourceNav.navigate(loc);
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'p', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
   assert.equal(marks(overlay(w, 'response'))[0].textContent, '0.1');
   assert.equal(marks(overlay(w, 'request'))[0].textContent, '0.9');
 });
@@ -149,8 +149,8 @@ test('minified and pretty both resolve the same pointer', () => {
   );
   for (const text of [PRETTY(res), JSON.stringify(res)]) {
     const w = setup('', text);
-    w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-    assert.ok(w.SpyglassSourceNav.navigate(loc));
+    w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+    assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
     assert.equal(marks(overlay(w, 'response'))[0].textContent, '1.25');
   }
 });
@@ -162,15 +162,15 @@ test('stale: editing a pane tears down highlight + disables nav until re-analyze
     { id: 'x', path: 'seatbid[0].bid[0].price' },
     { side: 'response', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-  w.SpyglassSourceNav.navigate(loc);
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  w.OrtbtoolsSourceNav.navigate(loc);
   assert.equal(marks(overlay(w, 'response')).length, 1);
   // user edits the response pane
   const el = w.document.getElementById('bidRes');
   el.value = PRETTY({ seatbid: [{ bid: [{ price: 999 }] }] });
   el.dispatchEvent(new w.Event('input', { bubbles: true }));
   assert.equal(marks(overlay(w, 'response')).length, 0, 'highlight torn down on edit');
-  assert.equal(w.SpyglassSourceNav.navigate(loc), false, 'navigation disabled while stale');
+  assert.equal(w.OrtbtoolsSourceNav.navigate(loc), false, 'navigation disabled while stale');
   assert.equal(w.document.getElementById('srcNavBar').hidden, true);
 });
 
@@ -194,13 +194,13 @@ test('prev/next cycles navigable findings across panes with wrap-around', () => 
       ),
     },
   ];
-  w.SpyglassSourceNav.onAnalyzed(items);
-  w.SpyglassSourceNav.next(); // → item 0 (request)
+  w.OrtbtoolsSourceNav.onAnalyzed(items);
+  w.OrtbtoolsSourceNav.next(); // → item 0 (request)
   assert.equal(marks(overlay(w, 'request')).length, 1);
-  w.SpyglassSourceNav.next(); // → item 1 (response) — auto cross-pane
+  w.OrtbtoolsSourceNav.next(); // → item 1 (response) — auto cross-pane
   assert.equal(marks(overlay(w, 'response')).length, 1);
   assert.equal(marks(overlay(w, 'request')).length, 0);
-  w.SpyglassSourceNav.next(); // wrap → item 0 again
+  w.OrtbtoolsSourceNav.next(); // wrap → item 0 again
   assert.equal(marks(overlay(w, 'request')).length, 1);
 });
 
@@ -215,22 +215,22 @@ test('URL provenance: present raw param resolves; unknown provenance does not ju
     { id: 'request.url.user_ip_ipv6', path: 'device.ipv6' },
     { side: 'request', kind: 'url', canonical: { _raw: { 'ch-model': 'Pixel' } } },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'ok', location: ok }]);
-  assert.ok(w.SpyglassSourceNav.navigate(ok));
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'ok', location: ok }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(ok));
   assert.equal(marks(overlay(w, 'request'))[0].textContent, 'Pixel');
   assert.equal(bad.precision, 'none');
-  assert.equal(w.SpyglassSourceNav.navigate(bad), false, 'disabled url location does not jump');
+  assert.equal(w.OrtbtoolsSourceNav.navigate(bad), false, 'disabled url location does not jump');
 });
 
 test('>2MB pane is disabled (honest no-jump), not built', () => {
   const big = '{"a":"' + 'x'.repeat(2 * 1024 * 1024 + 10) + '"}';
   const w = setup('', big);
   const loc = FL.buildNormalLocation({ id: 'x', path: 'a' }, { side: 'response', kind: 'ortb' });
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-  const r = w.SpyglassSourceNav.__test.resolvePart(loc.primary, 'ortb-json');
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  const r = w.OrtbtoolsSourceNav.__test.resolvePart(loc.primary, 'ortb-json');
   assert.equal(r.ok, false);
   assert.equal(r.reason, 'too-large');
-  assert.equal(w.SpyglassSourceNav.navigate(loc), false);
+  assert.equal(w.OrtbtoolsSourceNav.navigate(loc), false);
 });
 
 test('invalid JSON pane → no jump (honest fallback)', () => {
@@ -239,8 +239,8 @@ test('invalid JSON pane → no jump (honest fallback)', () => {
     { id: 'x', path: 'seatbid[0]' },
     { side: 'response', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-  assert.equal(w.SpyglassSourceNav.navigate(loc), false);
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  assert.equal(w.OrtbtoolsSourceNav.navigate(loc), false);
 });
 
 // ── CP3.1: lifecycle / idempotency / focused-Esc / stale-after-failed-analyze ──
@@ -255,10 +255,10 @@ test('remount: after repeated init/teardown, ONE keypress performs exactly ONE s
   const req = { id: 'r', imp: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }] };
   const w = setup(PRETTY(req), '');
   // simulate several SPA remounts — each init() must fully clean the prior one
-  w.SpyglassSourceNav.init({});
-  w.SpyglassSourceNav.init({});
-  w.SpyglassSourceNav.init({});
-  w.SpyglassSourceNav.onAnalyzed(
+  w.OrtbtoolsSourceNav.init({});
+  w.OrtbtoolsSourceNav.init({});
+  w.OrtbtoolsSourceNav.init({});
+  w.OrtbtoolsSourceNav.onAnalyzed(
     itemsFor(['imp[0].id', 'imp[1].id', 'imp[2].id', 'imp[3].id'], 'request'),
   );
   w.document.dispatchEvent(
@@ -266,7 +266,7 @@ test('remount: after repeated init/teardown, ONE keypress performs exactly ONE s
   );
   // stacked listeners would advance the cursor N times; exactly one listener → cursor 0
   assert.equal(
-    w.SpyglassSourceNav.__test.state().cursor,
+    w.OrtbtoolsSourceNav.__test.state().cursor,
     0,
     'exactly one step → no stacked listeners',
   );
@@ -280,16 +280,16 @@ test('remount: after repeated init/teardown, ONE keypress performs exactly ONE s
 
 test('teardown removes document keydown, overlays, live region + toolbar state', () => {
   const w = setup('{"a":1}', '');
-  w.SpyglassSourceNav.onAnalyzed(itemsFor(['a'], 'request'));
+  w.OrtbtoolsSourceNav.onAnalyzed(itemsFor(['a'], 'request'));
   assert.ok(w.document.querySelector('.src-hl-overlay'));
   assert.ok(w.document.querySelector('[aria-live]'));
-  w.SpyglassSourceNav.teardown();
+  w.OrtbtoolsSourceNav.teardown();
   // listener gone → keypress is inert, no throw, no state
   w.document.dispatchEvent(
     new w.KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }),
   );
-  assert.equal(w.SpyglassSourceNav.__test.state(), null);
-  assert.equal(w.SpyglassSourceNav.__test.panes(), null);
+  assert.equal(w.OrtbtoolsSourceNav.__test.state(), null);
+  assert.equal(w.OrtbtoolsSourceNav.__test.panes(), null);
   assert.equal(w.document.querySelector('.src-hl-overlay'), null, 'overlays removed');
   assert.equal(w.document.querySelector('[aria-live]'), null, 'live region removed');
   assert.equal(w.document.getElementById('srcNavBar').children.length, 0, 'toolbar emptied');
@@ -303,16 +303,16 @@ test('Esc clears the active highlight even while the textarea HAS focus', () => 
     { id: 'x', path: 'seatbid[0].bid[0].price' },
     { side: 'response', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-  assert.ok(w.SpyglassSourceNav.navigate(loc));
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
   const el = w.document.getElementById('bidRes');
   el.focus();
-  assert.equal(w.SpyglassSourceNav.__test.isTyping(el), true, 'textarea IS a typing target');
-  assert.equal(w.SpyglassSourceNav.__test.highlightActive(), true);
+  assert.equal(w.OrtbtoolsSourceNav.__test.isTyping(el), true, 'textarea IS a typing target');
+  assert.equal(w.OrtbtoolsSourceNav.__test.highlightActive(), true);
   // Esc dispatched FROM the focused textarea (e.target = textarea, bubbles to document)
   el.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   assert.equal(marks(overlay(w, 'response')).length, 0, 'highlight cleared despite focus');
-  assert.equal(w.SpyglassSourceNav.__test.highlightActive(), false);
+  assert.equal(w.OrtbtoolsSourceNav.__test.highlightActive(), false);
 });
 
 test('failed analyze: resetNavigation() at analyze start leaves no stale jump', () => {
@@ -322,15 +322,15 @@ test('failed analyze: resetNavigation() at analyze start leaves no stale jump', 
     { id: 'x', path: 'seatbid[0].bid[0].price' },
     { side: 'response', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-  w.SpyglassSourceNav.navigate(loc);
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  w.OrtbtoolsSourceNav.navigate(loc);
   assert.equal(marks(overlay(w, 'response')).length, 1);
   // a NEW runAnalysis() begins → resetNavigation(); then the analyze FAILS
   // (onAnalyzed is never called)
-  w.SpyglassSourceNav.resetNavigation();
+  w.OrtbtoolsSourceNav.resetNavigation();
   assert.equal(marks(overlay(w, 'response')).length, 0, 'prior highlight dropped at analyze start');
-  assert.equal(w.SpyglassSourceNav.__test.state(), null, 'navigation revision cleared');
-  assert.equal(w.SpyglassSourceNav.navigate(loc), false, 'no stale jump without a fresh analysis');
+  assert.equal(w.OrtbtoolsSourceNav.__test.state(), null, 'navigation revision cleared');
+  assert.equal(w.OrtbtoolsSourceNav.navigate(loc), false, 'no stale jump without a fresh analysis');
   assert.equal(w.document.getElementById('srcNavBar').hidden, true);
 });
 
@@ -343,16 +343,16 @@ test('CP3.2: Esc clears the highlight AND drops the stale active-location status
     { id: 'x', path: 'seatbid[0].bid[0].price' },
     { side: 'response', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-  assert.ok(w.SpyglassSourceNav.navigate(loc));
-  const active = w.SpyglassSourceNav.__test.status();
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
+  const active = w.OrtbtoolsSourceNav.__test.status();
   assert.ok(active && /:\d+:\d+$/.test(active), 'status shows the active location (…:line:col)');
   // Esc dispatched FROM the focused textarea (bubbles to the document handler)
   const el = w.document.getElementById('bidRes');
   el.focus();
   el.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   assert.equal(marks(overlay(w, 'response')).length, 0, 'highlight cleared');
-  const after = w.SpyglassSourceNav.__test.status();
+  const after = w.OrtbtoolsSourceNav.__test.status();
   assert.notEqual(after, active, 'status no longer the stale active location');
   assert.match(after, /locatable/, 'status returned to the neutral list state');
 });
@@ -372,17 +372,17 @@ test('CP3.2: window resize refreshes overlay geometry while active; teardown sto
     { id: 'x', path: 'seatbid[0].bid[0].price' },
     { side: 'response', kind: 'ortb' },
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
-  assert.ok(w.SpyglassSourceNav.navigate(loc));
-  const before = w.SpyglassSourceNav.__test.geometryRefreshes();
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
+  const before = w.OrtbtoolsSourceNav.__test.geometryRefreshes();
   w.dispatchEvent(new w.Event('resize'));
-  const afterResize = w.SpyglassSourceNav.__test.geometryRefreshes();
+  const afterResize = w.OrtbtoolsSourceNav.__test.geometryRefreshes();
   assert.equal(afterResize, before + 1, 'exactly one geometry refresh per resize');
   // teardown aborts the signal → the window listener is removed
-  w.SpyglassSourceNav.teardown();
+  w.OrtbtoolsSourceNav.teardown();
   w.dispatchEvent(new w.Event('resize'));
   assert.equal(
-    w.SpyglassSourceNav.__test.geometryRefreshes(),
+    w.OrtbtoolsSourceNav.__test.geometryRefreshes(),
     afterResize,
     'no geometry refresh fires after teardown',
   );
@@ -397,7 +397,7 @@ test('CP3.2: crosscheck data-loc round-trips through HTML parsing and navigates 
     req,
     res,
   );
-  w.SpyglassSourceNav.onAnalyzed([{ id: 'crosscheck.cur_not_in_request', location: loc }]);
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'crosscheck.cur_not_in_request', location: loc }]);
   // Replicate the app's exact serialization: escapeHtml (& < >) THEN &quot;-escape,
   // embedded in a DOUBLE-quoted data-loc, parsed back by the browser. Guards the
   // bug where unescaped quotes truncate the attribute at the first " so
@@ -419,7 +419,7 @@ test('CP3.2: crosscheck data-loc round-trips through HTML parsing and navigates 
   assert.equal(btn.getAttribute('data-jsonpath'), null, 'crosscheck nav carries no data-jsonpath');
   // the goto-path dispatcher does navigate(JSON.parse(el.dataset.loc)) — must succeed
   const parsed = JSON.parse(btn.dataset.loc);
-  assert.ok(w.SpyglassSourceNav.navigate(parsed), 'data-loc round-trips and navigates');
+  assert.ok(w.OrtbtoolsSourceNav.navigate(parsed), 'data-loc round-trips and navigates');
   assert.equal(marks(overlay(w, 'response'))[0].textContent, '"USD"', 'primary: response cur');
   assert.ok(
     marks(overlay(w, 'request'))[0].textContent.includes('EUR'),

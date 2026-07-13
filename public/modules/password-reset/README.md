@@ -17,7 +17,7 @@ Three-screen state machine for credential recovery:
 
 **Lazy.** Three triggers:
 
-- URL boot: `?reset=<token>` detected in the shell (`spyglass.app.js`)
+- URL boot: `?reset=<token>` detected in the shell (`ortbtools.app.js`)
   → shell awaits `import('/modules/password-reset/...')` then calls
   `window.openPasswordResetFlow(token)`.
 - "Forgot password?" link in the login modal / unlock modal → dispatcher
@@ -49,11 +49,11 @@ cached by the browser's ES module loader, zero extra fetch.
   `onchange=` attribute in the rendered modal — must remain on `window`)
 - `window.cancelPasswordReset()` — clears in-flight context (called from
   the dispatcher's `'reset-cancel'` case)
-- `window.__spyglassResetActive` — boolean flag the shell's `closeModal`
+- `window.__ortbtoolsResetActive` — boolean flag the shell's `closeModal`
   reads to decide whether to strip `?reset=` from the URL on Esc/backdrop
   close
 
-## SpyglassSession methods consumed
+## OrtbtoolsSession methods consumed
 
 - `api(method, url, body)` — HTTP wrapper
 - `setUser(u)` — install fresh user record after server returns it
@@ -64,7 +64,7 @@ cached by the browser's ES module loader, zero extra fetch.
 - `renderAuthWidget()`, `renderVerifyBanner()`, `refreshSamples()` —
   post-success UI refresh
 
-## SpyglassCrypto methods consumed (via `window.SpyglassCrypto`)
+## OrtbtoolsCrypto methods consumed (via `window.OrtbtoolsCrypto`)
 
 - `deriveKEK(password, salt)` — PBKDF2 → AES-KW key
 - `unwrapBytes(kek, iv, ct)` — extract raw DEK bytes from the wrapped
@@ -98,7 +98,7 @@ IIFE closure — neither this module nor any other module ever sees it.
   optional oldPassword, new wrap-state} and persists the rotation
   atomically.
 
-## Dispatcher cases (stay in `spyglass.app.js`)
+## Dispatcher cases (stay in `ortbtools.app.js`)
 
 - `'open-forgot'` — lazy-loads this module, then calls `openForgotPasswordFlow`
 - `'do-forgot'` — calls `window.doForgotPassword` (always present once
@@ -106,7 +106,7 @@ IIFE closure — neither this module nor any other module ever sees it.
 - `'do-reset'` — calls `window.doResetPassword`
 - `'reset-cancel'` — closes modal + strips URL + calls `cancelPasswordReset`
 
-## Boot-time URL trigger (stays in `spyglass.app.js`)
+## Boot-time URL trigger (stays in `ortbtools.app.js`)
 
 `?reset=<token>` detection at boot stays in the shell. On detection the
 shell lazy-imports this module and calls `window.openPasswordResetFlow(token)`.

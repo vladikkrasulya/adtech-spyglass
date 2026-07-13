@@ -1,6 +1,6 @@
 {
-  "name": "adtech-spyglass",
-  "version": "1.4.2",
+  "name": "ortbtools",
+  "version": "1.5.0",
   "description": "OpenRTB inspector — paste a BidRequest/BidResponse, get human-readable validation, semantic crosscheck, creative preview.",
   "private": true,
   "workspaces": [
@@ -11,9 +11,9 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test tests/*.test.js",
-    "test:watch": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --watch tests/*.test.js",
-    "test:coverage": "SPYGLASS_DATA_DIR=$(mktemp -d -t spyglass-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --experimental-test-coverage tests/*.test.js",
+    "test": "ORTBTOOLS_DATA_DIR=$(mktemp -d -t ortbtools-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test tests/*.test.js",
+    "test:watch": "ORTBTOOLS_DATA_DIR=$(mktemp -d -t ortbtools-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --watch tests/*.test.js",
+    "test:coverage": "ORTBTOOLS_DATA_DIR=$(mktemp -d -t ortbtools-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --experimental-test-coverage tests/*.test.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -22,7 +22,7 @@
     "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage"
   },
   "dependencies": {
-    "@kyivtech/spyglass-core": "*",
+    "@ortbtools/core": "*",
     "@sentry/node": "^10.53.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.5.0",

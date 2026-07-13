@@ -64,7 +64,7 @@
       toastErr(tt('toast.share_unsupported'));
       return;
     }
-    if (window.spyglassShareSupported && !window.spyglassShareSupported()) {
+    if (window.ortbtoolsShareSupported && !window.ortbtoolsShareSupported()) {
       toastErr(tt('toast.share_unsupported'));
       return;
     }

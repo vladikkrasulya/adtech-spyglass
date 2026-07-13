@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Daily backup for Spyglass: the SQLite store AND the persistent blog content
+# Daily backup for ortbtools: the SQLite store AND the persistent blog content
 # (content-posts/, since v1.1.5). Both rotate after RETENTION_DAYS so the
 # backup directory never grows unbounded.
 #
@@ -9,13 +9,13 @@
 # in the same dir, then mv into place) so a partial run never leaves a corrupt
 # archive.
 #
-# Install via /etc/cron.d/spyglass-backup:
-#   30 3 * * * root /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh >> /var/log/spyglass-backup.log 2>&1
+# Install via /etc/cron.d/ortbtools-backup:
+#   30 3 * * * root /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
 #
 # RESTORE:
-#   DB:            gunzip -c $DEST_DIR/spyglass-YYYY-MM-DD.db.gz > /srv/DATA/AppData/adtech-spyglass/spyglass.db
+#   DB:            gunzip -c $DEST_DIR/ortbtools-YYYY-MM-DD.db.gz > /srv/DATA/AppData/ortbtools/ortbtools.db
 #                 (stop the container first; remove stale -wal/-shm)
-#   content-posts: tar xzf $DEST_DIR/content-posts-YYYY-MM-DD.tar.gz -C /srv/DATA/AppData/adtech-spyglass
+#   content-posts: tar xzf $DEST_DIR/content-posts-YYYY-MM-DD.tar.gz -C /srv/DATA/AppData/ortbtools
 #
 # SECURITY: the archives are full copies of the SQLite store (bcrypt password
 # hashes, session/email tokens, encrypted samples). They have NO non-root
@@ -27,9 +27,9 @@ set -euo pipefail
 umask 077 # every file/dir created below is owner-only (0600 / 0700) by default
 
 # Paths are overridable for tests (disposable dirs); prod defaults unchanged.
-DATA_DIR="${SPYGLASS_BACKUP_DATA_DIR:-/srv/DATA/AppData/adtech-spyglass}"
-DEST_DIR="${SPYGLASS_BACKUP_DEST_DIR:-/srv/DATA/Backups/adtech-spyglass}"
-SRC="$DATA_DIR/spyglass.db"
+DATA_DIR="${ORTBTOOLS_BACKUP_DATA_DIR:-/srv/DATA/AppData/ortbtools}"
+DEST_DIR="${ORTBTOOLS_BACKUP_DEST_DIR:-/srv/DATA/Backups/ortbtools}"
+SRC="$DATA_DIR/ortbtools.db"
 CONTENT_DIR="$DATA_DIR/content-posts"
 RETENTION_DAYS=30
 DATE=$(date +%Y-%m-%d)
@@ -39,11 +39,11 @@ chmod 700 "$DEST_DIR" # restrictive even if an older run created it 0755
 
 # ── SQLite ──────────────────────────────────────────────────────────────────
 if [ -f "$SRC" ]; then
-  DEST="$DEST_DIR/spyglass-$DATE.db"
+  DEST="$DEST_DIR/ortbtools-$DATE.db"
   sqlite3 "$SRC" ".backup '$DEST'"
   gzip -f "$DEST"
   chmod 600 "$DEST.gz" # explicit: never inherit a stale 0644 when overwriting same-day
-  find "$DEST_DIR" -maxdepth 1 -name "spyglass-*.db.gz" -mtime +"$RETENTION_DAYS" -delete
+  find "$DEST_DIR" -maxdepth 1 -name "ortbtools-*.db.gz" -mtime +"$RETENTION_DAYS" -delete
   echo "$(date -Is) db backup ok: $DEST.gz ($(stat -c%s "$DEST.gz") bytes)"
 else
   echo "$(date -Is) db skip: $SRC does not exist" >&2

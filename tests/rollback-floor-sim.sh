@@ -185,7 +185,7 @@ printf '#!/bin/sh\nexit 0\n' >"$BIN/mock-smoke.sh"
 chmod +x "$BIN/git" "$BIN/docker" "$BIN/curl" "$BIN/mock-smoke.sh"
 
 # Pre-create env file and state file
-printf 'SPYGLASS_TAG=old\n' >"$WORK/.env"
+printf 'ORTBTOOLS_TAG=old\n' >"$WORK/.env"
 chmod 600 "$WORK/.env"
 
 cat >"$DATA/deploy-state.env" <<EOF
@@ -200,11 +200,11 @@ esac
 
 # Run the real rollback.sh
 PATH="$BIN:$PATH" \
-  SPYGLASS_DEPLOY_DATA_DIR="$DATA" \
-  SPYGLASS_DEPLOY_ENV_FILE="$WORK/.env" \
+  ORTBTOOLS_DEPLOY_DATA_DIR="$DATA" \
+  ORTBTOOLS_DEPLOY_ENV_FILE="$WORK/.env" \
   SMOKE_CMD="$BIN/mock-smoke.sh" \
-  SPYGLASS_BASE_URL="http://127.0.0.1:8090" \
-  SPYGLASS_CONTAINER="adtech-spyglass" \
+  ORTBTOOLS_BASE_URL="http://127.0.0.1:8090" \
+  ORTBTOOLS_CONTAINER="ortbtools" \
   READY_TIMEOUT=6 \
   bash "$REPO/scripts/rollback.sh" "$TAG_ARG" >"$WORK/stdout.log" 2>"$WORK/stderr.log"
 rc=$?
@@ -212,7 +212,7 @@ rc=$?
 # Print results for JS verification
 echo "EXIT=$rc"
 if [ -f "$DATA/deploy-state.env" ]; then cat "$DATA/deploy-state.env"; else echo "(no state)"; fi
-echo "ENV_SPYGLASS_TAG=$(grep -E '^SPYGLASS_TAG=' "$WORK/.env" | cut -d= -f2)"
+echo "ENV_ORTBTOOLS_TAG=$(grep -E '^ORTBTOOLS_TAG=' "$WORK/.env" | cut -d= -f2)"
 echo "--- override-trace ---"
 cat "$DATA/override-trace" 2>/dev/null
 echo "--- STDOUT ---"

@@ -1,5 +1,5 @@
 {
-  "_note": "Synthetic fraud BidResponse — frozen JS thread. The adm renders a visible banner AND fires while(true){} 200ms after load. The probe sends one heartbeat at probe_ready, then the thread blocks indefinitely — no further heartbeats reach the parent. The parent watchdog (spyglass.app.js, FROZEN_THRESHOLD_MS=3500) detects the absence after 3.5s and injects a synthetic kind:'frozen_thread' event into __spyglassBehavior.events; engine promotes it to behavior.malicious.frozen_thread (ERROR). This is the only Phase 4 vector that REQUIRES a parent-side detection — a frozen probe cannot self-report.",
+  "_note": "Synthetic fraud BidResponse — frozen JS thread. The adm renders a visible banner AND fires while(true){} 200ms after load. The probe sends one heartbeat at probe_ready, then the thread blocks indefinitely — no further heartbeats reach the parent. The parent watchdog (ortbtools.app.js, FROZEN_THRESHOLD_MS=3500) detects the absence after 3.5s and injects a synthetic kind:'frozen_thread' event into __ortbtoolsBehavior.events; engine promotes it to behavior.malicious.frozen_thread (ERROR). This is the only Phase 4 vector that REQUIRES a parent-side detection — a frozen probe cannot self-report.",
   "id": "bid-response-frozen-thread-001",
   "cur": "USD",
   "seatbid": [

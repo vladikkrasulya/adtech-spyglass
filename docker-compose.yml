@@ -1,6 +1,6 @@
 services:
-  spyglass:
-    container_name: adtech-spyglass
+  ortbtools:
+    container_name: ortbtools
     # ── Immutable image (v1.1.5+) ──────────────────────────────────────────
     # The running container is a self-contained snapshot: ALL source (server.js,
     # modules/, packages/, public/, samples/, lib/, content/posts seed) is baked
@@ -9,11 +9,11 @@ services:
     # a prior release. See docs/OPERATIONS.md and tests/immutable-image.test.js.
     #
     # `image:` pins an explicit tag so deploy/rollback select an exact build.
-    # SPYGLASS_TAG is written to the gitignored .env by scripts/deploy.sh and is
+    # ORTBTOOLS_TAG is written to the gitignored .env by scripts/deploy.sh and is
     # auto-read by compose, so a plain `docker compose up -d` (or a reboot)
     # starts the SAME image. The `:?` guard forbids a silent fall back to a
     # `local`/`dev` image in production.
-    image: adtech-spyglass:${SPYGLASS_TAG:?SPYGLASS_TAG must be set (deploy via scripts/deploy.sh — never a silent local/dev image)}
+    image: ortbtools:${ORTBTOOLS_TAG:?ORTBTOOLS_TAG must be set (deploy via scripts/deploy.sh — never a silent local/dev image)}
     build:
       # Relative context so the image is reproducible from any clean checkout
       # (GitHub Actions, a fresh clone) — NOT tied to /srv/DATA/Stacks/...
@@ -29,7 +29,7 @@ services:
         APP_VERSION: ${APP_VERSION:-dev}
     env_file:
       # Secrets + runtime config (gitignored; .env.example documents the keys).
-      # SPYGLASS_TAG also lives here so compose interpolation + plain `up -d`
+      # ORTBTOOLS_TAG also lives here so compose interpolation + plain `up -d`
       # resolve the deployed image tag after a reboot.
       - .env
     environment:
@@ -49,10 +49,17 @@ services:
       # (content-posts/). All source AND the vendored design-system.css are baked
       # into the image (see design-system.vendor.json), so the container is fully
       # self-contained; the transitional portal CSS overlay was removed in v1.1.6.
-      - /srv/DATA/AppData/adtech-spyglass:/data
+      - /srv/DATA/AppData/ortbtools:/data
     networks:
-      - default
-      - kt-shared
+      # legacy-spyglass-ok: the old container DNS name stays as a network alias
+      # so cross-stack consumers (prometheus blackbox, n8n admin brief, portal,
+      # exec-sidecar) keep resolving until each updates to `ortbtools` (~v1.6).
+      default:
+        aliases:
+          - adtech-spyglass # legacy-spyglass-ok
+      kt-shared:
+        aliases:
+          - adtech-spyglass # legacy-spyglass-ok
     # `always` is the NORMAL, base-file policy — a plain `docker compose up -d`
     # (routine ops, manual recovery, a host reboot bringing dockerd back) must
     # keep behaving exactly as documented: it recreates/resumes THIS service with

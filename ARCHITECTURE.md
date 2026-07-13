@@ -1,4 +1,4 @@
-# Spyglass — Architecture
+# ortbtools — Architecture
 
 OpenRTB inspector and validator. Paste a `BidRequest`/`BidResponse` JSON, get human-readable explanations of every issue, semantic crosscheck between request and response, creative preview, and a saved-sample library per partner.
 
@@ -8,7 +8,7 @@ This document describes the **target architecture**. The current state has conve
 
 ## 0. Current state (as of 2026-05-13)
 
-A snapshot of what's actually live on `spyglass.kyivtech.com.ua`. Anything below differs from later sections — those describe target architecture, this section describes today.
+A snapshot of what's actually live on `ortbtools.com`. Anything below differs from later sections — those describe target architecture, this section describes today.
 
 **Live and working:**
 
@@ -44,8 +44,8 @@ External-model spend across that wave: **$0.401 / $22 OpenRouter cap** (5 GPT-5.
 
 - ❌ **No public/private domain split** — Phase 5 was rejected 2026-05-04 (anonymous use already works, single domain is the simpler architecture; see decision log in ROADMAP.md). The "free public demo" tier in §1 below is therefore _the same domain_, with login as opt-in unlock.
 - 🟢 **Validator strictness levels** (`lax`/`normal`/`pedantic`) and full version-aware rule gating (Phase 2) are partially shipped — `detectVersion()` works with confidence + signals, but most rules don't yet branch by version.
-- 🟢 **`@spyglass/core` is extracted as a workspace** but **not yet npm-published** — held back until Phase 2 strict-mode work stabilises the public API.
-- ⏹️ **`@spyglass/cli` (Phase 6)** not started.
+- 🟢 **`@ortbtools/core` is extracted as a workspace** but **not yet npm-published** — held back until Phase 2 strict-mode work stabilises the public API.
+- ⏹️ **`@ortbtools/cli` (Phase 6)** not started.
 - 🟢 **Phase 7 Pro features**: multi-user accounts ✅, encrypted library ✅, per-user history ✅, dialects ✅. Per-partner default profiles, share read-only sample, mock generation, schema diff, browser extension — not started.
 - 🟢 **Operationalize gaps** (Phase 8): pre-push hook enforces full CI, daily backup + off-site replica live. Still backlog: error tracking (Sentry/GlitchTip), structured logging (Pino — partial), build-SHA in `/api/health`.
 
@@ -57,7 +57,7 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 
 **Problem.** Ad-tech engineers debugging RTB bids today have walled-garden tools (Xandr Console, Magnite RP Console, GAM Inspect Creative) tied to a single seat, dead npm packages stuck on OpenRTB 2.3, and JSON Schema validators that emit `instancePath: /imp/0/banner/format/1/h is required`. There is no "Postman for OpenRTB" — no tool you paste a bid into and get a sentence telling you what's wrong, why it's wrong, and how to fix it.
 
-**Spyglass fills that gap.** Three distinguishing capabilities:
+**ortbtools fills that gap.** Three distinguishing capabilities:
 
 1. **Human-readable, localized errors with fix hints.** "Banner slot 2 has no height — OpenRTB 2.6 §3.2.10 requires `h` when using `format[]` with absolute pixels. Add `h: 250` or use the `wmin/wmax/hmin/hmax` ranges." In Ukrainian, Russian, English.
 2. **Strict IAB OpenRTB 2.6 + errata** as the source of truth, with **per-partner dialect overlays** layered on top — never as the default. Auto-detect the OpenRTB version from payload signals.
@@ -67,7 +67,7 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 
 - **Free public demo** — paste-and-validate, no auth, no storage. Showcase tier. Drives organic discovery.
 - **Authenticated workspace** — saved samples per partner, history, dialects, team features. Behind login.
-- **Open-source validator core** (`@spyglass/core` on npm) — solves the trust gap (engineers won't paste real bid traffic into a black box) and replaces the dead `openrtb-validator` package.
+- **Open-source validator core** (`@ortbtools/core` on npm) — solves the trust gap (engineers won't paste real bid traffic into a black box) and replaces the dead `openrtb-validator` package.
 - **Niche wedge:** CIS/EE push and pop SSPs first — localization plus dialect overlays = no competition. Then mainstream programmatic.
 
 ---
@@ -79,13 +79,13 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 │  Surfaces                                                        │
 │  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
 │  │ public demo  │  │ auth'd workspace │  │ CLI / CI         │   │
-│  │ (static)     │  │ (Node + SQLite)  │  │ npx @spyglass/cli│   │
+│  │ (static)     │  │ (Node + SQLite)  │  │ npx @ortbtools/cli│   │
 │  └──────────────┘  └──────────────────┘  └──────────────────┘   │
 │         │                  │                       │             │
 │         └──────────┬───────┴───────────────────────┘             │
 │                    │                                             │
 │  ┌─────────────────▼──────────────────┐                          │
-│  │ @spyglass/core (validator engine)  │  ← pure JS, no Node deps │
+│  │ @ortbtools/core (validator engine)  │  ← pure JS, no Node deps │
 │  │   - detectVersion(payload)         │     server-side + CI/CLI │
 │  │   - validate(payload, opts)        │     published to npm     │
 │  │   - crosscheck(req, res)           │                          │
@@ -95,7 +95,7 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 │  └─────────────────┬──────────────────┘                          │
 │                    │                                             │
 │  ┌─────────────────▼──────────────────┐                          │
-│  │ @spyglass/i18n                     │  ← string registry       │
+│  │ @ortbtools/i18n                     │  ← string registry       │
 │  │   /locales/{uk,en,ru}.json         │     ICU MessageFormat    │
 │  │   keyed by stable IDs              │     loaded on demand     │
 │  └────────────────────────────────────┘                          │
@@ -108,17 +108,17 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 
 - the public demo validates **server-side** — the browser POSTs the bid JSON to `/api/analyze` over HTTPS and renders the findings the server returns (it is **not** validated locally in the browser); the bodies are processed transiently and never stored
 - the auth'd backend reuses the same engine for `/api/analyze`
-- the CLI wraps it for CI pipelines (`npx spyglass validate req.json resp.json --dialect=iab --version=auto`)
+- the CLI wraps it for CI pipelines (`npx ortbtools validate req.json resp.json --dialect=iab --version=auto`)
 - a future browser extension can `import` it directly
 
 ---
 
-## 3. Validator core (`@spyglass/core`)
+## 3. Validator core (`@ortbtools/core`)
 
 ### 3.1 API shape
 
 ```js
-import { validate, detectVersion, crosscheck, listDialects } from '@spyglass/core';
+import { validate, detectVersion, crosscheck, listDialects } from '@ortbtools/core';
 
 const detection = detectVersion(payload);
 //   → { version: '2.6-202309', confidence: 0.95, signals: ['regs.gpp', 'imp[0].rwdd'] }
@@ -158,7 +158,7 @@ const cross = crosscheck(bidReq, bidRes, { version: 'auto' });
 | `warning` | Spec violation tolerated by most exchanges. Reduces fill / quality. |
 | `info`    | Best-practice or recommendation. Optional improvement.              |
 
-Findings carry **structured `id`s and `params`** — never inline copy. Localization happens at presentation time, by the consuming surface, via `@spyglass/i18n` (see §5). This is non-negotiable for the OSS-able core.
+Findings carry **structured `id`s and `params`** — never inline copy. Localization happens at presentation time, by the consuming surface, via `@ortbtools/i18n` (see §5). This is non-negotiable for the OSS-able core.
 
 ### 3.3 Version detection
 
@@ -179,11 +179,11 @@ Pasted JSON has no HTTP headers, so `X-Openrtb-Version` is unavailable. Detectio
 | Default           | none of the above + valid 2.5-shaped payload                                                                            | assume 2.5     |
 | Deprecated/legacy | `banner.wmax`, `video.protocol` singular, `device.didsha1`, `user.yob`, …                                               | hint as legacy |
 
-**OpenRTB 3.0 is fully validated.** Production adoption remains low, but Spyglass now implements full spec-compliant deep validation for oRTB 3.0 requests, including AdCOM 1.0 placements, contexts, and bid media/creative specs (including recursive VAST validation).
+**OpenRTB 3.0 is fully validated.** Production adoption remains low, but ortbtools now implements full spec-compliant deep validation for oRTB 3.0 requests, including AdCOM 1.0 placements, contexts, and bid media/creative specs (including recursive VAST validation).
 
 ### 3.4 Strictness levels
 
-The OpenRTB spec is full of "should" and "recommended". Treating those as errors makes Spyglass annoying to bidder devs.
+The OpenRTB spec is full of "should" and "recommended". Treating those as errors makes ortbtools annoying to bidder devs.
 
 - `lax` — only what spec marks "must" or what exchanges actively reject. Good for production replay.
 - `normal` — default. Errors for "must" violations; warnings for "should" violations.
@@ -198,7 +198,7 @@ Each dialect is an **additive layer** (not a replacement) over the IAB base. A d
 - known-supported macros / unsupported macros (e.g. only `${AUCTION_PRICE/CURRENCY/LOSS}` substituted by some vendors)
 - specific recommended values
 
-Dialects ship in `/dialects/{name}.js` next to the core. Each vendor-specific overlay can become its own `@spyglass/dialect-<name>` package — separate from the core. New dialects follow the same pattern.
+Dialects ship in `/dialects/{name}.js` next to the core. Each vendor-specific overlay can become its own `@ortbtools/dialect-<name>` package — separate from the core. New dialects follow the same pattern.
 
 Beyond findings, a loaded **user dialect also feeds format detection**: its saved signal mappings let `scanExtForFormatHints` recognise vendor-coded formats (e.g. a numeric pop `ad_type`) with no core change. See §3.7.
 
@@ -212,7 +212,7 @@ https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3210
 
 We control this via a **section-id table** in the core: `'imp.banner' → '3210-object-banner'`. When IAB ships a new tag (e.g. `2.6-202506`), we bump the table, not the rules.
 
-The IAB does **not publish official JSON Schemas** — Spyglass derives rules from the markdown specs directly. We commit to tracking new tags within 2 weeks of publication.
+The IAB does **not publish official JSON Schemas** — ortbtools derives rules from the markdown specs directly. We commit to tracking new tags within 2 weeks of publication.
 
 ### 3.7 Non-IAB format detection (pop family)
 
@@ -325,17 +325,17 @@ Planned additions:
 
 ### 6.1 Public demo
 
-- Static frontend on Cloudflare Pages or similar (or just our portal serving `/spyglass-public/`).
+- Static frontend on Cloudflare Pages or similar (or just our portal serving `/ortbtools-public/`).
 - Domain: `rtb.kyivtech.com.ua` (subdomain split — separate Cloudflare Tunnel route, no auth gate).
 - Validator runs in-browser; no `/api/samples` or `/api/partners` exist. `/api/analyze` is unnecessary if the core runs client-side.
 - Could share the same code build with a feature flag — `BUILD_TARGET=public` strips the library UI.
 
 ### 6.2 Authenticated workspace
 
-- Current setup: portal proxy at `/spyglass-proxy/*` (kyivtech.com.ua, behind admin login).
-- May graduate to its own subdomain `spyglass.kyivtech.com.ua` once team accounts land.
-- Container: `adtech-spyglass` on host network, port `127.0.0.1:8090`.
-- DB: `/srv/DATA/AppData/adtech-spyglass/spyglass.db` (bind-mounted).
+- Current setup: portal proxy at `/ortbtools-proxy/*` (kyivtech.com.ua, behind admin login).
+- May graduate to its own subdomain `ortbtools.com` once team accounts land.
+- Container: `ortbtools` on host network, port `127.0.0.1:8090`.
+- DB: `/srv/DATA/AppData/ortbtools/ortbtools.db` (bind-mounted).
 - Backups: daily `kt-backup-*` cron, gzipped SQLite snapshot, 30-day rotation, off-site rclone replica to Drive (verified fresh 2026-05-10). See [docs/OPERATIONS.md](./docs/OPERATIONS.md) for the restore drill.
 
 ### 6.3 Self-hosted / enterprise
@@ -346,13 +346,13 @@ Planned additions:
 
 ### 6.4 CLI
 
-- `npx @spyglass/cli validate req.json [resp.json] [--dialect=iab] [--version=auto] [--format=json|tap|junit]`
-- Wraps `@spyglass/core` directly. Exit code 0 on clean, 1 on errors, 2 on warnings (configurable).
+- `npx @ortbtools/cli validate req.json [resp.json] [--dialect=iab] [--version=auto] [--format=json|tap|junit]`
+- Wraps `@ortbtools/core` directly. Exit code 0 on clean, 1 on errors, 2 on warnings (configurable).
 - CI integration: GitHub Action wrapper that comments on PRs with finding deltas.
 
 ---
 
-## 7. Data model — findings (`@spyglass/core` output)
+## 7. Data model — findings (`@ortbtools/core` output)
 
 ```ts
 type Finding = {
@@ -382,7 +382,7 @@ type ValidationResult = {
 
 ## 8. Open questions / decisions deferred
 
-- **License** for `@spyglass/core`: MIT vs Apache-2.0. MIT is friendlier for vendors to embed; Apache-2.0 includes patent grant. Decision before first npm publish.
+- **License** for `@ortbtools/core`: MIT vs Apache-2.0. MIT is friendlier for vendors to embed; Apache-2.0 includes patent grant. Decision before first npm publish.
 - **3.0 support timeline.** Deep validation is fully resolved and implemented in v0.53.0. Gating check is retired.
 - **Hosted backend for public demo** — none planned, but if `/api/proxy`-style replay is needed, it becomes a Cloudflare Worker rather than a Node server (rate-limit + serverless cost shape).
 - **Auth provider** for multi-user: keep bcrypt sessions for v1, evaluate Auth.js / Clerk / Lucia later.
@@ -394,6 +394,6 @@ type ValidationResult = {
 
 - **Render VAST video in-page.** Embed/iframe IAB's VAST validator instead. Reinventing it is years of work for marginal value.
 - **Decode TCF / GPP consent strings.** Surface presence and validity-pattern, defer string decoding to dedicated tools. Maybe later.
-- **Real bid simulation against live exchanges.** Spyglass is an inspector, not a load tester or auction simulator.
+- **Real bid simulation against live exchanges.** ortbtools is an inspector, not a load tester or auction simulator.
 - **Adapter SDK / bidder framework.** Prebid Server already exists and dominates. Stay in our lane.
 - **Historical / time-series analytics on saved bids.** Possible future, but not core mission.

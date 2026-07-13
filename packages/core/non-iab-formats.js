@@ -2,7 +2,7 @@
 
 /**
  * packages/core/non-iab-formats.js — shared constants + helpers for the
- * non-IAB ad formats Spyglass recognises (pop family, push family).
+ * non-IAB ad formats ortbtools recognises (pop family, push family).
  *
  * These formats live OUTSIDE the canonical oRTB 2.x spec: there's no
  * `imp.popunder` field, no `imp.video.protocols`-equivalent. Vendors
@@ -180,7 +180,7 @@ function isPushFormat(name) {
  *   - a `location.href = URL` / `top.location = URL` redirect
  *
  * False positives possible: a banner with a click-tracker that includes
- * `window.open` would match. But Spyglass uses this signal only when
+ * `window.open` would match. But ortbtools uses this signal only when
  * other pop indicators are already present in the request — not as a
  * standalone classification.
  *

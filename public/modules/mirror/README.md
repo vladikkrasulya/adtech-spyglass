@@ -8,7 +8,7 @@ one when both panes are populated.
 ## Loading
 
 **Lazy.** This module is fetched only when the user clicks the
-"дзеркало ↔" button (case `'mirror'` in spyglass.app.js dispatcher).
+"дзеркало ↔" button (case `'mirror'` in ortbtools.app.js dispatcher).
 On first click: ~25KB across `index.js` + `i18n.js`. On subsequent
 clicks: cached by the browser's ES module loader, zero extra fetch.
 
@@ -24,13 +24,13 @@ clicks: cached by the browser's ES module loader, zero extra fetch.
 ## Window APIs (provides)
 
 - `window.openMirrorModal()` — entry point, called by dispatcher
-- `window.__spyglassMirrorRefetch(mode)` — closure called when the user
+- `window.__ortbtoolsMirrorRefetch(mode)` — closure called when the user
   flips the mode radio (`minimal` / `best-practice`); triggers a
   re-fetch with the new mode
 
 ## Window APIs (consumes)
 
-- `window.closeModal` — modal lifecycle (provided by spyglass.app.js)
+- `window.closeModal` — modal lifecycle (provided by ortbtools.app.js)
 - `window.buildShareUrl` — provided by `modules/share/` when present;
   modal hides the "share with pair" button when absent
 
@@ -42,7 +42,7 @@ proper `modules/mirror/` server-side module is separate work.
 
 ## Dispatcher cases
 
-Five `data-action` cases are handled by spyglass.app.js's central
+Five `data-action` cases are handled by ortbtools.app.js's central
 dispatcher (NOT by this module — they manipulate DOM that exists only
 after the modal is open, so they don't need to be inside the lazy
 module):

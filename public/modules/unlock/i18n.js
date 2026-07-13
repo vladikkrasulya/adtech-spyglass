@@ -11,7 +11,7 @@
    Note: auth.label.password + auth.forgot_password STAY in the
    central /i18n.js — they're shared with the auth modal.
    sample.btn.unlock + sample.unlock_cta STAY too — they belong to
-   the saved-list locked-state CTA, which lives in spyglass.app.js
+   the saved-list locked-state CTA, which lives in ortbtools.app.js
    itself (renderSaved fallback rendering, not in any modal).
    ============================================================ */
 (function () {

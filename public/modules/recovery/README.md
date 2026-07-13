@@ -15,9 +15,9 @@ it" button all share the same gate.
 **Lazy.** This module is fetched only on two paths:
 
 - The dispatcher's `case 'show-recovery'` stub fires after register
-  (called by `bootstrapNewCrypto` in `spyglass.app.js`).
-- The boot-time F5-survival check in `spyglass.app.js` reads
-  `sessionStorage.spyglass_recovery_pending_v1` directly (one cheap
+  (called by `bootstrapNewCrypto` in `ortbtools.app.js`).
+- The boot-time F5-survival check in `ortbtools.app.js` reads
+  `sessionStorage.ortbtools_recovery_pending_v1` directly (one cheap
   line, no module load) and only lazy-loads this module when a key is
   actually pending.
 
@@ -42,7 +42,7 @@ cached by the browser's ES module loader, zero extra fetch.
   sessionStorage for F5-survival.
 - `window.closeRecoveryKeyModal()` — confirm-gated close. Wipes the
   in-memory key, clears sessionStorage, calls
-  `window.__spyglassRecoveryClosed` (shell hook) to clear `#modalRoot`
+  `window.__ortbtoolsRecoveryClosed` (shell hook) to clear `#modalRoot`
   and chain the post-register history-merge prompt.
 - `window.copyRecoveryKey()` — clipboard copy with button flash. Pulls
   the key from module closure (NOT from a window global, NOT from a DOM
@@ -54,8 +54,8 @@ cached by the browser's ES module loader, zero extra fetch.
 ## Window APIs (consumes)
 
 - `window.closeModal` — fallback only (the shell installs
-  `__spyglassRecoveryClosed` at boot and that's the normal path).
-- `window.__spyglassRecoveryClosed` — shell hook that clears
+  `__ortbtoolsRecoveryClosed` at boot and that's the normal path).
+- `window.__ortbtoolsRecoveryClosed` — shell hook that clears
   `#modalRoot` and chains the history-merge prompt if needed. Set by
   the shell's IIFE, cleared by the registry's deactivate cleanup.
 
@@ -70,7 +70,7 @@ copies are wiped on confirm-gated close. The key never enters
 
 ## Dispatcher cases
 
-Three `data-action` cases stay in `spyglass.app.js`'s central
+Three `data-action` cases stay in `ortbtools.app.js`'s central
 dispatcher (they're trivial trampolines into the four `window.*`
 exports — keeping them in the dispatcher matches the pattern used by
 mirror/live/etc.):

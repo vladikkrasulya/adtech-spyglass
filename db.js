@@ -22,12 +22,23 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const DATA_DIR = process.env.SPYGLASS_DATA_DIR || '/data';
+// legacy-spyglass-ok: read the pre-rename env name as fallback (~v1.6 removal)
+const DATA_DIR = process.env.ORTBTOOLS_DATA_DIR || process.env.SPYGLASS_DATA_DIR || '/data'; // legacy-spyglass-ok
 const SCHEMA_VERSION = 10;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const db = new Database(path.join(DATA_DIR, 'spyglass.db'));
+  // One-time rename migration (2026-07-13): the store used to be spyglass.db. legacy-spyglass-ok
+  // Move db + WAL + SHM together BEFORE opening, only if the new name is not
+  // yet taken. legacy-spyglass-ok: keep until all deploys are past v1.5.0.
+  const newPath = path.join(DATA_DIR, 'ortbtools.db');
+  const oldPath = path.join(DATA_DIR, 'spyglass.db'); // legacy-spyglass-ok
+  if (!fs.existsSync(newPath) && fs.existsSync(oldPath)) {
+    for (const ext of ['', '-wal', '-shm']) {
+      if (fs.existsSync(oldPath + ext)) fs.renameSync(oldPath + ext, newPath + ext);
+    }
+  }
+  const db = new Database(newPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   // 5s headroom for SQLITE_BUSY during contentions (backup script runs
@@ -278,8 +289,8 @@ function migrate(db, fromVersion) {
   //
   // Captures HTTP requests (1-in-10 sample for 2xx, all 4xx/5xx) plus
   // hand-picked events: auth login fail/success, intel queue saturation,
-  // LLM timeouts, rate-limit hits. Read by /admin/spyglass/logs in the
-  // kyivtech-portal so the operator can see how Spyglass behaves when
+  // LLM timeouts, rate-limit hits. Read by /admin/ortbtools/logs in the
+  // kyivtech-portal so the operator can see how ortbtools behaves when
   // they're not watching. Bounded by daily prune (7-day retention).
   //
   // Columns:

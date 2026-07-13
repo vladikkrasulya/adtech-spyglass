@@ -15,7 +15,7 @@
      - the dispatcher invokes window.showRecoveryKeyModal(key)
        after register (bootstrapNewCrypto chains via the lazy
        stub `case 'show-recovery'`-equivalent inline in
-       spyglass.app.js — see _showRecoveryLazy below).
+       ortbtools.app.js — see _showRecoveryLazy below).
      - the F5-survival path on boot finds a key in
        sessionStorage and re-shows the modal so an accidental
        refresh doesn't lose the key.
@@ -31,7 +31,7 @@
        routing decision (Esc / backdrop on OTHER modals)
 
    Boot-time F5-survival check: the shell reads
-   `sessionStorage.getItem('spyglass_recovery_pending_v1')`
+   `sessionStorage.getItem('ortbtools_recovery_pending_v1')`
    directly (one cheap line, no module load) and only lazy-loads
    this module if a key is pending. The constant + key name are
    intentionally duplicated in the shell so the boot path stays
@@ -57,7 +57,7 @@ import { $, escapeHtml, toast, t } from '/core/utils.js';
 let _modalActive = false;
 let _currentRecoveryKey = null;
 
-const RECOVERY_PENDING_KEY = 'spyglass_recovery_pending_v1';
+const RECOVERY_PENDING_KEY = 'ortbtools_recovery_pending_v1';
 
 function persistPendingRecovery(key) {
   try {
@@ -114,8 +114,8 @@ export function closeRecoveryKeyModal() {
   clearPendingRecovery();
   // Shell owns the modalRoot DOM + history-merge chaining. Tell it we
   // closed cleanly so it can clear #modalRoot and chain the next modal.
-  if (typeof window.__spyglassRecoveryClosed === 'function') {
-    window.__spyglassRecoveryClosed();
+  if (typeof window.__ortbtoolsRecoveryClosed === 'function') {
+    window.__ortbtoolsRecoveryClosed();
   } else if (typeof window.closeModal === 'function') {
     // Fallback if shell hook isn't installed (shouldn't happen post-boot).
     window.closeModal();
@@ -151,7 +151,7 @@ export function isRecoveryKeyModalActive() {
   return _modalActive;
 }
 
-// Expose for the dispatcher in spyglass.app.js. The dispatcher's
+// Expose for the dispatcher in ortbtools.app.js. The dispatcher's
 // `case 'show-recovery'` lazy stub does:
 //   await import('/modules/recovery/i18n.js');
 //   await import('/modules/recovery/index.js');

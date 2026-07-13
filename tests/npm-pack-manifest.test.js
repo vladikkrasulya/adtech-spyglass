@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * tests/npm-pack-manifest.test.js — @kyivtech/spyglass-core ships a complete tarball.
+ * tests/npm-pack-manifest.test.js — @ortbtools/core ships a complete tarball.
  *
  * Catches missing `files` entries (e.g. non-iab-formats.js) before npm publish.
  */
@@ -23,8 +23,8 @@ const REQUIRED_IN_TARBALL = [
   'package/iab-categories.en.json',
 ];
 
-test('npm pack @kyivtech/spyglass-core includes runtime modules', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'spyglass-pack-manifest-'));
+test('npm pack @ortbtools/core includes runtime modules', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ortbtools-pack-manifest-'));
   try {
     const tgz = execFileSync('npm', ['pack', '--pack-destination', tmp, '--silent'], {
       cwd: CORE,

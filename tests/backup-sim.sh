@@ -22,7 +22,7 @@ trap 'rm -rf "$WORK"' EXIT
 chmod 0755 "$DEST"
 
 # A fake "live DB" + a seeded content file (real bytes so gzip/tar have input).
-printf 'fake-sqlite-bytes\n' >"$DATA/spyglass.db"
+printf 'fake-sqlite-bytes\n' >"$DATA/ortbtools.db"
 printf '# welcome\n' >"$DATA/content-posts/en/welcome.md"
 
 # Mock sqlite3: `sqlite3 SRC ".backup 'DEST'"` → just copy SRC to DEST so the
@@ -37,12 +37,12 @@ EOS
 chmod +x "$BIN/sqlite3"
 
 PATH="$BIN:$PATH" \
-  SPYGLASS_BACKUP_DATA_DIR="$DATA" \
-  SPYGLASS_BACKUP_DEST_DIR="$DEST" \
+  ORTBTOOLS_BACKUP_DATA_DIR="$DATA" \
+  ORTBTOOLS_BACKUP_DEST_DIR="$DEST" \
   bash "$REPO/scripts/backup-db.sh" >/dev/null 2>&1
 
 mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null; }
-db_gz="$(find "$DEST" -name 'spyglass-*.db.gz' | head -1)"
+db_gz="$(find "$DEST" -name 'ortbtools-*.db.gz' | head -1)"
 ct_gz="$(find "$DEST" -name 'content-posts-*.tar.gz' | head -1)"
 
 echo "DEST_DIR_MODE=$(mode "$DEST")"

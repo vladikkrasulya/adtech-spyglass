@@ -19,12 +19,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const schain = require('@kyivtech/spyglass-core/rules/schain');
-const eids = require('@kyivtech/spyglass-core/rules/eids');
-const currency = require('@kyivtech/spyglass-core/rules/currency');
-const priceFloor = require('@kyivtech/spyglass-core/rules/price-floor');
-const tmax = require('@kyivtech/spyglass-core/rules/tmax');
-const { listPlugins } = require('@kyivtech/spyglass-core/rules');
+const schain = require('@ortbtools/core/rules/schain');
+const eids = require('@ortbtools/core/rules/eids');
+const currency = require('@ortbtools/core/rules/currency');
+const priceFloor = require('@ortbtools/core/rules/price-floor');
+const tmax = require('@ortbtools/core/rules/tmax');
+const { listPlugins } = require('@ortbtools/core/rules');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -557,7 +557,7 @@ test('currency: ISO_4217_CODES set has at least 150 entries', () => {
 // ─── NEW: eids/schain registrations still correct after refactor ─────────────
 
 test('eids: plugin still registered for ORTB_REQUEST after refactor', () => {
-  const { listPlugins } = require('@kyivtech/spyglass-core/rules');
+  const { listPlugins } = require('@ortbtools/core/rules');
   const meta = listPlugins().find((p) => p.id === 'eids');
   assert.ok(meta);
   assert.deepEqual(meta.appliesTo, ['ORTB_REQUEST']);

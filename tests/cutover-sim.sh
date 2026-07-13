@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Disposable simulator for scripts/cutover-spyglass-ro.sh. Mocks git/docker/curl/
+# Disposable simulator for scripts/cutover-ortbtools-ro.sh. Mocks git/docker/curl/
 # setpriv and injects a mock provision + mock deploy whose behaviour is driven by
 # the scenario, against a throwaway DATA dir with fake DB files. Runs the REAL
 # wrapper and reports its exit code + the FULL cutover-state snapshot + DB modes.
@@ -24,7 +24,7 @@ mkdir -p "$BIN" "$DATA"
 trap 'rm -rf "$WORK"' EXIT
 
 # Baseline DATA: DB trio 0644, dir 0755, active sha = pre-cutover.
-for f in spyglass.db spyglass.db-wal spyglass.db-shm; do printf x >"$DATA/$f"; chmod 0644 "$DATA/$f"; done
+for f in ortbtools.db ortbtools.db-wal ortbtools.db-shm; do printf x >"$DATA/$f"; chmod 0644 "$DATA/$f"; done
 chmod 0755 "$DATA"
 echo "oldsha6" >"$DATA/.active_sha"
 case "$SCEN" in
@@ -76,14 +76,14 @@ case "\$1" in
     case "\$SCEN" in
       provision-apply-fail) exit 1 ;;
       provision-fail-rollback-fail) chmod 2710 "$DATA"; exit 1 ;;
-      partial-perms) chmod 2710 "$DATA"; chmod 0640 "$DATA/spyglass.db" "$DATA/spyglass.db-shm"; chmod 0644 "$DATA/spyglass.db-wal"; exit 0 ;;
-      *) chmod 2710 "$DATA"; for f in spyglass.db spyglass.db-wal spyglass.db-shm; do chmod 0640 "$DATA/\$f"; done; exit 0 ;;
+      partial-perms) chmod 2710 "$DATA"; chmod 0640 "$DATA/ortbtools.db" "$DATA/ortbtools.db-shm"; chmod 0644 "$DATA/ortbtools.db-wal"; exit 0 ;;
+      *) chmod 2710 "$DATA"; for f in ortbtools.db ortbtools.db-wal ortbtools.db-shm; do chmod 0640 "$DATA/\$f"; done; exit 0 ;;
     esac ;;
   --rollback)
     case "\$SCEN" in
       provision-fail-rollback-fail|host-rollback-fail) exit 1 ;;
-      incomplete-baseline) for f in spyglass.db spyglass.db-wal spyglass.db-shm; do chmod 0644 "$DATA/\$f"; done; exit 0 ;;
-      *) chmod 0755 "$DATA"; chmod g-s "$DATA"; for f in spyglass.db spyglass.db-wal spyglass.db-shm; do chmod 0644 "$DATA/\$f"; done; exit 0 ;;
+      incomplete-baseline) for f in ortbtools.db ortbtools.db-wal ortbtools.db-shm; do chmod 0644 "$DATA/\$f"; done; exit 0 ;;
+      *) chmod 0755 "$DATA"; chmod g-s "$DATA"; for f in ortbtools.db ortbtools.db-wal ortbtools.db-shm; do chmod 0644 "$DATA/\$f"; done; exit 0 ;;
     esac ;;
 esac
 EOP
@@ -105,18 +105,18 @@ WMODE="--apply"
 [ "$SCEN" = recovery-gate-fail ] && WMODE="--recover"
 
 PATH="$BIN:$PATH" \
-  SPYGLASS_DEPLOY_DATA_DIR="$DATA" \
-  SPYGLASS_SUDO="" \
-  SPYGLASS_PROVISION_CMD="$BIN/mock-provision" \
-  SPYGLASS_DEPLOY_CMD="$BIN/mock-deploy" \
-  SPYGLASS_EXPECT_PREV_SHA="oldsha6" \
-  SPYGLASS_APP_UID="$(id -u)" \
-  SPYGLASS_APP_GID="$TESTGID" \
-  SPYGLASS_DB_GID="$TESTGID" \
-  SPYGLASS_DIR_MODE="2710" \
-  SPYGLASS_GRAFANA_CONTAINER="grafana" \
-  SPYGLASS_CONTAINER="adtech-spyglass" \
-  bash "$REPO/scripts/cutover-spyglass-ro.sh" "$WMODE" >/dev/null 2>&1
+  ORTBTOOLS_DEPLOY_DATA_DIR="$DATA" \
+  ORTBTOOLS_SUDO="" \
+  ORTBTOOLS_PROVISION_CMD="$BIN/mock-provision" \
+  ORTBTOOLS_DEPLOY_CMD="$BIN/mock-deploy" \
+  ORTBTOOLS_EXPECT_PREV_SHA="oldsha6" \
+  ORTBTOOLS_APP_UID="$(id -u)" \
+  ORTBTOOLS_APP_GID="$TESTGID" \
+  ORTBTOOLS_DB_GID="$TESTGID" \
+  ORTBTOOLS_DIR_MODE="2710" \
+  ORTBTOOLS_GRAFANA_CONTAINER="grafana" \
+  ORTBTOOLS_CONTAINER="ortbtools" \
+  bash "$REPO/scripts/cutover-ortbtools-ro.sh" "$WMODE" >/dev/null 2>&1
 rc=$?
 
 echo "EXIT=$rc"
@@ -127,5 +127,5 @@ else
   echo "(no state)"
 fi
 mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null; }
-echo "DB_MODE=$(mode "$DATA/spyglass.db")  WAL_MODE=$(mode "$DATA/spyglass.db-wal")  DIR_MODE=$(mode "$DATA")"
+echo "DB_MODE=$(mode "$DATA/ortbtools.db")  WAL_MODE=$(mode "$DATA/ortbtools.db-wal")  DIR_MODE=$(mode "$DATA")"
 exit "$rc"
