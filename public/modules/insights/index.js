@@ -57,7 +57,7 @@ const L = {
 
 // Format + version colour maps
 const FORMAT_COLORS = {
-  banner: '#f59e0b',
+  banner: '#ec4899',
   video: '#3b82f6',
   native: '#10b981',
   audio: '#8b5cf6',
@@ -68,7 +68,7 @@ const FORMAT_COLORS = {
 };
 const VERSION_COLORS = {
   2.5: '#6b7280',
-  2.6: '#f59e0b',
+  2.6: '#0ea5e9',
   '3.0': '#8b5cf6',
   unknown: '#9ca3af',
 };
@@ -155,8 +155,8 @@ function renderWidget1(data, lang) {
       <svg class="ins-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Stream activity">
         <defs>
           <linearGradient id="ins-sa-grad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="var(--accent,#ffcc00)" stop-opacity="0.55"/>
-            <stop offset="100%" stop-color="var(--accent,#ffcc00)" stop-opacity="0"/>
+            <stop offset="0%" stop-color="var(--accent,#38bdf8)" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="var(--accent,#38bdf8)" stop-opacity="0"/>
           </linearGradient>
         </defs>
         <line class="ins-chart-axis" x1="0" y1="${H}" x2="${W}" y2="${H}"/>

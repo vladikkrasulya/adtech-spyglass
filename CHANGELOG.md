@@ -16,6 +16,27 @@ All notable changes to Spyglass are documented here. Format follows
 - **README** — CLI install section; remove stale `types` entry from core package
   (no `index.d.ts` yet).
 
+### v1.5.1 — insights: recolor leftover amber bars to off-brand hues
+
+The Signal "stop-yellow" sweep (v1.3.8) recolored inspector/search/blog CSS
+and regenerated the og-image, but never touched the Insights dashboard —
+`public/modules/insights/index.js` predates it and slipped through. Two
+categorical series in Widget 3 (Spec Mix) still rendered brand-yellow
+`#f59e0b` bars, and the Widget 1 (Stream Activity) gradient still carried a
+dead `var(--accent,#ffcc00)` yellow fallback.
+
+- **Format mix** — `banner` series `#f59e0b` → rose `#ec4899` (clear of the
+  cool video/vast/audio cluster; no clash with the semantic warning amber).
+- **Version mix** — oRTB `2.6` series `#f59e0b` → sky `#0ea5e9` (on-brand
+  Signal blue, ordinal-neutral between 2.5-grey and 3.0-purple).
+- **Stream Activity gradient** — dead `var(--accent,#ffcc00)` fallback →
+  `var(--accent,#38bdf8)`; renders identically (`--accent` is always defined),
+  only the never-hit literal changes — the last `#ffcc00` in the tree.
+- **Kept:** the Validation Health donut's warnings segment stays `#f59e0b`;
+  that is the semantic error=red / warn=amber / info=blue scale, not brand.
+- Version: PATCH bump v1.5.1 across the 8 canonical spots (core engine
+  untouched, stays 0.31.0).
+
 ### v1.5.0 — Themis rename migration: Spyglass identifiers retired everywhere
 
 `packages/core` MINOR (`0.30.4` → `0.31.0`, package renamed to
