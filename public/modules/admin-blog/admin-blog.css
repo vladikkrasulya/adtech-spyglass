@@ -37,7 +37,7 @@
 }
 .ablog-input:focus {
   outline: none;
-  border-color: var(--accent, #ffcc00);
+  border-color: var(--accent, #0284c7);
 }
 
 /* ── Head row ────────────────────────────────────────────── */
@@ -166,7 +166,7 @@
 }
 .ablog-link {
   font-size: 11px;
-  color: var(--accent, #ffcc00);
+  color: var(--accent, #0284c7);
   text-decoration: none;
   margin-left: 4px;
 }

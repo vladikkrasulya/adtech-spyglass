@@ -153,7 +153,7 @@ test('iab-categories: renders a filterable tier-1 table, no CTA', () => {
   assert.match(html, /<code>IAB1<\/code>/); // a tier-1 code
   assert.match(html, /Arts &amp; Entertainment/); // decoded + escaped label
   assert.equal((html.match(/data-landing-row/g) || []).length, 26); // 26 tier-1 codes
-  assert.doesNotMatch(html, /landing__cta-btn/); // sample: null → no CTA
+  assert.doesNotMatch(html, /landing__cta/); // sample: null → no CTA wrapper
 });
 
 test('iab-categories: page localizes (uk differs from en)', () => {

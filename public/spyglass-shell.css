@@ -48,11 +48,12 @@
   background: transparent;
 }
 
-/* Text selection — yellow accent tint, dark text pinned for contrast
-   in both themes. --selection-bg token declared in design-system.css
-   (light: 55% yellow on cream; dark: 45% yellow on graphite). The
-   `color: --text-on-accent` is #18181B in both themes — readable
-   against the yellow tint regardless of underlying background. */
+/* Text selection — Signal sky-blue accent tint, text color pinned per
+   theme for contrast. --selection-bg token declared in design-system.css
+   (light: 40% electric sky on chalk-blue; dark: 35% electric sky on
+   deep navy). `color: --text-on-accent` is theme-dependent — #FFFFFF
+   (light) reads on the sky-600 tint, #0A111F (dark) reads on the
+   brighter sky-400 tint used against the navy background. */
 ::selection {
   background: var(--selection-bg);
   color: var(--text-on-accent);
@@ -218,7 +219,7 @@
   list-style: none;
   padding: 6px 10px;
   border-radius: var(--r-pill, 999px);
-  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   background: var(--bg-elev, #fff);
   font-size: 13px;
   font-weight: 500;
@@ -229,14 +230,14 @@
   display: none;
 }
 .kt-topbar .kt-lang-toggle:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 .kt-topbar .kt-lang-menu .kt-lang-menu-list {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
   background: var(--bg-elev, #fff);
-  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   border-radius: var(--r-sm, 10px);
   padding: 4px;
   min-width: 180px;
@@ -255,11 +256,11 @@
   border-radius: var(--r-sm, 10px);
 }
 .kt-topbar .kt-lang-menu .kt-lang-menu-list a:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 .kt-topbar .kt-lang-menu .kt-lang-menu-list a[aria-current='true'] {
-  background: var(--accent, #ffcc00);
-  color: var(--accent-ink, #18181b);
+  background: var(--accent, #0284c7);
+  color: var(--accent-ink, #0d1726);
 }
 
 .kt-topbar button.kt-theme-toggle {
@@ -269,7 +270,7 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   border-radius: var(--r-pill, 999px);
   background: var(--bg-elev, #fff);
   color: var(--text);
@@ -281,7 +282,7 @@
   position: static !important;
 }
 .kt-topbar button.kt-theme-toggle:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 
 .kt-topbar__signin {
@@ -289,7 +290,7 @@
   align-items: center;
   padding: 8px 14px;
   border-radius: var(--r-pill, 999px);
-  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   background: var(--bg-elev, #fff);
   color: var(--text);
   cursor: pointer;
@@ -298,7 +299,7 @@
   font-weight: 500;
 }
 .kt-topbar__signin:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 
 /* ── Sidebar footer height matches inspector footer ────────────────

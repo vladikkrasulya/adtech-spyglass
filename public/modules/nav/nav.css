@@ -4,11 +4,11 @@
 
 :root {
   --kt-nav-width: 220px;
-  --kt-nav-bg: var(--bg-2, #f2ede3);
-  --kt-nav-border: var(--border, rgba(24, 24, 27, 0.08));
-  --kt-nav-item-hover: var(--accent-soft, rgba(255, 204, 0, 0.14));
-  --kt-nav-item-active-bg: var(--accent, #ffcc00);
-  --kt-nav-item-active-fg: var(--accent-ink, #18181b);
+  --kt-nav-bg: var(--bg-2, #ecf1f6);
+  --kt-nav-border: var(--border, rgba(13, 23, 38, 0.08));
+  --kt-nav-item-hover: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  --kt-nav-item-active-bg: var(--accent, #0284c7);
+  --kt-nav-item-active-fg: var(--text-on-accent, #ffffff);
 }
 
 .kt-nav {
@@ -42,8 +42,8 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: var(--accent, #ffcc00);
-  color: var(--accent-ink, #18181b);
+  background: var(--accent, #0284c7);
+  color: var(--text-on-accent, #ffffff);
   border-radius: var(--r-sm, 10px);
   font-size: 14px;
 }
@@ -60,7 +60,7 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   text-transform: uppercase;
 }
 .kt-nav__list {
@@ -107,7 +107,7 @@
   padding: var(--space-2, 8px) var(--space-4, 16px);
   font-family: var(--font-mono, ui-monospace);
   font-size: 11px;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   background: var(--surface);
   border-top: 1px solid var(--kt-nav-border);
 }
@@ -118,8 +118,8 @@
 }
 
 /* ── Unified collapse/expand tab (desktop ≥1024px) ─────────────────
-   One persistent yellow pill. Color/shape/height stay constant; only
-   the `left` coordinate and the arrow direction change between states.
+   One persistent Signal-accent pill. Color/shape/height stay constant;
+   only the `left` coordinate and the arrow direction change between states.
 
    Expanded:  pill anchored to sidebar's right edge (left: 208 = 220-12),
               slightly overlapping the content column.
@@ -151,10 +151,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--accent, #ffcc00);
+    border: 1px solid var(--accent, #0284c7);
     border-radius: var(--r-md, 16px);
-    background: var(--accent, #ffcc00);
-    color: var(--accent-ink, #18181b);
+    background: var(--accent, #0284c7);
+    color: var(--text-on-accent, #ffffff);
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
@@ -167,7 +167,7 @@
       background-color 150ms ease;
   }
   .kt-nav__collapse-tab:hover {
-    background: var(--accent-hover, #ffd633);
+    background: var(--accent-hover, #0e96dc);
   }
   .kt-shell.is-nav-collapsed .kt-nav__collapse-tab {
     /* User-requested 1.1 fix (2026-05-23): pill fully visible flush

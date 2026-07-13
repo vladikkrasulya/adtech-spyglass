@@ -15,16 +15,16 @@
      - About-page footers (3 locales)
      - export.js (reads #engineVer.textContent which we paint here)
 
-   Not auto-updated by this script — must be bumped manually:
-     - docs eyebrow `v9.0.0` text in about-page intro (it's the docs
-       *content* version, not the app version, and they're allowed
-       to drift)
+   As of v1.4.0 the about-page docs eyebrow is also tagged with
+   [data-spyglass-version] (the old "docs content version" distinction
+   let it drift ~50 releases behind — it showed v0.52.0 next to a
+   v1.3.7 footer), so every version surface now paints from here.
    ============================================================ */
 (function () {
   'use strict';
 
   // ⚠ Single source of truth — bump this on a release.
-  const VERSION = 'v1.3.9';
+  const VERSION = 'v1.4.0';
 
   window.SpyglassVersion = VERSION;
 

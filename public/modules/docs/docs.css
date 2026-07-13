@@ -19,7 +19,7 @@
 }
 .docs-section__sub {
   margin: 0 0 var(--space-5, 24px);
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   font-size: var(--fs-base, 15px);
   max-width: 720px;
 }
@@ -30,11 +30,11 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   margin-bottom: var(--space-4, 16px);
 }
 .docs-breadcrumb a {
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   text-decoration: none;
 }
 .docs-breadcrumb a:hover {
@@ -53,7 +53,7 @@
 .docs-welcome {
   background: var(--bg-elev, #fff);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--accent, #ffcc00);
+  border-left: 4px solid var(--accent, #0284c7);
   border-radius: var(--r-md, 16px);
   padding: var(--space-5, 24px);
   margin-bottom: var(--space-5, 24px);
@@ -66,7 +66,7 @@
 }
 .docs-welcome p {
   margin: 0;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -95,7 +95,7 @@
   cursor: pointer;
 }
 .docs-card:hover {
-  border-color: var(--accent, #ffcc00);
+  border-color: var(--accent, #0284c7);
   transform: translateY(-1px);
 }
 .docs-card__icon {
@@ -111,7 +111,7 @@
 .docs-card__desc {
   margin: 0;
   font-size: 13px;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   line-height: 1.5;
   flex: 1;
 }
@@ -125,7 +125,7 @@
   gap: 4px;
 }
 .docs-card--external .docs-card__action {
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
 }
 
 /* ── Finding catalog ── */
@@ -144,8 +144,8 @@
   padding: 6px 14px;
   border: 1px solid var(--border);
   border-radius: var(--r-pill, 999px);
-  background: var(--bg-2, #f2ede3);
-  color: var(--text-muted, #52525b);
+  background: var(--bg-2, #ecf1f6);
+  color: var(--text-muted, #46556b);
   font: inherit;
   font-size: 13px;
   font-weight: 500;
@@ -156,8 +156,8 @@
     color 100ms ease;
 }
 .docs-chip:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
-  border-color: var(--accent, #ffcc00);
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  border-color: var(--accent, #0284c7);
   color: var(--text);
 }
 .docs-chip.is-active {
@@ -169,7 +169,7 @@
 /* Stats bar */
 .docs-stats {
   font-size: 13px;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   margin-bottom: var(--space-3, 12px);
 }
 
@@ -185,7 +185,7 @@
   font-size: 13px;
 }
 .docs-table thead tr {
-  background: var(--bg-2, #f2ede3);
+  background: var(--bg-2, #ecf1f6);
 }
 .docs-table th {
   padding: 10px 14px;
@@ -194,7 +194,7 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
@@ -208,7 +208,7 @@
   border-bottom: none;
 }
 .docs-table tbody tr:hover td {
-  background: var(--bg-2, #f2ede3);
+  background: var(--bg-2, #ecf1f6);
 }
 
 /* ID cell — monospace */
@@ -216,7 +216,7 @@
   font-family: var(--font-mono, ui-monospace);
   font-size: 12px;
   white-space: nowrap;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
 }
 /* Message cell — wraps */
 .docs-table .col-msg {
@@ -225,7 +225,7 @@
 }
 /* Spec ref link */
 .docs-table .col-spec a {
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   font-size: 12px;
   text-decoration: none;
 }
@@ -274,6 +274,6 @@
 .docs-empty {
   padding: var(--space-6, 32px);
   text-align: center;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   font-size: 14px;
 }

@@ -1209,14 +1209,15 @@ if (process.env.NEWS_CRAWLER_DISABLED !== '1') {
 // 'unsafe-inline' is a known compromise; future improvement = per-request
 // nonces + drop 'unsafe-inline' for script-src. Tracked in tech-debt.
 //
-// External origins allow-listed: only Google Fonts CSS + WOFF2 endpoints,
-// pulled in by /design-system.css from the kyivtech-portal shared file.
+// No external origins: fonts are self-hosted variable woff2 in
+// /public/fonts/ with @font-face in design-system.css (Signal plan item 2,
+// 2026-07-13) — Google Fonts origins removed from style-src/font-src.
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' https://fonts.gstatic.com data:",
+  "font-src 'self' data:",
   "connect-src 'self'",
   "frame-src 'self' data: blob:",
   "frame-ancestors 'self'",

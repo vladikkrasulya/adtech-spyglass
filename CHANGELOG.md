@@ -16,6 +16,49 @@ All notable changes to Spyglass are documented here. Format follows
 - **README** — CLI install section; remove stale `types` entry from core package
   (no `index.d.ts` yet).
 
+### v1.4.0 — Signal design wave 3: typography + family
+
+Third design-debt wave from the 2026-07-13 audit. MINOR: adds self-hosted
+fonts (a user-visible feature and a privacy-claim fix), reshapes the SEO
+landing pages onto the shared section grammar, and clears the remaining
+pre-Signal fallback debt.
+
+- **Self-hosted fonts (Signal plan item 2, coordinated with the portal).**
+  16 variable woff2 files in `public/fonts/` (Onest 100-900, Geologica
+  100-900, JetBrains Mono 100-800; latin/latin-ext/cyrillic/cyrillic-ext +
+  greek/vietnamese subsets, 280K total) with `@font-face` + `unicode-range`
+  blocks in the shared `design-system.css` (vendored hash re-pinned,
+  cache-bust `?v=12`). All 27 fonts.googleapis/gstatic references removed
+  from the 9 shells; CSP `style-src`/`font-src` no longer allow Google
+  origins — the `/about` claim "No external CDNs — everything self-hosted"
+  is now true. **Geologica finally loads**, so `--font-display` headings
+  stop silently falling back to Onest and match kyivtech.com.ua; JBM
+  weight 600 (used by 9 rules) now renders true 600.
+- **SEO landings adopt the family grammar** (`lib/landings.js` +
+  `landing.css`): mono `.eyebrow` kicker derived from the URL
+  ("openrtb · 2.6"), display-scale h1 (was h2-sized `--fs-xl`),
+  `.kt-blueprint` grid backdrop on the hero, CTA is the design-system
+  `.btn.btn-primary` (bespoke `.landing__cta-btn` deleted;
+  `tests/landings.test.js` no-CTA assertion updated to the wrapper class).
+- **/about docs eyebrow tied to the app version.** The "docs content
+  version" exemption let it drift ~50 releases (showed v0.52.0 next to a
+  v1.3.7 footer); the eyebrow now carries `data-spyglass-version` and is
+  repainted by version.js (comment there updated).
+- **One brand mark.** `.kt-brand-spark` "K" (the kyivtech letterform) →
+  "◆" in the 3 inspector templates + about/account shells — matches the
+  sidebar brand and the wave-1 favicon.
+- **Legacy-fallback sweep (spyglass-css-cleaner):** 171 stale pre-Signal
+  `var()` fallback literals across 13 CSS files re-pointed to Signal
+  values; 4 misleading yellow-era comments rewritten. `grep -E
+"ffcc00|255, ?204, ?0"` over `public/**/*.css` (minus design-system.css)
+  is now zero.
+- **Polish:** `/insights` interval `<select>` no longer stretches full
+  width (global `select{width:100%}` now overridden); inspector tab strip
+  gets the overflow + right-edge fade treatment on ALL viewports (tabs
+  clipped mid-letter even at 1440px; the fade was mobile-only, and the
+  duplicate mobile `::after` was removed in favor of the base rule).
+- Version: MINOR bump v1.4.0 across the 8 canonical spots.
+
 ### v1.3.9 — Signal design wave 2: contrast AA
 
 App patch only — `packages/core` and CLI unchanged. Second design-debt wave

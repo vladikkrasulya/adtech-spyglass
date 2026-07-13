@@ -24,7 +24,7 @@
 }
 .ins-section__sub {
   margin: 0 0 var(--space-4, 16px);
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   font-size: var(--fs-base, 15px);
   max-width: 720px;
 }
@@ -38,7 +38,7 @@
 }
 .ins-updated {
   font-size: 12px;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   min-width: 80px;
 }
 .ins-toggle-label {
@@ -51,9 +51,13 @@
   user-select: none;
 }
 .ins-toggle-label input[type='checkbox'] {
-  accent-color: var(--accent, #ffcc00);
+  accent-color: var(--accent, #0284c7);
 }
 .ins-interval-select {
+  /* design-system.css sets a global `select { width: 100% }` for form
+     layouts — without this override the interval picker stretched across
+     the whole content column (2026-07-13 audit). */
+  width: auto;
   padding: 4px 8px;
   background: var(--bg-elev, #fff);
   border: 1px solid var(--border);
@@ -102,7 +106,7 @@
 }
 .ins-widget__meta {
   font-size: 12px;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   white-space: nowrap;
 }
 
@@ -118,7 +122,7 @@
 }
 .ins-chart-line {
   fill: none;
-  stroke: var(--accent, #ffcc00);
+  stroke: var(--accent, #0284c7);
   stroke-width: 1.5;
 }
 .ins-chart-axis {
@@ -209,7 +213,7 @@
   text-overflow: ellipsis;
 }
 .ins-mix-bar-wrap {
-  background: var(--bg-2, #f2ede3);
+  background: var(--bg-2, #ecf1f6);
   border-radius: 3px;
   height: 8px;
   overflow: hidden;
@@ -245,7 +249,7 @@
   font-size: 14px;
 }
 .ins-skeleton-bar {
-  background: var(--bg-2, #f2ede3);
+  background: var(--bg-2, #ecf1f6);
   border-radius: 4px;
   height: 12px;
   margin: 8px auto;
@@ -277,7 +281,7 @@
   background: rgba(24, 24, 27, 0.18);
 }
 .ins-section::-webkit-scrollbar-thumb:hover {
-  background: var(--accent, #ffcc00);
+  background: var(--accent, #0284c7);
 }
 .ins-section {
   scrollbar-width: thin;

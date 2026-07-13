@@ -24,7 +24,7 @@
   --text-ok: #15803d;
   /* RGB triplets for rgba(var(--…-rgb), α) mixing. Neither token exists in
      design-system.css — without these declarations the call sites below fell
-     back to the retired brand yellow (255, 204, 0). Values mirror --accent
+     back to the retired brand-yellow triplet. Values mirror --accent
      (#0284C7 / #38BDF8) and --bg-elev (#FFFFFF / #121C30) per theme. */
   --accent-rgb: 2, 132, 199;
   --bg-elev-rgb: 255, 255, 255;
@@ -216,19 +216,10 @@ body {
   .tabs-wrap {
     position: relative;
   }
-  .tab-bar::after {
-    content: '';
-    position: sticky;
-    right: 0;
-    top: 0;
-    width: 44px;
-    height: 100%;
-    /* Stronger fade so the clipped trailing tab reads as "scroll right",
-       not "broken layout": opaque bg-2 at the edge → transparent. */
-    background: linear-gradient(to right, transparent, var(--bg-2) 70%, var(--bg-2));
-    pointer-events: none;
-    flex-shrink: 0;
-  }
+  /* The right-edge scroll-hint gradient moved to the BASE .tab-bar::after
+     (~line 1918) — the 1440px audit found the strip clips on desktop too,
+     so the fade is no longer mobile-only. The base rule is later in source
+     order and would shadow any ::after declared here anyway. */
   /* P1 #20 — collapse footer extras on mobile. Specs/source/dialect/
      reset-layout add no mobile value (trivia, an unhelpable link, a
      power-user feature, a layout toggle for sidebars that aren't shown
@@ -1208,11 +1199,11 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
          editing right now". */
 .history-item--active {
   border-color: var(--accent);
-  background: var(--accent-soft, rgba(255, 204, 0, 0.08));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 .history-item--active:hover {
   border-color: var(--accent-strong, var(--accent));
-  background: var(--accent-soft, rgba(255, 204, 0, 0.12));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 /* Hover-revealed action buttons in top-right corner. Hidden until the
          row is hovered (or focused) so the resting state stays clean. */
@@ -1704,8 +1695,8 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   margin-top: var(--space-2);
   padding: 6px 10px;
   border-radius: var(--r-sm);
-  background: var(--accent-soft, rgba(255, 200, 60, 0.12));
-  border: 1px solid var(--accent, #ffc83d);
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  border: 1px solid var(--accent, #0284c7);
   font-size: 12px;
   color: var(--text);
 }
@@ -1855,11 +1846,11 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border-color: var(--accent);
 }
 /* Interactive dialect picker. Native <select> styled to match the
-   surrounding format pills — yellow accent border, monospace label,
-   inherits the format-bar theme tokens so light/dark modes both look
-   consistent. The native chevron is replaced with an inline SVG so the
-   control reads as part of the pill row rather than a generic OS form
-   widget. */
+   surrounding format pills — Signal accent (blue) border, monospace
+   label, inherits the format-bar theme tokens so light/dark modes both
+   look consistent. The native chevron is replaced with an inline SVG so
+   the control reads as part of the pill row rather than a generic OS
+   form widget. */
 .format-pill-select {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1904,6 +1895,32 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border-bottom: 1px solid var(--border);
   padding: 0 var(--space-4);
   background: var(--surface);
+  /* The strip holds 5+ tabs; when the right rail squeezes the column the
+     trailing tab clipped MID-LETTER even at 1440px (2026-07-13 audit) —
+     the overflow/scroll-hint treatment used to be mobile-only. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scrollbar-width: none; /* Firefox */
+}
+.tab-bar::-webkit-scrollbar {
+  display: none;
+}
+.tab-bar::after {
+  content: '';
+  position: sticky;
+  right: 0;
+  top: 0;
+  width: 44px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, var(--surface) 75%, var(--surface));
+  pointer-events: none;
+  flex-shrink: 0;
+  margin-left: -44px;
+}
+.tab-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .tab-btn {
   font-family: var(--font-mono);
@@ -2011,7 +2028,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 
 /* Premium thin scrollbars for the findings/inspector tab body. Match the
    user-approved spec: 6px width, transparent track, soft white thumb,
-   accent yellow on hover. */
+   Signal accent (blue) on hover. */
 .tab-content::-webkit-scrollbar,
 .sidebar-left::-webkit-scrollbar,
 .sidebar-right::-webkit-scrollbar,
@@ -2047,7 +2064,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .sidebar-right::-webkit-scrollbar-thumb:hover,
 .history-list::-webkit-scrollbar-thumb:hover,
 .main-editor::-webkit-scrollbar-thumb:hover {
-  background: var(--accent, #ffcc00);
+  background: var(--accent, #0284c7);
 }
 .tab-content,
 .history-list,

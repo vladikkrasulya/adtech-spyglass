@@ -2,8 +2,8 @@
 
 :root {
   --kt-topbar-height: 52px;
-  --kt-topbar-bg: var(--bg, #faf7f2);
-  --kt-topbar-border: var(--border, rgba(24, 24, 27, 0.08));
+  --kt-topbar-bg: var(--bg, #f6f8fa);
+  --kt-topbar-border: var(--border, rgba(13, 23, 38, 0.08));
 }
 
 .kt-topbar {
@@ -34,7 +34,7 @@
   flex-shrink: 0;
 }
 .kt-topbar__nav-toggle:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 
 .kt-topbar__brand-mini {
@@ -53,8 +53,8 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  background: var(--accent, #ffcc00);
-  color: var(--accent-ink, #18181b);
+  background: var(--accent, #0284c7);
+  color: var(--accent-ink, #0d1726);
   border-radius: var(--r-sm, 10px);
   font-size: 12px;
 }
@@ -66,12 +66,12 @@
 .kt-topbar__search-input {
   width: 100%;
   height: 34px;
-  background: var(--bg-2, #f2ede3);
-  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  background: var(--bg-2, #ecf1f6);
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   border-radius: var(--r-sm, 10px);
   padding: 0 12px;
   font: inherit;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   cursor: text;
   transition:
     border-color 150ms,
@@ -100,7 +100,7 @@
   flex-shrink: 0;
 }
 .kt-topbar__search-btn:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 
 .kt-topbar__actions {
@@ -127,7 +127,7 @@
   gap: 8px;
   padding: 4px 12px 4px 4px;
   border-radius: var(--r-pill, 999px);
-  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   background: var(--bg-elev, #fff);
   color: var(--text);
   text-decoration: none;
@@ -140,8 +140,8 @@
     border-color 150ms ease;
 }
 .kt-topbar__profile:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
-  border-color: var(--accent, #ffcc00);
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  border-color: var(--accent, #0284c7);
 }
 .kt-topbar__avatar {
   display: inline-flex;
@@ -150,8 +150,8 @@
   width: 26px;
   height: 26px;
   border-radius: var(--r-pill, 999px);
-  background: var(--accent, #ffcc00);
-  color: var(--accent-ink, #18181b);
+  background: var(--accent, #0284c7);
+  color: var(--accent-ink, #0d1726);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;

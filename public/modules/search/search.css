@@ -18,12 +18,12 @@
 }
 .kt-topbar__search-input:focus {
   outline: none;
-  border-color: var(--accent, #ffcc00);
-  box-shadow: 0 0 0 3px var(--accent-soft, rgba(255, 204, 0, 0.18));
+  border-color: var(--accent, #0284c7);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(2, 132, 199, 0.12));
   color: var(--text);
 }
 .kt-topbar__search-input::placeholder {
-  color: var(--text-dim, #5f5f66);
+  color: var(--text-dim, #5c6b82);
 }
 
 /* ── Dropdown panel ─────────────────────────────────────── */
@@ -39,7 +39,7 @@
   z-index: 1000;
 
   border-radius: var(--r-md, 16px);
-  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
 
   /* Glassmorphism */
   background: rgba(255, 255, 255, 0.88);
@@ -104,7 +104,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-dim, #5f5f66);
+  color: var(--text-dim, #5c6b82);
 }
 .sg-search-hint__chips {
   display: flex;
@@ -115,17 +115,17 @@
   display: inline-block;
   padding: 3px 9px;
   border-radius: var(--r-pill, 999px);
-  background: var(--bg-2, #f2ede3);
-  border: 1px solid var(--border, rgba(24, 24, 27, 0.08));
+  background: var(--bg-2, #ecf1f6);
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   font-size: 12px;
-  color: var(--text-muted, #52525b);
+  color: var(--text-muted, #46556b);
   cursor: pointer;
   transition: background var(--t-fast, 150ms);
   user-select: none;
 }
 .sg-search-hint__chip:hover {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
-  color: var(--text, #18181b);
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  color: var(--text, #0d1726);
 }
 
 /* ── "Nothing found" ───────────────────────────────────── */
@@ -133,7 +133,7 @@
   padding: 24px 16px;
   text-align: center;
   font-size: 13px;
-  color: var(--text-dim, #5f5f66);
+  color: var(--text-dim, #5c6b82);
 }
 
 /* ── Group header ───────────────────────────────────────── */
@@ -141,7 +141,7 @@
   padding: 6px 0 4px;
 }
 .sg-search-group + .sg-search-group {
-  border-top: 1px solid var(--border, rgba(24, 24, 27, 0.06));
+  border-top: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   margin-top: 2px;
   padding-top: 8px;
 }
@@ -156,12 +156,12 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--text-dim, #5f5f66);
+  color: var(--text-dim, #5c6b82);
 }
 .sg-search-group__count {
   font-size: 10px;
-  color: var(--text-dim, #5f5f66);
-  background: var(--bg-2, #f2ede3);
+  color: var(--text-dim, #5c6b82);
+  background: var(--bg-2, #ecf1f6);
   padding: 1px 6px;
   border-radius: 8px;
 }
@@ -177,16 +177,16 @@
   margin: 0 4px;
   transition: background var(--t-fast, 150ms);
   text-decoration: none;
-  color: var(--text, #18181b);
+  color: var(--text, #0d1726);
   min-width: 0;
 }
 .sg-search-row:hover,
 .sg-search-row.is-selected {
-  background: var(--accent-soft, rgba(255, 204, 0, 0.14));
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
   outline: none;
 }
 .sg-search-row.is-selected {
-  outline: 2px solid var(--accent, #ffcc00);
+  outline: 2px solid var(--accent, #0284c7);
   outline-offset: -2px;
 }
 
@@ -265,14 +265,14 @@
 .sg-search-row__title {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text, #18181b);
+  color: var(--text, #0d1726);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .sg-search-row__preview {
   font-size: 11px;
-  color: var(--text-dim, #5f5f66);
+  color: var(--text-dim, #5c6b82);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -280,8 +280,8 @@
 
 /* ── Highlight mark ─────────────────────────────────────── */
 mark.search-hit {
-  background: var(--accent, #ffcc00);
-  color: var(--accent-ink, #18181b);
+  background: var(--accent, #0284c7);
+  color: var(--accent-ink, #0d1726);
   border-radius: 2px;
   padding: 0 1px;
   font-style: normal;
@@ -292,7 +292,7 @@ mark.search-hit {
   padding: 16px;
   text-align: center;
   font-size: 12px;
-  color: var(--text-dim, #5f5f66);
+  color: var(--text-dim, #5c6b82);
   animation: sg-pulse 1.2s ease-in-out infinite;
 }
 @keyframes sg-pulse {
