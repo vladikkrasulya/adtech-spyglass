@@ -40,9 +40,6 @@ const SUBSTRING_ALLOWLIST = [
   'spyglass_cabinet_draft',
   'spyglass_i18n_debt',
   'spyglass_jsonfeed_research',
-  // Host repo path — renamed with a compat symlink in migration wave F; drop
-  // this entry once the directory is flipped.
-  '/srv/DATA/Stacks/adtech-spyglass',
 ];
 
 const LINE_MARKER = 'legacy-spyglass-ok';

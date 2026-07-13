@@ -5,7 +5,7 @@ tools: Read, Edit, Bash
 model: sonnet
 ---
 
-You are the ortbtools i18n translator. Repo root: `/srv/DATA/Stacks/adtech-spyglass`.
+You are the ortbtools i18n translator. Repo root: `/srv/DATA/Stacks/ortbtools`.
 
 You add or modify translation keys in `public/i18n.js`. The file has three locale objects (`I18N.uk`, `I18N.en`, `I18N.ru`) that must stay in sync — every key present in one must be present in all three.
 

@@ -1,7 +1,7 @@
 # ortbtools — Operations Runbook
 
 Maintainer: Vladik. Machine: Optiplex 7050 Micro, Debian 13, LAN `192.168.1.4`,
-Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/adtech-spyglass/`.
+Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/ortbtools/`.
 
 ---
 
@@ -17,7 +17,7 @@ Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/adtech-spyglass/`.
   `ortbtools.db-shm` + `ortbtools.db-wal` in the same dir, all three are live state)
 - **Latest backup**: `/srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz`
   — daily at 03:30 via `/etc/cron.d/ortbtools-backup`
-- **Restart**: `cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart`
+- **Restart**: `cd /srv/DATA/Stacks/ortbtools && docker compose restart`
 - **Secrets vault**: `/srv/DATA/.secrets/api-tokens.env` (mode 0600, owner vk)
 
 ---
@@ -117,7 +117,7 @@ changes — everything is baked into the image (there are no bind-mounts left ex
 the `/data` data directory).
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
+cd /srv/DATA/Stacks/ortbtools && docker compose restart
 ```
 
 ### 4.2 Any source / dependency / CSS change → redeploy (§9)
@@ -128,7 +128,7 @@ Since v1.1.5 every change to `server.js`, `db.js`, `auth.js`, `modules/`,
 script (gate + build + smoke + auto-rollback):
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass
+cd /srv/DATA/Stacks/ortbtools
 git checkout main && git pull --ff-only
 ./scripts/deploy.sh
 ```
@@ -292,7 +292,7 @@ The flag is read once at boot (`server.js`), passed into the container via the
 restart). It is NOT an image rebuild.
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass
+cd /srv/DATA/Stacks/ortbtools
 # PAUSE — set the flag atomically (preserves .env 0600/owner) and recreate
 . scripts/deploy-lib.sh && set_env NEWS_CRAWLER_DISABLED 1 .env
 ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
@@ -320,7 +320,7 @@ Anonymous analyze metadata (`validation_logs`) and the operational request log
 `ORTBTOOLS_ANALYTICS_DISABLED` is not `1`.
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass
+cd /srv/DATA/Stacks/ortbtools
 # Option A: leave CLICKHOUSE_USER empty in .env (default for local dev).
 
 # Option B: explicit opt-out on production-like stacks:
@@ -353,7 +353,7 @@ vault rides the daily AppData backup and off-site sync.
 ### 5.2 What ortbtools reads
 
 From `docker-compose.yml`, the container loads `env_file: - .env` (the per-project
-`.env` at `/srv/DATA/Stacks/adtech-spyglass/.env`, git-ignored). Additional env vars
+`.env` at `/srv/DATA/Stacks/ortbtools/.env`, git-ignored). Additional env vars
 (`OLLAMA_URL`, `OLLAMA_MODEL`) are set directly in the `environment:` block and do not
 come from the vault.
 
@@ -374,8 +374,8 @@ directly in `.env`.
 ### 5.3 Adding a new secret
 
 1. Append the key=value to `/srv/DATA/.secrets/api-tokens.env`.
-2. Reference it in `/srv/DATA/Stacks/adtech-spyglass/.env`.
-3. `cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d` — this re-reads the
+2. Reference it in `/srv/DATA/Stacks/ortbtools/.env`.
+3. `cd /srv/DATA/Stacks/ortbtools && docker compose up -d` — this re-reads the
    env file without a rebuild.
 
 ### 5.4 Rotating a secret
@@ -385,7 +385,7 @@ Order matters — kill the old credential at the provider before updating the co
 1. Revoke the old key at the provider (Resend dashboard, Telegram BotFather, etc).
 2. Generate the new key.
 3. Update `/srv/DATA/.secrets/api-tokens.env`.
-4. Update `/srv/DATA/Stacks/adtech-spyglass/.env` with the new value.
+4. Update `/srv/DATA/Stacks/ortbtools/.env` with the new value.
 5. `docker compose up -d` to apply.
 6. If the rotated secret is `EMAIL_TOKEN_SECRET`: all outstanding password-reset and
    email-verify links are immediately invalidated. Users mid-reset will need to
@@ -397,12 +397,12 @@ Order matters — kill the old credential at the provider before updating the co
 
 ### 6.1 Daily SQLite backup (cron)
 
-Script: `/srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh`
+Script: `/srv/DATA/Stacks/ortbtools/scripts/backup-db.sh`
 
 Cron entry (`/etc/cron.d/ortbtools-backup`):
 
 ```
-30 3 * * * root /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
+30 3 * * * root /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
 ```
 
 The script uses `sqlite3 "$SRC" ".backup '$DEST'"` — this is the correct WAL-aware
@@ -502,7 +502,7 @@ Losing it is a `git checkout` away.
 ### 6.3 Manual backup (on-demand)
 
 ```bash
-/srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh
+/srv/DATA/Stacks/ortbtools/scripts/backup-db.sh
 # Output: /srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz
 ```
 
@@ -514,7 +514,7 @@ If a file for today already exists, `gzip -f` will overwrite it.
 
 ```bash
 # 1. Stop the container so no new writes race with the restore
-cd /srv/DATA/Stacks/adtech-spyglass && docker compose stop
+cd /srv/DATA/Stacks/ortbtools && docker compose stop
 
 # 2. Identify the backup to restore from
 ls -lh /srv/DATA/Backups/ortbtools/
@@ -563,7 +563,7 @@ restic --repo /srv/DATA/Backups/restic-repo \
        restore latest --include /srv/DATA/AppData/ortbtools --target /
 
 # 4. Rebuild and start
-cd /srv/DATA/Stacks/adtech-spyglass
+cd /srv/DATA/Stacks/ortbtools
 BUILD_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
 ```
 
@@ -635,7 +635,7 @@ docker ps --filter name=ortbtools
 docker logs ortbtools --tail 100
 
 # Attempt restart
-cd /srv/DATA/Stacks/adtech-spyglass && docker compose restart
+cd /srv/DATA/Stacks/ortbtools && docker compose restart
 
 # If still unhealthy after ~30s, look at exit reason
 docker inspect ortbtools --format '{{.State.ExitCode}} {{.State.Error}}'
@@ -656,7 +656,7 @@ Signs: `/api/health` returns `"db": false`, container logs show `SQLITE_CORRUPT`
 
 ```bash
 # 1. Stop the container immediately to prevent further writes
-cd /srv/DATA/Stacks/adtech-spyglass && docker compose stop
+cd /srv/DATA/Stacks/ortbtools && docker compose stop
 
 # 2. Copy the corrupt DB aside for post-mortem
 cp /srv/DATA/AppData/ortbtools/ortbtools.db /tmp/ortbtools-corrupt-$(date +%s).db
@@ -728,7 +728,7 @@ in `docker-compose.yml`. Start the Ollama stack first:
 
 ```bash
 cd /srv/DATA/Stacks/ollama && docker compose up -d
-cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
+cd /srv/DATA/Stacks/ortbtools && docker compose up -d
 ```
 
 ### 8.5 Token leak — secret pushed to GitHub or otherwise exposed
@@ -744,7 +744,7 @@ cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
    Edit `/srv/DATA/.secrets/api-tokens.env`, then update `.env`.
 4. **Restart the container** to pick up the new env:
    ```bash
-   cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
+   cd /srv/DATA/Stacks/ortbtools && docker compose up -d
    ```
 5. **Audit logs** for the exposure window:
    ```bash
@@ -765,7 +765,7 @@ to source — everything ships in the image.
 ### 9.1 Deploy
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass
+cd /srv/DATA/Stacks/ortbtools
 git checkout main && git pull --ff-only        # clean main == origin/main
 ./scripts/deploy.sh
 ```
@@ -888,7 +888,7 @@ the **coordinated wrapper**, NOT a bare `deploy.sh`, as the host user `vk`
 (prereq: CP3A done — Grafana joined to group 2472):
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass
+cd /srv/DATA/Stacks/ortbtools
 git checkout main && git pull --ff-only
 ./scripts/cutover-ortbtools-ro.sh            # dry-run: gates + plan, no changes
 ./scripts/cutover-ortbtools-ro.sh --apply    # perform the cutover
@@ -929,7 +929,7 @@ State at `/srv/DATA/AppData/ortbtools/cutover-state.env` (full snapshot,
 ### 9.2 Rollback
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass
+cd /srv/DATA/Stacks/ortbtools
 ./scripts/rollback.sh                 # → the rollback-pre-<BUILD_SHA> image from the last deploy
 # or pin an explicit image:  ./scripts/rollback.sh <tag>
 ```

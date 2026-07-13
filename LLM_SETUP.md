@@ -43,7 +43,7 @@ set via `OLLAMA_MODEL` env in
 - Docker + Docker Compose v2.
 - A box with at least **16 GB RAM** and **20 GB free disk**. CPU-only is
   fine (no GPU required); generation runs at ~10 tokens/sec on an i7-7700.
-- The ortbtools repo (`/srv/DATA/Stacks/adtech-spyglass/` in the canonical
+- The ortbtools repo (`/srv/DATA/Stacks/ortbtools/` in the canonical
   deploy).
 
 ## Step 1 — Bring up Ollama as a separate Compose stack
@@ -139,7 +139,7 @@ Restart ortbtools to pick up the network attachment if it wasn't already
 joined:
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass
+cd /srv/DATA/Stacks/ortbtools
 docker compose up -d --force-recreate
 ```
 

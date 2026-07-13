@@ -6,7 +6,7 @@ Goal: turn the main thread (Opus) into an **orchestrator**. Sonnet sub-agents do
 
 ### Step A — Create `.claude/agents/` fleet
 
-Location: `/srv/DATA/Stacks/adtech-spyglass/.claude/agents/<name>.md`
+Location: `/srv/DATA/Stacks/ortbtools/.claude/agents/<name>.md`
 
 Each agent is a markdown file with frontmatter + system prompt. Template:
 
@@ -18,7 +18,7 @@ tools: Read, Edit, Bash # restrict per role
 model: sonnet # default; bump to opus only when role demands
 ---
 
-You are a ortbtools <role>. Repo root: /srv/DATA/Stacks/adtech-spyglass.
+You are a ortbtools <role>. Repo root: /srv/DATA/Stacks/ortbtools.
 
 ## Strict constraints
 
@@ -93,7 +93,7 @@ Break-even: setup cost amortized after 2-3 features delegated.
 After ~2hr limit refresh, before anything else:
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass && git push origin main
+cd /srv/DATA/Stacks/ortbtools && git push origin main
 ```
 
 Pushes `629dbb6` (node-abi 3.89→3.90, sub-agent demo from prev session).

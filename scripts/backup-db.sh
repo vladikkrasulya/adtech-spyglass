@@ -10,7 +10,7 @@
 # archive.
 #
 # Install via /etc/cron.d/ortbtools-backup:
-#   30 3 * * * root /srv/DATA/Stacks/adtech-spyglass/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
+#   30 3 * * * root /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
 #
 # RESTORE:
 #   DB:            gunzip -c $DEST_DIR/ortbtools-YYYY-MM-DD.db.gz > /srv/DATA/AppData/ortbtools/ortbtools.db

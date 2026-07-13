@@ -1,3 +1,5 @@
+name: ortbtools
+
 services:
   ortbtools:
     container_name: ortbtools

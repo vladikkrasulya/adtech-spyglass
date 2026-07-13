@@ -254,12 +254,12 @@ container environment even when ClickHouse credentials exist (useful when CH is
 shared with other services on the same host).
 
 ```bash
-# In /srv/DATA/Stacks/adtech-spyglass/.env (then recreate container):
+# In /srv/DATA/Stacks/ortbtools/.env (then recreate container):
 ORTBTOOLS_ANALYTICS_DISABLED=1
 ```
 
 ```bash
-cd /srv/DATA/Stacks/adtech-spyglass && docker compose up -d
+cd /srv/DATA/Stacks/ortbtools && docker compose up -d
 ```
 
 **Not disabled by either option:** per-user `analyze_log` rows in SQLite (Cabinet →
