@@ -16,6 +16,29 @@ All notable changes to Spyglass are documented here. Format follows
 - **README** — CLI install section; remove stale `types` entry from core package
   (no `index.d.ts` yet).
 
+### v1.4.1 — Signal wave-3 tails: /about refresh, TOC, ticker, code-num tokens
+
+App patch — closes the four deliberately-deferred tails from the 2026-07-13
+design audit.
+
+- **/about "What's new" refreshed** in all three locales: the stale
+  2026-05-10 tour of v0.25→v0.35 replaced with a compact v0.52→v1.4 digest
+  (validator wave, honest privacy contract + `SPYGLASS_ANALYTICS_DISABLED`,
+  self-hosted fonts, Signal refresh, search fix, Node 22).
+- **/about gutter TOC**: fixed table of contents in the previously-empty
+  right column (≥1280px; the gutter collapses below that), mirroring the
+  header section anchors per locale.
+- **SEO landings get the Signal marquee ticker** (`.ticker` from the
+  design system, track doubled for a seamless -50% loop) with real engine
+  facts, localized.
+- **«числа/код» palette row implemented** — the last missing token pair
+  from the Signal vault note: `--code-num` `#B7791F` light / `#F6C177`
+  dark added to the SHARED design-system.css (both repos byte-identical,
+  vendored manifest re-pinned, cache-bust `?v=13`). Applied to the
+  inspector's large mono numbers (`.metric-value` 28px, `.stat-value`
+  22px) — large-text AA (3.2:1 light / ~9:1 dark).
+- Version: PATCH bump v1.4.1 across the 8 canonical spots.
+
 ### v1.4.0 — Signal design wave 3: typography + family
 
 Third design-debt wave from the 2026-07-13 audit. MINOR: adds self-hosted

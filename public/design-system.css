@@ -249,6 +249,10 @@
   --success:         #15803D;
   --warning:         #F59E0B;
   --danger:          #DC2626;
+  /* «числа/код» з палітри Signal (vault-нота 2026-06-11) — теплий амбер для
+     великих mono-цифр і коду. 3.2:1 на білому — ЛИШЕ для large text (18px+
+     bold / 24px+); для дрібного тексту лишаються --text / --text-accent. */
+  --code-num:        #B7791F;
 
   /* ── Spacing scale (8-based) ─────────────────────────── */
   --space-1:  4px;
@@ -808,6 +812,7 @@ input:focus, select:focus, textarea:focus, .field-input:focus {
      (3.5:1 на темних поверхнях, нижче AA). Додано 2026-07-13 (аудит, хвиля 2)
      синхронно в обох репо: kyivtech-portal і adtech-spyglass. */
   --danger:          #F87171;
+  --code-num:        #F6C177;
 
   --shadow-sm:    0 1px 2px rgba(0,0,0,0.30);
   --shadow-md:    0 4px 12px rgba(0,0,0,0.40), 0 2px 4px rgba(0,0,0,0.28);

@@ -59,7 +59,7 @@
     <link rel="icon" type="image/svg+xml" sizes="any" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     <link rel="mask-icon" href="/icon.svg" color="#0284C7" />
-    <link rel="stylesheet" href="/design-system.css?v=12" />
+    <link rel="stylesheet" href="/design-system.css?v=13" />
     <script>
       (function () {
         try {
@@ -184,6 +184,40 @@
       }
       .doc-prose {
         max-width: 70ch;
+      }
+      /* Sticky TOC у правому жолобі (аудит 2026-07-13: права колонка була
+         порожня на всі ~13 000px висоти). Fixed у вільному жолобі контейнера
+         1200px; ховається, коли жолоб зникає. */
+      .doc-toc {
+        display: none;
+      }
+      @media (min-width: 1280px) {
+        .doc-toc {
+          display: block;
+          position: fixed;
+          top: 110px;
+          right: calc((100vw - var(--maxw-wide, 1200px)) / 2 + var(--space-5, 24px));
+          width: 210px;
+        }
+        .doc-toc .mono-label {
+          display: block;
+          margin-bottom: var(--space-3, 12px);
+        }
+        .doc-toc a {
+          display: block;
+          padding: 5px 0 5px 12px;
+          border-left: 2px solid var(--border);
+          color: var(--text-muted);
+          font-size: var(--fs-sm);
+          text-decoration: none;
+          transition:
+            color var(--t-fast),
+            border-color var(--t-fast);
+        }
+        .doc-toc a:hover {
+          color: var(--text);
+          border-left-color: var(--accent);
+        }
       }
       .doc-prose h1 {
         font-size: clamp(34px, 6vw, 54px);
@@ -414,8 +448,19 @@
 
     <section class="kt-section" style="padding-top: var(--space-7)">
       <div class="kt-container">
+        <nav class="doc-toc" aria-label="contents">
+          <span class="mono-label">contents</span>
+          <a href="#whats-new">What's new</a>
+          <a href="#use">What it does</a>
+          <a href="#layers">How it works</a>
+          <a href="#wont">What it doesn't</a>
+          <a href="#data">Data</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#example">Example</a>
+          <a href="#sources">Sources</a>
+        </nav>
         <div class="doc-prose">
-          <span class="eyebrow">docs · <span data-spyglass-version>v1.4.0</span></span>
+          <span class="eyebrow">docs · <span data-spyglass-version>v1.4.1</span></span>
           <h1 style="margin-top: var(--space-3)">How to use ortbtools</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             A private inspector for OpenRTB traffic. Paste JSON, get a breakdown: whether the
@@ -429,94 +474,40 @@
 
           <hr />
 
-          <h2 id="whats-new">What's new · 2026-05-10</h2>
+          <h2 id="whats-new">What's new · 2026-07-13</h2>
           <p>
-            Eleven releases shipped in one day (v0.25 → v0.35). Quick tour of the new surfaces —
-            full detail in the sections below or in CHANGELOG.md.
+            Highlights since the last docs refresh (v0.52 → v1.4) — full detail lives in
+            CHANGELOG.md.
           </p>
-
-          <h3>🪞 Mirror — canonical pair, one click</h3>
-          <p>
-            Hit <strong>mirror ↔</strong> in the header (or hotkey <code>M</code>) and ortbtools
-            generates the canonical counterpart of your paste. BidRequest in → minimal-valid
-            BidResponse out. BidResponse in → BidRequest the response would fit. Output is
-            self-tested through the existing validate() + crosscheck() loop, so it's always clean.
-            Two modes: <em>minimal</em> (required fields only) and <em>best-practice</em> (with
-            recommended: schain, dchain, DSA, GDPR consent, device.sua).
-          </p>
-          <p>
-            With both panes filled, the modal also shows a <strong>diff</strong>: your version vs
-            the canonical one, colour-coded (≠ different, + canonical-only, − you-only). 🔗 share
-            button generates a permalink carrying the pair — handy for SSP calls.
-          </p>
-
-          <h3>📡 Live RTB stream</h3>
-          <p>
-            <strong>📡 live</strong> button opens a modal subscribed to a synthetic RTB sample
-            stream. Each row: timestamp, kind (REQ/RES), source filename, optional banner size.
-            Pause/resume button. Click a row to load that sample into the matching editor and close
-            the modal. Foundation for the upcoming Stream platform.
-          </p>
-
-          <h3>👁 Finding details</h3>
-          <p>
-            Every validator finding now has a ▾ expander. Click reveals: JSON path, your
-            <em>current value</em> at that path (extracted from the paste), severity in plain
-            language ("error → exchange rejects"; "warning → reduces fill-rate"; "info →
-            best-practice note"), spec link, and canonical rule id.
-          </p>
-
-          <h3>🛡 Behavior corpus + Confusion matrix</h3>
-          <p>
-            On the behavior tab, <strong>💾 save as corpus</strong> appears when there are probe
-            events and you're signed in. Save the event-stream with a label (<em
-              >legitimate / fraud / ambiguous</em
-            >) — your cabinet has a section for all entries. Foundation for Chapter B (behaviour
-            calibration).
-          </p>
-          <p>
-            Off the corpus, the <strong>confusion matrix</strong> auto-computes precision, recall,
-            F1 for each of the 12 detectors against your own labelled data. Spot low-precision
-            patterns (red row) that need tuning, or stable ones (≥90% green).
-          </p>
-
-          <h3>🤖 Bid simulator (local LLM 3-strategy)</h3>
-          <p>
-            <strong>🤖 simulate</strong> button. Local gemma4:e2b runs three DSP strategies:
-            <em>aggressive (max scale, +30-50% over floor)</em>,
-            <em>conservative (ROAS guard, +5-15%)</em>,
-            <em>quality (premium only, +50-80% or skip)</em>. Privacy: the LLM sees only an 8-field
-            metadata summary (formats, sizes, geo, currency, floor, surface, device-type,
-            auction-type) — bid VALUES never reach the LLM.
-          </p>
-
-          <h3>📦 Specimen replay endpoint</h3>
-          <p>
-            <code>POST /api/v1/replay</code> accepts an array of samples, runs validate + crosscheck
-            + behavior on each, returns per-sample results plus an aggregate
-            (<code>statusCounts</code>, <code>topFindings</code>, <code>totalFindings</code>). One
-            call instead of N round-trips. Capped at 100 samples per call. Foundation for CI fixture
-            grading, archive replay, partner audit pipelines.
-          </p>
-
-          <h3>👤 Cabinet — new 7-section layout</h3>
-          <p>
-            Cabinet (<code>/account</code>) restructured: sticky sidebar with 7 sections — Profile ·
-            Library · Activity · Behavior corpus · Preferences · Security · Danger zone. Scroll-spy
-            highlights the active section as you scroll. URL hash updates for deep links:
-            <code>/account#corpus</code> jumps straight in. Mobile (≤880px) collapses the sidebar to
-            a horizontal tab-chip bar.
-          </p>
-
-          <h3>Localization: EN and RU now first-class</h3>
-          <p>
-            English and Russian about pages shipped in v0.32 (previously stubs). The lang menu in
-            the header works on the inspector (full navigation, since the inspector mounts its
-            template async), on /about, and on /account. The <code>kt-lang</code> cookie is written
-            before the fetch so the server doesn't redirect back to the old locale.
-          </p>
-
-          <hr />
+          <ul>
+            <li>
+              <strong>Validator wave</strong> — OpenRTB 2.6 AdPod constraints, <code>rqddurs</code>,
+              Native 1.1/1.2 request roots and asset subtypes, <code>bid.adomain[]</code>,
+              <code>device.ifa</code>/<code>lmt</code>,
+              <code>banner.pos</code>/<code>banner.mimes</code>.
+            </li>
+            <li>
+              <strong>Honest privacy contract</strong> — docs and UI describe the server-transient
+              <code>/api/analyze</code> flow exactly as it works; self-host operators can switch
+              telemetry off with <code>SPYGLASS_ANALYTICS_DISABLED=1</code>.
+            </li>
+            <li>
+              <strong>Self-hosted fonts</strong> — zero calls to Google Fonts; variable woff2 served
+              from this domain, so "no external CDNs" is literally true.
+            </li>
+            <li>
+              <strong>Signal design refresh</strong> — new ◆ favicon and social cards, WCAG-AA
+              contrast in both themes, spec landing pages redesigned onto the shared grammar.
+            </li>
+            <li>
+              <strong>Global search fix</strong> — closing the search dropdown no longer throws;
+              picking a result navigates reliably.
+            </li>
+            <li>
+              <strong>Node 22 runtime</strong> — production image on Node 22 with a Docker smoke
+              gate on every release.
+            </li>
+          </ul>
 
           <h2 id="use">What ortbtools does</h2>
 
@@ -1334,7 +1325,7 @@ server formats localised text and returns 200 JSON</code></pre>
               font-size: var(--fs-sm);
             "
           >
-            <span data-spyglass-version>v1.4.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
+            <span data-spyglass-version>v1.4.1</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
             4.x · <a href="/" style="color: var(--text-dim)">↗ ortbtools</a> ·
             <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>

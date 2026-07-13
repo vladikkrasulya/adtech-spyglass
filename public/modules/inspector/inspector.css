@@ -1036,7 +1036,9 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 700;
-  color: var(--text);
+  /* «числа/код» з палітри Signal — теплий амбер для великих mono-цифр
+     (large text: 3.2:1 light / ~9:1 dark — AA для 18px+ bold) */
+  color: var(--code-num, #b7791f);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -2662,7 +2664,7 @@ button.cross-path:focus-visible,
   font-family: var(--font-mono);
   font-size: 22px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--code-num, #b7791f);
   font-variant-numeric: tabular-nums;
 }
 .stat-label {

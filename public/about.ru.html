@@ -60,7 +60,7 @@
     <link rel="icon" type="image/svg+xml" sizes="any" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     <link rel="mask-icon" href="/icon.svg" color="#0284C7" />
-    <link rel="stylesheet" href="/design-system.css?v=12" />
+    <link rel="stylesheet" href="/design-system.css?v=13" />
     <script>
       (function () {
         try {
@@ -185,6 +185,40 @@
       }
       .doc-prose {
         max-width: 70ch;
+      }
+      /* Sticky TOC у правому жолобі (аудит 2026-07-13: права колонка була
+         порожня на всі ~13 000px висоти). Fixed у вільному жолобі контейнера
+         1200px; ховається, коли жолоб зникає. */
+      .doc-toc {
+        display: none;
+      }
+      @media (min-width: 1280px) {
+        .doc-toc {
+          display: block;
+          position: fixed;
+          top: 110px;
+          right: calc((100vw - var(--maxw-wide, 1200px)) / 2 + var(--space-5, 24px));
+          width: 210px;
+        }
+        .doc-toc .mono-label {
+          display: block;
+          margin-bottom: var(--space-3, 12px);
+        }
+        .doc-toc a {
+          display: block;
+          padding: 5px 0 5px 12px;
+          border-left: 2px solid var(--border);
+          color: var(--text-muted);
+          font-size: var(--fs-sm);
+          text-decoration: none;
+          transition:
+            color var(--t-fast),
+            border-color var(--t-fast);
+        }
+        .doc-toc a:hover {
+          color: var(--text);
+          border-left-color: var(--accent);
+        }
       }
       .doc-prose h1 {
         font-size: clamp(34px, 6vw, 54px);
@@ -415,8 +449,19 @@
 
     <section class="kt-section" style="padding-top: var(--space-7)">
       <div class="kt-container">
+        <nav class="doc-toc" aria-label="содержание">
+          <span class="mono-label">содержание</span>
+          <a href="#whats-new">Что нового</a>
+          <a href="#use">Что умеет</a>
+          <a href="#layers">Как работает</a>
+          <a href="#wont">Что не делает</a>
+          <a href="#data">Данные</a>
+          <a href="#privacy">Приватность</a>
+          <a href="#example">Пример</a>
+          <a href="#sources">Источники</a>
+        </nav>
         <div class="doc-prose">
-          <span class="eyebrow">docs · <span data-spyglass-version>v1.4.0</span></span>
+          <span class="eyebrow">docs · <span data-spyglass-version>v1.4.1</span></span>
           <h1 style="margin-top: var(--space-3)">Как пользоваться ortbtools</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             Приватный инспектор OpenRTB-трафика. Вставь JSON, получи разбор: правильно ли
@@ -431,97 +476,37 @@
 
           <hr />
 
-          <h2 id="whats-new">Что нового · 2026-05-10</h2>
-          <p>
-            За один день выкатили 11 версий (v0.25 → v0.35). Краткий обзор новых функций — детали в
-            соответствующих разделах ниже или в CHANGELOG.md.
-          </p>
-
-          <h3>🪞 Зеркало (Mirror) — эталонная пара одним кликом</h3>
-          <p>
-            Жми <strong>зеркало ↔</strong> в шапке (или hotkey <code>M</code>) — ortbtools
-            сгенерирует канонический counterpart твоего payload-а. Если вставил BidRequest —
-            получишь минимально-валидный BidResponse. Если BidResponse — сгенерирует запрос, в
-            котором этот ответ прошёл бы. Результат самопроверяется через существующий цикл
-            validate() + crosscheck(), поэтому всегда чистый. Два режима: <em>minimal</em> (только
-            обязательные поля) и <em>best-practice</em> (с recommended: schain, dchain, DSA, GDPR
-            consent, device.sua).
-          </p>
-          <p>
-            Если у тебя заполнены оба поля — модалка зеркала также показывает
-            <strong>diff</strong>: твоя версия vs каноническая, с цветовой маркировкой (≠ различие,
-            + в канонической есть, − у тебя есть лишнее). 🔗 share-кнопка генерирует permalink с
-            парой — полезно для звонков с SSP.
-          </p>
-
-          <h3>📡 Live RTB stream</h3>
-          <p>
-            Кнопка <strong>📡 live</strong> открывает модалку со стримом синтетических RTB-образцов
-            в реальном времени. Каждая строка: timestamp, тип (REQ/RES), источник (имя файла),
-            опционально размер баннера. Пауза/продолжить — кнопкой. Клик на строке загружает образец
-            в соответствующее поле и закрывает модалку. Foundation для будущей Stream platform.
-          </p>
-
-          <h3>👁 Детали находок (Finding details)</h3>
-          <p>
-            Каждая находка валидатора теперь имеет ▾ разворачивалку. Клик открывает панель с:
-            JSON-путём, <em>твоим текущим значением</em> в этом пути (вытаскиваем из вставленного),
-            серьёзностью с человеческой расшифровкой ("error → биржи отклонят"; "warning → fill-rate
-            упадёт"; "info → best-practice"), ссылкой на спецификацию и canonical ID правила.
-          </p>
-
-          <h3>🛡 Behavior corpus + Confusion matrix</h3>
-          <p>
-            На вкладке behavior появляется <strong>💾 save as corpus</strong> когда есть события
-            probe-а и ты залогинен. Сохраняешь event-stream с меткой (<em
-              >legitimate / fraud / ambiguous</em
-            >) — в кабинете есть секция со всеми твоими entries. Foundation для Chapter B
-            (поведенческая калибровка).
-          </p>
-          <p>
-            На основе corpus-а автоматически считается <strong>confusion matrix</strong>: precision,
-            recall, F1 каждого из 12 детекторов на ТВОЁМ корпусе. Видно сразу какие паттерны имеют
-            низкую точность (красная строка) и нуждаются в tuning, какие стабильно ловят фрод
-            (зелёный ≥90%).
-          </p>
-
-          <h3>🤖 Bid simulator (local LLM 3-strategy)</h3>
-          <p>
-            Кнопка <strong>🤖 simulate</strong> в шапке. Локальная gemma4:e2b симулирует как 3 типа
-            DSP ответили бы на твой запрос: <em>aggressive (max scale, +30-50% над floor)</em>,
-            <em>conservative (ROAS guard, +5-15%)</em>,
-            <em>quality (premium only, +50-80% или skip)</em>. Приватность: LLM видит только 8 полей
-            метаданных (формат, размер, гео, currency, floor, surface, device-type, auction-type) —
-            значения bid-ов в LLM не попадают.
-          </p>
-
-          <h3>📦 Specimen replay endpoint</h3>
-          <p>
-            <code>POST /api/v1/replay</code> принимает массив samples, прогоняет валидатор +
-            crosscheck + behavior на каждом, возвращает per-sample результаты + агрегат
-            (<code>statusCounts</code>, <code>topFindings</code>, <code>totalFindings</code>). Один
-            вызов вместо N round-trips. Cap 100 samples на запрос. Foundation для CI
-            fixture-grading, archive replay, partner audit pipelines.
-          </p>
-
-          <h3>👤 Кабинет — новая структура с 7 разделами</h3>
-          <p>
-            Cabinet (<code>/ru/account</code>) переосмыслен: боковая навигация (sticky sidebar) с 7
-            разделами — Профиль · Библиотека · Активность · Behavior corpus · Настройки ·
-            Безопасность · Danger zone. Scroll-spy подсвечивает активную секцию при скролле. URL
-            hash обновляется для глубоких ссылок: <code>/ru/account#corpus</code> открывает сразу
-            корпус. Mobile (≤880px) — sidebar сворачивается в горизонтальные tab-чипы.
-          </p>
-
-          <h3>Локализация: EN и RU теперь полноценные</h3>
-          <p>
-            Английская и русская страницы «О проекте» выкачены в v0.32 (раньше были заглушками).
-            Переключатель языков в шапке работает как на главной (полная навигация вместо in-place
-            морфа), так и на /about и /account. Cookie <code>kt-lang</code> синхронизируется с
-            выбранной локалью перед fetch-ом, чтобы сервер не редиректил назад.
-          </p>
-
-          <hr />
+          <h2 id="whats-new">Что нового · 2026-07-13</h2>
+          <p>Главное с прошлого обновления доков (v0.52 → v1.4) — все детали в CHANGELOG.md.</p>
+          <ul>
+            <li>
+              <strong>Волна валидатора</strong> — ограничения AdPod из OpenRTB 2.6,
+              <code>rqddurs</code>, корни запроса Native 1.1/1.2 и подтипы asset,
+              <code>bid.adomain[]</code>, <code>device.ifa</code>/<code>lmt</code>,
+              <code>banner.pos</code>/<code>banner.mimes</code>.
+            </li>
+            <li>
+              <strong>Честный privacy-контракт</strong> — доки и UI описывают server-transient поток
+              <code>/api/analyze</code> так, как он реально работает; на self-host телеметрия
+              отключается через <code>SPYGLASS_ANALYTICS_DISABLED=1</code>.
+            </li>
+            <li>
+              <strong>Шрифты self-hosted</strong> — ни одного обращения к Google Fonts; variable
+              woff2 отдаются с этого домена, так что «без внешних CDN» — буквально правда.
+            </li>
+            <li>
+              <strong>Дизайн-обновление Signal</strong> — новый ◆ favicon и соцкарточки, контраст
+              WCAG-AA в обеих темах, spec-лендинги переведены на общую грамматику.
+            </li>
+            <li>
+              <strong>Фикс глобального поиска</strong> — закрытие дропдауна больше не бросает
+              ошибку; выбор результата надёжно ведёт куда нужно.
+            </li>
+            <li>
+              <strong>Runtime Node 22</strong> — прод-образ на Node 22 с Docker smoke-гейтом на
+              каждый релиз.
+            </li>
+          </ul>
 
           <h2 id="use">Что ortbtools умеет</h2>
 
@@ -1335,7 +1320,7 @@ findings[]: { id, level, path, params, msg, specRef }
               font-size: var(--fs-sm);
             "
           >
-            <span data-spyglass-version>v1.4.0</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
+            <span data-spyglass-version>v1.4.1</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x · vast
             4.x · <a href="/" style="color: var(--text-dim)">↗ ortbtools</a> ·
             <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>

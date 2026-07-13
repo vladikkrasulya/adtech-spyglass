@@ -45,6 +45,12 @@
 /* CTA renders as the design-system .btn.btn-primary since v1.4.0 — the
    bespoke .landing__cta-btn re-implementation was removed (2026-07-13 audit). */
 
+/* Signal motion-pack marquee under the hero — real engine facts.
+   Base .ticker/.ticker-track styles come from design-system.css. */
+.landing__ticker {
+  margin: 0 0 var(--space-5);
+}
+
 .landing__block {
   margin: var(--space-5) 0;
 }
