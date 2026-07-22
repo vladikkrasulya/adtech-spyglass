@@ -34,26 +34,19 @@ test('parseJsonLoose: returns null on garbage', () => {
   assert.equal(mod.parseJsonLoose(42), null);
 });
 
-// ── extractScore ───────────────────────────────────────────────────────────
+// ── relevance scoring ──────────────────────────────────────────────────────
+// extractScore (the LLM-reply parser) left with the Ollama path (2026-07-22):
+// scoring is deterministic now — see tests/intel-rules.test.js for the full
+// scoreRelevance golden corpus. Here we only pin the moderator's contract:
+// the threshold constant still gates publication.
 
-test('extractScore: from strict JSON', () => {
-  assert.equal(mod.extractScore('{"relevance_score": 9}'), 9);
-});
-
-test('extractScore: low-relevance shape', () => {
-  assert.equal(mod.extractScore('{"relevance_score": 4}'), 4);
-});
-
-test('extractScore: clamps above 10', () => {
-  assert.equal(mod.extractScore('{"relevance_score": 99}'), 10);
-});
-
-test('extractScore: regex fallback when not valid JSON', () => {
-  assert.equal(mod.extractScore('relevance_score: 7 (it is adtech)'), 7);
-});
-
-test('extractScore: null when no number present', () => {
-  assert.equal(mod.extractScore('no score here'), null);
+test('relevance: rules scorer clears the threshold on core AdTech', () => {
+  const { scoreRelevance } = require('../lib/intel-rules');
+  const { score } = scoreRelevance({
+    title: 'OpenRTB 2.6 ships in Prebid',
+    summary: 'Programmatic SSP adapters gain header bidding support.',
+  });
+  assert.ok(score >= mod.RELEVANCE_THRESHOLD, `score ${score} must clear threshold`);
 });
 
 // ── sanitizeCategory / sanitizeTags ─────────────────────────────────────────
