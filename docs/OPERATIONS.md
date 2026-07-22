@@ -1,7 +1,9 @@
 # ortbtools — Operations Runbook
 
-Maintainer: Vladik. Machine: Optiplex 7050 Micro, Debian 13, LAN `192.168.1.4`,
-Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/ortbtools/`.
+Maintainer: Vladik. Machine: `vkbox` / Dell 7090, Debian 13, LAN
+`192.168.1.6`, Tailscale `100.127.220.92`. Since 2026-07-12 this is the only
+production host; old core/optiplex endpoints are decommissioned. Stack root:
+`/srv/DATA/Stacks/adtech-spyglass/`.
 
 ---
 
@@ -574,7 +576,7 @@ BUILD_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
 ### 7.1 Beszel (container metrics)
 
 Hub + agent compose at `/srv/DATA/Stacks/beszel/`. Hub UI: `http://127.0.0.1:8190`
-(or via Tailscale at `100.86.20.34:8190`). Container `ortbtools` should appear
+(or via Tailscale at `100.127.220.92:8190`). Container `adtech-spyglass` should appear
 in the system list. CPU, RAM, and network are tracked by the agent via Docker socket.
 
 ### 7.2 Docker healthcheck

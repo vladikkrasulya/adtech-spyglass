@@ -622,7 +622,7 @@ Browser (https://ortbtools.com)
     │
     ▼  Cloudflare (DNS + edge)
     │
-    ▼  CF Tunnel → 192.168.1.4
+    ▼  CF Tunnel → vkbox 192.168.1.6
     │
     ▼  kyivtech-portal (host network) — proxies admin tiles
     │  PUBLIC_PROXIES=Set(['ortbtools']) anon-allowed
