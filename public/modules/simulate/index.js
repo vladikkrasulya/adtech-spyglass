@@ -20,10 +20,11 @@
                                     ortbtools.app.js + data-action
                                     'modal-close' / 'modal-backdrop-close')
 
-   Backend: /api/intel/simulate-bids — handler delegates to local
-   qwen2.5:3b via Ollama (see packages/intel/intel-llm.js). On
-   ollama_unavailable the modal renders a translated friendly error
-   instead of the raw error string.
+   Backend: /api/intel/simulate-bids — handler delegates to the
+   deterministic rules engine (lib/intel-rules.js): transparent
+   floor/quality/strategy formulas, no model. Same input → same
+   output. A transient 5xx still renders the translated friendly
+   error instead of the raw error string.
    ============================================================ */
 import { $, escapeHtml, toast, t } from '/core/utils.js';
 

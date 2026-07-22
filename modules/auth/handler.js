@@ -61,7 +61,6 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
  *   setLocaleCookie: (req: import('http').IncomingMessage, res: import('http').ServerResponse, locale: string) => void,
  *   VERIFY_TOKEN_TTL: number,
  *   RESET_TOKEN_TTL: number,
- *   intelLlm?: { warmupOllama: () => void },
  * }} deps
  */
 function createAuthRoutesModule(deps) {
@@ -81,10 +80,6 @@ function createAuthRoutesModule(deps) {
     setLocaleCookie,
     VERIFY_TOKEN_TTL,
     RESET_TOKEN_TTL,
-    // v0.38.2 — optional intel-llm injection for the post-login warmup
-    // ping. Default to a no-op stub so the module stays usable in test
-    // environments that don't wire Ollama.
-    intelLlm = { warmupOllama: () => {} },
   } = deps;
 
   function handleMe(req, res) {
@@ -140,17 +135,9 @@ function createAuthRoutesModule(deps) {
         auth.createSession(req, res, user);
         const encryption = publicEncryption(Users.getCryptoState(user.id));
         sendJson(res, 200, { success: true, user: publicUser(user), encryption });
-        // v0.38.2 — Ollama warmup. The user has just authenticated; they
-        // likely will (or won't) hit /api/intel/* soon. Pre-warm the
-        // local LLM so the first call doesn't pay the 10-15s cold-load
-        // tax. Fire-and-forget — warmupOllama swallows all errors and
-        // has its own 5s abort timeout, so login response stays snappy
-        // regardless of Ollama health.
-        try {
-          intelLlm.warmupOllama();
-        } catch {
-          /* warmup must never disrupt login */
-        }
+        // v0.38.2's post-login Ollama warmup was removed 2026-07-22: the
+        // intel endpoints run on the deterministic rules engine — there is
+        // no model to warm and nothing cold to pay for.
       })
       .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));
   }

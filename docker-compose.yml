@@ -35,11 +35,9 @@ services:
       # resolve the deployed image tag after a reboot.
       - .env
     environment:
-      # On-prem LLM bridge. `http://ollama:11434` resolves via kt-shared →
-      # ollama-router → gpu (model alias gemma4-prod, currently gemma4:e4b on
-      # vkbox). Fail-open: if ollama is unreachable the AI affordances hide.
-      - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=gemma4:26b-a4b-it-qat  # 26B brain migration 2026-07-22
+      # 2026-07-22: no LLM wiring. /api/intel/* and news relevance run on the
+      # deterministic rules engine (lib/intel-rules.js). The ONLY model call
+      # left is the isolated OpenRouter news-translation pipeline (.env key).
       # Blog content root. Persisted UNDER the existing /data volume (no second
       # mount) and seeded from the repo's content/posts on first deploy. Keeps
       # promoted posts out of the git working tree and out of the image layer.

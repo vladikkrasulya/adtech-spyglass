@@ -248,7 +248,7 @@
       'sample.label.title': 'назва',
       'sample.label.partner': 'партнер',
       'sample.label.notes': 'нотатки (необовʼязково)',
-      // Phase C-1 — LLM-inferred partner banner.
+      // Phase C-1 — rules-inferred partner banner (deterministic since 2026-07-22).
       'hint.partner.suggestion': 'Виглядає як <b>{name}</b> ({conf} впевненість)',
       'hint.partner.use_existing': 'Обрати',
       'hint.partner.create_new': 'Створити',
@@ -520,7 +520,7 @@
       'sample.label.title': 'title',
       'sample.label.partner': 'partner',
       'sample.label.notes': 'notes (optional)',
-      // Phase C-1 — LLM-inferred partner banner.
+      // Phase C-1 — rules-inferred partner banner (deterministic since 2026-07-22).
       'hint.partner.suggestion': 'Looks like <b>{name}</b> ({conf} confidence)',
       'hint.partner.use_existing': 'Use this',
       'hint.partner.create_new': 'Create',
@@ -772,7 +772,7 @@
       'sample.label.title': 'название',
       'sample.label.partner': 'партнёр',
       'sample.label.notes': 'заметки (необязательно)',
-      // Phase C-1 — LLM-inferred partner banner.
+      // Phase C-1 — rules-inferred partner banner (deterministic since 2026-07-22).
       'hint.partner.suggestion': 'Похоже на <b>{name}</b> ({conf} уверенность)',
       'hint.partner.use_existing': 'Выбрать',
       'hint.partner.create_new': 'Создать',

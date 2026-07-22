@@ -138,7 +138,9 @@ function makeIntelLimiter() {
   };
 }
 const intelLimiter = makeIntelLimiter();
-const intelLlm = require('./intel-llm');
+// 2026-07-22 — the intel features run on the deterministic rules engine;
+// no Ollama / OpenRouter on any interactive path (see docs/ARCHMAP.md).
+const intelRules = require('./lib/intel-rules');
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || 'http://localhost:' + PORT;
@@ -916,7 +918,7 @@ router.register(
   createIntelModule({
     intelLimiter,
     auth,
-    intelLlm,
+    intelRules,
     knowledgeBase,
   }),
 );
@@ -957,10 +959,8 @@ router.register(
     setLocaleCookie,
     VERIFY_TOKEN_TTL,
     RESET_TOKEN_TTL,
-    // Post-login Ollama warmup (v0.38.2). Fire-and-forget — login
-    // response is sent first, then warmup ping is issued. Tests in
-    // isolation get the no-op stub default.
-    intelLlm,
+    // v0.38.2's post-login Ollama warmup is gone (2026-07-22): the rules
+    // engine has no model to warm. The auth module keeps its no-op stub.
   }),
 );
 router.register(createPartnersModule({ auth, Partners }));
@@ -1083,11 +1083,11 @@ function unionFormat(a, b) {
 
 // ── /api/intel/simulate-bids — Bid simulator demo ─────────────────────────
 //
-// Given a parsed BidRequest, fan out 3 strategies (aggressive /
-// conservative / quality) to the configured OLLAMA_MODEL (gemma4-prod) in parallel. Each strategy gets a
-// metadata-only summary (no bid VALUES) and decides bid yes/no, price,
-// and a one-sentence rationale. Demonstrates the AI-bridge as more than
-// just naming/classification — it's also useful for "what would
+// Given a parsed BidRequest, run 3 strategies (aggressive /
+// conservative / quality) through the deterministic rules engine. Each
+// strategy gets a metadata-only summary (no bid VALUES) and decides bid
+// yes/no, price, and a one-sentence rationale — same input, same answer,
+// transparent formulas. It's useful for "what would
 // different bidders do?" intuition.
 //
 // Public — no auth — to match other intel endpoints. Rate-limited to

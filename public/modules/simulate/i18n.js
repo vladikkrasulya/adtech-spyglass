@@ -19,19 +19,19 @@
         ru: '🤖 симуляция 3 DSP-стратегий',
       },
       'modal.simbids.hint': {
-        uk: 'Локальна gemma4:e4b симулює як три типи DSP відповіли б на твій запит. Тільки метадані запиту (формат, розмір, гео, floor) — bid VALUES не передаємо в LLM.',
-        en: 'Local gemma4:e4b simulates how three DSP types would respond to your request. Metadata only (format, size, geo, floor) — bid VALUES never reach the LLM.',
-        ru: 'Локальная gemma4:e4b симулирует как три типа DSP ответили бы на твой запрос. Только метаданные (формат, размер, гео, floor) — bid VALUES не передаются в LLM.',
+        uk: 'Детермінований rules-движок рахує, як три типи DSP відповіли б на твій запит: прозорі формули від floor, якості інвентарю і стратегії. Тільки метадані (формат, розмір, гео, floor) — bid VALUES нікуди не передаються.',
+        en: 'A deterministic rules engine computes how three DSP types would respond: transparent formulas over floor, inventory quality and strategy. Metadata only (format, size, geo, floor) — bid VALUES never leave the page.',
+        ru: 'Детерминированный rules-движок считает, как три типа DSP ответили бы на твой запрос: прозрачные формулы от floor, качества инвентаря и стратегии. Только метаданные (формат, размер, гео, floor) — bid VALUES никуда не передаются.',
       },
       'modal.simbids.loading': {
-        uk: 'LLM думає… (3 паралельні prompts, ~15s)',
-        en: 'LLM is thinking… (3 parallel prompts, ~15s)',
-        ru: 'LLM думает… (3 параллельных prompts, ~15s)',
+        uk: 'Рахуємо стратегії…',
+        en: 'Computing strategies…',
+        ru: 'Считаем стратегии…',
       },
       'modal.simbids.ollama_down': {
-        uk: 'Ollama недоступна. AI-bridge падає тихо — попроси адміна перевірити контейнер.',
-        en: 'Ollama unavailable. AI bridge fails quietly — ask the admin to check the container.',
-        ru: 'Ollama недоступна. AI-bridge падает тихо — попроси админа проверить контейнер.',
+        uk: 'Сервіс тимчасово недоступний — спробуй ще раз за хвилину.',
+        en: 'Service temporarily unavailable — try again in a minute.',
+        ru: 'Сервис временно недоступен — попробуй ещё раз через минуту.',
       },
       'modal.simbids.bid': {
         uk: '✓ ставить',
