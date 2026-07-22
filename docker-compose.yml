@@ -39,7 +39,7 @@ services:
       # ollama-router → gpu (model alias gemma4-prod, currently gemma4:e4b on
       # vkbox). Fail-open: if ollama is unreachable the AI affordances hide.
       - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=gemma4-prod
+      - OLLAMA_MODEL=gemma4:26b-a4b-it-qat  # 26B brain migration 2026-07-22
       # Blog content root. Persisted UNDER the existing /data volume (no second
       # mount) and seeded from the repo's content/posts on first deploy. Keeps
       # promoted posts out of the git working tree and out of the image layer.
