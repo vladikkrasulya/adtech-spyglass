@@ -29,11 +29,12 @@
 
 - **Автодетект версії** — ortbtools аналізує сигнатурні поля (`imp.rwdd`,
   `device.sua`, `regs.gpp_sid`, `source.schain`) і визначає
-  чи це oRTB 2.5 / 2.6 baseline / 2.6-202211 / 2.6-202309 / 3.0.
-  Повертає рівень впевненості (`confidence`) і список знайдених сигналів
-- **Spec deep-links** — кожна знахідка має посилання на конкретний параграф
-  IAB-специфікації (`§3.2.10`, `§5.4` тощо), щоб ти не шукав вручну
-- **Severity levels** — error / warning / info. UI підсвічує іконкою
+  евристичний bucket oRTB 2.5 / 2.6 / 3.0. Датовані редакції 2.6
+  групуються у 2.6; per-revision detection/gating немає. Повертає рівень
+  впевненості (`confidence`) і список знайдених сигналів
+- **Spec deep-links** — IAB-знахідки мають посилання там, де підтримується
+  мапінг; vendor, behavior і meta findings можуть мати `specRef: null`
+- **Severity levels** — error / warning / info / question. UI підсвічує іконкою
 
 ### Діалекти (vendor overlays)
 
@@ -59,10 +60,11 @@
   окремий.
 - **Партнери** — каталог SSP/DSP/AdNetwork з якими працюєш. Drop-down
   фільтр над списком зразків звужує бібліотеку за партнером.
-- **Zero-knowledge шифрування** — все що зберігається, шифрується
-  на твоєму браузері ключем, похідним від твого пароля. **Сервер
-  не може розшифрувати твої зразки** навіть якщо захоче. При забутому
-  паролі є recovery key — без нього доступ втрачено назавжди.
+- **Шифрування bid-тіл у браузері** — current web save шифрує
+  `bid_req`/`bid_res` ключем, похідним від твого пароля. **Сервер не
+  може розшифрувати ці тіла.** Назва, статус і notes зразка, partner
+  metadata та власні dialect mappings залишаються відкритими для сервера;
+  direct API також не примушує клієнта шифрувати.
 - **Recovery key показується тільки раз** при реєстрації. Закриття вікна
   (Esc, кнопка "я зберіг", або клік повз) проходить через `confirm()`-діалог
   щоб випадково не втратити ключ.
@@ -70,7 +72,8 @@
 ### Локальна історія аналізів
 
 - Кожен `analyze stream` додає запис у History sidebar (зліва внизу).
-  Записи зберігаються у `localStorage` — переживають reload.
+  До 50 сирих request/response записів зберігаються у same-origin
+  `localStorage`, переживають reload і синхронізуються між вкладками.
 - Кожен запис має `👁` (peek) і `×` (delete). Peek показує JSON у
   read-only модалі без перезапису поточного editor — перевірити вміст
   без втрати роботи.
@@ -102,18 +105,18 @@
 
 ## Чого ortbtools **НЕ робить**
 
-| Обмеження                                              | Чому                                                                                                                                                     |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Не робить реальні bid-и                                | Це інспектор JSON, не RTB-клієнт. ortbtools не підключається до жодного exchange                                                                         |
-| Не виконує макроси (`${AUCTION_PRICE}` тощо) у runtime | Перевіряємо лише статично — чи макрос валідний, чи правильно записаний                                                                                   |
-| Не показує реальний рендер креативу з третіх сторін    | iframe-preview лише локальний `adm` HTML, без VAST-плеєру і без external-tag fetching                                                                    |
-| Не перевіряє повну oRTB 2.6 enforcement                | Поточна баzeline — 2.5 + детект 2.6 сигналів. **Strict 2.6 валідація — Phase 2 у roadmap**                                                               |
-| Не зберігає твої зразки якщо ти не залогінений         | Анонім — все живе тільки у вкладці браузера; reload — і пусто                                                                                            |
-| Не зберігає твій вставлений payload                    | Тіла валідуються в памʼяті й відкидаються; зберігаються лише похідні метадані та семпльований лог запитів (який містить твій IP) — ніколи не сам payload |
-| Не підтримує English UI                                | Поки тільки українська. `en.json` — заглушка, Phase 3 roadmap                                                                                            |
-| Не оптимізує bid strategy / eCPM / yield               | Це інспектор, не yield manager                                                                                                                           |
-| Не парсить TCF/GPP consent strings                     | Запланована окрема вкладка (Tier-2 AdTech extension у `kyivtech-portal/tools/`)                                                                          |
-| Не валідує `ads.txt` / `sellers.json` / `app-ads.txt`  | Те саме — окремий тулз, не замішаний у oRTB-інспектор                                                                                                    |
+| Обмеження                                                   | Чому                                                                                                                                                     |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Не робить реальні bid-и                                     | Це інспектор JSON, не RTB-клієнт. ortbtools не підключається до жодного exchange                                                                         |
+| Не виконує макроси (`${AUCTION_PRICE}` тощо) у runtime      | Перевіряємо лише статично — чи макрос валідний, чи правильно записаний                                                                                   |
+| Не показує реальний рендер креативу з третіх сторін         | iframe-preview лише локальний `adm` HTML, без VAST-плеєру і без external-tag fetching                                                                    |
+| Не має окремого strict-профілю для dated revisions oRTB 2.6 | Версії 2.6-202211/202303/202309 згруповані в один compatibility bucket `2.6`; окремого revision gating немає                                             |
+| Не зберігає анонімні зразки в серверній бібліотеці          | Браузерна History тримає до 50 сирих записів у same-origin `localStorage`; вони переживають reload і синхронізуються між вкладками                       |
+| Не зберігає твій вставлений payload                         | Тіла валідуються в памʼяті й відкидаються; зберігаються лише похідні метадані та семпльований лог запитів (який містить твій IP) — ніколи не сам payload |
+| Не підтримує довільні UI-локалі                             | Доступні українська, English і російська; невідомий locale fallback-иться на українську                                                                  |
+| Не оптимізує bid strategy / eCPM / yield                    | Це інспектор, не yield manager                                                                                                                           |
+| Не парсить TCF/GPP consent strings                          | Запланована окрема вкладка (Tier-2 AdTech extension у `kyivtech-portal/tools/`)                                                                          |
+| Не валідує `ads.txt` / `sellers.json` / `app-ads.txt`       | Те саме — окремий тулз, не замішаний у oRTB-інспектор                                                                                                    |
 
 ---
 
@@ -171,23 +174,24 @@ payload. Сам Cloudflare Tunnel перед нами теж веде станд
 
 ### Зареєстровані користувачі (коли логінишся)
 
-| Що                                   | Як зберігається                                                                                      |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| email + password hash                | bcrypt, 12 rounds                                                                                    |
-| Сесія                                | Токен + термін у SQLite, відновлюється при старті (TTL 30 днів). Рядок зберігає твій IP і user-agent |
-| Saved samples (`bid_req`, `bid_res`) | **AES-GCM ciphertext**. Сервер бачить байти, але не може розшифрувати                                |
-| KDF salt + wrapped DEK + IVs         | Так. Без твого пароля — марно для атакера                                                            |
-| Notes / metadata зразка              | Те саме шифрування                                                                                   |
-| Партнери (label)                     | Те саме шифрування                                                                                   |
-| `email_verified_at`                  | timestamp (тільки після verify-email)                                                                |
+| Що                                         | Як зберігається                                                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| email + password hash                      | bcrypt, 12 rounds                                                                                    |
+| Сесія                                      | Токен + термін у SQLite, відновлюється при старті (TTL 30 днів). Рядок зберігає твій IP і user-agent |
+| Saved sample bodies (`bid_req`, `bid_res`) | Штатний web UI надсилає **AES-GCM ciphertext**; direct API не enforce-ить шифрування                 |
+| KDF salt + wrapped DEK + IVs               | Так. Без твого пароля — марно для атакера                                                            |
+| Title / status / notes / partner_id        | Plaintext metadata, доступна серверу                                                                 |
+| Партнери + власні dialect mappings         | Plaintext account metadata, доступна серверу                                                         |
+| Явно збережений Behavior Corpus            | Plaintext probe events + label + notes                                                               |
+| `email_verified_at`                        | timestamp (тільки після verify-email)                                                                |
 
 Реалізація: у браузері пароль проходить через PBKDF2 600k SHA-256 → KEK →
 розгортає збережений DEK → DEK шифрує контент. Пароль також надсилається на
 сервер через HTTPS для перевірки логіна через bcrypt — сервер зберігає лише
 bcrypt-хеш, ніколи не відкритий текст, а KEK і розгорнутий DEK ніколи не
-залишають браузер. **Тому сервер не може розшифрувати твої збережені зразки.**
-При зміні пароля DEK перепаковується (не перегенерується), щоб не втратити
-доступ до старих зразків.
+залишають браузер. **Тому сервер не може розшифрувати bid-тіла, зашифровані
+штатним web UI.** При зміні пароля DEK перепаковується (не перегенерується),
+щоб не втратити доступ до старих зашифрованих тіл.
 
 ---
 
@@ -280,32 +284,28 @@ bcrypt-хеш, ніколи не відкритий текст, а KEK і роз
 
 ## Підтримувані версії
 
-| Тип     | Версія          | Статус                                                                  |
-| ------- | --------------- | ----------------------------------------------------------------------- |
-| OpenRTB | 2.5             | ✅ Validation + detection                                               |
-| OpenRTB | 2.6 baseline    | ✅ Detection (signals: rwdd, sua, gpp_sid). Strict validation — Phase 2 |
-| OpenRTB | 2.6-202211      | ✅ Detection. Strict validation — Phase 2                               |
-| OpenRTB | 2.6-202309      | ✅ Detection. Strict validation — Phase 2                               |
-| OpenRTB | 3.0             | ✅ Detection (envelope `openrtb.ver`). Strict validation — Phase 2      |
-| Native  | 1.1             | ✅ Validation + asset matching                                          |
-| Native  | 1.2             | ✅ Validation (eventtrackers signal)                                    |
-| VAST    | 2 / 3 / 4.x     | ✅ `video.protocols` accept 2-12                                        |
-| Dialect | IAB             | ✅ default                                                              |
-| Dialect | Vendor overlays | ✅ опціонально, через `?dialect=<vendor>` query                         |
-| Locale  | UK 🇺🇦           | ✅                                                                      |
-| Locale  | EN              | ⏳ Phase 3 (en.json — stub)                                             |
+| Тип     | Версія          | Статус                                                   |
+| ------- | --------------- | -------------------------------------------------------- |
+| OpenRTB | 2.5             | ✅ Validation + detection                                |
+| OpenRTB | 2.6             | ✅ Broad validation + heuristic detection                |
+| OpenRTB | Датовані 2.6    | ⚠️ Групуються у 2.6; per-revision detection/gating немає |
+| OpenRTB | 3.0             | ✅ Deep core validation; покриття AdCOM не вичерпне      |
+| Native  | 1.1             | ✅ Validation + asset matching                           |
+| Native  | 1.2             | ✅ Validation (eventtrackers signal)                     |
+| VAST    | 2 / 3 / 4.x     | ✅ `video.protocols` accept 2-12                         |
+| Dialect | IAB             | ✅ default                                               |
+| Dialect | Vendor overlays | ✅ опціонально, через `?dialect=<vendor>` query          |
+| Locale  | UK 🇺🇦           | ✅                                                       |
+| Locale  | EN 🇬🇧           | ✅                                                       |
+| Locale  | RU              | ✅                                                       |
 
 ---
 
 ## Що в roadmap
 
-Кратко (повний — у [`ROADMAP.md`](../ROADMAP.md)):
-
-- **Phase 2** — повна 2.6 enforcement, version-aware rules, native 1.1 vs 1.2 auto-switch
-- **Phase 3** — English UI, theme polish
-- **Phase 4-7** — productization, public/private split, account features ✅ shipped
-- **Phase 8** — verify-email, password reset з збереженням DEK ✅ shipped
-- Найближче — TCF/GPP/USP decoder як окрема вкладка, ads.txt/sellers.json checker
+Актуальний baseline, завершені етапи та пріоритети підтримуються у
+[`ROADMAP.md`](../ROADMAP.md). Старі Phase 0–5 нижче в тому файлі збережені як
+історичний design record, а не як поточний backlog.
 
 ---
 

@@ -436,7 +436,7 @@
           class="btn btn-ghost btn-sm"
           id="shareLinkBtn"
           data-action="share-link"
-          title="Copy a permalink — payload is encoded in the URL fragment, never reaches the server"
+          title="Copy a permalink — the fragment is absent from the initial request; opening it submits the payload to /api/analyze"
         >
           share link
         </button>
@@ -588,7 +588,7 @@
       >
       <span class="footer-sep">·</span>
       <a
-        href="https://github.com/vladikkrasulya/ortbtools"
+        href="https://github.com/vladikkrasulya/adtech-spyglass"
         target="_blank"
         rel="noopener"
         style="color: var(--text-dim); text-decoration: none"

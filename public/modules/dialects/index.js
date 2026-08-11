@@ -91,9 +91,9 @@ const L = {
     ru: 'Твои собственные диалекты',
   },
   builderDesc: {
-    en: 'Derive overlays from observed *.ext.* fields in your samples. Built in-browser; stored in your ZK library.',
-    uk: 'Виводь overlay з *.ext.* полів у твоїх зразках. Будується в браузері; зберігається у твоїй ZK-бібліотеці.',
-    ru: 'Выводи overlay из *.ext.* полей в твоих образцах. Строится в браузере; хранится в твоей ZK-библиотеке.',
+    en: 'Derive overlays from observed *.ext.* fields in your samples. Built in-browser; stored as plaintext account metadata.',
+    uk: 'Виводь overlay з *.ext.* полів у твоїх зразках. Будується в браузері; зберігається як відкриті метадані акаунта.',
+    ru: 'Выводи overlay из *.ext.* полей в твоих образцах. Строится в браузере; хранится как открытые метаданные аккаунта.',
   },
   openBuilder: {
     en: 'Open builder',
@@ -101,9 +101,9 @@ const L = {
     ru: 'Открыть конструктор',
   },
   anonPrompt: {
-    en: 'Sign in to create and manage custom dialects. The server stores ciphertext only.',
-    uk: 'Увійди щоб створювати та управляти власними діалектами. На сервері зберігається лише шифротекст.',
-    ru: 'Войди чтобы создавать и управлять собственными диалектами. На сервере хранится только шифротекст.',
+    en: 'Sign in to create and manage custom dialects. Dialect names and mappings are readable by the server.',
+    uk: 'Увійди, щоб створювати власні діалекти. Назви й мапінги діалектів читає сервер.',
+    ru: 'Войди, чтобы создавать собственные диалекты. Названия и маппинги диалектов читает сервер.',
   },
   signIn: {
     en: 'Sign in',

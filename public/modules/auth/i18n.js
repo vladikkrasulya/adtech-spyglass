@@ -37,9 +37,9 @@
         ru: 'создать аккаунт',
       },
       'auth.subtitle': {
-        uk: 'збережені запити · мапінги діалектів · метадані партнерів — все наскрізно зашифровано',
-        en: 'saved samples · dialect mappings · partner metadata — all end-to-end encrypted',
-        ru: 'сохранённые запросы · маппинги диалектов · метаданные партнёров — всё сквозное шифрование',
+        uk: 'тіла збережених bid-запитів шифруються у браузері · метадані партнерів і діалектів читає сервер',
+        en: 'saved bid bodies are encrypted in your browser · partner and dialect metadata is server-readable',
+        ru: 'тела сохранённых bid-запросов шифруются в браузере · метаданные партнёров и диалектов читает сервер',
       },
       'auth.label.password_hint': {
         uk: 'пароль (мінімум 8 символів)',

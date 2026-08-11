@@ -24,10 +24,11 @@ cd ortbtools
 npm install          # installs root deps + all workspace packages
 ```
 
-This repo is an **npm workspace**. The only package currently is
-`packages/core/` (the `@ortbtools/core` validator engine). The root
-`package.json` aggregates it; `npm install` at the root covers everything.
-You never need to `cd packages/core && npm install` separately.
+This repo is an **npm workspace** with two packages: `packages/core/` (the
+`@ortbtools/core` validator engine) and `packages/cli/` (the
+`@ortbtools/cli` command-line wrapper). The private root package aggregates
+both; `npm install` at the root covers the app and both workspaces. You never
+need to install dependencies separately inside either package directory.
 
 ### Start the container
 
@@ -157,11 +158,22 @@ English copy is plain imperative / declarative — no "Please" prefix.
 
 ### SemVer bumps
 
-`feat` → MINOR version bump. `fix` → PATCH. The bump goes in the **same
-commit** as the change, not a separate commit. Nine files need updating; see
-[ARCHMAP §2.4](./docs/ARCHMAP.md#24-semver-bump-locations-9-files-do-all-in-one-commit)
-for the exact list. The CI gate doesn't enforce the bump, but the CHANGELOG
-convention does — every release entry starts with the version number.
+App, Core, and CLI use independent SemVer lines. Choose the surface from the
+public contract that changed; a typical backward-compatible feature is MINOR
+and a fix is PATCH, but an app-only change must not bump Core or CLI.
+
+- **App:** update root `package.json`, root metadata in `package-lock.json`,
+  `public/version.js`, and the six static HTML fallbacks guarded by
+  `tests/version-consistency.test.js`.
+- **Core:** update `packages/core/package.json` and its workspace entry in
+  `package-lock.json` only when the engine contract changes.
+- **CLI:** update `packages/cli/package.json` and its workspace entry in
+  `package-lock.json` when CLI flags/output change; align its Core dependency
+  range when required.
+
+Keep the version and CHANGELOG entry in the same commit. See
+[ARCHMAP §2.4](./docs/ARCHMAP.md#24-independent-semver-release-surfaces) for
+the exact release surfaces.
 
 ---
 
@@ -195,13 +207,17 @@ Tests for the new rule go in `tests/rules-plugins.test.js` or a new
 
 ## Adding a frontend module
 
-The module contract is documented in
-[`public/modules/README.md`](./public/modules/README.md). The short layout:
+The loading and lifecycle contracts are documented in
+[`public/modules/README.md`](./public/modules/README.md). First decide whether
+the feature is a lazy SPA section, persistent shell/chrome code, or a
+feature/action/compatibility helper; the caller determines its contract.
+
+A typical directory uses only the files it needs:
 
 ```
 public/modules/<tool>/
-  index.js              IIFE; wires event listeners + window.* APIs
-  i18n.js               pushes translation keys to window.kt_i18n_modules
+  index.js              ES module or classic compatibility entry point
+  i18n.js               optional namespaced translations
   template.en.html      injected DOM (only if the tool adds markup)
   template.uk.html
   template.ru.html
@@ -209,10 +225,12 @@ public/modules/<tool>/
   README.md             what the tool does, window.* APIs, events
 ```
 
-Modules must be self-contained. They communicate with the rest of the shell
-via `kt:` DOM events and explicit `window.*` function assignments — never by
-importing each other. See the modules README for the full communication
-contract.
+SPA sections default-export the registry contract and are registered lazily in
+`public/shell-boot.js`; use `ctx.signal` and `ctx.addCleanup()` for lifecycle
+ownership. Direct ES imports and the event bus are preferred in module code.
+Existing classic compatibility helpers may use documented `window.*` APIs and
+`kt:` events. See the modules README and the existing caller before wiring a
+new feature.
 
 ### Asset versioning
 
@@ -253,7 +271,7 @@ trailing-`*` wildcards. `lib/http.js` provides `readJson`, `sendJson`,
 Since `server.js`, `lib/`, and `modules/` are all baked into the image,
 any change to a handler requires `docker compose up -d --build`.
 
-See [ARCHMAP §0](./docs/ARCHMAP.md#0-module-layout-the-big-picture-as-of-2026-05-10)
+See [ARCHMAP §0](./docs/ARCHMAP.md#0-module-layout)
 for the full backend module inventory and §1.4 for the consumer table.
 
 ---

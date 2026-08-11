@@ -7,8 +7,8 @@
         cards grouped by category (IAB · Чисті · Атаки). Each card has
         Load (→ /inspector?sample=SLUG) and Copy (clipboard) buttons.
 
-     2. Мої збереження (ZK-encrypted): if user is logged in, fetches
-        /api/samples and renders the saved bid request/response history.
+     2. Мої збереження: if user is logged in, fetches /api/samples and
+        renders saved metadata; bodies written by the web UI are encrypted.
         If not logged in, shows a sign-in prompt that navigates to /account.
 
    Backend endpoints used:
@@ -57,9 +57,9 @@ function renderShell(lang) {
     section: pick({ en: 'Library', uk: 'Бібліотека', ru: 'Библиотека' }, lang),
     subtitle: pick(
       {
-        en: 'Curated OpenRTB test cases plus your private ZK-encrypted saves.',
-        uk: 'Куровані OpenRTB тест-кейси плюс твої приватні ZK-зашифровані збереження.',
-        ru: 'Курируемые OpenRTB тест-кейсы плюс твои приватные ZK-зашифрованные сохранения.',
+        en: 'Curated OpenRTB test cases plus your private saves with browser-encrypted bid bodies.',
+        uk: 'Куровані OpenRTB тест-кейси плюс приватні збереження з bid-тілами, зашифрованими у браузері.',
+        ru: 'Курируемые OpenRTB тест-кейсы плюс приватные сохранения с bid-телами, зашифрованными в браузере.',
       },
       lang,
     ),
@@ -148,9 +148,9 @@ function renderSavedPanel(state, samples, lang) {
   if (state === 'anonymous') {
     const prompt = pick(
       {
-        en: 'Sign in to see your zero-knowledge encrypted samples. The server stores ciphertext only.',
-        uk: 'Увійди щоб побачити свої zero-knowledge зашифровані зразки. На сервері зберігається лише шифротекст.',
-        ru: 'Войди чтобы увидеть свои zero-knowledge зашифрованные образцы. На сервере хранится только шифротекст.',
+        en: 'Sign in to see your saved samples. The web UI encrypts bid bodies before upload; titles, notes, and partner metadata remain server-readable.',
+        uk: 'Увійди, щоб побачити збережені зразки. Вебінтерфейс шифрує bid-тіла перед завантаженням; назви, нотатки й дані партнерів читає сервер.',
+        ru: 'Войди, чтобы увидеть сохранённые образцы. Веб-интерфейс шифрует bid-тела перед загрузкой; названия, заметки и данные партнёров читает сервер.',
       },
       lang,
     );
@@ -165,9 +165,9 @@ function renderSavedPanel(state, samples, lang) {
   if (state === 'locked') {
     const msg = pick(
       {
-        en: 'Your library is encrypted. Unlock it from the cabinet to view samples here.',
-        uk: 'Твоя бібліотека зашифрована. Розблокуй її в кабінеті щоб побачити зразки тут.',
-        ru: 'Твоя библиотека зашифрована. Разблокируй её в кабинете чтобы увидеть образцы здесь.',
+        en: 'Your saved bid bodies are encrypted. Unlock them from the cabinet to view samples here.',
+        uk: 'Твої збережені bid-тіла зашифровані. Розблокуй їх у кабінеті, щоб побачити зразки тут.',
+        ru: 'Твои сохранённые bid-тела зашифрованы. Разблокируй их в кабинете, чтобы увидеть образцы здесь.',
       },
       lang,
     );

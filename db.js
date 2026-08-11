@@ -528,7 +528,7 @@ const Users = {
   /**
    * Atomic password reset + full wipe. Used by reset-password mode='wipe'
    * when user lost both password AND recovery key. Combines updatePassword
-   * + clearCryptoState + wipeUserData (all five per-user tables) in a single
+   * + clearCryptoState + wipeUserData (all per-user tables) in a single
    * db.transaction so a crash mid-flow rolls back everything — the user
    * either keeps their old state entirely or transitions to the clean-slate
    * state, never an inconsistent middle.
@@ -538,7 +538,8 @@ const Users = {
    * @returns {{
    *   samplesDeleted: number, partnersDeleted: number,
    *   analyzeLogDeleted: number, behaviorCorpusDeleted: number,
-   *   sessionsDeleted: number,
+   *   sessionsDeleted: number, dialectMappingsDeleted: number,
+   *   userDialectsDeleted: number,
    * }}
    */
   updatePasswordAndWipe(id, password_hash) {
@@ -559,12 +560,23 @@ const Users = {
         .prepare('DELETE FROM behavior_corpus WHERE user_id = ?')
         .run(id).changes;
       const sessionsDeleted = db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id).changes;
+      const dialectMappingsDeleted = db
+        .prepare(
+          `DELETE FROM dialect_mappings
+           WHERE dialect_id IN (SELECT id FROM user_dialects WHERE user_id = ?)`,
+        )
+        .run(id).changes;
+      const userDialectsDeleted = db
+        .prepare('DELETE FROM user_dialects WHERE user_id = ?')
+        .run(id).changes;
       return {
         samplesDeleted,
         partnersDeleted,
         analyzeLogDeleted,
         behaviorCorpusDeleted,
         sessionsDeleted,
+        dialectMappingsDeleted,
+        userDialectsDeleted,
       };
     })();
   },
@@ -586,10 +598,10 @@ const Users = {
 
   /**
    * Hard-delete all user data: samples + partners + analyze_log +
-   * behavior_corpus + sessions. Used by reset-password mode='wipe' when
-   * user has lost both password AND recovery key. Does NOT delete the
-   * user row (account survives, becomes empty). Returns counts of rows
-   * deleted per table.
+   * behavior_corpus + sessions + user dialects and their mappings. Used by
+   * reset-password mode='wipe' when user has lost both password AND recovery
+   * key. Does NOT delete the user row (account survives, becomes empty).
+   * Returns counts of rows deleted per table.
    *
    * Why sessions too: a wiping user has effectively repudiated their
    * old identity — any sessions issued under the old password are now
@@ -613,12 +625,23 @@ const Users = {
       .prepare('DELETE FROM behavior_corpus WHERE user_id = ?')
       .run(id).changes;
     const sessionsDeleted = db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id).changes;
+    const dialectMappingsDeleted = db
+      .prepare(
+        `DELETE FROM dialect_mappings
+         WHERE dialect_id IN (SELECT id FROM user_dialects WHERE user_id = ?)`,
+      )
+      .run(id).changes;
+    const userDialectsDeleted = db
+      .prepare('DELETE FROM user_dialects WHERE user_id = ?')
+      .run(id).changes;
     return {
       samplesDeleted,
       partnersDeleted,
       analyzeLogDeleted,
       behaviorCorpusDeleted,
       sessionsDeleted,
+      dialectMappingsDeleted,
+      userDialectsDeleted,
     };
   },
 };

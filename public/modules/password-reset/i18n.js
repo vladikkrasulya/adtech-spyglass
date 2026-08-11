@@ -91,14 +91,14 @@
         ru: '32-символьный ключ, который показывали при регистрации. Библиотека сохранится.',
       },
       'reset.mode.wipe': {
-        uk: 'Я втратив обидва — стерти все',
-        en: 'I lost both — wipe everything',
-        ru: 'Я потерял оба — стереть всё',
+        uk: 'Я втратив обидва — видалити збережені дані акаунта',
+        en: 'I lost both — delete saved account data',
+        ru: 'Я потерял оба — удалить сохранённые данные аккаунта',
       },
       'reset.mode.wipe_hint': {
-        uk: 'Усі збережені запити та партнери будуть видалені.',
-        en: 'All saved samples and partners will be deleted.',
-        ru: 'Все сохранённые запросы и партнёры будут удалены.',
+        uk: 'Збережені зразки, партнери, власні діалекти, історію активності та записи Behavior Corpus буде видалено з активного акаунта. Усі старі сесії завершаться; цей браузер увійде знову. Локальна History браузера не очищується; операційні журнали й резервні копії мають окремі строки зберігання.',
+        en: 'Saved samples, partners, custom dialects, activity history, and Behavior Corpus entries will be removed from the active account. All old sessions end; this browser is signed back in. Local browser History is not cleared; operational logs and backups have separate retention periods.',
+        ru: 'Сохранённые образцы, партнёры, собственные диалекты, история активности и записи Behavior Corpus будут удалены из активного аккаунта. Все старые сессии завершатся; этот браузер войдёт снова. Локальная History браузера не очищается; для операционных журналов и резервных копий действуют отдельные сроки хранения.',
       },
 
       // ── reset password — labels ───────────────────────────
@@ -118,9 +118,9 @@
         ru: 'recovery key (32 символа)',
       },
       'reset.wipe_warn': {
-        uk: '<b>Це знищить всі ваші збережені запити та партнерів.</b> Зашифровані дані не можна відновити без паролю чи recovery key.',
-        en: '<b>This will destroy all your saved samples and partners.</b> Encrypted data cannot be recovered without password or recovery key.',
-        ru: '<b>Это уничтожит все ваши сохранённые запросы и партнёров.</b> Зашифрованные данные нельзя восстановить без пароля или recovery key.',
+        uk: '<b>Це видалить перелічені вище дані з активного акаунта.</b> Локальна History не очищується; операційні журнали й резервні копії мають окремі строки зберігання. Зашифровані bid-тіла не можна відновити без пароля чи recovery key.',
+        en: '<b>This removes the account data listed above from the active account.</b> Local History is not cleared; operational logs and backups have separate retention periods. Encrypted bid bodies cannot be recovered without the password or recovery key.',
+        ru: '<b>Это удалит перечисленные выше данные из активного аккаунта.</b> Локальная History не очищается; для операционных журналов и резервных копий действуют отдельные сроки хранения. Зашифрованные bid-тела нельзя восстановить без пароля или recovery key.',
       },
       'reset.wipe_confirm': {
         uk: 'Я розумію і приймаю втрату даних',
@@ -157,9 +157,9 @@
         ru: 'Подтверди, что принимаешь потерю данных',
       },
       'reset.err.no_state': {
-        uk: 'Немає стану шифрування — використай "стерти все"',
-        en: 'No encryption state — use "wipe everything"',
-        ru: 'Нет состояния шифрования — используй "стереть всё"',
+        uk: 'Немає стану шифрування — вибери видалення збережених даних акаунта',
+        en: 'No encryption state — choose delete saved account data',
+        ru: 'Нет состояния шифрования — выбери удаление сохранённых данных аккаунта',
       },
       'reset.err.old_required': {
         uk: 'Введи поточний пароль',

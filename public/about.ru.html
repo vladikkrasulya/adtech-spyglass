@@ -6,7 +6,7 @@
     <title>Как пользоваться ortbtools — документация валидатора OpenRTB</title>
     <meta
       name="description"
-      content="Документация ortbtools: как работает валидатор OpenRTB, что анализирует, как обрабатываются ваши вставленные данные (отправляются по HTTPS, анализируются на сервере, не сохраняются), и что хранится со сквозным шифрованием (ключ есть только в вашем браузере). oRTB 2.5/2.6/3.0, Native, VAST."
+      content="Документация ortbtools: как работает валидатор OpenRTB, что анализирует, как вставленные bid-данные отправляются по HTTPS и не сохраняются сервером, и как тела bid, сохранённые через веб-интерфейс, шифруются в браузере. oRTB 2.5/2.6/3.0, Native, VAST."
     />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href="https://ortbtools.com/ru/about" />
@@ -20,7 +20,7 @@
     <meta property="og:title" content="Документация ortbtools — валидатор OpenRTB" />
     <meta
       property="og:description"
-      content="Как работает валидатор OpenRTB, что он анализирует на сервере, и как ваша сохранённая библиотека сквозно шифруется в браузере."
+      content="Как работает валидатор OpenRTB, что он анализирует на сервере, и как тела bid, сохранённые через веб-интерфейс, шифруются в браузере."
     />
     <meta property="og:url" content="https://ortbtools.com/ru/about" />
     <meta property="og:locale" content="ru_RU" />
@@ -541,15 +541,17 @@
             <li>
               <strong>Авто-детект версии</strong> — анализирует сигнатурные поля
               (<code>imp.rwdd</code>, <code>device.sua</code>, <code>regs.gpp_sid</code>,
-              <code>source.schain</code>) и определяет, oRTB 2.5 / 2.6 baseline / 2.6-202211 /
-              2.6-202309 / 3.0 это. Возвращает <code>confidence</code> и список найденных сигналов.
+              <code>source.schain</code>) и относит payload к эвристическому bucket oRTB 2.5 / 2.6 /
+              3.0. Датированные редакции 2.6 группируются в 2.6. Возвращает
+              <code>confidence</code> и список найденных сигналов.
             </li>
             <li>
-              <strong>Spec deep-links</strong> — каждая находка имеет ссылку на конкретный параграф
-              IAB-спецификации (<code>§3.2.10</code>, <code>§5.4</code>)
+              <strong>Spec deep-links</strong> — IAB-находки имеют ссылку там, где поддерживается
+              маппинг; vendor, behavior и meta findings могут не иметь spec link.
             </li>
             <li>
-              <strong>Severity levels</strong> — error / warning / info. UI подсвечивает иконкой.
+              <strong>Severity levels</strong> — error / warning / info / question. UI подсвечивает
+              иконкой.
             </li>
           </ul>
 
@@ -586,9 +588,10 @@
             <li>
               <strong>Ссылка</strong> — копирует self-contained URL вида
               <code>ortbtools.com/?#req=…&amp;res=…</code>. Payload deflate-сжатый +
-              base64url-закодированный в hash-фрагменте URL, который
-              <strong>никогда не доходит до сервера</strong> (zero-knowledge на уровне самой URL).
-              Открываешь ссылку — оба поля автоматически заполняются и анализ перезапускается.
+              base64url-закодированный в hash-фрагменте URL. Браузер не включает фрагмент в первый
+              HTTP-запрос, поэтому его нет в этом запросе и access-log. После открытия оба поля
+              автоматически заполняются, а payload отправляется в <code>/api/analyze</code> для
+              временного серверного анализа.
             </li>
             <li>
               <strong>Скачать бандл</strong> — пакует запрос + ответ + находки + crosscheck в один
@@ -610,10 +613,12 @@
             </li>
             <li><strong>Партнёры</strong> — каталог SSP/DSP/AdNetwork с которыми работаешь</li>
             <li>
-              <strong>Zero-knowledge шифрование</strong> — всё что сохраняется, шифруется в твоём
-              браузере ключом, производным от твоего пароля.
-              <strong>Сервер не может расшифровать твои образцы</strong> даже если захочет. Есть
-              recovery key для случая забытого пароля — без него доступ потерян навсегда.
+              <strong>Шифрование payload в браузере</strong> — тела request/response, сохранённые
+              через веб-интерфейс, шифруются ключом, производным от твоего пароля.
+              <strong>Сервер не может расшифровать эти тела.</strong> Названия, статусы, заметки
+              образцов, профили партнёров и маппинги диалектов остаются читаемыми сервером
+              метаданными. При забытом пароле есть recovery key — без него зашифрованные тела не
+              восстановить.
             </li>
           </ul>
 
@@ -706,9 +711,9 @@
           <p>
             <em>«Правильно ли сформирован JSON?»</em> Парсим payload, валидируем против IAB-спеки
             (oRTB 2.5 / 2.6 / 3.0, Native 1.x, VAST-протоколы), проверяем обязательные поля, типы,
-            форматы. Результат — список находок с severity (error / warning / info), JSON-path до
-            места ошибки и deep-link на конкретный параграф IAB-документации. Это самый быстрый слой
-            — миллисекунды на pure-JS правилах, без побочных вызовов.
+            форматы. Результат — список находок с severity (error / warning / info / question),
+            JSON-path до места ошибки и IAB deep-link там, где поддерживается маппинг. Это самый
+            быстрый слой — миллисекунды на pure-JS правилах, без побочных вызовов.
           </p>
 
           <h3>Слой 2 — Behavior (sandbox iframe)</h3>
@@ -880,10 +885,12 @@
           <p style="color: var(--text-muted); font-size: var(--fs-sm); margin-top: var(--space-5)">
             Probe работает client-side в песочнице iframe; собранные поведенческие события (вместе с
             разметкой креатива) отправляются на <code>/api/analyze-behavior</code> и оцениваются на
-            сервере, который ничего не сохраняет. Engine в <code>packages/core/behavior/</code> —
-            pure-data функция, только возвращающая находки. Sandbox блокирует само fraud-действие;
-            мы делаем <em>факт попытки</em> видимым — чтобы можно было прикрепить к bug-тикету и
-            вернуться к поставщику креатива со screenshot-ом.
+            сервере. Application не сохраняет эти behavior events или creative markup; sampled
+            operational metadata запроса (включая IP/path/status) всё равно может логироваться.
+            Engine в <code>packages/core/behavior/</code> — pure-data функция, только возвращающая
+            находки. Sandbox блокирует само fraud-действие; мы делаем <em>факт попытки</em> видимым
+            — чтобы можно было прикрепить к bug-тикету и вернуться к поставщику креатива со
+            screenshot-ом.
           </p>
 
           <hr />
@@ -942,7 +949,11 @@
               </tr>
               <tr>
                 <td>Не сохраняет образцы если ты не залогинен</td>
-                <td>Аноним — всё живёт только во вкладке браузера; reload — и пусто.</td>
+                <td>
+                  Анонимная History хранит до 50 сырых записей в same-origin
+                  <code>localStorage</code>; они переживают reload и синхронизируются между
+                  вкладками.
+                </td>
               </tr>
               <tr>
                 <td>Не сохраняет твой вставленный payload</td>
@@ -1022,8 +1033,11 @@ findings[]: { id, level, path, params, msg, specRef }
           <p>
             Сама валидация происходит <strong>синхронно в одном Node.js процессе</strong> — ни один
             внешний сервис не привлекается для оценки твоего bid. После ответа записываются только
-            производные метаданные (формат, версия oRTB, количество находок) в нашу аналитику и логи
-            запросов; тела request и response не записываются никуда.
+            производная аналитика (формат, версия oRTB, количество находок) и sampled operational
+            metadata запроса (включая IP, path, status и latency) могут записываться; тела не
+            записываются в серверную базу или application log. Отдельно браузер хранит до 50
+            последних сырых записей в same-origin <code>localStorage</code>, чтобы History
+            переживала reload и синхронизировалась между вкладками.
           </p>
 
           <hr />
@@ -1037,7 +1051,9 @@ findings[]: { id, level, path, params, msg, specRef }
             храним обезличенную аналитику (определённый формат, версию oRTB, количество находок) и
             операционный лог запросов, фиксирующий метаданные запроса — время, метод, путь, статус и
             твой IP-адрес (каждую ошибку плюс выборку успешных вызовов) — но никогда payload. Сам
-            Cloudflare Tunnel перед нами тоже ведёт стандартный access-log.
+            Cloudflare Tunnel перед нами тоже ведёт стандартный access-log. Отдельно браузерная
+            History хранит до 50 последних сырых записей в same-origin <code>localStorage</code>;
+            это не серверная синхронизация истории.
           </p>
 
           <h3>Зарегистрированные пользователи</h3>
@@ -1061,9 +1077,13 @@ findings[]: { id, level, path, params, msg, specRef }
                 </td>
               </tr>
               <tr>
-                <td>Сохранение образцов (<code>bid_req</code>, <code>bid_res</code>)</td>
                 <td>
-                  <strong>AES-GCM ciphertext</strong>. Сервер видит байты, но не может расшифровать.
+                  Тела образцов, сохранённых через веб-интерфейс (<code>bid_req</code>,
+                  <code>bid_res</code>)
+                </td>
+                <td>
+                  <strong>AES-GCM ciphertext</strong>. Сервер не может расшифровать тела,
+                  зашифрованные веб-интерфейсом. Direct API-клиенты не обязаны шифровать.
                 </td>
               </tr>
               <tr>
@@ -1072,11 +1092,15 @@ findings[]: { id, level, path, params, msg, specRef }
               </tr>
               <tr>
                 <td>Notes / metadata образца</td>
-                <td>То же шифрование</td>
+                <td>Открытый текст, доступный серверу</td>
               </tr>
               <tr>
-                <td>Партнёры (label)</td>
-                <td>То же шифрование</td>
+                <td>Партнёры и маппинги собственных диалектов</td>
+                <td>Открытые метаданные аккаунта, доступные серверу</td>
+              </tr>
+              <tr>
+                <td>Явно сохранённые записи Behavior Corpus</td>
+                <td>Открытые probe events, label и notes</td>
               </tr>
               <tr>
                 <td><code>email_verified_at</code></td>
@@ -1089,9 +1113,11 @@ findings[]: { id, level, path, params, msg, specRef }
             сохранённый DEK → DEK шифрует контент. Пароль также отправляется на сервер по HTTPS для
             проверки логина через bcrypt — сервер хранит только bcrypt-хеш, никогда не открытый
             текст, а KEK и развёрнутый DEK никогда не покидают браузер.
-            <strong>Поэтому сервер не может расшифровать твои сохранённые образцы.</strong> При
-            смене пароля DEK перепаковывается (не перегенерируется), чтобы не потерять доступ к
-            старым образцам.
+            <strong
+              >Поэтому сервер не может расшифровать bid-тела, зашифрованные веб-интерфейсом.</strong
+            >
+            При смене пароля DEK перепаковывается (не перегенерируется), чтобы не потерять доступ к
+            старым зашифрованным телам. Полное описание полей — в <code>docs/PRIVACY.md</code>.
           </p>
 
           <hr />
@@ -1187,17 +1213,17 @@ findings[]: { id, level, path, params, msg, specRef }
               <tr>
                 <td>OpenRTB</td>
                 <td>2.6 baseline</td>
-                <td class="ok">Detection (rwdd, sua, gpp_sid)</td>
+                <td class="ok">Broad validation + detection</td>
               </tr>
               <tr>
                 <td>OpenRTB</td>
-                <td>2.6-202211 / 2.6-202309</td>
-                <td class="ok">Detection. Strict — Phase 2</td>
+                <td>Датированные редакции 2.6</td>
+                <td>Группируются в bucket 2.6; per-revision gating нет</td>
               </tr>
               <tr>
                 <td>OpenRTB</td>
                 <td>3.0</td>
-                <td class="ok">Detection (envelope <code>openrtb.ver</code>)</td>
+                <td class="ok">Deep core validation; частичное покрытие AdCOM</td>
               </tr>
               <tr>
                 <td>Native</td>
@@ -1290,9 +1316,11 @@ findings[]: { id, level, path, params, msg, specRef }
           </ul>
           <p>
             Исходники:
-            <a href="https://github.com/vladikkrasulya/ortbtools" target="_blank" rel="noopener"
-              >github.com/vladikkrasulya/ortbtools</a
-            >
+            <a
+              href="https://github.com/vladikkrasulya/adtech-spyglass"
+              target="_blank"
+              rel="noopener"
+              >github.com/vladikkrasulya/adtech-spyglass</a
             >
           </p>
 

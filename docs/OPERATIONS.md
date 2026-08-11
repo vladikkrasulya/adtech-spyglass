@@ -24,13 +24,16 @@ Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/ortbtools/`.
 
 ## 1. Architecture Overview
 
-Single container `ortbtools` built from the local repo. No external DB, no
-Redis, no queue. Dependencies:
+Single application container `ortbtools` built from the local repo. It has no
+app-managed Postgres, Redis, or queue. ClickHouse is an optional external
+persistent dependency for analytics and news/blog data; those features no-op
+without credentials.
 
 ```
 [internet] → CF Tunnel → kyivtech-portal (host net, port 80)
                             │ PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090
                             └→ ortbtools (127.0.0.1:8090 → container :3000)
+                                   └→ ClickHouse on kt-shared (optional)
 ```
 
 The portal exposes ortbtools in two ways:
@@ -44,9 +47,13 @@ The portal exposes ortbtools in two ways:
 directly. ortbtools is on Docker's default bridge and publishes only to
 `127.0.0.1:8090` — never to `0.0.0.0`.
 
-**SQLite** is the only persistent store — one file, WAL mode, no migration tooling
-needed beyond running the app (schema auto-applied at startup via `db.js`). No
-Postgres or Redis to manage.
+**SQLite** is the application's only mounted local store: one WAL-mode database
+whose schema is auto-applied at startup by `db.js`. When `CLICKHOUSE_*`
+credentials are configured, ClickHouse separately persists derived analytics,
+news drafts, and published blog records. The `/data` backup procedure in this
+runbook covers SQLite and persisted Markdown content only; ClickHouse backup and
+restore belong to that external stack's operations. There is no Postgres or
+Redis service to manage for ortbtools.
 
 For deep architectural context see `ARCHITECTURE.md` (especially §0 Current State).
 
@@ -165,41 +172,22 @@ same directory are part of the live state. `sqlite3` handles WAL transparently �
 do not need to stop the container to run read queries, but be aware that writes from
 the shell while the container is running can race with the app.
 
-### 4.5 Reset a test user's password
+### 4.5 Reset or recover a user's password
 
-**This is destructive.** Resetting `password_hash` via SQL also invalidates the
-user's KEK (key-encryption key), which is derived from the old password. The wrapped
-DEK stored in `dek_wrapped` becomes unrecoverable — the user permanently loses access
-to their encrypted library (saved samples, partner notes). If they have a recovery key
-they can wrap a new DEK from the recovery path. If they do not, library data is lost.
+Use the application's Forgot Password flow. It preserves the security invariants and
+invalidates sessions atomically:
 
-Use this only for test accounts or at explicit user request where they understand the
-consequence.
+- `rotate` re-wraps the existing DEK when the user can unlock it;
+- `recover` uses the one-time recovery key to unwrap and re-wrap the existing DEK;
+- `wipe` is the explicit lost-password-and-recovery-key path. It changes the password,
+  clears crypto state, and deletes samples, partners, custom dialects/mappings,
+  analyze history, Behavior Corpus rows, and sessions while keeping the account email.
 
-```bash
-# Generate a bcrypt hash first (cost 12):
-python3 -c "import bcrypt; print(bcrypt.hashpw(b'newpassword', bcrypt.gensalt(12)).decode())"
-# or: node -e "const b=require('bcryptjs'); b.hash('newpassword',12).then(console.log)"
-```
-
-Then in the SQLite shell:
-
-```sql
--- DESTRUCTIVE: user loses encrypted library access (KEK invalidated)
-UPDATE users
-SET    password_hash = '$2b$12$<hash_from_above>',
-       dek_wrapped   = NULL,
-       dek_iv        = NULL,
-       kdf_salt      = NULL
-WHERE  email = 'target@example.com';
-
--- Verify exactly one row affected before committing:
-SELECT id, email FROM users WHERE email = 'target@example.com';
-```
-
-After the UPDATE the user can log in with the new password but their library will be
-empty (encrypted blobs remain in `samples` but the DEK is gone so they decrypt to
-garbage — they will see an error or empty state depending on the UI path).
+Do **not** update `password_hash` or null crypto columns directly in SQLite. That
+unsupported shortcut leaves existing sessions valid, bypasses the atomic reset logic,
+and can make web-UI-encrypted bid bodies permanently unreadable even when the user has
+a recovery key. For a disposable test account, use the application's `wipe` mode so
+the deletion and session invalidation happen together.
 
 ### 4.6 Force-clear all anonymous / expired sessions
 

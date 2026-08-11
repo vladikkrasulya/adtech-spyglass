@@ -1,101 +1,103 @@
 # ortbtools frontend modules
 
-Each user-facing tool is its own folder under `public/modules/`. Add
-the folder, wire it in the shell (or the lazy stub in the dispatcher),
-the tool exists. Delete the folder, unregister, the tool is gone —
-without touching anything else. Same idea as design-system tokens, but
-for code.
+`public/modules/` contains frontend features, but not every folder has the
+same loading contract. The authoritative inventory is the directory itself;
+the authoritative loading paths are `public/shell-boot.js`,
+`public/core/registry.js`, and each feature's callers.
 
-> Backend has a parallel layout under `modules/` (note: no `public/`
-> prefix) — same one-folder-per-tool rule applied to server-side
-> handlers. See `docs/ARCHMAP.md` §0 for the full map.
+The backend has a parallel one-folder-per-feature layout under `modules/`
+(without the `public/` prefix). See `docs/ARCHMAP.md` for the broader project
+map.
 
-## Inventory (as of 2026-05-10)
+## Categories and loading
 
-**Eager** (boot-loaded via `<script>` tag — needed at first paint):
+- **SPA section modules** own route-level content mounted into `#app-root`.
+  `public/shell-boot.js` registers them with `registry.registerLazy()`, so the
+  section and its static imports are fetched on first activation. These modules
+  default-export the registry contract described below.
+- **Shell/chrome modules** provide persistent navigation and topbar behavior.
+  The shell imports and mounts them once, outside the active-section lifecycle.
+- **Feature and action modules** provide modals, inspector actions, search, or
+  supporting behavior. Their callers load them as needed from the shell,
+  modal host, topbar, or inspector dispatcher. Some compatibility helpers are
+  still classic scripts loaded by the locale shells. Follow the local README
+  and the caller instead of assuming a registry lifecycle.
 
-- `share/` — fragment-encoded permalinks
-- `embed/` — iframe-embed snippet generator
-- `shortcuts/` — keyboard cheatsheet
+Do not maintain a dated module list here. Add or remove the feature directory
+and update the relevant registration or call site in the same change.
 
-**Lazy** (loaded on first dispatcher click via `await import()`):
+## SPA section contract
 
-- `mirror/` — canonical-counterpart generator
-- `live/` — SSE-driven live stream
-- `simulate/` — deterministic server-rule 3-strategy DSP demo
-- `corpus-save/` — labelled behavior corpus capture
-- `partners/` — partner CRUD modal
-- `auth/` — login + register
-- `unlock/` — re-derive DEK from password
-- `recovery/` — one-time recovery-key display
-- `password-reset/` — forgot/reset flow (rotate / recover / wipe)
-- `save-sample/` — encrypted sample save + partner-suggest banner
-- `edit-sample/` — sample metadata edit
+Section modules use the contract implemented by `public/core/registry.js`:
 
-**Plus pre-modularization folders** (not following the same shape yet):
-
-- `inspector/` — workbench template + mount lifecycle (loaded via
-  `<script type="module">` from each shell)
-- `intel/` — banner/builder/observer/storage/index split
-- `behavior/` — runtime behavior analyzer
-
-## Layout
-
-```
-modules/<tool>/
-  index.js        ← entry point. IIFE that wires up the tool
-                    (event listeners, exposed window.* APIs, lifecycle).
-                    Must be self-contained: no imports from other modules.
-  i18n.js         ← per-module translation registration. Pushes its keys
-                    to window.kt_i18n_modules; the central /i18n.js merges
-                    them into the global I18N table. Keys are NAMESPACED
-                    by tool ("toast.share_*", "modal.mirror.*", …).
-  template.{lang}.html  ← (only if the tool injects DOM). One file per
-                          locale. Loaded lazy by index.js on first use.
-  styles.css      ← (only if the tool needs styles beyond design-system
-                    tokens). Loaded lazy by index.js the same way.
-  README.md       ← one-paragraph description: what the tool does,
-                    what window.* APIs it exposes, what events it
-                    listens to / dispatches.
+```js
+export default {
+  id: 'example',
+  route: '/example', // optional metadata; routes are registered by the shell
+  css: '/modules/example/styles.css', // optional
+  manifest: { title: { en: 'Example', uk: 'Приклад', ru: 'Пример' } }, // optional
+  async mount(root, ctx) {},
+  async unmount(root) {}, // optional final teardown
+};
 ```
 
-## Lifecycle
+`mount()` receives a fresh context for every activation:
 
-Modules are loaded in the HTML shell as `<script>` tags in this order:
+- shared helpers: `t`, `toast`, and `escapeHtml`;
+- event-bus helpers: `emit`, `on`, and `off`;
+- live `lang` and `theme` getters;
+- a mount-scoped `AbortSignal` in `ctx.signal`;
+- `ctx.addCleanup(fn)` for resources that do not accept an abort signal.
 
-1. `/i18n.js` (central) — defines `window.t()` and `window.registerI18nModule()`.
-2. `/modules/<tool>/i18n.js` — pushes keys (or registers if i18n.js already loaded).
-3. `/modules/<tool>/index.js` — wires the tool. Listens for `kt:inspector-ready`
-   if it depends on workbench DOM (#bidReq, #bidRes, …).
+Pass `ctx.signal` to listeners and requests where supported. Register cleanup
+for resources such as `EventSource`, intervals, observers, and dynamically
+created nodes. On deactivation, the registry aborts the signal, runs registered
+cleanups in LIFO order, calls optional `unmount()`, and finally clears the
+section root. A stylesheet declared through the module's `css` field is loaded
+before `mount()` and retained for later activations.
 
-Module index.js MUST be wrapped in an IIFE — `'use strict'` mode, no
-globals leaked except via explicit `window.<name>` assignments at the
-bottom of the file.
+## Typical directory shape
 
-## Communication between modules
+Feature directories use only the files they need:
 
-Modules don't import each other. They communicate via:
+```text
+public/modules/<feature>/
+  index.js                 entry point
+  i18n.js                  optional feature translations
+  template.<lang>.html     optional localized templates
+  styles.css               optional feature styles
+  README.md                optional feature-specific contracts
+```
 
-- **window.\* APIs** — `window.buildShareUrl`, `window.runAnalysis`,
-  `window.toast`, `window.t`. Documented in each module's README.
-- **DOM events** — `kt:inspector-ready`, `kt:locale-changed`,
-  `kt:analysis-complete`. Names are `kt:` prefixed.
-- **Shared DOM contracts** — `#bidReq`, `#bidRes`, `#findingDetail`,
-  `#modalRoot`. Owned by `modules/inspector/` (the workbench template).
+`index.js` may be an ES module or a classic-script compatibility entry point,
+depending on its caller. Do not require an IIFE or ban imports globally: SPA
+sections use ES imports, while older shell-loaded helpers may expose explicit
+`window.*` APIs.
 
-If you need a new cross-module API, it gets a `kt:` event or a
-`window.*` function with a one-line comment in both modules' READMEs.
-No "magic" — every cross-module touchpoint is explicit and grepable.
+## Communication and i18n
 
-## Versioning
+Prefer direct ES imports for shared code and the event bus for lifecycle-aware
+cross-feature notifications. Existing compatibility surfaces also use
+documented `window.*` functions and `kt:` DOM events. Keep those touchpoints
+explicit in the producer, consumer, and feature README when one exists.
 
-Each module's `i18n.js` and `index.js` are content-hashed by the server's
-`rewriteAssetVersions()` (server.js:245) — no manual `?v=N` bumps needed.
-Touch the file → hash changes → cache invalidates.
+The central `/i18n.js` owns the global translation table. A feature-local
+`i18n.js` can call `window.registerI18nModule()` after central i18n has loaded,
+or queue its dictionary in `window.kt_i18n_modules` when loaded earlier. Keep
+feature keys namespaced.
+
+## Asset versioning
+
+The server rewrites served HTML and JavaScript asset references with content
+hashes, including static and dynamic imports. Modules with several templates or
+styles can use a `__<MODULE>_BUNDLE_HASH__` token so any file in that module
+invalidates the bundle URL. Normal module changes do not need manual version
+bumps.
 
 ## Tests
 
-Module-local tests live in `tests/modules/<tool>.test.js` (top-level
-tests/ dir, mirroring the modules/ structure). Reason: Node's test
-runner discovers via glob; keeping all tests under tests/ avoids per-
-module test-config repetition.
+Frontend module tests live directly under `tests/`, for example
+`tests/<tool>.test.js`. Package scripts invoke Node's test runner with the
+shallow `tests/*.test.js` glob, so nested files such as
+`tests/modules/<tool>.test.js` are not discovered by the standard test and CI
+commands.

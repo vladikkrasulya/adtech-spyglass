@@ -9,21 +9,26 @@ for an auditor who wants to verify the claims against the source code.
 
 ## TL;DR
 
-- **Anonymous use (no login) never persists your payload bodies.** Your `BidRequest`
-  and `BidResponse` JSON is sent over HTTPS, analyzed on the server, and discarded — it
-  never touches a database. The server does keep _derived_ records: anonymous analytics
-  (detected format, oRTB version, finding counts) and an operational request log that
-  records request metadata including your IP address (sampled). Neither contains the
-  payload itself.
-- **Signed-in users' saved samples are encrypted in the browser before they leave
-  your machine.** The server stores AES-GCM-256 ciphertext. It cannot decrypt the
-  contents.
+- **Anonymous server-side processing never persists your payload bodies.** Your
+  `BidRequest` and `BidResponse` JSON is sent over HTTPS, analyzed on the server, and
+  discarded — it never touches the server's databases. The server does keep _derived_
+  records: anonymous analytics (detected format, oRTB version, finding counts) and an
+  operational request log that records request metadata including your IP address
+  (sampled). Neither contains the payload itself.
+- **The browser keeps a local analysis history.** Up to 50 recent raw request/response
+  entries are stored in same-origin `localStorage`, survive reloads, and synchronize
+  between tabs. This is browser persistence, not a server-side history sync.
+- **The current web save flow encrypts saved request/response bodies before upload.**
+  The server stores AES-GCM-256 ciphertext and cannot decrypt those bodies. Sample
+  titles, statuses and notes; partner profiles; and custom-dialect mappings are
+  plaintext server metadata. The API does not cryptographically verify that arbitrary
+  callers supplied ciphertext; the `is_encrypted` list flag only reflects IV presence.
 - **The Key Encryption Key (KEK) is derived from your password using PBKDF2 and
   never leaves the browser.** ortbtools the server never sees it.
 - **A 32-character hex recovery key is shown once at registration.** It is the only
-  way to regain access to your library if you forget your password. If both your
-  password and recovery key are lost, the encrypted library can only be wiped — there
-  is no server-side recovery path.
+  way to regain access to encrypted sample bodies if you forget your password. If both
+  your password and recovery key are lost, the account's saved data can only be wiped —
+  there is no server-side decryption path.
 - **The `/api/analyze` endpoint reads your payload transiently.** The validator runs
   server-side, returns findings, and drops the payload. It does not write the payload
   to the database. See "What the validator pipeline does" below.
@@ -38,11 +43,11 @@ for an auditor who wants to verify the claims against the source code.
 
 ### Anonymous use (no login)
 
-| Data                              | Stored?                         | Notes                                                                                                                                                                                                                |
-| --------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BidRequest` / `BidResponse` JSON | Body: no. Derived metadata: yes | Body is validated transiently and discarded — never written to DB or logs. Derived analytics (format, version, finding counts) go to ClickHouse `validation_logs`.                                                   |
-| Per-tab analysis history          | Browser only                    | `localStorage` — never sent to the server                                                                                                                                                                            |
-| IP address                        | Yes — sampled request log       | In-memory rate-limit buckets (swept hourly) plus an operational request log (ClickHouse `event_log`) that records your IP with request metadata for every error and a sample of successful calls. Never the payload. |
+| Data                              | Stored?                       | Notes                                                                                                                                                                                                                |
+| --------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BidRequest` / `BidResponse` JSON | Body: browser only; server no | Sent to `/api/analyze`, validated transiently, and never written to a server DB or application log. Derived analytics (format, version, finding counts) go to ClickHouse `validation_logs`.                          |
+| Recent analysis history           | Browser `localStorage`        | Up to 50 raw request/response entries. Survives reloads and synchronizes across same-origin tabs. There is no dedicated history upload; analyzing an entry still sends its payload to `/api/analyze` as described.   |
+| IP address                        | Yes — sampled request log     | In-memory rate-limit buckets (swept hourly) plus an operational request log (ClickHouse `event_log`) that records your IP with request metadata for every error and a sample of successful calls. Never the payload. |
 
 ortbtools keeps two derived records for anonymous analyses: an anonymous analytics row
 (detected format, oRTB version, and finding counts — ClickHouse `validation_logs`) and
@@ -63,7 +68,7 @@ bodies.
 | Recovery wrapped DEK + salt | Yes (ciphertext + separate salt)  | For password-reset path                                                                                                                   |
 | Name, phone, card           | Not collected                     | None of these fields exist                                                                                                                |
 
-### Saved samples (authenticated)
+### Saved samples (authenticated, current web UI)
 
 | Column              | What it contains                                                      |
 | ------------------- | --------------------------------------------------------------------- |
@@ -73,12 +78,23 @@ bodies.
 | `title`             | Plaintext (set by user; consider omitting sensitive info)             |
 | `partner_id`        | Integer reference to the partner row                                  |
 | `status`            | `clean` / `warnings` / `errors` (plaintext)                           |
-| `notes`             | Encrypted (ciphertext, same DEK) as of schema v3                      |
+| `notes`             | Plaintext user-supplied metadata                                      |
 | `created_at`        | Timestamp                                                             |
 
-`title` and `status` are stored in plaintext because they are used for sorting and
-filtering on the server before results are returned to the browser for decryption.
-If the title itself is sensitive, treat it like you would a filename on a shared drive.
+The web UI encrypts `bid_req` and `bid_res` before it calls `/api/samples`. The API
+also accepts legacy or direct-client rows without IVs and does not validate that a
+submitted string is ciphertext; the list response's `is_encrypted` value means only
+that `req_iv` is present. `title`, `status`, `notes`, `partner_id`, and timestamps are
+plaintext so the server can list, filter, and edit metadata without decrypting payload
+bodies. Treat all of those fields like filenames or labels on a shared drive.
+
+### Partner profiles and custom dialects (authenticated)
+
+Partner `name`, generated `slug`, `notes`, and creation timestamp are stored as
+plaintext SQLite columns. Custom dialect names and their mappings — including signal
+paths/values, semantic labels, fingerprints, parameters, confidence, notes, and
+timestamps — are also plaintext. These records are account-scoped and auth-gated, but
+they are not encrypted with the sample DEK and are readable by the server operator.
 
 ### Activity log (Cabinet → Activity)
 
@@ -93,6 +109,15 @@ activity heatmap and insights cards in the Cabinet derive from this metadata onl
 
 Aggregate counts computed from `analyze_log` metadata rows for the current user. No
 decryption of saved samples occurs during insights computation.
+
+### Behavior Corpus (authenticated, explicit save)
+
+The Behavior analyzer itself is transient, but choosing to save a labelled corpus
+entry via `POST /api/behavior/corpus` persists the probe `events_json`, label,
+free-form `notes`, optional source-sample link, and timestamp in SQLite. These fields
+are plaintext and readable by the server operator. They may include URL or behavior
+details from the creative probe, so save a corpus entry only when that retention is
+acceptable.
 
 ---
 
@@ -128,11 +153,12 @@ recovery_dek_wrapped, recovery_dek_iv }`. The server stores the email and the si
    crypto fields. The password is transmitted over TLS and hashed with bcrypt
    **server-side** (`auth.js`, `bcrypt.hash`, 12 rounds); only the resulting hash is
    persisted — the plaintext is never written to disk or logs. The KEK and DEK, by
-   contrast, are never sent to the server, which is why it cannot decrypt your samples.
+   contrast, are never sent to the server, which is why it cannot decrypt the
+   request/response bodies encrypted by the current web UI.
 
 6. **Recovery key shown once.** The 32-hex recovery key is displayed in a modal. It
    is never sent to the server and never stored. If you lose it, the recovery wrap
-   path is permanently unavailable and password-reset can only wipe your library.
+   path is permanently unavailable and password-reset can only wipe saved account data.
 
 ### Encrypting a saved sample
 
@@ -142,8 +168,11 @@ When you click "save" on an analysis:
    was unwrapped from `dek_wrapped` at login time using your password-derived KEK).
 2. `encryptBlob(dekKey, bidReqJSON)` → `{ iv, ct }` (fresh 12-byte IV per blob).
 3. Same for `bidResJSON`.
-4. The browser POSTs `{ req_iv, bid_req_ct, res_iv, bid_res_ct, title, partner_id, status }`
-   to `/api/samples`. The plaintext JSON never appears in the POST body.
+4. The browser POSTs
+   `{ req_iv, bid_req, res_iv, bid_res, title, partner_id, status, notes }` to
+   `/api/samples`. In the current web flow, `bid_req` and `bid_res` hold ciphertext,
+   so plaintext bid JSON never appears in this POST body. The title, partner reference,
+   status, and notes do appear as plaintext metadata.
 
 ### What the server stores (summary)
 
@@ -164,10 +193,20 @@ samples table:
   req_iv / res_iv  ← base64(12-byte IVs)
   title            ← plaintext (user-supplied, used for filtering)
   status           ← plaintext (clean/warnings/errors, used for filtering)
+  notes            ← plaintext (user-supplied)
+  partner_id       ← plaintext reference to a partner row
+
+partners table:
+  name / slug / notes / created_at  ← plaintext account metadata
+
+user_dialects + dialect_mappings tables:
+  names, signal mappings, params, notes and timestamps  ← plaintext account metadata
 ```
 
 The server cannot recover the DEK without the user's password or recovery key. A
-full DB dump reveals only ciphertext and metadata.
+full DB dump reveals encrypted sample bodies alongside the plaintext metadata listed
+above. Direct API clients can also create rows without IVs; server storage does not
+enforce or prove client-side encryption.
 
 ---
 
@@ -183,9 +222,10 @@ After you set a new password, the DEK is re-wrapped with the new KEK. The recove
 wrap is preserved so the key-on-paper remains valid.
 
 If the password is forgotten **and** the recovery key is lost, there is no server-side
-path to decrypt the library. The "wipe" mode in the reset flow deletes the encrypted
-samples and creates a fresh crypto state — your data is gone but your account
-(email, metadata) can continue.
+path to decrypt the encrypted sample bodies. The reset flow's `wipe` mode clears the
+crypto state and deletes samples, partners, custom dialects/mappings, activity rows,
+saved Behavior Corpus rows, and sessions before a fresh crypto state is created; the
+account email remains.
 
 Source: `public/ortbtools-crypto.js`, `openWithRecoveryKey()`;
 `public/modules/password-reset/index.js` (rotate / recover / wipe modes).
@@ -263,8 +303,10 @@ cd /srv/DATA/Stacks/ortbtools && docker compose up -d
 ```
 
 **Not disabled by either option:** per-user `analyze_log` rows in SQLite (Cabinet →
-Activity for signed-in users), bcrypt auth, encrypted library storage, and stdout
-pino logs. Payload bodies are never persisted regardless of these settings.
+Activity for signed-in users), bcrypt auth, saved-sample/account storage, and stdout
+pino logs. `/api/analyze` payload bodies are never persisted server-side regardless of
+these settings; browser history and explicitly saved samples follow the separate
+retention rules above.
 
 See also `docs/OPERATIONS.md` §4.10.
 
@@ -275,14 +317,17 @@ See also `docs/OPERATIONS.md` §4.10.
 ### What ortbtools protects against
 
 **Server-side data breach (full DB dump).** An attacker who reads the SQLite database
-file sees bcrypt hashes, ciphertext blobs, and metadata. Without the user's password
-or recovery key, the ciphertext cannot be decrypted. The wrapped DEK and IVs in the
-`users` table are cryptographically inert without the KEK, which is never stored.
+file sees bcrypt hashes, encrypted body blobs produced by the current web UI, and all
+plaintext metadata described above. Without the user's password or recovery key, those
+encrypted body blobs cannot be decrypted. The wrapped DEK and IVs in the `users` table
+are cryptographically inert without the KEK, which is never stored. Because the API
+does not enforce ciphertext, any direct-client sample saved as plaintext is visible in
+the dump.
 
 **Operator curiosity.** The server operator (the person running the container) has
-read access to the database file. They see the same thing an attacker with a DB dump
-would see: ciphertext. They cannot read `bid_req` / `bid_res` payloads without the
-user's password.
+read access to the database file. They can read sample/partner/dialect metadata and
+saved Behavior Corpus events. They cannot read `bid_req` / `bid_res` bodies encrypted
+by the current web UI without the user's password or recovery key.
 
 **Password reuse from a different breach.** Because PBKDF2 uses a per-user random
 salt stored separately from the wrapped DEK, a leaked plaintext password from a
@@ -301,18 +346,21 @@ a compromised client.
 attacker who can modify the JavaScript files served by ortbtools could replace
 `ortbtools-crypto.js` to exfiltrate the password at the next login. This is not a
 weakness specific to ortbtools — it applies to any web-delivered encryption. The
-mitigation is source integrity: the source code is public at
-`github.com/vladikkrasulya/ortbtools`, and a hash-verified deployment process
-would close this gap.
+source is public at `github.com/vladikkrasulya/adtech-spyglass`, and the deployment
+pipeline uses exact-SHA immutable images plus readiness/smoke gates. Those controls
+reduce accidental drift and some supply-chain mistakes; they do not protect a user
+from an attacker who retains control of the host, proxy, container runtime, or served
+JavaScript.
 
 **Your bid stream through ad networks.** ortbtools inspects a _copy_ of the payload
 you paste. The original bid transaction still passed through the SSP, DSP, and any
 intermediaries. ortbtools protects the copy you saved; it has no effect on what the ad
 networks logged.
 
-**Plaintext metadata (title, status, timestamps).** As noted above, `title` and
-`status` are stored in plaintext. Do not put sensitive deal IDs or partner
-identifiers in the title field if that would be a concern.
+**Plaintext metadata.** Sample titles, statuses, notes, partner references and
+timestamps; partner names/slugs/notes; custom dialect mappings; and saved Behavior
+Corpus data are readable by the server. Do not put sensitive deal IDs, identifiers,
+URLs, or secrets in these fields if that would be a concern.
 
 ---
 
@@ -321,7 +369,7 @@ identifiers in the title field if that would be a concern.
 The following proof points are available without access to the production server:
 
 1. **Source code.** The repository is public at
-   `https://github.com/vladikkrasulya/ortbtools`. The crypto module is at
+   `https://github.com/vladikkrasulya/adtech-spyglass`. The crypto module is at
    `public/ortbtools-crypto.js`. The KEK derivation parameters (`PBKDF2_ITERATIONS`,
    `PBKDF2_HASH`, `KEY_BITS`, `SALT_BYTES`, `IV_BYTES`) are declared at the top of
    that file. As of this writing: 600,000 iterations, SHA-256, 256-bit key, 16-byte
@@ -338,10 +386,11 @@ The following proof points are available without access to the production server
 https://ortbtools.com/api/auth/me` — the response includes
    `kdf_salt`, `dek_wrapped`, `dek_iv` (ciphertext blobs) and no password field.
 
-4. **Samples endpoint.** `GET /api/samples` returns the list of saved samples for
-   the logged-in user. Each row includes `bid_req` and `bid_res` as base64 blobs
-   (ciphertext), not plaintext JSON. You can confirm this by saving a sample and
-   inspecting the API response in the browser's network tab.
+4. **Samples endpoints.** `GET /api/samples` returns metadata, blob lengths, and an
+   `is_encrypted` marker derived only from `req_iv` presence; it does not return the
+   bodies. `GET /api/samples/:id` returns the stored `bid_req`, `bid_res`, and IVs.
+   For a sample created by the current web UI, the body fields are base64 ciphertext.
+   The server does not verify that direct API clients supplied ciphertext.
 
 5. **No server-side decryption code.** Search the repository for `decryptBlob`,
    `unwrapBytes`, `openWithPassword` — these functions exist only in
@@ -360,8 +409,8 @@ https://ortbtools.com/api/auth/me` — the response includes
 See `SECURITY.md` in the repo root. Email `hi@kyivtech.com.ua`. Do not open a
 public issue before the maintainer has had a chance to ship a fix.
 
-A finding that breaks the "server cannot decrypt saved samples" claim is treated as
-high severity and triaged immediately.
+A finding that lets the server decrypt request/response bodies saved through the
+current encrypted web flow is treated as high severity and triaged immediately.
 
 ---
 

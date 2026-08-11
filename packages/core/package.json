@@ -1,7 +1,7 @@
 {
   "name": "@ortbtools/core",
   "version": "0.31.0",
-  "description": "OpenRTB inspector engine — version + format detection, IAB-spec validation, semantic crosscheck, knowledge base. Pure JavaScript, runs in Node and the browser.",
+  "description": "OpenRTB inspection engine — deterministic type/version/format detection, rule-based validation, semantic crosscheck, and knowledge-base helpers.",
   "license": "MIT",
   "main": "index.js",
   "files": [
@@ -38,12 +38,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vladikkrasulya/ortbtools.git",
+    "url": "git+https://github.com/vladikkrasulya/adtech-spyglass.git",
     "directory": "packages/core"
   },
   "homepage": "https://ortbtools.com",
   "bugs": {
-    "url": "https://github.com/vladikkrasulya/ortbtools/issues"
+    "url": "https://github.com/vladikkrasulya/adtech-spyglass/issues"
   },
   "publishConfig": {
     "access": "public"

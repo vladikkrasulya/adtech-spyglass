@@ -33,9 +33,9 @@
         ru: '⚠ recovery key — сохрани сейчас',
       },
       'recovery.body': {
-        uk: 'Це <b>єдиний</b> спосіб відновити доступ до твоєї бібліотеки якщо забудеш пароль. Я (оператор сервера) не маю його і не зможу відновити твої дані без нього. Запиши його у password-manager або на папері.',
-        en: 'This is the <b>only</b> way to recover access to your library if you forget your password. I (the operator) don’t hold it and can’t recover your data without it. Save it in a password manager or on paper.',
-        ru: 'Это <b>единственный</b> способ восстановить доступ к твоей библиотеке если забудешь пароль. Я (оператор сервера) не имею его и не смогу восстановить твои данные без него. Запиши его в password-manager или на бумаге.',
+        uk: 'Це <b>єдиний</b> спосіб відновити доступ до bid request/response, зашифрованих вебінтерфейсом, якщо забудеш пароль. Оператор не має ключа й не може розшифрувати ці тіла; назви, нотатки та інші метадані читає сервер. Запиши ключ у password-manager або на папері.',
+        en: 'This is the <b>only</b> way to recover bid request/response bodies encrypted by the web UI if you forget your password. The operator does not hold the key and cannot decrypt those bodies; titles, notes, and other metadata remain server-readable. Save the key in a password manager or on paper.',
+        ru: 'Это <b>единственный</b> способ восстановить bid request/response, зашифрованные веб-интерфейсом, если забудешь пароль. Оператор не имеет ключа и не может расшифровать эти тела; названия, заметки и другие метаданные читает сервер. Запиши ключ в password-manager или на бумаге.',
       },
       'btn.recovery_saved': {
         uk: 'я зберіг',
@@ -48,9 +48,9 @@
         ru: 'Recovery key скопирован',
       },
       'confirm.recovery_save': {
-        uk: 'Ти точно зберіг recovery key? Без нього неможливо відновити дані якщо забудеш пароль.',
-        en: 'Did you really save your recovery key? You can’t recover data without it if you forget your password.',
-        ru: 'Ты точно сохранил recovery key? Без него невозможно восстановить данные если забудешь пароль.',
+        uk: 'Ти точно зберіг recovery key? Без нього не відновити зашифровані bid-тіла, якщо забудеш пароль.',
+        en: 'Did you really save your recovery key? Without it, encrypted bid bodies cannot be recovered if you forget your password.',
+        ru: 'Ты точно сохранил recovery key? Без него не восстановить зашифрованные bid-тела, если забудешь пароль.',
       },
     },
   };

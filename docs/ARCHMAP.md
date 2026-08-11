@@ -8,9 +8,19 @@ shifts a connection.
 > **Never trust this doc 100%** — verify with grep. But if a grep result
 > contradicts the map, fix the map.
 
-Last touched: 2026-07-02 (v1.3.5 doc sync — locale-routes security, validator
-wave #35–#40, banner.pos/mimes; prior: ROADMAP #18 session hoist v1.3.0; #19
-re-entrant inspector v1.2.5).
+Last reconciled: 2026-08-11 (app 1.6.0, Core 0.31.0, CLI 0.1.1;
+documentation-truth sweep after the model-free Intel cleanup).
+
+## 0.3 What changed 2026-07-02 → 2026-08-11
+
+- Hosted Inspector validation remains server-side through `POST /api/analyze`;
+  Core and CLI are local workspaces and are not yet published to npm.
+- Interactive Intel and news relevance now use deterministic
+  `lib/intel-rules.js`; OpenRouter remains isolated to news translation.
+- Production is an immutable exact-SHA image with only `/data` mounted.
+- Backend/frontend module lists continue to grow. Treat the live directories
+  and exported route registries as authoritative instead of relying on a
+  hard-coded module or line count here.
 
 ## 0.2 What changed 2026-06-17 → 2026-07-02
 
@@ -94,15 +104,15 @@ Two operationally-relevant traps surfaced + got memory entries
 
 ---
 
-## 0. Module layout (the big picture as of 2026-05-10)
+## 0. Module layout
 
 ```
-modules/                      backend handler folders (require'd by server.js)
-├── account/ admin/ analyze/  one file each: handler.js exporting either a plain
-│   auth/ corpus/ health/      `{id, routes}` or a `createXxxModule(deps)` factory
-│   intel/ mirror/ partners/   that returns the same shape. Routes registered with
-│   proxy/ replay/ sample/     lib/router.js at boot.
-│   samples/ stream/
+modules/                      backend handler folders (required by server.js)
+├── account/ admin/ analytics/ one handler.js each, exporting either a plain
+│   analyze/ auth/ blog/ corpus/ `{id, routes}` or a `createXxxModule(deps)`
+│   dialects/ findings/ health/ factory. Routes register with lib/router.js.
+│   intel/ mirror/ partners/ proxy/
+│   replay/ sample/ samples/ sentry-ingest/ stream/
 │
 lib/
 ├── router.js                  pattern-based dispatcher (exact / `:id` / trailing-*)
@@ -112,13 +122,12 @@ lib/
 ├── replay.js                  DI'd bulk-pipeline engine (consumed by modules/replay)
 └── corpus-matrix.js           confusion matrix runner (consumed by modules/corpus)
 
-public/modules/                frontend tool folders (loaded eager via <script>
-├── share/ embed/ shortcuts/   in shell, or lazy via `await import()` from the
-├── mirror/ live/ simulate/    dispatcher in public/ortbtools.app.js)
-│   corpus-save/ partners/     each folder has index.js + i18n.js + README.md.
-│   auth/ unlock/ recovery/    Crypto goes through window.OrtbtoolsSession facade
-│   password-reset/            (owned by public/core/session.js — DEK never
-│   save-sample/ edit-sample/  leaves the service module).
+public/modules/                frontend tool folders, loaded by the shell or
+├── admin-blog/ auth/ behavior/ lazily through the section registry/dispatcher.
+│   blog/ dialects/ docs/       Each folder owns its templates, lifecycle,
+│   insights/ library/ live/    translations and styles as needed.
+│   mirror/ partners/ search/
+│   share/ simulate/ stream/ …
 ├── inspector/                 workbench template + mount lifecycle; registers
 │                              an inspector adapter with the shell session on
 │                              mount (sample/dirty/partner + DOM renderers).
@@ -134,10 +143,9 @@ public/core/                   chrome-level services (installed once by shell-bo
 ├── registry.js                section lazy-load registry
 └── utils.js                   toast, t() helpers
 
-server.js                      ~868 LOC shell. Reads top-level deps, builds the
-                                Router, registers all 14 backend modules, runs the
-                                static-file fallback, owns the auth + crypto
-                                closure that backend modules access via DI.
+server.js                      Node HTTP composition root. Reads dependencies,
+                                builds the Router, registers backend modules,
+                                serves assets/routes, and owns shared DI wiring.
 
 public/ortbtools.app.js         inspector workbench shell. Dispatcher routes
                                 `data-action="..."` clicks to module lazy stubs.
@@ -153,9 +161,10 @@ public/ortbtools.app.js         inspector workbench shell. Dispatcher routes
 2. Back-end API broken → look in `modules/<tool>/handler.js` first.
 3. Both → start from the front-end module; back-end route name is right
    there in the `fetch(...)` call.
-4. Auth or crypto → `public/core/session.js` owns DEK + auth lifecycle for the
-   whole page; `window.OrtbtoolsSession` facade is the browser docs. Backend auth
-   still lives in `server.js` IIFE (`_sessionDEK` + auth routes).
+4. Auth or crypto → `public/core/session.js` owns the browser DEK + auth
+   lifecycle; `window.OrtbtoolsSession` is its compatibility facade. Backend
+   `/api/auth/*` routes live in `modules/auth/handler.js` and are registered by
+   `server.js`.
 
 ---
 
@@ -185,7 +194,8 @@ helpers.js ─┤    rules-response.js ─┼──> findings.js ──> index.j
 - `decodeCategory` / `decodeCategories` / `extractAllCategories`
 - Re-exports: `TYPES`, `VERSIONS`, `FORMATS`, `CONTEXTS`, `PROTOCOLS`, `LEVELS`, `CROSS_LEVELS`, `nativeAssetCrosscheck`
 
-**Subpath exports** (per `packages/core/package.json` "exports" field):
+**CommonJS subpaths** (resolved from packaged files; there is currently no
+`package.json` `exports` map):
 
 - `@ortbtools/core` → main API
 - `@ortbtools/core/behavior` → `behavior/index.js` (event-stream analyzer + static creative scan)
@@ -220,25 +230,26 @@ does NOT false-positive.
 
 ### 1.3.0 oRTB 3.0 routing (since 0.13.0; response since 0.14.0)
 
-- Detection (`detect.js`): presence of `openrtb` object (any shape, even
-  broken `ver=""`) OR top-level `item[]` classifies the payload as 3.0
-  with confidence 1. Envelope discrimination: `openrtb.response{}` →
-  ORTB_RESPONSE, else → ORTB_REQUEST.
+- Detection (`detect.js`): `looksLike30Envelope()` accepts an `openrtb` object
+  with a request/response/version signal, or a bare broken envelope only when
+  no 2.x `imp[]`/`seatbid[]` root competes with it. A top-level `item[]` counts
+  only when it contains object entries and no 2.x root. Matching payloads are
+  bucketed as 3.0 with confidence 1; `openrtb.response{}` selects response,
+  otherwise request.
 - Routing (`index.js validate()`): version-dispatch on both sides:
   V_3_0 + ORTB_REQUEST → `validateRequest30()`,
   V_3_0 + ORTB_RESPONSE → `validateResponse30()`.
   Same `disabledRules` / `dialect` / `locale` opts.
-- Request rules (`rules-request-30.js`): 12 — 7 envelope-level, 4
-  per-item, 1 always-fire INFO.
-- Response rules (`rules-response-30.js`): 16 — envelope (4), response
-  body (4 incl. `no_bid` INFO), per-seatbid + per-bid (5 incl.
-  `bid.item_required` since 3.0 uses `bid.item` instead of 2.x
-  `bid.impid`), plus `deep_validation_limited` INFO.
-- Test surface: `tests/ortb30.test.js` (~36 cases).
-- AdCOM 1.0 placement validation (item.spec.placement, bid.media,
-  AdCOM creative specs) NOT covered. The always-fire INFO
-  `*.30.deep_validation_limited` tells users so they aren't surprised
-  by a thin findings list.
+- Request rules (`rules-request-30.js`) validate the envelope, items, context,
+  site/app/DOOH/device/privacy/user fields, and AdCOM placement shapes for
+  display, video, audio, and native.
+- Response rules (`rules-response-30.js`) validate the envelope, response and
+  seat/bid shape, `bid.item`, creative `bid.media` variants, domains, markup,
+  and embedded VAST where present.
+- Test surface: `tests/ortb30.test.js`.
+- Coverage is deep but not exhaustive AdCOM schema conformance. Stable
+  `request.30.deep_validation_limited` / `response.30.deep_validation_limited`
+  info findings remain part of the contract.
 
 ### 1.3.1 VAST validation surface (since 0.12.0; expanded 0.14.0)
 
@@ -511,8 +522,11 @@ shell-level service so auth/DEK exist for the whole page lifecycle.
   `data-action` clicks to existing `window.*` globals (`doLogin`, `confirmSave`,
   …); `lazyOpenAuth()` lets topbar/sections open auth in place with zero route
   change.
-- **Zero-knowledge invariants** — DEK never exported raw; password never cached;
-  `signOut()` / `clearSession()` wipe memory + persisted DEK; no secrets logged.
+- **Crypto/session invariants** — raw DEK bytes are not exposed through the
+  public facade or sent to the server. The service exports them internally only
+  to persist a base64 key in tab-scoped `sessionStorage`; passwords are never
+  cached, `signOut()` / `clearSession()` wipe memory + persisted DEK, and no
+  secrets are logged.
 - **Tests** — [`session-hoist`](../tests/session-hoist.test.js): runtime (jsdom +
   fresh ESM instances), static wiring assertions across the import boundary.
 
@@ -542,10 +556,9 @@ shell-level service so auth/DEK exist for the whole page lifecycle.
 | `lib/replay.js`          | `tests/replay.test.js` (16 cases — input validation, pipeline routing, status rollup, severity counts, topFindings, maxSamples cap, label echo)                              |
 | Any new message key      | manually check 3 locales (`messages/{en,uk,ru}.json`) — there's no test that enforces this; _yet_                                                                            |
 
-**Total suite**: 469 tests (as of 2026-05-10 post-modularization). Run
-`node --test tests/` from repo root, ~8s. The extra 13 cases (vs 456)
-came in with `lib/router.js` (6) + later patches around the auth/intel
-modules during the backend migration.
+**Full suite:** run `npm test` from the repository root. Do not hard-code the
+assertion count here; `tests/*.test.js` is the discovery contract and CI output
+is the authority for the current total.
 
 ---
 
@@ -556,9 +569,10 @@ Two post sources, one indexing contract.
 - **Sources.** Editorial = markdown at `CONTENT_DIR/<lang>/<slug>.md` (prod
   `CONTENT_DIR=/data/content-posts`, a persistent volume seeded from the repo's
   `content/posts/`). Firehose = `analytics.blog_posts` (ClickHouse), written by
-  the AI auto-publisher `lib/news-moderator.js` ← `lib/news-crawler.js` (RSS
-  ingest → `analytics.blog_drafts` → score/translate → publish). Firehose posts
-  store `body == summary` (thin by construction).
+  the automated `lib/news-moderator.js` ← `lib/news-crawler.js` pipeline (RSS
+  ingest → `analytics.blog_drafts` → deterministic relevance → isolated
+  OpenRouter translation/categorization → publish). Firehose posts store
+  `body == summary` (thin by construction).
 - **Read/SEO layer (`lib/blog-service.js`).** `getPost()` is tri-state
   (`found` / `confirmed_absent` / `unavailable`) — absence comes ONLY from a
   fresh authoritative CH query, never a cached list. `listAllPublishedRefs()` =
@@ -645,17 +659,25 @@ Browser (https://ortbtools.com)
 | Server error reporting       | Sentry-compatible DSN | optional `SENTRY_DSN`; disabled cleanly when unset                                                                                      |
 | Health monitoring            | `uptime-kuma`         | HTTP probe of public URL                                                                                                                |
 
-### 2.4 SemVer bump locations (9 files, do all in one commit)
+### 2.4 Independent SemVer release surfaces
 
-Per `feedback_ortbtools_semver_bump.md`:
+App, Core, and CLI versions are independent. Bump only the surface whose
+public contract changed, and update its lockfile metadata in the same commit.
 
-1. `package.json` (root, app version)
-2. `packages/core/package.json` (engine version)
-3. `public/version.js` (browser-side `VERSION` constant)
-   4-6. `public/about.{en,uk,ru}.html` (eyebrow + footer span × 2 each = 2 spots × 3 locales, but search is `v9.X.Y`)
-   7-9. `public/modules/inspector/template.{en,uk,ru}.html` (topnav brand + footer #engineVer × 3 locales)
+- **App:** root `package.json`; the top-level and root-workspace version in
+  `package-lock.json`; `public/version.js`; and the static
+  `data-ortbtools-version` fallbacks in `public/about.{en,uk,ru}.html` plus
+  `public/modules/inspector/template.{en,uk,ru}.html`.
+- **Core:** `packages/core/package.json` and the `packages/core` workspace
+  entry in `package-lock.json`. Do not bump Core for app-only UI/docs changes.
+- **CLI:** `packages/cli/package.json` and the `packages/cli` workspace entry
+  in `package-lock.json`. Update `dependencies.@ortbtools/core` when the CLI
+  starts requiring a newer Core contract.
 
-Use `version.js` for runtime paint via `data-ortbtools-version`, but the static fallback strings in HTML still need to bump (browsers without JS see them, and bundle metadata in `export.js` reads `#engineVer.textContent`).
+`tests/version-consistency.test.js` guards root lockfile metadata,
+`public/version.js`, and all six app HTML fallbacks. Runtime paint comes from
+`version.js`, while no-JS clients and `export.js` still depend on the static
+fallbacks. Every release also gets a matching `CHANGELOG.md` entry.
 
 ---
 
@@ -672,10 +694,18 @@ Use `version.js` for runtime paint via `data-ortbtools-version`, but the static 
   `kt-shared` when `ADMIN_STATS_TOKEN` is configured. Any n8n workflow lives
   outside this repository and must be verified independently.
 
-### 3.2 Schema / migration reminders for adjacent data
+### 3.2 Analytics and news storage reminder
 
-- `news` Postgres DB: `items` table — `hot_score` column DROPPED 2026-05-09 (was always 0). `hot_score_llm` (LLM 0..1) is the live signal. `news_schema.sql` is the source-of-truth doc.
-- ClickHouse OLAP: `analytics.news_events` mirrors `items` minus `hot_score`. CH script: `/srv/DATA/Stacks/clickhouse/scripts/replicate-news.sh`.
+- ClickHouse stores the current news/blog workflow in
+  `analytics.blog_drafts` and `analytics.blog_posts`; the code-level sources of
+  truth are `lib/news-crawler.js`, `lib/news-moderator.js`, and
+  `lib/blog-service.js`.
+- News relevance is calculated transiently and deterministically by
+  `scoreRelevance()` in `lib/intel-rules.js`. There is no live
+  `hot_score_llm` signal or Postgres mirror in this application path.
+- OpenRouter is called only after the deterministic relevance gate for isolated
+  translation/categorization. ClickHouse-backed features no-op when its
+  credentials are not configured.
 
 ---
 
@@ -701,10 +731,10 @@ Estimates that ignore the connection-audit + regression-test + rollback verifica
 
 **Realistic floors** (revised from validator-roadmap-2026-05-09.md):
 
-| Item                                                                            | Original est | Honest est     | Actual | Why                                                                                                                                           |
-| ------------------------------------------------------------------------------- | ------------ | -------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| ① API stability                                                                 | 3-4h         | 3-4h ✓         | ~2.5h  | done; small surface, accurate                                                                                                                 |
-| ② Tier 1 + drop hot_score                                                       | 2h           | 2h ✓           | ~1h    | done; smaller than expected (column already had 0 non-zero rows)                                                                              |
-| ③ VAST validation (minimal)                                                     | 1-2 days     | **2-3 days**   | ~3h    | done at REDUCED scope (8 rules vs 13). User chose minimal; defers VPAID/ad-pod/Linear duration/OMID.                                          |
-| ④ oRTB 3.0 routing (request-only, minimal)                                      | 1 day        | **1.5-2 days** | ~2.5h  | done at REDUCED scope — request envelope + item shape only. Pre-flight cut the honest estimate.                                               |
-| Functional close (v0.14.0): 4 VAST rules + 3.0 response + sniffer consolidation | 4-5h         | **4-5h**       | ~3h    | done; closes the deferrals from items ③ and ④. Only AdCOM 1.0 deep validation remains intentionally deferred (no production 3.0 traffic yet). |
+| Item                                                                            | Original est | Honest est     | Actual | Why                                                                                                                                |
+| ------------------------------------------------------------------------------- | ------------ | -------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| ① API stability                                                                 | 3-4h         | 3-4h ✓         | ~2.5h  | done; small surface, accurate                                                                                                      |
+| ② Tier 1 + drop hot_score                                                       | 2h           | 2h ✓           | ~1h    | done; smaller than expected (column already had 0 non-zero rows)                                                                   |
+| ③ VAST validation (minimal)                                                     | 1-2 days     | **2-3 days**   | ~3h    | done at REDUCED scope (8 rules vs 13). User chose minimal; defers VPAID/ad-pod/Linear duration/OMID.                               |
+| ④ oRTB 3.0 routing (request-only, minimal)                                      | 1 day        | **1.5-2 days** | ~2.5h  | done at REDUCED scope — request envelope + item shape only. Pre-flight cut the honest estimate.                                    |
+| Functional close (v0.14.0): 4 VAST rules + 3.0 response + sniffer consolidation | 4-5h         | **4-5h**       | ~3h    | historical estimate; later releases implemented deep 3.x request/response rules, with intentionally non-exhaustive AdCOM coverage. |

@@ -437,7 +437,7 @@ function createAuthRoutesModule(deps) {
           });
         } else if (mode === 'wipe') {
           // Lost both password AND recovery key. User accepts data loss.
-          // Atomic: password + clear crypto + wipe all five per-user tables
+          // Atomic: password + clear crypto + wipe all per-user data tables
           // in one transaction. Crash mid-flow rolls back entirely — user
           // keeps old state or transitions to clean-slate, never a half-state.
           const newHash = await auth.hashPassword(b.newPassword);

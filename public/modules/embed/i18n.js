@@ -23,9 +23,9 @@
         ru: 'Встроить в другой сайт',
       },
       'embed.body': {
-        uk: 'Вставиш цей сніпет у блог, Notion або документ — і він покаже інтерактивний ortbtools з поточним bid. Payload зашитий у hash-фрагмент URL — на сервер не йде.',
-        en: 'Paste this snippet into a blog, Notion or doc — it will render an interactive ortbtools view with the current bid. The payload is in the URL hash fragment — never reaches the server.',
-        ru: 'Вставь этот сниппет в блог, Notion или документ — и он покажет интерактивный ortbtools с текущим bid. Payload зашит в hash-фрагменте URL — на сервер не идёт.',
+        uk: 'Вставиш цей сніпет у блог, Notion або документ — і він покаже інтерактивний ortbtools з поточним bid. Hash-фрагмент не надсилається з першим HTTP-запитом; після завантаження сторінка передає payload у /api/analyze.',
+        en: 'Paste this snippet into a blog, Notion or doc to render an interactive ortbtools view with the current bid. The hash fragment is absent from the initial HTTP request; after loading, the page submits the payload to /api/analyze.',
+        ru: 'Вставь этот сниппет в блог, Notion или документ — он покажет интерактивный ortbtools с текущим bid. Hash-фрагмент отсутствует в первом HTTP-запросе; после загрузки страница отправляет payload в /api/analyze.',
       },
       'embed.label.height': {
         uk: 'Висота (px)',

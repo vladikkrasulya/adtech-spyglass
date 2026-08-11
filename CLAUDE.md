@@ -4,9 +4,10 @@
 
 ortbtools is a public OpenRTB inspector: paste a `BidRequest` / `BidResponse` JSON
 and get human-readable validation findings, semantic request↔response crosscheck,
-IAB-category decoding, and a sandboxed creative preview. Authenticated users get a
-zero-knowledge encrypted library of saved samples per partner. It ships in three
-locales (EN / UK / RU) and runs on a single domain without any client-side framework.
+IAB-category decoding, and a sandboxed creative preview. For authenticated users, the
+current web flow encrypts saved request/response bodies in the browser; sample,
+partner, and dialect metadata remains server-readable. It ships in three locales
+(EN / UK / RU) and runs on a single domain without any client-side framework.
 
 ## Where to start
 
@@ -21,8 +22,8 @@ locales (EN / UK / RU) and runs on a single domain without any client-side frame
 ## File-system layout
 
 ```
-server.js                         Express-like node:http entry (~868 LOC shell)
-auth.js                           bcrypt sessions + KEK lifecycle (crypto bootstrap)
+server.js                         Vanilla node:http composition root + route wiring
+auth.js                           bcrypt authentication + server-side sessions
 db.js                             SQLite via better-sqlite3 (partners, samples, users)
 tokens.js                         Stateless HMAC tokens (verify-email, password reset)
 email.js                          Resend HTTPS API wrapper
@@ -35,13 +36,13 @@ lib/
   intel-rules.js                  Deterministic intel + relevance rules
   openrouter.js                   Isolated news-translation client
 modules/                          Backend handler folders (baked into image — needs rebuild)
-  account/ admin/ analyze/        One folder per route group. Each exports {id, routes}
-  auth/ corpus/ health/           or a createXxxModule(deps) factory. Registered in
-  intel/ mirror/ partners/        server.js at boot via lib/router.js.
-  proxy/ replay/ sample/
-  samples/ stream/ dialects/
+  account/ admin/ analytics/      One folder per route group. Each exports {id, routes}
+  analyze/ auth/ blog/ corpus/    or a createXxxModule(deps) factory. Registered in
+  dialects/ findings/ health/     server.js at boot via lib/router.js.
+  intel/ mirror/ partners/ proxy/
+  replay/ sample/ samples/ sentry-ingest/ stream/
 
-packages/core/                    Validator engine — pure JS, Node + browser compatible
+packages/core/                    CommonJS validator workspace; main APIs are network-free
   index.js                        Public API: validate(), crosscheck(), mirror(), detect*()
   detect.js                       Type + oRTB version autodetection
   format-detect.js                Format detection (banner/video/audio/native/push/pop); dialect- & shape-aware
@@ -56,6 +57,7 @@ packages/core/                    Validator engine — pure JS, Node + browser c
   categories.js                   IAB Content Taxonomy decoder
   dialects/                       iab.js (default), ext-rtb.js, inpage-push.js
   intel/                          walker.js, cluster.js, temp-dialect.js
+  knowledge-base.js               Node-only fixture/reference loader
   knowledge_base/                 Curated oRTB / JsonFeed reference fixtures
   messages/{en,uk,ru}.json        Localised finding messages (en/uk/ru parity required)
 
@@ -63,12 +65,13 @@ public/                           Static assets baked into the immutable image
   index.{en,uk,ru}.html           Shell per locale (EN at /, others at /uk/, /ru/)
   about.{en,uk,ru}.html           Docs per locale
   account.{en,uk,ru}.html         Cabinet (logged-in workspace)
-  ortbtools.app.js                 Inspector shell (~4467 LOC); owns OrtbtoolsSession facade
+  ortbtools.app.js                 Central Inspector workbench + legacy window facades
   ortbtools-crypto.js              Zero-knowledge crypto (browser-only, Web Crypto API)
   i18n.js                         ~140-key UK/EN/RU dictionary + window.t() helper
   lang-switch.js                  Seamless DOM-morph language switch
   version.js                      Browser-side VERSION constant (bump with package.json)
   design-system.css               Vendored design system, baked into the image
+  core/                            Shell-owned router, session, modal, registry, utilities
   modules/                        Frontend tool folders (folder-per-feature)
     README.md                     Module contract: layout, lifecycle, cross-module comms
     inspector/                    Workbench template + mount lifecycle
@@ -76,10 +79,11 @@ public/                           Static assets baked into the immutable image
     password-reset/               Forgot/reset flow (rotate/recover/wipe modes)
     save-sample/ edit-sample/     Encrypted sample save + metadata edit
     partners/                     Partner CRUD modal
+    blog/ docs/ insights/ library/ Section surfaces and account-aware data views
     mirror/ live/ simulate/       Mirror generator, SSE live stream, rules simulator
     share/ embed/ shortcuts/      Permalink, iframe embed, keyboard cheatsheet
     corpus-save/                  Labelled behavior corpus capture
-    intel/ behavior/              Discovery + behavior analyzer (pre-modularization shape)
+    intel/ behavior/ search/      Discovery, behavior analyzer, and global search
 
 tests/                            node:test runner — run with `npm test`
 samples/                          Synthetic specimens for rules + demos (baked)
@@ -98,8 +102,8 @@ Any source edit requires a rebuild/redeploy; `compose restart` does not load it.
 ### Code quality gate
 
 ```bash
-npm run ci          # format:check + lint + typecheck + test — runs before every push
-npm test            # 917 tests (as of v0.54.0)
+npm run ci          # format:check + lint + typecheck + coverage — runs before every push
+npm test            # full node:test suite; CI output is the count authority
 npm run lint:fix    # auto-fix eslint issues
 npm run format      # prettier --write .
 ```
@@ -171,10 +175,14 @@ See `packages/core/rules/README.md` for the plugin contract. Summary:
 
 See `public/modules/README.md`. Summary:
 
-- Create `public/modules/<name>/index.js` (IIFE, strict mode, no cross-module imports).
-- Add `public/modules/<name>/i18n.js` (pushes keys to `window.kt_i18n_modules`).
-- Wire in `public/ortbtools.app.js` dispatcher or a `<script>` tag in the shell.
-- Module-local tests go in `tests/modules/<name>.test.js`.
+- First identify the caller/loading category: SPA section, persistent shell/chrome,
+  or feature/action/compatibility helper.
+- SPA sections are ES modules that default-export `{ id, route?, css?, mount,
+unmount? }`; register their lazy loader in `public/shell-boot.js`.
+- `i18n.js`, templates, styles and a local README are optional. Follow the
+  feature's caller instead of imposing an IIFE/no-import rule on every module.
+- Module-local tests go in `tests/<name>.test.js`; test discovery is intentionally
+  shallow (`tests/*.test.js`).
 
 ### New translation key
 

@@ -15,9 +15,10 @@
  * them on the way out.
  *
  * Why this surface:
- *   - Browser-side validation in the public demo (no Node-only deps)
  *   - Server-side `/api/analyze` (this module is what server.js requires)
- *   - CLI / CI mode in Phase 6 (same module wrapped by @ortbtools/cli)
+ *   - Offline CLI / CI use (the same module is wrapped by @ortbtools/cli)
+ *   - Node/CommonJS consumers that need the same network-free main API; the
+ *     optional knowledge-base loader is explicitly Node-only
  */
 
 const { detectType, detectVersion, TYPES, VERSIONS } = require('./detect');
@@ -63,11 +64,11 @@ const DEFAULT_DIALECT = 'iab';
  *
  * Findings are returned in deterministic order (severity DESC → path ASC →
  * id ASC) and deduplicated: repeated (id, path) pairs collapse to one
- * finding with a `count` param. Pass `disabledRules` to suppress specific
+ * finding with a `params.dedupCount` value. Pass `disabledRules` to suppress specific
  * ids — exact ('imp.id_required') or '*'-suffixed prefix ('regs.*').
  *
  * @param {unknown} payload
- * @param {{dialect?: string, locale?: string, disabledRules?: string[], strictness?: string}} [opts]
+ * @param {{dialect?: string, locale?: string, disabledRules?: string[], strictness?: string, expectedVersion?: string, pairReq?: object, userDialect?: object}} [opts]
  */
 // Versions that participate in the pinning contract. `detectVersion` can
 // return any of these or `UNKNOWN`; expectedVersion must match one of these

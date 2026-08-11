@@ -1,7 +1,8 @@
 'use strict';
 
-// Thin structured-logging wrapper. Uses pino in Node; falls back to a
-// console stub in browser/worker environments (core is browser-compatible).
+// Thin structured-logging wrapper. Uses pino when available in Node and falls
+// back to a console stub otherwise. Node/CommonJS is the supported package
+// distribution contract; this fallback is not a browser-bundle guarantee.
 // LOG_LEVEL=silent suppresses all output — set by the test runner.
 
 let logger;
