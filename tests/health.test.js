@@ -76,6 +76,22 @@ test('health: db failure → 503 with build.sha still present', () => {
   assert.ok(typeof res.body.build.sha === 'string');
 });
 
+for (const ready of [false, true]) {
+  test(`health: reports injected Sentry configuration state ${ready}`, () => {
+    const mod = createHealthModule({
+      db: fakeDb,
+      auth: { getCurrentUser: () => null },
+      Users: { count: () => 0 },
+      sendJson: fakeSendJson,
+      sentryReady: () => ready,
+    });
+    const res = fakeRes();
+    mod.routes[0].handler({ headers: {} }, res);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.body.sentry, { ready });
+  });
+}
+
 test('health: anonymous does not see pid/node/users/sessions', () => {
   const mod = createHealthModule({
     db: fakeDb,

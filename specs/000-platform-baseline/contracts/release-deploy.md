@@ -111,6 +111,12 @@ A candidate is committed to `ACTIVE` only after:
 3. the non-destructive public smoke passes; and
 4. the deployment script pins the verified tag and arms `restart: always`.
 
+The readiness gate is application/database health plus expected build identity. The optional
+`sentry.ready` field reports only whether the local SDK retained a parsed destination; it is not a
+deployment gate and does not prove upstream delivery. A real controlled delivery check is a separate
+operator procedure after explicitly authorized configuration/deployment work. Telegram remains an
+independent incident channel.
+
 If the host/process stops during an unverified phase, Docker must not resurrect the candidate
 automatically. The in-flight state blocks a new blind deploy and requires an operator to inspect and
 restore a known-good image.
@@ -168,6 +174,10 @@ operator runbook.
 Local `npm run ci` runs Prettier check, ESLint, JSDoc/TypeScript checking, and the Node suite with
 coverage. GitHub CI on `main` pushes and pull requests uses full Git history, then runs formatting,
 lint, type checking, tests, npm pack smoke, and an isolated production Docker smoke.
+
+The standard CI workflow does not query the mutable npm advisory service. A dependency-security
+feature therefore records both full and production-only `npm audit` results separately, in addition
+to an offline regression for the advisory floors it changes.
 
 The Docker CI smoke builds a temporary image, uses a disposable data volume/container, verifies
 health/analyze and native dependency loading, then removes those local artifacts. It does not use the

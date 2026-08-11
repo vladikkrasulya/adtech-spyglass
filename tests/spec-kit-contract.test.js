@@ -675,4 +675,9 @@ test('Spec Kit release, source revision, and non-destructive upgrade sequence ar
     /^feature\.json\s*$/m,
     '.specify/feature.json must remain gitignored',
   );
+  assert.match(
+    read('.prettierignore'),
+    /^\.specify\/feature\.json\s*$/m,
+    '.specify/feature.json must remain outside repository-wide formatting',
+  );
 });
