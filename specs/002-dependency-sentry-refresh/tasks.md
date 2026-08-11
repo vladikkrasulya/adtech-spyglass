@@ -84,9 +84,12 @@ runtime-scope review remain independently testable.
   duplications, constitution conflicts, or P0/P1/P2 findings. The two traceability observations raised
   during the pass—plan inventory and sandbox child-process evidence—were reconciled before the clean
   rerun; before/after analyze hooks remained empty.
-- **Handoff status**: the feature is in verification with a locally complete candidate. The canonical
-  roadmap now distinguishes that evidence from the still-unchanged remote PR #57 branch, pending
-  convergence, final T030 gates, explicit lease-protected push authorization, and new GitHub checks.
+- **Handoff status**: after explicit authorization, commit `9eae19a` replaced the unchanged old PR #57
+  head `7f19da9` through an exact `--force-with-lease`; no concurrent remote work was overwritten. The
+  draft became mergeable against foundation-enabled `main`, its body was updated to current Spec Kit
+  owners and evidence, and GitHub CI run #338 passed. This evidence-only follow-up records completion;
+  final reporting waits for the follow-up head's own green check. The PR remains draft and no merge,
+  publish, production configuration change, real delivery test, or deployment occurred.
 - **Convergence**: `speckit.converge` checked 19 requirements, nine acceptance scenarios, the bounded
   plan decisions, and all eight constitution principles. It found zero missing, partial,
   contradicting, or unrequested gaps and appended no tasks; the convergence command left `tasks.md`
@@ -270,7 +273,7 @@ perform—the external PR mutation.
 - [x] T030 Re-run the final changed-file format/lint/type checks, both npm audits, package smoke, Docker
       smoke, full CI, and `git diff --check`; record only current-run evidence in
       `specs/002-dependency-sentry-refresh/tasks.md`
-- [ ] T031 After explicit authorization, commit the reviewed local candidate, lease-protected push it
+- [x] T031 After explicit authorization, commit the reviewed local candidate, lease-protected push it
       from `chore/dependencies-sentry-rebase` to remote `chore/dependencies-sentry`, and verify draft PR
       #57 exact head/checks without merging or deploying
 
