@@ -199,6 +199,42 @@ test('deploy/rollback/smoke/backup/lib/sim scripts are valid bash (bash -n)', ()
   }
 });
 
+test('disposable Docker smoke verifies the hashed Blog vendor graph and shipped notices', () => {
+  const smoke = read('scripts/ci-docker-smoke.sh');
+  for (const required of [
+    '/modules/blog/index.js',
+    '/modules/blog/markdown-renderer\\.js\\?v=[0-9a-f]{8}',
+    '/vendor/marked\\.es\\.js\\?v=[0-9a-f]{8}',
+    '/vendor/dompurify\\.es\\.js\\?v=[0-9a-f]{8}',
+    '/vendor/NOTICE.txt',
+    '/vendor/licenses/Marked-MIT.txt',
+    '/vendor/licenses/DOMPurify-Apache-2.0.txt',
+    '/vendor/marked.esm.min.js',
+  ]) {
+    assert.ok(smoke.includes(required), `ci-docker-smoke.sh must verify ${required}`);
+  }
+  assert.match(smoke, /OLD_MARKED_STATUS[\s\S]{0,240}!= "404"/u);
+  const notice = read('public/vendor/NOTICE.txt');
+  for (const packageLine of ['Package: marked@15.0.12', 'Package: dompurify@3.4.13']) {
+    assert.ok(notice.includes(packageLine), `vendor notice must contain ${packageLine}`);
+    assert.ok(
+      smoke.includes(packageLine),
+      `Docker smoke must verify exact notice line ${packageLine}`,
+    );
+  }
+  assert.match(
+    smoke,
+    /docker exec "\$CONTAINER" cat \/app\/public\/vendor\/NOTICE\.txt/u,
+    'Docker smoke must inspect the notice inside the immutable image',
+  );
+  for (const license of ['Marked-MIT.txt', 'DOMPurify-Apache-2.0.txt']) {
+    assert.ok(
+      smoke.includes(`docker exec "$CONTAINER" test -f "/app/public/vendor/licenses/${license}"`),
+      `Docker smoke must prove ${license} exists inside the immutable image`,
+    );
+  }
+});
+
 // ── CP2 amendment guards ────────────────────────────────────────────────────
 
 test('deploy/rollback wait for readiness (polling), not a fixed sleep before smoke', () => {

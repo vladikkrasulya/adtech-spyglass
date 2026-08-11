@@ -107,26 +107,42 @@ permalinks, and ClickHouse/firehose posts are excluded.
 `/blog/rss.xml` uses the same indexable Markdown post source, so RSS cannot advertise a post the SEO
 gate rejects. The feed uses the public SEO origin, not an internal proxy origin.
 
-## SSR Safety, Client Trust, and Failure Behavior
+## SSR and Browser Body Safety
 
 The server-side renderer in `lib/seo.js` escapes metadata and body input before applying its limited
 Markdown grammar. Locale and slug allowlists prevent filesystem traversal. Blog HTML and CSS
 injection are best-effort, but a render/SEO exception is reported and must not crash unrelated static
 serving.
 
-The browser renderer has a different trust boundary. Posts classified as `source === 'markdown'` are
-passed to the full vendored Marked parser and inserted with `innerHTML`; Marked is not an HTML
-sanitizer. Non-Markdown/ClickHouse posts use the escape-first safe renderer. A Markdown-source post
-can come from a reviewed repository file **or** from the token-gated admin `promote` action, which
-writes the draft summary into persistent `CONTENT_DIR` Markdown without HTML sanitization. Therefore
-“Markdown source” is a trusted-editorial assumption, not a content-safety proof. Promoting untrusted
-draft text can create stored script-capable markup in the browser path; runtime hardening requires a
-separate assessed feature.
+The browser treats every Blog body as untrusted regardless of `source`, author, approval, storage,
+or age. Editorial Markdown uses the exact reviewed Marked parser with controlled raw-HTML, image,
+task-control, and link renderers. Both that output and the existing escape-first ClickHouse/news
+presentation cross one strict DOMPurify allowlist and are inserted only as a `DocumentFragment`.
+Parser or sanitizer output is never interpolated back into the Blog shell.
+
+Supported browser semantics are paragraphs, headings, emphasis, strong text, ordered and unordered
+lists, blockquotes, inline and fenced code, tables, line and thematic breaks, strikethrough, inert
+task-list markers, and safe links. Raw HTML remains visible as literal text, Markdown images retain
+only readable alternative text, and no content-driven resource is loaded. Links resolve against the
+document base and retain capability only for unambiguous HTTP(S), relative, or fragment destinations;
+unsafe destinations retain their readable labels without becoming links.
+
+If a renderer dependency, parser, sanitizer, policy, fragment construction, or insertion step fails,
+the original body is inserted with `textContent`. Abort and stale-root checks prevent an obsolete
+section from painting after an awaited load. No failure path logs or reports the body. These rules
+also cover Markdown created by the token-gated admin `promote` action and pre-existing persistent
+content; source classification is a presentation choice, never a content-safety proof. Exact
+third-party provenance and update rules are owned by
+[ADR-011](../../decisions/ADR-011-browser-markdown-sanitization.md).
 
 For a found blog post, the server replaces `#app-root` with the article before delivery. For a
 programmatic landing, it injects the localized landing body. Client navigation onto an SSR-only
 landing performs a full navigation so the server can reconstruct content; first load mounts a
 lightweight module that preserves the existing SSR body.
+
+This boundary does not change the Blog HTTP or authorization model. Source-URL scheme parity outside
+`.blog-post__body`, promotion state/locale/collision/frontmatter integrity, global CSP or Trusted
+Types policy, unrelated DOM sinks, and a broader CMS redesign remain separately assessed work.
 
 ## News Pipeline Boundary
 

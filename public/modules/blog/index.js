@@ -9,7 +9,7 @@
    Views:
      - Listing: header with category chips + grid of cards.
        Each card: title, summary, category badge, date, source pill.
-     - Post: title + meta + body rendered via vendored marked.
+     - Post: title + meta + body rendered through one sanitized fragment boundary.
    ============================================================ */
 'use strict';
 
@@ -52,11 +52,9 @@ function safeHref(url) {
   return /^https?:\/\//i.test(u) ? u : '';
 }
 
-// SAFE Markdown → HTML for UNTRUSTED (firehose/crawled) post bodies. Escapes
-// FIRST so any raw HTML/<script> in the body is inert, then applies a small set
-// of inline/block rules on the escaped text. Mirrors lib/seo.js renderBodyHtml
-// so client output matches the server SSR. Trusted editorial posts
-// (source==='markdown', admin-authored via git) get full marked instead.
+// Escape-first Markdown presentation for firehose/crawled and unknown sources.
+// This output is never inserted directly: it also crosses markdown-renderer.js'
+// final DOMPurify-to-DocumentFragment boundary.
 function inlineMd(s) {
   return s
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -268,12 +266,16 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
       <div class="blog-loading">${escapeHtml(pick(L.loading, uiLang))}</div>
     </section>
   `;
+  let ownerNode = root.firstElementChild;
+  const ownsMount = () =>
+    !ctx.signal.aborted && root.isConnected && ownerNode && root.contains(ownerNode);
 
   try {
     const resp = await fetch(
       `/api/v1/blog/post?slug=${encodeURIComponent(slug)}&lang=${encodeURIComponent(postLang)}`,
       { signal: ctx.signal },
     );
+    if (!ownsMount()) return;
     if (!resp.ok) {
       if (resp.status === 404) {
         root.innerHTML = `
@@ -286,6 +288,7 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
       throw new Error('HTTP ' + resp.status);
     }
     const data = await resp.json();
+    if (!ownsMount()) return;
     if (!data.ok || !data.post) throw new Error('bad response');
 
     const post = data.post;
@@ -293,24 +296,8 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
     const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
     const dateStr = formatDate(post.published_at, postLang);
 
-    // Body rendering by source classification. Markdown-source posts (repository
-    // files or token-gated admin promotions) get full, unsanitized Marked output
-    // and are therefore a trusted-editorial boundary. Firehose/crawled posts are
-    // UNTRUSTED — render through the escape-first safe renderer so stored
-    // HTML/<script> in a crawled body cannot execute (stored-XSS).
-    let bodyHtml = '';
-    if (post.source === 'markdown') {
-      try {
-        const markedMod = await import('/vendor/marked.esm.min.js');
-        const marked = markedMod.marked || markedMod.default;
-        bodyHtml = marked(post.body || '');
-      } catch {
-        bodyHtml = safeRenderMarkdown(post.body || '');
-      }
-    } else {
-      bodyHtml = safeRenderMarkdown(post.body || '');
-    }
-
+    if (!ownsMount()) return;
+    const originalBody = String(post.body || '');
     root.innerHTML = `
       <section class="blog-section blog-post-section">
         <a class="blog-back" href="${escapeHtml(localePrefix(uiLang) + '/blog')}">${escapeHtml(pick(L.backToList, uiLang))}</a>
@@ -324,12 +311,32 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
               ${safeHref(post.url) ? `<a class="blog-post__src" href="${escapeHtml(safeHref(post.url))}" target="_blank" rel="noopener nofollow">original ↗</a>` : ''}
             </div>
           </header>
-          <div class="blog-post__body">${bodyHtml}</div>
+          <div class="blog-post__body"></div>
         </article>
       </section>
     `;
+    ownerNode = root.firstElementChild;
+
+    const bodyEl = root.querySelector('.blog-post__body');
+    const ownsBody = () => ownsMount() && bodyEl && root.contains(bodyEl);
+    if (!ownsBody()) return;
+
+    try {
+      const { renderBlogBody } = await import('/modules/blog/markdown-renderer.js');
+      if (!ownsBody()) return;
+      const fragment = renderBlogBody(originalBody, {
+        source: post.source,
+        limitedHtml: safeRenderMarkdown(originalBody),
+        baseUrl: document.baseURI,
+      });
+      if (!ownsBody()) return;
+      bodyEl.replaceChildren(fragment);
+    } catch {
+      if (!ownsBody()) return;
+      bodyEl.textContent = originalBody;
+    }
   } catch (e) {
-    if (e.name === 'AbortError') return;
+    if (e.name === 'AbortError' || !ownsMount()) return;
     root.innerHTML = `<section class="blog-section"><p class="blog-empty">Error: ${escapeHtml(e.message)}</p></section>`;
   }
 }

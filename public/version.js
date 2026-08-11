@@ -24,7 +24,7 @@
   'use strict';
 
   // ⚠ Single source of truth — bump this on a release.
-  const VERSION = 'v1.6.0';
+  const VERSION = 'v1.6.1';
 
   window.OrtbtoolsVersion = VERSION;
   // legacy-spyglass-ok: console/back-compat alias for the pre-rename global (~v1.6)

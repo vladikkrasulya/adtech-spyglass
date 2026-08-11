@@ -52,3 +52,22 @@ API/schema does not enforce or cryptographically verify ciphertext for direct cl
 A finding that lets the server decrypt a body encrypted by the current web flow is
 treated as high severity and triaged immediately. The full retention boundary and
 direct-API caveat are documented in [`docs/PRIVACY.md`](./docs/PRIVACY.md).
+
+## Blog content boundary
+
+Every public Blog body is treated as untrusted at its final browser-rendering boundary, including
+repository Markdown, persistent promoted Markdown, and ClickHouse/news content. Editorial Markdown
+supports ordinary text structure, code, tables, inert task markers, and safe HTTP(S), relative, or
+fragment links. Interpreted raw HTML, active attributes, embedded documents, forms, styles, media,
+and image loading are not supported Blog-body capabilities; raw HTML and image alternative text
+remain readable as inert text.
+
+The browser uses exact reviewed Marked and DOMPurify assets, a closed element/attribute policy, and
+`DocumentFragment` insertion. Rendering failures fall back to the original body via `textContent`
+without logging or reporting that body. Content source or admin approval is never treated as proof
+that markup is safe. The server-side/no-JavaScript renderer remains independently escape-first.
+
+The full invariant, compatibility grammar, dependency provenance, and deliberately deferred
+source-link/promotion-integrity scope are recorded in the
+[Content/SEO contract](./specs/000-platform-baseline/contracts/content-seo.md) and
+[ADR-011](./specs/decisions/ADR-011-browser-markdown-sanitization.md).

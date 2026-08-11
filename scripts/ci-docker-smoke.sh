@@ -76,6 +76,61 @@ echo "$ANALYZE" | grep -q '"success":true' || {
 }
 echo "  PASS  /api/analyze returns findings"
 
+echo "==> verify content-hashed Blog renderer/vendor graph"
+BLOG_JS="$(curl -fsS --max-time 8 "http://127.0.0.1:${PORT}/modules/blog/index.js")"
+RENDERER_PATH="$(
+  echo "$BLOG_JS" | grep -oE '/modules/blog/markdown-renderer\.js\?v=[0-9a-f]{8}' | head -1
+)"
+if [ -z "$RENDERER_PATH" ]; then
+  echo "FAIL: served Blog module has no content-hashed Markdown renderer import" >&2
+  exit 1
+fi
+
+RENDERER_JS="$(curl -fsS --max-time 8 "http://127.0.0.1:${PORT}${RENDERER_PATH}")"
+MARKED_PATH="$(
+  echo "$RENDERER_JS" | grep -oE '/vendor/marked\.es\.js\?v=[0-9a-f]{8}' | head -1
+)"
+DOMPURIFY_PATH="$(
+  echo "$RENDERER_JS" | grep -oE '/vendor/dompurify\.es\.js\?v=[0-9a-f]{8}' | head -1
+)"
+if [ -z "$MARKED_PATH" ] || [ -z "$DOMPURIFY_PATH" ]; then
+  echo "FAIL: served Markdown renderer lacks both content-hashed vendor imports" >&2
+  exit 1
+fi
+
+MARKED_JS="$(curl -fsS --max-time 8 "http://127.0.0.1:${PORT}${MARKED_PATH}")"
+DOMPURIFY_JS="$(curl -fsS --max-time 8 "http://127.0.0.1:${PORT}${DOMPURIFY_PATH}")"
+grep -q 'v15.0.12' <<<"$MARKED_JS" || {
+  echo "FAIL: production-served Marked asset version drifted" >&2
+  exit 1
+}
+grep -q 'DOMPurify 3.4.13' <<<"$DOMPURIFY_JS" || {
+  echo "FAIL: production-served DOMPurify asset version drifted" >&2
+  exit 1
+}
+
+NOTICE="$(docker exec "$CONTAINER" cat /app/public/vendor/NOTICE.txt)"
+grep -q 'Package: marked@15.0.12' <<<"$NOTICE" || {
+  echo "FAIL: vendor notice omits Package: marked@15.0.12" >&2
+  exit 1
+}
+grep -q 'Package: dompurify@3.4.13' <<<"$NOTICE" || {
+  echo "FAIL: vendor notice omits Package: dompurify@3.4.13" >&2
+  exit 1
+}
+docker exec "$CONTAINER" test -f "/app/public/vendor/licenses/Marked-MIT.txt"
+docker exec "$CONTAINER" test -f "/app/public/vendor/licenses/DOMPurify-Apache-2.0.txt"
+
+OLD_MARKED_STATUS="$(
+  curl -sS --max-time 8 -o /dev/null -w '%{http_code}' \
+    "http://127.0.0.1:${PORT}/vendor/marked.esm.min.js"
+)"
+if [ "$OLD_MARKED_STATUS" != "404" ]; then
+  echo "FAIL: obsolete Marked asset returned HTTP $OLD_MARKED_STATUS, expected 404" >&2
+  exit 1
+fi
+echo "  PASS  hashed Blog/vendor graph, notices/licenses, obsolete asset absent"
+
 NODE_VER="$(docker exec "$CONTAINER" node -p "process.version")"
 echo "$NODE_VER" | grep -q '^v22\.' || {
   echo "FAIL: container Node is $NODE_VER, expected v22.x" >&2
