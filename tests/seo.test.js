@@ -12,8 +12,18 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { JSDOM } = require('jsdom');
 
 const seo = require('../lib/seo');
+const {
+  COMPATIBILITY_FIXTURES,
+  LONG_TEXT_BODY,
+  loadCompatibilityFixtures,
+  loadTrackedMarkdownFixtures,
+} = require('./blog-markdown-fixtures');
+const { normalizeReadableText } = require('./blog-dom-assertions');
+
+const SSR_COMPATIBILITY_CORPUS = loadCompatibilityFixtures();
 
 // A minimal stand-in for the static shell <head> — same tag shapes the real
 // index.{en,uk,ru}.html carry (some multi-line, as prettier formats them).
@@ -208,6 +218,74 @@ test('renderPostArticle: escapes a malicious title', () => {
 test('escapeHtml: covers the five entities', () => {
   assert.equal(seo.escapeHtml(`<>&"'`), '&lt;&gt;&amp;&quot;&#39;');
 });
+
+// ── Complete SSR compatibility corpus ──────────────────────────────────────────
+test('renderBodyHtml: SSR compatibility corpus includes every fixed edge and tracked locale post', () => {
+  const trackedFixtures = loadTrackedMarkdownFixtures();
+  assert.equal(COMPATIBILITY_FIXTURES.length, 20);
+  assert.equal(LONG_TEXT_BODY.length, 128 * 1024);
+  assert.ok(trackedFixtures.length > 0, 'the tracked Blog corpus must not be empty');
+  assert.deepEqual(
+    new Set(trackedFixtures.map((fixture) => fixture.path.split('/')[0])),
+    new Set(['en', 'uk', 'ru']),
+  );
+  assert.equal(
+    SSR_COMPATIBILITY_CORPUS.length,
+    COMPATIBILITY_FIXTURES.length + trackedFixtures.length,
+  );
+  assert.equal(
+    new Set(SSR_COMPATIBILITY_CORPUS.map((fixture) => fixture.id)).size,
+    SSR_COMPATIBILITY_CORPUS.length,
+    'compatibility fixture IDs remain unique',
+  );
+});
+
+for (const fixture of SSR_COMPATIBILITY_CORPUS) {
+  test(`renderBodyHtml: preserves readable SSR text for ${fixture.id}`, () => {
+    const dom = new JSDOM('<!doctype html><html><body><template></template></body></html>');
+    try {
+      const template = dom.window.document.querySelector('template');
+      const html = seo.renderBodyHtml(fixture.markdown);
+      template.innerHTML = html;
+
+      const text = normalizeReadableText(template.content.textContent);
+      const expectedText = normalizeReadableText(fixture.expectedText);
+      if (expectedText) {
+        assert.ok(
+          text.includes(expectedText),
+          `${fixture.id} retains ${JSON.stringify(expectedText)}`,
+        );
+      } else {
+        assert.equal(text, '', `${fixture.id} remains empty`);
+      }
+      if (fixture.id === 'COMP-long-text-001') {
+        assert.equal(
+          text,
+          normalizeReadableText(fixture.markdown),
+          'SSR does not truncate 128 KiB',
+        );
+      }
+
+      assert.equal(
+        template.content.querySelector(
+          'script, style, svg, math, iframe, object, embed, form, base, meta, img, audio, video, source, link',
+        ),
+        null,
+        `${fixture.id} remains inert after the SSR HTML is parsed`,
+      );
+      for (const element of template.content.querySelectorAll('*')) {
+        for (const attribute of element.attributes) {
+          assert.ok(
+            !attribute.name.toLowerCase().startsWith('on'),
+            `${fixture.id} has no event-bearing SSR attributes`,
+          );
+        }
+      }
+    } finally {
+      dom.window.close();
+    }
+  });
+}
 
 // ── renderSitemap ────────────────────────────────────────────────────────────
 test('renderSitemap: indexable sections + /about + approved posts only; no xhtml; T5 excluded', () => {

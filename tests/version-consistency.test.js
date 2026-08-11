@@ -71,6 +71,12 @@ const HTML_FALLBACKS = [
   'public/modules/inspector/template.ru.html',
 ];
 
+const BASELINE_VERSION_SURFACES = [
+  'specs/000-platform-baseline/spec.md',
+  'specs/000-platform-baseline/plan.md',
+  'specs/000-platform-baseline/contracts/locales-versioning.md',
+];
+
 for (const f of HTML_FALLBACKS) {
   test(`${f} static version fallback === ${EXPECTED}`, () => {
     const html = read(f);
@@ -86,5 +92,18 @@ for (const f of HTML_FALLBACKS) {
         `${f} static fallback ${v} must equal ${EXPECTED} (incomplete version bump)`,
       );
     }
+  });
+}
+
+for (const f of BASELINE_VERSION_SURFACES) {
+  test(`${f} current app version === ${PKG_VERSION}`, () => {
+    const text = read(f);
+    assert.match(
+      text,
+      new RegExp(
+        `(?:App|app|application|Web application)[^\\n]{0,100}\\b${PKG_VERSION.replaceAll('.', '\\.')}\\b`,
+      ),
+      `${f} must state the current app version ${PKG_VERSION}`,
+    );
   });
 }

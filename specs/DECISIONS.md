@@ -20,3 +20,4 @@ the existing record.
 | [ADR-008](./decisions/ADR-008-independent-versioning-unpublished-npm.md) | Accepted | 2026-08-11 | App, Core, and CLI version independently; registry packages remain documented as unpublished until verified                |
 | [ADR-009](./decisions/ADR-009-spec-kit-document-ownership.md)            | Accepted | 2026-08-11 | Spec Kit owns working memory with exactly one owner per concern                                                            |
 | [ADR-010](./decisions/ADR-010-supported-agents-safe-automation.md)       | Accepted | 2026-08-11 | Support four manifest-managed agents and keep automatic or third-party automation outside the initial safety boundary      |
+| [ADR-011](./decisions/ADR-011-browser-markdown-sanitization.md)          | Accepted | 2026-08-11 | Treat every browser-rendered Blog body as untrusted and insert only a sanitized, closed-policy fragment                    |

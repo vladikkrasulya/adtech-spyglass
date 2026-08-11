@@ -6,6 +6,19 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.6.1 — safe browser rendering for every Blog body
+
+- Removed the executable-content exception for editorial and promoted Markdown: every Blog body now
+  crosses one closed DOMPurify fragment boundary regardless of source, author, approval, or age.
+- Kept ordinary Markdown structure through an exact pinned Marked renderer while showing raw HTML
+  and image alternative text as inert readable text; unsafe links lose navigation capability.
+- Added closed text fallback for dependency, parser, sanitizer, policy, fragment, and insertion
+  failures, with abort/stale-root protection and no body logging or reporting.
+- Added exact npm-to-browser byte parity, licenses, provenance, final-DOM security/compatibility
+  corpora, synthetic promotion-chain evidence, public Blog/search contracts, and disposable-image
+  checks for the two reviewed vendor modules.
+- App version bumped `1.6.0 → 1.6.1`; Core remains `0.31.0` and CLI remains `0.1.1`.
+
 ### Governance — GitHub Spec Kit foundation
 
 - Adopted GitHub Spec Kit `0.16.2` (upstream commit

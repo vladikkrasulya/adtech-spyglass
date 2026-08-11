@@ -1,6 +1,8 @@
 node_modules/
 public/design-system.css
 *.min.js
+public/vendor/dompurify.es.js
+public/vendor/marked.es.js
 dist/
 build/
 coverage/

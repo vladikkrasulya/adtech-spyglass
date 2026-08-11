@@ -153,16 +153,36 @@ test('Sentry health copy reports local SDK configuration, not upstream delivery'
   assert.match(logger, /does NOT[\s\S]{0,100}(?:upstream|delivery)/);
 });
 
-test('content contract distinguishes safe SSR from the browser Markdown trust boundary', () => {
+test('content and security contracts own the closed Blog-body fragment boundary', () => {
   const contract = read('specs/000-platform-baseline/contracts/content-seo.md');
-  assert.doesNotMatch(
-    contract,
-    /Landing and blog rendering escape metadata and user\/content HTML at the rendering boundary/i,
-    'the content contract must not apply SSR escaping to the browser Marked path',
-  );
-  assert.match(contract, /Marked is not an HTML\s+sanitizer/i);
+  const security = read('SECURITY.md');
+  const adr = read('specs/decisions/ADR-011-browser-markdown-sanitization.md');
+
+  for (const [relativePath, text] of [
+    ['content contract', contract],
+    ['SECURITY.md', security],
+    ['ADR-011', adr],
+  ]) {
+    assert.match(
+      text,
+      /every (?:public )?(?:browser-rendered )?Blog body[\s\S]{0,180}(?:untrusted|regardless of `source`)/i,
+      `${relativePath} must state the source-neutral untrusted-body invariant`,
+    );
+    assert.match(
+      text,
+      /DOMPurify[\s\S]{0,180}(?:DocumentFragment|fragment)/i,
+      `${relativePath} must state the sanitizer-to-fragment boundary`,
+    );
+  }
+
   assert.match(contract, /token-gated admin `promote` action/i);
-  assert.match(contract, /stored script-capable markup/i);
+  assert.match(contract, /Raw HTML remains visible as literal text/i);
+  assert.match(
+    contract,
+    /Source-URL scheme parity outside[\s\S]{0,240}remain separately assessed/i,
+  );
+  assert.doesNotMatch(contract, /full, unsanitized Marked|trusted-editorial assumption/i);
+  assert.doesNotMatch(contract, /runtime hardening requires a separate assessed feature/i);
 });
 
 const CANONICAL_REPOSITORY = 'https://github.com/vladikkrasulya/adtech-spyglass';

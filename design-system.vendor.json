@@ -13,7 +13,7 @@
   "update_procedure": [
     "1. cp /srv/DATA/Stacks/kyivtech-portal/public/design-system.css public/design-system.css",
     "2. shasum -a 256 public/design-system.css  -> update sha256 + bytes here",
-    "3. bump app patch version (package.json, package-lock.json, public/version.js) + CHANGELOG",
+    "3. bump every app surface guarded by tests/version-consistency.test.js + CHANGELOG",
     "4. npm run ci ; rebuild + redeploy via scripts/deploy.sh",
     "NOTE: the Docker build never reads the portal path; it bakes public/design-system.css from this checkout."
   ]
