@@ -12,8 +12,32 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
+const path = require('node:path');
 
 const { logger, child, captureException, flushSentry, sentryReady } = require('../lib/logger');
+
+function runLoggerChild(source, env) {
+  const childEnv = {
+    ...process.env,
+    NODE_ENV: 'production',
+    LOG_LEVEL: 'silent',
+    ...env,
+  };
+  // A process spawned by node:test inherits this internal marker and may emit
+  // test-runner protocol instead of ordinary stdout. This child is an isolated
+  // application boot, not a nested test worker.
+  delete childEnv.NODE_TEST_CONTEXT;
+  const result = spawnSync(process.execPath, ['-e', source], {
+    cwd: path.join(__dirname, '..'),
+    env: childEnv,
+    encoding: 'utf8',
+  });
+  assert.ifError(result.error);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const lines = result.stdout.trim().split('\n');
+  return JSON.parse(lines[lines.length - 1]);
+}
 
 test('logger: root is a pino instance with the expected methods', () => {
   assert.equal(typeof logger.info, 'function');
@@ -91,4 +115,87 @@ test('sentry: flushSentry resolves true when not initialized', async () => {
   // when the SDK was never wired up.
   const result = await flushSentry(100);
   assert.equal(result, true);
+});
+
+test('sentry: malformed DSN does not report a valid SDK configuration', () => {
+  const result = runLoggerChild(
+    `
+      const logger = require('./lib/logger');
+      console.log(JSON.stringify({ ready: logger.sentryReady() }));
+    `,
+    { SENTRY_DSN: 'not-a-dsn' },
+  );
+  assert.equal(result.ready, false);
+});
+
+test('sentry: valid DSN keeps init, capture and flush APIs compatible without network', () => {
+  const result = runLoggerChild(
+    `
+      (async () => {
+        const Sentry = require('@sentry/node');
+        const originalInit = Sentry.init;
+        let initOptions;
+        const sent = [];
+        const flushCalls = [];
+
+        Sentry.init = (options) => {
+          initOptions = options;
+          return originalInit({
+            ...options,
+            defaultIntegrations: false,
+            transport: () => ({
+              send(envelope) {
+                sent.push(envelope);
+                return Promise.resolve({});
+              },
+              flush(timeout) {
+                flushCalls.push(timeout);
+                return Promise.resolve(true);
+              },
+            }),
+          });
+        };
+
+        const logger = require('./lib/logger');
+        const apiCompatible = ['getClient', 'withScope', 'captureException', 'flush']
+          .every((name) => typeof Sentry[name] === 'function');
+        logger.captureException(new Error('compat-event'), {
+          source: 'compat-test',
+          request: { method: 'GET', url: '/safe' },
+        });
+        const flushed = await logger.flushSentry(500);
+
+        console.log(JSON.stringify({
+          ready: logger.sentryReady(),
+          apiCompatible,
+          flushed,
+          sends: sent.length,
+          flushCalls,
+          contextCaptured: JSON.stringify(sent).includes('compat-test'),
+          initOptions,
+        }));
+      })().catch((err) => {
+        console.error(err);
+        process.exitCode = 1;
+      });
+    `,
+    {
+      SENTRY_DSN: 'https://public@example.invalid/1',
+      BUILD_SHA: 'deadbee',
+    },
+  );
+
+  assert.equal(result.ready, true);
+  assert.equal(result.apiCompatible, true);
+  assert.equal(result.flushed, true);
+  assert.equal(result.sends, 1);
+  assert.deepEqual(result.flushCalls, [500]);
+  assert.equal(result.contextCaptured, true);
+  assert.deepEqual(result.initOptions, {
+    dsn: 'https://public@example.invalid/1',
+    environment: 'production',
+    release: 'deadbee',
+    tracesSampleRate: 0,
+    sendDefaultPii: false,
+  });
 });

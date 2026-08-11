@@ -35,9 +35,10 @@ sample, partner and dialect metadata remains server-readable.
 
 Interactive Intel endpoints and news relevance use deterministic
 `lib/intel-rules.js` rules. OpenRouter remains isolated to news translation and
-categorization. Sentry support is configuration-gated and exposes readiness in
-`/api/health`; the verified production baseline reported `sentry.ready:false`,
-with Telegram as the active alert path.
+categorization. Sentry support is configuration-gated and exposes valid local
+SDK configuration in `/api/health` (not upstream connectivity); the verified
+production baseline reported `sentry.ready:false`, with Telegram as the active
+alert path.
 
 Production uses an immutable, exact-tag Docker image. Application source and
 the vendored design system are baked into the image; `/data` is the only
@@ -311,7 +312,7 @@ Ordered by likelihood it will eventually matter:
     module JS/CSS with content hashes at serve time.
 
 11. **Health endpoint metadata** — **SHIPPED.** `/api/health` includes build
-    metadata and integration readiness, including `sentry.ready`.
+    metadata and integration configuration state, including `sentry.ready`.
 
 12. **Quality Score 0–100** — **SHIPPED (live 2026-05-26 reality-audit).** The `.quality-pill` renders a 0–100 score with tiered status (excellent/good/needs-attention/critical) in the summary strip; `computeQualityScore()` in `ortbtools.app.js`. Competitor research 2026-05-23: openrtb.ovh shows a `Score: 100/100` pill at the top of every validation. Single-number quality summary is more digestible for non-developers than raw finding counts. Formula candidate: `max(0, 100 - errors*20 - warnings*5 - info*1)`, clamped. Renders as a pill badge alongside the existing severity counters. ~1-2 days in `public/ortbtools.app.js` validation render + `packages/core/findings.js` aggregator.
 

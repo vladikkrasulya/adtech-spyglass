@@ -36,9 +36,9 @@ truth is [docs/ARCHMAP.md](./docs/ARCHMAP.md); current work order lives in
   path.
 - **Operations:** production uses immutable exact-SHA Docker images with one
   `/data` mount, readiness and public smoke gates, and automatic rollback.
-  Sentry is configuration-gated and reports readiness through `/api/health`;
-  the last verified production baseline had `sentry.ready:false` and used
-  Telegram for alerts.
+  Sentry is configuration-gated; `/api/health` reports whether the SDK retained
+  a valid parsed DSN, not upstream connectivity. The last verified production
+  baseline had `sentry.ready:false` and used Telegram for alerts.
 
 See [docs/OPERATIONS.md](./docs/OPERATIONS.md) for the runbook and
 [docs/PRIVACY.md](./docs/PRIVACY.md) for the code-verified data-flow contract.
