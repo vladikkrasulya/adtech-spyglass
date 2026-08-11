@@ -6,7 +6,20 @@ build/
 coverage/
 package-lock.json
 
-# LLM agent prompts — Prettier reflow can break carefully tuned context
-# (paragraph boundaries, fenced-block ordering, leading whitespace inside
-# examples). These are not source code; leave them alone.
-.claude/agents/*.md
+# Spec Kit package-owned output. Reformatting these files would invalidate
+# managed hashes and create upgrade churn. Authored project memory remains in
+# scope: `.specify/memory/constitution.md` and all of `specs/` are checked.
+.agents/skills/
+.claude/skills/
+.cursor/skills/
+.gemini/commands/
+.github/skills/
+.specify/extensions/
+.specify/integrations/
+.specify/scripts/
+.specify/templates/
+.specify/workflows/
+.specify/extensions.yml
+.specify/init-options.json
+.specify/integration.json
+.specify/memory/.constitution-template.json

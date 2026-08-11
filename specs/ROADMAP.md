@@ -1,0 +1,39 @@
+# Current Roadmap
+
+**Last reconciled**: 2026-08-11
+
+This file contains only active status, ordering, dependencies, and next gates. Feature detail belongs
+in the linked feature package, durable rationale in [ADRs](./DECISIONS.md), and completed history in
+`CHANGELOG.md` and Git.
+
+## Active Queue
+
+| Priority | Work                                                           | Status                                        | Owner                                                                                                                          | Dependency                                                                                | Next gate                                                                                                    |
+| -------- | -------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| P0       | Establish Spec Kit as canonical project memory                 | Complete; awaiting review and merge           | [001 Spec Kit foundation](./001-spec-kit-foundation/spec.md)                                                                   | Documentation truth sweep is already on `main`                                            | Open a draft PR; merge only after review and green GitHub CI                                                 |
+| P1       | Dependency and Sentry package refresh                          | In progress; draft PR, not merged or deployed | [GitHub PR #57](https://github.com/vladikkrasulya/adtech-spyglass/pull/57)                                                     | Keep separate from the governance migration                                               | Re-review the branch against current `main`, merge only with green CI and package smoke                      |
+| P1       | Assess and harden the browser Markdown trust boundary          | Needs assessment                              | [Content/SEO contract](./000-platform-baseline/contracts/content-seo.md)                                                       | Keep runtime hardening separate from the governance migration                             | Reproduce with synthetic markup, define sanitization/promotion requirements, then specify a bounded fix      |
+| P1       | Decide the reachable GitHub repository identity                | Needs assessment                              | [Foundation research](./001-spec-kit-foundation/research.md)                                                                   | Canonical docs must keep using the currently reachable repository until cutover is proven | Assess rename redirects, package metadata, deploy remotes, links, and rollback before specifying a migration |
+| P1       | Decide the first npm publication                               | Needs assessment                              | [npm publication runbook](../docs/NPM_PUBLISH.md) and [ADR-008](./decisions/ADR-008-independent-versioning-unpublished-npm.md) | Registry ownership and package order must be verified; Core precedes CLI                  | Assess scope and credentials, then specify a separately authorized dry run and publication                   |
+| P2       | Restore or deliberately reconfigure production error reporting | Pending external verification                 | [Operations runbook](../docs/OPERATIONS.md)                                                                                    | Depends on the reviewed dependency/Sentry change and an explicitly authorized deploy      | Verify health readiness and delivery without weakening Telegram fallback                                     |
+| P2       | Deploy the reviewed baseline                                   | Not authorized by this roadmap                | [Release/deploy contract](./000-platform-baseline/contracts/release-deploy.md)                                                 | All selected changes merged to clean `main`; full gates green                             | Obtain explicit deployment authorization, then use the immutable-image pipeline                              |
+| P3       | Product features and hotspot refactors                         | Not scheduled                                 | [Platform baseline](./000-platform-baseline/spec.md)                                                                           | Baseline governance, dependencies, package identity, and observability decisions          | Assess one bounded problem before opening a feature package                                                  |
+
+The last verified state for PR #57 in this work session was commit `7f19da9` with green GitHub checks;
+it remains outside `main` and has not been deployed. Re-verify external state before acting on that
+claim.
+
+## Fleet Standard Follow-Ups
+
+These are ordered future assessments, not installed capabilities or authorized implementation. Each
+must pass `speckit.assess` and receive its own feature package before repository changes begin.
+
+| Order | Candidate                             | Status                                                             | Linked rationale                                                                                                                    | Assessment gate                                                                                                                                       |
+| ----- | ------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | First-party passive-context extension | Needs assessment                                                   | [ADR-010](./decisions/ADR-010-supported-agents-safe-automation.md) and [foundation research](./001-spec-kit-foundation/research.md) | Specify deterministic `session_start` input, secret redaction, zero mutation, bounded output, and cross-agent fixture tests                           |
+| 2     | Organization governance preset        | Needs assessment after this foundation converges                   | [ADR-009](./decisions/ADR-009-spec-kit-document-ownership.md)                                                                       | Separate universal principles from ortbtools-specific contracts; pin source and prove upgrade/uninstall behavior in a fixture                         |
+| 3     | Safe reviewed workflow                | Needs assessment after the context and preset boundaries are known | [ADR-010](./decisions/ADR-010-supported-agents-safe-automation.md)                                                                  | Preserve clarification, checklist, analysis, verification, convergence, and human authorization gates; prohibit unattended Git or production mutation |
+| 4     | Organization-owned bundle             | Needs assessment after its components are accepted                 | [Foundation feature](./001-spec-kit-foundation/spec.md)                                                                             | Bundle only pinned first-party assets; verify clean install, status, upgrade, and removal in an empty temporary project                               |
+
+Community packages, URL-delivered extensions, automatic Git hooks, and unattended implementation
+workflows remain outside the accepted baseline.

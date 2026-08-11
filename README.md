@@ -18,8 +18,8 @@ raw request/response entries in same-origin `localStorage`; that history
 survives reloads and is shared across tabs. The server does keep derived
 analytics and a sampled request log (which includes your IP), but never the
 payload bodies. Login is **opt-in** for saved samples and partner profiles.
-The whole surface lives on a single domain by design — see
-[decision log in ROADMAP.md](./ROADMAP.md#decisions).
+The whole surface lives on a single domain by design — see the
+[decision index](./specs/DECISIONS.md).
 
 ## What it does
 
@@ -135,54 +135,23 @@ The only runtime mount is `/srv/DATA/AppData/ortbtools:/data` for SQLite and
 persisted blog content. A source edit therefore requires an image rebuild; a
 plain container restart does not load host-side changes.
 
-## Layout
+## Project memory and layout
 
-```
-server.js                 vanilla node:http server, REST API
-db.js                     SQLite store (account metadata + saved samples)
-auth.js                   bcrypt + per-IP / per-account rate-limiter
-tokens.js                 stateless HMAC tokens for verify-email + reset
-email.js                  Resend HTTPS API wrapper
+GitHub Spec Kit is the repository's working memory:
 
-packages/core/            CommonJS validator workspace; main APIs are network-free
-  index.js                public API surface — validate(), crosscheck()
-  detect.js               type + oRTB version autodetection
-  format-detect.js        format detection (banner/video/audio/native/push/…)
-  knowledge-base.js       Node-only fixture loader + reference context
-  rules-request.js        oRTB BidRequest rules (IAB-spec baseline)
-  rules-response.js       oRTB BidResponse rules
-  rules-request-30.js     oRTB 3.0 BidRequest envelope checks
-  rules-response-30.js    oRTB 3.0 BidResponse envelope checks
-  rules-vast.js           VAST 2.x / 3.x / 4.x envelope + quality checks
-  rules-feed.js           JsonFeed rules (vendor-specific shapes)
-  rules/                  plugin-style validator rules — see rules/README.md
-                          for contract. Eleven rule groups currently ship;
-                          adding one requires a folder + PLUGINS registration.
-  spec-refs.json          finding-id → IAB spec URL map (gated by
-                          tests/spec-refs.test.js)
-  crosscheck.js           request↔response semantic checks
-  categories.js           IAB Content Taxonomy decoder
-  dialects/iab.js         IAB-canonical baseline (default)
-  dialects/ext-rtb.js     Vendor oRTB-extension overlay
-  dialects/inpage-push.js  Vendor in-page push overlay
-  intel/walker.js         discovery walker with PII denylist
-  intel/cluster.js        co-occurrence clustering
-  intel/temp-dialect.js   client-side temporary dialect runtime
-  knowledge_base/         curated reference fixtures (oRTB 2.5/2.6 + JsonFeed)
-  messages/{uk,en,ru}.json  localised finding messages
-  behavior/               creative-probe scanner + behavior engine
-lib/intel-rules.js        deterministic intel suggestions + news relevance
+- [constitution](./.specify/memory/constitution.md) — non-negotiable rules;
+- [memory index](./specs/README.md) — where to find current state, contracts,
+  decisions, and active work;
+- [platform baseline](./specs/000-platform-baseline/plan.md) — current component
+  ownership and data flow;
+- [roadmap](./specs/ROADMAP.md) — current priorities only;
+- [decision index](./specs/DECISIONS.md) — durable architectural rationale.
 
-public/index.{en,uk,ru}.html UI per locale (EN at /, others under /uk/, /ru/)
-public/about.{en,uk,ru}.html docs per locale
-public/ortbtools.app.js UI behaviours
-public/ortbtools-crypto.js zero-knowledge crypto (browser-only)
-public/lang-switch.js seamless DOM-morph language switch (shared by index + about)
-public/i18n.js central UK/EN/RU dictionary
-
-docker-compose.yml service definition (ports + bind mounts)
-Dockerfile multi-stage alpine + node + better-sqlite3 build
-```
+At a high level, `server.js` composes the vanilla `node:http` application;
+backend route groups live under `modules/`; the deterministic validator and CLI
+are npm workspaces under `packages/`; browser surfaces live in `public/`; and
+all tests live directly under `tests/`. The baseline is the canonical detailed
+map, so this README does not maintain a second file-by-file inventory.
 
 ## CLI (`@ortbtools/cli`)
 
@@ -212,9 +181,12 @@ See [the CLI README](./packages/cli/README.md) and
 
 ```bash
 npm test          # full node:test suite
-npm run ci        # prettier:check → eslint → typecheck → tests; what the
-                  # pre-push hook enforces
+npm run ci        # prettier:check → eslint → typecheck → coverage
 ```
+
+The tracked `.githooks/pre-push` runs `npm run ci` only for direct pushes from
+local `main`; feature branches rely on GitHub CI, so run the full gate before
+opening or merging a pull request.
 
 ## Configuration
 
@@ -235,8 +207,10 @@ Issues + PRs welcome. Particularly useful:
 - **Vendor dialect overlays** — if you have public docs for a CIS adtech
   network we don't cover, drop a PR with a new
   `packages/core/dialects/<vendor>.js` and register it in the `DIALECTS` map.
-- **Translations** — `packages/core/messages/` and `public/i18n.js` accept
-  more locales; a new file + entries in the I18N object is enough.
+- **Translations** — all three shipped locales (`en`, `uk`, `ru`) move
+  together. Adding a fourth locale is an architectural change because routes,
+  templates, switch logic, dictionaries, and tests currently enumerate the
+  supported set.
 - **oRTB minor revisions** — per-revision detection and rule gating.
 
 For security issues: see [SECURITY.md](./SECURITY.md).

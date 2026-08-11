@@ -202,9 +202,6 @@ const FORBIDDEN = [
 const ALLOWLIST = new Set([
   // Internal (not user-facing) docs — exempt by policy.
   'CHANGELOG.md', // historical: quotes past claims verbatim
-  'ROADMAP.md', // internal roadmap / decision log
-  'CONTRIBUTING.md', // internal contributor doc
-  'CLAUDE.md', // internal agent instructions
   // Offline packages — "no phoning home" / "runs in browser AND Node" are
   // accurate for the network-free core library + CLI (verified: zero fetch).
   'packages/cli/README.md',
@@ -222,7 +219,6 @@ const ALLOWLIST = new Set([
   'docs/jsonfeed-research-adkernel-2026-05-04.md',
   'docs/next-chapters-2026-05-09.md',
   'docs/validator-roadmap-2026-05-09.md',
-  'docs/sonnet-orchestration-plan.md',
   'docs/superseded/stream-platform-pivot-2026-05-05.md',
 ]);
 
@@ -261,6 +257,13 @@ function collectFiles() {
     }
   })(path.join(ROOT, 'docs'));
 
+  // 4. Canonical as-built privacy/API contracts. Other project-memory files
+  //    link here instead of restating the data-flow promises.
+  files.push(
+    path.join(ROOT, 'specs', '000-platform-baseline', 'contracts', 'data-retention.md'),
+    path.join(ROOT, 'specs', '000-platform-baseline', 'contracts', 'http-api.md'),
+  );
+
   return [...new Set(files)].filter((abs) => !ALLOWLIST.has(path.relative(ROOT, abs)));
 }
 
@@ -282,9 +285,9 @@ test('scan set covers the public marketing surfaces', () => {
     'public/about.ru.html',
     'public/account.en.html',
     'docs/PRIVACY.md',
-    'docs/ARCHMAP.md',
     'docs/api-v1.md',
-    'ARCHITECTURE.md',
+    'specs/000-platform-baseline/contracts/data-retention.md',
+    'specs/000-platform-baseline/contracts/http-api.md',
     'lib/seo.js',
     'lib/landings.js',
   ]) {
@@ -384,16 +387,22 @@ for (const rel of ['public/account.en.html', 'public/account.uk.html', 'public/a
   });
 }
 
-// Architecture docs must describe the real server-side validation path.
-const SERVER_SIDE_VALIDATION = {
-  'docs/ARCHMAP.md':
-    /\/api\/analyze[\s\S]{0,160}server-side|server-side[\s\S]{0,160}\/api\/analyze/i,
-  'ARCHITECTURE.md': /validate[sd]?\s+\*\*server-side\*\*|server-side[\s\S]{0,120}\/api\/analyze/i,
+// Canonical baseline contracts must describe the real server-side validation
+// and retention paths. Retired architecture mirrors are intentionally absent.
+const BASELINE_FLOW_CONTRACTS = {
+  'specs/000-platform-baseline/contracts/http-api.md': {
+    description: 'server-side /api/analyze validation',
+    re: /\/api\/analyze[\s\S]{0,240}(?:server-side|server)|(?:server-side|server)[\s\S]{0,240}\/api\/analyze/i,
+  },
+  'specs/000-platform-baseline/contracts/data-retention.md': {
+    description: 'transient raw-payload retention boundary',
+    re: /raw[\s\S]{0,100}payload[\s\S]{0,180}(?:transient|not persist|never persist|not stor|never stor)/i,
+  },
 };
-for (const [rel, re] of Object.entries(SERVER_SIDE_VALIDATION)) {
-  test(`${rel} describes server-side /api/analyze validation`, () => {
+for (const [rel, { description, re }] of Object.entries(BASELINE_FLOW_CONTRACTS)) {
+  test(`${rel} describes its ${description}`, () => {
     const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-    assert.match(text, re, `${rel} lost its accurate server-side /api/analyze description`);
+    assert.match(text, re, `${rel} lost its accurate ${description}`);
   });
 }
 

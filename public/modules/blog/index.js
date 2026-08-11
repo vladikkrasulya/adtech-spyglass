@@ -293,8 +293,9 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
     const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
     const dateStr = formatDate(post.published_at, postLang);
 
-    // Body rendering by trust level. Trusted editorial posts (source==='markdown',
-    // admin-authored via git) get full marked. Firehose/crawled posts are
+    // Body rendering by source classification. Markdown-source posts (repository
+    // files or token-gated admin promotions) get full, unsanitized Marked output
+    // and are therefore a trusted-editorial boundary. Firehose/crawled posts are
     // UNTRUSTED — render through the escape-first safe renderer so stored
     // HTML/<script> in a crawled body cannot execute (stored-XSS).
     let bodyHtml = '';

@@ -1,0 +1,34 @@
+{
+  "version": "0.16.2",
+  "integration_state_schema": 1,
+  "installed_integrations": [
+    "codex",
+    "claude",
+    "cursor-agent",
+    "gemini"
+  ],
+  "integration_settings": {
+    "codex": {
+      "script": "sh",
+      "raw_options": "--skills",
+      "parsed_options": {
+        "skills": true
+      },
+      "invoke_separator": "-"
+    },
+    "claude": {
+      "script": "sh",
+      "invoke_separator": "-"
+    },
+    "cursor-agent": {
+      "script": "sh",
+      "invoke_separator": "-"
+    },
+    "gemini": {
+      "script": "sh",
+      "invoke_separator": "."
+    }
+  },
+  "integration": "codex",
+  "default_integration": "codex"
+}

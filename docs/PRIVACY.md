@@ -308,7 +308,7 @@ pino logs. `/api/analyze` payload bodies are never persisted server-side regardl
 these settings; browser history and explicitly saved samples follow the separate
 retention rules above.
 
-See also `docs/OPERATIONS.md` §4.10.
+See also [OPERATIONS §4.9](./OPERATIONS.md#49-disable-clickhouse-derived-telemetry-self-host-privacy).
 
 ---
 

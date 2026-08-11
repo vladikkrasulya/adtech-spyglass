@@ -20,7 +20,7 @@ const PACKAGE_DOCS = [
   'README.md',
   'packages/core/README.md',
   'packages/cli/README.md',
-  'ARCHITECTURE.md',
+  'specs/000-platform-baseline/spec.md',
 ];
 
 const PACKAGE_INSTALL_COMMANDS = {
@@ -117,6 +117,18 @@ test('@ortbtools/core README describes the current server and validation contrac
   }
 });
 
+test('content contract distinguishes safe SSR from the browser Markdown trust boundary', () => {
+  const contract = read('specs/000-platform-baseline/contracts/content-seo.md');
+  assert.doesNotMatch(
+    contract,
+    /Landing and blog rendering escape metadata and user\/content HTML at the rendering boundary/i,
+    'the content contract must not apply SSR escaping to the browser Marked path',
+  );
+  assert.match(contract, /Marked is not an HTML\s+sanitizer/i);
+  assert.match(contract, /token-gated admin `promote` action/i);
+  assert.match(contract, /stored script-capable markup/i);
+});
+
 const CANONICAL_REPOSITORY = 'https://github.com/vladikkrasulya/adtech-spyglass';
 const RETIRED_REPOSITORY_RE = /github\.com\/vladikkrasulya\/ortbtools\b/i;
 const IDENTITY_FILES = [
@@ -150,24 +162,114 @@ for (const relativePath of IDENTITY_FILES) {
   });
 }
 
-const CURRENT_MARKDOWN = [
+const RETAINED_CURRENT_MARKDOWN = [
   'README.md',
-  'ARCHITECTURE.md',
-  'ROADMAP.md',
-  'CLAUDE.md',
   'CONTRIBUTING.md',
   'SECURITY.md',
-  'docs/ARCHMAP.md',
   'docs/NPM_PUBLISH.md',
   'docs/OPERATIONS.md',
   'docs/PRIVACY.md',
-  'docs/TESTING.md',
   'docs/USER_GUIDE.md',
   'docs/api-v1.md',
   'packages/core/README.md',
   'packages/cli/README.md',
   'public/modules/README.md',
 ];
+
+function collectMarkdown(relativeDir) {
+  const files = [];
+  const absoluteRoot = path.join(ROOT, relativeDir);
+  if (!fs.existsSync(absoluteRoot)) return files;
+
+  (function walk(absoluteDir) {
+    for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+      const absolutePath = path.join(absoluteDir, entry.name);
+      if (entry.isDirectory()) walk(absolutePath);
+      else if (entry.name.endsWith('.md')) {
+        files.push(path.relative(ROOT, absolutePath).split(path.sep).join('/'));
+      }
+    }
+  })(absoluteRoot);
+
+  return files.sort();
+}
+
+const CURRENT_MARKDOWN = [
+  ...RETAINED_CURRENT_MARKDOWN,
+  '.specify/memory/constitution.md',
+  ...collectMarkdown('specs'),
+];
+
+const HISTORICAL_MARKDOWN = collectMarkdown('docs').filter(
+  (relativePath) => !RETAINED_CURRENT_MARKDOWN.includes(relativePath),
+);
+
+test('active Markdown registry uses canonical Spec Kit owners, not retired mirrors', () => {
+  for (const required of [
+    '.specify/memory/constitution.md',
+    'specs/README.md',
+    'specs/ROADMAP.md',
+    'specs/DECISIONS.md',
+    'specs/000-platform-baseline/spec.md',
+    'specs/001-spec-kit-foundation/spec.md',
+  ]) {
+    assert.ok(CURRENT_MARKDOWN.includes(required), `active Markdown scan must include ${required}`);
+  }
+
+  for (const retired of [
+    'CLAUDE.md',
+    'ROADMAP.md',
+    'ARCHITECTURE.md',
+    'docs/ARCHMAP.md',
+    'docs/TESTING.md',
+  ]) {
+    assert.equal(
+      CURRENT_MARKDOWN.includes(retired),
+      false,
+      `${retired} is a retired document owner`,
+    );
+  }
+});
+
+test('dated reports excluded from current truth are explicitly historical and route to current owners', () => {
+  assert.ok(HISTORICAL_MARKDOWN.length > 0, 'expected dated historical documents');
+  for (const relativePath of HISTORICAL_MARKDOWN) {
+    const text = read(relativePath);
+    assert.match(
+      text,
+      /\*\*(?:Historical snapshot|SUPERSEDED)\b/i,
+      `${relativePath} must identify itself as historical or superseded`,
+    );
+    assert.match(
+      text,
+      /specs\/000-platform-baseline\/plan\.md/,
+      `${relativePath} must route current behavior to the platform baseline`,
+    );
+    assert.match(
+      text,
+      /specs\/ROADMAP\.md/,
+      `${relativePath} must route active work to the Spec Kit roadmap`,
+    );
+  }
+});
+
+test('active Ukrainian documentation consistently uses “вразливість”', () => {
+  const violations = [];
+  for (const relativePath of CURRENT_MARKDOWN) {
+    const match = /(?<!\p{L})[Уу]разлив\p{L}*/u.exec(read(relativePath));
+    if (match) violations.push(`${relativePath}: ${match[0]}`);
+  }
+  assert.deepEqual(
+    violations,
+    [],
+    `active Markdown contains the rejected “уразлив-” form:\n${violations.join('\n')}`,
+  );
+  assert.match(
+    read('specs/000-platform-baseline/contracts/locales-versioning.md'),
+    /(?<!\p{L})вразливість(?!\p{L})/iu,
+    'the locale contract must pin the preferred Ukrainian term “вразливість”',
+  );
+});
 
 function proseOnly(markdown) {
   let fence = null;

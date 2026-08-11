@@ -55,7 +55,9 @@ runbook covers SQLite and persisted Markdown content only; ClickHouse backup and
 restore belong to that external stack's operations. There is no Postgres or
 Redis service to manage for ortbtools.
 
-For deep architectural context see `ARCHITECTURE.md` (especially §0 Current State).
+For the as-built architecture, read the
+[platform baseline](../specs/000-platform-baseline/plan.md) and its
+[release/deploy contract](../specs/000-platform-baseline/contracts/release-deploy.md).
 
 ---
 
@@ -81,7 +83,7 @@ Since v1.1.6 exactly **one** host path is mounted:
 **The `/data` mount** holds `ortbtools.db` + `-wal`/`-shm` (live SQLite WAL state)
 and `content-posts/` (persistent blog content; the container reads it via
 `CONTENT_DIR=/data/content-posts`). Never copy only `ortbtools.db` without the WAL
-files. The backup script archives both (§7).
+files. The backup script archives both (§6).
 
 **`design-system.css`** is vendored byte-for-byte into the image
 (`public/design-system.css`; provenance + update procedure in

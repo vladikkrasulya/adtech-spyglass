@@ -11,12 +11,12 @@ own folder under `packages/core/rules/<plugin>/`, registered in
 ## Why split
 
 - Easier to find: bug in client-hints check → `rules/client-hints/`.
-  No grepping a 432-line function.
+  No searching through the entire baseline validator.
 - Easier to disable: `disabledRules: ['device.client_hints.*']` already
   works because findings use prefix-style IDs.
 - Easier to test: each plugin owns its own test file.
-- Future LLM-tuned thresholds, statistical context, A/B
-  experimentation — all natural per-plugin.
+- Deterministic, evidence-backed rule groups can evolve independently while
+  retaining the same finding contract.
 
 ## Plugin contract
 
@@ -65,7 +65,9 @@ Return an array (never null). Use `makeFinding(id, level, path, params)` from
 5. Register in `packages/core/rules/index.js` (one line in the
    PLUGINS array).
 6. Add tests: `tests/rules-<name>.test.js`.
-7. Bump test count in `docs/ARCHMAP.md` §1.5.
+7. Update the owning feature or
+   [Core contract](../../../specs/000-platform-baseline/contracts/core-validator.md)
+   when public behavior changes, then run the focused tests and `npm run ci`.
 
 ## How findings flow through the pipeline
 
@@ -75,7 +77,7 @@ validate(payload, opts) in packages/core/index.js
   ├─→ detectType → ORTB_REQUEST / ORTB_RESPONSE / …
   │
   ├─→ legacy rules:
-  │     validateRequest(req, ctx)        ← rules-request.js   (432 LOC)
+  │     validateRequest(req, ctx)        ← rules-request.js
   │     validateRequest30(req, ctx)      ← rules-request-30.js
   │     validateResponse(res, ctx)       ← rules-response.js
   │     validateResponse30(res, ctx)     ← rules-response-30.js
@@ -83,9 +85,7 @@ validate(payload, opts) in packages/core/index.js
   ├─→ plugin pass:
   │     runRulePlugins(payload, ctx)     ← THIS FOLDER
   │       ├─→ client-hints/index.js .validate(...)
-  │       ├─→ (future) categories/index.js .validate(...)
-  │       ├─→ (future) native/index.js .validate(...)
-  │       └─→ …
+  │       └─→ every plugin registered in rules/index.js
   │     ← findings array, merged with legacy findings
   │
   ├─→ applyDisabledRules (skip suppressed ids/prefixes)
@@ -107,6 +107,8 @@ collapse — and the params merge keeps the latest).
   recommended fields, deprecated patterns, dialect mismatches.
 - **info** — best-practice note. Tells the integrator "you could do
   better" but the current state is fine.
+- **question** — non-blocking ambiguity that needs operator or integration
+  context before it can be judged.
 
 If you're not sure → **warning**. `error` is for "this WILL be
 rejected"; `info` is for "this is just a tip".

@@ -303,9 +303,10 @@ bcrypt-хеш, ніколи не відкритий текст, а KEK і роз
 
 ## Що в roadmap
 
-Актуальний baseline, завершені етапи та пріоритети підтримуються у
-[`ROADMAP.md`](../ROADMAP.md). Старі Phase 0–5 нижче в тому файлі збережені як
-історичний design record, а не як поточний backlog.
+Поточні пріоритети й статус активних специфікацій підтримуються у
+[Spec Kit roadmap](../specs/ROADMAP.md). Опис уже реалізованої системи живе в
+[platform baseline](../specs/000-platform-baseline/plan.md), а причини ключових
+рішень — у [ADR index](../specs/DECISIONS.md).
 
 ---
 
