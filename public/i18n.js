@@ -118,8 +118,8 @@
       'builder.create': 'Створити тимчасовий діалект',
       'builder.info': '{n} полів обрано',
       'builder.suggest_name': 'Запропонувати',
-      'builder.suggest_name_tooltip': 'Запропонувати назву через локальну LLM',
-      'builder.suggesting': 'Думаю…',
+      'builder.suggest_name_tooltip': 'Запропонувати назву за детермінованими серверними правилами',
+      'builder.suggesting': 'Обчислюю…',
       'banner.new_patterns': 'Виявлено {n} нових патернів полів',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
 
@@ -390,8 +390,8 @@
       'builder.create': 'Create temporary dialect',
       'builder.info': '{n} fields selected',
       'builder.suggest_name': 'Suggest',
-      'builder.suggest_name_tooltip': 'Suggest a name with the local LLM',
-      'builder.suggesting': 'Thinking…',
+      'builder.suggest_name_tooltip': 'Suggest a name with deterministic server-side rules',
+      'builder.suggesting': 'Calculating…',
       'banner.new_patterns': '{n} new field patterns detected',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
 
@@ -659,8 +659,8 @@
       'builder.create': 'Создать временный диалект',
       'builder.info': '{n} полей выбрано',
       'builder.suggest_name': 'Предложить',
-      'builder.suggest_name_tooltip': 'Предложить название через локальную LLM',
-      'builder.suggesting': 'Думаю…',
+      'builder.suggest_name_tooltip': 'Предложить название по детерминированным серверным правилам',
+      'builder.suggesting': 'Вычисляю…',
       'banner.new_patterns': 'Обнаружено {n} новых паттернов полей',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
       'btn.cancel': 'отмена',

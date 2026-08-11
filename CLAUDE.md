@@ -26,13 +26,14 @@ auth.js                           bcrypt sessions + KEK lifecycle (crypto bootst
 db.js                             SQLite via better-sqlite3 (partners, samples, users)
 tokens.js                         Stateless HMAC tokens (verify-email, password reset)
 email.js                          Resend HTTPS API wrapper
-intel-llm.js                      Server-side Ollama LLM bridge (live-edit bind-mount)
 lib/
   router.js                       Pattern-based dispatcher (exact / :id / trailing-*)
   http.js                         readJson, sendJson, sendError, makeError
   logger.js                       pino-based structured logger
   replay.js                       DI'd bulk-pipeline engine
   corpus-matrix.js                Confusion matrix runner
+  intel-rules.js                  Deterministic intel + relevance rules
+  openrouter.js                   Isolated news-translation client
 modules/                          Backend handler folders (baked into image — needs rebuild)
   account/ admin/ analyze/        One folder per route group. Each exports {id, routes}
   auth/ corpus/ health/           or a createXxxModule(deps) factory. Registered in
@@ -58,7 +59,7 @@ packages/core/                    Validator engine — pure JS, Node + browser c
   knowledge_base/                 Curated oRTB / JsonFeed reference fixtures
   messages/{en,uk,ru}.json        Localised finding messages (en/uk/ru parity required)
 
-public/                           Static assets — bind-mounted, live-edit OK
+public/                           Static assets baked into the immutable image
   index.{en,uk,ru}.html           Shell per locale (EN at /, others at /uk/, /ru/)
   about.{en,uk,ru}.html           Docs per locale
   account.{en,uk,ru}.html         Cabinet (logged-in workspace)
@@ -67,7 +68,7 @@ public/                           Static assets — bind-mounted, live-edit OK
   i18n.js                         ~140-key UK/EN/RU dictionary + window.t() helper
   lang-switch.js                  Seamless DOM-morph language switch
   version.js                      Browser-side VERSION constant (bump with package.json)
-  design-system.css               Empty placeholder — real file bind-mounted from portal
+  design-system.css               Vendored design system, baked into the image
   modules/                        Frontend tool folders (folder-per-feature)
     README.md                     Module contract: layout, lifecycle, cross-module comms
     inspector/                    Workbench template + mount lifecycle
@@ -75,22 +76,20 @@ public/                           Static assets — bind-mounted, live-edit OK
     password-reset/               Forgot/reset flow (rotate/recover/wipe modes)
     save-sample/ edit-sample/     Encrypted sample save + metadata edit
     partners/                     Partner CRUD modal
-    mirror/ live/ simulate/       Mirror generator, SSE live stream, LLM demo
+    mirror/ live/ simulate/       Mirror generator, SSE live stream, rules simulator
     share/ embed/ shortcuts/      Permalink, iframe embed, keyboard cheatsheet
     corpus-save/                  Labelled behavior corpus capture
     intel/ behavior/              Discovery + behavior analyzer (pre-modularization shape)
 
 tests/                            node:test runner — run with `npm test`
-samples/                          Synthetic specimens for rules + demos (bind-mounted)
+samples/                          Synthetic specimens for rules + demos (baked)
 docs/                             ARCHMAP.md, USER_GUIDE.md, historical audits
 .claude/agents/                   Pre-built specialized sub-agents (see §8 below)
 ```
 
-**Bind-mounted** (live edit → `docker compose restart` if Node-cached):
-`./public/`, `./packages/`, `./intel-llm.js`, `./samples/`
-
-**Baked into image** (requires `docker compose up -d --build` after any edit):
-`server.js`, `lib/`, `modules/`, `auth.js`, `db.js`, `tokens.js`, `email.js`
+**Immutable image:** every source directory and the vendored design system are
+baked. The only runtime mount is `/data` for SQLite and persisted blog content.
+Any source edit requires a rebuild/redeploy; `compose restart` does not load it.
 
 ---
 
@@ -186,27 +185,16 @@ logical position in each block. Then run `npx prettier --write public/i18n.js`.
 
 ## Two well-known traps
 
-### Trap A — File-level bind-mount inode
+### Trap A — Restarting an old immutable image
 
-**Symptom.** You edit a file with `Edit` or `Write`, run `docker compose restart`,
-the change isn't live inside the container. `curl` returns the old content.
+**Symptom.** You edit a source file, run `docker compose restart`, and the change
+isn't live inside the container.
 
-**Root cause.** Editors and formatters (including the `Edit` and `Write` tools) often
-perform an atomic write: write to a temp file, then `rename()` it into place. The
-rename creates a new inode. Docker's bind-mount held the old inode's file descriptor,
-so the container still reads the previous version.
+**Root cause.** No source is bind-mounted. A restart starts the same image again.
 
-**Detection.** Compare inodes: `stat <file>` on the host vs `docker compose exec
-ortbtools stat /app/public/<file>` inside the container. Different inode number
-confirms the stale-mount condition.
-
-**Fix.** `docker compose restart ortbtools`. A plain restart re-opens the bind
-mount's directory entry, picks up the new inode, and serves the updated file.
-
-**Affected files.** Any file in `./public/` and the portal's `design-system.css`
-bind-mount (`/srv/DATA/Stacks/kyivtech-portal/public/design-system.css`). Hit twice
-in v0.42.5 and v0.42.8. The design-system.css trap is especially easy to miss because
-the file lives in a different repo directory and has no local source copy in this repo.
+**Fix.** Build and deploy a new image through `scripts/deploy.sh` (production) or
+rebuild/recreate the local Compose service. Verify `/api/health` reports the expected
+build SHA.
 
 ### Trap B — CSS source-order trap with mobile `@media`
 
@@ -314,6 +302,6 @@ Include the model name and generation (e.g. `Claude Sonnet 4.6`, `Claude Opus 4.
 3. Browse `docs/` — historical audits (`audit-2026-05-12.md`,
    `tech-debt-2026-05-04.md`, `tech-debt-2026-05-12.md`) contain findings and
    root-cause analyses that are still relevant.
-4. If the bug looks like "edit not working" — check bind-mount inode (Trap A above)
-   and whether the file is baked into the image (needs `--build`).
+4. If the bug looks like "edit not working" — confirm the image was rebuilt and
+   `/api/health` reports the expected build SHA (Trap A above).
 5. If a CSS change isn't firing on mobile — check source order (Trap B above).

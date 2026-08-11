@@ -1,6 +1,6 @@
 # ortbtools — Operations Runbook
 
-Maintainer: Vladik. Machine: Optiplex 7050 Micro, Debian 13, LAN `192.168.1.4`,
+Maintainer: Vladik. Machine: `vkbox`, Debian 13, LAN `192.168.1.6`,
 Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/ortbtools/`.
 
 ---
@@ -8,7 +8,7 @@ Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/ortbtools/`.
 ## TL;DR — Quick Reference
 
 - **Public URL**: `https://ortbtools.com/`
-- **Health endpoint**: `curl -s http://127.0.0.1:3000/api/health | python3 -m json.tool`
+- **Health endpoint**: `curl -s http://127.0.0.1:8090/api/health | python3 -m json.tool`
   — returns `{"success": true, "status": "ok", "checks": {"db": true}, "build": {"sha": "..."}}`
 - **Container name**: `ortbtools` — check: `docker ps --filter name=ortbtools`
 - **App is down → first command**: `docker logs ortbtools --tail 100`
@@ -47,12 +47,6 @@ directly. ortbtools is on Docker's default bridge and publishes only to
 **SQLite** is the only persistent store — one file, WAL mode, no migration tooling
 needed beyond running the app (schema auto-applied at startup via `db.js`). No
 Postgres or Redis to manage.
-
-**Ollama** (cross-stack, `ollama_default` network): LLM intel features call
-`http://ollama:11434`. Fail-open — if Ollama is down, AI affordances hide in the UI,
-everything else continues unaffected. The model in use is `gemma4:e2b` (since
-2026-05-21; previously `qwen2.5:3b`). See §8 (Monitoring) and §5.8 (Bump Ollama
-model) for ops details.
 
 For deep architectural context see `ARCHITECTURE.md` (especially §0 Current State).
 
@@ -102,9 +96,9 @@ rebuild+redeploy (§9).
 Since v1.1.6 there are **no file-level bind-mounts at all** — the transitional
 `design-system.css` overlay was removed, so the inode trap is fully retired. The
 single remaining mount is the `/data` **directory** (persistent SQLite + content),
-which is not subject to this gotcha. Historically the trap bit `./public`,
-`./packages`, `./intel-llm.js`, `./samples` (v0.42.5 / v0.42.8) and the portal
-`design-system.css` (through v1.1.5) — none are mounted any more.
+which is not subject to this gotcha. Historically the trap affected selected
+source directories and the portal `design-system.css` (through v1.1.5) — none
+are mounted any more.
 
 ---
 
@@ -256,27 +250,7 @@ Also rotate `EMAIL_TOKEN_SECRET` in the vault and restart if the leak included
 password-reset / email-verify tokens (stateless HMAC — rotation invalidates all
 outstanding tokens of that type).
 
-### 4.8 Bump Ollama model
-
-The current model is `gemma4:e2b` (set in `docker-compose.yml` as
-`OLLAMA_MODEL=gemma4:e2b`). To switch:
-
-1. Pull the new model into Ollama first:
-   ```bash
-   docker exec ollama ollama pull <new-model>
-   ```
-2. Edit `docker-compose.yml` — change `OLLAMA_MODEL=<new-model>` in the `environment`
-   block.
-3. `docker compose up -d` (no rebuild needed — the env var is the only thing changing).
-
-If the model is not pulled and the app calls it, the request returns a non-200 and
-the LLM feature degrades silently (fail-open). No user-facing crash.
-
-The Ollama container is managed by the separate stack at `/srv/DATA/Stacks/ollama/`.
-
----
-
-### 4.9 Pause / resume the news+blog pipeline (whole-pipeline kill-switch)
+### 4.8 Pause / resume the news+blog pipeline (whole-pipeline kill-switch)
 
 `NEWS_CRAWLER_DISABLED=1` is an **emergency whole-pipeline kill-switch**: it stops
 the hourly scheduler that does RSS crawl → draft ingest → AI moderation →
@@ -313,7 +287,7 @@ To pause ONLY publishing while keeping crawl/ingest running, a separate
 `BLOG_AUTO_PUBLISH_DISABLED` flag (gating just `moderatePendingDrafts()`) would be
 needed — not yet implemented.
 
-### 4.10 Disable ClickHouse-derived telemetry (self-host / privacy)
+### 4.9 Disable ClickHouse-derived telemetry (self-host / privacy)
 
 Anonymous analyze metadata (`validation_logs`) and the operational request log
 (`event_log`) write to ClickHouse only when `CLICKHOUSE_USER` is set **and**
@@ -353,20 +327,20 @@ vault rides the daily AppData backup and off-site sync.
 ### 5.2 What ortbtools reads
 
 From `docker-compose.yml`, the container loads `env_file: - .env` (the per-project
-`.env` at `/srv/DATA/Stacks/ortbtools/.env`, git-ignored). Additional env vars
-(`OLLAMA_URL`, `OLLAMA_MODEL`) are set directly in the `environment:` block and do not
-come from the vault.
+`.env` at `/srv/DATA/Stacks/ortbtools/.env`, git-ignored). The non-secret
+`CONTENT_DIR` value is set directly in the Compose service definition.
 
 The `.env.example` documents the full key set. Variables that should live in the vault
 and be referenced from `.env`:
 
-| Var                  | Purpose                                      |
-| -------------------- | -------------------------------------------- |
-| `RESEND_API_KEY`     | Transactional email (password reset, verify) |
-| `EMAIL_TOKEN_SECRET` | HMAC secret for stateless email tokens       |
-| `TG_BOT_TOKEN`       | Telegram admin alerts                        |
-| `TG_ADMIN_CHAT_ID`   | Telegram destination chat                    |
-| `ADMIN_STATS_TOKEN`  | Bearer token for `/api/admin/stats` (n8n)    |
+| Var                  | Purpose                                                |
+| -------------------- | ------------------------------------------------------ |
+| `RESEND_API_KEY`     | Transactional email (password reset, verify)           |
+| `EMAIL_TOKEN_SECRET` | HMAC secret for stateless email tokens                 |
+| `TG_BOT_TOKEN`       | Telegram admin alerts                                  |
+| `TG_ADMIN_CHAT_ID`   | Telegram destination chat                              |
+| `SENTRY_DSN`         | Optional server-side Sentry-compatible error reporting |
+| `ADMIN_STATS_TOKEN`  | Bearer token for optional `/api/admin/stats` consumers |
 
 `NODE_ENV=production`, `EMAIL_FROM`, and `PUBLIC_BASE_URL` are non-secret and can live
 directly in `.env`.
@@ -488,16 +462,16 @@ Off-site replica confirmed fresh as of 2026-05-10.
 
 **What gets backed up:**
 
-| Data                                        | Mechanism                               | Recovery path                   |
-| ------------------------------------------- | --------------------------------------- | ------------------------------- |
-| `ortbtools.db` + WAL                        | Both: cron `.backup` + restic           | `.gz` files or `restic restore` |
-| `ortbtools.db-shm`, `-wal`                  | restic (file-level)                     | `restic restore`                |
-| `./public` bind-mount                       | git repo (source of truth)              | `git checkout`                  |
-| `./packages`, `./samples`, `./intel-llm.js` | git repo                                | `git checkout`                  |
-| `.env` secrets                              | `/srv/DATA/.secrets` included in restic | `restic restore`                |
+| Data                       | Mechanism                               | Recovery path                   |
+| -------------------------- | --------------------------------------- | ------------------------------- |
+| `ortbtools.db` + WAL       | Both: cron `.backup` + restic           | `.gz` files or `restic restore` |
+| `ortbtools.db-shm`, `-wal` | restic (file-level)                     | `restic restore`                |
+| Application source         | git repo (source of truth)              | clean checkout + image rebuild  |
+| Secrets vault              | `/srv/DATA/.secrets` included in restic | `restic restore`                |
+| Project `.env`             | host runtime configuration              | restore or recreate explicitly  |
 
-The bind-mounted `/app/public` directory is in git — no separate backup needed.
-Losing it is a `git checkout` away.
+Application source is baked into the image and needs no separate runtime backup.
+A clean Git checkout plus a rebuild recreates it.
 
 ### 6.3 Manual backup (on-demand)
 
@@ -538,7 +512,7 @@ sqlite3 /srv/DATA/AppData/ortbtools/ortbtools.db "PRAGMA integrity_check;"
 docker compose start
 
 # 8. Verify health
-curl -s http://127.0.0.1:3000/api/health | python3 -m json.tool
+curl -s http://127.0.0.1:8090/api/health | python3 -m json.tool
 ```
 
 **Scenario: full disk loss, fresh container from git + restic.**
@@ -548,7 +522,7 @@ curl -s http://127.0.0.1:3000/api/health | python3 -m json.tool
 cd /srv/DATA/Stacks
 git clone <repo_url> ortbtools
 
-# 2. Restore .env and secrets from restic
+# 2. Restore the secrets vault from restic
 restic --repo /srv/DATA/Backups/restic-repo \
        --password-file /etc/kt-backup.password \
        restore latest --include /srv/DATA/.secrets --target /
@@ -557,14 +531,22 @@ restic --repo /srv/DATA/Backups/restic-repo \
 # rclone sync gdrive:optiplex-restic /srv/DATA/Backups/restic-repo
 # then restic restore as above
 
-# 3. Restore AppData
+# 3. Recreate the project .env if it was not restored by the host backup.
+# Start from .env.example, populate production values from the restored vault,
+# and keep mode 0600. Do not start Compose with placeholder secrets.
+cp --no-clobber .env.example .env
+chmod 600 .env
+$EDITOR .env
+
+# 4. Restore AppData
 restic --repo /srv/DATA/Backups/restic-repo \
        --password-file /etc/kt-backup.password \
        restore latest --include /srv/DATA/AppData/ortbtools --target /
 
-# 4. Rebuild and start
+# 5. Build, verify, and deploy through the canonical state machine. The script
+# writes ORTBTOOLS_TAG and build provenance into .env after successful checks.
 cd /srv/DATA/Stacks/ortbtools
-BUILD_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
+./scripts/deploy.sh
 ```
 
 ---
@@ -595,7 +577,7 @@ ortbtools returns 404 on HEAD requests, so wget's GET against the root is used i
 `/api/health` does a live DB ping and is the better liveness probe for manual checks:
 
 ```bash
-curl -s http://127.0.0.1:3000/api/health
+curl -s http://127.0.0.1:8090/api/health
 # Healthy: {"success":true,"status":"ok","checks":{"db":true},"build":{"sha":"<sha>"}}
 # DB down: {"success":false,"status":"degraded","checks":{"db":false},...} + HTTP 503
 ```
@@ -607,12 +589,12 @@ docker inspect ortbtools --format '{{.State.Health.Status}}'
 # healthy | unhealthy | starting
 ```
 
-### 7.3 n8n morning brief
+### 7.3 Optional admin stats endpoint
 
-The n8n workflow (at `/srv/DATA/Stacks/n8n/`) calls `GET /api/admin/stats` with a
-bearer token (`ADMIN_STATS_TOKEN` env) to include ortbtools stats in the morning
-report. If `ADMIN_STATS_TOKEN` is unset or wrong, the endpoint returns 503 and n8n
-will log a workflow error — ortbtools itself is unaffected.
+`GET /api/admin/stats` exposes aggregate operational counts to trusted internal
+automation. It requires `Authorization: Bearer <ADMIN_STATS_TOKEN>` and returns
+503 when the token is not configured. The application itself is unaffected.
+Consumers run outside this repository; verify their deployment separately.
 
 ### 7.4 Telegram alerts
 
@@ -694,44 +676,7 @@ du -sh /srv/DATA/Backups/* | sort -rh | head -10
 docker system df
 ```
 
-### 8.4 Ollama unreachable (LLM intel features down)
-
-Expected behavior: the app detects the 503/connection-refused on the first LLM call
-and hides AI affordances in the UI. Logged at `warn` level, no crash. Users see the
-inspector without dialect naming / field-purpose hints.
-
-Verify from inside the container:
-
-```bash
-docker exec ortbtools wget -qO- --tries=1 --timeout=3 http://ollama:11434/api/tags
-```
-
-If that returns `{}` or a model list — Ollama is up, DNS resolution via `ollama_default`
-network is working.
-
-If it returns a connection error:
-
-```bash
-# Check if the ollama container is running
-docker ps --filter name=ollama
-
-# Check if the network exists
-docker network inspect ollama_default | grep -E "Name|Containers" | head -10
-
-# Restart Ollama stack
-cd /srv/DATA/Stacks/ollama && docker compose restart
-```
-
-If `ollama_default` network doesn't exist at all (Ollama stack was removed), the
-ortbtools container won't start because the network is declared `external: true`
-in `docker-compose.yml`. Start the Ollama stack first:
-
-```bash
-cd /srv/DATA/Stacks/ollama && docker compose up -d
-cd /srv/DATA/Stacks/ortbtools && docker compose up -d
-```
-
-### 8.5 Token leak — secret pushed to GitHub or otherwise exposed
+### 8.4 Token leak — secret pushed to GitHub or otherwise exposed
 
 1. **Immediately revoke the leaked token at the provider** (Resend, Telegram BotFather,
    wherever it was issued).
@@ -987,7 +932,7 @@ routes through it. `ortbtools.com` is not a separate tunnel route — it's
 a subdomain that the portal handles at the application layer via
 `PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090`.
 
-If the public URL is unreachable but `http://127.0.0.1:3000/api/health` returns OK:
+If the public URL is unreachable but `http://127.0.0.1:8090/api/health` returns OK:
 the problem is in the Cloudflare Tunnel or the portal proxy, not in ortbtools. Check
 the `kyivtech-portal` container:
 
@@ -1012,7 +957,7 @@ explaining that the email could not be sent. No crash, no data loss.
 To test Resend connectivity without a real user:
 
 ```bash
-curl -s http://127.0.0.1:3000/api/health
+curl -s http://127.0.0.1:8090/api/health
 # Then check docker logs for any email-related warnings in the last run
 docker logs ortbtools --since 10m 2>&1 | grep -i "email\|resend"
 ```
@@ -1034,43 +979,49 @@ is still valid by calling the Telegram API directly:
 curl "https://api.telegram.org/bot${TG_BOT_TOKEN}/getMe"
 ```
 
-### 10.4 n8n morning brief
+### 10.4 Optional admin stats consumers
 
-n8n stack at `/srv/DATA/Stacks/n8n/`. The workflow calls `GET /api/admin/stats` with
-`Authorization: Bearer <ADMIN_STATS_TOKEN>`. If the token is wrong or unset, ortbtools
-returns 503 and the workflow logs an error — ortbtools is unaffected. Fix: ensure
-`ADMIN_STATS_TOKEN` in `.env` matches what the n8n workflow credential has.
+Internal automation can call `GET /api/admin/stats` over `kt-shared` with the
+`ADMIN_STATS_TOKEN` bearer token. A missing or mismatched token returns 503 or
+401 and does not affect public application traffic. Workflow definitions and
+credentials are managed outside this repository.
 
-### 10.5 GlitchTip (error tracking)
+### 10.5 Sentry-compatible error tracking
 
-GlitchTip runs at `/srv/DATA/Stacks/glitchtip/`. As of the ARCHITECTURE.md "Current
-State" note, Sentry/GlitchTip integration in ortbtools is on the backlog (Phase 8 ⏸️
-partial — not yet wired in). ortbtools does not currently send error events to
-GlitchTip. The Telegram alert path (`notify.js`) is the active incident signal.
+Server-side reporting is implemented in `lib/logger.js` with `@sentry/node`.
+When `SENTRY_DSN` is present, the SDK initializes at boot and `/api/health`
+reports `sentry.ready: true`; explicit handler errors and process-level failures
+call `captureException()`. When the DSN is absent or initialization fails, the
+integration no-ops and health reports `ready: false` without degrading the app.
+
+The DSN may point to Sentry or a compatible self-hosted target such as GlitchTip.
+Target lifecycle and credentials live outside this repository. After changing
+the DSN, recreate the container so it rereads `.env`, then verify:
+
+```bash
+curl -s http://127.0.0.1:8090/api/health | python3 -m json.tool
+docker logs ortbtools --since 10m 2>&1 | grep -i sentry
+```
+
+`sentry.ready: false` is expected for a deliberate Telegram-only deployment.
+Telegram alerts remain the independent incident channel either way.
 
 ---
 
 ## Appendix: Container Network Summary
 
-ortbtools attaches to three Docker networks:
+ortbtools attaches to two Docker networks:
 
-| Network                 | Type                               | Purpose                                 |
-| ----------------------- | ---------------------------------- | --------------------------------------- |
-| `default` (stack-local) | Managed by compose                 | Internal stack bridge                   |
-| `ollama_default`        | External (managed by ollama stack) | DNS `http://ollama:11434` for LLM calls |
-| `kt-shared`             | External (cross-stack hub)         | n8n can reach `/api/admin/stats`        |
+| Network                 | Type                     | Purpose                                                  |
+| ----------------------- | ------------------------ | -------------------------------------------------------- |
+| `default` (stack-local) | Managed by compose       | Internal stack bridge                                    |
+| `kt-shared`             | External cross-stack hub | ClickHouse + optional internal `/api/admin/stats` access |
 
-If either external network is missing at startup, `docker compose up` will fail with
-"network not found". Fix: ensure the owning stack is running and has created the
-network:
-
-```bash
-docker network ls | grep -E "ollama_default|kt-shared"
-# If missing:
-cd /srv/DATA/Stacks/ollama && docker compose up -d
-# kt-shared is created by whichever stack owns it — check portal or n8n compose
-```
+If `kt-shared` is missing at startup, `docker compose up` will fail with
+"network not found". Recreate it from one of the retained shared-infrastructure
+stacks before deploying ortbtools. ClickHouse-backed analytics/blog features
+also require valid `CLICKHOUSE_*` credentials; without them those features no-op.
 
 ---
 
-_Last updated: 2026-05-13. Reflects ortbtools v0.42.10._
+_Last updated: 2026-08-11._

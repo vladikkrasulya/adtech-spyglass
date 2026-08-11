@@ -210,25 +210,29 @@
     return validation;
   }
 
-  // ── Phase 7c: LLM client ─────────────────────────────────────────
+  // ── Intel suggestion client ──────────────────────────────────────
 
-  // 503 from server (Ollama unavailable) flips this latch ON for the
-  // current page session. UI hides AI affordances while it's set so
-  // users don't repeatedly trigger ~30s-timeouts. Cleared on a
-  // page reload — no exponential backoff state machine for now;
-  // if the server comes back, refresh.
+  // A 503 or network failure flips this latch for the current page session so
+  // the UI does not repeatedly call an unavailable server. The legacy `llm`
+  // identifier and event names remain as compatibility APIs for older modules;
+  // all current responses come from the deterministic rules engine.
   let _llmUnavailable = false;
   function isLlmAvailable() {
     return !_llmUnavailable;
   }
 
-  // Stable cache key. Hash with djb2 → unsigned 32-bit hex so keys
-  // don't grow with path length and IDB lookups stay fast.
+  // The visible namespace makes pre-v1.6 LLM cache rows (`k_*`) unreachable.
+  // Prefixing the final key, rather than only the hash input, also rules out a
+  // 32-bit collision with the legacy namespace.
+  const INTEL_CACHE_NAMESPACE = 'rules-v1';
+
+  // Stable cache key. Hash with djb2 → unsigned 32-bit hex so keys do not grow
+  // with path length and IDB lookups stay fast.
   function cacheKey(parts) {
     const s = parts.join('||');
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-    return 'k_' + (h >>> 0).toString(16);
+    return INTEL_CACHE_NAMESPACE + ':k_' + (h >>> 0).toString(16);
   }
 
   async function fetchJson(url, body) {
@@ -263,23 +267,21 @@
 
   /**
    * Suggest a snake_case name for a cluster of fields. Cached locally
-   * for 30 days (fields are stable; renaming the same cluster
-   * shouldn't burn LLM calls). Returns null on any failure path so
+   * for 30 days (fields are stable; renaming the same cluster should not
+   * repeat a rules request). Returns null on any failure path so
    * the UI can hide the suggestion silently.
    */
   async function suggestName(bucket, fields, format) {
     if (_llmUnavailable) return null;
     const sortedFields = (fields || []).slice().sort();
-    // Phase 10b — `format` is part of the cache key. The same field set
-    // can map to different suggestions when the LLM has different KB
-    // few-shot context (e.g. "[clickurl, image, title]" gets a more
-    // confident name when format is known to be 'push' than zero-shot).
+    // `format` is part of the cache key because the same field set can map to a
+    // different deterministic suggestion when format-specific KB context exists.
     const cleanFormat = typeof format === 'string' ? format : '';
     const key = cacheKey(['suggest-name', bucket || '', cleanFormat, ...sortedFields]);
     if (window.OrtbtoolsIntelStorage) {
       try {
         const cached = await window.OrtbtoolsIntelStorage.getLlmCache(key);
-        if (cached && cached.kind === 'name') return cached;
+        if (cached && cached.kind === 'name' && cached.engine === 'rules') return cached;
       } catch (_e) {
         /* cache miss is fine */
       }
@@ -289,11 +291,19 @@
       fields: sortedFields,
       format: cleanFormat,
     });
-    if (!r.ok || !r.body || !r.body.success || !r.body.suggestion) return null;
+    if (
+      !r.ok ||
+      !r.body ||
+      !r.body.success ||
+      !r.body.suggestion ||
+      r.body.suggestion.engine !== 'rules'
+    )
+      return null;
     const out = {
       kind: 'name',
       name: r.body.suggestion.name,
       description: r.body.suggestion.description,
+      engine: 'rules',
       cachedAt: Date.now(),
     };
     if (window.OrtbtoolsIntelStorage) {
@@ -308,8 +318,7 @@
 
   /**
    * Suggest a single-purpose label for one field. Hover-fired in the
-   * builder; aggressive 30-day cache means a path discovered once
-   * never burns a second LLM call.
+   * builder; a 30-day cache avoids repeating a rules request for a path.
    */
   async function fieldPurpose(path, charClass, bucket) {
     if (_llmUnavailable) return null;
@@ -317,7 +326,7 @@
     if (window.OrtbtoolsIntelStorage) {
       try {
         const cached = await window.OrtbtoolsIntelStorage.getLlmCache(key);
-        if (cached && cached.kind === 'purpose') return cached;
+        if (cached && cached.kind === 'purpose' && cached.engine === 'rules') return cached;
       } catch (_e) {
         /* */
       }
@@ -327,11 +336,13 @@
       charClass: charClass || 'unknown',
       bucket: bucket || 'display',
     });
-    if (!r.ok || !r.body || !r.body.success || !r.body.purpose) return null;
+    if (!r.ok || !r.body || !r.body.success || !r.body.purpose || r.body.purpose.engine !== 'rules')
+      return null;
     const out = {
       kind: 'purpose',
       purpose: r.body.purpose.purpose,
       confidence: r.body.purpose.confidence,
+      engine: 'rules',
       cachedAt: Date.now(),
     };
     if (window.OrtbtoolsIntelStorage) {
@@ -374,9 +385,10 @@
     listTempDialects: listTempDialects,
     getActiveSpec: getActiveSpec,
     applyToFindings: applyToFindings,
-    // Phase 7c — LLM
+    // Suggestion client (legacy availability alias retained below).
     suggestName: suggestName,
     fieldPurpose: fieldPurpose,
+    isIntelAvailable: isLlmAvailable,
     isLlmAvailable: isLlmAvailable,
   };
 })();

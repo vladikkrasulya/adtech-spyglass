@@ -3,10 +3,13 @@
    (lazy-loaded ES module).
 
    The library "save / update" modal: title + partner picker + notes,
-   plus the live partner-inference banner that asks the LLM to identify
-   the SSP / vendor based on the current bid_req / bid_res. Encrypts
-   blobs locally via the OrtbtoolsSession facade BEFORE POSTing — the
-   server never sees plaintext.
+   plus a live partner-inference banner backed by deterministic
+   server-side domain/bundle rules. The save/update request encrypts
+   blobs locally via the OrtbtoolsSession facade BEFORE POSTing, so the
+   sample API stores only ciphertext. Partner inference is separate: it
+   may POST the raw bid_req / bid_res to the ortbtools server for
+   transient processing. That endpoint does not persist the bodies, and
+   no external model receives them.
 
    Loaded ONLY when the user clicks the "💾 зберегти" button — see
    the lazy stub in ortbtools.app.js dispatcher (case 'save-sample').
@@ -163,12 +166,13 @@ export function openSaveModal() {
   }, 0);
 }
 
-// Phase C-1: ask the LLM to identify the SSP / vendor based on the
-// current bid_req / bid_res contents. Privacy-safe: payload stays on
-// the local Ollama, never reaches a cloud LLM. Banner offers two paths:
-// pick an existing partner with the same name, OR create + select a
-// new one. Failures (no signal, Ollama down) silently leave the banner
-// hidden — never disrupt the save flow.
+// Phase C-1: ask the deterministic server-side rules engine to identify
+// the SSP / vendor from domain and bundle signals in bid_req / bid_res.
+// Privacy boundary: these raw bodies are POSTed to the ortbtools server,
+// processed transiently, and not persisted by this endpoint; no external
+// model receives them. Banner offers two paths: pick an existing partner
+// with the same name, OR create + select a new one. Failures or no signal
+// silently leave the banner hidden — never disrupt the save flow.
 async function suggestPartnerForSave() {
   const S = window.OrtbtoolsSession;
   const banner = $('mPartnerHint');
@@ -180,7 +184,7 @@ async function suggestPartnerForSave() {
   try {
     j = await S.api('POST', 'api/intel/suggest-partner', { bid_req, bid_res });
   } catch (_e) {
-    return; // Ollama unavailable, rate limit, etc. — silent fallback.
+    return; // Request failure, rate limit, etc. — silent fallback.
   }
   if (!j || !j.suggestion || !j.suggestion.name) return;
   const name = j.suggestion.name;
@@ -214,7 +218,7 @@ async function suggestPartnerForSave() {
 }
 
 // Partner-suggest banner action: user picked the existing partner the
-// LLM matched against. Just sets the <select> value and hides the banner.
+// rules engine matched. Just sets the <select> value and hides the banner.
 export function pickPartner(id) {
   const sel = $('mPartner');
   if (sel) sel.value = String(id);
@@ -222,7 +226,7 @@ export function pickPartner(id) {
   if (banner) banner.hidden = true;
 }
 
-// Partner-suggest banner action: user accepted the LLM's "create new"
+// Partner-suggest banner action: user accepted the rules engine's "create new"
 // suggestion. POSTs the new partner, refreshes the cache, re-renders
 // the <select> with the new partner pre-selected.
 export async function createPartnerFromHint(name) {

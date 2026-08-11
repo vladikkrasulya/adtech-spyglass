@@ -215,9 +215,9 @@ generator.
 - **Production SQLite**: `tests/db.test.js` creates a temporary database via
   the existing test setup (Node test isolation). Never point at the real
   `/data/ortbtools.db` in a test.
-- **External network**: Ollama, Resend, and Sentry are either fail-open by
-  design or mocked in tests. Don't write tests that require a live external
-  service to pass.
+- **External network**: Resend, Sentry, ClickHouse, and the isolated OpenRouter
+  news-translation path are fail-open where appropriate or mocked in tests.
+  Don't write tests that require a live external service to pass.
 - **Container runtime**: tests import the packages directly; they don't boot
   the HTTP server. Test the server's HTTP surface only where the module
   boundary is the HTTP handler itself (e.g. `health.test.js`, `router.test.js`).

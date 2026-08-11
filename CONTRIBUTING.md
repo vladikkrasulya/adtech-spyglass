@@ -39,9 +39,9 @@ The UI is at **http://127.0.0.1:8090**. The container name is
 `ortbtools`; the app listens on port 3000 inside and is forwarded to
 8090 on the host.
 
-`docker compose up -d --build` is required on first run and whenever you edit
-files that are baked into the image (see "The dev loop" below). On subsequent
-UI-only edits a plain browser refresh is enough.
+`docker compose up -d --build` is required on first run and after every source
+edit. The runtime image is immutable; source files are not bind-mounted into a
+running container.
 
 ### SQLite database
 
@@ -70,31 +70,12 @@ the register/verify/reset flow; `PUBLIC_BASE_URL` for the production domain.
 
 ## The dev loop
 
-ortbtools has three categories of files with different hot-reload behaviour.
+All application source is baked into the immutable image: `public/`,
+`packages/`, `modules/`, `lib/`, `samples/`, and the root server files. The
+vendored `public/design-system.css` is baked too. The only runtime mount is the
+`/data` directory for SQLite and persisted blog content.
 
-### 1. `public/` — browser refresh, no restart
-
-`./public/` is bind-mounted read-write. Edits to HTML, CSS, and JS under
-`public/` are live on the next browser refresh. No build step, no container
-restart needed.
-
-The one exception is `public/design-system.css`, which is itself a bind-mount
-from outside the repo (the portal's design-system). See the "Bind-mount inode
-trap" gotcha below.
-
-### 2. `packages/` — `docker compose restart`
-
-`./packages/` is bind-mounted read-only. Changes to validator rules and core
-logic take effect after `docker compose restart ortbtools`. No rebuild.
-
-Same applies to `intel-llm.js` and `samples/`.
-
-### 3. `server.js`, `lib/`, `modules/`, `db.js`, `auth.js`, etc. — `docker compose up -d --build`
-
-These files are **baked into the image**. Editing them and then doing only
-`docker compose restart` will leave the container running the old code — no
-error, no warning, the change is silently ignored. Always rebuild after
-touching anything not in the bind-mount list above:
+After any source edit, run the relevant tests and rebuild the image:
 
 ```bash
 docker compose up -d --build
@@ -106,19 +87,9 @@ To surface the build SHA in `/api/health`:
 BUILD_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
 ```
 
-The ARCHMAP [§2.1](./docs/ARCHMAP.md#21-what-rebuilds-vs-what-doesnt) has the
-full bind-mount inventory.
-
-### Bind-mount inode trap
-
-When you edit `design-system.css` (or any single-file bind-mount) with an
-editor that atomically replaces the file (write-to-temp + rename), a new inode
-is created. The running container keeps a file descriptor to the old inode. The
-correct fix is `docker compose restart ortbtools` — that restarts Node
-and the new inode gets picked up. This is distinct from a full `--build`; the
-image hasn't changed, only the container's view of the bind-mounted file needs
-refreshing. This trap was first hit in v0.42.8; it's documented in CHANGELOG
-under that entry for reference.
+The ARCHMAP [§2.1](./docs/ARCHMAP.md#21-what-rebuilds-vs-what-doesnt) documents
+the immutable deploy contract. A plain `docker compose restart` only restarts
+the existing image and never loads host-side source edits.
 
 ---
 
@@ -168,7 +139,7 @@ Comment the **why**, not the **what**. The code itself should be readable enough
 that "// increment i" adds nothing. What belongs in a comment: non-obvious
 constraints ("// alpine resolves 'localhost' as ::1 first; app listens IPv4
 only"), deferred work ("// AdCOM 1.0 deep validation — deferred, no production
-3.0 traffic yet"), cross-references ("// see ARCHMAP §2.1 for bind-mount list").
+3.0 traffic yet"), cross-references ("// see ARCHMAP §2.1 for image contract").
 
 ### Locales
 
@@ -397,13 +368,9 @@ request a review explicitly.
 
 ## Common gotchas
 
-- **Rebuild trap**: edited `server.js`, `lib/`, or `modules/` and the change
-  isn't live? You forgot `docker compose up -d --build`. `compose restart` only
-  restarts Node on the existing image.
-
-- **Bind-mount inode trap**: edited a single-file bind-mount (e.g.
-  `design-system.css`) and the change isn't live? The editor created a new
-  inode. Run `docker compose restart ortbtools`.
+- **Immutable-image trap**: edited any source file and the change isn't live?
+  Rebuild and recreate the container. `compose restart` only restarts the
+  existing image.
 
 - **CSS source-order trap**: added a media-query override and it doesn't fire?
   The unconditional desktop rule is declared later in the file and wins on
@@ -420,9 +387,8 @@ request a review explicitly.
   human-readable message. Check all three message files together.
 
 - **`disabledRules` not working**: edited `packages/core/` but tested against
-  the running container? `packages/` is bind-mounted, so a `compose restart` is
-  enough — but if you're changing `server.js` logic that reads `disabledRules`,
-  that's baked and needs a `--build`.
+  the old running image? Rebuild and recreate the container; packages are baked
+  with the rest of the source.
 
 - **Test count drift**: the ARCHMAP lists the test count as of its last-touched
   date. The README's test count was accurate at v0.40.x. Neither is guaranteed

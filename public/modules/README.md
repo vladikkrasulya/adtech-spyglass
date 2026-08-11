@@ -22,7 +22,7 @@ for code.
 
 - `mirror/` — canonical-counterpart generator
 - `live/` — SSE-driven live stream
-- `simulate/` — LLM 3-strategy DSP demo
+- `simulate/` — deterministic server-rule 3-strategy DSP demo
 - `corpus-save/` — labelled behavior corpus capture
 - `partners/` — partner CRUD modal
 - `auth/` — login + register

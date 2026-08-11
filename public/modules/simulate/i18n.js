@@ -19,9 +19,9 @@
         ru: '🤖 симуляция 3 DSP-стратегий',
       },
       'modal.simbids.hint': {
-        uk: 'Детермінований rules-движок рахує, як три типи DSP відповіли б на твій запит: прозорі формули від floor, якості інвентарю і стратегії. Тільки метадані (формат, розмір, гео, floor) — bid VALUES нікуди не передаються.',
-        en: 'A deterministic rules engine computes how three DSP types would respond: transparent formulas over floor, inventory quality and strategy. Metadata only (format, size, geo, floor) — bid VALUES never leave the page.',
-        ru: 'Детерминированный rules-движок считает, как три типа DSP ответили бы на твой запрос: прозрачные формулы от floor, качества инвентаря и стратегии. Только метаданные (формат, размер, гео, floor) — bid VALUES никуда не передаются.',
+        uk: 'Детермінований rules-движок рахує, як три типи DSP відповіли б на твій запит: прозорі формули від floor, якості інвентарю і стратегії. BidRequest тимчасово обробляється сервером ortbtools, не зберігається цим endpoint і не передається зовнішній моделі.',
+        en: 'A deterministic rules engine computes how three DSP types would respond: transparent formulas over floor, inventory quality and strategy. The BidRequest is processed transiently by the ortbtools server, is not persisted by this endpoint, and is not sent to an external model.',
+        ru: 'Детерминированный rules-движок считает, как три типа DSP ответили бы на твой запрос: прозрачные формулы от floor, качества инвентаря и стратегии. BidRequest временно обрабатывается сервером ortbtools, не сохраняется этим endpoint и не передаётся внешней модели.',
       },
       'modal.simbids.loading': {
         uk: 'Рахуємо стратегії…',

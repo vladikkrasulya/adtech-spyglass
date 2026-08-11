@@ -349,11 +349,11 @@
 
     const parts = [];
 
-    // Name input + 🤖 Suggest button (Phase 7c — LLM-backed naming).
-    // Button is wired here but auto-hides if Ollama is unavailable
-    // (graceful degradation per Phase 7 R&D). The label-row layout
-    // keeps name + button on the same line so the input doesn't shift
-    // when the button appears/disappears.
+    // Name input + Suggest button. Naming comes from deterministic
+    // server-side rules. The existing availability latch and its legacy
+    // isLlmAvailable() name stay untouched for API compatibility. The
+    // label-row layout keeps name + button on the same line so the input
+    // doesn't shift when the button appears/disappears.
     parts.push(
       '<label class="ortbtools-intel-modal__field">' + escapeHtml(t.nameLabel) + '</label>',
       '<div class="ortbtools-intel-modal__name-row">',
@@ -361,7 +361,7 @@
         escapeHtml(t.namePlaceholder) +
         '">',
       '  <button class="ortbtools-intel-modal__suggest-btn" data-suggest-name title="' +
-        escapeHtml(t.suggestNameTooltip || 'Suggest name with local LLM') +
+        escapeHtml(t.suggestNameTooltip || 'Suggest name with deterministic server-side rules') +
         '">🤖 ' +
         escapeHtml(t.suggestName || 'Suggest') +
         '</button>',
@@ -469,13 +469,13 @@
       });
     });
 
-    // Phase 7c: 🤖 Suggest button. Pulls cluster-naming suggestion from
-    // local Ollama, fills the name input. Hides itself on the first
-    // 503 (server-side Ollama unavailable) so users don't keep
-    // hammering a non-responsive endpoint.
+    // Suggest button: pulls a deterministic cluster-name suggestion from
+    // /api/intel/suggest-name and fills the name input. The old availability
+    // latch still hides the button after an unavailable endpoint or network
+    // failure so users do not keep retrying a non-responsive request.
     const suggestBtn = body.querySelector('[data-suggest-name]');
     if (suggestBtn) {
-      // Hide proactively if a previous /api/intel call already hit 503.
+      // Hide proactively if a previous /api/intel call latched unavailable.
       if (window.OrtbtoolsIntel && !window.OrtbtoolsIntel.isLlmAvailable()) {
         suggestBtn.style.display = 'none';
       }
@@ -494,11 +494,10 @@
         const bucket =
           Object.keys(bucketCount).sort((a, b) => bucketCount[b] - bucketCount[a])[0] || 'display';
         const fields = Array.from(_selection.keys());
-        // Phase 10b — fish the detected format off the last /api/analyze
-        // run so the LLM gets KB few-shot context grounded in the actual
-        // payload kind. Falls through to '' (zero-shot) when there is no
-        // analysis cached yet, when meta.format is missing, or when the
-        // detector returned no formats — graceful by design.
+        // Read the detected format from the last /api/analyze run so the
+        // rules engine can compare selected fields with the relevant shipped
+        // Knowledge Base references. Falls through to '' when no analysis is
+        // cached, meta.format is missing, or the detector returned no formats.
         let detectedFormat = '';
         try {
           const last = window.__ortbtoolsLast;
@@ -525,16 +524,16 @@
             nameInput.title = suggestion.description; // tooltip with full description
           }
         } else if (window.OrtbtoolsIntel && !window.OrtbtoolsIntel.isLlmAvailable()) {
-          // 503 latched: hide the button quietly. No toast, no alarm.
+          // Availability latched: hide the button quietly. No toast, no alarm.
           suggestBtn.style.display = 'none';
         }
       });
     }
 
-    // Phase 7c: per-field purpose hint on hover. Lazy fetch — only
-    // fires on first hover for a path; result populates the row's
-    // tooltip via title attribute. Cached for 30 days client-side
-    // (storage layer), so a hover storm doesn't burn LLM calls.
+    // Per-field purpose hint on hover. Lazy fetch — only fires on first
+    // hover for a path; result populates the row's tooltip via title
+    // attribute. Cached for 30 days client-side (storage layer), so a
+    // hover storm does not repeat server calls.
     body.querySelectorAll('[data-field-toggle]').forEach((cb) => {
       const row = cb.closest('.ortbtools-intel-fieldlist__row');
       if (!row) return;
@@ -550,13 +549,13 @@
           if (r && r.purpose) {
             const meta = row.querySelector('.ortbtools-intel-fieldlist__meta');
             if (meta) {
-              const ai = ' · 🤖 ' + r.purpose + (r.confidence === 'low' ? '?' : '');
+              const ai = ' · rules ' + r.purpose + (r.confidence === 'low' ? '?' : '');
               if (!meta.dataset.aiAdded) {
                 meta.textContent = meta.textContent + ai;
                 meta.dataset.aiAdded = '1';
               }
               row.title =
-                'AI-suggested purpose: ' + r.purpose + ' (confidence: ' + r.confidence + ')';
+                'Rule-based purpose: ' + r.purpose + ' (confidence: ' + r.confidence + ')';
             }
           }
         } catch (_e) {

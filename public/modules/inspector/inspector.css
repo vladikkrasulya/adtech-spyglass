@@ -1688,7 +1688,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
    The .kt-mirror-modes / .kt-corpus-labels overrides below still apply on
    top of them (Inspector-only modals; inspector.css is guaranteed loaded
    by the time those open). */
-/* Phase C-1 — LLM-inferred partner suggestion banner inside the
+/* Phase C-1 — rules-inferred partner suggestion banner inside the
    save modal. Soft accent panel; never blocks user input. */
 .modal-hint {
   display: flex;

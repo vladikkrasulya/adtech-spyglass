@@ -21,8 +21,7 @@ docs/
 .idea/
 *.swp
 
-# Stale in-tree source backups (event-log.js.bak, handler.js.bak, intel-llm.js.bak*,
-# docker-compose.yml.bak*) — these were baking OLD copies of source into the image.
+# Stale in-tree source backups (`*.bak*`) must never enter the runtime image.
 **/*.bak
 **/*.bak-*
 **/*.bak.*

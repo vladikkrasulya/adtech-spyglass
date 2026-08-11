@@ -114,7 +114,7 @@ const behaviorLimiter = makeAnalyzeLimiter(BEHAVIOR_MAX_PER_WINDOW);
 const READ_MAX_PER_WINDOW = Number(process.env.READ_MAX_PER_WINDOW) || 120;
 const readLimiter = makeAnalyzeLimiter(READ_MAX_PER_WINDOW);
 
-// Intel (LLM-bridge) limiter — slower service, smaller per-IP allowance.
+// Public intel endpoint limiter — bounds request abuse independently of analyze.
 const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
 const INTEL_WINDOW_MS = 60_000;
 function makeIntelLimiter() {
@@ -860,7 +860,7 @@ const {
   loadUserDialect,
   getDefaultDialectForUser,
 } = require('./packages/core/dialects/user-dialect-runtime');
-// intelLlm + knowledgeBase already required at the top of the file
+// intelRules + knowledgeBase are already required at the top of the file.
 const { computeCorpusMatrix: _computeCorpusMatrix } = require('./lib/corpus-matrix');
 
 router.register(
@@ -1062,19 +1062,9 @@ function unionFormat(a, b) {
 // Client posts events on every Behavior-tab render; debouncing happens
 // in the UI module.
 
-// ── /api/intel/* — Phase 7c LLM intelligence ───────────────────────────────
-// Two narrow endpoints (cluster naming + per-field purpose hint) that bridge
-// to a locally-hosted Ollama instance via http://ollama:11434. Both are
-// fire-on-user-gesture only — no automatic discovery — so the rate limit is
-// modest (30/min/IP) and there's no caching server-side; the browser caches
-// in IndexedDB for 30 days.
-//
-// Both endpoints fail open: when Ollama is unreachable the frontend silently
-// hides the AI affordances (per Phase 7 R&D doc graceful-degradation rule).
-// We log unavailability at warn-level so an admin can see the pattern but
-// don't surface user-facing errors.
-
-// intel limiter + intelLlm moved up before module registrations.
+// ── /api/intel/* — deterministic intelligence ──────────────────────────────
+// Naming, field-purpose, partner, and simulation endpoints are handled by
+// lib/intel-rules.js. They have no external model or service dependency.
 
 // Phase C-1 — partner inference for the save-modal. Caller is the
 // in-app save flow: sends the raw bid_req / bid_res JSON strings and
@@ -1091,12 +1081,12 @@ function unionFormat(a, b) {
 // different bidders do?" intuition.
 //
 // Public — no auth — to match other intel endpoints. Rate-limited to
-// 30/min/IP via the shared intelLimiter. Heavy: 3 LLM calls per request.
+// 30/min/IP via the shared intelLimiter.
 
 // ── Per-user CRUD: partners + samples (auth-required) ──────────────────────
 
 // ── /api/admin/stats — bearer-token operational stats ──────────────────────
-// For internal callers (the n8n morning-brief workflow, future ops scripts).
+// For optional internal monitoring and automation consumers.
 // Auth = ADMIN_STATS_TOKEN env. Returns aggregate counts + 24h activity.
 
 // ── /api/health ─────────────────────────────────────────────────────────────

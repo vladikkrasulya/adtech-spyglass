@@ -63,7 +63,7 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
   500 events per session (rolling window) to keep parent-tab memory bounded
   during long monitoring runs.
 
-## ortbtools Intelligence (Discovery + Local AI)
+## ortbtools Intelligence (Discovery + deterministic rules)
 
 Phase 7a–7c built an **opt-in, browser-local discovery layer** that watches
 for unknown vendor extension fields under `*.ext.*` and clusters them by
@@ -81,17 +81,15 @@ kept; bid values are dropped in the browser, not sent to the server. Highlights:
 - **Dialect Builder** — modal that lets users review a suggested cluster,
   pick fields, and turn it into a temporary dialect overlay applied to
   validation findings client-side.
-- **Local LLM bridge** (Phase 7c, **opt-in**): a self-hosted Ollama instance
-  (default model `gemma4:e2b` since 2026-05-21; previously `qwen2.5:3b`)
-  provides cluster naming + per-field purpose hints. The LLM call is
-  fail-open: if Ollama is unreachable, the AI affordances quietly hide
-  and the rest of ortbtools continues unaffected. See
-  [LLM_SETUP.md](./LLM_SETUP.md) for deployment.
+- **Deterministic suggestions** — the server-side rules engine in
+  [`lib/intel-rules.js`](./lib/intel-rules.js) names clusters, classifies field
+  purpose, infers partners, and simulates bidder strategies. It has no model or
+  third-party service dependency: the same input produces the same output, and
+  unknown signals stay unknown instead of being guessed.
 - **Knowledge Base** (Phase 10): a curated set of OpenRTB / JsonFeed
   reference fixtures under [packages/core/knowledge_base/](./packages/core/knowledge_base/).
-  Used for two things — `format-detect` self-tests and **few-shot context**
-  for the local LLM (so cluster names are grounded in real-market vocabulary
-  rather than priors). License-clean ingestion plan in
+  Used for `format-detect` self-tests and format-aware context for deterministic
+  cluster naming. License-clean ingestion plan in
   [SOURCES.md](./packages/core/knowledge_base/SOURCES.md).
 
 The privacy posture across the stack: the discovery layer keeps bid
@@ -127,23 +125,11 @@ docker compose up -d --build
 # UI at http://127.0.0.1:8090
 ```
 
-The container bind-mounts:
-
-- `./public` for live-edit of HTML/CSS/JS (no rebuild on UI changes)
-- `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` for the shared
-  design system (this is an artefact of how I deploy it — replace the path
-  with your own design-system.css source if you fork)
-- `/srv/DATA/AppData/ortbtools` for persistent SQLite
-- `./intel-llm.js` (live-edit of the LLM bridge without container rebuild)
-
-The `public/design-system.css` file in this repo is an **empty placeholder** —
-Docker requires the bind-mount target to exist. At runtime the real file from
-the path above is served on top.
-
-**Optional: Local AI**. Discovery cluster naming + per-field purpose hints
-require a local Ollama instance reachable on the `ollama_default` Docker
-network. See [LLM_SETUP.md](./LLM_SETUP.md) for the full setup. ortbtools
-runs cleanly without it — AI affordances hide on first 503.
+The production container is an immutable image: application source, packages,
+public assets, samples, and the vendored design system are baked at build time.
+The only runtime mount is `/srv/DATA/AppData/ortbtools:/data` for SQLite and
+persisted blog content. A source edit therefore requires an image rebuild; a
+plain container restart does not load host-side changes.
 
 ## Layout
 
@@ -158,7 +144,7 @@ packages/core/            validator core (browser + server-side compatible)
   index.js                public API surface — validate(), crosscheck()
   detect.js               type + oRTB version autodetection
   format-detect.js        format detection (banner/video/audio/native/push/…)
-  knowledge-base.js       fixture loader + few-shot helper for the LLM
+  knowledge-base.js       fixture loader + format-aware reference context
   rules-request.js        oRTB BidRequest rules (IAB-spec baseline)
   rules-response.js       oRTB BidResponse rules
   rules-request-30.js     oRTB 3.0 BidRequest envelope checks
@@ -182,8 +168,7 @@ packages/core/            validator core (browser + server-side compatible)
   knowledge_base/         curated reference fixtures (oRTB 2.5/2.6 + JsonFeed)
   messages/{uk,en,ru}.json  localised finding messages
 behavior/                 in-iframe creative-probe scanner + engine
-
-intel-llm.js              server-side LLM bridge (Ollama)
+lib/intel-rules.js        deterministic intel suggestions + news relevance
 
 ## CLI (`@ortbtools/cli`)
 

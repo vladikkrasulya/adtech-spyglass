@@ -148,7 +148,8 @@
       });
       $defName.textContent = def ? def.name : '—';
     }
-    if ($llm) $llm.textContent = '—'; // placeholder until LLM-suggester wiring
+    // Keep the legacy DOM id for compatibility; suggestions are deterministic.
+    if ($llm) $llm.textContent = 'rules';
 
     if ($btnExport && !$btnExport.dataset.bound) {
       $btnExport.dataset.bound = '1';

@@ -189,7 +189,8 @@ helpers.js ─┤    rules-response.js ─┼──> findings.js ──> index.j
 
 - `@ortbtools/core` → main API
 - `@ortbtools/core/behavior` → `behavior/index.js` (event-stream analyzer + static creative scan)
-- `@ortbtools/core/intel` → LLM-bridge primitives (used by `intel-llm.js`)
+- `@ortbtools/core/intel` → pure Discovery helpers (walker, clustering,
+  fingerprinting, decay, and temporary dialects)
 - `@ortbtools/core/knowledge-base` → KB query helpers
 
 ### 1.2 Public contract guarantees (since core 0.11.0)
@@ -523,7 +524,7 @@ shell-level service so auth/DEK exist for the whole page lifecycle.
 | Browser (validator card)         | [`public/ortbtools.app.js`](../public/ortbtools.app.js)           | POSTs the payload to `POST /api/analyze` — validation runs **server-side** (core is NOT bundled into the page; the browser only renders the findings the server returns) |
 | Browser (behavior tab)           | [`public/modules/behavior/index.js`](../public/modules/behavior/) | `behavior` subpath — server-side proxy, but UI consumes findings                                                                                                         |
 | Tests                            | `tests/{validator,dialects,format-detect,behavior,intel}.test.js` | every public surface                                                                                                                                                     |
-| `intel-llm.js`                   | [intel-llm.js](../intel-llm.js)                                   | uses LLM-bridge primitives from `core/intel`                                                                                                                             |
+| Browser Discovery algorithms     | [`public/modules/intel/`](../public/modules/intel/)               | mirrors the pure `core/intel` helpers for browser execution; parity is covered by `tests/intel.test.js`                                                                  |
 
 ### 1.5 Tests by surface (so changes know where to look)
 
@@ -586,7 +587,7 @@ Two post sources, one indexing contract.
   to drop a section from the sitemap (that re-introduces the homepage-canonical
   leak); use `NOINDEX_SECTIONS` + the `indexable`-skip in `renderSitemap`. The
   news pipeline is paused in prod via `NEWS_CRAWLER_DISABLED=1` (see OPERATIONS
-  §4.9) — that gate is read at boot, so it needs a container recreate.
+  §4.8) — that gate is read at boot, so it needs a container recreate.
 
 ---
 
@@ -596,8 +597,8 @@ Two post sources, one indexing contract.
 
 **Since v1.1.5 (immutable image): EVERYTHING is baked.** There are no source
 bind-mounts. `./public/`, `./packages/`, `./modules/`, `server.js`, `lib/`,
-`intel-llm.js`, `./samples/`, and the `content/posts` seed all ship inside the
-image. A `compose restart` no longer reloads any source — every change goes
+`./samples/`, and the `content/posts` seed all ship inside the image. A
+`compose restart` no longer reloads any source — every change goes
 through a rebuild+redeploy (`scripts/deploy.sh`, see docs/OPERATIONS.md §9).
 
 The only mount left (since v1.1.6) is persistent data (`/data`, which now also
@@ -606,10 +607,9 @@ holds `content-posts/`). The design-system CSS is vendored into
 the transitional portal overlay was removed in v1.1.6, so the container is fully
 self-contained with a single `/data` mount and no cross-project runtime dependency.
 
-_Historical (pre-v1.1.5): `./public`, `./packages`, `./intel-llm.js` and
-`./samples` were bind-mounted for live edit, while `server.js`/`lib/`/`modules/`
-were baked — the asymmetry was a frequent "edit not visible" trap. The immutable
-image removes the asymmetry entirely._
+_Historical (pre-v1.1.5): selected source directories and the former model
+bridge were bind-mounted for live edit, while `server.js`/`lib/`/`modules/` were
+baked. The immutable image removes that asymmetric "edit not visible" trap._
 
 > If you edit ANY file, commit to `main` and redeploy
 > (`./scripts/deploy.sh`). `compose restart` no longer picks up source — the
@@ -622,7 +622,7 @@ Browser (https://ortbtools.com)
     │
     ▼  Cloudflare (DNS + edge)
     │
-    ▼  CF Tunnel → 192.168.1.4
+    ▼  CF Tunnel → 192.168.1.6
     │
     ▼  kyivtech-portal (host network) — proxies admin tiles
     │  PUBLIC_PROXIES=Set(['ortbtools']) anon-allowed
@@ -637,10 +637,12 @@ Browser (https://ortbtools.com)
 
 | ortbtools needs...           | From...               | How it connects                                                                                                                         |
 | ---------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| LLM (intel)                  | `ollama` container    | shared docker network `ollama_default`, `OLLAMA_URL=http://ollama:11434`                                                                |
+| Intel suggestions            | built-in rules engine | deterministic `lib/intel-rules.js`; no external model or service                                                                        |
 | Design system CSS            | vendored (build-time) | baked from `public/design-system.css` (`design-system.vendor.json`) — **no runtime mount / no kyivtech-portal dependency** since v1.1.6 |
 | Persistent SQLite            | host fs               | `/srv/DATA/AppData/ortbtools:/data`                                                                                                     |
+| Analytics + news/blog data   | ClickHouse            | `CLICKHOUSE_URL` over `kt-shared`; CH-backed features no-op without credentials                                                         |
 | Email (recovery key, verify) | Resend                | `RESEND_API_KEY` from `.env` (gitignored)                                                                                               |
+| Server error reporting       | Sentry-compatible DSN | optional `SENTRY_DSN`; disabled cleanly when unset                                                                                      |
 | Health monitoring            | `uptime-kuma`         | HTTP probe of public URL                                                                                                                |
 
 ### 2.4 SemVer bump locations (9 files, do all in one commit)
@@ -666,7 +668,9 @@ Use `version.js` for runtime paint via `data-ortbtools-version`, but the static 
   - `src/routes/admin/proxies.js` — `PUBLIC_PROXIES = new Set(['ortbtools'])` makes the tile anon-public
   - `src/routes/bot/index.js:49` — Telegram bot status command lists `ortbtools`
 - **uptime-kuma** monitor on `https://ortbtools.com`
-- **n8n**: no direct integration today (Mozok bot doesn't call validator)
+- **Optional automation consumers**: `GET /api/admin/stats` is available on
+  `kt-shared` when `ADMIN_STATS_TOKEN` is configured. Any n8n workflow lives
+  outside this repository and must be verified independently.
 
 ### 3.2 Schema / migration reminders for adjacent data
 
