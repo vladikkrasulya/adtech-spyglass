@@ -42,21 +42,27 @@ stability promise.
 
 ### Public Read and Analysis
 
-| Family          | Routes                                                                            | Behavior                                                                                       |
-| --------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Health          | `GET /api/health`                                                                 | Anonymous liveness/DB/build view; authenticated session receives additional operational detail |
-| Analyze         | `POST /api/analyze`, `POST /api/analyze-behavior`                                 | Transient validator and behavior analysis                                                      |
-| Mirror/replay   | `POST /api/v1/mirror`, `POST /api/v1/replay`                                      | Core counterpart generation and bounded multi-sample replay                                    |
-| Curated samples | `GET /api/v1/sample`, `GET /api/v1/sample/list`, `GET /api/v1/behavior/scenarios` | Repository-baked synthetic/curated corpus                                                      |
-| Finding catalog | `GET /api/v1/finding-catalog`                                                     | Locale message/spec-reference catalog                                                          |
-| Stream          | `GET /api/v1/stream`, `GET /api/v1/specimen/:hash`                                | Demand-gated SSE and cached synthetic permalinks                                               |
-| Analytics       | `GET /api/v1/analytics/summary`                                                   | ClickHouse-derived aggregate with graceful failure                                             |
-| Blog            | `GET /api/v1/blog/list`, `GET /api/v1/blog/post`, `GET /blog/rss.xml`             | Markdown and ClickHouse content reads; RSS is indexable Markdown only                          |
+| Family          | Routes                                                                            | Behavior                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Health          | `GET /api/health`                                                                 | Anonymous liveness/DB/build/local-Sentry-config view; authenticated session receives additional operational detail |
+| Analyze         | `POST /api/analyze`, `POST /api/analyze-behavior`                                 | Transient validator and behavior analysis                                                                          |
+| Mirror/replay   | `POST /api/v1/mirror`, `POST /api/v1/replay`                                      | Core counterpart generation and bounded multi-sample replay                                                        |
+| Curated samples | `GET /api/v1/sample`, `GET /api/v1/sample/list`, `GET /api/v1/behavior/scenarios` | Repository-baked synthetic/curated corpus                                                                          |
+| Finding catalog | `GET /api/v1/finding-catalog`                                                     | Locale message/spec-reference catalog                                                                              |
+| Stream          | `GET /api/v1/stream`, `GET /api/v1/specimen/:hash`                                | Demand-gated SSE and cached synthetic permalinks                                                                   |
+| Analytics       | `GET /api/v1/analytics/summary`                                                   | ClickHouse-derived aggregate with graceful failure                                                                 |
+| Blog            | `GET /api/v1/blog/list`, `GET /api/v1/blog/post`, `GET /blog/rss.xml`             | Markdown and ClickHouse content reads; RSS is indexable Markdown only                                              |
 
 Public Intel routes are `POST /api/intel/suggest-name`, `POST /api/intel/field-purpose`, and
 `POST /api/intel/simulate-bids`. They run deterministic `lib/intel-rules.js` logic. Simulation can
 receive a request body for transient processing but does not call an external model or store the
 body.
+
+The Health response retains `sentry: { ready: boolean }`. `true` means only that this server process
+initialized its Sentry-compatible SDK with a locally parsed destination. It does not prove target
+reachability, authentication, envelope ingestion, retention, alerting, or delivery. The response
+never exposes the destination host, project identifier, credentials, or initialization error.
+Database health—not the optional Sentry state—owns the endpoint's HTTP `200`/`503` status.
 
 ### Session and Account
 

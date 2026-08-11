@@ -117,6 +117,42 @@ test('@ortbtools/core README describes the current server and validation contrac
   }
 });
 
+test('Sentry health copy reports local SDK configuration, not upstream delivery', () => {
+  const requiredSurfaces = [
+    '.env.example',
+    'docs/OPERATIONS.md',
+    'specs/000-platform-baseline/plan.md',
+    'specs/000-platform-baseline/contracts/http-api.md',
+    'specs/000-platform-baseline/contracts/release-deploy.md',
+    'specs/002-dependency-sentry-refresh/contracts/sentry-health.md',
+  ];
+
+  for (const relativePath of requiredSurfaces) {
+    const text = read(relativePath);
+    assert.match(
+      text,
+      /(?:(?:local|locally)[\s\S]{0,180}(?:configur|parsed|SDK)|(?:configur|parsed|SDK)[\s\S]{0,180}(?:local|locally))/i,
+      `${relativePath} must state the local SDK/configuration boundary`,
+    );
+    assert.match(
+      text,
+      /(?:does not|not a|never)[\s\S]{0,180}(?:reachability|connectivity|ingestion|delivery)/i,
+      `${relativePath} must reject an upstream availability/delivery claim`,
+    );
+  }
+
+  const http = read('specs/000-platform-baseline/contracts/http-api.md');
+  assert.match(http, /`sentry:\s*\{ ready:\s*boolean \}`/);
+  assert.match(http, /Database health[^.]+HTTP `200`\/`503` status/i);
+
+  const release = read('specs/000-platform-baseline/contracts/release-deploy.md');
+  assert.match(release, /`sentry\.ready`[^.]+not a\s+deployment gate/i);
+
+  const logger = read('lib/logger.js');
+  assert.doesNotMatch(logger, /\/srv\/DATA\/Stacks\/glitchtip|no SaaS dependency/i);
+  assert.match(logger, /does NOT[\s\S]{0,100}(?:upstream|delivery)/);
+});
+
 test('content contract distinguishes safe SSR from the browser Markdown trust boundary', () => {
   const contract = read('specs/000-platform-baseline/contracts/content-seo.md');
   assert.doesNotMatch(

@@ -43,7 +43,8 @@ function createHealthModule({ db, auth, Users, sendJson, sentryReady }) {
       checks: { db: dbOk },
       build: { sha: buildSha },
       // Anonymous tier surfaces only a boolean — fine for ops dashboards
-      // and avoids leaking the DSN host or project id.
+      // and avoids leaking the DSN host or project id. This means the SDK has
+      // a valid parsed DSN; it does not probe upstream connectivity.
       sentry: { ready: typeof sentryReady === 'function' ? !!sentryReady() : false },
     };
     if (auth.getCurrentUser(req)) {

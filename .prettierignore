@@ -20,6 +20,7 @@ package-lock.json
 .specify/templates/
 .specify/workflows/
 .specify/extensions.yml
+.specify/feature.json
 .specify/init-options.json
 .specify/integration.json
 .specify/memory/.constitution-template.json

@@ -45,6 +45,7 @@ dependency of Core's main validation APIs.
 | Route metadata, SSR, and sitemap rendering                            | `lib/seo.js`, `lib/landings.js`                                     | Static server                              |
 | Hybrid blog reads and publication                                     | `lib/blog-service.js`, blog handlers                                | Browser, sitemap, RSS, admin               |
 | Derived analytics                                                     | `lib/validation-log.js`, `lib/event-log.js`                         | Analyze/stream and request lifecycle       |
+| Structured logging and optional server-side error capture             | `lib/logger.js`                                                     | Server composition and backend handlers    |
 | Immutable release state machine                                       | `scripts/deploy.sh`, `scripts/deploy-lib.sh`, `scripts/rollback.sh` | Authorized production operator             |
 
 ## Backend Composition
@@ -58,6 +59,12 @@ Handler factories accept their dependencies from the composition root. This keep
 authentication, persistence, and Core calls visible at registration rather than hidden as secondary
 routers. The implemented route families and access boundaries are captured in
 [the HTTP contract](./contracts/http-api.md).
+
+`lib/logger.js` owns one process-wide Pino logger and the optional Sentry-compatible SDK wrapper.
+The wrapper is locally configured only when the SDK client retains a parsed destination. The health
+projection exposes that boolean without destination detail; it is not a network, ingestion, or
+delivery probe. Telegram is an independent alert path. Neither optional reporter is a dependency of
+Core validation or application liveness.
 
 The static path:
 

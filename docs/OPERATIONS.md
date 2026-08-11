@@ -979,9 +979,11 @@ credentials are managed outside this repository.
 ### 10.5 Sentry-compatible error tracking
 
 Server-side reporting is implemented in `lib/logger.js` with `@sentry/node`.
-When `SENTRY_DSN` is present, the SDK initializes at boot and `/api/health`
-reports `sentry.ready: true`; explicit handler errors and process-level failures
-call `captureException()`. When the DSN is absent or initialization fails, the
+When `SENTRY_DSN` is present and the SDK retains a valid parsed DSN,
+`/api/health` reports `sentry.ready: true`; explicit handler errors and
+process-level failures call `captureException()`. This flag confirms local SDK
+configuration only — it does not probe target reachability or guarantee event
+delivery. When the DSN is absent, invalid, or initialization fails, the
 integration no-ops and health reports `ready: false` without degrading the app.
 
 The DSN may point to Sentry or a compatible self-hosted target such as GlitchTip.
@@ -992,6 +994,10 @@ the DSN, recreate the container so it rereads `.env`, then verify:
 curl -s http://127.0.0.1:8090/api/health | python3 -m json.tool
 docker logs ortbtools --since 10m 2>&1 | grep -i sentry
 ```
+
+The health response verifies local configuration only. Confirm end-to-end
+delivery separately with a controlled test event and the configured target's
+event view.
 
 `sentry.ready: false` is expected for a deliberate Telegram-only deployment.
 Telegram alerts remain the independent incident channel either way.
