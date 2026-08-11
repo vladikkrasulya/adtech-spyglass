@@ -138,8 +138,9 @@ function makeIntelLimiter() {
   };
 }
 const intelLimiter = makeIntelLimiter();
-// 2026-07-22 — the intel features run on the deterministic rules engine;
-// no Ollama / OpenRouter on any interactive path (see docs/ARCHMAP.md).
+// Interactive intel uses the deterministic rules contract documented in
+// specs/000-platform-baseline/contracts/core-validator.md. OpenRouter remains
+// isolated to the news translation/categorization pipeline.
 const intelRules = require('./lib/intel-rules');
 
 function getPublicBaseUrl() {

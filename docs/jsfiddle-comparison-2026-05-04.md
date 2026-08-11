@@ -1,5 +1,10 @@
 # Spyglass vs JSFiddle — UX Feature Comparison
 
+> **Historical snapshot (2026-05-04).** This comparison records early product exploration; its
+> branding, domain, gaps, and recommendations are not current behavior or backlog. Use the
+> [platform baseline](../specs/000-platform-baseline/plan.md) for current behavior and the
+> [Spec Kit roadmap](../specs/ROADMAP.md) for active work.
+
 **Date:** 2026-05-04
 **Subject under inspiration:** [JSFiddle](https://jsfiddle.net/) — code playground, ~15-year-old toolset
 **Subject under improvement:** [Spyglass](https://spyglass.kyivtech.com.ua/) — OpenRTB inspector for AdTech engineers

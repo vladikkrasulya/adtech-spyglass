@@ -6,6 +6,22 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### Governance — GitHub Spec Kit foundation
+
+- Adopted GitHub Spec Kit `0.16.2` (upstream commit
+  `4871b485f97c7fa452ec58eba325d87536c55c34`) as the repository's canonical
+  specification and delivery system.
+- Added tracked Codex, Claude, Cursor, and Gemini integrations plus the bundled
+  offline `assess` extension. Agent-specific skills are generated adapters;
+  policy lives only in `.specify/memory/constitution.md`.
+- Added the as-built platform baseline, current-only roadmap, ADR index, and a
+  complete migration feature spec with requirements, plan, tasks, contracts,
+  checklist, and verification evidence.
+- Retired the competing `CLAUDE.md`, specialist-agent fleet, root architecture
+  and roadmap snapshots, and the obsolete Jules palette and test guide.
+- Added governance regression tests and excluded Spec Kit/agent sources from
+  the production Docker build context.
+
 ### Tooling — first npm publication preparation (no app deploy)
 
 - **`scripts/npm-pack-smoke.sh`** — packs Core + CLI tarballs, installs them in a
@@ -340,7 +356,7 @@ Runtime/toolchain only — `packages/core` unchanged (`0.30.1`), CLI unchanged
 - **Docs.** `CONTRIBUTING.md` and `docs/TESTING.md` baseline Node 22; normative
   test comments updated.
 
-## [Unreleased] — Vendor-name scrub
+### Vendor-name scrub
 
 - Feed validator finding IDs renamed to format-descriptive identifiers: `feed.pushub.*` → `feed.linkfeed.*`, `feed.exoclick.*` → `feed.valuefeed.*`, `feed.richads.*` → `feed.bidprice.*`, `feed.zeropark.*` → `feed.bidredirect.*`
 - Dialect filenames renamed: `kadam.js` → `ext-rtb.js`, `kadam-inpage-push.js` → `inpage-push.js`; dialect finding IDs `kadam.*` → `extrtb.*`, `kadam.inpage.*` → `inpage-push.*`
@@ -352,8 +368,6 @@ Runtime/toolchain only — `packages/core` unchanged (`0.30.1`), CLI unchanged
 - `KADAM` reference object renamed to `VENDOR_REF`; `window._kadam` → `window._vendorRef`; data-action attributes updated to `vendor-paste-*`
 - Wiki.kadam.net source link removed; replaced with generic note
 - Message prose updated to drop partner brand names across en/ru/uk locales
-
-## [Unreleased]
 
 ### v1.3.2 — SEO: canonical route normalization + real SPA subroute 404s
 

@@ -1,12 +1,12 @@
 /* ============================================================
    public/modules/nav/index.js — multi-section side navigation.
 
-   Stage 0 chrome (ROADMAP.md). Lives OUTSIDE the registry section
+   Persistent shell chrome. Lives OUTSIDE the registry section
    lifecycle: mounted once at boot into <aside id="kt-nav-root">,
    stays for the life of the page, updates its `active` highlight
    in response to popstate / pushState navigation.
 
-   Grouping (РОБОТА / ДАНІ / ЗНАННЯ — locked in ROADMAP):
+   Grouping (РОБОТА / ДАНІ / ЗНАННЯ):
      РОБОТА: Інспектор / Стрім / Behavior
      ДАНІ:   Зразки / Діалекти
      ЗНАННЯ: Блог / Доки

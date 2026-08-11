@@ -6,8 +6,10 @@ the authoritative loading paths are `public/shell-boot.js`,
 `public/core/registry.js`, and each feature's callers.
 
 The backend has a parallel one-folder-per-feature layout under `modules/`
-(without the `public/` prefix). See `docs/ARCHMAP.md` for the broader project
-map.
+(without the `public/` prefix). The broader as-built map lives in the
+[platform baseline](../../specs/000-platform-baseline/plan.md); the stable
+browser lifecycle is recorded in its
+[frontend contract](../../specs/000-platform-baseline/contracts/frontend-modules.md).
 
 ## Categories and loading
 

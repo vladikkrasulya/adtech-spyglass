@@ -1,13 +1,19 @@
 # ortbtools — Next Chapters
 
+> **Historical snapshot (2026-05-09).** This file preserves past product
+> exploration and is not current architecture or backlog. Use the
+> [platform baseline](../specs/000-platform-baseline/plan.md) for current
+> behavior and the [Spec Kit roadmap](../specs/ROADMAP.md) for active work.
+
 End-of-day 2026-05-09 strategic doc. Validator coverage is mature
 (v0.14.0): IAB 2.5/2.6 full + 3.0 envelope routing + VAST 12 rules + 12
 behavior detection patterns shipped on 2026-05-06. This document surveys
 where the product extends NEXT — not next-week patches, but month-scale
 chapters.
 
-The canonical brief is in `MEMORY.md`. The architecture map is in
-[`ARCHMAP.md`](./ARCHMAP.md). The roadmap that closed today is in
+The period brief and architecture map referenced by the original session were
+retired after their durable knowledge moved into Spec Kit. The roadmap that
+closed that day remains in
 [`validator-roadmap-2026-05-09.md`](./validator-roadmap-2026-05-09.md).
 
 ---

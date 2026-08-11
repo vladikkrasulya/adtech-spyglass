@@ -1,4 +1,7 @@
-> **SUPERSEDED 2026-05-23** — See ROADMAP.md. Stream MVP is now Stage 2 of the multi-section site architecture, not a landing-page replacement. The SSE contract / ring buffer / specimen permalink design below remains useful as Stage 2 reference.
+> **SUPERSEDED 2026-05-23.** This is historical design input, not current
+> architecture or backlog. See the [platform baseline](../../specs/000-platform-baseline/plan.md)
+> and [current roadmap](../../specs/ROADMAP.md). The SSE contract, ring buffer,
+> and specimen-permalink discussion below remains historical context.
 
 ---
 

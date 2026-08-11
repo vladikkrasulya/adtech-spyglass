@@ -1,7 +1,7 @@
 /* ============================================================
    public/modules/topbar/index.js — thin global topbar.
 
-   Stage 0 chrome (ROADMAP.md). Lives outside the section
+   Persistent shell chrome. Lives outside the section
    registry; mounted once at boot into <header id="kt-topbar-root">.
 
    Slots, left to right:

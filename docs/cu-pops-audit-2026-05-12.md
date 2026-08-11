@@ -1,5 +1,10 @@
 # ortbtools — CU + Pops support audit (2026-05-12)
 
+> **Historical snapshot (2026-05-12).** This audit preserves past evidence and severity calibration;
+> its coverage claims and action labels are not current architecture or backlog. Use the
+> [platform baseline](../specs/000-platform-baseline/plan.md) for current behavior and the
+> [Spec Kit roadmap](../specs/ROADMAP.md) for active work.
+
 > **Source**: DeepSeek v4 Pro via OpenRouter, single 15.7k-token pass against
 > all pops/CU touchpoints in `packages/core/` + UI surface + samples list +
 > dialect overlays + crosscheck.

@@ -1,5 +1,10 @@
 # Validator roadmap — pending after audit follow-up (2026-05-09)
 
+> **Historical snapshot (2026-05-09).** This is a completed/superseded implementation plan, not the
+> current validator contract or backlog. Use the
+> [platform baseline](../specs/000-platform-baseline/plan.md) for current behavior and the
+> [Spec Kit roadmap](../specs/ROADMAP.md) for active work.
+
 Чотири пункти лишилися з аудиту валідатора. Цей документ — план як їх
 закрити. Кожен пункт — самодостатній наряд: можна брати в довільному
 порядку. Рекомендований порядок зверху вниз (від найдешевшого до

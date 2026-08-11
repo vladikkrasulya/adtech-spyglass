@@ -15,8 +15,14 @@
 docs/
 
 # Agent / IDE metadata — never needed at runtime
+.agents/
 .claude/
+.codex/
+.cursor/
+.gemini/
 .Jules/
+.specify/
+specs/
 .vscode/
 .idea/
 *.swp

@@ -19,12 +19,10 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const CURRENT_SURFACES = [
   '.env.example',
+  '.specify/memory/constitution.md',
   'README.md',
-  'CLAUDE.md',
   'CONTRIBUTING.md',
-  'docs/ARCHMAP.md',
   'docs/OPERATIONS.md',
-  'docs/TESTING.md',
   'packages/core/knowledge-base.js',
   'packages/core/knowledge_base/README.md',
   'packages/core/rules/README.md',
@@ -43,6 +41,8 @@ const CURRENT_SURFACES = [
   'public/modules/save-sample/README.md',
   'public/modules/simulate/i18n.js',
   'public/modules/simulate/README.md',
+  'specs/000-platform-baseline/plan.md',
+  'specs/000-platform-baseline/contracts/core-validator.md',
 ];
 
 const RETIRED_CLAIMS = [
@@ -72,6 +72,21 @@ test('interactive intel runtime is wired only to deterministic rules', () => {
   assert.match(server, /require\(['"]\.\/lib\/intel-rules['"]\)/);
   assert.match(handler, /engine:\s*["']rules["']/);
   assert.doesNotMatch(handler, /require\([^\n]*intel-llm/i);
+});
+
+test('canonical Core contract locks deterministic, network-free validation semantics', () => {
+  const contract = read('specs/000-platform-baseline/contracts/core-validator.md');
+  for (const required of [
+    /deterministic/i,
+    /stable\s+`?(?:finding\s+)?ids?`?/i,
+    /findings\s+sort\s+by\s+severity[\s\S]{0,100}path\s+ascending[\s\S]{0,80}id\s+ascending/i,
+    /dedup/i,
+    /(?:do\s+not\s+perform|no|without)[\s\S]{0,40}(?:external\s+)?network\s+(?:calls?|requests?)/i,
+    /lib\/intel-rules\.js/,
+  ]) {
+    assert.match(contract, required, `Core baseline lost deterministic contract ${required}`);
+  }
+  assert.doesNotMatch(contract, /intel-llm|OLLAMA_|ollama_default/i);
 });
 
 for (const rel of ['public/about.en.html', 'public/about.uk.html', 'public/about.ru.html']) {

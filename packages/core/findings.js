@@ -8,10 +8,11 @@
  * Localized message text is resolved at presentation time by messages/index.js
  * — never inline in the validator.
  *
- * Levels (per ARCHITECTURE.md §3.2):
+ * Levels (stable Core contract; see specs/000-platform-baseline/contracts/core-validator.md):
  *   error   — spec violation that an exchange will reject (fail the bid)
  *   warning — spec violation tolerated by most exchanges (reduces fill)
  *   info    — best-practice / recommendation
+ *   question — non-blocking ambiguity that needs operator context
  *
  * Crosscheck findings additionally carry `ok` (passed/failed) and use:
  *   ok=true  level=ok      — green check

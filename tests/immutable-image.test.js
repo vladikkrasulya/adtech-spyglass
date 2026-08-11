@@ -143,14 +143,21 @@ test('Dockerfile bakes OCI version/revision labels from build-args (not hardcode
   }
 });
 
-test('.dockerignore keeps the build context clean (docs/.bak/.claude/.Jules/ops) but keeps the blog seed', () => {
+test('.dockerignore excludes docs, Spec Kit governance, agent adapters, backups, and ops but keeps the blog seed', () => {
   const di = read('.dockerignore');
   for (const pat of [
     '**/*.md',
     'docs/',
     '**/*.bak',
+    '.github/',
+    '.agents/',
     '.claude/',
+    '.codex/',
+    '.cursor/',
+    '.gemini/',
     '.Jules/',
+    '.specify/',
+    'specs/',
     'Dockerfile*',
     'docker-compose*.yml',
   ]) {

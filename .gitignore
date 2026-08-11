@@ -52,6 +52,33 @@ Thumbs.db
 !.vscode/settings.shared.json
 *.iml
 
+# ── Agent adapters ─────────────────────────────────────────────
+# Track only Spec Kit's reviewed adapters. Agent-local credentials/settings
+# must never enter the repository.
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/speckit-*/
+.agents/skills/speckit-*/*
+!.agents/skills/speckit-*/SKILL.md
+.codex/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/speckit-*/
+.claude/skills/speckit-*/*
+!.claude/skills/speckit-*/SKILL.md
+.cursor/*
+!.cursor/skills/
+.cursor/skills/*
+!.cursor/skills/speckit-*/
+.cursor/skills/speckit-*/*
+!.cursor/skills/speckit-*/SKILL.md
+.gemini/*
+!.gemini/commands/
+.gemini/commands/*
+!.gemini/commands/speckit.*.toml
+
 # ── Coverage / test artifacts ─────────────────────────────────
 coverage/
 .nyc_output/

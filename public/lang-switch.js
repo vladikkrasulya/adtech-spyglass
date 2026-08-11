@@ -407,7 +407,7 @@
     '/',
     '/about',
     '/account',
-    // Stage 0 multi-section SPA sections (ROADMAP.md 2026-05-23):
+    // Canonical SPA sections shared by locale routing and the shell switcher:
     '/inspector',
     '/live',
     '/behavior',

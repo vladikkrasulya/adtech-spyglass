@@ -1,5 +1,10 @@
 # ortbtools — Functional Audit (2026-05-12)
 
+> **Historical snapshot (2026-05-12).** This audit preserves past evidence and reviewer calibration;
+> its product inventory, file references, model paths, and status labels are not current instructions
+> or backlog. Use the [platform baseline](../specs/000-platform-baseline/plan.md) for current behavior
+> and the [Spec Kit roadmap](../specs/ROADMAP.md) for active work.
+
 > **Source**: DeepSeek v4 Pro via OpenRouter, single 247k-token pass against
 > ~22k LOC of source + ROADMAP/README/ARCHMAP/about-pages.
 > **Cost**: $0.38, finish=stop, 70 sections.
