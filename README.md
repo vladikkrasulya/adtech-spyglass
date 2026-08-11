@@ -4,28 +4,28 @@
 
 Public OpenRTB inspector — paste a `BidRequest` / `BidResponse` JSON and get
 human-readable validation, semantic request↔response crosscheck, IAB-category
-decoding, and a sandboxed creative preview. With an account: zero-knowledge
-encrypted library of saved samples per partner.
+decoding, and a sandboxed creative preview. With an account: browser-encrypted
+saved payload bodies, organized by partner.
 
 **Live**: <https://ortbtools.com/> · **Docs**:
 [/about](https://ortbtools.com/about) · 🇺🇦 / 🇬🇧 / 🇷🇺
 ([UK](https://ortbtools.com/uk/) · [EN](https://ortbtools.com/) · [RU](https://ortbtools.com/ru/))
 
 **No account required** to inspect bids — paste-and-validate works
-anonymously. Your pasted payload is sent over HTTPS, analyzed on the
-server, and never stored; the only payload retention is a per-tab
-in-memory history in your own browser. The server does keep derived
-analytics and a sampled request log (which includes your IP), but never
-the payload bodies. Login is **opt-in** for the encrypted library of
-saved samples and partner profiles. The whole surface lives on a single
-domain by design — see [decision log in
-ROADMAP.md](./ROADMAP.md#decision-log-live).
+anonymously. Your pasted payload is sent over HTTPS, analyzed on the server,
+and not persisted by the server. Separately, the browser keeps up to 50 recent
+raw request/response entries in same-origin `localStorage`; that history
+survives reloads and is shared across tabs. The server does keep derived
+analytics and a sampled request log (which includes your IP), but never the
+payload bodies. Login is **opt-in** for saved samples and partner profiles.
+The whole surface lives on a single domain by design — see
+[decision log in ROADMAP.md](./ROADMAP.md#decisions).
 
 ## What it does
 
 - **OpenRTB**: oRTB 2.5 / 2.6 / 3.0 detection + validation. Auto-detect the
   version from field signatures (`imp.rwdd`, `device.sua`, `regs.gpp`, …) and
-  surface findings with deep-links to the IAB spec paragraph.
+  surface findings with IAB spec links where a maintained mapping exists.
 - **Format detection** (Phase 10): a third axis alongside type + version —
   classifies the payload as banner / video / audio / native / push / pops /
   inpage and tags runtime context (web / inapp / ctv / dooh) and creative
@@ -40,18 +40,15 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
   detection + validation. `format-detect.js` tags pop intent from
   `imp.ext.adtype` / `imp.ext.popunder` / `bid.ext.adtype` and from
   `bid.adm` shape (window.open / bare URL / location.href). Plugin rules
-  warn on missing fcap, recommend `imp.banner.btype:[4]`, flag bid.adm
-  shipping banner HTML instead of a redirect, and crosscheck the
-  landing host against `bid.adomain` — pops bypass anti-phishing
-  filters so adomain truth is the only safety signal.
+  warn when `battr` blocks pop creatives, flag `instl` conflicts and missing
+  frequency caps, detect banner HTML where a redirect is expected, and
+  crosscheck the landing host against `bid.adomain`.
 - **IAB Content Taxonomy 1.0** category decoding from `cat[]` / `bcat[]` /
   `pcat[]`.
 - **Vendor dialect overlays** — opt-in extra rules for specific SSPs/DSPs via
-  `?dialect=<vendor>` (a couple of vendor-specific overlays ship by default).
-  Authors can
-  also build **temporary client-side dialects** from discovered fields via
-  the in-UI Dialect Builder — these stay in your browser and are not sent to
-  the server.
+  `?dialect=<vendor>`. The built-ins are `iab`, `ext-rtb`, and `inpage-push`.
+  The discovery UI can also build a temporary overlay from browser-local field
+  shapes; that temporary overlay is applied to rendered findings in the tab.
 - **Ad preview** — renders `bid.adm` HTML, native JSON cards, and VAST
   fragments in a sandboxed iframe (`sandbox="allow-scripts"`, no
   `allow-same-origin`). Native bids are synthesized into a stand-alone HTML
@@ -63,7 +60,7 @@ ROADMAP.md](./ROADMAP.md#decision-log-live).
   500 events per session (rolling window) to keep parent-tab memory bounded
   during long monitoring runs.
 
-## ortbtools Intelligence (Discovery + Local AI)
+## ortbtools Intelligence (Discovery + deterministic rules)
 
 Phase 7a–7c built an **opt-in, browser-local discovery layer** that watches
 for unknown vendor extension fields under `*.ext.*` and clusters them by
@@ -81,24 +78,25 @@ kept; bid values are dropped in the browser, not sent to the server. Highlights:
 - **Dialect Builder** — modal that lets users review a suggested cluster,
   pick fields, and turn it into a temporary dialect overlay applied to
   validation findings client-side.
-- **Local LLM bridge** (Phase 7c, **opt-in**): a self-hosted Ollama instance
-  (default model `gemma4:e2b` since 2026-05-21; previously `qwen2.5:3b`)
-  provides cluster naming + per-field purpose hints. The LLM call is
-  fail-open: if Ollama is unreachable, the AI affordances quietly hide
-  and the rest of ortbtools continues unaffected. See
-  [LLM_SETUP.md](./LLM_SETUP.md) for deployment.
+- **Deterministic suggestions** — the server-side rules engine in
+  [`lib/intel-rules.js`](./lib/intel-rules.js) names clusters, classifies field
+  purpose, infers partners, and simulates bidder strategies. It has no model or
+  third-party service dependency: the same input produces the same output, and
+  unknown signals stay unknown instead of being guessed.
 - **Knowledge Base** (Phase 10): a curated set of OpenRTB / JsonFeed
   reference fixtures under [packages/core/knowledge_base/](./packages/core/knowledge_base/).
-  Used for two things — `format-detect` self-tests and **few-shot context**
-  for the local LLM (so cluster names are grounded in real-market vocabulary
-  rather than priors). License-clean ingestion plan in
+  Used for `format-detect` self-tests and format-aware context for deterministic
+  cluster naming. License-clean ingestion plan in
   [SOURCES.md](./packages/core/knowledge_base/SOURCES.md).
 
-The privacy posture across the stack: the discovery layer keeps bid
-**values** in your browser (only field paths are persisted). When you run the
-Inspector, the pasted payload is sent over HTTPS and analyzed on the server —
-transiently, never stored. Saving a sample to your account encrypts it
-end-to-end in the browser before upload.
+The privacy posture across the stack: Discovery persists derived field paths,
+not bid values. Partner inference can send the current request (and optional
+response) to the server-side deterministic rules endpoint for transient
+processing; no external model receives it. The Inspector likewise sends pasted
+payloads over HTTPS for transient server-side analysis. The current web save
+flow encrypts request/response bodies in the browser before upload; its metadata
+remains server-readable. See [docs/PRIVACY.md](./docs/PRIVACY.md) for exact
+retention boundaries.
 
 ## Safe Public Mode
 
@@ -111,11 +109,15 @@ test payloads.
 
 ## Zero-knowledge encryption
 
-Saved samples are **encrypted in the browser** with a key derived from the
-user's password (PBKDF2-SHA-256, 600k iterations, 16-byte salt). The server
-stores AES-GCM-256 ciphertext + a wrapped DEK + IVs — it cannot decrypt
-samples, partners, or notes even with full DB access. A 32-hex recovery key is
-shown at register-time as the only way to regain access on lost-password.
+The current web save flow **encrypts the request and response bodies in the
+browser** with a key derived from the user's password (PBKDF2-SHA-256, 600k
+iterations, 16-byte salt). The server stores AES-GCM-256 ciphertext + a wrapped
+DEK + IVs and cannot decrypt those bodies. Sample titles, statuses and notes;
+partner names, slugs and notes; and custom-dialect mappings remain plaintext
+server metadata. The API/schema does not enforce or cryptographically verify
+ciphertext; direct clients can store plaintext or omit IVs. A 32-hex recovery
+key is shown at register-time as the only way to regain access to encrypted
+bodies after a lost password.
 
 This is verifiable: read [public/ortbtools-crypto.js](./public/ortbtools-crypto.js)
 and the `Phase 7 — Zero-knowledge encryption` section of [CHANGELOG.md](./CHANGELOG.md).
@@ -127,38 +129,26 @@ docker compose up -d --build
 # UI at http://127.0.0.1:8090
 ```
 
-The container bind-mounts:
-
-- `./public` for live-edit of HTML/CSS/JS (no rebuild on UI changes)
-- `/srv/DATA/Stacks/kyivtech-portal/public/design-system.css` for the shared
-  design system (this is an artefact of how I deploy it — replace the path
-  with your own design-system.css source if you fork)
-- `/srv/DATA/AppData/ortbtools` for persistent SQLite
-- `./intel-llm.js` (live-edit of the LLM bridge without container rebuild)
-
-The `public/design-system.css` file in this repo is an **empty placeholder** —
-Docker requires the bind-mount target to exist. At runtime the real file from
-the path above is served on top.
-
-**Optional: Local AI**. Discovery cluster naming + per-field purpose hints
-require a local Ollama instance reachable on the `ollama_default` Docker
-network. See [LLM_SETUP.md](./LLM_SETUP.md) for the full setup. ortbtools
-runs cleanly without it — AI affordances hide on first 503.
+The production container is an immutable image: application source, packages,
+public assets, samples, and the vendored design system are baked at build time.
+The only runtime mount is `/srv/DATA/AppData/ortbtools:/data` for SQLite and
+persisted blog content. A source edit therefore requires an image rebuild; a
+plain container restart does not load host-side changes.
 
 ## Layout
 
-````
+```
 server.js                 vanilla node:http server, REST API
-db.js                     SQLite store (partners + encrypted samples)
+db.js                     SQLite store (account metadata + saved samples)
 auth.js                   bcrypt + per-IP / per-account rate-limiter
 tokens.js                 stateless HMAC tokens for verify-email + reset
 email.js                  Resend HTTPS API wrapper
 
-packages/core/            validator core (browser + server-side compatible)
+packages/core/            CommonJS validator workspace; main APIs are network-free
   index.js                public API surface — validate(), crosscheck()
   detect.js               type + oRTB version autodetection
   format-detect.js        format detection (banner/video/audio/native/push/…)
-  knowledge-base.js       fixture loader + few-shot helper for the LLM
+  knowledge-base.js       Node-only fixture loader + reference context
   rules-request.js        oRTB BidRequest rules (IAB-spec baseline)
   rules-response.js       oRTB BidResponse rules
   rules-request-30.js     oRTB 3.0 BidRequest envelope checks
@@ -166,9 +156,8 @@ packages/core/            validator core (browser + server-side compatible)
   rules-vast.js           VAST 2.x / 3.x / 4.x envelope + quality checks
   rules-feed.js           JsonFeed rules (vendor-specific shapes)
   rules/                  plugin-style validator rules — see rules/README.md
-                          for contract. Currently shipped: client-hints,
-                          imp-secure. Append-only — adding one is a folder
-                          + one line in PLUGINS array.
+                          for contract. Eleven rule groups currently ship;
+                          adding one requires a folder + PLUGINS registration.
   spec-refs.json          finding-id → IAB spec URL map (gated by
                           tests/spec-refs.test.js)
   crosscheck.js           request↔response semantic checks
@@ -181,52 +170,51 @@ packages/core/            validator core (browser + server-side compatible)
   intel/temp-dialect.js   client-side temporary dialect runtime
   knowledge_base/         curated reference fixtures (oRTB 2.5/2.6 + JsonFeed)
   messages/{uk,en,ru}.json  localised finding messages
-behavior/                 in-iframe creative-probe scanner + engine
-
-intel-llm.js              server-side LLM bridge (Ollama)
-
-## CLI (`@ortbtools/cli`)
-
-Validate OpenRTB JSON from the terminal — same engine as ortbtools.com, no network
-calls (payloads stay on your machine).
-
-```bash
-npm install -g @ortbtools/cli
-ortbtools validate path/to/bidrequest.json
-ortbtools crosscheck request.json response.json --json
-````
-
-Library use:
-
-```bash
-npm install @ortbtools/core
-```
-
-See `packages/cli/README.md` and `packages/core/README.md`. Publish procedure:
-`docs/NPM_PUBLISH.md`.
+  behavior/               creative-probe scanner + behavior engine
+lib/intel-rules.js        deterministic intel suggestions + news relevance
 
 public/index.{en,uk,ru}.html UI per locale (EN at /, others under /uk/, /ru/)
 public/about.{en,uk,ru}.html docs per locale
 public/ortbtools.app.js UI behaviours
 public/ortbtools-crypto.js zero-knowledge crypto (browser-only)
 public/lang-switch.js seamless DOM-morph language switch (shared by index + about)
-public/i18n.js ~140-key UK/EN/RU dictionary
+public/i18n.js central UK/EN/RU dictionary
 
 docker-compose.yml service definition (ports + bind mounts)
 Dockerfile multi-stage alpine + node + better-sqlite3 build
+```
 
-````
+## CLI (`@ortbtools/cli`)
+
+Validate OpenRTB JSON from the terminal — same engine as ortbtools.com, no network
+calls (payloads stay on your machine).
+
+The CLI and core packages are currently available only as workspaces in this
+repository; neither package has been published to npm yet (registry status
+verified 2026-08-11). From a checkout after `npm install`:
+
+```bash
+node packages/cli/bin/ortbtools.js validate path/to/bidrequest.json
+node packages/cli/bin/ortbtools.js crosscheck request.json response.json --json
+```
+
+Workspace library use:
+
+```js
+const { validate, crosscheck } = require('@ortbtools/core');
+```
+
+See [the CLI README](./packages/cli/README.md) and
+[the core README](./packages/core/README.md). The first-publish procedure is in
+[docs/NPM_PUBLISH.md](./docs/NPM_PUBLISH.md).
 
 ## Tests
 
 ```bash
-npm test          # 658 tests at v0.42.10 — validator, crosscheck, auth,
-                  # tokens, behavior engine, intel walker/cluster/LLM,
-                  # format detection, knowledge-base round-trip, router
-                  # dispatch, health endpoint, spec-refs coverage gate
+npm test          # full node:test suite
 npm run ci        # prettier:check → eslint → typecheck → tests; what the
                   # pre-push hook enforces
-````
+```
 
 ## Configuration
 
@@ -245,10 +233,11 @@ Issues + PRs welcome. Particularly useful:
   also land in `packages/core/spec-refs.json` (the `tests/spec-refs.test.js`
   gate enforces it).
 - **Vendor dialect overlays** — if you have public docs for a CIS adtech
-  network we don't cover, drop a PR with a new `dialects/<vendor>.js`.
+  network we don't cover, drop a PR with a new
+  `packages/core/dialects/<vendor>.js` and register it in the `DIALECTS` map.
 - **Translations** — `packages/core/messages/` and `public/i18n.js` accept
   more locales; a new file + entries in the I18N object is enough.
-- **oRTB minor-revisions** — 2.6-202506+ signal detection.
+- **oRTB minor revisions** — per-revision detection and rule gating.
 
 For security issues: see [SECURITY.md](./SECURITY.md).
 

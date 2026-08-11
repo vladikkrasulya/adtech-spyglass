@@ -31,23 +31,24 @@ the maintainer has had a chance to ship a fix.
 
 ## Zero-knowledge crypto threat model
 
-ortbtools encrypts saved samples in the browser with a key derived from the
-user's password (PBKDF2-SHA-256, 600 000 iterations). The server stores
-opaque AES-GCM ciphertext + a wrapped DEK + IVs.
+The current ortbtools web save flow encrypts saved request/response bodies in the
+browser with a key derived from the user's password (PBKDF2-SHA-256, 600 000
+iterations). The server stores AES-GCM ciphertext + a wrapped DEK + IVs. The samples
+API/schema does not enforce or cryptographically verify ciphertext for direct clients.
 
 **The server cannot decrypt**:
 
-- Sample `bid_req` / `bid_res` payloads
-- Sample notes / metadata
-- Partner labels
+- `bid_req` / `bid_res` bodies encrypted by the current web UI
 
 **The server can see**:
 
 - email + bcrypt hash
-- Sample title, partner-id reference, status, created-at timestamp (these
-  fields are plaintext for sorting/filtering)
+- Sample title, partner-id reference, status, notes, and created-at timestamp
 - Whether the user has a saved sample for a given partner
+- Partner names, slugs, notes, and custom-dialect mappings
+- Explicitly saved Behavior Corpus probe events, labels, and notes
 - KDF salt + wrapped DEK + IVs (useless to an attacker without the password)
 
-A finding that breaks any "server cannot decrypt" claim above is treated as
-high severity and triaged immediately.
+A finding that lets the server decrypt a body encrypted by the current web flow is
+treated as high severity and triaged immediately. The full retention boundary and
+direct-API caveat are documented in [`docs/PRIVACY.md`](./docs/PRIVACY.md).

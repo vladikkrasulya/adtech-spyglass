@@ -2,7 +2,7 @@ name: Publish npm packages
 
 # Publishes @ortbtools/core then @ortbtools/cli to the public npm registry.
 # Prerequisites: GitHub secret NPM_TOKEN (Automation token with publish access to
-# @kyivtech and @ortbtools scopes). See docs/NPM_PUBLISH.md.
+# the @ortbtools scope). See docs/NPM_PUBLISH.md.
 
 on:
   workflow_dispatch:
@@ -14,11 +14,11 @@ on:
       publish_cli:
         description: Publish @ortbtools/cli (requires core on registry)
         type: boolean
-        default: true
+        default: false
       dry_run:
         description: npm publish --dry-run only (no upload)
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -28,6 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Require main for live publish
+        if: ${{ !inputs.dry_run && github.ref != 'refs/heads/main' }}
+        run: |
+          echo 'Live npm publishing is allowed only from refs/heads/main.' >&2
+          exit 1
+
       - uses: actions/checkout@v7
 
       - name: Setup Node 22
@@ -38,6 +44,9 @@ jobs:
 
       - name: Install root deps (workspace link smoke)
         run: npm ci
+
+      - name: Full CI gate
+        run: npm run ci
 
       - name: npm pack smoke
         run: bash scripts/npm-pack-smoke.sh

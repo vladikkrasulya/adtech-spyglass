@@ -33,9 +33,9 @@ npm run test:watch
 npm run test:coverage
 ```
 
-The full suite currently runs in ~8-10 seconds on the development machine
-(i7-7700, cold-start). No network calls are made during tests — external
-services are either mocked or skipped.
+No network calls are required during tests; external services are mocked or
+skipped. Runtime and assertion totals are reported by the current CI run rather
+than duplicated here.
 
 To surface server-level log output during a failing test, override the log
 level:
@@ -58,10 +58,10 @@ passed to `test(...)`.
 
 ## Where tests live
 
-All tests are under `tests/` at the repo root. npm scripts pass `tests/*.test.js`
-to `node --test` — every `*.test.js` file there is picked up (55 files as of
-v1.2.1). Do not pass the `tests/` directory as a positional argument: Node 22
-treats it as a file path and fails to discover tests.
+All tests are under `tests/` at the repo root. npm scripts pass
+`tests/*.test.js` to `node --test`, so every matching file is picked up. Do not
+pass the `tests/` directory as a positional argument: Node 22 treats it as a
+file path and fails to discover tests.
 
 | File                               | What it covers                                                                                             |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -108,17 +108,17 @@ in isolation with injected dependencies, not a full HTTP server.
 `npm run ci` is the gate used by the pre-push hook and any CI runner:
 
 ```bash
-npm run format:check && npm run lint && npm run typecheck && npm test
+npm run format:check && npm run lint && npm run typecheck && npm run test:coverage
 ```
 
 All four steps must pass. A failure in any one blocks the push.
 
-| Step           | What it checks                                               |
-| -------------- | ------------------------------------------------------------ |
-| `format:check` | Prettier formatting — fails if any file would be reformatted |
-| `lint`         | ESLint — `no-var`, no unused catch bindings, custom rules    |
-| `typecheck`    | `tsc --noEmit` over JSDoc annotations (no `.ts` files)       |
-| `test`         | Full `node --test tests/*.test.js` suite                     |
+| Step            | What it checks                                               |
+| --------------- | ------------------------------------------------------------ |
+| `format:check`  | Prettier formatting — fails if any file would be reformatted |
+| `lint`          | ESLint — `no-var`, no unused catch bindings, custom rules    |
+| `typecheck`     | `tsc --noEmit` over JSDoc annotations (no `.ts` files)       |
+| `test:coverage` | Full `node --test tests/*.test.js` suite + coverage report   |
 
 ---
 
@@ -215,9 +215,9 @@ generator.
 - **Production SQLite**: `tests/db.test.js` creates a temporary database via
   the existing test setup (Node test isolation). Never point at the real
   `/data/ortbtools.db` in a test.
-- **External network**: Ollama, Resend, and Sentry are either fail-open by
-  design or mocked in tests. Don't write tests that require a live external
-  service to pass.
+- **External network**: Resend, Sentry, ClickHouse, and the isolated OpenRouter
+  news-translation path are fail-open where appropriate or mocked in tests.
+  Don't write tests that require a live external service to pass.
 - **Container runtime**: tests import the packages directly; they don't boot
   the HTTP server. Test the server's HTTP surface only where the module
   boundary is the HTTP handler itself (e.g. `health.test.js`, `router.test.js`).

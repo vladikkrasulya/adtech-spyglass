@@ -5,6 +5,7 @@
  *
  * package.json is the single source of truth for the app version. Every other
  * surface that paints/declares the version must agree with it:
+ *   - package-lock.json          → root package metadata
  *   - public/version.js          → const VERSION = `v${package.version}`
  *   - public/about.{en,uk,ru}.html               (static fallback span)
  *   - public/modules/inspector/template.{en,uk,ru}.html (static fallback span)
@@ -23,7 +24,8 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-const PKG_VERSION = JSON.parse(read('package.json')).version; // source of truth
+const PKG = JSON.parse(read('package.json'));
+const PKG_VERSION = PKG.version; // source of truth
 const EXPECTED = `v${PKG_VERSION}`;
 
 test('package.json version is a clean semver (source of truth)', () => {
@@ -31,6 +33,26 @@ test('package.json version is a clean semver (source of truth)', () => {
     PKG_VERSION,
     /^\d+\.\d+\.\d+$/,
     `package.json version "${PKG_VERSION}" is not x.y.z`,
+  );
+});
+
+test('package-lock root metadata matches package.json', () => {
+  const lock = JSON.parse(read('package-lock.json'));
+  assert.equal(lock.name, PKG.name, 'package-lock top-level name drifted from package.json');
+  assert.equal(
+    lock.version,
+    PKG_VERSION,
+    'package-lock top-level version drifted from package.json',
+  );
+  assert.equal(
+    lock.packages && lock.packages[''] && lock.packages[''].name,
+    PKG.name,
+    'package-lock root workspace name drifted from package.json',
+  );
+  assert.equal(
+    lock.packages && lock.packages[''] && lock.packages[''].version,
+    PKG_VERSION,
+    'package-lock root workspace version drifted from package.json',
   );
 });
 

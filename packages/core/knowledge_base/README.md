@@ -16,11 +16,10 @@ The Knowledge Base is the data layer that supports two derived features:
    pure-data heuristics. Runs in browser AND Node, no fs reads.
    Returns `{ formats, contexts, protocols, tags, confidence }`.
 
-2. **Smart LLM Context (Few-Shot)** (Phase 10b — wired in
-   `intel-llm.js`) — when the local LLM is asked to name a discovered
-   dialect cluster, we inject 1–3 anonymized field-list examples drawn
-   from this base, so the model answers in the vocabulary of the real
-   market rather than from priors alone.
+2. **Deterministic naming context** — the server-side rules engine can compare
+   a discovered dialect cluster with 1–3 anonymized field-list examples from
+   this base. This grounds names in shipped market fixtures without a model or
+   network call.
 
 The KB is reference data, not test fixtures. `tests/fixtures.js` exists
 for unit tests and stays separate.

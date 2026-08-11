@@ -10,11 +10,10 @@
  *   1. `format-detect` self-tests — enumerate known samples and prove
  *      the heuristic tags every one correctly. (Phase 10 test rig.)
  *
- *   2. `intel-llm` few-shot context (Phase 10b) — when the LLM is asked
- *      to name a discovered cluster, we fetch 1–3 anonymised field
- *      paths from samples matching the same `format`. The actual
- *      VALUES never leave this module; only top-level field names
- *      go into the prompt. The privacy posture matches the rest of
+ *   2. Deterministic naming context — when the rules engine names a
+ *      discovered cluster, it can compare anonymised field names from
+ *      samples matching the same `format`. No payload values or external
+ *      model calls are involved. The privacy posture matches the rest of
  *      the Discovery layer (`packages/core/intel/walker.js`).
  *
  * Node-only: uses `fs.readFileSync` at first access. Browser code
@@ -52,8 +51,8 @@ function readSampleFile(relativeFile) {
     const abs = path.join(KB_ROOT, relativeFile);
     // Defense in depth: ensure resolved path stays inside KB_ROOT
     // (manifest is hand-curated, but a future ingestion script could
-    // fat-finger a `../something` and we'd silently leak unrelated
-    // files into prompts).
+    // fat-finger a `../something` and we'd expose unrelated files to a
+    // future caller).
     if (!abs.startsWith(KB_ROOT + path.sep) && abs !== KB_ROOT) return null;
     const raw = fs.readFileSync(abs, 'utf8');
     return JSON.parse(raw);
@@ -91,7 +90,7 @@ function loadSample(id) {
 
 /**
  * Extract the top-level FIELD NAMES (not values) from a sample. Used
- * by Phase 10b few-shot wiring to pass anonymized hints to the LLM.
+ * as anonymized reference context by deterministic naming rules.
  *
  * For an array payload (push-materials feed), uses the first item.
  * For an oRTB request, walks one level under the most format-relevant
@@ -131,11 +130,11 @@ function fieldsForSample(id, format) {
 }
 
 /**
- * Build a few-shot context object for the LLM prompt: up to `limit`
- * (default 2) sample summaries that match `format`, each carrying
+ * Build a reference-context object: up to `limit` (default 2) sample
+ * summaries that match `format`, each carrying
  * an id, tags, and an anonymized field-name list.
  *
- * Caller composes the prompt; this module only provides the data.
+ * The caller decides how to score the context; this module only provides data.
  *
  * @param {string} format
  * @param {{limit?:number, side?:string, spec?:string}} [opts]

@@ -113,9 +113,9 @@ rejected"; `info` is for "this is just a tip".
 
 ## Future expansion (intentionally not done yet)
 
-- LLM-suggested checks: a plugin could call the LLM bridge (`intel-llm.js`)
-  to flag patterns it noticed across recent traffic. Architecturally
-  fits — plugin just returns findings.
+- Data-derived checks: a plugin could consume explicitly provided aggregate
+  statistics to flag patterns seen across recent traffic. Architecturally it
+  fits — the plugin still returns ordinary deterministic findings.
 - Statistical context: a plugin could query `analyze_log` for "how
   common is this missing field?" and downgrade severity if it's a
   majority pattern. Fits — same shape.

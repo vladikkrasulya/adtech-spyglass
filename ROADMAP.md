@@ -1,104 +1,84 @@
-# ortbtools Roadmap (revised 2026-05-23)
+# ortbtools Roadmap
 
----
+Last reconciled with the repository on 2026-08-11.
 
 ## How to use this document
 
-This is the canonical roadmap for ortbtools / ortbtools.com. Single source of truth.
+The current baseline and priorities below are the live plan. The dated Stage
+0–6 material later in this file is retained as an implementation and decision
+record; it is not a list of unfinished work. Verify architecture details in
+[docs/ARCHMAP.md](./docs/ARCHMAP.md) and production procedures in
+[docs/OPERATIONS.md](./docs/OPERATIONS.md).
 
-- **At the start of every session**: re-read this file. Memory pointer: `[ortbtools multi-section](project_ortbtools_multi_section.md)`.
-- **Stage numbering is stable**: Stages 0-5 are committed and ordered; Stage 6+ is the backlog (unordered, priority changes).
-- **All decisions are locked** (see Decisions log). If a decision needs to change, change THIS document first, then proceed.
-- **No open questions in the active plan.** If a question surfaces mid-stage, resolve it before proceeding or escalate to user. Do not silently defer.
-- **Reality audit** at the bottom of this document records what the audit docs in `docs/` said vs HEAD code as of 2026-05-23. Those audit docs in `docs/` are snapshots — this ROADMAP is the live plan.
+## Current baseline
 
----
+| Surface        | Version / state                                                        |
+| -------------- | ---------------------------------------------------------------------- |
+| Web app        | `1.6.0`                                                                |
+| Core workspace | `@ortbtools/core` `0.31.0`; not published to npm                       |
+| CLI workspace  | `@ortbtools/cli` `0.1.1`; implemented and tested, not published to npm |
+| Runtime        | Node `>=22.13.0`; vanilla `node:http` application                      |
+| Source repo    | `vladikkrasulya/adtech-spyglass`; GitHub rename remains a decision     |
 
-## Current release snapshot (2026-07-02)
+The npm status was verified against the public registry on 2026-08-11: both
+package names returned `E404`. The local model-free cleanup baseline is commit
+`89d1af1`; the last production state verified during the audit was `f6bead9`.
+This document does not claim that later local commits have been deployed.
 
-**Supersedes the dated “Where we are” paragraph below for operational facts.**
+The shipped product is a multi-section SPA with Inspector, Live/Stream,
+Behavior, Library, Dialects, Blog, Docs and Insights, plus separately served
+localized Account pages. The
+hosted Inspector sends pasted payloads to `POST /api/analyze`; analysis is
+server-side and raw bodies are processed transiently rather than persisted.
+The current web save path encrypts sample bodies in the browser before upload;
+sample, partner and dialect metadata remains server-readable.
 
-| Surface | Version / state                                                                     |
-| ------- | ----------------------------------------------------------------------------------- |
-| App     | `1.3.6` (production `b45c437`); npm pipeline in flight (`chore/npm-publish-v1.3.7`) |
-| Core    | `0.30.3` (this branch); production `0.30.2`                                         |
-| CLI     | `0.1.0` (unpublished)                                                               |
-| Runtime | Node `>=22.13.0`; production Node `22.22.x`                                         |
-| CI      | full suite + Docker production smoke gate                                           |
+Interactive Intel endpoints and news relevance use deterministic
+`lib/intel-rules.js` rules. OpenRouter remains isolated to news translation and
+categorization. Sentry support is configuration-gated and exposes readiness in
+`/api/health`; the verified production baseline reported `sentry.ready:false`,
+with Telegram as the active alert path.
 
-**Shipped since v1.3.3 (validator + routing wave):**
+Production uses an immutable, exact-tag Docker image. Application source and
+the vendored design system are baked into the image; `/data` is the only
+runtime mount. Deploys run readiness and smoke gates with automatic rollback.
 
-- PR #35 — AdPod `podseq` / `minduration` (OpenRTB 2.6)
-- PR #36 — `rqddurs` validation + min/maxduration conflict
-- PR #37 — Native 1.1/1.2 request roots + asset subtype guard
-- PR #38 — `bid.adomain[]` bare-domain validation
-- PR #39 — release `v1.3.4`
-- PR #40 — `device.ifa` / `device.lmt` privacy signals (in `v1.3.5` CHANGELOG; shipped on main pre-bump)
-- PR #32 amendments — encoded-path alias 404 + same-origin redirect invariant (documented under v1.3.2 in CHANGELOG)
-- **This branch (`chore/docs-sync-v1.3.5`)** — `banner.pos` / `banner.mimes` + doc/version sync to `v1.3.5`
+## Current priorities
 
-**Docs debt closed in v1.3.5 doc-sync:** CHANGELOG gap for #40, SEO security notes, ARCHMAP §0.2, this snapshot block, Obsidian vault sync.
+1. Complete the documentation truth sweep and keep regression guards in CI.
+2. Decide whether to rename the existing GitHub repository to `ortbtools`.
+   Until then, active source links must use the reachable repository URL shown
+   in the baseline above.
+3. Decide whether to perform the first verified npm publication. Until it
+   succeeds, document Core and CLI as repository workspaces only.
+4. Run a fresh dependency/security audit and merge only upgrades that pass the
+   complete CI and package smoke gates.
+5. Restore or deliberately reconfigure production Sentry, then verify
+   readiness and alert delivery without weakening the Telegram fallback.
+6. Deploy the reviewed baseline through the normal immutable-image pipeline.
+7. Only after these baseline tasks, schedule product features or hotspot-file
+   refactors.
 
-**Still open:** first `npm publish` run (needs `NPM_TOKEN` + org scopes); browser-local validation (Phase 2B — deferred); ROADMAP backlog items #14 severity tabs marked stale below (shipped `88065f3`).
+## Decisions
 
-**In flight (Phase 3):** `npm-pack-smoke` CI gate + `publish-npm` workflow + `docs/NPM_PUBLISH.md` on branch `chore/npm-publish-v1.3.7`.
+- Inspector remains the primary product surface; Live is a sibling tool.
+- The web app stays on one domain with path-based SPA navigation.
+- Hosted validation is server-side; raw analyze payloads are not persisted.
+- Zero-knowledge claims apply to encrypted saved-sample bodies and keys, not
+  to every network flow in the product.
+- Interactive intelligence is deterministic and model-free. External model
+  use is limited to the isolated news translation pipeline.
+- Vendor dialect work remains evidence-driven: add named overlays from public
+  documentation or representative samples, not guesses.
+- Production images are immutable and addressed by exact commit tags.
 
----
+## Historical implementation plan (superseded)
 
-## Mini-tasks (not stage-bound)
-
-### Immutable production image — DONE (v1.1.6)
-
-Status: **complete**. Production runs a fully self-contained, reproducible image — ALL source plus the vendored `design-system.css` (provenance in `design-system.vendor.json`) are baked at build time; the **only** mount is the persistent `/data` volume (SQLite + `content-posts/`). No source or cross-project bind-mounts remain — the transitional portal `design-system.css` overlay was removed in v1.1.6 (its rollback target, the v1.1.5 image, also bakes the full CSS, so styling is never lost). Deploy/rollback via `scripts/deploy.sh` / `scripts/rollback.sh` with image-tag pinning (`ORTBTOOLS_TAG` in `.env`) + readiness/smoke + auto-rollback; CI (`tests/immutable-image.test.js`) enforces exactly one `/data` mount and the vendored-CSS hash. NOTE: this supersedes the dated "Docker bind-mounts cover `./packages` and `./modules`" line in the "Where we are" snapshot below — handler/validator edits now require a rebuild+redeploy, not just a `compose restart`.
-
-### Domain migration — ortbtools.com → ortbtools.com
-
-Status: **DONE (verified 2026-07-02).** `ortbtools.com/*` returns `301` to the matching `https://ortbtools.com/*` path. Passive monitoring continues; DNS record removal is an operational follow-up after 60–90 days, not a code task.
-
----
-
-## Where we are
-
-ortbtools is a mature OpenRTB inspector at ortbtools.com (v0.52.0 as of 2026-05-25). The validator engine (`packages/core/`, v0.26.0) covers oRTB 2.5/2.6/3.0 detection with confidence scoring, version-aware rule sets, VAST 12-rule validation, semantic crosscheck, URL-style request validation (new in v0.51.0), and 5 JSON-feed shape handlers (Clickunder, Link-Feed, Value-Feed, Bid-Price, Bid-Redirect). Three dialects ship: `iab` (canonical), `ext-rtb` (formerly kadam — renamed 2026-05-23 as part of the partner-name scrub), and `inpage-push`. Pop / popunder / clickunder detection is dialect-aware and shape-based as of v0.52.0: a user dialect can map a vendor signal (e.g. a numeric `ext.ad_type`) to `pop` with no core change, and `allowMT`/`allowShock`/`sizeID:[0]`-style shapes are recognised without any dialect (`packages/core/non-iab-formats.js`); pop-request now flags `battr:8`-blocks-pop and `instl`-on-pop contradictions. Strictness levels (`lax`/`normal`/`pedantic`) are fully wired through the API (`packages/core/index.js` `applyStrictness()`). Three locales (uk/en/ru). 16 behavior detection patterns. Specimen replay endpoint (`/api/v1/replay`) and SSE stream generator (`/api/v1/stream`) are wired and functional.
-
-The auth and crypto layer is solid: zero-knowledge encrypted library, per-user partners, bcrypt sessions, PBKDF2-SHA-256 AES-GCM for stored samples. The backend is modular: `server.js` is a thin router; each feature lives in `modules/*/handler.js`. Structured logging via pino (`lib/logger.js`). GlitchTip error tracking is wired end-to-end: `lib/logger.js` initialises `@sentry/node` against a self-hosted GlitchTip instance; `modules/sentry-ingest/handler.js` proxies browser error envelopes from `POST /glitchtip-ingest/*`. Daily SQLite backups at 03:30. Rate limiting on all public endpoints. CI green. Docker bind-mounts cover both `./packages` and `./modules`, so validator and handler edits do not require a rebuild.
-
-What is NOT done: the inspector is still a single-screen paste tool. The `public/stream.html` page exists (canonical URL `ortbtools.com/stream`, SSE backed by synthetic corpus), but it is a standalone HTML file with no shared navigation. The zero-knowledge library lives inside `/account`. There is no `/docs`, `/dialects`, or `/blog` surface. There is no side navigation connecting the sections. Seven pop-vendor dialects are not started — gated on real samples per project reactive-only policy. `@ortbtools/core` is not published to npm: the `private` field has been removed and `publishConfig.access: "public"` is set in `packages/core/package.json`, but the actual publish is held back pending API stabilisation.
-
-The product is real and useful. The ceiling it is hitting: the inspector is the entire UI, so every new capability either crowds the single screen or goes undiscoverable. The multi-section architecture below is the answer to that ceiling.
-
----
-
-## What changed in direction (2026-05-23)
-
-The decision: ortbtools becomes a multi-section site with a **wide grouped sidebar** (~220px) and a **thin global topbar** (~44px). The inspector retains flagship status but becomes one of 8 sections. Path-based URLs on a single domain (ortbtools.com). The old stream-platform-pivot plan (stream as the default landing, inspector demoted to `/playground`) is **superseded** — stream is now Stage 2 of the multi-section rollout, not a landing-page replacement. The superseded doc lives at `docs/stream-platform-pivot-2026-05-05.md` and will be annotated.
-
-**8 sections:**
-
-| Path                   | Purpose                                                            |
-| ---------------------- | ------------------------------------------------------------------ |
-| `/inspector` (default) | Paste and validate — existing core product                         |
-| `/live`                | Synthetic SSE stream of oRTB specimens at 60–120 req/min           |
-| `/behavior`            | Behavior corpus labelling UI and confusion matrix                  |
-| `/library`             | Zero-knowledge saved samples (moved from `/account`)               |
-| `/dialects`            | Public catalog of known dialects and user dialect builder          |
-| `/blog`                | Editorial posts (markdown) and firehose-sourced posts (ClickHouse) |
-| `/docs`                | Reference: spec coverage, finding IDs, API, integration guide      |
-| `/account`             | Auth and profile settings (login/logout/password)                  |
-
-**Sidebar grouping:**
-
-- РОБОТА: Інспектор / Стрім / Behavior
-- ДАНІ: Зразки / Діалекти
-- ЗНАННЯ: Блог / Доки
-
-**Architectural choices:**
-
-- Path-based routing (pushState), single domain, single Node process
-- Sidebar: ~220px on desktop; drawer below 1024px breakpoint (tablets 768-1023px get the drawer because the inspector dual-panel needs the horizontal space)
-- Topbar: logo, disabled search slot (`🔎 пошук — скоро`, real search Stage 5+), lang switcher, theme toggle, profile avatar (~44px)
-- Blog: hybrid — editorial posts as `content/posts/{lang}/*.md` with frontmatter (git-versioned); firehose posts in ClickHouse `analytics.blog_drafts` with manual approval gate at `/admin/blog`; default approval publishes to `analytics.blog_posts` DB; opt-in markdown promotion for evergreen content
-- Root URL `ortbtools.com/` issues a **302** redirect to `/inspector` (temporary on purpose — a cached 301 would pin returning visitors to `/inspector` even after a future marketing landing reclaims `/`); locale-roots and legacy paths use 301. See Decisions log (revised 2026-05-26).
+The sections below preserve the May–July 2026 rollout plan and its original
+acceptance criteria. Stages 0–5 shipped and many Stage 6 entries were later
+implemented. Version numbers, test counts, route lists, model references and
+“not started” labels below are historical unless the current priorities above
+repeat them.
 
 ---
 
@@ -126,7 +106,10 @@ The goal: wire the URL structure and chrome without building any new feature.
 - Topbar shows disabled search slot at all widths
 - No regression on existing share-link, embed, download-bundle flows
 
-**Risk:** `public/ortbtools.app.js` is 4785 lines and bootstraps many `window.*` globals. The mount/unmount lifecycle needs care to avoid leaks when navigating away from `/inspector`. The existing `mountInspector()` cleanup list (which already covers `window.toast`, `window.openEmbedModal`, etc.) is the model to follow.
+**Risk (still relevant):** `public/ortbtools.app.js` remains a large central
+hotspot and bootstraps multiple `window.*` facades. The mount/unmount lifecycle
+needs care to avoid leaks when navigating away from `/inspector`; re-entrant
+lifecycle tests are the safety net for any extraction.
 
 **Files touched:**
 
@@ -263,7 +246,14 @@ The corpus capture pipeline shipped in v0.29.0. `modules/corpus/handler.js` expo
 
 ## Stage 5 — Insights (1 week, opportunistic)
 
-Self-validation analytics surface. Aggregates everything a user has run through their own inspector locally (ortbtools Intel walker already writes to IndexedDB; `analytics.intel_llm_calls` in ClickHouse mirrors LLM-touched samples). The section answers: what does MY pipeline look like across the last N sessions — format mix, version mix, top-N findings, dialect distribution, behavior-probe hit rate.
+**Later status:** shipped. The implemented surface reads derived validation
+analytics through `modules/analytics` and the account Insights API. The
+original `analytics.intel_llm_calls` design below was retired with the local
+model bridge.
+
+Self-validation analytics surface. The section answers: what does MY pipeline
+look like across the last N sessions — format mix, version mix, top-N findings,
+dialect distribution, behavior-probe hit rate.
 
 Inspiration: openrtb.ovh ships an aggregate route titled "All requests combined" — proves there is appetite for a personal aggregate view alongside per-sample validation.
 
@@ -297,9 +287,13 @@ Ordered by likelihood it will eventually matter:
 
 2. **Version-aware rule gating** — some rules fire on payload versions where they should be silent. Tracked in `packages/core/rules-request.js` and `rules-response.js`. Needs a `version` argument threaded into each rule function and per-rule `appliesTo` declarations. Gated on a real false-positive complaint caused by this gap.
 
-3. **`@ortbtools/core` npm publish** — `private` field is already removed from `packages/core/package.json`; `publishConfig.access: "public"` is set. Blocked by: (a) finalising the `strictness` API surface (the last open Phase 2 item), (b) deciding whether the package name stays `@ortbtools/core` or migrates to `@ortbtools/core`. Expect this after Stage 2 settles the API surface.
+3. **`@ortbtools/core` npm publish** — package metadata and pack-smoke tooling
+   exist, but no registry release has succeeded. Publication is now a deliberate
+   release/identity decision, not an implementation prerequisite.
 
-4. **`@ortbtools/cli`** — gated on npm publish. Estimated 3–5 days once unblocked. Flags: `--dialect`, `--strictness`, `--format=json|tap|junit|github-actions`.
+4. **`@ortbtools/cli`** — implemented and tested at `0.1.1`; registry
+   publication remains pending with Core. Its actual flags are documented in
+   `packages/cli/README.md`.
 
 5. **Seven pop-vendor dialects** — reactive only (policy in `feedback_ortbtools_iab_dialects.md`). The `cu-pops-audit-2026-05-12.md` listed all 7 as CRITICAL; the audit's own calibration note recalibrated severity as inflated. The gap is real but each dialect is gated on receiving a real sample from a partner integration. **(v0.52.0 update:** the detection layer is now user-dialect-mapping-aware + shape-based, so a pop vendor's signal can be mapped to `pop` via a saved user dialect with no core change. A full core dialect file is therefore needed only for vendor-specific _rule overlays_, not for format recognition.)
 
@@ -309,11 +303,15 @@ Ordered by likelihood it will eventually matter:
 
 8. **i18n debt** — the ~30 hardcoded Cyrillic strings flagged in `docs/tech-debt-2026-05-04.md` are **resolved**. `public/ortbtools.app.js` contains 9 Cyrillic lines, all in code comments, not in UI copy. The i18n.js registry plus per-module i18n files cover all UI strings. No open debt here.
 
-9. **`ortbtools.app.js` modularisation** — currently 4785 lines (was 4505 at audit time; grew with new features). The Stage 0 routing approach naturally slows growth: each Stage 0–2 feature lands as a `public/modules/*/` IIFE rather than extending the main file.
+9. **`ortbtools.app.js` modularisation** — still a hotspot despite section and
+   service extraction. Future work should remove cohesive responsibilities with
+   re-entrant lifecycle tests rather than chase a line-count target.
 
-10. **Cache-bust automation** — still manual `?v=N` bumps. Low priority while the project has no build step by design.
+10. **Cache-bust automation** — **SHIPPED.** `rewriteAssetVersions()` versions
+    module JS/CSS with content hashes at serve time.
 
-11. **Health endpoint metadata** — `/api/health` responds `{success:true, db:"ok"}`. Build SHA and validator version missing. One-day task, low priority.
+11. **Health endpoint metadata** — **SHIPPED.** `/api/health` includes build
+    metadata and integration readiness, including `sentry.ready`.
 
 12. **Quality Score 0–100** — **SHIPPED (live 2026-05-26 reality-audit).** The `.quality-pill` renders a 0–100 score with tiered status (excellent/good/needs-attention/critical) in the summary strip; `computeQualityScore()` in `ortbtools.app.js`. Competitor research 2026-05-23: openrtb.ovh shows a `Score: 100/100` pill at the top of every validation. Single-number quality summary is more digestible for non-developers than raw finding counts. Formula candidate: `max(0, 100 - errors*20 - warnings*5 - info*1)`, clamped. Renders as a pill badge alongside the existing severity counters. ~1-2 days in `public/ortbtools.app.js` validation render + `packages/core/findings.js` aggregator.
 
@@ -321,7 +319,7 @@ Ordered by likelihood it will eventually matter:
 
 14. **Severity tabs in findings panel** — **SHIPPED (`88065f3`, 2026-05-24; confirmed live 2026-05-26).** `renderSeverityTabs()` provides `All / Errors / Warnings / Info` chips with counters and empty states. Optional future polish: `aria-pressed`, delayed-render abort guard, regression tests — not a greenfield build.
 
-15. **Test Cases public gallery (Stage 1 expansion)** — **SHIPPED (live 2026-05-26 reality-audit).** `/library` renders a public catalog (IAB fixtures / clean baselines / attack patterns) with Open-in-inspector + Copy JSON per card, via `GET /api/v1/sample/list`; authed users get their ZK saves in a separate tab. Competitor parity: openrtb.ovh `/testcases` is a public-facing catalog of curated valid/invalid samples with copy + download. Their best SEO + onboarding surface. We have ~25 synthetic specimens hidden in the `приклад` dropdown. Promote them to `/library` Stage 1 as a public catalog (no auth required) sectioned as: Valid Cases (banner / video / native / pop / 3.0 / inpage-push) vs Invalid Cases (attack patterns, malformed shapes). Each card: title, description, Valid|Invalid badge, Copy, Download. Authenticated users see their own ZK-encrypted saves in a separate tab on the same page. This expands the original Stage 1 scope.
+15. **Test Cases public gallery (Stage 1 expansion)** — **SHIPPED (live 2026-05-26 reality-audit).** `/library` renders a public catalog (IAB fixtures / clean baselines / attack patterns) with Open-in-inspector + Copy JSON per card, via `GET /api/v1/sample/list`; authenticated users get their own saved metadata in a separate tab and unlock bid bodies encrypted by the current web flow. Competitor parity: openrtb.ovh `/testcases` is a public-facing catalog of curated valid/invalid samples with copy + download. Their best SEO + onboarding surface. We have ~25 synthetic specimens hidden in the `приклад` dropdown. Promote them to `/library` Stage 1 as a public catalog (no auth required) sectioned as: Valid Cases (banner / video / native / pop / 3.0 / inpage-push) vs Invalid Cases (attack patterns, malformed shapes). Each card: title, description, Valid|Invalid badge, Copy, Download. This expands the original Stage 1 scope.
 
 16. **shadcn-style design tokens migration** — competitor research 2026-05-23: openrtb.ovh ships clean shadcn/ui aesthetics on Tailwind. We can match the look without adopting Tailwind/React. Refactor `public/ortbtools-shell.css` design tokens from our ad-hoc set (`--accent`, `--text`, `--bg`, `--border`, etc.) to shadcn-semantic structure: `--background`, `--foreground`, `--card`, `--card-foreground`, `--primary`, `--primary-foreground`, `--muted`, `--muted-foreground`, `--accent`, `--accent-foreground`, `--border`, `--input`, `--destructive`, `--destructive-foreground`, plus single `--radius` with derived `calc(var(--radius) - 2px)` rhythm. Add severity colour tokens (`--error`, `--warning`, `--info`, `--success`) using Tailwind defaults. System-font stack confirmed clean. ~1-2 days mechanical migration with `git grep` of token usages across `public/`. Bundled naturally with Stage 0 shell refactor — fresh CSS surface is cheaper than retrofitting later.
 
@@ -329,7 +327,7 @@ Ordered by likelihood it will eventually matter:
 
 ---
 
-18. **Chrome-level auth modal (popup on any page)** — **SHIPPED (v1.3.0, 2026-07-01).** `OrtbtoolsSession` is now a shell-level service ([`public/core/session.js`](../public/core/session.js)) installed once by [`public/shell-boot.js`](../public/shell-boot.js) alongside nav/topbar — auth, DEK, and the canonical `/api/auth/me` boot live for the whole page lifecycle, independent of which section is mounted. A compatibility facade (`window.OrtbtoolsSession`, `__shellOwned`) preserves the existing consumer surface; inspector-specific state (sample/dirty/partner + DOM renderers) registers via a generation-safe adapter on mount and unregisters on teardown without clearing the shell session. The auth/unlock/recovery/password-reset modals share a single chrome-level [`public/core/modal-host.js`](../public/core/modal-host.js) owner: `#modalRoot` is declared once in `index.{en,uk,ru}.html` (sibling of `#app-root`), so sign-in from `/docs`, `/library`, or `/live` opens the modal **in place** with zero route change. Zero-knowledge invariants unchanged: DEK never leaves the service module, password is never cached, logout wipes memory + `sessionStorage`, stale `/api/auth/me` responses are gen-guarded, Inspector unmount does not destroy the shell session. Regression coverage: [`tests/session-hoist.test.js`](../tests/session-hoist.test.js). Original problem (for history): the auth modal depended on the inspector closure-scoped `OrtbtoolsSession`, so sign-in from any other section had to SPA-navigate through `/inspector?auth=login` first.
+18. **Chrome-level auth modal (popup on any page)** — **SHIPPED (v1.3.0, 2026-07-01).** `OrtbtoolsSession` is now a shell-level service ([`public/core/session.js`](./public/core/session.js)) installed once by [`public/shell-boot.js`](./public/shell-boot.js) alongside nav/topbar — auth, DEK, and the canonical `/api/auth/me` boot live for the whole page lifecycle, independent of which section is mounted. A compatibility facade (`window.OrtbtoolsSession`, `__shellOwned`) preserves the existing consumer surface; inspector-specific state (sample/dirty/partner + DOM renderers) registers via a generation-safe adapter on mount and unregisters on teardown without clearing the shell session. The auth/unlock/recovery/password-reset modals share a single chrome-level [`public/core/modal-host.js`](./public/core/modal-host.js) owner: `#modalRoot` is declared once in `index.{en,uk,ru}.html` (sibling of `#app-root`), so sign-in from `/docs`, `/library`, or `/live` opens the modal **in place** with zero route change. Crypto/session invariants: the raw DEK is not exposed through the public facade or sent to the server; the service can export it internally to `sessionStorage` for tab persistence. Passwords are never cached, logout wipes memory + `sessionStorage`, stale `/api/auth/me` responses are gen-guarded, and Inspector unmount does not destroy the shell session. Regression coverage: [`tests/session-hoist.test.js`](./tests/session-hoist.test.js). Original problem (for history): the auth modal depended on the inspector closure-scoped `OrtbtoolsSession`, so sign-in from any other section had to SPA-navigate through `/inspector?auth=login` first.
 
 19. **Inspector re-entrant mount (un-block inspector SPA navigation)** — **SHIPPED (v1.2.5, 2026-07-01).** `mountInspector()` is now idempotent and re-entrant: every `window`/`document` listener plus both `setInterval` watchdogs are scoped to `ctx.signal` / `ctx.addCleanup` (LIFO teardown on unmount), layout init is recomputable, and the in-flight `analyze` + all secondary read/mutation/boot paths guard on `ctx.signal.aborted` so a torn-down mount can never paint/toast into its successor. The **2026-05-26 mitigation was removed** — `shell-boot.js` `activateFromUrl()` no longer forces a full page load when navigating _to_ the inspector (or `/r/{hash}`); the flagship section now mounts in place via SPA like every other section (verified: Live↔Inspector round-trips and back/forward stay SPA, single document load, no freeze). Regression coverage: `tests/inspector-reentrant.test.js` (re-entrant lifecycle + static guards). Original problem (for history): classic scripts boot once per page, so SPA-remounting the inspector from another section corrupted its workbench layout and could freeze the renderer. Paired naturally with item 9 (modularisation) and item 18 (OrtbtoolsSession hoist).
 
@@ -342,15 +340,27 @@ Ordered by likelihood it will eventually matter:
 - **Multi-section site with wide grouped sidebar.** The inspector was hitting a single-screen ceiling. A proper navigation shell makes each capability discoverable without crowding the paste surface. 8 sections, 3 groups (РОБОТА / ДАНІ / ЗНАННЯ).
 - **pushState over hash routing.** SEO canonical URLs matter for the blog and docs sections. Hash routing rejected.
 - **Stream is Stage 2, not the landing.** The 2026-05-05 stream-platform-pivot doc proposed making the stream the default landing and demoting the inspector to `/playground`. That framing is superseded. Stream is a sibling section; inspector remains default.
-- **Hybrid blog stack.** Editorial posts in git for durability and diff history; firehose-sourced posts in ClickHouse for the automated Mozok news candidate pipeline, with manual approval gate at `/admin/blog`.
+- **Hybrid blog stack (current implementation).** Repository posts seed the image;
+  promoted Markdown is written to persistent `/data/content-posts`, not committed
+  to git. Firehose drafts live in ClickHouse. The deterministic/OpenRouter
+  moderator auto-publishes qualified localized drafts under its daily cap;
+  `/admin/blog` remains the manual publish/promote/reject fallback.
 - **Pop-vendor dialects remain reactive.** The cu-pops-audit listed 7 missing dialects as CRITICAL — the audit's own calibration note recalibrated severity as inflated. Policy unchanged: one real sample from a partner integration → one dialect.
 - **Canonical redirect status codes (revised 2026-05-26).** Locale-roots and `.html`/legacy canonicalisations (`/en`, `/uk`, `/ru`, `/playground`, `/stream.html`, `/en/about`…) → **301** (permanent — stable canonical targets, consolidates SEO signals). Root `/` and `/index.html` → **302** (temporary, on purpose): a 301 would be browser-cached and pin returning visitors to `/inspector` even after a future marketing/dashboard landing reclaims `/`. Implemented via a `route.status` override in `server.js` `resolveLocaleRoute()` on top of the redirect handler's 301 default. Supersedes the original Stage 0 "root → 301" plan, whose own rationale ("keep `/` free for a landing") was incompatible with a cached 301.
 - **Mobile breakpoint is `<1024px` (drawer mode).** Tablets (768-1023px) get the drawer because the inspector dual-panel (request|response) needs the horizontal space. Desktop (≥1024px): sidebar always visible.
 - **Global search: disabled slot Stage 0, full build Stage 5+.** Topbar shows a disabled `🔎 пошук — скоро` slot from day one for consistent visual chrome. Full unified search via ClickHouse full-text indexes (TokenBF / NGRAM) after blog (Stage 3) ships and there is content worth indexing. ClickHouse chosen over MeiliSearch — no new container.
 - **`/r/{hash}` route is free.** Verified via grep of `server.js` + `modules/*/handler.js`: no existing route matches `/r/*` or `/r/:hash`. Safe to register in Stage 2.
-- **Blog approval is hybrid: DB publish (default) + opt-in markdown promotion.** Firehose candidates approved via `/admin/blog` default to publishing into `analytics.blog_posts` (DB-backed, fast, auto-refreshable). Evergreen posts can be optionally promoted to `content/posts/{lang}/{slug}.md` in git (admin UI surfaces a hint to `git add && git commit`). CH row kept as audit trail with status `promoted`.
+- **Blog approval is hybrid: DB publish (default) + opt-in persistent Markdown
+  promotion.** Manual `/admin/blog` approval can publish into
+  `analytics.blog_posts` or promote to `${CONTENT_DIR}/{lang}/{slug}.md` (production:
+  `/data/content-posts`). Promotion does not create a git commit; ClickHouse keeps
+  the draft audit status.
 - **Inspector-first is the product — Decision A (2026-06-11, user-confirmed).** Closes the primary-surface question open since 2026-05-12. ortbtools IS the paste-JSON inspector/validator — web UI + `@ortbtools/cli` + `/api/analyze`. The stream stays a sibling section on synthetic traffic, now explicitly labeled "Live (preview)" in the nav; it is not the headline and gets no further build-out in 0.x. Everything shipped since May already voted this way: the SEO landings target the validator, the CLI is the validator, the growth positioning is validator + CLI + try-sample. Stream-first remains the v10.0 vector, gated on partner legal approval for real-traffic ingest. Path to declaring v1.0.0: `docs/api-v1.md` public contract (shipped with this decision) → friction sweep → declare; the "Not a v1.0.0 stability declaration" line below stands only until those gates close.
-- **AI auto-publish for the firehose (2026-05-25, v0.53.0 — supersedes the manual-only gate).** `lib/news-moderator.js` runs at the end of each crawl: scores pending drafts on local Ollama; relevance ≥8 → translated to en/uk/ru via OpenRouter DeepSeek and auto-published (cap **3 articles/day**); <8 → auto-rejected. The manual `/admin/blog` gate is **retained** and shares the same `lib/blog-service.js` `publishPost`/`rejectPost` — it handles anything the moderator leaves pending (translation/score failures, over-cap drafts). Rationale: the firehose backlog needs throughput; the daily cap + relevance gate + retained human gate bound the risk of a bad public post. User decision (overrides the earlier "manual approval gate" decision above).
+- **Automated firehose moderation (original decision 2026-05-25; engine
+  superseded 2026-07-22).** `lib/news-moderator.js` still runs after crawl and
+  retains the daily cap plus manual `/admin/blog` fallback. Relevance is now
+  deterministic in `lib/intel-rules.js`; the retired Ollama scorer is not part
+  of runtime. OpenRouter remains isolated to translation/categorization.
 
 ---
 
@@ -368,20 +378,20 @@ Ordered by likelihood it will eventually matter:
 
 Cross-check of claims in `docs/tech-debt-2026-05-04.md`, `docs/functional-audit-2026-05-12.md`, `docs/cu-pops-audit-2026-05-12.md`, and the old ROADMAP against HEAD code.
 
-| Old claim                                    | Audit doc                        | Status at HEAD     | Evidence                                                                                                          |
-| -------------------------------------------- | -------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `packages/core` not bind-mounted (CRITICAL)  | tech-debt-2026-05-04             | **RESOLVED**       | `docker-compose.yml` line 47: `./packages:/app/packages:ro`                                                       |
-| SQLite backup missing (CRITICAL)             | tech-debt-2026-05-04             | **RESOLVED**       | `scripts/backup-db.sh`, cron 03:30                                                                                |
-| GlitchTip not integrated                     | ROADMAP Phase 8                  | **RESOLVED**       | `lib/logger.js` (`@sentry/node` init), `modules/sentry-ingest/handler.js` (proxy), wired in `server.js`           |
-| Pino not in package.json                     | tech-debt-2026-05-04             | **RESOLVED**       | `lib/logger.js` uses `require('pino')`                                                                            |
-| Strictness levels not wired to API           | ROADMAP Phase 2                  | **RESOLVED**       | `packages/core/index.js` `applyStrictness()`; documented in `packages/core/README.md` line 67                     |
-| `@ortbtools/core` private:true               | ROADMAP Phase 4                  | **PARTIALLY DONE** | `private` field removed; `publishConfig.access:"public"` set; actual `npm publish` not done                       |
-| ~30 hardcoded Cyrillic strings               | next-chapters-2026-05-09         | **RESOLVED**       | `wc -l` grep: 9 Cyrillic lines in `ortbtools.app.js`, all in comments                                             |
-| `ortbtools.app.js` 4505 lines                | functional-audit-2026-05-12      | **STALE** (grew)   | Currently 4785 lines                                                                                              |
-| Stream endpoint missing                      | ROADMAP Phase 8                  | **RESOLVED**       | `modules/stream/handler.js`, `public/stream.html` at `ortbtools.com/stream`                                       |
-| Replay endpoint missing                      | next-chapters-2026-05-09         | **RESOLVED**       | `modules/replay/handler.js`, `GET /api/v1/replay`                                                                 |
-| Confusion matrix missing                     | next-chapters-2026-05-09         | **RESOLVED**       | `modules/corpus/handler.js` `GET /api/behavior/corpus/matrix`                                                     |
-| "All 7 pop-vendor dialects missing"          | cu-pops-audit-2026-05-12         | **CONFIRMED**      | `packages/core/dialects/` has only `ext-rtb.js`, `iab.js`, `inpage-push.js`                                       |
-| AdCOM 1.0 deep validation missing            | functional-audit-2026-05-12      | **RESOLVED**       | Deep validation for OpenRTB 3.0/AdCOM 1.0 is fully implemented in `rules-request-30.js` & `rules-response-30.js`. |
-| Phase 5 public/private domain split REJECTED | old ROADMAP                      | **OBSOLETE**       | Decision logged; single domain confirmed; domain is now ortbtools.com                                             |
-| stream-platform-pivot as landing strategy    | stream-platform-pivot-2026-05-05 | **SUPERSEDED**     | Stream is Stage 2 of multi-section, not landing pivot                                                             |
+| Old claim                                    | Audit doc                        | Status at HEAD     | Evidence                                                                                                                    |
+| -------------------------------------------- | -------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core` not bind-mounted (CRITICAL)  | tech-debt-2026-05-04             | **SUPERSEDED**     | Immutable image bakes all source; `/data` is the only runtime mount                                                         |
+| SQLite backup missing (CRITICAL)             | tech-debt-2026-05-04             | **RESOLVED**       | `scripts/backup-db.sh`, cron 03:30                                                                                          |
+| GlitchTip not integrated                     | ROADMAP Phase 8                  | **CODE COMPLETE**  | Sentry-compatible code is configuration-gated; verified production baseline reports `sentry.ready:false`                    |
+| Pino not in package.json                     | tech-debt-2026-05-04             | **RESOLVED**       | `lib/logger.js` uses `require('pino')`                                                                                      |
+| Strictness levels not wired to API           | ROADMAP Phase 2                  | **RESOLVED**       | `packages/core/index.js` `applyStrictness()`; documented in `packages/core/README.md` line 67                               |
+| `@ortbtools/core` private:true               | ROADMAP Phase 4                  | **PARTIALLY DONE** | `private` field removed; `publishConfig.access:"public"` set; actual `npm publish` not done                                 |
+| ~30 hardcoded Cyrillic strings               | next-chapters-2026-05-09         | **RESOLVED**       | `wc -l` grep: 9 Cyrillic lines in `ortbtools.app.js`, all in comments                                                       |
+| `ortbtools.app.js` 4505 lines                | functional-audit-2026-05-12      | **STALE**          | Still a central hotspot; use current `wc -l` rather than preserving another count                                           |
+| Stream endpoint missing                      | ROADMAP Phase 8                  | **RESOLVED**       | `modules/stream/handler.js`; SPA section is registered at `/live` in `public/shell-boot.js`                                 |
+| Replay endpoint missing                      | next-chapters-2026-05-09         | **RESOLVED**       | `modules/replay/handler.js`, `POST /api/v1/replay`                                                                          |
+| Confusion matrix missing                     | next-chapters-2026-05-09         | **RESOLVED**       | `modules/corpus/handler.js` `GET /api/behavior/corpus/matrix`                                                               |
+| "All 7 pop-vendor dialects missing"          | cu-pops-audit-2026-05-12         | **CONFIRMED**      | `packages/core/dialects/` has only `ext-rtb.js`, `iab.js`, `inpage-push.js`                                                 |
+| AdCOM 1.0 deep validation missing            | functional-audit-2026-05-12      | **PARTIALLY DONE** | Deep 3.x rules exist in `rules-request-30.js` / `rules-response-30.js`; coverage is not exhaustive AdCOM schema conformance |
+| Phase 5 public/private domain split REJECTED | old ROADMAP                      | **OBSOLETE**       | Decision logged; single domain confirmed; domain is now ortbtools.com                                                       |
+| stream-platform-pivot as landing strategy    | stream-platform-pivot-2026-05-05 | **SUPERSEDED**     | Stream is Stage 2 of multi-section, not landing pivot                                                                       |

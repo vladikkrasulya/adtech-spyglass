@@ -19,9 +19,9 @@
     id: 'share',
     keys: {
       'toast.share_link_copied': {
-        uk: 'Посилання скопійовано — payload зашитий у URL-фрагменті, на сервер не потрапляє',
-        en: 'Link copied — payload is embedded in the URL fragment, never reaches the server',
-        ru: 'Ссылка скопирована — payload встроен в URL-фрагмент, на сервер не попадает',
+        uk: 'Посилання скопійовано — payload у URL-фрагменті не надсилається з першим запитом, але після відкриття передається в /api/analyze',
+        en: 'Link copied — the URL fragment is absent from the initial request, but opening the link submits the payload to /api/analyze',
+        ru: 'Ссылка скопирована — URL-фрагмент отсутствует в первом запросе, но после открытия payload отправляется в /api/analyze',
       },
       'toast.share_link_loaded': {
         uk: 'Завантажено зі share-посилання',

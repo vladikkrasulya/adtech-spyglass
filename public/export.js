@@ -7,7 +7,7 @@
 
    Bundle shape:
      {
-       "ortbtools_version": "v8.0.0",
+       "ortbtools_version": "<current UI version>",
        "captured_at": "<ISO>",
        "url": "https://ortbtools.com/...",
        "bid_request": <object | string>,

@@ -24,10 +24,11 @@ cd ortbtools
 npm install          # installs root deps + all workspace packages
 ```
 
-This repo is an **npm workspace**. The only package currently is
-`packages/core/` (the `@ortbtools/core` validator engine). The root
-`package.json` aggregates it; `npm install` at the root covers everything.
-You never need to `cd packages/core && npm install` separately.
+This repo is an **npm workspace** with two packages: `packages/core/` (the
+`@ortbtools/core` validator engine) and `packages/cli/` (the
+`@ortbtools/cli` command-line wrapper). The private root package aggregates
+both; `npm install` at the root covers the app and both workspaces. You never
+need to install dependencies separately inside either package directory.
 
 ### Start the container
 
@@ -39,9 +40,9 @@ The UI is at **http://127.0.0.1:8090**. The container name is
 `ortbtools`; the app listens on port 3000 inside and is forwarded to
 8090 on the host.
 
-`docker compose up -d --build` is required on first run and whenever you edit
-files that are baked into the image (see "The dev loop" below). On subsequent
-UI-only edits a plain browser refresh is enough.
+`docker compose up -d --build` is required on first run and after every source
+edit. The runtime image is immutable; source files are not bind-mounted into a
+running container.
 
 ### SQLite database
 
@@ -70,31 +71,12 @@ the register/verify/reset flow; `PUBLIC_BASE_URL` for the production domain.
 
 ## The dev loop
 
-ortbtools has three categories of files with different hot-reload behaviour.
+All application source is baked into the immutable image: `public/`,
+`packages/`, `modules/`, `lib/`, `samples/`, and the root server files. The
+vendored `public/design-system.css` is baked too. The only runtime mount is the
+`/data` directory for SQLite and persisted blog content.
 
-### 1. `public/` — browser refresh, no restart
-
-`./public/` is bind-mounted read-write. Edits to HTML, CSS, and JS under
-`public/` are live on the next browser refresh. No build step, no container
-restart needed.
-
-The one exception is `public/design-system.css`, which is itself a bind-mount
-from outside the repo (the portal's design-system). See the "Bind-mount inode
-trap" gotcha below.
-
-### 2. `packages/` — `docker compose restart`
-
-`./packages/` is bind-mounted read-only. Changes to validator rules and core
-logic take effect after `docker compose restart ortbtools`. No rebuild.
-
-Same applies to `intel-llm.js` and `samples/`.
-
-### 3. `server.js`, `lib/`, `modules/`, `db.js`, `auth.js`, etc. — `docker compose up -d --build`
-
-These files are **baked into the image**. Editing them and then doing only
-`docker compose restart` will leave the container running the old code — no
-error, no warning, the change is silently ignored. Always rebuild after
-touching anything not in the bind-mount list above:
+After any source edit, run the relevant tests and rebuild the image:
 
 ```bash
 docker compose up -d --build
@@ -106,19 +88,9 @@ To surface the build SHA in `/api/health`:
 BUILD_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
 ```
 
-The ARCHMAP [§2.1](./docs/ARCHMAP.md#21-what-rebuilds-vs-what-doesnt) has the
-full bind-mount inventory.
-
-### Bind-mount inode trap
-
-When you edit `design-system.css` (or any single-file bind-mount) with an
-editor that atomically replaces the file (write-to-temp + rename), a new inode
-is created. The running container keeps a file descriptor to the old inode. The
-correct fix is `docker compose restart ortbtools` — that restarts Node
-and the new inode gets picked up. This is distinct from a full `--build`; the
-image hasn't changed, only the container's view of the bind-mounted file needs
-refreshing. This trap was first hit in v0.42.8; it's documented in CHANGELOG
-under that entry for reference.
+The ARCHMAP [§2.1](./docs/ARCHMAP.md#21-what-rebuilds-vs-what-doesnt) documents
+the immutable deploy contract. A plain `docker compose restart` only restarts
+the existing image and never loads host-side source edits.
 
 ---
 
@@ -168,7 +140,7 @@ Comment the **why**, not the **what**. The code itself should be readable enough
 that "// increment i" adds nothing. What belongs in a comment: non-obvious
 constraints ("// alpine resolves 'localhost' as ::1 first; app listens IPv4
 only"), deferred work ("// AdCOM 1.0 deep validation — deferred, no production
-3.0 traffic yet"), cross-references ("// see ARCHMAP §2.1 for bind-mount list").
+3.0 traffic yet"), cross-references ("// see ARCHMAP §2.1 for image contract").
 
 ### Locales
 
@@ -186,11 +158,22 @@ English copy is plain imperative / declarative — no "Please" prefix.
 
 ### SemVer bumps
 
-`feat` → MINOR version bump. `fix` → PATCH. The bump goes in the **same
-commit** as the change, not a separate commit. Nine files need updating; see
-[ARCHMAP §2.4](./docs/ARCHMAP.md#24-semver-bump-locations-9-files-do-all-in-one-commit)
-for the exact list. The CI gate doesn't enforce the bump, but the CHANGELOG
-convention does — every release entry starts with the version number.
+App, Core, and CLI use independent SemVer lines. Choose the surface from the
+public contract that changed; a typical backward-compatible feature is MINOR
+and a fix is PATCH, but an app-only change must not bump Core or CLI.
+
+- **App:** update root `package.json`, root metadata in `package-lock.json`,
+  `public/version.js`, and the six static HTML fallbacks guarded by
+  `tests/version-consistency.test.js`.
+- **Core:** update `packages/core/package.json` and its workspace entry in
+  `package-lock.json` only when the engine contract changes.
+- **CLI:** update `packages/cli/package.json` and its workspace entry in
+  `package-lock.json` when CLI flags/output change; align its Core dependency
+  range when required.
+
+Keep the version and CHANGELOG entry in the same commit. See
+[ARCHMAP §2.4](./docs/ARCHMAP.md#24-independent-semver-release-surfaces) for
+the exact release surfaces.
 
 ---
 
@@ -224,13 +207,17 @@ Tests for the new rule go in `tests/rules-plugins.test.js` or a new
 
 ## Adding a frontend module
 
-The module contract is documented in
-[`public/modules/README.md`](./public/modules/README.md). The short layout:
+The loading and lifecycle contracts are documented in
+[`public/modules/README.md`](./public/modules/README.md). First decide whether
+the feature is a lazy SPA section, persistent shell/chrome code, or a
+feature/action/compatibility helper; the caller determines its contract.
+
+A typical directory uses only the files it needs:
 
 ```
 public/modules/<tool>/
-  index.js              IIFE; wires event listeners + window.* APIs
-  i18n.js               pushes translation keys to window.kt_i18n_modules
+  index.js              ES module or classic compatibility entry point
+  i18n.js               optional namespaced translations
   template.en.html      injected DOM (only if the tool adds markup)
   template.uk.html
   template.ru.html
@@ -238,10 +225,12 @@ public/modules/<tool>/
   README.md             what the tool does, window.* APIs, events
 ```
 
-Modules must be self-contained. They communicate with the rest of the shell
-via `kt:` DOM events and explicit `window.*` function assignments — never by
-importing each other. See the modules README for the full communication
-contract.
+SPA sections default-export the registry contract and are registered lazily in
+`public/shell-boot.js`; use `ctx.signal` and `ctx.addCleanup()` for lifecycle
+ownership. Direct ES imports and the event bus are preferred in module code.
+Existing classic compatibility helpers may use documented `window.*` APIs and
+`kt:` events. See the modules README and the existing caller before wiring a
+new feature.
 
 ### Asset versioning
 
@@ -282,7 +271,7 @@ trailing-`*` wildcards. `lib/http.js` provides `readJson`, `sendJson`,
 Since `server.js`, `lib/`, and `modules/` are all baked into the image,
 any change to a handler requires `docker compose up -d --build`.
 
-See [ARCHMAP §0](./docs/ARCHMAP.md#0-module-layout-the-big-picture-as-of-2026-05-10)
+See [ARCHMAP §0](./docs/ARCHMAP.md#0-module-layout)
 for the full backend module inventory and §1.4 for the consumer table.
 
 ---
@@ -397,13 +386,9 @@ request a review explicitly.
 
 ## Common gotchas
 
-- **Rebuild trap**: edited `server.js`, `lib/`, or `modules/` and the change
-  isn't live? You forgot `docker compose up -d --build`. `compose restart` only
-  restarts Node on the existing image.
-
-- **Bind-mount inode trap**: edited a single-file bind-mount (e.g.
-  `design-system.css`) and the change isn't live? The editor created a new
-  inode. Run `docker compose restart ortbtools`.
+- **Immutable-image trap**: edited any source file and the change isn't live?
+  Rebuild and recreate the container. `compose restart` only restarts the
+  existing image.
 
 - **CSS source-order trap**: added a media-query override and it doesn't fire?
   The unconditional desktop rule is declared later in the file and wins on
@@ -420,9 +405,8 @@ request a review explicitly.
   human-readable message. Check all three message files together.
 
 - **`disabledRules` not working**: edited `packages/core/` but tested against
-  the running container? `packages/` is bind-mounted, so a `compose restart` is
-  enough — but if you're changing `server.js` logic that reads `disabledRules`,
-  that's baked and needs a `--build`.
+  the old running image? Rebuild and recreate the container; packages are baked
+  with the rest of the source.
 
 - **Test count drift**: the ARCHMAP lists the test count as of its last-touched
   date. The README's test count was accurate at v0.40.x. Neither is guaranteed

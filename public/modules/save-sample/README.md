@@ -1,10 +1,18 @@
 # save-sample — library save / update modal
 
 The library "save / update" modal: title + partner picker + notes,
-plus the live partner-inference banner that asks the LLM to identify
-the SSP / vendor based on the current bid_req / bid_res. Encrypts
-blobs locally via the OrtbtoolsSession facade BEFORE POSTing — the
-server never sees plaintext.
+plus a live partner-inference banner backed by deterministic
+server-side domain/bundle rules. The save/update flow encrypts blobs
+locally via the OrtbtoolsSession facade BEFORE POSTing, so the sample
+API stores only ciphertext.
+
+Partner inference is a separate, best-effort request: when a new-save
+modal opens, the current raw `bid_req` / `bid_res` may be POSTed to
+`/api/intel/suggest-partner`. The ortbtools server parses and processes
+those bodies transiently, does not persist them through this endpoint,
+and sends them to no external model. This distinction matters: sample
+storage is zero-knowledge, while partner inference temporarily exposes
+the plaintext payload to the ortbtools server.
 
 ## Loading
 
@@ -82,11 +90,12 @@ reads `#bidReq` / `#bidRes` / `#stEntity` (contracts owned by
 
 - `POST /api/samples` — create new sample (encrypted blobs).
 - `PATCH /api/samples/:id` — update existing sample.
-- `POST /api/intel/suggest-partner` — LLM SSP-inference for the
-  partner-suggest banner (best-effort; failures silently hide the
-  banner).
+- `POST /api/intel/suggest-partner` — deterministic domain/bundle →
+  vendor inference in `lib/intel-rules.js` (best-effort; raw request /
+  response bodies are processed transiently and failures silently hide
+  the banner).
 - `POST /api/partners` — used by `_spy_createPartner` when the user
-  accepts the LLM's "create new partner" suggestion.
+  accepts the rules engine's "create new partner" suggestion.
 
 ## Dispatcher cases
 

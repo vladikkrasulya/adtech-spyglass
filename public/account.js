@@ -148,7 +148,8 @@
       });
       $defName.textContent = def ? def.name : '—';
     }
-    if ($llm) $llm.textContent = '—'; // placeholder until LLM-suggester wiring
+    // Keep the legacy DOM id for compatibility; suggestions are deterministic.
+    if ($llm) $llm.textContent = 'rules';
 
     if ($btnExport && !$btnExport.dataset.bound) {
       $btnExport.dataset.bound = '1';
@@ -221,6 +222,9 @@
       .slice(0, 10);
     ul.innerHTML = sorted
       .map((s) => {
+        // `is_encrypted` is a legacy API marker derived only from req_iv.
+        // It signals that an IV was supplied; it is not proof that the body is
+        // valid ciphertext (direct API clients are not cryptographically checked).
         const enc = s.is_encrypted
           ? pill('ok', T('cabinet.pill.encrypted'))
           : pill('muted', T('cabinet.pill.plain'));
@@ -504,8 +508,8 @@
       loadDialects(),
     ]);
     renderDialectsCard(dialects);
-    // Compute encrypted/assigned counts from sample metadata.
-    const encryptedCount = samples.filter((s) => s.is_encrypted).length;
+    // Count the legacy IV-presence marker, not cryptographically verified rows.
+    const ivMarkedCount = samples.filter((s) => s.is_encrypted).length;
     const assignedCount = samples.filter((s) => s.partner_id != null).length;
     // Defensive guards — Profile + Library cards may be in display:none until
     // setProfile() flipped showBody(). querySelector returning null on a
@@ -518,7 +522,7 @@
     };
     setText('statSamples', samples.length);
     setText('statPartners', partners.length);
-    setText('statEncrypted', encryptedCount);
+    setText('statEncrypted', ivMarkedCount);
     setText('statAssigned', assignedCount);
     // P1 #15 — when all 4 Library stats are zero (fresh account, nothing
     // saved yet), show a contextual empty-state hint immediately under
@@ -526,7 +530,7 @@
     // "0 0 0 0" row reads as a dead end. The hint hides as soon as any
     // metric becomes non-zero.
     const allZero =
-      samples.length === 0 && partners.length === 0 && encryptedCount === 0 && assignedCount === 0;
+      samples.length === 0 && partners.length === 0 && ivMarkedCount === 0 && assignedCount === 0;
     const hint = $('libraryEmptyHint');
     if (hint) hint.hidden = !allZero;
     setRecent(samples);

@@ -118,8 +118,8 @@
       'builder.create': 'Створити тимчасовий діалект',
       'builder.info': '{n} полів обрано',
       'builder.suggest_name': 'Запропонувати',
-      'builder.suggest_name_tooltip': 'Запропонувати назву через локальну LLM',
-      'builder.suggesting': 'Думаю…',
+      'builder.suggest_name_tooltip': 'Запропонувати назву за детермінованими серверними правилами',
+      'builder.suggesting': 'Обчислюю…',
       'banner.new_patterns': 'Виявлено {n} нових патернів полів',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
 
@@ -236,7 +236,7 @@
       // ── history merge (post-register import prompt) ───────
       'merge.title': 'Перенести історію в бібліотеку?',
       'merge.body':
-        'У тебе є {count} записів у локальній історії. Перенести їх у твою зашифровану бібліотеку? Локальна історія залишиться доступною — це лише копіювання у архів.',
+        'У тебе є {count} записів у локальній історії. Скопіювати їх у бібліотеку? Bid-тіла шифруються у браузері; назви, нотатки й дані партнерів читає сервер. Локальна історія залишиться доступною.',
       'merge.btn.skip': 'не зараз',
       'merge.btn.import': 'перенести {count}',
       'merge.progress': 'переношу {i} / {total}…',
@@ -259,7 +259,7 @@
       'sample.partner_unassigned': 'без партнера',
       'sample.empty': 'Збережених запитів ще немає',
       'sample.anon_cta': 'Увійди в акаунт щоб зберігати запити в особисту бібліотеку.',
-      'sample.unlock_cta': 'Бібліотека зашифрована. Введи пароль щоб розблокувати.',
+      'sample.unlock_cta': 'Збережені bid-тіла зашифровані. Введи пароль, щоб розблокувати їх.',
       'sample.btn.signin': 'увійти або створити акаунт',
       'sample.btn.unlock': 'розблокувати',
 
@@ -390,8 +390,8 @@
       'builder.create': 'Create temporary dialect',
       'builder.info': '{n} fields selected',
       'builder.suggest_name': 'Suggest',
-      'builder.suggest_name_tooltip': 'Suggest a name with the local LLM',
-      'builder.suggesting': 'Thinking…',
+      'builder.suggest_name_tooltip': 'Suggest a name with deterministic server-side rules',
+      'builder.suggesting': 'Calculating…',
       'banner.new_patterns': '{n} new field patterns detected',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
 
@@ -508,7 +508,7 @@
       // ── history merge (post-register import prompt) ───────
       'merge.title': 'Move history to your library?',
       'merge.body':
-        'You have {count} entries in local history. Copy them into your encrypted library? Local history stays available — this only mirrors entries into the archive.',
+        'You have {count} entries in local history. Copy them into your library? Bid bodies are encrypted in the browser; titles, notes, and partner metadata remain server-readable. Local history stays available.',
       'merge.btn.skip': 'not now',
       'merge.btn.import': 'import {count}',
       'merge.progress': 'importing {i} / {total}…',
@@ -531,7 +531,7 @@
       'sample.partner_unassigned': 'unassigned',
       'sample.empty': 'No saved samples yet',
       'sample.anon_cta': 'Sign in to save samples to your personal library.',
-      'sample.unlock_cta': 'Library is encrypted. Enter your password to unlock.',
+      'sample.unlock_cta': 'Saved bid bodies are encrypted. Enter your password to unlock them.',
       'sample.btn.signin': 'sign in or create account',
       'sample.btn.unlock': 'unlock',
 
@@ -659,8 +659,8 @@
       'builder.create': 'Создать временный диалект',
       'builder.info': '{n} полей выбрано',
       'builder.suggest_name': 'Предложить',
-      'builder.suggest_name_tooltip': 'Предложить название через локальную LLM',
-      'builder.suggesting': 'Думаю…',
+      'builder.suggest_name_tooltip': 'Предложить название по детерминированным серверным правилам',
+      'builder.suggesting': 'Вычисляю…',
       'banner.new_patterns': 'Обнаружено {n} новых паттернов полей',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
       'btn.cancel': 'отмена',
@@ -761,7 +761,7 @@
       // ── history merge (post-register import prompt) ───────
       'merge.title': 'Перенести историю в библиотеку?',
       'merge.body':
-        'У тебя {count} записей в локальной истории. Перенести их в твою зашифрованную библиотеку? Локальная история останется доступной — это только копирование в архив.',
+        'У тебя {count} записей в локальной истории. Скопировать их в библиотеку? Bid-тела шифруются в браузере; названия, заметки и данные партнёров читает сервер. Локальная история останется доступной.',
       'merge.btn.skip': 'не сейчас',
       'merge.btn.import': 'перенести {count}',
       'merge.progress': 'переношу {i} / {total}…',
@@ -783,7 +783,8 @@
       'sample.partner_unassigned': 'без партнёра',
       'sample.empty': 'Сохранённых запросов пока нет',
       'sample.anon_cta': 'Войди в аккаунт чтобы сохранять запросы в личную библиотеку.',
-      'sample.unlock_cta': 'Библиотека зашифрована. Введи пароль чтобы разблокировать.',
+      'sample.unlock_cta':
+        'Сохранённые bid-тела зашифрованы. Введи пароль, чтобы разблокировать их.',
       'sample.btn.signin': 'войти или создать аккаунт',
       'sample.btn.unlock': 'разблокировать',
 
@@ -981,8 +982,8 @@
       uk: 'не налаштовано',
       ru: 'не настроен',
     },
-    'cabinet.pill.encrypted': { en: 'encrypted', uk: 'зашифровано', ru: 'зашифровано' },
-    'cabinet.pill.plain': { en: 'plain', uk: 'plain', ru: 'plain' },
+    'cabinet.pill.encrypted': { en: 'IV present', uk: 'IV є', ru: 'IV есть' },
+    'cabinet.pill.plain': { en: 'no IV', uk: 'без IV', ru: 'без IV' },
     'cabinet.pill.items': { en: '{n} items', uk: '{n} записів', ru: '{n} записей' },
     'cabinet.pill.empty': { en: 'empty', uk: 'порожньо', ru: 'пусто' },
     'cabinet.recent.empty': {

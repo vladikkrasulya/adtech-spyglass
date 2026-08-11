@@ -1,20 +1,34 @@
 # Changelog
 
-All notable changes to Spyglass are documented here. Format follows
+All notable changes to ortbtools are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning is
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Tooling — npm publish pipeline (Phase 3, no app deploy)
+### Tooling — first npm publication preparation (no app deploy)
 
-- **`scripts/npm-pack-smoke.sh`** — pack core + CLI tarballs, clean install, run
-  `ortbtools validate` (CI gate on every PR).
+- **`scripts/npm-pack-smoke.sh`** — packs Core + CLI tarballs, installs them in a
+  clean directory, and runs `ortbtools validate` (CI gate on every PR).
 - **`.github/workflows/publish-npm.yml`** — workflow_dispatch publish for
-  `@kyivtech/spyglass-core` and `@ortbtools/cli` (requires `NPM_TOKEN` secret).
-- **`docs/NPM_PUBLISH.md`** — one-time npm org/token setup and release procedure.
-- **README** — CLI install section; remove stale `types` entry from core package
-  (no `index.d.ts` yet).
+  `@ortbtools/core` and `@ortbtools/cli` with dry-run-first defaults and a live
+  publish guard for `main` (requires the `NPM_TOKEN` secret).
+- **`docs/NPM_PUBLISH.md`** — records both packages as unpublished and documents
+  the one-time npm scope/token setup plus Core-before-CLI release order.
+- **Package READMEs** — document repository-workspace usage only until the first
+  public registry release is completed and verified.
+
+### v1.6.0 — interactive intelligence becomes model-free
+
+- Replaced interactive Intel naming, field-purpose, partner-inference, bid
+  simulation, and news-relevance scoring with deterministic
+  `lib/intel-rules.js` rules.
+- Removed the retired Ollama bridge, post-login warmup, runtime Ollama wiring,
+  and model-specific interactive UI copy.
+- Kept OpenRouter only in the isolated news translation/categorization step;
+  it is not on an interactive bid-analysis path.
+- App version bumped `1.5.1 → 1.6.0`; Core remains `0.31.0` and CLI remains
+  `0.1.1`.
 
 ### v1.5.1 — insights: recolor leftover amber bars to off-brand hues
 

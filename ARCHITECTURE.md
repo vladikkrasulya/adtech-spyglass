@@ -2,54 +2,52 @@
 
 OpenRTB inspector and validator. Paste a `BidRequest`/`BidResponse` JSON, get human-readable explanations of every issue, semantic crosscheck between request and response, creative preview, and a saved-sample library per partner.
 
-This document describes the **target architecture**. The current state has converged toward this target on most axes; what's still in flight is called out in the **Current State** section just below. Sequencing of remaining work lives in [ROADMAP.md](./ROADMAP.md) (with status markers per phase).
+This page gives a compact current-state view, followed by the original target
+design for historical context. The detailed, file-level dependency source of
+truth is [docs/ARCHMAP.md](./docs/ARCHMAP.md); current work order lives in
+[ROADMAP.md](./ROADMAP.md).
 
 ---
 
-## 0. Current state (as of 2026-05-13)
+## 0. Current state (2026-08-11)
 
-A snapshot of what's actually live on `ortbtools.com`. Anything below differs from later sections — those describe target architecture, this section describes today.
+- **Surfaces:** the localized vanilla-JS SPA exposes Inspector, Live/Stream,
+  Behavior, Library, Dialects, Blog, Docs and Insights. Account is a separately
+  served localized page. The shell owns navigation, session and modal
+  lifecycle; SPA section modules mount lazily and clean up listeners through
+  their lifecycle contract.
+- **Server:** a vanilla Node `node:http` process uses `lib/router.js` and
+  handler modules under `modules/`. It serves the SPA, authenticated APIs,
+  analysis, replay/mirror/stream, blog, analytics and optional integrations.
+- **Core:** `@ortbtools/core` `0.31.0` supplies deterministic type, version and
+  format detection, rule-based validation, request/response crosscheck,
+  behavior analysis and knowledge helpers. The hosted web app invokes it via
+  `POST /api/analyze`; validation does not run in the browser.
+- **CLI:** `@ortbtools/cli` `0.1.1` wraps Core for offline terminal use. Core
+  and CLI are repository workspaces and are not currently published to npm.
+- **Data:** SQLite stores accounts, saved samples, plaintext account metadata
+  and operational state. The current web flow AES-GCM encrypts sample bodies in
+  the browser, but the API does not enforce ciphertext; raw `/api/analyze`
+  bodies are processed transiently and not persisted server-side.
+  ClickHouse receives derived analytics and sampled request metadata.
+- **Intelligence boundary:** interactive `/api/intel/*` features and news
+  relevance use deterministic `lib/intel-rules.js`. OpenRouter is isolated to
+  news translation/categorization; it is not on an interactive bid-analysis
+  path.
+- **Operations:** production uses immutable exact-SHA Docker images with one
+  `/data` mount, readiness and public smoke gates, and automatic rollback.
+  Sentry is configuration-gated and reports readiness through `/api/health`;
+  the last verified production baseline had `sentry.ready:false` and used
+  Telegram for alerts.
 
-**Live and working:**
+See [docs/OPERATIONS.md](./docs/OPERATIONS.md) for the runbook and
+[docs/PRIVACY.md](./docs/PRIVACY.md) for the code-verified data-flow contract.
 
-- **Validator core in `packages/core/`** — extracted from `server.js`, used by both the Node server and (planned) the browser. Pure JS, no Node-only APIs. **891 tests pass** (up from 209 — `Phase 1 ✅`; npm publish still gated by API-stability work). Folder-per-rule layout under `packages/core/rules/` makes new rules a small, isolated addition.
-- **3 locales** (`/`, `/uk/`, `/ru/`) with **seamless DOM-morph language switch** (no full reload, preserves analysis state). About pages parallel: `/about`, `/uk/about`, `/ru/about`. SEO via hreflang + sitemap.
-- **Anonymous-first UX**: paste-and-validate works without login. Login is opt-in for the encrypted library (zero-knowledge AES-GCM-256, PBKDF2 600k, recovery key) + partner profiles.
-- **JsonFeed validators** for non-RTB CIS adtech: vendor-specific push, clickunder, single-bid shapes.
-- **AdKernel routing detection** as info-level finding (49+ alias networks share the same wire format).
-- **Format-pill bar** in inspector — surfaces `[status] [type] [version] [dialect-picker] [version-pin]` at a glance, with the status pill hoisted to first via `order: -1` so the verdict reads outcome-first (icon + count for warnings/errors). Added in v0.42.3.
-- **User Dialects (v0.42.0)** — per-user vendor-extension mappings. Saved dialect → discovery flow → IAB-aware overrides. Lives in cabinet `#dialects` section.
-- **Cabinet section-only routing (v0.42.10)** — `/account` is Gmail-style: sidebar click → only that section renders, URL hash drives state, deep-links work (`/account#library`), browser back/forward walks between sections. Inner anchors like `<a href="#privacy">` resolve to the ancestor section + scroll the inner element.
-- **Auto-version of module assets** — `__<MODULE>_BUNDLE_HASH__` tokens in JS get replaced server-side with content-hash of `public/modules/<module>/`. No manual bumps on rule/template changes.
-- **Modular code shape** — `server.js` 2033 → 868 LOC (Phase 7c modularization closed 2026-05-10); both backend and frontend are folder-per-tool under `modules/<name>/` and `public/modules/<name>/` respectively. See [docs/ARCHMAP.md](./docs/ARCHMAP.md) for the authoritative map.
-- **Operations**: SQLite daily backup (kt-backup-\* cron, gzipped, 30-day rotation, off-site rclone to Drive verified fresh 2026-05-10), per-IP rate-limiting (60/min on analyze, 10/15min on login, 5/hour on register), HttpOnly+SameSite+Secure cookies, full `npm run ci` green (format/lint/typecheck/891 tests).
+## Historical target/design record
 
-**Recent UX polish wave (2026-05-13 v0.42.1 → v0.42.10):**
-
-A 2026-05-12 GPT-5.5 vision audit found 29 issues across 9 screenshots. Across 10 lockstep releases on 2026-05-13 the actionable items closed: 4 P0s, 12 P1s, 4 P2s. Highlights worth knowing for orientation:
-
-- Empty-state copy + auction-price relabel (v0.42.1-v0.42.2)
-- Outcome-first format-bar + demoted version chip (v0.42.3)
-- Post-analyze autoscroll + compact mobile header + /account dual-CTA + `?auth=login|signup` deep-link (v0.42.4)
-- Cabinet mobile viewport fix — `.cab-stats minmax(140, 1fr)` ×4 was inflating `.cab-layout 1fr` to 821px on 375px viewports (v0.42.5)
-- Auth modal subtitle + footer hierarchy + save tooltip + cabinet zero-state hint (v0.42.6)
-- Findings-tab severity hand-off (`:has()` upgrades inactive tab when its badge is danger/warn) + tablet toolbar wrap (v0.42.7)
-- Dark theme parity (added `--bg-elev` + `--bg-elev-2` tokens that were referenced but never declared; bumped dark `--text-dim`) + EN cabinet copy operational rewrite (v0.42.8)
-- Mobile footer collapse + dialect state-chip + IAB-categories rename + mobile letter-spacing tightening (v0.42.9)
-- Cabinet section-only routing — replaced scroll-spy with `hidden`-attr toggle + pushState (v0.42.10)
-
-External-model spend across that wave: **$0.401 / $22 OpenRouter cap** (5 GPT-5.5 vision audits + 1 DeepSeek copy rewrite). False-positive rate on the vision audit: 2/29 ≈ 6.9%, within the expected 10-20% band.
-
-**Diverges from target (still on the roadmap):**
-
-- ❌ **No public/private domain split** — Phase 5 was rejected 2026-05-04 (anonymous use already works, single domain is the simpler architecture; see decision log in ROADMAP.md). The "free public demo" tier in §1 below is therefore _the same domain_, with login as opt-in unlock.
-- 🟢 **Validator strictness levels** (`lax`/`normal`/`pedantic`) and full version-aware rule gating (Phase 2) are partially shipped — `detectVersion()` works with confidence + signals, but most rules don't yet branch by version.
-- 🟢 **`@ortbtools/core` is extracted as a workspace** but **not yet npm-published** — held back until Phase 2 strict-mode work stabilises the public API.
-- ⏹️ **`@ortbtools/cli` (Phase 6)** not started.
-- 🟢 **Phase 7 Pro features**: multi-user accounts ✅, encrypted library ✅, per-user history ✅, dialects ✅. Per-partner default profiles, share read-only sample, mock generation, schema diff, browser extension — not started.
-- 🟢 **Operationalize gaps** (Phase 8): pre-push hook enforces full CI, daily backup + off-site replica live. Still backlog: error tracking (Sentry/GlitchTip), structured logging (Pino — partial), build-SHA in `/api/health`.
-
-For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md). For the authoritative module dependency map, see [docs/ARCHMAP.md](./docs/ARCHMAP.md). For operating the live service, see [docs/OPERATIONS.md](./docs/OPERATIONS.md). For privacy claims, see [docs/PRIVACY.md](./docs/PRIVACY.md).
+Sections 1–9 below preserve the original design that guided the build. They
+are not an inventory of the current runtime. When they conflict with section 0
+or ARCHMAP, the current-state documents win.
 
 ---
 
@@ -67,7 +65,9 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 
 - **Free public demo** — paste-and-validate, no auth, no storage. Showcase tier. Drives organic discovery.
 - **Authenticated workspace** — saved samples per partner, history, dialects, team features. Behind login.
-- **Open-source validator core** (`@ortbtools/core` on npm) — solves the trust gap (engineers won't paste real bid traffic into a black box) and replaces the dead `openrtb-validator` package.
+- **Open-source validator core** (`@ortbtools/core` workspace; npm publication
+  is still pending) — solves the trust gap and replaces the dead
+  `openrtb-validator` package.
 - **Niche wedge:** CIS/EE push and pop SSPs first — localization plus dialect overlays = no competition. Then mainstream programmatic.
 
 ---
@@ -79,37 +79,44 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 │  Surfaces                                                        │
 │  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
 │  │ public demo  │  │ auth'd workspace │  │ CLI / CI         │   │
-│  │ (static)     │  │ (Node + SQLite)  │  │ npx @ortbtools/cli│   │
+│  │ (static)     │  │ (Node + SQLite)  │  │ local CLI workspace│  │
 │  └──────────────┘  └──────────────────┘  └──────────────────┘   │
 │         │                  │                       │             │
 │         └──────────┬───────┴───────────────────────┘             │
 │                    │                                             │
 │  ┌─────────────────▼──────────────────┐                          │
-│  │ @ortbtools/core (validator engine)  │  ← pure JS, no Node deps │
+│  │ @ortbtools/core (validator engine)  │  ← main APIs: no network │
 │  │   - detectVersion(payload)         │     server-side + CI/CLI │
-│  │   - validate(payload, opts)        │     published to npm     │
+│  │   - validate(payload, opts)        │     repository workspace │
 │  │   - crosscheck(req, res)           │                          │
 │  │   - dialects: iab | ext-rtb | …    │                          │
-│  │   - findings + spec refs           │                          │
-│  │   - i18n string keys (no copy)     │                          │
+│  │   - stable IDs + localized msg     │     KB loader: Node-only │
 │  └─────────────────┬──────────────────┘                          │
 │                    │                                             │
 │  ┌─────────────────▼──────────────────┐                          │
-│  │ @ortbtools/i18n                     │  ← string registry       │
-│  │   /locales/{uk,en,ru}.json         │     ICU MessageFormat    │
-│  │   keyed by stable IDs              │     loaded on demand     │
+│  │ web + core locale registries       │  ← current implementation│
+│  │   public/i18n.js                   │     module registries     │
+│  │   core/messages/{uk,en,ru}.json    │     localized findings   │
 │  └────────────────────────────────────┘                          │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-> **Deployment note:** on ortbtools.com both the public demo and the auth'd workspace validate **server-side** — the browser POSTs the payload to `POST /api/analyze` and renders the findings the server returns. The core runs in-process only in the CLI (`@ortbtools/cli`, fully offline) and in CI/tests. "server-side + CI/CLI" / "published to npm" above describe the core's portability (pure, dependency-free JS); the website itself never validates the bid in your browser.
+> **Deployment note:** on ortbtools.com both anonymous and authenticated
+> Inspector use validates **server-side**. The browser POSTs the payload to
+> `POST /api/analyze` and renders the returned findings. Core runs in-process
+> in the Node server, the offline CLI and tests; its package and CLI workspaces
+> are not currently published to npm.
 
-**Why this split:** the validator core is the thing every surface consumes. Putting it in a single browser-+-Node module means:
+**Why this split:** the validator workspace is the shared engine used by the
+server, CLI, and CI:
 
 - the public demo validates **server-side** — the browser POSTs the bid JSON to `/api/analyze` over HTTPS and renders the findings the server returns (it is **not** validated locally in the browser); the bodies are processed transiently and never stored
 - the auth'd backend reuses the same engine for `/api/analyze`
-- the CLI wraps it for CI pipelines (`npx ortbtools validate req.json resp.json --dialect=iab --version=auto`)
-- a future browser extension can `import` it directly
+- the local CLI wraps it for CI pipelines
+  (`node packages/cli/bin/ortbtools.js validate req.json`)
+- a future browser extension would need its own explicitly tested browser build;
+  the current package contract is Node/CommonJS and the optional knowledge-base
+  loader is Node-only
 
 ---
 
@@ -118,101 +125,113 @@ For day-to-day status of what's done vs in-flight, see [ROADMAP.md](./ROADMAP.md
 ### 3.1 API shape
 
 ```js
-import { validate, detectVersion, crosscheck, listDialects } from '@ortbtools/core';
+const { validate, detectVersion, crosscheck, listDialects } = require('@ortbtools/core');
 
 const detection = detectVersion(payload);
-//   → { version: '2.6-202309', confidence: 0.95, signals: ['regs.gpp', 'imp[0].rwdd'] }
+//   → { version: '2.6', confidence: 1, signals: ['regs.gpp', 'imp[].rwdd'] }
 
 const result = validate(payload, {
-  version: 'auto', // 'auto' | '2.5' | '2.6' | '2.6-202309' | …
-  dialect: 'iab', // 'iab' | 'ext-rtb' | 'inpage-push' | …
+  expectedVersion: '2.6', // optional target bucket: 2.5 | 2.6 | 3.0
+  dialect: 'iab', // iab | ext-rtb | inpage-push
   strictness: 'normal', // 'lax' | 'normal' | 'pedantic'
-  locale: 'uk', // resolved client-side; server passes through
+  locale: 'uk', // uk | en | ru
 });
 //   → {
-//       version: '2.6-202309',
-//       dialect: 'iab',
-//       status: 'errors' | 'warnings' | 'clean',
+//       type: 'oRTB BidRequest',
+//       version: { version: '2.6', confidence: 1, signals: [...] },
+//       status: 'invalid' | 'errors' | 'warnings' | 'clean',
 //       findings: [
 //         {
 //           id: 'imp.banner.size_required',
-//           level: 'error' | 'warning' | 'info',
+//           level: 'error' | 'warning' | 'info' | 'question',
 //           path: 'imp[0].banner',
 //           params: { idx: 0 },
-//           specRef: 'https://github.com/.../2.6.md#3210-object-banner',
-//           messageKey: 'finding.imp.banner.size_required',
-//           fixKey: 'finding.imp.banner.size_required.fix',
+//           specRef: 'https://github.com/.../2.6.md#3210-object-banner', // or null
+//           msg: 'Localized human-readable finding',
 //         },
 //         …
 //       ],
 //     }
 
-const cross = crosscheck(bidReq, bidRes, { version: 'auto' });
+const cross = crosscheck(bidReq, bidRes, { locale: 'uk' });
 ```
 
-### 3.2 Findings model — three levels
+### 3.2 Findings model — four validator levels
 
-| Level     | Meaning                                                             |
-| --------- | ------------------------------------------------------------------- |
-| `error`   | Spec violation that an exchange will reject. Fail the bid.          |
-| `warning` | Spec violation tolerated by most exchanges. Reduces fill / quality. |
-| `info`    | Best-practice or recommendation. Optional improvement.              |
+| Level      | Meaning                                                             |
+| ---------- | ------------------------------------------------------------------- |
+| `error`    | Spec violation that an exchange will reject. Fail the bid.          |
+| `warning`  | Spec violation tolerated by most exchanges. Reduces fill / quality. |
+| `info`     | Best-practice or recommendation. Optional improvement.              |
+| `question` | Non-blocking ambiguity that may need a user/vendor decision.        |
 
-Findings carry **structured `id`s and `params`** — never inline copy. Localization happens at presentation time, by the consuming surface, via `@ortbtools/i18n` (see §5). This is non-negotiable for the OSS-able core.
+Crosscheck results use their own `ok` / `warn` / `crit` scale. Findings carry
+stable, structured `id`s and `params`; the current Core also
+decorates them with a localized `msg`. Web chrome strings live in
+`public/i18n.js` and per-module registries, while validator messages live in
+`packages/core/messages/{en,uk,ru}.json`.
 
 ### 3.3 Version detection
 
-Pasted JSON has no HTTP headers, so `X-Openrtb-Version` is unavailable. Detection uses **field-presence signals** in tiered confidence:
+Pasted JSON has no HTTP headers, so `X-Openrtb-Version` is unavailable.
+`detectVersion()` uses field-presence signals and returns only the `2.5`, `2.6`,
+`3.0`, or `unknown` buckets:
 
-| Tier              | Signals (subset)                                                                                                        | Verdict        |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------- |
-| OpenRTB 3.0       | `item[]`, `context`, top-level `openrtb` envelope                                                                       | `3.0` (DOA)    |
-| ≥ 2.6-202505      | `data.cids`, `content.genres` as string                                                                                 | newest 2.6     |
-| ≥ 2.6-202501      | `content.gtax`, `content.genres`                                                                                        |                |
-| ≥ 2.6-202409      | `eid.inserter`, `eid.matcher`, `eid.mm`                                                                                 |                |
-| ≥ 2.6-202402      | `video.poddedupe`                                                                                                       |                |
-| ≥ 2.6-202309      | `acat`, `durfloors`, `deal.guaranteed`, `deal.mincpmpersec`                                                             |                |
-| ≥ 2.6-202303      | `imp.video.plcmt`, `imp.refresh`, `${AUCTION_IMP_TS}`                                                                   |                |
-| ≥ 2.6-202211      | `regs.gpp`, `regs.gpp_sid`, `dooh`, `imp.qty`, first-class `inventorypartnerdomain`                                     |                |
-| ≥ 2.6 baseline    | `imp.rwdd`, `imp.ssai`, `bid.mtype`, `bid.apis`, any `*.cattax`, `device.sua`, `langb`, `Network`/`Channel`, pod fields | 2.6            |
-| ≥ 2.5             | `source`, `source.pchain`, `bseat`, `wlang`, `imp.metric[]`, `banner.vcm`, …                                            | 2.5            |
-| Default           | none of the above + valid 2.5-shaped payload                                                                            | assume 2.5     |
-| Deprecated/legacy | `banner.wmax`, `video.protocol` singular, `device.didsha1`, `user.yob`, …                                               | hint as legacy |
+| Bucket    | Signals (subset)                                                                  | Confidence |
+| --------- | --------------------------------------------------------------------------------- | ---------- |
+| `3.0`     | top-level `openrtb` object or `item[]`                                            | 1          |
+| `2.6`     | `imp[].rwdd`, `device.sua`, `regs.gpp`, `*.cattax`, `video.plcmt`, `bid[].mtype`… | 1          |
+| `2.5`     | `source`, `bseat`, `wlang`, `imp[].metric`, `banner.vcm`, `bid[].burl`…           | 0.7        |
+| `2.5`     | object with no recognized version marker (low-confidence default)                 | 0.3        |
+| `unknown` | non-object input                                                                  | 0          |
 
-**OpenRTB 3.0 is fully validated.** Production adoption remains low, but ortbtools now implements full spec-compliant deep validation for oRTB 3.0 requests, including AdCOM 1.0 placements, contexts, and bid media/creative specs (including recursive VAST validation).
+Dated OpenRTB 2.6 revisions are grouped into the `2.6` bucket; per-revision
+detection and rule gating are not implemented.
+
+**OpenRTB 3.x has deep rule coverage, not exhaustive schema conformance.** The
+engine validates the envelope and core request/response context, privacy,
+placement, media, creative and embedded VAST fields; additional AdCOM fields
+may remain unchecked.
 
 ### 3.4 Strictness levels
 
 The OpenRTB spec is full of "should" and "recommended". Treating those as errors makes ortbtools annoying to bidder devs.
 
-- `lax` — only what spec marks "must" or what exchanges actively reject. Good for production replay.
-- `normal` — default. Errors for "must" violations; warnings for "should" violations.
-- `pedantic` — surface every "recommended" hint. Good for cleaning a freshly-built bidder.
+- `lax` — errors only.
+- `normal` — errors, warnings, and non-blocking questions.
+- `pedantic` — all findings, including informational recommendations; this is
+  the compatibility default.
 
 ### 3.5 Dialect overlays
 
-Each dialect is an **additive layer** (not a replacement) over the IAB base. A dialect file declares:
+Each dialect overlays the IAB base. Most rules are additive, but a dialect may
+claim a custom bid shape and suppress an incompatible base rule; for example,
+`inpage-push` suppresses `response.bid.payload_missing` when creative fields live
+under `bid.ext`. A dialect file can declare:
 
 - additional fields it expects (e.g. `imp.ext.subage`, `imp.ext.bsection`, `imp.ext.btags`, `site.ext.idzone`)
 - field-presence rules conditional on shape (e.g. "if `site.ext.idzone` matches `/push|sub/i`, treat as push and require `subage`")
 - known-supported macros / unsupported macros (e.g. only `${AUCTION_PRICE/CURRENCY/LOSS}` substituted by some vendors)
 - specific recommended values
 
-Dialects ship in `/dialects/{name}.js` next to the core. Each vendor-specific overlay can become its own `@ortbtools/dialect-<name>` package — separate from the core. New dialects follow the same pattern.
+Built-in dialects ship in `packages/core/dialects/*.js` and are registered in
+`packages/core/index.js`. New dialects must be added to that registry as well as
+implemented in their own file.
 
 Beyond findings, a loaded **user dialect also feeds format detection**: its saved signal mappings let `scanExtForFormatHints` recognise vendor-coded formats (e.g. a numeric pop `ad_type`) with no core change. See §3.7.
 
 ### 3.6 Spec deep-links
 
-Every finding carries a `specRef` pointing into the IAB markdown spec on GitHub:
+IAB findings carry a `specRef` when a maintained mapping exists. Vendor,
+behavior and meta findings may return `null`:
 
 ```
 https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3210-object-banner
 ```
 
-We control this via a **section-id table** in the core: `'imp.banner' → '3210-object-banner'`. When IAB ships a new tag (e.g. `2.6-202506`), we bump the table, not the rules.
-
-The IAB does **not publish official JSON Schemas** — ortbtools derives rules from the markdown specs directly. We commit to tracking new tags within 2 weeks of publication.
+Mappings live in `packages/core/spec-refs.json` and are tested alongside rule
+IDs. The IAB does **not publish official JSON Schemas**; ortbtools implements
+maintained rules from the published specifications.
 
 ### 3.7 Non-IAB format detection (pop family)
 
@@ -240,18 +259,10 @@ Light + dark themes via CSS custom properties bound to `:root[data-theme="…"]`
 
 ### 4.3 i18n
 
-String registry under `/locales/{uk,en,ru}.json` keyed by stable IDs. Both validator findings and UI labels go through it. Format is **ICU MessageFormat** — handles plurals, gender, parameter interpolation cleanly:
-
-```json
-{
-  "finding.imp.banner.size_required": "Слот {idx, number} → банер без розмірів. {count, plural, one {Вкажи w і h} other {Вкажи розміри для всіх банерів}} (наприклад 300×250) або масив format[].",
-  "finding.imp.banner.size_required.fix": "Додай у imp[{idx}].banner поля w і h, або format: [{w: 300, h: 250}, ...]"
-}
-```
-
-Resolution order at runtime: `localStorage.locale` → `?locale=` query param → `navigator.language` → `'en'`. English is the global fallback (not Ukrainian) — the auth'd workspace will have international partners.
-
-Locale files load lazily (browser fetches `/locales/uk.json` only when needed).
+English, Ukrainian and Russian ship together. Web chrome uses `public/i18n.js`,
+per-module registries and locale-specific HTML templates. Core finding messages
+live in `packages/core/messages/{en,uk,ru}.json`; stable IDs and params make the
+localized output testable across surfaces.
 
 ### 4.4 Editor and preview
 
@@ -270,85 +281,69 @@ Library panel with partner filter (`all` / `unassigned` / specific partner). Cli
 
 ### 5.1 Stack
 
-Node.js + Express. SQLite via `better-sqlite3` for the partner/sample/history store. Bcrypt session auth via the kyivtech-portal pattern (already in place). No PocketBase, no Postgres yet — single-writer SQLite is ample until multi-user team workspaces land.
+Vanilla Node `node:http` with the custom `lib/router.js` dispatcher. SQLite via
+`better-sqlite3` stores accounts, saved samples, plaintext account metadata and
+operational state. Authentication uses bcrypt and server-side sessions.
 
-### 5.2 Endpoints (current + planned)
+### 5.2 Routes
 
-```
-POST   /api/analyze           validate + crosscheck (server-side mirror of core)
-POST   /api/proxy             SSRF-guarded forwarder (test endpoints allow-list)
+The route table is deliberately not duplicated here. Backend handlers under
+`modules/*/handler.js` export their route definitions and `server.js` registers
+them with `lib/router.js`. Locale-aware SPA paths are owned by
+`lib/locale-routes.js`. See ARCHMAP for the handler-to-route map and inspect a
+module's exported `routes` array before changing an endpoint.
 
-GET    /api/partners          list
-POST   /api/partners          create
-PATCH  /api/partners/:id      update
-DELETE /api/partners/:id      delete (samples → unassigned)
+### 5.3 Storage
 
-GET    /api/samples           list (filter by partner_id)
-GET    /api/samples/:id       full body
-POST   /api/samples           create
-PATCH  /api/samples/:id       update
-DELETE /api/samples/:id       delete
-
-GET    /api/profiles          (planned) per-partner default version + dialect + strictness
-POST   /api/profiles          (planned)
-
-GET    /api/history           (planned) persistent history per user
-
-POST   /api/share/:id         (planned) generate read-only share link for a saved sample
-```
-
-### 5.3 Schema (current + planned)
-
-Current (`db.js`):
-
-- `partners(id, name, slug, notes, created_at)`
-- `samples(id, partner_id, title, bid_req, bid_res, status, notes, created_at)`
-
-Planned additions:
-
-- `samples.version_pinned` — `null` for auto-detect, else explicit `'2.6'` etc.
-- `samples.dialect` — `null` for `'iab'`, else specific dialect.
-- `partners.default_version`, `partners.default_dialect`, `partners.default_strictness` — applied when saving a sample with that partner.
-- `users(id, email, password_hash, locale, theme, created_at)` — for multi-user.
-- `histories(id, user_id, sample_snapshot_json, created_at)` — persistent history when logged in.
+`db.js` owns SQLite schema v10 and atomic `PRAGMA user_version` migrations for
+users, sessions, partners, saved samples, analyze history, behavior corpus and
+user dialect data. ClickHouse-backed services keep derived analytics and
+blog/news records outside SQLite. Column-level truth belongs in migrations and
+queries, not in a duplicated architecture table.
 
 ### 5.4 Privacy posture
 
-- Bid JSON is potentially sensitive (deal IDs, user IDs, supply paths). The product is explicit about how it is handled: the public demo POSTs the pasted bid over HTTPS to `/api/analyze`, validates it **server-side**, and never stores the payload (only derived metadata + a sampled operational request log that includes the client IP — never the bodies); saved samples in the auth'd workspace are encrypted end-to-end and visible only to your workspace.
+- Bid JSON is potentially sensitive (deal IDs, user IDs, supply paths). The
+  public demo POSTs pasted bids over HTTPS to `/api/analyze`, validates them
+  **server-side**, and does not persist the bodies server-side (derived metadata
+  and sampled request metadata including IP are retained). The browser keeps up
+  to 50 raw recent entries in `localStorage`. The current web save path encrypts
+  request/response bodies before upload, while sample notes, partner profiles,
+  dialect mappings, and other account metadata remain server-readable; direct
+  API clients are not forced to encrypt.
 - No analytics SDK that captures input fields.
 - `Content-Security-Policy` disallows third-party script and frame sources.
 - Creative previews iframe-sandboxed.
 
 ---
 
-## 6. Deploy modes
+## 6. Deploy and offline modes
 
-### 6.1 Public demo
+### 6.1 Hosted application
 
-- Static frontend on Cloudflare Pages or similar (or just our portal serving `/ortbtools-public/`).
-- Domain: `rtb.kyivtech.com.ua` (subdomain split — separate Cloudflare Tunnel route, no auth gate).
-- Validator runs in-browser; no `/api/samples` or `/api/partners` exist. `/api/analyze` is unnecessary if the core runs client-side.
-- Could share the same code build with a feature flag — `BUILD_TARGET=public` strips the library UI.
+- One immutable Node image serves the localized SPA and APIs on
+  `ortbtools.com`.
+- Source, workspace packages and public assets are baked into an exact-SHA
+  image; `/data` is the only runtime mount.
+- `BUILD_SHA`, OCI labels, readiness, public smoke and automatic rollback are
+  release gates. See [docs/OPERATIONS.md](./docs/OPERATIONS.md).
 
-### 6.2 Authenticated workspace
+### 6.2 Self-hosted
 
-- Current setup: portal proxy at `/ortbtools-proxy/*` (kyivtech.com.ua, behind admin login).
-- May graduate to its own subdomain `ortbtools.com` once team accounts land.
-- Container: `ortbtools` on host network, port `127.0.0.1:8090`.
-- DB: `/srv/DATA/AppData/ortbtools/ortbtools.db` (bind-mounted).
-- Backups: daily `kt-backup-*` cron, gzipped SQLite snapshot, 30-day rotation, off-site rclone replica to Drive (verified fresh 2026-05-10). See [docs/OPERATIONS.md](./docs/OPERATIONS.md) for the restore drill.
+- `docker-compose.yml` uses the same application image and environment-based
+  integration configuration.
+- Operators must provide their own persistent `/data` path, secrets, network
+  attachments and backup destination.
 
-### 6.3 Self-hosted / enterprise
+### 6.3 CLI workspace
 
-- `docker-compose.yml` shipped publicly.
-- Configuration via env (DB path, allowed origins, OAuth provider hooks if added).
-- Same image, different env.
-
-### 6.4 CLI
-
-- `npx @ortbtools/cli validate req.json [resp.json] [--dialect=iab] [--version=auto] [--format=json|tap|junit]`
-- Wraps `@ortbtools/core` directly. Exit code 0 on clean, 1 on errors, 2 on warnings (configurable).
-- CI integration: GitHub Action wrapper that comments on PRs with finding deltas.
+- `node packages/cli/bin/ortbtools.js validate req.json` runs locally after a
+  workspace install and makes no network calls.
+- It wraps `@ortbtools/core`. Exit code `0` means the selected threshold was
+  not reached, `1` means findings reached it, and `2` is reserved for CLI
+  usage/input errors.
+- Registry installation instructions remain disabled until the first npm
+  publication is verified.
 
 ---
 
@@ -357,34 +352,38 @@ Planned additions:
 ```ts
 type Finding = {
   id: string; // 'imp.banner.size_required' — stable, namespaced
-  level: 'error' | 'warning' | 'info';
+  level: 'error' | 'warning' | 'info' | 'question' | 'crit' | 'warn' | 'ok';
   path: string; // JSON pointer-ish: 'imp[0].banner'
-  params?: Record<string, unknown>; // for ICU interpolation: { idx: 0, count: 3 }
-  specRef?: string; // permalink into IAB GitHub markdown
-  versionRequired?: string; // 'requires ≥ 2.6-202309 for durfloors'
-  fixKey?: string; // i18n key for actionable fix hint
-  messageKey: string; // i18n key for explanation
-  detail?: object; // arbitrary structured data for UI rendering
+  params: Record<string, unknown>;
+  specRef: string | null;
+  msg: string; // localized presentation copy
+  ok?: boolean; // crosscheck findings
+  detail?: object;
 };
 
 type ValidationResult = {
-  version: string; // detected or pinned
-  versionDetect: { confidence: number; signals: string[] };
-  dialect: string;
-  status: 'clean' | 'warnings' | 'errors';
+  type: string;
+  version: { version: '2.5' | '2.6' | '3.0' | 'unknown'; confidence: number; signals: string[] };
+  status: 'clean' | 'warnings' | 'errors' | 'invalid';
   findings: Finding[];
+  urlRequest?: object; // present for recognized URL-style input
 };
 ```
 
-**Findings are i18n-neutral.** The core never returns a copy string, only keys + params. This is the linchpin that makes localization, OSS, and CI-mode all work from the same engine.
+The actual Core finding contract includes stable IDs and params plus a
+localized `msg`; `specRef` is nullable for vendor, behavior and meta findings.
+Consumers should key automation on `id`, `level` and `path`, not translated
+copy.
 
 ---
 
-## 8. Open questions / decisions deferred
+## 8. Decisions and remaining questions
 
-- **License** for `@ortbtools/core`: MIT vs Apache-2.0. MIT is friendlier for vendors to embed; Apache-2.0 includes patent grant. Decision before first npm publish.
-- **3.0 support timeline.** Deep validation is fully resolved and implemented in v0.53.0. Gating check is retired.
-- **Hosted backend for public demo** — none planned, but if `/api/proxy`-style replay is needed, it becomes a Cloudflare Worker rather than a Node server (rate-limit + serverless cost shape).
+- **License:** Core and CLI are MIT.
+- **3.x coverage:** deep request/response rules are implemented for core OpenRTB
+  and AdCOM structures, but they are not exhaustive AdCOM schema conformance.
+- **Hosted backend:** the public Inspector uses the existing Node backend; a
+  browser-only validation split is not planned.
 - **Auth provider** for multi-user: keep bcrypt sessions for v1, evaluate Auth.js / Clerk / Lucia later.
 - **Mock / fixture generation** as a feature (generate a valid `BidRequest` matching given constraints). Post-MVP. Strong magnet for organic discovery if it works well.
 

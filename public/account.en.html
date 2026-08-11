@@ -6,7 +6,7 @@
     <title>ortbtools — Account</title>
     <meta
       name="description"
-      content="Your ortbtools account: profile, library stats, encryption status, insights, and preferences. Your saved library is end-to-end encrypted with your password — the operator can't read it."
+      content="Your ortbtools account: profile, library stats, encryption status, insights, and preferences. Bid payload bodies saved through the web UI are encrypted in your browser; library metadata remains server-readable."
     />
     <meta name="robots" content="noindex,nofollow" />
     <link rel="canonical" href="https://ortbtools.com/account" />
@@ -689,8 +689,9 @@
             <section class="cab-card">
               <h2>Library</h2>
               <p class="lead">
-                Your zero-knowledge encrypted bid samples and partners. The server can't read them;
-                only your password or recovery key unlocks the library.
+                Bid request/response bodies saved through the web UI are encrypted in your browser;
+                only your password or recovery key unlocks those bodies. Sample notes, partner
+                profiles, and other library metadata remain server-readable.
               </p>
               <div class="cab-stats">
                 <div class="cab-stat">
@@ -703,7 +704,7 @@
                 </div>
                 <div class="cab-stat">
                   <div class="num" id="statEncrypted">—</div>
-                  <div class="lbl">Encrypted</div>
+                  <div class="lbl">Encryption IV present</div>
                 </div>
                 <div class="cab-stat">
                   <div class="num" id="statAssigned">—</div>
@@ -726,8 +727,8 @@
                 "
               >
                 Library is empty. Open ortbtools, paste a BidRequest, click <code>save</code> —
-                samples are encrypted with your password before they leave the browser. Add partner
-                profiles to tag and filter saved samples.
+                request/response bodies are encrypted with your password before they leave the
+                browser. Add partner profiles to tag and filter saved samples.
               </div>
               <div class="cab-actions">
                 <a href="/" class="btn btn-secondary btn-sm">← Open library in ortbtools</a>
@@ -828,7 +829,7 @@
                 Activity stats come from a small per-user log that records only the metadata listed
                 below. Your bid request and response bodies are never persisted to that log — they
                 pass through the validator, generate findings, and are discarded. (Saved library
-                samples are separately end-to-end encrypted; see Security.)
+                payload bodies saved through the web UI are separately encrypted; see Security.)
               </p>
               <div class="cab-row">
                 <span class="label">Tracked</span>
@@ -913,7 +914,7 @@
                 <span class="value" id="dialectDefault">—</span>
               </div>
               <div class="cab-row">
-                <span class="label">LLM suggester</span>
+                <span class="label">Suggestion engine</span>
                 <span class="value" id="dialectLlm">—</span>
               </div>
               <div class="cab-row">
@@ -968,9 +969,10 @@
             <section class="cab-card">
               <h2>Encryption &amp; recovery</h2>
               <p class="lead">
-                Library encryption uses a key derived from your password. A 32-character hex
-                recovery key was shown once at registration — store it in a password manager. If you
-                lose both, the library can only be wiped, not recovered.
+                Saved bid payload bodies use a key derived from your password; sample and partner
+                metadata is not encrypted. A 32-character hex recovery key was shown once at
+                registration — store it in a password manager. If you lose both, encrypted bodies
+                cannot be recovered and the saved account data must be wiped.
               </p>
               <div class="cab-row">
                 <span class="label">Change password</span>

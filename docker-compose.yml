@@ -52,8 +52,8 @@ services:
       - /srv/DATA/AppData/ortbtools:/data
     networks:
       # legacy-spyglass-ok: the old container DNS name stays as a network alias
-      # so cross-stack consumers (prometheus blackbox, n8n admin brief, portal,
-      # exec-sidecar) keep resolving until each updates to `ortbtools` (~v1.6).
+      # so remaining cross-stack consumers keep resolving while they migrate
+      # to the canonical `ortbtools` name.
       default:
         aliases:
           - adtech-spyglass # legacy-spyglass-ok

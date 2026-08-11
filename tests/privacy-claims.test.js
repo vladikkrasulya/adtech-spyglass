@@ -11,10 +11,13 @@
  *     never stored, but the server keeps derived metadata (ClickHouse
  *     validation_logs + per-user analyze_log) and an operational request log
  *     (ClickHouse event_log) that records the client IP, sampled.
+ *   - The browser keeps up to 50 raw recent analyses in same-origin
+ *     localStorage; this survives reloads and synchronizes across tabs.
  *   - Login passwords are sent to the server over TLS and hashed with bcrypt
  *     server-side; only the bcrypt hash is stored. Sessions store IP + UA.
- *   - Zero-knowledge applies ONLY to saved-library sample bodies + the DEK
- *     (encrypted in the browser; the server holds ciphertext + a wrapped key).
+ *   - The current web flow encrypts saved request/response bodies + the DEK.
+ *     Sample notes, partner/dialect metadata, and saved Behavior Corpus data
+ *     are plaintext; direct API clients are not forced to encrypt sample bodies.
  *
  * See docs/PRIVACY.md for the full, code-verified contract.
  *
@@ -93,6 +96,102 @@ const FORBIDDEN = [
     // "the key derivation happens in your browser".
     label: 'validation "runs in the/your browser"',
     re: /\bvalidat\w*\s+(?:runs?|happens?|performed|done|executed|occurs?)\s+in\s+(?:the|your)\s+browser\b/i,
+  },
+  {
+    label: '"everything you save is encrypted"',
+    re: /everything\s+you\s+save\s+is\s+encrypted/i,
+  },
+  {
+    label: 'UK "все що зберігається, шифрується"',
+    re: /все\s+що\s+зберігається[,.]?\s+шифрується/i,
+  },
+  {
+    label: 'RU "всё что сохраняется, шифруется"',
+    re: /вс[её]\s+что\s+сохраняется[,.]?\s+шифруется/i,
+  },
+  {
+    label: '"server stores ciphertext only"',
+    re: /server\s+stores\s+ciphertext\s+only/i,
+  },
+  {
+    label: 'UK/RU "server stores ciphertext only"',
+    re: /(?:на\s+сервері\s+зберігається|на\s+сервере\s+хранится)\s+лише?\s*шифротекст|на\s+сервере\s+хранится\s+только\s+шифротекст/i,
+  },
+  {
+    label: 'encrypted samples and partners',
+    re: /(?:zero[-\s]?knowledge\s+)?(?:encrypted|зашифрован\w*)\s+(?:bid\s+)?samples?\s*(?:and|\+)\s*partners?|зашифрован\w*\s+bid\s+samples?\s*\+\s*партнер/i,
+  },
+  {
+    label: 'share/embed payload "never reaches the server"',
+    re: /\b(?:payloads?|bid\s+payloads?)\b[\s\S]{0,120}\b(?:never\s+reaches?|does\s+not\s+reach)\s+the\s+server\b/i,
+  },
+  {
+    label: 'UK share/embed payload "не потрапляє на сервер"',
+    re: /\b(?:payload|bid)\b[\s\S]{0,120}(?:на\s+сервер\s+(?:ніколи\s+)?не\s+(?:потрапляє|йде|доходить)|ніколи\s+не\s+доходить\s+до\s+сервера)/i,
+  },
+  {
+    label: 'RU share/embed payload "не попадает на сервер"',
+    re: /\b(?:payload|bid)\b[\s\S]{0,120}(?:на\s+сервер\s+не\s+(?:попадает|ид[её]т|доходит)|никогда\s+не\s+доходит\s+до\s+сервера)/i,
+  },
+  {
+    label: 'anonymous history "browser tab only / reload empty"',
+    re: /\banonymous\b[\s\S]{0,140}(?:browser\s+tab\s+only|reload\s*(?:=|—|-)\s*empty)/i,
+  },
+  {
+    label: 'UK anonymous history "tab only / reload empty"',
+    re: /\bанонім\b[\s\S]{0,140}(?:тільки\s+у\s+вкладці|reload\s*(?:=|—|-)\s*(?:і\s+)?пуст)/i,
+  },
+  {
+    label: 'RU anonymous history "tab only / reload empty"',
+    re: /\bаноним\b[\s\S]{0,140}(?:только\s+во?\s+вкладке|reload\s*(?:=|—|-)\s*(?:и\s+)?пуст)/i,
+  },
+  {
+    label: 'whole library "is encrypted"',
+    re: /\blibrary\s+is\s+encrypted\b/i,
+  },
+  {
+    label: 'UK whole library "зашифрована"',
+    re: /\bбібліотека\s+зашифрована\b/i,
+  },
+  {
+    label: 'RU whole library "зашифрована"',
+    re: /\bбиблиотека\s+зашифрована\b/i,
+  },
+  {
+    label: 'recovery scoped to the whole library/data',
+    re: /recover\s+access\s+to\s+your\s+library|operator[\s\S]{0,80}(?:can(?:no|')t|cannot)\s+recover\s+your\s+data/i,
+  },
+  {
+    label: 'UK recovery scoped to the whole library/data',
+    re: /відновити\s+доступ\s+до\s+тво(?:єї|єі)\s+бібліотеки|оператор[\s\S]{0,80}не\s+зможе\s+відновити\s+твої\s+дані/i,
+  },
+  {
+    label: 'RU recovery scoped to the whole library/data',
+    re: /восстановить\s+доступ\s+к\s+твоей\s+библиотеке|оператор[\s\S]{0,80}не\s+сможет\s+восстановить\s+твои\s+данные/i,
+  },
+  {
+    label: 'wipe everything',
+    re: /\bwipe\s+everything\b/i,
+  },
+  {
+    label: 'UK "стерти все"',
+    re: /\bстерти\s+все\b/i,
+  },
+  {
+    label: 'RU "стереть всё"',
+    re: /\bстереть\s+вс[её]\b/i,
+  },
+  {
+    label: 'wipe "signed out everywhere"',
+    re: /\bsigned\s+out\s+everywhere\b/i,
+  },
+  {
+    label: 'UK wipe "all sessions end"',
+    re: /\bусі\s+сесії\s+заверш(?:аться|уються)\b/i,
+  },
+  {
+    label: 'RU wipe "all sessions end"',
+    re: /\bвсе\s+сессии\s+заверш(?:атся|аются)\b/i,
   },
 ];
 
@@ -297,3 +396,239 @@ for (const [rel, re] of Object.entries(SERVER_SIDE_VALIDATION)) {
     assert.match(text, re, `${rel} lost its accurate server-side /api/analyze description`);
   });
 }
+
+test('privacy docs disclose persistent browser history using the runtime limit', () => {
+  const app = fs.readFileSync(path.join(ROOT, 'public/ortbtools.app.js'), 'utf8');
+  const limitMatch = app.match(/const\s+HISTORY_MAX\s*=\s*(\d+)/);
+  assert.ok(limitMatch, 'public/ortbtools.app.js must declare HISTORY_MAX');
+  const limit = limitMatch[1];
+
+  for (const rel of [
+    'README.md',
+    'docs/PRIVACY.md',
+    'docs/USER_GUIDE.md',
+    'public/about.en.html',
+    'public/about.uk.html',
+    'public/about.ru.html',
+  ]) {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.match(text, /localStorage/, `${rel} must disclose browser localStorage history`);
+    assert.match(
+      text,
+      new RegExp(`(?:up to|до)\\s+${limit}\\b`, 'i'),
+      `${rel} must track the runtime HISTORY_MAX=${limit}`,
+    );
+  }
+});
+
+test('share and embed copy distinguishes the initial fragment request from automatic analysis', () => {
+  const shareRuntime = fs.readFileSync(path.join(ROOT, 'public/modules/share/index.js'), 'utf8');
+  const inspectorRuntime = fs.readFileSync(path.join(ROOT, 'public/ortbtools.app.js'), 'utf8');
+  assert.match(
+    shareRuntime,
+    /loadFromHash[\s\S]{0,1800}window\.runAnalysis\(\)/,
+    'hash restore must stay covered as an automatic analysis trigger',
+  );
+  assert.match(
+    inspectorRuntime,
+    /fetch\(analyzeUrl\(\)[\s\S]{0,180}body:\s*JSON\.stringify\(body\)/,
+    'runAnalysis must stay covered as a body POST to /api/analyze',
+  );
+
+  const copyContracts = {
+    'public/modules/share/i18n.js': [
+      /initial[\s\S]{0,80}(?:HTTP\s+)?request/i,
+      /(?:початков|перш)\w*[\s\S]{0,80}(?:HTTP[-\s]?)?запит/i,
+      /(?:первонач|перв)\w*[\s\S]{0,80}(?:HTTP[-\s]?)?запрос/i,
+    ],
+    'public/modules/embed/i18n.js': [
+      /initial[\s\S]{0,80}(?:HTTP\s+)?request/i,
+      /(?:початков|перш)\w*[\s\S]{0,80}(?:HTTP[-\s]?)?запит/i,
+      /(?:первонач|перв)\w*[\s\S]{0,80}(?:HTTP[-\s]?)?запрос/i,
+    ],
+    'public/modules/inspector/template.en.html': [/initial[\s\S]{0,80}request/i],
+    'public/modules/inspector/template.uk.html': [/(?:початков|перш)\w*[\s\S]{0,80}запит/i],
+    'public/modules/inspector/template.ru.html': [/(?:первонач|перв)\w*[\s\S]{0,80}запрос/i],
+    'public/about.en.html': [/initial[\s\S]{0,80}request/i],
+    'public/about.uk.html': [/(?:початков|перш)\w*[\s\S]{0,80}запит/i],
+    'public/about.ru.html': [/(?:первонач|перв)\w*[\s\S]{0,80}запрос/i],
+  };
+  for (const [rel, localePatterns] of Object.entries(copyContracts)) {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    for (const re of localePatterns) {
+      assert.match(text, re, `${rel} must scope fragment privacy to the initial request (${re})`);
+    }
+    const analyzeMentions = text.match(/\/api\/analyze/g) || [];
+    assert.ok(
+      analyzeMentions.length >= localePatterns.length,
+      `${rel} must disclose automatic /api/analyze submission in every locale`,
+    );
+  }
+});
+
+test('current security docs disclose plaintext metadata and the direct-API caveat', () => {
+  const privacy = fs.readFileSync(path.join(ROOT, 'docs/PRIVACY.md'), 'utf8');
+  assert.match(privacy, /sample\s+titles,\s+statuses\s+and\s+notes/i);
+  assert.match(privacy, /Partner\s+`name`[\s\S]{0,180}plaintext/i);
+  assert.match(privacy, /custom\s+dialect[\s\S]{0,220}plaintext/i);
+  assert.match(privacy, /Behavior\s+Corpus[\s\S]{0,400}plaintext/i);
+  assert.match(privacy, /API\s+does\s+not\s+cryptographically\s+verify/i);
+
+  const security = fs.readFileSync(path.join(ROOT, 'SECURITY.md'), 'utf8');
+  assert.match(security, /Sample\s+title[\s\S]{0,160}notes/i);
+  assert.match(security, /Partner\s+names[\s\S]{0,160}dialect/i);
+});
+
+const ACCOUNT_METADATA_CONTRACT = {
+  'public/account.en.html': /sample\s+notes[\s\S]{0,160}server-readable/i,
+  'public/account.uk.html': /Нотатки\s+зразків[\s\S]{0,180}читає\s+сервер/i,
+  'public/account.ru.html': /Заметки\s+образцов[\s\S]{0,180}читает\s+сервер/i,
+};
+for (const [rel, re] of Object.entries(ACCOUNT_METADATA_CONTRACT)) {
+  test(`${rel} scopes encryption to payload bodies`, () => {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.match(text, re, `${rel} must disclose that library metadata is server-readable`);
+  });
+}
+
+test('cabinet labels the IV marker without claiming cryptographically proven encryption', () => {
+  const dbText = fs.readFileSync(path.join(ROOT, 'db.js'), 'utf8');
+  assert.match(
+    dbText,
+    /\(req_iv\s+IS\s+NOT\s+NULL\)\s+AS\s+is_encrypted/i,
+    'test assumptions changed: is_encrypted is expected to remain an IV-presence marker',
+  );
+
+  const dictionary = fs.readFileSync(path.join(ROOT, 'public/i18n.js'), 'utf8');
+  assert.match(
+    dictionary,
+    /'cabinet\.pill\.encrypted':\s*\{[\s\S]{0,100}en:\s*'[^']*\bIV\b[^']*(?:present|marked|not verified)[^']*'/i,
+    'EN cabinet pill must say that an IV/marker is present, not claim proven encryption',
+  );
+  assert.match(
+    dictionary,
+    /'cabinet\.pill\.encrypted':\s*\{[\s\S]{0,180}uk:\s*'(?=[^']*\bIV\b)(?=[^']*(?:є|наяв|познач|не перевір))[^']*'/i,
+    'UK cabinet pill must say that an IV/marker is present, not claim proven encryption',
+  );
+  assert.match(
+    dictionary,
+    /'cabinet\.pill\.encrypted':\s*\{[\s\S]{0,260}ru:\s*'[^']*\bIV\b[^']*(?:есть|присутств|помеч|не провер)[^']*'/i,
+    'RU cabinet pill must say that an IV/marker is present, not claim proven encryption',
+  );
+
+  const statLabels = {
+    'public/account.en.html': /\bIV\b[\s\S]{0,40}(?:present|marked|not verified)/i,
+    'public/account.uk.html':
+      /(?:\bIV\b[\s\S]{0,40}(?:є|наяв|познач|не перевір)|(?:є|наяв|познач|не перевір)[\s\S]{0,40}\bIV\b)/i,
+    'public/account.ru.html':
+      /(?:\bIV\b[\s\S]{0,40}(?:есть|присутств|помеч|не провер)|(?:есть|присутств|помеч|не провер)[\s\S]{0,40}\bIV\b)/i,
+  };
+  for (const [rel, re] of Object.entries(statLabels)) {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const markerAt = text.indexOf('id="statEncrypted"');
+    assert.notEqual(markerAt, -1, `${rel} lost the sample marker statistic`);
+    assert.match(
+      text.slice(markerAt, markerAt + 320),
+      re,
+      `${rel} must label statEncrypted as an IV marker, not proven encryption`,
+    );
+  }
+});
+
+test('recovery and unlock copy scopes protection to encrypted bid bodies', () => {
+  const recovery = fs.readFileSync(path.join(ROOT, 'public/modules/recovery/i18n.js'), 'utf8');
+  const bodyBlock = recovery.match(/'recovery\.body':\s*\{([\s\S]*?)\n\s*\},/);
+  assert.ok(bodyBlock, 'recovery.body locale block must exist');
+  const bodyWords = /** @type {Record<string, RegExp>} */ ({
+    en: /bod(?:y|ies)/i,
+    uk: /тіл/i,
+    ru: /тел/i,
+  });
+  for (const [locale, bodyWord] of Object.entries(bodyWords)) {
+    const value = bodyBlock[1].match(new RegExp(`${locale}:\\s*'([^']+)'`));
+    assert.ok(value, `recovery.body must include ${locale}`);
+    assert.match(
+      value[1],
+      /bid|request\/response/i,
+      `${locale} recovery copy must name bid bodies`,
+    );
+    assert.match(value[1], bodyWord, `${locale} recovery copy must be body-scoped`);
+  }
+
+  const dictionary = fs.readFileSync(path.join(ROOT, 'public/i18n.js'), 'utf8');
+  const unlockCopy = [...dictionary.matchAll(/'sample\.unlock_cta':\s*'([^']+)'/g)].map(
+    (m) => m[1],
+  );
+  assert.equal(unlockCopy.length, 3, 'sample.unlock_cta must exist in all three locales');
+  for (const value of unlockCopy) {
+    assert.match(value, /bid/i, 'unlock copy must identify bid content, not the whole library');
+    assert.match(value, /bod|тіл|тел/i, 'unlock copy must be scoped to payload bodies');
+  }
+});
+
+test('password-reset wipe copy enumerates deletion and retention boundaries per locale', () => {
+  const text = fs.readFileSync(path.join(ROOT, 'public/modules/password-reset/i18n.js'), 'utf8');
+  const localeCopy = (locale) =>
+    [...text.matchAll(new RegExp(`${locale}:\\s*'([^']*)'`, 'g'))].map((m) => m[1]).join(' ');
+
+  const contracts = {
+    en: {
+      deleted: [
+        /saved samples/i,
+        /partners/i,
+        /custom dialects/i,
+        /activity history/i,
+        /Behavior Corpus entries/i,
+        /old sessions/i,
+      ],
+      browser: /browser\s+History[\s\S]{0,120}(?:remains|stays|is not cleared)/i,
+      operational: /operational\s+(?:logs?|telemetry)/i,
+      backups: /backups?/i,
+      retention: /retention/i,
+    },
+    uk: {
+      deleted: [
+        /збережені\s+(?:зразки|запити)/i,
+        /партнер/i,
+        /(?:власні|користувацькі)\s+діалект/i,
+        /історі[яю]\s+активності/i,
+        /Behavior Corpus/i,
+        /(?:старі|попередні)\s+сесі/i,
+      ],
+      browser: /(?:браузерна\s+)?History[\s\S]{0,120}(?:залиша|не\s+(?:очищ|видал))/i,
+      operational: /операційн[а-яіїєґ]*\s+(?:лог|журнал|телеметр)/i,
+      backups: /(?:backup|резервн[а-яіїєґ]*\s+коп)/i,
+      retention: /(?:retention|строк[а-яіїєґ]*\s+зберіган)/i,
+    },
+    ru: {
+      deleted: [
+        /сохран[её]нные\s+(?:образцы|запросы)/i,
+        /партн[её]р/i,
+        /(?:собственные|пользовательские)\s+диалект/i,
+        /истори[яю]\s+активности/i,
+        /Behavior Corpus/i,
+        /(?:старые|предыдущие)\s+сесси/i,
+      ],
+      browser: /(?:браузерная\s+)?History[\s\S]{0,120}(?:оста|не\s+(?:очищ|удал))/i,
+      operational: /операционн[а-яё]*\s+(?:лог|журнал|телеметр)/i,
+      backups: /(?:backup|резервн[а-яё]*\s+коп)/i,
+      retention: /(?:retention|срок[а-яё]*\s+хранен)/i,
+    },
+  };
+
+  for (const [locale, contract] of Object.entries(contracts)) {
+    const copy = localeCopy(locale);
+    assert.ok(copy, `password-reset copy must include ${locale}`);
+    for (const required of contract.deleted) {
+      assert.match(copy, required, `${locale} wipe copy lost deleted class ${required}`);
+    }
+    assert.match(copy, contract.browser, `${locale} wipe copy must preserve browser History`);
+    assert.match(
+      copy,
+      contract.operational,
+      `${locale} wipe copy must disclose operational retention`,
+    );
+    assert.match(copy, contract.backups, `${locale} wipe copy must disclose backup retention`);
+    assert.match(copy, contract.retention, `${locale} wipe copy must name the retention policy`);
+  }
+});

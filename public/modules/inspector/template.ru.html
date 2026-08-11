@@ -135,7 +135,7 @@
       data-action="sim-bids"
       class="btn btn-ghost btn-sm"
       id="simBidsBtn"
-      title="Симуляция 3 DSP-стратегий (local LLM) — как разные биддеры ответили бы на этот запрос"
+      title="Симуляция 3 DSP-стратегий по детерминированным серверным правилам — сырой BidRequest временно обрабатывает ortbtools; ни одна внешняя модель его не получает"
     >
       🤖 simulate
     </button>
@@ -456,7 +456,7 @@
           class="btn btn-ghost btn-sm"
           id="shareLinkBtn"
           data-action="share-link"
-          title="Скопировать permalink — payload закодирован в URL-фрагменте, на сервер не попадает"
+          title="Скопировать permalink — фрагмент отсутствует в первом запросе; открытие отправляет payload в /api/analyze"
         >
           ссылка
         </button>
@@ -606,7 +606,7 @@
       >
       <span class="footer-sep">·</span>
       <a
-        href="https://github.com/vladikkrasulya/ortbtools"
+        href="https://github.com/vladikkrasulya/adtech-spyglass"
         target="_blank"
         rel="noopener"
         style="color: var(--text-dim); text-decoration: none"

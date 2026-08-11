@@ -10,7 +10,8 @@
   "files": [
     "bin/",
     "lib/",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18"
@@ -32,12 +33,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vladikkrasulya/ortbtools.git",
+    "url": "git+https://github.com/vladikkrasulya/adtech-spyglass.git",
     "directory": "packages/cli"
   },
   "homepage": "https://ortbtools.com",
   "bugs": {
-    "url": "https://github.com/vladikkrasulya/ortbtools/issues"
+    "url": "https://github.com/vladikkrasulya/adtech-spyglass/issues"
   },
   "publishConfig": {
     "access": "public"

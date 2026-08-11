@@ -32,7 +32,7 @@
   if (window.OrtbtoolsIntelStorage) return;
 
   const DB_NAME = 'ortbtools_intel_v1';
-  const DB_VERSION = 3; // 7c: + intel_llm_cache
+  const DB_VERSION = 3; // 7c: + suggestion cache (legacy store name retained)
   const STORE_OBSERVATIONS = 'field_observations';
   const STORE_META = 'discovery_meta';
   const STORE_COOCCURRENCE = 'co_occurrence';
@@ -145,10 +145,9 @@
         if (!db.objectStoreNames.contains(STORE_TEMP_DIALECTS)) {
           db.createObjectStore(STORE_TEMP_DIALECTS, { keyPath: 'id' });
         }
-        // Phase 7c: LLM-suggestion cache. Keyed by deterministic hash
-        // of (kind + path + bucket) so the same field never burns a
-        // second LLM call within the TTL window. expiresAt index lets
-        // future cleanup pass evict expired rows in one cursor scan.
+        // Suggestion-result cache. The store name is retained for schema
+        // compatibility; current keys use a rules-engine namespace. The
+        // expiresAt index lets cleanup evict expired rows in one cursor scan.
         if (!db.objectStoreNames.contains(STORE_LLM_CACHE)) {
           const os = db.createObjectStore(STORE_LLM_CACHE, { keyPath: 'key' });
           os.createIndex('expiresAt', 'expiresAt', { unique: false });
@@ -274,7 +273,7 @@
     return promisify(tx.objectStore(STORE_TEMP_DIALECTS).getAll());
   }
 
-  // ── Phase 7c: LLM cache ───────────────────────────────────────────
+  // ── Suggestion cache (legacy method/store names retained) ─────────
 
   async function getLlmCache(key) {
     const db = await openDb();

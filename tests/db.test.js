@@ -366,6 +366,19 @@ test('users: updatePasswordAndWipe is atomic and returns per-table counts', () =
     ip: '127.0.0.1',
     ua: 'test',
   });
+  const dialectId = Number(
+    db
+      .prepare(
+        `INSERT INTO user_dialects(user_id, name, is_default, created_at, updated_at)
+         VALUES (?, ?, 1, ?, ?)`,
+      )
+      .run(u.id, 'Atomic wipe dialect', Date.now(), Date.now()).lastInsertRowid,
+  );
+  db.prepare(
+    `INSERT INTO dialect_mappings
+       (dialect_id, signal_path, signal_value, semantic_label, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(dialectId, 'imp.ext.vendor', 'atomic', 'banner', Date.now());
 
   const r = Users.updatePasswordAndWipe(u.id, 'fresh');
   assert.equal(r.samplesDeleted, 1);
@@ -373,12 +386,117 @@ test('users: updatePasswordAndWipe is atomic and returns per-table counts', () =
   assert.equal(r.analyzeLogDeleted, 1);
   assert.equal(r.behaviorCorpusDeleted, 1);
   assert.equal(r.sessionsDeleted, 1);
+  assert.equal(r.dialectMappingsDeleted, 1);
+  assert.equal(r.userDialectsDeleted, 1);
 
   // Password updated, crypto cleared
   assert.equal(Users.getByEmail('awipe@example.com').password_hash, 'fresh');
   const cs = Users.getCryptoState(u.id);
   assert.equal(cs.kdf_salt, null, 'password-side crypto cleared');
   assert.equal(cs.recovery_salt, null, 'recovery-side crypto cleared too');
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS n FROM user_dialects WHERE user_id = ?').get(u.id).n,
+    0,
+  );
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS n FROM dialect_mappings WHERE dialect_id = ?').get(dialectId).n,
+    0,
+  );
+});
+
+test('users: updatePasswordAndWipe rolls back every write when the final delete fails', () => {
+  const email = 'awipe-rollback@example.com';
+  const u = Users.create({ email, password_hash: 'old-hash' });
+  const cryptoState = {
+    kdf_salt: 'rollback-kdf-salt',
+    dek_wrapped: 'rollback-dek-wrapped',
+    dek_iv: 'rollback-dek-iv',
+    recovery_salt: 'rollback-recovery-salt',
+    recovery_dek_wrapped: 'rollback-recovery-wrapped',
+    recovery_dek_iv: 'rollback-recovery-iv',
+  };
+  Users.setCryptoState(u.id, cryptoState);
+
+  const partner = Partners.create({ userId: u.id, name: 'Rollback Partner' });
+  Samples.create({ userId: u.id, partner_id: partner.id, title: 'Rollback Sample' });
+  AnalyzeLog.record({
+    userId: u.id,
+    payloadType: 'request',
+    version: '2.6',
+    status: 'clean',
+    format: 'banner',
+    findingCount: 0,
+    errorCount: 0,
+    warningCount: 0,
+  });
+  BehaviorCorpus.create({
+    userId: u.id,
+    label: 'fraud',
+    events: [{ kind: 'click' }],
+    notes: 'must survive rollback',
+  });
+  Sessions.create({
+    token: 'awipe-rollback-token-' + u.id,
+    userId: u.id,
+    expiresAt: Date.now() + 60000,
+    ip: '127.0.0.1',
+    ua: 'test',
+  });
+
+  const now = Date.now();
+  const dialectId = Number(
+    db
+      .prepare(
+        `INSERT INTO user_dialects(user_id, name, is_default, created_at, updated_at)
+         VALUES (?, ?, 1, ?, ?)`,
+      )
+      .run(u.id, 'Rollback dialect', now, now).lastInsertRowid,
+  );
+  db.prepare(
+    `INSERT INTO dialect_mappings
+       (dialect_id, signal_path, signal_value, semantic_label, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(dialectId, 'imp.ext.vendor', 'rollback', 'banner', now);
+
+  // user_dialects is the final table updatePasswordAndWipe deletes. Aborting
+  // there exercises rollback after every preceding password/crypto/data write.
+  const triggerName = 'test_fail_update_password_and_wipe_dialect_delete';
+  try {
+    db.exec(`
+      CREATE TRIGGER ${triggerName}
+      BEFORE DELETE ON user_dialects
+      WHEN OLD.user_id = ${Number(u.id)}
+      BEGIN
+        SELECT RAISE(ABORT, 'forced atomic wipe failure');
+      END;
+    `);
+    assert.throws(
+      () => Users.updatePasswordAndWipe(u.id, 'new-hash'),
+      /forced atomic wipe failure/,
+    );
+  } finally {
+    db.exec(`DROP TRIGGER IF EXISTS ${triggerName}`);
+  }
+
+  assert.equal(Users.getByEmail(email).password_hash, 'old-hash');
+  assert.deepEqual(Users.getCryptoState(u.id), cryptoState);
+
+  for (const table of [
+    'partners',
+    'samples',
+    'analyze_log',
+    'behavior_corpus',
+    'sessions',
+    'user_dialects',
+  ]) {
+    const count = db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE user_id = ?`).get(u.id).n;
+    assert.equal(count, 1, `${table} row must survive rollback`);
+  }
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS n FROM dialect_mappings WHERE dialect_id = ?').get(dialectId).n,
+    1,
+    'dialect_mappings row must survive rollback',
+  );
 });
 
 test('users: wipeUserData sweeps all per-user tables but keeps the user row', () => {
@@ -412,6 +530,31 @@ test('users: wipeUserData sweeps all per-user tables but keeps the user row', ()
     ip: '127.0.0.1',
     ua: 'test',
   });
+  const now = Date.now();
+  const dialectId = Number(
+    db
+      .prepare(
+        `INSERT INTO user_dialects(user_id, name, is_default, created_at, updated_at)
+         VALUES (?, ?, 1, ?, ?)`,
+      )
+      .run(u.id, 'Wipe dialect', now, now).lastInsertRowid,
+  );
+  const keepDialectId = Number(
+    db
+      .prepare(
+        `INSERT INTO user_dialects(user_id, name, is_default, created_at, updated_at)
+         VALUES (?, ?, 1, ?, ?)`,
+      )
+      .run(userB.id, 'Keep dialect', now, now).lastInsertRowid,
+  );
+  const insertMapping = db.prepare(
+    `INSERT INTO dialect_mappings
+       (dialect_id, signal_path, signal_value, semantic_label, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  );
+  insertMapping.run(dialectId, 'imp.ext.vendor', 'wipe', 'banner', now);
+  insertMapping.run(dialectId, 'imp.ext.vendor', 'wipe-too', 'video', now);
+  insertMapping.run(keepDialectId, 'imp.ext.vendor', 'keep', 'native', now);
 
   const result = Users.wipeUserData(u.id);
   assert.equal(result.samplesDeleted, 2);
@@ -419,6 +562,8 @@ test('users: wipeUserData sweeps all per-user tables but keeps the user row', ()
   assert.equal(result.analyzeLogDeleted, 1);
   assert.equal(result.behaviorCorpusDeleted, 1);
   assert.equal(result.sessionsDeleted, 1);
+  assert.equal(result.dialectMappingsDeleted, 2);
+  assert.equal(result.userDialectsDeleted, 1);
 
   // User row still exists
   assert.ok(Users.get(u.id), 'user must survive');
@@ -429,6 +574,27 @@ test('users: wipeUserData sweeps all per-user tables but keeps the user row', ()
   // Activity + corpus + sessions also gone
   assert.equal(BehaviorCorpus.listForUser(u.id).length, 0, 'behavior_corpus wiped');
   assert.equal(Sessions.loadActive(Date.now()).filter((s) => s.userId === u.id).length, 0);
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS n FROM user_dialects WHERE user_id = ?').get(u.id).n,
+    0,
+    'user dialects wiped',
+  );
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS n FROM dialect_mappings WHERE dialect_id = ?').get(dialectId).n,
+    0,
+    'dialect mappings wiped',
+  );
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS n FROM user_dialects WHERE user_id = ?').get(userB.id).n,
+    1,
+    'other user dialect preserved',
+  );
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS n FROM dialect_mappings WHERE dialect_id = ?').get(keepDialectId)
+      .n,
+    1,
+    'other user mapping preserved',
+  );
 });
 
 // ── BehaviorCorpus ────────────────────────────────────────────────────────

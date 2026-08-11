@@ -1,9 +1,12 @@
 # simulate — bid simulator (3 DSP strategies)
 
-POSTs the parsed BidRequest to `/api/intel/simulate-bids` and renders
+POSTs the raw BidRequest to `/api/intel/simulate-bids` and renders
 three DSP strategies (aggressive / conservative / quality)
 side-by-side. Each strategy gets bid yes/no, price, and a one-sentence
-rationale. Best run with a non-trivial request loaded in `#bidReq`.
+rationale from deterministic server-side rules. The server parses and
+processes the BidRequest transiently; this endpoint does not persist the
+raw body, and no external model receives it. Best run with a non-trivial
+request loaded in `#bidReq`.
 
 ## Loading
 
@@ -40,11 +43,17 @@ and writes its modal into `#modalRoot`.
 
 ## Backend
 
-Talks to `POST /api/intel/simulate-bids` (handler delegates to local
-qwen2.5:3b via Ollama; see `packages/intel/intel-llm.js`). When the
-backend returns `{ success: false, code: 'ollama_unavailable' }` the
-modal renders a translated friendly error
-(`modal.simbids.ollama_down`) instead of the raw error string.
+Talks to `POST /api/intel/simulate-bids`. The handler parses the
+BidRequest transiently and delegates to the deterministic formulas in
+`lib/intel-rules.js`: format-aware reference CPM, metadata-completeness
+quality score, and explicit per-strategy floor multipliers and limits.
+The same input produces the same output, with `engine: "rules"`
+provenance. It makes no Ollama, cloud AI, or other model call and does
+not persist the raw BidRequest.
+
+The client retains the legacy `modal.simbids.ollama_down` translation
+key for compatibility; the current deterministic handler does not emit
+`ollama_unavailable`.
 
 ## Dispatcher cases
 

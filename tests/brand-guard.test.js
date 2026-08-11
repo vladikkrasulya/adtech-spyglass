@@ -31,6 +31,10 @@ const FILE_ALLOWLIST = new Set([
 ]);
 
 const SUBSTRING_ALLOWLIST = [
+  // The public GitHub repository has not been renamed yet. Active links must
+  // use its reachable slug until that external migration is completed; the
+  // docs-truth guard pins the same temporary canonical identity.
+  'vladikkrasulya/adtech-spyglass',
   // Obsidian-vault note names — external paper trail, renaming the strings
   // would break the pointers without renaming the vault files.
   'spyglass_crypto_architecture',

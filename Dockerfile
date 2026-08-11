@@ -31,7 +31,7 @@ ENV BUILD_SHA=${BUILD_SHA}
 LABEL org.opencontainers.image.title="ortbtools" \
       org.opencontainers.image.version="${APP_VERSION}" \
       org.opencontainers.image.revision="${GIT_SHA}" \
-      org.opencontainers.image.source="https://github.com/vladikkrasulya/ortbtools"
+      org.opencontainers.image.source="https://github.com/vladikkrasulya/adtech-spyglass"
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
 USER node

@@ -9,9 +9,13 @@ Three-screen state machine for credential recovery:
 3. **Submit** — for rotate/recover, the module unwraps the existing DEK
    _locally_ (KEK from old password OR recovery key), re-wraps it under a
    freshly-derived KEK, ships the new wrap-state to the server, and
-   installs the live DEK so the user is unlocked immediately. For wipe
-   mode, the server drops the user's encrypted blobs and the module
-   nukes its local DEK.
+   installs the live DEK so the user is unlocked immediately. Wipe mode
+   atomically clears crypto state and deletes samples, partners, custom
+   dialects/mappings, activity history, saved Behavior Corpus rows, and
+   existing sessions from the active account; the reset browser then receives
+   a fresh session and the module clears its local DEK. Browser History in
+   `localStorage` is not cleared; operational telemetry and retained backups are
+   outside this account-row wipe and follow their own retention periods.
 
 ## Loading
 

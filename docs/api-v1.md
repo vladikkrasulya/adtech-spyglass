@@ -1,13 +1,17 @@
 # Public API contract — v1
 
-The validation engine behind [ortbtools.com](https://ortbtools.com) is reachable
-three ways; all three run the exact same `@ortbtools/core` pipeline:
+The validation engine behind [ortbtools.com](https://ortbtools.com) has three
+surfaces. The hosted inspector and HTTP API run `@ortbtools/core` server-side;
+the CLI workspace runs the same engine locally without network calls:
 
-| Surface                      | Best for                           |
-| ---------------------------- | ---------------------------------- |
-| Web inspector (`/inspector`) | Humans: paste, read, share         |
-| `@ortbtools/cli`             | Scripts, CI pipelines, log triage  |
-| `POST /api/analyze`          | Programmatic integration over HTTP |
+| Surface                                       | Best for                           |
+| --------------------------------------------- | ---------------------------------- |
+| Web inspector (`/inspector`)                  | Humans: paste, read, share         |
+| `@ortbtools/cli` (local repository workspace) | Scripts, CI pipelines, log triage  |
+| `POST /api/analyze`                           | Programmatic integration over HTTP |
+
+`@ortbtools/cli` is not currently published to npm. References to it in this
+document describe the workspace in this repository, not a registry install.
 
 This document pins the HTTP contract. **Stability promise:** fields documented
 here are additive-only within the same major version — new response fields may
@@ -22,8 +26,11 @@ Validate an OpenRTB BidRequest and/or BidResponse, with semantic crosscheck
 when both sides are present.
 
 **Rate limit:** 60 calls/min/IP → `429` with `code: "rate_limited"`.
-**Privacy:** payload bodies are never persisted. Authenticated calls record
-metadata only (counts/version/format) for the personal cabinet's Insights.
+**Privacy:** payload bodies are processed transiently and are not persisted.
+Derived validation metrics may be recorded; authenticated calls also record
+counts/version/format for Insights, and sampled operational request metadata
+includes the client IP. See [`PRIVACY.md`](./PRIVACY.md) for the complete
+retention boundary.
 
 ### Query parameters
 
@@ -64,14 +71,14 @@ metadata only (counts/version/format) for the personal cabinet's Insights.
       "confidence": 0.3, // 0..1
       "signals": [], // field-level evidence for the detection
     },
-    "status": "errors", // "errors" | "warnings" | "clean"
+    "status": "errors", // "invalid" | "errors" | "warnings" | "clean"
     "findings": [
       {
         "id": "request.device_required", // stable rule id
         "level": "error", // "error" | "warning" | "info" | "question"
         "path": "device", // JSON path into the payload ('' = root)
         "params": {}, // values interpolated into msg
-        "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3218-object-device",
+        "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3218-object-device", // URL or null
         "msg": "No device block. …", // localized human message
       },
     ],
@@ -97,8 +104,8 @@ metadata only (counts/version/format) for the personal cabinet's Insights.
       "formats": ["banner"], // banner/video/audio/native/push/…
       "contexts": [], // web/inapp/ctv/dooh
       "protocols": [], // vast-N/daast
-      "tags": [],
-      "confidence": 0.6,
+      "tags": ["banner"], // union of formats + contexts + protocols
+      "confidence": 1, // 1 when any tag was detected, otherwise 0
     },
   },
 }
@@ -110,8 +117,9 @@ Notes:
   findings get a `[response] ` message prefix. `validation.status` rolls up
   across the union.
 - **Response-only** → same shape, all findings carry the `[response] ` prefix.
-- **String `bidReq`** (URL-style GET) → validated through the URL-request
-  decoders; crosscheck/categories/format are skipped for that side.
+- **String `bidReq`** (recognized URL-style GET) → validated through the
+  URL-request decoders. Crosscheck and category extraction are skipped for that
+  side; format detection uses the decoded canonical request.
 
 ### Errors
 
@@ -121,12 +129,13 @@ All errors share one envelope (HTTP status carries the class):
 { "success": false, "error": "human-readable message", "code": "machine_code" }
 ```
 
-| Status | `code`          | When                                   |
-| ------ | --------------- | -------------------------------------- |
-| 400    | `empty_payload` | Neither `bidReq` nor `bidRes` provided |
-| 400    | `bad_request`   | Body is not valid JSON / malformed     |
-| 404    | `not_found`     | Unknown `/api/*` path                  |
-| 429    | `rate_limited`  | Per-IP limiter tripped                 |
+| Status | `code`              | When                                        |
+| ------ | ------------------- | ------------------------------------------- |
+| 400    | `empty_payload`     | Neither `bidReq` nor `bidRes` provided      |
+| 400    | `invalid_json`      | Body is not valid JSON                      |
+| 400    | `payload_too_large` | Request body exceeds the 2 MiB parser limit |
+| 404    | `not_found`         | Unknown `/api/*` path                       |
+| 429    | `rate_limited`      | Per-IP limiter tripped                      |
 
 ---
 
@@ -164,8 +173,8 @@ Run the behavior/anti-fraud engine over probe events captured by the in-iframe
 
 ## Versioning
 
-- The engine is `@ortbtools/core` (SemVer). The site footer and
-  `ortbtools version` (CLI) report the running versions.
+- The engine is `@ortbtools/core` (SemVer). The site footer and local CLI
+  `version` command report the running versions.
 - Rule ids are stable identifiers: renames/removals are MAJOR-version events
   in core; additions are MINOR.
 - This document: `docs/api-v1.md` — contract revisions are listed in
