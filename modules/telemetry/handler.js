@@ -48,6 +48,7 @@ const {
   RETENTION_DAYS,
 } = require('../../lib/product-telemetry');
 const { chQuery } = require('../../lib/clickhouse');
+const { resolveClientIp } = require('../../lib/client-ip');
 
 /** Enough for the fixed-shape beacon record with generous headroom. */
 const BEACON_MAX_BYTES = 2048;
@@ -93,9 +94,14 @@ function createTelemetryModule(deps) {
       }
     };
 
+    // NOT auth.clientIp(): behind Docker's published-port proxy the peer is the
+    // bridge gateway, never loopback, so that helper discards the forwarded
+    // header and every real visitor would resolve to a private address (and
+    // classify as `internal`). lib/client-ip.js trusts the configured proxy
+    // instead — see its header comment for the measurement behind this.
     let ip = '';
     try {
-      ip = auth.clientIp(req);
+      ip = resolveClientIp(req);
     } catch (_e) {
       ip = '';
     }

@@ -175,7 +175,9 @@ this list cannot be written even if a caller supplies it:
 `BidResponse` content, and none that accepts free-form text. Your IP address and
 User-Agent string are read in memory to compute `traffic_class` / `ua_class` and are
 then discarded — unlike the operational `event_log` described below, this table
-stores neither. No URL path or query string is recorded: an inbound referrer
+stores neither. (Your address is recovered from the reverse proxy's
+`CF-Connecting-IP` / `X-Forwarded-For` header for exactly that in-memory
+classification step — see `lib/client-ip.js`; it is still never written down here.) No URL path or query string is recorded: an inbound referrer
 contributes its host only, and from the current page only the three `utm_*` values.
 
 **How the identifier works.** `visitor_id` is not a cookie. It is generated in your

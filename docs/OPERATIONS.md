@@ -351,6 +351,42 @@ Notes on the shape, since it deviates from `ortbtools_events` in two places:
 in range 30 days after the fact, with room to plot a trend. It matches
 `RETENTION_DAYS` in `lib/product-telemetry.js`.
 
+**Trusted proxy — required, or every visitor counts as internal.** The published
+port (`127.0.0.1:8090 -> 3000`) makes Docker's userland proxy re-originate every
+connection, so the container's TCP peer is the bridge **gateway**, never loopback:
+
+```
+Cloudflare edge → cloudflared (host) → 127.0.0.1:8090 → docker-proxy → container
+                                                          peer = 172.24.0.1
+```
+
+`lib/client-ip.js` therefore believes `CF-Connecting-IP` / `X-Forwarded-For` only
+from a peer listed in `ORTBTOOLS_TRUSTED_PROXIES`. Leave it empty and the forwarded
+header is discarded, every real visitor resolves to a private address, and
+`is_external` is 0 forever.
+
+Find the peer the app actually sees, then set it:
+
+```bash
+# Which addresses does the app currently record as the client?
+docker exec clickhouse clickhouse-client -q \
+  "SELECT ip, count() FROM analytics.ortbtools_events \
+   WHERE ts >= now() - INTERVAL 1 DAY AND component='http' GROUP BY ip ORDER BY 2 DESC"
+# All-private output means the forwarded header is being dropped.
+
+. scripts/deploy-lib.sh && set_env ORTBTOOLS_TRUSTED_PROXIES "172.24.0.1" .env
+ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+```
+
+Keep the list as narrow as the real hop. Anything able to connect from a trusted
+address can claim any client IP; here that is the Docker gateway, reachable only by
+host processes through the published port. It affects counter attribution only — no
+authorization decision reads this value.
+
+Note `auth.clientIp()` is deliberately NOT changed by this: it also keys the login
+and analyze rate limiters, so widening its trust is a separate, security-sensitive
+change. As things stand those limiters bucket all proxied visitors together.
+
 **Excluding your own traffic.** Set these in `.env` and recreate the container. All
 three are optional and additive; without them, your own browsing counts as a user.
 
