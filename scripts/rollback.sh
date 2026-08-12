@@ -6,7 +6,9 @@
 # deploy). The expected BUILD_SHA is read FROM THE SELECTED IMAGE (never a stale
 # PREV from a different image). The `docker compose up` is guarded so a non-zero
 # exit yields a controlled CRITICAL + state update rather than a silent `set -e`
-# abort. Does NOT touch git, source mounts, /data, or persistent content.
+# abort. Does NOT touch git/source mounts, restore backups, or edit account-owned
+# SQLite/editorial content. It does pin .env, write /data deploy state, and run
+# the documented telemetry/cache-warming smoke.
 #
 # Run on the host: ./scripts/rollback.sh [image_tag]
 #
@@ -61,7 +63,8 @@ EOF
 # `.env` and restart:always are committed ONLY after wait_ready + smoke both
 # pass — same discipline as deploy.sh. Recovery-on-boot from a crash during THIS
 # attempt: nothing runs (the target container, if created before the crash, has
-# no restart policy armed — docker-compose.yml default is 'no'), which is
+# no restart policy armed — the deploy-transition override supplies restart policy
+# 'no', while the base steady-state Compose policy is 'always'), which is
 # correct: an unverified rollback attempt must not be silently promoted either.
 rollback_ok=0
 if ORTBTOOLS_TAG="$TAG" docker compose $COMPOSE_TRANSITION_FILES up -d --no-build --remove-orphans; then

@@ -72,11 +72,17 @@ The canonical deployment script fails before changing the running service unless
 1. repository `HEAD`, local `main`, and `origin/main` are identical;
 2. the working tree is clean;
 3. no prior candidate/rollback transition remains in an in-flight state;
-4. environment, state, data-directory, database, and backup permissions meet the declared contract;
+4. environment, state, data-directory, and live-database permissions meet the declared contract;
 5. the read-only database group and directory mode are correctly provisioned;
 6. persistent EN/UK/RU content can be seeded without overwriting existing content;
 7. an existing service has a verifiable rollback image identity; and
 8. both candidate and rollback target satisfy the immutable privacy-floor ancestry check.
+
+Backup readiness is a separate operator gate and is not created or validated by `deploy.sh`. Before
+an authorized production deployment, the operator runs the WAL-aware backup script and verifies the
+fresh SQLite and persistent-content archives. `backup-db.sh` owns the backup directory/archive
+permission contract (`0700`/`0600`); the exact command and verification procedure live in the
+operations runbook.
 
 The deployment script fetches remote Git state, builds the image, writes operator-owned state, and
 controls Docker. Running it is therefore an explicitly authorized production operation, never an
@@ -101,8 +107,9 @@ unrecoverable transition
 ```
 
 Before starting the candidate, deployment records the attempt and rollback identity outside the Git
-worktree. It starts the candidate with the transition Compose override and does not update the
-persistent image tag or arm automatic restart.
+worktree. It seeds only missing EN/UK/RU editorial files without overwriting existing posts, writes
+the transition state under `/data`, starts the candidate with the transition Compose override, and
+does not update the persistent image tag or arm automatic restart.
 
 A candidate is committed to `ACTIVE` only after:
 
@@ -151,8 +158,10 @@ Automatic and manual rollback both:
 - pin the tag and arm restart only after verification.
 
 If candidate and rollback both fail, state becomes `CRITICAL`; the scripts do not claim an active
-image. Rollback does not alter Git or `/data` and does not restore database backups. Data restore is a
-separate operator procedure.
+image. Rollback does not alter Git, restore database backups, or edit account-owned SQLite rows or
+editorial posts. It does pin the verified image tag in `.env`, write transition state under `/data`,
+and run the shared smoke, which can emit derived telemetry and warm the synthetic specimen cache.
+Data restore is a separate operator procedure.
 
 ## Backups and Recovery
 

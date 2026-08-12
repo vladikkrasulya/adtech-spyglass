@@ -185,6 +185,50 @@ test('content and security contracts own the closed Blog-body fragment boundary'
   assert.doesNotMatch(contract, /runtime hardening requires a separate assessed feature/i);
 });
 
+test('deployment truth separates the operator backup gate and records the live v1.6.1 release', () => {
+  const release = read('specs/000-platform-baseline/contracts/release-deploy.md');
+  const operations = read('docs/OPERATIONS.md');
+  const roadmap = read('specs/ROADMAP.md');
+  const deploy = read('scripts/deploy.sh');
+  const rollback = read('scripts/rollback.sh');
+
+  assert.match(
+    release,
+    /Backup readiness is a separate operator gate and is not created or validated by `deploy\.sh`/i,
+    'release contract must not claim that deploy.sh creates or validates the backup gate',
+  );
+  assert.match(
+    operations,
+    /sudo -n \/srv\/DATA\/Stacks\/ortbtools\/scripts\/backup-db\.sh/,
+    'root-owned backup archives require the documented sudo-capable command',
+  );
+  assert.match(
+    operations,
+    /`deploy\.sh`[^.]{0,180}(?:does not|doesn't)[^.]{0,100}(?:create|validate|verify)[^.]{0,80}backup/i,
+    'operations must state that the deploy script does not enforce the backup gate',
+  );
+
+  assert.doesNotMatch(deploy, /records intent \(STATUS=DEPLOYING\)/);
+  assert.match(deploy, /records intent \(STATUS=CANDIDATE_STARTING\)/);
+  assert.doesNotMatch(deploy, /Never touches \/data SQLite or\s*# persistent content/);
+  assert.match(deploy, /seeds only missing persistent content/i);
+  assert.doesNotMatch(deploy, /docker-compose\.yml `restart: 'no'`/);
+  assert.match(deploy, /deploy-transition override[\s\S]{0,100}`restart: 'no'`/i);
+  assert.doesNotMatch(rollback, /docker-compose\.yml default is 'no'/);
+  assert.match(rollback, /deploy-transition override[\s\S]{0,100}restart policy[\s\S]{0,100}'no'/i);
+  assert.doesNotMatch(release, /Rollback does not alter Git or `\/data`/);
+  assert.match(release, /write transition state under `\/data`/i);
+  assert.match(operations, /write `deploy-state\.env` under `\/data`/i);
+
+  assert.match(roadmap, /`v1\.6\.1`/);
+  assert.match(roadmap, /`d6c873d`/);
+  assert.match(roadmap, /PR #59/);
+  assert.doesNotMatch(
+    roadmap,
+    /Harden the browser Markdown trust boundary[^\n]+not committed or deployed/i,
+  );
+});
+
 const CANONICAL_REPOSITORY = 'https://github.com/vladikkrasulya/adtech-spyglass';
 const RETIRED_REPOSITORY_RE = /github\.com\/vladikkrasulya\/ortbtools\b/i;
 const IDENTITY_FILES = [
