@@ -27,7 +27,7 @@
   <div class="app-header-actions">
     <div
       class="sim-price-wrap"
-      title="Цена, по которой аукцион отдаётся победителю — подставляется в макрос ${AUCTION_PRICE} в preview креатива. Авто-выводится из seatbid.bid.price или imp.bidfloor при analyze; можно перебить вручную для проверки других цен."
+      title="Симулируемая клиринговая цена для ${AUCTION_PRICE}. Введите её вручную: bid.price и bidfloor не считаются клиринговой ценой. Если поле пустое, макрос остаётся неразрешённым."
     >
       <label for="simPrice">цена аукциона</label>
       <input id="simPrice" type="text" placeholder="0.00" />
@@ -505,6 +505,14 @@
       >
         поведение <span class="tab-badge" id="behaviorBadge" hidden></span>
       </button>
+      <button
+        class="tab-btn"
+        data-action="switch-tab"
+        data-target="tMacros"
+        title="OpenRTB 2.x §4.4 макросы подстановки и трекинг-URL, извлеченные из ответа"
+      >
+        макросы <span class="tab-badge" id="macrosBadge" hidden></span>
+      </button>
       <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
         vendor ref
       </button>
@@ -544,6 +552,13 @@
         Отрендерь креатив справа — здесь появятся попытки click-skim и авто-навигации.
       </div>
     </div>
+    <div class="tab-content" id="tMacros">
+      <div id="macroEvaluatorContainer">
+        <div class="empty-hint">
+          Макросы и трекинг-URL из BidResponse появятся здесь после анализа.
+        </div>
+      </div>
+    </div>
     <div class="tab-content" id="tRef">
       <!-- Filled at load time by renderReference() -->
     </div>
@@ -551,7 +566,14 @@
 
   <!-- Right sidebar -->
   <aside class="sidebar-right">
-    <div class="section-title">превью рекламы</div>
+    <div class="section-title">предпросмотр</div>
+    <div class="preview-csp-notice">
+      <span class="preview-csp-icon">🔒</span>
+      <span
+        >Внешние ресурсы заблокированы. Визуальный предпросмотр и результаты Behavior могут быть
+        неполными.</span
+      >
+    </div>
     <div class="preview-safe" id="creativePreviewSafe">
       <div class="preview-container" id="creativePreview">
         <div class="preview-placeholder">ожидается adm — вставь BidResponse</div>

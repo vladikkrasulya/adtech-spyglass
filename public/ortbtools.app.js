@@ -92,6 +92,18 @@ export async function mountInspector(root, ctx) {
   });
   ctx.addCleanup(() => session.unregisterAdapter(_adapterToken));
 
+  // ── Macro Evaluator: mount-scoped state reset ───────────────────
+  // Overrides entered during a previous Inspector mount must not leak
+  // into a new mount (e.g. Inspector → Live → Inspector).
+  if (window.OrtbtoolsMacros && typeof window.OrtbtoolsMacros.resetState === 'function') {
+    window.OrtbtoolsMacros.resetState();
+  }
+  ctx.addCleanup(() => {
+    if (window.OrtbtoolsMacros && typeof window.OrtbtoolsMacros.resetState === 'function') {
+      window.OrtbtoolsMacros.resetState();
+    }
+  });
+
   // ── Global error boundary ──────────────────────────────────────
   // One bug in a handler shouldn't kill the page. Catch synchronous errors
   // and unhandled promise rejections, log them, and surface a toast so the
@@ -209,6 +221,7 @@ export async function mountInspector(root, ctx) {
     _currentSampleId = null;
     _currentSampleMeta = null;
     _isDirty = false;
+    clearMacros();
     flashButtonStatus(btn, 'button.status.cleared');
   };
 
@@ -498,23 +511,25 @@ export async function mountInspector(root, ctx) {
         //    with the freshly-loaded pane: same count, same tagName/className
         //    per index. If analysed content is present (different shape),
         //    leave alone — runAnalysis below will repaint in the new locale.
-        ['tInspector', 'tValidation', 'tCross', 'tCategories', 'tBehavior'].forEach(function (id) {
-          const cur = document.getElementById(id);
-          const fresh = doc.getElementById(id);
-          if (!cur || !fresh) return;
-          if (cur.children.length !== fresh.children.length) return;
-          let untouched = true;
-          for (let i = 0; i < cur.children.length; i++) {
-            if (
-              cur.children[i].tagName !== fresh.children[i].tagName ||
-              cur.children[i].className !== fresh.children[i].className
-            ) {
-              untouched = false;
-              break;
+        ['tInspector', 'tValidation', 'tCross', 'tCategories', 'tBehavior', 'tMacros'].forEach(
+          function (id) {
+            const cur = document.getElementById(id);
+            const fresh = doc.getElementById(id);
+            if (!cur || !fresh) return;
+            if (cur.children.length !== fresh.children.length) return;
+            let untouched = true;
+            for (let i = 0; i < cur.children.length; i++) {
+              if (
+                cur.children[i].tagName !== fresh.children[i].tagName ||
+                cur.children[i].className !== fresh.children[i].className
+              ) {
+                untouched = false;
+                break;
+              }
             }
-          }
-          if (untouched) cur.innerHTML = fresh.innerHTML;
-        });
+            if (untouched) cur.innerHTML = fresh.innerHTML;
+          },
+        );
       }
 
       // 3) Re-render the dynamic chrome that holds translated strings. Toasts
@@ -591,6 +606,53 @@ export async function mountInspector(root, ctx) {
         );
       })
       .join('');
+  }
+
+  let _lastExtractedMacros = [];
+  let _currentPreviewAdm = null;
+  let _currentPreviewBaseContext = null;
+  let _currentPreviewDims = null;
+
+  function reRenderPreview() {
+    if (!_currentPreviewBaseContext) return;
+    const macros = window.OrtbtoolsMacros;
+    const overrides =
+      macros && typeof macros.getOverrides === 'function' ? macros.getOverrides() : {};
+    const context =
+      macros && typeof macros.mergeMacroContext === 'function'
+        ? macros.mergeMacroContext(_currentPreviewBaseContext, overrides)
+        : { ..._currentPreviewBaseContext, price: overrides.price || '' };
+    setAdPreview(_currentPreviewAdm, context, _currentPreviewDims);
+  }
+
+  function renderMacros(res, req) {
+    const el = $('macroEvaluatorContainer');
+    if (!el) return;
+    if (window.OrtbtoolsMacros && typeof window.OrtbtoolsMacros.extractBidTrackers === 'function') {
+      _lastExtractedMacros = window.OrtbtoolsMacros.extractBidTrackers(res, req);
+      const count = _lastExtractedMacros.length;
+      setTabBadge('macrosBadge', { text: count ? String(count) : '' });
+      const simP = ($('simPrice') || {}).value || '';
+      window.OrtbtoolsMacros.renderMacroTable(
+        el,
+        _lastExtractedMacros,
+        { price: simP },
+        reRenderPreview,
+      );
+    }
+  }
+
+  function clearMacros() {
+    _lastExtractedMacros = [];
+    setTabBadge('macrosBadge', { text: '' });
+    const el = $('macroEvaluatorContainer');
+    if (
+      el &&
+      window.OrtbtoolsMacros &&
+      typeof window.OrtbtoolsMacros.renderMacroTable === 'function'
+    ) {
+      window.OrtbtoolsMacros.renderMacroTable(el, []);
+    }
   }
 
   // Format pill — surfaces detected payload type, status, version, dialect
@@ -879,10 +941,14 @@ export async function mountInspector(root, ctx) {
   }
 
   function buildProbedSrcdoc(creativeHtml) {
-    if (!_probeSource) return creativeHtml; // graceful: probe not loaded yet
+    // Inject a restrictive Content-Security-Policy meta tag into the creative iframe
+    // so no external images, scripts, fonts, or network beacons can load over HTTPS during preview.
+    const cspMeta =
+      "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src 'none'; media-src 'none'; frame-src 'none';\">";
+    if (!_probeSource) return cspMeta + creativeHtml;
     // Wrap in a <script> at the very top so listeners are hooked before
     // creative HTML parses any inline handlers.
-    return '<script>' + _probeSource + '</' + 'script>' + creativeHtml;
+    return '<script>' + _probeSource + '</' + 'script>' + cspMeta + creativeHtml;
   }
 
   function resetBehavior() {
@@ -936,7 +1002,7 @@ export async function mountInspector(root, ctx) {
   // OrtbtoolsSourceNav (explicit side, RFC 6901 pointer, source-map resolved).
   // See the `goto-path` action handler.
 
-  function setAdPreview(adm, simPrice, dims) {
+  function setAdPreview(adm, macroContext, dims) {
     const el = $('creativePreview');
     el.innerHTML = '';
     // Phase 8: re-apply safe-demo blur on every new creative. The user
@@ -994,11 +1060,17 @@ export async function mountInspector(root, ctx) {
     } catch (_e) {
       /* defensive — shouldn't fail, but the rest of preview must run */
     }
-    // Resolve known macros so the preview reflects an actual rendered impression.
-    const resolved = String(adm)
-      .replace(/\$\{AUCTION_PRICE\}/g, simPrice)
-      .replace(/\$\{AUCTION_CURRENCY\}/g, 'USD')
-      .replace(/\$\{AUCTION_LOSS\}/g, '0');
+    // Resolve known macros via the shared evaluator.
+    // macroContext carries the same overrides as the Macro table:
+    // - AUCTION_PRICE: only from explicit user simulation input (empty = literal)
+    // - AUCTION_CURRENCY: BidResponse.cur or USD
+    // - AUCTION_ID: BidRequest.id only
+    // Unresolved macros stay literal in the creative, which is correct
+    // for an inert preview where no real auction has occurred.
+    const resolved =
+      window.OrtbtoolsMacros && typeof window.OrtbtoolsMacros.resolveAdmMacros === 'function'
+        ? window.OrtbtoolsMacros.resolveAdmMacros(String(adm), macroContext || {})
+        : String(adm);
     const trimmed = resolved.trim();
 
     // 1) VAST XML → show as expandable XML preview. We can't actually play
@@ -2016,6 +2088,7 @@ export async function mountInspector(root, ctx) {
 
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
+    clearMacros();
     // Stage-1: drop any prior finding→source jump at the START of every analyze.
     // A failed/aborted analyze must not leave a stale highlight pointing at the
     // previous payload; onAnalyzed() re-arms navigation only on success.
@@ -2078,24 +2151,11 @@ export async function mountInspector(root, ctx) {
         }
       }
       const res = resVal ? JSON.parse(resVal) : {};
-      // Auto-fill SIM PRICE from the actual auction signals so the value
-      // shown reflects the bid being analysed, not a stale placeholder.
-      // Priority: winning bid.price (the SSP would substitute this into
-      // ${AUCTION_PRICE}) → imp[0].bidfloor (lower bound for what a bid
-      // would have to clear) → 0.00 (nothing to anchor against).
-      // The user can still type over the field after analysis; the next
-      // runAnalysis call re-derives.
+      // Simulated clearing price: use ONLY the user's explicit input.
+      // Do NOT fallback to bid.price, bidfloor, or 0.00 — an empty field
+      // means "clearing price unknown" and macros stay literal.
       const simPriceEl = $('simPrice');
-      const seatbidAuto = res.seatbid && res.seatbid[0];
-      const bidAuto = seatbidAuto && seatbidAuto.bid && seatbidAuto.bid[0];
-      let autoPrice = null;
-      if (bidAuto && typeof bidAuto.price === 'number') {
-        autoPrice = bidAuto.price;
-      } else if (req.imp && req.imp[0] && typeof req.imp[0].bidfloor === 'number') {
-        autoPrice = req.imp[0].bidfloor;
-      }
-      simPriceEl.value = autoPrice != null ? formatPrice(autoPrice) : '0.00';
-      const simP = simPriceEl.value || '0.00';
+      const simP = simPriceEl.value || '';
 
       if (!fromHist) {
         // Skip pretty-print for string bidReq (URL-style requests). Running
@@ -2155,7 +2215,39 @@ export async function mountInspector(root, ctx) {
           previewDims = { w: Number(b.format[0].w), h: Number(b.format[0].h) };
         }
       }
-      setAdPreview(adm, simP, previewDims);
+      // Build a shared macro context for the preview — same sources as
+      // extractBidTrackers uses. The preview resolves adm through the
+      // same evaluator as the Macro tab so results are always in sync.
+      const previewCurrency =
+        res && typeof res.cur === 'string' && res.cur.trim() ? res.cur.trim() : 'USD';
+      const previewMacroContext = {
+        auctionId: (req && req.id) || '',
+        responseBidId: (res && res.bidid) || '',
+        bidId: bid.id || '',
+        impid: bid.impid || '',
+        seat: seatbid ? seatbid.seat || '' : '',
+        adid: bid.adid || '',
+        currency: previewCurrency,
+        bidPrice: typeof bid.price === 'number' ? String(bid.price) : bid.price || '',
+        price: '', // Only an explicit simulation override may replace this value
+        lossCode: '',
+        mbr: '',
+        minToWin: '',
+        multiplier: '',
+        impTs: '',
+        discountPct: '',
+        discountCpm: '',
+      };
+
+      // Keep preview data local to this Inspector mount. The shared overrides
+      // are merged through the Macro Evaluator before every render.
+      if (window.OrtbtoolsMacros && typeof window.OrtbtoolsMacros.syncPriceInputs === 'function') {
+        window.OrtbtoolsMacros.syncPriceInputs(simP);
+      }
+      _currentPreviewAdm = adm;
+      _currentPreviewBaseContext = previewMacroContext;
+      _currentPreviewDims = previewDims;
+      reRenderPreview();
 
       // Phase 8: paint summary-bar IDs so the collapsed-card state shows
       // identity. req.id / res.id are the canonical oRTB BidRequest /
@@ -2376,6 +2468,7 @@ export async function mountInspector(root, ctx) {
           // tab regardless of validation status. Empty object means no
           // category fields present in the payload.
           renderCategories((j.meta && j.meta.categories) || {});
+          renderMacros(res, req);
           // Phase 10b — third detection axis. Server returns
           // meta.format = { formats, contexts, protocols, tags, confidence }.
           // Painted into the left-sidebar "Підсумок" panel as colour-coded
@@ -4046,8 +4139,36 @@ export async function mountInspector(root, ctx) {
       if (el)
         el.addEventListener('input', () => {
           _isDirty = true;
+          clearMacros();
         });
     });
+
+    const spEl = $('simPrice');
+    if (spEl) {
+      spEl.addEventListener('input', () => {
+        const simP = spEl.value || '';
+        if (
+          window.OrtbtoolsMacros &&
+          typeof window.OrtbtoolsMacros.syncPriceInputs === 'function'
+        ) {
+          window.OrtbtoolsMacros.syncPriceInputs(simP);
+        }
+        const el = $('macroEvaluatorContainer');
+        if (
+          el &&
+          window.OrtbtoolsMacros &&
+          typeof window.OrtbtoolsMacros.renderMacroTable === 'function'
+        ) {
+          window.OrtbtoolsMacros.renderMacroTable(
+            el,
+            _lastExtractedMacros,
+            { price: simP },
+            reRenderPreview,
+          );
+          reRenderPreview();
+        }
+      });
+    }
 
     // Partner filter dropdown — refresh sample list on change. Without
     // this listener users selected a partner and saw no UI reaction.

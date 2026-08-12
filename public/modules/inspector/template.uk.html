@@ -27,7 +27,7 @@
   <div class="app-header-actions">
     <div
       class="sim-price-wrap"
-      title="Ціна, яку аукціон віддає переможцю — підставляється в макрос ${AUCTION_PRICE} у preview креативу. Авто-виводиться з seatbid.bid.price або imp.bidfloor під час analyze; можна перебити вручну для перевірки інших цін."
+      title="Симульована клірингова ціна для ${AUCTION_PRICE}. Введіть її вручну: bid.price та bidfloor не вважаються кліринговою ціною. Якщо поле порожнє, макрос лишається невирішеним."
     >
       <label for="simPrice">ціна аукціону</label>
       <input id="simPrice" type="text" placeholder="0.00" />
@@ -505,6 +505,14 @@
       >
         поведінка <span class="tab-badge" id="behaviorBadge" hidden></span>
       </button>
+      <button
+        class="tab-btn"
+        data-action="switch-tab"
+        data-target="tMacros"
+        title="OpenRTB 2.x §4.4 макроси підстановки та трекінг-URL, витягнуті з відповіді"
+      >
+        макроси <span class="tab-badge" id="macrosBadge" hidden></span>
+      </button>
       <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
         vendor ref
       </button>
@@ -544,6 +552,13 @@
         Відрендер креатив справа — тут зʼявляться спроби click-skim та авто-навігації.
       </div>
     </div>
+    <div class="tab-content" id="tMacros">
+      <div id="macroEvaluatorContainer">
+        <div class="empty-hint">
+          Макроси та трекінг-URL з BidResponse зʼявляться тут після аналізу.
+        </div>
+      </div>
+    </div>
     <div class="tab-content" id="tRef">
       <!-- Filled at load time by renderReference() -->
     </div>
@@ -551,7 +566,14 @@
 
   <!-- Right sidebar -->
   <aside class="sidebar-right">
-    <div class="section-title">перегляд реклами</div>
+    <div class="section-title">попередній перегляд</div>
+    <div class="preview-csp-notice">
+      <span class="preview-csp-icon">🔒</span>
+      <span
+        >Зовнішні ресурси заблоковані. Візуальний попередній перегляд і знахідки Behavior можуть
+        бути неповними.</span
+      >
+    </div>
     <!-- Phase 8: safe-mode wrapper around the iframe — JS toggles
          is-revealed on the wrapper after the user clicks the overlay
          button. setAdPreview re-applies blur on every new creative. -->

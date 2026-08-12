@@ -1,0 +1,147 @@
+/* ============================================================
+   modules/macros/styles.css — Macro Evaluator scoped styles.
+   ============================================================ */
+
+.macro-evaluator-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+}
+
+.macro-sim-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.macro-sim-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.macro-sim-field label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.macro-sim-field input {
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  min-width: 110px;
+}
+
+.macro-sim-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.macro-table-container {
+  overflow-x: auto;
+}
+
+.macro-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.macro-table th {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.macro-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.macro-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.macro-badge.badge-iab {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+}
+
+.macro-badge.badge-unresolved {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--danger);
+  border: 1px dashed rgba(220, 38, 38, 0.4);
+}
+
+.preview-csp-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.preview-csp-notice .preview-csp-icon {
+  font-size: 13px;
+}
+
+.type-pill {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--bg-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.type-pill-nurl {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.type-pill-burl {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.type-pill-lurl {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.type-pill-adm {
+  border-color: var(--text-dim);
+  color: var(--text-muted);
+}
