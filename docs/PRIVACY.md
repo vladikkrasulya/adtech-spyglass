@@ -32,6 +32,13 @@ for an auditor who wants to verify the claims against the source code.
 - **The `/api/analyze` endpoint reads your payload transiently.** The validator runs
   server-side, returns findings, and drops the payload. It does not write the payload
   to the database. See "What the validator pipeline does" below.
+- **Anonymous product counters run in the browser, and you can switch them off.**
+  A small set of counter events (a page view, a session starting, "an analysis
+  completed", "the share button was used") is sent with a random 128-bit id kept in
+  `localStorage`. No payload, no IP address and no User-Agent string is stored with
+  them. Visiting `?__ot_optout=1` once stops the counters permanently and deletes the
+  id; Global Privacy Control and Do Not Track are honoured automatically. See
+  "Product telemetry" below.
 - **Self-hosters can disable ClickHouse-derived telemetry.** Leave `CLICKHOUSE_USER`
   unset, or set `ORTBTOOLS_ANALYTICS_DISABLED=1` in the container env. See
   "Self-hosting: disabling derived telemetry" below. This does not remove per-account
@@ -118,6 +125,86 @@ free-form `notes`, optional source-sample link, and timestamp in SQLite. These f
 are plaintext and readable by the server operator. They may include URL or behavior
 details from the creative probe, so save a corpus entry only when that retention is
 acceptable.
+
+### Product telemetry (anonymous counters)
+
+ortbtools keeps a small set of counters so the maintainer can tell how many real
+people use the tool, how many of them ever complete an analysis, and how many come
+back. Without them there is no way to separate genuine users from the maintainer's
+own browsing, AI coding agents, CI runs, uptime probes and crawlers.
+
+Source: `public/telemetry.js` (browser), `lib/product-telemetry.js` (the field
+contract), `lib/traffic-class.js` (traffic classification),
+`modules/telemetry/handler.js` (the endpoint). Table:
+ClickHouse `analytics.ortbtools_product_events`, retention 180 days.
+
+**The complete list of events.** Each one is a bare counter — the event name is all
+that is recorded about what happened:
+
+| Event                                    | Fires when                                    |
+| ---------------------------------------- | --------------------------------------------- |
+| `landing`                                | a page finished loading                       |
+| `session_start`                          | the first page load in a browser tab          |
+| `analyze_success`                        | an analysis completed in that tab             |
+| `macro_use`                              | the Macro Evaluator was used (once per tab)   |
+| `share_use`                              | a share permalink was produced (once per tab) |
+| `register`                               | an account was created                        |
+| `verify_email`                           | an email verification link was confirmed      |
+| `gist_create` / `gist_open` / `diff_use` | reserved; not emitted by any code today       |
+
+**The complete list of stored fields.** The row is rebuilt server-side from this
+closed contract (`buildRow()` in `lib/product-telemetry.js`); a field that is not on
+this list cannot be written even if a caller supplies it:
+
+| Column                                     | What it holds                                                             |
+| ------------------------------------------ | ------------------------------------------------------------------------- |
+| `ts`, `event`                              | timestamp and the event name above                                        |
+| `visitor_id`                               | 128 random bits from `crypto.getRandomValues`, kept in `localStorage`     |
+| `session_id`                               | 128 random bits, kept in `sessionStorage` (cleared when the tab closes)   |
+| `user_id`                                  | your account id when signed in, `0` otherwise                             |
+| `traffic_class`, `is_external`             | derived bucket: external / owner / internal / bot / monitor / ci / agent  |
+| `ua_class`                                 | derived bucket: desktop / mobile / tablet / bot / unknown                 |
+| `locale`                                   | `en`, `uk` or `ru`                                                        |
+| `surface`                                  | `web` (the enum reserves `api` / `cli`)                                   |
+| `referrer_host`                            | the host of the site you arrived from, e.g. `google.com` — never its path |
+| `utm_source`, `utm_medium`, `utm_campaign` | campaign slugs, `[a-z0-9._-]`, 48 chars max                               |
+| `dnt`                                      | 1 when your browser signalled GPC or Do Not Track                         |
+| `app_version`                              | the ortbtools version that emitted the row                                |
+
+**What is deliberately absent.** There is no column that can hold `BidRequest` or
+`BidResponse` content, and none that accepts free-form text. Your IP address and
+User-Agent string are read in memory to compute `traffic_class` / `ua_class` and are
+then discarded — unlike the operational `event_log` described below, this table
+stores neither. No URL path or query string is recorded: an inbound referrer
+contributes its host only, and from the current page only the three `utm_*` values.
+
+**How the identifier works.** `visitor_id` is not a cookie. It is generated in your
+browser, stored in same-origin `localStorage`, and travels only inside the body of an
+explicit beacon request to `/api/v1/telemetry/event` — it is not attached to page
+loads or to any other API call, and it cannot identify you on any other site. It
+exists so that "12 visits" can be distinguished from "12 different people", and so
+D1/D7/D30 retention is computable.
+
+**Three ways to switch it off:**
+
+1. **Explicit opt-out.** Visit any page with `?__ot_optout=1` once. Nothing is sent
+   from then on, and the stored `visitor_id` is deleted. Equivalent to setting
+   `localStorage['ortbtools_telemetry_optout_v1'] = '1'`. Undo with `?__ot_optout=0`.
+2. **Global Privacy Control / Do Not Track.** Detected automatically. The counter is
+   still incremented, but no persistent identifier is generated or sent and the row
+   is marked `dnt=1`, so the visit cannot be joined into a retention cohort.
+3. **Content blockers.** The beacon is an ordinary same-origin `POST`; blocking it
+   suppresses these events entirely, and nothing about the app changes.
+
+Because every one of these events travels the same single path, a blocked or
+opted-out browser is simply absent from the counters — there is no server-side
+fallback that records the visit anyway.
+
+**Operator-side exclusions.** `ORTBTOOLS_OWNER_IPS` and `ORTBTOOLS_OWNER_USER_IDS`
+mark the maintainer's own addresses and accounts, and `?__ot_internal=1` marks a
+specific browser. Traffic classification is always recomputed server-side; a client
+can mark itself as internal, but nothing a client sends can make it count as an
+external user.
 
 ---
 
@@ -281,10 +368,11 @@ Test mode runs with `LOG_LEVEL=silent` (see `package.json` `npm test` script).
 
 ortbtools writes **derived** analytics to ClickHouse when credentials are configured:
 
-| Table / module                                        | What it stores                                       | Env gate                                                 |
-| ----------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------- |
-| `analytics.validation_logs` (`lib/validation-log.js`) | Format, oRTB version, finding counts per analyze     | `CLICKHOUSE_USER` + not `ORTBTOOLS_ANALYTICS_DISABLED=1` |
-| `analytics.ortbtools_events` (`lib/event-log.js`)     | Sampled request metadata (path, status, IP, latency) | same                                                     |
+| Table / module                                                    | What it stores                                        | Env gate                                                    |
+| ----------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
+| `analytics.validation_logs` (`lib/validation-log.js`)             | Format, oRTB version, finding counts per analyze      | `CLICKHOUSE_USER` + not `ORTBTOOLS_ANALYTICS_DISABLED=1`    |
+| `analytics.ortbtools_events` (`lib/event-log.js`)                 | Sampled request metadata (path, status, IP, latency)  | same                                                        |
+| `analytics.ortbtools_product_events` (`lib/product-telemetry.js`) | Anonymous product counters (no payload, no IP, no UA) | same, **plus** not `ORTBTOOLS_PRODUCT_TELEMETRY_DISABLED=1` |
 
 **Option A — no ClickHouse (simplest):** leave `CLICKHOUSE_USER` empty in `.env`
 (default in `.env.example`). Both modules no-op; the app boots normally.
@@ -296,6 +384,13 @@ shared with other services on the same host).
 ```bash
 # In /srv/DATA/Stacks/ortbtools/.env (then recreate container):
 ORTBTOOLS_ANALYTICS_DISABLED=1
+```
+
+**Option C — product counters only:** keep the operational logs and drop just the
+product telemetry table.
+
+```bash
+ORTBTOOLS_PRODUCT_TELEMETRY_DISABLED=1
 ```
 
 ```bash

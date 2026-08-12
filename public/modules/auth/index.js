@@ -181,6 +181,12 @@ export async function doRegister() {
   errEl.textContent = '';
   try {
     const j = await session.api('POST', 'api/auth/register', { email, password });
+    // Product telemetry: a bare counter. No email, no user id — the beacon
+    // body carries neither, and the server reads the id from the session
+    // cookie it just issued.
+    if (typeof window.ortbtoolsTrack === 'function') {
+      window.ortbtoolsTrack('register');
+    }
     session.setUser(j.user);
     // Snapshot history-presence BEFORE bootstrap modal opens.
     // closeRecoveryKeyModal checks this flag and chains the

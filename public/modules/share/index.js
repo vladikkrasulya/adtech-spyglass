@@ -118,6 +118,13 @@
       return;
     }
 
+    // Product telemetry: a share link was successfully produced, once per tab
+    // session. The link encodes the payload in a fragment — neither the link
+    // nor its length is sent; only the fact that sharing was used.
+    if (typeof window.ortbtoolsTrackOnce === 'function') {
+      window.ortbtoolsTrackOnce('share_use');
+    }
+
     try {
       await navigator.clipboard.writeText(url);
       toastOk(tt('toast.share_link_copied'));

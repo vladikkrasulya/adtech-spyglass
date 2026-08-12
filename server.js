@@ -114,6 +114,12 @@ const behaviorLimiter = makeAnalyzeLimiter(BEHAVIOR_MAX_PER_WINDOW);
 const READ_MAX_PER_WINDOW = Number(process.env.READ_MAX_PER_WINDOW) || 120;
 const readLimiter = makeAnalyzeLimiter(READ_MAX_PER_WINDOW);
 
+// Product-telemetry beacon. Each document load fires at most 2 events, plus a
+// couple of feature events per session — 120/min/IP is far above any human
+// pattern while still bounding a scripted flood into ClickHouse.
+const TELEMETRY_MAX_PER_WINDOW = Number(process.env.TELEMETRY_MAX_PER_WINDOW) || 120;
+const telemetryLimiter = makeAnalyzeLimiter(TELEMETRY_MAX_PER_WINDOW);
+
 // Public intel endpoint limiter — bounds request abuse independently of analyze.
 const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
 const INTEL_WINDOW_MS = 60_000;
@@ -851,6 +857,7 @@ const blogService = require('./lib/blog-service');
 const { createProxyModule } = require('./modules/proxy/handler');
 // Stage 5 — Insights Dashboard analytics endpoint
 const { createAnalyticsModule } = require('./modules/analytics/handler');
+const { createTelemetryModule } = require('./modules/telemetry/handler');
 // Stage 5 — validation-log helper. Only the /api/analyze hot path logs to
 // analytics.validation_logs now (see modules/analyze/handler.js, which requires
 // this lazily); the synthetic stream path intentionally does not — see the
@@ -890,6 +897,7 @@ router.register(
 router.register(sampleModule);
 router.register(findingsModule);
 router.register(createAnalyticsModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));
+router.register(createTelemetryModule({ telemetryLimiter, auth }));
 router.register(
   createAnalyzeModule({
     analyzeLimiter,

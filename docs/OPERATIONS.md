@@ -297,6 +297,159 @@ that window. Cabinet `analyze_log` (signed-in users) still records metadata in S
 
 Full contract: `docs/PRIVACY.md` → "Self-hosting: disabling derived telemetry".
 
+### 4.10 Product telemetry — provisioning and analysis
+
+Anonymous product counters (`lib/product-telemetry.js`) answer "how many REAL people
+use this, and do they come back". They live in their own ClickHouse table and store
+no payload, no IP address and no User-Agent string — see `docs/PRIVACY.md` →
+"Product telemetry" for the full field contract.
+
+**One-time table creation.** The app never issues DDL; create the table once with a
+CH account that has `CREATE TABLE` on the `analytics` database.
+
+```bash
+docker exec -i clickhouse clickhouse-client --multiquery <<'SQL'
+CREATE TABLE IF NOT EXISTS analytics.ortbtools_product_events
+(
+  ts            DateTime64(3) DEFAULT now64(),
+  event         LowCardinality(String),
+  traffic_class LowCardinality(String) DEFAULT '',
+  is_external   UInt8 DEFAULT 0,
+  visitor_id    String DEFAULT '' CODEC(ZSTD(3)),
+  session_id    String DEFAULT '' CODEC(ZSTD(3)),
+  user_id       UInt32 DEFAULT 0,
+  locale        LowCardinality(String) DEFAULT '',
+  surface       LowCardinality(String) DEFAULT 'web',
+  ua_class      LowCardinality(String) DEFAULT 'unknown',
+  referrer_host String DEFAULT '' CODEC(ZSTD(3)),
+  utm_source    LowCardinality(String) DEFAULT '',
+  utm_medium    LowCardinality(String) DEFAULT '',
+  utm_campaign  LowCardinality(String) DEFAULT '',
+  dnt           UInt8 DEFAULT 0,
+  app_version   LowCardinality(String) DEFAULT ''
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(ts)
+ORDER BY (is_external, ts)
+TTL toDateTime(ts) + toIntervalDay(180)
+SETTINGS index_granularity = 8192;
+SQL
+```
+
+Notes on the shape, since it deviates from `ortbtools_events` in two places:
+
+- `PARTITION BY toYYYYMM(ts)` — this table takes a row per page view, so it grows
+  much faster than the event log. Monthly partitions let the 180-day TTL drop whole
+  parts instead of rewriting them row by row.
+- `ORDER BY (is_external, ts)` — every product query starts with
+  `WHERE is_external = 1 AND ts >= …`, so the primary index prunes on both.
+- The `DEFAULT`s exist only so a hand-written partial `INSERT` cannot fabricate a
+  real user: `traffic_class` defaults to `''` and `is_external` to `0`. The
+  application always writes every column explicitly.
+
+180 days is the floor for the D30 curve: a cohort must still have its acquisition row
+in range 30 days after the fact, with room to plot a trend. It matches
+`RETENTION_DAYS` in `lib/product-telemetry.js`.
+
+**Excluding your own traffic.** Set these in `.env` and recreate the container. All
+three are optional and additive; without them, your own browsing counts as a user.
+
+```bash
+. scripts/deploy-lib.sh
+set_env ORTBTOOLS_OWNER_IPS "203.0.113.45,198.51.100.0/24" .env   # exact IPv4, CIDR, literal IPv6
+set_env ORTBTOOLS_OWNER_USER_IDS "1" .env                          # your own account id(s)
+ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+```
+
+For a browser on a changing address, visit `https://ortbtools.com/?__ot_internal=1`
+once — it sets a sticky localStorage flag and every later event from that browser is
+filed as `internal`. Clear with `?__ot_internal=0`. To stop sending entirely (rather
+than reclassifying), use `?__ot_optout=1`.
+
+Automated callers can declare themselves with a header instead:
+`X-Ortbtools-Traffic: ci` (also accepts `agent`, `monitor`, `internal`, `owner`, `bot`).
+The header can only move a request OUT of `external` — it can never promote one in.
+
+**Reading the metrics.** The operator endpoint is gated by the same Bearer token as
+`/api/admin/stats`:
+
+```bash
+curl -sS -H "Authorization: Bearer $ADMIN_STATS_TOKEN" \
+  'https://ortbtools.com/api/v1/telemetry/summary?days=30' | jq
+```
+
+It returns `traffic` (the class split — proof that monitoring and owner traffic are
+excluded), `activation`, `repeat_usage`, `retention` (per-cohort D1/D7/D30 with
+`mature` flags) and `daily`. A cohort younger than N days reports `mature: false` for
+D-N; treat that as "unknown", not as 0%.
+
+The same numbers straight from ClickHouse, if the endpoint is unavailable:
+
+```sql
+-- Activation: external visitors who ever completed an analysis.
+SELECT uniqExact(visitor_id) AS visitors,
+       uniqExactIf(visitor_id, has(events, 'analyze_success')) AS activated
+FROM (
+  SELECT visitor_id, groupUniqArray(event) AS events
+  FROM analytics.ortbtools_product_events
+  WHERE is_external = 1 AND visitor_id != '' AND ts >= now() - INTERVAL 30 DAY
+  GROUP BY visitor_id
+);
+
+-- Repeat usage: external visitors active on 2+ distinct days.
+SELECT uniqExact(visitor_id) AS visitors,
+       uniqExactIf(visitor_id, active_days >= 2) AS repeat_visitors
+FROM (
+  SELECT visitor_id, uniqExact(toDate(ts)) AS active_days
+  FROM analytics.ortbtools_product_events
+  WHERE is_external = 1 AND visitor_id != '' AND ts >= now() - INTERVAL 30 DAY
+  GROUP BY visitor_id
+);
+
+-- D1/D7/D30 retention by acquisition day.
+SELECT d0 AS cohort_date,
+       uniqExact(visitor_id) AS cohort_size,
+       uniqExactIf(visitor_id, has(days, d0 + 1))  AS d1,
+       uniqExactIf(visitor_id, has(days, d0 + 7))  AS d7,
+       uniqExactIf(visitor_id, has(days, d0 + 30)) AS d30
+FROM (
+  SELECT visitor_id, min(toDate(ts)) AS d0, groupUniqArray(toDate(ts)) AS days
+  FROM analytics.ortbtools_product_events
+  WHERE is_external = 1 AND visitor_id != '' AND ts >= now() - INTERVAL 180 DAY
+  GROUP BY visitor_id
+)
+GROUP BY d0 ORDER BY d0 DESC;
+
+-- Who is actually hitting us (the exclusion proof). The empty visitor_id
+-- (DNT / storage blocked) is skipped so it is not counted as one shared visitor.
+SELECT traffic_class, count() AS events,
+       uniqExactIf(visitor_id, visitor_id != '') AS visitors
+FROM analytics.ortbtools_product_events
+WHERE ts >= now() - INTERVAL 30 DAY
+GROUP BY traffic_class ORDER BY events DESC;
+```
+
+**Verify after a deploy:**
+
+```bash
+# 204 with an empty body, whether or not ClickHouse is configured.
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST \
+  -H 'content-type: text/plain' -H 'sec-fetch-site: same-origin' \
+  --data '{"event":"landing"}' https://ortbtools.com/api/v1/telemetry/event   # → 204
+
+# Rows landing, and none of them classed as a real user for a curl caller.
+docker exec -i clickhouse clickhouse-client -q \
+  "SELECT traffic_class, count() FROM analytics.ortbtools_product_events
+   WHERE ts >= now() - INTERVAL 10 MINUTE GROUP BY traffic_class"
+```
+
+**Pause just this table** (keeps `validation_logs` and `event_log` running):
+
+```bash
+. scripts/deploy-lib.sh && set_env ORTBTOOLS_PRODUCT_TELEMETRY_DISABLED 1 .env
+ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose up -d --no-build
+```
+
 ---
 
 ## 5. Secrets Management

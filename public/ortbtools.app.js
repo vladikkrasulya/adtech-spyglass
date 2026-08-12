@@ -2462,6 +2462,12 @@ export async function mountInspector(root, ctx) {
           return;
         }
         if (j.success) {
+          // Product telemetry: a counter only — the event carries no payload,
+          // no findings and no status, just "an analysis completed in this
+          // tab". Drives the activation metric (visitors who ever analyse).
+          if (typeof window.ortbtoolsTrack === 'function') {
+            window.ortbtoolsTrack('analyze_success');
+          }
           validation = j.validation;
           cross = j.crosscheck;
           // IAB cat decoding (Phase 2 feature) — surface as a side-panel
@@ -4936,6 +4942,13 @@ export async function mountInspector(root, ctx) {
       })();
     } else if (qp.get('verified') === '1') {
       toast(t('toast.email_verified'), 'success');
+      // Product telemetry: the verification link was confirmed server-side and
+      // bounced us back here with ?verified=1. Counting it in the browser (not
+      // in the redirect handler) is what lets it join the same anonymous cohort
+      // as the landing and register events.
+      if (typeof window.ortbtoolsTrack === 'function') {
+        window.ortbtoolsTrack('verify_email');
+      }
       history.replaceState({}, '', location.pathname);
       // Force a fresh /api/auth/me (email_verified_at just flipped
       // server-side) so the verify banner clears without a reload.

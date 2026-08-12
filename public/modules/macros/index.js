@@ -594,6 +594,12 @@
 
       inp.addEventListener('input', () => {
         const val = inp.value || '';
+        // Same once-per-session counter as the copy button — simulating a
+        // macro substitution is just as much "using the evaluator". The typed
+        // value itself is never sent.
+        if (typeof window.ortbtoolsTrackOnce === 'function') {
+          window.ortbtoolsTrackOnce('macro_use');
+        }
         _macroOverrides[key] = val;
 
         if (key === 'price') {
@@ -621,6 +627,11 @@
         e.preventDefault();
         const url = btn.getAttribute('data-url');
         if (!url) return;
+        // Product telemetry: "this person used the Macro Evaluator", once per
+        // tab session. The URL being copied is never sent.
+        if (typeof window.ortbtoolsTrackOnce === 'function') {
+          window.ortbtoolsTrackOnce('macro_use');
+        }
         try {
           await navigator.clipboard.writeText(url);
           if (typeof window.toast === 'function') {
