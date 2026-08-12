@@ -3,12 +3,15 @@
 # Immutable production deploy for ortbtools.
 #
 # Builds a self-contained image from a CLEAN main == origin/main checkout, seeds
-# the persistent blog content, records intent (STATUS=DEPLOYING) BEFORE switching
-# anything, pins the image tag in .env (auto-read by compose), waits for
+# only missing persistent blog content, records intent (STATUS=CANDIDATE_STARTING)
+# BEFORE switching anything, advances through CANDIDATE_READY, pins the image tag
+# in .env (auto-read by compose) only at ACTIVE, waits for
 # readiness, runs the non-destructive smoke, and AUTO-ROLLS-BACK to the previous
 # image on any failure. Every `docker compose up` is guarded so `set -e` can't
-# kill the script before a rollback is attempted. Never touches /data SQLite or
-# persistent content, never re-adds source mounts.
+# kill the script before a rollback is attempted. It never overwrites /data
+# SQLite or existing posts: it seeds only missing persistent content, writes
+# deploy state, and runs the documented telemetry/cache-warming smoke. It never
+# re-adds source mounts.
 #
 # Run on the host: ./scripts/deploy.sh
 #
@@ -161,7 +164,8 @@ fi
 # 5. Record intent BEFORE the transition (survives a kill/reboot mid-deploy).
 #    State machine: LAST_GOOD(=ACTIVE) → CANDIDATE_STARTING → CANDIDATE_READY →
 #    ACTIVE. The candidate container is brought up WITHOUT pinning .env and
-#    WITHOUT arming restart:always — see docker-compose.yml `restart: 'no'`.
+#    WITHOUT arming restart:always — the deploy-transition override sets
+#    `restart: 'no'` over the base steady-state `always` policy.
 #    Recovery-on-boot from THIS phase: nothing runs. `.env` still names the
 #    LAST_GOOD tag (unchanged until verified below), and the candidate container
 #    (if it was even created before the crash) has NO restart policy armed, so

@@ -145,6 +145,24 @@ scripts/ci-docker-smoke.sh`, and `git diff --check` all exited zero on the curre
   Registry audits required approved network access and full CI required unsandboxed child-process
   execution; neither gate accessed production. No commit, push, PR, publication, or deployment was
   performed.
+- **Separately authorized deployment and reconciliation (T038)**: on 2026-08-12, after explicit
+  authorization outside the local implementation boundary, the canonical immutable-image pipeline
+  activated app `v1.6.1` from merge SHA
+  `d6c873d44cffde9b4f34e5fb8fca9472b9ec2d83`. A fresh SQLite/content backup was verified before the
+  transition. State readback reported `STATUS=ACTIVE`, `ACTIVE_TAG=ACTIVE_BUILD_SHA=d6c873d`,
+  `ACTIVE_VERSION=v1.6.1`, `PREV_TAG=PREV_BUILD_SHA=f6bead9`, and
+  `ROLLBACK_TAG=rollback-pre-f6bead9`. The container was healthy with restart policy `always` and
+  zero restarts; OCI version/revision labels were `1.6.1` and the full merge SHA. Local and public
+  health/smoke passed with build `d6c873d`; no rollback was required. `sentry.ready=false` remained
+  the documented non-gate and makes no upstream-delivery claim. After the truth reconciliation,
+  `NODE_ENV=test LOG_LEVEL=silent node --test --test-reporter=spec tests/docs-truth.test.js
+tests/immutable-image.test.js tests/spec-kit-contract.test.js` passed 88/88 in 3190.066167 ms;
+  `bash -n scripts/deploy.sh scripts/rollback.sh`, formatting, lint, typecheck, and
+  `git diff --check` all exited zero. The subsequent full `npm run ci` exited zero with 1,754 tests,
+  1,744 pass, 10 intentional skips, and zero failures; aggregate coverage was 86.15% lines, 84.64%
+  branches, and 81.61% functions. The reconciliation changed only tracked documentation, host-only
+  script comments, Spec Kit evidence/status, and an offline regression; it did not require another
+  image build, production transition, or rollback.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -157,9 +175,10 @@ T010/T012/T015; FR-004 → T010/T012/T015/T019/T022; FR-005 → T019/T022/T023; 
 T010/T012/T015/T019/T022; FR-007 → T019/T020/T022/T023; FR-008 → T012/T013/T016/T017; FR-009 →
 T013/T017/T018; FR-010 → T011/T012/T015/T016/T018; FR-011 → T019–T023; FR-012 →
 T009–T013/T017/T018/T031; FR-013 → T010/T012/T018; FR-014 → T019/T022/T023; FR-015 →
-T024/T025/T027/T029; FR-016 → T028/T029; FR-017 → T004/T005/T024/T027/T033. SC-001 →
+T024/T025/T027/T029; FR-016 → T028/T029; FR-017 → T004/T005/T024/T027/T033/T038. SC-001 →
 T010/T012/T015/T016/T018; SC-002 → T011/T012/T016/T018; SC-003 → T013/T017/T018; SC-004 →
-T019–T023; SC-005 → T018/T023/T031/T032/T034/T037; SC-006 → T024/T025/T027/T029/T036.
+T019–T023; SC-005 → T018/T023/T031/T032/T034/T037; SC-006 →
+T024/T025/T027/T029/T036/T038.
 
 ## Phase 1: Setup and Pre-Implementation Gate
 
@@ -366,6 +385,9 @@ before any external mutation.
 - **Truth/version/image evidence (Phase 5)**: depends on both story checkpoints.
 - **Verification/convergence (Phase 6)**: depends on every implementation/document task and stops at
   the verified local handoff boundary.
+- **Authorized deployment reconciliation (Phase 7)**: begins only after separate production
+  authorization and records the verified outcome without retroactively broadening the feature's
+  implementation authority.
 
 ### User Story Dependencies
 
@@ -425,4 +447,14 @@ Task T016: placeholder-first dynamic load and lifecycle-safe insertion
 Local implementation and verification do not authorize commit, push, PR creation, merge, package
 publication, production content access, data migration, cache purge, or deployment. After T037, report
 the exact local candidate and ask for separate authorization before any Git/PR or production action;
-that handoff is deliberately not an executable feature checkbox.
+that handoff is deliberately not an executable feature checkbox. The later authorizations and their
+verified results are recorded in T038; they do not authorize any future external mutation.
+
+## Phase 7: Convergence
+
+- [x] T038 Reconcile the separately authorized `v1.6.1` production deployment evidence in
+      `specs/003-blog-markdown-safety/tasks.md` and `specs/ROADMAP.md`; correct the backup-preflight,
+      candidate-state, persistent-content, and transition restart-policy truth gaps in
+      `specs/000-platform-baseline/contracts/release-deploy.md`, `docs/OPERATIONS.md`,
+      `scripts/deploy.sh`, and `scripts/rollback.sh`; and add focused regression coverage per
+      Constitution II

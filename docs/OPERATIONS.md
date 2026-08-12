@@ -376,10 +376,12 @@ running risks a torn page or a snapshot that doesn't include WAL-flushed transac
 Retention: 30 days. Output: `/srv/DATA/Backups/ortbtools/ortbtools-YYYY-MM-DD.db.gz`.
 Check the log at `/var/log/ortbtools-backup.log` for failures.
 
-Current backup inventory (verified 2026-05-13):
+Do not rely on a dated inventory in this runbook. The archives are root-only; verify the current
+inventory and the cron outcome at operation time:
 
-```
-/srv/DATA/Backups/ortbtools/ortbtools-2026-04-30.db.gz  … ortbtools-2026-05-13.db.gz
+```bash
+sudo -n find /srv/DATA/Backups/ortbtools -maxdepth 1 -type f -printf '%TY-%Tm-%Td %TH:%TM %m %u:%g %f\n' | sort
+sudo -n tail -n 50 /var/log/ortbtools-backup.log
 ```
 
 #### Permissions — backups & data dir (security, since v1.1.5)
@@ -466,11 +468,16 @@ A clean Git checkout plus a rebuild recreates it.
 ### 6.3 Manual backup (on-demand)
 
 ```bash
-/srv/DATA/Stacks/ortbtools/scripts/backup-db.sh
+sudo -n /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh
 # Output: /srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz
 ```
 
 If a file for today already exists, `gzip -f` will overwrite it.
+
+`deploy.sh` does not create, validate, or inspect a backup. Immediately before an authorized
+production deployment, run the command above and verify the fresh database gzip (including a SQLite
+integrity check from a temporary restore) plus the persistent-content tar archive. This is a separate
+operator gate; keep its evidence with the deployment record.
 
 ### 6.4 Restore from backup
 
@@ -699,13 +706,16 @@ to source — everything ships in the image.
 
 ### 9.1 Deploy
 
+First complete the separate backup gate in §6.3. The deployment script deliberately does not create
+or inspect backup archives.
+
 ```bash
 cd /srv/DATA/Stacks/ortbtools
 git checkout main && git pull --ff-only        # clean main == origin/main
 ./scripts/deploy.sh
 ```
 
-`scripts/deploy.sh` does the whole thing safely:
+`scripts/deploy.sh` performs the image transition safely after that operator prerequisite:
 
 1. **Preflight** — refuses to run if a prior attempt was left mid-transition
    (`deploy-state.env` `STATUS` is `CANDIDATE_STARTING`/`CANDIDATE_READY`/
@@ -731,6 +741,12 @@ docker-compose.deploy-transition.yml up -d --no-build` — the transition
    `rollback-pre-<BUILD_SHA>` through the SAME transition override, and only
    pins `.env`/arms `always` once THAT image is verified too; prints `CRITICAL`
    and exits non-zero if the rollback also fails.
+
+The operation is not storage-write-free: it seeds only missing EN/UK/RU files under
+`/data/content-posts`, writes `deploy-state.env`, and updates `.env` only after verification. It does
+not overwrite existing editorial posts or account-owned SQLite rows. The shared smoke can emit
+derived validation/event telemetry and warm the synthetic specimen cache as documented by the smoke
+script and the data-retention contract.
 
 The deploy is reproducible from any clean checkout (GitHub Actions builds the same
 image) — the build context is `.`, the CSS is vendored into `public/design-system.css`,
@@ -875,8 +891,9 @@ crash-safe path as `deploy.sh`: `docker compose -f docker-compose.yml -f
 docker-compose.deploy-transition.yml up -d --no-build` (restart:'no' until
 verified; no silent rebuild), then pins `.env` and arms `docker update
 --restart=always` ONLY after wait_ready + smoke both pass. It does **not** touch
-git, does **not** re-add source bind-mounts, and does **not** touch `/data` or
-`content-posts`. It also enforces the privacy floor (§9.1.2) — refuses to
+git, re-add source bind-mounts, restore backups, or edit account-owned SQLite rows/editorial posts.
+It does write `deploy-state.env` under `/data`, update `.env`, and run the shared smoke with its
+documented derived-telemetry/cache side effects. It also enforces the privacy floor (§9.1.2) — refuses to
 roll back to any image older than `PRIVACY_BASELINE_SHA`. It verifies the
 expected previous `BUILD_SHA` and prints `CRITICAL` if the smoke fails.
 `rollback.sh` is the designated recovery action for a stuck/mid-transition
@@ -1020,4 +1037,4 @@ also require valid `CLICKHOUSE_*` credentials; without them those features no-op
 
 ---
 
-_Last updated: 2026-08-11._
+_Last updated: 2026-08-12._
