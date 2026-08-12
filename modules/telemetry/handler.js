@@ -94,11 +94,9 @@ function createTelemetryModule(deps) {
       }
     };
 
-    // NOT auth.clientIp(): behind Docker's published-port proxy the peer is the
-    // bridge gateway, never loopback, so that helper discards the forwarded
-    // header and every real visitor would resolve to a private address (and
-    // classify as `internal`). lib/client-ip.js trusts the configured proxy
-    // instead — see its header comment for the measurement behind this.
+    // Same rule `auth.clientIp()` now delegates to; called directly so the
+    // classifier sees '' rather than the 'unknown' placeholder that helper
+    // substitutes for a session row.
     let ip = '';
     try {
       ip = resolveClientIp(req);

@@ -19,15 +19,22 @@
  */
 
 const crypto = require('crypto');
+const { resolveClientIp } = require('../../lib/client-ip');
 
-// Concurrent SSE connections allowed per client IP. The origin is only
-// reachable through the Cloudflare→cloudflared tunnel, which sets
-// X-Forwarded-For, so the first XFF hop is a reliable client key here.
+// Concurrent SSE connections allowed per client IP.
+//
+// The key used to be the FIRST X-Forwarded-For hop, taken from any peer. That
+// made the cap decorative: Cloudflare appends to X-Forwarded-For rather than
+// replacing it, so the leftmost entry is whatever the client sent, and a
+// client rotating a fake header got a fresh allowance every time. The origin is
+// also reachable from the host through the published port, so "only via the
+// tunnel" did not hold either.
+//
+// resolveClientIp() reads a forwarded header only from a configured trusted
+// proxy, and walks it from the right, past hops a client cannot control.
 const MAX_STREAM_CONNS_PER_IP = Number(process.env.STREAM_MAX_CONNS_PER_IP) || 8;
 function streamClientIp(req) {
-  const xff = req.headers && req.headers['x-forwarded-for'];
-  if (xff) return String(xff).split(',')[0].trim();
-  return (req.socket && req.socket.remoteAddress) || 'unknown';
+  return resolveClientIp(req) || 'unknown';
 }
 
 /** SQLite-backed specimen cache (Step 2 — persistence).

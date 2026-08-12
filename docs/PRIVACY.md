@@ -364,6 +364,20 @@ passes one (v1.2.1).
 
 Test mode runs with `LOG_LEVEL=silent` (see `package.json` `npm test` script).
 
+### How your address is determined
+
+Behind the production reverse proxy the application's TCP peer is an internal
+Docker address, not yours. `lib/client-ip.js` recovers your real address from the
+proxy's `CF-Connecting-IP` / `X-Forwarded-For` header, and only from a peer listed
+in `ORTBTOOLS_TRUSTED_PROXIES`. That resolved address is what the operational
+request log (`event_log`) and session rows record, and what every per-IP rate limit
+is counted against.
+
+Until v1.6.1 those two logs stored the proxy's own internal address instead of
+yours — the disclosure above was the intended contract, but the recorded value was
+not actually yours. It is now. Product telemetry is unaffected either way: it uses
+the address to pick a traffic class in memory and never stores it.
+
 ---
 
 ## Self-hosting: disabling derived telemetry

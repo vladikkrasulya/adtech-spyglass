@@ -1,6 +1,7 @@
 'use strict';
 
 const http = require('http');
+const { resolveClientIp } = require('../../lib/client-ip');
 
 /**
  * modules/sentry-ingest/handler.js — POST /glitchtip-ingest/*
@@ -49,9 +50,11 @@ function createSentryIngestModule({ logger }) {
   }
 
   function handleIngest(req, res) {
-    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '')
-      .split(',')[0]
-      .trim();
+    // Was: the leftmost X-Forwarded-For entry from any peer — i.e. a value the
+    // caller chooses, which turned this rate limit into a formality. Now the
+    // shared trusted-proxy rule, which only reads a forwarded header from a
+    // configured proxy and takes the hop a client cannot prepend past.
+    const ip = resolveClientIp(req) || 'unknown';
     if (!rateLimitOk(ip)) {
       res.writeHead(429, { 'Content-Type': 'text/plain' });
       res.end('rate_limited');

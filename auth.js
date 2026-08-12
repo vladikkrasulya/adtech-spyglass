@@ -24,6 +24,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const eventLog = require('./lib/event-log');
+const { resolveClientIp } = require('./lib/client-ip');
 
 const COOKIE_NAME = 'ot_session';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -156,18 +157,24 @@ function createAuth({ Users, Sessions, logger }) {
     );
   }
 
-  // Trust X-Forwarded-For only when the request actually came from the local
-  // proxy (kyivtech-portal binds the container on 127.0.0.1:8090). Otherwise
-  // an attacker who reaches the app directly could spoof XFF and bypass the
-  // per-IP rate limiters on /login and /register.
+  // The single client-address rule for the whole app — see lib/client-ip.js for
+  // the trust model and the measurement behind it.
+  //
+  // This used to trust X-Forwarded-For only when the TCP peer was loopback, on
+  // the assumption that the proxy dialled 127.0.0.1:8090. It does, but the
+  // published port (127.0.0.1:8090 -> 3000) makes Docker's userland proxy
+  // re-originate the connection, so the peer is the bridge gateway and the
+  // header was never read. Every visitor therefore resolved to the SAME
+  // address, and these per-IP limiters were per-IP in name only: one shared
+  // bucket for the whole internet.
+  //
+  // It also used to take the LEFTMOST X-Forwarded-For entry. Cloudflare appends
+  // rather than replaces, so that entry is whatever the client sent — spoofable
+  // by anyone who could reach the trusted path. resolveClientIp() prefers
+  // CF-Connecting-IP (rewritten at the edge) and otherwise walks XFF from the
+  // right, which a client-supplied prefix cannot reach.
   function clientIp(req) {
-    const peer = (req.socket && req.socket.remoteAddress) || 'unknown';
-    const peerIsLoopback = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
-    if (peerIsLoopback) {
-      const fwd = req.headers['x-forwarded-for'];
-      if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0].trim();
-    }
-    return peer;
+    return resolveClientIp(req) || 'unknown';
   }
 
   function setSessionCookie(req, res, token) {
@@ -465,7 +472,7 @@ function createAuth({ Users, Sessions, logger }) {
     checkResetPasswordLimit,
     checkResetStateLimit,
     checkVerifyEmailLimit,
-    clientIp, // exposed so other handlers (e.g. /api/analyze rate-limit) reuse the same loopback-XFF logic
+    clientIp, // exposed so other handlers (e.g. /api/analyze rate-limit) reuse the same trusted-proxy rule
     shutdown,
   };
 }

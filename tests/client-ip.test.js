@@ -182,3 +182,60 @@ test('trusted-proxy env changes take effect without a restart', () =>
     process.env.ORTBTOOLS_TRUSTED_PROXIES = GATEWAY;
     assert.equal(isTrustedProxy(GATEWAY), true);
   }));
+
+// ── Rate-limit bucketing: the reason this is not just a telemetry concern ───
+
+/** The per-IP limiter shape used across the app (auth.js, server.js). */
+function makeLimiter(maxPerWindow) {
+  const buckets = new Map();
+  return (key) => {
+    const used = buckets.get(key) || 0;
+    if (used >= maxPerWindow) return false;
+    buckets.set(key, used + 1);
+    return true;
+  };
+}
+
+test('distinct visitors behind one proxy get distinct buckets', () =>
+  withEnv({ ORTBTOOLS_TRUSTED_PROXIES: '172.24.0.1' }, () => {
+    const limiter = makeLimiter(2);
+    const visitor = (addr) => limiter(resolveClientIp(req(GATEWAY, { 'cf-connecting-ip': addr })));
+
+    // Visitor A burns their allowance.
+    assert.equal(visitor('203.0.113.1'), true);
+    assert.equal(visitor('203.0.113.1'), true);
+    assert.equal(visitor('203.0.113.1'), false, 'A is throttled after its own quota');
+
+    // Visitor B must be unaffected. Before the fix every visitor resolved to
+    // the gateway, so A exhausting the bucket locked B out too.
+    assert.equal(visitor('203.0.113.2'), true, "B must not inherit A's throttling");
+  }));
+
+test('a spoofed forwarded header cannot mint fresh buckets', () =>
+  withEnv({ ORTBTOOLS_TRUSTED_PROXIES: '172.24.0.1' }, () => {
+    const limiter = makeLimiter(2);
+    const attacker = '198.51.100.66'; // reaches the app directly, not via the proxy
+
+    // Each attempt carries a different forged address. An untrusted peer must
+    // resolve to itself every time, so all attempts share one bucket.
+    const attempt = (forged) =>
+      limiter(resolveClientIp(req(attacker, { 'x-forwarded-for': forged })));
+
+    assert.equal(attempt('203.0.113.1'), true);
+    assert.equal(attempt('203.0.113.2'), true);
+    assert.equal(attempt('203.0.113.3'), false, 'rotating a fake header must not reset the quota');
+    assert.equal(attempt('203.0.113.4'), false);
+  }));
+
+test('a client prefix cannot mint fresh buckets through the trusted proxy', () =>
+  withEnv({ ORTBTOOLS_TRUSTED_PROXIES: '172.24.0.1' }, () => {
+    const limiter = makeLimiter(2);
+    // Cloudflare APPENDS, so a client-sent value ends up on the left and the
+    // real address on the right. Reading from the right is what defeats this.
+    const attempt = (forgedPrefix) =>
+      limiter(resolveClientIp(req(GATEWAY, { 'x-forwarded-for': `${forgedPrefix}, ${CLIENT}` })));
+
+    assert.equal(attempt('1.1.1.1'), true);
+    assert.equal(attempt('2.2.2.2'), true);
+    assert.equal(attempt('3.3.3.3'), false, 'the real rightmost hop keys the bucket');
+  }));

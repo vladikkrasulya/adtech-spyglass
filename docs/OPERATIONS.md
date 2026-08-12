@@ -30,22 +30,37 @@ persistent dependency for analytics and news/blog data; those features no-op
 without credentials.
 
 ```
-[internet] → CF Tunnel → kyivtech-portal (host net, port 80)
-                            │ PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090
-                            └→ ortbtools (127.0.0.1:8090 → container :3000)
-                                   └→ ClickHouse on kt-shared (optional)
+[internet] → CF edge → cloudflared (host process, /etc/cloudflared/config.yml)
+   │
+   ├─ hostname ortbtools.com  ─────────────→ http://localhost:8090   (direct)
+   └─ hostname kyivtech.com.ua ─→ kyivtech-portal (host net, :3000)
+                                     │ PORTAL_PROXY_TARGETS: ortbtools=http://127.0.0.1:8090
+                                     └→ ortbtools
+                                            └→ ClickHouse on kt-shared (optional)
+
+               ...:8090 → docker-proxy → container :3000
+                          ^^^^^^^^^^^^ re-originates the connection:
+                          the container's TCP peer is the bridge GATEWAY
+                          (172.24.0.1), NEVER loopback
 ```
 
-The portal exposes ortbtools in two ways:
+**`ortbtools.com` does not go through the portal.** cloudflared has its own ingress
+rule sending that hostname straight to `localhost:8090`. The portal is in the path
+only for `kyivtech.com.ua/ortbtools-proxy/*`. An older revision of this section said
+otherwise, and the same stale assumption in a code comment is what made every
+per-IP limiter bucket the whole internet together until v1.6.1 — see §4.10.
+
+The portal still exposes ortbtools in two ways of its own:
 
 1. **`/ortbtools-proxy/*`** — public reverse-proxy mount (no auth gate, since 2026-05-09).
-   This is what `ortbtools.com` resolves to through Cloudflare Tunnel.
 2. **`/api/admin/ortbtools`** — admin-only data surface used by the portal admin dashboard
    (reads ortbtools's SQLite read-only via bind-mount at `/app/ortbtools-data/`).
 
 `kyivtech-portal` runs with `network_mode: host` so `http://127.0.0.1:8090` resolves
 directly. ortbtools is on Docker's default bridge and publishes only to
-`127.0.0.1:8090` — never to `0.0.0.0`.
+`127.0.0.1:8090` — never to `0.0.0.0`. Because that publish is what re-originates
+the connection, **no** caller reaches the container from loopback, whichever path it
+took; `ORTBTOOLS_TRUSTED_PROXIES` is what makes the forwarded address usable (§4.10).
 
 **SQLite** is the application's only mounted local store: one WAL-mode database
 whose schema is auto-applied at startup by `db.js`. When `CLICKHOUSE_*`
@@ -379,13 +394,34 @@ ORTBTOOLS_TAG="$(grep -E '^ORTBTOOLS_TAG=' .env | cut -d= -f2)" docker compose u
 ```
 
 Keep the list as narrow as the real hop. Anything able to connect from a trusted
-address can claim any client IP; here that is the Docker gateway, reachable only by
-host processes through the published port. It affects counter attribution only — no
-authorization decision reads this value.
+address can claim any client IP, and therefore any rate-limit bucket; here that is
+the Docker gateway, reachable only by host processes through the published port. No
+authentication or authorization decision reads this value — it selects a throttling
+bucket and labels a log row.
 
-Note `auth.clientIp()` is deliberately NOT changed by this: it also keys the login
-and analyze rate limiters, so widening its trust is a separate, security-sensitive
-change. As things stand those limiters bucket all proxied visitors together.
+**This setting is app-wide, not telemetry-only.** `lib/client-ip.js` is the single
+client-address rule, and `auth.clientIp()` delegates to it, so the same value also
+governs:
+
+| Consumer                                               | What it keys                               |
+| ------------------------------------------------------ | ------------------------------------------ |
+| `auth.js`                                              | login / register / reset / verify limits   |
+| `modules/{analyze,mirror,replay,intel,blog,analytics}` | per-IP request limits                      |
+| `modules/stream`                                       | concurrent SSE connections per IP          |
+| `modules/sentry-ingest`                                | GlitchTip ingest limit                     |
+| `server.js` → `event_log`, `auth.js` → `sessions`      | the recorded client address                |
+| `lib/product-telemetry.js`                             | traffic classification (address discarded) |
+
+Leaving it unset does not merely blank the product metrics — it collapses every
+per-IP limiter into one shared bucket for the whole internet. Verify after setting
+it that real addresses now appear:
+
+```bash
+docker exec clickhouse clickhouse-client -q \
+  "SELECT ip, count() FROM analytics.ortbtools_events \
+   WHERE ts >= now() - INTERVAL 1 HOUR AND component='http' GROUP BY ip ORDER BY 2 DESC LIMIT 10"
+# Expect a spread of public addresses, not one private one.
+```
 
 **Excluding your own traffic.** Set these in `.env` and recreate the container. All
 three are optional and additive; without them, your own browsing counts as a user.
