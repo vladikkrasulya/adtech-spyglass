@@ -442,7 +442,81 @@ Automated callers can declare themselves with a header instead:
 `X-Ortbtools-Traffic: ci` (also accepts `agent`, `monitor`, `internal`, `owner`, `bot`).
 The header can only move a request OUT of `external` — it can never promote one in.
 
-**Reading the metrics.** The operator endpoint is gated by the same Bearer token as
+**The usage table — "how many people, per day / week / month".**
+
+```bash
+./scripts/usage-report.sh              # last 30 days, 12 weeks, 12 months
+./scripts/usage-report.sh --days 90    # widen the daily table
+./scripts/usage-report.sh --all        # add the traffic-class split
+```
+
+It reads `analytics.ortbtools_usage_daily`, an AggregatingMergeTree rollup kept
+current by a materialized view on the raw events. Create both once, alongside the
+table above:
+
+```bash
+docker exec -i clickhouse clickhouse-client --multiquery <<'SQL'
+CREATE TABLE IF NOT EXISTS analytics.ortbtools_usage_daily
+(
+  day             Date,
+  traffic_class   LowCardinality(String),
+  visitors_state  AggregateFunction(uniq, String),
+  sessions_state  AggregateFunction(uniq, String),
+  events          UInt64,
+  analyses        UInt64,
+  registrations   UInt64,
+  macro_uses      UInt64,
+  share_uses      UInt64
+)
+ENGINE = AggregatingMergeTree
+PARTITION BY toYYYYMM(day)
+ORDER BY (day, traffic_class);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS analytics.ortbtools_usage_daily_mv
+TO analytics.ortbtools_usage_daily AS
+SELECT
+  toDate(ts)                                                            AS day,
+  traffic_class,
+  uniqStateIf(visitor_id, visitor_id != '')                             AS visitors_state,
+  uniqStateIf(session_id, session_id != '' AND event = 'session_start') AS sessions_state,
+  count()                                                               AS events,
+  countIf(event = 'analyze_success')                                    AS analyses,
+  countIf(event = 'register')                                           AS registrations,
+  countIf(event = 'macro_use')                                          AS macro_uses,
+  countIf(event = 'share_use')                                          AS share_uses
+FROM analytics.ortbtools_product_events
+GROUP BY day, traffic_class;
+SQL
+```
+
+Two properties this shape exists for, both easy to get wrong:
+
+- **It outlives the raw data.** `ortbtools_product_events` drops rows after 180
+  days; the rollup has no TTL, so "visitors in March" stays answerable next year.
+- **Unique visitors do not add up.** Someone who visits Monday and Tuesday is ONE
+  weekly visitor, not two — a weekly number can never be the sum of daily numbers.
+  Storing `uniqState` (not a count) lets `uniqMerge` recompute the true distinct
+  figure at day, week or month grain. Verified against a fixture where the naive
+  sum reports 3 and the correct answer is 2.
+
+A materialized view only sees rows inserted after it exists. If it is ever
+recreated, backfill the gap explicitly:
+
+```bash
+docker exec -i clickhouse clickhouse-client -q "
+INSERT INTO analytics.ortbtools_usage_daily
+SELECT toDate(ts), traffic_class,
+       uniqStateIf(visitor_id, visitor_id != ''),
+       uniqStateIf(session_id, session_id != '' AND event = 'session_start'),
+       count(), countIf(event='analyze_success'), countIf(event='register'),
+       countIf(event='macro_use'), countIf(event='share_use')
+FROM analytics.ortbtools_product_events
+WHERE toDate(ts) BETWEEN '2026-08-12' AND '2026-08-31'
+GROUP BY toDate(ts), traffic_class"
+# Delete the same day range from the rollup first, or the counts double.
+```
+
+**Reading the funnel.** The operator endpoint is gated by the same Bearer token as
 `/api/admin/stats`:
 
 ```bash
