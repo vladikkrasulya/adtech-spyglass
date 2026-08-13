@@ -41,6 +41,10 @@ Semantic mode adds only the rules in `registry.js`:
 
 All other arrays remain positional. In particular, `source.ext.schain.nodes` is order-sensitive.
 
+Set-like arrays have mathematical set semantics: both order and duplicate multiplicity are ignored. For example, `cur: ["USD", "USD", "EUR"]` is equal to `cur: ["EUR", "USD"]` in semantic mode.
+
 If either side of an identity-matched array contains missing, invalid, or duplicate identities, that complete array falls back to positional comparison. The result includes an `array_identity_fallback` warning with indices and duplicate values for both sides; no data is silently discarded.
 
-Inputs must be JSON-compatible: finite numbers, strings, booleans, null, dense arrays, and plain objects with data properties. Cycles, accessors, sparse arrays, and non-JSON values fail with `TypeError`.
+`equal` reports only whether `changes` is empty; warnings are independent. A degraded positional comparison can therefore return `equal: true` with non-empty `warnings`. Consumers must surface those warnings to show that the comparison was weaker instead of presenting an unqualified “no differences” state.
+
+Inputs must be JSON-compatible: finite numbers, strings, booleans, null, dense arrays, and plain objects with data properties. Cycles, accessors, sparse arrays, non-JSON values, and nesting deeper than the `512`-level limit fail with a pointer-bearing `TypeError`. The depth guard rejects an excessive input before recursive comparison can exhaust the JavaScript call stack.

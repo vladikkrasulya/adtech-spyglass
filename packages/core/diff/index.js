@@ -4,6 +4,7 @@ const { OPENRTB_ARRAY_IDENTITIES, OPENRTB_SET_PATHS } = require('./registry');
 
 const IDENTITY_BY_PATH = new Map(OPENRTB_ARRAY_IDENTITIES.map((entry) => [entry.path, entry.key]));
 const SET_PATHS = new Set(OPENRTB_SET_PATHS);
+const MAX_JSON_DEPTH = 512;
 
 function compareText(left, right) {
   if (left < right) return -1;
@@ -56,7 +57,13 @@ function cloneJson(value) {
 function assertJsonCompatible(value, label) {
   const ancestors = new Set();
 
-  function visit(current, pointer) {
+  function visit(current, pointer, depth) {
+    if (depth > MAX_JSON_DEPTH) {
+      throw new TypeError(
+        `${label} is not JSON-compatible at ${pointer || '/'}: nesting depth exceeds ${MAX_JSON_DEPTH}`,
+      );
+    }
+
     const kind = typeof current;
     if (current === null || kind === 'string' || kind === 'boolean') return;
     if (kind === 'number') {
@@ -92,7 +99,7 @@ function assertJsonCompatible(value, label) {
             `${label} is not JSON-compatible at ${appendPointer(pointer, index)}: sparse array`,
           );
         }
-        visit(current[index], appendPointer(pointer, index));
+        visit(current[index], appendPointer(pointer, index), depth + 1);
       }
     } else {
       const descriptors = Object.getOwnPropertyDescriptors(current);
@@ -104,13 +111,13 @@ function assertJsonCompatible(value, label) {
             `${label} is not JSON-compatible at ${appendPointer(pointer, key)}: accessor property`,
           );
         }
-        visit(descriptor.value, appendPointer(pointer, key));
+        visit(descriptor.value, appendPointer(pointer, key), depth + 1);
       }
     }
     ancestors.delete(current);
   }
 
-  visit(value, '');
+  visit(value, '', 0);
 }
 
 function addChange(state, op, path, leftPath, rightPath, before, after) {

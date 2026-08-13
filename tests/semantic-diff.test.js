@@ -51,6 +51,15 @@ function mirrorResult(result) {
   return sortResult({ ...result, changes, warnings });
 }
 
+function nestedValue(depth) {
+  /** @type {any} */
+  let value = 1;
+  for (let level = 0; level < depth; level++) {
+    value = { a: value };
+  }
+  return value;
+}
+
 test('raw diff ignores object key order but compares arrays positionally', () => {
   const equal = rawDiff(
     { id: 'req-1', site: { page: 'https://example.com', domain: 'example.com' } },
@@ -355,4 +364,27 @@ test('invalid mode and non-JSON values fail explicitly', () => {
   const cycle = {};
   cycle.self = cycle;
   assert.throws(() => rawDiff(cycle, {}), /left is not JSON-compatible/);
+});
+
+test('nesting depth is bounded with a typed error before stack exhaustion', () => {
+  const tooDeep = nestedValue(600);
+  assert.throws(
+    () => rawDiff(tooDeep, tooDeep),
+    (error) => {
+      if (!(error instanceof Error)) return false;
+      assert.equal(error.constructor, TypeError);
+      assert.equal(error instanceof RangeError, false);
+      assert.match(error.message, /^left is not JSON-compatible at \/a(?:\/a)+:/);
+      assert.match(error.message, /nesting depth exceeds 512$/);
+      return true;
+    },
+  );
+
+  const supported = nestedValue(100);
+  assert.deepEqual(rawDiff(supported, supported), {
+    mode: 'raw',
+    equal: true,
+    changes: [],
+    warnings: [],
+  });
 });
