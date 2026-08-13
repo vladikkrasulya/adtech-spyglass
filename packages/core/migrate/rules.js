@@ -14,8 +14,9 @@ const RULE_DEFINITIONS = /** @type {MigrationRule[]} */ ([
   {
     id: 'ortb26.category.cattax',
     spec: `${SPEC_BASE}#appendix-b-specification-change-log`,
-    confidence: 'certain',
-    rationale: 'Make the OpenRTB 2.5 default Content Taxonomy 1.0 explicit for 2.6.',
+    confidence: 'review',
+    rationale:
+      'Category codes do not all look like Content Taxonomy 1.0; confirm the suggested cattax value manually before applying it.',
   },
   {
     id: 'ortb26.content.prodq',

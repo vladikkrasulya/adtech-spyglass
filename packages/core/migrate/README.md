@@ -44,6 +44,6 @@ The bounded 2.5 → 2.6 rules cover:
 - legacy `user.ext.eids` → `user.eids`
 - removed `imp[].video.protocol` → `imp[].video.protocols`
 - removed `site.content.videoquality` / `app.content.videoquality` → `prodq`
-- explicit Content Taxonomy 1.0 (`cattax: 1`) where 2.5 category arrays relied on that default
+- an explicit `cattax` suggestion where 2.5 category arrays relied on the default: `cattax: 1` is `certain` only when every code matches the taxonomy 1.0 form (`IAB1`, `IAB2-3`); other or empty code sets are marked `review` and require manual confirmation
 
 Rules are conservative. A legacy value is removed only when the standardized target is absent or already equal. Conflicting modern and legacy values produce no operation. Unknown extension keys, vendor fields, and even empty `ext` containers are never removed. Fields without an unambiguous 2.6 representation—such as flexible banner bounds, structured user-agent data, and pod metadata—are outside this rule set.

@@ -210,6 +210,41 @@ test('every operation is self-contained, serializable, and links an official 2.6
   assert.doesNotThrow(() => JSON.stringify(operations));
 });
 
+test('cattax advice is certain only when every category code has the 1.0 IAB shape', () => {
+  const { adviseMigration25To26 } = require('../packages/core/migrate');
+  const taxonomyOne = adviseMigration25To26({
+    imp: [{ id: '1' }],
+    site: { cat: ['IAB1', 'IAB2-3'] },
+  }).find((operation) => operation.path === '/site/cattax');
+  assert.deepEqual(
+    {
+      after: taxonomyOne?.after,
+      confidence: taxonomyOne?.confidence,
+      rationale: taxonomyOne?.rationale,
+    },
+    {
+      after: 1,
+      confidence: 'certain',
+      rationale: 'Make the OpenRTB 2.5 default Content Taxonomy 1.0 explicit for 2.6.',
+    },
+  );
+
+  const numericTaxonomy = adviseMigration25To26({
+    imp: [{ id: '1' }],
+    site: { cat: ['52', '150'] },
+  }).find((operation) => operation.path === '/site/cattax');
+  assert.equal(numericTaxonomy?.after, 1);
+  assert.equal(numericTaxonomy?.confidence, 'review');
+  assert.match(numericTaxonomy?.rationale || '', /do not all look like Content Taxonomy 1\.0/i);
+  assert.match(numericTaxonomy?.rationale || '', /confirm.*manually/i);
+
+  const mixedTaxonomy = adviseMigration25To26({
+    imp: [{ id: '1' }],
+    site: { cat: ['IAB1', '52'] },
+  }).find((operation) => operation.path === '/site/cattax');
+  assert.equal(mixedTaxonomy?.confidence, 'review');
+});
+
 test('same input produces byte-identical operations in deterministic order', () => {
   const { adviseMigration25To26 } = require('../packages/core/migrate');
   const input = {

@@ -61,7 +61,15 @@ function jsonEqual(left, right) {
   return true;
 }
 
-function makeOperation(ruleId, path, op, before, after) {
+/**
+ * @param {string} ruleId
+ * @param {string} path
+ * @param {'add'|'remove'} op
+ * @param {any} before
+ * @param {any} after
+ * @param {{confidence?: 'certain'|'likely'|'review', rationale?: string}} [metadata]
+ */
+function makeOperation(ruleId, path, op, before, after, metadata = {}) {
   const rule = RULE_BY_ID.get(ruleId);
   return {
     path,
@@ -70,8 +78,8 @@ function makeOperation(ruleId, path, op, before, after) {
     after: cloneJson(after),
     rule: rule.id,
     spec: rule.spec,
-    confidence: rule.confidence,
-    rationale: rule.rationale,
+    confidence: metadata.confidence || rule.confidence,
+    rationale: metadata.rationale || rule.rationale,
   };
 }
 
@@ -151,10 +159,24 @@ function collectCategoryTargets(payload) {
 
 function collectCategoryOperations(payload, operations) {
   for (const target of collectCategoryTargets(payload)) {
-    const hasLegacyCategories = target.categoryKeys.some(
-      (key) => Object.hasOwn(target.value, key) && Array.isArray(target.value[key]),
-    );
-    if (hasLegacyCategories && !Object.hasOwn(target.value, 'cattax')) {
+    const categoryArrays = target.categoryKeys
+      .filter((key) => Object.hasOwn(target.value, key) && Array.isArray(target.value[key]))
+      .map((key) => target.value[key]);
+    if (categoryArrays.length && !Object.hasOwn(target.value, 'cattax')) {
+      const categoryCodes = categoryArrays.flat();
+      const looksLikeTaxonomyOne =
+        categoryCodes.length > 0 &&
+        categoryCodes.every((code) => typeof code === 'string' && /^IAB\d+(?:-\d+)?$/.test(code));
+      const metadata = looksLikeTaxonomyOne
+        ? {
+            confidence: /** @type {const} */ ('certain'),
+            rationale: 'Make the OpenRTB 2.5 default Content Taxonomy 1.0 explicit for 2.6.',
+          }
+        : {
+            confidence: /** @type {const} */ ('review'),
+            rationale:
+              'Category codes do not all look like Content Taxonomy 1.0; confirm the suggested cattax value manually before applying it.',
+          };
       operations.push(
         makeOperation(
           'ortb26.category.cattax',
@@ -162,6 +184,7 @@ function collectCategoryOperations(payload, operations) {
           'add',
           null,
           1,
+          metadata,
         ),
       );
     }
