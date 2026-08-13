@@ -80,6 +80,7 @@
     <link rel="stylesheet" href="/design-system.css?v=13" />
     <link rel="stylesheet" href="/modules/macros/styles.css" />
     <link rel="stylesheet" href="/modules/diff/styles.css" />
+    <link rel="stylesheet" href="/modules/migrate/styles.css" />
     <script>
       (function () {
         try {
@@ -256,6 +257,14 @@
     <script src="/core/diff.js?v=1" defer></script>
     <script src="/modules/diff/i18n.js" defer></script>
     <script src="/modules/diff/index.js" defer></script>
+    <!-- 2.6 Migration tab. Same mirroring contract as the diff engine: the
+         advisor is the canonical packages/core/migrate source, copied verbatim
+         by scripts/gen-browser-core.js under a CI parity guard — rules first,
+         index.js reads them from the browser global. -->
+    <script src="/core/migrate-rules.js?v=1" defer></script>
+    <script src="/core/migrate.js?v=1" defer></script>
+    <script src="/modules/migrate/i18n.js" defer></script>
+    <script src="/modules/migrate/index.js" defer></script>
     <script src="/modules/macros/i18n.js" defer></script>
     <script src="/modules/macros/index.js" defer></script>
     <!-- Phase 7a — ortbtools Intelligence (Discovery Mode). Loads in order:

@@ -445,6 +445,7 @@ const {
   OPENRTB_ARRAY_IDENTITIES,
   OPENRTB_SET_PATHS,
 } = require('./diff');
+const { adviseMigration25To26, MIGRATION_RULES } = require('./migrate');
 
 module.exports = {
   validate,
@@ -466,6 +467,11 @@ module.exports = {
   semanticDiff,
   OPENRTB_ARRAY_IDENTITIES,
   OPENRTB_SET_PATHS,
+  // OpenRTB 2.5 → 2.6 migration advice. Returns a list of proposed operations
+  // and deliberately exposes no `apply`: whether to rewrite a payload is the
+  // caller's explicit decision, never a side effect of asking for advice.
+  adviseMigration25To26,
+  MIGRATION_RULES,
   // Status rollup — exported so HTTP handlers that union findings from
   // several validate() calls recompute status with the SAME semantics
   // (question-level findings don't block 'clean') instead of inlining a

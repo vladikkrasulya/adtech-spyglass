@@ -521,6 +521,14 @@
       >
         diff <span class="tab-badge" id="diffBadge" hidden></span>
       </button>
+      <button
+        class="tab-btn"
+        data-action="switch-tab"
+        data-target="tMigrate"
+        title="Пропозиції переходу цього BidRequest з OpenRTB 2.5 на 2.6. Нічого не застосовується, доки ти не натиснеш «Застосувати», а «Скасувати» повертає твій текст точно таким, яким він був."
+      >
+        міграція 2.6 <span class="tab-badge" id="migrateBadge" hidden></span>
+      </button>
       <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
         vendor ref
       </button>
@@ -572,6 +580,14 @@
         <div class="empty-hint">
           Порівняй цей payload з іншим. Встав сторону B і натисни «Порівняти» — тут ніщо не змінює
           редактор.
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="tMigrate">
+      <div id="migrateContainer">
+        <div class="empty-hint">
+          Тут зʼявляться пропозиції переходу з OpenRTB 2.5 на 2.6. Нічого не застосовується, доки ти
+          не натиснеш «Застосувати».
         </div>
       </div>
     </div>

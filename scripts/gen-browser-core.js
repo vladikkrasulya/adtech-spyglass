@@ -22,6 +22,11 @@ const PAIRS = [
   // index.js reads it from the browser global, and HTML must load it first too.
   ['packages/core/diff/registry.js', 'public/core/diff-registry.js'],
   ['packages/core/diff/index.js', 'public/core/diff.js'],
+  // Migration advisor. Same reason as the diff engine: the tab must propose
+  // exactly what tests/migration-rules.test.js pins. rules.js first — index.js
+  // reads it from the browser global, and the HTML must load it in that order.
+  ['packages/core/migrate/rules.js', 'public/core/migrate-rules.js'],
+  ['packages/core/migrate/index.js', 'public/core/migrate.js'],
 ];
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');

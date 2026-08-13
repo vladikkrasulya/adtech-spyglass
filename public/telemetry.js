@@ -56,6 +56,8 @@
     'gist_create',
     'gist_open',
     'diff_use',
+    'migrate_use',
+    'migrate_apply',
     'register',
     'verify_email',
   ];

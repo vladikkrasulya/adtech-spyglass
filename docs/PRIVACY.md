@@ -184,16 +184,25 @@ ClickHouse `analytics.ortbtools_product_events`, retention 180 days.
 **The complete list of events.** Each one is a bare counter — the event name is all
 that is recorded about what happened:
 
-| Event                                    | Fires when                                    |
-| ---------------------------------------- | --------------------------------------------- |
-| `landing`                                | a page finished loading                       |
-| `session_start`                          | the first page load in a browser tab          |
-| `analyze_success`                        | an analysis completed in that tab             |
-| `macro_use`                              | the Macro Evaluator was used (once per tab)   |
-| `share_use`                              | a share permalink was produced (once per tab) |
-| `register`                               | an account was created                        |
-| `verify_email`                           | an email verification link was confirmed      |
-| `gist_create` / `gist_open` / `diff_use` | reserved; not emitted by any code today       |
+| Event             | Fires when                                               |
+| ----------------- | -------------------------------------------------------- |
+| `landing`         | a page finished loading                                  |
+| `session_start`   | the first page load in a browser tab                     |
+| `analyze_success` | an analysis completed in that tab                        |
+| `macro_use`       | the Macro Evaluator was used (once per tab)              |
+| `share_use`       | a share permalink was produced (once per tab)            |
+| `gist_create`     | a payload was uploaded as an encrypted gist              |
+| `gist_open`       | an encrypted gist was opened and decrypted               |
+| `diff_use`        | a comparison was run in the Diff tab (once per tab)      |
+| `migrate_use`     | migration advice was displayed (once per tab)            |
+| `migrate_apply`   | proposed migration operations were applied to the editor |
+| `register`        | an account was created                                   |
+| `verify_email`    | an email verification link was confirmed                 |
+
+Note what `migrate_apply` does **not** record: which operations were selected, how
+many there were, or anything about the payload. It is a bare counter like every
+other row — the only thing it tells us is that somebody trusted the advice enough
+to press the button.
 
 **The complete list of stored fields.** The row is rebuilt server-side from this
 closed contract (`buildRow()` in `lib/product-telemetry.js`); a field that is not on
