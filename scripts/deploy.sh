@@ -133,10 +133,6 @@ echo "    seed ok (en/uk/ru welcome.md present, owner uid ${SEED_UID})"
 #    build: retagging the SAME commit again is a harmless no-op, and retagging a
 #    DIFFERENT commit never clobbers an existing distinct rollback pointer.
 PREV_TAG="$(grep -E '^ORTBTOOLS_TAG=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || true)"
-# legacy-spyglass-ok: the first post-rename deploy reads the tag written by the old key
-if [ -z "$PREV_TAG" ]; then
-  PREV_TAG="$(grep -E '^SPYGLASS_TAG=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || true)" # legacy-spyglass-ok
-fi
 PREV_IMG="$(docker inspect "$CONTAINER" --format '{{.Image}}' 2>/dev/null || echo '')"
 PREV_SHA=""
 ROLLBACK_TAG=""

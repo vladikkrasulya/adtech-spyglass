@@ -51,15 +51,8 @@ services:
       # self-contained; the transitional portal CSS overlay was removed in v1.1.6.
       - /srv/DATA/AppData/ortbtools:/data
     networks:
-      # legacy-spyglass-ok: the old container DNS name stays as a network alias
-      # so remaining cross-stack consumers keep resolving while they migrate
-      # to the canonical `ortbtools` name.
-      default:
-        aliases:
-          - adtech-spyglass # legacy-spyglass-ok
-      kt-shared:
-        aliases:
-          - adtech-spyglass # legacy-spyglass-ok
+      - default
+      - kt-shared
     # `always` is the NORMAL, base-file policy — a plain `docker compose up -d`
     # (routine ops, manual recovery, a host reboot bringing dockerd back) must
     # keep behaving exactly as documented: it recreates/resumes THIS service with

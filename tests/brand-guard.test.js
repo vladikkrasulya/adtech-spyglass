@@ -5,11 +5,9 @@
  * Themis, public brand ortbtools; vault «Spyglass — ortbtools», Етап 0).
  *
  * This test FAILS the build if any tracked file reintroduces the retired
- * name outside the explicit allowlist below. Three escape hatches:
+ * name outside the explicit allowlist below. Two escape hatches:
  *   1. FILE allowlist — historical documents quoted as they existed.
- *   2. LINE marker `legacy-spyglass-ok` — compatibility shims that must keep
- *      the old identifier (cookie/env/db/storage migration paths, ~v1.6).
- *   3. SUBSTRING allowlist — pointers to external artifacts that carry the
+ *   2. SUBSTRING allowlist — pointers to external artifacts that carry the
  *      old name (Obsidian-vault note filenames, host paths pending wave F).
  */
 
@@ -46,7 +44,6 @@ const SUBSTRING_ALLOWLIST = [
   'spyglass_jsonfeed_research',
 ];
 
-const LINE_MARKER = 'legacy-spyglass-ok';
 const RE = /spyglass|spy_session/i;
 const BINARY_EXT = new Set(['.png', '.woff2', '.ico', '.jpg', '.gif', '.pdf', '.gz', '.zip']);
 
@@ -70,7 +67,6 @@ test('no tracked file reintroduces the retired Spyglass name', () => {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (!RE.test(line)) continue;
-      if (line.includes(LINE_MARKER)) continue;
       if (SUBSTRING_ALLOWLIST.some((s) => line.includes(s))) continue;
       violations.push(`${rel}:${i + 1}: ${line.trim().slice(0, 120)}`);
     }
@@ -79,7 +75,6 @@ test('no tracked file reintroduces the retired Spyglass name', () => {
     violations,
     [],
     `retired "Spyglass" name found outside the allowlist:\n${violations.join('\n')}\n` +
-      'Use the new ortbtools identifiers, or mark an intentional compatibility ' +
-      `shim with a "${LINE_MARKER}" comment.`,
+      'Use the new ortbtools identifiers.',
   );
 });

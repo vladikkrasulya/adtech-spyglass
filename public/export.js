@@ -70,8 +70,6 @@
     const last = window.__ortbtoolsLast || null;
     const bundle = {
       ortbtools_version: getEngineVersion(),
-      // legacy-spyglass-ok: duplicate key for downstream parsers, drop ~v1.6
-      spyglass_version: getEngineVersion(), // legacy-spyglass-ok
       captured_at: new Date().toISOString(),
       url: location.href,
       bid_request: dataField(reqText),

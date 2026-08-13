@@ -128,9 +128,7 @@ test('createSession + getCurrentUser round-trip', async () => {
   );
   const res = fakeRes();
   auth.createSession(fakeReq(), res, user);
-  // Set-Cookie is an array since the rename shim also expires the legacy
-  // cookie name in the same response. legacy-spyglass-ok
-  const setCookie = [].concat(res.getHeader('Set-Cookie')).join('\n');
+  const setCookie = res.getHeader('Set-Cookie');
   assert.match(setCookie, /ot_session=/);
   assert.match(setCookie, /HttpOnly/);
   assert.match(setCookie, /SameSite=Lax/);

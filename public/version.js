@@ -27,40 +27,6 @@
   const VERSION = 'v1.6.1';
 
   window.OrtbtoolsVersion = VERSION;
-  // legacy-spyglass-ok: console/back-compat alias for the pre-rename global (~v1.6)
-  window.SpyglassVersion = VERSION; // legacy-spyglass-ok
-
-  // One-time browser-storage migration for the 2026-07-13 rename (legacy-spyglass-ok)
-  // rename. Copies each pre-rename key to its new name (if the new one is not
-  // already set) and deletes the old key. Cheap and idempotent — runs on every
-  // shell because version.js is the one script all three page types load.
-  // legacy-spyglass-ok: drop the whole block ~v1.6.
-  try {
-    const LS_PAIRS = [
-      ['spyglass_dialect_v1', 'ortbtools_dialect_v1'], // legacy-spyglass-ok
-      ['spyglass_history_v1', 'ortbtools_history_v1'], // legacy-spyglass-ok
-      ['spyglass_version_pin', 'ortbtools_version_pin'], // legacy-spyglass-ok
-      ['spyglass_intel_banner_dismissed_until', 'ortbtools_intel_banner_dismissed_until'], // legacy-spyglass-ok
-      ['spyglass_admin_token', 'ortbtools_admin_token'], // legacy-spyglass-ok
-    ];
-    for (const [oldKey, newKey] of LS_PAIRS) {
-      const v = localStorage.getItem(oldKey);
-      if (v !== null) {
-        if (localStorage.getItem(newKey) === null) localStorage.setItem(newKey, v);
-        localStorage.removeItem(oldKey);
-      }
-    }
-    const SS_PAIRS = [['spyglass_recovery_pending_v1', 'ortbtools_recovery_pending_v1']]; // legacy-spyglass-ok
-    for (const [oldKey, newKey] of SS_PAIRS) {
-      const v = sessionStorage.getItem(oldKey);
-      if (v !== null) {
-        if (sessionStorage.getItem(newKey) === null) sessionStorage.setItem(newKey, v);
-        sessionStorage.removeItem(oldKey);
-      }
-    }
-  } catch (_e) {
-    /* storage blocked — nothing to migrate */
-  }
 
   function paint() {
     try {

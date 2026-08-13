@@ -22,23 +22,13 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-// legacy-spyglass-ok: read the pre-rename env name as fallback (~v1.6 removal)
-const DATA_DIR = process.env.ORTBTOOLS_DATA_DIR || process.env.SPYGLASS_DATA_DIR || '/data'; // legacy-spyglass-ok
+const DATA_DIR = process.env.ORTBTOOLS_DATA_DIR || '/data';
 const SCHEMA_VERSION = 10;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  // One-time rename migration (2026-07-13): the store used to be spyglass.db. legacy-spyglass-ok
-  // Move db + WAL + SHM together BEFORE opening, only if the new name is not
-  // yet taken. legacy-spyglass-ok: keep until all deploys are past v1.5.0.
-  const newPath = path.join(DATA_DIR, 'ortbtools.db');
-  const oldPath = path.join(DATA_DIR, 'spyglass.db'); // legacy-spyglass-ok
-  if (!fs.existsSync(newPath) && fs.existsSync(oldPath)) {
-    for (const ext of ['', '-wal', '-shm']) {
-      if (fs.existsSync(oldPath + ext)) fs.renameSync(oldPath + ext, newPath + ext);
-    }
-  }
-  const db = new Database(newPath);
+  const dbPath = path.join(DATA_DIR, 'ortbtools.db');
+  const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   // 5s headroom for SQLITE_BUSY during contentions (backup script runs

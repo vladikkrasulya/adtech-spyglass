@@ -129,13 +129,11 @@ function createAuth({ Users, Sessions, logger }) {
 
   function getCookieToken(req) {
     const cookie = req.headers.cookie || '';
-    let legacy = null;
     for (const part of cookie.split(';')) {
       const [k, v] = part.trim().split('=');
       if (k === COOKIE_NAME) return v;
-      if (k === 'spy_session') legacy = v; // legacy-spyglass-ok: pre-rename cookie, drop shim ~v1.6
     }
-    return legacy;
+    return null;
   }
 
   function getCurrentUser(req) {
@@ -186,12 +184,7 @@ function createAuth({ Users, Sessions, logger }) {
       `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
     ];
     if (isHttps(req)) parts.push('Secure');
-    // Also expire the pre-rename cookie so browsers converge on the new name.
-    // legacy-spyglass-ok: drop together with the read shim ~v1.6.
-    res.setHeader('Set-Cookie', [
-      parts.join('; '),
-      'spy_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0', // legacy-spyglass-ok
-    ]);
+    res.setHeader('Set-Cookie', parts.join('; '));
   }
 
   function createSession(req, res, user) {
@@ -231,12 +224,7 @@ function createAuth({ Users, Sessions, logger }) {
     }
     const parts = [`${COOKIE_NAME}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
     if (isHttps(req)) parts.push('Secure');
-    // Also expire the pre-rename cookie so browsers converge on the new name.
-    // legacy-spyglass-ok: drop together with the read shim ~v1.6.
-    res.setHeader('Set-Cookie', [
-      parts.join('; '),
-      'spy_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0', // legacy-spyglass-ok
-    ]);
+    res.setHeader('Set-Cookie', parts.join('; '));
   }
 
   async function register({ email, password }, req) {
