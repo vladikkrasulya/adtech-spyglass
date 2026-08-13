@@ -24,6 +24,21 @@ function readAdm(relativeFilename) {
   return payload.seatbid[0].bid[0].adm;
 }
 
+function assertRichError(result, expectedCode) {
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, expectedCode);
+  assert.equal(typeof result.error.message, 'string');
+  assert.ok(result.error.message.length > 40);
+  assert.equal(typeof result.error.expected, 'string');
+  assert.ok(result.error.expected.length > 0);
+  assert.equal(typeof result.error.spec, 'string');
+  assert.equal(typeof result.error.offset, 'number');
+  assert.equal(typeof result.error.line, 'number');
+  assert.equal(typeof result.error.column, 'number');
+  assert.equal(typeof result.error.excerpt, 'string');
+  assert.match(result.error.excerpt, /\^/);
+}
+
 const TRAP_VAST = `<?xml version="1.0" encoding="UTF-8"?>
 <VAST version="4.2">
   <Ad id="ad-1" sequence="1">
@@ -155,6 +170,7 @@ test('all four repository VAST samples return typed results without exceptions',
     if (result.ok) {
       assert.ok(Array.isArray(result.ads), filename);
       assert.ok(Array.isArray(result.timeline), filename);
+      assert.ok(Array.isArray(result.notes), filename);
     } else {
       assert.equal(typeof result.error.message, 'string', filename);
       assert.equal(typeof result.error.offset, 'number', filename);
@@ -166,6 +182,130 @@ test('all four repository VAST samples return typed results without exceptions',
   assert.equal(broken.version, null);
   assert.equal(broken.ads[0].type, 'inline');
   assert.equal(broken.ads[0].mediaFiles.length, 0);
+  assert.deepEqual(
+    broken.notes.map((note) => note.code),
+    ['vast.note.version_missing', 'vast.note.timeline_empty'],
+  );
+  const wrapper = parseVastTimeline(readAdm('samples/synthetic-vast-insecure-wrapper.json'));
+  const vpaid = parseVastTimeline(readAdm('samples/synthetic-vast-vpaid-deprecated.json'));
+  assert.deepEqual(
+    wrapper.notes.map((note) => note.code),
+    ['vast.note.timeline_empty'],
+  );
+  assert.deepEqual(
+    vpaid.notes.map((note) => note.code),
+    ['vast.note.timeline_empty'],
+  );
+});
+
+test('exports a complete, deeply frozen diagnostic catalog with official references', () => {
+  const { VAST_DIAGNOSTICS } = loadModule();
+  assert.ok(Array.isArray(VAST_DIAGNOSTICS));
+  assert.ok(Object.isFrozen(VAST_DIAGNOSTICS));
+
+  const catalogCodes = [];
+  for (const diagnostic of VAST_DIAGNOSTICS) {
+    assert.ok(Object.isFrozen(diagnostic), diagnostic.code);
+    assert.match(diagnostic.code, /^vast\.(?:input|xml|runtime|note)\.[a-z0-9_]+$/);
+    assert.ok(diagnostic.message.length > 40, diagnostic.code);
+    assert.ok(diagnostic.expected.trim(), diagnostic.code);
+    const spec = new URL(diagnostic.spec);
+    assert.ok(
+      ['www.w3.org', 'iabtechlab.com', 'interactiveadvertisingbureau.github.io'].includes(
+        spec.hostname,
+      ),
+      diagnostic.code,
+    );
+    const codeWords = diagnostic.code.split('.').slice(2).join(' ').replaceAll('_', ' ');
+    assert.notEqual(diagnostic.message.toLowerCase(), codeWords, diagnostic.code);
+    assert.match(diagnostic.message, /Found|result|timeline|durationSeconds/i, diagnostic.code);
+    assert.match(
+      diagnostic.message,
+      /Write|Use|Pass|Load|Provide|Add|Reduce|Keep|Remove|Close|Replace|Supply|Treat/i,
+      diagnostic.code,
+    );
+    catalogCodes.push(diagnostic.code);
+  }
+  assert.equal(new Set(catalogCodes).size, catalogCodes.length);
+
+  const source = fs.readFileSync(path.join(MODULE_DIR, 'index.js'), 'utf8');
+  const referencedCodes = [
+    ...source.matchAll(/\b(?:fail|failure|makeNote)\(\s*['"]([^'"]+)['"]/g),
+  ].map((match) => match[1]);
+  assert.deepEqual([...new Set(referencedCodes)].sort(), [...catalogCodes].sort());
+});
+
+test('distinguishes bare ampersands, unterminated entities, and unknown entities', () => {
+  const { parseVastTimeline } = loadModule();
+  const bareXml =
+    '<VAST version="4.2">\r\n  <Ad><InLine><Impression>https://t/i?a=1&b=2</Impression></InLine></Ad>\r\n</VAST>';
+  const bareOffset = bareXml.indexOf('&b=2');
+  const bare = parseVastTimeline(bareXml);
+  assertRichError(bare, 'vast.xml.bare_ampersand');
+  assert.ok(Object.hasOwn(bare.error, 'message'));
+  assert.ok(Object.hasOwn(bare.error, 'offset'));
+  assert.equal(bare.error.offset, bareOffset);
+  assert.equal(bare.error.line, 2);
+  assert.equal(bare.error.column, bareOffset - bareXml.indexOf('\n'));
+  assert.match(bare.error.message, /XML treats & as the start of an entity reference/i);
+  assert.match(bare.error.message, /&amp;/);
+  assert.match(bare.error.message, /CDATA/);
+
+  const unterminated = parseVastTimeline(
+    '<VAST><Ad><InLine><Impression>https://t/i?a=1&amp</Impression></InLine></Ad></VAST>',
+  );
+  assertRichError(unterminated, 'vast.xml.entity_unterminated');
+
+  const unknown = parseVastTimeline(
+    '<VAST><Ad><InLine><Impression>https://t/i?a=1&vendor;</Impression></InLine></Ad></VAST>',
+  );
+  assertRichError(unknown, 'vast.xml.entity_unknown');
+});
+
+test('reports 1-based CRLF locations and emits a bounded local excerpt', () => {
+  const { parseVastTimeline } = loadModule();
+  const xml = `<VAST version="4.2">\r\n<Ad>\r\n<InLine>${'x'.repeat(
+    5_000,
+  )}&bad=1</InLine>\r\n</Ad>\r\n</VAST>`;
+  const offset = xml.indexOf('&bad=1');
+  const result = parseVastTimeline(xml);
+  assertRichError(result, 'vast.xml.bare_ampersand');
+  assert.equal(result.error.offset, offset);
+  assert.equal(result.error.line, 3);
+  assert.equal(result.error.column, '<InLine>'.length + 5_000 + 1);
+  assert.ok(result.error.excerpt.length <= 160);
+  assert.ok(result.error.excerpt.includes('&bad=1'));
+  assert.ok(!result.error.excerpt.includes(xml));
+  assert.ok(!result.error.excerpt.includes('<VAST version'));
+});
+
+test('success notes explain only empty or degenerate extractor output', () => {
+  const { parseVastTimeline } = loadModule();
+  const clean = parseVastTimeline(readAdm('samples/synthetic-vast-clean-inline.json'));
+  assert.deepEqual(clean.notes, []);
+
+  const degenerate = parseVastTimeline(`<VAST>
+    <Ad id="unknown" />
+    <Ad id="relative"><InLine><Creatives><Creative><Linear>
+      <Duration>thirty seconds</Duration>
+      <TrackingEvents><Tracking event="start">https://t/start</Tracking></TrackingEvents>
+    </Linear></Creative></Creatives></InLine></Ad>
+  </VAST>`);
+  assert.equal(degenerate.ok, true);
+  assert.deepEqual(
+    degenerate.notes.map((note) => note.code),
+    [
+      'vast.note.version_missing',
+      'vast.note.ad_type_unknown',
+      'vast.note.duration_invalid',
+      'vast.note.timeline_relative',
+    ],
+  );
+  for (const note of degenerate.notes) {
+    assert.deepEqual(Object.keys(note), ['code', 'message', 'spec']);
+    assert.ok(note.message.length > 40, note.code);
+    assert.match(note.spec, /^https:\/\//);
+  }
 });
 
 test('malformed and non-VAST input returns typed errors with offsets and never throws', () => {
