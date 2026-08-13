@@ -145,6 +145,103 @@ test('timeline is chronological and deterministic, including progress offsets', 
   }
 });
 
+test('namespace declarations never shadow real tracking attributes', () => {
+  const { parseVastTimeline } = loadModule();
+  const result = parseVastTimeline(`<VAST version="4.2"><Ad><InLine>
+    <Creatives><Creative><Linear><Duration>00:00:08</Duration><TrackingEvents>
+      <Tracking xmlns:event="urn:x" event="start">https://track.example/start</Tracking>
+    </TrackingEvents></Linear></Creative></Creatives>
+  </InLine></Ad></VAST>`);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.ads[0].trackingEvents, [
+    { event: 'start', offset: null, urls: ['https://track.example/start'] },
+  ]);
+  assert.equal(result.timeline[0].event, 'start');
+  assert.equal(result.timeline[0].timeSeconds, 0);
+});
+
+test('trims both percentage and clock progress offsets before grouping and timing', () => {
+  const { parseVastTimeline } = loadModule();
+  const result = parseVastTimeline(`<VAST version="4.2"><Ad><InLine>
+    <Creatives><Creative><Linear><Duration>00:00:20</Duration><TrackingEvents>
+      <Tracking event="progress" offset=" 25% ">https://track.example/percent</Tracking>
+      <Tracking event="progress" offset=" 00:00:05 ">https://track.example/clock</Tracking>
+    </TrackingEvents></Linear></Creative></Creatives>
+  </InLine></Ad></VAST>`);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    result.timeline.map(({ offset, timeSeconds }) => ({ offset, timeSeconds })),
+    [
+      { offset: '00:00:05', timeSeconds: 5 },
+      { offset: '25%', timeSeconds: 5 },
+    ],
+  );
+});
+
+test('accepts legal non-ASCII XML names without losing extracted VAST fields', () => {
+  const { parseVastTimeline } = loadModule();
+  const result = parseVastTimeline(`<VAST version="4.2"><Ad><InLine>
+    <Impression>https://track.example/impression</Impression>
+    <Extensions><Größe><Значення>ok</Значення></Größe></Extensions>
+  </InLine></Ad></VAST>`);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.ads[0].impressions, [
+    { id: null, url: 'https://track.example/impression' },
+  ]);
+});
+
+test('keeps parsing known permissive XML deviations and explains each one', () => {
+  const { parseVastTimeline } = loadModule();
+  const xml = `<VAST version="4.2"><Ad id="a"sequence="2"><InLine>
+    <Impression>https://track.example/impression</Impression>
+    <Extensions><Extension>&#1;&#xB;&#xFFFE;&#X26;</Extension></Extensions>
+    <Creatives><Creative><Linear><Duration>00:00:10</Duration>
+      <TrackingEvents><Tracking event="start">https://track.example/start</Tracking></TrackingEvents>
+      <MediaFiles><MediaFile label="a
+b" referenced="a&#10;b">https://cdn.example/video.mp4</MediaFile></MediaFiles>
+    </Linear></Creative></Creatives>
+  </InLine></Ad></VAST>`;
+  const result = parseVastTimeline(xml);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.ads[0].id, 'a');
+  assert.equal(result.ads[0].sequence, '2');
+  assert.equal(result.ads[0].mediaFiles[0].attributes.label, 'a b');
+  assert.equal(result.ads[0].mediaFiles[0].attributes.referenced, 'a\nb');
+  assert.deepEqual(
+    result.notes.map((note) => note.code),
+    [
+      'vast.note.xml_attribute_separator_missing',
+      'vast.note.xml_char_reference_nonconforming',
+      'vast.note.xml_char_reference_uppercase_x',
+      'vast.note.xml_attribute_whitespace_normalized',
+    ],
+  );
+  assert.equal(JSON.stringify(parseVastTimeline(xml)), JSON.stringify(result));
+});
+
+test('explains an Ad containing both InLine and Wrapper without hiding the chosen branch', () => {
+  const { parseVastTimeline } = loadModule();
+  const result = parseVastTimeline(`<VAST version="4.2"><Ad id="both">
+    <InLine><Impression>https://track.example/inline</Impression></InLine>
+    <Wrapper><Impression>https://track.example/wrapper</Impression>
+      <VASTAdTagURI>https://wrapper.example/vast</VASTAdTagURI>
+    </Wrapper>
+  </Ad></VAST>`);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.ads[0].type, 'inline');
+  assert.deepEqual(result.ads[0].impressions, [{ id: null, url: 'https://track.example/inline' }]);
+  assert.deepEqual(result.ads[0].vastAdTagUri, {
+    url: 'https://wrapper.example/vast',
+    unresolved: true,
+  });
+  assert.ok(result.notes.some((note) => note.code === 'vast.note.ad_branches_conflict'));
+});
+
 test('wrapper URI is recorded as unresolved and is never resolved', () => {
   const { parseVastTimeline } = loadModule();
   const result = parseVastTimeline(readAdm('samples/synthetic-vast-insecure-wrapper.json'));
@@ -230,7 +327,7 @@ test('exports a complete, deeply frozen diagnostic catalog with official referen
 
   const source = fs.readFileSync(path.join(MODULE_DIR, 'index.js'), 'utf8');
   const referencedCodes = [
-    ...source.matchAll(/\b(?:fail|failure|makeNote)\(\s*['"]([^'"]+)['"]/g),
+    ...source.matchAll(/\b(?:fail|failure|note|makeNote)\(\s*['"]([^'"]+)['"]/g),
   ].map((match) => match[1]);
   assert.deepEqual([...new Set(referencedCodes)].sort(), [...catalogCodes].sort());
 });

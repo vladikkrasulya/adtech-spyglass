@@ -27,6 +27,7 @@
   const XML_COMMENTS = 'https://www.w3.org/TR/xml/#sec-comments';
   const XML_TAGS = 'https://www.w3.org/TR/xml/#sec-starttags';
   const XML_UNIQUE_ATTRIBUTES = 'https://www.w3.org/TR/xml/#uniqattspec';
+  const XML_ATTRIBUTE_NORMALIZATION = 'https://www.w3.org/TR/xml/#AVNormalize';
   const XML_NAMES = 'https://www.w3.org/TR/xml/#NT-Name';
   const XML_DTD = 'https://www.w3.org/TR/xml/#sec-prolog-dtd';
   const VAST_SPEC = 'https://iabtechlab.com/standards/vast/';
@@ -37,6 +38,11 @@
     ['thirdquartile', { event: 'thirdQuartile', ratio: 0.75, rank: 3 }],
     ['complete', { event: 'complete', ratio: 1, rank: 4 }],
   ]);
+  // XML 1.0 NameChar intentionally includes combining-mark ranges.
+  /* eslint-disable no-misleading-character-class */
+  const XML_NAME =
+    /^[:A-Z_a-z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c-\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd\u{10000}-\u{effff}][:A-Z_a-z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c-\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd\u{10000}-\u{effff}\-.0-9\u00b7\u0300-\u036f\u203f-\u2040]*$/u;
+  /* eslint-enable no-misleading-character-class */
 
   const DIAGNOSTIC_DEFINITIONS = [
     {
@@ -300,6 +306,42 @@
       expected: 'Provide a valid Duration to calculate absolute timeline seconds.',
       spec: VAST_SPEC,
     },
+    {
+      code: 'vast.note.xml_char_reference_nonconforming',
+      message:
+        'Found a numeric character reference whose code point is outside the XML 1.0 character set. The tolerant extractor preserved it so other VAST fields remain visible, but a strict XML parser will reject the payload as not well-formed. Replace the reference with an allowed XML character or remove it.',
+      expected: 'Replace the reference with a character allowed by the XML 1.0 Char production.',
+      spec: XML_CHAR_REFERENCE,
+    },
+    {
+      code: 'vast.note.xml_char_reference_uppercase_x',
+      message:
+        'Found a hexadecimal character reference using uppercase X after &#. XML defines the hexadecimal marker as lowercase x, so a strict XML parser will reject this spelling. Write &#x26; instead of &#X26;.',
+      expected: 'Write the hexadecimal character-reference marker as lowercase x.',
+      spec: XML_CHAR_REFERENCE,
+    },
+    {
+      code: 'vast.note.xml_attribute_separator_missing',
+      message:
+        'Found adjacent attributes without whitespace between the closing quote and the next attribute name. XML requires attributes in a start-tag to be separated, so a strict XML parser will reject the payload. Add at least one space, for example id="a" sequence="2".',
+      expected: 'Add whitespace between adjacent XML attributes.',
+      spec: XML_TAGS,
+    },
+    {
+      code: 'vast.note.xml_attribute_whitespace_normalized',
+      message:
+        'Found literal tab or line-break whitespace inside an attribute value. XML processors normalize that literal whitespace to spaces before exposing the value, so the extractor returned the normalized form. Use ordinary spaces explicitly, or use a character reference when the exact whitespace character matters.',
+      expected:
+        'Use explicit spaces, or a character reference when exact whitespace must be retained.',
+      spec: XML_ATTRIBUTE_NORMALIZATION,
+    },
+    {
+      code: 'vast.note.ad_branches_conflict',
+      message:
+        'Found an Ad containing both InLine and Wrapper branches. The extractor selected InLine for branch-owned fields while retaining the unresolved Wrapper URI, so Wrapper-owned tracking data is not represented as the active branch. Keep only the intended InLine or Wrapper child.',
+      expected: 'Keep exactly the intended InLine or Wrapper branch beneath the Ad.',
+      spec: VAST_SPEC,
+    },
   ];
 
   /** @type {ReadonlyArray<Readonly<{code:string,message:string,expected:string,spec:string}>>} */
@@ -378,16 +420,33 @@
     return 0;
   }
 
-  function decodeEntities(text, baseOffset, fail) {
+  function normalizeAttributeLiteral(text) {
+    return text.replace(/\r\n?/g, ' ').replace(/[\t\n]/g, ' ');
+  }
+
+  function isXmlCharacter(value) {
+    return (
+      value === 0x9 ||
+      value === 0xa ||
+      value === 0xd ||
+      (value >= 0x20 && value <= 0xd7ff) ||
+      (value >= 0xe000 && value <= 0xfffd) ||
+      (value >= 0x10000 && value <= 0x10ffff)
+    );
+  }
+
+  function decodeEntities(text, baseOffset, fail, note, normalizeAttributeWhitespace) {
     let output = '';
     let cursor = 0;
+    const appendLiteral = (literal) =>
+      normalizeAttributeWhitespace ? normalizeAttributeLiteral(literal) : literal;
     while (cursor < text.length) {
       const amp = text.indexOf('&', cursor);
       if (amp < 0) {
-        output += text.slice(cursor);
+        output += appendLiteral(text.slice(cursor));
         break;
       }
-      output += text.slice(cursor, amp);
+      output += appendLiteral(text.slice(cursor, amp));
       const next = text[amp + 1] || '';
       if (!/[A-Za-z_#]/.test(next)) fail('vast.xml.bare_ampersand', baseOffset + amp);
       const semi = text.indexOf(';', amp + 1);
@@ -408,9 +467,18 @@
       else if (entity === 'gt') decoded = '>';
       else if (entity === 'quot') decoded = '"';
       else if (entity === 'apos') decoded = "'";
-      else if (/^#\d+$/.test(entity)) decoded = decodeCodePoint(entity.slice(1), 10);
-      else if (/^#x[0-9a-f]+$/i.test(entity)) decoded = decodeCodePoint(entity.slice(2), 16);
-      else if (entity.startsWith('#')) fail('vast.xml.char_reference_invalid', baseOffset + amp);
+      else if (/^#\d+$/.test(entity)) {
+        const codePoint = decodeCodePoint(entity.slice(1), 10);
+        if (codePoint === null) fail('vast.xml.char_reference_invalid', baseOffset + amp);
+        if (!codePoint.xmlAllowed) note('vast.note.xml_char_reference_nonconforming');
+        decoded = codePoint.text;
+      } else if (/^#[xX][0-9a-f]+$/i.test(entity)) {
+        if (entity[1] === 'X') note('vast.note.xml_char_reference_uppercase_x');
+        const codePoint = decodeCodePoint(entity.slice(2), 16);
+        if (codePoint === null) fail('vast.xml.char_reference_invalid', baseOffset + amp);
+        if (!codePoint.xmlAllowed) note('vast.note.xml_char_reference_nonconforming');
+        decoded = codePoint.text;
+      } else if (entity.startsWith('#')) fail('vast.xml.char_reference_invalid', baseOffset + amp);
       else if (/^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(entity)) {
         fail('vast.xml.entity_unknown', baseOffset + amp);
       } else {
@@ -425,20 +493,15 @@
 
   function decodeCodePoint(raw, radix) {
     const value = Number.parseInt(raw, radix);
-    if (
-      !Number.isInteger(value) ||
-      value <= 0 ||
-      value > 0x10ffff ||
-      (value >= 0xd800 && value <= 0xdfff)
-    ) {
-      return null;
-    }
-    return String.fromCodePoint(value);
+    if (!Number.isInteger(value) || value < 0 || value > 0x10ffff) return null;
+    return { text: String.fromCodePoint(value), xmlAllowed: isXmlCharacter(value) };
   }
 
   function parseXml(xml) {
     let cursor = 0;
     const stack = [];
+    const noteCodes = [];
+    const seenNoteCodes = new Set();
     let rootNode = null;
 
     function fail(code, offset) {
@@ -452,9 +515,15 @@
       return stack.length ? stack[stack.length - 1] : null;
     }
 
+    function note(code) {
+      if (seenNoteCodes.has(code)) return;
+      seenNoteCodes.add(code);
+      noteCodes.push(code);
+    }
+
     function appendText(raw, offset, decode) {
       if (decode && raw.includes(']]>')) fail('vast.xml.cdata_end_in_text', offset);
-      const text = decode ? decodeEntities(raw, offset, fail) : raw;
+      const text = decode ? decodeEntities(raw, offset, fail, note, false) : raw;
       const current = currentNode();
       if (current) current.text += text;
       else if (text.trim()) fail('vast.xml.text_outside_root', offset);
@@ -468,7 +537,7 @@
       const start = cursor;
       while (cursor < xml.length && !/[\s=/>]/.test(xml[cursor])) cursor++;
       const name = xml.slice(start, cursor);
-      if (!/^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(name)) fail('vast.xml.name_invalid', start);
+      if (!XML_NAME.test(name)) fail('vast.xml.name_invalid', start);
       return name;
     }
 
@@ -536,9 +605,12 @@
       const name = parseName();
       const attributes = Object.create(null);
       let selfClosing = false;
+      let attributeCount = 0;
 
       for (;;) {
+        const separatorOffset = cursor;
         skipWhitespace();
+        const hasSeparator = cursor > separatorOffset;
         if (xml.startsWith('/>', cursor)) {
           selfClosing = true;
           cursor += 2;
@@ -549,6 +621,9 @@
           break;
         }
         if (cursor >= xml.length) fail('vast.xml.start_tag_unterminated', elementOffset);
+        if (attributeCount > 0 && !hasSeparator) {
+          note('vast.note.xml_attribute_separator_missing');
+        }
 
         const attributeOffset = cursor;
         const attributeName = parseName();
@@ -567,7 +642,11 @@
         if (end < 0) fail('vast.xml.attribute_unterminated', valueOffset);
         const rawValue = xml.slice(cursor, end);
         if (rawValue.includes('<')) fail('vast.xml.attribute_lt', valueOffset);
-        attributes[attributeName] = decodeEntities(rawValue, valueOffset, fail);
+        if (/[\t\r\n]/.test(rawValue)) {
+          note('vast.note.xml_attribute_whitespace_normalized');
+        }
+        attributes[attributeName] = decodeEntities(rawValue, valueOffset, fail, note, true);
+        attributeCount++;
         cursor = end + 1;
       }
 
@@ -585,7 +664,7 @@
       fail('vast.xml.element_unclosed', xml.length);
     }
     if (!rootNode) fail('vast.xml.root_missing', 0);
-    return rootNode;
+    return { rootNode, noteCodes };
   }
 
   function localName(node) {
@@ -596,6 +675,7 @@
   function attribute(node, wanted) {
     const lowerWanted = wanted.toLowerCase();
     for (const key of Object.keys(node.attributes)) {
+      if (key === 'xmlns' || key.startsWith('xmlns:')) continue;
       const parts = key.split(':');
       if (parts[parts.length - 1].toLowerCase() === lowerWanted) return node.attributes[key];
     }
@@ -673,7 +753,8 @@
     for (const parent of descendants(container, 'TrackingEvents')) {
       for (const tracking of directChildren(parent, 'Tracking')) {
         const event = normalizeTrackingEvent(attribute(tracking, 'event'));
-        const offset = attribute(tracking, 'offset');
+        const rawOffset = attribute(tracking, 'offset');
+        const offset = rawOffset === null ? null : rawOffset.trim();
         const key = JSON.stringify([event, offset]);
         let group = groups.get(key);
         if (!group) {
@@ -818,15 +899,16 @@
       duration,
       durationSeconds: parsedDuration,
     };
-    return { ad, timeline: buildTimeline(ad, adIndex) };
+    return { ad, timeline: buildTimeline(ad, adIndex), branchConflict: Boolean(inline && wrapper) };
   }
 
-  function buildNotes(version, ads, timeline) {
-    const notes = [];
+  function buildNotes(parserNoteCodes, version, ads, timeline, branchConflict) {
+    const notes = parserNoteCodes.map(makeNote);
     if (version === null) notes.push(makeNote('vast.note.version_missing'));
     if (ads.some((ad) => ad.type === 'unknown')) {
       notes.push(makeNote('vast.note.ad_type_unknown'));
     }
+    if (branchConflict) notes.push(makeNote('vast.note.ad_branches_conflict'));
     if (ads.some((ad) => ad.duration !== null && ad.durationSeconds === null)) {
       notes.push(makeNote('vast.note.duration_invalid'));
     }
@@ -859,15 +941,18 @@
     }
 
     try {
-      const rootNode = parseXml(xml);
+      const parsedXml = parseXml(xml);
+      const rootNode = parsedXml.rootNode;
       if (localName(rootNode) !== 'vast')
         return failure('vast.input.root_not_vast', xml, rootNode.offset);
       const ads = [];
       const timeline = [];
+      let branchConflict = false;
       for (const adNode of directChildren(rootNode, 'Ad')) {
         const extracted = extractAd(adNode, ads.length);
         ads.push(extracted.ad);
         timeline.push(...extracted.timeline);
+        if (extracted.branchConflict) branchConflict = true;
       }
       const version = formatDetect.detectVastVersion(xml);
       return {
@@ -875,7 +960,7 @@
         version,
         ads,
         timeline,
-        notes: buildNotes(version, ads, timeline),
+        notes: buildNotes(parsedXml.noteCodes, version, ads, timeline, branchConflict),
       };
     } catch (error) {
       if (error && typeof error.code === 'string' && VAST_DIAGNOSTIC_BY_CODE.has(error.code)) {
