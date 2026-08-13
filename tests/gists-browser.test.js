@@ -391,7 +391,30 @@ test(
       page3.on('dialog', async (d) => {
         await d.dismiss();
       });
-      const flipped = key.slice(0, -1) + (key.endsWith('A') ? 'B' : 'A');
+      // Edit the FIRST character, not the last. A 256-bit key is 43 base64url
+      // characters, and 43 × 6 = 258 bits: the final character carries four
+      // significant bits and two that decode to nothing. Flipping it therefore
+      // yields the SAME key about one time in sixteen, and this assertion used
+      // to fail at roughly that rate — reporting a product bug that was really
+      // a test that had not tampered with anything. Every bit of the first
+      // character is significant.
+      const flipped = (key.startsWith('A') ? 'B' : 'A') + key.slice(1);
+      // Guard the premise rather than trusting it: if the "tampered" key ever
+      // decodes to the original bytes again, say so instead of quietly passing.
+      const reallyDifferent = await page3.evaluate(
+        (a, b) => {
+          const raw = (s) =>
+            atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4));
+          return raw(a) !== raw(b);
+        },
+        key,
+        flipped,
+      );
+      assert.ok(
+        reallyDifferent,
+        'the tampered key decodes to the original key — nothing was tested',
+      );
+
       await page3.goto(shareUrl.replace(key, flipped), {
         waitUntil: 'networkidle2',
         timeout: 20000,
