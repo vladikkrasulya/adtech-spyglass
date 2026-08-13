@@ -12,6 +12,8 @@ const operations = adviseMigration25To26(bidRequest);
 
 There is intentionally no `apply` API. Applying all, some, or none of the proposed operations remains an explicit caller decision.
 
+The browser Migration tab (`public/modules/migrate/`) is the caller that does apply them. It loads this module verbatim — `scripts/gen-browser-core.js` mirrors both files into `public/core/` behind a CI byte-parity guard — regroups the operations into atomic proposals, applies only what the user ticks, and keeps the previous editor text so a single Undo restores it exactly.
+
 ## Operation contract
 
 Every operation is JSON-serializable and self-contained:

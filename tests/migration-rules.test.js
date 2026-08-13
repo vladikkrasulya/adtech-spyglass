@@ -383,11 +383,16 @@ test('all repository sample and OpenRTB knowledge-base JSON survives advisory an
 });
 
 test('engine source remains pure and does not emit validator findings', () => {
+  // Strip comments first. The module DOCUMENTS that its browser global is
+  // `window.OrtbtoolsMigrate`, and a guard that reads prose would fail on the
+  // sentence explaining why the code is pure. Only executable text is scanned.
   const source = fs
     .readdirSync(MIGRATE_DIR)
     .filter((name) => name.endsWith('.js'))
     .map((name) => fs.readFileSync(path.join(MIGRATE_DIR, name), 'utf8'))
-    .join('\n');
+    .join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
 
   assert.doesNotMatch(source, /\b(?:window|document|fetch|XMLHttpRequest|sendBeacon)\b/);
   assert.doesNotMatch(source, /require\(['"](?:node:)?(?:fs|path|http|https)['"]\)/);

@@ -1,103 +1,73 @@
-# Walkthrough — Priority #0: Privacy-safe product telemetry
+# Walkthrough — Priority #4: OpenRTB 2.6 Migration Advisor (UI)
 
-Status: **CLOSED — live in production.**
+> Earlier priorities' walkthroughs are in git history, not in this file: #0
+> (privacy-safe product telemetry) is at `ad4ef27`, its predecessor at
+> `8032c55`. This file always documents the priority just closed.
 
-| Step                          | State                                                      |
-| ----------------------------- | ---------------------------------------------------------- |
-| Code                          | `03a7fb5` · `ba91c3f` · `6503261` · `6b4e1ed` on `main`    |
-| ClickHouse tables             | created, verified, empty — counting starts 2026-08-12      |
-| Production                    | `v1.6.1 (8032c55)` live, full smoke passed, RestartCount=0 |
-| `external` classification     | proven end-to-end through Cloudflare on the real domain    |
-| Per-IP rate limits            | proven isolating real clients against the live server (§6) |
-| Operator summary endpoint     | verified against live data (401 without token, 200 with)   |
-| Usage table (day/week/month)  | `scripts/usage-report.sh`, backed by a no-TTL rollup       |
-| Pre-existing shim-removal WIP | landed separately in `eab3de3` — see §8                    |
-
-The first deploy shipped a real defect that only a production request could
-reveal (§7), and chasing it down surfaced that the same broken value keyed every
-rate limiter in the app (§6).
-
----
-
-## 0. What the WIP check found
-
-The plan's first instruction was to inspect the uncommitted changes in
-`analytics` / `auth` / `db` and not duplicate or overwrite them.
-
-**Those changes are not telemetry.** They are the removal of the legacy
-"Spyglass" compatibility shims (the ~v1.6 wave):
-
-| File                              | What the WIP removes                                                           |
-| --------------------------------- | ------------------------------------------------------------------------------ |
-| `auth.js`                         | reading the `spy_session` cookie, and expiring it in `Set-Cookie`              |
-| `db.js`                           | `SPYGLASS_DATA_DIR` fallback + the `spyglass.db` → `ortbtools.db` rename       |
-| `lib/analytics-enabled.js`        | the `SPYGLASS_ANALYTICS_DISABLED` opt-out                                      |
-| `public/version.js`               | `window.SpyglassVersion` + migration of 5 localStorage / 1 sessionStorage keys |
-| `public/modules/intel/storage.js` | migration of the `spyglass_intel_v1` IndexedDB                                 |
-| `docker-compose.yml`              | the `adtech-spyglass` network alias on both networks                           |
-| `scripts/deploy.sh`               | the `SPYGLASS_TAG` fallback when reading the rollback tag                      |
-| `public/export.js`                | the duplicate `spyglass_version` key in the export bundle                      |
-| `tests/brand-guard.test.js`       | the `legacy-spyglass-ok` escape hatch itself                                   |
-
-So there was no telemetry work to avoid duplicating; this priority was built
-from scratch. Those changes were left untouched and are still in the working
-tree alongside the new work.
-
-Two side effects of that WIP worth a decision before it ships (not part of this
-priority): dropping the `spy_session` read will sign out sessions created before
-the rename, and dropping the localStorage/IndexedDB migrations will lose local
-history and the intel corpus for browsers that have not visited since
-2026-07-13.
+The advisor rules themselves landed earlier as `bc07e5a` + `1e12257`, built in a
+separate worktree and verified here against 17 adversarial probes. They were
+merged to `main` but wired to nothing — no export, no browser copy, no UI. This
+priority is the other half: making the advice reachable, and making it safe to
+act on.
 
 ---
 
 ## 1. What was built
 
-Anonymous product counters that separate **real external users** from the
-owner, AI agents, CI, uptime monitors and crawlers, and make activation, repeat
-usage and D1/D7/D30 retention computable — without storing any payload, IP
-address or User-Agent string.
+**A Migration tab that proposes, and only applies when told to.**
 
-### Data flow
+The chain is deliberately identical to the Diff tab's, because the property that
+matters is the same: the browser must apply _exactly_ the rules the tests pin,
+so there is one canonical source and no second implementation.
 
 ```
-browser (public/telemetry.js)
-  │  mints visitor_id (localStorage) + session_id (sessionStorage)
-  │  honours ?__ot_optout / GPC / DNT / ?__ot_internal
-  │  POST /api/v1/telemetry/event   {event, ids, locale, referrer host, utm_*, dnt, internal}
-  ▼
-modules/telemetry/handler.js
-  │  Sec-Fetch-Site guard · 2 KB body cap · per-IP rate limit · always 204
-  ▼
-lib/product-telemetry.js  buildRow()      ← the privacy boundary
-  │  rebuilds the row from a closed contract; validates every field
-  │  calls lib/traffic-class.js with ip + headers, then DISCARDS both
-  ▼
-ClickHouse analytics.ortbtools_product_events   (TTL 180 days)
-  ▲
-  └── GET /api/v1/telemetry/summary (Bearer ADMIN_STATS_TOKEN)
-      → traffic split · activation · repeat usage · D1/D7/D30 cohorts · daily
+packages/core/migrate/{rules,index}.js     ← canonical, isomorphic (UMD-lite)
+        │  scripts/gen-browser-core.js (byte-parity guard in CI)
+        ▼
+public/core/migrate-rules.js, migrate.js   ← verbatim copies, loaded by <script>
+        │
+        ▼
+public/modules/migrate/index.js            ← presentation + the applier
 ```
 
-### One writer, on purpose
+### The two decisions worth reading
 
-`public/telemetry.js` is the only thing that writes to this table. That was a
-design decision, documented in `lib/product-telemetry.js`:
+**Proposals are atomic; operations are not.** The advisor emits a promotion as
+_two_ operations — an `add` at the 2.6 path and a `remove` at the legacy path.
+Rendering those as two checkboxes would let a user tick the `remove` alone and
+silently delete a consent string. The tab pairs them back into one proposal and
+applies them together.
 
-- Every row then carries the same anonymous `visitor_id`, so cohorts are
-  computable. A server-side emitter has no visitor id to attach (the browser
-  never sends it on ordinary API calls, by design), so its rows could be
-  counted but never cohorted.
-- Traffic that cannot run JavaScript — Docker health checks, Uptime Kuma, curl,
-  most crawlers — is absent from the table **by construction**, not by
-  filtering.
-- Authoritative server-side volume already exists and is not duplicated:
-  `analytics.validation_logs` counts every analyze including API/CLI callers,
-  `analytics.ortbtools_events` counts requests.
+Pairing is not a guess. An `add` pairs with a `remove` when they share a rule id
+**and the removal sits underneath the add's parent** — which is exactly how the
+advisor constructs a promotion (`/imp/1/rwdd` ← `/imp/1/video/ext/rewarded`,
+`/regs/gdpr` ← `/regs/ext/gdpr`). That containment test is what stops imp 1's
+`add` being paired with imp 0's `remove` when only one of two impressions needs
+the promotion — the failure a "first free add" pairing would produce, and the
+case `tests/migrate-tab.test.js` → _"pairing never crosses an imp boundary"_
+exists to catch.
 
-Trade-off: a content blocker suppresses these counters. Because the whole funnel
-travels one path, the ratios stay sound even when absolute totals under-count.
-This is stated in `docs/PRIVACY.md`.
+An unpaired `remove` is a real and safe case: it means the 2.6 field already
+holds the same value, so only the legacy copy goes. It is labelled `Drop legacy
+copy` with that reason spelled out, rather than hidden or silently merged.
+
+**`review` is never pre-ticked.** `certain` and `likely` arrive selected;
+`review` arrives unselected, on a warning-coloured row. That confidence level
+exists precisely for advice the advisor cannot justify on its own — the
+ambiguous-taxonomy case `1e12257` introduced — so pre-ticking it would undo the
+point of having the level at all.
+
+### Undo
+
+Apply stores the previous editor text **verbatim** and restores it on one click.
+Not a recomputed inverse patch — the literal string. That matters because Apply
+re-serializes with `JSON.stringify(…, null, 2)` and therefore reformats the
+whole document; an inverse-patch undo would leave the user's original formatting
+gone forever. The reformatting is stated in the UI _before_ the click, not
+discovered after it.
+
+If nothing actually applied, the editor is not rewritten and no undo point is
+created — an Undo button that restores identical text would be a lie.
 
 ---
 
@@ -105,190 +75,106 @@ This is stated in `docs/PRIVACY.md`.
 
 ### New
 
-| File                                      | Purpose                                                                   |
-| ----------------------------------------- | ------------------------------------------------------------------------- |
-| `lib/traffic-class.js`                    | pure classifier: external / owner / internal / bot / monitor / ci / agent |
-| `lib/product-telemetry.js`                | the privacy boundary (`buildRow`) + buffered ClickHouse writer            |
-| `modules/telemetry/handler.js`            | `POST /api/v1/telemetry/event`, `GET /api/v1/telemetry/summary`           |
-| `public/telemetry.js`                     | browser client: ids, consent switches, beacon transport                   |
-| `lib/client-ip.js`                        | the app-wide client-address rule (`ba91c3f`, §7; extended in `6503261`)   |
-| `tests/traffic-class.test.js`             | 25 tests — the classification matrix                                      |
-| `tests/product-telemetry.test.js`         | 33 tests — the field contract                                             |
-| `tests/client-ip.test.js`                 | 16 tests — proxy trust, spoofing, and rate-limit bucketing                |
-| `tests/product-telemetry-browser.test.js` | headless Chrome smoke test                                                |
+| File                                | What it is                                                |
+| ----------------------------------- | --------------------------------------------------------- |
+| `public/modules/migrate/index.js`   | the tab: grouping, rendering, the applier, Undo           |
+| `public/modules/migrate/i18n.js`    | `migrate.*` keys in uk / en / ru                          |
+| `public/modules/migrate/styles.css` | scoped styles, design-system tokens only                  |
+| `public/core/migrate-rules.js`      | generated verbatim copy (parity-guarded)                  |
+| `public/core/migrate.js`            | generated verbatim copy (parity-guarded)                  |
+| `tests/migrate-tab.test.js`         | 14 tests — pairing, the applier, real samples; no browser |
+| `tests/migrate-tab-browser.test.js` | 1 end-to-end smoke test in real headless Chrome           |
 
 ### Modified
 
-| File                                           | Change                                                                        |
-| ---------------------------------------------- | ----------------------------------------------------------------------------- |
-| `server.js`                                    | `telemetryLimiter` (120/min/IP) + `router.register(createTelemetryModule(…))` |
-| `lib/http.js`                                  | `readJson(req, { maxBytes })` — optional tighter per-route body cap           |
-| `public/ortbtools.app.js`                      | emits `analyze_success`, `verify_email`                                       |
-| `public/modules/auth/index.js`                 | emits `register`                                                              |
-| `public/modules/macros/index.js`               | emits `macro_use` (copy click + override input, once per session)             |
-| `public/modules/share/index.js`                | emits `share_use` (once per session)                                          |
-| `public/{index,about,account}.{en,uk,ru}.html` | `<script src="/telemetry.js?v=1">` after `version.js` (9 files)               |
-| `docs/PRIVACY.md`                              | TL;DR bullet + "Product telemetry" section + self-host table/Option C         |
-| `docs/OPERATIONS.md`                           | §4.10 — DDL, owner exclusions, analysis SQL, verify, pause                    |
-| `.env.example`                                 | 5 new vars documented                                                         |
-| `lib/traffic-class.js`                         | CIDR matcher lifted out and shared with `lib/client-ip.js` (`ba91c3f`)        |
-| `modules/telemetry/handler.js`                 | uses `resolveClientIp()` (`ba91c3f`)                                          |
-| `auth.js`                                      | `clientIp()` delegates to `lib/client-ip.js` (`6503261`, §6)                  |
-| `modules/stream/handler.js`                    | SSE per-IP cap keys on the resolved address (`6503261`, §6)                   |
-| `modules/sentry-ingest/handler.js`             | ingest limit keys on the resolved address (`6503261`, §6)                     |
+| File                                                | Change                                                        |
+| --------------------------------------------------- | ------------------------------------------------------------- |
+| `packages/core/migrate/{index,rules}.js`            | wrapped in the UMD-lite shape so one source runs in both envs |
+| `packages/core/migrate/README.md`                   | names the caller that does apply, and how                     |
+| `packages/core/index.js`                            | exports `adviseMigration25To26`, `MIGRATION_RULES`            |
+| `scripts/gen-browser-core.js`                       | two new mirror pairs                                          |
+| `public/index.{en,uk,ru}.html`                      | stylesheet + four script tags, rules before index             |
+| `public/modules/inspector/template.{en,uk,ru}.html` | `tMigrate` tab button, badge, content container               |
+| `lib/product-telemetry.js`                          | `migrate_use` / `migrate_apply` in the event vocabulary       |
+| `public/telemetry.js`                               | same two names in the browser copy of the vocabulary          |
+| `docs/PRIVACY.md`                                   | event table corrected and extended                            |
+| `tests/migration-rules.test.js`                     | purity guard now strips comments before scanning              |
+| `tests/gists-browser.test.js`                       | fixed a tamper assertion that tampered with nothing (§5)      |
 
-**Zero overlap with the pre-existing WIP.** Not one file in the commit is a file
-the shim-removal WIP touches, which is what made it possible to ship Priority #0
-on its own.
-
-This document is deliberately **not committed**. `tests/brand-guard.test.js`
-scans every _tracked_ file (`git ls-files`) for the retired name, and section 0
-above quotes those identifiers on purpose. Committing this note would therefore
-need a `FILE_ALLOWLIST` entry — in a file the WIP is also editing. Keeping the
-note untracked avoids touching that shared file at all. If it is ever committed,
-add `'walkthrough.md'` to `FILE_ALLOWLIST` in the same commit.
+The migration-rules one: the guard asserted the module never mentions `window`,
+and the UMD header _documents_ that its browser global is
+`window.OrtbtoolsMigrate`. The guard was reading prose. It now scans executable
+text only — the same fix `tests/gists.test.js` already carries, for the same
+reason.
 
 ---
 
 ## 3. Acceptance criteria vs evidence
 
-### "Жодних BidRequest/BidResponse у telemetry"
+### "Вкладка зі списком запропонованих операцій, spec-лінк, before/after, confidence"
 
-Structural, not best-effort. `buildRow()` reads a closed set of keys, validates
-each against an enum / regex / numeric range, and returns a **fresh object
-literal** — the input is never spread. There is no column that accepts free-form
-text: the only strings are enums, a 32-hex id, a hostname and three UTM slugs
-capped at 48 chars of `[a-z0-9._-]`.
-
-Evidence:
-
-- `tests/product-telemetry.test.js` → _"a valid event produces exactly the
-  declared key set"_ (asserts `Object.keys(row)` equals `ROW_KEYS`).
-- → _"extra caller fields never reach the row"_ — passes `bidReq`, `bidRes`,
-  `adm`, `payload`, `msg`, `email`, `ip_address`, `path`, and a spoofed
-  `traffic_class`/`app_version`; asserts none appear in the serialized row.
-- → _"a getter cannot pass validation and then change the stored value"_.
-- `tests/product-telemetry-browser.test.js` step 5 — pastes a real BidRequest
-  containing `SECRET-DEAL-ID-42` and `confidential-publisher.example`, runs a
-  real analysis, then asserts no captured beacon body contains the marker, the
-  domain, `bidfloor`, the page path, or any undeclared key.
-
-Also absent by construction: the client IP and User-Agent are passed to the
-classifier and discarded — `tests/product-telemetry.test.js` → _"the transient
-IP and User-Agent are classified, never stored"_.
-
-### "Monitoring не рахується як користувач"
-
-Two independent layers.
-
-1. Health probes cannot run JavaScript, so they never reach the table at all.
-2. Anything that does reach it is classified. `tests/traffic-class.test.js`
-   pins the matrix: Uptime-Kuma, UptimeRobot, Prometheus, Blackbox Exporter,
-   kube-probe, Better Uptime and Zabbix → `monitor`; GitHub-Actions and the
-   repo's own smoke UA → `ci`; ClaudeBot / GPTBot / PerplexityBot /
-   OAI-SearchBot → `agent`; Googlebot, curl, wget, python-requests, node-fetch,
-   Go-http-client, PostmanRuntime, HeadlessChrome, AhrefsBot, Slackbot → `bot`;
-   a missing User-Agent → `bot`. All have `is_external === false`.
-
-### "Owner/agent traffic можна виключити"
-
-Three mechanisms, all tested:
-
-- `ORTBTOOLS_OWNER_IPS` — exact IPv4, IPv4 CIDR, literal IPv6. Env re-read per
-  call, so a change takes effect without a restart (_"owner env changes take
-  effect without a process restart"_).
-- `ORTBTOOLS_OWNER_USER_IDS` — signed-in owner accounts.
-- `?__ot_internal=1` — sticky per-browser flag; proven end-to-end in the browser
-  test (step 7, including stickiness on the next load without the parameter).
-  Automated callers can use `X-Ortbtools-Traffic: ci|agent|monitor|internal|owner|bot`.
-
-**Security property:** a hint can only move a request OUT of `external`.
-`external` is exclusively the fall-through result and no hint value maps to it.
-`tests/traffic-class.test.js` → _"no client-supplied hint can promote a request
-into external"_ tries every hint value plus `'external'`, `'EXTERNAL'`,
-`' external '`, `'human'`, a number, and an object with a lying `toString`.
-`tests/product-telemetry.test.js` → _"a bot cannot claim to be an external
-user"_ covers the same through the full row builder.
-
-Private, loopback, link-local, ULA and CGNAT (Tailscale `100.64/10`) addresses
-classify as `internal`. Any address that cannot be positively identified as
-public — `'unknown'`, a spoofed XFF token, a hostname — also lands on the
-internal side, so the numbers under-count rather than inflate.
-
-### "Доступні activation, repeat usage та D1/D7/D30 retention"
-
-`GET /api/v1/telemetry/summary?days=30` (Bearer `ADMIN_STATS_TOKEN`) returns:
-
-- `traffic` — the class split, i.e. the exclusion proof
-- `activation` — external visitors with ≥1 `analyze_success`, plus `registered`
-- `repeat_usage` — external visitors active on ≥2 distinct days
-- `retention` — per acquisition-day cohort: `cohort_size`, `d1`, `d7`, `d30`,
-  each with a `mature` flag so a 3-day-old cohort is never misread as 0% D7
-- `daily` — visitors, sessions and analyses per day
-
-All aggregates filter `is_external = 1 AND visitor_id != ''`. The equivalent raw
-SQL is in `docs/OPERATIONS.md` §4.10 for when the endpoint is unavailable.
-
-Retention is 180 days, so a D30 cohort still has its acquisition row in range
-with room to plot a trend.
-
-**The DDL and all four queries were executed against the live ClickHouse
-server**, in an isolated `tmp_ortbtools_telemetry_check` database that was
-created and dropped in the same run — `analytics.*` was never touched. A
-synthetic fixture with a known answer (three external visitors, one of them
-returning on d0+1/+7/+30, one on d0+1 only, one never; plus a `monitor` visitor
-and a DNT row with an empty id) produced exactly the expected numbers:
+Live run against a 2.5 request exercising all eight rules — 7 proposals, each
+with its confidence chip, rule id, `from → to = value` line, rationale, and a
+spec link:
 
 ```
-activation:  visitors=3  activated=2  repeat_visitors=2  registered=0
-retention:   cohort 2026-07-12  size=3  d1=2  d7=1  d30=1
-traffic:     external 13 events / monitor 2 events   ← reported separately
-daily:       4 rows; the monitor and DNT rows excluded from all of them
+mig-certain  ortb26.video.protocols  Move  /imp/0/video/protocol → /imp/0/video/protocols = [3]
+mig-certain  ortb26.regs.gdpr        Move  /regs/ext/gdpr        → /regs/gdpr             = 1
+mig-certain  ortb26.user.consent     Move  /user/ext/consent     → /user/consent          = CONSENT-STRING
+mig-certain  ortb26.content.prodq    Move  /site/content/videoquality → /site/content/prodq = 1
+mig-likely   ortb26.imp.rwdd         Move  /imp/0/video/ext/rewarded  → /imp/0/rwdd         = 1
+mig-likely   ortb26.source.schain    Move  /source/ext/schain    → /source/schain          = {…}
+mig-review   ortb26.category.cattax  Add   /site/cattax = 1
 ```
 
-That run also caught a real defect: the traffic-split query used
-`uniqExact(visitor_id)`, which counted the empty id (DNT / blocked storage) as
-one extra shared "visitor". It now uses
-`uniqExactIf(visitor_id, visitor_id != '')` in both the handler and the runbook.
+Spec hrefs verified to be `https://github.com/InteractiveAdvertisingBureau/…`
+links, opened with `rel="noopener noreferrer"`.
 
-Two environment notes for whoever repeats this: the server has `async_insert`
-enabled, so a SELECT immediately after an INSERT reads nothing — pass
-`--async_insert 0` when verifying by hand. And the app itself issues no DDL, so
-the table must be created before any row can land.
+### "`review` візуально відрізняється від `certain`"
 
-**Verified again on the real table after deploy.** `GET /api/v1/telemetry/summary`
-against production returned 401 without a token and, with one, the full shape
-over live rows: the traffic split separating `external` from `internal`,
-activation and repeat usage computed over external traffic only, and today's
-cohort reporting `mature: false` on D1/D7/D30 — the maturity flag correctly
-refusing to present "0%" as a finding.
+Distinct CSS class, distinct left border, warning colour, and — the part that
+actually protects the user — **unticked**. The Apply button read
+`Apply selected (6)` against 7 listed proposals.
 
-### "Документація Privacy оновлена"
+`tests/migrate-tab.test.js` pins the default table; the browser test asserts the
+rendered checkbox state. Both were confirmed non-vacuous by mutation: flipping
+`review: false → true` produces `not ok — a `review` proposal must never be
+pre-ticked`.
 
-`docs/PRIVACY.md` gained a TL;DR bullet and a "Product telemetry (anonymous
-counters)" section: the complete event list, the complete column list, what is
-deliberately absent, how the identifier works, the three opt-out paths, and the
-operator-side exclusions. The self-hosting table gained the new row and an
-Option C for disabling just this table.
+### "Apply лише за явним кліком"
 
-### Minimal event list from the plan
+Asserted directly: after loading the payload and opening the tab, the editor
+still equals the original string byte-for-byte. Rendering, badge updates and
+re-analysis never write.
 
-| Plan item                   | Event                                             | Emitted from                                       |
-| --------------------------- | ------------------------------------------------- | -------------------------------------------------- |
-| landing / session           | `landing`, `session_start`                        | `public/telemetry.js` on document load             |
-| успішний analyze            | `analyze_success`                                 | `public/ortbtools.app.js` on `j.success`           |
-| Macro / Share               | `macro_use`, `share_use`                          | `public/modules/{macros,share}/index.js`           |
-| Diff                        | `diff_use`                                        | **reserved** — Priority #3 not built yet           |
-| gist create / open          | `gist_create`, `gist_open`                        | **reserved** — Priority #2 not built yet           |
-| registration / verification | `register`, `verify_email`                        | `public/modules/auth/index.js`, `ortbtools.app.js` |
-| sanitized referrer / UTM    | `referrer_host`, `utm_source/medium/campaign`     | every event                                        |
-| bot / internal markers      | `traffic_class`, `is_external`, `ua_class`, `dnt` | every event                                        |
+### "Обов'язковий Undo"
 
-The three reserved names are in the vocabulary so Priorities #2 and #3 can emit
-without touching the privacy contract. `tests/product-telemetry.test.js` →
-_"every wired event name appears at a real emit site"_ fails the build if a name
-is declared wired but has no emitter, and _"the browser client and the server
-share one event vocabulary"_ fails if the two lists drift.
+```
+UNDO → byte-exact restore: true | proposals back: 7
+```
+
+Also mutation-checked: removing the `undoText = previous` line produces
+`not ok — Undo did not restore the original text exactly`.
+
+### "Нічого не втрачається"
+
+After applying the 6 ticked proposals:
+
+```
+regs.gdpr=1   regs.ext={}   user.consent=CONSENT-STRING   user.ext={vendorThing:"keep-me"}
+imp[0].video.protocols=[3]  imp[0].rwdd=1  imp[0].video.ext={vendor:"keep"}
+site.content.prodq=1  source.schain present  imp[1] untouched  id/bidfloor untouched
+```
+
+The unticked `review` proposal was **not** applied (`site.cattax` absent) and is
+still the one row on offer. Emptied `ext` containers are left in place, matching
+the advisor's own contract.
+
+### Wiring is real, not just present
+
+`node scripts/gen-browser-core.js --check` reports both new copies byte-identical
+to their canonical sources; `tests/browser-core-parity.test.js` fails the build
+on drift. `require('@ortbtools/core').adviseMigration25To26` resolves.
 
 ---
 
@@ -297,243 +183,114 @@ share one event vocabulary"_ fails if the two lists drift.
 Targeted:
 
 ```
-node --test tests/traffic-class.test.js \
-            tests/product-telemetry.test.js \
-            tests/product-telemetry-browser.test.js
-  → 59 tests, 59 pass, 0 fail, 0 skipped
-    (25 classifier + 33 contract + 1 real headless-Chrome smoke, ~7s)
+node --test tests/migrate-tab.test.js          → 14 pass, 0 fail
+node --test tests/migrate-tab-browser.test.js  →  1 pass, 0 fail
+node --test tests/migration-rules.test.js      → 11 pass, 0 fail
+node --test tests/browser-core-parity.test.js  →  1 pass, 0 fail
 ```
 
-Full suite — `npm run ci` (`format:check && lint && typecheck && test:coverage`):
+Full `npm run ci` (format:check → lint → typecheck → test:coverage):
 
 ```
-BEFORE this work:                 exit 0 — 1775 tests, 1765 pass, 0 fail
-AFTER telemetry      (03a7fb5):   exit 0 — 1836 tests, 1826 pass, 0 fail
-AFTER client-ip fix  (ba91c3f):   exit 0 — 1849 tests, 1839 pass, 0 fail
-AFTER limit hardening(6503261):   exit 0 — 1852 tests, 1842 pass, 0 fail
-Restored tree (all three commits + the shim-removal WIP on top):
-                                  exit 0 — 1853 tests, 1843 pass, 0 fail
+# tests 1928
+# pass  1918
+# fail  0
+# skipped 10
 ```
 
-All three pushes went through the `.githooks/pre-push` gate, which runs the same
-suite before it will let the push proceed.
+Baseline before this priority was 1913; the 15 added are the 14 unit tests plus
+the browser smoke test.
 
-The browser smoke test is skipped automatically when no Chrome/Chromium is
-present; on this machine it ran for real (`/usr/bin/google-chrome-stable`), so
-the 0-skipped count above is the genuine result, not a silent skip.
-
-The browser smoke test proves, against the real page in real Chrome:
-
-1. a first load emits `landing` + `session_start`;
-2. a reload re-emits `landing` but **not** `session_start`;
-3. `visitor_id` and `session_id` survive the reload and are 32-hex;
-4. a real analysis emits `analyze_success`;
-5. no beacon body carries the payload, the page path, or an undeclared key;
-6. every beacon is answered `204` with an empty body;
-7. `?__ot_internal=1` sets the flag and it is sticky;
-8. `?__ot_optout=1` silences the client completely, deletes the stored id, stays
-   silent on later loads, and makes an explicit `ortbtoolsTrack()` call return
-   `false`.
-
-Two real defects were found by these tests during development and fixed:
-`Blackbox Exporter/0.25.0` (a space, not a dash) was classifying as `external`,
-and an unparseable IP string was falling through to `external`.
+Both browser assertions were verified to fail under deliberate mutation before
+being accepted — see §3.
 
 ---
 
-## 5. Known limitations
+## 5. A latent defect in Priority #2's test, found by running CI repeatedly
 
-1. **The app never issues DDL.** The table now exists, but a future schema
-   change — or a fresh self-host — needs the statement in
-   `docs/OPERATIONS.md` §4.10 run by hand. Until a table exists the writer
-   buffers and the flush fails into a throttled pino error: no crash, no data.
-2. **`ORTBTOOLS_TRUSTED_PROXIES` must match the real hop.** It is set to
-   `172.24.0.1` for this deployment. If the Docker network is recreated with a
-   different subnet, or the front end stops being cloudflared → `127.0.0.1:8090`,
-   the value goes stale — and since `6503261` that no longer only blanks the
-   metrics, it also collapses every per-IP limiter back into one shared bucket.
-   The check is one query, in `docs/OPERATIONS.md` §4.10, and it is worth adding
-   to the deploy smoke if this ever bites twice.
-3. **Content blockers suppress everything.** There is no server-side fallback,
-   by design. Ratios stay valid; absolute totals under-count.
-4. **`ORTBTOOLS_OWNER_IPS` supports IPv4 CIDR only.** IPv6 must be listed as
-   literal addresses. Documented in both the module and `.env.example`. It is
-   currently **unset** — the owner's address is dynamic, so the practical way to
-   exclude your own browsing is `?__ot_internal=1` once per browser.
-5. **`landing` fires per document load, not per SPA navigation.** In-app
-   navigation between sections does not emit a new event. That makes `landing`
-   "documents loaded", not "screens viewed".
-6. **No opt-out UI.** The opt-out is a URL parameter plus a localStorage key,
-   documented in `docs/PRIVACY.md`. GPC/DNT is automatic. A settings toggle was
-   out of the stated scope for this priority.
-7. **`surface` is always `web`.** The `api` and `cli` values are reserved; direct
-   API and CLI callers emit nothing (their volume is already in
-   `validation_logs`).
-8. **Summary endpoint auth reuses `ADMIN_STATS_TOKEN`.** It is not separately
-   scoped. Without that env var it returns 503.
-9. **The `mature` flag is computed from the server clock**, not from a stored
-   cohort watermark. Cohort ages are day-granular UTC.
-10. **`analyze_success` is client-attested.** It fires when `/api/analyze`
-    returned success to that tab. The authoritative per-analyze count remains
-    `analytics.validation_logs`.
+`tests/gists-browser.test.js` → _"a tampered key must not decrypt to anything"_
+failed once in a full run and then passed three runs in a row. Run in isolation
+it failed 2 times in 5, so it was not load-related.
+
+The cause is arithmetic. A 256-bit key is 43 base64url characters, and
+43 × 6 = 258 bits — the final character carries four significant bits and two
+that decode to nothing. The test "tampered" with the key by flipping that last
+character, so roughly one time in sixteen the tampered key decoded to **exactly
+the original 32 bytes**, decryption succeeded, and the assertion reported a
+zero-knowledge failure that had not happened.
+
+```
+measured over 20 000 random keys: collision rate 5.92%
+distinct final characters observed: 0 4 8 A E I M Q U Y c g k o s w   (16 — as expected)
+```
+
+The product is fine: `importContentKey` rejects wrong keys correctly, and no
+entropy is lost — two spellings of the same key are still one 256-bit key. What
+was broken was the test, and its failure mode was the expensive kind: a false
+alarm on an encryption claim.
+
+Fixed by editing the **first** character, where all six bits are significant,
+and by asserting the premise before relying on it — the tampered key is now
+decoded in-page and compared against the original, so if it ever stops being a
+different key the test says so instead of passing quietly. 8 consecutive solo
+runs and 2 consecutive full CI runs green afterwards.
 
 ---
 
-## 6. The same defect keyed every rate limiter — also fixed (`6503261`)
+## 6. Known limitations
 
-The address `ba91c3f` fixed for telemetry was never telemetry's alone: it is the
-value the whole app throttles on. Auditing every reader turned up **two opposite
-bugs**.
-
-**Too strict.** `auth.clientIp()` had the identical loopback-only assumption, and
-it keys the login, register, reset, verify, analyze, behavior, intel and read
-limiters, plus the address written to `event_log` and `sessions`. Since the peer
-is always the Docker gateway, every visitor resolved to one address: those
-limiters were per-IP in name only, sharing a single bucket for the whole
-internet.
-
-**Too lax.** `modules/stream` (SSE connections per IP) and
-`modules/sentry-ingest` (GlitchTip ingest limit) each took the **leftmost**
-`X-Forwarded-For` entry from **any** peer. Cloudflare appends to that header
-rather than replacing it, so the leftmost entry is whatever the caller sent — a
-client rotating a fake value got a fresh allowance every request, making both
-caps decorative. `modules/stream` even carried a comment asserting the opposite,
-on two counts: the leftmost hop is not client-proof, and the origin is reachable
-from the host as well as through the tunnel.
-
-Both now route through `lib/client-ip.js`. Three tests were added that exercise
-the _bucketing_, not just the parsing: two visitors behind one proxy must not
-share a bucket; a spoofed header from an untrusted peer must not mint a fresh
-allowance; a client-supplied XFF prefix through the trusted proxy must not
-either.
-
-**Proven against the live server** with the 20/min behaviour limiter:
-
-```
-client A (198.51.100.10) ×22 → 200 ×20, then 429, 429
-client B (198.51.100.20) ×1  → 200      ← unaffected by A's exhausted quota
-client A again           ×1  → 429      ← still throttled
-```
-
-Before the fix B would have been 429 as well; both shared the gateway's bucket.
-
-Root cause behind the root cause: `docs/OPERATIONS.md` §1 claimed `ortbtools.com`
-reaches the app through kyivtech-portal. cloudflared routes that hostname
-straight to `localhost:8090`. The same stale topology claim was repeated in the
-`auth.js` comment, which is how the assumption survived. Both corrected.
-
-One consequence worth naming: `event_log` and session rows now record the
-visitor's real address rather than the proxy's internal one. That is what
-`docs/PRIVACY.md` already described — until now the recorded value simply was not
-the one documented. Called out explicitly there.
+- **Apply reformats the document.** 2-space indent, key order preserved,
+  comments impossible (it is JSON). Stated in the UI before the click; Undo is
+  the exact way back, but only one level deep — a second Apply overwrites the
+  undo point rather than stacking.
+- **The rule set is bounded, and the tab says so.** Flexible banner bounds,
+  `device.sua`, pod metadata and anything else without an unambiguous 2.6
+  counterpart are out of scope. "No proposals" therefore means "nothing this
+  rule set recognises", not "fully migrated" — the footer states that in all
+  three locales so the empty state cannot be misread.
+- **Request side only.** The advisor requires `imp[]`, so a BidResponse is
+  reported as _not examined_ rather than as clean. Verified in the browser test.
+- **The badge recomputes on a 400 ms debounce** after editor input, and the list
+  itself re-derives only on tab open, explicit Refresh, Apply or Undo — a list
+  that redrew mid-review would fight the user.
+- **Selection is per-session, not persisted.** Re-opening the tab restores the
+  confidence defaults. Deliberate: a remembered tick on a `review` proposal is
+  exactly the state that should not survive.
 
 ---
 
-## 7. The defect the first deploy shipped
+## 7. State to resume from
 
-Worth recording, because no test caught it and no amount of local verification
-would have.
-
-`03a7fb5` went to production green: full CI, a real headless-Chrome smoke, and an
-end-to-end run against the live ClickHouse in which classification was correct
-for eight different traffic shapes. Then a single beacon fired at
-`https://ortbtools.com` came back **`traffic_class = internal`,
-`is_external = 0`** — identical to a localhost call.
-
-Every real visitor would have been filed as internal. Activation, repeat usage
-and retention would have read zero forever, and the table would have looked like
-it was working.
-
-Cause: `auth.clientIp()` believes `X-Forwarded-For` only when the TCP peer is
-loopback, on the assumption that the proxy dials `127.0.0.1:8090`. It does — but
-the published port (`127.0.0.1:8090 -> 3000`) makes Docker's userland proxy
-re-originate the connection, so the container's peer is the bridge gateway:
-
-```
-Cloudflare edge → cloudflared (host) → 127.0.0.1:8090 → docker-proxy → container
-                                                          peer = 172.24.0.1
-```
-
-Confirmed rather than assumed: the same `/api/v1/telemetry/summary` 401 fired
-publicly and locally both landed in `analytics.ortbtools_events` with
-`ip = 172.24.0.1`, and seven days of http rows held zero public addresses.
-
-Fixed in `ba91c3f` by `lib/client-ip.js`, which believes `CF-Connecting-IP`
-(Cloudflare overwrites it at the edge, so a client cannot forge it) or the
-rightmost untrusted `X-Forwarded-For` hop — but only from a peer in
-`ORTBTOOLS_TRUSTED_PROXIES`. Unset, it behaves exactly like the old loopback-only
-rule, so a self-host trusts nothing by default. 13 tests cover it, including that
-an untrusted peer can never claim a different address.
-
-Re-verified in production after the second deploy:
-
-```
-public  request via Cloudflare → traffic_class=external, is_external=1   ✓
-local   request via 127.0.0.1  → traffic_class=internal, is_external=0   ✓
-```
-
-The lesson for the remaining priorities: a deployment-topology assumption
-written in a code comment ("the portal binds the container on 127.0.0.1:8090")
-had gone stale, and only a request from the real internet could show it. The
-follow-up in §6 came from asking the obvious next question — _what else reads
-that value?_ — which turned one telemetry bug into three real ones.
+- Landed on `feat/migration-advisor-ui` as three commits, kept separate because
+  they are three different things: the gists test fix (§5), this priority, and
+  the `vast-shape` extraction that belongs to #5's integration rather than to
+  #4. Merged to `main` and deployed from there. Production had been sitting at
+  `0e5b6da` while `main` was `1e12257` — core-only, no behaviour difference —
+  and this closes that gap too.
+- Codex is on `feat/vast-timeline` in `/srv/DATA/Work/ortbtools-diff`, building
+  Priority #5's VAST extractor under `packages/core/vast-timeline/`. Its brief
+  forbids `packages/core/index.js`, `spec-refs.json`, `rules-vast.js`,
+  `tests/vast.test.js`, `public/**`, `scripts/gen-browser-core.js`, `server.js`,
+  `db.js`, `modules/**` — export wiring and browser mirroring stay the
+  integration step here, exactly as they were for #3 and #4.
+- `packages/core/vast-shape.js` is that integration already started: the two
+  VAST sniffing helpers moved out of `format-detect.js` (which re-exports them
+  unchanged) so the browser can have them without dragging
+  `non-iab-formats.js` along. Codex's module still reads them from
+  `../format-detect`; repointing it at `../vast-shape` is a two-line change
+  once its branch merges.
+- `migrate_use` / `migrate_apply` are in the vocabulary and emitting, but no row
+  exists in ClickHouse yet — the table accepts them by name, no DDL needed.
 
 ---
 
-## 8. The legacy-shim WIP — landed in `eab3de3`, live as `8032c55`
+## 8. Not done in this priority
 
-Done. Next up is **#2, Shareable Encrypted Gists**.
-
-Every prediction below held on the real deploy: the container came up with the
-`adtech-spyglass` alias gone from both networks, and the one live session
-survived (`sessions hydrated from DB, loaded: 1`) — nobody was signed out. The
-internal Prometheus probe stayed green on `http://ortbtools:3000/api/health`.
-
-Before committing, each shim was checked for a live consumer rather than assumed
-dead: zero Prometheus targets and zero provisioned-dashboard references to
-`adtech-spyglass`, no `spyglass.db` on disk, `ORTBTOOLS_TAG` present in `.env`
-with no `SPYGLASS_TAG`, and no dangling references left in
-`public/modules/intel/storage.js`. Three blank lines left where removed blocks
-had been were tidied up.
-
-**Why it was safe** — the two side effects flagged in §0 as needing a decision,
-measured rather than guessed:
-
-| Risk flagged in §0                               | Measured                                               |
-| ------------------------------------------------ | ------------------------------------------------------ |
-| Removing `spy_session` signs out old sessions    | 1 session exists, 0 created before the rename → nobody |
-| `db.js` drops the `spyglass.db` rename migration | No `spyglass.db` on disk → the code is already dead    |
-| Local history / intel corpus lost                | <10 real page loads a day, essentially the owner only  |
-
-Landing it first also freed `db.js`, which #2 needs for its schema migration and
-which the WIP had been holding — no more stash-park-restore dance.
-
-**State to resume from:**
-
-- `main` = `8032c55`, pushed, and that is what production runs. The working tree
-  is clean for the first time this session.
-- ClickHouse: `ortbtools_product_events` and `ortbtools_usage_daily` both exist
-  and are empty. Counting starts honestly at 2026-08-12.
-- `.specify/assessments/shareable-url-gists/` holds only `intake.md`. Its four
-  open questions are already answered by the roadmap brief (storage, encryption,
-  30-day TTL, anonymous creation), so #2 needs no separate clarification phase.
-- #3's diff engine is being built in parallel by another agent, scoped to
-  `packages/core/diff/` plus its own tests in a separate git worktree. Do not
-  touch those paths, `packages/core/index.js`, `packages/core/spec-refs.json`,
-  or `scripts/gen-browser-core.js` — browser mirroring and export wiring are the
-  integration step, and that is ours.
-- Outside this repo: the Prometheus probe fix is applied and live but sits
-  **uncommitted** inside the grafana-stack dashboard-redesign WIP. If that WIP is
-  ever discarded, re-add `scrape_interval: 60s` to the `blackbox-external` job.
-
----
-
-## 9. Not done in this priority
-
-- Priorities #2–#5 untouched. `.specify/assessments/shareable-url-gists/` still
-  contains only `intake.md`.
-- The pre-existing shim-removal WIP is still uncommitted, exactly as found, with
-  its two user-visible side effects still awaiting a decision (§0).
-- `STREAM_MAX_CONNS_PER_IP` and the sentry-ingest limit now actually bind, where
-  before they could be bypassed. If either turns out to be tuned for a world
-  where it never fired, the number — not the mechanism — is what to revisit.
+- **No `confirm()` before Apply.** An explicit button plus an exact, always-
+  present Undo covers it, and a modal on an operation designed to be run
+  iteratively would be friction without safety. Reconsider if a second undo
+  level ever lands.
+- **No multi-level undo history.** One level, exact.
+- **#3 cosmetics still open**: diff-count badge on the Diff tab, loading side B
+  from local history.
+- **#5 and #6 untouched** on this side.

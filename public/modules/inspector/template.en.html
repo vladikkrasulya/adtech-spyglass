@@ -501,6 +501,14 @@
       >
         diff <span class="tab-badge" id="diffBadge" hidden></span>
       </button>
+      <button
+        class="tab-btn"
+        data-action="switch-tab"
+        data-target="tMigrate"
+        title="Proposed OpenRTB 2.5 → 2.6 changes for this BidRequest. Nothing is applied until you click Apply, and Undo restores your text exactly."
+      >
+        2.6 migration <span class="tab-badge" id="migrateBadge" hidden></span>
+      </button>
       <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
         vendor ref
       </button>
@@ -554,6 +562,13 @@
         <div class="empty-hint">
           Compare this payload against another. Paste side B and press Compare — nothing here
           modifies the editor.
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="tMigrate">
+      <div id="migrateContainer">
+        <div class="empty-hint">
+          Proposed OpenRTB 2.5 → 2.6 changes appear here. Nothing is applied until you click Apply.
         </div>
       </div>
     </div>

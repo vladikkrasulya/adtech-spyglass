@@ -118,24 +118,13 @@ function isCanonicalUrlRequest(o) {
  * subtly different sniffers (this file, crosscheck.js, the UI). All
  * future code SHOULD reuse these.
  *
- * `isVastShape` is anchored at start (allowing whitespace) so a string
- * mentioning `<VAST` deep inside HTML doesn't false-positive. `detect`
- * returns the major.minor string from the version attribute, or null.
+ * They now live in `vast-shape.js` and are re-exported here unchanged: the
+ * browser-side VAST timeline extractor needs them, and mirroring this file
+ * would drag `non-iab-formats.js` along for no benefit. Callers of
+ * `format-detect` are unaffected — importing from either place resolves to the
+ * same one definition.
  */
-function isVastShape(s) {
-  if (typeof s !== 'string') return false;
-  // Anchor on `<VAST` directly, OR `<?xml` prefix immediately followed by
-  // `<VAST` (allowing the XML declaration). Pre-fix any `<?xml` prefix
-  // matched, which false-positive'd on SVG / other XML-shaped creatives
-  // (audit 2026-05-10 finding B-12). Now only an actual VAST root passes.
-  return /^\s*(?:<\?xml[^?]*\?>\s*)?<VAST\b/i.test(s);
-}
-
-function detectVastVersion(s) {
-  if (typeof s !== 'string') return null;
-  const m = s.match(/<VAST\b[^>]*\sversion\s*=\s*["'](\d+(?:\.\d+)?)["']/i);
-  return m ? m[1] : null;
-}
+const { isVastShape, detectVastVersion } = require('./vast-shape');
 
 function hasPopBidRowShape(row) {
   return isObj(row) && 'url' in row && 'bid' in row;
