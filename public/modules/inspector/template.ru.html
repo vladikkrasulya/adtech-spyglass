@@ -513,6 +513,14 @@
       >
         макросы <span class="tab-badge" id="macrosBadge" hidden></span>
       </button>
+      <button
+        class="tab-btn"
+        data-action="switch-tab"
+        data-target="tDiff"
+        title="Сравнить payload в редакторе с другим — с учётом OpenRTB или как сырой JSON. Только чтение: ничего не меняется."
+      >
+        diff <span class="tab-badge" id="diffBadge" hidden></span>
+      </button>
       <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
         vendor ref
       </button>
@@ -556,6 +564,14 @@
       <div id="macroEvaluatorContainer">
         <div class="empty-hint">
           Макросы и трекинг-URL из BidResponse появятся здесь после анализа.
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="tDiff">
+      <div id="diffContainer">
+        <div class="empty-hint">
+          Сравни этот payload с другим. Вставь сторону B и нажми «Сравнить» — здесь ничто не меняет
+          редактор.
         </div>
       </div>
     </div>

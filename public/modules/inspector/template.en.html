@@ -493,6 +493,14 @@
       >
         macros <span class="tab-badge" id="macrosBadge" hidden></span>
       </button>
+      <button
+        class="tab-btn"
+        data-action="switch-tab"
+        data-target="tDiff"
+        title="Compare the payload in the editor against another one — OpenRTB-aware or raw JSON. Read-only: nothing is modified."
+      >
+        diff <span class="tab-badge" id="diffBadge" hidden></span>
+      </button>
       <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
         vendor ref
       </button>
@@ -538,6 +546,14 @@
       <div id="macroEvaluatorContainer">
         <div class="empty-hint">
           Macros and notice URLs from BidResponse appear here after analysis.
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="tDiff">
+      <div id="diffContainer">
+        <div class="empty-hint">
+          Compare this payload against another. Paste side B and press Compare — nothing here
+          modifies the editor.
         </div>
       </div>
     </div>

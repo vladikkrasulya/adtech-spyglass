@@ -78,6 +78,7 @@
     <link rel="mask-icon" href="/icon.svg" color="#0284C7" />
     <link rel="stylesheet" href="/design-system.css?v=13" />
     <link rel="stylesheet" href="/modules/macros/styles.css" />
+    <link rel="stylesheet" href="/modules/diff/styles.css" />
     <script>
       (function () {
         try {
@@ -255,6 +256,13 @@
     <script src="/modules/embed/i18n.js" defer></script>
     <script src="/modules/embed/index.js" defer></script>
     <script src="/modules/behavior/behavior-tab.js" defer></script>
+    <!-- Diff tab. The engine is the canonical packages/core/diff source,
+         mirrored verbatim by scripts/gen-browser-core.js under a CI parity
+         guard — registry first, it registers the global index.js reads. -->
+    <script src="/core/diff-registry.js?v=1" defer></script>
+    <script src="/core/diff.js?v=1" defer></script>
+    <script src="/modules/diff/i18n.js" defer></script>
+    <script src="/modules/diff/index.js" defer></script>
     <script src="/modules/macros/i18n.js" defer></script>
     <script src="/modules/macros/index.js" defer></script>
     <!-- Phase 7a — ortbtools Intelligence (Discovery Mode). Loads in order:

@@ -1,0 +1,171 @@
+/* ============================================================
+   modules/diff/styles.css — Diff tab scoped styles.
+
+   Uses the design-system tokens only; no hard-coded colours, so the
+   tab follows the theme like every other surface.
+   ============================================================ */
+
+.diff-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.diff-optgroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.diff-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.diff-hint {
+  padding: var(--space-2) var(--space-3) 0;
+  opacity: 0.8;
+}
+
+.diff-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .diff-sides {
+    grid-template-columns: 1fr;
+  }
+}
+
+.diff-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.diff-pane {
+  width: 100%;
+  min-height: 9rem;
+  resize: vertical;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  padding: var(--space-2);
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.diff-pane[readonly] {
+  opacity: 0.75;
+}
+
+.diff-result {
+  margin-top: var(--space-4);
+}
+
+.diff-summary {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  margin-bottom: var(--space-3);
+}
+
+/* "Equal, but the comparison was degraded" must not look like a clean pass. */
+.diff-summary-warned {
+  border-color: var(--warning, var(--border));
+}
+
+.diff-warning {
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--warning, var(--border));
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.85rem;
+}
+
+.diff-group {
+  margin-bottom: var(--space-4);
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+}
+
+.diff-table td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.diff-sign {
+  width: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.diff-add .diff-sign {
+  color: var(--success);
+}
+
+.diff-remove .diff-sign {
+  color: var(--danger, var(--error));
+}
+
+.diff-change .diff-sign {
+  color: var(--warning);
+}
+
+.diff-path {
+  color: var(--text);
+  word-break: break-all;
+}
+
+.diff-path-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent, var(--text));
+  text-decoration: underline dotted;
+  cursor: pointer;
+  text-align: left;
+}
+
+.diff-values {
+  width: 55%;
+}
+
+.diff-before {
+  color: var(--danger, var(--error));
+}
+
+.diff-after {
+  color: var(--success);
+}
+
+.diff-arrow {
+  opacity: 0.6;
+}
