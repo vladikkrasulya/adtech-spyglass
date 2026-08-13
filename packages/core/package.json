@@ -14,6 +14,7 @@
     "rules/",
     "decoders/",
     "behavior/",
+    "diff/",
     "intel/",
     "utils/",
     "README.md",

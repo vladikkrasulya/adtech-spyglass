@@ -17,7 +17,14 @@ Use this package when an application, service, or local tool needs the same dete
 ## Usage
 
 ```js
-const { validate, crosscheck, detectVersion, listDialects } = require('@ortbtools/core');
+const {
+  validate,
+  crosscheck,
+  detectVersion,
+  listDialects,
+  rawDiff,
+  semanticDiff,
+} = require('@ortbtools/core');
 
 const result = validate(bidRequest, {
   dialect: 'iab', // 'iab' | 'ext-rtb' | 'inpage-push'
@@ -47,6 +54,10 @@ const cross = crosscheck(bidRequest, bidResponse, { locale: 'uk' });
 
 const detection = detectVersion(bidRequest);
 // → { version: '2.6', confidence: 1, signals: [...] }
+
+const rawChanges = rawDiff(before, after);
+const semanticChanges = semanticDiff(before, after);
+// → { mode, equal, changes, warnings }
 ```
 
 ## API
@@ -100,6 +111,8 @@ Enumerate supported dialect overlays / locales.
 ### Additional root exports
 
 - `mirror(payload, opts?)` — generate a minimal or best-practice request/response counterpart and self-test it
+- `diffJson(left, right, { mode })`, `rawDiff(left, right)`, `semanticDiff(left, right)` — pure deterministic JSON comparison; semantic mode matches `imp[]`, `seatbid[]`, and `bid[]` by their documented identities and uses only an explicit registry for set-like arrays
+- `OPENRTB_ARRAY_IDENTITIES`, `OPENRTB_SET_PATHS` — immutable registries defining semantic array behavior
 - `detectFormat(payload, userDialect?)` — detect format, context, and creative-protocol tags
 - `decodeCategory()`, `decodeCategories()`, `extractAllCategories()` — IAB Content Taxonomy helpers
 - `rollupStatus(findings)` — apply the same status rollup used by `validate()`

@@ -438,6 +438,13 @@ function mirror(input, opts) {
 }
 
 const { decodeCategory, decodeCategories, extractAllCategories } = require('./categories');
+const {
+  diffJson,
+  rawDiff,
+  semanticDiff,
+  OPENRTB_ARRAY_IDENTITIES,
+  OPENRTB_SET_PATHS,
+} = require('./diff');
 
 module.exports = {
   validate,
@@ -452,6 +459,13 @@ module.exports = {
   decodeCategory,
   decodeCategories,
   extractAllCategories,
+  // Pure raw/semantic JSON comparison. Semantic behavior is constrained to
+  // the exported, explicit OpenRTB array registries.
+  diffJson,
+  rawDiff,
+  semanticDiff,
+  OPENRTB_ARRAY_IDENTITIES,
+  OPENRTB_SET_PATHS,
   // Status rollup — exported so HTTP handlers that union findings from
   // several validate() calls recompute status with the SAME semantics
   // (question-level findings don't block 'clean') instead of inlining a
