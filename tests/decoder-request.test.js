@@ -267,3 +267,84 @@ test('decodeRequest: clickunder and link-feed do not intercept each other', () =
   assert.equal(decodeRequest(CLICKUNDER_URL).variant, 'url-clickunder-feed');
   assert.equal(decodeRequest(LINKFEED_URL).variant, 'url-linkfeed');
 });
+
+// ── _raw is verbatim (see docs/url-input-spec-2026-08-13.md, D1) ────────────
+
+const { parseRawQuery, findDecodeDamage } = require('@ortbtools/core/decoders/request/_raw-query');
+
+test('parseRawQuery: does not percent-decode', () => {
+  const raw = parseRawQuery('?a=%20&b=%2F&c=hello%20world');
+  assert.equal(raw.a, '%20');
+  assert.equal(raw.b, '%2F');
+  assert.equal(raw.c, 'hello%20world');
+});
+
+test('parseRawQuery: bare key is present with an empty value', () => {
+  const raw = parseRawQuery('?flag&a=1');
+  assert.ok(Object.hasOwn(raw, 'flag'));
+  assert.equal(raw.flag, '');
+  assert.equal(raw.a, '1');
+});
+
+test('parseRawQuery: first value wins on a repeated key', () => {
+  // Must match detect(), which reads searchParams.get() — the first value.
+  assert.equal(parseRawQuery('?format=json&format=cu').format, 'json');
+});
+
+test('parseRawQuery: tolerates leading ?, empty pairs and missing input', () => {
+  assert.deepEqual(parseRawQuery(''), {});
+  assert.deepEqual(parseRawQuery('?'), {});
+  assert.deepEqual(parseRawQuery(undefined), {});
+  assert.deepEqual(parseRawQuery('a=1&&b=2'), { a: '1', b: '2' });
+  assert.deepEqual(parseRawQuery('a=1'), parseRawQuery('?a=1'));
+});
+
+test('findDecodeDamage: reports only values percent-decoding destroyed', () => {
+  const url = new URL('https://f.example/s?cb=%%CACHEBUSTER%%&cu=%%CLICK_URL%%&sp=hello%20world');
+  const damage = findDecodeDamage(url.searchParams, parseRawQuery(url.search));
+  assert.equal(damage.length, 1, 'only the hex-prefix macro is damaged');
+  assert.equal(damage[0].key, 'cb');
+});
+
+// A macro `%%NAME%%` is destroyed exactly when NAME's first two letters are a
+// valid hex pair: `CA` → 0xCA → invalid UTF-8 → U+FFFD. `CL` is not, so
+// %%CLICK_URL%% survives. Measured on Node, Chrome and Firefox alike.
+const MACROS_DESTROYED = ['CACHEBUSTER', 'AD_UNIT', 'ADV_DOM', 'DEVICE_ID', 'EARNINGS'];
+const MACROS_INTACT = ['CLICK_URL', 'AUCTION_PRICE', 'CORRELATOR', 'TIMESTAMP'];
+
+test('_raw: unexpanded feed macros survive verbatim', () => {
+  for (const name of [...MACROS_DESTROYED, ...MACROS_INTACT]) {
+    const c = decodeRequest(
+      `https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=q&m=%%${name}%%`,
+    );
+    assert.ok(c, `${name}: claimed`);
+    assert.equal(c._raw.m, `%%${name}%%`, `${name}: _raw is verbatim`);
+  }
+});
+
+test('_raw: damaged macros warn, intact macros do not', () => {
+  const build = (name) =>
+    decodeRequest(
+      `https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=q&m=%%${name}%%`,
+    );
+  for (const name of MACROS_DESTROYED) {
+    const w = build(name).warnings;
+    assert.equal(w.length, 1, `${name}: warns`);
+    assert.equal(w[0].code, 'query_value_decode_damage');
+    assert.equal(w[0].param, 'm');
+  }
+  for (const name of MACROS_INTACT) {
+    assert.deepEqual(build(name).warnings, [], `${name}: no warning`);
+  }
+});
+
+test('_raw: verbatim reading does not stop fields that need decoding', () => {
+  const c = decodeRequest(SEARCH_FEED_URL);
+  assert.equal(c.site.page, 'https://publisher.example/', 'site.page stays decoded');
+  assert.equal(c.device.ua, 'Mozilla/5.0 Test', 'device.ua stays decoded');
+  assert.equal(c._raw.url, 'https%3A%2F%2Fpublisher.example%2F', '_raw stays encoded');
+});
+
+test('makeCanonicalUrlRequest: envelope carries an empty warnings array', () => {
+  assert.deepEqual(makeCanonicalUrlRequest('v', 'http://x.test/').warnings, []);
+});

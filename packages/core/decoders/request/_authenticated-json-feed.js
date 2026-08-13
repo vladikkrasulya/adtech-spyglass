@@ -9,6 +9,7 @@
  */
 
 const { makeCanonicalUrlRequest } = require('./_canonical');
+const { parseRawQuery, findDecodeDamage } = require('./_raw-query');
 
 function isIPv6(s) {
   return typeof s === 'string' && s.includes(':');
@@ -20,17 +21,26 @@ function decodeAuthenticatedJsonFeed(id, text, parsedUrl, opts) {
   if (opts && opts.format) can.format = opts.format;
 
   const q = parsedUrl.searchParams;
-  // FIRST value wins on a repeated key, because that is what detect() matched
-  // on (`q.get()` returns the first). Last-wins here let one extra
-  // `&format=cu` at the end overwrite the `format=json` that detection saw:
-  // `_raw` then disagreed with the signature and format-detect read the
-  // overwritten value, re-labelling the feed `pops` — the exact label this
-  // decoder family exists to avoid. One query string, one reading.
-  const raw = {};
-  for (const [k, v] of q.entries()) {
-    if (!Object.hasOwn(raw, k)) raw[k] = v;
-  }
+  // Read `_raw` off the query string itself, not off `q`. FIRST value wins on a
+  // repeated key, because that is what detect() matched on (`q.get()` returns
+  // the first). Last-wins here let one extra `&format=cu` at the end overwrite
+  // the `format=json` that detection saw: `_raw` then disagreed with the
+  // signature and format-detect read the overwritten value, re-labelling the
+  // feed `pops` — the exact label this decoder family exists to avoid. One
+  // query string, one reading.
+  const raw = parseRawQuery(parsedUrl.search);
   can._raw = raw;
+
+  // Unexpanded feed macros can decode into U+FFFD without throwing, so say so
+  // rather than letting a mangled value pass as the operator's own input.
+  for (const { key, decoded } of findDecodeDamage(q, raw)) {
+    can.warnings.push({
+      code: 'query_value_decode_damage',
+      param: key,
+      detail: `Percent-decoding replaced bytes in "${key}"; raw value preserved in _raw.`,
+      decoded,
+    });
+  }
 
   const ip = q.get('user_ip');
   if (ip) {
