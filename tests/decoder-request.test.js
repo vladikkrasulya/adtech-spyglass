@@ -152,6 +152,26 @@ test('url-linkfeed.decode: _raw preserves every query param verbatim', () => {
   assert.equal(c._raw.lang, 'en');
 });
 
+test('_raw reads a repeated key the same way detect() did — first value wins', () => {
+  // The adversarial review caught last-wins here: one extra `&format=cu` at
+  // the END overwrote the `format=json` that detection matched on, `_raw`
+  // disagreed with the signature, and format-detect re-labelled the search
+  // feed `pops` — the exact label the decoder exists to avoid. detect() uses
+  // q.get(), which returns the FIRST value; _raw must read the same one.
+  const c = decodeRequest(
+    'https://feed.vendor.example/search?format=json&feed=7&auth=tk&query=x&format=cu',
+  );
+  assert.equal(c.variant, 'url-search-feed');
+  assert.equal(c._raw.format, 'json', '_raw must report what detection saw, not the override');
+
+  // Same reading on /link, same shared mapping.
+  const l = decodeRequest(
+    'http://feed.vendor.example/link?format=json&feed=demo&auth=tk&subid=a&subid=b',
+  );
+  assert.equal(l._raw.subid, 'a');
+  assert.equal(l.user.id, 'a', 'the mapped field and _raw must agree');
+});
+
 test("url-linkfeed.decode: missing optional params don't pollute canonical", () => {
   // Required feed-param triad present; all optional params (ip/ua/lang/url/subid) absent.
   const c = decodeRequest('http://feed.vendor.example/link?format=json&feed=demo&auth=tk');

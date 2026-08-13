@@ -20,8 +20,16 @@ function decodeAuthenticatedJsonFeed(id, text, parsedUrl, opts) {
   if (opts && opts.format) can.format = opts.format;
 
   const q = parsedUrl.searchParams;
+  // FIRST value wins on a repeated key, because that is what detect() matched
+  // on (`q.get()` returns the first). Last-wins here let one extra
+  // `&format=cu` at the end overwrite the `format=json` that detection saw:
+  // `_raw` then disagreed with the signature and format-detect read the
+  // overwritten value, re-labelling the feed `pops` — the exact label this
+  // decoder family exists to avoid. One query string, one reading.
   const raw = {};
-  for (const [k, v] of q.entries()) raw[k] = v;
+  for (const [k, v] of q.entries()) {
+    if (!Object.hasOwn(raw, k)) raw[k] = v;
+  }
   can._raw = raw;
 
   const ip = q.get('user_ip');

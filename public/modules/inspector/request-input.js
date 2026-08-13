@@ -13,13 +13,24 @@
    ============================================================ */
 'use strict';
 
-export function isHttpUrlInput(text) {
-  if (typeof text !== 'string') return false;
-  const trimmed = text.trim();
-  if (!/^https?:\/\//i.test(trimmed)) return false;
+/**
+ * Permissive: the text LOOKS like an http(s) URL, however mangled. This is the
+ * routing test, and it is deliberately just a prefix match. People paste URLs
+ * with spaces from wrapped log lines and truncated hosts from chat — those must
+ * still travel to the server as URL-style requests so validate() can produce a
+ * verdict about THEM, alongside the response-side findings. A strict
+ * `new URL()` gate here once made a mangled URL throw as "not valid JSON",
+ * which aborted the whole analysis and blamed the wrong format.
+ */
+export function isUrlLikeInput(text) {
+  return typeof text === 'string' && /^https?:\/\//i.test(text.trim());
+}
 
+/** Strict: a well-formed absolute http(s) URL. Display-grade, used by the badge. */
+export function isHttpUrlInput(text) {
+  if (!isUrlLikeInput(text)) return false;
   try {
-    const parsed = new URL(trimmed);
+    const parsed = new URL(text.trim());
     return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.hostname;
   } catch {
     return false;
@@ -33,13 +44,19 @@ export function parseRequestInput(text) {
     return JSON.parse(text);
   } catch (jsonError) {
     const trimmed = text.trim();
-    if (isHttpUrlInput(trimmed)) return trimmed;
+    if (isUrlLikeInput(trimmed)) return trimmed;
     throw jsonError;
   }
 }
 
 export function serializeRequestInput(value) {
-  return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  // Bare only for what the URL branch produced — the same permissive test
+  // parseRequestInput routes on, so the two stay symmetrical by construction.
+  // An unconditional bare-string branch stored a JSON string scalar ("hello")
+  // unquoted, and the History reload then threw on its own stored entry.
+  return typeof value === 'string' && isUrlLikeInput(value)
+    ? value
+    : JSON.stringify(value, null, 2);
 }
 
 export function inputBadgeState(text, opts = {}) {

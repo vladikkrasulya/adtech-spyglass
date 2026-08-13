@@ -428,6 +428,25 @@ test('notice URL validation accepts HTTP(S) macro templates and exact CDATA wrap
   assert.equal(findById(findings, 'response.bid.notice_url_invalid'), undefined);
 });
 
+test('whitespace-padded CDATA notice URLs are accepted; junk inside is still caught', () => {
+  // XML→JSON adapters emit `<![CDATA[ url ]]>` with padding or newlines —
+  // that is the common form, and the first version of this rule accepted only
+  // the byte-exact wrapper while the product's own macro evaluator
+  // (cleanRawUrl) took both. The trim must not become a loophole, though:
+  // markup INSIDE the wrapper is still an adapter concatenation bug.
+  const res = validResponse();
+  const bid = res.seatbid[0].bid[0];
+  bid.nurl = '<![CDATA[ https://notice.example/win?p=${AUCTION_PRICE} ]]>';
+  bid.burl = '<![CDATA[\nhttps://notice.example/bill\n]]>';
+  const { findings } = validate(res);
+  assert.equal(findById(findings, 'response.bid.notice_url_invalid'), undefined);
+
+  const bad = validResponse();
+  bad.seatbid[0].bid[0].burl = '<![CDATA[ https://notice.example/bill <iframe> ]]>';
+  const hits = validate(bad).findings.filter((f) => f.id === 'response.bid.notice_url_invalid');
+  assert.equal(hits.length, 1, 'markup inside CDATA must stay flagged');
+});
+
 test('all present notice fields must be absolute HTTP(S) string templates', () => {
   const res = validResponse();
   const bid = res.seatbid[0].bid[0];

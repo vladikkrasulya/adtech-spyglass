@@ -43,7 +43,12 @@ function isValidNoticeUrl(value) {
   if (typeof value !== 'string' || value.length === 0) return false;
   let candidate = value;
   if (candidate.startsWith('<![CDATA[') && candidate.endsWith(']]>')) {
-    candidate = candidate.slice(9, -3);
+    // Trim inside the wrapper: an XML boundary is exactly where the value
+    // arrives newline-padded (`<![CDATA[ https://… ]]>`), and this product's
+    // own macro evaluator (cleanRawUrl) accepts that form. Without the trim
+    // the surviving whitespace hit the guard below and the only CDATA shape
+    // real adapters emit was the one shape this tolerance failed to cover.
+    candidate = candidate.slice(9, -3).trim();
   }
   // URL() helpfully percent-encodes raw markup/whitespace. Notice fields are
   // wire templates, so accepting those characters would hide adapter
