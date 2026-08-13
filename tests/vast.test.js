@@ -86,6 +86,98 @@ test('detectVastVersion: missing returns null', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────
+// The sniffers used to be one regex each. These pin the three defects
+// that cost us — see packages/core/vast-shape.js for the full story.
+// ─────────────────────────────────────────────────────────────────
+
+const INLINE = '<Ad id="a"><InLine><Impression>https://t/i</Impression></InLine></Ad>';
+
+test('sniffers: legal XML prolog before the root does not hide a VAST document', () => {
+  // Ad servers routinely prepend a comment or a stylesheet PI. The old regex
+  // allowed at most ONE processing instruction and no comments, so a valid tag
+  // came back as "not VAST" — detectFormat tagged no format and validateVast
+  // never ran, which reported a broken creative as having nothing wrong.
+  for (const prolog of [
+    '<!-- served by adserver -->',
+    '<?xml version="1.0"?><!--c-->',
+    '<?xml version="1.0"?><?xml-stylesheet href="a.xsl"?>',
+    '<!DOCTYPE VAST>',
+    '\n\n  <!--a--> <!--b-->\t',
+  ]) {
+    const xml = `${prolog}<VAST version="4.2">${INLINE}</VAST>`;
+    assert.equal(isVastShape(xml), true, `shape rejected after: ${prolog}`);
+    assert.equal(detectShape(xml), true, `shape rejected after: ${prolog}`);
+    assert.equal(detectVastVersion(xml), '4.2', `version lost after: ${prolog}`);
+  }
+});
+
+test('sniffers: a namespace-prefixed root is VAST, whatever the prefix is', () => {
+  // `<vast:VAST>` used to pass by pure accident of the substring `<vast`, while
+  // `<v:VAST>` was rejected. Prefixes are handled everywhere else, so handle
+  // them here too rather than depending on how the author spelled the prefix.
+  assert.equal(isVastShape('<v:VAST xmlns:v="urn:iab" version="3.0"></v:VAST>'), true);
+  assert.equal(detectVastVersion('<v:VAST xmlns:v="urn:iab" version="3.0"></v:VAST>'), '3.0');
+  assert.equal(isVastShape('<vast:VAST version="4.0"></vast:VAST>'), true);
+});
+
+test('sniffers: still anchored — a document whose root is not VAST is not VAST', () => {
+  assert.equal(isVastShape('<div>see <VAST></VAST></div>'), false);
+  assert.equal(isVastShape('<svg xmlns="http://www.w3.org/2000/svg"><VAST/></svg>'), false);
+  assert.equal(isVastShape('<!-- c --><html><VAST version="4.0"/></html>'), false);
+  assert.equal(isVastShape('<VASTLIKE version="4.0"/>'), false);
+  assert.equal(isVastShape('<notvast:VASTish/>'), false);
+});
+
+test('detectVastVersion: reads the ROOT tag only, never the body', () => {
+  // The old regex matched `version=` anywhere, so a tracker URL that happened
+  // to contain the text `<VAST version="2.0"` set the document's version.
+  const spoof = `<VAST>${'<Ad><InLine><Impression><![CDATA[https://t/?n=<VAST version="2.0" ]]></Impression></InLine></Ad>'}</VAST>`;
+  assert.equal(detectVastVersion(spoof), null);
+  // A '>' inside an attribute value must not end the start tag early either.
+  assert.equal(detectVastVersion('<VAST xmlns="a>b" version="4.1"></VAST>'), '4.1');
+});
+
+// `'<VAST '.repeat(n)` inside CDATA made the old `[^>]*` regex quadratic:
+// 192 KB took 4.2 s, and the 2 MiB body cap extrapolated to ~8 minutes of
+// blocked CPU — reachable from an unauthenticated /api/analyze POST, because
+// detectFormat() calls detectVastVersion on bid.adm.
+//
+// THE ORDER OF THE TWO HALVES BELOW IS LOAD-BEARING. A node:test `timeout`
+// cannot rescue this: the work is synchronous, so a blocked event loop never
+// runs the timer and a regression would stall the whole suite instead of
+// reporting. The moderate fixture therefore goes FIRST, sized so the OLD code
+// finishes in about four seconds and trips the assertion — the test aborts
+// there and never reaches the body-cap fixture that would actually hang.
+const vastBomb = (repeats) =>
+  `<VAST><Ad><InLine><Impression><![CDATA[${'<VAST '.repeat(repeats)}]]></Impression></InLine></Ad></VAST>`;
+
+test('sniffers: linear on adversarial input — no catastrophic backtracking', () => {
+  const moderate = vastBomb(32000);
+  assert.ok(moderate.length > 190_000, `fixture too small to discriminate: ${moderate.length}`);
+
+  let started = process.hrtime.bigint();
+  assert.equal(detectVastVersion(moderate), null);
+  assert.equal(isVastShape(moderate), true);
+  const moderateMs = Number(process.hrtime.bigint() - started) / 1e6;
+  // The fix does this in well under a millisecond; the old regex took 4257 ms.
+  assert.ok(
+    moderateMs < 1000,
+    `sniffers took ${moderateMs.toFixed(0)}ms on 190 KB — expected linear, this is backtracking`,
+  );
+
+  // Only now the real thing: a document at the 2 MiB request-body cap.
+  const atCap = vastBomb(340000);
+  assert.ok(atCap.length > 1_800_000, `fixture must reach the body cap, got ${atCap.length}`);
+  started = process.hrtime.bigint();
+  assert.equal(detectVastVersion(atCap), null);
+  assert.equal(isVastShape(atCap), true);
+  // An unterminated prolog construct must not be re-scanned either.
+  assert.equal(isVastShape('<!--' + 'x'.repeat(1_000_000)), false);
+  const capMs = Number(process.hrtime.bigint() - started) / 1e6;
+  assert.ok(capMs < 1000, `sniffers took ${capMs.toFixed(0)}ms on 1.9 MiB — expected linear`);
+});
+
+// ─────────────────────────────────────────────────────────────────
 // validateVast() — unit
 // ─────────────────────────────────────────────────────────────────
 
