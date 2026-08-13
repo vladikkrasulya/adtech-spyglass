@@ -26,6 +26,9 @@ const FILE_ALLOWLIST = new Set([
   'docs/tech-debt-2026-05-12.md',
   'docs/jsfiddle-comparison-2026-05-04.md',
   'tests/brand-guard.test.js',
+  // Records WHICH retired-name shims the v1.6.1 cleanup removed, so it has to
+  // quote the old identifiers to be useful.
+  'walkthrough.md',
 ]);
 
 const SUBSTRING_ALLOWLIST = [
