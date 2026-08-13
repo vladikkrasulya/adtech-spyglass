@@ -15,7 +15,14 @@ const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
 // canonical → browser copy (verbatim; the UMD-lite wrapper runs in both envs).
-const PAIRS = [['packages/core/source-map.js', 'public/core/source-map.js']];
+const PAIRS = [
+  ['packages/core/source-map.js', 'public/core/source-map.js'],
+  // The Diff tab must apply exactly the rules tests/semantic-diff.test.js pins,
+  // so the engine is mirrored rather than reimplemented. registry.js first:
+  // index.js reads it from the browser global, and HTML must load it first too.
+  ['packages/core/diff/registry.js', 'public/core/diff-registry.js'],
+  ['packages/core/diff/index.js', 'public/core/diff.js'],
+];
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 const check = process.argv.includes('--check');

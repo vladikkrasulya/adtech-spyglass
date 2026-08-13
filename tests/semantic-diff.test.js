@@ -345,7 +345,15 @@ test('engine source is pure and does not emit validator findings', () => {
     .readdirSync(diffDir)
     .filter((name) => name.endsWith('.js'))
     .map((name) => fs.readFileSync(path.join(diffDir, name), 'utf8'))
-    .join('\n');
+    .join('\n')
+    // Strip comments before the DOM/network check. The module is isomorphic and
+    // its header has to SAY so — naming `window.OrtbtoolsDiff` in prose is
+    // documentation, not an access. Scanning comments would force the file to
+    // describe itself vaguely to stay green. Executable code is still held to
+    // the full rule: it reaches the browser global through `globalThis`, never
+    // through a DOM reference.
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
 
   assert.doesNotMatch(source, /\b(?:window|document|fetch|XMLHttpRequest|sendBeacon)\b/);
   assert.doesNotMatch(source, /require\(['"](?:node:)?fs['"]\)/);
