@@ -7,11 +7,15 @@
  */
 (function (root, factory) {
   'use strict';
+  // The sniffers come from vast-shape.js, not format-detect.js. Both export the
+  // same two functions -- format-detect re-exports them -- but format-detect
+  // also pulls in non-iab-formats.js, and mirroring 600+ lines of pop/push
+  // heuristics into the page to get two five-line helpers is not a trade worth
+  // making. vast-shape.js is the mirrored one.
   if (typeof module === 'object' && module.exports) {
-    const { isVastShape, detectVastVersion } = require('../format-detect');
-    module.exports = factory({ isVastShape, detectVastVersion });
+    module.exports = factory(require('../vast-shape'));
   } else {
-    root.OrtbtoolsVastTimeline = factory(root.OrtbtoolsFormatDetect);
+    root.OrtbtoolsVastTimeline = factory(root.OrtbtoolsVastShape);
   }
 })(globalThis, function (formatDetect) {
   'use strict';
@@ -62,8 +66,8 @@
     {
       code: 'vast.runtime.detector_unavailable',
       message:
-        'Found that the VAST format-detection helpers are unavailable. The UMD build cannot classify the XML without those existing helpers. Load OrtbtoolsFormatDetect before OrtbtoolsVastTimeline, or use the Node module.',
-      expected: 'Load the existing VAST format-detection helpers before calling the extractor.',
+        'Found that the VAST shape helpers are unavailable. The UMD build cannot classify the XML without them. Load OrtbtoolsVastShape (public/core/vast-shape.js) before OrtbtoolsVastTimeline, or use the Node module.',
+      expected: 'Load OrtbtoolsVastShape before calling the extractor.',
       spec: VAST_SPEC,
     },
     {

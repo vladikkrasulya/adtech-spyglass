@@ -446,6 +446,7 @@ const {
   OPENRTB_SET_PATHS,
 } = require('./diff');
 const { adviseMigration25To26, MIGRATION_RULES } = require('./migrate');
+const { parseVastTimeline, VAST_DIAGNOSTICS } = require('./vast-timeline');
 
 module.exports = {
   validate,
@@ -472,6 +473,13 @@ module.exports = {
   // caller's explicit decision, never a side effect of asking for advice.
   adviseMigration25To26,
   MIGRATION_RULES,
+  // Static VAST extraction: structure and a deterministic event timeline, with
+  // no network at any point — a Wrapper's VASTAdTagURI is reported unresolved
+  // rather than followed. Distinct from `validateVast` in rules-vast.js, which
+  // judges a tag against IAB rules; this one only describes what is in it, and
+  // explains every failure and every empty field it produces.
+  parseVastTimeline,
+  VAST_DIAGNOSTICS,
   // Status rollup — exported so HTTP handlers that union findings from
   // several validate() calls recompute status with the SAME semantics
   // (question-level findings don't block 'clean') instead of inlining a

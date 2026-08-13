@@ -512,23 +512,57 @@ test('input size and nesting depth are bounded with typed failures', () => {
 });
 
 test('Node and browser-global branches expose the same UMD-lite API', () => {
+  // The REAL vast-shape.js is loaded first, exactly as the page loads it via a
+  // script tag, rather than a stub standing in for it. A stub would agree with
+  // the module by construction: it would pass even if the global were renamed
+  // or the two files disagreed about what "is this VAST" means, which is the
+  // only thing this test can usefully catch.
   const nodeApi = loadModule();
-  const source = fs.readFileSync(path.join(MODULE_DIR, 'index.js'), 'utf8');
-  const context = {
-    OrtbtoolsFormatDetect: {
-      isVastShape: (value) => typeof value === 'string' && /^\s*<VAST\b/i.test(value),
-      detectVastVersion: (value) => value.match(/version="([^"]+)"/)?.[1] || null,
-    },
-  };
+  const context = {};
   context.globalThis = context;
-  vm.runInNewContext(source, context, { filename: 'vast-timeline/index.js' });
-
-  assert.deepEqual(Object.keys(context.OrtbtoolsVastTimeline).sort(), Object.keys(nodeApi).sort());
-  const browserResult = context.OrtbtoolsVastTimeline.parseVastTimeline(
-    '<VAST version="4.2"></VAST>',
+  vm.runInNewContext(
+    fs.readFileSync(path.join(MODULE_DIR, '..', 'vast-shape.js'), 'utf8'),
+    context,
+    {
+      filename: 'vast-shape.js',
+    },
   );
-  assert.equal(browserResult.ok, true);
-  assert.equal(browserResult.version, '4.2');
+  assert.ok(
+    context.OrtbtoolsVastShape,
+    'vast-shape.js must publish the global the extractor reads',
+  );
+
+  vm.runInNewContext(fs.readFileSync(path.join(MODULE_DIR, 'index.js'), 'utf8'), context, {
+    filename: 'vast-timeline/index.js',
+  });
+  assert.deepEqual(Object.keys(context.OrtbtoolsVastTimeline).sort(), Object.keys(nodeApi).sort());
+
+  // Same input, both branches, compared as a whole — not one hand-picked field.
+  const xml =
+    '<!-- adserver --><VAST version="4.2"><Ad id="a"><InLine>' +
+    '<Impression><![CDATA[https://t/i?a=1&amp;b=2]]></Impression>' +
+    '<Creatives><Creative><Linear><Duration>00:00:20</Duration><TrackingEvents>' +
+    '<Tracking event="start">https://t/s</Tracking>' +
+    '<Tracking event="progress" offset="50%">https://t/p</Tracking>' +
+    '</TrackingEvents></Linear></Creative></Creatives></InLine></Ad></VAST>';
+  const browserResult = context.OrtbtoolsVastTimeline.parseVastTimeline(xml);
+  assert.equal(browserResult.ok, true, JSON.stringify(browserResult.error));
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(browserResult)),
+    JSON.parse(JSON.stringify(nodeApi.parseVastTimeline(xml))),
+    'the two branches must produce identical results, not merely load',
+  );
+
+  // Without the shape helpers the module must say so, and say what to do.
+  const bare = {};
+  bare.globalThis = bare;
+  vm.runInNewContext(fs.readFileSync(path.join(MODULE_DIR, 'index.js'), 'utf8'), bare, {
+    filename: 'vast-timeline/index.js',
+  });
+  const unavailable = bare.OrtbtoolsVastTimeline.parseVastTimeline(xml);
+  assert.equal(unavailable.ok, false);
+  assert.equal(unavailable.error.code, 'vast.runtime.detector_unavailable');
+  assert.match(unavailable.error.message, /OrtbtoolsVastShape/);
 });
 
 test('canonical source has no network, DOM, clock, randomness, or findings primitives', () => {
