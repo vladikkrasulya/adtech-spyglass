@@ -16,6 +16,7 @@
     "behavior/",
     "diff/",
     "migrate/",
+    "vast-timeline/",
     "intel/",
     "utils/",
     "README.md",

@@ -22,6 +22,7 @@ const REQUIRED_IN_TARBALL = [
   'package/behavior/index.js',
   'package/intel/index.js',
   'package/migrate/index.js',
+  'package/vast-timeline/index.js',
   'package/iab-categories.en.json',
 ];
 
