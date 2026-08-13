@@ -40,6 +40,23 @@ function validateUrlRequest(canonical) {
 
   const raw = canonical._raw || {};
 
+  // Plain HTTP can work server-to-server, but query parameters are exposed
+  // in transit and browser-side calls from an HTTPS page may be rejected as
+  // mixed content. Do not include the URL (and therefore credentials or
+  // account identifiers) in the finding.
+  try {
+    if (new URL(canonical.url).protocol === 'http:') {
+      // No path on purpose: URL finding locations currently resolve query
+      // parameter names. Using `url` here would jump to the nested `url=`
+      // referrer parameter instead of the request's `http:` scheme.
+      findings.push(F('request.url.insecure_http', LEVELS.WARNING, ''));
+    }
+  } catch {
+    // A decoder-produced canonical should always contain a valid URL. The
+    // decode_failed branch owns malformed input; keep this validator total
+    // for hand-built canonicals used by API consumers.
+  }
+
   // IPv6 in user_ip — many SSPs only accept IPv4. INFO not WARNING because
   // The link-feed endpoint handles IPv6 fine; the signal is "verify your downstream
   // chain handles v6". When we observe vendor-specific intolerance we'll

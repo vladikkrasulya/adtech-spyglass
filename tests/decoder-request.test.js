@@ -17,11 +17,19 @@ const assert = require('node:assert/strict');
 const { makeCanonicalUrlRequest } = require('@ortbtools/core/decoders/request/_canonical');
 const { decodeRequest, info } = require('@ortbtools/core/decoders/request');
 const urlLinkfeed = require('@ortbtools/core/decoders/request/url-linkfeed');
+const urlSearchFeed = require('@ortbtools/core/decoders/request/url-search-feed');
 
 const LINKFEED_URL =
   'http://feed.vendor.example/link?format=json&feed=demo&auth=tk&subid=pub1' +
   '&user_ip=192.0.2.1&ua=Mozilla%2F5.0%20Test' +
   '&url=https%3A%2F%2Fexample.com%2F&lang=en';
+
+// Fully synthetic: reserved example domains/IP and placeholder credentials.
+// This mirrors only the wire shape; no partner-supplied values are retained.
+const SEARCH_FEED_URL =
+  'http://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=demo-query' +
+  '&subid=pub1&user_ip=192.0.2.44&ua=Mozilla%2F5.0%20Test' +
+  '&url=https%3A%2F%2Fpublisher.example%2F&count=1&ad_info=1&lang=en';
 
 // ── Canonical envelope ──────────────────────────────────────────────────────
 
@@ -68,6 +76,7 @@ test('info(): exposes registered decoder metadata', () => {
   const list = info();
   assert.ok(Array.isArray(list));
   assert.ok(list.find((d) => d.id === 'url-linkfeed'));
+  assert.ok(list.find((d) => d.id === 'url-search-feed'));
   assert.ok(list.every((d) => typeof d.description === 'string'));
 });
 
@@ -152,6 +161,57 @@ test("url-linkfeed.decode: missing optional params don't pollute canonical", () 
   assert.equal(c.device.language, undefined);
   assert.equal(c.site.page, undefined);
   assert.equal(c.user.id, undefined);
+});
+
+// ── url-search-feed decoder ───────────────────────────────────────────────
+
+test('url-search-feed.detect: claims only the full JSON search-feed signature', () => {
+  assert.equal(urlSearchFeed.detect('', new URL(SEARCH_FEED_URL)), true);
+  assert.equal(
+    urlSearchFeed.detect(
+      '',
+      new URL('https://another-host.example/search?format=json&feed=demo&auth=tk&query=x'),
+    ),
+    true,
+  );
+  assert.equal(
+    urlSearchFeed.detect(
+      '',
+      new URL('https://feed.vendor.example/search/?format=json&feed=demo&auth=tk&query=x'),
+    ),
+    true,
+  );
+
+  for (const url of [
+    'https://feed.vendor.example/search?format=json&feed=demo&auth=tk',
+    'https://feed.vendor.example/search?format=json&feed=demo&query=x',
+    'https://feed.vendor.example/search?format=json&auth=tk&query=x',
+    'https://feed.vendor.example/other?format=json&feed=demo&auth=tk&query=x',
+    'ftp://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=x',
+    'https://user:pass@feed.vendor.example/search?format=json&feed=demo&auth=tk&query=x',
+    'https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=x#fragment',
+  ]) {
+    assert.equal(urlSearchFeed.detect('', new URL(url)), false, url);
+  }
+});
+
+test('decodeRequest: synthetic search-feed URL maps to canonical URL request', () => {
+  const c = decodeRequest(SEARCH_FEED_URL);
+  assert.ok(c, 'search-feed URL is claimed');
+  assert.equal(c.variant, 'url-search-feed');
+  assert.equal(c.endpoint, 'feed.vendor.example/search');
+  assert.equal(c.format, undefined);
+  assert.equal(c.device.ip, '192.0.2.44');
+  assert.equal(c.device.ua, 'Mozilla/5.0 Test');
+  assert.equal(c.device.language, 'en');
+  assert.equal(c.site.page, 'https://publisher.example/');
+  assert.equal(c.user.id, 'pub1');
+  assert.equal(c._raw.query, 'demo-query');
+  assert.ok(Object.hasOwn(c._raw, 'auth'));
+});
+
+test('decodeRequest: generic web search URL remains unclaimed', () => {
+  assert.equal(decodeRequest('https://search.example/search?q=demo-query&format=json'), null);
 });
 
 // ── url-clickunder-feed (Track: clickunder/pop URL feed) ────────────────────

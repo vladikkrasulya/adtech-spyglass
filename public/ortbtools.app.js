@@ -34,6 +34,11 @@ import {
 // partner state + renderers) that the shell service delegates to when
 // Inspector happens to be mounted.
 import { session } from '/core/session.js';
+import {
+  parseRequestInput,
+  renderInputBadge,
+  serializeRequestInput,
+} from '/modules/inspector/request-input.js';
 
 export async function mountInspector(root, ctx) {
   'use strict';
@@ -782,20 +787,11 @@ export async function mountInspector(root, ctx) {
   function updateJsonBadge(id) {
     const el = $(id);
     const badge = $(id === 'bidReq' ? 'reqBadge' : 'resBadge');
-    const v = el.value.trim();
-    if (!v) {
-      badge.textContent = t('badge.empty');
-      badge.className = 'json-badge empty';
-      return;
-    }
-    try {
-      JSON.parse(v);
-      badge.textContent = t('badge.valid');
-      badge.className = 'json-badge valid';
-    } catch {
-      badge.textContent = t('badge.invalid');
-      badge.className = 'json-badge invalid';
-    }
+    // The request editor admits two wire shapes: OpenRTB JSON and a raw
+    // HTTP(S) feed URL. Give the latter an explicit state instead of the
+    // misleading red "invalid JSON" badge. The response editor remains
+    // JSON-only.
+    renderInputBadge(el.value, badge, t, { allowUrl: id === 'bidReq' });
   }
 
   // ── Ad preview helpers ────────────────────────────────────────
@@ -2131,25 +2127,11 @@ export async function mountInspector(root, ctx) {
 
     try {
       // bidReq accepts two shapes: oRTB JSON (parsed to object) OR a URL-
-      // style ad request string (clickunder/teaser/pop GET — decoded
+      // style legacy feed request string (decoded
       // server-side via packages/core/decoders/request/). If JSON.parse
       // fails AND the text looks like a URL, pass it through verbatim;
       // the server's validate() will route it to the URL_REQUEST branch.
-      let req;
-      if (!reqVal) {
-        req = {};
-      } else {
-        try {
-          req = JSON.parse(reqVal);
-        } catch (e) {
-          const trimmed = reqVal.trim();
-          if (/^https?:\/\//i.test(trimmed)) {
-            req = trimmed;
-          } else {
-            throw e;
-          }
-        }
-      }
+      const req = parseRequestInput(reqVal);
       const res = resVal ? JSON.parse(resVal) : {};
       // Simulated clearing price: use ONLY the user's explicit input.
       // Do NOT fallback to bid.price, bidfloor, or 0.00 — an empty field
@@ -2699,7 +2681,10 @@ export async function mountInspector(root, ctx) {
         const status = validation ? validation.status : 'local';
         historyStore.unshift({
           ts: Date.now(),
-          req: JSON.stringify(req, null, 2),
+          // Keep URL-style requests as raw URLs. JSON.stringify(string)
+          // would persist a quote-wrapped JSON scalar, so loading History
+          // would visibly mutate the original request.
+          req: serializeRequestInput(req),
           res: resVal ? JSON.stringify(res, null, 2) : '',
           title: entity,
           status,

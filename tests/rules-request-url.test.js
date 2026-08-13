@@ -17,7 +17,7 @@ const { validateUrlRequest } = require('@ortbtools/core/rules-request-url');
 const { makeCanonicalUrlRequest } = require('@ortbtools/core/decoders/request/_canonical');
 
 function baseCanonical(extra) {
-  const c = makeCanonicalUrlRequest('url-linkfeed', 'http://feed.vendor.example/link?x=1');
+  const c = makeCanonicalUrlRequest('url-linkfeed', 'https://feed.vendor.example/link?x=1');
   // Default sane shape — IPv4, no empty CH fields, no quoted ch-uafull,
   // no trailing-? in url. Each test mutates exactly one signal.
   c.device.ip = '192.0.2.1';
@@ -54,6 +54,24 @@ test('validateUrlRequest: non-object canonical → decode_failed ERROR', () => {
 test('validateUrlRequest: clean canonical → no findings', () => {
   const r = validateUrlRequest(baseCanonical());
   assert.deepEqual(r.findings, []);
+});
+
+// ── Plain HTTP transport → WARNING ────────────────────────────────────────
+
+test('validateUrlRequest: plain HTTP → insecure_http WARNING without URL params', () => {
+  const c = baseCanonical();
+  c.url = 'http://feed.vendor.example/link?auth=synthetic-secret';
+  const r = validateUrlRequest(c);
+  const f = r.findings.find((x) => x.id === 'request.url.insecure_http');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, '', 'must not mispoint at the nested url= query parameter');
+  assert.deepEqual(f.params, {});
+});
+
+test('validateUrlRequest: HTTPS → no insecure_http finding', () => {
+  const r = validateUrlRequest(baseCanonical());
+  assert.ok(!findingIds(r).includes('request.url.insecure_http'));
 });
 
 // ── IPv6 user_ip → INFO ─────────────────────────────────────────────────────
