@@ -1,0 +1,10 @@
+{
+  "id": "fixture-regs-gdpr",
+  "imp": [{ "id": "1" }],
+  "regs": {
+    "ext": {
+      "gdpr": 1,
+      "us_privacy": "1YNN"
+    }
+  }
+}

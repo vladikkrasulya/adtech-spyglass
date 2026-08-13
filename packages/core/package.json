@@ -15,6 +15,7 @@
     "decoders/",
     "behavior/",
     "diff/",
+    "migrate/",
     "intel/",
     "utils/",
     "README.md",

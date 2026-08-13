@@ -1,0 +1,11 @@
+{
+  "id": "fixture-content-prodq",
+  "imp": [{ "id": "1" }],
+  "site": {
+    "content": {
+      "videoquality": 2,
+      "title": "Keep this title",
+      "ext": { "vendor_content": "keep" }
+    }
+  }
+}

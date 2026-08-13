@@ -1,0 +1,19 @@
+{
+  "id": "fixture-category-cattax",
+  "imp": [{ "id": "1" }],
+  "bcat": ["IAB25"],
+  "site": {
+    "cat": ["IAB1"],
+    "sectioncat": ["IAB1-2"],
+    "publisher": {
+      "cat": ["IAB12"]
+    },
+    "content": {
+      "cat": ["IAB17"],
+      "producer": {
+        "cat": ["IAB17-1"],
+        "ext": { "vendor_producer": "keep" }
+      }
+    }
+  }
+}

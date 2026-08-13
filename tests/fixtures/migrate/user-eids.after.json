@@ -1,0 +1,15 @@
+{
+  "id": "fixture-user-eids",
+  "imp": [{ "id": "1" }],
+  "user": {
+    "eids": [
+      {
+        "source": "id.example",
+        "uids": [{ "id": "opaque-user-id", "atype": 1 }]
+      }
+    ],
+    "ext": {
+      "vendor_user": { "keep": true }
+    }
+  }
+}

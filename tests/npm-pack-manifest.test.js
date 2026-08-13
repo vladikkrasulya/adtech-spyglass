@@ -21,6 +21,7 @@ const REQUIRED_IN_TARBALL = [
   'package/utils/domain.js',
   'package/behavior/index.js',
   'package/intel/index.js',
+  'package/migrate/index.js',
   'package/iab-categories.en.json',
 ];
 

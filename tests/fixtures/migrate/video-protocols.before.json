@@ -1,0 +1,13 @@
+{
+  "id": "fixture-video-protocols",
+  "imp": [
+    {
+      "id": "1",
+      "video": {
+        "protocol": 3,
+        "mimes": ["video/mp4"],
+        "ext": { "vendor_video": "keep" }
+      }
+    }
+  ]
+}

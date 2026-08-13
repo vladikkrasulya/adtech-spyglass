@@ -1,0 +1,14 @@
+{
+  "id": "fixture-source-schain",
+  "imp": [{ "id": "1" }],
+  "source": {
+    "ext": {
+      "schain": {
+        "ver": "1.0",
+        "complete": 1,
+        "nodes": [{ "asi": "exchange.example", "sid": "seller-1", "hp": 1 }]
+      },
+      "vendor_source": "keep"
+    }
+  }
+}

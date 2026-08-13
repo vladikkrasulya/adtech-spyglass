@@ -1,0 +1,15 @@
+{
+  "id": "fixture-imp-rwdd",
+  "imp": [
+    {
+      "id": "1",
+      "rwdd": 1,
+      "video": {
+        "ext": {
+          "vendor_flag": "keep"
+        }
+      }
+    }
+  ],
+  "ext": { "vendor_request_id": "keep" }
+}

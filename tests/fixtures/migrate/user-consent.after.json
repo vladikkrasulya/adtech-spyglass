@@ -1,0 +1,10 @@
+{
+  "id": "fixture-user-consent",
+  "imp": [{ "id": "1" }],
+  "user": {
+    "consent": "COwK6gaOwK6gaFmAAAENAPCAAAAAAAAAAAAAAAAAAAAA.IFMsv_Z_G____bvQXQ1f9-z1Y3f9zLv9____39nP___9v-_4v9zLv9____39nP___9v-_4v9zLv9____39nP___9v-_4v9zLv9____39nP___9v-_4v9zLv9____39nP___9v-_4v9zLv9____39nP___9v-_4v8",
+    "ext": {
+      "vendor_segment": "keep"
+    }
+  }
+}
