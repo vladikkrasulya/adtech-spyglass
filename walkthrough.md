@@ -4,17 +4,18 @@ Status: **CLOSED — live in production.**
 
 | Step                          | State                                                      |
 | ----------------------------- | ---------------------------------------------------------- |
-| Code                          | `03a7fb5` + `ba91c3f` + `6503261` on `main`, pushed        |
-| ClickHouse table              | created, verified, empty (verification rows removed)       |
-| Production                    | `v1.6.1 (6503261)` live, full smoke passed, RestartCount=0 |
+| Code                          | `03a7fb5` · `ba91c3f` · `6503261` · `6b4e1ed` on `main`    |
+| ClickHouse tables             | created, verified, empty — counting starts 2026-08-12      |
+| Production                    | `v1.6.1 (8032c55)` live, full smoke passed, RestartCount=0 |
 | `external` classification     | proven end-to-end through Cloudflare on the real domain    |
 | Per-IP rate limits            | proven isolating real clients against the live server (§6) |
 | Operator summary endpoint     | verified against live data (401 without token, 200 with)   |
-| Pre-existing shim-removal WIP | untouched — parked and restored byte-for-byte, twice       |
+| Usage table (day/week/month)  | `scripts/usage-report.sh`, backed by a no-TTL rollup       |
+| Pre-existing shim-removal WIP | landed separately in `eab3de3` — see §8                    |
 
-Three commits. The first deploy shipped a real defect that only a production
-request could reveal (§7), and chasing it down surfaced that the same broken
-value keyed every rate limiter in the app (§6).
+The first deploy shipped a real defect that only a production request could
+reveal (§7), and chasing it down surfaced that the same broken value keyed every
+rate limiter in the app (§6).
 
 ---
 
@@ -479,15 +480,24 @@ that value?_ — which turned one telemetry bug into three real ones.
 
 ---
 
-## 8. Session paused here — start of the next one
+## 8. The legacy-shim WIP — landed in `eab3de3`, live as `8032c55`
 
-Priority #0 is closed and live. The agreed next step is **finish the legacy-shim
-WIP first, then start #2 (Shareable Encrypted Gists)** — paused before either
-began.
+Done. Next up is **#2, Shareable Encrypted Gists**.
 
-**Why the WIP goes first, and why it is safe.** Its two user-visible side effects
-were flagged in §0 as needing a decision. They were then measured, and both are
-effectively zero:
+Every prediction below held on the real deploy: the container came up with the
+`adtech-spyglass` alias gone from both networks, and the one live session
+survived (`sessions hydrated from DB, loaded: 1`) — nobody was signed out. The
+internal Prometheus probe stayed green on `http://ortbtools:3000/api/health`.
+
+Before committing, each shim was checked for a live consumer rather than assumed
+dead: zero Prometheus targets and zero provisioned-dashboard references to
+`adtech-spyglass`, no `spyglass.db` on disk, `ORTBTOOLS_TAG` present in `.env`
+with no `SPYGLASS_TAG`, and no dangling references left in
+`public/modules/intel/storage.js`. Three blank lines left where removed blocks
+had been were tidied up.
+
+**Why it was safe** — the two side effects flagged in §0 as needing a decision,
+measured rather than guessed:
 
 | Risk flagged in §0                               | Measured                                               |
 | ------------------------------------------------ | ------------------------------------------------------ |
@@ -495,33 +505,23 @@ effectively zero:
 | `db.js` drops the `spyglass.db` rename migration | No `spyglass.db` on disk → the code is already dead    |
 | Local history / intel corpus lost                | <10 real page loads a day, essentially the owner only  |
 
-Practical reason for the order: #2 needs a schema migration in `db.js`, and
-`db.js` is one of the ten files the WIP is holding. Landing the WIP first avoids
-a third round of the stash-park-restore dance this session used twice.
-
-**Review status of the WIP.** The backend half was read and looks correct:
-`auth.js` (drops the `spy_session` read and the paired `Set-Cookie` expiry),
-`db.js` (drops the env fallback and the rename migration), and
-`lib/analytics-enabled.js` (drops the old opt-out). **Not reviewed:**
-`public/version.js`, `public/modules/intel/storage.js`, `public/export.js`,
-`docker-compose.yml`, `scripts/deploy.sh`, `tests/auth.test.js`,
-`tests/brand-guard.test.js` — read those before committing.
+Landing it first also freed `db.js`, which #2 needs for its schema migration and
+which the WIP had been holding — no more stash-park-restore dance.
 
 **State to resume from:**
 
-- `main` = `6b4e1ed`, pushed. Production runs `6503261` — one commit behind, and
-  deliberately so: `6b4e1ed` only adds `scripts/usage-report.sh` and docs, no
-  application code, so a redeploy would restart the container for no behaviour
-  change. It ships with whatever lands next.
-- Working tree holds the WIP exactly as found: 10 modified files, `18 insertions,
-168 deletions`, plus `.specify/assessments/{macro-evaluator,shareable-url-gists}/`
-  and this file, all untracked.
+- `main` = `8032c55`, pushed, and that is what production runs. The working tree
+  is clean for the first time this session.
 - ClickHouse: `ortbtools_product_events` and `ortbtools_usage_daily` both exist
   and are empty. Counting starts honestly at 2026-08-12.
-- `.specify/assessments/shareable-url-gists/` still holds only `intake.md`. Its
-  four open questions are already answered by the roadmap brief (storage,
-  encryption, 30-day TTL, anonymous creation), so #2 needs no separate
-  clarification phase.
+- `.specify/assessments/shareable-url-gists/` holds only `intake.md`. Its four
+  open questions are already answered by the roadmap brief (storage, encryption,
+  30-day TTL, anonymous creation), so #2 needs no separate clarification phase.
+- #3's diff engine is being built in parallel by another agent, scoped to
+  `packages/core/diff/` plus its own tests in a separate git worktree. Do not
+  touch those paths, `packages/core/index.js`, `packages/core/spec-refs.json`,
+  or `scripts/gen-browser-core.js` — browser mirroring and export wiring are the
+  integration step, and that is ours.
 - Outside this repo: the Prometheus probe fix is applied and live but sits
   **uncommitted** inside the grafana-stack dashboard-redesign WIP. If that WIP is
   ever discarded, re-add `scrape_interval: 60s` to the `blackbox-external` job.
