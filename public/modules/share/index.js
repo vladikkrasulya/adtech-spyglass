@@ -92,6 +92,73 @@
     return location.origin + location.pathname + '?#' + parts.join('&');
   }
 
+  // ── Encrypted gists — the overflow path for payloads too big to fit a URL ──
+  //
+  // The fragment link above is the preferred form: a fragment is never
+  // transmitted, so nothing leaves the browser at all. It just cannot carry a
+  // real auction, because chat clients truncate long links.
+  //
+  // A gist keeps that property as far as it can. The bundle is compressed and
+  // encrypted here, under a key minted here, and only the ciphertext is
+  // uploaded. The key rides in the fragment of the resulting link, so it
+  // reaches the recipient and never the server. See modules/gists/handler.js.
+  //
+  // Uploading is NOT automatic. The plain share link promises that nothing is
+  // sent; silently turning it into an upload — even an encrypted one — would
+  // break that promise at exactly the moment the user is least likely to be
+  // reading carefully. So we ask.
+  const GIST_BUNDLE_VERSION = 1;
+
+  function cryptoApi() {
+    return window.OrtbtoolsCrypto;
+  }
+
+  async function createGist(reqText, resText) {
+    const api = cryptoApi();
+    if (!api || typeof api.generateContentKey !== 'function') {
+      throw new Error('crypto_unavailable');
+    }
+    const bundle = JSON.stringify({ v: GIST_BUNDLE_VERSION, req: reqText, res: resText });
+    const compressed = await compress(bundle);
+    const { key, keyB64u } = await api.generateContentKey();
+    const { iv, ct } = await api.encryptBytes(key, compressed);
+
+    const resp = await fetch('/api/v1/gists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ ciphertext: ct, iv, bundle_version: GIST_BUNDLE_VERSION }),
+    });
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok || !body.id) {
+      throw new Error(body.error || 'HTTP ' + resp.status);
+    }
+    // The key is appended client-side and never travelled with the request.
+    return location.origin + location.pathname + '#gist=' + body.id + '&key=' + keyB64u;
+  }
+
+  async function loadGist(id, keyB64u) {
+    const api = cryptoApi();
+    if (!api || typeof api.importContentKey !== 'function') {
+      throw new Error('crypto_unavailable');
+    }
+    const resp = await fetch('/api/v1/gists/' + encodeURIComponent(id), {
+      credentials: 'same-origin',
+    });
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok || !body.ciphertext) {
+      throw new Error(body.error || 'HTTP ' + resp.status);
+    }
+    const key = await api.importContentKey(keyB64u);
+    // AES-GCM verifies its tag here: a tampered ciphertext or a wrong key
+    // throws rather than yielding plausible-looking JSON.
+    const plainBytes = await api.decryptBytes(key, body.iv, body.ciphertext);
+    const text = await decompress(plainBytes);
+    const bundle = JSON.parse(text);
+    if (!bundle || bundle.v !== GIST_BUNDLE_VERSION) throw new Error('unsupported_bundle');
+    return bundle;
+  }
+
   async function copyShareLink() {
     if (!hasCompressionStream()) {
       toastErr(tt('toast.share_unsupported'));
@@ -114,8 +181,20 @@
     }
 
     if (url.length > URL_BUDGET) {
-      toastErr(tt('toast.share_link_too_long', { size: url.length }));
-      return;
+      // Too big for a fragment. Offer the encrypted-gist path instead of
+      // failing outright — but only with an explicit yes, because this is the
+      // one share mode that transmits anything at all.
+      if (!window.confirm(tt('confirm.share_gist_upload', { size: url.length }))) {
+        toastErr(tt('toast.share_link_too_long', { size: url.length }));
+        return;
+      }
+      try {
+        url = await createGist(reqText, resText);
+      } catch (e) {
+        toastErr(tt('toast.share_gist_failed', { error: e.message || String(e) }));
+        return;
+      }
+      if (typeof window.ortbtoolsTrack === 'function') window.ortbtoolsTrack('gist_create');
     }
 
     // Product telemetry: a share link was successfully produced, once per tab
@@ -134,17 +213,52 @@
     }
   }
 
+  /** Put text into a pane and let the rest of the app notice. */
+  function fillPane(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   async function loadFromHash() {
     const hash = location.hash.replace(/^#/, '');
     if (!hash) return false;
     const params = new URLSearchParams(hash);
+    const gistId = params.get('gist');
+    const gistKey = params.get('key');
     const reqEnc = params.get('req');
     const resEnc = params.get('res');
-    if (!reqEnc && !resEnc) return false;
+    if (!gistId && !reqEnc && !resEnc) return false;
 
     if (!hasCompressionStream()) {
       toastErr(tt('toast.share_unsupported'));
       return false;
+    }
+
+    if (gistId) {
+      if (!gistKey) {
+        // The id alone is useless: without the fragment key the bundle cannot
+        // be read by anyone, including us. Say so rather than showing a
+        // decryption failure.
+        toastErr(tt('toast.share_gist_no_key'));
+        return false;
+      }
+      try {
+        const bundle = await loadGist(gistId, gistKey);
+        if (bundle.req) fillPane('bidReq', bundle.req);
+        if (bundle.res) fillPane('bidRes', bundle.res);
+        if (typeof window.runAnalysis === 'function') {
+          await Promise.resolve();
+          window.runAnalysis();
+        }
+        if (typeof window.ortbtoolsTrack === 'function') window.ortbtoolsTrack('gist_open');
+        toastOk(tt('toast.share_gist_loaded'));
+        return true;
+      } catch (e) {
+        toastErr(tt('toast.share_gist_invalid', { error: e.message || String(e) }));
+        return false;
+      }
     }
 
     try {

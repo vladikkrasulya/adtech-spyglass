@@ -126,6 +126,49 @@ are plaintext and readable by the server operator. They may include URL or behav
 details from the creative probe, so save a corpus entry only when that retention is
 acceptable.
 
+### Shareable encrypted links (gists)
+
+The ordinary share button packs the payload into a URL fragment. A fragment is
+never transmitted, so that link sends nothing to the server at all — but it only
+holds about 7 KB, because chat clients truncate long URLs. For anything larger,
+ortbtools offers an **encrypted link** instead, and only after you confirm it.
+
+What happens when you accept:
+
+1. Your browser builds a bundle of both panes, compresses it, and generates a
+   fresh 256-bit AES-GCM key that exists nowhere else.
+2. It encrypts the bundle and uploads **only the ciphertext** and its nonce.
+3. The key is appended to the resulting link after the `#`. Fragments are not
+   part of an HTTP request, so the key reaches whoever you send the link to and
+   never reaches the server.
+
+| Stored server-side | Not stored                                    |
+| ------------------ | --------------------------------------------- |
+| AES-GCM ciphertext | the key — it never leaves the fragment        |
+| 12-byte nonce      | your payload in any readable form             |
+| bundle format id   | your account or IP (creation is anonymous)    |
+| created / expires  | anything identifying the creator or recipient |
+
+Consequences, stated plainly:
+
+- **A database dump yields opaque blobs.** Not "hard to read" — unreadable,
+  because the key was never there to take. There is no decryption code on the
+  server; `modules/gists/handler.js` has a test asserting it contains none.
+- **Anyone with the full link can read it.** The link _is_ the credential. Treat
+  it like a password: sending it through a channel you would not send the payload
+  through gives away the same thing.
+- **A truncated link is unrecoverable.** If the part after `#key=` is lost, the
+  bundle cannot be opened by anyone, ortbtools included.
+- **Links expire after 30 days** (`ORTBTOOLS_GIST_TTL_DAYS`), after which the
+  server refuses to serve them and a daily sweep deletes them.
+- **Creation requires no account** and is not linked to one; the `gists` table
+  has no user column by design.
+
+Source: `public/modules/share/index.js` (compress, encrypt, build the link),
+`public/ortbtools-crypto.js` (`generateContentKey`, `encryptBytes`,
+`decryptBytes`), `modules/gists/handler.js` (store and serve ciphertext),
+`db.js` (`Gists`).
+
 ### Product telemetry (anonymous counters)
 
 ortbtools keeps a small set of counters so the maintainer can tell how many real

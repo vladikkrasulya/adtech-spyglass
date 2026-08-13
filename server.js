@@ -35,7 +35,16 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const zlib = require('zlib');
-const { Users, Partners, Samples, AnalyzeLog, Sessions, BehaviorCorpus, db } = require('./db');
+const {
+  Users,
+  Partners,
+  Samples,
+  AnalyzeLog,
+  Sessions,
+  BehaviorCorpus,
+  Gists,
+  db,
+} = require('./db');
 const { createAuth } = require('./auth');
 const { signToken, verifyToken, TokenError } = require('./tokens');
 const { sendVerifyEmail, sendResetEmail } = require('./email');
@@ -119,6 +128,12 @@ const readLimiter = makeAnalyzeLimiter(READ_MAX_PER_WINDOW);
 // pattern while still bounding a scripted flood into ClickHouse.
 const TELEMETRY_MAX_PER_WINDOW = Number(process.env.TELEMETRY_MAX_PER_WINDOW) || 120;
 const telemetryLimiter = makeAnalyzeLimiter(TELEMETRY_MAX_PER_WINDOW);
+
+// Share-link creation writes to disk and is anonymous by design, so it gets its
+// own tight bucket rather than sharing the generous read allowance. A human
+// shares a handful of payloads a minute at most; 10 leaves room for retries.
+const GIST_WRITE_MAX_PER_WINDOW = Number(process.env.GIST_WRITE_MAX_PER_WINDOW) || 10;
+const gistWriteLimiter = makeAnalyzeLimiter(GIST_WRITE_MAX_PER_WINDOW);
 
 // Public intel endpoint limiter — bounds request abuse independently of analyze.
 const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
@@ -858,6 +873,7 @@ const { createProxyModule } = require('./modules/proxy/handler');
 // Stage 5 — Insights Dashboard analytics endpoint
 const { createAnalyticsModule } = require('./modules/analytics/handler');
 const { createTelemetryModule } = require('./modules/telemetry/handler');
+const { createGistsModule } = require('./modules/gists/handler');
 // Stage 5 — validation-log helper. Only the /api/analyze hot path logs to
 // analytics.validation_logs now (see modules/analyze/handler.js, which requires
 // this lazily); the synthetic stream path intentionally does not — see the
@@ -898,6 +914,7 @@ router.register(sampleModule);
 router.register(findingsModule);
 router.register(createAnalyticsModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));
 router.register(createTelemetryModule({ telemetryLimiter, auth }));
+router.register(createGistsModule({ Gists, gistWriteLimiter, readLimiter }));
 router.register(
   createAnalyzeModule({
     analyzeLimiter,
@@ -1343,6 +1360,15 @@ const _pruneTimer = setInterval(() => {
     eventLog.pruneOlderThan(eventLog.RETENTION_DAYS);
   } catch (err) {
     log.error({ err }, 'event_log prune cron failed');
+  }
+  try {
+    // Expired gists are already unreachable — Gists.get() refuses them on read
+    // regardless of this sweep. Deleting them is storage hygiene, so a failure
+    // here is logged and shrugged off rather than allowed to break the tick.
+    const removed = Gists.pruneExpired();
+    if (removed) log.info({ removed }, 'expired gists pruned');
+  } catch (err) {
+    log.error({ err }, 'gist prune cron failed');
   }
 }, ONE_DAY_MS);
 if (typeof _pruneTimer.unref === 'function') _pruneTimer.unref();

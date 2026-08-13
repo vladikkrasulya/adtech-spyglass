@@ -18,12 +18,13 @@
  *   v3 → v4 (Phase 8): users.email_verified_at for SMTP-based email verify.
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
 const DATA_DIR = process.env.ORTBTOOLS_DATA_DIR || '/data';
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 
 function init() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -324,6 +325,42 @@ function migrate(db, fromVersion) {
   // gone. DROP cascades the table's index. (See spyglass-audit-2026-06-14.)
   if (fromVersion < 10) {
     db.exec(`DROP TABLE IF EXISTS dialect_question_log;`);
+  }
+
+  // v10 → v11 (2026-08-13): shareable encrypted gists.
+  //
+  // The fragment-only share link (public/modules/share/index.js) cannot carry a
+  // full auction — chat clients truncate long URLs, so anything past ~7 KB is
+  // undeliverable. A gist stores the same bundle server-side instead, but the
+  // server is given ONLY ciphertext: the browser compresses, encrypts with a
+  // fresh AES-GCM-256 key, and keeps that key in the URL fragment, which is
+  // never transmitted. There is deliberately no decryption path on this side.
+  //
+  // Column notes:
+  //   id           22 chars of base64url = 128 random bits. Not sequential, so
+  //                a gist cannot be found by counting up from another one.
+  //   ciphertext   base64 AES-GCM output, including the auth tag. Tampering
+  //                makes it fail to open in the browser, not here.
+  //   iv           base64 12-byte nonce, generated per gist.
+  //   bundle_version  format of the PLAINTEXT the client encrypted. Stored so a
+  //                future bundle shape can be recognised after decryption
+  //                without guessing; the server never sees inside it.
+  //   user_id      intentionally ABSENT. Creation is anonymous by design, and
+  //                linking a gist to an account would add an identifier the
+  //                feature does not need.
+  if (fromVersion < 11) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS gists (
+        id TEXT PRIMARY KEY,
+        ciphertext TEXT NOT NULL,
+        iv TEXT NOT NULL,
+        bundle_version INTEGER NOT NULL,
+        bytes INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_gists_expires ON gists(expires_at);
+    `);
   }
 }
 
@@ -1128,6 +1165,106 @@ const BehaviorCorpus = {
   },
 };
 
+// ── Gists: encrypted share bundles ──────────────────────────────────────────
+//
+// Every value handled here is OPAQUE. Nothing in this model parses, inspects,
+// or could decrypt what it stores — the key that would make the ciphertext
+// readable never leaves the browser's URL fragment. Keep it that way: if a
+// future change needs to look inside a gist, that is a change to the privacy
+// contract in docs/PRIVACY.md, not an implementation detail.
+
+/** 128 random bits → 22 base64url characters. */
+const GIST_ID_BYTES = 16;
+
+const Gists = {
+  /**
+   * Mint an unguessable id. Random rather than sequential so possession of one
+   * gist link tells you nothing about the existence of any other.
+   */
+  newId() {
+    return crypto.randomBytes(GIST_ID_BYTES).toString('base64url');
+  },
+
+  /**
+   * Store one ciphertext bundle.
+   *
+   * @param {{ciphertext: string, iv: string, bundleVersion: number, ttlMs: number, now?: number}} entry
+   * @returns {{id: string, expiresAt: number}}
+   */
+  create(entry) {
+    const now = Number.isFinite(entry.now) ? entry.now : Date.now();
+    const expiresAt = now + entry.ttlMs;
+    // Collision is a ~2^-128 event, but a PRIMARY KEY clash would surface as a
+    // 500 rather than a retry, so give it one cheap second chance.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const id = Gists.newId();
+      try {
+        db.prepare(
+          `INSERT INTO gists (id, ciphertext, iv, bundle_version, bytes, created_at, expires_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
+          id,
+          entry.ciphertext,
+          entry.iv,
+          entry.bundleVersion,
+          entry.ciphertext.length,
+          now,
+          expiresAt,
+        );
+        return { id, expiresAt };
+      } catch (e) {
+        if (attempt === 1 || !/UNIQUE|PRIMARY/i.test(String(e && e.message))) throw e;
+      }
+    }
+    /* istanbul ignore next — unreachable: the loop either returns or throws */
+    throw new Error('gist_id_allocation_failed');
+  },
+
+  /**
+   * Fetch a gist. Returns null when the id is unknown, and a row with
+   * `expired: true` when it exists but has aged out — the caller can then
+   * answer "this link expired" instead of "no such link", which is the more
+   * useful message and costs nothing given a 128-bit id.
+   *
+   * @param {string} id
+   * @param {number} [now]
+   */
+  get(id, now) {
+    if (typeof id !== 'string' || !id) return null;
+    const row = db.prepare(`SELECT * FROM gists WHERE id = ?`).get(id);
+    if (!row) return null;
+    const at = Number.isFinite(now) ? now : Date.now();
+    return {
+      id: row.id,
+      ciphertext: row.ciphertext,
+      iv: row.iv,
+      bundleVersion: row.bundle_version,
+      createdAt: row.created_at,
+      expiresAt: row.expires_at,
+      expired: row.expires_at <= at,
+    };
+  },
+
+  /**
+   * Delete everything past its expiry. Expiry is enforced on read as well, so
+   * this is storage hygiene rather than an access control — a gist is already
+   * unreachable the moment it expires, whether or not this has run.
+   *
+   * @param {number} [now]
+   * @returns {number} rows removed
+   */
+  pruneExpired(now) {
+    const at = Number.isFinite(now) ? now : Date.now();
+    return db.prepare(`DELETE FROM gists WHERE expires_at <= ?`).run(at).changes;
+  },
+
+  /** Live (unexpired) gist count — operational visibility only. */
+  count(now) {
+    const at = Number.isFinite(now) ? now : Date.now();
+    return db.prepare(`SELECT COUNT(*) AS n FROM gists WHERE expires_at > ?`).get(at).n;
+  },
+};
+
 module.exports = {
   db,
   Users,
@@ -1136,6 +1273,7 @@ module.exports = {
   AnalyzeLog,
   Sessions,
   BehaviorCorpus,
+  Gists,
   slugify,
   SCHEMA_VERSION,
 };

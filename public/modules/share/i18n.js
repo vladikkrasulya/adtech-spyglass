@@ -53,6 +53,51 @@
         en: 'Copy this link manually (clipboard blocked):',
         ru: 'Скопируй ссылку вручную (буфер обмена заблокирован):',
       },
+      // ── Encrypted gists ──────────────────────────────────────────
+      // The confirm text has to be exact about the trade: this is the one
+      // share mode that transmits anything, and the user is agreeing to an
+      // upload. It says what the server gets (ciphertext), what it does not
+      // get (the key), and where the key lives (the link itself).
+      'confirm.share_gist_upload': {
+        uk:
+          'Payload завеликий для звичайного посилання ({size} символів).\n\n' +
+          'Створити зашифроване посилання? Дані буде стиснуто й зашифровано у твоєму браузері, ' +
+          'на сервер піде лише шифротекст. Ключ залишиться у самому посиланні — сервер його не отримає ' +
+          'і прочитати вміст не зможе.\n\n' +
+          'Хто має посилання — той має доступ. Термін дії: 30 днів.',
+        en:
+          'Payload is too large for a plain link ({size} chars).\n\n' +
+          'Create an encrypted link? The data is compressed and encrypted in your browser, and only ' +
+          'the ciphertext is uploaded. The key stays inside the link itself — the server never receives ' +
+          'it and cannot read the contents.\n\n' +
+          'Anyone with the link has access. It expires in 30 days.',
+        ru:
+          'Payload слишком большой для обычной ссылки ({size} символов).\n\n' +
+          'Создать зашифрованную ссылку? Данные будут сжаты и зашифрованы в твоём браузере, ' +
+          'на сервер уйдёт только шифротекст. Ключ останется в самой ссылке — сервер его не получит ' +
+          'и содержимое прочитать не сможет.\n\n' +
+          'У кого есть ссылка — у того есть доступ. Срок действия: 30 дней.',
+      },
+      'toast.share_gist_failed': {
+        uk: 'Не вдалося створити зашифроване посилання: {error}',
+        en: "Couldn't create the encrypted link: {error}",
+        ru: 'Не удалось создать зашифрованную ссылку: {error}',
+      },
+      'toast.share_gist_loaded': {
+        uk: 'Завантажено із зашифрованого посилання — розшифровано у твоєму браузері',
+        en: 'Loaded from an encrypted link — decrypted in your browser',
+        ru: 'Загружено из зашифрованной ссылки — расшифровано в твоём браузере',
+      },
+      'toast.share_gist_no_key': {
+        uk: 'У посиланні немає ключа — без частини після "#key=" вміст не прочитає ніхто, включно з сервером.',
+        en: 'The link carries no key — without the part after "#key=" nobody can read it, the server included.',
+        ru: 'В ссылке нет ключа — без части после "#key=" содержимое не прочитает никто, включая сервер.',
+      },
+      'toast.share_gist_invalid': {
+        uk: 'Не вдалося відкрити зашифроване посилання: {error}. Воно могло застаріти, бути обрізаним або зміненим.',
+        en: "Couldn't open the encrypted link: {error}. It may have expired, been truncated, or been altered.",
+        ru: 'Не удалось открыть зашифрованную ссылку: {error}. Она могла устареть, быть обрезанной или изменённой.',
+      },
     },
   };
 

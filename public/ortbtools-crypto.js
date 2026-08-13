@@ -138,6 +138,77 @@
     return utf8Decode(new Uint8Array(plain));
   }
 
+  // ── Content keys: one-off AES-GCM keys not tied to an account ──────
+  //
+  // Used by shareable encrypted gists. The DEK above belongs to a user and is
+  // unwrapped from their password; a content key belongs to a single shared
+  // bundle and exists only in a URL fragment. Nothing derives it, nothing
+  // stores it, and it never reaches the server — a fragment is not transmitted.
+  //
+  // Kept in this file on purpose: docs/PRIVACY.md tells auditors that every
+  // decryption primitive lives in exactly one browser module, and that claim is
+  // only worth anything if new primitives land here too.
+
+  /** base64 → base64url, so a key can sit in a URL fragment unescaped. */
+  function b64ToB64u(b64) {
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64uToB64(b64u) {
+    const s = String(b64u || '')
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    return s + '='.repeat((4 - (s.length % 4)) % 4);
+  }
+
+  /**
+   * Mint a fresh 256-bit key for one shared bundle.
+   * @returns {Promise<{key: CryptoKey, keyB64u: string}>}
+   */
+  async function generateContentKey() {
+    const raw = crypto.getRandomValues(new Uint8Array(DEK_BYTES));
+    // Non-extractable: the caller already holds the raw bytes it needs for the
+    // URL, and the key object itself should not be re-exportable afterwards.
+    const key = await importDEK(raw, { extractable: false });
+    return { key, keyB64u: b64ToB64u(bytesToB64(raw)) };
+  }
+
+  /**
+   * Rebuild a content key from the fragment. Throws on anything that is not a
+   * 256-bit key, so a truncated or edited link fails here rather than
+   * producing garbage plaintext later.
+   * @param {string} keyB64u
+   */
+  async function importContentKey(keyB64u) {
+    const raw = b64ToBytes(b64uToB64(keyB64u));
+    if (raw.length !== DEK_BYTES) throw new Error('bad_key_length');
+    return importDEK(raw, { extractable: false });
+  }
+
+  /**
+   * Encrypt raw bytes (not a string) — gist bundles are compressed before
+   * encryption, so there is no text to hand to encryptBlob.
+   * @returns {Promise<{iv: string, ct: string}>} both base64
+   */
+  async function encryptBytes(key, bytes) {
+    const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes);
+    return { iv: bytesToB64(iv), ct: bytesToB64(new Uint8Array(ct)) };
+  }
+
+  /**
+   * Decrypt back to raw bytes. AES-GCM verifies its auth tag, so a tampered
+   * ciphertext rejects here instead of decoding into plausible-looking JSON.
+   * @returns {Promise<Uint8Array>}
+   */
+  async function decryptBytes(key, ivB64, ctB64) {
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: b64ToBytes(ivB64) },
+      key,
+      b64ToBytes(ctB64),
+    );
+    return new Uint8Array(plain);
+  }
+
   // ── High-level: bootstrap a brand new crypto state ─────────────────
   // Generates DEK + recovery key, wraps DEK twice (with password-KEK and
   // recovery-KEK), returns everything ready to POST to the server plus
@@ -200,6 +271,10 @@
     unwrapBytes,
     encryptBlob,
     decryptBlob,
+    generateContentKey,
+    importContentKey,
+    encryptBytes,
+    decryptBytes,
     bootstrap,
     openWithPassword,
     openWithRecoveryKey,
