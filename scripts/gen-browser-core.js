@@ -27,6 +27,9 @@ const PAIRS = [
   // reads it from the browser global, and the HTML must load it in that order.
   ['packages/core/migrate/rules.js', 'public/core/migrate-rules.js'],
   ['packages/core/migrate/index.js', 'public/core/migrate.js'],
+  // VAST. vast-shape.js is the two sniffing helpers only — the timeline
+  // extractor reads them from the browser global, so it must load first.
+  ['packages/core/vast-shape.js', 'public/core/vast-shape.js'],
 ];
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
