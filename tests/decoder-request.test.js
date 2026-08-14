@@ -396,3 +396,104 @@ test('_raw: clickunder repeated key takes the first value, matching detect()', (
   const c = decodeRequest('https://ads.vendor.example/feed?format=cu&sid=1&sid=2');
   assert.equal(c._raw.sid, '1');
 });
+
+// ── Case-insensitive signature matching (spec §3, layer 3) ──────────────────
+
+const {
+  pathEquals,
+  getParam,
+  hasParam,
+  valueEquals,
+} = require('@ortbtools/core/decoders/request/_signature');
+
+test('_signature: path compare ignores case and trailing slashes', () => {
+  assert.equal(pathEquals('/search', '/search'), true);
+  assert.equal(pathEquals('/SEARCH', '/search'), true);
+  assert.equal(pathEquals('/Search//', '/search'), true);
+  assert.equal(pathEquals('/searching', '/search'), false, 'prefix is not a match');
+  assert.equal(pathEquals('/a/search', '/search'), false, 'suffix is not a match');
+});
+
+test('_signature: param lookup ignores name case and takes query order', () => {
+  const q = new URL('https://x.test/?FORMAT=a&format=b&Feed=demo&empty=').searchParams;
+  assert.equal(getParam(q, 'format'), 'a', 'first in query order wins, as detect() sees it');
+  assert.equal(getParam(q, 'feed'), 'demo');
+  assert.equal(getParam(q, 'missing'), null);
+  assert.equal(hasParam(q, 'FeEd'), true);
+  assert.equal(hasParam(q, 'empty'), true, 'present-but-empty is present');
+  assert.equal(hasParam(q, 'nope'), false);
+});
+
+test('_signature: enumerated value compare ignores case', () => {
+  assert.equal(valueEquals('JSON', 'json'), true);
+  assert.equal(valueEquals('json', 'JSON'), true);
+  assert.equal(valueEquals(null, 'json'), false);
+  assert.equal(valueEquals('jsonp', 'json'), false);
+});
+
+test('detect: the same feed URL is claimed however the paste mangled its case', () => {
+  const variants = [
+    'https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=q',
+    'https://feed.vendor.example/SEARCH?format=json&feed=demo&auth=tk&query=q',
+    'https://feed.vendor.example/search?FORMAT=json&FEED=demo&AUTH=tk&QUERY=q',
+    'https://feed.vendor.example/search?format=JSON&feed=demo&auth=tk&query=q',
+    'https://feed.vendor.example/search/?format=json&feed=demo&auth=tk&query=q',
+  ];
+  for (const url of variants) {
+    assert.equal(decodeRequest(url).variant, 'url-search-feed', url);
+  }
+});
+
+test('detect: loose matching does not rewrite the operator input', () => {
+  // RFC 3986 §6.2.2.1 — only scheme and host are case-insensitive. We match
+  // loosely and preserve exactly, so a replay sends what was pasted.
+  const c = decodeRequest(
+    'https://feed.vendor.example/SEARCH?FORMAT=json&feed=demo&auth=tk&query=Q',
+  );
+  assert.equal(c.endpoint, 'feed.vendor.example/SEARCH', 'path case preserved');
+  assert.ok(Object.hasOwn(c._raw, 'FORMAT'), '_raw keeps the key as sent');
+  assert.equal(Object.hasOwn(c._raw, 'format'), false, 'and does not invent a lowercased twin');
+  assert.equal(c._raw.query, 'Q', 'operator values are never case-folded');
+  assert.match(c.url, /SEARCH\?FORMAT=json/, 'url is the input, verbatim');
+});
+
+test('decode: mapped fields are read case-insensitively too', () => {
+  // Detection succeeding while every mapped field came back empty would be
+  // worse than not claiming the URL at all.
+  const c = decodeRequest(
+    'https://feed.vendor.example/search?FORMAT=json&FEED=demo&AUTH=tk&QUERY=q' +
+      '&USER_IP=192.0.2.7&UA=Mozilla%2F5.0%20Test&LANG=en&SUBID=pub9',
+  );
+  assert.equal(c.device.ip, '192.0.2.7');
+  assert.equal(c.device.ua, 'Mozilla/5.0 Test');
+  assert.equal(c.device.language, 'en');
+  assert.equal(c.user.id, 'pub9');
+});
+
+test('detect: linkfeed and clickunder gained the same tolerance', () => {
+  assert.equal(
+    decodeRequest('https://feed.vendor.example/LINK/?Format=JSON&Feed=demo&Auth=tk').variant,
+    'url-linkfeed',
+  );
+  const cu = decodeRequest('https://ads.vendor.example/FEED?FORMAT=CU&IP=192.0.2.9');
+  assert.equal(cu.variant, 'url-clickunder-feed');
+  assert.equal(cu.device.ip, '192.0.2.9');
+});
+
+test('detect: looser case matching did not make the decoders greedy', () => {
+  // The guards that mattered before still hold: path alone claims nothing,
+  // and an incomplete signature is still incomplete.
+  assert.equal(decodeRequest('https://news.example/FEED?format=json&id=1').reason, 'no_decoder');
+  assert.equal(
+    decodeRequest('https://feed.vendor.example/SEARCH?FORMAT=json').reason,
+    'no_decoder',
+  );
+  assert.equal(
+    decodeRequest('https://search.example/SEARCH?q=demo&FORMAT=json').reason,
+    'no_decoder',
+  );
+  assert.equal(
+    decodeRequest('https://feed.vendor.example/SEARCHING?format=json&feed=d&auth=t&query=q').reason,
+    'no_decoder',
+  );
+});

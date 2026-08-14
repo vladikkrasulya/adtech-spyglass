@@ -10,6 +10,7 @@
  */
 
 const { decodeAuthenticatedJsonFeed } = require('../_authenticated-json-feed');
+const { pathEquals, getParam, hasParam, valueEquals } = require('../_signature');
 
 const ID = 'url-search-feed';
 const PATH = '/search';
@@ -19,9 +20,17 @@ function detect(_text, parsedUrl) {
   // part of the observed wire shape, and a fragment is never sent upstream.
   if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') return false;
   if (parsedUrl.username || parsedUrl.password || parsedUrl.hash) return false;
-  if (parsedUrl.pathname.replace(/\/+$/, '') !== PATH) return false;
+  // Case-insensitive throughout: a pasted `/SEARCH?FORMAT=json` is the same
+  // feed. Matching is loose, the URL itself is preserved exactly — see
+  // `_signature.js`.
+  if (!pathEquals(parsedUrl.pathname, PATH)) return false;
   const q = parsedUrl.searchParams;
-  return q.get('format') === 'json' && q.has('feed') && q.has('auth') && q.has('query');
+  return (
+    valueEquals(getParam(q, 'format'), 'json') &&
+    hasParam(q, 'feed') &&
+    hasParam(q, 'auth') &&
+    hasParam(q, 'query')
+  );
 }
 
 function decode(text, parsedUrl) {

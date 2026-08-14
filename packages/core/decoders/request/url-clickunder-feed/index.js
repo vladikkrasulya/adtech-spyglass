@@ -12,6 +12,7 @@
 
 const { makeCanonicalUrlRequest } = require('../_canonical');
 const { parseRawQuery, findDecodeDamage } = require('../_raw-query');
+const { pathEquals, getParam } = require('../_signature');
 const { isPopFormat, normaliseFormatName } = require('../../../non-iab-formats');
 
 const ID = 'url-clickunder-feed';
@@ -19,12 +20,19 @@ const PATH = '/feed';
 const FORMAT_ALIASES = new Set(['cu', 'clickunder', 'pop', 'pops', 'popup', 'popunder']);
 
 function normalisedQueryFormat(q) {
-  const raw = q.get('format') || q.get('ad_format') || q.get('type') || q.get('adtype') || '';
+  // Param names matched case-insensitively; the value is lowercased by
+  // normaliseFormatName already. See `_signature.js`.
+  const raw =
+    getParam(q, 'format') ||
+    getParam(q, 'ad_format') ||
+    getParam(q, 'type') ||
+    getParam(q, 'adtype') ||
+    '';
   return normaliseFormatName(raw);
 }
 
 function detect(_text, parsedUrl) {
-  if (parsedUrl.pathname.replace(/\/+$/, '') !== PATH) return false;
+  if (!pathEquals(parsedUrl.pathname, PATH)) return false;
   const q = parsedUrl.searchParams;
   const fmt = normalisedQueryFormat(q);
   return FORMAT_ALIASES.has(fmt) || isPopFormat(fmt);
@@ -36,7 +44,7 @@ function isIPv6(s) {
 
 function firstParam(q, names) {
   for (const name of names) {
-    const value = q.get(name);
+    const value = getParam(q, name);
     if (value) return value;
   }
   return null;

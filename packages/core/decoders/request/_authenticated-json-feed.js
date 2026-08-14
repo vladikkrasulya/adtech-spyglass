@@ -10,6 +10,7 @@
 
 const { makeCanonicalUrlRequest } = require('./_canonical');
 const { parseRawQuery, findDecodeDamage } = require('./_raw-query');
+const { getParam } = require('./_signature');
 
 function isIPv6(s) {
   return typeof s === 'string' && s.includes(':');
@@ -42,31 +43,41 @@ function decodeAuthenticatedJsonFeed(id, text, parsedUrl, opts) {
     });
   }
 
-  const ip = q.get('user_ip');
+  // Field names are read case-insensitively for the same reason detect() is:
+  // a paste that mangled the case is still the same feed URL. Reading them
+  // case-sensitively here would let detection succeed and then hand back an
+  // envelope with every mapped field empty — worse than not claiming at all.
+  const ip = getParam(q, 'user_ip');
   if (ip) {
     if (isIPv6(ip)) can.device.ipv6 = ip;
     else can.device.ip = ip;
   }
 
-  const ua = q.get('ua');
+  const ua = getParam(q, 'ua');
   if (ua) can.device.ua = ua;
 
-  const lang = q.get('lang');
+  const lang = getParam(q, 'lang');
   if (lang) can.device.language = lang;
 
   const sua = {};
-  if (q.get('ch-ua')) sua.brands = q.get('ch-ua');
-  if (q.get('ch-uafull')) sua.fullVersion = q.get('ch-uafull');
-  if (q.get('ch-platform')) sua.platform = q.get('ch-platform');
-  if (q.get('ch-platformv')) sua.platformVersion = q.get('ch-platformv');
-  if (q.get('ch-mobile')) sua.mobile = q.get('ch-mobile');
-  if (q.get('ch-model')) sua.model = q.get('ch-model');
+  const chBrands = getParam(q, 'ch-ua');
+  if (chBrands) sua.brands = chBrands;
+  const chFull = getParam(q, 'ch-uafull');
+  if (chFull) sua.fullVersion = chFull;
+  const chPlatform = getParam(q, 'ch-platform');
+  if (chPlatform) sua.platform = chPlatform;
+  const chPlatformV = getParam(q, 'ch-platformv');
+  if (chPlatformV) sua.platformVersion = chPlatformV;
+  const chMobile = getParam(q, 'ch-mobile');
+  if (chMobile) sua.mobile = chMobile;
+  const chModel = getParam(q, 'ch-model');
+  if (chModel) sua.model = chModel;
   if (Object.keys(sua).length) can.device.sua = sua;
 
-  const refUrl = q.get('url');
+  const refUrl = getParam(q, 'url');
   if (refUrl) can.site.page = refUrl;
 
-  const subid = q.get('subid');
+  const subid = getParam(q, 'subid');
   if (subid) can.user.id = subid;
 
   return can;
