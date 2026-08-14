@@ -192,11 +192,17 @@
       'severity.empty.all': '🧘 Нічого не знайдено для цього тесту.',
 
       // ── analysis strip labels (Feature #13) ──────────────
-      'strip.label.version': 'Версія',
-      'strip.label.traffic': 'Трафік',
-      'strip.label.device': 'Пристрій',
-      'strip.label.privacy': 'Приватність',
-      'strip.label.pricing': 'Ціна',
+      'strip.label.version': 'ВЕР',
+      'strip.label.traffic': 'ТРАФ',
+      'strip.label.device': 'ПРИСТР',
+      'strip.label.privacy': 'ПРИВ',
+      'strip.label.pricing': 'ЦІНА',
+      'strip.hint.version': 'Версія — визначена редакція OpenRTB',
+      'strip.hint.traffic': 'Трафік — звідки прийшов цей показ',
+      'strip.hint.device': 'Пристрій — з чого дивиться користувач',
+      'strip.hint.privacy': 'Приватність — які сигнали згоди є в запиті',
+      'strip.hint.pricing': 'Ціна — мінімальна ставка за цей показ',
+      'strip.hint.quality': 'Якість — оцінка за знайденими проблемами',
       'strip.privacy.none': 'Без приватності',
       'strip.pricing.no_floor': 'Без floor',
       'strip.pricing.not_allowed':
@@ -216,7 +222,7 @@
       'quality.tooltip.error': 'Помилка',
       'quality.tooltip.warning': 'Попередження',
       'quality.tooltip.info': 'Інфо',
-      'strip.label.quality': 'Якість',
+      'strip.label.quality': 'ЯКІСТЬ',
 
       // ── theme toggle tooltips ─────────────────────────────
       'theme.tooltip.auto': 'тема: авто · клік → світла',
@@ -471,11 +477,17 @@
       'severity.empty.all': '🧘 Nothing found for this check.',
 
       // ── analysis strip labels (Feature #13) ──────────────
-      'strip.label.version': 'Version',
-      'strip.label.traffic': 'Traffic',
-      'strip.label.device': 'Device',
-      'strip.label.privacy': 'Privacy',
-      'strip.label.pricing': 'Pricing',
+      'strip.label.version': 'VER',
+      'strip.label.traffic': 'TRAF',
+      'strip.label.device': 'DEV',
+      'strip.label.privacy': 'PRIV',
+      'strip.label.pricing': 'PRICE',
+      'strip.hint.version': 'Version — the OpenRTB revision detected',
+      'strip.hint.traffic': 'Traffic — where this impression comes from',
+      'strip.hint.device': 'Device — what the user is on',
+      'strip.hint.privacy': 'Privacy — consent signals found in the request',
+      'strip.hint.pricing': 'Pricing — the floor this impression asks for',
+      'strip.hint.quality': 'Quality — score derived from the findings',
       'strip.privacy.none': 'No Privacy',
       'strip.pricing.no_floor': 'No Floor',
       'strip.pricing.not_allowed':
@@ -495,7 +507,7 @@
       'quality.tooltip.error': 'Error',
       'quality.tooltip.warning': 'Warning',
       'quality.tooltip.info': 'Info',
-      'strip.label.quality': 'Quality',
+      'strip.label.quality': 'QUALITY',
 
       // ── theme toggle tooltips ─────────────────────────────
       'theme.tooltip.auto': 'theme: auto · click → light',
@@ -738,11 +750,17 @@
       'severity.empty.all': '🧘 Ничего не найдено для этой проверки.',
 
       // ── analysis strip labels (Feature #13) ──────────────
-      'strip.label.version': 'Версия',
-      'strip.label.traffic': 'Трафик',
-      'strip.label.device': 'Устройство',
-      'strip.label.privacy': 'Приватность',
-      'strip.label.pricing': 'Цена',
+      'strip.label.version': 'ВЕР',
+      'strip.label.traffic': 'ТРАФ',
+      'strip.label.device': 'УСТР',
+      'strip.label.privacy': 'ПРИВ',
+      'strip.label.pricing': 'ЦЕНА',
+      'strip.hint.version': 'Версия — определённая редакция OpenRTB',
+      'strip.hint.traffic': 'Трафик — откуда пришёл этот показ',
+      'strip.hint.device': 'Устройство — с чего смотрит пользователь',
+      'strip.hint.privacy': 'Приватность — какие сигналы согласия есть в запросе',
+      'strip.hint.pricing': 'Цена — минимальная ставка за этот показ',
+      'strip.hint.quality': 'Качество — оценка по найденным проблемам',
       'strip.privacy.none': 'Без приватности',
       'strip.pricing.no_floor': 'Без floor',
       'strip.pricing.not_allowed':
@@ -762,7 +780,7 @@
       'quality.tooltip.error': 'Ошибка',
       'quality.tooltip.warning': 'Предупреждение',
       'quality.tooltip.info': 'Инфо',
-      'strip.label.quality': 'Качество',
+      'strip.label.quality': 'КАЧЕСТВО',
 
       'theme.tooltip.auto': 'тема: авто · клик → светлая',
       'theme.tooltip.light': 'тема: светлая · клик → тёмная',

@@ -2875,14 +2875,15 @@ button.cross-path:focus-visible,
   flex-direction: column;
   justify-content: center;
   padding: 0 var(--space-3);
-  /* `flex: 1` is `1 1 0%` — every block gets an equal sixth no matter what it
-     holds, so "GDPR" was given exactly the room of "💻 Web (Banner)" and the
-     long values ellipsised while short ones sat in white space. `auto` makes
-     the BASIS the content's own width and shares only the surplus, so a cell
-     truncates when the bar is genuinely out of room rather than because it was
-     handed a sixth. min-width: 0 stays: without it a block refuses to shrink
-     at all and the bar overflows instead. */
-  flex: 1 1 auto;
+  /* `1 1 0%` — equal shares of the whole bar, with .analysis-strip-pricing
+     weighted below. Content-derived widths (`flex: 1 1 auto`) were tried and
+     measured worse where it matters: the long values claim their content
+     first, and the pricing cell — the one carrying money — was left 95px
+     instead of 129px and truncated its figure. A reader can infer a label
+     from its column; nobody can infer a price from "Floor: 0.3…". Equal
+     shares plus an explicit weight for the cell that needs it beats
+     proportional fairness here. */
+  flex: 1;
   /* 0, not a floor: six cells with a 96px minimum need 576px and this bar gets
      540px at a 1440px window (the centre column is `viewport − ~900px`), so a
      floor makes the row overflow and `overflow-x: clip` then removes a whole
@@ -2903,7 +2904,18 @@ button.cross-path:focus-visible,
   flex: 2.2;
 }
 .analysis-strip-label {
-  font-size: var(--fs-mono);
+  /* The one deliberate exception to the type scale, and it is budgeted as one
+     in tests/type-scale.test.js rather than hidden.
+     This bar gets the width of the centre column — `viewport − ~900px`, so
+     540px for six labelled cells at a 1440px window. Raising these labels to
+     the scale's smallest step was measured three ways: at 11px with full
+     words, VERSION and PRIVACY grew wider than their cells and painted over
+     their neighbours; abbreviating them to VER/PRIV fixed that and still cost
+     the pricing cell its figure; and short labels at 9px gave the most room of
+     the three. The room a label takes here is paid for by a value, and the
+     values are what the reader came for. The abbreviations stay — they help
+     wherever the bar compacts — and each carries a title explaining it. */
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;

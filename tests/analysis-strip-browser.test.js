@@ -368,3 +368,33 @@ test(
     }
   },
 );
+
+// ── STATIC: every label in the bar carries an explanation ───────────────────
+// The bar's labels are abbreviated — VER, TRAF, DEV, PRIV, PRICE — because it
+// gets the width of the centre column and every pixel a label takes is paid
+// for by a value. An abbreviation is only honest if the full meaning is one
+// hover away, so `stripLabel()` renders each with a title from
+// `strip.hint.<key>`. Both lookups come from the same key, so the pairing
+// cannot drift per call site; what CAN drift is a hint missing from a locale,
+// which renders as a bracketed id in that language only — invisible to anyone
+// testing in English.
+test('every strip label has a hint in all three locales', () => {
+  const app = fs.readFileSync(path.join(ROOT, 'public/ortbtools.app.js'), 'utf8');
+  const i18n = fs.readFileSync(path.join(ROOT, 'public/i18n.js'), 'utf8');
+
+  const keys = [...new Set([...app.matchAll(/stripLabel\('([a-z]+)'\)/g)].map((m) => m[1]))];
+  assert.ok(keys.length >= 6, `expected the bar's labels, parsed ${keys.length}: ${keys}`);
+
+  for (const key of keys) {
+    for (const kind of ['label', 'hint']) {
+      const found = (i18n.match(new RegExp(`'strip\\.${kind}\\.${key}'\\s*:`, 'g')) || []).length;
+      assert.equal(
+        found,
+        3,
+        `strip.${kind}.${key} must exist in all three locale blocks of public/i18n.js — ` +
+          `found ${found}. An abbreviated label with no hint in a locale is an abbreviation ` +
+          'nobody in that language can resolve.',
+      );
+    }
+  }
+});

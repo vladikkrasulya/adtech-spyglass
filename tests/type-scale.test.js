@@ -21,9 +21,12 @@
  * instead — which keeps progress deliberate and visible in the diff rather than
  * letting the budget quietly absorb a regression somewhere else.
  *
- * public/modules/inspector/inspector.css is 0 and must stay 0: it is the file
- * this started with, all 55 of its literals now read tokens, and the rendered
- * result went from fourteen sizes to six with nothing below 11px.
+ * public/modules/inspector/inspector.css is the file this started with: 55 of
+ * its 56 literals now read tokens, and the rendered result went from fourteen
+ * sizes to six. Its budget is 1, not 0, and the one survivor is named and
+ * asserted below rather than merely counted — `.analysis-strip-label` at 9px,
+ * because that bar is width-constrained in a way nothing else here is and the
+ * room a label takes in it is paid for by a value.
  *
  * A stylesheet not listed here must have none at all, so a new file cannot
  * arrive with off-scale sizes unremarked.
@@ -60,8 +63,15 @@ const BUDGET = {
   'modules/stream/stream.css': 9,
   'modules/topbar/topbar.css': 1,
   'ortbtools-shell.css': 2,
-  // Converted. Must stay at zero.
-  'modules/inspector/inspector.css': 0,
+  // Converted, with one deliberate exception: `.analysis-strip-label` stays at
+  // 9px. That bar gets the width of the centre column — 540px for six labelled
+  // cells at a 1440px window — and every pixel a label takes there is paid for
+  // by a value. Measured at 11px: full words painted over their neighbours;
+  // abbreviated words fixed that and still cost the pricing cell its figure.
+  // A reader can infer a label from its column; nobody can infer a price from
+  // "Floor: 0.3…". Budgeted at 1 rather than excluded, so the exception is a
+  // number someone has to change on purpose.
+  'modules/inspector/inspector.css': 1,
 };
 
 function stylesheets(dir, acc = []) {
@@ -101,12 +111,19 @@ test('the design system still defines the scale this budget is measured against'
   }
 });
 
-test('the inspector stays fully on the scale', () => {
+test('the inspector has exactly one budgeted exception, and it is the one named', () => {
   const found = offScale(path.join(PUBLIC, 'modules/inspector/inspector.css'));
   assert.deepEqual(
     found,
-    [],
-    `inspector.css must use --fs-* tokens only; found literals at ${[...new Set(found)].join(', ')}px`,
+    ['9'],
+    `inspector.css may carry one 9px literal — the analysis-strip label — and nothing else; ` +
+      `found ${found.join(', ')}`,
+  );
+  const css = fs.readFileSync(path.join(PUBLIC, 'modules/inspector/inspector.css'), 'utf8');
+  assert.match(
+    css,
+    /\.analysis-strip-label \{[^}]*font-size: 9px/,
+    'the 9px exception must be the strip label — anywhere else it is an unbudgeted literal',
   );
 });
 

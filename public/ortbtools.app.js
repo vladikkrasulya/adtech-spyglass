@@ -1588,43 +1588,53 @@ export async function mountInspector(root, ctx) {
         '"></span>';
     }
 
+    // The bar's labels are abbreviated because the bar is narrow: it gets the
+    // width of the centre column, `viewport − ~900px`, which is 540px for six
+    // labelled cells at an ordinary 1440px window. Full words at the scale's
+    // smallest step did not fit — VERSION and PRIVACY grew wider than the cells
+    // they shrink into and painted over their neighbours, and the room they took
+    // was paid for by the values, which is the wrong way round: a reader can
+    // infer a label from its column, never a price from a truncated one.
+    //
+    // So the label is short and a hint carries the meaning — not a re-spelling
+    // of the same word, which would be one record restating another and free to
+    // drift from it, but a plain-language line about what the column holds.
+    // Both come from one place here rather than being repeated at six call
+    // sites, so a label can never end up beside another column's explanation.
+    const stripLabel = (key) =>
+      '<div class="analysis-strip-label" title="' +
+      escapeHtml(t('strip.hint.' + key)) +
+      '">' +
+      escapeHtml(t('strip.label.' + key)) +
+      '</div>';
+
     const stripHtml =
       '<div class="analysis-strip-block">' +
-      '<div class="analysis-strip-label">' +
-      escapeHtml(t('strip.label.version')) +
-      '</div>' +
+      stripLabel('version') +
       '<div class="analysis-strip-value"><span class="ver-badge">' +
       escapeHtml(version) +
       '</span></div>' +
       '</div>' +
       '<div class="analysis-strip-block">' +
-      '<div class="analysis-strip-label">' +
-      escapeHtml(t('strip.label.traffic')) +
-      '</div>' +
+      stripLabel('traffic') +
       '<div class="analysis-strip-value">' +
       escapeHtml(trafficValue) +
       '</div>' +
       '</div>' +
       '<div class="analysis-strip-block">' +
-      '<div class="analysis-strip-label">' +
-      escapeHtml(t('strip.label.device')) +
-      '</div>' +
+      stripLabel('device') +
       '<div class="analysis-strip-value">' +
       escapeHtml(deviceLabel) +
       '</div>' +
       '</div>' +
       '<div class="analysis-strip-block">' +
-      '<div class="analysis-strip-label">' +
-      escapeHtml(t('strip.label.privacy')) +
-      '</div>' +
+      stripLabel('privacy') +
       '<div class="analysis-strip-value">' +
       privValue +
       '</div>' +
       '</div>' +
       '<div class="analysis-strip-block analysis-strip-pricing">' +
-      '<div class="analysis-strip-label">' +
-      escapeHtml(t('strip.label.pricing')) +
-      '</div>' +
+      stripLabel('pricing') +
       '<div class="analysis-strip-value">' +
       pricingValue +
       '</div>' +
@@ -1676,9 +1686,7 @@ export async function mountInspector(root, ctx) {
 
       return (
         '<div class="analysis-strip-block analysis-strip-quality">' +
-        '<div class="analysis-strip-label">' +
-        escapeHtml(t('strip.label.quality')) +
-        '</div>' +
+        stripLabel('quality') +
         '<div class="analysis-strip-value">' +
         '<span class="quality-pill ' +
         tierClass +
