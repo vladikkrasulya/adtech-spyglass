@@ -34,6 +34,57 @@ function validateRequest(req, ctx) {
   else if (req.site && req.app)
     findings.push(F('request.site_and_app_both', LEVELS.WARNING, 'site/app'));
 
+  // Impression ids must be unique within a request. A bid answers with
+  // `bid.impid`, so two impressions sharing an id make that reference
+  // ambiguous: the response cannot say which one it bid on, and two receivers
+  // resolving it differently disagree about what was sold. Nothing rejects the
+  // payload for it — the JSON is valid and every field is present.
+  if (Array.isArray(req.imp)) {
+    const seen = new Set();
+    const duplicated = new Set();
+    for (const imp of req.imp) {
+      if (!imp || imp.id == null) continue;
+      const id = String(imp.id);
+      if (seen.has(id)) duplicated.add(id);
+      seen.add(id);
+    }
+    for (const id of duplicated) {
+      findings.push(F('request.imp_id_duplicated', LEVELS.ERROR, 'imp', { impid: id }));
+    }
+  }
+
+  // Extended identifiers have two homes: `user.eids` since 2.6, and
+  // `user.ext.eids` before it, which is still what most senders emit. Carrying
+  // both is not itself wrong — but carrying both with different contents is,
+  // because which one a receiver reads is implementation-defined. Measured:
+  // Prebid Server discards the legacy array when the core one is present, while
+  // Prebid.js merges and de-duplicates the two. One request, two outbound
+  // identity sets, no error anywhere.
+  if (
+    req.user &&
+    Array.isArray(req.user.eids) &&
+    req.user.ext &&
+    Array.isArray(req.user.ext.eids)
+  ) {
+    const fingerprint = (eids) =>
+      JSON.stringify(
+        eids
+          .map(
+            (e) =>
+              `${(e && e.source) || ''}|${((e && e.uids) || []).map((u) => (u && u.id) || '').join(',')}`,
+          )
+          .sort(),
+      );
+    if (fingerprint(req.user.eids) !== fingerprint(req.user.ext.eids)) {
+      findings.push(
+        F('request.user.eids_disagree', LEVELS.WARNING, 'user.eids', {
+          core: req.user.eids.length,
+          legacy: req.user.ext.eids.length,
+        }),
+      );
+    }
+  }
+
   // at is required per oRTB §3.2.1. Missing or non-numeric → error.
   // Present-but-wrong-value (3, 4, "first", …) → at_invalid warning below.
   if (req.at == null || typeof req.at !== 'number') {

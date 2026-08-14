@@ -318,3 +318,76 @@ test('applyStrictness: pedantic matches default (backwards compat)', () => {
   const pedanticResult = validate(VALID_REQUEST, { strictness: 'pedantic' });
   assert.equal(pedanticResult.findings.length, defaultResult.findings.length);
 });
+
+// ── Structurally impossible auctions (bucket B, transaction-local part) ────
+
+const { validate: validateStructural } = require('@ortbtools/core');
+
+const structuralBase = () => ({
+  id: 'r',
+  at: 2,
+  tmax: 120,
+  cur: ['USD'],
+  /** @type {Array<Record<string, unknown>>} */
+  imp: [{ id: '1', banner: { w: 300, h: 250 }, bidfloor: 0.5 }],
+  site: { id: 's', domain: 'pub.example', page: 'https://pub.example/a' },
+  device: { ua: 'Mozilla/5.0', ip: '192.0.2.1', language: 'en' },
+  user: { id: 'u1' },
+});
+const structuralIds = (req) => validateStructural(req, { locale: 'en' }).findings.map((f) => f.id);
+
+test('duplicate imp.id makes bid.impid ambiguous and is an error', () => {
+  // A bid answers with bid.impid. With two impressions sharing an id that
+  // reference names neither one, and two receivers can resolve it differently.
+  // Every required field is present, so nothing else rejects the payload.
+  const req = structuralBase();
+  req.imp = [
+    { id: '1', banner: { w: 300, h: 250 } },
+    { id: '1', banner: { w: 728, h: 90 } },
+  ];
+  const found = validateStructural(req, { locale: 'en' }).findings.find(
+    (f) => f.id === 'request.imp_id_duplicated',
+  );
+  assert.ok(found);
+  assert.equal(found.level, 'error');
+  assert.equal(found.params.impid, '1');
+});
+
+test('distinct imp ids say nothing, however many impressions there are', () => {
+  const req = structuralBase();
+  req.imp = [
+    { id: '1', banner: { w: 300, h: 250 } },
+    { id: '2', banner: { w: 728, h: 90 } },
+    { id: '3', banner: { w: 160, h: 600 } },
+  ];
+  assert.equal(structuralIds(req).includes('request.imp_id_duplicated'), false);
+});
+
+test('EIDs in both homes with different contents is reported', () => {
+  // Measured: Prebid Server discards the legacy array when the core one is
+  // present; Prebid.js merges and de-duplicates both. One request, two possible
+  // outbound identity sets, and no error anywhere in the chain.
+  const req = structuralBase();
+  req.user.eids = [{ source: 'a.example', uids: [{ id: 'AAA' }] }];
+  req.user.ext = { eids: [{ source: 'b.example', uids: [{ id: 'BBB' }] }] };
+  const found = validateStructural(req, { locale: 'en' }).findings.find(
+    (f) => f.id === 'request.user.eids_disagree',
+  );
+  assert.ok(found);
+  assert.equal(found.level, 'warning');
+});
+
+test('EIDs in both homes agreeing is not a finding', () => {
+  // Carrying both homes is ordinary during the 2.5→2.6 transition. Only a
+  // disagreement between them is worth saying anything about.
+  const req = structuralBase();
+  const eids = [{ source: 'a.example', uids: [{ id: 'AAA' }] }];
+  req.user.eids = eids;
+  req.user.ext = { eids: JSON.parse(JSON.stringify(eids)) };
+  assert.equal(structuralIds(req).includes('request.user.eids_disagree'), false);
+
+  // And a single home, however populated, says nothing either.
+  const single = structuralBase();
+  single.user.eids = eids;
+  assert.equal(structuralIds(single).includes('request.user.eids_disagree'), false);
+});

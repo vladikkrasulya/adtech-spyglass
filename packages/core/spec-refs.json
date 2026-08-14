@@ -321,5 +321,7 @@
   "consent.tcf_restriction_overrides_consent": "https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md",
   "consent.tcf_requires_li_without_li": "https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md",
   "consent.tcf_requires_consent_without_purpose": "https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md",
-  "vast.wrapper_multiple_ads_ambiguous": "https://github.com/InteractiveAdvertisingBureau/vast/blob/master/4.3.md#3132-wrapper-attributes"
+  "vast.wrapper_multiple_ads_ambiguous": "https://github.com/InteractiveAdvertisingBureau/vast/blob/master/4.3.md#3132-wrapper-attributes",
+  "request.imp_id_duplicated": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324---object-imp",
+  "request.user.eids_disagree": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220---object-user"
 }
