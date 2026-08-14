@@ -30,6 +30,18 @@ const DECODERS = [
 ];
 
 /**
+ * The only schemes an ad-feed pull can arrive on.
+ *
+ * This is a registry-level gate, not a per-decoder one, because `new URL()`
+ * accepts `javascript:alert(1)`, `data:…` and `file:///…` without complaint —
+ * measured, not assumed. Leaving the check to each decoder meant the two that
+ * forgot it rejected those inputs only by accident, through a path or format
+ * that happened not to match, and reported them as "we do not know this feed"
+ * rather than "that scheme is not allowed here".
+ */
+const ALLOWED_SCHEMES = new Set(['http:', 'https:']);
+
+/**
  * Summarize a parsed URL for the `no_decoder` answer: enough for a caller to
  * show what we actually read, without handing out a live `URL` object.
  *
@@ -56,8 +68,8 @@ function summarizeUrl(u) {
  *
  * @param {string} text
  * @returns {Object|null} Canonical request on success; `{ ok: false, reason }`
- *   with `reason` one of `unparseable` / `no_decoder` / `decoder_threw`;
- *   `null` only for absent or non-string input.
+ *   with `reason` one of `unparseable` / `unsupported_scheme` / `no_decoder` /
+ *   `decoder_threw`; `null` only for absent or non-string input.
  */
 function decodeRequest(text) {
   if (typeof text !== 'string' || text.length === 0) return null;
@@ -67,6 +79,10 @@ function decodeRequest(text) {
     parsedUrl = new URL(text);
   } catch (e) {
     return { ok: false, reason: 'unparseable', detail: String((e && e.message) || e) };
+  }
+
+  if (!ALLOWED_SCHEMES.has(parsedUrl.protocol)) {
+    return { ok: false, reason: 'unsupported_scheme', scheme: parsedUrl.protocol };
   }
 
   for (const dec of DECODERS) {

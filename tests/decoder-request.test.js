@@ -229,7 +229,10 @@ test('url-search-feed.detect: claims only the full JSON search-feed signature', 
     'https://feed.vendor.example/search?format=json&feed=demo&query=x',
     'https://feed.vendor.example/search?format=json&auth=tk&query=x',
     'https://feed.vendor.example/other?format=json&feed=demo&auth=tk&query=x',
-    'ftp://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=x',
+    // Scheme is no longer asserted here: the gate moved to the registry, which
+    // refuses anything outside http(s) with an explicit `unsupported_scheme`
+    // before a decoder is consulted at all. Covered by the scheme-gating tests
+    // below — `ftp://…` included.
     'https://user:pass@feed.vendor.example/search?format=json&feed=demo&auth=tk&query=x',
     'https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=x#fragment',
   ]) {
@@ -496,4 +499,74 @@ test('detect: looser case matching did not make the decoders greedy', () => {
     decodeRequest('https://feed.vendor.example/SEARCHING?format=json&feed=d&auth=t&query=q').reason,
     'no_decoder',
   );
+});
+
+// ── Scheme gating (spec §5) ────────────────────────────────────────────────
+
+test('decodeRequest: only http(s) is accepted, with the scheme named', () => {
+  // `new URL()` accepts all of these without complaint — measured, not
+  // assumed — so the blocklist has to be explicit. The parser does not help.
+  for (const [input, scheme] of [
+    ['javascript:alert(1)', 'javascript:'],
+    ['data:text/html,<b>x', 'data:'],
+    ['file:///etc/passwd', 'file:'],
+    ['ftp://host.example/f', 'ftp:'],
+    ['mailto:ops@vendor.example', 'mailto:'],
+    ['ws://host.example/s', 'ws:'],
+  ]) {
+    const r = decodeRequest(input);
+    assert.equal(r.ok, false, input);
+    assert.equal(r.reason, 'unsupported_scheme', input);
+    assert.equal(r.scheme, scheme, `${input}: names the scheme so the UI can say which`);
+    assert.equal(r.variant, undefined, input);
+  }
+});
+
+test('decodeRequest: a bare host:port reads as a scheme and is refused as one', () => {
+  // `adserver:8080/feed` parses with protocol `adserver:`, so it lands here
+  // rather than looking like a feed. Layer 1 is what will turn it into
+  // `https://adserver:8080/feed` before it ever reaches this gate.
+  const r = decodeRequest('adserver:8080/feed');
+  assert.equal(r.reason, 'unsupported_scheme');
+  assert.equal(r.scheme, 'adserver:');
+});
+
+test('decodeRequest: unsupported_scheme is distinct from the other refusals', () => {
+  const reasons = [
+    decodeRequest('not a url').reason,
+    decodeRequest('javascript:alert(1)').reason,
+    decodeRequest('https://example.com/').reason,
+  ];
+  assert.deepEqual(reasons, ['unparseable', 'unsupported_scheme', 'no_decoder']);
+});
+
+test('decodeRequest: http and https still decode on every variant', () => {
+  assert.equal(
+    decodeRequest('https://feed.vendor.example/search?format=json&feed=d&auth=t&query=q').variant,
+    'url-search-feed',
+  );
+  assert.equal(
+    decodeRequest('http://feed.vendor.example/link?format=json&feed=d&auth=t').variant,
+    'url-linkfeed',
+  );
+  assert.equal(
+    decodeRequest('HTTPS://ads.vendor.example/feed?format=cu&sid=1').variant,
+    'url-clickunder-feed',
+  );
+});
+
+test('url-search-feed.detect: userinfo and fragment stay a decoder concern', () => {
+  // Moved scheme checking to the registry; these did not move, because a
+  // fragment is arguably paste noise for layer 1 to strip rather than a
+  // reason to refuse the whole URL.
+  const q = '?format=json&feed=demo&auth=tk&query=q';
+  assert.equal(
+    urlSearchFeed.detect('', new URL(`https://u:p@feed.vendor.example/search${q}`)),
+    false,
+  );
+  assert.equal(
+    urlSearchFeed.detect('', new URL(`https://feed.vendor.example/search${q}#frag`)),
+    false,
+  );
+  assert.equal(urlSearchFeed.detect('', new URL(`https://feed.vendor.example/search${q}`)), true);
 });

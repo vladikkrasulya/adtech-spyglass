@@ -16,9 +16,9 @@ const ID = 'url-search-feed';
 const PATH = '/search';
 
 function detect(_text, parsedUrl) {
-  // URL feeds are HTTP requests. Reject userinfo and fragments: neither is
+  // Scheme is gated once in the registry (`ALLOWED_SCHEMES`), so it is not
+  // rechecked here. Userinfo and fragments stay a decoder concern: neither is
   // part of the observed wire shape, and a fragment is never sent upstream.
-  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') return false;
   if (parsedUrl.username || parsedUrl.password || parsedUrl.hash) return false;
   // Case-insensitive throughout: a pasted `/SEARCH?FORMAT=json` is the same
   // feed. Matching is loose, the URL itself is preserved exactly — see
