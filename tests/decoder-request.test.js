@@ -679,3 +679,54 @@ test('repairInput: never throws, whatever it is handed', () => {
     assert.deepEqual(r.repairs, []);
   }
 });
+
+// ── Refusal reasons reach the operator (spec §4) ────────────────────────────
+
+const { validate } = require('@ortbtools/core');
+const { detectType, TYPES } = require('@ortbtools/core/detect');
+
+test('validate: each refusal gets its own finding, not payload.invalid_root', () => {
+  // Before this, all three answered "expected a JSON object or array" — the
+  // reasons were computed inside decodeRequest and discarded a frame later.
+  const cases = [
+    ['javascript:alert(1)', 'request.url.unsupported_scheme'],
+    ['https://news.example/feed?format=json&id=1', 'request.url.no_decoder'],
+    ['https://news.example/feed', 'request.url.no_decoder_no_params'],
+    ['http://', 'request.url.unparseable'],
+  ];
+  for (const [input, id] of cases) {
+    const ids = validate(input, { locale: 'en' }).findings.map((f) => f.id);
+    assert.ok(ids.includes(id), `${input} → ${id}, got ${ids.join(',')}`);
+    assert.equal(ids.includes('payload.invalid_root'), false, input);
+  }
+});
+
+test('validate: no_decoder names the parameters we actually read', () => {
+  const f = validate('https://news.example/feed?format=json&id=1', { locale: 'en' }).findings.find(
+    (x) => x.id === 'request.url.no_decoder',
+  );
+  // Joined at the emit site: a raw array interpolates as "format,id".
+  assert.equal(f.params.params, 'format, id');
+  assert.match(f.msg, /format, id/);
+  assert.match(f.msg, /news\.example/);
+});
+
+test('detectType: prose, SQL, markup and bare numbers stay non-URL', () => {
+  // The widening must not hijack every failed JSON paste. `42` is the sharp
+  // one: repair prefixes https:// and WHATWG expands it to 0.0.0.42.
+  for (const s of ['hello', '42', 'SELECT * FROM x', '{"imp":[]}', '<html>x</html>', 'not a url']) {
+    assert.notEqual(detectType(s), TYPES.URL_REQUEST, s);
+  }
+});
+
+test('detectType: anything the operator plainly aimed at a URL is claimed', () => {
+  for (const s of [
+    'https://news.example/feed',
+    'feed.vendor.example/search?a=1',
+    'javascript:alert(1)',
+    'http://',
+    'localhost:8080/search',
+  ]) {
+    assert.equal(detectType(s), TYPES.URL_REQUEST, s);
+  }
+});

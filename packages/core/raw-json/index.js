@@ -39,6 +39,18 @@
 /** Node's exact-integer ceiling: 2^53 − 1. */
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
 
+/**
+ * Nesting depth at which the scan refuses rather than recurses.
+ *
+ * The scanner is recursive, so without a limit a deeply nested payload ends in
+ * a RangeError whose message is about the call stack — an implementation
+ * detail leaking out as if it were a fact about the input, at a depth that
+ * varies with the runtime. A fixed limit fails at the same place every time
+ * and can say why. Real oRTB nests roughly a dozen deep; 512 is far past any
+ * honest payload and far below where the stack gives out.
+ */
+const MAX_DEPTH = 512;
+
 const WS = new Set([' ', '\t', '\n', '\r']);
 
 /** RFC 6901 §3: `~` → `~0`, `/` → `~1`, in that order. */
@@ -60,9 +72,17 @@ function escapePointerToken(token) {
  * @typedef {Object} UnsafeInteger
  * @property {string} pointer  RFC 6901 pointer to the number.
  * @property {string} raw      The integer literal exactly as written.
- * @property {string} parsed   What `Number()` makes of it, as a string.
- * @property {boolean} lossy   True when `parsed` is a different integer than
- *                             `raw` — i.e. the value did not survive the read.
+ * @property {string} parsed   The value as this runtime would re-emit it —
+ *                             `String(Number(raw))`, the shortest decimal that
+ *                             round-trips. This is what the next hop receives,
+ *                             which is not always the exact double: the token
+ *                             1234567890123456789 prints as
+ *                             1234567890123456800 while the stored value is
+ *                             1234567890123456768.
+ * @property {boolean} lossy   True when the written integer and the one
+ *                             actually stored differ. Decided by comparing
+ *                             BigInts, so it is exact rather than a comparison
+ *                             of printed forms.
  */
 
 /**
@@ -125,6 +145,13 @@ function scanRawJson(text) {
         i++;
         return value;
       }
+      if (ch < ' ') {
+        // RFC 8259 §7: U+0000–U+001F must be escaped inside a string. Letting
+        // one through would make `ok` mean "scanned" rather than "valid", and
+        // a caller reading `ok: true` on input `JSON.parse` refuses is being
+        // misled by this module rather than warned by it.
+        throw err('unescaped control character in string');
+      }
       if (ch === '\\') {
         i++;
         const esc = text[i];
@@ -165,23 +192,35 @@ function scanRawJson(text) {
    * @param {string} pointer
    */
   function readNumber(pointer) {
+    // The JSON number grammar, enforced rather than approximated. A looser
+    // scan would accept `01`, `1.` and `1e` — all of which `JSON.parse`
+    // refuses — and the scan would then report `ok` on a payload nothing
+    // downstream can read.
     const start = i;
     if (text[i] === '-') i++;
-    while (i < n && text[i] >= '0' && text[i] <= '9') i++;
+    if (text[i] === '0') {
+      i++;
+      if (text[i] >= '0' && text[i] <= '9') throw err('leading zero in number');
+    } else if (text[i] >= '1' && text[i] <= '9') {
+      while (i < n && text[i] >= '0' && text[i] <= '9') i++;
+    } else {
+      throw err('invalid number');
+    }
     let isInteger = true;
     if (text[i] === '.') {
       isInteger = false;
       i++;
+      if (!(text[i] >= '0' && text[i] <= '9')) throw err('digit required after "."');
       while (i < n && text[i] >= '0' && text[i] <= '9') i++;
     }
     if (text[i] === 'e' || text[i] === 'E') {
       isInteger = false;
       i++;
       if (text[i] === '+' || text[i] === '-') i++;
+      if (!(text[i] >= '0' && text[i] <= '9')) throw err('digit required in exponent');
       while (i < n && text[i] >= '0' && text[i] <= '9') i++;
     }
     const raw = text.slice(start, i);
-    if (raw === '' || raw === '-') throw err('invalid number');
     if (!isInteger) return;
 
     // Magnitude check first: inside the safe range there is nothing to say.
@@ -196,16 +235,19 @@ function scanRawJson(text) {
       return;
     }
 
-    // BigInt on both sides decides precision exactly. `9007199254740992` is
-    // outside the safe range and still round-trips; saying it was damaged
-    // would be a false alarm, so `lossy` carries the distinction.
-    const written = BigInt(raw);
-    const readBack = BigInt(asNumber);
+    // Two different true answers exist here, and the choice matters.
+    // `String(Number('1234567890123456789'))` is "1234567890123456800" — the
+    // shortest decimal that round-trips, and therefore what this process will
+    // write if it ever re-serializes the value. The exact double is
+    // 1234567890123456768. The first is what the next hop receives, so that is
+    // what `parsed` reports; the second is what decides whether anything was
+    // lost, so BigInt does the comparison. Reporting the printed form and
+    // testing it with the exact form is deliberate, not an inconsistency.
     out.unsafeIntegers.push({
       pointer,
       raw,
-      parsed: readBack.toString(),
-      lossy: written !== readBack,
+      parsed: String(asNumber),
+      lossy: BigInt(raw) !== BigInt(asNumber),
     });
   }
 
@@ -221,8 +263,9 @@ function scanRawJson(text) {
 
   /**
    * @param {string} pointer  Pointer of the object itself.
+   * @param {number} depth
    */
-  function readObject(pointer) {
+  function readObject(pointer, depth) {
     expect('{');
     /**
      * First offset seen per key, plus every occurrence. Keyed by the unescaped
@@ -243,7 +286,7 @@ function scanRawJson(text) {
       expect(':');
       skipWs();
       const valueStart = i;
-      readValue(pointer + '/' + escapePointerToken(key));
+      readValue(pointer + '/' + escapePointerToken(key), depth);
       const rawValue = text.slice(valueStart, i);
 
       const prior = seen.get(key);
@@ -275,8 +318,9 @@ function scanRawJson(text) {
 
   /**
    * @param {string} pointer  Pointer of the array itself.
+   * @param {number} depth
    */
-  function readArray(pointer) {
+  function readArray(pointer, depth) {
     expect('[');
     skipWs();
     if (text[i] === ']') {
@@ -286,7 +330,7 @@ function scanRawJson(text) {
     let idx = 0;
     for (;;) {
       skipWs();
-      readValue(pointer + '/' + idx);
+      readValue(pointer + '/' + idx, depth);
       idx++;
       skipWs();
       if (text[i] === ',') {
@@ -303,13 +347,16 @@ function scanRawJson(text) {
 
   /**
    * @param {string} pointer
+   * @param {number} [depth]
    */
-  function readValue(pointer) {
+  function readValue(pointer, depth = 0) {
     skipWs();
     const ch = text[i];
     if (ch === undefined) throw err('unexpected end of input');
-    if (ch === '{') return readObject(pointer);
-    if (ch === '[') return readArray(pointer);
+    if (ch === '{' || ch === '[') {
+      if (depth >= MAX_DEPTH) throw err(`nesting deeper than ${MAX_DEPTH} levels`);
+      return ch === '{' ? readObject(pointer, depth + 1) : readArray(pointer, depth + 1);
+    }
     if (ch === '"') {
       readString();
       return;
@@ -334,4 +381,4 @@ function scanRawJson(text) {
   return out;
 }
 
-module.exports = { scanRawJson, MAX_SAFE };
+module.exports = { scanRawJson, MAX_SAFE, MAX_DEPTH };

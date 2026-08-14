@@ -76,6 +76,48 @@ const DEFAULT_DIALECT = 'iab';
 // (e.g. 2.6-202309 revision) only need adding here.
 const PINNABLE_VERSIONS = [VERSIONS.V_2_5, VERSIONS.V_2_6, VERSIONS.V_3_0];
 
+/**
+ * Turn a decoder refusal into findings the operator can actually read.
+ *
+ * `decodeRequest` distinguishes "this did not parse as a URL", "that scheme is
+ * not fetchable" and "valid URL, no decoder knows this feed". Nothing consumed
+ * those reasons, so all three surfaced as `payload.invalid_root` — the answer
+ * for a payload that is not a JSON object, which is not what a pasted feed URL
+ * needs to hear. See `docs/url-input-spec-2026-08-13.md` (D2, §4).
+ *
+ * Ids are written literally at the call site on purpose: `tests/spec-refs.test.js`
+ * discovers finding ids by grepping the source for the literal call shape, so a
+ * lookup table of ids would slip past that coverage gate without failing it.
+ * (Writing an example of the shape in this comment is enough to invent a
+ * phantom id, which is the same bluntness working as intended.)
+ *
+ * @param {{reason?: string, detail?: string, scheme?: string, parsed?: {protocol: string, host: string, pathname: string, params: string[]}}} refusal
+ * @returns {Array<Object>}
+ */
+function refusalFindings(refusal) {
+  const F = makeFinding;
+  if (refusal.reason === 'unsupported_scheme') {
+    return [F('request.url.unsupported_scheme', LEVELS.ERROR, '', { scheme: refusal.scheme })];
+  }
+  if (refusal.reason === 'no_decoder') {
+    const p = refusal.parsed || { protocol: '', host: '', pathname: '', params: [] };
+    const shared = { protocol: p.protocol, host: p.host, pathname: p.pathname };
+    // Two ids rather than one: an empty parameter list renders as a dangling
+    // "query parameters: ." and substituting an English "none" would leak that
+    // word into the other locales. The no-params case also has something of its
+    // own to say — feed URLs normally carry parameters.
+    return p.params && p.params.length
+      ? [
+          F('request.url.no_decoder', LEVELS.ERROR, '', {
+            ...shared,
+            params: p.params.join(', '),
+          }),
+        ]
+      : [F('request.url.no_decoder_no_params', LEVELS.ERROR, '', shared)];
+  }
+  return [F('request.url.unparseable', LEVELS.ERROR, '', { detail: refusal.detail || '' })];
+}
+
 function validate(payload, opts) {
   const o = opts || {};
   const dialect = DIALECTS[o.dialect || DEFAULT_DIALECT] || DIALECTS[DEFAULT_DIALECT];
@@ -119,7 +161,12 @@ function validate(payload, opts) {
       );
     }
     const canonical = decodeRequest(payload);
-    const r = validateUrlRequest(canonical);
+    // A refusal never reaches the validator — it has no canonical shape to
+    // validate. Turn its reason into a finding here instead, or the reason is
+    // computed and then discarded, and the operator is told their feed URL is
+    // not a JSON object.
+    const findings = canonical && canonical.ok === false ? refusalFindings(canonical) : [];
+    const r = canonical && canonical.ok === false ? { findings } : validateUrlRequest(canonical);
     const out = finalize(
       {
         type: TYPES.URL_REQUEST,
