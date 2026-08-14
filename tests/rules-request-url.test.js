@@ -4,7 +4,7 @@
  * tests/rules-request-url.test.js — packages/core/rules-request-url.js
  *
  * Each of the 4 base findings in isolation + clean-canonical → 0 findings
- * + null-canonical → decode_failed.
+ * + null-canonical → decode_failed + the `warnings[]` projection.
  *
  * Inputs are raw canonical shapes (the registry's output), built inline
  * so each test pins exactly one signal.
@@ -15,6 +15,8 @@ const assert = require('node:assert/strict');
 
 const { validateUrlRequest } = require('@ortbtools/core/rules-request-url');
 const { makeCanonicalUrlRequest } = require('@ortbtools/core/decoders/request/_canonical');
+const { rollupStatus } = require('@ortbtools/core/findings');
+const { resolve } = require('@ortbtools/core/messages');
 
 function baseCanonical(extra) {
   const c = makeCanonicalUrlRequest('url-linkfeed', 'https://feed.vendor.example/link?x=1');
@@ -143,4 +145,120 @@ test('validateUrlRequest: url= ending in ? → url_trailing_questionmark WARNING
 test('validateUrlRequest: url= no trailing ? → no trailing_questionmark', () => {
   const r = validateUrlRequest(baseCanonical({ url: 'https://example.com/page' }));
   assert.ok(!findingIds(r).includes('request.url.url_trailing_questionmark'));
+});
+
+// ── canonical.warnings[] → findings ─────────────────────────────────────────
+//
+// Decoders wrote this array from the start and nothing read it. These tests
+// pin the property that makes it a warning at all: it reaches the caller.
+
+const DAMAGED = '%�CHEBUSTER%%';
+
+function withWarning(warning, extra) {
+  const c = baseCanonical(extra);
+  c.warnings.push(warning);
+  return c;
+}
+
+test('validateUrlRequest: decode-damage warning → mapped finding carrying raw and decoded', () => {
+  const c = withWarning(
+    {
+      code: 'query_value_decode_damage',
+      param: 'cb',
+      detail: 'Percent-decoding replaced bytes in "cb"; raw value preserved in _raw.',
+      decoded: DAMAGED,
+    },
+    { cb: '%%CACHEBUSTER%%' },
+  );
+  const f = validateUrlRequest(c).findings.find(
+    (x) => x.id === 'request.url.query_value_decode_damage',
+  );
+  assert.ok(f, 'warning became a finding');
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'cb', 'points at the damaged parameter');
+  assert.equal(f.params.param, 'cb');
+  // The raw value is read from `_raw`, not echoed from the warning: `_raw` is
+  // the source of truth and the warning does not carry it.
+  assert.equal(f.params.raw, '%%CACHEBUSTER%%');
+  assert.equal(f.params.decoded, DAMAGED);
+});
+
+test('validateUrlRequest: double-escape warning is mapped, not generic', () => {
+  const c = withWarning({
+    code: 'query_double_escaped_entity',
+    param: 'b',
+    detail: 'Input looks double-escaped; left as sent.',
+  });
+  const ids = findingIds(validateUrlRequest(c));
+  assert.ok(ids.includes('request.url.query_double_escaped_entity'));
+  assert.ok(!ids.includes('request.url.decoder_warning'), 'must not fall through to the generic');
+});
+
+test('validateUrlRequest: unmapped warning code still surfaces, verbatim', () => {
+  // The point of the whole rule: a code this file has never heard of must not
+  // vanish just because there is no phrasing for it yet.
+  const c = withWarning({
+    code: 'some_code_invented_after_this_test',
+    param: 'zz',
+    detail: 'Decoder said something new.',
+  });
+  const f = validateUrlRequest(c).findings.find((x) => x.id === 'request.url.decoder_warning');
+  assert.ok(f, 'unknown code produced a finding');
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'zz');
+  assert.equal(f.params.code, 'some_code_invented_after_this_test');
+  assert.equal(f.params.detail, 'Decoder said something new.');
+});
+
+test('validateUrlRequest: an unmapped warning alone does not roll up to clean', () => {
+  // WARNING rather than INFO is load-bearing: rollupStatus folds info-only
+  // into `clean`, and a clean badge over input the decoder flagged is the
+  // green-status-over-mutated-value defect this branch exists to remove.
+  const c = withWarning({ code: 'unheard_of', param: 'zz', detail: 'x' });
+  assert.equal(rollupStatus(validateUrlRequest(c).findings), 'warnings');
+});
+
+test('validateUrlRequest: empty warnings[] adds nothing', () => {
+  const r = validateUrlRequest(baseCanonical());
+  assert.deepEqual(r.findings, [], 'a clean canonical stays clean');
+});
+
+test('validateUrlRequest: malformed warnings[] entries never throw', () => {
+  // Hand-built canonicals reach this validator through the API; it stays total.
+  const c = baseCanonical();
+  c.warnings = [null, 'not an object', 42, {}, { code: 'no_param' }];
+  const r = validateUrlRequest(c);
+  // null / string / number are skipped; the two objects each report.
+  const generic = r.findings.filter((x) => x.id === 'request.url.decoder_warning');
+  assert.equal(generic.length, 2);
+  assert.equal(generic[0].params.code, 'unknown', 'a warning with no code still reports');
+  assert.equal(generic[0].path, '');
+  assert.equal(generic[1].params.code, 'no_param');
+});
+
+test('validateUrlRequest: non-array warnings is ignored, not fatal', () => {
+  const c = baseCanonical();
+  c.warnings = undefined;
+  assert.deepEqual(validateUrlRequest(c).findings, []);
+  // Deliberately off-contract: `warnings` is Array<Object> in the canonical
+  // JSDoc, so the cast is what lets the test hand over the shape a careless
+  // caller might.
+  c.warnings = /** @type {any} */ ({ code: 'not an array' });
+  assert.deepEqual(validateUrlRequest(c).findings, []);
+});
+
+test('warning messages resolve in all three locales (no raw key leaks)', () => {
+  /** @type {Array<[string, Record<string, unknown>]>} */
+  const cases = [
+    ['request.url.query_value_decode_damage', { param: 'cb', raw: '%%CB%%', decoded: DAMAGED }],
+    ['request.url.query_double_escaped_entity', { param: 'b' }],
+    ['request.url.decoder_warning', { code: 'unheard_of', detail: 'Decoder said something.' }],
+  ];
+  for (const locale of ['en', 'uk', 'ru']) {
+    for (const [id, params] of cases) {
+      const msg = resolve(id, params, locale);
+      assert.ok(msg && !msg.includes(id), `${locale}/${id}: fell back to the raw key`);
+      assert.ok(!/\{\w+\}/.test(msg), `${locale}/${id}: unsubstituted param in "${msg}"`);
+    }
+  }
 });
