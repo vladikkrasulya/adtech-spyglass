@@ -1731,11 +1731,31 @@ export async function mountInspector(root, ctx) {
     }).length;
     const warnCount = findings.filter((f) => f.level === 'warning').length;
     const infoCount = findings.filter((f) => f.level === 'info').length;
+    // `question` is the fourth level packages/core/findings.js emits, and it had
+    // no chip. On a payload carrying one, the row read all 8 · errors 1 ·
+    // warnings 4 · info 2 — which sums to seven. The eighth was reachable only
+    // under "all" (listHtml filters by exact level), so clicking every chip in
+    // turn showed 7 of 8 and no chip could isolate the missing one. A counter
+    // row that does not add up to its own total is a record describing a set it
+    // is not checked against.
+    const questionCount = findings.filter((f) => f.level === 'question').length;
 
     function buildFindingHtml(f) {
       const lvl = f.level === 'danger' ? 'error' : f.level;
-      const cls = lvl === 'error' ? 'danger' : lvl === 'info' ? 'info' : 'warning';
-      const ic = lvl === 'error' ? '✕' : lvl === 'info' ? 'i' : '!';
+      // Both chains used to end in `warning`, so a `question` finding rendered
+      // with the warning stripe and the `!` icon while being counted by neither
+      // the warning chip nor any other — it looked like a warning and was not
+      // one. It now carries its own class and a `?`, which is what it is: the
+      // tool asking rather than reporting.
+      const cls =
+        lvl === 'error'
+          ? 'danger'
+          : lvl === 'info'
+            ? 'info'
+            : lvl === 'question'
+              ? 'question'
+              : 'warning';
+      const ic = lvl === 'error' ? '✕' : lvl === 'info' ? 'i' : lvl === 'question' ? '?' : '!';
       const specLink = f.specRef
         ? ' <a href="' +
           escapeHtml(f.specRef) +
@@ -1787,11 +1807,33 @@ export async function mountInspector(root, ctx) {
     }
 
     function chipsHtml(activeFilter) {
+      // Dots come from the theme's own tokens rather than literals. The three
+      // that were hardcoded painted the same hex in both themes, so the light
+      // theme got the dark theme's red (#ef4444 where --danger is #DC2626).
+      // `question` is deliberately NEUTRAL: it is not a point on the severity
+      // scale, it is the tool asking the operator something, and a severity
+      // colour would assert a ranking that does not exist.
       const chips = [
         { key: 'all', label: t('severity.chip.all'), count: findings.length, dot: null },
-        { key: 'error', label: t('severity.chip.error'), count: errCount, dot: '#ef4444' },
-        { key: 'warning', label: t('severity.chip.warning'), count: warnCount, dot: '#f59e0b' },
-        { key: 'info', label: t('severity.chip.info'), count: infoCount, dot: '#3b82f6' },
+        { key: 'error', label: t('severity.chip.error'), count: errCount, dot: 'var(--danger)' },
+        {
+          key: 'warning',
+          label: t('severity.chip.warning'),
+          count: warnCount,
+          dot: 'var(--warning)',
+        },
+        {
+          key: 'info',
+          label: t('severity.chip.info'),
+          count: infoCount,
+          dot: 'hsl(var(--c-info))',
+        },
+        {
+          key: 'question',
+          label: t('severity.chip.question'),
+          count: questionCount,
+          dot: 'var(--text-muted)',
+        },
       ];
       return (
         '<div class="severity-chips">' +

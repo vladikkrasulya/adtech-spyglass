@@ -184,9 +184,11 @@
       'severity.chip.error': 'Помилки',
       'severity.chip.warning': 'Попередження',
       'severity.chip.info': 'Інфо',
+      'severity.chip.question': 'Питання',
       'severity.empty.error': '🎉 Чудова робота! Жодних критичних помилок не виявлено.',
       'severity.empty.warning': '✨ Ідеально! Попередження відсутні.',
       'severity.empty.info': '☕️ Інформаційних сповіщень немає, все чисто.',
+      'severity.empty.question': '🤔 Питань немає — усі розширення інструмент упізнав.',
       'severity.empty.all': '🧘 Нічого не знайдено для цього тесту.',
 
       // ── analysis strip labels (Feature #13) ──────────────
@@ -461,9 +463,11 @@
       'severity.chip.error': 'Errors',
       'severity.chip.warning': 'Warnings',
       'severity.chip.info': 'Info',
+      'severity.chip.question': 'Questions',
       'severity.empty.error': '🎉 Great job! No critical errors found.',
       'severity.empty.warning': '✨ Perfect! No warnings.',
       'severity.empty.info': '☕️ No info notices — all clean.',
+      'severity.empty.question': '🤔 No questions — every extension was recognised.',
       'severity.empty.all': '🧘 Nothing found for this check.',
 
       // ── analysis strip labels (Feature #13) ──────────────
@@ -726,9 +730,11 @@
       'severity.chip.error': 'Ошибки',
       'severity.chip.warning': 'Предупреждения',
       'severity.chip.info': 'Инфо',
+      'severity.chip.question': 'Вопросы',
       'severity.empty.error': '🎉 Отлично! Критических ошибок не найдено.',
       'severity.empty.warning': '✨ Идеально! Предупреждений нет.',
       'severity.empty.info': '☕️ Информационных уведомлений нет, всё чисто.',
+      'severity.empty.question': '🤔 Вопросов нет — все расширения распознаны.',
       'severity.empty.all': '🧘 Ничего не найдено для этой проверки.',
 
       // ── analysis strip labels (Feature #13) ──────────────

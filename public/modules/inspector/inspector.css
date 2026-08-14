@@ -2204,6 +2204,17 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border-color: var(--border);
   color: var(--text-muted);
 }
+/* `question` used to fall through to `.warning` — amber stripe, `!` icon —
+   while being counted by no chip at all. It is not a point on the severity
+   scale: it is the tool asking the operator to supply a dialect mapping.
+   Neutral ground like `info`, and a dashed edge for "waiting on you" rather
+   than a severity hue, which would assert a ranking that does not exist. */
+.validation-item.question {
+  background: var(--bg-2);
+  border-color: var(--border-strong);
+  border-style: dashed;
+  color: var(--text-muted);
+}
 .validation-icon {
   font-family: var(--font-mono);
   font-size: 13px;
