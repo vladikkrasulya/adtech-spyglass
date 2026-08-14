@@ -1564,8 +1564,17 @@ export async function mountInspector(root, ctx) {
       const cur = imp0.bidfloorcur || allowed[0] || 'USD';
       const outsideAllowed = allowed.length > 0 && allowed.indexOf(cur) === -1;
 
+      // No "Floor: " prefix. It was a hardcoded English literal printed into
+      // all three locales, so a Ukrainian reader got "Floor: 0,30 USD" — and it
+      // repeated the column it sits in, which is labelled PRICE / ЦІНА / ЦЕНА
+      // and whose own hint already says "the floor this impression asks for".
+      // A label and its value saying the same word twice is the redundancy that
+      // squeezed the figure: in Ukrainian the quality cell is 12px wider than in
+      // English ("Критично" against "Critical"), that came out of the other five
+      // cells, and the amount ended up 3px short of its own box. Dropping a
+      // duplicate is a better answer than tuning a flex weight until three
+      // pixels appear.
       pricingValue =
-        'Floor: ' +
         escapeHtml(formatAmount(imp0.bidfloor, cur)) +
         ' <span class="floor-cur' +
         (outsideAllowed ? ' floor-cur-mismatch' : '') +
