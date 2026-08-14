@@ -1422,6 +1422,13 @@ export async function mountInspector(root, ctx) {
       const conv = toUsd(amount, cur);
       if (!conv) return;
       live.textContent = ' ≈ ' + formatMoney(conv.usd, 'USD');
+      // This lands AFTER the strip's title pass, so the cell's own title would
+      // otherwise describe the figure as it read before the conversion arrived
+      // — accurate for a moment, then quietly wrong in the one cell whose value
+      // is longest and gets truncated first. Re-read it from the DOM, which is
+      // the only version that cannot disagree with what is on screen.
+      const cell = live.closest('.analysis-strip-value');
+      if (cell) cell.setAttribute('title', cell.textContent.trim());
       live.title = t('strip.pricing.fx_tooltip', {
         amount: formatAmount(amount, cur) + ' ' + cur,
         cur: cur,
@@ -1705,6 +1712,36 @@ export async function mountInspector(root, ctx) {
     }
     strip.innerHTML = fullStripHtml;
     strip.hidden = false;
+
+    // Every value carries its own full text as a title, so an ellipsised cell
+    // is still readable. This bar is only as wide as the centre column —
+    // `viewport − ~900px`, so 540px for six labelled cells at a 1440px window —
+    // and measured on that width four of the six were cut with no title, no
+    // tooltip and no other route to the value. The text was simply gone.
+    //
+    // Done here in one pass over the rendered result rather than at each of the
+    // six places that build a cell: those are six chances to forget, and a
+    // seventh cell added later would arrive without one. Reading it back off
+    // the DOM cannot disagree with what was rendered.
+    //
+    // Set unconditionally rather than only when scrollWidth exceeds clientWidth,
+    // because whether a cell is truncated changes with every resize and a title
+    // computed once would then describe the width it was measured at. A tooltip
+    // repeating text you can already read is a much smaller cost than a value
+    // you cannot recover.
+    // The quality block is excluded for two measured reasons. Its score counts
+    // up from 0 over 400ms, so a title read at this instant says "0Critical"
+    // while the cell settles on "29Critical" — a record taken in one moment and
+    // never checked against what happened next, which is the exact defect this
+    // title exists to avoid. And its pill already owns a richer tooltip: the
+    // score breakdown, which was unreachable until it was fixed. A crude title
+    // on the ancestor would compete with it and win.
+    for (const valueEl of strip.querySelectorAll(
+      '.analysis-strip-block:not(.analysis-strip-quality) .analysis-strip-value',
+    )) {
+      const full = valueEl.textContent.trim();
+      if (full) valueEl.setAttribute('title', full);
+    }
 
     // USD equivalent, painted in as soon as the rate table is available. The
     // strip is already complete and correct without it.

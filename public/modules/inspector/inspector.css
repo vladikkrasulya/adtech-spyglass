@@ -331,7 +331,7 @@ body {
 .app-header-actions .kt-theme-toggle {
   padding: 0;
   width: 32px;
-  font-size: 14px;
+  font-size: var(--fs-base);
 }
 /* 3-locale dropdown menu (replaces the single-button toggle).
          Native <details>/<summary> — no JS for open/close, links navigate. */
@@ -369,7 +369,7 @@ body {
   border-color: var(--text-dim);
 }
 .kt-lang-menu .kt-lang-caret {
-  font-size: 9px;
+  font-size: var(--fs-mono);
   opacity: 0.55;
 }
 .kt-lang-menu[open] summary.kt-lang-toggle {
@@ -458,7 +458,7 @@ body {
 .kt-example-menu .example-menu-list .menu-label {
   display: block;
   padding: 6px var(--space-4) 2px;
-  font-size: 10px;
+  font-size: var(--fs-mono);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-dim);
@@ -673,7 +673,7 @@ body {
   color: var(--text-dim);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: var(--fs-mono);
   flex-shrink: 0;
 }
 .input-card-summary__id {
@@ -737,7 +737,7 @@ body {
 }
 .preview-safe-overlay__btn {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   padding: 8px 16px;
   background: var(--surface);
@@ -768,7 +768,7 @@ body {
    Kept subtle — power-user feature, shouldn't shout for attention. */
 .finding-path {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   color: var(--text-dim);
   background: transparent;
   border: none;
@@ -803,7 +803,7 @@ body {
 }
 .char-count {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
@@ -812,7 +812,7 @@ body {
 }
 .json-badge {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   font-weight: 600;
   padding: 2px 8px;
   border-radius: var(--r-pill);
@@ -842,7 +842,7 @@ textarea.json-input {
   background: var(--surface);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   padding: var(--space-3);
   border: none;
   outline: none;
@@ -941,7 +941,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   cursor: pointer;
   color: var(--text-dim);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   padding: var(--space-3) var(--space-2);
   line-height: 1;
   transition: color var(--t-fast);
@@ -1005,7 +1005,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
    that area". */
 .section-title {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   font-weight: 500;
   color: var(--text-dim);
   text-transform: uppercase;
@@ -1029,7 +1029,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .metric-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   font-weight: 500;
   color: var(--text-dim);
   text-transform: uppercase;
@@ -1066,7 +1066,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .format-summary__label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   font-weight: 500;
   color: var(--text-dim);
   text-transform: uppercase;
@@ -1083,7 +1083,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   align-items: center;
   padding: 2px 8px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1250,7 +1250,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .history-title {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text);
   margin-bottom: 3px;
@@ -1260,13 +1260,13 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .history-meta {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   color: var(--text-dim);
   display: flex;
   gap: var(--space-2);
 }
 .history-status {
-  font-size: 9px;
+  font-size: var(--fs-mono);
   font-weight: 500;
   padding: 1px 7px;
   border-radius: var(--r-pill);
@@ -1324,7 +1324,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .saved-item-title {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text);
   margin-bottom: 3px;
@@ -1335,7 +1335,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .saved-item-meta {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   color: var(--text-dim);
   display: flex;
   gap: var(--space-2);
@@ -1355,7 +1355,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .saved-act-btn {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   padding: 2px 6px;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
@@ -1403,7 +1403,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   list-style: disc;
   padding-left: var(--space-5);
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text));
 }
 .kt-mirror-notes li {
@@ -1414,13 +1414,13 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   align-items: center;
   gap: var(--space-2);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 .kt-mirror-modes {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 /* Override .modal-row label (uppercase + 10px + dim, defined further down
    in this file) which would otherwise apply to each radio's <label>
@@ -1435,7 +1435,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   gap: 8px;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text);
   text-transform: none;
   letter-spacing: 0;
@@ -1514,7 +1514,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--text-warning);
 }
 .kt-mirror-diff-legend {
-  font-size: 10px;
+  font-size: var(--fs-mono);
   color: var(--text-dim, var(--text));
   margin-top: 4px;
   font-family: var(--font-mono);
@@ -1522,7 +1522,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .kt-mirror-diff-empty {
   padding: 12px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-dim, var(--text));
   background: rgba(46, 160, 67, 0.06);
   border: 1px solid rgba(46, 160, 67, 0.3);
@@ -1558,7 +1558,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .kt-live-list {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   border: 1px solid var(--border);
   border-radius: var(--r-sm, 4px);
   background: var(--bg-2);
@@ -1604,7 +1604,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   color: var(--text-dim, var(--text));
 }
 .kt-live-kind {
-  font-size: 10px;
+  font-size: var(--fs-mono);
   text-align: center;
   padding: 2px 6px;
   border-radius: 3px;
@@ -1668,7 +1668,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   align-items: baseline;
   margin-bottom: 6px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 .sim-strategy-label {
   color: var(--text);
@@ -1684,7 +1684,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .sim-strategy-reason {
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
 }
 /* .modal-title / .modal-row / .modal-actions moved to /core/modal-host.css
@@ -1703,7 +1703,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   border-radius: var(--r-sm);
   background: var(--accent-soft, rgba(2, 132, 199, 0.12));
   border: 1px solid var(--accent, #0284c7);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text);
 }
 .modal-hint[hidden] {
@@ -1711,7 +1711,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .modal-hint .hint-icon {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: var(--fs-base);
 }
 .modal-hint .hint-text {
   flex: 1;
@@ -1841,7 +1841,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .format-pill-version,
 .format-pill-dialect {
-  font-size: 10px;
+  font-size: var(--fs-mono);
   opacity: 0.85;
   background: var(--surface);
   color: var(--text-dim);
@@ -2113,7 +2113,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .slot-type {
   display: inline-block;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -2160,7 +2160,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .slot-floor-label {
   color: var(--text-dim);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -2276,7 +2276,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .finding-detail-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-dim, var(--text));
@@ -2284,7 +2284,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .finding-detail-path,
 .finding-detail-id {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text);
   background: var(--bg);
   padding: 2px 6px;
@@ -2308,12 +2308,12 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   word-break: break-all;
 }
 .finding-detail-value-missing {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-dim, var(--text));
   font-style: italic;
 }
 .finding-detail-severity {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text);
 }
 .finding-detail-severity strong {
@@ -2348,7 +2348,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .kt-corpus-summary {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-dim, var(--text));
 }
 .kt-corpus-labels {
@@ -2363,7 +2363,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   gap: 8px;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text);
   text-transform: none;
   letter-spacing: 0;
@@ -2445,7 +2445,7 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 .cross-path {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   color: var(--text-dim);
   margin-top: 2px;
   letter-spacing: 0.04em;
@@ -2477,7 +2477,7 @@ button.cross-path:focus-visible,
 }
 .cross-detail {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   color: var(--text-muted);
   margin-top: 4px;
   padding: 4px 8px;
@@ -2494,7 +2494,7 @@ button.cross-path:focus-visible,
 }
 .ref-section h3 {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -2547,7 +2547,7 @@ button.cross-path:focus-visible,
 }
 .ref-table th {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--text-dim);
@@ -2564,7 +2564,7 @@ button.cross-path:focus-visible,
 .ref-pill {
   display: inline-block;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-mono);
   font-weight: 500;
   padding: 2px 7px;
   border-radius: var(--r-pill);
@@ -2583,7 +2583,7 @@ button.cross-path:focus-visible,
 }
 .ref-paste-btn {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-mono);
   font-weight: 500;
   padding: 4px 10px;
   border-radius: var(--r-pill);
@@ -2677,14 +2677,14 @@ button.cross-path:focus-visible,
 }
 .stat-value {
   font-family: var(--font-mono);
-  font-size: 22px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--code-num, #b7791f);
   font-variant-numeric: tabular-nums;
 }
 .stat-label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-mono);
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -2823,6 +2823,12 @@ button.cross-path:focus-visible,
 .analysis-strip {
   display: flex;
   align-items: stretch;
+  /* Deliberately NOT flex-wrap: wrap. Measured: wrapping removes almost all
+     truncation, and then the second row overflows the centre panel by 41px at
+     1100px wide, because the panel is not sized to a bar that grows. Clipping
+     the panel is worse than ellipsising a label, so the bar stays one row and
+     the full value is recovered through a title instead — see setStripValue in
+     ortbtools.app.js. */
   /* min-height, not height: a fixed height silently squashed the quality pill
      below its own content (see .quality-pill). The bar now grows if a block
      ever needs more room instead of painting text through its own borders. */
@@ -2855,7 +2861,19 @@ button.cross-path:focus-visible,
   flex-direction: column;
   justify-content: center;
   padding: 0 var(--space-3);
-  flex: 1;
+  /* `flex: 1` is `1 1 0%` — every block gets an equal sixth no matter what it
+     holds, so "GDPR" was given exactly the room of "💻 Web (Banner)" and the
+     long values ellipsised while short ones sat in white space. `auto` makes
+     the BASIS the content's own width and shares only the surplus, so a cell
+     truncates when the bar is genuinely out of room rather than because it was
+     handed a sixth. min-width: 0 stays: without it a block refuses to shrink
+     at all and the bar overflows instead. */
+  flex: 1 1 auto;
+  /* 0, not a floor: six cells with a 96px minimum need 576px and this bar gets
+     540px at a 1440px window (the centre column is `viewport − ~900px`), so a
+     floor makes the row overflow and `overflow-x: clip` then removes a whole
+     cell rather than shortening one. A cell may shrink as far as it must; what
+     it must not do is lose the value, which the title now prevents. */
   min-width: 0;
   border-right: 1px solid var(--border);
 }
@@ -2871,7 +2889,7 @@ button.cross-path:focus-visible,
   flex: 2.2;
 }
 .analysis-strip-label {
-  font-size: 9px;
+  font-size: var(--fs-mono);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2881,7 +2899,7 @@ button.cross-path:focus-visible,
   white-space: nowrap;
 }
 .analysis-strip-value {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
@@ -2894,7 +2912,7 @@ button.cross-path:focus-visible,
   display: inline-block;
   padding: 1px 5px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: var(--fs-mono);
   font-weight: 700;
   margin-right: 3px;
   background: rgba(var(--accent-rgb, 2, 132, 199), 0.15);
@@ -3015,7 +3033,7 @@ button.cross-path:focus-visible,
 }
 .severity-chip .chip-count {
   opacity: 0.75;
-  font-size: 10px;
+  font-size: var(--fs-mono);
 }
 .severity-chip.active .chip-count {
   opacity: 1;
@@ -3117,14 +3135,14 @@ button.cross-path:focus-visible,
 }
 .quality-score {
   font-family: var(--font-mono);
-  font-size: 16px;
+  font-size: var(--fs-md);
   font-weight: 700;
   line-height: 1;
   color: var(--text);
   flex-shrink: 0;
 }
 .quality-status {
-  font-size: 9px;
+  font-size: var(--fs-mono);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
