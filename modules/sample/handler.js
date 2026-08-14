@@ -82,8 +82,16 @@ function handleSample(req, res) {
     const isBidRequest =
       !isBidResponse &&
       (isPlainObj(sample.openrtb) || Array.isArray(sample.item) || Array.isArray(sample.imp));
-    const cleanSample = Object.assign({}, sample);
-    delete cleanSample._note;
+    // `Object.assign({}, sample)` on a top-level array produces an object with
+    // numeric string keys — `{"0":…,"1":…}` — a shape that exists nowhere on
+    // disk and that no consumer asked for. samples/behavior-scenarios.json is
+    // such an array, and `handleSampleList` lists every .json in the directory,
+    // so it reaches this path as an ordinary catalog card. The transformation
+    // describes itself as a copy and is not one.
+    const cleanSample = Array.isArray(sample) ? sample.slice() : Object.assign({}, sample);
+    // `_note` is the human description lifted into the catalog row; it is only
+    // ever present on object fixtures.
+    if (!Array.isArray(cleanSample)) delete cleanSample._note;
 
     if (isBidRequest) {
       sendJson(res, 200, {

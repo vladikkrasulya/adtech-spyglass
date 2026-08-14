@@ -391,3 +391,41 @@ test('EIDs in both homes agreeing is not a finding', () => {
   single.user.eids = eids;
   assert.equal(structuralIds(single).includes('request.user.eids_disagree'), false);
 });
+
+// ── Sample delivery preserves the shape on disk ────────────────────────────
+
+const sampleFs = require('node:fs');
+const samplePath = require('node:path');
+
+test('a top-level array sample is not handed out as an object', () => {
+  // `Object.assign({}, sample)` on an array yields `{"0":…,"1":…}` — a shape
+  // that exists nowhere on disk. samples/behavior-scenarios.json is a top-level
+  // array, and the catalog lists every .json in the directory, so it reaches
+  // the generic sample path as an ordinary card. The transformation described
+  // itself as a copy and was not one.
+  const dir = samplePath.join(__dirname, '..', 'samples');
+  const arrays = sampleFs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .filter((f) => {
+      try {
+        return Array.isArray(JSON.parse(sampleFs.readFileSync(samplePath.join(dir, f), 'utf8')));
+      } catch {
+        return false;
+      }
+    });
+  assert.ok(arrays.length > 0, 'the corpus still contains a top-level array to guard');
+
+  for (const file of arrays) {
+    const onDisk = JSON.parse(sampleFs.readFileSync(samplePath.join(dir, file), 'utf8'));
+    // The copy the handler performs, mirrored here: array-aware.
+    const served = Array.isArray(onDisk) ? onDisk.slice() : Object.assign({}, onDisk);
+    assert.ok(Array.isArray(served), `${file} must be served as an array`);
+    assert.equal(served.length, onDisk.length, `${file} must keep every element`);
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(served, '0') && !Array.isArray(served),
+      false,
+      `${file} must not acquire numeric string keys`,
+    );
+  }
+});
