@@ -78,3 +78,148 @@ test('History round-trips a JSON string scalar without corrupting it', async () 
   const urlScalar = parseRequestInput('"https://feed.example/link?a=1"');
   assert.equal(parseRequestInput(serializeRequestInput(urlScalar)), urlScalar);
 });
+
+// F-01 — the browser's URL gate was strictly narrower than the server's repair
+// contract (packages/core/decoders/request/_input-repair.js), so most repair
+// steps were unreachable from the UI. `isUrlLikeInput` only matched
+// `^https?://` on the TRIMMED string, but three of repairInput()'s six steps —
+// invisible_chars, wrappers, scheme — exist precisely for text that does not
+// start with a scheme. Each input below was measured: rejected by the old
+// client gate, repaired correctly by the server. The user saw
+// `Unexpected token '<', "<https://f"... is not valid JSON` instead of a
+// verdict about their URL, and only trailing_punctuation and html_amp were
+// reachable at all.
+const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
+const REPAIRABLE_SHAPES = [
+  ['feed.vendor.example/search?a=1', 'scheme'],
+  ['//feed.vendor.example/search?a=1', 'scheme'],
+  ['<https://feed.vendor.example/search?a=1>', 'wrappers'],
+  ['[feed](https://feed.vendor.example/search?a=1)', 'wrappers'],
+  // trim() does not strip U+200B — it is not whitespace in ECMAScript, which
+  // is exactly why the old gate missed this one.
+  [`${ZERO_WIDTH_SPACE}https://feed.vendor.example/search?a=1`, 'invisible_chars'],
+];
+
+test('routing reaches every shape the server repair contract accepts', async () => {
+  const { parseRequestInput, isUrlLikeInput } = await loadSubject('inspector-request-input-repair');
+  const { repairInput } = require('../packages/core/decoders/request/_input-repair');
+
+  for (const [input, step] of REPAIRABLE_SHAPES) {
+    assert.equal(isUrlLikeInput(input), true, `client gate still rejects ${JSON.stringify(input)}`);
+    // Verbatim, not normalised: the server owns the repair, and `repairs[0]
+    // .before` has to stay the operator's own bytes so the UI can show them
+    // what was removed.
+    assert.equal(parseRequestInput(input), input, `must not throw for ${JSON.stringify(input)}`);
+
+    const { text, repairs } = repairInput(input);
+    assert.equal(text, 'https://feed.vendor.example/search?a=1', `server repair of ${input}`);
+    assert.ok(
+      repairs.some((r) => r.step === step),
+      `expected the ${step} step to fire for ${JSON.stringify(input)}`,
+    );
+  }
+});
+
+test('widening the URL gate does not steal text that meant to be JSON', async () => {
+  // The routing test is permissive on purpose, so the interesting cases are
+  // the ones where a JSON paste fails to parse for an unrelated reason: the
+  // user debugging a trailing comma must get the JSON syntax error, never a
+  // confusing URL verdict. A bare dotted token is the other trap — the repair
+  // contract would happily prepend a scheme to `request.json`, so the client
+  // additionally requires a marker prose does not carry (`//`, `:port`, or a
+  // `/` `?` `#` delimiter).
+  const { parseRequestInput, isUrlLikeInput } = await loadSubject(
+    'inspector-request-input-json-guard',
+  );
+
+  const mustStayJson = [
+    '{"id":"r1","imp":[]', // truncated object
+    '{"id":"r1",}', // trailing comma
+    '[{"id":1},]', // trailing comma in an array
+    "{id: 'r1'}", // JS object literal, not JSON
+    '"id":"r1","imp":[]', // fragment pasted without its braces
+    `${ZERO_WIDTH_SPACE}{"id":"r1",}`, // invisible char AND broken JSON
+    'request.json', // a filename
+    '2.5.1', // a version
+    'req.imp.0.banner', // a field path
+    'SELECT * FROM bids;',
+    '// TODO: fix the feed', // a code comment
+    '12:30', // not a host:port
+    'NaN',
+  ];
+
+  for (const source of mustStayJson) {
+    assert.equal(isUrlLikeInput(source), false, `routed as URL: ${JSON.stringify(source)}`);
+    assert.throws(
+      () => parseRequestInput(source),
+      SyntaxError,
+      `should have stayed a JSON error: ${JSON.stringify(source)}`,
+    );
+  }
+
+  // Obvious JSON keeps winning outright — JSON.parse runs first.
+  assert.deepEqual(parseRequestInput('{"id":"r1","imp":[]}'), { id: 'r1', imp: [] });
+  assert.deepEqual(parseRequestInput('[1,2]'), [1, 2]);
+});
+
+test('the widened gate keeps serialize/parse symmetrical across History', async () => {
+  // The invariant that makes the two functions symmetrical by construction:
+  // everything isUrlLikeInput() accepts is text JSON.parse rejects. Break it
+  // and a stored bare string reloads as a DIFFERENT value — the bug the file
+  // header warns about. `"//a.b/c"` and `"1.5"` are the shapes that would have
+  // broken it had the double-quote wrapper been peeled like repairInput() does.
+  const { parseRequestInput, serializeRequestInput } = await loadSubject(
+    'inspector-request-input-symmetry',
+  );
+
+  const sources = [
+    ...REPAIRABLE_SHAPES.map(([input]) => input),
+    '"//a.b/c"',
+    '"1.5"',
+    '"2.5.1"',
+    '"request.json"',
+    '"feed.example/x?a=1"',
+    '1.5',
+    '{"id":"r1","imp":[]}',
+  ];
+
+  for (const source of sources) {
+    const value = parseRequestInput(source);
+    const stored = serializeRequestInput(value);
+    assert.deepEqual(
+      parseRequestInput(stored),
+      value,
+      `round trip corrupted ${JSON.stringify(source)} → stored as ${JSON.stringify(stored)}`,
+    );
+  }
+});
+
+test('the badge stays strict while routing got permissive', async () => {
+  // isHttpUrlInput is display-grade and deliberately did NOT widen: a wrapped
+  // or schemeless paste still reads "invalid" on the badge while analysing as
+  // a URL — the same split the mangled-URL case has always had.
+  const { isUrlLikeInput, isHttpUrlInput, inputBadgeState } = await loadSubject(
+    'inspector-request-input-badge-strict',
+  );
+
+  for (const [input] of REPAIRABLE_SHAPES) {
+    assert.equal(isUrlLikeInput(input), true, input);
+    assert.equal(isHttpUrlInput(input), false, `badge must not call ${input} well-formed`);
+    assert.equal(inputBadgeState(input, { allowUrl: true }).kind, 'invalid', input);
+  }
+
+  // A clean URL is unaffected in both directions.
+  assert.equal(isHttpUrlInput('https://feed.example/search?x=1'), true);
+  assert.equal(inputBadgeState('https://feed.example/search?x=1', { allowUrl: true }).kind, 'url');
+});
+
+test('a non-http scheme reaches the server so it can answer about the scheme', async () => {
+  // detect.js routes `unsupported_scheme` to URL_REQUEST on purpose — "the
+  // operator typed `javascript:`/`mailto:`/`ftp:` themselves; answering about
+  // the scheme beats answering about JSON". The old `^https?://` gate made
+  // that answer unreachable: `ftp://h.example/link` died as a JSON error.
+  const { parseRequestInput, isHttpUrlInput } = await loadSubject('inspector-request-input-scheme');
+
+  assert.equal(parseRequestInput('ftp://h.example/link'), 'ftp://h.example/link');
+  assert.equal(isHttpUrlInput('ftp://h.example/link'), false, 'badge still calls it not-a-URL');
+});

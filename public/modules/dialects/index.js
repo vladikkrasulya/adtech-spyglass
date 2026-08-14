@@ -69,11 +69,6 @@ const L = {
     uk: 'правила',
     ru: 'правила',
   },
-  validationBehav: {
-    en: 'Validation',
-    uk: 'Валідація',
-    ru: 'Валидация',
-  },
   useDialect: {
     en: 'Copy slug',
     uk: 'Копіювати slug',
@@ -118,6 +113,90 @@ const L = {
     ru: 'Ошибка загрузки каталога.',
   },
 };
+
+// ── Severity vocabulary ───────────────────────────────────────────
+//
+// The severity bar on each card used to tally exactly three buckets —
+// `severity === 'error' | 'warning' | 'info'` — and drop everything else on
+// the floor without a word. Measured against the catalog on 2026-08-14 that
+// silently omitted 58 of the 330 rows in the `iab` bucket: 34 crosscheck
+// rows on a different scale (crit / warn / ok), 23 mirror notes that carry
+// no level at all, and the single `question`. A count that leaves rows out
+// without saying so is the same defect the severity registry was built to
+// remove, so the bar now groups by `family` and covers every row.
+//
+// `unknown` (message text, no emitter) serves no rows today but is a family
+// the registry can return, so it is ordered and labelled here rather than
+// waiting for the next one to go missing.
+//
+// Nothing below is a closed list: a level added to findings.js tomorrow
+// gets its own chip from the data. Only order and labels are declared, and
+// both fall back to "last, shown verbatim".
+
+const FAMILY_UNKNOWN = 'unknown';
+const FAMILY_ORDER = ['validator', 'crosscheck', 'mirror-note', FAMILY_UNKNOWN];
+const SEVERITY_ORDER = [
+  'error',
+  'crit',
+  'warning',
+  'warn',
+  'question',
+  'info',
+  'ok',
+  'none',
+  FAMILY_UNKNOWN,
+];
+
+/** family token → the bar's row label. Unnamed families show their token. */
+const FAMILY_LABEL = {
+  validator: { en: 'Validation', uk: 'Валідація', ru: 'Валидация' },
+  crosscheck: { en: 'Crosscheck', uk: 'Крос-перевірка', ru: 'Кросс-проверка' },
+  'mirror-note': { en: 'Mirror notes', uk: 'Нотатки mirror', ru: 'Заметки mirror' },
+  [FAMILY_UNKNOWN]: { en: 'No emitter', uk: 'Без емітера', ru: 'Без эмитера' },
+};
+
+/** `${family}/${severity}` → the reading of that value on its own scale. */
+const SEVERITY_MEANING = {
+  'crosscheck/crit': { en: 'critical', uk: 'критично', ru: 'критично' },
+  'crosscheck/warn': { en: 'warning', uk: 'попередження', ru: 'предупреждение' },
+  'crosscheck/ok': { en: 'the check passed', uk: 'перевірку пройдено', ru: 'проверка пройдена' },
+  'mirror-note/none': { en: 'no level', uk: 'без рівня', ru: 'без уровня' },
+  'unknown/unknown': {
+    en: 'no rule emits this ID',
+    uk: 'жодне правило не видає цей ID',
+    ru: 'ни одно правило не выдаёт этот ID',
+  },
+};
+
+/**
+ * dialects.css carries exactly three severity colours and they are the
+ * validator's. Crosscheck `crit` is deliberately NOT painted with
+ * `--error`: the two are separate enums, and giving them one colour would
+ * assert in CSS the equivalence this change exists to stop asserting in
+ * data. Unmapped pairs fall through to the neutral base `.dlc-sev-chip`,
+ * which cannot contradict the word it carries — `ok` in particular must
+ * never pick up a warning tint, it is the check passing.
+ */
+const SEVERITY_CLASS = {
+  'validator/error': 'dlc-sev-chip--error',
+  'validator/warning': 'dlc-sev-chip--warning',
+  'validator/info': 'dlc-sev-chip--info',
+};
+
+function orderIndex(order, value) {
+  const i = order.indexOf(value);
+  return i < 0 ? order.length : i;
+}
+
+/**
+ * A body cached before the severity registry landed has no `family`
+ * (Cache-Control on the endpoint is 300s). 'unknown' is what the catalog
+ * itself calls a row it cannot place — better than assuming the validator
+ * scale.
+ */
+function familyOf(item) {
+  return (item && item.family) || FAMILY_UNKNOWN;
+}
 
 // ── Built-in dialect definitions ──────────────────────────────────
 
@@ -177,31 +256,38 @@ function renderShell(lang) {
   `;
 }
 
+/**
+ * One row per family, so the reader is never asked to tell crosscheck
+ * `warn` from validator `warning` by the word alone. The chip text stays
+ * the verbatim token the catalog published; its reading on its own scale is
+ * in the title.
+ */
 function renderSevBar(lang, counts) {
-  const label = escapeHtml(pick(L.validationBehav, lang));
-  const chips = [
-    counts.error > 0
-      ? `<span class="dlc-sev-chip dlc-sev-chip--error">${counts.error} error</span>`
-      : '',
-    counts.warning > 0
-      ? `<span class="dlc-sev-chip dlc-sev-chip--warning">${counts.warning} warning</span>`
-      : '',
-    counts.info > 0
-      ? `<span class="dlc-sev-chip dlc-sev-chip--info">${counts.info} info</span>`
-      : '',
-  ]
-    .filter(Boolean)
-    .join('');
-  return `
+  return (counts.groups || [])
+    .map((group) => {
+      const label = escapeHtml(
+        FAMILY_LABEL[group.family] ? pick(FAMILY_LABEL[group.family], lang) : group.family,
+      );
+      const chips = group.facets
+        .map((f) => {
+          const cls = SEVERITY_CLASS[f.family + '/' + f.severity];
+          const meaning = SEVERITY_MEANING[f.family + '/' + f.severity];
+          const title = meaning ? ` title="${escapeHtml(pick(meaning, lang))}"` : '';
+          return `<span class="dlc-sev-chip${cls ? ' ' + cls : ''}"${title}>${f.n} ${escapeHtml(f.severity)}</span>`;
+        })
+        .join('');
+      return `
     <div class="dlc-sev-bar">
       <span class="dlc-sev-bar__label">${label}:</span>
       <div class="dlc-sev-bar__track">${chips}</div>
     </div>
   `;
+    })
+    .join('');
 }
 
 function renderDialectCard(dialect, lang, stats) {
-  const counts = stats[dialect.slug] || { count: 0, error: 0, warning: 0, info: 0 };
+  const counts = stats[dialect.slug] || { count: 0, groups: [] };
   const rulesLabel = escapeHtml(pick(L.rulesLabel, lang));
   const useLabel = escapeHtml(pick(L.useDialect, lang));
   return `
@@ -283,12 +369,43 @@ async function fetchCatalogStats(signal) {
   const inpage = items.filter((f) => f.id.startsWith('inpage-push.'));
   const iab = items.filter((f) => !f.id.startsWith('extrtb.') && !f.id.startsWith('inpage-push.'));
 
+  /**
+   * Counts every row, keyed on family+severity.
+   *
+   * Each row is counted exactly ONCE, under its canonical `severity` — not
+   * once per entry in `severities` — so the numbers on a card still add up
+   * to the rule count printed above them. The four IDs that can be emitted
+   * at either of two levels (payload.duplicate_key and friends) are counted
+   * under the more severe one, which is what `severity` already means; the
+   * /docs/findings table is where both levels are shown.
+   */
   function tally(arr) {
+    const byKey = new Map();
+    for (const item of arr) {
+      const family = familyOf(item);
+      const severity = (item && item.severity) || FAMILY_UNKNOWN;
+      const key = family + '/' + severity;
+      const rec = byKey.get(key) || { key, family, severity, n: 0 };
+      rec.n++;
+      byKey.set(key, rec);
+    }
+
+    const facets = [...byKey.values()];
+    const families = [];
+    for (const f of facets) if (families.indexOf(f.family) < 0) families.push(f.family);
+    families.sort((a, b) => orderIndex(FAMILY_ORDER, a) - orderIndex(FAMILY_ORDER, b));
+
     return {
       count: arr.length,
-      error: arr.filter((f) => f.severity === 'error').length,
-      warning: arr.filter((f) => f.severity === 'warning').length,
-      info: arr.filter((f) => f.severity === 'info').length,
+      groups: families.map((family) => ({
+        family,
+        facets: facets
+          .filter((f) => f.family === family)
+          .sort(
+            (a, b) =>
+              orderIndex(SEVERITY_ORDER, a.severity) - orderIndex(SEVERITY_ORDER, b.severity),
+          ),
+      })),
     };
   }
 

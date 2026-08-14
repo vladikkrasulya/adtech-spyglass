@@ -14,6 +14,7 @@
 'use strict';
 
 import { escapeHtml } from '/core/utils.js';
+import { blogPostPath, localePath, stripLocale } from '/core/routes.js';
 
 const FALLBACK_LANG = 'en';
 
@@ -83,9 +84,9 @@ function safeRenderMarkdown(src) {
     .join('\n');
 }
 
-function localePrefix(lang) {
-  return lang === 'en' ? '' : '/' + lang;
-}
+// localePrefix() used to be redefined here (one of six verbatim copies).
+// Blog URLs now come from /core/routes.js, which is also what search builds
+// its blog links with — two call sites, one spelling.
 
 function formatDate(isoStr, lang) {
   try {
@@ -101,7 +102,7 @@ function formatDate(isoStr, lang) {
 /** Parse /blog/{lang}/{slug} or /{locale}/blog/{lang}/{slug} from pathname */
 function parsePostRoute(pathname) {
   // Strip locale prefix: /uk/blog/uk/welcome -> /blog/uk/welcome
-  const stripped = pathname.replace(/^\/(uk|ru)\//, '/');
+  const { path: stripped } = stripLocale(pathname);
   const m = stripped.match(/^\/blog\/([a-z]{2})\/([a-z0-9][a-z0-9-]*)$/);
   if (m) return { lang: m[1], slug: m[2] };
   return null;
@@ -239,7 +240,12 @@ function renderCard(post, uiLang) {
   const sourceLabel =
     post.source === 'markdown' ? pick(L.editorial, uiLang) : pick(L.firehose, uiLang);
   const sourceIcon = post.source === 'markdown' ? '📝' : '📰';
-  const postUrl = `/blog/${post.lang}/${post.slug}`;
+  // F-15: this used to be a bare `/blog/${post.lang}/${post.slug}` with no UI
+  // locale prefix. From /uk/blog the card pointed at /blog/uk/<slug>, which
+  // the SPA router does not match (clicking did nothing) and which, followed
+  // directly, dropped the whole shell back to EN. The article's language and
+  // the UI locale are independent — /uk/blog/uk/<slug> is the real route.
+  const postUrl = blogPostPath(post.lang, post.slug, uiLang);
   return `
     <article class="blog-card" data-href="${escapeHtml(postUrl)}">
       <div class="blog-card__head">
@@ -280,7 +286,7 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
       if (resp.status === 404) {
         root.innerHTML = `
           <section class="blog-section blog-post-section">
-            <a class="blog-back" href="${escapeHtml(localePrefix(uiLang) + '/blog')}">${escapeHtml(pick(L.backToList, uiLang))}</a>
+            <a class="blog-back" href="${escapeHtml(localePath('/blog', uiLang))}">${escapeHtml(pick(L.backToList, uiLang))}</a>
             <p class="blog-empty">${escapeHtml(pick(L.notFound, uiLang))}</p>
           </section>`;
         return;
@@ -300,7 +306,7 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
     const originalBody = String(post.body || '');
     root.innerHTML = `
       <section class="blog-section blog-post-section">
-        <a class="blog-back" href="${escapeHtml(localePrefix(uiLang) + '/blog')}">${escapeHtml(pick(L.backToList, uiLang))}</a>
+        <a class="blog-back" href="${escapeHtml(localePath('/blog', uiLang))}">${escapeHtml(pick(L.backToList, uiLang))}</a>
         <article class="blog-post">
           <header class="blog-post__head">
             <span class="blog-badge blog-badge--${escapeHtml(catKey)}">${escapeHtml(catLabel)}</span>

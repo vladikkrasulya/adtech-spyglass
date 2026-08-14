@@ -12,6 +12,13 @@
    - Tokenised, scored, grouped results in a glassmorphism dropdown
    - Full keyboard navigation (↑↓ Enter Esc Tab)
    - Click-outside to close
+
+   Accessibility (F-07): the dropdown implements the ARIA 1.2
+   combobox-with-listbox-popup pattern — the INPUT keeps DOM focus at all
+   times and owns role=combobox + aria-expanded/aria-controls/
+   aria-activedescendant; the rows are role=option and stay out of the tab
+   order. See the block comment above initSearch() for why that pattern was
+   chosen over plain tab-focusable links.
    ============================================================ */
 'use strict';
 
@@ -58,6 +65,28 @@ const PLACEHOLDERS = {
   uk: '🔎 шукати по сайту',
   ru: '🔎 искать по сайту',
 };
+
+// F-07: the results container announced itself with the hardcoded English
+// string 'Search results' even on /uk and /ru. Everything else user-visible
+// in this module already goes through pickStr() + a per-string locale map —
+// the accessible name had simply been left out of that mechanism.
+const A11Y_LABELS = {
+  results: { en: 'Search results', uk: 'Результати пошуку', ru: 'Результаты поиска' },
+};
+
+// F-06: the docs finding catalog renders one row per finding as
+// <tr id="finding-${item.id}"> — see renderTable() in
+// public/modules/docs/index.js. This module used to link to a bare
+// `#${item.id}` ("#vast.version_missing"), which matches no element in that
+// table at all, so a measured navigation left the intended row sitting at
+// top:10477px with the viewport still at the top of the page. Kept as a
+// named constant shared by buildUrl() and the post-navigation scroll so the
+// two can never drift apart again.
+const FINDING_ANCHOR_PREFIX = 'finding-';
+
+// Instance counter — the ARIA wiring needs DOM ids that are unique per
+// mounted search widget (topbar re-mounts on kt:lang-change).
+let _instanceSeq = 0;
 
 // ── Data fetch + cache ───────────────────────────────────────────
 
@@ -249,12 +278,79 @@ function buildUrl(item) {
     case 'behavior':
       return `${prefix}/inspector?sample=${encodeURIComponent(item.sample)}`;
     case 'finding':
-      return `${prefix}/docs/findings#${encodeURIComponent(item.id)}`;
+      // Anchor must match docs' row id EXACTLY, prefix included — see
+      // FINDING_ANCHOR_PREFIX. encodeURIComponent is a no-op for the ids
+      // that actually exist (dots/underscores are unreserved) but is kept
+      // so a future id with a reserved character still yields a legal URL;
+      // scrollToAnchor() decodes before looking the element up, so the two
+      // sides stay symmetric.
+      return `${prefix}/docs/findings#${FINDING_ANCHOR_PREFIX}${encodeURIComponent(item.id)}`;
     case 'blog':
       return `${prefix}/blog/${encodeURIComponent(item.lang)}/${encodeURIComponent(item.slug)}`;
     default:
       return '/';
   }
+}
+
+// ── Post-navigation anchor scroll ────────────────────────────────
+// F-06, second half. Emitting the right anchor is necessary but NOT
+// sufficient, for two reasons both confirmed by reading the code we
+// navigate into:
+//   1. shell-boot.js's navigateTo() moves the SPA with history.pushState().
+//      pushState never performs the browser's own fragment scroll and never
+//      fires hashchange, so a correct `#finding-…` in the URL still moved
+//      nothing. Neither the docs module nor shell-boot reads location.hash.
+//   2. /docs/findings renders its <table> only AFTER fetching
+//      /api/v1/finding-catalog (mountCatalog in docs/index.js), so the row
+//      does not exist on the frame the navigation completes — a one-shot
+//      lookup would miss even with the anchor fixed.
+// Hence: poll a bounded number of animation frames for the row, then scroll.
+let _scrollToken = 0;
+
+function scrollToAnchor(url) {
+  const hashIdx = url.indexOf('#');
+  if (hashIdx < 0) return;
+  const raw = url.slice(hashIdx + 1);
+  if (!raw) return;
+  let id;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {
+    id = raw;
+  }
+  // getElementById, NEVER querySelector('#' + id): finding ids contain dots
+  // ("finding-vast.version_missing"), and a CSS selector parses that dot as
+  // a class separator — querySelector would silently match nothing. This is
+  // also why no CSS.escape() dance is needed here.
+  const token = ++_scrollToken; // cancels any earlier in-flight poll
+  // navigateTo() pushState()s synchronously before we get here, so this is
+  // already the destination path. Re-checking it each frame is how a poll
+  // that outlives the user's interest gets abandoned instead of yanking the
+  // viewport on whatever page they moved on to.
+  const startPath = window.location.pathname;
+  let frames = 0;
+  const MAX_FRAMES = 180; // ~3s at 60fps — covers a slow catalog fetch
+
+  const raf =
+    typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame
+      : (fn) => setTimeout(fn, 16);
+
+  (function tick() {
+    if (token !== _scrollToken) return; // superseded by a newer navigation
+    if (window.location.pathname !== startPath) return;
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ block: 'center' });
+      // Move focus to the row as well, so a keyboard/screen-reader user who
+      // activated the result lands ON the finding instead of being told
+      // nothing changed. tabindex=-1 keeps it out of the tab order.
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+      if (typeof el.focus === 'function') el.focus({ preventScroll: true });
+      return;
+    }
+    if (++frames < MAX_FRAMES) raf(tick);
+  })();
 }
 
 // ── Highlight ────────────────────────────────────────────────────
@@ -300,18 +396,26 @@ function badgeText(item) {
 
 // ── Render dropdown ──────────────────────────────────────────────
 
-function renderDropdown(state, query, groups) {
+// `idPrefix` namespaces the DOM ids the combobox wiring needs
+// (aria-controls / aria-activedescendant / aria-labelledby).
+//
+// The loading / hint / empty states carry role="presentation": they render
+// inside the role=listbox container, and a listbox whose children are
+// arbitrary <div>s is invalid ARIA — presentation keeps them out of the
+// accessibility tree so the popup reports an honest option count instead of
+// exposing status text as if it were a selectable result.
+function renderDropdown(state, query, groups, idPrefix) {
   const tokens = query ? query.toLowerCase().trim().split(/\s+/).filter(Boolean) : [];
 
   if (state === 'loading') {
-    return `<div class="sg-search-loading">${escHtml(pickStr(HINT_LABELS.loading))}</div>`;
+    return `<div class="sg-search-loading" role="presentation">${escHtml(pickStr(HINT_LABELS.loading))}</div>`;
   }
 
   if (!query) {
     // Hint card
     const label = pickStr(HINT_LABELS.typeToSearch);
     return `
-      <div class="sg-search-hint">
+      <div class="sg-search-hint" role="presentation">
         <div class="sg-search-hint__title">${escHtml(label)}</div>
         <div class="sg-search-hint__chips">
           <span class="sg-search-hint__chip" data-suggest="gdpr">Try: gdpr</span>
@@ -325,15 +429,17 @@ function renderDropdown(state, query, groups) {
 
   if (!groups || !groups.length) {
     const label = pickStr(HINT_LABELS.nothing);
-    return `<div class="sg-search-empty">${escHtml(label)}</div>`;
+    return `<div class="sg-search-empty" role="presentation">${escHtml(label)}</div>`;
   }
 
   let html = '';
+  let optIndex = 0;
   for (const group of groups) {
     const groupLabel = pickStr(GROUP_LABELS[group.type] || { en: group.type });
+    const headerId = `${idPrefix}-grp-${group.type}`;
     html += `
-      <div class="sg-search-group" data-group-type="${escHtml(group.type)}">
-        <div class="sg-search-group__header">
+      <div class="sg-search-group" role="group" aria-labelledby="${escHtml(headerId)}" data-group-type="${escHtml(group.type)}">
+        <div class="sg-search-group__header" id="${escHtml(headerId)}">
           <span class="sg-search-group__label">${escHtml(groupLabel)}</span>
           <span class="sg-search-group__count">${group.items.length}</span>
         </div>
@@ -347,8 +453,16 @@ function renderDropdown(state, query, groups) {
       );
       const bClass = badgeClass(item);
       const bText = badgeText(item);
+      // tabindex="-1" was already here before F-07, but for the wrong
+      // reason: nothing put the rows in reach any other way, so they were
+      // simply unreachable. Under the combobox pattern it is now correct BY
+      // DESIGN — options must not be tab stops; the input holds focus and
+      // aria-activedescendant points at the row id below.
       html += `
         <a class="sg-search-row"
+           id="${escHtml(idPrefix)}-opt-${optIndex++}"
+           role="option"
+           aria-selected="false"
            href="${escHtml(url)}"
            data-search-url="${escHtml(url)}"
            tabindex="-1">
@@ -367,6 +481,27 @@ function renderDropdown(state, query, groups) {
 
 // ── Main initSearch ──────────────────────────────────────────────
 
+// F-07 — chosen pattern: ARIA 1.2 combobox with a listbox popup, NOT plain
+// tab-focusable links. Both were legitimate; this one won on three counts.
+//   1. It is what the widget already half-was. The measured DOM already
+//      claimed role=listbox and the JS already kept a virtual selection
+//      (selectedIndex / setSelected / ↑↓ / Enter). The only thing missing
+//      was the ARIA contract that makes that virtual selection perceivable:
+//      role=combobox on the input plus aria-expanded / aria-controls /
+//      aria-activedescendant / aria-autocomplete, and role=option +
+//      aria-selected on the rows. "ArrowDown leaves focus in the input" was
+//      never the bug — under this pattern that is the CORRECT behaviour;
+//      the bug was that nothing told assistive tech where the selection had
+//      moved to.
+//   2. Plain links would put up to 20 tab stops between the search box and
+//      the rest of the topbar, and every keystroke rebuilds the list — a
+//      keyboard user mid-list would have focus destroyed underneath them on
+//      the next debounce tick. The virtual cursor has no such problem.
+//   3. It matches what a Cmd+K site-search is expected to be.
+// Everything the pattern requires is implemented here: expanded state,
+// controls/activedescendant wiring, ↑↓ wraparound, Enter to activate,
+// Escape to close while KEEPING focus in the combobox, Tab to close and
+// move on, and full teardown of the attributes in cleanup().
 export function initSearch(inputEl, _shellRoot) {
   const lang = getLang();
   inputEl.placeholder = PLACEHOLDERS[lang] || PLACEHOLDERS.en;
@@ -377,15 +512,30 @@ export function initSearch(inputEl, _shellRoot) {
   cssLink.href = '/modules/search/search.css';
   document.head.appendChild(cssLink);
 
+  const idPrefix = `sg-search-${++_instanceSeq}`;
+  const listboxId = `${idPrefix}-listbox`;
+
   // Create dropdown element (attached to inputEl's parent = .kt-topbar__search)
   const dropdownEl = document.createElement('div');
   dropdownEl.className = 'sg-search-dropdown';
+  dropdownEl.id = listboxId;
   dropdownEl.setAttribute('role', 'listbox');
-  dropdownEl.setAttribute('aria-label', 'Search results');
+  dropdownEl.setAttribute('aria-label', pickStr(A11Y_LABELS.results));
   dropdownEl.hidden = true;
 
   const searchWrapper = inputEl.closest('.kt-topbar__search') || inputEl.parentElement;
   searchWrapper.appendChild(dropdownEl);
+
+  // ── Combobox contract on the input (F-07) ────────────────────
+  // Pre-fix measurement of the input: role=null, aria-expanded=null,
+  // aria-controls=null, aria-activedescendant=null, aria-autocomplete=null
+  // — i.e. the listbox above was announced but no element ever pointed at
+  // it, so there was no way in.
+  inputEl.setAttribute('role', 'combobox');
+  inputEl.setAttribute('aria-expanded', 'false');
+  inputEl.setAttribute('aria-controls', listboxId);
+  inputEl.setAttribute('aria-haspopup', 'listbox');
+  inputEl.setAttribute('aria-autocomplete', 'list');
 
   let indexLoaded = false;
   let selectedIndex = -1;
@@ -397,17 +547,29 @@ export function initSearch(inputEl, _shellRoot) {
 
   function setSelected(idx) {
     const rows = getAllRows();
-    rows.forEach((r, i) => r.classList.toggle('is-selected', i === idx));
+    rows.forEach((r, i) => {
+      const on = i === idx;
+      r.classList.toggle('is-selected', on);
+      // The visual .is-selected class alone told a sighted user where the
+      // cursor was and told everyone else nothing; aria-selected +
+      // aria-activedescendant are the half that was missing.
+      r.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
     selectedIndex = idx;
     if (idx >= 0 && rows[idx]) {
+      inputEl.setAttribute('aria-activedescendant', rows[idx].id);
       rows[idx].scrollIntoView({ block: 'nearest' });
+    } else {
+      inputEl.removeAttribute('aria-activedescendant');
     }
   }
 
   function openDropdown(content) {
     dropdownEl.innerHTML = content;
     dropdownEl.hidden = false;
+    inputEl.setAttribute('aria-expanded', 'true');
     selectedIndex = -1;
+    inputEl.removeAttribute('aria-activedescendant');
 
     // Wire hint chip clicks
     dropdownEl.querySelectorAll('[data-suggest]').forEach((chip) => {
@@ -423,23 +585,28 @@ export function initSearch(inputEl, _shellRoot) {
     dropdownEl.hidden = true;
     dropdownEl.innerHTML = '';
     selectedIndex = -1;
+    inputEl.setAttribute('aria-expanded', 'false');
+    inputEl.removeAttribute('aria-activedescendant');
   }
 
   function renderCurrent(query) {
     if (!indexLoaded) {
-      openDropdown(renderDropdown('loading', query, null));
+      openDropdown(renderDropdown('loading', query, null, idPrefix));
       return;
     }
     const groups = search(query);
-    openDropdown(renderDropdown('ready', query, groups));
+    openDropdown(renderDropdown('ready', query, groups, idPrefix));
   }
 
   // ── Index load ───────────────────────────────────────────────
-  async function ensureIndex(_query) {
+  async function ensureIndex(query) {
     if (indexLoaded) return;
-    // Show loading state
+    // Show loading state. Goes through openDropdown() rather than a raw
+    // innerHTML write so the ARIA selection state is reset with it —
+    // otherwise aria-activedescendant would keep pointing at a row id that
+    // this write has just removed from the DOM.
     if (!dropdownEl.hidden) {
-      dropdownEl.innerHTML = `<div class="sg-search-loading">${escHtml(pickStr(HINT_LABELS.loading))}</div>`;
+      openDropdown(renderDropdown('loading', query, null, idPrefix));
     }
     try {
       await loadIndex();
@@ -495,17 +662,33 @@ export function initSearch(inputEl, _shellRoot) {
       e.preventDefault();
       const prev = selectedIndex - 1 < 0 ? rows.length - 1 : selectedIndex - 1;
       setSelected(prev);
-    } else if (e.key === 'Enter') {
+    } else if (e.key === 'Home' && selectedIndex >= 0) {
+      // Only hijack Home/End while a virtual option is active — otherwise
+      // they must keep their normal caret meaning inside the text field.
       e.preventDefault();
+      if (rows.length) setSelected(0);
+    } else if (e.key === 'End' && selectedIndex >= 0) {
+      e.preventDefault();
+      if (rows.length) setSelected(rows.length - 1);
+    } else if (e.key === 'Enter') {
       if (selectedIndex >= 0 && rows[selectedIndex]) {
+        e.preventDefault();
         const url = rows[selectedIndex].dataset.searchUrl;
         if (url) navigate(url);
       }
+      // With nothing selected, leave Enter alone — swallowing it here would
+      // block any enclosing form's own submit for no benefit.
     } else if (e.key === 'Escape') {
       e.preventDefault();
       closeDropdown();
-      inputEl.blur();
+      // Do NOT blur. Pre-fix this called inputEl.blur(), which dumped focus
+      // on <body> and cost the keyboard user their place in the page — the
+      // combobox pattern says Escape dismisses the popup and leaves focus
+      // in the combobox, from where ArrowDown reopens it.
+      inputEl.focus();
     } else if (e.key === 'Tab') {
+      // No preventDefault: closing and letting focus move on to the next
+      // topbar control is exactly the expected combobox behaviour.
       closeDropdown();
     }
   };
@@ -518,6 +701,10 @@ export function initSearch(inputEl, _shellRoot) {
     } else {
       window.location.assign(url);
     }
+    // F-06: must run AFTER the navigation is kicked off — navigateTo() only
+    // pushState()s, which never scrolls to a fragment on its own. Harmless
+    // no-op for the hash-less URLs (samples/behavior/blog).
+    scrollToAnchor(url);
   }
 
   // Click on a result row
@@ -565,8 +752,20 @@ export function initSearch(inputEl, _shellRoot) {
     document.removeEventListener('keydown', onGlobalKey);
     document.removeEventListener('click', onDocClick);
     closeDropdown();
+    // The input is topbar-owned and outlives this widget on some re-mount
+    // paths, so hand it back in the state we found it — a stale
+    // aria-controls pointing at a removed listbox is its own a11y defect.
+    [
+      'role',
+      'aria-expanded',
+      'aria-controls',
+      'aria-haspopup',
+      'aria-autocomplete',
+      'aria-activedescendant',
+    ].forEach((a) => inputEl.removeAttribute(a));
     dropdownEl.remove();
     cssLink.remove();
     clearTimeout(debounceTimer);
+    _scrollToken++; // abandon any in-flight anchor poll
   };
 }

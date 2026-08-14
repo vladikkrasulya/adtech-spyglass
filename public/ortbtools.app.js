@@ -187,6 +187,14 @@ export async function mountInspector(root, ctx) {
   // embed/index.js, export.js) can call it for user feedback.
   window.toast = toast;
 
+  // The URL the operator pasted and the URL that was analysed are not always
+  // the same string: the decoder repairs transport artifacts (a trailing ")"
+  // off a chat paste, an HTML-escaped &amp;, a missing scheme) before parsing.
+  // Set from `validation.urlRequest.repairs` after every analyse, cleared when
+  // an analyse produced no repairs. Read by copy() below and by the Validation
+  // panel — see urlRepairsHtml().
+  let _lastUrlRepair = null;
+
   window.utils = {
     format(id, btn) {
       try {
@@ -205,9 +213,26 @@ export async function mountInspector(root, ctx) {
         toast(t('toast.empty_field_copy'), 'error');
         return;
       }
+      // Pre-fix this read `el.value` unconditionally — the raw textarea. When
+      // the pane held a URL that only parsed after repair, Copy handed the
+      // operator back the broken string they pasted, so the fix never left the
+      // tool. Hand back the URL that was actually analysed instead, and say so;
+      // the pane itself is left exactly as they typed it. Gated on the text
+      // still being the one that was repaired, so an edit since the analyse
+      // falls back to the literal value.
+      const pasted = el.value;
+      const canonical =
+        id === 'bidReq' &&
+        _lastUrlRepair &&
+        (pasted === _lastUrlRepair.original || pasted.trim() === _lastUrlRepair.original)
+          ? _lastUrlRepair.repaired
+          : null;
       navigator.clipboard
-        .writeText(el.value)
-        .then(() => flashButtonStatus(btn, 'button.status.copied'))
+        .writeText(canonical || pasted)
+        .then(() => {
+          flashButtonStatus(btn, 'button.status.copied');
+          if (canonical) toast(t('toast.copied_repaired_url'), 'info');
+        })
         .catch(() => toast(t('toast.copy_failed'), 'error'));
     },
   };
@@ -2087,6 +2112,104 @@ export async function mountInspector(root, ctx) {
   // integer spellings. Reset when the operator edits the pane.
   let _rawBeforePretty = null;
   let _prettyPrintedReq = null;
+  // The same two, for the response pane. Pre-fix only the request pane kept
+  // its bytes, so a duplicate `id` or a price past 2^53-1 in a BidResponse was
+  // unreportable — the pane was pretty-printed on the way out and nothing
+  // upstream ever saw the spelling. Same pair, same invalidation rule.
+  let _rawBeforePrettyRes = null;
+  let _prettyPrintedRes = null;
+
+  /**
+   * An oRTB payload is an object. `JSON.parse` is happy to hand back `null`,
+   * `[]`, `42` or `"x"` for text that is perfectly valid JSON and not a
+   * payload, and every read below (`req.site`, `res.seatbid`, …) assumes an
+   * object. Say which pane and which root, in words, instead of letting the
+   * first property read throw "Cannot read properties of null (reading
+   * 'site')" from somewhere in the middle of the render.
+   *
+   * `allowUrlString` is the request pane only: a bare URL is a legitimate
+   * request shape there (clickunder/teaser/pop GET), decoded server-side.
+   */
+  function assertJsonRoot(value, paneText, paneLabelKey, allowUrlString) {
+    // Empty pane is not an error — the caller substitutes `{}` and the
+    // request-only / response-only branches take it from there.
+    if (!paneText) return;
+    if (allowUrlString && typeof value === 'string') return;
+    if (value && typeof value === 'object' && !Array.isArray(value)) return;
+    const root = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+    throw new Error(t('error.json_root_not_object', { pane: t(paneLabelKey), root }));
+  }
+
+  /**
+   * Wipe every panel the last analysis painted and put the reason in its
+   * place. Pre-fix a failed analyse only raised a toast: the status bar still
+   * read the PREVIOUS payload's entity, its findings stayed rendered, and the
+   * tab badges still carried its counts — so the stale verdict read as the
+   * verdict for the payload that just failed. A result that is not current
+   * must not look current.
+   */
+  function clearResultsForError(reason) {
+    // This runs from a catch block, so it must not be the thing that throws
+    // next: the panels below are all optional in the stripped /embed view.
+    const paint = (id, html) => {
+      const el = $(id);
+      if (el) el.innerHTML = html;
+    };
+    const errHint =
+      '<div class="empty-hint" style="color:var(--danger)">' + escapeHtml(reason) + '</div>';
+    const stEntity = $('stEntity');
+    if (stEntity) {
+      stEntity.innerText = t('status.analysis_failed');
+      stEntity.dataset.status = '';
+    }
+    const dot = $('statusDot');
+    if (dot) dot.className = 'status-dot error';
+    const stText = $('statusText');
+    if (stText) stText.textContent = reason;
+    paint('tValidation', errHint);
+    paint('tCross', errHint);
+    paint(
+      'slotGrid',
+      '<div class="empty-hint" style="grid-column:1/-1;color:var(--danger)">' +
+        escapeHtml(reason) +
+        '</div>',
+    );
+    paint('quickStats', '');
+    paint('mInfo', '');
+    const price = $('mPrice');
+    if (price) price.innerText = '$0.00';
+    setTabBadge('validationBadge', { text: '!', severity: 'error' });
+    setTabBadge('crossBadge', { text: '—', severity: null });
+    setTabBadge('inspectorBadge', { text: '' });
+    renderCategories({});
+    paintFormatSummary(null);
+    renderAnalysisStrip(null, []);
+    updateFormatBar(null, null);
+    resetTabStatus();
+    paintCardSummary('cardReq', '—');
+    paintCardSummary('cardRes', '—');
+    clearMacros();
+    // The preview and the export bundle are both "the last analysis" too;
+    // leaving either behind is the same lie in a different panel.
+    _currentPreviewAdm = null;
+    _currentPreviewBaseContext = null;
+    _currentPreviewDims = null;
+    if ($('creativePreview')) setAdPreview(null, {}, null);
+    window.__ortbtoolsLast = null;
+    // No current analysis means no canonical repaired URL either — Copy must
+    // not keep offering the previous request's repair.
+    _lastUrlRepair = null;
+    // A stale finding→source highlight points at the previous payload's
+    // bytes; runAnalysis already resets it on entry, but a failure that
+    // happens after a successful analyse must not re-arm it either.
+    if (window.OrtbtoolsSourceNav) {
+      try {
+        window.OrtbtoolsSourceNav.resetNavigation();
+      } catch (_e) {
+        /* navigator is optional */
+      }
+    }
+  }
 
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
@@ -2118,6 +2241,13 @@ export async function mountInspector(root, ctx) {
         ? _rawBeforePretty
         : reqVal;
     const resVal = fromHist ? fromHist.res : $('bidRes').value;
+    // Mirror of `rawReqBytes` — see the comment above it. Same guard, same
+    // reason: on a repeat analyse the pane holds our pretty-print, and the
+    // operator's bytes are the ones we stashed before rewriting it.
+    const rawResBytes =
+      !fromHist && _prettyPrintedRes !== null && resVal === _prettyPrintedRes
+        ? _rawBeforePrettyRes
+        : resVal;
     // Backend supports request-only, response-only, or both. JsonFeed-format
     // payloads (push-materials, value-feed, bid-price, bid-redirect) are typically
     // pasted into bidRes — refusing to analyze in that case loses the whole
@@ -2146,6 +2276,15 @@ export async function mountInspector(root, ctx) {
       // the server's validate() will route it to the URL_REQUEST branch.
       const req = parseRequestInput(reqVal);
       const res = resVal ? JSON.parse(resVal) : {};
+      // `JSON.parse` accepts every JSON value, not just an object: `null`,
+      // `[]`, `42` and `"x"` all parse fine. Pre-fix the only gate was
+      // `typeof req === 'object'`, and `typeof null === 'object'` — so a pane
+      // holding `null` walked straight into `(req.site || req.app || {})` and
+      // threw a TypeError from the middle of the render, after the toast but
+      // before anything on screen had been touched. Reject the root here, by
+      // name, while nothing has been painted yet.
+      assertJsonRoot(req, reqVal, 'peek.label.bid_req', true);
+      assertJsonRoot(res, resVal, 'peek.label.bid_res', false);
       // Simulated clearing price: use ONLY the user's explicit input.
       // Do NOT fallback to bid.price, bidfloor, or 0.00 — an empty field
       // means "clearing price unknown" and macros stay literal.
@@ -2172,7 +2311,15 @@ export async function mountInspector(root, ctx) {
           $('bidReq').value = JSON.stringify(req, null, 2);
           _prettyPrintedReq = $('bidReq').value;
         }
-        if (resVal) $('bidRes').value = JSON.stringify(res, null, 2);
+        if (resVal) {
+          // Same bookkeeping as the request pane above: the pretty-print is
+          // what erases a duplicate key or an oversized integer's spelling, so
+          // remember the text it replaced or the second analyse reports less
+          // than the first.
+          _rawBeforePrettyRes = rawResBytes;
+          $('bidRes').value = JSON.stringify(res, null, 2);
+          _prettyPrintedRes = $('bidRes').value;
+        }
         if (reqVal) updateCharCount('bidReq');
         if (resVal) updateCharCount('bidRes');
       }
@@ -2363,50 +2510,27 @@ export async function mountInspector(root, ctx) {
             })
             .join('')
         : (function () {
-            // URL-style request branch: `req` is a string when the user
-            // pasted a clickunder/teaser/pop GET URL. Parse it client-side
-            // just enough to surface endpoint + key query params — the
-            // server's canonical (validation.urlRequest) is richer but
-            // arrives AFTER this slot render runs (`validation` is in TDZ
-            // here), so we work from `req` directly.
+            // URL-style request branch: `req` is a string when the user pasted
+            // a clickunder/teaser/pop GET URL. The card is painted twice — once
+            // here with nothing decoded yet (`validation` is in TDZ at this
+            // point), then repainted from the server's canonical when the
+            // analyze response lands. See urlSlotCardHtml for why the browser
+            // no longer parses the URL a second time itself.
             if (typeof req !== 'string') {
+              // Two different states used to print the same sentence. When the
+              // operator pastes only a BidResponse there IS no request, and
+              // "Request has no imp[]" accused them of a defect in a payload
+              // they never sent. Only say that about a request that exists.
+              const hasRequestText = typeof reqVal === 'string' && reqVal.trim().length > 0;
               return (
                 '<div class="empty-hint" style="grid-column:1/-1">' +
-                escapeHtml(t('empty.no_imp_slots')) +
+                escapeHtml(
+                  t(hasRequestText ? 'empty.no_imp_slots' : 'empty.needs_paired_request'),
+                ) +
                 '</div>'
               );
             }
-            let endpoint = '';
-            let ip = '';
-            let ua = '';
-            let page = '';
-            try {
-              const u = new URL(req);
-              endpoint = u.hostname + u.pathname;
-              ip = u.searchParams.get('user_ip') || '';
-              ua = u.searchParams.get('ua') || '';
-              page = u.searchParams.get('url') || '';
-            } catch (_e) {
-              endpoint = req.slice(0, 80);
-            }
-            const uaShort = ua.length > 80 ? ua.slice(0, 80) + '…' : ua;
-            return (
-              '<div class="slot-card" style="grid-column:1/-1">' +
-              '<div class="slot-type-row">' +
-              '<span class="slot-type">URL</span>' +
-              '</div>' +
-              '<div class="slot-id">' +
-              escapeHtml(endpoint) +
-              '</div>' +
-              (ip ? '<div class="slot-dims">ip: ' + escapeHtml(ip) + '</div>' : '') +
-              (uaShort
-                ? '<div class="slot-dims" style="font-size:10px;color:var(--text-dim)">' +
-                  escapeHtml(uaShort) +
-                  '</div>'
-                : '') +
-              (page ? '<div class="slot-dims">page: ' + escapeHtml(page) + '</div>' : '') +
-              '</div>'
-            );
+            return urlSlotCardHtml(req, null);
           })();
 
       // Quick stats (right sidebar)
@@ -2440,8 +2564,15 @@ export async function mountInspector(root, ctx) {
         // Re-serialising would lose exactly what the raw scan looks for: a
         // duplicate key collapses to one, and an integer past 2^53-1 comes
         // back spelled differently. Those defects exist only in the bytes the
-        // operator pasted, so the bytes are what travels.
-        const body = { bidReq: req, bidRes: res, bidReqRaw: rawReqBytes };
+        // operator pasted, so the bytes are what travels. Both panes: pre-fix
+        // only the request side sent its bytes, which made the same defect
+        // reportable in a BidRequest and silent in the BidResponse beside it.
+        const body = {
+          bidReq: req,
+          bidRes: res,
+          bidReqRaw: rawReqBytes,
+          bidResRaw: rawResBytes,
+        };
         if (expectedVersion) body.opts = { expectedVersion };
         const r = await fetch(analyzeUrl(), {
           method: 'POST',
@@ -2484,6 +2615,26 @@ export async function mountInspector(root, ctx) {
           }
           validation = j.validation;
           cross = j.crosscheck;
+          // Remember what the decoder had to change, so Copy can hand back the
+          // URL that was actually analysed instead of the one that wouldn't
+          // parse. Cleared on a clean paste so a later Copy can't hand out a
+          // previous request's repair.
+          const repairs =
+            validation && validation.urlRequest && Array.isArray(validation.urlRequest.repairs)
+              ? validation.urlRequest.repairs
+              : [];
+          _lastUrlRepair = repairs.length
+            ? { original: repairs[0].before, repaired: repairs[repairs.length - 1].after }
+            : null;
+          // Repaint the URL slot card now that the decoder has spoken. The
+          // first paint above ran before this response existed and therefore
+          // claimed nothing; this one carries the host, path, variant and the
+          // decoded device/site fields, all derived from the REPAIRED url — so
+          // the card, the repair steps and the findings all describe one URL.
+          if (typeof req === 'string') {
+            const grid = $('slotGrid');
+            if (grid) grid.innerHTML = urlSlotCardHtml(req, validation && validation.urlRequest);
+          }
           // IAB cat decoding (Phase 2 feature) — surface as a side-panel
           // tab regardless of validation status. Empty object means no
           // category fields present in the payload.
@@ -2613,6 +2764,12 @@ export async function mountInspector(root, ctx) {
       // is now stashed in window.__ortbtoolsLast after the try-block above.
       renderAnalysisStrip(req, findings);
 
+      // What the decoder changed before it could parse the URL. Empty string
+      // for every other payload shape, so both branches below prepend it
+      // unconditionally — including the clean one, where "we repaired your URL
+      // and then found nothing wrong with it" is the whole message.
+      const repairsHtml = urlRepairsHtml(validation);
+
       if (validation && findings && findings.length) {
         setTabBadge('validationBadge', {
           text: findings.length,
@@ -2620,6 +2777,7 @@ export async function mountInspector(root, ctx) {
         });
         // Feature #14: replace flat list with severity-filtered tabs.
         const headerHtml =
+          repairsHtml +
           '<div class="mono-label" style="margin-bottom:var(--space-3)">' +
           escapeHtml(validation.type) +
           ' · ' +
@@ -2632,6 +2790,7 @@ export async function mountInspector(root, ctx) {
         // Clean state — still surface the detected oRTB version so the user
         // knows which spec the inspector validated against. Was hidden before.
         valEl.innerHTML =
+          repairsHtml +
           '<div class="mono-label" style="margin-bottom:var(--space-3)">' +
           escapeHtml(validation.type) +
           ' · ' +
@@ -2758,6 +2917,12 @@ export async function mountInspector(root, ctx) {
       }
       toast(t('toast.error_generic', { error: e.message }), 'error');
       console.error('Analysis error:', e);
+      // The toast is not the result panel. Pre-fix the throw left every panel
+      // showing the PREVIOUS payload — same entity in the status bar, same
+      // findings, same badges — so the stale verdict read as this payload's
+      // verdict and only a fading toast said otherwise. Clear them together
+      // with the reason in their place, unless this mount is already gone.
+      if (!ctx.signal.aborted) clearResultsForError(e.message);
     } finally {
       if (!fromHist) {
         analyzeBtn.innerHTML = analyzeBtnOriginal;
@@ -2817,6 +2982,146 @@ export async function mountInspector(root, ctx) {
     chips.innerHTML = parts.join(' ');
     wrap.hidden = false;
   }
+  // F-02 — say what was repaired. `POST /api/analyze` has always returned the
+  // repair steps as `validation.urlRequest.repairs` ({step, before, after} in
+  // application order), and the string "repairs" appeared nowhere in public/:
+  // the tool analysed a different URL than the one on screen and never
+  // mentioned it. That is the exact class of silent failure this product
+  // exists to report, so it gets stated at the top of the Validation panel,
+  // above the findings that were produced FROM the repaired URL.
+  //
+  // Returns '' for everything that is not a repaired URL request, so both
+  // render branches below can prepend it unconditionally.
+  function urlRepairsHtml(validation) {
+    const ur = validation && validation.urlRequest;
+    const repairs = ur && Array.isArray(ur.repairs) ? ur.repairs : [];
+    if (!repairs.length) return '';
+    // First `before` is the operator's own text; last `after` is what the
+    // decoder parsed. The steps in between are the derivation.
+    const original = repairs[0].before;
+    const analysed = repairs[repairs.length - 1].after;
+    const steps = repairs
+      .map(
+        (r) =>
+          '<div style="margin-top:var(--space-2)">' +
+          '<div class="mono-label">' +
+          escapeHtml(t('repair.step.' + r.step)) +
+          '</div>' +
+          '<div style="font-family:var(--font-mono);font-size:11px;word-break:break-all">' +
+          '<span style="color:var(--text-dim);text-decoration:line-through">' +
+          escapeHtml(r.before) +
+          '</span>' +
+          ' → ' +
+          '<span>' +
+          escapeHtml(r.after) +
+          '</span>' +
+          '</div>' +
+          '</div>',
+      )
+      .join('');
+    return (
+      '<div class="validation-item warning" style="margin-bottom:var(--space-3)">' +
+      '<div><strong>' +
+      escapeHtml(t('repair.title', { count: repairs.length })) +
+      '</strong></div>' +
+      '<div style="margin-top:var(--space-2);font-family:var(--font-mono);font-size:11px;word-break:break-all">' +
+      '<div class="mono-label">' +
+      escapeHtml(t('repair.pasted')) +
+      '</div>' +
+      escapeHtml(original) +
+      '</div>' +
+      '<div style="margin-top:var(--space-2);font-family:var(--font-mono);font-size:11px;word-break:break-all">' +
+      '<div class="mono-label">' +
+      escapeHtml(t('repair.analysed')) +
+      '</div>' +
+      escapeHtml(analysed) +
+      '</div>' +
+      steps +
+      '<div class="mono-label" style="margin-top:var(--space-3)">' +
+      escapeHtml(t('repair.copy_hint')) +
+      '</div>' +
+      '</div>'
+    );
+  }
+
+  // The Inspector card for a URL-style request (clickunder/teaser/pop GET).
+  //
+  // Pre-fix this ran `new URL(req)` in the browser and, on throw, fell back to
+  // `req.slice(0, 80)` in the endpoint field. That was survivable only while
+  // the client gate refused everything `new URL()` refuses. It no longer does:
+  // schemeless, wrapped, markdown-linked and zero-width-prefixed pastes now
+  // route to the URL branch, and every one of them makes that constructor
+  // throw — so the first thing the operator saw after pasting `<https://…>`
+  // was their own raw text labelled as a parsed endpoint.
+  //
+  // The server already holds the answer. `validation.urlRequest` is built from
+  // the REPAIRED url by the decoder registry, so it agrees with the repair
+  // steps shown in the Validation panel and with the findings. Two parsers
+  // that disagree is the defect; this leaves one. `canonical` is null on the
+  // first paint (the analyze response has not arrived yet) and stays null when
+  // the backend is unreachable — that state says so instead of guessing.
+  function urlSlotCardHtml(rawText, canonical) {
+    let endpoint = '';
+    let ip = '';
+    let ua = '';
+    let page = '';
+    let variant = '';
+
+    if (canonical && canonical.ok !== false) {
+      // Decoded canonical. `endpoint` is host+path as the decoder read it;
+      // `url` is the repaired string, and it parsed by construction.
+      endpoint = canonical.endpoint || '';
+      if (!endpoint && canonical.url) {
+        try {
+          const u = new URL(canonical.url);
+          endpoint = u.hostname + u.pathname;
+        } catch (_e) {
+          /* canonical.url parsed server-side; a throw here is not worth a card */
+        }
+      }
+      const dev = canonical.device || {};
+      ip = dev.ip || dev.ipv6 || '';
+      ua = dev.ua || '';
+      page = (canonical.site || {}).page || '';
+      variant = canonical.variant || '';
+    } else if (canonical && canonical.parsed) {
+      // Refusal envelope: the URL parsed, but no decoder claimed the feed.
+      // `parsed` is what the server read, which is still more than we know.
+      endpoint = (canonical.parsed.host || '') + (canonical.parsed.pathname || '');
+    }
+
+    const decoded = !!endpoint;
+    const uaShort = ua.length > 80 ? ua.slice(0, 80) + '…' : ua;
+    const shownRaw = rawText.length > 120 ? rawText.slice(0, 120) + '…' : rawText;
+    return (
+      '<div class="slot-card" style="grid-column:1/-1">' +
+      '<div class="slot-type-row">' +
+      '<span class="slot-type">URL</span>' +
+      (variant
+        ? '<span class="slot-type" style="opacity:0.7">' + escapeHtml(variant) + '</span>'
+        : '') +
+      '</div>' +
+      '<div class="slot-id">' +
+      escapeHtml(decoded ? endpoint : shownRaw) +
+      '</div>' +
+      // Say which of the two this is. Without the label the verbatim paste and
+      // a decoded host+path look like the same claim.
+      (decoded
+        ? ''
+        : '<div class="slot-dims" style="font-size:10px;color:var(--text-dim)">' +
+          escapeHtml(t('slot.url.not_decoded')) +
+          '</div>') +
+      (ip ? '<div class="slot-dims">ip: ' + escapeHtml(ip) + '</div>' : '') +
+      (uaShort
+        ? '<div class="slot-dims" style="font-size:10px;color:var(--text-dim)">' +
+          escapeHtml(uaShort) +
+          '</div>'
+        : '') +
+      (page ? '<div class="slot-dims">page: ' + escapeHtml(page) + '</div>' : '') +
+      '</div>'
+    );
+  }
+
   function statBox(value, label) {
     return (
       '<div class="stat-box"><div class="stat-value">' +
@@ -4955,6 +5260,26 @@ export async function mountInspector(root, ctx) {
           // Strip the URL so a refresh doesn't re-attempt the same
           // failing import in a loop.
           history.replaceState({}, '', location.pathname);
+        }
+      })();
+    } else if (qp.get('forgot') === '1') {
+      // The cabinet's "forgot password" action navigates here with ?forgot=1
+      // (public/account.js). Pre-fix nothing on this side read that param —
+      // `qp.get('forgot')` appeared zero times in this file — so the deep link
+      // dropped the user on the inspector with no recovery UI and no message.
+      // Same lazy-import + same failure handling as ?reset= above; the entry
+      // point is the other one the module registers.
+      history.replaceState({}, '', location.pathname);
+      (async () => {
+        try {
+          await Promise.all([
+            import('/modules/password-reset/i18n.js'),
+            import('/modules/password-reset/index.js'),
+          ]);
+          window.openForgotPasswordFlow();
+        } catch (err) {
+          console.error('[password-reset] lazy import failed:', err);
+          toast(t('toast.error_generic', { error: 'password-reset module load failed' }), 'error');
         }
       })();
     } else if (qp.get('verified') === '1') {

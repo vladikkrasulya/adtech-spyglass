@@ -282,6 +282,175 @@ test('static: the in-flight analyze is aborted on unmount and its render paths g
   );
 });
 
+// ── STATIC: the analyze-path fixes that a refactor would silently undo ──────
+// Each of these was a live defect. Behaviour is covered end-to-end in a real
+// browser; these guard the specific line that made the behaviour possible, in
+// the file where a careless edit would remove it.
+
+const I18N = fs.readFileSync(path.join(ROOT, 'public/i18n.js'), 'utf8');
+
+test('static: the response pane sends its raw bytes, with the same pretty-print bookkeeping as the request pane', () => {
+  // The request pane keeps `_rawBeforePretty` across the pretty-print that
+  // erases duplicate keys and oversized integer spellings. Without the same
+  // pair for the response pane, `bidResRaw` would carry our re-serialisation
+  // and report nothing — the tool destroying its own evidence on the response
+  // side only.
+  assert.match(APP, /_rawBeforePrettyRes/, 'response pane must stash its pre-pretty-print bytes');
+  assert.match(
+    APP,
+    /const rawResBytes =\s*!fromHist && _prettyPrintedRes !== null && resVal === _prettyPrintedRes/,
+    'rawResBytes must fall back to the stash once the pane holds our own pretty-print',
+  );
+  assert.match(APP, /bidResRaw: rawResBytes/, 'the analyze body must carry the response bytes');
+});
+
+test('static: a JSON root that is not a plain object is rejected before anything dereferences it', () => {
+  // `JSON.parse('null')` succeeds and `typeof null === 'object'`, so the old
+  // `if (reqVal && typeof req === 'object')` guard passed it straight into
+  // `(req.site || req.app || {})` — a TypeError from mid-render.
+  assert.match(APP, /function assertJsonRoot\(/, 'expected an explicit root-shape check');
+  assert.match(
+    APP,
+    /assertJsonRoot\(req, reqVal, 'peek\.label\.bid_req', true\)/,
+    'the request pane is checked (and still admits a bare URL string)',
+  );
+  assert.match(
+    APP,
+    /assertJsonRoot\(res, resVal, 'peek\.label\.bid_res', false\)/,
+    'the response pane is checked, and a URL is not a response',
+  );
+  // The check must run before the first property read, not after.
+  assert.ok(
+    APP.indexOf("assertJsonRoot(req, reqVal, 'peek.label.bid_req'") <
+      APP.indexOf('(req.site || req.app || {}).domain'),
+    'the root check must precede the entity read that used to throw',
+  );
+});
+
+test('static: a failed analysis clears the results panel instead of leaving the previous one on screen', () => {
+  assert.match(APP, /function clearResultsForError\(/, 'expected an atomic results-panel reset');
+  assert.match(
+    APP,
+    /console\.error\('Analysis error:', e\);[\s\S]{0,600}?if \(!ctx\.signal\.aborted\) clearResultsForError\(e\.message\)/,
+    'the analyze catch must clear the panels, not just raise a toast',
+  );
+  // The pieces that made a stale render read as the current one. Scoped to the
+  // function body so the assertion is about the reset, not about the file.
+  const start = APP.indexOf('function clearResultsForError(');
+  assert.ok(start > 0);
+  const body = APP.slice(start, APP.indexOf('\n  }\n', start));
+  for (const painted of ['tValidation', 'tCross', 'slotGrid', 'stEntity', '__ortbtoolsLast']) {
+    assert.ok(body.includes(painted), `clearResultsForError must reset ${painted}`);
+  }
+});
+
+test('static: response-only analysis does not accuse a request that was never sent', () => {
+  // `empty.no_imp_slots` asserts a defect IN a request. Rendering it as the
+  // catch-all told an operator who pasted only a BidResponse that their
+  // (non-existent) request was malformed.
+  assert.match(
+    APP,
+    /t\(hasRequestText \? 'empty\.no_imp_slots' : 'empty\.needs_paired_request'\)/,
+    'the two states must resolve to two different messages',
+  );
+  for (const locale of ['en', 'uk', 'ru']) {
+    assert.match(
+      I18N,
+      new RegExp(`'empty\\.needs_paired_request':[\\s\\S]{0,400}?${locale}:`),
+      `empty.needs_paired_request must exist in ${locale}`,
+    );
+  }
+});
+
+test('static: ?forgot=1 is handled on boot like every other recovery deep link', () => {
+  // public/account.js navigates to /?forgot=1; pre-fix `qp.get('forgot')`
+  // appeared zero times here, so the link dropped the user on the inspector
+  // with no recovery UI and no message.
+  assert.match(APP, /qp\.get\('forgot'\) === '1'/, 'boot must read the forgot param');
+  assert.match(
+    APP,
+    /qp\.get\('forgot'\)[\s\S]{0,900}?window\.openForgotPasswordFlow\(\)/,
+    'the forgot branch must call the module entry point',
+  );
+  assert.match(
+    APP,
+    /qp\.get\('forgot'\)[\s\S]{0,900}?history\.replaceState\(\{\}, '', location\.pathname\)/,
+    'the param must be stripped so a refresh does not re-open the modal',
+  );
+});
+
+test('static: a repaired URL is shown and offered by Copy, and never written back into the pane', () => {
+  // POST /api/analyze has always returned validation.urlRequest.repairs; the
+  // string "repairs" appeared nowhere in public/, so the tool analysed a
+  // different URL than the one on screen and never said so.
+  assert.match(APP, /function urlRepairsHtml\(/, 'expected a renderer for the repair steps');
+  assert.match(APP, /ur\.repairs/, 'the renderer must read validation.urlRequest.repairs');
+  // Prepended to BOTH validation-render branches — a repaired URL that then
+  // validates clean is exactly the case worth stating.
+  assert.match(APP, /renderSeverityTabs\(valEl, findings, headerHtml\)/);
+  assert.equal(
+    (APP.match(/repairsHtml \+\n?\s*'<div class="mono-label"/g) || []).length,
+    2,
+    'both the findings branch and the clean branch must show the repairs',
+  );
+  // Copy hands back the canonical URL; the textarea keeps the operator's text.
+  assert.match(APP, /_lastUrlRepair\.repaired/, 'copy() must be able to reach the repaired URL');
+  assert.match(
+    APP,
+    /writeText\(canonical \|\| pasted\)/,
+    'copy() must prefer the repaired URL and fall back to the literal value',
+  );
+  assert.doesNotMatch(
+    APP,
+    /\$\('bidReq'\)\.value = _lastUrlRepair/,
+    'the repair must never be written back into the operator’s pane',
+  );
+  for (const key of ['repair.title', 'repair.step.html_amp', 'toast.copied_repaired_url']) {
+    for (const locale of ['en', 'uk', 'ru']) {
+      assert.match(
+        I18N,
+        new RegExp(`'${key.replace(/\./g, '\\.')}':[\\s\\S]{0,400}?${locale}:`),
+        `${key} must exist in ${locale}`,
+      );
+    }
+  }
+});
+
+test('static: the URL slot card is driven by the server canonical, not a second client-side parse', () => {
+  // The client URL gate now routes schemeless, wrapped, markdown-linked and
+  // zero-width-prefixed pastes to the URL branch. `new URL()` throws on every
+  // one of them, and the old fallback printed `req.slice(0, 80)` into the
+  // endpoint field — the operator's raw text presented as a parsed host+path.
+  // The server already parsed the REPAIRED url; one parser, not two.
+  assert.match(APP, /function urlSlotCardHtml\(/, 'expected a canonical-driven URL card');
+  assert.doesNotMatch(
+    APP,
+    /const u = new URL\(req\);/,
+    'the browser must not re-parse the operator’s raw request text',
+  );
+  assert.doesNotMatch(
+    APP,
+    /endpoint = req\.slice\(/,
+    'the raw-paste endpoint fallback must be gone',
+  );
+  // Painted twice: once with nothing known, once from validation.urlRequest.
+  assert.match(APP, /return urlSlotCardHtml\(req, null\)/, 'first paint claims nothing');
+  assert.match(
+    APP,
+    /urlSlotCardHtml\(req, validation && validation\.urlRequest\)/,
+    'the repaint must come from the server canonical',
+  );
+  // The undecoded state must be labelled, or a verbatim paste and a decoded
+  // host+path look like the same claim.
+  for (const locale of ['en', 'uk', 'ru']) {
+    assert.match(
+      I18N,
+      new RegExp(`'slot\\.url\\.not_decoded':[\\s\\S]{0,400}?${locale}:`),
+      `slot.url.not_decoded must exist in ${locale}`,
+    );
+  }
+});
+
 test('static: shell-boot no longer force-reloads onto the inspector (mitigation removed)', () => {
   assert.doesNotMatch(
     SHELL,

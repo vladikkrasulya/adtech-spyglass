@@ -6,51 +6,65 @@
  * Returns the full finding-ID catalog built from:
  *   packages/core/messages/{lang}.json  — message template per ID
  *   packages/core/spec-refs.json        — IAB spec URL per ID
+ *   packages/core/severity-registry.js  — the level the engine emits per ID
  *
- * Severity is inferred from the finding ID suffix using these rules
- * (in priority order):
- *   _required  → error
- *   _invalid   → error
- *   _mismatch  → error
- *   _recommended → warning
- *   _missing   → warning
- *   _detected  → info
- *   _unknown   → info
- *   everything else → info
+ * ── SEVERITY ────────────────────────────────────────────────────────────────
+ *
+ * Severity used to be inferred here from the shape of the ID string — a table
+ * of suffix rules (`_required` → error, `_missing` → warning, `_invalid` →
+ * error, everything unmatched → info). It disagreed with the validator for 25
+ * of the 64 IDs reachable from `samples/`: `vast.mediafile_missing` was
+ * published as `warning` while rules-vast.js emits `error`,
+ * `request.30.item.qty_invalid` as `error` while rules-request-30.js emits
+ * `warning`, `imp.secure_recommended` as `warning` against an emitted `info`.
+ * `question` — a real findings.js level since v8 — had no representation at
+ * all, so `dialects.question.unknown_ext_signal` could not be published
+ * correctly under any suffix rule.
+ *
+ * The catalog now reports what packages/core actually puts in `finding.level`,
+ * read from the `makeFinding` / `makeCross` call sites by severity-registry.js.
+ * The three consumers of this endpoint — /docs/findings, the dialect severity
+ * tallies and the site search index — get the engine's own answer.
+ *
+ * `severity` is therefore on the scale of the family that emits it, and
+ * `family` says which scale to read it on:
+ *
+ *   validator    error | warning | info | question   (findings.js LEVELS)
+ *   crosscheck   crit | warn | ok                    (findings.js CROSS_LEVELS)
+ *                crit≈error and warn≈warning; `ok` is the check *passing*, and
+ *                has no counterpart on the validator scale. Reported verbatim
+ *                rather than folded, because folding would publish a value
+ *                `finding.level` never holds — the defect this replaced.
+ *   mirror-note  'none' — mirror.js notes are `{id, params}` with no level at
+ *                all. The old scheme called all 23 of them `info`.
+ *   unknown      'unknown' — an ID with message text but no emitter anywhere
+ *                in packages/core. Published as unknown rather than defaulted
+ *                to `info`, so the catalog does not sound authoritative about
+ *                a rule that does not run.
+ *
+ * `severities` lists every level an ID can carry. It is a single-entry array
+ * except for the handful of rules that pick at runtime (`payload.duplicate_key`
+ * is error on a consequential path, warning elsewhere); for those `severity`
+ * holds the most severe of them.
  *
  * Query params:
  *   ?lang=en|uk|ru  — defaults to 'en'
  *
- * Response: { ok: true, count: N, lang, items: [{id, severity, message, specRef}] }
+ * Response: { ok: true, count: N, lang,
+ *             items: [{id, severity, severities, family, message, specRef}] }
  * Cache-Control: public, max-age=300
  */
 
 const fs = require('fs');
 const path = require('path');
 const { sendJson, sendError } = require('../../lib/http');
+const severityRegistry = require('../../packages/core/severity-registry');
 
 const CORE_DIR = path.join(__dirname, '..', '..', 'packages', 'core');
 const MESSAGES_DIR = path.join(CORE_DIR, 'messages');
 const SPEC_REFS_PATH = path.join(CORE_DIR, 'spec-refs.json');
 
 const VALID_LANGS = new Set(['en', 'uk', 'ru']);
-
-// Severity inference from ID suffix (longest-match first)
-function inferSeverity(id) {
-  // Prefix-based: err-* / warn-* / info-* (Etap B+ naming convention)
-  if (/^err-/.test(id)) return 'error';
-  if (/^warn-/.test(id)) return 'warning';
-  if (/^info-/.test(id)) return 'info';
-  if (/_required$/.test(id)) return 'error';
-  if (/_invalid$/.test(id)) return 'error';
-  if (/_mismatch$/.test(id)) return 'error';
-  if (/_recommended$/.test(id)) return 'warning';
-  if (/_missing$/.test(id)) return 'warning';
-  if (/_detected$/.test(id)) return 'info';
-  if (/_unknown$/.test(id)) return 'info';
-  if (/_empty$/.test(id)) return 'warning';
-  return 'info';
-}
 
 // Load and cache parsed JSON files (process-lifetime cache — restart clears it)
 const _cache = {};
@@ -80,9 +94,12 @@ function handleFindingCatalog(req, res) {
       if (id.startsWith('_')) continue;
       if (typeof message !== 'string') continue;
 
+      const sev = severityRegistry.describe(id);
       items.push({
         id,
-        severity: inferSeverity(id),
+        severity: sev.severity,
+        severities: sev.levels.length ? sev.levels : [sev.severity],
+        family: sev.family,
         message,
         specRef: specRefs[id] || '',
       });

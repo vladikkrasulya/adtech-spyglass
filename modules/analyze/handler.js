@@ -140,6 +140,15 @@ function createAnalyzeModule(deps) {
         const hasReq = hasReqStr || hasReqObj;
         const hasRes = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0;
 
+        // Same bargain as `bidReqRaw`, for the other pane. The response arrives
+        // parsed too, so a duplicate `id`, an integer past 2^53-1 and a raw
+        // control character are already gone by the time validate() sees it.
+        // Pre-fix neither response branch passed rawText at all, so those three
+        // defects were reachable on one side of a transaction and invisible on
+        // the other — a bid price spelled 9007199254740993 came back as
+        // ...992 and nothing said so.
+        const bidResRaw = typeof body.bidResRaw === 'string' ? body.bidResRaw : undefined;
+
         // Optional `opts.disabledRules`: forwarded to validate() / crosscheck()
         // for per-call rule suppression. Accepts string[] of exact ids or
         // trailing-`*` prefixes (e.g. ['imp.*', 'regs.coppa_pii_present']).
@@ -203,6 +212,7 @@ function createAnalyzeModule(deps) {
               expectedVersion,
               userDialect,
               pairReq: bidReq, // inject paired request for floor/currency mismatch plugins
+              rawText: bidResRaw,
             });
             attachLocations(resValidation.findings, { side: 'response', kind: 'ortb' });
             if (resValidation.findings && resValidation.findings.length) {
@@ -221,6 +231,7 @@ function createAnalyzeModule(deps) {
             disabledRules,
             expectedVersion,
             userDialect,
+            rawText: bidResRaw,
           });
           attachLocations(validation.findings, { side: 'response', kind: 'ortb' });
           validation.findings = validation.findings.map((f) =>

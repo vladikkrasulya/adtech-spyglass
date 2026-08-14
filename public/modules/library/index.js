@@ -254,20 +254,82 @@ async function fetchSavedState(signal) {
 const COPY_TOAST = {
   ok: { en: '✓ Copied', uk: '✓ Скопійовано', ru: '✓ Скопировано' },
   err: { en: 'Copy failed: ', uk: 'Помилка копіювання: ', ru: 'Ошибка копирования: ' },
+  empty: {
+    en: 'sample carries no payload',
+    uk: 'зразок не містить даних',
+    ru: 'образец не содержит данных',
+  },
 };
+
+// GET /api/v1/sample ALWAYS answers with both keys and sends `{}` for the one
+// the fixture on disk does not carry (modules/sample/handler.js:88-110), so
+// "present" has to mean "has at least one field", not "is truthy".
+function hasFields(v) {
+  return v != null && typeof v === 'object' && Object.keys(v).length > 0;
+}
+
+// Repairs one specific wrong shape, identified by looking at it.
+//
+// Older servers copied the parsed fixture with `Object.assign({}, sample)`,
+// which turns a top-level JSON *array* into an index-keyed object
+// ({"0":…,"1":…}) — a shape that exists nowhere on disk.
+// samples/behavior-scenarios.json is such an array and is listed in the
+// catalog like any other card, so Copy handed that shape straight to the user.
+// Servers from 7f883f4 onward send the array; this function then sees no
+// index-keyed object and returns its input untouched.
+//
+// Deliberately a shape test and not a version check. A version check would be
+// a record of when the server changed, and would have to be right about a
+// deploy that has not happened yet — the failure this whole batch is made of.
+// This asks the payload what it is, so it is correct against both servers and
+// needs no one to remember a date. It costs one Object.keys per copy.
+function unflattenArray(payload) {
+  const keys = Object.keys(payload);
+  // `[].every()` is vacuously true, so an empty object would otherwise leave
+  // here as `[]` — a different wrong shape than the one we came to fix. The
+  // caller happens to screen those out today; this does not rely on that.
+  if (!keys.length) return payload;
+  return keys.every((k, i) => k === String(i)) ? keys.map((k) => payload[k]) : payload;
+}
+
+// Which of the two payloads is the sample the card actually advertises?
+//
+// The card's own metadata cannot answer this: `format` (banner/video/vast/pop/
+// native/ortb30, see FORMAT_LABEL above) says what kind of ad the fixture is
+// about, never whether the fixture is a request or a response — VAST and
+// oRTB 3.0 cards exist in both directions. The only reliable discriminator is
+// which side the API did not invent.
+//
+// Pre-fix this preferred ANY non-empty bid_request, which is exactly the wrong
+// preference: for every legacy 2.x BidResponse fixture (top-level seatbid[])
+// the API SYNTHESISES a demo BidRequest — example.com, IP 203.0.113.42, a
+// 300x250 banner (handler.js:112-144) — and returns it beside the real
+// response. So a card labelled as a VAST BidResponse copied that invented
+// request, with no seatbid anywhere in it. oRTB 3.0 response fixtures only
+// looked correct because handler.js:106 leaves bid_request empty for them.
+//
+// bid_response is never fabricated — handler.js sends either `{}` or the
+// fixture verbatim — so a non-empty bid_response IS the file on disk, and any
+// bid_request next to it is demo scaffolding. Deliberate rule for a fixture
+// that would some day genuinely carry both: still copy the response, because a
+// card that advertises a response must never answer with a request. Fixtures
+// that are requests (iab-*, ortb30 requests, native, pop requests) reach the
+// second branch and copy their own request unchanged.
+function selectSamplePayload(data) {
+  if (hasFields(data.bid_response)) return unflattenArray(data.bid_response);
+  if (hasFields(data.bid_request)) return unflattenArray(data.bid_request);
+  return null;
+}
 
 async function copySampleToClipboard(slug, signal, toast, lang) {
   try {
     const r = await fetch(`/api/v1/sample?type=${encodeURIComponent(slug)}`, { signal });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
-    const text = JSON.stringify(
-      data.bid_request && Object.keys(data.bid_request).length
-        ? data.bid_request
-        : data.bid_response,
-      null,
-      2,
-    );
+    const payload = selectSamplePayload(data);
+    // Better a visible failure than a silent `{}` on the clipboard.
+    if (!payload) throw new Error(pick(COPY_TOAST.empty, lang));
+    const text = JSON.stringify(payload, null, 2);
     await navigator.clipboard.writeText(text);
     if (toast) toast(pick(COPY_TOAST.ok, lang), 'success');
   } catch (e) {

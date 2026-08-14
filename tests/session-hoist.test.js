@@ -462,6 +462,98 @@ test('modal-host lazyOpenAuth(mode) calls window.openAuthModal directly when alr
   }
 });
 
+// ── F-17: dialog semantics + focus management, applied host-side ───────────
+// Pre-fix measurement: `role`, `aria-modal` and `dialog` appeared ZERO times
+// in modal-host.js; the live browser reported .modal-card role=null,
+// aria-modal=null, no accessible label, #authError role=null/aria-live=null,
+// and Escape returning focus to <body> instead of the opener.
+const AUTH_MODAL_HTML =
+  '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
+  '<div class="modal-card">' +
+  '<div class="modal-title">sign in</div>' +
+  '<input id="authEmailInput"><input id="authPasswordInput" type="password">' +
+  '<div id="authError"></div>' +
+  '<button data-action="modal-close">cancel</button>' +
+  '<button data-action="do-auth">log in</button>' +
+  '</div></div>';
+
+// MutationObserver callbacks are microtasks; a macrotask hop is enough.
+const tick = () => new Promise((r) => setTimeout(r, 0));
+
+test('F-17: every modal rendered into #modalRoot becomes a labelled role=dialog with a live error region', async () => {
+  const ctx = await freshSession();
+  await withSession(ctx, async () => {
+    const modalHost = await import(`../public/core/modal-host.js?instance=${++_instanceSeq}`);
+    modalHost.installModalHost();
+    const doc = ctx.w.document;
+    doc.getElementById('modalRoot').innerHTML = AUTH_MODAL_HTML;
+    await tick();
+
+    const card = doc.querySelector('.modal-card');
+    assert.equal(card.getAttribute('role'), 'dialog');
+    assert.equal(card.getAttribute('aria-modal'), 'true');
+    const labelledBy = card.getAttribute('aria-labelledby');
+    assert.ok(labelledBy, 'the dialog has an accessible name');
+    assert.equal(doc.getElementById(labelledBy).textContent, 'sign in');
+
+    const err = doc.getElementById('authError');
+    assert.equal(err.getAttribute('role'), 'alert');
+    assert.equal(err.getAttribute('aria-live'), 'assertive');
+  });
+});
+
+test('F-17: focus enters the dialog, Tab cycles inside it, and Escape hands focus back to the opener', async () => {
+  const ctx = await freshSession();
+  await withSession(ctx, async () => {
+    const modalHost = await import(`../public/core/modal-host.js?instance=${++_instanceSeq}`);
+    modalHost.installModalHost();
+    const doc = ctx.w.document;
+
+    const trigger = doc.createElement('button');
+    trigger.id = 'signInTrigger';
+    trigger.textContent = 'sign in';
+    doc.getElementById('app-root').appendChild(trigger);
+    trigger.focus();
+    assert.equal(doc.activeElement, trigger, 'precondition: the opener holds focus');
+
+    doc.getElementById('modalRoot').innerHTML = AUTH_MODAL_HTML;
+    await tick();
+
+    const card = doc.querySelector('.modal-card');
+    assert.ok(card.contains(doc.activeElement), 'focus moved into the dialog on open');
+
+    // Focus trap. aria-modal alone does not stop the browser's tab order —
+    // pre-fix, two Tab presses walked straight out of the modal.
+    const focusables = Array.from(card.querySelectorAll('input,button'));
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const tab = (from, shiftKey) =>
+      from.dispatchEvent(
+        new ctx.w.KeyboardEvent('keydown', {
+          key: 'Tab',
+          shiftKey,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+
+    last.focus();
+    tab(last, false);
+    assert.equal(doc.activeElement, first, 'Tab from the last control wraps to the first');
+    tab(first, true);
+    assert.equal(doc.activeElement, last, 'Shift+Tab from the first control wraps to the last');
+
+    // Escape closes AND restores — the measured pre-fix behaviour closed the
+    // modal but dropped focus on <body>.
+    doc.body.dispatchEvent(
+      new ctx.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    );
+    await tick();
+    assert.equal(doc.getElementById('modalRoot').innerHTML, '', 'modal closed');
+    assert.equal(doc.activeElement, trigger, 'focus returned to the element that opened it');
+  });
+});
+
 // ── STATIC: topbar's sign-in is section-agnostic by construction ───────────
 test('static: topbar onSignIn tries window.openAuthModal / window.lazyOpenAuth BEFORE the /inspector?auth= navigate fallback', () => {
   const topbar = fs.readFileSync(path.join(ROOT, 'public/modules/topbar/index.js'), 'utf8');

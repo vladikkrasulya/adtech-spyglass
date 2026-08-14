@@ -32,8 +32,15 @@
 
    Every case below delegates to a window.* global that a lazy-loaded
    module already exposes (window.doLogin, window.confirmSave, etc.) —
-   this file introduces no new business logic, it only relocates the
+   the dispatcher introduces no new business logic, it only relocates the
    dispatch plumbing that the modalRoot-ownership move requires.
+
+   The one thing this file DOES own outright is dialog accessibility
+   (F-17): role/aria-modal/label, the focus trap, focus restoration and
+   the error live region are applied host-side to whatever renders into
+   #modalRoot, for the same reason Esc and backdrop-close are — it is the
+   single choke point every modal in the app goes through. See the
+   "Dialog semantics + focus management" block below.
    ============================================================ */
 'use strict';
 
@@ -247,6 +254,203 @@ function bindModalDispatcher(modalRoot) {
   });
 }
 
+// ── Dialog semantics + focus management (F-17) ───────────────────────────
+// Measured before this block existed: the strings `role`, `aria-modal` and
+// `dialog` appeared ZERO times in this file, and a live browser reported
+//   .modal-backdrop role: null   .modal-card role: null   aria-modal: null
+//   accessible label: none       #authError: role=null, aria-live=null
+//   Escape: closes, but focus lands on <body>, not the trigger
+// So every modal in the app was, to assistive tech, an unlabelled <div>
+// stack with the whole page behind it still reachable by Tab.
+//
+// The fix lives HERE rather than in the thirteen modules that actually
+// render modal markup (auth, unlock, recovery, password-reset, save-sample,
+// edit-sample, corpus-save, partners, simulate, mirror, live, embed,
+// shortcuts) because #modalRoot is the ONE node all of them pass through —
+// the same reason Esc and backdrop-close already live here. All thirteen
+// emit the identical `.modal-backdrop > .modal-card` shape with exactly one
+// `.modal-title` inside (verified by grep: 13/13 files, one title per card),
+// which is what makes a single host-side upgrade sound.
+
+// Deliberately NOT a computed-style check: inline `display:none` is the only
+// hiding the modal renderers actually use, and layout-based visibility tests
+// (offsetParent / getClientRects) report everything as invisible under the
+// jsdom harness the regression tests run in.
+const FOCUSABLE_SEL = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+// Error text rendered by auth/unlock/password-reset. Referenced by id
+// because those renderers are owned elsewhere; `[data-modal-error]` is the
+// forward-compatible hook for any modal added later.
+const ERROR_SEL = '#authError,#unlockError,#resetError,[data-modal-error]';
+
+const DIALOG_LABEL = { en: 'Dialog', uk: 'Діалогове вікно', ru: 'Диалоговое окно' };
+
+let _dialogSeq = 0;
+let _opener = null; // element that gets focus back when the modal closes
+let _lastPressed = null; // fallback opener — see captureOpener()
+
+function isVisible(el) {
+  if (el.hidden) return false;
+  if (el.style && el.style.display === 'none') return false;
+  return !el.closest('[hidden]');
+}
+
+function focusablesIn(card) {
+  return Array.from(card.querySelectorAll(FOCUSABLE_SEL)).filter(isVisible);
+}
+
+function focusSafely(el) {
+  if (!el || typeof el.focus !== 'function') return;
+  try {
+    el.focus({ preventScroll: true });
+  } catch {
+    el.focus();
+  }
+}
+
+function currentCard() {
+  const root = document.getElementById('modalRoot');
+  if (!root || !root.children.length) return null;
+  return root.querySelector('.modal-card');
+}
+
+function upgradeModalCard(card) {
+  if (card.getAttribute('role') === 'dialog') return; // already upgraded
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+  // Needed so the host can park focus on the card itself for modals whose
+  // renderer does not focus a field of its own (mirror/live/shortcuts/embed).
+  if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex', '-1');
+
+  const title = card.querySelector('.modal-title');
+  if (title) {
+    if (!title.id) title.id = `modal-host-title-${++_dialogSeq}`;
+    card.setAttribute('aria-labelledby', title.id);
+  } else if (!card.hasAttribute('aria-label')) {
+    const lang = document.documentElement.getAttribute('lang') || 'en';
+    card.setAttribute('aria-label', DIALOG_LABEL[lang] || DIALOG_LABEL.en);
+  }
+
+  // Validation errors are written into an empty div AFTER submit, so without
+  // a live region a screen-reader user pressed "log in" and was told nothing
+  // at all. assertive (role=alert) rather than polite: the user is blocked.
+  card.querySelectorAll(ERROR_SEL).forEach((el) => {
+    el.setAttribute('role', 'alert');
+    el.setAttribute('aria-live', 'assertive');
+    el.setAttribute('aria-atomic', 'true');
+  });
+}
+
+function captureOpener(modalRoot) {
+  const active = document.activeElement;
+  if (active && active.nodeType === 1 && active !== document.body && !modalRoot.contains(active)) {
+    _opener = active;
+    return;
+  }
+  // Chrome focuses a <button> on mousedown; Firefox and Safari do not, so
+  // document.activeElement is <body> at the instant the modal appears there.
+  // Falling back to the last thing the user actually pressed is what makes
+  // focus restoration work across browsers rather than only in Chrome.
+  if (_lastPressed && _lastPressed.isConnected && !modalRoot.contains(_lastPressed)) {
+    _opener = _lastPressed;
+  }
+}
+
+function restoreOpenerFocus() {
+  const el = _opener;
+  _opener = null;
+  // isConnected guard: signing in replaces the topbar sign-in button with
+  // the profile pill, so the opener can legitimately be gone by close time.
+  if (el && el.isConnected) focusSafely(el);
+}
+
+function bindOpenerTracking() {
+  const remember = (ev) => {
+    const t = ev.target;
+    if (!t || t.nodeType !== 1) return;
+    _lastPressed = (t.closest && t.closest(FOCUSABLE_SEL)) || t;
+  };
+  // Capture phase: runs BEFORE the trigger's own click handler opens the
+  // modal, so the opener is recorded even for triggers that never take focus.
+  document.addEventListener('pointerdown', remember, true);
+  document.addEventListener('keydown', remember, true);
+}
+
+function bindDialogSemantics(modalRoot) {
+  let wasOpen = modalRoot.children.length > 0;
+  const sync = () => {
+    const open = modalRoot.children.length > 0;
+    if (open && !wasOpen) captureOpener(modalRoot);
+    // Re-run on every mutation, not just the open transition: the auth modal
+    // swaps login↔register by replacing #modalRoot's innerHTML outright, so
+    // each swap produces a brand-new, un-upgraded card.
+    modalRoot.querySelectorAll('.modal-card').forEach(upgradeModalCard);
+    if (open && !wasOpen) {
+      const card = currentCard();
+      // Only park focus on the card when the renderer has not already put it
+      // somewhere better — auth focuses authEmailInput from a setTimeout(0)
+      // that runs after this observer, and wins, which is the intent.
+      if (card && !card.contains(document.activeElement)) focusSafely(card);
+    }
+    if (!open && wasOpen) restoreOpenerFocus();
+    wasOpen = open;
+  };
+  // window.MutationObserver, not the bare global: every other browser API in
+  // this file is reached through window/document/history/location, and the
+  // jsdom test harness aliases those onto the fake window rather than onto
+  // globalThis — a bare `MutationObserver` reference throws there.
+  const MO = window.MutationObserver;
+  if (MO) {
+    new MO(sync).observe(modalRoot, { childList: true, subtree: true });
+  } else {
+    console.warn(
+      '[modal-host] MutationObserver unavailable — dialog semantics are install-time only',
+    );
+  }
+  sync(); // catch a modal that somehow rendered before install
+}
+
+// Real trap: Tab/Shift+Tab cycle inside the open card instead of walking off
+// into the page behind it. aria-modal alone tells AT the background is inert;
+// it does not stop the browser's own tab order, which is why this exists too.
+function bindFocusTrap() {
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key !== 'Tab') return;
+      const card = currentCard();
+      if (!card) return;
+      const items = focusablesIn(card);
+      if (!items.length) {
+        e.preventDefault();
+        focusSafely(card);
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (!card.contains(active)) {
+        e.preventDefault();
+        focusSafely(e.shiftKey ? last : first);
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault();
+        focusSafely(last);
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        focusSafely(first);
+      }
+    },
+    true,
+  );
+}
+
 // ── Escape (global, permanent — replaces the old ctx.signal-scoped one) ──
 function bindEscape() {
   document.addEventListener('keydown', (e) => {
@@ -272,4 +476,7 @@ export function installModalHost() {
   window.lazyOpenAuth = lazyOpenAuth;
   bindModalDispatcher(modalRoot);
   bindEscape();
+  bindOpenerTracking();
+  bindDialogSemantics(modalRoot);
+  bindFocusTrap();
 }

@@ -415,7 +415,14 @@ export default {
       clearInterval(refreshTimer);
       refreshTimer = null;
       if (!refreshToggle.checked) return;
-      const intervalSec = Number(intervalSelect.value) || 30;
+      // 0 is a legitimate value here — it is the "Off" option in renderShell
+      // (<option value="0">). The pre-fix `Number(value) || 30` pushed that 0
+      // through the falsy branch and replaced it with 30, which made the
+      // `<= 0` guard below unreachable: picking Off still armed a 30s timer
+      // and the "Updated N ago" label was observed resetting after ~32s.
+      // Only a genuinely unparseable value may fall back to the default.
+      const parsed = Number(intervalSelect.value);
+      const intervalSec = Number.isFinite(parsed) ? parsed : 30;
       if (intervalSec <= 0) return;
       refreshTimer = setInterval(() => {
         if (ctx && ctx.signal && ctx.signal.aborted) return;

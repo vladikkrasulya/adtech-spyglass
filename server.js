@@ -479,6 +479,38 @@ const LOCALE_REDIRECT_TABLE = {
   '/docs': { uk: '/uk/docs', ru: '/ru/docs' },
 };
 
+/**
+ * Carry the incoming query string onto a redirect target.
+ *
+ * Extracted because serveStaticFile had two redirects twelve lines apart and
+ * only the second one did this. The cookie-locale redirect dropped the query
+ * outright, so for any visitor holding kt-lang=uk|ru every parameter arriving
+ * on a bare landing URL was destroyed before anything could read it:
+ *
+ *   GET /?reset=<token>   Cookie: kt-lang=uk   ->   Location: /uk
+ *   GET /?forgot=1        Cookie: kt-lang=uk   ->   Location: /uk
+ *   GET /?auth=login      Cookie: kt-lang=uk   ->   Location: /uk
+ *   GET /?verified=1      Cookie: kt-lang=uk   ->   Location: /uk
+ *
+ * The same requests without the cookie kept their parameters, which is why
+ * this survived: it is invisible to anyone testing in English. A password
+ * reset link mailed to a Ukrainian or Russian user lost its token here.
+ *
+ * One function now, used by both, so the two cannot drift apart again — the
+ * second redirect already knew the rule and carried a comment explaining it,
+ * and that knowledge simply never reached its neighbour.
+ *
+ * @param {string} target - redirect Location, may already carry its own query
+ * @param {string} reqUrl - the raw incoming req.url
+ */
+function withIncomingQuery(target, reqUrl) {
+  const qIdx = (reqUrl || '').indexOf('?');
+  // A target that already specifies a query wins: it was chosen deliberately
+  // by the route table, and appending a second `?` would produce a broken URL.
+  if (qIdx < 0 || target.indexOf('?') !== -1) return target;
+  return target + reqUrl.slice(qIdx);
+}
+
 // Dynamic sitemap.xml — indexable sections + /about + APPROVED markdown posts
 // (listIndexablePostRefs), one flat <loc> per locale URL; hreflang lives in each
 // page's HTML <head> only. CH-graceful: markdown is local and DB posts are never
@@ -540,7 +572,7 @@ function serveStaticFile(req, res) {
   const cookieLocale = readLocaleCookie(req);
   if (cookieLocale && LOCALE_REDIRECT_TABLE[norm] && LOCALE_REDIRECT_TABLE[norm][cookieLocale]) {
     res.writeHead(302, {
-      Location: LOCALE_REDIRECT_TABLE[norm][cookieLocale],
+      Location: withIncomingQuery(LOCALE_REDIRECT_TABLE[norm][cookieLocale], req.url),
       'Cache-Control': 'no-cache',
       Vary: 'Cookie',
     });
@@ -552,11 +584,7 @@ function serveStaticFile(req, res) {
   if (route && route.redirect) {
     // Preserve incoming query string so URLs like /uk?auth=login survive
     // the locale-root → /uk/inspector redirect (Stage 1 sign-in flow).
-    const qIdx = (req.url || '').indexOf('?');
-    const target =
-      qIdx >= 0 && route.redirect.indexOf('?') === -1
-        ? route.redirect + req.url.slice(qIdx)
-        : route.redirect;
+    const target = withIncomingQuery(route.redirect, req.url);
     // 301 (permanent) by default: locale-root + .html/legacy canonicalisations
     // are stable. route.status overrides it (root / → 302, see resolveLocaleRoute).
     res.writeHead(route.status || 301, { Location: target, 'Cache-Control': 'no-cache' });

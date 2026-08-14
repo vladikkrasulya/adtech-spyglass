@@ -30,6 +30,34 @@
 (function () {
   'use strict';
 
+  // ── Canonical route builder ──────────────────────────────────────
+  // This file is a CLASSIC script (<script src="/lang-switch.js">, no
+  // type="module") because it also runs on the non-SPA about/account pages,
+  // which load no module graph at all. So it can't `import` at the top —
+  // it pulls /core/routes.js in dynamically and keeps the namespace here.
+  //
+  // Everything URL-shaped goes through that module. Pre-fix this file owned
+  // a private localizePath() with a hardcoded allowlist of single-segment
+  // paths, which is why every deep route (/docs/findings, /r/<hash>,
+  // /blog/en/<slug>, /admin/blog) collapsed to the bare locale root on a
+  // language switch (F-09).
+  //
+  // Until the import resolves, Routes is null and we deliberately do NOT
+  // fall back to a second implementation — a second implementation is the
+  // bug we are removing. Instead the lang links keep their server-rendered
+  // hrefs and clicks navigate natively; bindLangLinks() re-runs the moment
+  // the module lands, which in practice is long before a human clicks.
+  let Routes = null;
+  const routesReady = import('/core/routes.js')
+    .then((mod) => {
+      Routes = mod;
+      return mod;
+    })
+    .catch((err) => {
+      console.warn('lang-switch: /core/routes.js failed to load, links stay static:', err);
+      return null;
+    });
+
   // Selectors whose contents are dynamic / user-state — never morph these.
   // Most are inspector-specific; on surfaces that don't have them (e.g.
   // /about) the matches just return false and the morph proceeds normally.
@@ -211,6 +239,17 @@
   async function switchLang(targetUrl, opts) {
     const push = !(opts && opts.push === false);
 
+    // Wait for the route module rather than keeping a second, divergent copy
+    // of the locale-prefix rules in this file — a duplicate spelling is the
+    // root cause we are removing, and by the time anything calls switchLang
+    // this promise is already settled. If it never loads, hard-navigate:
+    // the server will resolve the locale from targetUrl on its own.
+    await routesReady;
+    if (!Routes) {
+      location.assign(targetUrl);
+      return;
+    }
+
     // Modals are constructed on-open via t() at fire-time; their already-
     // rendered text doesn't auto-update. Close any open modal so it
     // re-opens (if user re-triggers) in the new locale.
@@ -230,7 +269,7 @@
     // the JS got UK content back, leaving the page Ukrainian regardless of
     // which lang the user clicked. Setting the cookie BEFORE the fetch
     // means the server reads the new locale and serves the correct file.
-    const newLangFromUrl = (targetUrl.match(/^\/(uk|ru)(?:\/|$)/) || [])[1] || 'en';
+    const newLangFromUrl = Routes.stripLocale(targetUrl).lang;
     try {
       const isHttps = location.protocol === 'https:';
       document.cookie =
@@ -257,7 +296,7 @@
     // #app-root and the landing module renders nothing → blank page. So for a
     // landing route, hard-navigate to the localized URL and let the server
     // render it fresh (mirrors the shell-boot.js landing guard).
-    if (hasSpaShell && LANDING_ROUTES.has(stripLocale(location.pathname))) {
+    if (hasSpaShell && Routes.isLandingRoute(location.pathname)) {
       location.assign(targetUrl);
       return;
     }
@@ -381,69 +420,50 @@
     }
   }
 
-  // Map current pathname into the equivalent path under another locale.
-  //   /                  + uk → /uk
-  //   /about             + uk → /uk/about
-  //   /uk/account        + ru → /ru/account
-  //   /uk/about          + en → /about
-  // Unknown deep paths fall back to the locale root (`/`, `/uk`, `/ru`)
-  // so we don't link to a 404.
-  // Programmatic-SEO landing routes (server-rendered only). Kept as a Set so
-  // both localizePath() and the SPA-switch guard agree on what's a landing.
-  const LANDING_ROUTES = new Set([
-    '/openrtb/2-6',
-    '/openrtb/2-5',
-    '/openrtb/3-0',
-    '/vast',
-    '/native',
-    '/iab-categories',
-  ]);
-  function stripLocale(p) {
-    const cur = (p || '/').replace(/\/$/, '') || '/';
-    if (cur.startsWith('/uk') || cur.startsWith('/ru')) return cur.slice(3) || '/';
-    return cur;
-  }
-  const KNOWN_LANDINGS = [
-    '/',
-    '/about',
-    '/account',
-    // Canonical SPA sections shared by locale routing and the shell switcher:
-    '/inspector',
-    '/live',
-    '/behavior',
-    '/library',
-    '/dialects',
-    '/blog',
-    '/docs',
-    '/insights',
-    // Programmatic-SEO landings — so a lang switch builds the localized URL
-    // (/uk/openrtb/2-6) instead of falling back to the bare locale root.
-    ...LANDING_ROUTES,
-  ];
-  function localizePath(currentPath, targetLang) {
-    const cur = (currentPath || '/').replace(/\/$/, '') || '/';
-    let canonical = cur;
-    if (cur.startsWith('/uk')) canonical = cur.slice(3) || '/';
-    else if (cur.startsWith('/ru')) canonical = cur.slice(3) || '/';
-    if (!KNOWN_LANDINGS.includes(canonical)) {
-      // Deep path under a section we don't know about → just go to the
-      // locale root rather than guess at a translation.
-      return targetLang === 'en' ? '/' : '/' + targetLang;
-    }
-    if (targetLang === 'en') return canonical;
-    if (canonical === '/') return '/' + targetLang;
-    return '/' + targetLang + canonical;
+  // Map the CURRENT LOCATION — path, query and fragment — into the
+  // equivalent URL under another locale.
+  //
+  //   /                       + uk → /uk
+  //   /about                  + uk → /uk/about
+  //   /docs/findings          + uk → /uk/docs/findings
+  //   /r/aabbccdd11           + uk → /uk/r/aabbccdd11
+  //   /blog/en/some-post      + uk → /uk/blog/en/some-post
+  //   /inspector?sample=x#tab + uk → /uk/inspector?sample=x#tab
+  //   /ru/account#security    + en → /account#security
+  //   /admin/blog             + uk → /admin/blog   (no /uk variant exists)
+  //
+  // F-09: the version this replaced matched `location.pathname` against a
+  // hardcoded list of SINGLE-SEGMENT paths and never looked at search or
+  // hash. So /docs/findings, /r/<hash>, /blog/<lang>/<slug> and /admin/blog
+  // all matched nothing and returned the bare locale root — which the SPA
+  // router then answered with "No section registered for /." — while
+  // /inspector?sample=x&dialect=y silently lost both params and
+  // /ru/account#security lost its fragment.
+  //
+  // Route shapes now live in /core/routes.js, mirroring the server's own
+  // table in lib/locale-routes.js, so this file no longer has an opinion
+  // about what a URL looks like. Falling back to the locale root is still
+  // allowed for genuinely untranslatable paths — it's just the rare
+  // exception now instead of the default for anything with two segments.
+  //
+  // Returns null when /core/routes.js hasn't loaded yet; callers then leave
+  // the link alone rather than guessing (see the comment at the top).
+  function localizeLocation(loc, targetLang) {
+    if (!Routes) return null;
+    return Routes.relocalize(loc, targetLang);
   }
 
   // Rewrite each lang menu <a href> to point at the equivalent of the
   // CURRENT page rather than the locale root. Pre-fix this was static
   // `/uk/` `/ru/` `/` regardless of where you were — clicking UK from
-  // /about lost docs context. Now the menu links track location.
+  // /about lost docs context. Now the menu links track location, including
+  // its query string and fragment.
   function refreshLangLinkHrefs() {
     document.querySelectorAll('.kt-lang-menu-list a').forEach((a) => {
       const lang = (a.getAttribute('lang') || '').toLowerCase();
       if (!lang) return;
-      const target = localizePath(location.pathname, lang);
+      const target = localizeLocation(location, lang);
+      if (target === null) return; // routes module not in yet — keep SSR href
       a.setAttribute('href', target);
     });
   }
@@ -454,10 +474,15 @@
       if (a.dataset.langSwapBound) return;
       a.dataset.langSwapBound = '1';
       a.addEventListener('click', (e) => {
-        // Re-resolve at click-time too, in case pathname shifted via
-        // pushState since the last refresh.
+        // Re-resolve at click-time too, in case the URL shifted via
+        // pushState since the last refresh (SPA navigation doesn't re-render
+        // this menu on every hop).
         const lang = (a.getAttribute('lang') || '').toLowerCase();
-        const href = lang ? localizePath(location.pathname, lang) : a.getAttribute('href');
+        const href = lang ? localizeLocation(location, lang) : a.getAttribute('href');
+        // href === null means /core/routes.js hasn't resolved yet. Let the
+        // browser follow the server-rendered href instead of preventing the
+        // default and going nowhere — a hard nav to the locale root is a
+        // worse page than the one you're on, but it's still a page.
         if (!href || /^https?:/i.test(href)) return;
         e.preventDefault();
         switchLang(href);
@@ -474,6 +499,14 @@
     bindLangLinks();
     bindThemeTooltipI18n();
   }
+
+  // /core/routes.js is fetched async, so the first bindLangLinks() above may
+  // have run with Routes still null and left the server-rendered hrefs in
+  // place. Re-run once it lands so the menu points at the current page's
+  // equivalent URL even if the user never navigates.
+  routesReady.then(() => {
+    if (Routes) bindLangLinks();
+  });
 
   // Phase C-2: inspector template loads ASYNC after DOMContentLoaded
   // (mountInspector fetches template.${lang}.html and injects). The lang

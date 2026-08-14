@@ -140,11 +140,7 @@ function renderNav() {
     `;
   }).join('');
 
-  const collapseLabel = pick({
-    en: 'Collapse sidebar',
-    uk: 'Згорнути меню',
-    ru: 'Свернуть меню',
-  });
+  const collapseLabel = collapseTabLabel();
   return `
     <a href="${escapeHtml(prefixLocale('/inspector'))}" class="kt-nav__brand">
       <span class="kt-nav__brand-icon" aria-hidden="true">◆</span>
@@ -163,6 +159,33 @@ function renderNav() {
 function pick(map) {
   const l = lang();
   return map[l] || map.en || '';
+}
+
+/** True when the shell is currently in the collapsed-sidebar state. */
+function isNavCollapsed() {
+  const shell = document.querySelector('.kt-shell');
+  return !!(shell && shell.classList.contains('is-nav-collapsed'));
+}
+
+/** Accessible name for the collapse tab. The button is a toggle: its label
+ *  must describe what the NEXT activation does, and it must agree with the
+ *  ‹ / › arrow nav.css swaps on .is-nav-collapsed. Pre-fix the label was
+ *  computed once, always as "collapse", so in the collapsed state the control
+ *  announced the opposite of the action it performs (F-10). */
+function collapseTabLabel() {
+  return isNavCollapsed()
+    ? pick({ en: 'Expand sidebar', uk: 'Розгорнути меню', ru: 'Развернуть меню' })
+    : pick({ en: 'Collapse sidebar', uk: 'Згорнути меню', ru: 'Свернуть меню' });
+}
+
+/** Re-derive the collapse tab's label from the live shell state. Called after
+ *  every toggle and after every re-render (locale change rebuilds the node). */
+function syncCollapseTab(root) {
+  const btn = root.querySelector('[data-action="collapse-nav"]');
+  if (!btn) return;
+  const label = collapseTabLabel();
+  btn.setAttribute('aria-label', label);
+  btn.setAttribute('title', label);
 }
 
 function highlight(root) {
@@ -187,18 +210,17 @@ function refreshLocalisedHrefs(root) {
 /** Mount the nav into the given root element. Idempotent: re-mounts replace
  *  the existing chrome. Returns an unmount() function for cleanup. */
 export function mountNav(root) {
-  root.innerHTML = renderNav();
-  highlight(root);
-
   // Sidebar collapse-tab — toggles .is-nav-collapsed on .kt-shell,
   // persists in localStorage. Mirrors the previous topbar handler but
   // anchored to the sidebar itself per user feedback.
   const COLLAPSE_KEY = 'kt-nav-collapsed';
   const shellRoot = document.querySelector('.kt-shell');
-  // Restore persisted state. Single .kt-nav__collapse-tab button serves
-  // both roles — it rides the sidebar's right edge when expanded, slides
-  // to viewport left edge (half visible) when collapsed. CSS handles the
-  // animation + arrow swap.
+  // Restore persisted state BEFORE the first render. Single
+  // .kt-nav__collapse-tab button serves both roles — it rides the sidebar's
+  // right edge when expanded, slides to the viewport left edge when
+  // collapsed. CSS handles the animation + arrow swap; the button's label is
+  // derived from the same .is-nav-collapsed class, so the class has to be
+  // settled before renderNav() reads it.
   try {
     if (shellRoot && localStorage.getItem(COLLAPSE_KEY) === '1') {
       shellRoot.classList.add('is-nav-collapsed');
@@ -207,11 +229,13 @@ export function mountNav(root) {
     /* storage disabled */
   }
 
+  root.innerHTML = renderNav();
+  highlight(root);
+
   // Clean up any pre-existing reopen-tab from earlier shell versions.
   const stale = document.querySelector('.kt-shell__reopen-tab');
   if (stale) stale.remove();
 
-  const collapseBtn = root.querySelector('[data-action="collapse-nav"]');
   const onCollapse = (e) => {
     e.preventDefault();
     if (!shellRoot) return;
@@ -219,8 +243,23 @@ export function mountNav(root) {
     try {
       localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
     } catch (_) {}
+    syncCollapseTab(root);
   };
-  if (collapseBtn) collapseBtn.addEventListener('click', onCollapse);
+
+  // F-10: the collapse tab is destroyed and rebuilt from scratch every time
+  // kt:lang-change re-renders the nav, so the handler must be bound to
+  // whatever node is in the DOM RIGHT NOW — never to one captured at mount.
+  // Pre-fix `collapseBtn` was a mount-time const; after the first language
+  // switch the live button carried no click listener at all and the sidebar
+  // was stuck in whichever state it happened to be in until a full reload.
+  let boundCollapseBtn = null;
+  function bindCollapse() {
+    if (boundCollapseBtn) boundCollapseBtn.removeEventListener('click', onCollapse);
+    boundCollapseBtn = root.querySelector('[data-action="collapse-nav"]');
+    if (boundCollapseBtn) boundCollapseBtn.addEventListener('click', onCollapse);
+    syncCollapseTab(root);
+  }
+  bindCollapse();
 
   // Sync active state on every URL change (initial pushState + popstate).
   const onLocationChange = () => {
@@ -233,11 +272,13 @@ export function mountNav(root) {
   const onLang = () => {
     root.innerHTML = renderNav();
     highlight(root);
+    // Re-bind: renderNav() just replaced the collapse tab node.
+    bindCollapse();
   };
   window.addEventListener('kt:lang-change', onLang);
 
   return function unmountNav() {
-    if (collapseBtn) collapseBtn.removeEventListener('click', onCollapse);
+    if (boundCollapseBtn) boundCollapseBtn.removeEventListener('click', onCollapse);
     window.removeEventListener('popstate', onLocationChange);
     window.removeEventListener('kt:pushstate', onLocationChange);
     window.removeEventListener('kt:lang-change', onLang);

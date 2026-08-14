@@ -10,6 +10,7 @@
 'use strict';
 
 import { escapeHtml } from '/core/utils.js';
+import { specimenPath } from '/core/routes.js';
 
 const MAX_ROWS = 100;
 const THEME_KEY = 'kt-theme';
@@ -328,6 +329,13 @@ export default {
       const hash = activeEnvelope && activeEnvelope.hash;
       if (!hash) return;
       const lang = ctx.lang || 'en';
+      // F-12: both buttons used to hardcode '/' + lang + '/r/' + hash. For
+      // English that is /en/r/<hash> — a route the server has never had. There
+      // is no /en/r/ at all (the legacy /en/<section> redirect in
+      // lib/locale-routes.js is single-segment and doesn't reach it), so the
+      // copied permalink and the navigation button both 404'd for EN users.
+      // specimenPath() knows en is the no-prefix locale: /r/<hash>.
+      const permalink = specimenPath(hash, lang);
       const bar = document.createElement('div');
       bar.className = 'stream-action-bar';
       const inspectBtn = document.createElement('button');
@@ -336,7 +344,7 @@ export default {
       inspectBtn.addEventListener(
         'click',
         () => {
-          window.OrtbtoolsShell.navigateTo('/' + lang + '/r/' + hash);
+          window.OrtbtoolsShell.navigateTo(permalink);
         },
         { signal: ctx.signal },
       );
@@ -346,7 +354,7 @@ export default {
       copyBtn.addEventListener(
         'click',
         () => {
-          const url = location.origin + '/' + lang + '/r/' + hash;
+          const url = location.origin + permalink;
           navigator.clipboard
             .writeText(url)
             .then(() => {

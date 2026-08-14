@@ -916,6 +916,92 @@
       uk: 'У запиті немає imp[] — слоти не знайдено',
       ru: 'В запросе нет imp[] — слоты не найдены',
     },
+    // F-18 — the response-only case. `empty.no_imp_slots` asserts a defect in
+    // a request; when the operator pasted only a BidResponse there is no
+    // request to have a defect, and saying so accused them of one.
+    'empty.needs_paired_request': {
+      en: 'Inspector preview needs a paired BidRequest — paste one in the left pane',
+      uk: 'Для превʼю в Inspector потрібен парний BidRequest — встав його у ліве поле',
+      ru: 'Для превью в Inspector нужен парный BidRequest — вставь его в левое поле',
+    },
+    // The URL slot card before (or without) a decoder verdict. The card used to
+    // print the operator's raw paste in the endpoint field, which read as a
+    // parsed host and path. Say which one is on screen.
+    'slot.url.not_decoded': {
+      en: 'your paste, verbatim — not decoded yet',
+      uk: 'твоя вставка дослівно — ще не декодовано',
+      ru: 'твоя вставка дословно — ещё не декодировано',
+    },
+    // F-04 — JSON that parses but is not a payload (`null`, an array, a bare
+    // number). Pre-fix these reached a property read and threw a TypeError.
+    'error.json_root_not_object': {
+      en: 'The {pane} pane must hold a JSON object — got {root}',
+      uk: 'Поле {pane} має містити JSON-обʼєкт — отримано {root}',
+      ru: 'Поле {pane} должно содержать JSON-объект — получено {root}',
+    },
+    'status.analysis_failed': {
+      en: 'analysis failed',
+      uk: 'аналіз не виконано',
+      ru: 'анализ не выполнен',
+    },
+    // F-02 — the URL that was analysed is not always the URL that was pasted.
+    'repair.title': {
+      en: 'Your URL was repaired before analysis ({count} changes)',
+      uk: 'URL було відремонтовано перед аналізом (змін: {count})',
+      ru: 'URL был исправлен перед анализом (изменений: {count})',
+    },
+    'repair.pasted': {
+      en: 'you pasted',
+      uk: 'ти вставив(ла)',
+      ru: 'ты вставил(а)',
+    },
+    'repair.analysed': {
+      en: 'analysed',
+      uk: 'проаналізовано',
+      ru: 'проанализировано',
+    },
+    'repair.copy_hint': {
+      en: 'Copy hands back the repaired URL; the pane keeps your original.',
+      uk: 'Копіювання віддає відремонтований URL; у полі лишається твій оригінал.',
+      ru: 'Копирование отдаёт исправленный URL; в поле остаётся твой оригинал.',
+    },
+    'toast.copied_repaired_url': {
+      en: 'Copied the repaired URL — the pane still holds your original',
+      uk: 'Скопійовано відремонтований URL — у полі лишився твій оригінал',
+      ru: 'Скопирован исправленный URL — в поле остался твой оригинал',
+    },
+    // Repair step names, as emitted by packages/core/decoders/request/
+    // _input-repair.js. One key per `record(step, …)` call there.
+    'repair.step.trim': {
+      en: 'surrounding whitespace removed',
+      uk: 'прибрано пробіли по краях',
+      ru: 'убраны пробелы по краям',
+    },
+    'repair.step.invisible_chars': {
+      en: 'invisible characters removed',
+      uk: 'прибрано невидимі символи',
+      ru: 'убраны невидимые символы',
+    },
+    'repair.step.wrappers': {
+      en: 'wrapping brackets or quotes removed',
+      uk: 'прибрано обгортки — дужки або лапки',
+      ru: 'убраны обёртки — скобки или кавычки',
+    },
+    'repair.step.trailing_punctuation': {
+      en: 'trailing punctuation removed',
+      uk: 'прибрано розділовий знак у кінці',
+      ru: 'убран знак препинания в конце',
+    },
+    'repair.step.html_amp': {
+      en: 'HTML-escaped &amp; restored to &',
+      uk: 'HTML-екранований &amp; повернуто до &',
+      ru: 'HTML-экранированный &amp; возвращён к &',
+    },
+    'repair.step.scheme': {
+      en: 'missing scheme added',
+      uk: 'додано відсутню схему',
+      ru: 'добавлена отсутствующая схема',
+    },
     'empty.no_iab_categories': {
       en: 'No IAB categories in payload (cat[] / bcat[] / pcat[] empty)',
       uk: 'Жодних IAB-категорій у payload (cat[] / bcat[] / pcat[] порожні)',
