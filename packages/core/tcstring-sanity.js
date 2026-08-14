@@ -371,6 +371,83 @@ const dsToMs = (deciseconds) => deciseconds * 100;
  * @param {string} field
  * @returns {TcVendorSection|null}
  */
+/**
+ * Vendors named by a publisher restriction.
+ *
+ * This is NOT the layout used by VendorConsents and VendorLegitimateInterests.
+ * Those carry MaxVendorId(16) and an encoding flag, and may be a bitfield. A
+ * RestrictionEntry carries neither: the vendor list is always range-encoded, so
+ * the section is NumEntries(12) followed by the ranges.
+ *
+ * Reading it with the other parser consumed sixteen bits that are not there and
+ * misaligned everything after, which surfaced as a spurious
+ * `segment.unconsumed_bits` finding rather than as a failure. The round trip did
+ * not catch it either: the writer was symmetric with the reader, so the string
+ * re-encoded to its own misreading. A faithful reader/writer pair round-trips
+ * anything the reader accepts — it proves the parse is self-consistent, not that
+ * it is right. Cross-checking against a second implementation is what found it.
+ *
+ * @param {any} reader
+ * @param {Array<Object>} out
+ * @param {string} segmentName
+ * @param {string} field
+ * @returns {any}
+ */
+function parseRestrictionVendors(reader, out, segmentName, field) {
+  const section = /** @type {TcVendorSection} */ ({
+    maxVendorId: 0,
+    isRangeEncoding: true,
+    ids: [],
+    ranges: [],
+  });
+  const numEntries = readInt(reader, 12);
+  if (numEntries === null) return null;
+
+  /** @type {number[]} */
+  const ids = [];
+  for (let i = 0; i < numEntries; i += 1) {
+    const entryBit = reader.at;
+    const isRange = readInt(reader, 1);
+    const start = readInt(reader, 16);
+    if (isRange === null || start === null) return null;
+    const end = isRange === 1 ? readInt(reader, 16) : start;
+    if (end === null) return null;
+    section.ranges.push({ start, end, isRange: isRange === 1 });
+
+    if (start === 0) {
+      push(
+        out,
+        'vendor.range_start_zero',
+        LEVELS.ERROR,
+        segmentName,
+        `${field}.ranges[${i}].startVendorId`,
+        start,
+        '>= 1',
+        'Vendor ids start at 1, so a range entry beginning at 0 cannot describe any vendor.',
+        [entryBit, reader.at],
+      );
+    }
+    if (end < start) {
+      push(
+        out,
+        'vendor.range_inverted',
+        LEVELS.ERROR,
+        segmentName,
+        `${field}.ranges[${i}]`,
+        [start, end],
+        'endVendorId >= startVendorId',
+        'A range whose end precedes its start describes no vendors at all.',
+        [entryBit, reader.at],
+      );
+      continue;
+    }
+    for (let id = start; id <= end; id += 1) ids.push(id);
+  }
+  section.ids = ids;
+  if (section.ids.length) section.maxVendorId = Math.max(...section.ids);
+  return section;
+}
+
 function parseVendorSection(reader, out, segmentName, field) {
   const startBit = reader.at;
   const maxVendorId = readInt(reader, 16);
@@ -573,7 +650,12 @@ function parseCore(bits, out) {
         [entryBit, entryBit + 6],
       );
     }
-    const vendors = parseVendorSection(reader, out, 'core', `publisherRestrictions[${i}].vendors`);
+    const vendors = parseRestrictionVendors(
+      reader,
+      out,
+      'core',
+      `publisherRestrictions[${i}].vendors`,
+    );
     if (!vendors) return { core: null, reader, truncatedAt: entryBit };
     publisherRestrictions.push({ purposeId, restrictionType, vendors });
   }
@@ -621,7 +703,13 @@ function writeCore(core) {
   for (const restriction of core.publisherRestrictions) {
     bits += writeInt(restriction.purposeId, 6);
     bits += writeInt(restriction.restrictionType, 2);
-    bits += writeVendorSection(restriction.vendors);
+    // Range-only, matching parseRestrictionVendors: no MaxVendorId, no flag.
+    bits += writeInt(restriction.vendors.ranges.length, 12);
+    for (const entry of restriction.vendors.ranges) {
+      bits += entry.isRange
+        ? '1' + writeInt(entry.start, 16) + writeInt(entry.end, 16)
+        : '0' + writeInt(entry.start, 16);
+    }
   }
   return bits;
 }

@@ -91,6 +91,24 @@ function validateVast(adm, path) {
     findings.push(F('vast.wrapper_no_tag_uri', LEVELS.ERROR, path));
   }
 
+  // R5b. A Wrapper carrying more than one <Ad> while leaving
+  //      `allowMultipleAds` unset. The attribute decides whether the player
+  //      renders every ad or only the first, and the omitted value is not the
+  //      same everywhere: VAST prose defaults it to false, VMAP prose defaults
+  //      it to true, and no schema declares either — measured across
+  //      vast4.xsd, vast_4.1.xsd, vast_4.2.xsd and vast_4.4.xsd, where all
+  //      three wrapper controls are bare `xs:boolean` with no `default=`.
+  //      So the same document plays one ad or several depending on the layer
+  //      it is embedded in, and the author's intent cannot be recovered from
+  //      the tag.
+  if (hasWrapper && countTag(adm, 'Ad') > 1 && !/\ballowMultipleAds\s*=/i.test(adm)) {
+    findings.push(
+      F('vast.wrapper_multiple_ads_ambiguous', LEVELS.WARNING, path, {
+        ads: countTag(adm, 'Ad'),
+      }),
+    );
+  }
+
   // R6. Insecure http:// URLs in security-critical tags. SSPs running
   //     on https sites will silently reject these for mixed-content.
   //     We scan a focused set: MediaFile, VASTAdTagURI, Impression,

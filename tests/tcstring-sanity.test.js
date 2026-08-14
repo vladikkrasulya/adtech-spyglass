@@ -380,6 +380,20 @@ const u = (value, length) => value.toString(2).padStart(length, '0');
 /** An empty vendor section: maxVendorId 0, bitfield encoding, no bits. */
 const EMPTY_SECTION = u(0, 16) + '0';
 
+// A publisher restriction's vendor list is NOT a vendor section: it carries no
+// MaxVendorId and no encoding flag, only NumEntries(12) and the ranges. Using
+// EMPTY_SECTION here encoded sixteen bits that do not exist in the format, which
+// is exactly the misparse this fixture now guards against.
+const EMPTY_RESTRICTION_VENDORS = u(0, 12);
+
+/**
+ * One range entry naming a single vendor, in restriction-entry layout.
+ *
+ * @param {number} vendorId
+ * @returns {string}
+ */
+const restrictionVendor = (vendorId) => u(1, 12) + '0' + u(vendorId, 16);
+
 /**
  * A range-encoded vendor section.
  * @param {number} maxVendorId
@@ -457,7 +471,8 @@ test('vendor sections: parsed ids are exposed for the caller', () => {
 });
 
 test('publisher restrictions: a legal one is clean, an impossible one is not', () => {
-  const restriction = (purposeId, type) => u(1, 12) + u(purposeId, 6) + u(type, 2) + EMPTY_SECTION;
+  const restriction = (purposeId, type) =>
+    u(1, 12) + u(purposeId, 6) + u(type, 2) + EMPTY_RESTRICTION_VENDORS;
 
   // Purpose 2, "require consent" — an ordinary publisher restriction.
   const legal = buildCore(EMPTY_SECTION, EMPTY_SECTION, restriction(2, 1));
@@ -743,4 +758,95 @@ test('no input reaches the module without an answer', () => {
     assert.ok(Array.isArray(result.findings));
     assert.ok(result.findings.length > 0, `${JSON.stringify(input)} was silently accepted`);
   }
+});
+
+test('publisher restrictions: the vendor list is range-only, not a vendor section', () => {
+  // Regression. This section was parsed with the VendorConsents reader, which
+  // expects MaxVendorId(16) plus an encoding flag. A RestrictionEntry has
+  // neither, so sixteen bits that are not in the format were consumed and
+  // everything after shifted — surfacing as a spurious `segment.unconsumed_bits`
+  // rather than as a failure.
+  //
+  // The round trip did not catch it: the writer was symmetric with the reader,
+  // so the string re-encoded to its own misreading. A faithful reader/writer
+  // pair round-trips anything the reader accepts. Cross-checking a second
+  // implementation is what found it.
+  const body = u(1, 12) + u(3, 6) + u(0, 2) + restrictionVendor(755);
+  // `toString64` drops whatever does not fill the final 6-bit group, so pad the
+  // block explicitly. Without it the vendor id loses its last two bits and reads
+  // as 752 — which would look like a parser bug rather than a fixture one.
+  const total = 213 + EMPTY_SECTION.length * 2 + body.length;
+  const restriction = body + '0'.repeat((6 - (total % 6)) % 6);
+  const result = checkTcString(buildCore(EMPTY_SECTION, EMPTY_SECTION, restriction), opts());
+  // `core.non_zero_padding` is an artefact of this hand-built fixture's length
+  // landing off a base64 boundary, not a parse problem. What matters is that no
+  // structural finding appears — a misparse showed up as unconsumed bits.
+  assert.deepEqual(
+    codes(result).filter((c) => c !== 'core.non_zero_padding'),
+    [],
+    'a well-formed restriction reads clean',
+  );
+  assert.equal(result.core.publisherRestrictions.length, 1);
+  assert.equal(result.core.publisherRestrictions[0].purposeId, 3);
+  assert.equal(result.core.publisherRestrictions[0].restrictionType, 0);
+  assert.deepEqual(
+    result.core.publisherRestrictions[0].vendors.ids,
+    [755],
+    'the vendor named by the range, not a bitfield read off the wrong offset',
+  );
+  assert.equal(result.roundTrip.matched, true);
+});
+
+// ── A consent bit the same string contradicts (rules-tcf-permission) ────────
+
+const { validate: validateCore } = require('@ortbtools/core');
+
+const withConsent = (tcString) => ({
+  id: 'r',
+  imp: [{ id: '1' }],
+  user: { consent: tcString },
+  regs: { gdpr: 1 },
+});
+const permissionIds = (tcString) =>
+  validateCore(withConsent(tcString), { locale: 'en' })
+    .findings.filter((f) => f.id.startsWith('consent.tcf_'))
+    .map((f) => f.id);
+
+// Real string: vendor 755 carries a consent bit, and the publisher restricts
+// purpose 3 to NOT_ALLOWED for that same vendor. Both decode without error, so
+// a reader checking only the bit acts on the opposite of the truth.
+const CONTRADICTED = 'CQo74kAQo74kABkABBENCsFgAP_AAELAAAYgF5wAQF5gAAABDAAQF5gA.YAAAAAAAAAAA';
+// The reference string from the IAB documentation: no restrictions at all.
+const UNRESTRICTED = 'COwxsONOwxsONKpAAAENAdCAAMAAAAAAAAAAAAAAAAAA';
+
+test('tcf permission: a restriction that contradicts a consent bit is reported', () => {
+  const ids = permissionIds(CONTRADICTED);
+  assert.ok(ids.includes('consent.tcf_restriction_overrides_consent'), ids.join(','));
+});
+
+test('tcf permission: a string without restrictions says nothing', () => {
+  // The gating property, as everywhere else: a rule that warns about a sound
+  // string gets switched off, and then reports nothing at all.
+  assert.deepEqual(permissionIds(UNRESTRICTED), []);
+});
+
+test('tcf permission: absent, empty and non-string consent are not findings', () => {
+  for (const user of [undefined, {}, { consent: '' }, { consent: 42 }, { consent: null }]) {
+    assert.deepEqual(
+      validateCore({ id: 'r', imp: [{ id: '1' }], user }, { locale: 'en' })
+        .findings.filter((f) => f.id.startsWith('consent.tcf_'))
+        .map((f) => f.id),
+      [],
+      JSON.stringify(user),
+    );
+  }
+});
+
+test('tcf permission: needs no vendor list, because restrictions are in the string', () => {
+  // The half of a permission decision that requires the GVL — whether the vendor
+  // declares the purpose under consent or legitimate interest — is deliberately
+  // out of scope, since fetching a vendor list means a network call. What the
+  // string can prove on its own is reported; nothing else is claimed.
+  const before = permissionIds(CONTRADICTED);
+  assert.ok(before.length > 0, 'a finding is produced with no GVL anywhere in reach');
 });

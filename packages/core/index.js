@@ -33,6 +33,7 @@ const { validateUrlRequest } = require('./rules-request-url');
 const { validateRawJson } = require('./rules-raw-json');
 const { validateUnknownFields } = require('./rules-unknown-fields');
 const { validateConsent } = require('./rules-consent');
+const { validateTcfPermission } = require('./rules-tcf-permission');
 const { decodeRequest } = require('./decoders/request');
 const { crosscheck: doCrosscheck, nativeAssetCrosscheck } = require('./crosscheck');
 const { mirror: doMirror } = require('./mirror');
@@ -135,13 +136,21 @@ function validate(payload, opts) {
   // A TCF consent string that decodes into different consent rather than
   // failing to decode. Reads `user.consent` and its pre-2.6 home.
   const consentFindings = isObj(payload) ? validateConsent(payload).findings : [];
+  // A consent bit the same string contradicts. Needs no vendor list: publisher
+  // restrictions travel inside the string.
+  const permissionFindings = isObj(payload) ? validateTcfPermission(payload).findings : [];
   // Shadows the module-level `finalize` for the rest of this function so every
   // exit path carries the raw findings. There are seven returns and adding the
   // merge at each of them is how one gets forgotten.
   const finalize = (result, ...rest) =>
     finalizeResult(
       Object.assign({}, result, {
-        findings: rawFindings.concat(unknownFieldFindings, consentFindings, result.findings || []),
+        findings: rawFindings.concat(
+          unknownFieldFindings,
+          consentFindings,
+          permissionFindings,
+          result.findings || [],
+        ),
       }),
       ...rest,
     );

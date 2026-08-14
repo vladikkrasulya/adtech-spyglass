@@ -904,3 +904,43 @@ test('validateVast: NonLinear missing both dimensions → nonlinear_no_dimension
   assert.ok(f);
   assert.equal(f.params.count, 1);
 });
+
+// ── Wrapper controls whose default depends on the layer ────────────────────
+
+const wrapperDoc = (attr, ads) => {
+  const ad = (i) =>
+    `<Ad id="${i}"><Wrapper${attr}><AdSystem>s</AdSystem>` +
+    `<VASTAdTagURI><![CDATA[https://vendor.example/v]]></VASTAdTagURI>` +
+    `<Impression><![CDATA[https://vendor.example/i]]></Impression></Wrapper></Ad>`;
+  return `<VAST version="4.2">${Array.from({ length: ads }, (_, i) => ad(i + 1)).join('')}</VAST>`;
+};
+
+const { validate: validateForVast } = require('@ortbtools/core');
+
+const ambiguityIds = (adm) =>
+  validateForVast(
+    { id: 'r', seatbid: [{ seat: 's', bid: [{ id: 'b', impid: '1', price: 1, adm }] }] },
+    { locale: 'en' },
+  )
+    .findings.filter((f) => f.id === 'vast.wrapper_multiple_ads_ambiguous')
+    .map((f) => f.id);
+
+test('vast: a multi-ad wrapper without allowMultipleAds is ambiguous', () => {
+  // Measured across vast4.xsd, vast_4.1.xsd, vast_4.2.xsd and vast_4.4.xsd: all
+  // three wrapper controls are declared as bare xs:boolean with no `default=`,
+  // so the default lives only in prose — and the prose differs by layer. VAST
+  // says false, VMAP says true, for the same attribute name. The tag therefore
+  // plays one ad or several depending on where it is embedded.
+  assert.deepEqual(ambiguityIds(wrapperDoc('', 2)), ['vast.wrapper_multiple_ads_ambiguous']);
+});
+
+test('vast: setting the attribute either way resolves it', () => {
+  // The point is not which value is right — it is that the author said nothing.
+  assert.deepEqual(ambiguityIds(wrapperDoc(' allowMultipleAds="true"', 2)), []);
+  assert.deepEqual(ambiguityIds(wrapperDoc(' allowMultipleAds="false"', 2)), []);
+});
+
+test('vast: a single-ad wrapper has no ambiguity to report', () => {
+  // Silence on a document where the attribute changes nothing.
+  assert.deepEqual(ambiguityIds(wrapperDoc('', 1)), []);
+});
