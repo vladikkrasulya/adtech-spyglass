@@ -6,6 +6,32 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.11.2 — the Inspector on its own type scale, and a preview that says what it needs
+
+- Put the Inspector on the type scale `design-system.css` already defines. It rendered fourteen
+  distinct sizes on one screen, 121 elements at 10px or below and one at 8px, while the scale's own
+  body size appeared on 9 elements out of ~450. 55 literals now read `--fs-*` tokens; measured on a
+  served build, nine rendered sizes became six with nothing below 11px.
+- Stopped the creative preview offering to reveal a creative that is not there. The overlay covers
+  the whole box and invited "Show creative" unconditionally, so on an empty page and on any
+  request-only analysis it sat on top of an empty rectangle — click it and the blur lifts off
+  nothing. It was also covering the panel's own instructions: "waiting for adm — paste BidResponse"
+  was underneath it the whole time, and creatives arrive in the BidResponse exactly as it said.
+- Abbreviated the analysis bar's labels and gave each one a hint explaining what the column holds.
+  The bar gets the width of the centre column — 540px for six labelled cells at a 1440px window —
+  so every pixel a label takes is paid for by a value, and a reader can infer a label from its
+  column while nobody can infer a price from `Floor: 0.3…`. Ukrainian and Russian gain the most:
+  their labels are longer and were truncating where English was not.
+- `.analysis-strip-label` stays at 9px as the one deliberate exception, budgeted and named in
+  `tests/type-scale.test.js` rather than excluded from it.
+- New guards, each mutation-checked: `tests/type-scale.test.js` is a ratchet over all 18
+  stylesheets — a count that must match exactly, so a size cannot creep back and an improvement
+  cannot be quietly absorbed; `tests/creative-preview-gate.test.js` ties the reveal control to the
+  flag that knows whether a creative exists; and the strip's own test now requires every
+  abbreviated label to carry a hint in all three locales, since a missing one renders as a
+  bracketed id in that language alone.
+- App version bumped `1.11.1 → 1.11.2`; Core remains `0.35.0` and CLI remains `0.1.1`.
+
 ### v1.11.1 — the verdict reports everything that needs action
 
 - Fixed the verdict line naming only its loudest severity. Its condition chain stopped at the first
