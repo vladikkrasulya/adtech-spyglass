@@ -167,24 +167,6 @@ export function isUrlLikeInput(text) {
   return looksLikeSchemelessUrl(core);
 }
 
-/**
- * Strict: a well-formed absolute http(s) URL. Display-grade, used by the badge.
- *
- * Deliberately NOT widened along with the routing test: the badge speaks about
- * the text as typed, so a wrapped or schemeless paste still reads "invalid"
- * there while analysing as a URL — the same split the mangled-URL case has
- * always had.
- */
-export function isHttpUrlInput(text) {
-  if (!isUrlLikeInput(text)) return false;
-  try {
-    const parsed = new URL(text.trim());
-    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.hostname;
-  } catch {
-    return false;
-  }
-}
-
 export function parseRequestInput(text) {
   if (!text) return {};
 
@@ -210,19 +192,64 @@ export function serializeRequestInput(value) {
     : JSON.stringify(value, null, 2);
 }
 
+/**
+ * What the badge says, and why it asks the routing test rather than a stricter one.
+ *
+ * The badge names the format the input is about to be analysed AS. It is not a
+ * second opinion on whether the URL is any good — the server owns that verdict,
+ * and answers it with a message and a `repairs[]` record no four-state chip can
+ * compete with.
+ *
+ * It used to call a display-grade `isHttpUrlInput()`: `isUrlLikeInput()` first,
+ * then a strict `new URL()` on the text AS TYPED. That second judgement had
+ * exactly one caller — this function — and it disagreed with the one judgement
+ * the app acts on. Measured across the shapes the server repair contract
+ * accepts, six inputs read "invalid" here while the analyser produced a clean
+ * URL request from them:
+ *
+ *   feed.vendor.example/search?a=1                  invalid  ->  URL request
+ *   //feed.vendor.example/search?a=1                invalid  ->  URL request
+ *   <https://feed.vendor.example/search?a=1>        invalid  ->  URL request
+ *   [feed](https://feed.vendor.example/search?a=1)  invalid  ->  URL request
+ *   U+200B + https://feed.vendor.example/search…    invalid  ->  URL request
+ *   ftp://h.example/link                            invalid  ->  URL request
+ *
+ * So the operator was told their paste was broken and then watched it analyse.
+ *
+ * Mirroring `repairInput()` into the browser and re-running the strict test on
+ * the REPAIRED text was the obvious repair, and it was measured too: it fixes
+ * the first five and leaves `ftp://` disagreeing, because that one is routed to
+ * the server precisely so the server can answer about the scheme. Two
+ * judgements kept in agreement by care, at the cost of a mirrored module and a
+ * browser global — still disagreeing.
+ *
+ * There is only one judgement now. The badge calls `isUrlLikeInput()` — the
+ * same function `parseRequestInput()` routes on, in the same order, JSON first
+ * — so it cannot disagree with what happens next. Nothing keeps them in sync
+ * because there are not two things to sync. The permissiveness is bounded by
+ * that function's own guards, which `tests/inspector-request-input.test.js`
+ * pins: `request.json`, `2.5.1`, `12:30` and a trailing comma all keep their
+ * JSON error here exactly as they keep it there.
+ */
 export function inputBadgeState(text, opts = {}) {
   const trimmed = typeof text === 'string' ? text.trim() : '';
   if (!trimmed) return { kind: 'empty', key: 'badge.empty' };
-  if (opts.allowUrl && isHttpUrlInput(trimmed)) {
-    return { kind: 'url', key: 'badge.url_request' };
-  }
 
+  // JSON first, mirroring parseRequestInput's own order rather than relying on
+  // the invariant that the two tests are mutually exclusive. They are, and a
+  // test pins it — but a badge that shadows the router's control flow stays
+  // truthful even on the day that invariant is what broke.
   try {
     JSON.parse(trimmed);
     return { kind: 'valid', key: 'badge.valid' };
   } catch {
-    return { kind: 'invalid', key: 'badge.invalid' };
+    /* not JSON — fall through to the same URL question the router asks */
   }
+
+  if (opts.allowUrl && isUrlLikeInput(trimmed)) {
+    return { kind: 'url', key: 'badge.url_request' };
+  }
+  return { kind: 'invalid', key: 'badge.invalid' };
 }
 
 export function renderInputBadge(text, badge, translate, opts = {}) {

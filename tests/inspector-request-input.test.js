@@ -46,16 +46,18 @@ test('a mangled URL still routes as a URL request instead of aborting the analys
   // from the FIRST line of runAnalysis — so the response pane's findings and
   // the history entry were lost, and the toast blamed JSON for a URL. The
   // baseline passed anything /^https?:\/\//i through verbatim and let the
-  // server render a verdict about it. Routing must stay that permissive;
-  // only the BADGE uses the strict well-formedness test.
-  const { parseRequestInput, isUrlLikeInput, isHttpUrlInput } = await loadSubject(
+  // server render a verdict about it. Routing must stay that permissive, and
+  // the badge now reports that routing rather than second-guessing it.
+  const { parseRequestInput, isUrlLikeInput, inputBadgeState } = await loadSubject(
     'inspector-request-input-mangled',
   );
   const mangled = 'http://feed vendor.example/link?format=json&feed=1&auth=t';
   assert.equal(parseRequestInput(mangled), mangled, 'must pass through, not throw');
   assert.equal(parseRequestInput('http://'), 'http://');
   assert.equal(isUrlLikeInput(mangled), true);
-  assert.equal(isHttpUrlInput(mangled), false, 'strict test still calls it malformed');
+  // A mangled URL reads as a URL request because that is what it becomes. The
+  // verdict about how mangled it is comes from the server, with the bytes.
+  assert.equal(inputBadgeState(mangled, { allowUrl: true }).kind, 'url');
 });
 
 test('History round-trips a JSON string scalar without corrupting it', async () => {
@@ -194,23 +196,77 @@ test('the widened gate keeps serialize/parse symmetrical across History', async 
   }
 });
 
-test('the badge stays strict while routing got permissive', async () => {
-  // isHttpUrlInput is display-grade and deliberately did NOT widen: a wrapped
-  // or schemeless paste still reads "invalid" on the badge while analysing as
-  // a URL — the same split the mangled-URL case has always had.
-  const { isUrlLikeInput, isHttpUrlInput, inputBadgeState } = await loadSubject(
-    'inspector-request-input-badge-strict',
+test('the badge reads invalid exactly when the router rejects the text', async () => {
+  // The badge used to run its own stricter judgement (`isHttpUrlInput`: the
+  // routing test, then a strict `new URL()` on the text AS TYPED). It had one
+  // caller — the badge — and it disagreed with the judgement the app acts on,
+  // so six of the shapes below read "invalid" while analysing as clean URL
+  // requests. The operator was told the paste was broken and then watched it
+  // work.
+  //
+  // Mirroring repairInput() into the browser and re-testing the REPAIRED text
+  // was measured as the alternative: it fixes five and leaves `ftp://`
+  // disagreeing, since that one is routed to the server precisely so the
+  // server can answer about the scheme. So the second judgement is gone rather
+  // than mirrored.
+  //
+  // Derived, not restated: the expected badge kind is read off the router for
+  // each input. A hand-written table of expected kinds would be another record
+  // describing behaviour it is never checked against — the defect this
+  // replaced, wearing the test's hat.
+  const { parseRequestInput, inputBadgeState } = await loadSubject(
+    'inspector-request-input-badge-router',
   );
 
-  for (const [input] of REPAIRABLE_SHAPES) {
-    assert.equal(isUrlLikeInput(input), true, input);
-    assert.equal(isHttpUrlInput(input), false, `badge must not call ${input} well-formed`);
-    assert.equal(inputBadgeState(input, { allowUrl: true }).kind, 'invalid', input);
+  const corpus = [
+    ...REPAIRABLE_SHAPES.map(([input]) => input),
+    'https://feed.example/search?x=1',
+    'ftp://h.example/link',
+    'http://feed vendor.example/link?a=1',
+    'http://',
+    'request.json',
+    '2.5.1',
+    '12:30',
+    'NaN',
+    'SELECT * FROM bids;',
+    '// TODO: fix the feed',
+    '{"id":"r1",}',
+    '{"id":"r1","imp":[]}',
+    '[1,2]',
+    '"hello"',
+    '"https://feed.example/link?a=1"',
+    '1.5',
+  ];
+
+  for (const input of corpus) {
+    let routerAccepts = true;
+    try {
+      parseRequestInput(input);
+    } catch {
+      routerAccepts = false;
+    }
+
+    const kind = inputBadgeState(input, { allowUrl: true }).kind;
+    assert.equal(
+      kind === 'invalid',
+      !routerAccepts,
+      `badge says "${kind}" but the router ${routerAccepts ? 'accepts' : 'rejects'} ` +
+        JSON.stringify(input),
+    );
   }
 
-  // A clean URL is unaffected in both directions.
-  assert.equal(isHttpUrlInput('https://feed.example/search?x=1'), true);
+  // The two accepting kinds stay distinguishable — agreeing with the router is
+  // the invariant, but the badge must still tell JSON from a URL request.
   assert.equal(inputBadgeState('https://feed.example/search?x=1', { allowUrl: true }).kind, 'url');
+  assert.equal(inputBadgeState('{"id":"r1","imp":[]}', { allowUrl: true }).kind, 'valid');
+  // A quoted URL is a JSON string scalar and must read as JSON, not as a URL —
+  // the History round-trip above depends on that branch, not on this one.
+  assert.equal(
+    inputBadgeState('"https://feed.example/link?a=1"', { allowUrl: true }).kind,
+    'valid',
+  );
+  // Without allowUrl the URL branch is unreachable and a URL is just bad JSON.
+  assert.equal(inputBadgeState('https://feed.example/search?x=1').kind, 'invalid');
 });
 
 test('a non-http scheme reaches the server so it can answer about the scheme', async () => {
@@ -218,8 +274,13 @@ test('a non-http scheme reaches the server so it can answer about the scheme', a
   // operator typed `javascript:`/`mailto:`/`ftp:` themselves; answering about
   // the scheme beats answering about JSON". The old `^https?://` gate made
   // that answer unreachable: `ftp://h.example/link` died as a JSON error.
-  const { parseRequestInput, isHttpUrlInput } = await loadSubject('inspector-request-input-scheme');
+  const { parseRequestInput, inputBadgeState } = await loadSubject(
+    'inspector-request-input-scheme',
+  );
 
   assert.equal(parseRequestInput('ftp://h.example/link'), 'ftp://h.example/link');
-  assert.equal(isHttpUrlInput('ftp://h.example/link'), false, 'badge still calls it not-a-URL');
+  // The badge says "URL request" because that is exactly what the app is about
+  // to make of it. Whether the scheme is supported is the server's answer, and
+  // it is a better one than a red chip: `unsupported_scheme`, with the bytes.
+  assert.equal(inputBadgeState('ftp://h.example/link', { allowUrl: true }).kind, 'url');
 });
