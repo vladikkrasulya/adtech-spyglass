@@ -22,6 +22,7 @@
  */
 
 const logger = require('../../logger');
+const { repairInput } = require('./_input-repair');
 
 const DECODERS = [
   require('./url-clickunder-feed'),
@@ -74,21 +75,43 @@ function summarizeUrl(u) {
 function decodeRequest(text) {
   if (typeof text !== 'string' || text.length === 0) return null;
 
+  // Repair transport artifacts first, always — not inside the catch. Measured:
+  // `?a=1&amp;b=2` and `?q=shoes)` parse without throwing, so a repair-on-
+  // failure strategy never sees them and the damaged value reaches the
+  // operator as if they had typed it.
+  const { text: repaired, repairs, warnings } = repairInput(text);
+
   let parsedUrl;
   try {
-    parsedUrl = new URL(text);
+    parsedUrl = new URL(repaired);
   } catch (e) {
-    return { ok: false, reason: 'unparseable', detail: String((e && e.message) || e) };
+    return {
+      ok: false,
+      reason: 'unparseable',
+      detail: String((e && e.message) || e),
+      repairs,
+      warnings,
+    };
   }
 
   if (!ALLOWED_SCHEMES.has(parsedUrl.protocol)) {
-    return { ok: false, reason: 'unsupported_scheme', scheme: parsedUrl.protocol };
+    return {
+      ok: false,
+      reason: 'unsupported_scheme',
+      scheme: parsedUrl.protocol,
+      repairs,
+      warnings,
+    };
   }
 
   for (const dec of DECODERS) {
     let claimed = false;
     try {
-      claimed = !!dec.detect(text, parsedUrl);
+      // Decoders see the repaired string, never the raw paste: it is what
+      // `parsedUrl` was built from, so `canonical.url` and `canonical._raw`
+      // describe one and the same request. The original is still recoverable
+      // as `repairs[0].before` whenever anything was repaired at all.
+      claimed = !!dec.detect(repaired, parsedUrl);
     } catch (e) {
       logger.error(
         { decoderId: dec.id, phase: 'detect', err: e },
@@ -98,19 +121,31 @@ function decodeRequest(text) {
     }
     if (!claimed) continue;
     try {
-      return dec.decode(text, parsedUrl);
+      const canonical = dec.decode(repaired, parsedUrl);
+      canonical.repairs = repairs;
+      // Merge rather than assign: the decoder has already recorded its own
+      // warnings (a query value percent-decoding destroyed, say), and those
+      // are about a different layer than the repair ones.
+      canonical.warnings = [...warnings, ...(canonical.warnings || [])];
+      return canonical;
     } catch (e) {
       logger.error(
         { decoderId: dec.id, phase: 'decode', err: e },
         '[request-decoder] plugin threw',
       );
-      return { ok: false, reason: 'decoder_threw', detail: String((e && e.message) || e) };
+      return {
+        ok: false,
+        reason: 'decoder_threw',
+        detail: String((e && e.message) || e),
+        repairs,
+        warnings,
+      };
     }
   }
   // A perfectly good URL that no decoder recognizes. Say so, and say what we
   // read, so the caller can tell the operator which signature was missing
   // instead of showing the same blank as an unparseable string.
-  return { ok: false, reason: 'no_decoder', parsed: summarizeUrl(parsedUrl) };
+  return { ok: false, reason: 'no_decoder', parsed: summarizeUrl(parsedUrl), repairs, warnings };
 }
 
 /**

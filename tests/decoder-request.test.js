@@ -16,6 +16,7 @@ const assert = require('node:assert/strict');
 
 const { makeCanonicalUrlRequest } = require('@ortbtools/core/decoders/request/_canonical');
 const { decodeRequest, info } = require('@ortbtools/core/decoders/request');
+const { repairInput } = require('@ortbtools/core/decoders/request/_input-repair');
 const urlLinkfeed = require('@ortbtools/core/decoders/request/url-linkfeed');
 const urlSearchFeed = require('@ortbtools/core/decoders/request/url-search-feed');
 
@@ -522,13 +523,36 @@ test('decodeRequest: only http(s) is accepted, with the scheme named', () => {
   }
 });
 
-test('decodeRequest: a bare host:port reads as a scheme and is refused as one', () => {
-  // `adserver:8080/feed` parses with protocol `adserver:`, so it lands here
-  // rather than looking like a feed. Layer 1 is what will turn it into
-  // `https://adserver:8080/feed` before it ever reaches this gate.
+test('decodeRequest: a bare host:port is repaired, not refused as a scheme', () => {
+  // Before layer 1 was wired this returned unsupported_scheme `adserver:`,
+  // because `adserver:8080/feed` genuinely parses that way. The repair layer
+  // now recognises the numeric port and prefixes https:// first, which is the
+  // interaction the A1 commit predicted. Docker hostnames are the real case.
   const r = decodeRequest('adserver:8080/feed');
-  assert.equal(r.reason, 'unsupported_scheme');
-  assert.equal(r.scheme, 'adserver:');
+  assert.notEqual(r.reason, 'unsupported_scheme');
+  assert.deepEqual(
+    r.repairs.map((x) => x.step),
+    ['scheme'],
+  );
+  assert.equal(r.repairs[0].after, 'https://adserver:8080/feed');
+  // Still not a feed we know — but now for the honest reason.
+  assert.equal(r.reason, 'no_decoder');
+  assert.equal(r.parsed.host, 'adserver:8080');
+});
+
+test('decodeRequest: a scheme we cannot fetch is still refused after repair', () => {
+  // The repair layer must not launder javascript:/data:/file: into something
+  // fetchable. It leaves them alone, and the registry gate still fires.
+  for (const [input, scheme] of [
+    ['javascript:alert(1)', 'javascript:'],
+    ['"javascript:alert(1)"', 'javascript:'],
+    ['data:text/html,<b>x', 'data:'],
+    ['mailto:ops@vendor.example', 'mailto:'],
+  ]) {
+    const r = decodeRequest(input);
+    assert.equal(r.reason, 'unsupported_scheme', input);
+    assert.equal(r.scheme, scheme, input);
+  }
 });
 
 test('decodeRequest: unsupported_scheme is distinct from the other refusals', () => {
@@ -569,4 +593,89 @@ test('url-search-feed.detect: userinfo and fragment stay a decoder concern', () 
     false,
   );
   assert.equal(urlSearchFeed.detect('', new URL(`https://feed.vendor.example/search${q}`)), true);
+});
+
+// ── Input repair wired into the registry (spec §3, layer 1 + layer 2) ───────
+
+test('decodeRequest: repairs run always, not only when parsing fails', () => {
+  // Measured reason for "always": both of these parse without throwing, so a
+  // repair-on-failure strategy never sees them and the damaged value reaches
+  // the operator looking like their own input.
+  const paren = decodeRequest(
+    'https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=shoes)',
+  );
+  assert.equal(paren._raw.query, 'shoes', 'trailing paren gone — this is D3');
+  const amp = decodeRequest(
+    'https://feed.vendor.example/search?format=json&amp;feed=demo&amp;auth=tk&amp;query=shoes',
+  );
+  assert.equal(amp.variant, 'url-search-feed', 'html-escaped separators no longer hide the feed');
+  assert.equal(amp._raw.query, 'shoes');
+});
+
+test('decodeRequest: canonical url is the repaired string, and _raw agrees with it', () => {
+  // The two must describe one request. `url` is also what the operator should
+  // copy onward, so it cannot be the raw paste.
+  const c = decodeRequest(
+    '[feed](https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=shoes)',
+  );
+  assert.equal(
+    c.url,
+    'https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=shoes',
+  );
+  assert.equal(c._raw.query, 'shoes');
+  assert.equal(
+    c.repairs[0].before,
+    '[feed](https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=shoes)',
+    'the original paste is recoverable',
+  );
+});
+
+test('decodeRequest: repairs are ordered and named per applied step', () => {
+  const c = decodeRequest(
+    '  "feed.vendor.example/search?format=json&amp;feed=demo&amp;auth=tk&amp;query=shoes)."  ',
+  );
+  assert.deepEqual(
+    c.repairs.map((r) => r.step),
+    ['trim', 'wrappers', 'trailing_punctuation', 'html_amp', 'scheme'],
+  );
+  assert.equal(c.variant, 'url-search-feed');
+});
+
+test('decodeRequest: a clean paste reports no repairs at all', () => {
+  const c = decodeRequest(SEARCH_FEED_URL);
+  assert.deepEqual(c.repairs, []);
+});
+
+test('decodeRequest: repair warnings and decoder warnings both survive', () => {
+  // Different layers, one array: the repair layer declined to guess at an
+  // ambiguous double escape, and the decoder found a macro that percent-
+  // decoding destroyed.
+  const c = decodeRequest(
+    'https://ads.vendor.example/feed?format=cu&cb=%%CACHEBUSTER%%&x=a&amp;amp;b=2',
+  );
+  const codes = c.warnings.map((w) => w.code);
+  assert.ok(codes.includes('query_double_escaped_entity'), 'repair-layer warning');
+  assert.ok(codes.includes('query_value_decode_damage'), 'decoder-layer warning');
+});
+
+test('decodeRequest: refusals carry repairs and warnings too', () => {
+  // A refusal is where the operator most needs to see what we changed —
+  // otherwise they cannot tell whether our repair caused the refusal.
+  const r = decodeRequest('"not a url"');
+  assert.equal(r.reason, 'unparseable');
+  assert.deepEqual(
+    r.repairs.map((x) => x.step),
+    ['wrappers'],
+  );
+  assert.ok(Array.isArray(r.warnings));
+});
+
+test('repairInput: never throws, whatever it is handed', () => {
+  // decodeRequest screens non-strings, but this is a public pure function.
+  for (const bad of [null, undefined, 42, {}, [], NaN]) {
+    // @ts-ignore — intentional wrong type for robustness testing
+    const r = repairInput(bad);
+    assert.equal(r.text, '');
+    assert.deepEqual(r.repairs, []);
+  }
 });

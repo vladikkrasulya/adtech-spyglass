@@ -51,8 +51,18 @@
  *                                       a lossy projection of it.
  * @property {Array<Object>} warnings    Things left untouched but worth
  *                                       flagging, e.g. a query value that
- *                                       percent-decoding destroyed. Never a
- *                                       reason to reject on its own.
+ *                                       percent-decoding destroyed, or an
+ *                                       ambiguous double-escaped entity the
+ *                                       repair layer declined to guess at.
+ *                                       Never a reason to reject on its own.
+ * @property {Array<{step: string, before: string, after: string}>} [repairs]
+ *                                       What the input-repair layer changed
+ *                                       before parsing, in application order —
+ *                                       one entry per step that altered the
+ *                                       string. Attached by the registry, not
+ *                                       by the decoder. Empty when the paste
+ *                                       arrived clean; `repairs[0].before` is
+ *                                       the operator's original text.
  * @property {Object} meta
  * @property {string} meta.detectedVariant
  */

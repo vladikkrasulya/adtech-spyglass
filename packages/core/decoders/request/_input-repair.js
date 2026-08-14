@@ -244,6 +244,10 @@ function repairInput(input) {
   const repairs = [];
   /** @type {Array<{ step: string, code: string, detail: string }>} */
   const warnings = [];
+  // `decodeRequest` already screens non-strings, but this is a public pure
+  // function and throwing a TypeError on one is a worse answer than saying
+  // there was nothing to repair.
+  if (typeof input !== 'string') return { text: '', repairs, warnings };
   let text = input;
 
   /**
@@ -278,7 +282,9 @@ function repairInput(input) {
   if (DOUBLE_ESCAPED_HTML_AMP.test(text)) {
     warnings.push({
       step: 'html_amp',
-      code: 'double_escaped_amp',
+      // Named for the `query_*` convention the canonical envelope's warnings
+      // already use, so one vocabulary reaches the operator.
+      code: 'query_double_escaped_entity',
       detail: 'Ambiguous double-escaped &amp; sequence left unchanged.',
     });
   }

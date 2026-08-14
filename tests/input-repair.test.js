@@ -468,7 +468,10 @@ test('repairInput: double escaping warns without changing ambiguous text', () =>
   assert.equal(result.text, '?x=a&amp;amp;b=2');
   assert.equal(result.warnings.length, 1);
   assert.equal(result.warnings[0].step, 'html_amp');
-  assert.equal(result.warnings[0].code, 'double_escaped_amp');
+  // Renamed on merge to match the `query_*` vocabulary the canonical
+  // envelope's own warnings already use, so the operator sees one naming
+  // scheme rather than two.
+  assert.equal(result.warnings[0].code, 'query_double_escaped_entity');
   assert.equal(typeof result.warnings[0].detail, 'string');
 });
 
