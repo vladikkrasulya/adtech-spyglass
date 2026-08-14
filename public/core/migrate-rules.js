@@ -51,6 +51,13 @@
       rationale: 'Promote the standardized GDPR flag from its pre-2.6 extension location.',
     },
     {
+      id: 'ortb26.regs.us_privacy',
+      spec: `${SPEC_BASE}#323---object-regs`,
+      confidence: 'certain',
+      rationale:
+        'Promote the US Privacy (CCPA) string from its pre-2.6 extension location, where a 2.6 reader does not look for it.',
+    },
+    {
       id: 'ortb26.source.schain',
       spec: `${SPEC_BASE}#322---object-source`,
       confidence: 'likely',

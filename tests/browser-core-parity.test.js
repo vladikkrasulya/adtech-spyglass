@@ -13,7 +13,25 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 const ROOT = path.join(__dirname, '..');
-const PAIRS = [['packages/core/source-map.js', 'public/core/source-map.js']];
+// Read the pair list from the generator instead of restating it. This test
+// used to carry its own copy naming one pair of the six, so five mirrors had no
+// drift protection at all while the header promised that none could drift —
+// and one of them had already diverged: a migration rule added to the canonical
+// file never reached the browser, so the advisor proposed it server-side and
+// silently did not client-side. A guard that lists what it guards is a record
+// describing a set it is not checked against.
+const GENERATOR = path.join(ROOT, 'scripts/gen-browser-core.js');
+const PAIRS = [
+  ...fs
+    .readFileSync(GENERATOR, 'utf8')
+    .matchAll(/\[\s*'(packages\/core\/[^']+\.js)',\s*'(public\/core\/[^']+\.js)'\s*\]/g),
+].map((match) => [match[1], match[2]]);
+
+// A regex that quietly matches nothing would turn this guard into a test that
+// always passes — the same failure it exists to prevent, wearing a different hat.
+test('browser-core parity: the generator pair list is readable', () => {
+  assert.ok(PAIRS.length >= 6, `expected the generator's pairs, parsed ${PAIRS.length}`);
+});
 const sha = (p) =>
   crypto
     .createHash('sha256')
