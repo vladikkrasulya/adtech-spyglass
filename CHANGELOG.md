@@ -6,6 +6,104 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### Tooling — changelog completeness gate (no app deploy)
+
+- Restored the five release entries missing from this file: `v1.7.0`, `v1.8.0`, `v1.9.0`, `v1.10.0`
+  and `v1.10.1`. All five had shipped to production while the file above still claimed that all
+  notable changes were documented here.
+- **`tests/changelog-completeness.test.js`** — fails when the newest `### vX.Y.Z` heading is not the
+  version `package.json` declares. The claim of completeness is now checked rather than stated, at
+  the moment a version moves without its entry.
+- Recorded the requirement in the
+  [locales and versioning contract](specs/000-platform-baseline/contracts/locales-versioning.md):
+  an application version change requires its entry, and version changes run this gate alongside
+  `tests/version-consistency.test.js`.
+- Why it was possible: the version-consistency gate asks whether the version surfaces agree with
+  each other, never whether the release was written down. Five releases passed it.
+
+### v1.10.1 — one judgement about what the input is
+
+- Fixed the request badge running a stricter test than the one the app acts on: a wrapped,
+  schemeless, or invisible-character URL paste read "invalid" a moment before it analysed cleanly.
+  Six shapes disagreed, `ftp://` among them.
+- Removed the second judgement rather than mirroring it. The badge now calls the same
+  `isUrlLikeInput()` that `parseRequestInput()` routes on, in the same order, so the two cannot
+  disagree. Permissiveness is unchanged: `request.json`, `2.5.1`, `12:30` and a trailing comma keep
+  their JSON error.
+- A half-typed `https://` now reads "URL request" rather than "invalid". Nothing is lost — the
+  analysis answers `request.url.unparseable` at error level, in the place that judges quality,
+  instead of a badge accusing a URL of being bad JSON.
+- App version bumped `1.10.0 → 1.10.1`; Core remains `0.35.0` and CLI remains `0.1.1`.
+
+### v1.10.0 — records checked against what they describe
+
+- Fixed a password-reset link arriving with its token destroyed for every visitor holding a `kt-lang`
+  cookie of `uk` or `ru`. Two redirects twelve lines apart, and only the second preserved the
+  incoming query string; the English path took the other, which is why nothing caught it.
+- Replaced the finding catalog's severity guess with `packages/core/severity-registry.js`, which
+  reads the level out of the emitting `makeFinding`/`makeCross` call site. The guess had disagreed
+  with the validator for 41 of the 80 ids reachable from `samples/`.
+- Consolidated eight hand-rolled locale-route spellings into `public/core/routes.js`, checked
+  against the server's `resolveLocaleRoute` in both directions. Fixes an EN docs breadcrumb
+  resolving to `https://docs/`, a Live permalink that 404'd for English users, UK blog cards that
+  opened nothing, and a language switch that discarded any route deeper than one segment.
+- Widened the browser-mirror parity guard from one pair to all six by reading the pair list out of
+  `scripts/gen-browser-core.js`. It had promised no drift while checking a sixth of what exists, and
+  a migration rule had already reached the server without reaching the Migration tab.
+- Stopped advertising `response.seatbid_required` and `request.30.item.placement_invalid`, two
+  catalog entries no rule emits. The catalog gate now fails on both directions of that drift.
+- Fixed a TCF trailing-bit check that judged padding by how much there was rather than what it
+  contained, and a top-level array sample served as `{"0":…}`.
+- App version bumped `1.9.0 → 1.10.0`; Core `0.34.0 → 0.35.0`; CLI remains `0.1.1`.
+
+### v1.9.0 — duplicate imp ids and disagreeing identity homes
+
+- Added two findings that need the whole request to see: an impression id used twice, which leaves
+  `bid.impid` naming neither impression, and extended identifiers carried in both their 2.6 and
+  pre-2.6 homes with different contents, which two implementations resolve in opposite directions.
+- App version bumped `1.8.0 → 1.9.0`; Core `0.33.0 → 0.34.0`; CLI dependency range updated.
+
+### v1.8.0 — report what only a whole transaction can show
+
+- Added native asset fitness: an asset present but unusable — a missing required field, an image
+  with no dimensions, an unsafe scheme — is now reported instead of counting toward completeness.
+- Added a TCF finding for a consent bit the same string contradicts, where a publisher restriction
+  in the string overrides the per-vendor bit a naive reader would act on. No vendor list or network
+  is needed; the contradiction travels inside the string.
+- Added a flag for a VAST wrapper whose multi-ad behaviour nobody wrote down.
+- Added an OpenRTB 2.6 migration rule promoting the US Privacy string out of its pre-2.6 home.
+- Fixed a defect already deployed in v1.7.0: the TCF publisher-restriction parser read a restriction
+  entry's vendor list with the VendorConsents layout, which carries sixteen bits the restriction
+  format does not have. On a real string it reported `[3,5,6,7,8,11,12]` where the correct reading
+  is `[755]`, surfacing as a spurious warning on a valid string.
+- App version bumped `1.7.0 → 1.8.0`; Core `0.32.0 → 0.33.0`; CLI dependency range updated.
+
+### v1.7.0 — report the silent failures a parse destroys
+
+- Added URL search-feed decoding: a pasted vendor-feed URL is decoded and validated instead of being
+  refused as "not a JSON object", with an input-repair layer that trims, removes invisible
+  characters, peels wrappers and markdown links, strips trailing punctuation, unescapes guarded
+  `&amp;`, and adds a default scheme — reporting each repair rather than performing it silently.
+- Made a refusal say why. Every non-decodable input now carries a reason and, where the scheme is
+  the problem, names it; `null` is reserved for "nothing to decode".
+- Added a raw-JSON scanner reading the bytes for defects the parse erases: duplicate keys, raw
+  control characters, and values a decode destroys. `_raw` is now verbatim, and a decode that
+  changes a value warns instead of substituting quietly.
+- Added an unknown-field registry naming the fields a receiver will ignore without saying so, and
+  stopped inferring 2.6 from two fields the specification does not define.
+- Added TCF v2 consent-string structural plausibility checks, including a string that decodes into
+  different consent than it appears to carry.
+- Added a static VAST timeline extractor, actionable VAST diagnostics, and linear, prolog-aware VAST
+  sniffers replacing quadratic regexes.
+- Added the OpenRTB 2.6 Migration tab and its advisor, and a Diff tab backed by a deterministic,
+  bounded semantic diff engine mirrored to the browser from one canonical source.
+- Added shareable encrypted gists, an inert OpenRTB macro evaluator, privacy-safe product telemetry
+  with a usage report, and per-IP limits keyed on the real client address behind the published-port
+  proxy.
+- Removed the legacy Spyglass compatibility shims.
+- App version bumped `1.6.1 → 1.7.0`; Core `0.31.0 → 0.32.0`; CLI dependency range updated. Core's
+  `validate` gained an optional `opts.rawText`; callers holding only a parsed object are unaffected.
+
 ### v1.6.1 — safe browser rendering for every Blog body
 
 - Removed the executable-content exception for editorial and promoted Markdown: every Blog body now

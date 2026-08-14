@@ -96,7 +96,15 @@ are defined in [the validator contract](./core-validator.md).
 
 A version edit is one coherent change: update the owning manifest, relevant lock metadata,
 user-visible/static surfaces, changelog or release communication where applicable, and regression
-tests. A version bump alone does not publish npm packages, create a Git tag/release, or deploy the
+tests.
+
+An application version change additionally requires its `CHANGELOG.md` entry, and that is enforced
+rather than expected: `tests/changelog-completeness.test.js` fails when the newest `### vX.Y.Z`
+heading is not the version `package.json` declares. Core and CLI version lines are recorded inside
+the application entry that ships them rather than carrying headings of their own. The requirement is
+enforced because it was previously only stated: five releases reached production with the file still
+claiming its history was complete, because the version-consistency gate asks whether the version
+surfaces agree with each other, never whether the release was written down. A version bump alone does not publish npm packages, create a Git tag/release, or deploy the
 application. Those remain separately authorized actions under
 [the release and deploy contract](./release-deploy.md).
 
@@ -106,8 +114,8 @@ Locale changes run focused Core-message, browser-i18n, localized-route, localize
 tests appropriate to the touched owner. Verify that keys and interpolation placeholders remain
 usable in all three locales and that a language switch resolves to a canonical existing route.
 
-Version changes run `tests/version-consistency.test.js` plus the relevant Core/CLI API and package
-smoke tests. Before merge, run the complete repository gate from [the baseline quickstart](../quickstart.md).
+Version changes run `tests/version-consistency.test.js` and `tests/changelog-completeness.test.js`
+plus the relevant Core/CLI API and package smoke tests. Before merge, run the complete repository gate from [the baseline quickstart](../quickstart.md).
 
 ## Change Rule
 
