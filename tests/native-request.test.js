@@ -184,3 +184,138 @@ test('validate(): native request findings surface on public API', () => {
   assert.equal(typeof f.msg, 'string');
   assert.ok(f.msg.length > 0);
 });
+
+// ── Asset fitness, not just presence (crosscheck) ───────────────────────────
+
+const { crosscheck: xcheck } = require('@ortbtools/core');
+
+// Prebid validates a native response by intersecting asset ids and testing that
+// link.url is truthy — measured identical across 9.53.5 through 11.29.0. So a
+// bid whose assets are bare ids passes every check in the chain and renders as
+// an empty unit, because the renderer interpolates a missing value as ''.
+const FITNESS_REQ = {
+  ver: '1.2',
+  assets: [
+    { id: 1, required: 1, title: { len: 25 } },
+    { id: 2, required: 1, img: { type: 3, w: 300, h: 250 } },
+    { id: 3, required: 1, data: { type: 1, len: 25 } },
+  ],
+};
+
+const fitnessPair = (assets, link) => {
+  const req = {
+    id: 'r',
+    imp: [{ id: '1', native: { request: JSON.stringify(FITNESS_REQ), ver: '1.2' } }],
+  };
+  const res = {
+    id: 'r',
+    seatbid: [
+      {
+        seat: 's',
+        bid: [
+          {
+            id: 'b',
+            impid: '1',
+            price: 1,
+            adm: JSON.stringify({
+              native: { ver: '1.2', link: link || { url: 'https://adv.example/c' }, assets },
+            }),
+          },
+        ],
+      },
+    ],
+  };
+  return xcheck(req, res, { locale: 'en' })
+    .filter((f) => f.id.startsWith('crosscheck.bid.native_'))
+    .map((f) => f.id);
+};
+
+const GOOD = [
+  { id: 1, title: { text: 'A short title' } },
+  { id: 2, img: { url: 'https://cdn.example/i.png', w: 300, h: 250 } },
+  { id: 3, data: { value: 'Brand' } },
+];
+
+test('native fitness: a bid that satisfies the request is still complete', () => {
+  // The gating property. A warning on a correct bid gets the rule switched off.
+  assert.deepEqual(fitnessPair(GOOD), ['crosscheck.bid.native_complete']);
+});
+
+test('native fitness: an id with no payload is not a delivered asset', () => {
+  const ids = fitnessPair([{ id: 1 }, { id: 2 }, { id: 3 }]);
+  assert.ok(ids.includes('crosscheck.bid.native_asset_empty'));
+  assert.equal(ids.includes('crosscheck.bid.native_complete'), false, 'no green tick beside it');
+});
+
+test('native fitness: text longer than the requested len is reported', () => {
+  const ids = fitnessPair([{ id: 1, title: { text: 'x'.repeat(200) } }, GOOD[1], GOOD[2]]);
+  assert.ok(ids.includes('crosscheck.bid.native_over_length'));
+});
+
+test('native fitness: an image of the wrong size is reported', () => {
+  const ids = fitnessPair([
+    GOOD[0],
+    { id: 2, img: { url: 'https://cdn.example/i.png', w: 1, h: 1 } },
+    GOOD[2],
+  ]);
+  assert.ok(ids.includes('crosscheck.bid.native_img_size'));
+});
+
+test('native fitness: an asset returned as the wrong kind is reported', () => {
+  const ids = fitnessPair([
+    { id: 1, img: { url: 'https://cdn.example/i.png', w: 300, h: 250 } },
+    GOOD[1],
+    GOOD[2],
+  ]);
+  assert.ok(ids.includes('crosscheck.bid.native_asset_kind'));
+});
+
+test('native fitness: a non-fetchable scheme is critical, in either url', () => {
+  const inImg = fitnessPair([
+    GOOD[0],
+    { id: 2, img: { url: 'javascript:alert(1)', w: 300, h: 250 } },
+    GOOD[2],
+  ]);
+  assert.ok(inImg.includes('crosscheck.bid.native_unsafe_scheme'));
+
+  const inLink = fitnessPair(GOOD, { url: 'javascript:alert(1)' });
+  assert.ok(inLink.includes('crosscheck.bid.native_unsafe_scheme'));
+});
+
+test('native fitness: wmin/hmin is a floor, not an exact demand', () => {
+  const req = {
+    ver: '1.2',
+    assets: [{ id: 1, required: 1, img: { type: 3, wmin: 200, hmin: 100 } }],
+  };
+  const pair = (w, h) => {
+    const rq = {
+      id: 'r',
+      imp: [{ id: '1', native: { request: JSON.stringify(req), ver: '1.2' } }],
+    };
+    const rs = {
+      id: 'r',
+      seatbid: [
+        {
+          seat: 's',
+          bid: [
+            {
+              id: 'b',
+              impid: '1',
+              price: 1,
+              adm: JSON.stringify({
+                native: {
+                  ver: '1.2',
+                  link: { url: 'https://adv.example/c' },
+                  assets: [{ id: 1, img: { url: 'https://cdn.example/i.png', w, h } }],
+                },
+              }),
+            },
+          ],
+        },
+      ],
+    };
+    return xcheck(rq, rs, { locale: 'en' }).map((f) => f.id);
+  };
+  assert.ok(pair(400, 300).includes('crosscheck.bid.native_complete'), 'above the floor is fine');
+  assert.ok(pair(100, 50).includes('crosscheck.bid.native_img_size'), 'below the floor is not');
+});

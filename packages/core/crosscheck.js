@@ -352,19 +352,41 @@ function crosscheck(req, res, _ctx) {
               ),
             );
           } else {
-            out.push(
-              C(
-                'crosscheck.bid.native_complete',
-                true,
-                CROSS_LEVELS.OK,
-                `${bp}.adm`,
-                {
-                  ...baseParams,
-                  count: cm.requiredIds.length,
-                },
-                cm,
-              ),
-            );
+            // "Complete" only ever meant "the required ids are present". Say so
+            // only when the assets under those ids are also usable — otherwise a
+            // bid that renders blank collects a green tick.
+            const fitness = nativeAssetFitness(imp.native, bid.adm);
+            if (!fitness.length) {
+              out.push(
+                C(
+                  'crosscheck.bid.native_complete',
+                  true,
+                  CROSS_LEVELS.OK,
+                  `${bp}.adm`,
+                  {
+                    ...baseParams,
+                    count: cm.requiredIds.length,
+                  },
+                  cm,
+                ),
+              );
+            }
+            for (const issue of fitness) {
+              out.push(
+                C(
+                  `crosscheck.bid.native_${issue.code}`,
+                  false,
+                  issue.code === 'unsafe_scheme' ? CROSS_LEVELS.CRIT : CROSS_LEVELS.WARN,
+                  `${bp}.adm`,
+                  {
+                    ...baseParams,
+                    ...issue.params,
+                    assetId: issue.id >= 0 ? issue.id : '',
+                  },
+                  issue,
+                ),
+              );
+            }
           }
           if (cm.extra.length) {
             out.push(
@@ -493,4 +515,175 @@ function nativeAssetCrosscheck(impNative, adm) {
   return { requiredIds, providedIds, missing, extra };
 }
 
-module.exports = { crosscheck, nativeAssetCrosscheck };
+/**
+ * Which asset kind an entry declares, by the sub-object it carries.
+ *
+ * @param {Object} asset
+ * @returns {string|null}
+ */
+function nativeAssetKind(asset) {
+  if (!asset || typeof asset !== 'object') return null;
+  for (const kind of ['title', 'img', 'video', 'data']) {
+    if (asset[kind] && typeof asset[kind] === 'object') return kind;
+  }
+  return null;
+}
+
+/**
+ * Only http(s) can be fetched or rendered. Anything else in a native URL is a
+ * defect the renderer will happily interpolate into the markup.
+ *
+ * @param {unknown} url
+ * @returns {string|null} The offending scheme, or null when acceptable.
+ */
+function unsafeNativeScheme(url) {
+  if (typeof url !== 'string' || url.length === 0) return null;
+  const match = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(url.trim());
+  if (!match) return null;
+  const scheme = `${match[1].toLowerCase()}:`;
+  return scheme === 'http:' || scheme === 'https:' ? null : scheme;
+}
+
+/**
+ * Compare each returned native asset against what the request asked for.
+ *
+ * `nativeAssetCrosscheck` answers "are the required ids present". That is the
+ * whole of what Prebid checks too — measured across 9.53.5 through 11.29.0, its
+ * `nativeBidIsValid` tests truthy `link.url` plus an id-set intersection and
+ * nothing else. So a bid whose assets are bare ids with no payload passes every
+ * check in the chain and renders as an empty unit, because the renderer
+ * interpolates a missing value as `''`.
+ *
+ * These are the checks nobody performs, and all of them are answerable from the
+ * request/response pair alone.
+ *
+ * @param {Object} impNative The request-side `imp[].native`.
+ * @param {string|Object} adm The response-side markup.
+ * @returns {Array<{ code: string, id: number, params: Object }>}
+ */
+function nativeAssetFitness(impNative, adm) {
+  /** @type {Array<{ code: string, id: number, params: Object }>} */
+  const issues = [];
+  let reqInner;
+  let resInner;
+  try {
+    const parsedReq =
+      typeof impNative.request === 'string'
+        ? tryParseNativePayload(impNative.request)
+        : impNative.request;
+    reqInner = (parsedReq && parsedReq.native) || parsedReq || {};
+    const parsedRes = typeof adm === 'string' ? tryParseNativePayload(adm) : adm;
+    resInner = (parsedRes && parsedRes.native) || parsedRes || {};
+  } catch {
+    // Parse failures are already reported by nativeAssetCrosscheck; saying it
+    // twice would double every finding on a malformed payload.
+    return issues;
+  }
+
+  const requested = new Map();
+  for (const asset of Array.isArray(reqInner.assets) ? reqInner.assets : []) {
+    if (asset && asset.id != null) requested.set(Number(asset.id), asset);
+  }
+
+  const linkScheme = unsafeNativeScheme(resInner.link && resInner.link.url);
+  if (linkScheme) {
+    issues.push({
+      code: 'unsafe_scheme',
+      id: -1,
+      params: { field: 'link.url', scheme: linkScheme },
+    });
+  }
+
+  for (const asset of Array.isArray(resInner.assets) ? resInner.assets : []) {
+    if (!asset || asset.id == null) continue;
+    const id = Number(asset.id);
+    const want = requested.get(id);
+    if (!want) continue;
+
+    const wantKind = nativeAssetKind(want);
+    const gotKind = nativeAssetKind(asset);
+
+    if (gotKind === null) {
+      // An id with no payload at all. Prebid accepts it; the renderer turns it
+      // into an empty string and the unit ships blank.
+      issues.push({ code: 'asset_empty', id, params: { kind: wantKind || 'unknown' } });
+      continue;
+    }
+    if (wantKind && gotKind !== wantKind) {
+      issues.push({ code: 'asset_kind', id, params: { requested: wantKind, returned: gotKind } });
+      continue;
+    }
+
+    if (gotKind === 'title') {
+      const text = asset.title.text;
+      if (typeof text !== 'string' || text.length === 0) {
+        issues.push({ code: 'asset_empty', id, params: { kind: 'title' } });
+      } else if (Number.isFinite(want.title && want.title.len) && text.length > want.title.len) {
+        issues.push({
+          code: 'over_length',
+          id,
+          params: { kind: 'title', actual: text.length, limit: want.title.len },
+        });
+      }
+    }
+
+    if (gotKind === 'data') {
+      const value = asset.data.value;
+      if (typeof value !== 'string' || value.length === 0) {
+        issues.push({ code: 'asset_empty', id, params: { kind: 'data' } });
+      } else if (Number.isFinite(want.data && want.data.len) && value.length > want.data.len) {
+        issues.push({
+          code: 'over_length',
+          id,
+          params: { kind: 'data', actual: value.length, limit: want.data.len },
+        });
+      }
+    }
+
+    if (gotKind === 'img') {
+      const url = asset.img.url;
+      if (typeof url !== 'string' || url.length === 0) {
+        issues.push({ code: 'asset_empty', id, params: { kind: 'img' } });
+      } else {
+        const scheme = unsafeNativeScheme(url);
+        if (scheme) {
+          issues.push({ code: 'unsafe_scheme', id, params: { field: 'img.url', scheme } });
+        }
+      }
+      const wantImg = want.img || {};
+      const gotW = Number(asset.img.w);
+      const gotH = Number(asset.img.h);
+      // Exact w/h is a demand, wmin/hmin a floor. Only compare what was asked.
+      const tooSmall =
+        (Number.isFinite(wantImg.w) && Number.isFinite(gotW) && gotW !== wantImg.w) ||
+        (Number.isFinite(wantImg.h) && Number.isFinite(gotH) && gotH !== wantImg.h) ||
+        (Number.isFinite(wantImg.wmin) && Number.isFinite(gotW) && gotW < wantImg.wmin) ||
+        (Number.isFinite(wantImg.hmin) && Number.isFinite(gotH) && gotH < wantImg.hmin);
+      if (tooSmall) {
+        issues.push({
+          code: 'img_size',
+          id,
+          params: {
+            returned: `${Number.isFinite(gotW) ? gotW : '?'}x${Number.isFinite(gotH) ? gotH : '?'}`,
+            requested: describeImgRequest(wantImg),
+          },
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * @param {Object} img Request-side img spec.
+ * @returns {string}
+ */
+function describeImgRequest(img) {
+  if (Number.isFinite(img.w) || Number.isFinite(img.h)) {
+    return `${Number.isFinite(img.w) ? img.w : '?'}x${Number.isFinite(img.h) ? img.h : '?'}`;
+  }
+  return `min ${Number.isFinite(img.wmin) ? img.wmin : '?'}x${Number.isFinite(img.hmin) ? img.hmin : '?'}`;
+}
+
+module.exports = { crosscheck, nativeAssetCrosscheck, nativeAssetFitness };
