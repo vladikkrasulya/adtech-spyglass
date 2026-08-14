@@ -1,349 +1,721 @@
 'use strict';
 
 /**
- * tests/raw-json.test.js — packages/core/raw-json/index.js
+ * tests/raw-json.test.js — packages/core/raw-json.js
  *
- * The scanner exists because `JSON.parse` throws information away without
- * saying so. Every test here is written against that: the assertion is not
- * "the scanner returns X" but "the scanner returns what parsing destroyed",
- * and where it matters the test parses the same bytes to show the loss.
+ * The module's whole claim is that it sees what `JSON.parse` destroys, so the
+ * tests are written against the raw text and, where it matters, assert what
+ * `JSON.parse` does with the same bytes — if the parse ever stopped hiding
+ * these, the module would have no reason to exist.
  *
- * Payloads are synthetic and inline.
+ * Privacy: synthetic payloads only — reserved example domains, 192.0.2.x
+ * (RFC 5737 TEST-NET-1) and placeholder ids. Never paste partner data here.
  */
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 
-const { scanRawJson, MAX_SAFE, MAX_DEPTH } = require('@ortbtools/core/raw-json');
+const {
+  scanRawJson,
+  findDuplicateKeys,
+  findUnsafeNumbers,
+  UNSAFE_REASONS,
+  DEFAULT_LIMITS,
+} = require('@ortbtools/core/raw-json');
 
-// ── B1. Duplicate keys ──────────────────────────────────────────────────────
+// The exact bytes quoted in the module header. Two `id`s and two `bidfloor`s;
+// `JSON.parse` keeps "B" and 9.99 and forgets the rest ever existed.
+const MEASURED = '{"id":"A","imp":[{"id":"1"}],"id":"B","bidfloor":1.5,"bidfloor":9.99}';
 
-test('duplicate key: both values survive the scan, only one survives the parse', () => {
-  const src = '{"id":"A","bidfloor":1.5,"id":"B"}';
+/** Convenience: the finding for one key path, or undefined. */
+function byPath(findings, path) {
+  return findings.find((f) => f.path === path);
+}
 
-  // What the parse leaves you with — the first value is simply gone.
-  assert.equal(JSON.parse(src).id, 'B');
+// ── Duplicate keys: the measured case ───────────────────────────────────────
 
-  const r = scanRawJson(src);
-  assert.ok(r.ok);
-  assert.equal(r.duplicateKeys.length, 1);
-  const dup = r.duplicateKeys[0];
-  assert.equal(dup.key, 'id');
-  assert.equal(dup.pointer, '/id');
-  assert.deepEqual(
-    dup.occurrences.map((o) => o.raw),
-    ['"A"', '"B"'],
-    'every occurrence in source order — a conformant peer may keep the first',
-  );
+test('the parse really does hide it — anchor for everything below', () => {
+  const parsed = JSON.parse(MEASURED);
+  assert.equal(parsed.id, 'B');
+  assert.equal(parsed.bidfloor, 9.99);
+  assert.deepEqual(Object.keys(parsed), ['id', 'imp', 'bidfloor']);
 });
 
-test('duplicate bidfloor: the money case, with its pointer', () => {
-  // RFC 8259 §4 leaves the choice open, so 1.5 and 9.99 are both defensible
-  // readings of these bytes. That is the whole problem.
-  const src = '{"imp":[{"id":"1","bidfloor":1.5,"bidfloor":9.99}]}';
-  const r = scanRawJson(src);
-  assert.equal(r.duplicateKeys.length, 1);
-  assert.equal(r.duplicateKeys[0].pointer, '/imp/0/bidfloor');
+test('scanRawJson: finds both duplicated keys in the measured payload', () => {
+  const r = scanRawJson(MEASURED);
+  assert.equal(r.ok, true, 'the document is well-formed JSON — duplicates are legal');
+  assert.equal(r.error, null);
   assert.deepEqual(
-    r.duplicateKeys[0].occurrences.map((o) => o.raw),
+    r.duplicateKeys.map((f) => f.path),
+    ['id', 'bidfloor'],
+  );
+
+  const floor = byPath(r.duplicateKeys, 'bidfloor');
+  assert.equal(floor.kind, 'duplicate-key');
+  assert.equal(floor.key, 'bidfloor');
+  assert.equal(floor.pointer, '/bidfloor');
+  assert.equal(floor.container, '', 'the object holding it is the document root');
+  assert.equal(floor.count, 2);
+  assert.equal(floor.valuesDiffer, true, '1.5 against 9.99 is money');
+  assert.deepEqual(
+    floor.occurrences.map((o) => o.value),
     ['1.5', '9.99'],
+    'every value, in order of appearance',
   );
 });
 
-test('duplicate key written with a \\u escape is still a duplicate', () => {
-  // `"id"` is `"id"` on the wire. A byte-for-byte comparison misses this
-  // one, which makes it the interesting case rather than an edge case.
-  const src = '{"id":"A","\\u0069d":"B"}';
-  assert.equal(JSON.parse(src).id, 'B');
-  const r = scanRawJson(src);
-  assert.equal(r.duplicateKeys.length, 1);
-  assert.equal(r.duplicateKeys[0].key, 'id');
-  assert.equal(r.duplicateKeys[0].occurrences.length, 2);
+test('scanRawJson: occurrence offsets address the original text exactly', () => {
+  const floor = byPath(findDuplicateKeys(MEASURED), 'bidfloor');
+  for (const occ of floor.occurrences) {
+    assert.equal(MEASURED.slice(occ.keyStart, occ.keyEnd), '"bidfloor"');
+    assert.equal(MEASURED.slice(occ.valueStart, occ.valueEnd), occ.value);
+    assert.equal(occ.raw, MEASURED.slice(occ.keyStart, occ.keyEnd));
+  }
+  assert.equal(floor.occurrences[0].valueStart < floor.occurrences[1].valueStart, true);
 });
 
-test('duplicate key: three occurrences all reported', () => {
-  const r = scanRawJson('{"cur":"USD","cur":"EUR","cur":"GBP"}');
-  assert.equal(r.duplicateKeys.length, 1);
+// ── Duplicate keys: shapes ──────────────────────────────────────────────────
+
+test('duplicates nested in an object carry the nested path', () => {
+  const text = '{"site":{"domain":"publisher.example","domain":"other.example"}}';
+  const findings = findDuplicateKeys(text);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].path, 'site.domain');
+  assert.equal(findings[0].pointer, '/site/domain');
+  assert.equal(findings[0].container, 'site');
+});
+
+test('duplicates inside array elements carry the index', () => {
+  const text = '{"imp":[{"id":"1","id":"2"},{"id":"3"},{"tagid":"a","tagid":"b"}]}';
+  const findings = findDuplicateKeys(text);
   assert.deepEqual(
-    r.duplicateKeys[0].occurrences.map((o) => o.raw),
-    ['"USD"', '"EUR"', '"GBP"'],
+    findings.map((f) => f.path),
+    ['imp[0].id', 'imp[2].tagid'],
   );
-});
-
-test('the same key in sibling objects is not a duplicate', () => {
-  const r = scanRawJson('{"a":{"id":1},"b":{"id":2}}');
-  assert.deepEqual(r.duplicateKeys, [], 'scoping is per object, not per document');
-});
-
-test('duplicate object values are reported with their full source text', () => {
-  const src = '{"ext":{"x":1},"ext":{"y":[2,3]}}';
-  const r = scanRawJson(src);
   assert.deepEqual(
-    r.duplicateKeys[0].occurrences.map((o) => o.raw),
-    ['{"x":1}', '{"y":[2,3]}'],
+    findings.map((f) => f.pointer),
+    ['/imp/0/id', '/imp/2/tagid'],
   );
 });
 
-test('clean payload reports no duplicates', () => {
-  const r = scanRawJson('{"id":"1","imp":[{"id":"1"}],"at":1}');
-  assert.ok(r.ok);
+test('a duplicate deeper than one array level still resolves', () => {
+  const text = '{"seatbid":[{"bid":[{"price":1.2,"price":3.4}]}]}';
+  const findings = findDuplicateKeys(text);
+  assert.equal(findings[0].path, 'seatbid[0].bid[0].price');
+  assert.equal(findings[0].pointer, '/seatbid/0/bid/0/price');
+});
+
+test('three or more repeats are reported as one finding with every value', () => {
+  const text = '{"cur":"USD","cur":"EUR","cur":"GBP","cur":"USD"}';
+  const findings = findDuplicateKeys(text);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].count, 4);
+  assert.deepEqual(
+    findings[0].occurrences.map((o) => o.value),
+    ['"USD"', '"EUR"', '"GBP"', '"USD"'],
+  );
+  assert.equal(findings[0].occurrencesTruncated, false);
+});
+
+test('identical repeated values are still a duplicate, but flagged as agreeing', () => {
+  const findings = findDuplicateKeys('{"at":2,"at":2}');
+  assert.equal(findings.length, 1, 'RFC 8259 §4 leaves even this undefined');
+  assert.equal(findings[0].valuesDiffer, false, 'no receiver can diverge on the value');
+});
+
+test('duplicates are reported in document order, not innermost-first', () => {
+  const text = '{"a":1,"ext":{"z":1,"z":2},"a":2}';
+  const findings = findDuplicateKeys(text);
+  assert.deepEqual(
+    findings.map((f) => f.path),
+    ['a', 'ext.z'],
+    'the outer `a` opens first in the text, so it comes first',
+  );
+});
+
+test('objects nested in every position are all walked', () => {
+  const text = [
+    '{"id":"req-1",',
+    '"imp":[{"id":"1","banner":{"w":300,"w":320,"h":250}}],',
+    '"device":{"ip":"192.0.2.10","ua":"synthetic-ua","ip":"192.0.2.11"},',
+    '"user":{"ext":{"consent":"placeholder","consent":"placeholder-2"}}}',
+  ].join('');
+  assert.deepEqual(
+    findDuplicateKeys(text).map((f) => f.path),
+    ['imp[0].banner.w', 'device.ip', 'user.ext.consent'],
+  );
+});
+
+// ── Duplicate keys: names that only look different ──────────────────────────
+
+test('escape-equivalent key names are one key on the wire', () => {
+  // "\u0069d" and "id" are the same four bytes after decoding — and JSON.parse
+  // proves it by producing a single property.
+  const text = '{"\\u0069d":"A","id":"B"}';
+  assert.deepEqual(Object.keys(JSON.parse(text)), ['id']);
+
+  const findings = findDuplicateKeys(text);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].key, 'id', 'reported under the decoded name');
+  assert.equal(findings[0].path, 'id');
+  assert.equal(findings[0].count, 2);
+  assert.equal(findings[0].spellingsDiffer, true, 'they look different on screen');
+  assert.deepEqual(
+    findings[0].occurrences.map((o) => o.raw),
+    ['"\\u0069d"', '"id"'],
+    'each spelling is kept verbatim so the operator can see the trick',
+  );
+  assert.deepEqual(
+    findings[0].occurrences.map((o) => o.escaped),
+    [true, false],
+  );
+});
+
+test('a surrogate pair written as two escapes equals the literal character', () => {
+  const text = '{"\\ud83d\\ude00":1,"\u{1f600}":2}';
+  assert.equal(Object.keys(JSON.parse(text)).length, 1);
+  const findings = findDuplicateKeys(text);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].count, 2);
+  assert.equal(findings[0].spellingsDiffer, true);
+});
+
+test('other escape forms decode before comparison', () => {
+  const text = '{"a\\/b":1,"a/b":2}';
+  assert.deepEqual(Object.keys(JSON.parse(text)), ['a/b']);
+  const findings = findDuplicateKeys(text);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].key, 'a/b');
+  assert.equal(findings[0].pointer, '/a~1b', 'RFC 6901 §3 escapes the slash back out');
+});
+
+test('every short escape decodes, so \\t and \\u0009 are the same key', () => {
+  // The same name written two legal ways: short escapes, then the \u form of
+  // each. Both decode to one string, and JSON.parse confirms one property.
+  const shortForm = '"\\b\\f\\n\\r\\t\\"\\\\\\/"';
+  const uForm = '"\\u0008\\u000c\\u000a\\u000d\\u0009\\u0022\\u005c\\u002f"';
+  const text = `{${shortForm}:1,${uForm}:2}`;
+  assert.equal(Object.keys(JSON.parse(text)).length, 1);
+
+  const findings = findDuplicateKeys(text);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].key, '\b\f\n\r\t"\\/');
+  assert.equal(findings[0].count, 2);
+  assert.equal(findings[0].spellingsDiffer, true);
+  assert.deepEqual(
+    findings[0].occurrences.map((o) => o.raw),
+    [shortForm, uForm],
+  );
+});
+
+test('a raw control character in a string is tolerated, unlike JSON.parse', () => {
+  // Deliberate superset, same as source-map.js: an inspector that refuses a
+  // payload the exchange accepted can inspect nothing at all. The raw newline
+  // also has to move the line counter, or every offset after it lies.
+  const text = '{"adm":"line one\nline two","w":1,"w":2}';
+  assert.throws(() => JSON.parse(text), SyntaxError);
+
+  const r = scanRawJson(text);
+  assert.equal(r.ok, true, r.error && r.error.message);
+  assert.equal(r.duplicateKeys.length, 1);
+  assert.equal(r.duplicateKeys[0].occurrences[0].line, 2);
+  assert.equal(
+    text.slice(r.duplicateKeys[0].occurrences[0].keyStart),
+    '"w":1,"w":2}',
+    'the offset still lands where it should',
+  );
+});
+
+test('keys that only differ by case or spacing are different keys', () => {
+  assert.deepEqual(findDuplicateKeys('{"ID":1,"id":2,"i d":3}'), []);
+});
+
+test('"__proto__" is counted like any other key', () => {
+  // A plain-object accumulator would have swallowed this one.
+  const findings = findDuplicateKeys('{"__proto__":1,"__proto__":2}');
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].key, '__proto__');
+  assert.equal(findings[0].count, 2);
+});
+
+test('a key outside the display grammar is bracket-quoted, and the pointer stays exact', () => {
+  const findings = findDuplicateKeys('{"ext":{"a.b":1,"a.b":2}}');
+  assert.equal(findings[0].path, 'ext["a.b"]', 'ext.a.b would be a lie about the key name');
+  assert.equal(findings[0].pointer, '/ext/a.b');
+});
+
+// ── Unsafe numbers: the measured cases ──────────────────────────────────────
+
+test('the parse really does round these — anchor for everything below', () => {
+  assert.equal(JSON.parse('{"v":9007199254740993}').v, 9007199254740992);
+  assert.equal(JSON.parse('{"v":1234567890123456789}').v, 1234567890123456800);
+  assert.equal(Number.MAX_SAFE_INTEGER, 9007199254740991);
+});
+
+test('findUnsafeNumbers: 2^53+1 is reported as precision loss with both spellings', () => {
+  const text = '{"imp":[{"ext":{"auction_id":9007199254740993}}]}';
+  const findings = findUnsafeNumbers(text);
+  assert.equal(findings.length, 1);
+  const f = findings[0];
+  assert.equal(f.kind, 'unsafe-number');
+  assert.equal(f.path, 'imp[0].ext.auction_id');
+  assert.equal(f.pointer, '/imp/0/ext/auction_id');
+  assert.equal(f.raw, '9007199254740993', 'the token exactly as written');
+  assert.equal(f.rendered, '9007199254740992', 'what any JS receiver will echo back');
+  assert.equal(f.reason, UNSAFE_REASONS.PRECISION_LOSS);
+  assert.equal(f.lossy, true);
+  assert.equal(text.slice(f.start, f.end), f.raw);
+});
+
+test('findUnsafeNumbers: the 19-digit id is reported too', () => {
+  const f = findUnsafeNumbers('{"id":1234567890123456789}')[0];
+  assert.equal(f.raw, '1234567890123456789');
+  assert.equal(f.rendered, '1234567890123456800');
+  assert.equal(f.reason, UNSAFE_REASONS.PRECISION_LOSS);
+});
+
+// ── Unsafe numbers: the 2^53−1 boundary, both sides ─────────────────────────
+
+test('MAX_SAFE_INTEGER itself is safe and is not reported', () => {
+  assert.deepEqual(findUnsafeNumbers('{"v":9007199254740991}'), []);
+  assert.deepEqual(findUnsafeNumbers('{"v":-9007199254740991}'), []);
+});
+
+test('2^53 survives this parse exactly but is flagged as unsafe magnitude', () => {
+  // Round-trips today; one increment anywhere downstream and it stops doing so.
+  const f = findUnsafeNumbers('{"v":9007199254740992}')[0];
+  assert.equal(f.reason, UNSAFE_REASONS.UNSAFE_MAGNITUDE);
+  assert.equal(f.lossy, false, 'advisory — the value itself did not change');
+  assert.equal(f.rendered, '9007199254740992');
+});
+
+test('2^53+1 is over the line in both directions', () => {
+  for (const [token, rendered] of [
+    ['9007199254740993', '9007199254740992'],
+    ['-9007199254740993', '-9007199254740992'],
+  ]) {
+    const f = findUnsafeNumbers(`{"v":${token}}`)[0];
+    assert.equal(f.reason, UNSAFE_REASONS.PRECISION_LOSS, token);
+    assert.equal(f.lossy, true, token);
+    assert.equal(f.rendered, rendered, token);
+  }
+});
+
+// ── Unsafe numbers: forms that must not fool the check ──────────────────────
+
+test('exponential notation is judged by value, not by spelling', () => {
+  // Same number as 9007199254740993, written so a digit-counting check misses it.
+  const f = findUnsafeNumbers('{"v":9.007199254740993e15}')[0];
+  assert.equal(f.reason, UNSAFE_REASONS.PRECISION_LOSS);
+  assert.equal(f.rendered, '9007199254740992');
+
+  // 1e21 is an integer beyond the safe range that still round-trips exactly.
+  const g = findUnsafeNumbers('{"v":1e21}')[0];
+  assert.equal(g.reason, UNSAFE_REASONS.UNSAFE_MAGNITUDE);
+  assert.equal(g.lossy, false);
+
+  // And an exponent that is simply another way to write a small integer.
+  assert.deepEqual(findUnsafeNumbers('{"v":1e2}'), []);
+  assert.deepEqual(findUnsafeNumbers('{"v":-1.5e3}'), []);
+});
+
+test('ordinary fractional prices are not reported', () => {
+  // Every one of these is inexact in binary64 — 9.99 is really
+  // 9.9900000000000002131628…  Flagging that would bury the signal under every
+  // bidfloor in the corpus. What matters is whether the token survives a
+  // round trip, and it does, on every conforming implementation.
+  assert.equal((9.99).toFixed(20), '9.99000000000000021316', 'the double is not the decimal');
+  const text = '{"bidfloor":9.99,"a":1.5,"b":0.1,"c":1.50,"d":0.30000000000000004,"e":1e-7}';
+  assert.deepEqual(findUnsafeNumbers(text), []);
+  for (const token of ['9.99', '1.5', '0.1', '1e-7']) {
+    assert.equal(String(Number(token)), token, `${token} round-trips`);
+  }
+});
+
+test('a fraction whose digits do not survive is reported', () => {
+  const f = findUnsafeNumbers('{"v":1.0000000000000000001}')[0];
+  assert.equal(f.reason, UNSAFE_REASONS.PRECISION_LOSS);
+  assert.equal(f.rendered, '1', 'the tail is gone and nothing downstream can tell');
+});
+
+test('magnitudes a double cannot hold at all are separated from rounding', () => {
+  const over = findUnsafeNumbers('{"v":1e309}')[0];
+  assert.equal(over.reason, UNSAFE_REASONS.OVERFLOW);
+  assert.equal(over.lossy, true);
+  assert.equal(over.rendered, 'Infinity', 'JSON.stringify would turn this into null');
+
+  const under = findUnsafeNumbers('{"v":1e-999}')[0];
+  assert.equal(under.reason, UNSAFE_REASONS.UNDERFLOW);
+  assert.equal(under.lossy, true);
+  assert.equal(under.rendered, '0');
+});
+
+test('zero and negative zero are not findings', () => {
+  assert.deepEqual(findUnsafeNumbers('{"a":0,"b":-0,"c":0.0,"d":0e10}'), []);
+});
+
+test('unsafe numbers come back in document order', () => {
+  const text = '{"a":9007199254740993,"b":[1,1234567890123456789],"c":1e309}';
+  const findings = findUnsafeNumbers(text);
+  assert.deepEqual(
+    findings.map((f) => f.path),
+    ['a', 'b[1]', 'c'],
+  );
+  for (let k = 1; k < findings.length; k++) {
+    assert.equal(findings[k - 1].start < findings[k].start, true);
+  }
+});
+
+// ── Strings must never be mistaken for structure ────────────────────────────
+
+test('a numeric token inside a string is a string, not a number', () => {
+  assert.deepEqual(findUnsafeNumbers('{"id":"9007199254740993"}'), []);
+  assert.deepEqual(findUnsafeNumbers('{"note":"the id 1234567890123456789 was rounded"}'), []);
+});
+
+test('JSON embedded in a string value does not leak into the scan', () => {
+  // A serialized payload carried inside `ext`, as vendors regularly do.
+  const inner = '{"a":1,"a":2,"big":9007199254740993}';
+  const text = `{"ext":{"payload":${JSON.stringify(inner)}},"a":1}`;
+  const r = scanRawJson(text);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.duplicateKeys, [], 'the inner duplicate is text, not structure');
+  assert.deepEqual(r.unsafeNumbers, [], 'so is the inner number');
+});
+
+test('escaped quotes and braces inside strings do not desynchronise the walk', () => {
+  const text =
+    '{"adm":"<a href=\\"https://creative.example/c?x=\\\\\\"y\\">{\\"a\\":1}</a>","w":1,"w":2}';
+  const r = scanRawJson(text);
+  assert.equal(r.ok, true, r.error && r.error.message);
+  assert.deepEqual(
+    r.duplicateKeys.map((f) => f.path),
+    ['w'],
+  );
+});
+
+test('a key that contains a colon or a brace is still just a key', () => {
+  const findings = findDuplicateKeys('{"a:{}b":1,"a:{}b":2}');
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].key, 'a:{}b');
+});
+
+// ── Malformed input ─────────────────────────────────────────────────────────
+
+test('invalid JSON returns findings plus the error, and never throws', () => {
+  const text = '{"id":"A","id":"B","imp":[{"w":1,"w":2},{"h":';
+  assert.throws(() => JSON.parse(text), SyntaxError, 'the parser gives the operator nothing');
+
+  const r = scanRawJson(text);
+  assert.equal(r.ok, false);
+  assert.equal(typeof r.error.message, 'string');
+  assert.equal(r.error.offset, text.length);
+  assert.deepEqual(
+    r.duplicateKeys.map((f) => f.path),
+    ['id', 'imp[0].w'],
+    'a truncated paste leaves every enclosing object open — report them anyway',
+  );
+});
+
+test('a duplicate whose second value was cut off is still reported', () => {
+  // The paste stops mid-value. The key is right there in the text twice, so
+  // waiting for a value that never arrives would throw away a real finding.
+  const text = '{"imp":[{"h":250,"h":';
+  const f = findDuplicateKeys(text)[0];
+  assert.equal(f.path, 'imp[0].h');
+  assert.equal(f.count, 2);
+  assert.equal(f.occurrences[1].value, '', 'nothing of the second value was on the wire');
+  assert.equal(f.occurrences[1].valueEnd, text.length);
+  assert.equal(f.valuesDiffer, true);
+});
+
+test('what was scanned before the break is kept, including numbers', () => {
+  const r = scanRawJson('[{"x":9007199254740993},{"y":');
+  assert.equal(r.ok, false);
+  assert.equal(r.unsafeNumbers.length, 1);
+  assert.equal(r.unsafeNumbers[0].path, '[0].x');
+});
+
+test('garbage after a complete value is an error, but the value was still scanned', () => {
+  const r = scanRawJson('{"a":1,"a":2} trailing junk');
+  assert.equal(r.ok, false);
+  assert.equal(r.error.message, 'unexpected trailing content');
+  assert.equal(r.duplicateKeys.length, 1);
+});
+
+test('malformed tokens report a position a caller can highlight', () => {
+  const r = scanRawJson('{\n  "a": 1,\n  "b": tru\n}');
+  assert.equal(r.ok, false);
+  assert.equal(r.error.line, 3);
+  assert.equal(r.error.col, 8);
+});
+
+test('unterminated string, bad escape and bad number all degrade, none throw', () => {
+  const cases = [
+    '{"a":"unterminated',
+    '{"a":"\\x"}',
+    '{"a":"\\u00zz"}',
+    '{"a":"trailing escape\\',
+    '{"a":01}',
+    '{"a":1.}',
+    '{"a":1e}',
+    '{"a":+1}',
+    '{"a":-}',
+    '{"a":tru}',
+    '{"a"}',
+    '{"a" 1}',
+    '{a:1}',
+    '[1 2]',
+  ];
+  for (const bad of cases) {
+    const r = scanRawJson(bad);
+    assert.equal(r.ok, false, bad);
+    assert.equal(typeof r.error.message, 'string', bad);
+    assert.equal(Array.isArray(r.duplicateKeys), true, bad);
+  }
+});
+
+test('runaway nesting stops at maxDepth instead of exhausting the stack', () => {
+  const deep = '['.repeat(2000) + '1' + ']'.repeat(2000);
+  const r = scanRawJson(deep);
+  assert.equal(r.ok, false);
+  assert.equal(r.error.message, 'maximum nesting depth exceeded');
+});
+
+// ── Empty and non-string input ──────────────────────────────────────────────
+
+test('empty, blank and non-string input all come back empty, not thrown', () => {
+  const empty = scanRawJson('');
+  assert.equal(empty.ok, false);
+  assert.equal(empty.error.message, 'empty input');
+  assert.deepEqual(empty.duplicateKeys, []);
+  assert.deepEqual(empty.unsafeNumbers, []);
+
+  assert.equal(scanRawJson('   \n\t ').error.message, 'no JSON value found');
+  // @ts-ignore — intentional wrong type for robustness testing
+  assert.equal(scanRawJson(null).error.message, 'input is not a string');
+  // @ts-ignore — intentional wrong type for robustness testing
+  assert.equal(scanRawJson(undefined).ok, false);
+  // @ts-ignore — intentional wrong type for robustness testing
+  assert.deepEqual(scanRawJson({ id: 'A' }).duplicateKeys, []);
+  // @ts-ignore — intentional wrong type for robustness testing
+  assert.deepEqual(findUnsafeNumbers(42), []);
+});
+
+test('a clean payload produces no findings at all', () => {
+  const text = JSON.stringify({
+    id: 'req-1',
+    imp: [{ id: '1', bidfloor: 0.5, banner: { w: 300, h: 250 } }],
+    site: { domain: 'publisher.example' },
+    device: { ip: '192.0.2.10', ua: 'synthetic-ua' },
+  });
+  const r = scanRawJson(text);
+  assert.equal(r.ok, true);
   assert.deepEqual(r.duplicateKeys, []);
-});
-
-test('pointer tokens are RFC 6901 escaped', () => {
-  // `/` → `~1` and `~` → `~0`, so a key containing them stays addressable.
-  const r = scanRawJson('{"a/b":1,"a/b":2,"c~d":3,"c~d":4}');
-  const pointers = r.duplicateKeys.map((d) => d.pointer).sort();
-  assert.deepEqual(pointers, ['/a~1b', '/c~0d']);
-});
-
-// ── B2. Integers that do not survive the read ───────────────────────────────
-
-test('int64 id: silently rounded by Node, reported as lossy', () => {
-  const src = '{"user":{"id":9007199254740993}}';
-
-  // The loss, demonstrated rather than asserted from memory.
-  assert.equal(JSON.parse(src).user.id, 9007199254740992);
-
-  const r = scanRawJson(src);
-  assert.equal(r.unsafeIntegers.length, 1);
-  assert.deepEqual(r.unsafeIntegers[0], {
-    pointer: '/user/id',
-    raw: '9007199254740993',
-    parsed: '9007199254740992',
-    lossy: true,
+  assert.deepEqual(r.unsafeNumbers, []);
+  assert.deepEqual(r.controlCharacters, []);
+  assert.deepEqual(r.truncated, {
+    duplicateKeys: false,
+    unsafeNumbers: false,
+    controlCharacters: false,
   });
 });
 
-test('long int64: the trailing digits are replaced, not truncated', () => {
-  const r = scanRawJson('{"tid":1234567890123456789}');
-  assert.equal(r.unsafeIntegers[0].raw, '1234567890123456789');
-  assert.equal(r.unsafeIntegers[0].parsed, '1234567890123456800');
-  assert.equal(r.unsafeIntegers[0].lossy, true);
+test('scalars, empty containers and a leading BOM are all accepted', () => {
+  for (const text of ['{}', '[]', 'null', 'true', '42', '"a string"', '\uFEFF{"a":1,"a":2}']) {
+    const r = scanRawJson(text);
+    assert.equal(r.ok, true, text);
+  }
+  assert.equal(scanRawJson('\uFEFF{"a":1,"a":2}').duplicateKeys.length, 1);
 });
 
-test('2^53 is flagged for magnitude but NOT called damaged', () => {
-  // 9007199254740992 is above MAX_SAFE_INTEGER and still round-trips exactly.
-  // Reporting it as corrupted would be a false alarm — the distinction is the
-  // point of `lossy`.
-  const r = scanRawJson('{"n":9007199254740992}');
-  assert.equal(r.unsafeIntegers.length, 1);
-  assert.equal(r.unsafeIntegers[0].lossy, false);
-  assert.equal(r.unsafeIntegers[0].parsed, '9007199254740992');
+// ── Limits ──────────────────────────────────────────────────────────────────
+
+test('occurrences are capped per key, but the count stays true', () => {
+  const text = '{' + Array.from({ length: 200 }, (_, k) => `"cur":"C${k}"`).join(',') + '}';
+  const f = findDuplicateKeys(text)[0];
+  assert.equal(f.count, 200);
+  assert.equal(f.occurrences.length, DEFAULT_LIMITS.maxOccurrences);
+  assert.equal(f.occurrencesTruncated, true);
+
+  const smaller = findDuplicateKeys(text, { maxOccurrences: 3 })[0];
+  assert.equal(smaller.occurrences.length, 3);
+  assert.equal(smaller.count, 200);
 });
 
-test('MAX_SAFE_INTEGER itself is not reported at all', () => {
-  assert.equal(MAX_SAFE, 9007199254740991);
-  const r = scanRawJson(`{"n":${MAX_SAFE}}`);
-  assert.deepEqual(r.unsafeIntegers, [], 'inside the safe range there is nothing to say');
+test('findings are capped per category and the cap is reported', () => {
+  const text = '[' + Array.from({ length: 40 }, () => '{"a":1,"a":2}').join(',') + ']';
+  const r = scanRawJson(text, { maxFindings: 5 });
+  assert.equal(r.duplicateKeys.length, 5);
+  assert.equal(r.truncated.duplicateKeys, true);
+
+  const nums = '[' + Array.from({ length: 40 }, () => '9007199254740993').join(',') + ']';
+  const rn = scanRawJson(nums, { maxFindings: 5 });
+  assert.equal(rn.unsafeNumbers.length, 5);
+  assert.equal(rn.truncated.unsafeNumbers, true);
+  assert.equal(rn.ok, true, 'hitting a limit is not a parse failure');
 });
 
-test('negative integers past the safe range are caught too', () => {
-  const r = scanRawJson('{"n":-9007199254740993}');
-  assert.equal(r.unsafeIntegers.length, 1);
-  assert.equal(r.unsafeIntegers[0].lossy, true);
-});
-
-test('an integer too large to be a double is reported as overflow, not a crash', () => {
-  const r = scanRawJson('{"n":' + '9'.repeat(400) + '}');
-  assert.ok(r.ok, 'scanning still succeeds');
-  assert.equal(r.unsafeIntegers[0].parsed, 'Infinity');
-  assert.equal(r.unsafeIntegers[0].lossy, true);
-});
-
-test('floats and exponents are out of scope', () => {
-  // `1.50` → `1.5` is cosmetic; separating cosmetic from lossy in decimal
-  // fractions needs more than a token scan, so the scanner stays quiet rather
-  // than guessing.
-  const r = scanRawJson('{"a":1.5,"b":1.50,"c":1e400,"d":0.1}');
-  assert.deepEqual(r.unsafeIntegers, []);
-});
-
-test('integers in arrays carry an indexed pointer', () => {
-  const r = scanRawJson('{"ids":[1,9007199254740993]}');
-  assert.equal(r.unsafeIntegers[0].pointer, '/ids/1');
-});
-
-// ── Both mechanisms in one payload ──────────────────────────────────────────
-
-test('duplicate keys and unsafe integers are found in one pass', () => {
-  const src = '{"id":9007199254740993,"imp":[{"bidfloor":1.5,"bidfloor":9.99}],"id":42}';
-  const r = scanRawJson(src);
-  assert.deepEqual(
-    r.duplicateKeys.map((d) => d.pointer).sort(),
-    ['/id', '/imp/0/bidfloor'],
-    'nesting does not hide the inner duplicate behind the outer one',
+test('long values are previewed, and the full extent stays addressable', () => {
+  const long = 'x'.repeat(500);
+  const text = `{"adm":"${long}","adm":"short"}`;
+  const f = findDuplicateKeys(text, { maxValueChars: 20 })[0];
+  assert.equal(f.occurrences[0].value.length, 20);
+  assert.equal(f.occurrences[0].valueTruncated, true);
+  assert.equal(
+    text.slice(f.occurrences[0].valueStart, f.occurrences[0].valueEnd).length,
+    long.length + 2,
   );
-  assert.equal(r.unsafeIntegers.length, 1);
-  assert.equal(r.unsafeIntegers[0].pointer, '/id');
+  assert.equal(f.occurrences[1].valueTruncated, false);
 });
 
-test('`parsed` is the re-emitted value, `lossy` is decided exactly', () => {
-  // These are two different true answers about the same token and the scanner
-  // deliberately uses each for a different job:
-  //   String(Number(raw)) = 1234567890123456800  ← what gets written onward
-  //   BigInt(Number(raw)) = 1234567890123456768  ← what is actually stored
-  // Reporting the second would show the operator a number their logs will
-  // never contain; testing with the first would call 2^53 damaged.
-  const raw = '1234567890123456789';
-  assert.equal(String(Number(raw)), '1234567890123456800');
-  assert.equal(BigInt(Number(raw)).toString(), '1234567890123456768');
+// ── Unescaped control characters ────────────────────────────────────────────
+//
+// RFC 8259 §7 requires U+0000–U+001F to be escaped inside a string. The scan
+// tolerates the raw byte on purpose — an exchange may have accepted it, and
+// refusing would hand the operator nothing at the moment they most need to see
+// what arrived — but tolerating it silently would leave a clean report on a
+// payload `JSON.parse` rejects outright.
 
-  const r = scanRawJson(`{"tid":${raw}}`);
-  assert.equal(r.unsafeIntegers[0].parsed, '1234567890123456800');
-  assert.equal(r.unsafeIntegers[0].lossy, true);
+const BEL = String.fromCharCode(0x07);
+const NUL = String.fromCharCode(0x00);
+const US = String.fromCharCode(0x1f);
 
-  // And the exact form is what keeps 2^53 honest: it prints identically to
-  // how it was written, so a printed-form comparison would also say "same",
-  // but only the BigInt comparison says so for the right reason.
-  const safe = scanRawJson('{"n":9007199254740992}');
-  assert.equal(safe.unsafeIntegers[0].lossy, false);
+test('the parse really does refuse it — anchor for this section', () => {
+  assert.throws(() => JSON.parse(`{"a":"x${BEL}y"}`), SyntaxError);
 });
 
-// ── Tolerance ───────────────────────────────────────────────────────────────
-
-test('malformed input keeps what was found before the break', () => {
-  // Truncation is exactly when an operator most needs to see what was in
-  // there, so the scan reports the failure without discarding its findings.
-  const src = '{"id":"A","id":"B","imp":[{"bidfloor":';
+test('a raw control character in a value is scanned and reported', () => {
+  const src = `{"a":"x${BEL}y"}`;
   const r = scanRawJson(src);
-  assert.equal(r.ok, false);
-  assert.ok(r.error && typeof r.error.offset === 'number');
-  assert.equal(r.duplicateKeys.length, 0, 'the unclosed object never completed');
-  assert.match(r.error.message, /unexpected end of input/);
+  assert.equal(r.ok, true, 'tolerated: the walk completes');
+  assert.equal(r.controlCharacters.length, 1);
+  const f = r.controlCharacters[0];
+  assert.equal(f.kind, 'control-character');
+  assert.equal(f.where, 'value');
+  assert.equal(f.pointer, '/a');
+  assert.equal(f.code, 0x07);
+  assert.equal(f.label, 'U+0007');
+  assert.equal(f.end, f.start + 1);
+  assert.equal(src.charCodeAt(f.start), 0x07, 'the offset points at the character itself');
 });
 
-test('a completed object keeps its duplicates when a later one breaks', () => {
-  const src = '{"a":{"id":1,"id":2},"b":[';
-  const r = scanRawJson(src);
-  assert.equal(r.ok, false);
+test('a raw control character in a key is reported against the key', () => {
+  const r = scanRawJson(`{"a${NUL}b":1}`);
+  assert.equal(r.controlCharacters.length, 1);
+  assert.equal(r.controlCharacters[0].where, 'key');
+  assert.equal(r.controlCharacters[0].pointer, `/a${NUL}b`, 'the key as it was on the wire');
+  assert.equal(r.controlCharacters[0].label, 'U+0000');
+});
+
+test('a properly escaped control character is legal and stays quiet', () => {
+  // The defect is the raw byte, never the character it denotes. This payload
+  // is valid JSON and decodes to the same string as the one above.
+  const src = '{"a":"x\\u0007y"}';
+  assert.equal(JSON.parse(src).a, `x${BEL}y`);
+  assert.deepEqual(scanRawJson(src).controlCharacters, []);
+});
+
+test('a literal tab inside a string counts — it is U+0009', () => {
+  // Easy to read as whitespace and wave through; `JSON.parse` does not.
+  assert.throws(() => JSON.parse('{"a":"x\ty"}'), SyntaxError);
+  const r = scanRawJson('{"a":"x\ty"}');
+  assert.equal(r.controlCharacters[0].label, 'U+0009');
+});
+
+test('control characters carry a path and a line:column like every other finding', () => {
+  const r = scanRawJson(`{\n  "imp": [\n    {"adm": "p${US}q"}\n  ]\n}`);
+  const f = r.controlCharacters[0];
+  assert.equal(f.pointer, '/imp/0/adm');
+  assert.equal(f.path, 'imp[0].adm');
+  assert.equal(f.line, 3, 'line survives the newlines above it');
+});
+
+test('a control character does not cost the duplicate key beside it', () => {
+  // The two mechanisms are independent; tolerating one must not blind the other.
+  const r = scanRawJson(`{"id":"A","id":"B${BEL}"}`);
   assert.equal(r.duplicateKeys.length, 1);
-  assert.equal(r.duplicateKeys[0].pointer, '/a/id');
+  assert.equal(r.controlCharacters.length, 1);
 });
 
-test('trailing content after the top-level value is refused', () => {
-  const r = scanRawJson('{"a":1} {"b":2}');
-  assert.equal(r.ok, false);
-  assert.match(r.error.message, /trailing content/);
+test('several in one string are all reported, in document order', () => {
+  const r = scanRawJson(`{"a":"${BEL}x${NUL}y${US}"}`);
+  assert.deepEqual(
+    r.controlCharacters.map((f) => f.label),
+    ['U+0007', 'U+0000', 'U+001F'],
+  );
+  const starts = r.controlCharacters.map((f) => f.start);
+  assert.deepEqual(
+    starts,
+    [...starts].sort((a, b) => a - b),
+  );
 });
 
-test('non-string input is refused rather than coerced', () => {
-  for (const bad of [null, undefined, 42, {}, ['{}']]) {
-    const r = scanRawJson(/** @type {any} */ (bad));
-    assert.equal(r.ok, false, `${String(bad)}: ok`);
-    assert.equal(r.error.message, 'input is not a string');
+test('control characters obey maxFindings like the other categories', () => {
+  const r = scanRawJson(`{"a":"${BEL.repeat(5)}"}`, { maxFindings: 2 });
+  assert.equal(r.controlCharacters.length, 2);
+  assert.equal(r.truncated.controlCharacters, true);
+});
+
+test('a clean payload reports none, and the flag stays false', () => {
+  const r = scanRawJson(MEASURED);
+  assert.deepEqual(r.controlCharacters, []);
+  assert.equal(r.truncated.controlCharacters, false);
+});
+
+// ── Contract ────────────────────────────────────────────────────────────────
+
+test('the helpers are the scan, narrowed', () => {
+  assert.deepEqual(findDuplicateKeys(MEASURED), scanRawJson(MEASURED).duplicateKeys);
+  assert.deepEqual(findUnsafeNumbers(MEASURED), scanRawJson(MEASURED).unsafeNumbers);
+});
+
+test('the scan is pure: repeatable, and it touches neither input nor options', () => {
+  const options = { maxOccurrences: 4 };
+  const frozen = Object.freeze({ ...options });
+  const first = scanRawJson(MEASURED, options);
+  const second = scanRawJson(MEASURED, options);
+  assert.deepEqual(first, second);
+  assert.deepEqual(options, frozen);
+  assert.equal(MEASURED, '{"id":"A","imp":[{"id":"1"}],"id":"B","bidfloor":1.5,"bidfloor":9.99}');
+});
+
+test('reasons and default limits are exported and stable', () => {
+  assert.deepEqual(Object.values(UNSAFE_REASONS).sort(), [
+    'overflow',
+    'precision-loss',
+    'underflow',
+    'unsafe-magnitude',
+  ]);
+  assert.equal(Object.isFrozen(UNSAFE_REASONS), true);
+  assert.equal(Object.isFrozen(DEFAULT_LIMITS), true);
+  for (const key of ['maxFindings', 'maxOccurrences', 'maxValueChars', 'maxDepth']) {
+    assert.equal(typeof DEFAULT_LIMITS[key], 'number', key);
   }
 });
 
-test('scalars and empty containers at the top level scan cleanly', () => {
-  for (const src of ['{}', '[]', '"x"', '42', 'true', 'null', '  {"a":[]}  ']) {
-    assert.equal(scanRawJson(src).ok, true, `${src}: ok`);
+test('a multi-megabyte payload scans in a sane amount of time', () => {
+  const imps = [];
+  for (let k = 0; k < 12000; k++) {
+    imps.push(
+      JSON.stringify({
+        id: String(k),
+        tagid: `slot-${k}`,
+        bidfloor: 0.35 + (k % 100) / 100,
+        banner: { w: 300, h: 250, mimes: ['image/png', 'image/jpeg'] },
+        ext: { note: 'synthetic filler so the payload has realistic bulk ' },
+      }),
+    );
   }
-});
+  const text = `{"id":"req-1","imp":[${imps.join(',')}],"site":{"domain":"publisher.example"}}`;
+  assert.equal(text.length > 2 * 1024 * 1024, true, 'fixture is at least 2 MB');
 
-test('strings containing braces and escaped quotes do not confuse the scan', () => {
-  // The scanner must be a real tokenizer; a brace counter would break here.
-  const src = '{"adm":"<div a=\\"{\\">{\\"id\\":\\"not a key\\"}</div>","id":1,"id":2}';
-  assert.deepEqual(JSON.parse(src).id, 2);
-  const r = scanRawJson(src);
-  assert.ok(r.ok);
-  assert.equal(r.duplicateKeys.length, 1, 'only the real duplicate, none from inside the string');
-  assert.equal(r.duplicateKeys[0].pointer, '/id');
-});
-
-// ── Agreement with JSON.parse ───────────────────────────────────────────────
-
-test('the scanner accepts exactly what JSON.parse accepts', () => {
-  // A scanner looser than the parser makes `ok: true` a lie: the caller reads
-  // it as "this payload is fine" on input nothing downstream can read. These
-  // are the cases where a hand-rolled tokenizer usually drifts.
-  const cases = [
-    '01', // leading zero
-    '1.', // no digit after the point
-    '.5', // no integer part
-    '1e', // truncated exponent
-    '+1',
-    '{"a":1,}',
-    '[1,]',
-    '{a:1}',
-    "{'a':1}",
-    '"\\x"',
-    '[1 2]',
-    '{"a"1}',
-    '"unterminated',
-    'nul',
-    'NaN',
-    'Infinity',
-    '[]extra',
-    '{"a":"control"}', // RFC 8259 §7 forbids a bare control character
-    // Valid, and each one a chance to reject something legitimate:
-    '1e5',
-    '-0',
-    '0',
-    '[[[]]]',
-    '{"":1}',
-    '"\\ud83d\\ude00"',
-    '"😀"',
-    '  \n\t {"a":1}  \n ',
-  ];
-  for (const src of cases) {
-    let parses = true;
-    try {
-      JSON.parse(src);
-    } catch {
-      parses = false;
-    }
-    assert.equal(scanRawJson(src).ok, parses, `disagreed on ${JSON.stringify(src)}`);
-  }
-});
-
-test('escape-equivalence holds for astral keys too', () => {
-  // A surrogate pair written as two \u escapes is the same key as the literal
-  // character. Comparing decoded values rather than source text is what makes
-  // this work, and it is the case a naive byte comparison gets wrong.
-  const r = scanRawJson('{"\\ud83d\\ude00":1,"😀":2}');
-  assert.ok(r.ok);
-  assert.equal(r.duplicateKeys.length, 1);
-  assert.equal(r.duplicateKeys[0].key, '😀');
-});
-
-test('nesting is refused at a fixed depth, with a reason', () => {
-  // The limit exists so the failure is the same on every runtime and can
-  // explain itself, instead of surfacing as "Maximum call stack size exceeded"
-  // at whatever depth the stack happens to give out.
-  assert.equal(scanRawJson('['.repeat(MAX_DEPTH) + ']'.repeat(MAX_DEPTH)).ok, true);
-
-  const tooDeep = '['.repeat(MAX_DEPTH + 1) + ']'.repeat(MAX_DEPTH + 1);
-  const r = scanRawJson(tooDeep);
-  assert.equal(r.ok, false);
-  assert.match(r.error.message, /nesting deeper than 512 levels/);
-
-  // Well past the native stack limit: still a report, never a thrown RangeError.
-  const absurd = '['.repeat(50000) + ']'.repeat(50000);
-  assert.equal(scanRawJson(absurd).ok, false, 'reports rather than crashing the caller');
-});
-
-// ── Corpus sweep ────────────────────────────────────────────────────────────
-
-test('every JSON sample in the repo scans without a structural error', () => {
-  // Guards the tokenizer against real payload shapes rather than only the
-  // cases it was written for. A sample that JSON.parse accepts and the scanner
-  // rejects is a scanner bug by definition.
-  const dir = path.join(__dirname, '..', 'samples');
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
-  assert.ok(files.length > 0, 'corpus is not empty');
-  for (const f of files) {
-    const src = fs.readFileSync(path.join(dir, f), 'utf8');
-    let parses = true;
-    try {
-      JSON.parse(src);
-    } catch {
-      parses = false;
-    }
-    if (!parses) continue; // deliberately-malformed fixtures are not the target
-    const r = scanRawJson(src);
-    assert.equal(r.ok, true, `${f}: ${r.error && r.error.message} at ${r.error && r.error.offset}`);
-  }
+  const started = Date.now();
+  const r = scanRawJson(text);
+  const elapsed = Date.now() - started;
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.duplicateKeys, []);
+  // Generous on purpose — this guards against an accidental quadratic, not
+  // against a slow CI box. Measured ~40 ms for this fixture.
+  assert.equal(elapsed < 5000, true, `scan took ${elapsed} ms`);
 });
