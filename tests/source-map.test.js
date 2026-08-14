@@ -76,7 +76,7 @@ test('minified and pretty produce equivalent ranges for the same pointer', () =>
 });
 
 test('BOM is skipped', () => {
-  const text = '﻿{"x":1}';
+  const text = '\uFEFF{"x":1}';
   const m = buildSourceMap(text);
   assert.ok(m.ok);
   assert.equal(slice(text, m.resolve('/x'), 'value'), '1');

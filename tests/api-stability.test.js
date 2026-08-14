@@ -259,7 +259,7 @@ test('validate(): repeats of the same (id,path) are collapsed via dedup', () => 
   // Identity check: no two findings share (id, path).
   const seen = new Set();
   for (const f of r.findings) {
-    const k = f.id + ' ' + f.path;
+    const k = f.id + '\u0000' + f.path;
     assert.ok(!seen.has(k), `duplicate (id,path) survived dedup: ${f.id} @ ${f.path}`);
     seen.add(k);
   }
