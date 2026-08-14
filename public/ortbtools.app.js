@@ -711,12 +711,29 @@ export async function mountInspector(root, ctx) {
 
     const pillStatus = $('formatPillStatus');
     // Outcome-first: status pill leads with an icon and (for warnings/errors)
-    // the count of findings, so the reader gets the verdict before format
+    // the counts of findings, so the reader gets the verdict before format
     // metadata. Order in the DOM is preserved; visual reordering is done in
     // CSS via `order:` so any non-JS consumer still sees type→status→version.
     const findings = (validation && validation.findings) || [];
     const errCount = findings.filter((f) => f.level === 'error').length;
     const warnCount = findings.filter((f) => f.level === 'warning').length;
+    // The verdict states BOTH actionable severities, not just the leading one.
+    // It used to stop at the first `else if`: a payload with 1 error and 4
+    // warnings read "✗ 1 error", and the four warnings never reached the
+    // top-level answer at all. So the one line whose whole job is "what did
+    // you find" reported a fifth of it, and the reader had to go hunting
+    // through the other counters on screen to discover the rest — which is
+    // exactly what made those counters feel like they were competing.
+    //
+    // Errors and warnings only. Info and questions are real and are one click
+    // away in their own chips, but a verdict carrying four numbers is no
+    // longer a verdict; this line says what blocks and what to check.
+    const errText = errCount
+      ? errCount + ' ' + (errCount === 1 ? t('status.error_one') : t('status.errors'))
+      : '';
+    const warnText = warnCount
+      ? warnCount + ' ' + (warnCount === 1 ? t('status.warning_one') : t('status.warnings'))
+      : '';
     let icon = '·';
     let statusText = humanStatus(status) || status || '—';
     if (status === 'clean') {
@@ -725,11 +742,10 @@ export async function mountInspector(root, ctx) {
       icon = '✗';
     } else if (errCount) {
       icon = '✗';
-      statusText = errCount + ' ' + (errCount === 1 ? t('status.error_one') : t('status.errors'));
+      statusText = warnText ? errText + ' · ' + warnText : errText;
     } else if (warnCount) {
       icon = '⚠';
-      statusText =
-        warnCount + ' ' + (warnCount === 1 ? t('status.warning_one') : t('status.warnings'));
+      statusText = warnText;
     }
     pillStatus.textContent = icon + ' ' + statusText;
     pillStatus.dataset.status = status;
