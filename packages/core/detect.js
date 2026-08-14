@@ -57,8 +57,19 @@ const SIGNALS_2_6 = [
   'app.cattax',
   'site.publisher.cattax',
   'app.publisher.cattax',
-  'site.langb',
-  'app.langb',
+  // `langb` is 2.6's BCP-47 companion to `language`, and it lives on Content,
+  // Device and the response Bid — not on Site or App, which have no language
+  // field at all. BidRequest's 2.6 addition is `wlangb`, next to 2.5's `wlang`.
+  // `site.langb` and `app.langb` sat here as definitive markers: fields nobody
+  // sends, each of them enough to pin a payload to 2.6 with confidence 1, so a
+  // typo or a key copied to the wrong object silently raised the version.
+  // Verified against the pinned 2.6 text (1debba8) and cross-checked against
+  // the independently typed registry in `unknown-fields.js`, which had copied
+  // the same two entries from this list rather than from the spec.
+  'wlangb',
+  'site.content.langb',
+  'app.content.langb',
+  'device.langb',
   'imp[].video.plcmt',
   'imp[].video.poddedupe',
   'imp[].refresh',

@@ -803,3 +803,33 @@ test('validate: raw findings survive every exit path, including a refusal', () =
   assert.ok(proseIds.includes('payload.duplicate_key'), 'raw finding on the invalid-root path');
   assert.ok(proseIds.includes('payload.invalid_root'), 'prose is not claimed as a URL');
 });
+
+// ── Version markers name fields that exist (detect.js SIGNALS_2_6) ─────────
+
+const { detectVersion, VERSIONS } = require('@ortbtools/core/detect');
+
+test('detectVersion: 2.6 language markers are the ones the spec defines', () => {
+  // `langb` is 2.6's BCP-47 companion to `language`: Content, Device and the
+  // response Bid have it, Site and App have no language field at all, and the
+  // BidRequest-level addition is `wlangb`. Verified against the pinned 2.6
+  // text and cross-checked against the independently typed field registry.
+  for (const payload of [
+    { wlangb: ['en'] },
+    { device: { langb: 'en-GB' } },
+    { site: { content: { langb: 'en' } } },
+    { app: { content: { langb: 'en' } } },
+  ]) {
+    assert.equal(detectVersion(payload).version, VERSIONS.V_2_6, JSON.stringify(payload));
+  }
+});
+
+test('detectVersion: a field nobody sends cannot pin a version', () => {
+  // These two sat in SIGNALS_2_6 as definitive markers. Neither exists in the
+  // spec, so any payload carrying one — a typo, or a key pasted into the wrong
+  // object — was pinned to 2.6 with confidence 1 on the strength of it.
+  for (const payload of [{ site: { langb: 'en' } }, { app: { langb: 'en' } }]) {
+    const v = detectVersion(payload);
+    assert.notEqual(v.version, VERSIONS.V_2_6, JSON.stringify(payload));
+    assert.deepEqual(v.signals, []);
+  }
+});

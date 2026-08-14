@@ -460,7 +460,6 @@ const SCHEMA = {
       keywords: ALL,
       kwarray: ALL,
       inventorypartnerdomain: ALL,
-      langb: V26, // detect.js SIGNALS_2_6: 'site.langb'
       ext: ALL,
     },
     children: { publisher: 'Publisher', content: 'Content' },
@@ -485,7 +484,6 @@ const SCHEMA = {
       keywords: ALL,
       kwarray: ALL,
       inventorypartnerdomain: ALL,
-      langb: V26, // detect.js SIGNALS_2_6: 'app.langb'
       ext: ALL,
     },
     children: { publisher: 'Publisher', content: 'Content' },
