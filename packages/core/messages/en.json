@@ -328,5 +328,9 @@
   "payload.duplicate_key": "The key `{key}` appears {count} times in the same object, with values {values}. RFC 8259 does not define which one a receiver keeps, so two of them can legitimately read different values from these same bytes — and after a parse the ambiguity is gone for good. Send the key once.",
   "payload.unsafe_number": "`{raw}` cannot be held exactly as a JSON number and reads back as `{parsed}` ({reason}). The same bytes give a different value depending on the receiver's language, so an identifier written this way is not the identifier that arrives. Send values above 2^53-1 as strings.",
   "payload.control_character": "A raw control character ({codepoint}) sits unescaped inside a string on line {line}. RFC 8259 §7 forbids it: some receivers accept the payload, others reject it outright. Write it as an escape — the string is identical at runtime and visible in review.",
-  "payload.raw_scan_truncated": "The raw-bytes scan stopped listing after its per-payload cap ({lists}). What is shown is real; what is missing was not checked. Fix these and re-run to see the rest."
+  "payload.raw_scan_truncated": "The raw-bytes scan stopped listing after its per-payload cap ({lists}). What is shown is real; what is missing was not checked. Fix these and re-run to see the rest.",
+  "payload.field_misspelled": "`{field}` on {object} is one edit away from `{suggestion}` and is not a field OpenRTB defines. A receiver is required to ignore what it does not recognise, so this does not fail — the value you wrote simply never arrives, and nothing says so.",
+  "payload.field_wrong_object": "`{field}` is a real OpenRTB field, but not on {object} — it belongs on {belongsOn}. Here it is ignored like any unknown key, so whatever you set it to has no effect.",
+  "payload.field_wrong_version": "`{field}` on {object} exists in {knownIn}, not in the version this payload was read as. A receiver on the other version ignores it silently.",
+  "payload.field_unrecognized": "`{field}` on {object} is not an OpenRTB field and is close to nothing that is. Vendor extensions belong under `ext`, where they are carried through rather than ignored."
 }

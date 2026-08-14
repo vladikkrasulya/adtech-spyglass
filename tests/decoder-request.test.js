@@ -833,3 +833,44 @@ test('detectVersion: a field nobody sends cannot pin a version', () => {
     assert.deepEqual(v.signals, []);
   }
 });
+
+// ── Unknown fields reach the operator (rules-unknown-fields) ───────────────
+
+test('validate: a misspelled field is reported with its correction', () => {
+  // Forward compatibility requires a receiver to ignore what it does not know,
+  // so a typo cannot fail — the value simply never arrives, and until now
+  // nothing said so.
+  const f = validate(
+    { id: '1', imp: [{ id: '1', video: { protcols: [2, 3], mimes: ['video/mp4'] } }] },
+    { locale: 'en' },
+  ).findings.find((x) => x.id === 'payload.field_misspelled');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'imp[0].video.protcols');
+  assert.equal(f.params.suggestion, 'protocols');
+});
+
+test('validate: a real field in the wrong object says where it belongs', () => {
+  // Not a typo — the name is correct, the placement is not. We name the object
+  // and stop, rather than guessing intent from a correct name in a wrong place.
+  const f = validate(
+    { id: '1', imp: [{ id: '1' }], us_privacy: '1YNN' },
+    { locale: 'en' },
+  ).findings.find((x) => x.id === 'payload.field_wrong_object');
+  assert.ok(f);
+  assert.equal(f.params.belongsOn, 'Regs');
+  assert.equal(f.params.suggestion, undefined, 'no invented correction');
+});
+
+test('validate: clean payloads and ext stay silent', () => {
+  const clean = validate(
+    {
+      id: '1',
+      imp: [{ id: '1', rwdd: 1, ext: { vendor: { anything: true } } }],
+      site: { id: 's', cattax: 6 },
+      source: { ext: { schain: { ver: '1.0', nodes: [] } } },
+    },
+    { locale: 'en' },
+  ).findings.filter((f) => f.id.startsWith('payload.field_'));
+  assert.deepEqual(clean, [], 'extensions are carried, not flagged');
+});

@@ -31,6 +31,7 @@ const { validateResponse30 } = require('./rules-response-30');
 const { validateFeedResponse } = require('./rules-feed');
 const { validateUrlRequest } = require('./rules-request-url');
 const { validateRawJson } = require('./rules-raw-json');
+const { validateUnknownFields } = require('./rules-unknown-fields');
 const { decodeRequest } = require('./decoders/request');
 const { crosscheck: doCrosscheck, nativeAssetCrosscheck } = require('./crosscheck');
 const { mirror: doMirror } = require('./mirror');
@@ -127,12 +128,17 @@ function validate(payload, opts) {
   // before any other rule in this package can look. Optional: callers that do
   // not hold the text simply do not get those findings.
   const rawFindings = validateRawJson(typeof o.rawText === 'string' ? o.rawText : '').findings;
+  // Fields a receiver will ignore without saying so. Runs on the parsed
+  // object, so unlike the raw scan it needs nothing extra from the caller.
+  const unknownFieldFindings = isObj(payload) ? validateUnknownFields(payload).findings : [];
   // Shadows the module-level `finalize` for the rest of this function so every
   // exit path carries the raw findings. There are seven returns and adding the
   // merge at each of them is how one gets forgotten.
   const finalize = (result, ...rest) =>
     finalizeResult(
-      Object.assign({}, result, { findings: rawFindings.concat(result.findings || []) }),
+      Object.assign({}, result, {
+        findings: rawFindings.concat(unknownFieldFindings, result.findings || []),
+      }),
       ...rest,
     );
   const dialect = DIALECTS[o.dialect || DEFAULT_DIALECT] || DIALECTS[DEFAULT_DIALECT];
