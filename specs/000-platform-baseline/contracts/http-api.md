@@ -49,6 +49,7 @@ stability promise.
 | Mirror/replay   | `POST /api/v1/mirror`, `POST /api/v1/replay`                                      | Core counterpart generation and bounded multi-sample replay                                                        |
 | Curated samples | `GET /api/v1/sample`, `GET /api/v1/sample/list`, `GET /api/v1/behavior/scenarios` | Repository-baked synthetic/curated corpus                                                                          |
 | Finding catalog | `GET /api/v1/finding-catalog`                                                     | Locale message/spec-reference catalog                                                                              |
+| Exchange rates  | `GET /api/v1/fx-rates`                                                            | Cached USD rate table for display-only currency conversion; 503 when no table (never a fallback rate)              |
 | Stream          | `GET /api/v1/stream`, `GET /api/v1/specimen/:hash`                                | Demand-gated SSE and cached synthetic permalinks                                                                   |
 | Analytics       | `GET /api/v1/analytics/summary`                                                   | ClickHouse-derived aggregate with graceful failure                                                                 |
 | Blog            | `GET /api/v1/blog/list`, `GET /api/v1/blog/post`, `GET /blog/rss.xml`             | Markdown and ClickHouse content reads; RSS is indexable Markdown only                                              |

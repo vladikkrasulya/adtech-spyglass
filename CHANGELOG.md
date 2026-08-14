@@ -6,6 +6,48 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.11.0 — a price is a number and the currency it is in
+
+- Fixed the analysis strip printing a hardcoded `$` in front of whatever currency arrived, so a
+  request pricing its floor in roubles read `Floor: $12500.00 · RUB` — a dollar sign, a rouble
+  amount and the letters RUB in one line, describing three different things. The floor now renders
+  as the amount plus its ISO code (`12 500,00 RUB`), formatted with that currency's own minor units
+  so a JPY floor loses its two decimals and a 0.001 CPM keeps its three.
+- The same hardcoded `$` labelled every winning bid in the preview as dollars regardless of what
+  `bid.cur` / `res.cur` said, and the slot cards read `req.cur[0]` for every impression — including
+  ones that had overridden it with `imp.bidfloorcur`, which wins per oRTB §3.2.4. Both now read the
+  currency that actually applies.
+- A floor priced outside the auction's allowed `req.cur` set is marked in the strip rather than left
+  to be inferred from a currency code nobody reads.
+- **USD equivalent** beside a non-USD floor: `12 500,00 RUB ≈ 150,11 $`, with the rate, its date and
+  its source in the tooltip. `lib/fx.js` fetches the whole USD rate table on a timer and caches it to
+  disk; `GET /api/v1/fx-rates` serves it. Nothing about a payload is ever sent to the provider — the
+  request carries no amount and no currency, which is what keeps
+  [the privacy claim](docs/PRIVACY.md) about analysed payloads true. `FX_DISABLED=1` stops the
+  outbound call itself, not merely the scheduler that makes it.
+- The converted figure is display-only and never reaches a finding, a verdict or a threshold: a live
+  rate would otherwise mean the same payload analysed differently tomorrow. A failed refresh serves
+  the last good table flagged stale; no table at all means the arriving currency alone. There is no
+  fallback rate, because an invented one is worse than no conversion.
+- Fixed the quality pill painting its own text through its own border. It was a vertical stack
+  needing ~36px inside a bar with a fixed 46px height that handed it 25px; as a shrinkable flex item
+  the box was squashed while the text kept its size, so the score sat above the capsule's top edge
+  and the tier word below its bottom one, in every locale. It is now a row, and the bar's height is a
+  minimum rather than a fixed value.
+- The bar also clipped the pill sideways between roughly 1025px and 1370px, where the three-panel
+  layout leaves the centre panel 200–400px. The compacting is now keyed on the bar's own width with
+  `@container` rather than on the viewport — the two do not correlate, since a 1100px viewport leaves
+  the bar 200px while a 1000px one leaves it the full width.
+- `overflow: hidden` on the bar was also eating the pill's hover tooltip, which renders above it, so
+  the score breakdown was unreachable at every viewport. The vertical axis is no longer clipped.
+- **`tests/analysis-strip-browser.test.js`** — measures the rendered boxes in uk, en and ru across
+  nine viewport widths, including the widest tier label in each locale, and asserts the floor's
+  currency against the rendered string. The CSS carried a comment claiming the pill was sized to fit
+  the longest label in any locale; that was true of its width and had never been checked for its
+  height. **`tests/fx.test.js`** covers the rate table's refusal to serve anything it cannot stand
+  behind.
+- App version bumped `1.10.1 → 1.11.0`; Core remains `0.35.0` and CLI remains `0.1.1`.
+
 ### Tooling — changelog completeness gate (no app deploy)
 
 - Restored the five release entries missing from this file: `v1.7.0`, `v1.8.0`, `v1.9.0`, `v1.10.0`

@@ -197,6 +197,11 @@
       'strip.label.pricing': 'Ціна',
       'strip.privacy.none': 'Без приватності',
       'strip.pricing.no_floor': 'Без floor',
+      'strip.pricing.not_allowed':
+        'Floor у {cur}, але req.cur дозволяє лише: {allowed}. imp.bidfloorcur перекриває req.cur для цього показу (oRTB §3.2.4).',
+      'strip.pricing.fx_tooltip':
+        '{amount} → USD за курсом {rate} {cur} за 1 USD · джерело: {provider}, {date} · тільки для читання, на перевірки не впливає',
+      'strip.pricing.fx_stale': 'курс давно не оновлювався',
 
       // ── quality score pill (Feature #12) ─────────────────
       'quality.status.excellent': 'Відмінно',
@@ -469,6 +474,11 @@
       'strip.label.pricing': 'Pricing',
       'strip.privacy.none': 'No Privacy',
       'strip.pricing.no_floor': 'No Floor',
+      'strip.pricing.not_allowed':
+        'Floor is priced in {cur}, but req.cur only allows: {allowed}. imp.bidfloorcur overrides req.cur for this impression (oRTB §3.2.4).',
+      'strip.pricing.fx_tooltip':
+        '{amount} → USD at {rate} {cur} per 1 USD · source: {provider}, {date} · display only, it feeds no check',
+      'strip.pricing.fx_stale': 'rate has not refreshed in a while',
 
       // ── quality score pill (Feature #12) ─────────────────
       'quality.status.excellent': 'Excellent',
@@ -729,6 +739,11 @@
       'strip.label.pricing': 'Цена',
       'strip.privacy.none': 'Без приватности',
       'strip.pricing.no_floor': 'Без floor',
+      'strip.pricing.not_allowed':
+        'Floor в {cur}, но req.cur разрешает только: {allowed}. imp.bidfloorcur перекрывает req.cur для этого показа (oRTB §3.2.4).',
+      'strip.pricing.fx_tooltip':
+        '{amount} → USD по курсу {rate} {cur} за 1 USD · источник: {provider}, {date} · только для чтения, на проверки не влияет',
+      'strip.pricing.fx_stale': 'курс давно не обновлялся',
 
       // ── quality score pill (Feature #12) ─────────────────
       'quality.status.excellent': 'Отлично',
@@ -1157,6 +1172,10 @@
       return params[k] != null ? String(params[k]) : '{' + k + '}';
     });
   };
+
+  // The active locale itself, for callers that need a real locale rather than
+  // a translated string — Intl formatters, mainly.
+  window.tLocale = activeLocale;
 
   // Expose for debugging + future expansion.
   window.tInfo = function () {

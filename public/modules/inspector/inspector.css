@@ -2812,13 +2812,28 @@ button.cross-path:focus-visible,
 .analysis-strip {
   display: flex;
   align-items: stretch;
-  height: 46px;
+  /* min-height, not height: a fixed height silently squashed the quality pill
+     below its own content (see .quality-pill). The bar now grows if a block
+     ever needs more room instead of painting text through its own borders. */
+  min-height: 46px;
   background: rgba(var(--bg-elev-rgb, 255, 255, 255), 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
-  overflow: hidden;
+  /* Clip sideways (long values still ellipsis inside their block) but let
+     the vertical axis escape — `overflow: hidden` also clipped the quality
+     pill's hover tooltip, which renders above the bar, so the score
+     breakdown was unreachable on every viewport. */
+  overflow-x: clip;
+  overflow-y: visible;
   flex-shrink: 0;
+  /* The blocks below key off the bar's OWN width, not the viewport's. The two
+     do not correlate: the three-panel desktop layout gives the centre panel
+     `viewport − 900px`, so a 1100px viewport leaves the bar 200px while a
+     1000px viewport (panels stacked) leaves it the full 1000px. Every
+     viewport-keyed breakpoint here was therefore guessing. */
+  container-type: inline-size;
+  container-name: analysis-strip;
 }
 /* Dark-theme tint */
 [data-theme='dark'] .analysis-strip {
@@ -2835,6 +2850,14 @@ button.cross-path:focus-visible,
 }
 .analysis-strip-block:last-child {
   border-right: none;
+}
+/* The pricing block carries the longest value in the bar — an amount, its
+   currency code and a USD equivalent — where the others carry a word or two.
+   Equal columns truncated it first and hardest; a larger share of the free
+   space keeps the whole figure readable while it still shrinks with the rest
+   when the bar gets tight. */
+.analysis-strip-pricing {
+  flex: 2.2;
 }
 .analysis-strip-label {
   font-size: 9px;
@@ -2867,6 +2890,29 @@ button.cross-path:focus-visible,
   color: var(--text);
   border: 1px solid rgba(var(--accent-rgb, 2, 132, 199), 0.4);
 }
+/* Floor currency + its USD equivalent.
+   The code is dimmed because it labels the amount rather than competing with
+   it; the USD figure is dimmed further because it is a derived reading aid,
+   not the value the request actually carries. */
+.analysis-strip-value .floor-cur {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+/* A floor priced outside req.cur's allowed set. Coloured, not hidden: the
+   amount is real, but the currency it is quoted in is one this auction said
+   it would not accept. */
+.analysis-strip-value .floor-cur-mismatch {
+  color: #ea580c;
+  cursor: help;
+}
+.analysis-strip-value .floor-usd {
+  color: var(--text-dim);
+  font-weight: 500;
+  cursor: help;
+}
+.analysis-strip-value .floor-usd-stale {
+  opacity: 0.65;
+}
 /* Version badge accent */
 .analysis-strip-value .ver-badge {
   display: inline-block;
@@ -2892,7 +2938,11 @@ button.cross-path:focus-visible,
     flex: 0 0 auto;
   }
   .analysis-strip {
-    height: 36px;
+    min-height: 36px;
+    /* Touch-scroll sideways. overflow-y stays hidden here on purpose: the
+       pill tooltip is a hover affordance with no touch equivalent, and
+       pairing overflow-x:auto with overflow-y:visible would compute the
+       vertical axis to auto and hang a scrollbar off the bar. */
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
@@ -2995,14 +3045,19 @@ button.cross-path:focus-visible,
   justify-content: center;
 }
 .quality-pill {
-  /* Vertical capsule — number on top, status label below it. Width set
-     to comfortably fit the longest tier label in any locale ("ТРЕБУЕТ
-     ВНИМАНИЯ" RU ≈ 16 chars at 8px font + 0.06em tracking ≈ 100px). */
+  /* Horizontal capsule — number then status label, on one line.
+     Was a vertical stack, which needed ~36px of height inside a bar that
+     only ever gave it 25px: the pill was a shrinkable flex item, so the box
+     was squashed while the text kept its natural size and bled through the
+     capsule's own border (number above the top edge, label below the bottom
+     one). A row fits the bar's height in every locale, and a long label like
+     RU "ТРЕБУЕТ ВНИМАНИЯ" now widens the pill instead of overflowing it. */
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  padding: 3px 14px;
+  gap: 7px;
+  padding: 3px 12px;
   border-radius: var(--r-pill, 999px);
   border: 1px solid transparent;
   cursor: default;
@@ -3011,7 +3066,10 @@ button.cross-path:focus-visible,
     background 0.3s ease,
     border-color 0.3s ease,
     box-shadow 0.3s ease;
-  min-width: 130px;
+  /* Never shrink below the text: the squash above is exactly what a
+     shrinkable pill in a fixed-height bar produces. */
+  flex-shrink: 0;
+  min-width: 92px;
   line-height: 1;
 }
 /* Tier colors */
@@ -3048,25 +3106,25 @@ button.cross-path:focus-visible,
 }
 .quality-score {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1;
   color: var(--text);
+  flex-shrink: 0;
 }
 .quality-status {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-dim);
-  margin-top: 2px;
-  /* Wrap long tier labels (UK "ПОТРЕБУЄ УВАГИ", RU "ТРЕБУЕТ ВНИМАНИЯ",
-     EN "NEEDS ATTENTION") instead of overflowing the pill. max-width keeps
-     the wrap inside the capsule (pill min-width 130 − 2×14 padding). */
-  white-space: normal;
-  text-align: center;
-  max-width: 102px;
-  line-height: 1.2;
+  /* One line beside the number. The previous rule wrapped long tier labels
+     onto a second line to keep them inside a fixed-width vertical pill —
+     which is what made the pill taller than the bar it lives in. In a row
+     the pill widens instead, so wrapping is neither needed nor wanted. */
+  white-space: nowrap;
+  text-align: left;
+  line-height: 1;
 }
 /* Tier-colored status text */
 /* Status text tier colors — descendant of .quality-pill again. */
@@ -3117,14 +3175,64 @@ button.cross-path:focus-visible,
   opacity: 1;
 }
 /* Responsive: shrink quality block on narrow screens */
-@media (max-width: 900px) {
-  .analysis-strip-quality {
-    min-width: 72px;
+/* Cramped bar on a wide viewport — the case no viewport breakpoint could see.
+   Between ~1025px and ~1370px the three-panel layout leaves the centre panel
+   200–400px, so six blocks do not fit and the quality pill (the one block that
+   must not shrink below its own text) was what got cut off the right edge.
+   Shed chrome in the order it stops earning its width: the block labels first,
+   then the tier word beside the score. Both are recoverable — the pill keeps
+   its hover tooltip, which still spells the tier out.
+
+   These must sit after the .quality-pill / .quality-status base rules: a
+   container query carries no specificity bonus, so declared earlier they lose
+   the cascade to the very rules they are meant to relax. */
+@container analysis-strip (max-width: 380px) {
+  /* The tier word is the only part of the bar that cannot ellipsis away —
+     the pill must not shrink below its text, or it clips it. The five other
+     blocks are already down to their padding by this width, so hiding their
+     labels would free no horizontal room; dropping the word does, and the
+     colour plus the tooltip still carry the tier. */
+  .quality-status {
+    display: none;
   }
   .quality-score {
     font-size: 15px;
   }
+  .analysis-strip-quality {
+    min-width: 0;
+    padding: 4px var(--space-2);
+  }
+  .quality-pill {
+    gap: 5px;
+    padding: 3px 9px;
+    min-width: 0;
+  }
 }
+@container analysis-strip (max-width: 300px) {
+  /* Past here every value is truncated to two or three characters anyway;
+     the labels are wider than the values they name, so they go too and the
+     values get the whole block height. The padding goes with them: five
+     blocks at var(--space-3) a side reserve 125px of pure gutter, which on
+     its own overflowed a bar this narrow. */
+  .analysis-strip-label {
+    display: none;
+  }
+  .analysis-strip-block {
+    justify-content: center;
+    padding: 0 var(--space-2);
+  }
+  .analysis-strip-quality {
+    padding: 4px var(--space-1);
+  }
+  .quality-pill {
+    padding: 3px 7px;
+  }
+}
+
+/* Compacting is driven by the @container rules above, keyed on the bar's own
+   width — see the note beside `container-name: analysis-strip`. What stays
+   viewport-keyed here is the touch treatment, which is genuinely about the
+   device rather than about how much room the bar got. */
 @media (max-width: 720px) {
   .analysis-strip-quality {
     min-width: 60px;

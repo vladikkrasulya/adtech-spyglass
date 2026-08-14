@@ -389,6 +389,27 @@ The `analyze_log` table (for logged-in users) records only metadata derived from
 findings: detected version/format, finding status, count by level, and whether it was
 a crosscheck. It never includes `bid_req` or `bid_res` body content.
 
+### Exchange rates (the one outbound call the analysis path relates to)
+
+The Inspector shows a USD equivalent beside a floor priced in another currency. The
+rate comes from `lib/fx.js`, which fetches **the entire USD rate table on a timer**
+(every 6 h) and caches it — it is the same request whoever is using the tool, and
+whether anyone is using it at all.
+
+This shape is deliberate, and it is what keeps the sentence above true. Asking a rate
+provider to convert a specific amount (`?from=RUB&to=USD&amount=12500`) would send a
+bid floor and its currency — both read out of a user's payload — to a third party on
+every analysis. Instead the table is fetched independently of any payload and the
+arithmetic runs in-process. **No amount, currency, or any other value derived from a
+submitted payload is sent anywhere.** `tests/fx.test.js` asserts the outbound request
+carries no query string and no body.
+
+The browser never contacts the rate provider either — it reads `/api/v1/fx-rates` from
+this origin, and the Content-Security-Policy (`connect-src 'self'`) forbids anything
+else. Operators who want no outbound call at all can set `FX_DISABLED=1`, which stops
+the fetch itself; the endpoint then answers 503 and floors are shown in their own
+currency with no conversion.
+
 ### Logging
 
 The server uses pino-based structured logging (`lib/logger.js`). The default log
@@ -580,6 +601,14 @@ current encrypted web flow is treated as high severity and triaged immediately.
 ## Changelog of privacy-relevant changes
 
 Selected entries from CHANGELOG.md:
+
+**v1.11.0** — The server gained an outbound call: `lib/fx.js` fetches a USD exchange-rate
+table every 6 h so the Inspector can show a non-USD floor's USD equivalent. It is listed
+here because adding any third-party call to a tool that promises not to forward payloads
+deserves to be written down, not because payload data moves — the table is fetched whole,
+independently of any analysis, and the conversion arithmetic runs in-process. See
+[Exchange rates](#exchange-rates-the-one-outbound-call-the-analysis-path-relates-to)
+above; `FX_DISABLED=1` removes the call entirely.
 
 **v0.37.1** — Closed an audit P1 desync: on password reset, stolen cookies stayed
 live in the in-memory session Map even after the DB-side delete threw. Fixed via a

@@ -1219,6 +1219,151 @@ export async function mountInspector(root, ctx) {
     return parseFloat(n.toFixed(6)).toString();
   }
 
+  // ── Money rendering ─────────────────────────────────────────────────────
+  // A price is a number AND the currency it is denominated in. The strip used
+  // to print a hardcoded '$' in front of whatever arrived, so a request
+  // pricing its floor in RUB rendered "Floor: $12500.00 · RUB" — a dollar
+  // sign, a rouble amount and the letters RUB, all in one line, describing
+  // three different things.
+  //
+  // Precision follows formatPrice: a currency's own minor-unit convention for
+  // ordinary amounts (JPY gets 0 decimals, USD 2), but sub-cent floors get up
+  // to 6 so a real 0.001 CPM does not render as "0.00" and read as "no bid".
+  function formatMoney(amount, code) {
+    const n = Number(amount);
+    if (!isFinite(n)) return String(amount);
+    const cur = typeof code === 'string' ? code.trim().toUpperCase() : '';
+    const opts = { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol' };
+    applySubCentDigits(opts, n);
+    try {
+      return new Intl.NumberFormat(activeLocaleTag(), opts).format(n);
+    } catch (_e) {
+      // Intl throws on a non-ISO code, and `narrowSymbol` is unsupported on
+      // older engines. Either way the amount still has to be readable, so
+      // fall back to the plain number beside whatever code arrived.
+      return formatPrice(n) + (cur ? ' ' + cur : '');
+    }
+  }
+
+  /**
+   * The amount alone, formatted with the currency's own minor-unit convention
+   * but no symbol — the caller writes the ISO code beside it.
+   *
+   * The floor uses this rather than formatMoney because a symbol AND a code
+   * ("12 500,00 ₽ · RUB") says the same thing twice in the tightest block on
+   * the bar, and pushed the USD equivalent off the end. Splitting the two
+   * roles also makes the line unambiguous at a glance: what arrived is a
+   * number with a CODE, what we derived is a number with a $.
+   */
+  function formatAmount(amount, code) {
+    const n = Number(amount);
+    if (!isFinite(n)) return String(amount);
+    const cur = typeof code === 'string' ? code.trim().toUpperCase() : '';
+    const opts = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+    // Borrow the currency's minor units (JPY 0, USD 2, KWD 3) without letting
+    // Intl print the symbol.
+    try {
+      const r = new Intl.NumberFormat(activeLocaleTag(), {
+        style: 'currency',
+        currency: cur,
+      }).resolvedOptions();
+      opts.minimumFractionDigits = r.minimumFractionDigits;
+      opts.maximumFractionDigits = r.maximumFractionDigits;
+    } catch (_e) {
+      // Unknown code — 2 decimals is the sane default, already set above.
+    }
+    applySubCentDigits(opts, n);
+    try {
+      return new Intl.NumberFormat(activeLocaleTag(), opts).format(n);
+    } catch (_e) {
+      return formatPrice(n);
+    }
+  }
+
+  /**
+   * A real sub-cent CPM (0.00177) must not round to "0.00" and read as "no
+   * bid" — the same reason formatPrice exists. Widen the fraction digits for
+   * small non-zero amounts only, so ordinary prices keep their conventional
+   * two (or none, for JPY).
+   */
+  function applySubCentDigits(opts, n) {
+    if (n !== 0 && Math.abs(n) < 0.01) {
+      opts.minimumFractionDigits = 2;
+      opts.maximumFractionDigits = 6;
+    }
+  }
+
+  // BCP-47 tag for Intl. The UI locale is uk | en | ru; en formats as en-US
+  // (the convention the rest of the numeric UI already follows).
+  function activeLocaleTag() {
+    const l = (window.tLocale && window.tLocale()) || 'uk';
+    return l === 'en' ? 'en-US' : l;
+  }
+
+  // ── FX: USD equivalent for a non-USD floor ──────────────────────────────
+  // Display only. The rate is live, so the same payload converts to a
+  // slightly different number tomorrow — that must never reach a finding, a
+  // verdict or a stored record, only the line the operator reads. Everything
+  // here degrades to "no conversion shown"; it never invents a rate.
+  let _fxTable = null;
+  let _fxPromise = null;
+
+  function loadFxRates() {
+    if (_fxTable) return Promise.resolve(_fxTable);
+    if (!_fxPromise) {
+      _fxPromise = fetch('/api/v1/fx-rates', { headers: { Accept: 'application/json' } })
+        .then(function (r) {
+          return r.ok ? r.json() : null;
+        })
+        .then(function (j) {
+          if (j && j.ok && j.rates && typeof j.rates === 'object') _fxTable = j;
+          return _fxTable;
+        })
+        .catch(function () {
+          // Offline, blocked, or the server has no table yet. The amount is
+          // already on screen in its own currency; that stays the answer.
+          return null;
+        });
+    }
+    return _fxPromise;
+  }
+
+  /**
+   * The provider's own "last updated" stamp, in the reader's locale. It
+   * arrives as RFC-1123 ("Fri, 14 Aug 2026 00:02:32 +0000"), which reads as
+   * noise inside a Ukrainian or Russian sentence. Unparseable input is passed
+   * through verbatim rather than replaced with a date we made up.
+   */
+  function formatFxDate(raw) {
+    if (!raw) return '—';
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return String(raw);
+    try {
+      return new Intl.DateTimeFormat(activeLocaleTag(), {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(d);
+    } catch (_e) {
+      return String(raw);
+    }
+  }
+
+  /**
+   * Convert into USD using the cached table.
+   * @returns {{usd: number, rate: number, table: object}|null} null when the
+   *   table is missing, the currency is absent from it, or no conversion is
+   *   needed (the amount is already USD).
+   */
+  function toUsd(amount, code) {
+    const n = Number(amount);
+    const cur = typeof code === 'string' ? code.trim().toUpperCase() : '';
+    if (!_fxTable || !isFinite(n) || !cur || cur === 'USD') return null;
+    const rate = Number(_fxTable.rates[cur]);
+    if (!isFinite(rate) || rate <= 0) return null;
+    return { usd: n / rate, rate: rate, table: _fxTable };
+  }
+
   // ── Feature #12: Quality Score Pill ─────────────────────────────────────
   // Computes a 0-100 quality score from findings. Returns {score, errors,
   // warnings, info, deductions} for tooltip use.
@@ -1240,6 +1385,43 @@ export async function mountInspector(root, ctx) {
     return { score: score, errors: errors, warnings: warnings, info: info, deductions: deductions };
   }
   window.computeQualityScore = computeQualityScore;
+
+  /**
+   * Fill the strip's USD-equivalent slot, fetching the rate table on first
+   * need. Re-entrant and self-cancelling: it re-reads the slot from the DOM
+   * after the await, so a second analysis landing mid-flight repaints its own
+   * floor rather than the previous one's.
+   */
+  function paintFloorUsd() {
+    const slot = document.querySelector('#analysisStrip .floor-usd');
+    if (!slot) return;
+    const amount = Number(slot.getAttribute('data-floor-amount'));
+    const cur = slot.getAttribute('data-floor-cur');
+    if (!isFinite(amount) || !cur || cur.toUpperCase() === 'USD') return;
+
+    const paint = function () {
+      const live = document.querySelector('#analysisStrip .floor-usd');
+      // A newer analysis has replaced the strip — that render paints itself.
+      if (!live || live !== slot) return;
+      const conv = toUsd(amount, cur);
+      if (!conv) return;
+      live.textContent = ' ≈ ' + formatMoney(conv.usd, 'USD');
+      live.title = t('strip.pricing.fx_tooltip', {
+        amount: formatAmount(amount, cur) + ' ' + cur,
+        cur: cur,
+        rate: conv.rate,
+        provider: conv.table.provider || '—',
+        date: formatFxDate(conv.table.providerUpdatedAt),
+      });
+      if (conv.table.stale) {
+        live.classList.add('floor-usd-stale');
+        live.title += ' · ' + t('strip.pricing.fx_stale');
+      }
+    };
+
+    if (_fxTable) paint();
+    else loadFxRates().then(paint);
+  }
 
   // ── Feature #13: Request Analysis Summary Strip ─────────────────────────
   // Renders a thin horizontal strip above the tab-bar showing 5 key
@@ -1346,10 +1528,41 @@ export async function mountInspector(root, ctx) {
       : escapeHtml(t('strip.privacy.none'));
 
     // 5. Pricing
+    //
+    // Three separate facts, kept separate: what the floor is, which currency
+    // it is priced in, and — when that is not USD — roughly what it is worth
+    // in USD. Per oRTB §3.2.4 imp.bidfloorcur overrides req.cur for this
+    // impression, so it wins here; req.cur is the *allowed* set, and a floor
+    // priced outside it is a real mismatch worth showing rather than hiding
+    // behind a currency code nobody reads.
     let pricingValue = escapeHtml(t('strip.pricing.no_floor'));
     if (imp0 && imp0.bidfloor != null) {
-      const cur = imp0.bidfloorcur || (req.cur && req.cur[0]) || 'USD';
-      pricingValue = 'Floor: $' + formatPrice(imp0.bidfloor) + ' · ' + escapeHtml(cur);
+      const allowed = Array.isArray(req.cur) ? req.cur.filter((c) => typeof c === 'string') : [];
+      const cur = imp0.bidfloorcur || allowed[0] || 'USD';
+      const outsideAllowed = allowed.length > 0 && allowed.indexOf(cur) === -1;
+
+      pricingValue =
+        'Floor: ' +
+        escapeHtml(formatAmount(imp0.bidfloor, cur)) +
+        ' <span class="floor-cur' +
+        (outsideAllowed ? ' floor-cur-mismatch' : '') +
+        '"' +
+        (outsideAllowed
+          ? ' title="' +
+            escapeHtml(t('strip.pricing.not_allowed', { cur: cur, allowed: allowed.join(', ') })) +
+            '"'
+          : '') +
+        '>' +
+        escapeHtml(cur) +
+        (outsideAllowed ? ' ⚠' : '') +
+        '</span>' +
+        // Filled in asynchronously once the rate table lands — the strip never
+        // waits on the network to show the number that actually arrived.
+        '<span class="floor-usd" data-floor-amount="' +
+        escapeHtml(String(imp0.bidfloor)) +
+        '" data-floor-cur="' +
+        escapeHtml(cur) +
+        '"></span>';
     }
 
     const stripHtml =
@@ -1385,7 +1598,7 @@ export async function mountInspector(root, ctx) {
       privValue +
       '</div>' +
       '</div>' +
-      '<div class="analysis-strip-block">' +
+      '<div class="analysis-strip-block analysis-strip-pricing">' +
       '<div class="analysis-strip-label">' +
       escapeHtml(t('strip.label.pricing')) +
       '</div>' +
@@ -1476,6 +1689,10 @@ export async function mountInspector(root, ctx) {
     }
     strip.innerHTML = fullStripHtml;
     strip.hidden = false;
+
+    // USD equivalent, painted in as soon as the rate table is available. The
+    // strip is already complete and correct without it.
+    paintFloorUsd();
 
     // Animate quality pill count-up (Feature #12)
     // Uses setTimeout-based ticks so it works even in background tabs
@@ -2356,7 +2573,18 @@ export async function mountInspector(root, ctx) {
       } else {
         adm = findAdm(res);
       }
-      $('mPrice').innerText = adm ? (bid.price ? '$' + formatPrice(bid.price) : 'BID') : '$0.00';
+      // Winning-bid price. Per oRTB §4.3.2 bid.cur overrides the response's
+      // cur, which in turn defaults to USD — the hardcoded '$' here labelled
+      // every bid as dollars regardless of what the response said it was.
+      const bidCur =
+        (typeof bid.cur === 'string' && bid.cur.trim()) ||
+        (res && typeof res.cur === 'string' && res.cur.trim()) ||
+        'USD';
+      $('mPrice').innerText = adm
+        ? bid.price
+          ? formatMoney(bid.price, bidCur)
+          : 'BID'
+        : formatMoney(0, bidCur);
       // Banner dimensions: prefer bid.{w,h} (winning creative size), fall back
       // to req.imp[0].banner.{w,h}, then to format[0] when banner has multi-size.
       // Used by setAdPreview to render at native size and scale-to-fit the
@@ -2415,10 +2643,13 @@ export async function mountInspector(root, ctx) {
       // Inspector tab — slot cards
       const imps = req.imp || [];
       const slotGrid = $('slotGrid');
-      // Currency for bidfloor: pick first allowed in req.cur (typical: ["USD"]).
-      // Fallback "$" for legacy/empty payloads.
+      // Currency for a slot's bidfloor. req.cur is only the *default* and the
+      // allowed set; imp.bidfloorcur overrides it per impression (oRTB §3.2.4).
+      // Reading req.cur[0] for every card labelled an imp that overrode it
+      // with a currency that impression is not priced in.
       const curList = Array.isArray(req.cur) ? req.cur.filter((x) => typeof x === 'string') : [];
-      const curSym = curList.length ? curList[0] : 'USD';
+      const reqCur0 = curList.length ? curList[0] : 'USD';
+      const impCur = (i) => (typeof i.bidfloorcur === 'string' && i.bidfloorcur.trim()) || reqCur0;
       // Banner sizes: prefer w×h if both set, otherwise pull from format[] (up
       // to 3 entries) so multi-size slots render meaningfully instead of empty.
       const bannerDims = (b) => {
@@ -2501,9 +2732,9 @@ export async function mountInspector(root, ctx) {
                   : '') +
                 flagsHtml +
                 '<div class="slot-floor"><span class="slot-floor-label">floor</span><span class="slot-floor-value">' +
-                (Number(i.bidfloor) || 0).toFixed(3) +
+                escapeHtml(formatPrice(Number(i.bidfloor) || 0)) +
                 ' ' +
-                escapeHtml(curSym) +
+                escapeHtml(impCur(i)) +
                 '</span></div>' +
                 '</div>'
               );

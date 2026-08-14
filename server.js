@@ -887,6 +887,7 @@ const { createMirrorModule } = require('./modules/mirror/handler');
 const { createReplayModule } = require('./modules/replay/handler');
 const sampleModule = require('./modules/sample/handler');
 const findingsModule = require('./modules/findings/handler');
+const { createFxModule } = require('./modules/fx/handler');
 const { createAnalyzeModule } = require('./modules/analyze/handler');
 const { createIntelModule } = require('./modules/intel/handler');
 const { createCorpusModule } = require('./modules/corpus/handler');
@@ -940,6 +941,7 @@ router.register(
 );
 router.register(sampleModule);
 router.register(findingsModule);
+router.register(createFxModule({ readLimiter, auth }));
 router.register(createAnalyticsModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));
 router.register(createTelemetryModule({ telemetryLimiter, auth }));
 router.register(createGistsModule({ Gists, gistWriteLimiter, readLimiter }));
@@ -1222,6 +1224,17 @@ const { startScheduled: startNewsCrawler } = require('./lib/news-crawler');
 if (process.env.NEWS_CRAWLER_DISABLED !== '1') {
   startNewsCrawler();
   log.info({ component: 'news-crawler' }, 'news crawler scheduled (run on +5s, then hourly)');
+}
+
+// ── FX rates — USD table for the Inspector's floor conversion ───────────────
+// Fetches the whole USD rate table on a timer; nothing about any payload is
+// ever sent to the provider (see lib/fx.js). Disabled via FX_DISABLED=1 for
+// dev/test runs that should make no outbound calls — /api/v1/fx-rates then
+// answers 503 and the UI shows floors in their own currency only.
+const { startScheduled: startFxRefresh } = require('./lib/fx');
+if (process.env.FX_DISABLED !== '1') {
+  startFxRefresh();
+  log.info({ component: 'fx' }, 'fx rate refresh scheduled (run on +3s, then every 6h)');
 }
 
 // ── /api/v1/sample — one synthetic example for the Playground "🎲 приклад" ─
