@@ -1181,28 +1181,45 @@ function parseNonCoreSegment(bits, index, out, limits) {
 // ── Trailing bits ────────────────────────────────────────────────────────────
 
 /**
- * Every bit must be accounted for. Base64URL rounds up to a multiple of six,
- * so up to five padding bits may follow the last field — and the spec says
- * they are zero. More than five leftover bits means the string carries content
- * this parser did not model; non-zero padding means it was not written by a
- * conforming encoder. Both are corruption signals that no field-level check
- * can see.
+ * Whatever follows the last field the parser read.
+ *
+ * This used to fire on *length*: more than five trailing bits was treated as
+ * unmodelled content, on the assumption that a conforming encoder pads to the
+ * nearest six-bit boundary and no further. Measured against `@iabtcf/core`, the
+ * reference implementation: every string it produces trips that rule. A minimal
+ * one carries fifteen trailing zero bits in its publisher segment, because the
+ * encoder emits twelve base64 characters where ten would hold the fields. Seven
+ * of seven generated strings were reported as suspect — a rule that warns about
+ * every valid input is worse than no rule, because it gets switched off and then
+ * nothing is reported at all.
+ *
+ * So the test is the content, not the count. Zeros are padding however many
+ * there are; a set bit is a field this parser did not model, however few. That
+ * distinction is also the one the spec actually makes.
  *
  * @param {TcFinding[]} out
+ * @param {string} segmentName
+ * @param {string} bits Full segment bit string.
+ * @param {number} consumed Index the parser stopped at.
  */
-function checkTrailingBits(out, segmentName, consumed, total) {
-  const trailing = total - consumed;
-  if (trailing < 6) return; // 0-5 bits is legal padding; its value is checked by the caller
+function checkTrailingBits(out, segmentName, bits, consumed) {
+  const trailing = bits.slice(consumed);
+  if (!trailing.includes('1')) return;
+  const isPaddingWidth = trailing.length < 6;
   push(
     out,
-    'segment.unconsumed_bits',
+    isPaddingWidth
+      ? `${segmentName === 'core' ? 'core' : 'segment'}.non_zero_padding`
+      : 'segment.unconsumed_bits',
     LEVELS.WARNING,
     segmentName,
     'trailing',
-    trailing,
-    '<= 5 padding bits',
-    'The segment holds more data than its declared structure accounts for.',
-    [consumed, total],
+    trailing.length,
+    'zero padding',
+    isPaddingWidth
+      ? 'The padding after the last field is not zero, so the string was not written by a conforming encoder.'
+      : 'The segment holds set bits past its declared structure — content this parser did not model.',
+    [consumed, bits.length],
   );
 }
 
@@ -1434,21 +1451,7 @@ function checkTcString(input, options) {
     if (opts.gvl) checkAgainstGvl(parsed.core, findings, opts.gvl);
 
     // — accounting: trailing bits and the round-trip —
-    checkTrailingBits(findings, 'core', parsed.reader.at, coreBits.length);
-    const padding = coreBits.slice(parsed.reader.at);
-    if (padding.length > 0 && padding.length < 6 && padding.includes('1')) {
-      push(
-        findings,
-        'core.non_zero_padding',
-        LEVELS.WARNING,
-        'core',
-        'padding',
-        padding,
-        'all zero',
-        'The Base64URL padding bits are not zero, so the string was not written by a conforming encoder.',
-        [parsed.reader.at, coreBits.length],
-      );
-    }
+    checkTrailingBits(findings, 'core', coreBits, parsed.reader.at);
 
     const reencodedCore = writeCore(parsed.core);
     roundTrip.attempted = true;
@@ -1491,20 +1494,7 @@ function checkTcString(input, options) {
       seenKinds.add(segment.kind);
       segments.push({ index: i, kind: segment.kind, chars: parts[i].length, bits: segment.bits });
 
-      checkTrailingBits(findings, `segment[${i}]`, segment.consumed, segment.bits);
-      const segmentPadding = segmentBits[i].slice(segment.consumed);
-      if (segmentPadding.length > 0 && segmentPadding.length < 6 && segmentPadding.includes('1')) {
-        push(
-          findings,
-          'segment.non_zero_padding',
-          LEVELS.WARNING,
-          `segment[${i}]`,
-          'padding',
-          segmentPadding,
-          'all zero',
-          'The Base64URL padding bits are not zero, so the segment was not written by a conforming encoder.',
-        );
-      }
+      checkTrailingBits(findings, `segment[${i}]`, segmentBits[i], segment.consumed);
       if (!segmentBits[i].startsWith(segment.encoded)) {
         roundTrip.matched = false;
         roundTrip.reason = `re-encoded segment[${i}] differs from the input bits`;

@@ -506,10 +506,30 @@ test('non-zero Base64 padding is reported', () => {
 });
 
 test('trailing content beyond the declared structure is reported', () => {
-  const result = checkTcString(`${BASE}AAAA`, opts());
+  // `____` is 24 set bits. Content, not padding.
+  const result = checkTcString(`${BASE}____`, opts());
   const finding = result.findings.find((f) => f.code === 'segment.unconsumed_bits');
   assert.ok(finding, `expected unconsumed bits, got ${codes(result).join(', ') || 'none'}`);
   assert.equal(finding.level, LEVELS.WARNING);
+});
+
+test('trailing zeros are padding, however many there are', () => {
+  // This check used to fire on length: more than five trailing bits counted as
+  // unmodelled content. Measured against @iabtcf/core, the reference encoder:
+  // seven of seven strings it produced tripped it, because a minimal one carries
+  // fifteen trailing zero bits in its publisher segment — twelve base64
+  // characters where ten would hold the fields. A rule that warns about every
+  // valid input is worse than no rule; it gets switched off, and then nothing is
+  // reported at all.
+  //
+  // `AAAA` is 24 zero bits, which the old rule reported and the spec calls
+  // padding.
+  const result = checkTcString(`${BASE}AAAA`, opts());
+  assert.equal(
+    result.findings.some((f) => f.code === 'segment.unconsumed_bits'),
+    false,
+    `expected silence, got ${codes(result).join(', ') || 'none'}`,
+  );
 });
 
 test('segments: a second core segment is out of position', () => {
