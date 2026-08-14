@@ -11,6 +11,7 @@
  */
 
 const { makeCanonicalUrlRequest } = require('../_canonical');
+const { parseRawQuery, findDecodeDamage } = require('../_raw-query');
 const { isPopFormat, normaliseFormatName } = require('../../../non-iab-formats');
 
 const ID = 'url-clickunder-feed';
@@ -47,9 +48,21 @@ function decode(text, parsedUrl) {
   can.format = 'pops';
 
   const q = parsedUrl.searchParams;
-  const raw = {};
-  for (const [k, v] of q.entries()) raw[k] = v;
+  // Verbatim, and first-value-wins on a repeated key — same contract as
+  // `decodeAuthenticatedJsonFeed`, for the same two reasons: `_raw` must not
+  // disagree with the value `detect()` matched on, and percent-decoding
+  // destroys unexpanded feed macros. See `_raw-query.js`.
+  const raw = parseRawQuery(parsedUrl.search);
   can._raw = raw;
+
+  for (const { key, decoded } of findDecodeDamage(q, raw)) {
+    can.warnings.push({
+      code: 'query_value_decode_damage',
+      param: key,
+      detail: `Percent-decoding replaced bytes in "${key}"; raw value preserved in _raw.`,
+      decoded,
+    });
+  }
 
   const ip = firstParam(q, ['ip', 'user_ip', 'userip', 'uip']);
   if (ip) {

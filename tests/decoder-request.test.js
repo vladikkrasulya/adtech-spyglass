@@ -372,3 +372,27 @@ test('_raw: verbatim reading does not stop fields that need decoding', () => {
 test('makeCanonicalUrlRequest: envelope carries an empty warnings array', () => {
   assert.deepEqual(makeCanonicalUrlRequest('v', 'http://x.test/').warnings, []);
 });
+
+test('_raw: clickunder decoder keeps macros verbatim too', () => {
+  // Same defect lived in two places. The clickunder decoder builds its own
+  // envelope instead of going through decodeAuthenticatedJsonFeed, so it
+  // needed the same fix rather than inheriting it.
+  const c = decodeRequest(
+    'https://ads.vendor.example/feed?sid=1&format=cu&cb=%%CACHEBUSTER%%' +
+      '&page=https%3A%2F%2Fpublisher.example%2Fa',
+  );
+  assert.equal(c.variant, 'url-clickunder-feed');
+  assert.equal(c._raw.cb, '%%CACHEBUSTER%%', '_raw is verbatim');
+  assert.equal(c.site.page, 'https://publisher.example/a', 'mapped fields stay decoded');
+  assert.deepEqual(
+    c.warnings.map((w) => w.param),
+    ['cb'],
+  );
+});
+
+test('_raw: clickunder repeated key takes the first value, matching detect()', () => {
+  // detect() reads normalisedQueryFormat(q) → q.get(), which is the first
+  // value. `_raw` must not disagree with the value detection matched on.
+  const c = decodeRequest('https://ads.vendor.example/feed?format=cu&sid=1&sid=2');
+  assert.equal(c._raw.sid, '1');
+});
