@@ -277,6 +277,20 @@
         targetPath: '/regs/gdpr',
         normalize: normalizeBinary,
       });
+      // Same shape as the GDPR flag directly above: a pre-2.6 extension field
+      // that 2.6 standardised at the top of Regs. Left out until now, so a 2.5
+      // payload carrying only the extension form was migrated with its CCPA
+      // signal still in the old home, where a 2.6 reader does not look.
+      proposePromotion(operations, {
+        ruleId: 'ortb26.regs.us_privacy',
+        source: payload.regs.ext,
+        sourceKey: 'us_privacy',
+        sourcePath: '/regs/ext/us_privacy',
+        target: payload.regs,
+        targetKey: 'us_privacy',
+        targetPath: '/regs/us_privacy',
+        normalize: normalizeNonEmptyString,
+      });
     }
     if (isObject(payload.source) && isObject(payload.source.ext)) {
       proposePromotion(operations, {

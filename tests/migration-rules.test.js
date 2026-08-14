@@ -14,6 +14,7 @@ const EXPECTED_FIXTURE_RULES = new Map([
   ['content-prodq', 'ortb26.content.prodq'],
   ['imp-rwdd', 'ortb26.imp.rwdd'],
   ['regs-gdpr', 'ortb26.regs.gdpr'],
+  ['regs-us-privacy', 'ortb26.regs.us_privacy'],
   ['source-schain', 'ortb26.source.schain'],
   ['user-consent', 'ortb26.user.consent'],
   ['user-eids', 'ortb26.user.eids'],
@@ -25,6 +26,7 @@ const KNOWN_LEGACY_SOURCE_PATHS = [
   /^\/imp\/\d+\/video\/protocol$/,
   /^\/(?:site|app)\/content\/videoquality$/,
   /^\/regs\/ext\/gdpr$/,
+  /^\/regs\/ext\/us_privacy$/,
   /^\/source\/ext\/schain$/,
   /^\/user\/ext\/(?:consent|eids)$/,
 ];
@@ -345,7 +347,12 @@ test('unknown extension and vendor fields survive every proposed operation', () 
   assert.deepEqual(migrated.imp[0].ext, input.imp[0].ext);
   assert.deepEqual(migrated.imp[0].video.ext.vendor_video, { nested: 'keep' });
   assert.equal(migrated.source.ext.vendor_source, 'keep');
-  assert.equal(migrated.regs.ext.us_privacy, '1YNN');
+  // `us_privacy` is a spec field, not a vendor extension, so this test asserted
+  // the wrong thing for its own purpose: it pinned the field in its pre-2.6
+  // home, which is exactly the omission it was meant to be indifferent to. It
+  // is promoted now; what this test is actually about is the vendor key beside
+  // it surviving the move.
+  assert.equal(migrated.regs.us_privacy, '1YNN');
   assert.equal(migrated.regs.ext.vendor_reg, true);
   assert.deepEqual(migrated.user.ext.vendor_user, { untouched: true });
   assert.equal(migrated.vendor_top_level, 'keep');

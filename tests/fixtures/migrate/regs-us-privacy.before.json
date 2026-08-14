@@ -1,0 +1,11 @@
+{
+  "id": "fixture-regs-us-privacy",
+  "imp": [{ "id": "1" }],
+  "regs": {
+    "coppa": 0,
+    "ext": {
+      "us_privacy": "1YNN",
+      "vendor_flag": true
+    }
+  }
+}
