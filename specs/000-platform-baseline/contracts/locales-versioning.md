@@ -66,7 +66,7 @@ The repository contains three independently versioned surfaces:
 
 | Surface           | Current version | Source of truth              | Coupled repository surfaces                                        |
 | ----------------- | --------------- | ---------------------------- | ------------------------------------------------------------------ |
-| Web application   | `1.10.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
+| Web application   | `1.10.1`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
 | `@ortbtools/core` | `0.35.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
 | `@ortbtools/cli`  | `0.1.1`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
 

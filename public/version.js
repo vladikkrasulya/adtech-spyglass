@@ -24,7 +24,7 @@
   'use strict';
 
   // ⚠ Single source of truth — bump this on a release.
-  const VERSION = 'v1.10.0';
+  const VERSION = 'v1.10.1';
 
   window.OrtbtoolsVersion = VERSION;
 
