@@ -1,6 +1,6 @@
 {
   "name": "@ortbtools/core",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "OpenRTB inspection engine — deterministic type/version/format detection, rule-based validation, semantic crosscheck, and knowledge-base helpers.",
   "license": "MIT",
   "main": "index.js",
