@@ -6,6 +6,24 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.11.3 — the price column stops repeating its own name
+
+- Removed the `Floor: ` prefix from the analysis bar's pricing value. It was a hardcoded English
+  literal printed into all three locales, so a Ukrainian reader got `Floor: 0,30 USD` — English
+  inside a Ukrainian interface — and it repeated the column it sits in, which is labelled
+  `PRICE` / `ЦІНА` / `ЦЕНА` and whose hint already says "the floor this impression asks for".
+- That duplication is what truncated the figure. The quality cell is `flex: 0 0 auto`, so it takes
+  its content width and never gives any back; `Критично` is 12px wider than `Critical`, those 12px
+  come out of the other five cells, and the amount ended up 3px short of its own box. Measured at
+  1440px: `Floor: 0,30 USD` needed 99px in 96 and was cut, `0,30 USD` needs 96 and fits.
+- Removing a word the column already carries beats tuning a flex weight until three pixels appear.
+- Not solved, and named rather than buried: a floor shown with its USD conversion —
+  `12 500,00 RUB ≈ 150,11 $` — needs 153px in 96. Cut by 57 where it was cut by 96. Twenty-four
+  characters do not fit that cell in any language, and the full string is recoverable from the
+  cell's title. Showing only the currency the floor is priced in, with the conversion in the
+  tooltip, would fit always; that is a product decision about whether both sides stay visible.
+- App version bumped `1.11.2 → 1.11.3`; Core remains `0.35.0` and CLI remains `0.1.1`.
+
 ### v1.11.2 — the Inspector on its own type scale, and a preview that says what it needs
 
 - Put the Inspector on the type scale `design-system.css` already defines. It rendered fourteen
