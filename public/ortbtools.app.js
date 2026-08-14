@@ -2082,6 +2082,12 @@ export async function mountInspector(root, ctx) {
     }
   });
 
+  // Bytes of the request pane as the operator pasted them, kept across the
+  // pretty-print that would otherwise erase duplicate keys and oversized
+  // integer spellings. Reset when the operator edits the pane.
+  let _rawBeforePretty = null;
+  let _prettyPrintedReq = null;
+
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
     clearMacros();
@@ -2104,6 +2110,13 @@ export async function mountInspector(root, ctx) {
     }
     _analyzeAbort = typeof AbortController === 'function' ? new AbortController() : null;
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
+    // If the pane still holds our own pretty-print, the bytes the operator
+    // pasted are the ones we stashed before rewriting it. See the pretty-print
+    // below for why this matters.
+    const rawReqBytes =
+      !fromHist && _prettyPrintedReq !== null && reqVal === _prettyPrintedReq
+        ? _rawBeforePretty
+        : reqVal;
     const resVal = fromHist ? fromHist.res : $('bidRes').value;
     // Backend supports request-only, response-only, or both. JsonFeed-format
     // payloads (push-materials, value-feed, bid-price, bid-redirect) are typically
@@ -2144,7 +2157,21 @@ export async function mountInspector(root, ctx) {
         // JSON.stringify on a string yields a quote-wrapped version that
         // would overwrite the user's textarea with `"http://…"` on every
         // analyse click.
-        if (reqVal && typeof req === 'object') $('bidReq').value = JSON.stringify(req, null, 2);
+        if (reqVal && typeof req === 'object') {
+          // Pretty-printing rewrites the pane, and re-serialising is exactly
+          // what erases a duplicate key or an oversized integer's spelling.
+          // Without remembering the text we replaced, the first analyse would
+          // report those defects and every later one would not — the tool
+          // destroying its own evidence. Kept until the operator edits the pane
+          // themselves, which `onBidReqInput` detects by the value no longer
+          // matching what we wrote.
+          // `rawReqBytes`, not `reqVal`: on a repeat analyse the pane already
+          // holds our pretty-print, and stashing that would quietly discard the
+          // operator's bytes on the second click instead of the first.
+          _rawBeforePretty = rawReqBytes;
+          $('bidReq').value = JSON.stringify(req, null, 2);
+          _prettyPrintedReq = $('bidReq').value;
+        }
         if (resVal) $('bidRes').value = JSON.stringify(res, null, 2);
         if (reqVal) updateCharCount('bidReq');
         if (resVal) updateCharCount('bidRes');
@@ -2409,7 +2436,12 @@ export async function mountInspector(root, ctx) {
         // instead of silently flipping the rule set.
         const versionPinEl = document.getElementById('versionPinSelector');
         const expectedVersion = versionPinEl && versionPinEl.value ? versionPinEl.value : null;
-        const body = { bidReq: req, bidRes: res };
+        // `reqVal` is the textarea verbatim, NOT a re-serialisation of `req`.
+        // Re-serialising would lose exactly what the raw scan looks for: a
+        // duplicate key collapses to one, and an integer past 2^53-1 comes
+        // back spelled differently. Those defects exist only in the bytes the
+        // operator pasted, so the bytes are what travels.
+        const body = { bidReq: req, bidRes: res, bidReqRaw: rawReqBytes };
         if (expectedVersion) body.opts = { expectedVersion };
         const r = await fetch(analyzeUrl(), {
           method: 'POST',

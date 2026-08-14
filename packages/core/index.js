@@ -30,6 +30,7 @@ const { validateResponse } = require('./rules-response');
 const { validateResponse30 } = require('./rules-response-30');
 const { validateFeedResponse } = require('./rules-feed');
 const { validateUrlRequest } = require('./rules-request-url');
+const { validateRawJson } = require('./rules-raw-json');
 const { decodeRequest } = require('./decoders/request');
 const { crosscheck: doCrosscheck, nativeAssetCrosscheck } = require('./crosscheck');
 const { mirror: doMirror } = require('./mirror');
@@ -120,6 +121,20 @@ function refusalFindings(refusal) {
 
 function validate(payload, opts) {
   const o = opts || {};
+  // `opts.rawText` is the payload exactly as it arrived, before any parse.
+  // Three defects exist only there — a duplicate key, an integer past 2^53-1,
+  // a raw control character in a string — and `JSON.parse` erases all three
+  // before any other rule in this package can look. Optional: callers that do
+  // not hold the text simply do not get those findings.
+  const rawFindings = validateRawJson(typeof o.rawText === 'string' ? o.rawText : '').findings;
+  // Shadows the module-level `finalize` for the rest of this function so every
+  // exit path carries the raw findings. There are seven returns and adding the
+  // merge at each of them is how one gets forgotten.
+  const finalize = (result, ...rest) =>
+    finalizeResult(
+      Object.assign({}, result, { findings: rawFindings.concat(result.findings || []) }),
+      ...rest,
+    );
   const dialect = DIALECTS[o.dialect || DEFAULT_DIALECT] || DIALECTS[DEFAULT_DIALECT];
   const locale = o.locale || FALLBACK_LOCALE;
   const disabledRules = o.disabledRules;
@@ -391,7 +406,7 @@ function crosscheck(req, res, opts) {
   return findings.map((f) => decorate(f, locale));
 }
 
-function finalize(result, statusOverride, locale, disabledRules, strictness) {
+function finalizeResult(result, statusOverride, locale, disabledRules, strictness) {
   let raw = applyDisabledRules(result.findings, disabledRules);
   raw = dedupFindings(raw);
   raw = sortFindings(raw);

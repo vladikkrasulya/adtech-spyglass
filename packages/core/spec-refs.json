@@ -302,5 +302,9 @@
   "payload.ambiguous_envelope": null,
   "version.assumed": null,
   "version.single_marker": null,
-  "jsonfeed.not_validated": "https://www.jsonfeed.org/version/1.1/"
+  "jsonfeed.not_validated": "https://www.jsonfeed.org/version/1.1/",
+  "payload.duplicate_key": "https://www.rfc-editor.org/rfc/rfc8259#section-4",
+  "payload.unsafe_number": "https://www.rfc-editor.org/rfc/rfc8259#section-6",
+  "payload.control_character": "https://www.rfc-editor.org/rfc/rfc8259#section-7",
+  "payload.raw_scan_truncated": null
 }

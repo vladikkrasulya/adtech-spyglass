@@ -324,5 +324,9 @@
   "payload.ambiguous_envelope": "Payload mixes an OpenRTB 3.0 envelope (openrtb) with 2.x root fields (imp/seatbid). It was validated as {validated} — the other layer was ignored. Remove the layer that does not belong.",
   "version.assumed": "No version-specific fields found — validated against the 2.5 baseline by assumption, not detection. If you target 2.6 or 3.0, pin it via expectedVersion to catch version drift.",
   "version.single_marker": "Version 2.6 was detected from a single field ({signal}). One field silently upgraded the whole validation target — if you actually target 2.5, pin expectedVersion to flag it instead.",
-  "jsonfeed.not_validated": "Recognized as JSON Feed 1.1 by shape (version + items). Structural validation for this format is not implemented — fields were NOT checked."
+  "jsonfeed.not_validated": "Recognized as JSON Feed 1.1 by shape (version + items). Structural validation for this format is not implemented — fields were NOT checked.",
+  "payload.duplicate_key": "The key `{key}` appears {count} times in the same object, with values {values}. RFC 8259 does not define which one a receiver keeps, so two of them can legitimately read different values from these same bytes — and after a parse the ambiguity is gone for good. Send the key once.",
+  "payload.unsafe_number": "`{raw}` cannot be held exactly as a JSON number and reads back as `{parsed}` ({reason}). The same bytes give a different value depending on the receiver's language, so an identifier written this way is not the identifier that arrives. Send values above 2^53-1 as strings.",
+  "payload.control_character": "A raw control character ({codepoint}) sits unescaped inside a string on line {line}. RFC 8259 §7 forbids it: some receivers accept the payload, others reject it outright. Write it as an escape — the string is identical at runtime and visible in review.",
+  "payload.raw_scan_truncated": "The raw-bytes scan stopped listing after its per-payload cap ({lists}). What is shown is real; what is missing was not checked. Fix these and re-run to see the rest."
 }

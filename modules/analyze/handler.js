@@ -183,6 +183,11 @@ function createAnalyzeModule(deps) {
             disabledRules,
             expectedVersion,
             userDialect,
+            // The browser parses before posting, so `bidReq` arrives as an
+            // object and the duplicate keys and integer spellings are already
+            // gone. `bidReqRaw` carries the text the operator actually pasted;
+            // without it those defects are unreachable from here.
+            rawText: typeof body.bidReqRaw === 'string' ? body.bidReqRaw : undefined,
           });
           // Side = request (call context), kind = url for string GET requests.
           attachLocations(validation.findings, {

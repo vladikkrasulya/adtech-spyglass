@@ -730,3 +730,76 @@ test('detectType: anything the operator plainly aimed at a URL is claimed', () =
     assert.equal(detectType(s), TYPES.URL_REQUEST, s);
   }
 });
+
+// ── Raw-bytes findings reach the operator (rules-raw-json) ─────────────────
+
+const { validateRawJson } = require('@ortbtools/core/rules-raw-json');
+
+test('validateRawJson: severity follows consequence, not spec pedantry', () => {
+  // RFC 8259 leaves duplicate-key resolution undefined, so the payload is not
+  // invalid — but two receivers can read different values, and one of them is
+  // a bid floor. Money and identity are errors; everything else is a warning.
+  const money = validateRawJson('{"imp":[{"bidfloor":1.5,"bidfloor":9.99}]}').findings;
+  assert.equal(money.length, 1);
+  assert.equal(money[0].id, 'payload.duplicate_key');
+  assert.equal(money[0].level, 'error');
+  assert.equal(money[0].path, 'imp[0].bidfloor');
+
+  const cosmetic = validateRawJson('{"site":{"name":"a","name":"b"}}').findings;
+  assert.equal(cosmetic[0].level, 'warning');
+});
+
+test('validateRawJson: a number that reads back differently is an error', () => {
+  const lossy = validateRawJson('{"tmax":9007199254740993}').findings;
+  assert.equal(lossy[0].id, 'payload.unsafe_number');
+  assert.equal(lossy[0].level, 'error');
+  assert.equal(lossy[0].params.raw, '9007199254740993');
+  assert.equal(lossy[0].params.parsed, '9007199254740992');
+
+  // Survived the round trip; arithmetic on it is merely unreliable.
+  assert.equal(validateRawJson('{"tmax":9007199254740992}').findings[0].level, 'warning');
+});
+
+test('validateRawJson: nothing to say about a clean or unscannable payload', () => {
+  assert.deepEqual(validateRawJson('{"id":"1","imp":[{"id":"1"}]}').findings, []);
+  assert.deepEqual(validateRawJson('not json').findings, []);
+  assert.deepEqual(validateRawJson('').findings, []);
+  // @ts-ignore — intentional wrong type for robustness testing
+  assert.deepEqual(validateRawJson(null).findings, []);
+});
+
+test('validate: raw findings only appear when the caller supplies the bytes', () => {
+  const raw = '{"id":"A","id":"B","imp":[{"id":"1","banner":{"w":300,"h":250}}]}';
+  const parsed = JSON.parse(raw);
+
+  const withText = validate(parsed, { locale: 'en', rawText: raw }).findings;
+  const dup = withText.find((f) => f.id === 'payload.duplicate_key');
+  assert.ok(dup, 'duplicate key is reported when the text is available');
+  assert.equal(dup.level, 'error');
+  assert.match(
+    dup.msg,
+    /"A" \| "B"/,
+    'both values are named, since one of them was chosen silently',
+  );
+
+  // A caller that only has the object behaves exactly as before.
+  const without = validate(parsed, { locale: 'en' }).findings;
+  assert.equal(without.filter((f) => f.id.startsWith('payload.duplicate_key')).length, 0);
+});
+
+test('validate: raw findings survive every exit path, including a refusal', () => {
+  // The merge is done once at the top rather than at each of the seven
+  // returns, which is how one gets forgotten.
+  // `http://` is claimed as a URL attempt and refused; `not a url` is prose and
+  // deliberately keeps the JSON answer. Both are exit paths that never reach
+  // the normal object flow, and the raw finding has to survive either.
+  const refused = validate('http://', { locale: 'en', rawText: '{"a":1,"a":2}' });
+  const refusedIds = refused.findings.map((f) => f.id);
+  assert.ok(refusedIds.includes('payload.duplicate_key'), 'raw finding on a URL refusal');
+  assert.ok(refusedIds.includes('request.url.unparseable'), 'refusal reason still present');
+
+  const prose = validate('not a url', { locale: 'en', rawText: '{"a":1,"a":2}' });
+  const proseIds = prose.findings.map((f) => f.id);
+  assert.ok(proseIds.includes('payload.duplicate_key'), 'raw finding on the invalid-root path');
+  assert.ok(proseIds.includes('payload.invalid_root'), 'prose is not claimed as a URL');
+});
