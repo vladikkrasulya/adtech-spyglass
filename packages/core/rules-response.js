@@ -27,6 +27,46 @@ const { admLooksLikePop } = require('./non-iab-formats');
 
 const F = makeFinding;
 
+// Win/billing/loss notices are optional, but when present OpenRTB defines
+// them as URLs. Treat malformed values as WARNING rather than ERROR: a bidder
+// can still clear the price auction while the exchange ignores a broken
+// callback (exactly the operational distinction the Inspector needs to make).
+//
+// Replace macro templates before parsing so standard forms such as
+// `https://dsp.example/win?p=${AUCTION_PRICE}` remain valid. Exact CDATA
+// wrappers are tolerated because they are common at XML/JSON adapter
+// boundaries even though the parsed OpenRTB value normally has no wrapper.
+const NOTICE_FIELDS = ['nurl', 'burl', 'lurl'];
+const NOTICE_MACRO_RE = /\$\{[A-Za-z0-9_]+(?::[A-Za-z0-9_]+)?\}/g;
+
+function isValidNoticeUrl(value) {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  let candidate = value;
+  if (candidate.startsWith('<![CDATA[') && candidate.endsWith(']]>')) {
+    // Trim inside the wrapper: an XML boundary is exactly where the value
+    // arrives newline-padded (`<![CDATA[ https://… ]]>`), and this product's
+    // own macro evaluator (cleanRawUrl) accepts that form. Without the trim
+    // the surviving whitespace hit the guard below and the only CDATA shape
+    // real adapters emit was the one shape this tolerance failed to cover.
+    candidate = candidate.slice(9, -3).trim();
+  }
+  // URL() helpfully percent-encodes raw markup/whitespace. Notice fields are
+  // wire templates, so accepting those characters would hide adapter
+  // concatenation bugs (for example an iframe accidentally appended to burl).
+  const hasControl = Array.from(candidate).some((ch) => {
+    const code = ch.charCodeAt(0);
+    return code <= 0x1f || code === 0x7f;
+  });
+  if (!candidate || hasControl || /[\s<>"'`]/.test(candidate)) return false;
+  candidate = candidate.replace(NOTICE_MACRO_RE, '0');
+  try {
+    const parsed = new URL(candidate);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.hostname;
+  } catch {
+    return false;
+  }
+}
+
 function validateResponse(res, ctx) {
   const findings = [];
   const dialect = (ctx && ctx.dialect) || null;
@@ -85,6 +125,16 @@ function validateResponse(res, ctx) {
         const claimed = dialect && typeof dialect.claimsBid === 'function' && dialect.claimsBid(b);
         if (!claimed) {
           findings.push(F('response.bid.payload_missing', LEVELS.WARNING, `${bp}.adm`, params));
+        }
+      }
+      for (const field of NOTICE_FIELDS) {
+        if (b[field] != null && !isValidNoticeUrl(b[field])) {
+          findings.push(
+            F('response.bid.notice_url_invalid', LEVELS.WARNING, `${bp}.${field}`, {
+              ...params,
+              field,
+            }),
+          );
         }
       }
       if (!Array.isArray(b.adomain) || !b.adomain.length) {

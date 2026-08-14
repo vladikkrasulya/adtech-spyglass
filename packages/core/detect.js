@@ -57,8 +57,19 @@ const SIGNALS_2_6 = [
   'app.cattax',
   'site.publisher.cattax',
   'app.publisher.cattax',
-  'site.langb',
-  'app.langb',
+  // `langb` is 2.6's BCP-47 companion to `language`, and it lives on Content,
+  // Device and the response Bid — not on Site or App, which have no language
+  // field at all. BidRequest's 2.6 addition is `wlangb`, next to 2.5's `wlang`.
+  // `site.langb` and `app.langb` sat here as definitive markers: fields nobody
+  // sends, each of them enough to pin a payload to 2.6 with confidence 1, so a
+  // typo or a key copied to the wrong object silently raised the version.
+  // Verified against the pinned 2.6 text (1debba8) and cross-checked against
+  // the independently typed registry in `unknown-fields.js`, which had copied
+  // the same two entries from this list rather than from the spec.
+  'wlangb',
+  'site.content.langb',
+  'app.content.langb',
+  'device.langb',
   'imp[].video.plcmt',
   'imp[].video.poddedupe',
   'imp[].refresh',
@@ -157,6 +168,55 @@ function decodeRequestLazy(text) {
 }
 
 /**
+ * Does a pasted string deserve a URL-request answer rather than "this is not
+ * JSON"?
+ *
+ * Claiming only what a decoder recognised meant every refusal — a mistyped
+ * host, an unfetchable scheme, a feed we have no decoder for — fell through to
+ * `payload.invalid_root`, and the operator was told their feed URL was not a
+ * JSON object. The reasons were computed and discarded one frame later.
+ *
+ * Claiming everything that parses is the opposite mistake: the repair layer
+ * prefixes `https://` generously, so bare `42` and `hello` become valid URLs
+ * with hosts `42` and `hello`. Those are not URL pastes and must stay UNKNOWN.
+ *
+ * So: a scheme the operator typed themselves is evidence enough, and otherwise
+ * the host has to look real — a dot, `localhost`, or an explicit port, which is
+ * roughly what a browser omnibox demands before it stops treating input as a
+ * search query.
+ *
+ * @param {string} text Original paste, before repair.
+ * @param {Object|null} decoded Whatever `decodeRequest` made of it.
+ * @returns {boolean}
+ */
+function looksLikeUrlRequest(text, decoded) {
+  if (!decoded) return false;
+  if (decoded.variant) return true;
+  switch (decoded.reason) {
+    // The operator typed `javascript:`/`mailto:`/`ftp:` themselves; answering
+    // about the scheme beats answering about JSON.
+    case 'unsupported_scheme':
+    case 'decoder_threw':
+      return true;
+    case 'no_decoder': {
+      // The paste itself has to look addressy. Host alone is not enough: bare
+      // `42` gets `https://` prefixed and then WHATWG expands it to the IPv4
+      // shorthand `0.0.0.42`, dots and all, so a lone number would qualify on
+      // the host test while plainly not being a URL anyone typed.
+      if (!/[.:/]/.test(text)) return false;
+      const host = (decoded.parsed && decoded.parsed.host) || '';
+      return host.includes('.') || host.includes(':') || host === 'localhost';
+    }
+    // Nothing parsed. Only claim it when the text plainly meant to be a URL,
+    // so prose, SQL and stray HTML keep the JSON answer.
+    case 'unparseable':
+      return text.includes('://');
+    default:
+      return false;
+  }
+}
+
+/**
  * Shared 3.0-envelope shape test — the ONE place that decides "is this
  * payload a 3.0 attempt". Used by both detectType() and detectVersion() so
  * the two axes can't drift apart.
@@ -192,9 +252,7 @@ function detectType(obj) {
   // analyze pipeline passes pasted text verbatim when JSON.parse fails — we
   // claim it here if any request-decoder recognizes the URL signature.
   if (typeof obj === 'string') {
-    const decoded = decodeRequestLazy(obj);
-    if (decoded && decoded.variant) return TYPES.URL_REQUEST;
-    return TYPES.UNKNOWN;
+    return looksLikeUrlRequest(obj, decodeRequestLazy(obj)) ? TYPES.URL_REQUEST : TYPES.UNKNOWN;
   }
   // Arrays are push-materials feed responses (list of materials).
   if (Array.isArray(obj)) return TYPES.VENDOR_FEED;

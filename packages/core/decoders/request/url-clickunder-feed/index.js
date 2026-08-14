@@ -11,6 +11,8 @@
  */
 
 const { makeCanonicalUrlRequest } = require('../_canonical');
+const { parseRawQuery, findDecodeDamage } = require('../_raw-query');
+const { pathEquals, getParam } = require('../_signature');
 const { isPopFormat, normaliseFormatName } = require('../../../non-iab-formats');
 
 const ID = 'url-clickunder-feed';
@@ -18,12 +20,19 @@ const PATH = '/feed';
 const FORMAT_ALIASES = new Set(['cu', 'clickunder', 'pop', 'pops', 'popup', 'popunder']);
 
 function normalisedQueryFormat(q) {
-  const raw = q.get('format') || q.get('ad_format') || q.get('type') || q.get('adtype') || '';
+  // Param names matched case-insensitively; the value is lowercased by
+  // normaliseFormatName already. See `_signature.js`.
+  const raw =
+    getParam(q, 'format') ||
+    getParam(q, 'ad_format') ||
+    getParam(q, 'type') ||
+    getParam(q, 'adtype') ||
+    '';
   return normaliseFormatName(raw);
 }
 
 function detect(_text, parsedUrl) {
-  if (parsedUrl.pathname.replace(/\/+$/, '') !== PATH) return false;
+  if (!pathEquals(parsedUrl.pathname, PATH)) return false;
   const q = parsedUrl.searchParams;
   const fmt = normalisedQueryFormat(q);
   return FORMAT_ALIASES.has(fmt) || isPopFormat(fmt);
@@ -35,7 +44,7 @@ function isIPv6(s) {
 
 function firstParam(q, names) {
   for (const name of names) {
-    const value = q.get(name);
+    const value = getParam(q, name);
     if (value) return value;
   }
   return null;
@@ -47,9 +56,21 @@ function decode(text, parsedUrl) {
   can.format = 'pops';
 
   const q = parsedUrl.searchParams;
-  const raw = {};
-  for (const [k, v] of q.entries()) raw[k] = v;
+  // Verbatim, and first-value-wins on a repeated key — same contract as
+  // `decodeAuthenticatedJsonFeed`, for the same two reasons: `_raw` must not
+  // disagree with the value `detect()` matched on, and percent-decoding
+  // destroys unexpanded feed macros. See `_raw-query.js`.
+  const raw = parseRawQuery(parsedUrl.search);
   can._raw = raw;
+
+  for (const { key, decoded } of findDecodeDamage(q, raw)) {
+    can.warnings.push({
+      code: 'query_value_decode_damage',
+      param: key,
+      detail: `Percent-decoding replaced bytes in "${key}"; raw value preserved in _raw.`,
+      decoded,
+    });
+  }
 
   const ip = firstParam(q, ['ip', 'user_ip', 'userip', 'uip']);
   if (ip) {

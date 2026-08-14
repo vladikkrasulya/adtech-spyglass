@@ -34,6 +34,11 @@ import {
 // partner state + renderers) that the shell service delegates to when
 // Inspector happens to be mounted.
 import { session } from '/core/session.js';
+import {
+  parseRequestInput,
+  renderInputBadge,
+  serializeRequestInput,
+} from '/modules/inspector/request-input.js';
 
 export async function mountInspector(root, ctx) {
   'use strict';
@@ -782,20 +787,11 @@ export async function mountInspector(root, ctx) {
   function updateJsonBadge(id) {
     const el = $(id);
     const badge = $(id === 'bidReq' ? 'reqBadge' : 'resBadge');
-    const v = el.value.trim();
-    if (!v) {
-      badge.textContent = t('badge.empty');
-      badge.className = 'json-badge empty';
-      return;
-    }
-    try {
-      JSON.parse(v);
-      badge.textContent = t('badge.valid');
-      badge.className = 'json-badge valid';
-    } catch {
-      badge.textContent = t('badge.invalid');
-      badge.className = 'json-badge invalid';
-    }
+    // The request editor admits two wire shapes: OpenRTB JSON and a raw
+    // HTTP(S) feed URL. Give the latter an explicit state instead of the
+    // misleading red "invalid JSON" badge. The response editor remains
+    // JSON-only.
+    renderInputBadge(el.value, badge, t, { allowUrl: id === 'bidReq' });
   }
 
   // ── Ad preview helpers ────────────────────────────────────────
@@ -2086,6 +2082,12 @@ export async function mountInspector(root, ctx) {
     }
   });
 
+  // Bytes of the request pane as the operator pasted them, kept across the
+  // pretty-print that would otherwise erase duplicate keys and oversized
+  // integer spellings. Reset when the operator edits the pane.
+  let _rawBeforePretty = null;
+  let _prettyPrintedReq = null;
+
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
     clearMacros();
@@ -2108,6 +2110,13 @@ export async function mountInspector(root, ctx) {
     }
     _analyzeAbort = typeof AbortController === 'function' ? new AbortController() : null;
     const reqVal = fromHist ? fromHist.req : $('bidReq').value;
+    // If the pane still holds our own pretty-print, the bytes the operator
+    // pasted are the ones we stashed before rewriting it. See the pretty-print
+    // below for why this matters.
+    const rawReqBytes =
+      !fromHist && _prettyPrintedReq !== null && reqVal === _prettyPrintedReq
+        ? _rawBeforePretty
+        : reqVal;
     const resVal = fromHist ? fromHist.res : $('bidRes').value;
     // Backend supports request-only, response-only, or both. JsonFeed-format
     // payloads (push-materials, value-feed, bid-price, bid-redirect) are typically
@@ -2131,25 +2140,11 @@ export async function mountInspector(root, ctx) {
 
     try {
       // bidReq accepts two shapes: oRTB JSON (parsed to object) OR a URL-
-      // style ad request string (clickunder/teaser/pop GET — decoded
+      // style legacy feed request string (decoded
       // server-side via packages/core/decoders/request/). If JSON.parse
       // fails AND the text looks like a URL, pass it through verbatim;
       // the server's validate() will route it to the URL_REQUEST branch.
-      let req;
-      if (!reqVal) {
-        req = {};
-      } else {
-        try {
-          req = JSON.parse(reqVal);
-        } catch (e) {
-          const trimmed = reqVal.trim();
-          if (/^https?:\/\//i.test(trimmed)) {
-            req = trimmed;
-          } else {
-            throw e;
-          }
-        }
-      }
+      const req = parseRequestInput(reqVal);
       const res = resVal ? JSON.parse(resVal) : {};
       // Simulated clearing price: use ONLY the user's explicit input.
       // Do NOT fallback to bid.price, bidfloor, or 0.00 — an empty field
@@ -2162,7 +2157,21 @@ export async function mountInspector(root, ctx) {
         // JSON.stringify on a string yields a quote-wrapped version that
         // would overwrite the user's textarea with `"http://…"` on every
         // analyse click.
-        if (reqVal && typeof req === 'object') $('bidReq').value = JSON.stringify(req, null, 2);
+        if (reqVal && typeof req === 'object') {
+          // Pretty-printing rewrites the pane, and re-serialising is exactly
+          // what erases a duplicate key or an oversized integer's spelling.
+          // Without remembering the text we replaced, the first analyse would
+          // report those defects and every later one would not — the tool
+          // destroying its own evidence. Kept until the operator edits the pane
+          // themselves, which `onBidReqInput` detects by the value no longer
+          // matching what we wrote.
+          // `rawReqBytes`, not `reqVal`: on a repeat analyse the pane already
+          // holds our pretty-print, and stashing that would quietly discard the
+          // operator's bytes on the second click instead of the first.
+          _rawBeforePretty = rawReqBytes;
+          $('bidReq').value = JSON.stringify(req, null, 2);
+          _prettyPrintedReq = $('bidReq').value;
+        }
         if (resVal) $('bidRes').value = JSON.stringify(res, null, 2);
         if (reqVal) updateCharCount('bidReq');
         if (resVal) updateCharCount('bidRes');
@@ -2427,7 +2436,12 @@ export async function mountInspector(root, ctx) {
         // instead of silently flipping the rule set.
         const versionPinEl = document.getElementById('versionPinSelector');
         const expectedVersion = versionPinEl && versionPinEl.value ? versionPinEl.value : null;
-        const body = { bidReq: req, bidRes: res };
+        // `reqVal` is the textarea verbatim, NOT a re-serialisation of `req`.
+        // Re-serialising would lose exactly what the raw scan looks for: a
+        // duplicate key collapses to one, and an integer past 2^53-1 comes
+        // back spelled differently. Those defects exist only in the bytes the
+        // operator pasted, so the bytes are what travels.
+        const body = { bidReq: req, bidRes: res, bidReqRaw: rawReqBytes };
         if (expectedVersion) body.opts = { expectedVersion };
         const r = await fetch(analyzeUrl(), {
           method: 'POST',
@@ -2699,7 +2713,10 @@ export async function mountInspector(root, ctx) {
         const status = validation ? validation.status : 'local';
         historyStore.unshift({
           ts: Date.now(),
-          req: JSON.stringify(req, null, 2),
+          // Keep URL-style requests as raw URLs. JSON.stringify(string)
+          // would persist a quote-wrapped JSON scalar, so loading History
+          // would visibly mutate the original request.
+          req: serializeRequestInput(req),
           res: resVal ? JSON.stringify(res, null, 2) : '',
           title: entity,
           status,

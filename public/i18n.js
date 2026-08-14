@@ -557,6 +557,7 @@
       'badge.empty': 'empty',
       'badge.valid': 'valid',
       'badge.invalid': 'invalid',
+      'badge.url_request': 'URL request',
     },
     ru: {
       // ── action-button flash statuses (post-success label swap) ──
@@ -809,11 +810,13 @@
   I18N.uk['badge.empty'] = 'порожньо';
   I18N.uk['badge.valid'] = 'валідний';
   I18N.uk['badge.invalid'] = 'невалідний';
+  I18N.uk['badge.url_request'] = 'URL-запит';
   I18N.uk['history.empty'] = 'Історія порожня — встав запит щоб почати';
   I18N.en['history.empty'] = 'History empty — paste a request to get started';
   I18N.ru['badge.empty'] = 'пусто';
   I18N.ru['badge.valid'] = 'валидный';
   I18N.ru['badge.invalid'] = 'невалидный';
+  I18N.ru['badge.url_request'] = 'URL-запрос';
   I18N.ru['history.empty'] = 'История пустая — вставь запрос чтобы начать';
 
   // Ad-preview empty hint — was hardcoded UK in ortbtools.app.js setAdPreview;

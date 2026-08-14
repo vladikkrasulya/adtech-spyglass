@@ -42,9 +42,27 @@
  * @property {string} [site.page]        Referring page URL (from `url=` etc.).
  * @property {Object} [user]
  * @property {string} [user.id]          Vendor sub-id / publisher tracking id.
- * @property {Object} _raw               Original query params verbatim —
- *                                       per-vendor extras live here so the
- *                                       canonical shape stays stable.
+ * @property {Object} _raw               Query params exactly as sent, read off
+ *                                       `url.search` without percent-decoding
+ *                                       (see `_raw-query.js`) — per-vendor
+ *                                       extras live here so the canonical
+ *                                       shape stays stable. This is the source
+ *                                       of truth; every decoded field above is
+ *                                       a lossy projection of it.
+ * @property {Array<Object>} warnings    Things left untouched but worth
+ *                                       flagging, e.g. a query value that
+ *                                       percent-decoding destroyed, or an
+ *                                       ambiguous double-escaped entity the
+ *                                       repair layer declined to guess at.
+ *                                       Never a reason to reject on its own.
+ * @property {Array<{step: string, before: string, after: string}>} [repairs]
+ *                                       What the input-repair layer changed
+ *                                       before parsing, in application order —
+ *                                       one entry per step that altered the
+ *                                       string. Attached by the registry, not
+ *                                       by the decoder. Empty when the paste
+ *                                       arrived clean; `repairs[0].before` is
+ *                                       the operator's original text.
  * @property {Object} meta
  * @property {string} meta.detectedVariant
  */
@@ -66,6 +84,7 @@ function makeCanonicalUrlRequest(variant, url) {
     site: {},
     user: {},
     _raw: {},
+    warnings: [],
     meta: { detectedVariant: variant },
   };
 }

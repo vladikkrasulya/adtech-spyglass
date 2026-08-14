@@ -823,6 +823,10 @@ body {
   background: rgba(22, 163, 74, 0.1);
   color: var(--success);
 }
+.json-badge.url {
+  background: var(--accent-soft);
+  color: var(--text);
+}
 .json-badge.invalid {
   background: rgba(220, 38, 38, 0.1);
   color: var(--danger);

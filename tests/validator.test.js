@@ -100,6 +100,20 @@ test('valid URL request link-feed: canonical format pops', () => {
   assert.equal(result.urlRequest.format, 'pops');
 });
 
+test('valid URL request search-feed: synthetic authenticated shape is accepted', () => {
+  const url =
+    'https://feed.vendor.example/search?format=json&feed=demo&auth=tk&query=demo-query' +
+    '&subid=u1&user_ip=192.0.2.44&ua=Mozilla%2F5.0' +
+    '&url=https%3A%2F%2Fpublisher.example%2F&count=1&ad_info=1&lang=en';
+  const result = validate(url);
+  assert.equal(result.type, TYPES.URL_REQUEST);
+  assert.equal(result.status, 'clean');
+  assert.equal(result.urlRequest.variant, 'url-search-feed');
+  assert.equal(result.urlRequest.endpoint, 'feed.vendor.example/search');
+  assert.equal(result.urlRequest.format, undefined);
+  assert.ok(Object.hasOwn(result.urlRequest._raw, 'auth'));
+});
+
 // ── validate on a valid BidRequest (default IAB dialect) ─────────────────
 
 test('valid BidRequest under IAB: status clean, no error findings', () => {
@@ -391,6 +405,60 @@ test('bid with no adm and no nurl is warning "response.bid.payload_missing"', ()
 });
 
 // ── Garbage / detection ──────────────────────────────────────────────────
+
+test('malformed notice URL is a warning and points at the exact notice field', () => {
+  const res = validResponse();
+  res.seatbid[0].bid[0].burl = '=broken&bid=${AUCTION_PRICE}<iframe></iframe>';
+  const { findings, status } = validate(res);
+  const f = findById(findings, 'response.bid.notice_url_invalid');
+  assert.ok(f);
+  assert.equal(f.level, 'warning');
+  assert.equal(f.path, 'seatbid[0].bid[0].burl');
+  assert.equal(f.params.field, 'burl');
+  assert.equal(status, 'warnings');
+});
+
+test('notice URL validation accepts HTTP(S) macro templates and exact CDATA wrappers', () => {
+  const res = validResponse();
+  const bid = res.seatbid[0].bid[0];
+  bid.nurl = 'https://notice.example/win?p=${AUCTION_PRICE}';
+  bid.burl = '<![CDATA[https://notice.example/bill?id=${AUCTION_ID}]]>';
+  bid.lurl = 'http://notice.example/loss?code=${AUCTION_LOSS}';
+  const { findings } = validate(res);
+  assert.equal(findById(findings, 'response.bid.notice_url_invalid'), undefined);
+});
+
+test('whitespace-padded CDATA notice URLs are accepted; junk inside is still caught', () => {
+  // XML→JSON adapters emit `<![CDATA[ url ]]>` with padding or newlines —
+  // that is the common form, and the first version of this rule accepted only
+  // the byte-exact wrapper while the product's own macro evaluator
+  // (cleanRawUrl) took both. The trim must not become a loophole, though:
+  // markup INSIDE the wrapper is still an adapter concatenation bug.
+  const res = validResponse();
+  const bid = res.seatbid[0].bid[0];
+  bid.nurl = '<![CDATA[ https://notice.example/win?p=${AUCTION_PRICE} ]]>';
+  bid.burl = '<![CDATA[\nhttps://notice.example/bill\n]]>';
+  const { findings } = validate(res);
+  assert.equal(findById(findings, 'response.bid.notice_url_invalid'), undefined);
+
+  const bad = validResponse();
+  bad.seatbid[0].bid[0].burl = '<![CDATA[ https://notice.example/bill <iframe> ]]>';
+  const hits = validate(bad).findings.filter((f) => f.id === 'response.bid.notice_url_invalid');
+  assert.equal(hits.length, 1, 'markup inside CDATA must stay flagged');
+});
+
+test('all present notice fields must be absolute HTTP(S) string templates', () => {
+  const res = validResponse();
+  const bid = res.seatbid[0].bid[0];
+  bid.nurl = '/relative/win';
+  bid.burl = { url: 'https://notice.example/bill' };
+  bid.lurl = 'javascript:alert(1)';
+  const hits = validate(res).findings.filter((f) => f.id === 'response.bid.notice_url_invalid');
+  assert.deepEqual(
+    hits.map((f) => f.path),
+    ['seatbid[0].bid[0].burl', 'seatbid[0].bid[0].lurl', 'seatbid[0].bid[0].nurl'],
+  );
+});
 
 test('non-object payload is invalid', () => {
   const result = validate('hello');
