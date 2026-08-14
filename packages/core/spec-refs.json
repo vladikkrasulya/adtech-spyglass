@@ -310,5 +310,7 @@
   "payload.field_misspelled": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#specification-conventions",
   "payload.field_wrong_object": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#specification-conventions",
   "payload.field_wrong_version": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#specification-conventions",
-  "payload.field_unrecognized": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#specification-conventions"
+  "payload.field_unrecognized": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#specification-conventions",
+  "consent.tcstring_implausible": "https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md",
+  "consent.tcstring_roundtrip_mismatch": "https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md"
 }

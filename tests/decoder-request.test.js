@@ -874,3 +874,62 @@ test('validate: clean payloads and ext stay silent', () => {
   ).findings.filter((f) => f.id.startsWith('payload.field_'));
   assert.deepEqual(clean, [], 'extensions are carried, not flagged');
 });
+
+// ── TCF consent strings (rules-consent) ────────────────────────────────────
+
+// Public example from the IAB documentation; carries no real user's consent.
+const TC_STRING = 'COwxsONOwxsONKpAAAENAdCAAMAAAAAAAAAAAAAAAAAA';
+const consentIds = (payload) =>
+  validate(payload, { locale: 'en' })
+    .findings.filter((f) => f.id.startsWith('consent.'))
+    .map((f) => f.id);
+
+test('validate: a sound consent string says nothing', () => {
+  // The check that matters most. A warning about a working consent string gets
+  // the whole rule switched off, and then nothing is reported at all.
+  assert.deepEqual(
+    consentIds({ id: '1', imp: [{ id: '1' }], user: { consent: TC_STRING }, regs: { gdpr: 1 } }),
+    [],
+  );
+});
+
+test('validate: a damaged consent string decodes into different consent, and is reported', () => {
+  // Corruption does not stop a TC string decoding — it changes what it says.
+  // Measured: four substituted characters switch on purposes and special
+  // features nobody consented to, with no exception anywhere.
+  const damaged = TC_STRING.slice(0, 20) + 'ZZZZ' + TC_STRING.slice(24);
+  const ids = consentIds({ id: '1', imp: [{ id: '1' }], user: { consent: damaged } });
+  assert.ok(ids.includes('consent.tcstring_implausible'), ids.join(','));
+
+  const f = validate(
+    { id: '1', imp: [{ id: '1' }], user: { consent: damaged } },
+    { locale: 'en' },
+  ).findings.find((x) => x.id === 'consent.tcstring_implausible');
+  assert.equal(f.level, 'warning', 'every check here is plausibility, never proof');
+  assert.equal(f.path, 'user.consent');
+});
+
+test('validate: the pre-2.6 home is read too', () => {
+  const damaged = TC_STRING.slice(0, 20) + 'ZZZZ' + TC_STRING.slice(24);
+  const f = validate(
+    { id: '1', imp: [{ id: '1' }], user: { ext: { consent: damaged } } },
+    { locale: 'en' },
+  ).findings.find((x) => x.id === 'consent.tcstring_implausible');
+  assert.ok(f, 'user.ext.consent is still what most senders emit');
+  assert.equal(f.path, 'user.ext.consent');
+});
+
+test('validate: absent, empty and non-string consent are not findings', () => {
+  for (const user of [undefined, {}, { consent: '' }, { consent: 42 }, { consent: null }]) {
+    assert.deepEqual(consentIds({ id: '1', imp: [{ id: '1' }], user }), [], JSON.stringify(user));
+  }
+});
+
+test('validate: a GPP string is not run through the TCF reader', () => {
+  // GPP is a different container with its own sections. A TCF bit reader over
+  // it would produce confident nonsense, so regs.gpp is deliberately not read.
+  assert.deepEqual(
+    consentIds({ id: '1', imp: [{ id: '1' }], regs: { gpp: 'DBABMA~CPXxRfAPXxR', gpp_sid: [7] } }),
+    [],
+  );
+});
