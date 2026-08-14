@@ -6,6 +6,32 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.11.1 — the verdict reports everything that needs action
+
+- Fixed the verdict line naming only its loudest severity. Its condition chain stopped at the first
+  match, so a payload with 1 error and 4 warnings rendered `✗ 1 error` and the four warnings never
+  reached the top-level answer — the one line whose job is "what did you find" reported a fifth of
+  it. It now reads `✗ 1 error · 4 warnings`.
+- This is also why the other counters on screen read as rivals rather than detail: they were the
+  only place the omitted findings appeared, so a reader had to consult them to learn what the
+  verdict had left out. Nothing else on the screen changed.
+- Deliberately limited to the two severities a reader must act on. Info and questions have their own
+  chips one click away; a verdict carrying four numbers stops being a verdict, and the guard fails
+  in that direction too.
+- Added the missing fourth severity chip. `packages/core/findings.js` emits four levels and the row
+  offered three plus "All", so it read `All 8 · Errors 1 · Warnings 4 · Info 2` — seven. The eighth
+  finding was reachable only under "All", and rendered with the warning stripe and `!` icon while
+  being counted by no chip: it looked like a warning and was not one.
+- `question` is styled as itself rather than as a weaker warning. It is the tool asking the operator
+  to name an unrecognised vendor extension — a warning is fixed where a question is answered — so its
+  dot is neutral rather than a point on the severity ramp, and its list item carries a dashed edge.
+- Severity dots now read the theme's tokens. The three literals painted the same hex in both themes,
+  so the light theme was given the dark theme's red.
+- New guards derive both sides rather than restating either: `tests/severity-levels-covered.test.js`
+  requires Core's `LEVELS` and parses the chip keys from the array that builds them, failing in both
+  directions — a level with no chip, and a chip naming a level nothing emits.
+- App version bumped `1.11.0 → 1.11.1`; Core remains `0.35.0` and CLI remains `0.1.1`.
+
 ### v1.11.0 — a price is a number and the currency it is in
 
 - Fixed the analysis strip printing a hardcoded `$` in front of whatever currency arrived, so a
