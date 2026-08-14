@@ -796,3 +796,57 @@ test('publisher restrictions: the vendor list is range-only, not a vendor sectio
   );
   assert.equal(result.roundTrip.matched, true);
 });
+
+// ── A consent bit the same string contradicts (rules-tcf-permission) ────────
+
+const { validate: validateCore } = require('@ortbtools/core');
+
+const withConsent = (tcString) => ({
+  id: 'r',
+  imp: [{ id: '1' }],
+  user: { consent: tcString },
+  regs: { gdpr: 1 },
+});
+const permissionIds = (tcString) =>
+  validateCore(withConsent(tcString), { locale: 'en' })
+    .findings.filter((f) => f.id.startsWith('consent.tcf_'))
+    .map((f) => f.id);
+
+// Real string: vendor 755 carries a consent bit, and the publisher restricts
+// purpose 3 to NOT_ALLOWED for that same vendor. Both decode without error, so
+// a reader checking only the bit acts on the opposite of the truth.
+const CONTRADICTED = 'CQo74kAQo74kABkABBENCsFgAP_AAELAAAYgF5wAQF5gAAABDAAQF5gA.YAAAAAAAAAAA';
+// The reference string from the IAB documentation: no restrictions at all.
+const UNRESTRICTED = 'COwxsONOwxsONKpAAAENAdCAAMAAAAAAAAAAAAAAAAAA';
+
+test('tcf permission: a restriction that contradicts a consent bit is reported', () => {
+  const ids = permissionIds(CONTRADICTED);
+  assert.ok(ids.includes('consent.tcf_restriction_overrides_consent'), ids.join(','));
+});
+
+test('tcf permission: a string without restrictions says nothing', () => {
+  // The gating property, as everywhere else: a rule that warns about a sound
+  // string gets switched off, and then reports nothing at all.
+  assert.deepEqual(permissionIds(UNRESTRICTED), []);
+});
+
+test('tcf permission: absent, empty and non-string consent are not findings', () => {
+  for (const user of [undefined, {}, { consent: '' }, { consent: 42 }, { consent: null }]) {
+    assert.deepEqual(
+      validateCore({ id: 'r', imp: [{ id: '1' }], user }, { locale: 'en' })
+        .findings.filter((f) => f.id.startsWith('consent.tcf_'))
+        .map((f) => f.id),
+      [],
+      JSON.stringify(user),
+    );
+  }
+});
+
+test('tcf permission: needs no vendor list, because restrictions are in the string', () => {
+  // The half of a permission decision that requires the GVL — whether the vendor
+  // declares the purpose under consent or legitimate interest — is deliberately
+  // out of scope, since fetching a vendor list means a network call. What the
+  // string can prove on its own is reported; nothing else is claimed.
+  const before = permissionIds(CONTRADICTED);
+  assert.ok(before.length > 0, 'a finding is produced with no GVL anywhere in reach');
+});
