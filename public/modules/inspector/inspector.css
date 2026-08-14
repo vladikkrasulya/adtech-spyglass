@@ -721,6 +721,20 @@ body {
 .preview-safe.is-revealed img {
   filter: none;
 }
+/* Never offer to reveal a creative that is not there. The overlay covers the
+   whole box at z-index 5, and the box underneath already holds exactly the
+   right words — "waiting for adm — paste BidResponse". So on an empty page, and
+   on any request-only analysis, the tool was covering its own instructions with
+   a button that promised a creative and delivered an empty rectangle: click it,
+   the blur lifts off nothing, and the reasonable conclusion is that the preview
+   is broken. Measured on production: with no response pasted the iframe had no
+   srcdoc at all and the overlay was still inviting the click.
+
+   `data-has-creative` already carries the answer — setAdPreview sets it on
+   every render. Nothing was asking it. */
+.preview-safe:not([data-has-creative='1']) .preview-safe-overlay {
+  display: none;
+}
 .preview-safe-overlay {
   position: absolute;
   inset: 0;
