@@ -262,3 +262,35 @@ test('warning messages resolve in all three locales (no raw key leaks)', () => {
     }
   }
 });
+
+test('refusal messages resolve in all three locales', () => {
+  // Phrased ahead of the emitter: `decodeRequest` computes these reasons but
+  // nothing turns them into findings yet — `detect.js` drops a string that no
+  // decoder claims, so the refusal never reaches a caller. The emission lands
+  // with the input-repair work; the wording is here so it arrives translated.
+  //
+  // `no_decoder` is split in two because the parameter list can be empty, and
+  // "query parameters: ." is not a sentence. Choosing the variant at the emit
+  // site keeps every human-readable word in the catalogs — a shared id with an
+  // English "none" substituted in would leak that word into uk and ru.
+  /** @type {Array<[string, Record<string, unknown>]>} */
+  const cases = [
+    ['request.url.unparseable', { detail: 'Invalid URL' }],
+    ['request.url.unsupported_scheme', { scheme: 'javascript:' }],
+    [
+      'request.url.no_decoder',
+      { protocol: 'https:', host: 'news.example', pathname: '/feed', params: 'format, id' },
+    ],
+    [
+      'request.url.no_decoder_no_params',
+      { protocol: 'https:', host: 'news.example', pathname: '/feed' },
+    ],
+  ];
+  for (const locale of ['en', 'uk', 'ru']) {
+    for (const [id, params] of cases) {
+      const msg = resolve(id, params, locale);
+      assert.ok(msg && !msg.includes(id), `${locale}/${id}: fell back to the raw key`);
+      assert.ok(!/\{\w+\}/.test(msg), `${locale}/${id}: unsubstituted param in "${msg}"`);
+    }
+  }
+});
