@@ -56,13 +56,35 @@ test('decodeRequest: null/empty/non-string input → null', () => {
   assert.equal(decodeRequest({}), null);
 });
 
-test('decodeRequest: malformed URL → null (no decoder fires)', () => {
-  assert.equal(decodeRequest('not a url'), null);
-  assert.equal(decodeRequest('http://'), null);
+// `null` is reserved for "no input". Anything the caller actually typed gets a
+// reason, because "not a URL" and "not a feed we know" need different answers
+// on screen. See docs/url-input-spec-2026-08-13.md (D2).
+
+test('decodeRequest: malformed URL → unparseable, not a bare null', () => {
+  for (const bad of ['not a url', 'http://']) {
+    const r = decodeRequest(bad);
+    assert.equal(r.ok, false, `${bad}: not claimed`);
+    assert.equal(r.reason, 'unparseable', `${bad}: reason`);
+    assert.equal(typeof r.detail, 'string', `${bad}: carries the parser message`);
+    assert.equal(r.variant, undefined, `${bad}: never looks like a canonical result`);
+  }
 });
 
-test('decodeRequest: unknown host → null (no decoder claims)', () => {
-  assert.equal(decodeRequest('https://example.com/foo?bar=1'), null);
+test('decodeRequest: valid URL nobody claims → no_decoder, with what we read', () => {
+  const r = decodeRequest('https://example.com/foo?bar=1&bar=2&baz=3');
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'no_decoder');
+  assert.equal(r.parsed.protocol, 'https:');
+  assert.equal(r.parsed.host, 'example.com');
+  assert.equal(r.parsed.pathname, '/foo');
+  assert.deepEqual(r.parsed.params, ['bar', 'baz'], 'param names, deduped, no values');
+  assert.equal(r.variant, undefined);
+});
+
+test('decodeRequest: unparseable and no_decoder are distinguishable', () => {
+  // The whole point of D2: one `null` for both events left the operator with
+  // no way to tell "fix your URL" from "we do not know this feed".
+  assert.notEqual(decodeRequest('not a url').reason, decodeRequest('https://example.com/').reason);
 });
 
 test('decodeRequest: url-linkfeed URL → canonical with variant=url-linkfeed', () => {
@@ -231,7 +253,9 @@ test('decodeRequest: synthetic search-feed URL maps to canonical URL request', (
 });
 
 test('decodeRequest: generic web search URL remains unclaimed', () => {
-  assert.equal(decodeRequest('https://search.example/search?q=demo-query&format=json'), null);
+  const r = decodeRequest('https://search.example/search?q=demo-query&format=json');
+  assert.equal(r.reason, 'no_decoder');
+  assert.equal(r.variant, undefined);
 });
 
 // ── url-clickunder-feed (Track: clickunder/pop URL feed) ────────────────────
@@ -258,8 +282,8 @@ test('decodeRequest: all clickunder format aliases are claimed', () => {
 test('decodeRequest: generic /feed without a pop format is NOT claimed as clickunder', () => {
   // Path alone must not trigger the clickunder decoder. A non-pop `/feed`
   // (e.g. an RSS-ish JSON pull) has no pop signal, so no decoder claims it.
-  assert.equal(decodeRequest('https://news.example/feed?format=json&id=1'), null);
-  assert.equal(decodeRequest('https://news.example/feed'), null);
+  assert.equal(decodeRequest('https://news.example/feed?format=json&id=1').reason, 'no_decoder');
+  assert.equal(decodeRequest('https://news.example/feed').reason, 'no_decoder');
 });
 
 test('decodeRequest: clickunder and link-feed do not intercept each other', () => {

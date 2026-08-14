@@ -30,12 +30,34 @@ const DECODERS = [
 ];
 
 /**
- * Try to decode a URL-style request payload. Returns the first decoder's
- * canonical output, `{ ok: false, reason }` if a decoder claimed-then-
- * failed, or `null` if no decoder claimed the text.
+ * Summarize a parsed URL for the `no_decoder` answer: enough for a caller to
+ * show what we actually read, without handing out a live `URL` object.
+ *
+ * @param {URL} u
+ * @returns {{ protocol: string, host: string, pathname: string, params: string[] }}
+ */
+function summarizeUrl(u) {
+  return {
+    protocol: u.protocol,
+    host: u.host,
+    pathname: u.pathname,
+    params: [...new Set([...u.searchParams.keys()])],
+  };
+}
+
+/**
+ * Try to decode a URL-style request payload.
+ *
+ * `null` means "nothing to decode" — no input at all. Everything else gets an
+ * answer with a reason, because "this is not a feed URL" and "this did not
+ * parse as a URL" are different events and a caller that cannot tell them
+ * apart cannot explain either one to a human. See
+ * `docs/url-input-spec-2026-08-13.md` (D2).
  *
  * @param {string} text
- * @returns {Object|null}
+ * @returns {Object|null} Canonical request on success; `{ ok: false, reason }`
+ *   with `reason` one of `unparseable` / `no_decoder` / `decoder_threw`;
+ *   `null` only for absent or non-string input.
  */
 function decodeRequest(text) {
   if (typeof text !== 'string' || text.length === 0) return null;
@@ -43,8 +65,8 @@ function decodeRequest(text) {
   let parsedUrl;
   try {
     parsedUrl = new URL(text);
-  } catch {
-    return null;
+  } catch (e) {
+    return { ok: false, reason: 'unparseable', detail: String((e && e.message) || e) };
   }
 
   for (const dec of DECODERS) {
@@ -69,7 +91,10 @@ function decodeRequest(text) {
       return { ok: false, reason: 'decoder_threw', detail: String((e && e.message) || e) };
     }
   }
-  return null;
+  // A perfectly good URL that no decoder recognizes. Say so, and say what we
+  // read, so the caller can tell the operator which signature was missing
+  // instead of showing the same blank as an unparseable string.
+  return { ok: false, reason: 'no_decoder', parsed: summarizeUrl(parsedUrl) };
 }
 
 /**
