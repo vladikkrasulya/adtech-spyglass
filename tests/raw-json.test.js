@@ -513,7 +513,12 @@ test('a clean payload produces no findings at all', () => {
   assert.equal(r.ok, true);
   assert.deepEqual(r.duplicateKeys, []);
   assert.deepEqual(r.unsafeNumbers, []);
-  assert.deepEqual(r.truncated, { duplicateKeys: false, unsafeNumbers: false });
+  assert.deepEqual(r.controlCharacters, []);
+  assert.deepEqual(r.truncated, {
+    duplicateKeys: false,
+    unsafeNumbers: false,
+    controlCharacters: false,
+  });
 });
 
 test('scalars, empty containers and a leading BOM are all accepted', () => {
@@ -562,6 +567,100 @@ test('long values are previewed, and the full extent stays addressable', () => {
     long.length + 2,
   );
   assert.equal(f.occurrences[1].valueTruncated, false);
+});
+
+// ── Unescaped control characters ────────────────────────────────────────────
+//
+// RFC 8259 §7 requires U+0000–U+001F to be escaped inside a string. The scan
+// tolerates the raw byte on purpose — an exchange may have accepted it, and
+// refusing would hand the operator nothing at the moment they most need to see
+// what arrived — but tolerating it silently would leave a clean report on a
+// payload `JSON.parse` rejects outright.
+
+const BEL = String.fromCharCode(0x07);
+const NUL = String.fromCharCode(0x00);
+const US = String.fromCharCode(0x1f);
+
+test('the parse really does refuse it — anchor for this section', () => {
+  assert.throws(() => JSON.parse(`{"a":"x${BEL}y"}`), SyntaxError);
+});
+
+test('a raw control character in a value is scanned and reported', () => {
+  const src = `{"a":"x${BEL}y"}`;
+  const r = scanRawJson(src);
+  assert.equal(r.ok, true, 'tolerated: the walk completes');
+  assert.equal(r.controlCharacters.length, 1);
+  const f = r.controlCharacters[0];
+  assert.equal(f.kind, 'control-character');
+  assert.equal(f.where, 'value');
+  assert.equal(f.pointer, '/a');
+  assert.equal(f.code, 0x07);
+  assert.equal(f.label, 'U+0007');
+  assert.equal(f.end, f.start + 1);
+  assert.equal(src.charCodeAt(f.start), 0x07, 'the offset points at the character itself');
+});
+
+test('a raw control character in a key is reported against the key', () => {
+  const r = scanRawJson(`{"a${NUL}b":1}`);
+  assert.equal(r.controlCharacters.length, 1);
+  assert.equal(r.controlCharacters[0].where, 'key');
+  assert.equal(r.controlCharacters[0].pointer, `/a${NUL}b`, 'the key as it was on the wire');
+  assert.equal(r.controlCharacters[0].label, 'U+0000');
+});
+
+test('a properly escaped control character is legal and stays quiet', () => {
+  // The defect is the raw byte, never the character it denotes. This payload
+  // is valid JSON and decodes to the same string as the one above.
+  const src = '{"a":"x\\u0007y"}';
+  assert.equal(JSON.parse(src).a, `x${BEL}y`);
+  assert.deepEqual(scanRawJson(src).controlCharacters, []);
+});
+
+test('a literal tab inside a string counts — it is U+0009', () => {
+  // Easy to read as whitespace and wave through; `JSON.parse` does not.
+  assert.throws(() => JSON.parse('{"a":"x\ty"}'), SyntaxError);
+  const r = scanRawJson('{"a":"x\ty"}');
+  assert.equal(r.controlCharacters[0].label, 'U+0009');
+});
+
+test('control characters carry a path and a line:column like every other finding', () => {
+  const r = scanRawJson(`{\n  "imp": [\n    {"adm": "p${US}q"}\n  ]\n}`);
+  const f = r.controlCharacters[0];
+  assert.equal(f.pointer, '/imp/0/adm');
+  assert.equal(f.path, 'imp[0].adm');
+  assert.equal(f.line, 3, 'line survives the newlines above it');
+});
+
+test('a control character does not cost the duplicate key beside it', () => {
+  // The two mechanisms are independent; tolerating one must not blind the other.
+  const r = scanRawJson(`{"id":"A","id":"B${BEL}"}`);
+  assert.equal(r.duplicateKeys.length, 1);
+  assert.equal(r.controlCharacters.length, 1);
+});
+
+test('several in one string are all reported, in document order', () => {
+  const r = scanRawJson(`{"a":"${BEL}x${NUL}y${US}"}`);
+  assert.deepEqual(
+    r.controlCharacters.map((f) => f.label),
+    ['U+0007', 'U+0000', 'U+001F'],
+  );
+  const starts = r.controlCharacters.map((f) => f.start);
+  assert.deepEqual(
+    starts,
+    [...starts].sort((a, b) => a - b),
+  );
+});
+
+test('control characters obey maxFindings like the other categories', () => {
+  const r = scanRawJson(`{"a":"${BEL.repeat(5)}"}`, { maxFindings: 2 });
+  assert.equal(r.controlCharacters.length, 2);
+  assert.equal(r.truncated.controlCharacters, true);
+});
+
+test('a clean payload reports none, and the flag stays false', () => {
+  const r = scanRawJson(MEASURED);
+  assert.deepEqual(r.controlCharacters, []);
+  assert.equal(r.truncated.controlCharacters, false);
 });
 
 // ── Contract ────────────────────────────────────────────────────────────────

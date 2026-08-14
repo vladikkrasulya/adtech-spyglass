@@ -42,6 +42,21 @@
  * The tokenizer accepts a small superset of `JSON.parse` (raw control
  * characters inside strings are tolerated), matching source-map.js: a
  * raw-bytes inspector must never refuse a payload an exchange accepted.
+ * Tolerated is not the same as unmentioned, though — an unescaped control
+ * character is a third defect of the same family, so it is reported rather
+ * than waved through:
+ *
+ *   3. Unescaped U+0000–U+001F inside a string. RFC 8259 §7 requires them
+ *      escaped. Receivers split on this the way they split on duplicate keys:
+ *      `JSON.parse` rejects the whole document, several streaming parsers
+ *      accept it, and some sanitizers drop the character and carry on. So the
+ *      same bytes are variously a hard error, a byte-exact value, or a shorter
+ *      string — and refusing to scan would hand the operator nothing at the
+ *      moment they most need to see what arrived.
+ *
+ * A properly escaped `\u0007` is legal and stays quiet. The defect is the raw
+ * byte on the wire, never the character it denotes — which is why this comment
+ * spells the escape out rather than containing one.
  *
  * What "lossy" means for a number, precisely — this is the one judgement call
  * in the module. A binary64 holds almost no decimal fraction exactly: 9.99 is
@@ -109,12 +124,30 @@
  */
 
 /**
+ * @typedef {Object} ControlCharFinding
+ * @property {'control-character'} kind
+ * @property {'key'|'value'} where  which half of the pair carried it
+ * @property {string} path     display path — of the string itself for a value,
+ *                             of the key for a key (control character included,
+ *                             because that is what was on the wire)
+ * @property {string} pointer  RFC 6901 pointer of the same
+ * @property {number} code     the code point, 0x00–0x1f
+ * @property {string} label    `U+0007` — the form a human can look up
+ * @property {number} start    offset of the character
+ * @property {number} end      offset just past it
+ * @property {number} line     1-based line of `start`
+ * @property {number} col      1-based column of `start`
+ */
+
+/**
  * @typedef {Object} RawScanResult
  * @property {boolean} ok        the text was walked to the end as one well-formed value
  * @property {{message:string,offset:number,line:number,col:number}|null} error
  * @property {DuplicateKeyFinding[]} duplicateKeys  in document order
  * @property {UnsafeNumberFinding[]} unsafeNumbers  in document order
- * @property {{duplicateKeys:boolean,unsafeNumbers:boolean}} truncated  a limit was hit
+ * @property {ControlCharFinding[]} controlCharacters  in document order
+ * @property {{duplicateKeys:boolean,unsafeNumbers:boolean,controlCharacters:boolean}} truncated
+ *           a limit was hit
  */
 
 /**
@@ -308,7 +341,9 @@ function scanRawJson(text, options) {
   const duplicateKeys = [];
   /** @type {UnsafeNumberFinding[]} */
   const unsafeNumbers = [];
-  const truncated = { duplicateKeys: false, unsafeNumbers: false };
+  /** @type {ControlCharFinding[]} */
+  const controlCharacters = [];
+  const truncated = { duplicateKeys: false, unsafeNumbers: false, controlCharacters: false };
   /** @type {Array<string|number>} */
   const stack = [];
   // Objects currently being walked, outermost first. A truncated paste — by far
@@ -343,6 +378,39 @@ function scanRawJson(text, options) {
     return { line: lo + 1, col: offset - starts[lo] + 1 };
   }
 
+  /**
+   * Turn raw control-character offsets collected by `scanString` into findings.
+   *
+   * Recorded by the caller rather than inside the string scanner, because only
+   * the caller knows where the string sits: a value already has its key on the
+   * stack, while a key is not on the stack until it has been read.
+   *
+   * @param {number[]|null} offsets
+   * @param {Array<string|number>} segments  path of the string itself
+   * @param {'key'|'value'} where
+   */
+  function recordControls(offsets, segments, where) {
+    if (!offsets) return;
+    for (const at of offsets) {
+      if (controlCharacters.length >= maxFindings) {
+        truncated.controlCharacters = true;
+        return;
+      }
+      const code = src.charCodeAt(at);
+      controlCharacters.push({
+        kind: 'control-character',
+        where,
+        path: displayPath(segments),
+        pointer: pointerPath(segments),
+        code,
+        label: 'U+' + code.toString(16).toUpperCase().padStart(4, '0'),
+        start: at,
+        end: at + 1,
+        ...positionAt(at),
+      });
+    }
+  }
+
   /** @param {string} message @param {number} at @returns {never} */
   function fail(message, at) {
     throw Object.assign(new Error(message), { rawJsonOffset: at });
@@ -363,8 +431,13 @@ function scanRawJson(text, options) {
    * only keys need their value — skipping the string body keeps large payloads
    * cheap.
    *
+   * `controls` carries the offsets of any unescaped U+0000–U+001F found in the
+   * body, or null. They are handed back rather than recorded here because the
+   * path of a string is the caller's knowledge, not the scanner's: a value has
+   * its key on the stack already, a key does not.
+   *
    * @param {boolean} decode
-   * @returns {{start:number, end:number, value:string, escaped:boolean}}
+   * @returns {{start:number, end:number, value:string, escaped:boolean, controls:number[]|null}}
    */
   function scanString(decode) {
     const start = i;
@@ -372,15 +445,25 @@ function scanRawJson(text, options) {
     let out = '';
     let chunk = i;
     let escaped = false;
+    /** @type {number[]|null} */
+    let controls = null;
 
     while (i < n) {
       const c = src.charCodeAt(i);
       if (c === 0x22) {
         if (decode) out += src.slice(chunk, i);
         i++;
-        return { start, end: i, value: out, escaped };
+        return { start, end: i, value: out, escaped, controls };
       }
       if (c !== 0x5c) {
+        // RFC 8259 §7 requires U+0000–U+001F to be escaped. The scan tolerates
+        // the raw byte, because an exchange may well have accepted it, but
+        // records where it was: tolerating and staying silent would leave the
+        // operator with a clean report on a payload `JSON.parse` refuses.
+        if (c < 0x20) {
+          if (controls) controls.push(i);
+          else controls = [i];
+        }
         i++;
         continue;
       }
@@ -542,6 +625,8 @@ function scanRawJson(text, options) {
       skipWs();
       if (src[i] !== '"') fail('expected a key string', i);
       const key = scanString(true);
+      // The key is not on the stack yet, so its own path is built here.
+      recordControls(key.controls, stack.concat([key.value]), 'key');
       skipWs();
       if (src[i] !== ':') fail('expected ":" after a key', i);
       i++;
@@ -664,6 +749,8 @@ function scanRawJson(text, options) {
       if (c === '[') return scanArray();
       if (c === '"') {
         const s = scanString(false);
+        // A value's key is already on the stack, so this is its own path.
+        recordControls(s.controls, stack.slice(), 'value');
         return { start: s.start, end: s.end };
       }
       if (c === '-' || (c >= '0' && c <= '9')) return scanNumber();
@@ -707,7 +794,7 @@ function scanRawJson(text, options) {
   // parents. Callers highlight text — give them document order.
   duplicateKeys.sort((a, b) => a.occurrences[0].keyStart - b.occurrences[0].keyStart);
 
-  return { ok: error === null, error, duplicateKeys, unsafeNumbers, truncated };
+  return { ok: error === null, error, duplicateKeys, unsafeNumbers, controlCharacters, truncated };
 }
 
 /**
