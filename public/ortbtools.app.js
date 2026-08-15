@@ -726,6 +726,12 @@ export async function mountInspector(root, ctx) {
     if (!bar) return;
     if (!validation || !validation.type) {
       bar.hidden = true;
+      // The verdict has to leave with the bar. It is rendered further down
+      // this function, so an early return here would have left the previous
+      // payload's sentence sitting above an empty workbench — stating an
+      // outcome for something the user already cleared.
+      const staleVerdict = $('verdict');
+      if (staleVerdict) staleVerdict.hidden = true;
       return;
     }
     bar.hidden = false;
@@ -741,59 +747,32 @@ export async function mountInspector(root, ctx) {
     else if (/Feed Response/i.test(type)) family = 'feed';
     pillType.dataset.format = family;
 
-    const pillStatus = $('formatPillStatus');
-    // Outcome-first: status pill leads with an icon and (for warnings/errors)
-    // the counts of findings, so the reader gets the verdict before format
-    // metadata. Order in the DOM is preserved; visual reordering is done in
-    // CSS via `order:` so any non-JS consumer still sees type→status→version.
     const findings = (validation && validation.findings) || [];
     const errCount = findings.filter((f) => f.level === 'error').length;
     const warnCount = findings.filter((f) => f.level === 'warning').length;
-    // The verdict states BOTH actionable severities, not just the leading one.
-    // It used to stop at the first `else if`: a payload with 1 error and 4
-    // warnings read "✗ 1 error", and the four warnings never reached the
-    // top-level answer at all. So the one line whose whole job is "what did
-    // you find" reported a fifth of it, and the reader had to go hunting
-    // through the other counters on screen to discover the rest — which is
-    // exactly what made those counters feel like they were competing.
-    //
-    // Errors and warnings only. Info and questions are real and are one click
-    // away in their own chips, but a verdict carrying four numbers is no
-    // longer a verdict; this line says what blocks and what to check.
     const errText = errCount
       ? counted(errCount, 'status.error_one', 'status.errors', 'status.errors_many')
       : '';
     const warnText = warnCount
       ? counted(warnCount, 'status.warning_one', 'status.warnings', 'status.warnings_many')
       : '';
-    let icon = '·';
-    let statusText = humanStatus(status) || status || '—';
-    if (status === 'clean') {
-      icon = '✓';
-    } else if (status === 'invalid') {
-      icon = '✗';
-    } else if (errCount) {
-      icon = '✗';
-      statusText = warnText ? errText + ' · ' + warnText : errText;
-    } else if (warnCount) {
-      icon = '⚠';
-      statusText = warnText;
-    }
-    pillStatus.textContent = icon + ' ' + statusText;
-    pillStatus.dataset.status = status;
 
     // ── Verdict ────────────────────────────────────────────────────────────
-    // The pill above answers "how many". It never answered "so what" — the
-    // reader had to know that `error` means a payload gets rejected and
-    // `warning` means it usually does not, then do the arithmetic themselves
-    // across four counters. That translation is the tool's job, and it is the
-    // one line a non-engineer reads before deciding whether to escalate.
+    // A status pill used to sit in the bar below, carrying an icon and these
+    // same counts. It answered "how many" and never "so what" — the reader
+    // had to already know that `error` means a payload gets rejected and
+    // `warning` usually does not, then do that arithmetic themselves. That
+    // translation is the tool's job, and it is the one line a non-engineer
+    // reads before deciding whether to escalate.
     //
-    // The headline states the consequence; the counts move underneath it,
-    // where they are detail rather than the answer. Wording is deliberately
-    // about the PAYLOAD, not about the auction: the engine checks conformance
-    // to a spec and cannot know how a given SSP or DSP will behave, so the
-    // verdict must not promise on their behalf.
+    // The pill is gone rather than kept alongside: printing the same counts
+    // twice, two lines apart, is precisely the counters-competing problem
+    // this replaced. The headline states the consequence and the counts move
+    // underneath it, where they are instrumentation rather than the answer.
+    //
+    // Wording is about the PAYLOAD, not the auction: the engine checks
+    // conformance to a spec and cannot know how a given SSP or DSP will
+    // behave, so the verdict must not promise on their behalf.
     const verdictBox = $('verdict');
     if (verdictBox) {
       const questionCount = findings.filter((f) => f.level === 'question').length;

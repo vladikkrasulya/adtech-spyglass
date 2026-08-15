@@ -1883,9 +1883,6 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
    of the format-bar row via `order: -1`. DOM order stays unchanged so
    screen readers, embedded consumers, and the dialect/version selectors
    that share this row are not disturbed. */
-.format-pill-status {
-  order: -1;
-}
 .format-pill-type[data-format='ortb'] {
   background: var(--accent-soft);
   border-color: var(--accent);
@@ -1895,29 +1892,6 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   background: rgba(76, 175, 80, 0.12);
   border-color: rgba(76, 175, 80, 0.35);
   color: var(--success);
-}
-.format-pill-status[data-status='errors'] {
-  background: rgba(220, 38, 38, 0.12);
-  border-color: rgba(220, 38, 38, 0.35);
-  color: var(--danger);
-}
-.format-pill-status[data-status='warnings'] {
-  background: rgba(255, 193, 7, 0.18);
-  border-color: rgba(255, 193, 7, 0.45);
-  color: #8a6900;
-}
-[data-theme='dark'] .format-pill-status[data-status='warnings'] {
-  color: #ffc107;
-}
-.format-pill-status[data-status='clean'] {
-  background: rgba(76, 175, 80, 0.12);
-  border-color: rgba(76, 175, 80, 0.35);
-  color: var(--success);
-}
-.format-pill-status[data-status='invalid'] {
-  background: rgba(220, 38, 38, 0.18);
-  border-color: rgba(220, 38, 38, 0.45);
-  color: var(--danger);
 }
 .format-pill-version,
 .format-pill-dialect {
