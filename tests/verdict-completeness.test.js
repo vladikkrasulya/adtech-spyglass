@@ -135,18 +135,27 @@ const MIXED = JSON.stringify({
   source: { ext: { schain: { complete: 0, nodes: [{ asi: 'ssp.example', sid: '42', hp: 1 }] } } },
 });
 
-test('both count strings are built before the branch that chooses between them', () => {
-  // The one property invisible from the rendered output: if either count were
-  // built inside its own branch, restoring the early-exit shape would be a
-  // one-line edit that reads as a tidy-up.
-  const errIdx = APP.indexOf('const errText = errCount');
-  const warnIdx = APP.indexOf('const warnText = warnCount');
-  const branchIdx = APP.indexOf("if (status === 'invalid')");
-  assert.ok(errIdx > -1 && warnIdx > -1, 'errText and warnText must be named values');
-  assert.ok(branchIdx > -1, 'the verdict must still branch on status');
+test('each severity reaches the meta line through its own if, not an else-chain', () => {
+  // The one property invisible from the rendered output: the original defect
+  // was an else-if chain that reported only the loudest severity. The v2 meta
+  // line builds parts[] with an independent `if` per severity; an edit that
+  // "tidies" those into a chain would look reasonable and quietly restore the
+  // bug. The browser test below proves the rendered result; this pins the
+  // shape that makes the result possible.
+  const start = APP.indexOf('const parts = [];');
+  assert.ok(start > -1, 'the verdict must build its meta line as parts[]');
+  const region = APP.slice(start, start + 900);
+  for (const marker of [
+    /if \(errCount\) \{/,
+    /if \(warnCount\) parts\.push/,
+    /if \(questionCount\) \{/,
+  ]) {
+    assert.match(region, marker, `the verdict region lost its independent ${marker} push`);
+  }
   assert.ok(
-    errIdx < branchIdx && warnIdx < branchIdx,
-    'both counts must be computed before the status branch, not inside it',
+    !/else if \((warnCount|questionCount)\)/.test(region),
+    'a severity count must not be gated behind another severity — that is the ' +
+      'early-exit shape that reported a fifth of what was found',
   );
 });
 

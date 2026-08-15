@@ -132,7 +132,7 @@
     <details class="kt-tools-menu">
       <summary
         class="btn btn-ghost btn-sm"
-        title="Everything that is not the main action: the live stream, the DSP simulator, the mirror, embed, share and download."
+        title="Everything that is not the main action: the live stream, the DSP simulator and the mirror."
       >
         tools ▾
       </summary>
@@ -169,30 +169,6 @@
           title="Generate the canonical counterpart of your paste"
         >
           mirror ↔
-        </button>
-        <button
-          role="menuitem"
-          id="embedBtn"
-          data-action="open-embed"
-          title="Get an iframe snippet to embed this view in a blog, Notion or doc"
-        >
-          embed
-        </button>
-        <button
-          role="menuitem"
-          id="shareLinkBtn"
-          data-action="share-link"
-          title="Copy a permalink — the fragment is absent from the initial request; opening it submits the payload to /api/analyze"
-        >
-          share link
-        </button>
-        <button
-          role="menuitem"
-          id="downloadBundleBtn"
-          data-action="download-bundle"
-          title="Download a JSON bundle (request + response + findings) for sharing or attaching to a bug ticket"
-        >
-          download
         </button>
         <div class="menu-divider"></div>
         <div
@@ -499,11 +475,72 @@
          aria-live so a screen reader hears the outcome when it changes,
          not only when the reader happens to walk the panel. -->
     <div class="verdict" id="verdict" hidden aria-live="polite">
-      <p class="verdict-headline">
-        <span class="verdict-icon" id="verdictIcon" aria-hidden="true"></span
-        ><span id="verdictHeadline"></span>
-      </p>
-      <p class="verdict-detail" id="verdictDetail"></p>
+      <div class="verdict-head">
+        <span class="verdict-badge" id="verdictIcon" aria-hidden="true"></span>
+        <div class="verdict-text">
+          <p class="verdict-headline" id="verdictHeadline"></p>
+          <p class="verdict-detail" id="verdictDetail"></p>
+        </div>
+        <details class="kt-share-menu">
+          <summary title="Share this analysis — permalink, embed snippet or a JSON bundle">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+              <path d="M12 3v13" />
+              <path d="m7 11 5 5 5-5" />
+            </svg>
+            share report
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          <div class="tools-menu-list" role="menu">
+            <button
+              role="menuitem"
+              id="shareLinkBtn"
+              data-action="share-link"
+              title="Copy a permalink — the fragment is absent from the initial request; opening it submits the payload to /api/analyze"
+            >
+              share link
+            </button>
+            <button
+              role="menuitem"
+              id="embedBtn"
+              data-action="open-embed"
+              title="Get an iframe snippet to embed this view in a blog, Notion or doc"
+            >
+              embed
+            </button>
+            <button
+              role="menuitem"
+              id="downloadBundleBtn"
+              data-action="download-bundle"
+              title="Download a JSON bundle (request + response + findings) for sharing or attaching to a bug ticket"
+            >
+              download
+            </button>
+          </div>
+        </details>
+      </div>
     </div>
 
     <div class="tab-bar">
@@ -516,54 +553,14 @@
       >
         ◀
       </button>
-      <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
-        inspector <span class="tab-badge" id="inspectorBadge" hidden></span>
-      </button>
       <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
-        validation <span class="tab-badge" id="validationBadge" hidden></span>
+        findings <span class="tab-badge" id="validationBadge" hidden></span>
+      </button>
+      <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
+        impressions <span class="tab-badge" id="inspectorBadge" hidden></span>
       </button>
       <button class="tab-btn" data-action="switch-tab" data-target="tCross">
         crosscheck <span class="tab-badge" id="crossBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tCategories"
-        title="IAB content categories detected on this BidRequest (site.cat, app.cat, bcat, etc.)"
-      >
-        IAB categories <span class="tab-badge" id="categoriesBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tBehavior"
-        title="Click-skim and auto-navigate attempts captured from the creative iframe"
-      >
-        behavior <span class="tab-badge" id="behaviorBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tMacros"
-        title="OpenRTB 2.x §4.4 substitution macros and notice/tracker URLs extracted from response"
-      >
-        macros <span class="tab-badge" id="macrosBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tDiff"
-        title="Compare the payload in the editor against another one — OpenRTB-aware or raw JSON. Read-only: nothing is modified."
-      >
-        diff <span class="tab-badge" id="diffBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tMigrate"
-        title="Proposed OpenRTB 2.5 → 2.6 changes for this BidRequest. Nothing is applied until you click Apply, and Undo restores your text exactly."
-      >
-        2.6 migration <span class="tab-badge" id="migrateBadge" hidden></span>
       </button>
       <button
         class="tab-btn"
@@ -573,9 +570,75 @@
       >
         creative
       </button>
-      <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
-        vendor ref
-      </button>
+      <details class="tab-more">
+        <summary class="tab-btn tab-more-toggle">
+          more
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </summary>
+        <div class="tab-more-menu" role="menu">
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tCategories"
+            title="IAB content categories detected on this BidRequest (site.cat, app.cat, bcat, etc.)"
+          >
+            IAB categories <span class="tab-badge" id="categoriesBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tBehavior"
+            title="Click-skim and auto-navigate attempts captured from the creative iframe"
+          >
+            behavior <span class="tab-badge" id="behaviorBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tMacros"
+            title="OpenRTB 2.x §4.4 substitution macros and notice/tracker URLs extracted from response"
+          >
+            macros <span class="tab-badge" id="macrosBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tDiff"
+            title="Compare the payload in the editor against another one — OpenRTB-aware or raw JSON. Read-only: nothing is modified."
+          >
+            diff <span class="tab-badge" id="diffBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tMigrate"
+            title="Proposed OpenRTB 2.5 → 2.6 changes for this BidRequest. Nothing is applied until you click Apply, and Undo restores your text exactly."
+          >
+            2.6 migration <span class="tab-badge" id="migrateBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            id="vendorRefTab"
+            data-action="switch-tab"
+            data-target="tRef"
+            hidden
+          >
+            vendor ref
+          </button>
+        </div>
+      </details>
     </div>
     <div class="tab-content active" id="tInspector">
       <div class="slot-grid" id="slotGrid">

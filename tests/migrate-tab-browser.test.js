@@ -197,6 +197,13 @@ test(
           el.dispatchEvent(new Event('input', { bubbles: true }));
         }, value);
       const openTab = async () => {
+        // v2 puts the migration tab behind the strip's "more ▾" menu — open
+        // it first, the way the user reaches the tab. switchTab() closes the
+        // menu after the switch, so every call re-opens it.
+        await page.evaluate(() => {
+          const m = /** @type {any} */ (document.querySelector('details.tab-more'));
+          if (m) m.open = true;
+        });
         await page.click('[data-target="tMigrate"]');
         await delay(400);
       };

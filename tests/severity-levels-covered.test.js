@@ -1,32 +1,30 @@
 'use strict';
 
 /**
- * Every level the engine emits must have a chip, and every chip must name a
- * level the engine emits.
+ * Every level the engine emits must have a home in the findings panel, and
+ * every section of that panel must name a level the engine emits.
  *
- * `packages/core/findings.js` has emitted four levels — error, warning, info,
- * question — and the Inspector's severity chips offered three plus "All". On a
- * payload carrying a question-level finding the row read
+ * HISTORY. `packages/core/findings.js` emits four levels — error, warning,
+ * info, question — and the Inspector's severity-filter chips once offered
+ * three plus "All". On a payload carrying a question-level finding the row
+ * read "All 8 · Errors 1 · Warnings 4 · Info 2", which sums to seven: the
+ * eighth finding was reachable only under "All", rendered with a warning's
+ * stripe and icon, and was counted by nothing. Nothing failed, because
+ * nothing compared the chip list to the level list.
  *
- *     All 8 · Errors 1 · Warnings 4 · Info 2
+ * THE PANEL CHANGED SHAPE, THE GUARD KEPT ITS SUBJECT. The v2 redesign
+ * (per the mockup) replaced filter chips with always-visible groups —
+ * Blocking / Should fix / Needs your input / Info. A group is a filter that
+ * costs nothing, and the original defect is now impossible to hide: a level
+ * with no group does not lose its count in a row of chips, it vanishes from
+ * the panel entirely. Which is exactly why this guard survives the redesign:
+ * it asserts the GROUPS map in renderSeverityTabs covers Core's LEVELS in
+ * both directions, the same two directions the chips were checked in.
  *
- * which sums to seven. `listHtml()` filters by exact level, so the eighth
- * finding was reachable only under "All" and no chip could isolate it. Worse,
- * both the class and icon chains ended in `warning`, so it rendered with the
- * amber stripe and the `!` icon: it looked like a warning, was counted as
- * nothing, and the row did not add up to its own total.
- *
- * Nothing failed, because nothing compared the chip list to the level list.
- * Only one finding in the whole catalog is question-level
- * (`dialects.question.unknown_ext_signal`), so a payload had to carry an
- * unrecognised vendor extension before the arithmetic broke on screen.
- *
- * This guard derives both sides rather than restating either. LEVELS is
- * required from Core, and the chip keys are parsed out of the array that
- * builds them, so adding a fifth level to the engine fails here rather than
- * shipping a counter row that silently omits it. Both directions are checked:
- * a chip naming a level nothing emits is the same defect pointing the other
- * way, and that is the one that already bit us in the finding catalog.
+ * Both sides are derived rather than restated: LEVELS is required from Core,
+ * and the group entries are parsed out of the array that renders them, so a
+ * fifth engine level fails here instead of shipping a panel that silently
+ * omits it.
  */
 
 const { test } = require('node:test');
@@ -42,86 +40,84 @@ const I18N = fs.readFileSync(path.join(ROOT, 'public/i18n.js'), 'utf8');
 const LOCALES = 3; // uk, en, ru — public/i18n.js carries one block each
 
 /**
- * Chip keys, read from the array that renders them. The label is captured too
- * so a chip whose key and message key disagree cannot pass.
+ * Group entries, read from the array that renders them. Key, the level it
+ * collects, and the label key it shows are all captured, so an entry whose
+ * pieces disagree cannot pass.
  */
-const CHIPS = [
-  ...APP.matchAll(/\{\s*key:\s*'([a-z]+)',\s*label:\s*t\('severity\.chip\.([a-z]+)'\)/g),
-].map((m) => ({ key: m[1], labelKey: m[2] }));
+const GROUPS = [
+  ...APP.matchAll(
+    /\{\s*key:\s*'([a-z_]+)',\s*level:\s*'([a-z]+)',\s*labelKey:\s*'(group\.[a-z_]+)'/g,
+  ),
+].map((m) => ({ key: m[1], level: m[2], labelKey: m[3] }));
 
 const ENGINE_LEVELS = Object.values(LEVELS);
 
-test('the chip list is actually readable — a regex matching nothing must not pass', () => {
+test('the group list is actually readable — a regex matching nothing must not pass', () => {
   // A guard whose parse silently returns [] asserts nothing at all while
   // reporting success. That failure mode is what let the browser-mirror parity
   // test guard one pair of six while promising no drift.
   assert.ok(
-    CHIPS.length >= ENGINE_LEVELS.length + 1,
-    `expected an "all" chip plus one per level, parsed ${CHIPS.length}: ` +
-      JSON.stringify(CHIPS.map((c) => c.key)),
+    GROUPS.length >= ENGINE_LEVELS.length,
+    `expected one group per engine level, parsed ${GROUPS.length}: ` +
+      JSON.stringify(GROUPS.map((g) => g.key)),
   );
   assert.ok(ENGINE_LEVELS.length >= 4, `expected the engine's levels, got ${ENGINE_LEVELS}`);
 });
 
-test('every chip key matches the message key it renders', () => {
-  for (const chip of CHIPS) {
+test('every level the engine emits has a group', () => {
+  const covered = new Set(GROUPS.map((g) => g.level));
+  const missing = ENGINE_LEVELS.filter((l) => !covered.has(l));
+  assert.deepEqual(
+    missing,
+    [],
+    `packages/core/findings.js emits ${missing} with no group in renderSeverityTabs — ` +
+      'findings at that level would not render in the panel at all, which is worse than ' +
+      'the chip-era defect this guard was written for',
+  );
+});
+
+test('every group collects a level the engine can emit', () => {
+  const levels = new Set(ENGINE_LEVELS);
+  const phantom = GROUPS.filter((g) => !levels.has(g.level)).map((g) => g.key);
+  assert.deepEqual(phantom, [], `groups ${phantom} collect levels nothing emits — always empty`);
+});
+
+test('no two groups collect the same level', () => {
+  // A level claimed twice renders every such finding twice, and the section
+  // counts stop summing to the verdict's totals.
+  const seen = new Map();
+  for (const g of GROUPS) {
+    assert.ok(
+      !seen.has(g.level),
+      `level "${g.level}" is collected by both "${seen.get(g.level)}" and "${g.key}"`,
+    );
+    seen.set(g.level, g.key);
+  }
+});
+
+test('each group has its header label in all three locales', () => {
+  for (const { labelKey } of GROUPS) {
+    const pattern = new RegExp(`'${labelKey.replace('.', '\\.')}'\\s*:`, 'g');
     assert.equal(
-      chip.key,
-      chip.labelKey,
-      `chip "${chip.key}" renders severity.chip.${chip.labelKey} — filtering and labelling ` +
-        'would disagree, so the chip would count one set and name another',
+      (I18N.match(pattern) || []).length,
+      LOCALES,
+      `${labelKey} must exist in all ${LOCALES} locale blocks of public/i18n.js — ` +
+        'a missing key renders as a bracketed id on the locale that lacks it',
     );
   }
 });
 
-test('every level the engine emits has a chip', () => {
-  const keys = new Set(CHIPS.map((c) => c.key));
-  const missing = ENGINE_LEVELS.filter((l) => !keys.has(l));
-  assert.deepEqual(
-    missing,
-    [],
-    `packages/core/findings.js emits ${missing} with no chip in renderSeverityTabs — ` +
-      'those findings would be reachable only under "All" and the counter row would not ' +
-      'add up to its own total',
-  );
-});
-
-test('every chip names a level the engine can emit', () => {
-  const levels = new Set([...ENGINE_LEVELS, 'all']);
-  const phantom = CHIPS.map((c) => c.key).filter((k) => !levels.has(k));
-  assert.deepEqual(phantom, [], `chips ${phantom} name levels nothing emits — always zero`);
-});
-
-test('each chip has its label and empty state in all three locales', () => {
-  for (const { key } of CHIPS) {
-    for (const kind of ['chip', 'empty']) {
-      const pattern = new RegExp(`'severity\\.${kind}\\.${key}'\\s*:`, 'g');
-      assert.equal(
-        (I18N.match(pattern) || []).length,
-        LOCALES,
-        `severity.${kind}.${key} must exist in all ${LOCALES} locale blocks of public/i18n.js — ` +
-          'a missing key renders as a bracketed id on the locale that lacks it',
-      );
-    }
-  }
-});
-
 test('a question renders as itself, not as a warning', () => {
-  // Both chains previously fell through to `warning`, giving a question the
-  // amber stripe and the `!` icon while no chip counted it.
+  // The class chain previously fell through to `warning`, giving a question
+  // the amber stripe while no counter owned it.
   assert.match(
     APP,
     /lvl === 'question'\s*\?\s*'question'/,
     'the class chain must give question its own class rather than falling through to warning',
   );
   assert.match(
-    APP,
-    /lvl === 'question' \? '\?'/,
-    'the icon chain must give question its own icon rather than the warning "!"',
-  );
-  assert.match(
     fs.readFileSync(path.join(ROOT, 'public/modules/inspector/inspector.css'), 'utf8'),
     /\.validation-item\.question\s*\{/,
-    'inspector.css must style .validation-item.question, or the new class renders unstyled',
+    'inspector.css must style .validation-item.question, or the class renders unstyled',
   );
 });

@@ -2006,61 +2006,110 @@ body:not(.sb-left-hidden) .sidebar-left {
 
    Severity shows up as the icon's colour and a leading-edge bar, the same
    grammar the finding rows use. The sentence itself keeps body contrast. */
+/* ── Verdict head — the mockup's, as drawn ────────────────────────────────
+   An icon square carries the severity (no left bar: the mockup states
+   severity once, in the square's tint), the headline is the display face at
+   the scale's 20px step, the meta line sits directly under it, and the
+   share-report menu rides the right edge. The context chips (#analysisStrip)
+   are appended into this block by renderAnalysisStrip. */
 .verdict {
-  padding: var(--space-4) var(--space-5) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
   border-bottom: 1px solid var(--border);
-  border-left: 3px solid var(--border-strong);
-  background: var(--bg);
+  background: var(--surface);
 }
 .verdict[hidden] {
   display: none;
 }
-.verdict[data-verdict='blocked'],
-.verdict[data-verdict='invalid'] {
-  border-left-color: var(--danger);
-}
-.verdict[data-verdict='risky'] {
-  border-left-color: var(--warning);
-}
-.verdict[data-verdict='clean'] {
-  border-left-color: var(--success);
-}
-.verdict-headline {
+.verdict-head {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0;
-  font-size: var(--fs-md);
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--text);
+  align-items: flex-start;
+  gap: var(--space-3);
 }
-.verdict-icon {
+.verdict-badge {
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-chip);
 }
-.verdict[data-verdict='blocked'] .verdict-icon,
-.verdict[data-verdict='invalid'] .verdict-icon {
+.verdict[data-verdict='blocked'] .verdict-badge,
+.verdict[data-verdict='invalid'] .verdict-badge {
+  background: rgba(220, 38, 38, 0.07);
   color: var(--danger);
 }
-.verdict[data-verdict='risky'] .verdict-icon {
+.verdict[data-verdict='risky'] .verdict-badge {
+  background: rgba(245, 158, 11, 0.09);
   color: var(--warning-text, #b45309);
 }
-.verdict[data-verdict='clean'] .verdict-icon {
+.verdict[data-verdict='clean'] .verdict-badge {
+  background: rgba(21, 128, 61, 0.08);
   color: var(--success);
 }
-/* The counts. Deliberately quieter than the sentence and set in mono —
-   they are figures to check against, not the answer. */
+[data-theme='dark'] .verdict[data-verdict='blocked'] .verdict-badge,
+[data-theme='dark'] .verdict[data-verdict='invalid'] .verdict-badge {
+  background: rgba(248, 113, 113, 0.1);
+}
+[data-theme='dark'] .verdict[data-verdict='risky'] .verdict-badge {
+  background: rgba(252, 211, 77, 0.1);
+}
+[data-theme='dark'] .verdict[data-verdict='clean'] .verdict-badge {
+  background: rgba(74, 222, 128, 0.1);
+}
+.verdict-text {
+  min-width: 0;
+}
+.verdict-headline {
+  margin: 0;
+  font-family: 'Geologica', var(--font-sans, sans-serif);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--text);
+}
 .verdict-detail {
-  margin: var(--space-1) 0 0;
-  padding-left: calc(var(--fs-sm) + var(--space-2));
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
+  margin: 2px 0 0;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 .verdict-detail[hidden] {
   display: none;
+}
+/* Share report ▾ — the mockup's button on the verdict's right edge. Its
+   dropdown reuses .tools-menu-list wholesale. */
+.kt-share-menu {
+  position: relative;
+  display: inline-flex;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.kt-share-menu > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.kt-share-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.kt-share-menu > .tools-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
 }
 
 /* The format bar is no longer a band of its own — it is the left half of the
@@ -3724,4 +3773,287 @@ button.cross-path:focus-visible,
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   V2 RIGHT PANEL — the mockup applied. Appended as one section so it
+   overrides the band-era rules above by cascade order instead of editing
+   them in place; the strip and tab rules above still describe the DOM
+   they were written for, this section restates the presentation.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Context chips (the analysis strip, dressed as the mockup's row) ─────
+   Same element, same classes — #analysisStrip .analysis-strip-block — so
+   every test and handler that addresses the strip keeps working. What
+   changes: cells stop being equal-width table columns and become content-
+   sized chips that wrap. The one-row constraint above existed because the
+   bar lived in its own band that nothing was sized to; inside the verdict
+   block the column IS sized to wrapping content. */
+.analysis-strip {
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.analysis-strip-block {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: var(--r-chip);
+  background: var(--bg-2);
+  border: 0;
+}
+.analysis-strip-block + .analysis-strip-block {
+  border-left: 0;
+}
+.analysis-strip-pricing {
+  flex: 0 0 auto;
+}
+.analysis-strip-label {
+  font-family: inherit;
+  font-size: var(--fs-mono);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+  overflow: visible;
+  white-space: nowrap;
+}
+.analysis-strip-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: visible;
+}
+/* The declared intent is the one chip the mockup accents — it names what
+   kind of ad this payload is trying to be. */
+.analysis-strip-intent {
+  background: var(--accent-soft);
+}
+.analysis-strip-intent .analysis-strip-label,
+.analysis-strip-intent .analysis-strip-value {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Tab strip — four named views and "more ▾" ──────────────────────────
+   Sentence case at the body size, not mono caps: the rationale reserves
+   uppercase for one level only, the finding-group headers. Active is a
+   2px accent underline. */
+.tab-bar {
+  min-height: 42px;
+  align-items: stretch;
+  overflow: visible;
+}
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0 var(--space-3);
+  color: var(--text-dim);
+}
+.tab-btn:hover {
+  color: var(--text);
+}
+.tab-btn.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.tab-badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--r-chip);
+  background: var(--bg-2);
+  color: var(--text-muted);
+}
+
+/* "more ▾" — the tabs that are not one of the four named views. The menu
+   reuses the tools-list pattern; items keep .tab-btn so switchTab() clears
+   and sets their active state exactly as it does for the visible four. */
+.tab-more {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+.tab-more > summary {
+  list-style: none;
+}
+.tab-more > summary::-webkit-details-marker {
+  display: none;
+}
+.tab-more > summary.tab-more-toggle {
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+/* When the active tab lives behind the menu, the toggle wears the state. */
+.tab-more:has(.tab-btn.active) > summary.tab-more-toggle {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.tab-more-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 60;
+  min-width: 200px;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 30px rgba(13, 23, 38, 0.18);
+}
+.tab-more-menu .tab-btn {
+  justify-content: flex-start;
+  padding: 7px var(--space-3);
+  border: 0;
+  border-radius: var(--r-sm);
+  margin-bottom: 0;
+}
+.tab-more-menu .tab-btn:hover {
+  background: var(--bg-2);
+}
+.tab-more-menu .tab-btn.active {
+  color: var(--accent);
+}
+
+/* ── Finding groups — Blocking / Should fix / Needs your input / Info ────
+   The header states severity once: a coloured label in the one place caps
+   are still allowed, a mono count, and a rule that carries the eye across.
+   Rows below it are neutral cards with the group's tint on the leading
+   edge only. */
+.findings-grouped {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.finding-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.finding-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.finding-group-label {
+  font-size: var(--fs-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.finding-group-danger .finding-group-label {
+  color: var(--danger);
+}
+.finding-group-warning .finding-group-label {
+  color: var(--warning-text, #b45309);
+}
+.finding-group-question .finding-group-label,
+.finding-group-info .finding-group-label {
+  color: var(--text-muted);
+}
+.finding-group-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--text-dim);
+}
+.finding-group-rule {
+  flex: 1 1 0;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Finding cards ──────────────────────────────────────────────────────
+   Title in the body face, description quieter under it, the REQ code on
+   the right edge in mono, and the path chip + spec link as a footer row.
+   The severity bar stays on the leading edge; the row surface stays
+   neutral — the contrast test pins that. */
+.validation-item.finding-detail {
+  margin-bottom: 0;
+  padding: 0;
+  background: var(--surface);
+}
+.validation-item.finding-detail > summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  cursor: pointer;
+  list-style: none;
+}
+.validation-item.finding-detail > summary::-webkit-details-marker {
+  display: none;
+}
+.finding-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.finding-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+.finding-desc {
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+.finding-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+.finding-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: var(--r-chip);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  cursor: pointer;
+}
+.finding-spec {
+  font-size: var(--fs-mono);
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+}
+.finding-code {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--text-dim);
+}
+.finding-detail-toggle {
+  flex-shrink: 0;
+  color: var(--text-dim);
 }

@@ -132,7 +132,7 @@
     <details class="kt-tools-menu">
       <summary
         class="btn btn-ghost btn-sm"
-        title="Всё, что не является главным действием: стрим, симулятор DSP, зеркало, встраивание, ссылка и выгрузка."
+        title="Всё, что не является главным действием: стрим, симулятор DSP и зеркало."
       >
         инструменты ▾
       </summary>
@@ -169,30 +169,6 @@
           title="Сгенерировать эталонную пару к вставленному"
         >
           зеркало ↔
-        </button>
-        <button
-          role="menuitem"
-          id="embedBtn"
-          data-action="open-embed"
-          title="Получить iframe-сниппет чтобы вставить этот вид в блог, Notion или документ"
-        >
-          embed
-        </button>
-        <button
-          role="menuitem"
-          id="shareLinkBtn"
-          data-action="share-link"
-          title="Скопировать permalink — фрагмент отсутствует в первом запросе; открытие отправляет payload в /api/analyze"
-        >
-          ссылка
-        </button>
-        <button
-          role="menuitem"
-          id="downloadBundleBtn"
-          data-action="download-bundle"
-          title="Скачать JSON-бандл (запрос + ответ + находки) — для пересылки или прикрепления к тикету"
-        >
-          скачать
         </button>
         <div class="menu-divider"></div>
         <div
@@ -499,11 +475,74 @@
          aria-live so a screen reader hears the outcome when it changes,
          not only when the reader happens to walk the panel. -->
     <div class="verdict" id="verdict" hidden aria-live="polite">
-      <p class="verdict-headline">
-        <span class="verdict-icon" id="verdictIcon" aria-hidden="true"></span
-        ><span id="verdictHeadline"></span>
-      </p>
-      <p class="verdict-detail" id="verdictDetail"></p>
+      <div class="verdict-head">
+        <span class="verdict-badge" id="verdictIcon" aria-hidden="true"></span>
+        <div class="verdict-text">
+          <p class="verdict-headline" id="verdictHeadline"></p>
+          <p class="verdict-detail" id="verdictDetail"></p>
+        </div>
+        <details class="kt-share-menu">
+          <summary
+            title="Поделиться анализом — постоянная ссылка, встраиваемый фрагмент или JSON-пакет"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+              <path d="M12 3v13" />
+              <path d="m7 11 5 5 5-5" />
+            </svg>
+            поделиться
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          <div class="tools-menu-list" role="menu">
+            <button
+              role="menuitem"
+              id="shareLinkBtn"
+              data-action="share-link"
+              title="Скопировать permalink — фрагмент отсутствует в первом запросе; открытие отправляет payload в /api/analyze"
+            >
+              ссылка
+            </button>
+            <button
+              role="menuitem"
+              id="embedBtn"
+              data-action="open-embed"
+              title="Получить iframe-сниппет чтобы вставить этот вид в блог, Notion или документ"
+            >
+              embed
+            </button>
+            <button
+              role="menuitem"
+              id="downloadBundleBtn"
+              data-action="download-bundle"
+              title="Скачать JSON-бандл (запрос + ответ + находки) — для пересылки или прикрепления к тикету"
+            >
+              скачать
+            </button>
+          </div>
+        </details>
+      </div>
     </div>
 
     <div class="tab-bar">
@@ -516,54 +555,14 @@
       >
         ◀
       </button>
-      <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
-        инспектор <span class="tab-badge" id="inspectorBadge" hidden></span>
-      </button>
       <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
-        валидация <span class="tab-badge" id="validationBadge" hidden></span>
+        находки <span class="tab-badge" id="validationBadge" hidden></span>
+      </button>
+      <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
+        импрессии <span class="tab-badge" id="inspectorBadge" hidden></span>
       </button>
       <button class="tab-btn" data-action="switch-tab" data-target="tCross">
         сверка <span class="tab-badge" id="crossBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tCategories"
-        title="IAB content-категории найденные в BidRequest (site.cat, app.cat, bcat и т.д.)"
-      >
-        IAB категории <span class="tab-badge" id="categoriesBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tBehavior"
-        title="Попытки click-skim и авто-навигации, перехваченные в iframe креатива"
-      >
-        поведение <span class="tab-badge" id="behaviorBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tMacros"
-        title="OpenRTB 2.x §4.4 макросы подстановки и трекинг-URL, извлеченные из ответа"
-      >
-        макросы <span class="tab-badge" id="macrosBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tDiff"
-        title="Сравнить payload в редакторе с другим — с учётом OpenRTB или как сырой JSON. Только чтение: ничего не меняется."
-      >
-        diff <span class="tab-badge" id="diffBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tMigrate"
-        title="Предложения перехода этого BidRequest с OpenRTB 2.5 на 2.6. Ничего не применяется, пока ты не нажмёшь «Применить», а «Отменить» вернёт твой текст ровно таким, каким он был."
-      >
-        миграция 2.6 <span class="tab-badge" id="migrateBadge" hidden></span>
       </button>
       <button
         class="tab-btn"
@@ -573,9 +572,75 @@
       >
         креатив
       </button>
-      <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
-        vendor ref
-      </button>
+      <details class="tab-more">
+        <summary class="tab-btn tab-more-toggle">
+          ещё
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </summary>
+        <div class="tab-more-menu" role="menu">
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tCategories"
+            title="IAB content-категории найденные в BidRequest (site.cat, app.cat, bcat и т.д.)"
+          >
+            IAB категории <span class="tab-badge" id="categoriesBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tBehavior"
+            title="Попытки click-skim и авто-навигации, перехваченные в iframe креатива"
+          >
+            поведение <span class="tab-badge" id="behaviorBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tMacros"
+            title="OpenRTB 2.x §4.4 макросы подстановки и трекинг-URL, извлеченные из ответа"
+          >
+            макросы <span class="tab-badge" id="macrosBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tDiff"
+            title="Сравнить payload в редакторе с другим — с учётом OpenRTB или как сырой JSON. Только чтение: ничего не меняется."
+          >
+            diff <span class="tab-badge" id="diffBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tMigrate"
+            title="Предложения перехода этого BidRequest с OpenRTB 2.5 на 2.6. Ничего не применяется, пока ты не нажмёшь «Применить», а «Отменить» вернёт твой текст ровно таким, каким он был."
+          >
+            миграция 2.6 <span class="tab-badge" id="migrateBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            id="vendorRefTab"
+            data-action="switch-tab"
+            data-target="tRef"
+            hidden
+          >
+            vendor ref
+          </button>
+        </div>
+      </details>
     </div>
     <div class="tab-content active" id="tInspector">
       <div class="slot-grid" id="slotGrid">

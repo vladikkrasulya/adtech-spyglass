@@ -261,6 +261,12 @@ test(
       assert.match(previewSrcdoc, /\$\{AUCTION_PRICE\}/);
 
       // Focus and Caret preservation using Puppeteer page.type
+      // v2 puts the macros tab behind the strip's "more ▾" menu — open it
+      // first, the way the user reaches the tab.
+      await page.evaluate(() => {
+        const m = /** @type {any} */ (document.querySelector('details.tab-more'));
+        if (m) m.open = true;
+      });
       await page.click('[data-target="tMacros"]');
       await page.waitForSelector('#macroSimPrice', { visible: true });
       await page.click('#macroSimPrice');
