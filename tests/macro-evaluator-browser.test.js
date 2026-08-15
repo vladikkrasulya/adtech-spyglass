@@ -261,6 +261,12 @@ test(
       assert.match(previewSrcdoc, /\$\{AUCTION_PRICE\}/);
 
       // Focus and Caret preservation using Puppeteer page.type
+      // v2 puts the macros tab behind the strip's "more ▾" menu — open it
+      // first, the way the user reaches the tab.
+      await page.evaluate(() => {
+        const m = /** @type {any} */ (document.querySelector('details.tab-more'));
+        if (m) m.open = true;
+      });
       await page.click('[data-target="tMacros"]');
       await page.waitForSelector('#macroSimPrice', { visible: true });
       await page.click('#macroSimPrice');
@@ -290,8 +296,22 @@ test(
       assert.match(previewSrcdocAfter, /p=1\.23/, 'Preview iframe did not update with new price');
       assert.doesNotMatch(previewSrcdocAfter, /\$\{AUCTION_PRICE\}/);
 
-      // Sidebar input is the second entry point into the same override state.
-      // It must update the toolbar, table, and preview in one input event.
+      // The auction-price field is the second entry point into the same
+      // override state. It must update the toolbar, table, and preview in one
+      // input event.
+      //
+      // v2 moved it out of the header row and into the Tools menu — it
+      // configures how a macro resolves, which is not something you reach for
+      // once per payload. So the path now starts by opening that menu, the
+      // same as the user's does. Asserted rather than assumed: a silently
+      // absent menu would leave the click landing on nothing and the failure
+      // would read as a timeout somewhere further down.
+      const toolsMenu = await page.$('.kt-tools-menu');
+      assert.ok(toolsMenu, 'the Tools menu must exist — it holds the auction-price field');
+      await page.evaluate(() => {
+        /** @type {any} */ (document.querySelector('.kt-tools-menu')).open = true;
+      });
+      await page.waitForSelector('#simPrice', { visible: true, timeout: 5000 });
       await page.click('#simPrice');
       await page.keyboard.down('Control');
       await page.keyboard.press('A');

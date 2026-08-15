@@ -45,14 +45,24 @@ body {
   margin: 0;
 }
 
+/* ── Page grid ────────────────────────────────────────────────────────────
+   v2 removes two of the six bands. The old stack was
+
+     banner / header / inputs / inputs-resize / main / footer
+
+   and the first thing a finding could occupy was ~280px down the page,
+   because the inputs owned a full-width horizontal band of their own and
+   the header carried a brand that the rail already shows.
+
+   Now the payload and the results are two full-height columns inside one
+   'main' area, so the editor gets the height it always needed (25 visible
+   lines instead of 8) and the verdict starts at the top of its column. */
 .workbench {
   display: grid;
-  grid-template-rows: auto auto auto auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   grid-template-areas:
     'banner'
     'header'
-    'inputs'
-    'inputs-resize'
     'main'
     'footer';
   height: 100vh;
@@ -60,40 +70,169 @@ body {
 #verifyBanner {
   grid-area: banner;
 }
-.app-header {
+.workbar {
   grid-area: header;
 }
-.input-section {
-  grid-area: inputs;
-}
-.main-grid {
+.workbench-split {
   grid-area: main;
 }
 .app-footer {
   grid-area: footer;
 }
 
+/* ── The split ────────────────────────────────────────────────────────────
+   Payload on the left at a fixed, readable measure; results take the rest.
+   The left sidebar is still in the DOM (history, library, the metric card)
+   but is now an overlay drawer rather than a permanent 320px column — it is
+   reference material, consulted occasionally, and it was charging rent. */
+.workbench-split {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+.workbench-payload {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 0 0 clamp(380px, 38%, 620px);
+  border-right: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.center-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Payload side ─────────────────────────────────────────────────────── */
+.payload-switch {
+  display: flex;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.payload-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.payload-switch-btn:hover {
+  color: var(--text);
+}
+.payload-switch-btn.is-active {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  /* Sit on top of the container's bottom rule so the active tab and its
+     panel read as one surface rather than two stacked boxes. */
+  margin-bottom: -1px;
+  padding-bottom: 7px;
+}
+/* Marks the side you are NOT looking at as already filled — the one thing
+   the two-pane layout told you for free and a switch otherwise hides. */
+.payload-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+/* Scoped to the payload column so it outranks the two-column grid further
+   down this file — that grid is what put Request and Response side by side,
+   and source order alone would keep it winning. */
+.workbench-payload .input-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-3);
+  gap: 0;
+  background: var(--bg-2);
+}
+/* One editor at a time. Both cards stay in the DOM — every handler, every
+   test and the mirror/diff features address #bidReq and #bidRes directly.
+   Scoped to the direct child so it outranks the card's own `display: flex`
+   further down this file, which would otherwise win on source order. */
+.workbench-payload .input-card {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.workbench-payload .input-card.is-shown {
+  display: flex;
+  flex-direction: column;
+}
+.workbench-payload .input-card .json-input {
+  flex: 1 1 auto;
+  min-height: 0;
+  resize: none;
+  /* A payload is code. Wrapping it re-flows every line the moment the column
+     changes width, which is exactly when you are trying to hold a position
+     in it. Scroll instead. */
+  white-space: pre;
+  overflow: auto;
+}
+
+/* The JSON location navigator belongs to the payload it navigates. */
+.workbench-payload .src-nav-bar {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border);
+}
+
 /* ── Responsive breakpoints ────────────────────────────────────────
          ortbtools was desktop-only until 2026-05-02. Mobile is rare for an
          oRTB inspector but useful for "peek at a copied JSON on the train".
-         Two breakpoints:
-           ≤1024px → main 3-column grid stacks vertically (left sidebar
-                     becomes top, right sidebar becomes bottom)
-           ≤720px  → bid-request/response stack vertically too, page scrolls
-                     instead of being height: 100vh.
+         v2 replaced the three-column main grid with a two-column split, so
+         the old ≤1024px rule — which stacked a left sidebar that is now a
+         drawer and a right sidebar that is now a tab — described nothing
+         any more. The split stacks in its place.
+
+         The threshold is 1100px, and it is set by the analysis strip rather
+         than by the columns: six labelled cells need roughly 520px before
+         values start being painted over their own edges. Below 1100px the
+         results column falls under that floor, so stacking is what gives
+         the strip its width back.
+
+         ≤720px still releases the desktop scroll-lock so phones scroll the
+         page instead of clipping it.
       */
-@media (max-width: 1024px) {
-  .main-grid {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: auto auto auto;
+@media (max-width: 1100px) {
+  .workbench-split {
+    flex-direction: column;
+    overflow-y: auto;
   }
-  .sidebar-left {
+  .workbench-payload {
+    flex: 0 0 auto;
+    /* Enough for the payload to stay legible without pushing the verdict —
+       the thing the reader came for — below the fold. */
+    max-height: 42vh;
     border-right: 0;
     border-bottom: 1px solid var(--border);
   }
-  .sidebar-right {
-    border-left: 0;
-    border-top: 1px solid var(--border);
+  .center-panel {
+    flex: 1 1 auto;
+    min-height: 60vh;
+  }
+  /* The drawer stays an overlay of its own width rather than going
+     full-bleed: it holds history, and history is for comparing against
+     what is on screen. */
+  .sidebar-left {
+    width: min(330px, 88vw);
   }
 }
 @media (max-width: 720px) {
@@ -292,24 +431,104 @@ body {
   }
 }
 
-/* ── Header ── */
-.app-header {
+/* ── Work bar ─────────────────────────────────────────────────────────────
+   One row where there used to be two: the app header (brand + nine buttons)
+   and the format bar (payload state + three more buttons). The brand is gone
+   because the rail already carries it, and nine actions became three.
+
+   Left says what the payload IS. Right says what you can DO with it, in one
+   order of importance: Analyze is the only filled control on the screen,
+   `example` loads one, and everything else lives behind Tools. The point is
+   not fewer features — every one of them is still one click away — it is
+   that secondary actions stopped competing with the primary one. */
+.workbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-2) var(--space-4);
   gap: var(--space-4);
+  min-height: 48px;
 }
-.app-header .kt-brand {
-  font-size: var(--fs-md);
+.workbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
 }
 .app-header-actions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* Tools — the drawer for everything that is not the main action. Mirrors
+   .kt-example-menu, which is the same pattern one control to the left. */
+.kt-tools-menu {
+  position: relative;
+  display: inline-flex;
+}
+.kt-tools-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.kt-tools-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.tools-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 230px;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 30px rgba(13, 23, 38, 0.18);
+}
+.tools-menu-list > button,
+.tools-menu-list > a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-3);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.tools-menu-list > button:hover,
+.tools-menu-list > a:hover {
+  background: var(--bg-2);
+}
+.tools-menu-list .sim-price-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-mono);
+  color: var(--text-muted);
+}
+.tools-menu-list .sim-price-wrap input {
+  width: 82px;
+  padding: 3px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
 }
 /* The lang + theme toggles default to fixed-position floating circles
          (design-system.css). In ortbtools we render them inline in the header
@@ -966,6 +1185,40 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .sb-toggle.right {
   margin-left: auto;
 }
+/* The left sidebar is reference material — the metric card, the saved
+   library, the history list. It is consulted occasionally and it was
+   charging 320px of permanent rent for that. In v2 it is an overlay drawer
+   opened from the same #toggleSidebarLeft control that already collapsed
+   it; closed is the default, and nothing about its contents changed.
+
+   Overlay rather than a collapsing column on purpose: a column that pushes
+   the payload and results sideways every time you glance at history is the
+   layout shifting under the thing you were reading. */
+.sidebar-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 40;
+  width: min(330px, 82vw);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  box-shadow: 8px 0 28px rgba(13, 23, 38, 0.16);
+  transform: translateX(-102%);
+  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Reuses the existing body.sb-left-hidden flag rather than inventing a
+   second one, so the same #toggleSidebarLeft button, the same localStorage
+   persistence and the same resetLayout() escape hatch all keep working.
+   Only the default flips: setupSidebarToggles() now starts the drawer
+   closed when the user has expressed no preference. */
+body:not(.sb-left-hidden) .sidebar-left {
+  transform: translateX(0);
+}
+.workbench-split {
+  position: relative;
+}
+
 .sidebar-left,
 .sidebar-right {
   padding: var(--space-4);
@@ -1744,14 +1997,130 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
          analysis. Surfaces detected payload type, validation status, oRTB
          version (if applicable) and active dialect. Hidden until first
          /api/analyze response lands. */
+/* ── Verdict ─────────────────────────────────────────────────────────────
+   One sentence, ahead of the counts, saying what the findings mean for the
+   payload. It sits above the format bar because it is the first thing worth
+   reading in the results — and it is the only thing on this screen sized for
+   reading rather than for scanning, which is what makes it read as an answer
+   and the bar below it as instrumentation.
+
+   Severity shows up as the icon's colour and a leading-edge bar, the same
+   grammar the finding rows use. The sentence itself keeps body contrast. */
+/* ── Verdict head — the mockup's, as drawn ────────────────────────────────
+   An icon square carries the severity (no left bar: the mockup states
+   severity once, in the square's tint), the headline is the display face at
+   the scale's 20px step, the meta line sits directly under it, and the
+   share-report menu rides the right edge. The context chips (#analysisStrip)
+   are appended into this block by renderAnalysisStrip. */
+.verdict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.verdict[hidden] {
+  display: none;
+}
+.verdict-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.verdict-badge {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-chip);
+}
+.verdict[data-verdict='blocked'] .verdict-badge,
+.verdict[data-verdict='invalid'] .verdict-badge {
+  background: rgba(220, 38, 38, 0.07);
+  color: var(--danger);
+}
+.verdict[data-verdict='risky'] .verdict-badge {
+  background: rgba(245, 158, 11, 0.09);
+  color: var(--warning-text, #b45309);
+}
+.verdict[data-verdict='clean'] .verdict-badge {
+  background: rgba(21, 128, 61, 0.08);
+  color: var(--success);
+}
+[data-theme='dark'] .verdict[data-verdict='blocked'] .verdict-badge,
+[data-theme='dark'] .verdict[data-verdict='invalid'] .verdict-badge {
+  background: rgba(248, 113, 113, 0.1);
+}
+[data-theme='dark'] .verdict[data-verdict='risky'] .verdict-badge {
+  background: rgba(252, 211, 77, 0.1);
+}
+[data-theme='dark'] .verdict[data-verdict='clean'] .verdict-badge {
+  background: rgba(74, 222, 128, 0.1);
+}
+.verdict-text {
+  min-width: 0;
+}
+.verdict-headline {
+  margin: 0;
+  font-family: 'Geologica', var(--font-sans, sans-serif);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--text);
+}
+.verdict-detail {
+  margin: 2px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.verdict-detail[hidden] {
+  display: none;
+}
+/* Share report ▾ — the mockup's button on the verdict's right edge. Its
+   dropdown reuses .tools-menu-list wholesale. */
+.kt-share-menu {
+  position: relative;
+  display: inline-flex;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.kt-share-menu > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.kt-share-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.kt-share-menu > .tools-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+}
+
+/* The format bar is no longer a band of its own — it is the left half of the
+   work bar, stating what the payload is next to the controls that act on it.
+   No padding, border or background: the work bar owns those now. */
 .format-bar {
   display: flex;
   gap: var(--space-2);
   align-items: center;
-  flex-wrap: wrap;
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-2);
+  min-width: 0;
+  overflow: hidden;
 }
 .format-bar[hidden] {
   display: none;
@@ -1817,9 +2186,6 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
    of the format-bar row via `order: -1`. DOM order stays unchanged so
    screen readers, embedded consumers, and the dialect/version selectors
    that share this row are not disturbed. */
-.format-pill-status {
-  order: -1;
-}
 .format-pill-type[data-format='ortb'] {
   background: var(--accent-soft);
   border-color: var(--accent);
@@ -1829,29 +2195,6 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   background: rgba(76, 175, 80, 0.12);
   border-color: rgba(76, 175, 80, 0.35);
   color: var(--success);
-}
-.format-pill-status[data-status='errors'] {
-  background: rgba(220, 38, 38, 0.12);
-  border-color: rgba(220, 38, 38, 0.35);
-  color: var(--danger);
-}
-.format-pill-status[data-status='warnings'] {
-  background: rgba(255, 193, 7, 0.18);
-  border-color: rgba(255, 193, 7, 0.45);
-  color: #8a6900;
-}
-[data-theme='dark'] .format-pill-status[data-status='warnings'] {
-  color: #ffc107;
-}
-.format-pill-status[data-status='clean'] {
-  background: rgba(76, 175, 80, 0.12);
-  border-color: rgba(76, 175, 80, 0.35);
-  color: var(--success);
-}
-.format-pill-status[data-status='invalid'] {
-  background: rgba(220, 38, 38, 0.18);
-  border-color: rgba(220, 38, 38, 0.45);
-  color: var(--danger);
 }
 .format-pill-version,
 .format-pill-dialect {
@@ -2193,29 +2536,45 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 
 /* Validation results */
+/* Finding rows.
+   ------------------------------------------------------------
+   Severity used to be painted three times over on every row: a tinted
+   background, a tinted border, AND tinted body text. With a dozen
+   findings on screen that is a dozen coloured blocks competing, and
+   the text — the part that says what is actually wrong — was the
+   least legible thing in its own row, because amber-on-amber and
+   red-on-red are the two worst pairings the palette can make.
+
+   v2 states severity ONCE, in a 3px bar on the leading edge. The row
+   itself is neutral: same surface, same border, body-colour text. The
+   colour becomes a scanning aid down the left margin instead of a
+   wash the reader has to see through, and the sentence gets the
+   contrast it always needed. */
 .validation-item {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-sm);
-  border: 1px solid;
+  /* Square on the leading edge only: the 3px severity bar has to read as a
+     bar. With the radius applied all round it curves at both ends and the
+     eye resolves it as a bracket sitting beside the row rather than as the
+     row's own edge. */
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  background: var(--bg-2);
+  color: var(--text);
   font-size: var(--fs-sm);
   margin-bottom: 6px;
 }
 .validation-item.danger {
-  background: rgba(220, 38, 38, 0.05);
-  border-color: rgba(220, 38, 38, 0.2);
-  color: var(--danger);
+  border-left-color: var(--danger);
 }
 .validation-item.warning {
-  background: rgba(245, 158, 11, 0.06);
-  border-color: rgba(245, 158, 11, 0.22);
-  color: var(--text-warning);
+  border-left-color: var(--warning);
 }
 .validation-item.info {
-  background: var(--bg-2);
-  border-color: var(--border);
+  border-left-color: var(--border-strong);
   color: var(--text-muted);
 }
 /* `question` used to fall through to `.warning` — amber stripe, `!` icon —
@@ -2224,10 +2583,20 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
    Neutral ground like `info`, and a dashed edge for "waiting on you" rather
    than a severity hue, which would assert a ranking that does not exist. */
 .validation-item.question {
-  background: var(--bg-2);
-  border-color: var(--border-strong);
-  border-style: dashed;
+  border-left-color: var(--border-strong);
+  border-left-style: dashed;
   color: var(--text-muted);
+}
+
+/* The icon keeps the severity hue — it is a glyph, not a wash, so it
+   carries the signal at full strength without costing the text any
+   contrast. --warning as TEXT measures 2.2:1 on white, so warnings
+   take the darkened --warning-text from ortbtools-v2.css. */
+.validation-item.danger .validation-icon {
+  color: var(--danger);
+}
+.validation-item.warning .validation-icon {
+  color: var(--warning-text, #b45309);
 }
 .validation-icon {
   font-family: var(--font-mono);
@@ -3404,4 +3773,306 @@ button.cross-path:focus-visible,
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   V2 RIGHT PANEL — the mockup applied. Appended as one section so it
+   overrides the band-era rules above by cascade order instead of editing
+   them in place; the strip and tab rules above still describe the DOM
+   they were written for, this section restates the presentation.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Context chips (the analysis strip, dressed as the mockup's row) ─────
+   Same element, same classes — #analysisStrip .analysis-strip-block — so
+   every test and handler that addresses the strip keeps working. What
+   changes: cells stop being equal-width table columns and become content-
+   sized chips that wrap. The one-row constraint above existed because the
+   bar lived in its own band that nothing was sized to; inside the verdict
+   block the column IS sized to wrapping content. */
+.analysis-strip {
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.analysis-strip-block {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: var(--r-chip);
+  background: var(--bg-2);
+  border: 0;
+}
+.analysis-strip-block + .analysis-strip-block {
+  border-left: 0;
+}
+.analysis-strip-pricing {
+  flex: 0 0 auto;
+}
+.analysis-strip-label {
+  font-family: inherit;
+  font-size: var(--fs-mono);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+  overflow: visible;
+  white-space: nowrap;
+}
+.analysis-strip-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: visible;
+}
+/* The declared intent is the one chip the mockup accents — it names what
+   kind of ad this payload is trying to be. */
+.analysis-strip-intent {
+  background: var(--accent-soft);
+}
+.analysis-strip-intent .analysis-strip-label,
+.analysis-strip-intent .analysis-strip-value {
+  color: var(--accent-text, var(--accent));
+  font-weight: 600;
+}
+
+/* ── Tab strip — four named views and "more ▾" ──────────────────────────
+   Sentence case at the body size, not mono caps: the rationale reserves
+   uppercase for one level only, the finding-group headers. Active is a
+   2px accent underline. */
+.tab-bar {
+  min-height: 42px;
+  align-items: stretch;
+  overflow: visible;
+}
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0 var(--space-3);
+  color: var(--text-dim);
+}
+.tab-btn:hover {
+  color: var(--text);
+}
+.tab-btn.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.tab-badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--r-chip);
+  background: var(--bg-2);
+  color: var(--text-muted);
+}
+
+/* "more ▾" — the tabs that are not one of the four named views. The menu
+   reuses the tools-list pattern; items keep .tab-btn so switchTab() clears
+   and sets their active state exactly as it does for the visible four. */
+.tab-more {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+.tab-more > summary {
+  list-style: none;
+}
+.tab-more > summary::-webkit-details-marker {
+  display: none;
+}
+.tab-more > summary.tab-more-toggle {
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+/* When the active tab lives behind the menu, the toggle wears the state. */
+.tab-more:has(.tab-btn.active) > summary.tab-more-toggle {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.tab-more-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 60;
+  min-width: 200px;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 30px rgba(13, 23, 38, 0.18);
+}
+.tab-more-menu .tab-btn {
+  justify-content: flex-start;
+  padding: 7px var(--space-3);
+  border: 0;
+  border-radius: var(--r-sm);
+  margin-bottom: 0;
+}
+.tab-more-menu .tab-btn:hover {
+  background: var(--bg-2);
+}
+.tab-more-menu .tab-btn.active {
+  color: var(--accent);
+}
+
+/* ── Finding groups — Blocking / Should fix / Needs your input / Info ────
+   The header states severity once: a coloured label in the one place caps
+   are still allowed, a mono count, and a rule that carries the eye across.
+   Rows below it are neutral cards with the group's tint on the leading
+   edge only. */
+.findings-grouped {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.finding-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.finding-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.finding-group-label {
+  font-size: var(--fs-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.finding-group-danger .finding-group-label {
+  color: var(--danger);
+}
+.finding-group-warning .finding-group-label {
+  color: var(--warning-text, #b45309);
+}
+.finding-group-question .finding-group-label,
+.finding-group-info .finding-group-label {
+  color: var(--text-muted);
+}
+.finding-group-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--text-dim);
+}
+.finding-group-rule {
+  flex: 1 1 0;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Finding cards ──────────────────────────────────────────────────────
+   Title in the body face, description quieter under it, the REQ code on
+   the right edge in mono, and the path chip + spec link as a footer row.
+   The severity bar stays on the leading edge; the row surface stays
+   neutral — the contrast test pins that. */
+.validation-item.finding-detail {
+  margin-bottom: 0;
+  padding: 0;
+  background: var(--surface);
+}
+.validation-item.finding-detail > summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  cursor: pointer;
+  list-style: none;
+}
+.validation-item.finding-detail > summary::-webkit-details-marker {
+  display: none;
+}
+.finding-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.finding-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+.finding-desc {
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+.finding-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+.finding-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: var(--r-chip);
+  background: var(--accent-soft);
+  color: var(--accent-text, var(--accent));
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  cursor: pointer;
+}
+.finding-spec {
+  font-size: var(--fs-mono);
+  font-weight: 500;
+  color: var(--accent-text, var(--accent));
+  text-decoration: none;
+}
+.finding-code {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--text-dim);
+}
+.finding-detail-toggle {
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+
+/* Contrast repairs measured by the light-theme probe before v1.12.0
+   shipped. The quality pill's translucent red composites to a mid-pink
+   in light theme, leaving 11px/700 red text at 3.22:1; the active tab's
+   count badge was white on the raw accent at 4.10:1. Both get the
+   darker on-surface colours; the dark theme keeps its own pairs. */
+.analysis-strip .quality-pill.q-critical {
+  color: #991b1b;
+}
+[data-theme='dark'] .analysis-strip .quality-pill.q-critical {
+  color: #fca5a5;
+}
+.analysis-strip .quality-pill.q-needs-attention {
+  color: var(--warning-text, #b45309);
+}
+.tab-btn.active .tab-badge {
+  background: var(--bg-2);
+  color: var(--text);
 }

@@ -19,19 +19,34 @@
   <span>Verify your email address — it improves account security.</span>
   <button class="btn btn-ghost btn-sm" data-action="verify-email">send email</button>
 </div>
-<header class="app-header">
-  <div class="kt-brand">
-    <span class="kt-brand-spark">◆</span>
-    <span>ortbtools · openrtb inspector</span>
-  </div>
-  <div class="app-header-actions">
-    <div
-      class="sim-price-wrap"
-      title="Simulated auction clearing price for ${AUCTION_PRICE}. Enter it manually; bid.price and bidfloor are not treated as the clearing price. When empty, the macro stays unresolved."
+<header class="workbar">
+  <div class="format-bar" id="formatBar" hidden>
+    <span class="format-pill format-pill-type" id="formatPillType"></span>
+    <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
+    <select
+      class="format-pill format-pill-select"
+      id="dialectSelector"
+      data-action="change-dialect"
+      title="Validation-dialect switch — changes the rule set the engine applies to the payload"
     >
-      <label for="simPrice">auction price</label>
-      <input id="simPrice" type="text" placeholder="0.00" />
-    </div>
+      <option value="iab">Standard IAB (oRTB 2.5)</option>
+      <option value="ext-rtb">Vendor · RTB</option>
+      <option value="inpage-push">Vendor · In-Page Push</option>
+    </select>
+    <select
+      class="format-pill format-pill-select"
+      id="versionPinSelector"
+      data-action="change-version-pin"
+      title="Expected oRTB version. If detection lands elsewhere, the engine emits a warning with the field paths that triggered the flip. Leave on 'auto' to trust the detector."
+    >
+      <option value="">auto</option>
+      <option value="2.5">oRTB 2.5</option>
+      <option value="2.6">oRTB 2.6</option>
+      <option value="3.0">oRTB 3.0</option>
+    </select>
+    <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
+  </div>
+  <div class="workbar-actions">
     <details class="kt-example-menu">
       <summary
         class="btn btn-ghost btn-sm"
@@ -113,40 +128,58 @@
         </button>
       </div>
     </details>
-    <a
-      href="/about"
-      target="_blank"
-      rel="noopener"
-      class="btn btn-ghost btn-sm"
-      title="How it works · what ortbtools can and can't do"
-      style="text-decoration: none"
-    >
-      docs ↗
-    </a>
-    <button
-      data-action="live"
-      class="btn btn-ghost btn-sm"
-      id="liveBtn"
-      title="Open the live RTB stream — watch synthetic samples flow past in realtime"
-    >
-      📡 live
-    </button>
-    <button
-      data-action="sim-bids"
-      class="btn btn-ghost btn-sm"
-      id="simBidsBtn"
-      title="Simulate 3 DSP strategies with deterministic server-side rules — the raw BidRequest is processed transiently by ortbtools; no external model receives it"
-    >
-      🤖 simulate
-    </button>
-    <button
-      data-action="mirror"
-      class="btn btn-ghost btn-sm"
-      id="mirrorBtn"
-      title="Generate the canonical counterpart of your paste"
-    >
-      mirror ↔
-    </button>
+
+    <details class="kt-tools-menu">
+      <summary
+        class="btn btn-ghost btn-sm"
+        title="Everything that is not the main action: the live stream, the DSP simulator and the mirror."
+      >
+        tools ▾
+      </summary>
+      <div class="tools-menu-list" role="menu">
+        <a
+          href="/about"
+          target="_blank"
+          rel="noopener"
+          role="menuitem"
+          title="How it works · what ortbtools can and can't do"
+        >
+          docs ↗
+        </a>
+        <button
+          data-action="live"
+          role="menuitem"
+          id="liveBtn"
+          title="Open the live RTB stream — watch synthetic samples flow past in realtime"
+        >
+          📡 live
+        </button>
+        <button
+          data-action="sim-bids"
+          role="menuitem"
+          id="simBidsBtn"
+          title="Simulate 3 DSP strategies with deterministic server-side rules — the raw BidRequest is processed transiently by ortbtools; no external model receives it"
+        >
+          🤖 simulate
+        </button>
+        <button
+          data-action="mirror"
+          role="menuitem"
+          id="mirrorBtn"
+          title="Generate the canonical counterpart of your paste"
+        >
+          mirror ↔
+        </button>
+        <div class="menu-divider"></div>
+        <div
+          class="sim-price-wrap"
+          title="Simulated auction clearing price for ${AUCTION_PRICE}. Enter it manually; bid.price and bidfloor are not treated as the clearing price. When empty, the macro stays unresolved."
+        >
+          <label for="simPrice">auction price</label>
+          <input id="simPrice" type="text" placeholder="0.00" />
+        </div>
+      </div>
+    </details>
     <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">analyze</button>
     <!-- Language + theme toggles. Buttons live in the header so users can
              see at a glance which locale/theme is active. The IIFEs in <head>
@@ -201,131 +234,16 @@
 </header>
 
 <!-- ── Inputs ── -->
-<section class="input-section">
-  <div class="input-card" id="cardReq">
-    <div class="input-card-header">
-      <span class="input-card-title">bid request</span>
-      <div class="input-card-actions">
-        <span class="char-count" id="reqCount">0</span>
-        <span class="json-badge empty" id="reqBadge">empty</span>
-        <button
-          data-action="save-sample"
-          class="btn-icon"
-          title="Save current request/response to your Cabinet — encrypted with your password. Signed-out users will be prompted to sign in first."
-        >
-          save
-        </button>
-        <button data-action="clear-input" data-target="bidReq" class="btn-icon" title="Clear field">
-          clear
-        </button>
-        <button data-action="format-json" data-target="bidReq" class="btn-icon" title="Format JSON">
-          format
-        </button>
-        <button
-          data-action="copy-text"
-          data-target="bidReq"
-          class="btn-icon"
-          title="Copy to clipboard"
-        >
-          copy
-        </button>
-        <button
-          data-action="toggle-card"
-          data-target="cardReq"
-          class="btn-collapse-toggle"
-          title="Collapse this pane — frees space when you only need the other side. Click again to expand."
-          aria-label="Collapse / expand panel"
-        >
-          <span class="caret">▾</span>
-        </button>
-      </div>
-    </div>
-    <textarea
-      id="bidReq"
-      class="json-input"
-      spellcheck="false"
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="off"
-      placeholder="1. paste BidRequest JSON here&#10;2. optional: paste BidResponse on the right&#10;3. click «analyze» or Ctrl+Enter&#10;&#10;no JSON? 🎲 example ▾ · 📡 live · mirror ↔&#10;? for shortcuts"
-    ></textarea>
-    <div class="input-card-summary" data-card-summary="cardReq">
-      <span class="input-card-summary__label">id</span>
-      <span class="input-card-summary__id" data-summary-id>—</span>
-    </div>
-  </div>
-  <div class="input-card" id="cardRes">
-    <div class="input-card-header">
-      <span class="input-card-title">bid response</span>
-      <div class="input-card-actions">
-        <span class="char-count" id="resCount">0</span>
-        <span class="json-badge empty" id="resBadge">empty</span>
-        <button data-action="clear-input" data-target="bidRes" class="btn-icon" title="Clear field">
-          clear
-        </button>
-        <button data-action="format-json" data-target="bidRes" class="btn-icon" title="Format JSON">
-          format
-        </button>
-        <button
-          data-action="copy-text"
-          data-target="bidRes"
-          class="btn-icon"
-          title="Copy to clipboard"
-        >
-          copy
-        </button>
-        <button
-          data-action="toggle-card"
-          data-target="cardRes"
-          class="btn-collapse-toggle"
-          title="Collapse this pane — frees space when you only need the other side. Click again to expand."
-          aria-label="Collapse / expand panel"
-        >
-          <span class="caret">▾</span>
-        </button>
-      </div>
-    </div>
-    <textarea
-      id="bidRes"
-      class="json-input"
-      spellcheck="false"
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="off"
-      placeholder="optional: paste BidResponse JSON here&#10;&#10;if both panes filled, mirror ↔ diffs against canonical"
-    ></textarea>
-    <div class="input-card-summary" data-card-summary="cardRes">
-      <span class="input-card-summary__label">id</span>
-      <span class="input-card-summary__id" data-summary-id>—</span>
-    </div>
-  </div>
-</section>
 
 <!-- Drag-resize handle for the input section. JS in ortbtools.app.js
      reads/writes --input-section-height on documentElement.style and
      persists to localStorage. Hidden on mobile via @media. -->
-<div
-  class="input-section-resize"
-  role="separator"
-  aria-orientation="horizontal"
-  aria-label="Resize request/response panels"
-  tabindex="0"
-  data-action="input-section-resize"
-  title="Drag to resize · double-click to reset"
-></div>
 
 <!-- Stage-1: prev/next finding→source navigation controls (populated by
      /modules/inspector/source-nav.js; hidden until a payload is analyzed). -->
-<div
-  id="srcNavBar"
-  class="src-nav-bar"
-  role="toolbar"
-  aria-label="Finding source navigation"
-  hidden
-></div>
 
 <!-- ── Main grid ── -->
-<main class="main-grid">
+<main class="workbench-split">
   <!-- Left sidebar -->
   <aside class="sidebar-left">
     <div class="section-title" data-section="summary-title">summary</div>
@@ -396,60 +314,235 @@
   </aside>
 
   <!-- Center panel -->
+  <section class="workbench-payload">
+    <!-- Request and Response are one editor with a switch, not two
+         half-height panes. Both textareas stay in the DOM under their
+         original ids so every handler and test keeps addressing them;
+         only one is shown, and the dot marks the other side as filled. -->
+    <div class="payload-switch" role="tablist" aria-label="payload side">
+      <button
+        type="button"
+        class="payload-switch-btn is-active"
+        data-payload="req"
+        role="tab"
+        aria-selected="true"
+        aria-controls="cardReq"
+      >
+        request<span class="payload-dot" id="payloadDotReq" hidden></span>
+      </button>
+      <button
+        type="button"
+        class="payload-switch-btn"
+        data-payload="res"
+        role="tab"
+        aria-selected="false"
+        aria-controls="cardRes"
+      >
+        response<span class="payload-dot" id="payloadDotRes" hidden></span>
+      </button>
+    </div>
+    <section class="input-section">
+      <div class="input-card" id="cardReq">
+        <div class="input-card-header">
+          <span class="input-card-title">bid request</span>
+          <div class="input-card-actions">
+            <span class="char-count" id="reqCount">0</span>
+            <span class="json-badge empty" id="reqBadge">empty</span>
+            <button
+              data-action="save-sample"
+              class="btn-icon"
+              title="Save current request/response to your Cabinet — encrypted with your password. Signed-out users will be prompted to sign in first."
+            >
+              save
+            </button>
+            <button
+              data-action="clear-input"
+              data-target="bidReq"
+              class="btn-icon"
+              title="Clear field"
+            >
+              clear
+            </button>
+            <button
+              data-action="format-json"
+              data-target="bidReq"
+              class="btn-icon"
+              title="Format JSON"
+            >
+              format
+            </button>
+            <button
+              data-action="copy-text"
+              data-target="bidReq"
+              class="btn-icon"
+              title="Copy to clipboard"
+            >
+              copy
+            </button>
+            <button
+              data-action="toggle-card"
+              data-target="cardReq"
+              class="btn-collapse-toggle"
+              title="Collapse this pane — frees space when you only need the other side. Click again to expand."
+              aria-label="Collapse / expand panel"
+            >
+              <span class="caret">▾</span>
+            </button>
+          </div>
+        </div>
+        <textarea
+          id="bidReq"
+          class="json-input"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          placeholder="1. paste BidRequest JSON here&#10;2. optional: paste BidResponse on the right&#10;3. click «analyze» or Ctrl+Enter&#10;&#10;no JSON? 🎲 example ▾ · 📡 live · mirror ↔&#10;? for shortcuts"
+        ></textarea>
+        <div class="input-card-summary" data-card-summary="cardReq">
+          <span class="input-card-summary__label">id</span>
+          <span class="input-card-summary__id" data-summary-id>—</span>
+        </div>
+      </div>
+      <div class="input-card" id="cardRes">
+        <div class="input-card-header">
+          <span class="input-card-title">bid response</span>
+          <div class="input-card-actions">
+            <span class="char-count" id="resCount">0</span>
+            <span class="json-badge empty" id="resBadge">empty</span>
+            <button
+              data-action="clear-input"
+              data-target="bidRes"
+              class="btn-icon"
+              title="Clear field"
+            >
+              clear
+            </button>
+            <button
+              data-action="format-json"
+              data-target="bidRes"
+              class="btn-icon"
+              title="Format JSON"
+            >
+              format
+            </button>
+            <button
+              data-action="copy-text"
+              data-target="bidRes"
+              class="btn-icon"
+              title="Copy to clipboard"
+            >
+              copy
+            </button>
+            <button
+              data-action="toggle-card"
+              data-target="cardRes"
+              class="btn-collapse-toggle"
+              title="Collapse this pane — frees space when you only need the other side. Click again to expand."
+              aria-label="Collapse / expand panel"
+            >
+              <span class="caret">▾</span>
+            </button>
+          </div>
+        </div>
+        <textarea
+          id="bidRes"
+          class="json-input"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          placeholder="optional: paste BidResponse JSON here&#10;&#10;if both panes filled, mirror ↔ diffs against canonical"
+        ></textarea>
+        <div class="input-card-summary" data-card-summary="cardRes">
+          <span class="input-card-summary__label">id</span>
+          <span class="input-card-summary__id" data-summary-id>—</span>
+        </div>
+      </div>
+    </section>
+    <div
+      id="srcNavBar"
+      class="src-nav-bar"
+      role="toolbar"
+      aria-label="Finding source navigation"
+      hidden
+    ></div>
+  </section>
   <div class="center-panel">
-    <div class="format-bar" id="formatBar" hidden>
-      <span class="format-pill format-pill-type" id="formatPillType"></span>
-      <span class="format-pill format-pill-status" id="formatPillStatus"></span>
-      <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
-      <select
-        class="format-pill format-pill-select"
-        id="dialectSelector"
-        data-action="change-dialect"
-        title="Validation-dialect switch — changes the rule set the engine applies to the payload"
-      >
-        <option value="iab">Standard IAB (oRTB 2.5)</option>
-        <option value="ext-rtb">Vendor · RTB</option>
-        <option value="inpage-push">Vendor · In-Page Push</option>
-      </select>
-      <select
-        class="format-pill format-pill-select"
-        id="versionPinSelector"
-        data-action="change-version-pin"
-        title="Expected oRTB version. If detection lands elsewhere, the engine emits a warning with the field paths that triggered the flip. Leave on 'auto' to trust the detector."
-      >
-        <option value="">auto</option>
-        <option value="2.5">oRTB 2.5</option>
-        <option value="2.6">oRTB 2.6</option>
-        <option value="3.0">oRTB 3.0</option>
-      </select>
-      <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
-      <div class="format-bar-actions">
-        <button
-          class="btn btn-ghost btn-sm"
-          id="embedBtn"
-          data-action="open-embed"
-          title="Get an iframe snippet to embed this view in a blog, Notion or doc"
-        >
-          embed
-        </button>
-        <button
-          class="btn btn-ghost btn-sm"
-          id="shareLinkBtn"
-          data-action="share-link"
-          title="Copy a permalink — the fragment is absent from the initial request; opening it submits the payload to /api/analyze"
-        >
-          share link
-        </button>
-        <button
-          class="btn btn-ghost btn-sm"
-          id="downloadBundleBtn"
-          data-action="download-bundle"
-          title="Download a JSON bundle (request + response + findings) for sharing or attaching to a bug ticket"
-        >
-          download
-        </button>
+    <!-- Verdict — one sentence about what the findings mean for this
+         payload, ahead of the counts. Filled by ortbtools.app.js; hidden
+         until an analysis exists so an empty workbench makes no claim.
+         aria-live so a screen reader hears the outcome when it changes,
+         not only when the reader happens to walk the panel. -->
+    <div class="verdict" id="verdict" hidden aria-live="polite">
+      <div class="verdict-head">
+        <span class="verdict-badge" id="verdictIcon" aria-hidden="true"></span>
+        <div class="verdict-text">
+          <p class="verdict-headline" id="verdictHeadline"></p>
+          <p class="verdict-detail" id="verdictDetail"></p>
+        </div>
+        <details class="kt-share-menu">
+          <summary title="Share this analysis — permalink, embed snippet or a JSON bundle">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+              <path d="M12 3v13" />
+              <path d="m7 11 5 5 5-5" />
+            </svg>
+            share report
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          <div class="tools-menu-list" role="menu">
+            <button
+              role="menuitem"
+              id="shareLinkBtn"
+              data-action="share-link"
+              title="Copy a permalink — the fragment is absent from the initial request; opening it submits the payload to /api/analyze"
+            >
+              share link
+            </button>
+            <button
+              role="menuitem"
+              id="embedBtn"
+              data-action="open-embed"
+              title="Get an iframe snippet to embed this view in a blog, Notion or doc"
+            >
+              embed
+            </button>
+            <button
+              role="menuitem"
+              id="downloadBundleBtn"
+              data-action="download-bundle"
+              title="Download a JSON bundle (request + response + findings) for sharing or attaching to a bug ticket"
+            >
+              download
+            </button>
+          </div>
+        </details>
       </div>
     </div>
+
     <div class="tab-bar">
       <button
         class="sb-toggle left"
@@ -460,11 +553,11 @@
       >
         ◀
       </button>
-      <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
-        inspector <span class="tab-badge" id="inspectorBadge" hidden></span>
-      </button>
       <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
-        validation <span class="tab-badge" id="validationBadge" hidden></span>
+        findings <span class="tab-badge" id="validationBadge" hidden></span>
+      </button>
+      <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
+        impressions <span class="tab-badge" id="inspectorBadge" hidden></span>
       </button>
       <button class="tab-btn" data-action="switch-tab" data-target="tCross">
         crosscheck <span class="tab-badge" id="crossBadge" hidden></span>
@@ -472,55 +565,80 @@
       <button
         class="tab-btn"
         data-action="switch-tab"
-        data-target="tCategories"
-        title="IAB content categories detected on this BidRequest (site.cat, app.cat, bcat, etc.)"
+        data-target="tCreative"
+        title="Rendered creative and placement stats — was a permanent right column"
       >
-        IAB categories <span class="tab-badge" id="categoriesBadge" hidden></span>
+        creative
       </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tBehavior"
-        title="Click-skim and auto-navigate attempts captured from the creative iframe"
-      >
-        behavior <span class="tab-badge" id="behaviorBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tMacros"
-        title="OpenRTB 2.x §4.4 substitution macros and notice/tracker URLs extracted from response"
-      >
-        macros <span class="tab-badge" id="macrosBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tDiff"
-        title="Compare the payload in the editor against another one — OpenRTB-aware or raw JSON. Read-only: nothing is modified."
-      >
-        diff <span class="tab-badge" id="diffBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tMigrate"
-        title="Proposed OpenRTB 2.5 → 2.6 changes for this BidRequest. Nothing is applied until you click Apply, and Undo restores your text exactly."
-      >
-        2.6 migration <span class="tab-badge" id="migrateBadge" hidden></span>
-      </button>
-      <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
-        vendor ref
-      </button>
-      <button
-        class="sb-toggle right"
-        id="toggleSidebarRight"
-        data-action="toggle-sidebar"
-        data-side="right"
-        title="Toggle right sidebar (ad preview / placement stats)"
-      >
-        ▶
-      </button>
+      <details class="tab-more">
+        <summary class="tab-btn tab-more-toggle">
+          more
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </summary>
+        <div class="tab-more-menu" role="menu">
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tCategories"
+            title="IAB content categories detected on this BidRequest (site.cat, app.cat, bcat, etc.)"
+          >
+            IAB categories <span class="tab-badge" id="categoriesBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tBehavior"
+            title="Click-skim and auto-navigate attempts captured from the creative iframe"
+          >
+            behavior <span class="tab-badge" id="behaviorBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tMacros"
+            title="OpenRTB 2.x §4.4 substitution macros and notice/tracker URLs extracted from response"
+          >
+            macros <span class="tab-badge" id="macrosBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tDiff"
+            title="Compare the payload in the editor against another one — OpenRTB-aware or raw JSON. Read-only: nothing is modified."
+          >
+            diff <span class="tab-badge" id="diffBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            data-action="switch-tab"
+            data-target="tMigrate"
+            title="Proposed OpenRTB 2.5 → 2.6 changes for this BidRequest. Nothing is applied until you click Apply, and Undo restores your text exactly."
+          >
+            2.6 migration <span class="tab-badge" id="migrateBadge" hidden></span>
+          </button>
+          <button
+            class="tab-btn"
+            id="vendorRefTab"
+            data-action="switch-tab"
+            data-target="tRef"
+            hidden
+          >
+            vendor ref
+          </button>
+        </div>
+      </details>
     </div>
     <div class="tab-content active" id="tInspector">
       <div class="slot-grid" id="slotGrid">
@@ -572,51 +690,54 @@
         </div>
       </div>
     </div>
+    <!-- Was a permanent 320px right column. It is one view of a result
+         among several, so it becomes one of the tabs instead of standing
+         beside them competing for the same attention. -->
+    <div class="tab-content" id="tCreative">
+      <div class="section-title">ad preview</div>
+      <div class="preview-csp-notice">
+        <span class="preview-csp-icon">🔒</span>
+        <span
+          >External resources are blocked. Visual preview and Behavior findings may be
+          incomplete.</span
+        >
+      </div>
+      <div class="preview-safe" id="creativePreviewSafe">
+        <div class="preview-container" id="creativePreview">
+          <div class="preview-placeholder">waiting for adm — paste BidResponse</div>
+        </div>
+        <div class="preview-safe-overlay" data-action="reveal-creative" role="button" tabindex="0">
+          <button type="button" class="preview-safe-overlay__btn">Show creative</button>
+        </div>
+      </div>
+      <div class="section-title section-title--sub" style="margin-top: var(--space-3)">
+        Placement stats
+      </div>
+      <div class="quick-stats" id="quickStats">
+        <div class="stat-box">
+          <div class="stat-value">0</div>
+          <div class="stat-label">banners</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">0</div>
+          <div class="stat-label">videos</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">0</div>
+          <div class="stat-label">native</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">0</div>
+          <div class="stat-label">audio</div>
+        </div>
+      </div>
+    </div>
     <div class="tab-content" id="tRef">
       <!-- Filled at load time by renderReference() -->
     </div>
   </div>
 
   <!-- Right sidebar -->
-  <aside class="sidebar-right">
-    <div class="section-title">ad preview</div>
-    <div class="preview-csp-notice">
-      <span class="preview-csp-icon">🔒</span>
-      <span
-        >External resources are blocked. Visual preview and Behavior findings may be
-        incomplete.</span
-      >
-    </div>
-    <div class="preview-safe" id="creativePreviewSafe">
-      <div class="preview-container" id="creativePreview">
-        <div class="preview-placeholder">waiting for adm — paste BidResponse</div>
-      </div>
-      <div class="preview-safe-overlay" data-action="reveal-creative" role="button" tabindex="0">
-        <button type="button" class="preview-safe-overlay__btn">Show creative</button>
-      </div>
-    </div>
-    <div class="section-title section-title--sub" style="margin-top: var(--space-3)">
-      Placement stats
-    </div>
-    <div class="quick-stats" id="quickStats">
-      <div class="stat-box">
-        <div class="stat-value">0</div>
-        <div class="stat-label">banners</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">0</div>
-        <div class="stat-label">videos</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">0</div>
-        <div class="stat-label">native</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">0</div>
-        <div class="stat-label">audio</div>
-      </div>
-    </div>
-  </aside>
 </main>
 
 <!-- Embed-mode footer — only shown when ?embed=1 strips the regular footer. -->
@@ -632,7 +753,7 @@
     <span class="footer-sep">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.11.3</span></span
+      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.12.0</span></span
     >
     <span class="footer-extras">
       <span class="footer-sep">·</span>

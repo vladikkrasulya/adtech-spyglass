@@ -242,6 +242,11 @@ export async function mountInspector(root, ctx) {
     document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
     btn.classList.add('active');
     $(targetId).classList.add('active');
+    // Tabs that live behind the strip's "more ▾" menu switch and then leave
+    // the menu open over the content they just revealed — close it. The
+    // summary itself gets no active class; CSS marks it via :has().
+    const more = btn.closest('details.tab-more');
+    if (more) more.open = false;
   };
 
   window.clearInput = function (id, btn) {
@@ -280,6 +285,38 @@ export async function mountInspector(root, ctx) {
       return 'uk';
     }
   }
+  /**
+   * Pick the plural form for `n` in the active locale.
+   *
+   * Ukrainian and Russian have three: 1 / 2-4 / 5+. Every count in this file
+   * used to interpolate a single stored plural, so any figure of five or
+   * more read as broken grammar in two of the three product locales —
+   * "5 критичні помилки" where the language wants "5 критичних помилок".
+   * It was invisible while counts lived inside a small pill and became
+   * obvious the moment the verdict put them in a sentence.
+   *
+   * English collapses `few` and `many` onto the same string, so callers can
+   * pass all three keys unconditionally.
+   *
+   * @param {number} n
+   * @param {string} one   key for 1
+   * @param {string} few   key for 2-4 (and English plural)
+   * @param {string} many  key for 5+
+   */
+  function pluralKey(n, one, few, many) {
+    if (activeLocale() === 'en') return n === 1 ? one : few;
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+
+  /** `n` followed by the correctly-inflected noun. */
+  function counted(n, one, few, many) {
+    return n + ' ' + t(pluralKey(n, one, few, many));
+  }
+
   function analyzeUrl() {
     // Absolute path — relative would resolve against pathname (e.g. /uk/),
     // breaking API access from non-root locales. serverSideDialect()
@@ -694,6 +731,12 @@ export async function mountInspector(root, ctx) {
     if (!bar) return;
     if (!validation || !validation.type) {
       bar.hidden = true;
+      // The verdict has to leave with the bar. It is rendered further down
+      // this function, so an early return here would have left the previous
+      // payload's sentence sitting above an empty workbench — stating an
+      // outcome for something the user already cleared.
+      const staleVerdict = $('verdict');
+      if (staleVerdict) staleVerdict.hidden = true;
       return;
     }
     bar.hidden = false;
@@ -709,46 +752,85 @@ export async function mountInspector(root, ctx) {
     else if (/Feed Response/i.test(type)) family = 'feed';
     pillType.dataset.format = family;
 
-    const pillStatus = $('formatPillStatus');
-    // Outcome-first: status pill leads with an icon and (for warnings/errors)
-    // the counts of findings, so the reader gets the verdict before format
-    // metadata. Order in the DOM is preserved; visual reordering is done in
-    // CSS via `order:` so any non-JS consumer still sees type→status→version.
     const findings = (validation && validation.findings) || [];
     const errCount = findings.filter((f) => f.level === 'error').length;
     const warnCount = findings.filter((f) => f.level === 'warning').length;
-    // The verdict states BOTH actionable severities, not just the leading one.
-    // It used to stop at the first `else if`: a payload with 1 error and 4
-    // warnings read "✗ 1 error", and the four warnings never reached the
-    // top-level answer at all. So the one line whose whole job is "what did
-    // you find" reported a fifth of it, and the reader had to go hunting
-    // through the other counters on screen to discover the rest — which is
-    // exactly what made those counters feel like they were competing.
-    //
-    // Errors and warnings only. Info and questions are real and are one click
-    // away in their own chips, but a verdict carrying four numbers is no
-    // longer a verdict; this line says what blocks and what to check.
-    const errText = errCount
-      ? errCount + ' ' + (errCount === 1 ? t('status.error_one') : t('status.errors'))
-      : '';
-    const warnText = warnCount
-      ? warnCount + ' ' + (warnCount === 1 ? t('status.warning_one') : t('status.warnings'))
-      : '';
-    let icon = '·';
-    let statusText = humanStatus(status) || status || '—';
-    if (status === 'clean') {
-      icon = '✓';
-    } else if (status === 'invalid') {
-      icon = '✗';
-    } else if (errCount) {
-      icon = '✗';
-      statusText = warnText ? errText + ' · ' + warnText : errText;
-    } else if (warnCount) {
-      icon = '⚠';
-      statusText = warnText;
+
+    // ── Verdict ────────────────────────────────────────────────────────────
+    // The mockup's head, verbatim: an icon square, one sentence, and a meta
+    // line that speaks the same language as the finding groups below it —
+    // blocking / to fix / unmapped — plus when the analysis ran and on which
+    // engine. A reader triaging a ticket needs those two facts the moment a
+    // screenshot of this panel lands in a chat.
+    const verdictBox = $('verdict');
+    if (verdictBox) {
+      const questionCount = findings.filter((f) => f.level === 'question').length;
+
+      // Lucide glyphs, same geometry as the mockup: triangle-alert for a
+      // payload that will not serve, check for a clean one.
+      const TRIANGLE =
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>' +
+        '<path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+      const CHECK =
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="m5 13 4 4L19 7"/></svg>';
+
+      let vKey;
+      let vIcon;
+      if (status === 'invalid') {
+        vKey = 'verdict.invalid';
+        vIcon = TRIANGLE;
+      } else if (errCount) {
+        vKey = 'verdict.blocked';
+        vIcon = TRIANGLE;
+      } else if (warnCount) {
+        vKey = 'verdict.risky';
+        vIcon = TRIANGLE;
+      } else {
+        vKey = 'verdict.clean';
+        vIcon = CHECK;
+      }
+
+      // "1 blocking issue · 3 to fix · 1 unmapped field. Analyzed 12:04,
+      // engine v1.11.3." — counts in the groups' own vocabulary, so the meta
+      // line and the section headers can never disagree about what a thing
+      // is called.
+      const parts = [];
+      if (errCount) {
+        parts.push(
+          counted(errCount, 'verdict.blocker_one', 'verdict.blockers', 'verdict.blockers_many'),
+        );
+      }
+      if (warnCount) parts.push(warnCount + ' ' + t('verdict.tofix'));
+      if (questionCount) {
+        parts.push(
+          counted(
+            questionCount,
+            'verdict.question_one',
+            'verdict.questions',
+            'verdict.questions_many',
+          ),
+        );
+      }
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const engineEl = document.getElementById('engineVer');
+      const engine = engineEl ? engineEl.textContent.trim() : '';
+      const analyzed = t('verdict.analyzed', { time: hh + ':' + mm, engine: engine });
+
+      $('verdictIcon').innerHTML = vIcon;
+      $('verdictHeadline').textContent = t(vKey);
+      const detail = $('verdictDetail');
+      detail.textContent = (parts.length ? parts.join(' · ') + '. ' : '') + analyzed;
+      detail.hidden = false;
+      verdictBox.dataset.status = status;
+      verdictBox.dataset.verdict = vKey.slice('verdict.'.length);
+      verdictBox.hidden = false;
     }
-    pillStatus.textContent = icon + ' ' + statusText;
-    pillStatus.dataset.status = status;
 
     const pillVer = $('formatPillVersion');
     const v = validation.version;
@@ -1617,13 +1699,61 @@ export async function mountInspector(root, ctx) {
       escapeHtml(t('strip.label.' + key)) +
       '</div>';
 
+    // Chips the mockup adds beside the classic five: the winning bid when a
+    // response has been analyzed, the creative size, and the declared intent.
+    // All three come from data this function already holds — they were shown
+    // only in the drawer before, which is the one place a reader deciding
+    // "is this bid sane" was guaranteed not to be looking.
+    let bidChip = '';
+    const mPriceEl = document.getElementById('mPrice');
+    const mPriceTxt = mPriceEl ? mPriceEl.textContent.trim() : '';
+    if (mPriceTxt && !/^\$?0([.,]0+)?$/.test(mPriceTxt)) {
+      bidChip =
+        '<div class="analysis-strip-block">' +
+        stripLabel('bid') +
+        '<div class="analysis-strip-value">' +
+        escapeHtml(mPriceTxt) +
+        '</div>' +
+        '</div>';
+    }
+
+    let sizeChip = '';
+    if (imp0 && imp0.banner && imp0.banner.w && imp0.banner.h) {
+      sizeChip =
+        '<div class="analysis-strip-block">' +
+        stripLabel('size') +
+        '<div class="analysis-strip-value">' +
+        escapeHtml(imp0.banner.w + '×' + imp0.banner.h) +
+        '</div>' +
+        '</div>';
+    }
+
+    let intentChip = '';
+    const adtype = imp0 && imp0.ext && typeof imp0.ext.adtype === 'string' ? imp0.ext.adtype : '';
+    if (adtype) {
+      intentChip =
+        '<div class="analysis-strip-block analysis-strip-intent">' +
+        stripLabel('intent') +
+        '<div class="analysis-strip-value">' +
+        escapeHtml(adtype) +
+        '</div>' +
+        '</div>';
+    }
+
+    // Mockup order: money first, then what the impression is, then where it
+    // runs. Version keeps a chip even though the work bar states it too — the
+    // work bar shows the *pinned* selector state, this shows what the payload
+    // itself declares, and the two disagreeing is worth seeing.
     const stripHtml =
-      '<div class="analysis-strip-block">' +
-      stripLabel('version') +
-      '<div class="analysis-strip-value"><span class="ver-badge">' +
-      escapeHtml(version) +
-      '</span></div>' +
+      bidChip +
+      '<div class="analysis-strip-block analysis-strip-pricing">' +
+      stripLabel('pricing') +
+      '<div class="analysis-strip-value">' +
+      pricingValue +
       '</div>' +
+      '</div>' +
+      sizeChip +
+      intentChip +
       '<div class="analysis-strip-block">' +
       stripLabel('traffic') +
       '<div class="analysis-strip-value">' +
@@ -1642,11 +1772,11 @@ export async function mountInspector(root, ctx) {
       privValue +
       '</div>' +
       '</div>' +
-      '<div class="analysis-strip-block analysis-strip-pricing">' +
-      stripLabel('pricing') +
-      '<div class="analysis-strip-value">' +
-      pricingValue +
-      '</div>' +
+      '<div class="analysis-strip-block">' +
+      stripLabel('version') +
+      '<div class="analysis-strip-value"><span class="ver-badge">' +
+      escapeHtml(version) +
+      '</span></div>' +
       '</div>';
 
     // Quality Pill (Feature #12) — 6th block
@@ -1716,16 +1846,22 @@ export async function mountInspector(root, ctx) {
 
     const fullStripHtml = stripHtml + qualityBlock;
 
-    // Inject the strip between .format-bar and .tab-bar if not yet present
+    // The chips live inside the verdict block — the mockup's context row
+    // under the headline — not in a band of their own. Same element, same id,
+    // same classes; only its parent changed, so everything that addresses
+    // #analysisStrip keeps working.
     let strip = document.getElementById('analysisStrip');
     if (!strip) {
       strip = document.createElement('div');
       strip.id = 'analysisStrip';
       strip.className = 'analysis-strip';
+    }
+    const verdictHost = document.getElementById('verdict');
+    if (verdictHost) {
+      if (strip.parentElement !== verdictHost) verdictHost.appendChild(strip);
+    } else if (!strip.parentElement) {
       const tabBar = document.querySelector('.center-panel .tab-bar');
-      if (tabBar) {
-        tabBar.parentNode.insertBefore(strip, tabBar);
-      }
+      if (tabBar) tabBar.parentNode.insertBefore(strip, tabBar);
     }
     strip.innerHTML = fullStripHtml;
     strip.hidden = false;
@@ -1795,28 +1931,8 @@ export async function mountInspector(root, ctx) {
   // `findings` is the array of finding objects. `headerHtml` is the header
   // row HTML (mono-label + version pill) that sits above the chips.
   function renderSeverityTabs(container, findings, headerHtml) {
-    const errCount = findings.filter((f) => {
-      const l = f.level === 'danger' ? 'error' : f.level;
-      return l === 'error';
-    }).length;
-    const warnCount = findings.filter((f) => f.level === 'warning').length;
-    const infoCount = findings.filter((f) => f.level === 'info').length;
-    // `question` is the fourth level packages/core/findings.js emits, and it had
-    // no chip. On a payload carrying one, the row read all 8 · errors 1 ·
-    // warnings 4 · info 2 — which sums to seven. The eighth was reachable only
-    // under "all" (listHtml filters by exact level), so clicking every chip in
-    // turn showed 7 of 8 and no chip could isolate the missing one. A counter
-    // row that does not add up to its own total is a record describing a set it
-    // is not checked against.
-    const questionCount = findings.filter((f) => f.level === 'question').length;
-
     function buildFindingHtml(f) {
       const lvl = f.level === 'danger' ? 'error' : f.level;
-      // Both chains used to end in `warning`, so a `question` finding rendered
-      // with the warning stripe and the `!` icon while being counted by neither
-      // the warning chip nor any other — it looked like a warning and was not
-      // one. It now carries its own class and a `?`, which is what it is: the
-      // tool asking rather than reporting.
       const cls =
         lvl === 'error'
           ? 'danger'
@@ -1825,24 +1941,39 @@ export async function mountInspector(root, ctx) {
             : lvl === 'question'
               ? 'question'
               : 'warning';
-      const ic = lvl === 'error' ? '✕' : lvl === 'info' ? 'i' : lvl === 'question' ? '?' : '!';
-      const specLink = f.specRef
-        ? ' <a href="' +
-          escapeHtml(f.specRef) +
-          '" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim);font-family:var(--font-mono);font-size:10px;text-decoration:none" title="OpenRTB spec reference">spec ↗</a>'
-        : '';
-      const pathBtn = f.path
-        ? ' <button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
+
+      // The mockup's card splits a finding into a bold claim and a quieter
+      // explanation. Our engine writes both into one msg, first sentence
+      // first — so the split point is the first sentence boundary, and a msg
+      // without one is all title. No per-row severity icon: severity is the
+      // group header and the card's leading edge, stated once.
+      const msg = String(f.msg || '');
+      const cut = msg.indexOf('. ');
+      const title = cut > 0 ? msg.slice(0, cut + 1) : msg;
+      const rest = cut > 0 ? msg.slice(cut + 2) : '';
+
+      const pathChip = f.path
+        ? '<button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
           escapeHtml(f.path) +
           '" data-loc="' +
           // &quot;-escape: data-loc holds JSON (full of quotes) in a double-quoted
           // attribute; escapeHtml alone leaves the quotes raw → the attribute
           // truncates at the first " and JSON.parse fails (the jump silently no-ops).
           (f.location ? escapeHtml(JSON.stringify(f.location)).replace(/"/g, '&quot;') : '') +
-          '" title="Jump to this path in the JSON">[' +
+          '" title="Jump to this path in the JSON">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+          'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="m9 18 6-6-6-6"/></svg>' +
           escapeHtml(f.path) +
-          ']</button>'
+          '</button>'
         : '';
+      const specLink = f.specRef
+        ? '<a class="finding-spec" href="' +
+          escapeHtml(f.specRef) +
+          '" target="_blank" rel="noopener noreferrer" title="OpenRTB spec reference">spec ↗</a>'
+        : '';
+      const code = f.id ? '<span class="finding-code">' + escapeHtml(f.id) + '</span>' : '';
+
       return (
         '<details class="validation-item ' +
         cls +
@@ -1856,14 +1987,15 @@ export async function mountInspector(root, ctx) {
         escapeHtml(f.specRef || '') +
         '">' +
         '<summary>' +
-        '<span class="validation-icon">' +
-        ic +
+        '<span class="finding-main">' +
+        '<span class="finding-title">' +
+        escapeHtml(title) +
         '</span>' +
-        '<span class="validation-text">' +
-        escapeHtml(f.msg) +
-        pathBtn +
-        specLink +
+        (rest ? '<span class="finding-desc">' + escapeHtml(rest) + '</span>' : '') +
+        ((pathChip || specLink) &&
+          '<span class="finding-foot">' + pathChip + specLink + '</span>') +
         '</span>' +
+        code +
         '<span class="finding-detail-toggle" aria-hidden="true">▾</span>' +
         '</summary>' +
         '<div class="finding-detail-body" data-detail-rendered="0"></div>' +
@@ -1871,108 +2003,52 @@ export async function mountInspector(root, ctx) {
       );
     }
 
-    function emptyStateHtml(filter) {
-      const msg = t('severity.empty.' + filter);
-      return '<div class="severity-empty-state">' + escapeHtml(msg) + '</div>';
+    // ── Groups, not filters ────────────────────────────────────────────────
+    // The mockup sections findings by what the reader should do about them —
+    // Blocking / Should fix / Needs your input — instead of offering a filter
+    // row. A group is a filter that costs nothing: every severity is visible,
+    // labelled and counted at once, and severity itself is stated by the
+    // section header rather than repeated on every row.
+    //
+    // GROUPS is the complete map of Core's finding levels. The coverage test
+    // asserts both directions against packages/core LEVELS: a new level with
+    // no group would silently vanish from the panel, and a group for a level
+    // Core no longer emits is a section that can never render.
+    const GROUPS = [
+      { key: 'blocking', level: 'error', labelKey: 'group.blocking', tone: 'danger' },
+      { key: 'should_fix', level: 'warning', labelKey: 'group.should_fix', tone: 'warning' },
+      { key: 'needs_input', level: 'question', labelKey: 'group.needs_input', tone: 'question' },
+      { key: 'info', level: 'info', labelKey: 'group.info', tone: 'info' },
+    ];
+
+    function groupsHtml() {
+      const sections = GROUPS.map((g) => {
+        const items = findings.filter((f) => {
+          const l = f.level === 'danger' ? 'error' : f.level;
+          return l === g.level;
+        });
+        if (!items.length) return '';
+        return (
+          '<section class="finding-group finding-group-' +
+          g.tone +
+          '">' +
+          '<div class="finding-group-head">' +
+          '<span class="finding-group-label">' +
+          escapeHtml(t(g.labelKey)) +
+          '</span>' +
+          '<span class="finding-group-count">' +
+          items.length +
+          '</span>' +
+          '<span class="finding-group-rule"></span>' +
+          '</div>' +
+          items.map(buildFindingHtml).join('') +
+          '</section>'
+        );
+      }).join('');
+      return '<div class="findings-list findings-grouped">' + sections + '</div>';
     }
 
-    function chipsHtml(activeFilter) {
-      // Dots come from the theme's own tokens rather than literals. The three
-      // that were hardcoded painted the same hex in both themes, so the light
-      // theme got the dark theme's red (#ef4444 where --danger is #DC2626).
-      // `question` is deliberately NEUTRAL: it is not a point on the severity
-      // scale, it is the tool asking the operator something, and a severity
-      // colour would assert a ranking that does not exist.
-      const chips = [
-        { key: 'all', label: t('severity.chip.all'), count: findings.length, dot: null },
-        { key: 'error', label: t('severity.chip.error'), count: errCount, dot: 'var(--danger)' },
-        {
-          key: 'warning',
-          label: t('severity.chip.warning'),
-          count: warnCount,
-          dot: 'var(--warning)',
-        },
-        {
-          key: 'info',
-          label: t('severity.chip.info'),
-          count: infoCount,
-          dot: 'hsl(var(--c-info))',
-        },
-        {
-          key: 'question',
-          label: t('severity.chip.question'),
-          count: questionCount,
-          dot: 'var(--text-muted)',
-        },
-      ];
-      return (
-        '<div class="severity-chips">' +
-        chips
-          .map((c) => {
-            const dotHtml = c.dot
-              ? '<span class="chip-dot" style="background:' + c.dot + '"></span>'
-              : '';
-            return (
-              '<button type="button" class="severity-chip' +
-              (activeFilter === c.key ? ' active' : '') +
-              '" data-sev-filter="' +
-              c.key +
-              '">' +
-              dotHtml +
-              escapeHtml(c.label) +
-              ' <span class="chip-count">' +
-              c.count +
-              '</span>' +
-              '</button>'
-            );
-          })
-          .join('') +
-        '</div>'
-      );
-    }
-
-    function listHtml(filter) {
-      const filtered =
-        filter === 'all'
-          ? findings
-          : findings.filter((f) => {
-              const l = f.level === 'danger' ? 'error' : f.level;
-              return l === filter;
-            });
-      if (!filtered.length) return emptyStateHtml(filter);
-      return '<div class="findings-list">' + filtered.map(buildFindingHtml).join('') + '</div>';
-    }
-
-    // Initial render
-    let currentFilter = 'all';
-    container.innerHTML = (headerHtml || '') + chipsHtml(currentFilter) + listHtml(currentFilter);
-
-    // Wire chip clicks
-    container.addEventListener(
-      'click',
-      function onChipClick(e) {
-        const chip = e.target.closest('[data-sev-filter]');
-        if (!chip) return;
-        const newFilter = chip.dataset.sevFilter;
-        if (newFilter === currentFilter) return;
-
-        // Fade animation
-        const list = container.querySelector('.findings-list, .severity-empty-state');
-        if (list) list.style.opacity = '0';
-
-        setTimeout(function () {
-          currentFilter = newFilter;
-          // Re-render chips + list
-          const chipsEl = container.querySelector('.severity-chips');
-          if (chipsEl) chipsEl.outerHTML = chipsHtml(currentFilter);
-          // Re-render chips (the above outerHTML swap disconnects old listener,
-          // but that's ok since the listener is on the container, not chips)
-          container.innerHTML =
-            (headerHtml || '') + chipsHtml(currentFilter) + listHtml(currentFilter);
-        }, 180);
-      },
-      { once: false },
-    );
+    container.innerHTML = (headerHtml || '') + groupsHtml();
   }
   window.renderSeverityTabs = renderSeverityTabs;
 
@@ -4740,6 +4816,15 @@ export async function mountInspector(root, ctx) {
         saved = null;
       }
 
+      // v2: the left sidebar became an overlay drawer, so its resting state
+      // is closed. It holds history, the saved library and the metric card —
+      // reference material, consulted occasionally, which was charging 320px
+      // of permanent rent for that. A stored preference still wins; this only
+      // changes what happens when there is none.
+      if (side === 'left' && saved === null) {
+        document.body.classList.add(cls);
+      }
+
       if (saved === '1') {
         const verdict = checkSidebarHealth(side);
         if (verdict === 'respect') {
@@ -4770,7 +4855,14 @@ export async function mountInspector(root, ctx) {
   // ↺ button in the footer (template) and to a 'reset-layout' data-action.
   function resetLayout() {
     ['left', 'right'].forEach((side) => {
-      document.body.classList.remove('sb-' + side + '-hidden');
+      // "Reset" means the DEFAULT layout, and v2 changed what the default
+      // is: the left sidebar became an overlay drawer whose resting state is
+      // closed — the sb-left-hidden class PRESENT. This function predates
+      // that and removed the class for both sides, so clicking reset with
+      // the drawer open cleared the stored preference and left the drawer
+      // sitting there; only a reload (which re-derives the default) closed
+      // it. A reset that needs a reload to take effect is not a reset.
+      document.body.classList.toggle('sb-' + side + '-hidden', side === 'left');
       try {
         localStorage.removeItem(SB_HIDDEN_KEYS[side]);
         localStorage.removeItem(SB_HIDDEN_TS_KEYS[side]);
@@ -4780,13 +4872,70 @@ export async function mountInspector(root, ctx) {
       const btn = document.getElementById(
         side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
       );
-      if (btn) btn.textContent = arrowFor(side, false);
+      if (btn) btn.textContent = arrowFor(side, side === 'left');
     });
     toast(t('toast.layout.reset'));
   }
 
   window.toggleSidebar = toggleSidebar;
   window.resetLayout = resetLayout;
+
+  // ── Payload switch ──────────────────────────────────────────────────────
+  // Request and Response were two half-height textareas side by side. Each
+  // showed about eight lines of JSON, which is less than one `imp` object,
+  // so reading a payload meant scrolling a pane the size of a receipt while
+  // the other pane sat empty most of the time — a BidResponse is optional
+  // and absent from the majority of sessions.
+  //
+  // One editor at full column height shows ~25 lines. Both cards stay in the
+  // DOM: #bidReq and #bidRes are addressed directly by the analyzer, the
+  // mirror, diff, migrate, share and a large part of the test suite, and
+  // none of that should have to care which side is visible.
+  const PAYLOAD_SIDES = { req: 'cardReq', res: 'cardRes' };
+
+  function showPayloadSide(side) {
+    if (!PAYLOAD_SIDES[side]) return;
+    for (const [key, cardId] of Object.entries(PAYLOAD_SIDES)) {
+      const card = document.getElementById(cardId);
+      if (card) card.classList.toggle('is-shown', key === side);
+    }
+    document.querySelectorAll('.payload-switch-btn').forEach((btn) => {
+      const on = btn.getAttribute('data-payload') === side;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  /** Mark the side you are NOT looking at as already filled. The two-pane
+   *  layout told you this for free by simply being visible; a switch has to
+   *  say it explicitly, or a pasted BidResponse becomes invisible. */
+  function refreshPayloadDots() {
+    for (const [side, inputId] of [
+      ['Req', 'bidReq'],
+      ['Res', 'bidRes'],
+    ]) {
+      const dot = document.getElementById('payloadDot' + side);
+      const input = document.getElementById(inputId);
+      if (dot && input) dot.hidden = !String(input.value || '').trim();
+    }
+  }
+
+  function setupPayloadSwitch() {
+    const buttons = document.querySelectorAll('.payload-switch-btn');
+    if (!buttons.length) return;
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => showPayloadSide(btn.getAttribute('data-payload')));
+    });
+    for (const id of ['bidReq', 'bidRes']) {
+      const input = document.getElementById(id);
+      if (input) input.addEventListener('input', refreshPayloadDots);
+    }
+    showPayloadSide('req');
+    refreshPayloadDots();
+  }
+
+  window.showPayloadSide = showPayloadSide;
+  window.refreshPayloadDots = refreshPayloadDots;
 
   // ── Init ──────────────────────────────────────────────────────
   // Phase C-2: mount() guarantees the template DOM is injected before
@@ -4799,6 +4948,7 @@ export async function mountInspector(root, ctx) {
     updateCharCount('bidReq');
     updateCharCount('bidRes');
     setupSidebarToggles();
+    setupPayloadSwitch();
     maybeShowInspectorOnboarding();
 
     // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
@@ -5348,20 +5498,33 @@ export async function mountInspector(root, ctx) {
       el.addEventListener('keydown', window.handleKeydown, { signal: ctx.signal });
     });
 
-    // Close any open <details> popover (sample picker, lang switcher) when
-    // the user clicks outside of it. Native <details> stays open until you
-    // click its <summary> again, which surprises users who expect popover
-    // semantics. Scoped to the .kt-example-menu / .kt-lang-menu classes so
-    // it doesn't interfere with content disclosures (e.g. .finding-detail
-    // expanders) which SHOULD stay open until the user folds them.
+    // Close any open <details> popover when the user clicks outside of it.
+    // Native <details> stays open until you click its <summary> again, which
+    // surprises users who expect popover semantics. Scoped to the popover
+    // menus — v2 added tools ▾, share report ▾ and the tab strip's more ▾ to
+    // the original pair — so it doesn't interfere with content disclosures
+    // (e.g. .finding-detail expanders) which SHOULD stay open until the user
+    // folds them. The mockup's own manual states the contract: "Esc або клік
+    // поза меню — закрити", so Escape closes them too.
+    const POPOVER_MENUS =
+      '.kt-example-menu[open], .kt-lang-menu[open], ' +
+      '.kt-tools-menu[open], .kt-share-menu[open], .tab-more[open]';
     document.addEventListener(
       'click',
       (ev) => {
-        const opened = document.querySelectorAll('.kt-example-menu[open], .kt-lang-menu[open]');
+        const opened = document.querySelectorAll(POPOVER_MENUS);
         if (!opened.length) return;
         opened.forEach((d) => {
           if (!d.contains(ev.target)) d.removeAttribute('open');
         });
+      },
+      { signal: ctx.signal },
+    );
+    document.addEventListener(
+      'keydown',
+      (ev) => {
+        if (ev.key !== 'Escape') return;
+        document.querySelectorAll(POPOVER_MENUS).forEach((d) => d.removeAttribute('open'));
       },
       { signal: ctx.signal },
     );
@@ -5697,6 +5860,8 @@ export async function mountInspector(root, ctx) {
       'updateCharCount',
       'toggleSidebar',
       'resetLayout',
+      'showPayloadSide',
+      'refreshPayloadDots',
       // analysis + history (loadFromHistory/peekHistoryItem/deleteHistoryItem
       // are now local — driven by delegated handler on #hList)
       'runAnalysis',

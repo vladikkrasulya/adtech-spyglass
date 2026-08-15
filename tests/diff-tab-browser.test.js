@@ -215,6 +215,13 @@ test('browser smoke test: the Diff tab', { timeout: 120000, skip: browserSkipRea
     await page.evaluate((a) => {
       /** @type {any} */ (document.getElementById('bidReq')).value = a;
     }, SIDE_A);
+    // v2 keeps four named tabs and puts the rest behind "more ▾" — the diff
+    // tab now opens from that menu, so the test walks the same path the user
+    // does. switchTab() closes the menu after the switch.
+    await page.evaluate(() => {
+      const m = /** @type {any} */ (document.querySelector('details.tab-more'));
+      if (m) m.open = true;
+    });
     await page.click('[data-target="tDiff"]');
     await page.waitForSelector('#diffPaneB', { timeout: 5000 });
 

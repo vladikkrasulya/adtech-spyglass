@@ -305,8 +305,15 @@ test(
       await analyze(RUB_FLOOR);
 
       const pricing = await page.evaluate(() => {
-        const blocks = [...document.querySelectorAll('#analysisStrip .analysis-strip-value')];
-        const text = blocks[4] ? blocks[4].textContent.replace(/\s+/g, ' ').trim() : '';
+        // Address the pricing cell by its own class, not by position. The
+        // original `blocks[4]` encoded "pricing is the fifth cell" — a record
+        // describing the strip's layout rather than the thing it wanted, and
+        // the v2 chip reorder (money first) falsified it without touching the
+        // cell itself.
+        const cell = document.querySelector(
+          '#analysisStrip .analysis-strip-pricing .analysis-strip-value',
+        );
+        const text = cell ? cell.textContent.replace(/\s+/g, ' ').trim() : '';
         const mismatch = document.querySelector('#analysisStrip .floor-cur-mismatch');
         const slot = document.querySelector('.slot-floor-value');
         return {
@@ -344,8 +351,14 @@ test(
       // ── 6. A sub-cent floor never reads as zero ─────────────────────────
       await analyze(SUBCENT);
       const subcent = await page.evaluate(() => {
-        const blocks = [...document.querySelectorAll('#analysisStrip .analysis-strip-value')];
-        return blocks[4] ? blocks[4].textContent.replace(/\s+/g, ' ').trim() : '';
+        // By class, not by position — the second of the two indexed reads
+        // this file carried. The first was caught by the RUB assertion the
+        // moment the chip order changed; this one failed one section later
+        // with "got 'No Privacy'", which is the same defect naming itself.
+        const cell = document.querySelector(
+          '#analysisStrip .analysis-strip-pricing .analysis-strip-value',
+        );
+        return cell ? cell.textContent.replace(/\s+/g, ' ').trim() : '';
       });
       assert.match(subcent, /0\.001/, `a 0.001 floor must not round to 0.00 — got "${subcent}"`);
 

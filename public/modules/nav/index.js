@@ -6,10 +6,16 @@
    stays for the life of the page, updates its `active` highlight
    in response to popstate / pushState navigation.
 
-   Grouping (РОБОТА / ДАНІ / ЗНАННЯ):
-     РОБОТА: Інспектор / Стрім / Behavior
-     ДАНІ:   Зразки / Діалекти
-     ЗНАННЯ: Блог / Доки
+   Grouping (WORKBENCH / CONFIGURE / LEARN) — v2 groups by what the
+   operator is DOING, not by what the thing is:
+     WORKBENCH: Inspector / Streams / Samples   — handling a payload
+     CONFIGURE: Dialects / Insights             — tuning what handling means
+     LEARN:     Docs / Blog                     — reading about it
+
+   Behavior left the rail in v2: it is a tab inside the Inspector's
+   results, not a destination. Its route (/behavior, registered in
+   lib/locale-routes.js + shell-boot.js) still resolves, so existing
+   links and bookmarks keep working — only the nav entry is gone.
 
    Mobile: below 1024px the sidebar collapses to a drawer (off-canvas),
    togglable by a hamburger button injected into the topbar.
@@ -19,74 +25,98 @@
 // Section catalog — single source of truth for nav, used by topbar/boot too.
 // `route` is the canonical EN path; locale-prefixed variants (/uk/inspector)
 // are computed by prefixLocale() based on the current document lang.
+/* Line icons, 24x24, 1.5 stroke, currentColor — replacing the emoji set
+   (⚡📡🧪📚🎛📊📰📖). Emoji render in a different font on every OS, carry
+   their own colour, and sat 1-2px off the text baseline, which is what
+   made the rail look ragged. These inherit weight, colour and alignment
+   from the item, so a hover or an active state moves the icon with the
+   label instead of leaving a coloured glyph behind. */
+const ICONS = {
+  inspector: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>',
+  live:
+    '<path d="M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2' +
+    'M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4"/><circle cx="12" cy="12" r="1.5"/>',
+  library:
+    '<path d="M4 4v16"/><path d="M8 4v16"/><rect x="12" y="4" width="8" height="16" rx="1"/>',
+  dialects:
+    '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/>' +
+    '<circle cx="15" cy="12" r="2"/><circle cx="7" cy="18" r="2"/>',
+  insights: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+  docs: '<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5Z"/><path d="M8 7h8M8 11h6"/>',
+  blog: '<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/>',
+};
+
+function icon(id) {
+  return (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    (ICONS[id] || '') +
+    '</svg>'
+  );
+}
+
 export const SECTIONS = [
-  // group key, route, icon, label keys
+  // group key, route, icon id, label keys, optional badge
   {
-    group: 'work',
+    group: 'workbench',
     id: 'inspector',
     route: '/inspector',
-    icon: '⚡',
     label: { en: 'Inspector', uk: 'Інспектор', ru: 'Инспектор' },
   },
   {
-    group: 'work',
+    group: 'workbench',
     id: 'live',
     route: '/live',
-    icon: '📡',
     // Decision A (ROADMAP 2026-06-11): inspector-first; the stream is an
     // explicitly-labeled preview on synthetic traffic, not the headline.
-    label: { en: 'Live (preview)', uk: 'Стрім (прев’ю)', ru: 'Стрим (превью)' },
+    // v2 renames the label to Streams but the "preview" qualifier is a
+    // LIMITATION DISCLOSURE, not decoration — contracts/locales-versioning.md
+    // forbids a locale or a redesign from removing one. It moves into the
+    // badge slot so it survives the shorter label and the collapsed rail.
+    label: { en: 'Streams', uk: 'Стріми', ru: 'Стримы' },
+    badge: { en: 'preview', uk: 'прев’ю', ru: 'превью' },
   },
   {
-    group: 'work',
-    id: 'behavior',
-    route: '/behavior',
-    icon: '🧪',
-    label: { en: 'Behavior', uk: 'Behavior', ru: 'Behavior' },
-  },
-  {
-    group: 'data',
+    group: 'workbench',
     id: 'library',
     route: '/library',
-    icon: '📚',
-    label: { en: 'Library', uk: 'Зразки', ru: 'Образцы' },
+    // Renamed in the rail only. The route stays /library: renaming a live
+    // URL costs redirects, sitemap churn and weeks of search re-indexing,
+    // and buys nothing the label does not already buy.
+    label: { en: 'Samples', uk: 'Зразки', ru: 'Образцы' },
   },
   {
-    group: 'data',
+    group: 'configure',
     id: 'dialects',
     route: '/dialects',
-    icon: '🎛',
     label: { en: 'Dialects', uk: 'Діалекти', ru: 'Диалекты' },
   },
   {
-    group: 'data',
+    group: 'configure',
     id: 'insights',
     route: '/insights',
-    icon: '📊',
     label: { en: 'Insights', uk: 'Інсайти', ru: 'Аналитика' },
   },
   {
-    group: 'know',
-    id: 'blog',
-    route: '/blog',
-    icon: '📰',
-    label: { en: 'Blog', uk: 'Блог', ru: 'Блог' },
-  },
-  {
-    group: 'know',
+    group: 'learn',
     id: 'docs',
     route: '/docs',
-    icon: '📖',
     label: { en: 'Docs', uk: 'Доки', ru: 'Доки' },
+  },
+  {
+    group: 'learn',
+    id: 'blog',
+    route: '/blog',
+    label: { en: 'Blog', uk: 'Блог', ru: 'Блог' },
   },
 ];
 
 const GROUP_LABELS = {
-  work: { en: 'WORK', uk: 'РОБОТА', ru: 'РАБОТА' },
-  data: { en: 'DATA', uk: 'ДАНІ', ru: 'ДАННЫЕ' },
-  know: { en: 'KNOWLEDGE', uk: 'ЗНАННЯ', ru: 'ЗНАНИЯ' },
+  workbench: { en: 'WORKBENCH', uk: 'РОБОТА', ru: 'РАБОТА' },
+  configure: { en: 'CONFIGURE', uk: 'НАЛАШТУВАННЯ', ru: 'НАСТРОЙКИ' },
+  learn: { en: 'LEARN', uk: 'ДОВІДКА', ru: 'СПРАВКА' },
 };
-const GROUP_ORDER = ['work', 'data', 'know'];
+const GROUP_ORDER = ['workbench', 'configure', 'learn'];
 
 function lang() {
   return document.documentElement.getAttribute('lang') || 'en';
@@ -122,15 +152,25 @@ function renderNav() {
   const l = lang();
   const groups = GROUP_ORDER.map((g) => {
     const items = SECTIONS.filter((s) => s.group === g)
-      .map(
-        (s) => `
+      .map((s) => {
+        const label = escapeHtml(s.label[l] || s.label.en);
+        // The badge carries a qualifier the short label dropped. It is part
+        // of the accessible name, not a decoration beside it — a screen
+        // reader must hear "Streams, preview", the same thing the eye reads.
+        const badgeText = s.badge ? s.badge[l] || s.badge.en : '';
+        const badge = badgeText
+          ? `<span class="kt-nav__badge">${escapeHtml(badgeText)}</span>`
+          : '';
+        const title = badgeText ? `${label} — ${badgeText}` : label;
+        return `
           <li>
-            <a class="kt-nav__item" href="${escapeHtml(prefixLocale(s.route))}" data-route="${escapeHtml(s.route)}">
-              <span class="kt-nav__icon" aria-hidden="true">${escapeHtml(s.icon)}</span>
-              <span class="kt-nav__label">${escapeHtml(s.label[l] || s.label.en)}</span>
+            <a class="kt-nav__item" href="${escapeHtml(prefixLocale(s.route))}" data-route="${escapeHtml(s.route)}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
+              <span class="kt-nav__icon">${icon(s.id)}</span>
+              <span class="kt-nav__label">${label}</span>
+              ${badge}
             </a>
-          </li>`,
-      )
+          </li>`;
+      })
       .join('');
     return `
       <div class="kt-nav__group">

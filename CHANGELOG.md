@@ -6,6 +6,54 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.12.0 — the Inspector wears the mockup
+
+- Rebuilt the Inspector around the design prototype: six horizontal bands became two full-height
+  columns. The payload editor grew from 8 visible lines to 24; the findings column from 500px to
+  856px at 1440px. Nine header buttons became three — `analyze` is the only filled control,
+  `example` loads one, everything else lives behind `tools ▾`. No feature was removed; every id,
+  `data-action` and title survived, so every handler and test kept addressing the same elements.
+- The verdict now answers instead of counting: an icon square, the mockup's own sentence
+  ("This bid will not serve" / «Цей бід не відкрутиться» / «Этот бид не открутится»), and a meta
+  line in the vocabulary of the groups below — "5 blocking issues · 5 to fix · 2 unmapped fields.
+  Analyzed 16:42, engine v1.12.0." `Share report ▾` sits on its right edge with share link / embed
+  / download. The old status pill, which printed the same counts two lines away, is gone.
+- Findings render as groups — Blocking / Should fix / Needs your input / Info — instead of a
+  severity filter row. A group is a filter that costs nothing: every level visible, labelled and
+  counted at once. Cards split into title/description on the first sentence boundary, carry the
+  finding id on the right edge, and keep the path chip as the existing jump-to-line control.
+- The analysis strip became the verdict's context-chip row (same element, same id, same tests):
+  winning bid when a response was analyzed, floor, creative size, the accented intent chip, then
+  traffic / device / privacy / version. Its labels dropped their 9px caps for lowercase words.
+- Finding text became legible: severity used to be painted three times per row (tinted background,
+  tinted border, tinted text), which measured 1.49:1–1.75:1 against a 4.5:1 WCAG AA floor — the
+  two sentences that say what blocks a bid were the least readable text in the product, in both
+  themes. Severity is now stated once, on the leading edge; error/warning text measures 15.81:1.
+  `tests/finding-contrast-browser.test.js` measures the composited result in both themes.
+- The rail: emoji icons became line icons that inherit the item's colour; groups became
+  WORKBENCH / CONFIGURE / LEARN; Behavior left the rail (it is an Inspector tab) while `/behavior`
+  still resolves; `Live (preview)` became `Streams` with the preview qualifier preserved as a
+  badge, tooltip and accessible name in all three locales, per the locales contract.
+- Radii collapsed from six declared steps to the three that were load-bearing (3/6/9px); the 72
+  pill-shaped elements measured on the live Inspector became zero. The v2 tokens live in
+  `public/ortbtools-v2.css` scoped to `.kt-shell`; the vendored `design-system.css` is untouched
+  and its hash guard still passes.
+- Counted nouns are now inflected: Ukrainian and Russian have three plural forms and every count
+  interpolated one stored plural, so any figure of 5+ read as broken grammar («5 критичні
+  помилки»). `pluralKey()` implements the standard rule (11→5+, 21→singular, 111→5+), pinned by
+  `tests/plural-forms.test.js` in both directions.
+- Tests that knew the old layout were repaired at their intent, not their letter: the strip test
+  read its pricing cell as `blocks[4]` — the position, not the thing — and failed with "expected a
+  floor, got 'No Privacy'" the moment the chips reordered; both reads now address
+  `.analysis-strip-pricing`. Three browser tests reach tabs through `more ▾`, the user's own path.
+  `severity-levels-covered` guards Core LEVELS ↔ panel groups in both directions, plus a
+  no-duplicate-level check.
+- Known and deliberately not hidden: `clear` still leaves the previous analysis on screen
+  (pre-existing, filed as its own decision); the strip's quality and version chips duplicate the
+  verdict and work bar by design — the score and the payload's own declaration are data the mockup
+  dropped.
+- App version bumped `1.11.3 → 1.12.0`; Core remains `0.35.0` and CLI remains `0.1.1`.
+
 ### v1.11.3 — the price column stops repeating its own name
 
 - Removed the `Floor: ` prefix from the analysis bar's pricing value. It was a hardcoded English
