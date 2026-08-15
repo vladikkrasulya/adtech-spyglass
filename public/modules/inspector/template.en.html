@@ -397,6 +397,18 @@
 
   <!-- Center panel -->
   <div class="center-panel">
+    <!-- Verdict — one sentence about what the findings mean for this
+         payload, ahead of the counts. Filled by ortbtools.app.js; hidden
+         until an analysis exists so an empty workbench makes no claim.
+         aria-live so a screen reader hears the outcome when it changes,
+         not only when the reader happens to walk the panel. -->
+    <div class="verdict" id="verdict" hidden aria-live="polite">
+      <p class="verdict-headline">
+        <span class="verdict-icon" id="verdictIcon" aria-hidden="true"></span
+        ><span id="verdictHeadline"></span>
+      </p>
+      <p class="verdict-detail" id="verdictDetail"></p>
+    </div>
     <div class="format-bar" id="formatBar" hidden>
       <span class="format-pill format-pill-type" id="formatPillType"></span>
       <span class="format-pill format-pill-status" id="formatPillStatus"></span>

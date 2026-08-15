@@ -1744,6 +1744,72 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
          analysis. Surfaces detected payload type, validation status, oRTB
          version (if applicable) and active dialect. Hidden until first
          /api/analyze response lands. */
+/* ── Verdict ─────────────────────────────────────────────────────────────
+   One sentence, ahead of the counts, saying what the findings mean for the
+   payload. It sits above the format bar because it is the first thing worth
+   reading in the results — and it is the only thing on this screen sized for
+   reading rather than for scanning, which is what makes it read as an answer
+   and the bar below it as instrumentation.
+
+   Severity shows up as the icon's colour and a leading-edge bar, the same
+   grammar the finding rows use. The sentence itself keeps body contrast. */
+.verdict {
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  background: var(--bg);
+}
+.verdict[hidden] {
+  display: none;
+}
+.verdict[data-verdict='blocked'],
+.verdict[data-verdict='invalid'] {
+  border-left-color: var(--danger);
+}
+.verdict[data-verdict='risky'] {
+  border-left-color: var(--warning);
+}
+.verdict[data-verdict='clean'] {
+  border-left-color: var(--success);
+}
+.verdict-headline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+}
+.verdict-icon {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+.verdict[data-verdict='blocked'] .verdict-icon,
+.verdict[data-verdict='invalid'] .verdict-icon {
+  color: var(--danger);
+}
+.verdict[data-verdict='risky'] .verdict-icon {
+  color: var(--warning-text, #b45309);
+}
+.verdict[data-verdict='clean'] .verdict-icon {
+  color: var(--success);
+}
+/* The counts. Deliberately quieter than the sentence and set in mono —
+   they are figures to check against, not the answer. */
+.verdict-detail {
+  margin: var(--space-1) 0 0;
+  padding-left: calc(var(--fs-sm) + var(--space-2));
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--text-muted);
+}
+.verdict-detail[hidden] {
+  display: none;
+}
+
 .format-bar {
   display: flex;
   gap: var(--space-2);

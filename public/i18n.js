@@ -177,6 +177,19 @@
       'status.error_one': 'помилка',
       'status.warning_one': 'попередження',
       'status.local': 'локально',
+      // Вердикт — одне речення про те, що знайдене означає для payload.
+      // Рушій перевіряє відповідність специфікації, а не передбачає аукціон,
+      // тому формулювання не обіцяє за SSP чи DSP, як вони поведуться.
+      'verdict.blocked': 'У такому вигляді payload не приймуть',
+      'verdict.risky': 'Payload пройде, але має ризики',
+      'verdict.clean': 'Проблем не знайдено',
+      'verdict.invalid': 'Це не валідний JSON',
+      'verdict.question_one': 'непозначене поле',
+      'verdict.questions': 'непозначені поля',
+      'verdict.questions_many': 'непозначених полів',
+      'status.errors_many': 'критичних помилок',
+      'status.warnings_many': 'попереджень',
+      'severity.chip.info_many': 'інфо',
       'validation.all_passed': 'Усі перевірки пройдено — {type} валідний',
 
       // ── severity filter chips (Feature #14) ──────────────
@@ -462,6 +475,19 @@
       'status.error_one': 'error',
       'status.warning_one': 'warning',
       'status.local': 'local',
+      // The verdict is one sentence about what the findings mean for this
+      // payload. The engine checks conformance; it does not predict an
+      // auction, so the wording never promises how an SSP or DSP will act.
+      'verdict.blocked': 'This payload will not be accepted as sent',
+      'verdict.risky': 'This payload will pass, but carries risks',
+      'verdict.clean': 'No problems found',
+      'verdict.invalid': 'This is not valid JSON',
+      'verdict.question_one': 'unmapped field',
+      'verdict.questions': 'unmapped fields',
+      'verdict.questions_many': 'unmapped fields',
+      'status.errors_many': 'critical errors',
+      'status.warnings_many': 'warnings',
+      'severity.chip.info_many': 'info',
       'validation.all_passed': 'All checks passed — {type} is valid',
 
       // ── severity filter chips (Feature #14) ──────────────
@@ -735,6 +761,19 @@
       'status.error_one': 'ошибка',
       'status.warning_one': 'предупреждение',
       'status.local': 'локально',
+      // Вердикт — одно предложение о том, что найденное значит для payload.
+      // Движок проверяет соответствие спецификации, а не предсказывает
+      // аукцион, поэтому формулировка не обещает за SSP или DSP.
+      'verdict.blocked': 'В таком виде payload не примут',
+      'verdict.risky': 'Payload пройдёт, но есть риски',
+      'verdict.clean': 'Проблем не найдено',
+      'verdict.invalid': 'Это не валидный JSON',
+      'verdict.question_one': 'неразмеченное поле',
+      'verdict.questions': 'неразмеченных поля',
+      'verdict.questions_many': 'неразмеченных полей',
+      'status.errors_many': 'критических ошибок',
+      'status.warnings_many': 'предупреждений',
+      'severity.chip.info_many': 'инфо',
       'validation.all_passed': 'Все проверки пройдены — {type} валиден',
 
       // ── severity filter chips (Feature #14) ──────────────

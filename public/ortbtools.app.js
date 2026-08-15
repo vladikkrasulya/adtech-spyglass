@@ -280,6 +280,38 @@ export async function mountInspector(root, ctx) {
       return 'uk';
     }
   }
+  /**
+   * Pick the plural form for `n` in the active locale.
+   *
+   * Ukrainian and Russian have three: 1 / 2-4 / 5+. Every count in this file
+   * used to interpolate a single stored plural, so any figure of five or
+   * more read as broken grammar in two of the three product locales —
+   * "5 критичні помилки" where the language wants "5 критичних помилок".
+   * It was invisible while counts lived inside a small pill and became
+   * obvious the moment the verdict put them in a sentence.
+   *
+   * English collapses `few` and `many` onto the same string, so callers can
+   * pass all three keys unconditionally.
+   *
+   * @param {number} n
+   * @param {string} one   key for 1
+   * @param {string} few   key for 2-4 (and English plural)
+   * @param {string} many  key for 5+
+   */
+  function pluralKey(n, one, few, many) {
+    if (activeLocale() === 'en') return n === 1 ? one : few;
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+
+  /** `n` followed by the correctly-inflected noun. */
+  function counted(n, one, few, many) {
+    return n + ' ' + t(pluralKey(n, one, few, many));
+  }
+
   function analyzeUrl() {
     // Absolute path — relative would resolve against pathname (e.g. /uk/),
     // breaking API access from non-root locales. serverSideDialect()
@@ -729,10 +761,10 @@ export async function mountInspector(root, ctx) {
     // away in their own chips, but a verdict carrying four numbers is no
     // longer a verdict; this line says what blocks and what to check.
     const errText = errCount
-      ? errCount + ' ' + (errCount === 1 ? t('status.error_one') : t('status.errors'))
+      ? counted(errCount, 'status.error_one', 'status.errors', 'status.errors_many')
       : '';
     const warnText = warnCount
-      ? warnCount + ' ' + (warnCount === 1 ? t('status.warning_one') : t('status.warnings'))
+      ? counted(warnCount, 'status.warning_one', 'status.warnings', 'status.warnings_many')
       : '';
     let icon = '·';
     let statusText = humanStatus(status) || status || '—';
@@ -749,6 +781,67 @@ export async function mountInspector(root, ctx) {
     }
     pillStatus.textContent = icon + ' ' + statusText;
     pillStatus.dataset.status = status;
+
+    // ── Verdict ────────────────────────────────────────────────────────────
+    // The pill above answers "how many". It never answered "so what" — the
+    // reader had to know that `error` means a payload gets rejected and
+    // `warning` means it usually does not, then do the arithmetic themselves
+    // across four counters. That translation is the tool's job, and it is the
+    // one line a non-engineer reads before deciding whether to escalate.
+    //
+    // The headline states the consequence; the counts move underneath it,
+    // where they are detail rather than the answer. Wording is deliberately
+    // about the PAYLOAD, not about the auction: the engine checks conformance
+    // to a spec and cannot know how a given SSP or DSP will behave, so the
+    // verdict must not promise on their behalf.
+    const verdictBox = $('verdict');
+    if (verdictBox) {
+      const questionCount = findings.filter((f) => f.level === 'question').length;
+
+      let vKey;
+      let vIcon;
+      if (status === 'invalid') {
+        vKey = 'verdict.invalid';
+        vIcon = '✗';
+      } else if (errCount) {
+        vKey = 'verdict.blocked';
+        vIcon = '✗';
+      } else if (warnCount) {
+        vKey = 'verdict.risky';
+        vIcon = '⚠';
+      } else {
+        vKey = 'verdict.clean';
+        vIcon = '✓';
+      }
+
+      // Detail carries every severity that asks something of the reader:
+      // errors block, warnings risk, questions need a mapping decision. Info
+      // findings are true and worth reading, but they request nothing, and a
+      // verdict that lists them makes the actionable count harder to find —
+      // they keep their own chip, one click away.
+      const parts = [];
+      if (errCount) parts.push(errText);
+      if (warnCount) parts.push(warnText);
+      if (questionCount) {
+        parts.push(
+          counted(
+            questionCount,
+            'verdict.question_one',
+            'verdict.questions',
+            'verdict.questions_many',
+          ),
+        );
+      }
+
+      $('verdictIcon').textContent = vIcon;
+      $('verdictHeadline').textContent = t(vKey);
+      const detail = $('verdictDetail');
+      detail.textContent = parts.join(' · ');
+      detail.hidden = parts.length === 0;
+      verdictBox.dataset.status = status;
+      verdictBox.dataset.verdict = vKey.slice('verdict.'.length);
+      verdictBox.hidden = false;
+    }
 
     const pillVer = $('formatPillVersion');
     const v = validation.version;
