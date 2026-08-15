@@ -4855,7 +4855,14 @@ export async function mountInspector(root, ctx) {
   // ↺ button in the footer (template) and to a 'reset-layout' data-action.
   function resetLayout() {
     ['left', 'right'].forEach((side) => {
-      document.body.classList.remove('sb-' + side + '-hidden');
+      // "Reset" means the DEFAULT layout, and v2 changed what the default
+      // is: the left sidebar became an overlay drawer whose resting state is
+      // closed — the sb-left-hidden class PRESENT. This function predates
+      // that and removed the class for both sides, so clicking reset with
+      // the drawer open cleared the stored preference and left the drawer
+      // sitting there; only a reload (which re-derives the default) closed
+      // it. A reset that needs a reload to take effect is not a reset.
+      document.body.classList.toggle('sb-' + side + '-hidden', side === 'left');
       try {
         localStorage.removeItem(SB_HIDDEN_KEYS[side]);
         localStorage.removeItem(SB_HIDDEN_TS_KEYS[side]);
@@ -4865,7 +4872,7 @@ export async function mountInspector(root, ctx) {
       const btn = document.getElementById(
         side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
       );
-      if (btn) btn.textContent = arrowFor(side, false);
+      if (btn) btn.textContent = arrowFor(side, side === 'left');
     });
     toast(t('toast.layout.reset'));
   }
@@ -5491,20 +5498,33 @@ export async function mountInspector(root, ctx) {
       el.addEventListener('keydown', window.handleKeydown, { signal: ctx.signal });
     });
 
-    // Close any open <details> popover (sample picker, lang switcher) when
-    // the user clicks outside of it. Native <details> stays open until you
-    // click its <summary> again, which surprises users who expect popover
-    // semantics. Scoped to the .kt-example-menu / .kt-lang-menu classes so
-    // it doesn't interfere with content disclosures (e.g. .finding-detail
-    // expanders) which SHOULD stay open until the user folds them.
+    // Close any open <details> popover when the user clicks outside of it.
+    // Native <details> stays open until you click its <summary> again, which
+    // surprises users who expect popover semantics. Scoped to the popover
+    // menus — v2 added tools ▾, share report ▾ and the tab strip's more ▾ to
+    // the original pair — so it doesn't interfere with content disclosures
+    // (e.g. .finding-detail expanders) which SHOULD stay open until the user
+    // folds them. The mockup's own manual states the contract: "Esc або клік
+    // поза меню — закрити", so Escape closes them too.
+    const POPOVER_MENUS =
+      '.kt-example-menu[open], .kt-lang-menu[open], ' +
+      '.kt-tools-menu[open], .kt-share-menu[open], .tab-more[open]';
     document.addEventListener(
       'click',
       (ev) => {
-        const opened = document.querySelectorAll('.kt-example-menu[open], .kt-lang-menu[open]');
+        const opened = document.querySelectorAll(POPOVER_MENUS);
         if (!opened.length) return;
         opened.forEach((d) => {
           if (!d.contains(ev.target)) d.removeAttribute('open');
         });
+      },
+      { signal: ctx.signal },
+    );
+    document.addEventListener(
+      'keydown',
+      (ev) => {
+        if (ev.key !== 'Escape') return;
+        document.querySelectorAll(POPOVER_MENUS).forEach((d) => d.removeAttribute('open'));
       },
       { signal: ctx.signal },
     );

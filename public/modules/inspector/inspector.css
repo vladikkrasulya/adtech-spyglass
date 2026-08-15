@@ -3839,7 +3839,7 @@ button.cross-path:focus-visible,
 }
 .analysis-strip-intent .analysis-strip-label,
 .analysis-strip-intent .analysis-strip-value {
-  color: var(--accent);
+  color: var(--accent-text, var(--accent));
   font-weight: 600;
 }
 
@@ -4036,7 +4036,7 @@ button.cross-path:focus-visible,
   border: 0;
   border-radius: var(--r-chip);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text, var(--accent));
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
   cursor: pointer;
@@ -4044,7 +4044,7 @@ button.cross-path:focus-visible,
 .finding-spec {
   font-size: var(--fs-mono);
   font-weight: 500;
-  color: var(--accent);
+  color: var(--accent-text, var(--accent));
   text-decoration: none;
 }
 .finding-code {
@@ -4056,4 +4056,23 @@ button.cross-path:focus-visible,
 .finding-detail-toggle {
   flex-shrink: 0;
   color: var(--text-dim);
+}
+
+/* Contrast repairs measured by the light-theme probe before v1.12.0
+   shipped. The quality pill's translucent red composites to a mid-pink
+   in light theme, leaving 11px/700 red text at 3.22:1; the active tab's
+   count badge was white on the raw accent at 4.10:1. Both get the
+   darker on-surface colours; the dark theme keeps its own pairs. */
+.analysis-strip .quality-pill.q-critical {
+  color: #991b1b;
+}
+[data-theme='dark'] .analysis-strip .quality-pill.q-critical {
+  color: #fca5a5;
+}
+.analysis-strip .quality-pill.q-needs-attention {
+  color: var(--warning-text, #b45309);
+}
+.tab-btn.active .tab-badge {
+  background: var(--bg-2);
+  color: var(--text);
 }

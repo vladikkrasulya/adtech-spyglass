@@ -88,6 +88,22 @@
 }
 
 /* ------------------------------------------------------------
+   Accent as TEXT on the accent-soft surface. The prototype carries
+   this as its own token — #0369A1 on light, #7DD3FC on dark — and the
+   first port skipped it, painting --accent (#0284C7) on --accent-soft
+   instead. Measured in light theme that pair is 3.51:1 at 11px, under
+   the 4.5:1 body-text floor, on every path chip and the intent chip.
+   #0369A1 on the same composited surface measures 5.1:1.
+   ------------------------------------------------------------ */
+.kt-shell {
+  --accent-text: #0369a1;
+}
+
+[data-theme='dark'] .kt-shell {
+  --accent-text: #7dd3fc;
+}
+
+/* ------------------------------------------------------------
    --code-num carried #B7791F on white: 3.2:1. Numbers in a payload
    are the single thing an operator reads most, at 11px, and they
    were the least legible glyphs on the page. They are data, not
