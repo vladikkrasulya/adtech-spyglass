@@ -1952,10 +1952,26 @@ export async function mountInspector(root, ctx) {
       // first — so the split point is the first sentence boundary, and a msg
       // without one is all title. No per-row severity icon: severity is the
       // group header and the card's leading edge, stated once.
-      const msg = String(f.msg || '');
+      //
+      // Response-side findings arrive with a literal "[response] " prefix —
+      // the backend's display hack for the old flat list, where a text tag
+      // was the only way to say which pane a finding belongs to. In a card
+      // that bolds its first line, the tag reads as a broken message id
+      // ("[res…" was the first thing the user saw in the Info group). The
+      // side moves into a badge; the sentence starts with its own words.
+      let msg = String(f.msg || '');
+      let side = '';
+      const sideTag = msg.match(/^\[(request|response)\]\s+/);
+      if (sideTag) {
+        side = sideTag[1];
+        msg = msg.slice(sideTag[0].length);
+      }
       const cut = msg.indexOf('. ');
       const title = cut > 0 ? msg.slice(0, cut + 1) : msg;
       const rest = cut > 0 ? msg.slice(cut + 2) : '';
+      const sideBadge = side
+        ? '<span class="finding-side">' + escapeHtml(t('finding.side.' + side)) + '</span>'
+        : '';
 
       const pathChip = f.path
         ? '<button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
@@ -1994,6 +2010,7 @@ export async function mountInspector(root, ctx) {
         '<summary>' +
         '<span class="finding-main">' +
         '<span class="finding-title">' +
+        sideBadge +
         escapeHtml(title) +
         '</span>' +
         (rest ? '<span class="finding-desc">' + escapeHtml(rest) + '</span>' : '') +
@@ -4808,7 +4825,7 @@ export async function mountInspector(root, ctx) {
     const btn = document.getElementById(
       side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
     );
-    if (btn) btn.textContent = arrowFor(side, isHidden);
+    if (btn && !btn.hasAttribute('data-static-icon')) btn.textContent = arrowFor(side, isHidden);
   }
 
   function setupSidebarToggles() {
@@ -4851,7 +4868,8 @@ export async function mountInspector(root, ctx) {
       const btn = document.getElementById(
         side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
       );
-      if (btn) btn.textContent = arrowFor(side, document.body.classList.contains(cls));
+      if (btn && !btn.hasAttribute('data-static-icon'))
+        btn.textContent = arrowFor(side, document.body.classList.contains(cls));
     });
   }
 
@@ -4877,7 +4895,8 @@ export async function mountInspector(root, ctx) {
       const btn = document.getElementById(
         side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
       );
-      if (btn) btn.textContent = arrowFor(side, side === 'left');
+      if (btn && !btn.hasAttribute('data-static-icon'))
+        btn.textContent = arrowFor(side, side === 'left');
     });
     toast(t('toast.layout.reset'));
   }

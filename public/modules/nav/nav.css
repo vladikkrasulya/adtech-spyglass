@@ -25,16 +25,19 @@
   overflow-y: auto;
 }
 
+/* The head row owns the padding and the bottom rule now; the brand is a
+   flex child that yields to the collapse button beside it. */
 .kt-nav__brand {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 18px 16px;
+  padding: 0;
   text-decoration: none;
   color: var(--text);
   font-weight: 700;
   font-size: 17px;
-  border-bottom: 1px solid var(--kt-nav-border);
 }
 .kt-nav__brand-icon {
   display: inline-flex;
@@ -171,74 +174,84 @@
               leaving the right half (12px) visible flush against the
               viewport's left edge.
    Mobile:    falls back to the existing drawer pattern (≤1023px). */
-.kt-nav__collapse-tab {
-  display: none;
+/* ── Rail head + collapse ─────────────────────────────────────────
+   The collapse control is a small bordered square in the rail head,
+   beside the brand — where the prototype draws it. Collapsing does
+   not remove the rail: it narrows to an icon rail, labels and badges
+   fold away, and every destination stays one click away with its
+   title/aria-label carrying the name. The previous form — the rail
+   vanishing to 0 and a blue pill floating mid-viewport to bring it
+   back — was chrome the mockup does not have. */
+.kt-nav__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--kt-nav-border);
 }
+.kt-nav__collapse-tab {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.11));
+  border-radius: var(--r-sm, 6px);
+  background: transparent;
+  color: var(--text-dim, #5c6b82);
+  cursor: pointer;
+}
+.kt-nav__collapse-tab:hover {
+  color: var(--text);
+  border-color: var(--border-strong, rgba(13, 23, 38, 0.22));
+}
+.kt-nav__collapse-tab svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kt-shell.is-nav-collapsed .kt-nav__collapse-tab svg {
+  transform: rotate(180deg);
+}
+
 @media (min-width: 1024px) {
   .kt-nav {
     width: var(--kt-nav-width);
-    transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
     overflow-x: hidden;
     overflow-y: auto;
   }
   .kt-shell.is-nav-collapsed .kt-nav {
-    width: 0;
+    width: 56px;
   }
-
-  .kt-nav__collapse-tab {
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    left: calc(var(--kt-nav-width) - 12px);
-    width: 24px;
-    height: 56px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--accent, #0284c7);
-    border-radius: var(--r-md, 16px);
-    background: var(--accent, #0284c7);
-    color: var(--text-on-accent, #ffffff);
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1;
+  .kt-shell.is-nav-collapsed .kt-nav__brand-text,
+  .kt-shell.is-nav-collapsed .kt-nav__label,
+  .kt-shell.is-nav-collapsed .kt-nav__badge,
+  .kt-shell.is-nav-collapsed .kt-nav__group-label,
+  .kt-shell.is-nav-collapsed .kt-nav__status {
+    display: none;
+  }
+  .kt-shell.is-nav-collapsed .kt-nav__head {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 0;
+  }
+  .kt-shell.is-nav-collapsed .kt-nav__brand {
     padding: 0;
-    z-index: 40;
-    box-shadow: var(--shadow-md);
-    transition:
-      left 280ms cubic-bezier(0.4, 0, 0.2, 1),
-      background-color 150ms ease;
+    border-bottom: 0;
   }
-  .kt-nav__collapse-tab:hover {
-    background: var(--accent-hover, #0e96dc);
+  .kt-shell.is-nav-collapsed .kt-nav__item {
+    justify-content: center;
+    padding: 8px 0;
   }
-  .kt-shell.is-nav-collapsed .kt-nav__collapse-tab {
-    /* User-requested 1.1 fix (2026-05-23): pill fully visible flush
-       against the viewport's left edge instead of half-hidden. Larger,
-       easier hit-target; arrow stays perfectly centered. */
-    left: 0;
+  .kt-shell.is-nav-collapsed .kt-nav__group {
+    margin-bottom: 10px;
   }
-
-  /* When the sidebar is collapsed the pill sits at left:0 with 24px
-     width. Push the content column right by 32px so the pill never
-     overlaps section text (e.g. inspector's "OS"/"GEO"/"DEVICE"/
-     "CONNECTION" labels). Same easing + duration as the sidebar +
-     pill transitions so everything animates in lockstep. */
-  .kt-shell__column {
-    transition: padding-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .kt-shell.is-nav-collapsed .kt-shell__column {
-    padding-left: 32px;
-  }
-
-  /* Icon: ‹ when expanded, › when collapsed. Pseudo-element so the
-     button itself stays a single DOM node and the swap is purely CSS. */
-  .kt-nav__collapse-tab::after {
-    content: '\2039'; /* ‹ */
-  }
-  .kt-shell.is-nav-collapsed .kt-nav__collapse-tab::after {
-    content: '\203A'; /* › */
+  .kt-shell.is-nav-collapsed .kt-nav__nav {
+    padding: 8px 6px;
   }
 }
 

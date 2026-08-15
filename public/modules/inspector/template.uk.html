@@ -20,6 +20,28 @@
   <button class="btn btn-ghost btn-sm" data-action="verify-email">надіслати лист</button>
 </div>
 <header class="workbar">
+  <button
+    class="workbar-drawer-btn"
+    id="toggleSidebarLeft"
+    data-static-icon="1"
+    data-action="toggle-sidebar"
+    data-side="left"
+    title="Історія та зведення"
+    aria-label="Історія та зведення"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+    </svg>
+  </button>
   <div class="format-bar" id="formatBar" hidden>
     <span class="format-pill format-pill-type" id="formatPillType"></span>
     <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
@@ -246,6 +268,25 @@
 <main class="workbench-split">
   <!-- Left sidebar -->
   <aside class="sidebar-left">
+    <button
+      class="drawer-close"
+      data-action="toggle-sidebar"
+      data-side="left"
+      title="Закрити панель"
+      aria-label="Закрити панель"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    </button>
     <div class="section-title" data-section="summary-title">підсумок</div>
     <div class="metric-card" data-section="winning-bid">
       <div class="metric-label">winning bid</div>
@@ -546,15 +587,6 @@
     </div>
 
     <div class="tab-bar">
-      <button
-        class="sb-toggle left"
-        id="toggleSidebarLeft"
-        data-action="toggle-sidebar"
-        data-side="left"
-        title="Перемкнути ліву панель (підсумок / бібліотека / історія)"
-      >
-        ◀
-      </button>
       <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
         знахідки <span class="tab-badge" id="validationBadge" hidden></span>
       </button>
@@ -757,7 +789,7 @@
     <span class="footer-sep">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.12.0</span></span
+      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.12.1</span></span
     >
     <span class="footer-extras">
       <span class="footer-sep">·</span>

@@ -63,7 +63,9 @@ const BUDGET = {
   // times on every page of the site. The 9px that remains is the
   // .kt-nav__badge qualifier ("preview"), deliberately below the label it
   // qualifies so it cannot compete with a destination name.
-  'modules/nav/nav.css': 3,
+  // v2.1 removed the floating collapse pill and its 16px arrow glyph —
+  // the chevron is an svg now, which has no font size at all.
+  'modules/nav/nav.css': 2,
   'modules/search/search.css': 6,
   'modules/stream/stream.css': 9,
   'modules/topbar/topbar.css': 1,

@@ -181,12 +181,21 @@ function renderNav() {
   }).join('');
 
   const collapseLabel = collapseTabLabel();
+  // The collapse control lives IN the rail head beside the brand, as the
+  // prototype draws it — a small bordered square with a chevron. Its earlier
+  // form was a blue pill floating at the rail's outer edge mid-viewport,
+  // which is chrome the mockup simply does not have: there, the rail
+  // collapses INTO a narrow icon rail, it does not vanish behind a tab.
   return `
-    <a href="${escapeHtml(prefixLocale('/inspector'))}" class="kt-nav__brand">
-      <span class="kt-nav__brand-icon" aria-hidden="true">◆</span>
-      <span class="kt-nav__brand-text">ortbtools</span>
-    </a>
-    <button type="button" class="kt-nav__collapse-tab" data-action="collapse-nav" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}"></button>
+    <div class="kt-nav__head">
+      <a href="${escapeHtml(prefixLocale('/inspector'))}" class="kt-nav__brand">
+        <span class="kt-nav__brand-icon" aria-hidden="true">◆</span>
+        <span class="kt-nav__brand-text">ortbtools</span>
+      </a>
+      <button type="button" class="kt-nav__collapse-tab" data-action="collapse-nav" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 8-4 4 4 4"/></svg>
+      </button>
+    </div>
     <nav class="kt-nav__nav" aria-label="Sections">
       ${groups}
     </nav>

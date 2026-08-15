@@ -4076,3 +4076,136 @@ button.cross-path:focus-visible,
   background: var(--bg-2);
   color: var(--text);
 }
+
+/* ── V2 drawer + workbar trigger + finding-side badge ──────────────────
+   The drawer trigger is a quiet icon button at the workbar's left edge —
+   the standard place a panel toggle lives — instead of a bare ▶ inside
+   the tab strip. The drawer itself gets the same design language as the
+   results panel: one uppercase level for section titles with a rule
+   line, cards on the chip radius, body-size text instead of wall-to-wall
+   mono caps. */
+.workbar-drawer-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  margin-right: var(--space-2);
+}
+.workbar-drawer-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.workbar-drawer-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+/* The trigger reads as pressed while its panel is open. */
+body:not(.sb-left-hidden) .workbar-drawer-btn {
+  background: var(--accent-soft);
+  color: var(--accent-text, var(--accent));
+  border-color: transparent;
+}
+
+.drawer-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.drawer-close:hover {
+  background: var(--bg-2);
+  color: var(--text);
+}
+.drawer-close svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* Section titles: the one uppercase level, same grammar as the finding
+   group headers — small caps, muted, a rule carrying the eye across. */
+.sidebar-left .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: inherit;
+  font-size: var(--fs-mono);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.sidebar-left .section-title::after {
+  content: '';
+  flex: 1 1 0;
+  height: 1px;
+  background: var(--border);
+}
+.sidebar-left .metric-card {
+  background: var(--bg-2);
+  border: 0;
+  border-radius: var(--r-md);
+  padding: var(--space-3);
+}
+.sidebar-left .metric-label {
+  font-family: inherit;
+  font-size: var(--fs-mono);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  color: var(--text-muted);
+}
+.sidebar-left .info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+.sidebar-left .info-row > :first-child {
+  font-family: inherit;
+  font-size: var(--fs-mono);
+  text-transform: lowercase;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+/* The pane a finding belongs to — was a literal "[response]" glued into
+   the message text, which the card's bold first line rendered like a
+   broken id. A quiet inline badge before the title says the same thing
+   in the reader's language. */
+.finding-side {
+  display: inline-block;
+  vertical-align: 1px;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 400;
+  text-transform: lowercase;
+  color: var(--text-muted);
+  background: var(--bg-2);
+}
