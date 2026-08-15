@@ -2193,29 +2193,45 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 }
 
 /* Validation results */
+/* Finding rows.
+   ------------------------------------------------------------
+   Severity used to be painted three times over on every row: a tinted
+   background, a tinted border, AND tinted body text. With a dozen
+   findings on screen that is a dozen coloured blocks competing, and
+   the text — the part that says what is actually wrong — was the
+   least legible thing in its own row, because amber-on-amber and
+   red-on-red are the two worst pairings the palette can make.
+
+   v2 states severity ONCE, in a 3px bar on the leading edge. The row
+   itself is neutral: same surface, same border, body-colour text. The
+   colour becomes a scanning aid down the left margin instead of a
+   wash the reader has to see through, and the sentence gets the
+   contrast it always needed. */
 .validation-item {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-sm);
-  border: 1px solid;
+  /* Square on the leading edge only: the 3px severity bar has to read as a
+     bar. With the radius applied all round it curves at both ends and the
+     eye resolves it as a bracket sitting beside the row rather than as the
+     row's own edge. */
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  background: var(--bg-2);
+  color: var(--text);
   font-size: var(--fs-sm);
   margin-bottom: 6px;
 }
 .validation-item.danger {
-  background: rgba(220, 38, 38, 0.05);
-  border-color: rgba(220, 38, 38, 0.2);
-  color: var(--danger);
+  border-left-color: var(--danger);
 }
 .validation-item.warning {
-  background: rgba(245, 158, 11, 0.06);
-  border-color: rgba(245, 158, 11, 0.22);
-  color: var(--text-warning);
+  border-left-color: var(--warning);
 }
 .validation-item.info {
-  background: var(--bg-2);
-  border-color: var(--border);
+  border-left-color: var(--border-strong);
   color: var(--text-muted);
 }
 /* `question` used to fall through to `.warning` — amber stripe, `!` icon —
@@ -2224,10 +2240,20 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
    Neutral ground like `info`, and a dashed edge for "waiting on you" rather
    than a severity hue, which would assert a ranking that does not exist. */
 .validation-item.question {
-  background: var(--bg-2);
-  border-color: var(--border-strong);
-  border-style: dashed;
+  border-left-color: var(--border-strong);
+  border-left-style: dashed;
   color: var(--text-muted);
+}
+
+/* The icon keeps the severity hue — it is a glyph, not a wash, so it
+   carries the signal at full strength without costing the text any
+   contrast. --warning as TEXT measures 2.2:1 on white, so warnings
+   take the darkened --warning-text from ortbtools-v2.css. */
+.validation-item.danger .validation-icon {
+  color: var(--danger);
+}
+.validation-item.warning .validation-icon {
+  color: var(--warning-text, #b45309);
 }
 .validation-icon {
   font-family: var(--font-mono);

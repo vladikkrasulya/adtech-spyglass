@@ -204,8 +204,101 @@ test('nav re-renders its item labels and locale-prefixed hrefs on kt:lang-change
   assert.equal(item().getAttribute('href'), '/ru/library');
 
   switchLang(w, 'en');
-  assert.equal(item().querySelector('.kt-nav__label').textContent, 'Library');
+  // v2 renames the rail label Library -> Samples. The ROUTE deliberately
+  // stays /library, asserted on every locale above: a label is free to
+  // change, a live URL is not.
+  assert.equal(item().querySelector('.kt-nav__label').textContent, 'Samples');
   assert.equal(item().getAttribute('href'), '/library');
+
+  unmount();
+  w.close();
+});
+
+// ── 4. What the v2 rail must not lose ───────────────────────────────────
+
+test('Streams keeps its "preview" qualifier after the rename', () => {
+  // /live is a preview over synthetic traffic (ROADMAP Decision A), and
+  // contracts/locales-versioning.md forbids dropping a stated limitation.
+  // v2 shortened the label from "Live (preview)" to "Streams", so the
+  // qualifier has to survive somewhere the user actually reads — the
+  // badge, the tooltip and the accessible name — in all three locales.
+  for (const [lang, badge] of [
+    ['en', 'preview'],
+    ['uk', 'прев’ю'],
+    ['ru', 'превью'],
+  ]) {
+    const { w, root, unmount } = setup({ lang });
+    const item = root.querySelector('.kt-nav__item[data-route="/live"]');
+    assert.ok(item, `${lang}: /live must still be in the rail`);
+    assert.equal(
+      item.querySelector('.kt-nav__badge').textContent,
+      badge,
+      `${lang}: the preview qualifier must survive the shorter label`,
+    );
+    assert.match(
+      item.getAttribute('aria-label'),
+      new RegExp(badge.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      `${lang}: a screen reader must hear the qualifier too`,
+    );
+    unmount();
+    w.close();
+  }
+});
+
+test('Behavior leaves the rail without taking its route with it', () => {
+  // v2 demotes Behavior to a tab inside the Inspector. Dropping the nav
+  // entry is intended; dropping the route would 404 every existing link.
+  const { w, root, unmount } = setup({ lang: 'en' });
+  assert.equal(
+    root.querySelector('.kt-nav__item[data-route="/behavior"]'),
+    null,
+    'Behavior must not be a rail destination in v2',
+  );
+  unmount();
+  w.close();
+
+  const routes = fs.readFileSync(path.join(__dirname, '..', 'lib/locale-routes.js'), 'utf8');
+  assert.match(routes, /['"]behavior['"]/, '/behavior must still resolve as a route');
+  const boot = fs.readFileSync(path.join(__dirname, '..', 'public/shell-boot.js'), 'utf8');
+  assert.match(boot, /registerLazy\(\s*['"]behavior['"]/, '/behavior must still be registered');
+});
+
+test('the rail renders line icons, not emoji', () => {
+  // Emoji resolve to a different font per OS, carry their own colour, and
+  // sat off the text baseline — which is what made the rail look ragged.
+  //
+  // This asserts the RENDERED rail, not the module source: the first cut
+  // grepped the file and failed on the comment that lists the emoji being
+  // replaced. A source grep answers "does this string appear", which is not
+  // the question — the question is what reaches the user.
+  const { w, root, unmount } = setup({ lang: 'en' });
+
+  const rendered = root.innerHTML;
+  // U+FE0F (variation selector) is matched as its own alternative rather than
+  // as a class member: inside a character class it combines with the
+  // preceding range and the class stops meaning what it reads as.
+  const emoji = rendered.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]|\u{FE0F}/gu);
+  assert.equal(
+    emoji,
+    null,
+    `the rail still paints emoji: ${emoji ? [...new Set(emoji)].join(' ') : ''}`,
+  );
+
+  const items = root.querySelectorAll('.kt-nav__item');
+  assert.ok(items.length >= 7, 'every section is still in the rail');
+  for (const item of items) {
+    const svg = item.querySelector('.kt-nav__icon svg');
+    assert.ok(svg, `${item.getAttribute('data-route')} must carry an svg icon`);
+    assert.equal(
+      svg.getAttribute('stroke'),
+      'currentColor',
+      `${item.getAttribute('data-route')}: the icon must inherit the item's colour`,
+    );
+    assert.ok(
+      svg.innerHTML.trim().length > 0,
+      `${item.getAttribute('data-route')}: icon must have geometry, not be an empty svg`,
+    );
+  }
 
   unmount();
   w.close();

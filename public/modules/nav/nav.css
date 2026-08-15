@@ -57,10 +57,10 @@
 }
 .kt-nav__group-label {
   padding: 6px 12px;
-  font-size: 11px;
+  font-size: var(--fs-mono, 11px);
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: var(--text-muted, #46556b);
+  color: var(--text-dim, #5c6b82);
   text-transform: uppercase;
 }
 .kt-nav__list {
@@ -79,7 +79,10 @@
   border-radius: var(--r-sm, 10px);
   text-decoration: none;
   color: var(--text);
-  font-size: 14px;
+  /* Was a hardcoded 14px — off the --fs-* scale, and repeated on every
+     page because the rail is persistent chrome, so eight elements per
+     page rendered off-scale site-wide. */
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   transition: background-color 150ms ease;
 }
@@ -90,14 +93,55 @@
   background: var(--kt-nav-item-active-bg);
   color: var(--kt-nav-item-active-fg);
 }
+/* Icon slot. Was a 16px emoji glyph; now a 16px line icon that inherits
+   colour from the item, so the active and hover states carry the icon
+   with them instead of leaving a fixed-colour emoji sitting in a
+   highlighted row. */
 .kt-nav__icon {
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
-  text-align: center;
+  height: 20px;
   flex-shrink: 0;
+  color: var(--text-dim, #5c6b82);
+}
+.kt-nav__icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+.kt-nav__item:hover .kt-nav__icon,
+.kt-nav__item.is-active .kt-nav__icon {
+  color: currentColor;
 }
 .kt-nav__label {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Qualifier that the shortened label gave up — e.g. Streams "preview".
+   Sized below the label on purpose: it must be readable without
+   competing with the destination name. */
+.kt-nav__badge {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.11));
+  border-radius: var(--r-chip, 3px);
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 9px;
+  line-height: 14px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: var(--text-dim, #5c6b82);
+}
+/* On the collapsed rail only the icon survives; a badge there would
+   overlap the glyph it qualifies. */
+.kt-shell.is-nav-collapsed .kt-nav__badge {
+  display: none;
 }
 
 .kt-nav__footer {

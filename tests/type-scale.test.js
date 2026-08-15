@@ -58,7 +58,12 @@ const BUDGET = {
   'modules/insights/insights.css': 7,
   'modules/library/library.css': 2,
   'modules/macros/styles.css': 4,
-  'modules/nav/nav.css': 4,
+  // v2 moved .kt-nav__item off a hardcoded 14px onto --fs-sm. The rail is
+  // persistent chrome, so that one literal was rendering off-scale eight
+  // times on every page of the site. The 9px that remains is the
+  // .kt-nav__badge qualifier ("preview"), deliberately below the label it
+  // qualifies so it cannot compete with a destination name.
+  'modules/nav/nav.css': 3,
   'modules/search/search.css': 6,
   'modules/stream/stream.css': 9,
   'modules/topbar/topbar.css': 1,
