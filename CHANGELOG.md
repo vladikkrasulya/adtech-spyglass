@@ -6,6 +6,25 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.12.1 — the mockup's remaining chrome, and a tag that read as a broken id
+
+- The rail now collapses the way the prototype draws it: into a 56px icon rail, chevron in the
+  head beside the brand, labels and badges folding away with every destination still one click
+  away under its tooltip. The previous form — the rail vanishing to nothing and a blue pill
+  floating mid-viewport to bring it back — was chrome the mockup does not have.
+- The drawer got its design language: the trigger is a panel icon in the workbar (pressed state
+  while open) instead of a bare ▶ inside the tab strip, a close button in its corner, section
+  titles on the one uppercase level with rule lines, and body-size rows instead of wall-to-wall
+  mono caps.
+- Response-side findings arrive with a literal `[response]` prefix in their message — the
+  backend's display hack for the old flat list. The v2 card bolds its first line, so the tag
+  rendered like a broken message id (`[res…` was the first thing visible in the Info group). The
+  side is now a quiet localized badge before the title; the sentence starts with its own words.
+- The winning-bid chip no longer announces a bid of zero: its guard assumed the currency sign
+  leads the figure, which is true in English and false in Ukrainian and Russian ("0,00 $"), so
+  both Slavic locales grew the chip on every request-only analysis.
+- App version bumped `1.12.0 → 1.12.1`; Core remains `0.35.0` and CLI remains `0.1.1`.
+
 ### v1.12.0 — the Inspector wears the mockup
 
 - Rebuilt the Inspector around the design prototype: six horizontal bands became two full-height
