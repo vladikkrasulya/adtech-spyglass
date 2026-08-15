@@ -23,27 +23,40 @@
   <div class="format-bar" id="formatBar" hidden>
     <span class="format-pill format-pill-type" id="formatPillType"></span>
     <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
-    <select
-      class="format-pill format-pill-select"
-      id="dialectSelector"
-      data-action="change-dialect"
-      title="Validation-dialect switch — changes the rule set the engine applies to the payload"
+    <!-- Tips ride a wrapper: ::after never renders on a <select>. The former
+         title text moved into data-tip (~0.3s, mockup contract); aria-label
+         keeps the control's accessible name. -->
+    <span
+      class="format-pill-tipwrap"
+      data-tip="Validation-dialect switch — changes the rule set the engine applies to the payload"
     >
-      <option value="iab">Standard IAB (oRTB 2.5)</option>
-      <option value="ext-rtb">Vendor · RTB</option>
-      <option value="inpage-push">Vendor · In-Page Push</option>
-    </select>
-    <select
-      class="format-pill format-pill-select"
-      id="versionPinSelector"
-      data-action="change-version-pin"
-      title="Expected oRTB version. If detection lands elsewhere, the engine emits a warning with the field paths that triggered the flip. Leave on 'auto' to trust the detector."
+      <select
+        class="format-pill format-pill-select"
+        id="dialectSelector"
+        data-action="change-dialect"
+        aria-label="Validation dialect"
+      >
+        <option value="iab">Standard IAB (oRTB 2.5)</option>
+        <option value="ext-rtb">Vendor · RTB</option>
+        <option value="inpage-push">Vendor · In-Page Push</option>
+      </select>
+    </span>
+    <span
+      class="format-pill-tipwrap"
+      data-tip="Expected oRTB version. If detection lands elsewhere, the engine emits a warning with the field paths that triggered the flip. Leave on 'auto' to trust the detector."
     >
-      <option value="">auto</option>
-      <option value="2.5">oRTB 2.5</option>
-      <option value="2.6">oRTB 2.6</option>
-      <option value="3.0">oRTB 3.0</option>
-    </select>
+      <select
+        class="format-pill format-pill-select"
+        id="versionPinSelector"
+        data-action="change-version-pin"
+        aria-label="Expected oRTB version"
+      >
+        <option value="">auto</option>
+        <option value="2.5">oRTB 2.5</option>
+        <option value="2.6">oRTB 2.6</option>
+        <option value="3.0">oRTB 3.0</option>
+      </select>
+    </span>
     <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
   </div>
   <div class="workbar-actions">
@@ -180,7 +193,15 @@
         </div>
       </div>
     </details>
-    <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">analyze</button>
+    <button
+      data-action="analyze"
+      class="btn btn-primary btn-sm"
+      id="analyzeBtn"
+      data-tip="Run analysis — Ctrl/⌘ + Enter"
+      data-tip-align="end"
+    >
+      analyze
+    </button>
     <!-- Language + theme toggles. Buttons live in the header so users can
              see at a glance which locale/theme is active. The IIFEs in <head>
              detect these existing buttons and bind their handlers (rather
@@ -348,10 +369,14 @@
           <div class="input-card-actions">
             <span class="char-count" id="reqCount">0</span>
             <span class="json-badge empty" id="reqBadge">empty</span>
+            <!-- Editor toolbar tips: end-aligned because the whole actions
+                 cluster hugs the card's right edge and .input-card clips at
+                 overflow:hidden — a centered bubble would truncate. -->
             <button
               data-action="save-sample"
               class="btn-icon"
-              title="Save current request/response to your Cabinet — encrypted with your password. Signed-out users will be prompted to sign in first."
+              data-tip="Save current request/response to your Cabinet — encrypted with your password. Signed-out users will be prompted to sign in first."
+              data-tip-align="end"
             >
               save
             </button>
@@ -359,7 +384,8 @@
               data-action="clear-input"
               data-target="bidReq"
               class="btn-icon"
-              title="Clear field"
+              data-tip="Clear field"
+              data-tip-align="end"
             >
               clear
             </button>
@@ -367,7 +393,8 @@
               data-action="format-json"
               data-target="bidReq"
               class="btn-icon"
-              title="Format JSON"
+              data-tip="Format JSON"
+              data-tip-align="end"
             >
               format
             </button>
@@ -375,7 +402,8 @@
               data-action="copy-text"
               data-target="bidReq"
               class="btn-icon"
-              title="Copy to clipboard"
+              data-tip="Copy to clipboard"
+              data-tip-align="end"
             >
               copy
             </button>
@@ -383,7 +411,8 @@
               data-action="toggle-card"
               data-target="cardReq"
               class="btn-collapse-toggle"
-              title="Collapse this pane — frees space when you only need the other side. Click again to expand."
+              data-tip="Collapse this pane — frees space when you only need the other side. Click again to expand."
+              data-tip-align="end"
               aria-label="Collapse / expand panel"
             >
               <span class="caret">▾</span>
@@ -414,7 +443,8 @@
               data-action="clear-input"
               data-target="bidRes"
               class="btn-icon"
-              title="Clear field"
+              data-tip="Clear field"
+              data-tip-align="end"
             >
               clear
             </button>
@@ -422,7 +452,8 @@
               data-action="format-json"
               data-target="bidRes"
               class="btn-icon"
-              title="Format JSON"
+              data-tip="Format JSON"
+              data-tip-align="end"
             >
               format
             </button>
@@ -430,7 +461,8 @@
               data-action="copy-text"
               data-target="bidRes"
               class="btn-icon"
-              title="Copy to clipboard"
+              data-tip="Copy to clipboard"
+              data-tip-align="end"
             >
               copy
             </button>
@@ -438,7 +470,8 @@
               data-action="toggle-card"
               data-target="cardRes"
               class="btn-collapse-toggle"
-              title="Collapse this pane — frees space when you only need the other side. Click again to expand."
+              data-tip="Collapse this pane — frees space when you only need the other side. Click again to expand."
+              data-tip-align="end"
               aria-label="Collapse / expand panel"
             >
               <span class="caret">▾</span>

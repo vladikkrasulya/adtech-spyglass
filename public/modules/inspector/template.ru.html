@@ -23,27 +23,40 @@
   <div class="format-bar" id="formatBar" hidden>
     <span class="format-pill format-pill-type" id="formatPillType"></span>
     <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
-    <select
-      class="format-pill format-pill-select"
-      id="dialectSelector"
-      data-action="change-dialect"
-      title="Переключатель диалекта валидации — меняет правила, которые engine применяет к payload"
+    <!-- Тултипы живут на обёртке: ::after не рендерится на <select>.
+         Прежний title переехал в data-tip (~0.3с, контракт макета);
+         aria-label сохраняет доступное имя контрола. -->
+    <span
+      class="format-pill-tipwrap"
+      data-tip="Переключатель диалекта валидации — меняет правила, которые engine применяет к payload"
     >
-      <option value="iab">Standard IAB (oRTB 2.5)</option>
-      <option value="ext-rtb">Vendor · RTB</option>
-      <option value="inpage-push">Vendor · In-Page Push</option>
-    </select>
-    <select
-      class="format-pill format-pill-select"
-      id="versionPinSelector"
-      data-action="change-version-pin"
-      title="Ожидаемая версия oRTB. Если детектор увидит другую — engine выдаст warning с полями-виновниками. Оставь «авто», чтобы довериться детектору."
+      <select
+        class="format-pill format-pill-select"
+        id="dialectSelector"
+        data-action="change-dialect"
+        aria-label="Диалект валидации"
+      >
+        <option value="iab">Standard IAB (oRTB 2.5)</option>
+        <option value="ext-rtb">Vendor · RTB</option>
+        <option value="inpage-push">Vendor · In-Page Push</option>
+      </select>
+    </span>
+    <span
+      class="format-pill-tipwrap"
+      data-tip="Ожидаемая версия oRTB. Если детектор увидит другую — engine выдаст warning с полями-виновниками. Оставь «авто», чтобы довериться детектору."
     >
-      <option value="">авто</option>
-      <option value="2.5">oRTB 2.5</option>
-      <option value="2.6">oRTB 2.6</option>
-      <option value="3.0">oRTB 3.0</option>
-    </select>
+      <select
+        class="format-pill format-pill-select"
+        id="versionPinSelector"
+        data-action="change-version-pin"
+        aria-label="Ожидаемая версия oRTB"
+      >
+        <option value="">авто</option>
+        <option value="2.5">oRTB 2.5</option>
+        <option value="2.6">oRTB 2.6</option>
+        <option value="3.0">oRTB 3.0</option>
+      </select>
+    </span>
     <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
   </div>
   <div class="workbar-actions">
@@ -180,7 +193,13 @@
         </div>
       </div>
     </details>
-    <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">
+    <button
+      data-action="analyze"
+      class="btn btn-primary btn-sm"
+      id="analyzeBtn"
+      data-tip="Запустить анализ — Ctrl/⌘ + Enter"
+      data-tip-align="end"
+    >
       анализировать
     </button>
     <!-- Language + theme toggles. Buttons live in the header so users can
@@ -348,10 +367,14 @@
           <div class="input-card-actions">
             <span class="char-count" id="reqCount">0</span>
             <span class="json-badge empty" id="reqBadge">пусто</span>
+            <!-- Тултипы тулбара — end-aligned: кластер кнопок прижат к
+                 правому краю карточки, а .input-card режет overflow:hidden —
+                 центрированный пузырь обрезался бы. -->
             <button
               data-action="save-sample"
               class="btn-icon"
-              title="Сохранить текущий запрос/ответ в кабинет — шифруется твоим паролем. Гостей попросим войти сначала."
+              data-tip="Сохранить текущий запрос/ответ в кабинет — шифруется твоим паролем. Гостей попросим войти сначала."
+              data-tip-align="end"
             >
               сохранить
             </button>
@@ -359,7 +382,8 @@
               data-action="clear-input"
               data-target="bidReq"
               class="btn-icon"
-              title="Очистить поле"
+              data-tip="Очистить поле"
+              data-tip-align="end"
             >
               очистить
             </button>
@@ -367,7 +391,8 @@
               data-action="format-json"
               data-target="bidReq"
               class="btn-icon"
-              title="Отформатировать JSON"
+              data-tip="Отформатировать JSON"
+              data-tip-align="end"
             >
               формат
             </button>
@@ -375,7 +400,8 @@
               data-action="copy-text"
               data-target="bidReq"
               class="btn-icon"
-              title="Скопировать в буфер"
+              data-tip="Скопировать в буфер"
+              data-tip-align="end"
             >
               копия
             </button>
@@ -383,7 +409,8 @@
               data-action="toggle-card"
               data-target="cardReq"
               class="btn-collapse-toggle"
-              title="Свернуть эту панель — освободить место, когда работаешь только с другой стороной. Клик ещё раз — развернёт назад."
+              data-tip="Свернуть эту панель — освободить место, когда работаешь только с другой стороной. Клик ещё раз — развернёт назад."
+              data-tip-align="end"
               aria-label="Свернуть / развернуть панель"
             >
               <span class="caret">▾</span>
@@ -414,7 +441,8 @@
               data-action="clear-input"
               data-target="bidRes"
               class="btn-icon"
-              title="Очистить поле"
+              data-tip="Очистить поле"
+              data-tip-align="end"
             >
               очистить
             </button>
@@ -422,7 +450,8 @@
               data-action="format-json"
               data-target="bidRes"
               class="btn-icon"
-              title="Отформатировать JSON"
+              data-tip="Отформатировать JSON"
+              data-tip-align="end"
             >
               формат
             </button>
@@ -430,7 +459,8 @@
               data-action="copy-text"
               data-target="bidRes"
               class="btn-icon"
-              title="Скопировать в буфер"
+              data-tip="Скопировать в буфер"
+              data-tip-align="end"
             >
               копия
             </button>
@@ -438,7 +468,8 @@
               data-action="toggle-card"
               data-target="cardRes"
               class="btn-collapse-toggle"
-              title="Свернуть эту панель — освободить место, когда работаешь только с другой стороной. Клик ещё раз — развернёт назад."
+              data-tip="Свернуть эту панель — освободить место, когда работаешь только с другой стороной. Клик ещё раз — развернёт назад."
+              data-tip-align="end"
               aria-label="Свернуть / развернуть панель"
             >
               <span class="caret">▾</span>

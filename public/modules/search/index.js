@@ -22,6 +22,10 @@
    ============================================================ */
 'use strict';
 
+// Section catalog + the ⌘1…⌘5 quick-jump contract — nav owns both, so the
+// palette's "Go to" rows can never drift from the rail or the key bindings.
+import { SECTIONS, QUICK_JUMPS } from '/modules/nav/index.js';
+
 // ── Locale helpers ───────────────────────────────────────────────
 
 function getLang() {
@@ -44,6 +48,7 @@ function escHtml(s) {
 }
 
 const GROUP_LABELS = {
+  section: { en: 'Go to', uk: 'Перейти', ru: 'Перейти' },
   sample: { en: 'Samples', uk: 'Зразки', ru: 'Образцы' },
   behavior: { en: 'Behavior scenarios', uk: 'Сценарії поведінки', ru: 'Поведенческие сценарии' },
   finding: { en: 'Finding catalog', uk: 'Документація помилок', ru: 'Каталог ошибок' },
@@ -58,13 +63,50 @@ const HINT_LABELS = {
   },
   nothing: { en: 'Nothing found', uk: 'Нічого не знайдено', ru: 'Ничего не найдено' },
   loading: { en: 'Loading index…', uk: 'Завантаження…', ru: 'Загрузка…' },
+  // The try-chips carried a hardcoded English "Try:" on /uk and /ru; the
+  // palette made the hint card prominent enough for that to show.
+  tryPrefix: { en: 'Try', uk: 'Спробуй', ru: 'Попробуй' },
 };
 
+// The mockup's manual words the ⌘K affordance as a jump, not a search:
+// «Jump to section, finding or doc». Kept in sync with the initial
+// placeholder the topbar paints before this module loads (topbar/index.js).
 const PLACEHOLDERS = {
-  en: '🔎 search the site',
-  uk: '🔎 шукати по сайту',
-  ru: '🔎 искать по сайту',
+  en: '🔎 jump to section, finding or doc',
+  uk: '🔎 перейти до розділу, помилки чи доки',
+  ru: '🔎 перейти к разделу, ошибке или докам',
 };
+
+// ── Quick-jump sections ("Go to" palette group) ──────────────────
+// Computed at call time, not baked into the fetched index: labels resolve
+// against the CURRENT document lang (the fetched index survives a seamless
+// language switch), and the shortcut hint respects the visitor's platform.
+
+const IS_MAC = /Mac|iP(hone|ad|od)/.test(
+  (typeof navigator === 'undefined'
+    ? ''
+    : (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform) || '',
+);
+
+function sectionItems() {
+  const l = getLang();
+  const items = [];
+  QUICK_JUMPS.forEach((id, i) => {
+    const s = SECTIONS.find((sec) => sec.id === id);
+    if (!s) return;
+    items.push({
+      type: 'section',
+      id: s.id,
+      route: s.route,
+      label: s.label[l] || s.label.en,
+      // A nav badge is a limitation disclosure (e.g. Streams — «preview»),
+      // not decoration; the palette row must carry it too.
+      note: s.badge ? s.badge[l] || s.badge.en : '',
+      shortcut: (IS_MAC ? '⌘' : 'Ctrl+') + (i + 1),
+    });
+  });
+  return items;
+}
 
 // F-07: the results container announced itself with the hardcoded English
 // string 'Search results' even on /uk and /ru. Everything else user-visible
@@ -238,7 +280,8 @@ function search(query) {
   if (!tokens.length) return [];
 
   const scored = [];
-  for (const item of _index) {
+  // Sections are not part of the fetched index — see sectionItems().
+  for (const item of sectionItems().concat(_index)) {
     const s = scoreItem(item, tokens);
     if (s > 0) scored.push({ item, score: s });
   }
@@ -251,7 +294,7 @@ function search(query) {
   }
 
   // Sort each group, take top 5
-  const typeOrder = ['sample', 'behavior', 'finding', 'blog'];
+  const typeOrder = ['section', 'sample', 'behavior', 'finding', 'blog'];
   const result = [];
   let total = 0;
   for (const type of typeOrder) {
@@ -273,6 +316,8 @@ function buildUrl(item) {
   const lang = getLang();
   const prefix = lang === 'en' ? '' : '/' + lang;
   switch (item.type) {
+    case 'section':
+      return prefix + item.route;
     case 'sample':
       return `${prefix}/inspector?sample=${encodeURIComponent(item.slug)}`;
     case 'behavior':
@@ -375,6 +420,7 @@ function truncate(text, len) {
 // ── Badge ────────────────────────────────────────────────────────
 
 function badgeClass(item) {
+  if (item.type === 'section') return 'sg-badge--section';
   if (item.type === 'sample') return 'sg-badge--sample';
   if (item.type === 'behavior') return 'sg-badge--behavior';
   if (item.type === 'blog') return 'sg-badge--blog';
@@ -387,6 +433,7 @@ function badgeClass(item) {
 }
 
 function badgeText(item) {
+  if (item.type === 'section') return '→';
   if (item.type === 'sample') return item.format || 'smpl';
   if (item.type === 'behavior') return item.category || 'scn';
   if (item.type === 'finding') return item.severity || 'info';
@@ -412,19 +459,28 @@ function renderDropdown(state, query, groups, idPrefix) {
   }
 
   if (!query) {
-    // Hint card
+    // Empty query = the palette's resting state. The mockup opens ⌘K on a
+    // "Go to" list of the five quick-jump sections (each with its ⌘n hint);
+    // the try-chips keep teaching the free-text half of the search.
     const label = pickStr(HINT_LABELS.typeToSearch);
-    return `
+    const tryPrefix = pickStr(HINT_LABELS.tryPrefix);
+    const chips = ['gdpr', 'vast', 'ortb', 'banner']
+      .map(
+        (term) =>
+          `<span class="sg-search-hint__chip" data-suggest="${term}">${escHtml(tryPrefix)}: ${term}</span>`,
+      )
+      .join('\n          ');
+    return (
+      renderGroups([{ type: 'section', items: sectionItems() }], [], idPrefix) +
+      `
       <div class="sg-search-hint" role="presentation">
         <div class="sg-search-hint__title">${escHtml(label)}</div>
         <div class="sg-search-hint__chips">
-          <span class="sg-search-hint__chip" data-suggest="gdpr">Try: gdpr</span>
-          <span class="sg-search-hint__chip" data-suggest="vast">Try: vast</span>
-          <span class="sg-search-hint__chip" data-suggest="ortb">Try: ortb</span>
-          <span class="sg-search-hint__chip" data-suggest="banner">Try: banner</span>
+          ${chips}
         </div>
       </div>
-    `;
+    `
+    );
   }
 
   if (!groups || !groups.length) {
@@ -432,6 +488,10 @@ function renderDropdown(state, query, groups, idPrefix) {
     return `<div class="sg-search-empty" role="presentation">${escHtml(label)}</div>`;
   }
 
+  return renderGroups(groups, tokens, idPrefix);
+}
+
+function renderGroups(groups, tokens, idPrefix) {
   let html = '';
   let optIndex = 0;
   for (const group of groups) {
@@ -471,6 +531,7 @@ function renderDropdown(state, query, groups, idPrefix) {
             <span class="sg-search-row__title">${highlight(primaryText, tokens)}</span>
             ${previewText ? `<span class="sg-search-row__preview">${highlight(previewText, tokens)}</span>` : ''}
           </span>
+          ${item.shortcut ? `<kbd class="sg-search-row__kbd">${escHtml(item.shortcut)}</kbd>` : ''}
         </a>
       `;
     }
@@ -591,6 +652,14 @@ export function initSearch(inputEl, _shellRoot) {
 
   function renderCurrent(query) {
     if (!indexLoaded) {
+      // The resting-state palette (quick-jump sections + try-chips) is
+      // static — only an actual query needs the fetched index. Painting
+      // "loading" here would make ⌘K useless for its main job (jumping)
+      // exactly on the first open, when it matters most.
+      if (!query) {
+        openDropdown(renderDropdown('ready', '', null, idPrefix));
+        return;
+      }
       openDropdown(renderDropdown('loading', query, null, idPrefix));
       return;
     }
@@ -604,8 +673,9 @@ export function initSearch(inputEl, _shellRoot) {
     // Show loading state. Goes through openDropdown() rather than a raw
     // innerHTML write so the ARIA selection state is reset with it —
     // otherwise aria-activedescendant would keep pointing at a row id that
-    // this write has just removed from the DOM.
-    if (!dropdownEl.hidden) {
+    // this write has just removed from the DOM. Empty query: leave the
+    // resting-state palette renderCurrent() just painted alone.
+    if (!dropdownEl.hidden && query) {
       openDropdown(renderDropdown('loading', query, null, idPrefix));
     }
     try {
@@ -735,6 +805,12 @@ export function initSearch(inputEl, _shellRoot) {
     }
   };
 
+  // Route change while the dropdown is open (⌘1…⌘5 jumps bypass this
+  // widget entirely) — close it so it doesn't sit over the new section.
+  const onRouteChange = () => {
+    if (!dropdownEl.hidden) closeDropdown();
+  };
+
   // ── Wire events ──────────────────────────────────────────────
   inputEl.addEventListener('focus', onFocus);
   inputEl.addEventListener('input', onInput);
@@ -742,6 +818,8 @@ export function initSearch(inputEl, _shellRoot) {
   dropdownEl.addEventListener('click', onDropdownClick);
   document.addEventListener('keydown', onGlobalKey);
   document.addEventListener('click', onDocClick);
+  window.addEventListener('kt:pushstate', onRouteChange);
+  window.addEventListener('popstate', onRouteChange);
 
   // ── Cleanup ──────────────────────────────────────────────────
   return function cleanup() {
@@ -751,6 +829,8 @@ export function initSearch(inputEl, _shellRoot) {
     dropdownEl.removeEventListener('click', onDropdownClick);
     document.removeEventListener('keydown', onGlobalKey);
     document.removeEventListener('click', onDocClick);
+    window.removeEventListener('kt:pushstate', onRouteChange);
+    window.removeEventListener('popstate', onRouteChange);
     closeDropdown();
     // The input is topbar-owned and outlives this widget on some re-mount
     // paths, so hand it back in the state we found it — a stale

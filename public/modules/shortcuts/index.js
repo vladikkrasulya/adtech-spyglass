@@ -2,10 +2,16 @@
    modules/shortcuts/index.js — ortbtools keyboard shortcuts + cheat-sheet modal.
 
    Bindings:
-     ?              → open cheat-sheet (skipped while typing)
-     Ctrl/Cmd+S     → save current sample to library (auth-gated by openSaveModal)
-     Ctrl/Cmd+Enter → already wired via ortbtools.app.js#handleKeydown
-     Esc            → already wired via ortbtools.app.js DOMContentLoaded handler
+     ?               → open cheat-sheet (skipped while typing)
+     Ctrl/Cmd+1…5    → jump to a section (Inspector, Streams, Samples,
+                       Dialects, Insights — the mockup manual's contract)
+     Ctrl/Cmd+Enter  → run analysis. The textareas bind their own copy via
+                       ortbtools.app.js#handleKeydown; this module adds the
+                       document-level fallback so the combo works when focus
+                       is on a button, a select or the page body.
+     Ctrl/Cmd+S      → save current sample to library (auth-gated by openSaveModal)
+     Ctrl/Cmd+K      → command palette (owned by modules/search/index.js)
+     Esc             → close menus/modals (ortbtools.app.js popover handler)
 
    Self-contained: injects its own <style> on first use. Reuses the existing
    `modalRoot` / `closeModal()` / `t()` primitives from ortbtools.app.js +
@@ -21,6 +27,15 @@
     if (el.isContentEditable) return true;
     return false;
   }
+
+  // Cheat-sheet rows and the palette chip must show the visitor's actual
+  // modifier — ⌘ on Apple keyboards, Ctrl everywhere else.
+  const IS_MAC = /Mac|iP(hone|ad|od)/.test(
+    (typeof navigator === 'undefined'
+      ? ''
+      : (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform) || '',
+  );
+  const MOD = IS_MAC ? '⌘' : 'Ctrl';
 
   function escapeHtml(s) {
     return String(s == null ? '' : s)
@@ -69,8 +84,10 @@
     ensureStyle();
     const rows = [
       ['?', tt('shortcuts.row.help')],
-      ['Ctrl + Enter', tt('shortcuts.row.run')],
-      ['Ctrl + S', tt('shortcuts.row.save')],
+      [MOD + ' + K', tt('shortcuts.row.palette')],
+      [MOD + ' + 1…5', tt('shortcuts.row.sections')],
+      [MOD + ' + Enter', tt('shortcuts.row.run')],
+      [MOD + ' + S', tt('shortcuts.row.save')],
       ['M', tt('shortcuts.row.mirror')],
       ['Esc', tt('shortcuts.row.close')],
     ];
@@ -100,7 +117,65 @@
     return !!(root && root.children.length);
   }
 
+  // ⌘1…⌘5 / Ctrl+1…5 → section jump. Routes and order come from the nav
+  // catalog (QUICK_JUMPS in modules/nav/index.js) via dynamic import — this
+  // file is a classic script, and the nav module is already instantiated by
+  // shell boot, so the import resolves from cache.
+  function jumpToSection(idx) {
+    import('/modules/nav/index.js')
+      .then(function (nav) {
+        const section = nav.SECTIONS.find(function (s) {
+          return s.id === nav.QUICK_JUMPS[idx];
+        });
+        if (!section) return;
+        // Already on that section → don't push a duplicate history entry.
+        if (nav.canonicalize(location.pathname) === section.route) return;
+        const target = nav.prefixLocale(section.route);
+        if (window.OrtbtoolsShell && typeof window.OrtbtoolsShell.navigateTo === 'function') {
+          window.OrtbtoolsShell.navigateTo(target);
+        } else {
+          window.location.assign(target);
+        }
+      })
+      .catch(function () {
+        /* nav module unavailable (non-shell page) — the combo stays inert */
+      });
+  }
+
+  // Which quick-jump digit (1…5) a keydown addresses, or 0 if none.
+  // e.code covers layouts where the digit row is shifted (AZERTY sends
+  // e.key='&' for the physical 1); e.key covers remapped/virtual keyboards.
+  function quickJumpDigit(e) {
+    if (/^(Digit|Numpad)[1-5]$/.test(e.code || '')) return Number((e.code || '').slice(-1));
+    if (e.key >= '1' && e.key <= '5' && e.key.length === 1) return Number(e.key);
+    return 0;
+  }
+
   document.addEventListener('keydown', function (e) {
+    // Ctrl/Cmd+1…5 → quick section jumps. Modifier chords are safe even
+    // while typing; !altKey keeps AltGr (Ctrl+Alt) layouts able to type
+    // digits, and an open modal means the user is mid-flow — don't yank
+    // the page out from under it.
+    const digit = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey ? quickJumpDigit(e) : 0;
+    if (digit) {
+      if (isModalOpen()) return;
+      e.preventDefault();
+      jumpToSection(digit - 1);
+      return;
+    }
+    // Ctrl/Cmd+Enter → run analysis from anywhere on the Inspector. When
+    // focus sits in a payload textarea, ortbtools.app.js#handleKeydown has
+    // already run (target phase) and preventDefault()ed — skip the rerun.
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      if (e.defaultPrevented) return;
+      if (isModalOpen()) return;
+      if (!document.getElementById('bidReq')) return; // Inspector not mounted
+      if (typeof window.runAnalysis === 'function') {
+        e.preventDefault();
+        window.runAnalysis();
+      }
+      return;
+    }
     // `?` (Shift+/) opens cheat-sheet — only when not typing into a field
     // (otherwise pasting/editing JSON containing '?' would pop the modal).
     if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {

@@ -4076,3 +4076,87 @@ button.cross-path:focus-visible,
   background: var(--bg-2);
   color: var(--text);
 }
+
+/* ── Hover tooltips ([data-tip]) ─────────────────────────────────
+   The mockup's manual: «наведи на іконки тулбара редактора, селекти
+   версії/діалекту, Analyze — тултіп з'являється через ~0.3с». CSS-only
+   primitive mirroring the prototype: inverse bubble under the control,
+   fade+drop-in, and the show-delay carried by transition-delay (320ms)
+   so leaving the control hides the tip instantly. Longer texts wrap —
+   the templates' former title attributes hold full sentences, and a
+   tooltip that truncates a disclosure is worse than no tooltip. */
+[data-tip] {
+  position: relative;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 7px);
+  transform: translate(-50%, 3px);
+  width: max-content;
+  max-width: 300px;
+  white-space: normal;
+  text-align: left;
+  background: var(--text);
+  color: var(--surface);
+  font-family: var(--font-body);
+  /* 11px matches the quality-pill tooltip — the one size the type-scale
+     budget admits for tooltip chrome (12px would be a new off-scale step). */
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 5px 9px;
+  border-radius: var(--r-sm);
+  box-shadow: 0 8px 20px rgba(10, 17, 31, 0.24);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1200;
+  transition:
+    opacity 110ms ease,
+    transform 110ms ease;
+}
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 320ms;
+}
+/* The editor toolbar sits ~240px from the workbench column's left clip
+   edge (.workbench-split, overflow:hidden) — measured, not assumed: the
+   300px bubble opened mid-sentence in the screenshot. 200px + chrome
+   keeps the end-aligned bubble inside the column at every pane width. */
+.input-card-actions [data-tip]::after {
+  max-width: 200px;
+}
+/* Controls near a right edge anchor the bubble to their own end so it
+   stays inside the pane (.input-card clips at overflow:hidden). */
+[data-tip][data-tip-align='end']::after {
+  left: auto;
+  right: 0;
+  transform: translate(0, 3px);
+}
+[data-tip][data-tip-align='end']:hover::after,
+[data-tip][data-tip-align='end']:focus-visible::after {
+  transform: translate(0, 0);
+}
+/* The format bar ellipsis-clips its pill row (overflow:hidden), which
+   would also clip a tooltip hanging below the dialect/version selects.
+   Only while a tipped control is hovered, let the bar overflow —
+   clipping is paint-only, so nothing reflows. The input cards clip the
+   same way (rounded-corner hygiene), and their action cluster sits so
+   close to the card's left edge that even an end-aligned bubble ran
+   past it — the pre-fix screenshot shows the save tip opening
+   mid-sentence. Same escape, same paint-only reasoning. */
+.format-bar:has([data-tip]:hover),
+.input-card:has([data-tip]:hover) {
+  overflow: visible;
+}
+/* <select> is a replaced element — ::after never renders on it, so the
+   dialect/version selects carry their tip on this layout-neutral wrapper. */
+.format-pill-tipwrap {
+  display: inline-flex;
+  min-width: 0;
+}

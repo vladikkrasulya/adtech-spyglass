@@ -27,6 +27,16 @@
         en: 'Show this help',
         ru: 'Показать эту справку',
       },
+      'shortcuts.row.palette': {
+        uk: 'Палітра команд — розділ, помилка чи док',
+        en: 'Command palette — section, finding or doc',
+        ru: 'Палитра команд — раздел, ошибка или док',
+      },
+      'shortcuts.row.sections': {
+        uk: 'Перейти до розділу (Інспектор … Інсайти)',
+        en: 'Go to section (Inspector … Insights)',
+        ru: 'Перейти к разделу (Инспектор … Аналитика)',
+      },
       'shortcuts.row.run': {
         uk: 'Запустити аналіз',
         en: 'Run analysis',
@@ -42,10 +52,12 @@
         en: 'Mirror request ↔ response',
         ru: 'Зеркало запрос ↔ ответ',
       },
+      // v1.12.0 taught Esc to close the ▾ popover menus as well (POPOVER_MENUS
+      // handler in ortbtools.app.js) — the row must describe both.
       'shortcuts.row.close': {
-        uk: 'Закрити модалку',
-        en: 'Close modal',
-        ru: 'Закрыть модалку',
+        uk: 'Закрити меню й модалки',
+        en: 'Close menus and modals',
+        ru: 'Закрыть меню и модалки',
       },
     },
   };

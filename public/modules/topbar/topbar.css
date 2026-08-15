@@ -62,6 +62,9 @@
 .kt-topbar__search {
   flex: 1;
   max-width: 480px;
+  /* Anchor for the ⌘K chip (search.css re-declares this for the dropdown,
+     but the chip renders before that stylesheet lazy-loads). */
+  position: relative;
 }
 .kt-topbar__search-input {
   width: 100%;
@@ -69,13 +72,35 @@
   background: var(--bg-2, #ecf1f6);
   border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   border-radius: var(--r-sm, 10px);
-  padding: 0 12px;
+  padding: 0 58px 0 12px; /* right gutter reserves room for the ⌘K chip */
   font: inherit;
   color: var(--text-muted, #46556b);
   cursor: text;
   transition:
     border-color 150ms,
     box-shadow 150ms;
+}
+
+/* ⌘K / Ctrl+K affordance riding the right edge of the search field —
+   the mockup's palette hint. Purely visual (aria-hidden, pointer-events
+   none); disappears once the field is focused and its job is done. */
+.kt-topbar__search-kbd {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 5px;
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
+  border-radius: 4px;
+  color: var(--text-dim, #5c6b82);
+  background: var(--surface, #ffffff);
+  pointer-events: none;
+}
+.kt-topbar__search:focus-within .kt-topbar__search-kbd {
+  display: none;
 }
 .kt-topbar__search-input:disabled {
   opacity: 0.6;
@@ -213,6 +238,11 @@
   .kt-topbar.is-search-open .kt-topbar__search-input {
     width: 100%;
     box-shadow: var(--shadow-md, 0 6px 18px rgba(24, 24, 27, 0.14));
+    padding-right: 12px; /* no chip on phones — reclaim its gutter */
+  }
+  /* A hardware-keyboard hint is noise on a phone overlay. */
+  .kt-topbar__search-kbd {
+    display: none;
   }
 }
 

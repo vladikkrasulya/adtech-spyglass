@@ -111,6 +111,13 @@ export const SECTIONS = [
   },
 ];
 
+// ⌘1…⌘5 / Ctrl+1…5 quick section jumps. The mockup's manual fixes the order:
+// «⌘1…⌘5 (Inspector, Streams, Samples, Dialects, Insights)» — ids here, routes
+// and labels resolved through SECTIONS above. Shared by the shortcuts module
+// (key bindings + cheat-sheet) and the search palette ("Go to" group), so the
+// keys, the palette rows and the help sheet can never disagree on the mapping.
+export const QUICK_JUMPS = ['inspector', 'live', 'library', 'dialects', 'insights'];
+
 const GROUP_LABELS = {
   workbench: { en: 'WORKBENCH', uk: 'РОБОТА', ru: 'РАБОТА' },
   configure: { en: 'CONFIGURE', uk: 'НАЛАШТУВАННЯ', ru: 'НАСТРОЙКИ' },

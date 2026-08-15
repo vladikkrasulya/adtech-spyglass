@@ -15,10 +15,22 @@
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('node:url');
 const { test } = require('node:test');
 const { JSDOM } = require('jsdom');
 
 const SEARCH_MODULE = path.join(__dirname, '../public/modules/search/index.js');
+const NAV_MODULE_URL = pathToFileURL(path.join(__dirname, '../public/modules/nav/index.js')).href;
+
+/** The module statically imports the nav catalog by root-absolute specifier
+ *  (the palette's "Go to" group and ⌘1…⌘5 hints are single-sourced there);
+ *  data:-URL imports can't resolve those, so rewrite it to a file: URL —
+ *  nav/index.js is dependency-free, so Node imports it directly. */
+function searchModuleSource() {
+  return fs
+    .readFileSync(SEARCH_MODULE, 'utf8')
+    .replace("'/modules/nav/index.js'", `'${NAV_MODULE_URL}'`);
+}
 
 async function waitFor(predicate, label) {
   const deadline = Date.now() + 1000;
@@ -91,13 +103,30 @@ test('global search indexes an escaped Blog result and navigates through the SPA
 
   let cleanup = () => {};
   try {
-    const source = fs.readFileSync(SEARCH_MODULE, 'utf8');
+    const source = searchModuleSource();
     const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}#blog-search-contract`;
     const { initSearch } = await import(moduleUrl);
     const input = window.document.querySelector('#search');
     cleanup = initSearch(input, window.document.body);
 
     input.dispatchEvent(new window.Event('focus'));
+    // Palette resting state: an empty query opens on the five quick-jump
+    // sections (the mockup's "Go to" group), localized to the route lang.
+    const sectionRows = window.document.querySelectorAll(
+      '[data-group-type="section"] .sg-search-row',
+    );
+    assert.equal(sectionRows.length, 5, 'empty query shows the five quick-jump sections');
+    assert.equal(sectionRows[0].dataset.searchUrl, '/uk/inspector');
+    assert.equal(
+      sectionRows[0].querySelector('.sg-search-row__title').textContent,
+      'Інспектор',
+      'section rows are localized from the nav catalog',
+    );
+    assert.match(
+      sectionRows[0].querySelector('.sg-search-row__kbd').textContent,
+      /^(⌘|Ctrl\+)1$/,
+      'quick-jump rows carry their shortcut hint',
+    );
     await waitFor(() => fetchCalls.length === 4, 'the four search-index requests');
     assert.deepEqual(fetchCalls, [
       '/api/v1/sample/list',
@@ -108,12 +137,14 @@ test('global search indexes an escaped Blog result and navigates through the SPA
 
     input.value = 'boundary';
     input.dispatchEvent(new window.Event('input', { bubbles: true }));
+    // Scoped to the blog group: until the debounced render lands, the
+    // dropdown still shows the resting-state section rows.
     await waitFor(
-      () => window.document.querySelector('.sg-search-row') !== null,
+      () => window.document.querySelector('[data-group-type="blog"] .sg-search-row') !== null,
       'the debounced Blog result',
     );
 
-    const row = window.document.querySelector('.sg-search-row');
+    const row = window.document.querySelector('[data-group-type="blog"] .sg-search-row');
     assert.ok(row, 'Blog result is rendered');
     assert.equal(row.dataset.searchUrl, '/uk/blog/en/safe-blog-result');
     assert.equal(
@@ -181,7 +212,7 @@ async function withSearch({ lang, url, findings, instance }, body) {
 
   let cleanup = () => {};
   try {
-    const source = fs.readFileSync(SEARCH_MODULE, 'utf8');
+    const source = searchModuleSource();
     // Fresh module instance per test — the search index is a module-level cache.
     const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}#${instance}`;
     const { initSearch } = await import(moduleUrl);
@@ -213,12 +244,14 @@ test('F-06: a finding result links to the row id /docs/findings actually renders
       input.dispatchEvent(new window.Event('focus'));
       input.value = 'vast';
       input.dispatchEvent(new window.Event('input', { bubbles: true }));
+      // Scoped to the finding group — the pre-debounce dropdown holds the
+      // palette's resting-state section rows.
       await waitFor(
-        () => window.document.querySelector('.sg-search-row') !== null,
+        () => window.document.querySelector('[data-group-type="finding"] .sg-search-row') !== null,
         'the finding result row',
       );
 
-      const row = window.document.querySelector('.sg-search-row');
+      const row = window.document.querySelector('[data-group-type="finding"] .sg-search-row');
       // Pre-fix this was '/docs/findings#vast.version_missing' — docs renders
       // <tr id="finding-vast.version_missing">, so nothing ever matched.
       assert.equal(row.dataset.searchUrl, '/docs/findings#finding-vast.version_missing');

@@ -204,6 +204,11 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.sg-badge--section {
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  color: var(--accent, #0284c7);
+  font-size: 11px; /* the → glyph; 11px is the nearest on-scale step */
+}
 .sg-badge--sample {
   background: rgba(234, 179, 8, 0.18);
   color: #92650a;
@@ -276,6 +281,19 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ── Shortcut hint on quick-jump rows (⌘1…⌘5 / Ctrl+1…5) ── */
+.sg-search-row__kbd {
+  flex-shrink: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-dim, #5c6b82);
+  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
+  border-radius: 4px;
+  padding: 3px 5px;
+  background: var(--bg-2, #ecf1f6);
 }
 
 /* ── Highlight mark ─────────────────────────────────────── */

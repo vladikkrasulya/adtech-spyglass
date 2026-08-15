@@ -44,12 +44,22 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+// The ⌘K chip must read as the visitor's own keyboard, not the designer's.
+const IS_MAC = /Mac|iP(hone|ad|od)/.test(
+  (typeof navigator === 'undefined'
+    ? ''
+    : (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform) || '',
+);
+
 function renderTopbar(authUser) {
   const l = lang();
+  // Mockup manual wording («Jump to section, finding or doc») — kept in sync
+  // with PLACEHOLDERS in modules/search/index.js, which repaints the same
+  // string once the search widget finishes loading.
   const searchPlaceholder = pick({
-    en: '🔎 search the site',
-    uk: '🔎 шукати по сайту',
-    ru: '🔎 искать по сайту',
+    en: '🔎 jump to section, finding or doc',
+    uk: '🔎 перейти до розділу, помилки чи доки',
+    ru: '🔎 перейти к разделу, ошибке или докам',
   });
   const navToggleLabel = pick({
     en: 'Toggle navigation',
@@ -113,6 +123,7 @@ function renderTopbar(authUser) {
         spellcheck="false"
         aria-label="${escapeHtml(searchPlaceholder)}"
       />
+      <kbd class="kt-topbar__search-kbd" aria-hidden="true">${IS_MAC ? '⌘K' : 'Ctrl+K'}</kbd>
     </div>
     <div class="kt-topbar__actions">
       <button type="button" class="kt-topbar__search-btn" data-action="toggle-search" aria-label="${escapeHtml(searchLabel)}" title="${escapeHtml(searchLabel)}">🔎</button>
