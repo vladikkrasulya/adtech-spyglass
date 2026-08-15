@@ -1707,7 +1707,12 @@ export async function mountInspector(root, ctx) {
     let bidChip = '';
     const mPriceEl = document.getElementById('mPrice');
     const mPriceTxt = mPriceEl ? mPriceEl.textContent.trim() : '';
-    if (mPriceTxt && !/^\$?0([.,]0+)?$/.test(mPriceTxt)) {
+    // A winning bid exists when the figure has a nonzero digit — not when
+    // the string fails to look like "$0.00". The first guard assumed the
+    // currency sign leads, which is true in English and false in Ukrainian
+    // and Russian ("0,00 $"), so both Slavic locales grew a chip announcing
+    // a winning bid of zero on every request-only analysis.
+    if (/[1-9]/.test(mPriceTxt)) {
       bidChip =
         '<div class="analysis-strip-block">' +
         stripLabel('bid') +
