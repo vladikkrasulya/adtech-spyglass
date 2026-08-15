@@ -45,14 +45,24 @@ body {
   margin: 0;
 }
 
+/* ── Page grid ────────────────────────────────────────────────────────────
+   v2 removes two of the six bands. The old stack was
+
+     banner / header / inputs / inputs-resize / main / footer
+
+   and the first thing a finding could occupy was ~280px down the page,
+   because the inputs owned a full-width horizontal band of their own and
+   the header carried a brand that the rail already shows.
+
+   Now the payload and the results are two full-height columns inside one
+   'main' area, so the editor gets the height it always needed (25 visible
+   lines instead of 8) and the verdict starts at the top of its column. */
 .workbench {
   display: grid;
-  grid-template-rows: auto auto auto auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   grid-template-areas:
     'banner'
     'header'
-    'inputs'
-    'inputs-resize'
     'main'
     'footer';
   height: 100vh;
@@ -60,40 +70,169 @@ body {
 #verifyBanner {
   grid-area: banner;
 }
-.app-header {
+.workbar {
   grid-area: header;
 }
-.input-section {
-  grid-area: inputs;
-}
-.main-grid {
+.workbench-split {
   grid-area: main;
 }
 .app-footer {
   grid-area: footer;
 }
 
+/* ── The split ────────────────────────────────────────────────────────────
+   Payload on the left at a fixed, readable measure; results take the rest.
+   The left sidebar is still in the DOM (history, library, the metric card)
+   but is now an overlay drawer rather than a permanent 320px column — it is
+   reference material, consulted occasionally, and it was charging rent. */
+.workbench-split {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+.workbench-payload {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 0 0 clamp(380px, 38%, 620px);
+  border-right: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.center-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Payload side ─────────────────────────────────────────────────────── */
+.payload-switch {
+  display: flex;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.payload-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.payload-switch-btn:hover {
+  color: var(--text);
+}
+.payload-switch-btn.is-active {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  /* Sit on top of the container's bottom rule so the active tab and its
+     panel read as one surface rather than two stacked boxes. */
+  margin-bottom: -1px;
+  padding-bottom: 7px;
+}
+/* Marks the side you are NOT looking at as already filled — the one thing
+   the two-pane layout told you for free and a switch otherwise hides. */
+.payload-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+/* Scoped to the payload column so it outranks the two-column grid further
+   down this file — that grid is what put Request and Response side by side,
+   and source order alone would keep it winning. */
+.workbench-payload .input-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-3);
+  gap: 0;
+  background: var(--bg-2);
+}
+/* One editor at a time. Both cards stay in the DOM — every handler, every
+   test and the mirror/diff features address #bidReq and #bidRes directly.
+   Scoped to the direct child so it outranks the card's own `display: flex`
+   further down this file, which would otherwise win on source order. */
+.workbench-payload .input-card {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.workbench-payload .input-card.is-shown {
+  display: flex;
+  flex-direction: column;
+}
+.workbench-payload .input-card .json-input {
+  flex: 1 1 auto;
+  min-height: 0;
+  resize: none;
+  /* A payload is code. Wrapping it re-flows every line the moment the column
+     changes width, which is exactly when you are trying to hold a position
+     in it. Scroll instead. */
+  white-space: pre;
+  overflow: auto;
+}
+
+/* The JSON location navigator belongs to the payload it navigates. */
+.workbench-payload .src-nav-bar {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border);
+}
+
 /* ── Responsive breakpoints ────────────────────────────────────────
          ortbtools was desktop-only until 2026-05-02. Mobile is rare for an
          oRTB inspector but useful for "peek at a copied JSON on the train".
-         Two breakpoints:
-           ≤1024px → main 3-column grid stacks vertically (left sidebar
-                     becomes top, right sidebar becomes bottom)
-           ≤720px  → bid-request/response stack vertically too, page scrolls
-                     instead of being height: 100vh.
+         v2 replaced the three-column main grid with a two-column split, so
+         the old ≤1024px rule — which stacked a left sidebar that is now a
+         drawer and a right sidebar that is now a tab — described nothing
+         any more. The split stacks in its place.
+
+         The threshold is 1100px, and it is set by the analysis strip rather
+         than by the columns: six labelled cells need roughly 520px before
+         values start being painted over their own edges. Below 1100px the
+         results column falls under that floor, so stacking is what gives
+         the strip its width back.
+
+         ≤720px still releases the desktop scroll-lock so phones scroll the
+         page instead of clipping it.
       */
-@media (max-width: 1024px) {
-  .main-grid {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: auto auto auto;
+@media (max-width: 1100px) {
+  .workbench-split {
+    flex-direction: column;
+    overflow-y: auto;
   }
-  .sidebar-left {
+  .workbench-payload {
+    flex: 0 0 auto;
+    /* Enough for the payload to stay legible without pushing the verdict —
+       the thing the reader came for — below the fold. */
+    max-height: 42vh;
     border-right: 0;
     border-bottom: 1px solid var(--border);
   }
-  .sidebar-right {
-    border-left: 0;
-    border-top: 1px solid var(--border);
+  .center-panel {
+    flex: 1 1 auto;
+    min-height: 60vh;
+  }
+  /* The drawer stays an overlay of its own width rather than going
+     full-bleed: it holds history, and history is for comparing against
+     what is on screen. */
+  .sidebar-left {
+    width: min(330px, 88vw);
   }
 }
 @media (max-width: 720px) {
@@ -292,24 +431,104 @@ body {
   }
 }
 
-/* ── Header ── */
-.app-header {
+/* ── Work bar ─────────────────────────────────────────────────────────────
+   One row where there used to be two: the app header (brand + nine buttons)
+   and the format bar (payload state + three more buttons). The brand is gone
+   because the rail already carries it, and nine actions became three.
+
+   Left says what the payload IS. Right says what you can DO with it, in one
+   order of importance: Analyze is the only filled control on the screen,
+   `example` loads one, and everything else lives behind Tools. The point is
+   not fewer features — every one of them is still one click away — it is
+   that secondary actions stopped competing with the primary one. */
+.workbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-2) var(--space-4);
   gap: var(--space-4);
+  min-height: 48px;
 }
-.app-header .kt-brand {
-  font-size: var(--fs-md);
+.workbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
 }
 .app-header-actions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* Tools — the drawer for everything that is not the main action. Mirrors
+   .kt-example-menu, which is the same pattern one control to the left. */
+.kt-tools-menu {
+  position: relative;
+  display: inline-flex;
+}
+.kt-tools-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.kt-tools-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.tools-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 230px;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 30px rgba(13, 23, 38, 0.18);
+}
+.tools-menu-list > button,
+.tools-menu-list > a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-3);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.tools-menu-list > button:hover,
+.tools-menu-list > a:hover {
+  background: var(--bg-2);
+}
+.tools-menu-list .sim-price-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-mono);
+  color: var(--text-muted);
+}
+.tools-menu-list .sim-price-wrap input {
+  width: 82px;
+  padding: 3px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
 }
 /* The lang + theme toggles default to fixed-position floating circles
          (design-system.css). In ortbtools we render them inline in the header
@@ -966,6 +1185,40 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
 .sb-toggle.right {
   margin-left: auto;
 }
+/* The left sidebar is reference material — the metric card, the saved
+   library, the history list. It is consulted occasionally and it was
+   charging 320px of permanent rent for that. In v2 it is an overlay drawer
+   opened from the same #toggleSidebarLeft control that already collapsed
+   it; closed is the default, and nothing about its contents changed.
+
+   Overlay rather than a collapsing column on purpose: a column that pushes
+   the payload and results sideways every time you glance at history is the
+   layout shifting under the thing you were reading. */
+.sidebar-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 40;
+  width: min(330px, 82vw);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  box-shadow: 8px 0 28px rgba(13, 23, 38, 0.16);
+  transform: translateX(-102%);
+  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Reuses the existing body.sb-left-hidden flag rather than inventing a
+   second one, so the same #toggleSidebarLeft button, the same localStorage
+   persistence and the same resetLayout() escape hatch all keep working.
+   Only the default flips: setupSidebarToggles() now starts the drawer
+   closed when the user has expressed no preference. */
+body:not(.sb-left-hidden) .sidebar-left {
+  transform: translateX(0);
+}
+.workbench-split {
+  position: relative;
+}
+
 .sidebar-left,
 .sidebar-right {
   padding: var(--space-4);
@@ -1810,14 +2063,15 @@ body.sb-left-hidden.sb-right-hidden .main-grid {
   display: none;
 }
 
+/* The format bar is no longer a band of its own — it is the left half of the
+   work bar, stating what the payload is next to the controls that act on it.
+   No padding, border or background: the work bar owns those now. */
 .format-bar {
   display: flex;
   gap: var(--space-2);
   align-items: center;
-  flex-wrap: wrap;
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-2);
+  min-width: 0;
+  overflow: hidden;
 }
 .format-bar[hidden] {
   display: none;

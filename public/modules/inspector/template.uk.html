@@ -19,19 +19,34 @@
   <span>Підтверди свою email-адресу — це покращує захист акаунту.</span>
   <button class="btn btn-ghost btn-sm" data-action="verify-email">надіслати лист</button>
 </div>
-<header class="app-header">
-  <div class="kt-brand">
-    <span class="kt-brand-spark">◆</span>
-    <span>ortbtools · openrtb inspector</span>
-  </div>
-  <div class="app-header-actions">
-    <div
-      class="sim-price-wrap"
-      title="Симульована клірингова ціна для ${AUCTION_PRICE}. Введіть її вручну: bid.price та bidfloor не вважаються кліринговою ціною. Якщо поле порожнє, макрос лишається невирішеним."
+<header class="workbar">
+  <div class="format-bar" id="formatBar" hidden>
+    <span class="format-pill format-pill-type" id="formatPillType"></span>
+    <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
+    <select
+      class="format-pill format-pill-select"
+      id="dialectSelector"
+      data-action="change-dialect"
+      title="Перемикач діалекту валідації — змінює правила, які engine застосовує до payload-у"
     >
-      <label for="simPrice">ціна аукціону</label>
-      <input id="simPrice" type="text" placeholder="0.00" />
-    </div>
+      <option value="iab">Standard IAB (oRTB 2.5)</option>
+      <option value="ext-rtb">Vendor · RTB</option>
+      <option value="inpage-push">Vendor · In-Page Push</option>
+    </select>
+    <select
+      class="format-pill format-pill-select"
+      id="versionPinSelector"
+      data-action="change-version-pin"
+      title="Очікувана версія oRTB. Якщо детектор побачить іншу — engine видасть warning з полями-винуватцями. Залиш «авто», щоб довіритися детектору."
+    >
+      <option value="">авто</option>
+      <option value="2.5">oRTB 2.5</option>
+      <option value="2.6">oRTB 2.6</option>
+      <option value="3.0">oRTB 3.0</option>
+    </select>
+    <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
+  </div>
+  <div class="workbar-actions">
     <details class="kt-example-menu">
       <summary
         class="btn btn-ghost btn-sm"
@@ -113,40 +128,82 @@
         </button>
       </div>
     </details>
-    <a
-      href="/uk/about"
-      target="_blank"
-      rel="noopener"
-      class="btn btn-ghost btn-sm"
-      title="Як користуватись · що ortbtools вміє і не вміє"
-      style="text-decoration: none"
-    >
-      доки ↗
-    </a>
-    <button
-      data-action="live"
-      class="btn btn-ghost btn-sm"
-      id="liveBtn"
-      title="Відкрити живий потік синтетичних RTB-зразків — побачити як шиплеться трафік у реальному часі"
-    >
-      📡 live
-    </button>
-    <button
-      data-action="sim-bids"
-      class="btn btn-ghost btn-sm"
-      id="simBidsBtn"
-      title="Симуляція 3 DSP-стратегій за детермінованими серверними правилами — сирий BidRequest тимчасово обробляє ortbtools; жодна зовнішня модель його не отримує"
-    >
-      🤖 simulate
-    </button>
-    <button
-      data-action="mirror"
-      class="btn btn-ghost btn-sm"
-      id="mirrorBtn"
-      title="Згенерувати еталонну пару до вставленого"
-    >
-      дзеркало ↔
-    </button>
+
+    <details class="kt-tools-menu">
+      <summary
+        class="btn btn-ghost btn-sm"
+        title="Усе, що не є головною дією: стрім, симулятор DSP, дзеркало, вбудовування, посилання та вивантаження."
+      >
+        інструменти ▾
+      </summary>
+      <div class="tools-menu-list" role="menu">
+        <a
+          href="/uk/about"
+          target="_blank"
+          rel="noopener"
+          role="menuitem"
+          title="Як користуватись · що ortbtools вміє і не вміє"
+        >
+          доки ↗
+        </a>
+        <button
+          data-action="live"
+          role="menuitem"
+          id="liveBtn"
+          title="Відкрити живий потік синтетичних RTB-зразків — побачити як шиплеться трафік у реальному часі"
+        >
+          📡 live
+        </button>
+        <button
+          data-action="sim-bids"
+          role="menuitem"
+          id="simBidsBtn"
+          title="Симуляція 3 DSP-стратегій за детермінованими серверними правилами — сирий BidRequest тимчасово обробляє ortbtools; жодна зовнішня модель його не отримує"
+        >
+          🤖 simulate
+        </button>
+        <button
+          data-action="mirror"
+          role="menuitem"
+          id="mirrorBtn"
+          title="Згенерувати еталонну пару до вставленого"
+        >
+          дзеркало ↔
+        </button>
+        <button
+          role="menuitem"
+          id="embedBtn"
+          data-action="open-embed"
+          title="Отримати iframe-сніпет щоб вставити цей вид у блог, Notion або документ"
+        >
+          embed
+        </button>
+        <button
+          role="menuitem"
+          id="shareLinkBtn"
+          data-action="share-link"
+          title="Скопіювати permalink — фрагмент не надсилається з першим запитом; відкриття передає payload у /api/analyze"
+        >
+          посилання
+        </button>
+        <button
+          role="menuitem"
+          id="downloadBundleBtn"
+          data-action="download-bundle"
+          title="Завантажити JSON-бандл (запит + відповідь + знахідки) — щоб переслати або прикріпити до тікета"
+        >
+          завантажити
+        </button>
+        <div class="menu-divider"></div>
+        <div
+          class="sim-price-wrap"
+          title="Симульована клірингова ціна для ${AUCTION_PRICE}. Введіть її вручну: bid.price та bidfloor не вважаються кліринговою ціною. Якщо поле порожнє, макрос лишається невирішеним."
+        >
+          <label for="simPrice">ціна аукціону</label>
+          <input id="simPrice" type="text" placeholder="0.00" />
+        </div>
+      </div>
+    </details>
     <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">
       аналізувати
     </button>
@@ -203,149 +260,14 @@
 </header>
 
 <!-- ── Inputs ── -->
-<section class="input-section">
-  <div class="input-card" id="cardReq">
-    <div class="input-card-header">
-      <span class="input-card-title">запит</span>
-      <div class="input-card-actions">
-        <span class="char-count" id="reqCount">0</span>
-        <span class="json-badge empty" id="reqBadge">порожньо</span>
-        <button
-          data-action="save-sample"
-          class="btn-icon"
-          title="Зберегти поточний запит/відповідь у кабінет — шифрується твоїм паролем. Гостей попросимо увійти спершу."
-        >
-          зберегти
-        </button>
-        <button
-          data-action="clear-input"
-          data-target="bidReq"
-          class="btn-icon"
-          title="Очистити поле"
-        >
-          очистити
-        </button>
-        <button
-          data-action="format-json"
-          data-target="bidReq"
-          class="btn-icon"
-          title="Відформатувати JSON"
-        >
-          формат
-        </button>
-        <button
-          data-action="copy-text"
-          data-target="bidReq"
-          class="btn-icon"
-          title="Скопіювати в буфер"
-        >
-          копія
-        </button>
-        <button
-          data-action="toggle-card"
-          data-target="cardReq"
-          class="btn-collapse-toggle"
-          title="Згорнути цю панель — звільнити місце, коли працюєш тільки з другою стороною. Клік ще раз — розгорне назад."
-          aria-label="Згорнути / розгорнути панель"
-        >
-          <span class="caret">▾</span>
-        </button>
-      </div>
-    </div>
-    <textarea
-      id="bidReq"
-      class="json-input"
-      spellcheck="false"
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="off"
-      placeholder="1. встав сюди BidRequest JSON&#10;2. опціонально: встав BidResponse праворуч&#10;3. натисни «аналізувати» або Ctrl+Enter&#10;&#10;немає JSON? 🎲 приклад ▾ · 📡 live · дзеркало ↔&#10;? для всіх хоткеїв"
-    ></textarea>
-    <div class="input-card-summary" data-card-summary="cardReq">
-      <span class="input-card-summary__label">id</span>
-      <span class="input-card-summary__id" data-summary-id>—</span>
-    </div>
-  </div>
-  <div class="input-card" id="cardRes">
-    <div class="input-card-header">
-      <span class="input-card-title">відповідь</span>
-      <div class="input-card-actions">
-        <span class="char-count" id="resCount">0</span>
-        <span class="json-badge empty" id="resBadge">порожньо</span>
-        <button
-          data-action="clear-input"
-          data-target="bidRes"
-          class="btn-icon"
-          title="Очистити поле"
-        >
-          очистити
-        </button>
-        <button
-          data-action="format-json"
-          data-target="bidRes"
-          class="btn-icon"
-          title="Відформатувати JSON"
-        >
-          формат
-        </button>
-        <button
-          data-action="copy-text"
-          data-target="bidRes"
-          class="btn-icon"
-          title="Скопіювати в буфер"
-        >
-          копія
-        </button>
-        <button
-          data-action="toggle-card"
-          data-target="cardRes"
-          class="btn-collapse-toggle"
-          title="Згорнути цю панель — звільнити місце, коли працюєш тільки з другою стороною. Клік ще раз — розгорне назад."
-          aria-label="Згорнути / розгорнути панель"
-        >
-          <span class="caret">▾</span>
-        </button>
-      </div>
-    </div>
-    <textarea
-      id="bidRes"
-      class="json-input"
-      spellcheck="false"
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="off"
-      placeholder="опціонально: встав BidResponse JSON сюди&#10;&#10;якщо обидва поля заповнені — дзеркало ↔ покаже diff проти канонічної"
-    ></textarea>
-    <div class="input-card-summary" data-card-summary="cardRes">
-      <span class="input-card-summary__label">id</span>
-      <span class="input-card-summary__id" data-summary-id>—</span>
-    </div>
-  </div>
-</section>
 
 <!-- Drag-resize handle for the input section. -->
-<div
-  class="input-section-resize"
-  role="separator"
-  aria-orientation="horizontal"
-  aria-label="Змінити висоту панелей запит/відповідь"
-  tabindex="0"
-  data-action="input-section-resize"
-  title="Перетягни щоб змінити висоту · подвійний клік щоб скинути"
-></div>
 
 <!-- Stage-1: prev/next finding→source navigation controls (populated by
      /modules/inspector/source-nav.js; hidden until a payload is analyzed). -->
-<div
-  id="srcNavBar"
-  class="src-nav-bar"
-  role="toolbar"
-  aria-label="Finding source navigation"
-  hidden
-></div>
 
 <!-- ── Main grid ── -->
-<main class="main-grid">
+<main class="workbench-split">
   <!-- Left sidebar -->
   <aside class="sidebar-left">
     <div class="section-title" data-section="summary-title">підсумок</div>
@@ -416,6 +338,160 @@
   </aside>
 
   <!-- Center panel -->
+  <section class="workbench-payload">
+    <!-- Request and Response are one editor with a switch, not two
+         half-height panes. Both textareas stay in the DOM under their
+         original ids so every handler and test keeps addressing them;
+         only one is shown, and the dot marks the other side as filled. -->
+    <div class="payload-switch" role="tablist" aria-label="payload side">
+      <button
+        type="button"
+        class="payload-switch-btn is-active"
+        data-payload="req"
+        role="tab"
+        aria-selected="true"
+        aria-controls="cardReq"
+      >
+        запит<span class="payload-dot" id="payloadDotReq" hidden></span>
+      </button>
+      <button
+        type="button"
+        class="payload-switch-btn"
+        data-payload="res"
+        role="tab"
+        aria-selected="false"
+        aria-controls="cardRes"
+      >
+        відповідь<span class="payload-dot" id="payloadDotRes" hidden></span>
+      </button>
+    </div>
+    <section class="input-section">
+      <div class="input-card" id="cardReq">
+        <div class="input-card-header">
+          <span class="input-card-title">запит</span>
+          <div class="input-card-actions">
+            <span class="char-count" id="reqCount">0</span>
+            <span class="json-badge empty" id="reqBadge">порожньо</span>
+            <button
+              data-action="save-sample"
+              class="btn-icon"
+              title="Зберегти поточний запит/відповідь у кабінет — шифрується твоїм паролем. Гостей попросимо увійти спершу."
+            >
+              зберегти
+            </button>
+            <button
+              data-action="clear-input"
+              data-target="bidReq"
+              class="btn-icon"
+              title="Очистити поле"
+            >
+              очистити
+            </button>
+            <button
+              data-action="format-json"
+              data-target="bidReq"
+              class="btn-icon"
+              title="Відформатувати JSON"
+            >
+              формат
+            </button>
+            <button
+              data-action="copy-text"
+              data-target="bidReq"
+              class="btn-icon"
+              title="Скопіювати в буфер"
+            >
+              копія
+            </button>
+            <button
+              data-action="toggle-card"
+              data-target="cardReq"
+              class="btn-collapse-toggle"
+              title="Згорнути цю панель — звільнити місце, коли працюєш тільки з другою стороною. Клік ще раз — розгорне назад."
+              aria-label="Згорнути / розгорнути панель"
+            >
+              <span class="caret">▾</span>
+            </button>
+          </div>
+        </div>
+        <textarea
+          id="bidReq"
+          class="json-input"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          placeholder="1. встав сюди BidRequest JSON&#10;2. опціонально: встав BidResponse праворуч&#10;3. натисни «аналізувати» або Ctrl+Enter&#10;&#10;немає JSON? 🎲 приклад ▾ · 📡 live · дзеркало ↔&#10;? для всіх хоткеїв"
+        ></textarea>
+        <div class="input-card-summary" data-card-summary="cardReq">
+          <span class="input-card-summary__label">id</span>
+          <span class="input-card-summary__id" data-summary-id>—</span>
+        </div>
+      </div>
+      <div class="input-card" id="cardRes">
+        <div class="input-card-header">
+          <span class="input-card-title">відповідь</span>
+          <div class="input-card-actions">
+            <span class="char-count" id="resCount">0</span>
+            <span class="json-badge empty" id="resBadge">порожньо</span>
+            <button
+              data-action="clear-input"
+              data-target="bidRes"
+              class="btn-icon"
+              title="Очистити поле"
+            >
+              очистити
+            </button>
+            <button
+              data-action="format-json"
+              data-target="bidRes"
+              class="btn-icon"
+              title="Відформатувати JSON"
+            >
+              формат
+            </button>
+            <button
+              data-action="copy-text"
+              data-target="bidRes"
+              class="btn-icon"
+              title="Скопіювати в буфер"
+            >
+              копія
+            </button>
+            <button
+              data-action="toggle-card"
+              data-target="cardRes"
+              class="btn-collapse-toggle"
+              title="Згорнути цю панель — звільнити місце, коли працюєш тільки з другою стороною. Клік ще раз — розгорне назад."
+              aria-label="Згорнути / розгорнути панель"
+            >
+              <span class="caret">▾</span>
+            </button>
+          </div>
+        </div>
+        <textarea
+          id="bidRes"
+          class="json-input"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          placeholder="опціонально: встав BidResponse JSON сюди&#10;&#10;якщо обидва поля заповнені — дзеркало ↔ покаже diff проти канонічної"
+        ></textarea>
+        <div class="input-card-summary" data-card-summary="cardRes">
+          <span class="input-card-summary__label">id</span>
+          <span class="input-card-summary__id" data-summary-id>—</span>
+        </div>
+      </div>
+    </section>
+    <div
+      id="srcNavBar"
+      class="src-nav-bar"
+      role="toolbar"
+      aria-label="Finding source navigation"
+      hidden
+    ></div>
+  </section>
   <div class="center-panel">
     <!-- Verdict — one sentence about what the findings mean for this
          payload, ahead of the counts. Filled by ortbtools.app.js; hidden
@@ -429,58 +505,7 @@
       </p>
       <p class="verdict-detail" id="verdictDetail"></p>
     </div>
-    <div class="format-bar" id="formatBar" hidden>
-      <span class="format-pill format-pill-type" id="formatPillType"></span>
-      <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
-      <select
-        class="format-pill format-pill-select"
-        id="dialectSelector"
-        data-action="change-dialect"
-        title="Перемикач діалекту валідації — змінює правила, які engine застосовує до payload-у"
-      >
-        <option value="iab">Standard IAB (oRTB 2.5)</option>
-        <option value="ext-rtb">Vendor · RTB</option>
-        <option value="inpage-push">Vendor · In-Page Push</option>
-      </select>
-      <select
-        class="format-pill format-pill-select"
-        id="versionPinSelector"
-        data-action="change-version-pin"
-        title="Очікувана версія oRTB. Якщо детектор побачить іншу — engine видасть warning з полями-винуватцями. Залиш «авто», щоб довіритися детектору."
-      >
-        <option value="">авто</option>
-        <option value="2.5">oRTB 2.5</option>
-        <option value="2.6">oRTB 2.6</option>
-        <option value="3.0">oRTB 3.0</option>
-      </select>
-      <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
-      <div class="format-bar-actions">
-        <button
-          class="btn btn-ghost btn-sm"
-          id="embedBtn"
-          data-action="open-embed"
-          title="Отримати iframe-сніпет щоб вставити цей вид у блог, Notion або документ"
-        >
-          embed
-        </button>
-        <button
-          class="btn btn-ghost btn-sm"
-          id="shareLinkBtn"
-          data-action="share-link"
-          title="Скопіювати permalink — фрагмент не надсилається з першим запитом; відкриття передає payload у /api/analyze"
-        >
-          посилання
-        </button>
-        <button
-          class="btn btn-ghost btn-sm"
-          id="downloadBundleBtn"
-          data-action="download-bundle"
-          title="Завантажити JSON-бандл (запит + відповідь + знахідки) — щоб переслати або прикріпити до тікета"
-        >
-          завантажити
-        </button>
-      </div>
-    </div>
+
     <div class="tab-bar">
       <button
         class="sb-toggle left"
@@ -540,17 +565,16 @@
       >
         міграція 2.6 <span class="tab-badge" id="migrateBadge" hidden></span>
       </button>
+      <button
+        class="tab-btn"
+        data-action="switch-tab"
+        data-target="tCreative"
+        title="Відрендерений креатив і статистика місць — раніше постійна права колонка"
+      >
+        креатив
+      </button>
       <button class="tab-btn" id="vendorRefTab" data-action="switch-tab" data-target="tRef" hidden>
         vendor ref
-      </button>
-      <button
-        class="sb-toggle right"
-        id="toggleSidebarRight"
-        data-action="toggle-sidebar"
-        data-side="right"
-        title="Перемкнути праву панель (ad preview / placement stats)"
-      >
-        ▶
       </button>
     </div>
     <div class="tab-content active" id="tInspector">
@@ -602,54 +626,57 @@
         </div>
       </div>
     </div>
+    <!-- Was a permanent 320px right column. It is one view of a result
+         among several, so it becomes one of the tabs instead of standing
+         beside them competing for the same attention. -->
+    <div class="tab-content" id="tCreative">
+      <div class="section-title">попередній перегляд</div>
+      <div class="preview-csp-notice">
+        <span class="preview-csp-icon">🔒</span>
+        <span
+          >Зовнішні ресурси заблоковані. Візуальний попередній перегляд і знахідки Behavior можуть
+          бути неповними.</span
+        >
+      </div>
+      <!-- Phase 8: safe-mode wrapper around the iframe — JS toggles
+         is-revealed on the wrapper after the user clicks the overlay
+         button. setAdPreview re-applies blur on every new creative. -->
+      <div class="preview-safe" id="creativePreviewSafe">
+        <div class="preview-container" id="creativePreview">
+          <div class="preview-placeholder">очікується adm — встав BidResponse</div>
+        </div>
+        <div class="preview-safe-overlay" data-action="reveal-creative" role="button" tabindex="0">
+          <button type="button" class="preview-safe-overlay__btn">Показати креатив</button>
+        </div>
+      </div>
+      <div class="section-title section-title--sub" style="margin-top: var(--space-3)">
+        Статистика слотів
+      </div>
+      <div class="quick-stats" id="quickStats">
+        <div class="stat-box">
+          <div class="stat-value">0</div>
+          <div class="stat-label">банери</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">0</div>
+          <div class="stat-label">відео</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">0</div>
+          <div class="stat-label">native</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">0</div>
+          <div class="stat-label">audio</div>
+        </div>
+      </div>
+    </div>
     <div class="tab-content" id="tRef">
       <!-- Filled at load time by renderReference() -->
     </div>
   </div>
 
   <!-- Right sidebar -->
-  <aside class="sidebar-right">
-    <div class="section-title">попередній перегляд</div>
-    <div class="preview-csp-notice">
-      <span class="preview-csp-icon">🔒</span>
-      <span
-        >Зовнішні ресурси заблоковані. Візуальний попередній перегляд і знахідки Behavior можуть
-        бути неповними.</span
-      >
-    </div>
-    <!-- Phase 8: safe-mode wrapper around the iframe — JS toggles
-         is-revealed on the wrapper after the user clicks the overlay
-         button. setAdPreview re-applies blur on every new creative. -->
-    <div class="preview-safe" id="creativePreviewSafe">
-      <div class="preview-container" id="creativePreview">
-        <div class="preview-placeholder">очікується adm — встав BidResponse</div>
-      </div>
-      <div class="preview-safe-overlay" data-action="reveal-creative" role="button" tabindex="0">
-        <button type="button" class="preview-safe-overlay__btn">Показати креатив</button>
-      </div>
-    </div>
-    <div class="section-title section-title--sub" style="margin-top: var(--space-3)">
-      Статистика слотів
-    </div>
-    <div class="quick-stats" id="quickStats">
-      <div class="stat-box">
-        <div class="stat-value">0</div>
-        <div class="stat-label">банери</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">0</div>
-        <div class="stat-label">відео</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">0</div>
-        <div class="stat-label">native</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">0</div>
-        <div class="stat-label">audio</div>
-      </div>
-    </div>
-  </aside>
 </main>
 
 <!-- Embed-mode footer — only shown when ?embed=1 strips the regular footer. -->

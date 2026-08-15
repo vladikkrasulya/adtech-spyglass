@@ -4812,6 +4812,15 @@ export async function mountInspector(root, ctx) {
         saved = null;
       }
 
+      // v2: the left sidebar became an overlay drawer, so its resting state
+      // is closed. It holds history, the saved library and the metric card —
+      // reference material, consulted occasionally, which was charging 320px
+      // of permanent rent for that. A stored preference still wins; this only
+      // changes what happens when there is none.
+      if (side === 'left' && saved === null) {
+        document.body.classList.add(cls);
+      }
+
       if (saved === '1') {
         const verdict = checkSidebarHealth(side);
         if (verdict === 'respect') {
@@ -4860,6 +4869,63 @@ export async function mountInspector(root, ctx) {
   window.toggleSidebar = toggleSidebar;
   window.resetLayout = resetLayout;
 
+  // ── Payload switch ──────────────────────────────────────────────────────
+  // Request and Response were two half-height textareas side by side. Each
+  // showed about eight lines of JSON, which is less than one `imp` object,
+  // so reading a payload meant scrolling a pane the size of a receipt while
+  // the other pane sat empty most of the time — a BidResponse is optional
+  // and absent from the majority of sessions.
+  //
+  // One editor at full column height shows ~25 lines. Both cards stay in the
+  // DOM: #bidReq and #bidRes are addressed directly by the analyzer, the
+  // mirror, diff, migrate, share and a large part of the test suite, and
+  // none of that should have to care which side is visible.
+  const PAYLOAD_SIDES = { req: 'cardReq', res: 'cardRes' };
+
+  function showPayloadSide(side) {
+    if (!PAYLOAD_SIDES[side]) return;
+    for (const [key, cardId] of Object.entries(PAYLOAD_SIDES)) {
+      const card = document.getElementById(cardId);
+      if (card) card.classList.toggle('is-shown', key === side);
+    }
+    document.querySelectorAll('.payload-switch-btn').forEach((btn) => {
+      const on = btn.getAttribute('data-payload') === side;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  /** Mark the side you are NOT looking at as already filled. The two-pane
+   *  layout told you this for free by simply being visible; a switch has to
+   *  say it explicitly, or a pasted BidResponse becomes invisible. */
+  function refreshPayloadDots() {
+    for (const [side, inputId] of [
+      ['Req', 'bidReq'],
+      ['Res', 'bidRes'],
+    ]) {
+      const dot = document.getElementById('payloadDot' + side);
+      const input = document.getElementById(inputId);
+      if (dot && input) dot.hidden = !String(input.value || '').trim();
+    }
+  }
+
+  function setupPayloadSwitch() {
+    const buttons = document.querySelectorAll('.payload-switch-btn');
+    if (!buttons.length) return;
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => showPayloadSide(btn.getAttribute('data-payload')));
+    });
+    for (const id of ['bidReq', 'bidRes']) {
+      const input = document.getElementById(id);
+      if (input) input.addEventListener('input', refreshPayloadDots);
+    }
+    showPayloadSide('req');
+    refreshPayloadDots();
+  }
+
+  window.showPayloadSide = showPayloadSide;
+  window.refreshPayloadDots = refreshPayloadDots;
+
   // ── Init ──────────────────────────────────────────────────────
   // Phase C-2: mount() guarantees the template DOM is injected before
   // calling mountInspector(), and the call itself is awaited inside
@@ -4871,6 +4937,7 @@ export async function mountInspector(root, ctx) {
     updateCharCount('bidReq');
     updateCharCount('bidRes');
     setupSidebarToggles();
+    setupPayloadSwitch();
     maybeShowInspectorOnboarding();
 
     // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
@@ -5769,6 +5836,8 @@ export async function mountInspector(root, ctx) {
       'updateCharCount',
       'toggleSidebar',
       'resetLayout',
+      'showPayloadSide',
+      'refreshPayloadDots',
       // analysis + history (loadFromHistory/peekHistoryItem/deleteHistoryItem
       // are now local — driven by delegated handler on #hList)
       'runAnalysis',

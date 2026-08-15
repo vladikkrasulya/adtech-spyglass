@@ -185,11 +185,19 @@
    widget. The topbar now renders functional duplicates (with the same
    class names the existing IIFE handlers bind to), so the user sees
    one set instead of two. The hidden DOM nodes remain present for any
-   inspector code that directly references them by ID. */
+   inspector code that directly references them by ID.
+
+   v2 renamed .app-header to .workbar; both are listed so this keeps working
+   under either name. Losing this rule is not subtle — the user gets two
+   language menus and two sign-in buttons, one row above the other. */
 .kt-shell .app-header .kt-lang-menu,
 .kt-shell .app-header .kt-theme-toggle,
 .kt-shell .app-header .theme-toggle,
-.kt-shell .app-header #authWidget {
+.kt-shell .app-header #authWidget,
+.kt-shell .workbar .kt-lang-menu,
+.kt-shell .workbar .kt-theme-toggle,
+.kt-shell .workbar .theme-toggle,
+.kt-shell .workbar #authWidget {
   display: none !important;
 }
 
