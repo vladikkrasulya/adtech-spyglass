@@ -54,7 +54,19 @@ const BUDGET = {
   'modules/behavior/behavior.css': 4,
   'modules/blog/blog.css': 4,
   'modules/dialects/dialects.css': 4,
-  'modules/docs/docs.css': 9,
+  // 9 → 4 with the /docs reader. Five of the nine were drift and are gone:
+  // the emoji card icon at 24px went with the cards, and 12px/14px/10px on
+  // the catalog chips, table cells and severity caption now read --fs-chip,
+  // --fs-card and --fs-mono. The four that remain are the mockup's measured
+  // display sizes, and the vendored scale carries no step for any of them:
+  // the 10px contents-group label with 1.2px tracking (11px is the size of
+  // the items under it, and a group title set the same size as its items
+  // stops being a title — same argument as nav.css above), the 16px doc
+  // reading size (the scale steps 15 → 17 and neither is it), and the
+  // 22px/32px h2/h1 pair (the scale steps 20 → 28 → 40). Written as
+  // literals and budgeted here so raising one is a number someone has to
+  // change on purpose, exactly as this ratchet intends.
+  'modules/docs/docs.css': 4,
   'modules/insights/insights.css': 7,
   'modules/library/library.css': 2,
   'modules/macros/styles.css': 4,
