@@ -1,50 +1,50 @@
 <!--
   Stream module template — fetched by mount() and injected into #app-root.
-  Owns its full chrome (header, feed, detail) inside the root container.
-  Future shared chrome (lang/theme toggle in a global header) will move
-  to the shell when a second module lands.
+
+  Structure follows the v2 mockup's Streams page: a white title band
+  (h1 + one-line lede + status pill + Pause), a filter band, and one
+  full-width table (TIME / KIND / SOURCE / FORMAT / SIZE / FINDINGS)
+  whose column header sticks to the top of the scroll region.
+
+  All user-visible text is filled in by index.js from ./i18n.js so the
+  page speaks the active locale and re-renders on kt:lang-change. The
+  markup below therefore ships empty text nodes on purpose — never put
+  an English literal here, it would be the string EN/UK/RU users see
+  for the first frame.
+
+  The standalone-app chrome this file used to carry (brand lockup,
+  "LIVE PREVIEW" chip, ← Playground link, theme toggle) is gone: the
+  shell's rail and topbar own all of it now, and the mockup's header
+  band carries the page's own title instead.
 -->
-<header class="app-header">
-  <div class="brand">
-    <span class="brand-spark">K</span>
-    <span class="brand-name">ortbtools · stream</span>
-    <span class="brand-mode">live preview</span>
+<header class="stream-head">
+  <div class="stream-head__text">
+    <h1 class="stream-head__title" id="streamTitle"></h1>
+    <p class="stream-head__lede" id="streamLede"></p>
   </div>
-  <div class="header-actions">
-    <a class="surface-link" href="/" title="Interactive bid validator + sample library">
-      ← Playground
-    </a>
-    <span class="counter" id="counter">0 specimens</span>
-    <span class="conn-status">
-      <span class="dot" id="dot"></span>
-      <span id="state">connecting…</span>
+  <div class="stream-head__actions">
+    <span class="stream-state" id="streamState" data-state="connecting" role="status">
+      <span class="stream-state__dot" aria-hidden="true"></span>
+      <span class="stream-state__text" id="streamStateText"></span>
     </span>
-    <button
-      class="theme-toggle"
-      id="themeToggle"
-      type="button"
-      aria-label="Toggle theme"
-      title="Toggle light/dark"
-    >
-      ◐
-    </button>
+    <button class="stream-freeze" id="streamFreeze" type="button"></button>
   </div>
 </header>
 
-<div class="stream-aggregates" id="aggregatesPanel"></div>
-<main class="feed" id="feed">
-  <div class="feed-empty">waiting for first event…</div>
-</main>
+<div class="stream-filters">
+  <span class="stream-filters__label" id="streamFiltersLabel"></span>
+  <!-- Chips are built by index.js: their labels are translated and the
+       set is small enough that markup duplication would only drift. -->
+  <div class="stream-filters__chips" id="streamChips" role="group"></div>
+  <span class="stream-filters__window" id="streamWindow"></span>
+</div>
 
-<aside class="detail">
-  <div class="detail-tabs" role="tablist">
-    <button class="tab active" data-tab="decoded" role="tab" disabled>Decoded</button>
-    <button class="tab" data-tab="validation" role="tab" disabled>
-      Validation <span class="badge" id="badgeValidation" hidden>0</span>
-    </button>
-    <button class="tab" data-tab="raw" role="tab" disabled>Raw JSON</button>
+<main class="stream-table" id="streamTable">
+  <!-- Visual column header. aria-hidden because each row is a single
+       button whose accessible name already reads its cells in order;
+       announcing six mono labels before every row would only repeat. -->
+  <div class="stream-thead" id="streamThead" aria-hidden="true"></div>
+  <div class="stream-rows" id="streamRows">
+    <p class="stream-empty" id="streamEmpty"></p>
   </div>
-  <div class="detail-body" id="detailBody">
-    <div class="placeholder">click any row to inspect specimen</div>
-  </div>
-</aside>
+</main>

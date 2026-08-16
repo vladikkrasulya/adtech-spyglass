@@ -2,477 +2,381 @@
    public/modules/stream/stream.css
 
    Module-scoped under #app-root. The shell mounts this <link> via
-   ctx.addCleanup() in stream/index.js, so it's only present while
-   the stream module is active. When the user navigates to another
-   module the shell's deactivate() removes it — no style bleed.
+   the registry's mod.css field, so it's only present while the
+   stream module is active; deactivate() removes it — no style bleed.
+
+   v2 (mockup parity): the page is one full-width table, not a
+   two-pane console. Three bands stack —
+
+     1. .stream-head     white title band: h1 + lede + status + Pause
+     2. .stream-filters  chip row on the page ground
+     3. .stream-table    scroll region with a sticky column header
+
+   Every band insets 24px from the left, so the h1, the chips, the
+   column labels and the row cells all start on the same line.
+
+   Type: no bare px font sizes. --fs-chip / --fs-nav live on
+   .kt-shell (ortbtools-v2.css), the rest on :root (design-system.css);
+   #app-root is inside .kt-shell on every surface that mounts this.
    ============================================================ */
 
 /* Layout — scoped to #app-root.stream-view (NOT bare #app-root) so this
-   persistent stylesheet never reshapes #app-root into a stream grid for the
-   NEXT section after we navigate away. stream/index.js adds .stream-view on
-   mount and removes it on unmount. */
+   persistent stylesheet never reshapes #app-root for the NEXT section we
+   navigate to. stream/index.js adds .stream-view on mount, removes it on
+   unmount. */
 #app-root.stream-view {
   display: grid;
-  grid-template-rows: auto 1fr;
-  grid-template-columns: minmax(440px, 2fr) 3fr;
-  grid-template-areas: 'header header' 'feed detail';
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-columns: 100%;
   height: 100%;
   overflow: hidden;
+  background: var(--bg);
 }
 
-/* ── Header ──────────────────────────────────────────────────────── */
-#app-root .app-header {
-  grid-area: header;
+/* ── 1. Title band ────────────────────────────────────────────────── */
+#app-root .stream-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: var(--space-4, 16px);
-  padding: var(--space-3, 12px) var(--space-5, 24px);
+  padding: 18px var(--space-5, 24px);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-#app-root .brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3, 12px);
+#app-root .stream-head__text {
+  min-width: 0;
 }
-#app-root .brand-spark {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--text-on-accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-weight: 700;
-  font-size: 13px;
-}
-#app-root .brand-name {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 13px;
+/* design-system.css sets h1 to the hero step (56/80px, weight 700). This is
+   a workbench page title, not a hero — the ID selector wins the cascade. */
+#app-root .stream-head__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: -0.015em;
+  line-height: 1.5;
+  color: var(--text);
 }
-#app-root .brand-mode {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  margin-left: var(--space-2, 8px);
-}
-#app-root .header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3, 12px);
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
-}
-#app-root .surface-link {
+#app-root .stream-head__lede {
+  margin: 2px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
   color: var(--text-muted);
-  text-decoration: none;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease;
-  white-space: nowrap;
+  /* Wide enough that all three translations of the lede stay on ONE line at
+     the mockup's 1440px reference width (en 733px, uk 840px, ru 890px, with
+     ~930px of room), and still a bounded measure on a very wide monitor.
+     A tighter cap wrapped uk/ru and grew the band from 90px to 108px. */
+  max-width: 104ch;
 }
-#app-root .surface-link:hover {
-  color: var(--accent);
-  border-color: var(--accent-soft);
-  background: var(--accent-soft);
-}
-#app-root .counter {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-#app-root .conn-status {
+#app-root .stream-head__actions {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: var(--space-2, 8px);
-  color: var(--text-muted);
-}
-#app-root .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  transition: background 0.2s ease;
-}
-#app-root .dot.connected {
-  background: #16a34a;
-  box-shadow: 0 0 8px rgba(22, 163, 74, 0.4);
-}
-#app-root .dot.connecting {
-  background: #f59e0b;
-}
-#app-root .dot.error {
-  background: #dc2626;
-}
-#app-root .theme-toggle {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: border-color 0.15s ease;
-}
-#app-root .theme-toggle:hover {
-  border-color: var(--text-dim);
+  flex-shrink: 0;
 }
 
-/* ── Feed ────────────────────────────────────────────────────────── */
-#app-root .feed {
-  grid-area: feed;
-  overflow-y: auto;
-  border-right: 1px solid var(--border);
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 12px;
-}
-#app-root .feed-empty {
-  padding: var(--space-6, 32px) var(--space-4, 16px);
-  color: var(--text-dim);
-  font-style: italic;
+/* Status pill. The soft fills are local rather than tokens because the
+   system has --success / --danger as ink only; both pairs are stated per
+   theme so neither borrows the other's ground. */
+#app-root .stream-state {
+  --stream-state-ink: var(--text-muted);
+  --stream-state-soft: var(--bg-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--r-chip);
+  background: var(--stream-state-soft);
+  color: var(--stream-state-ink);
   font-family: var(--font-body);
+  font-size: var(--fs-chip);
+  line-height: 1.5;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
-#app-root .row {
+#app-root .stream-state[data-state='streaming'] {
+  --stream-state-ink: var(--success);
+  --stream-state-soft: rgba(21, 128, 61, 0.09);
+}
+#app-root .stream-state[data-state='offline'] {
+  --stream-state-ink: var(--danger);
+  --stream-state-soft: rgba(220, 38, 38, 0.09);
+}
+[data-theme='dark'] #app-root .stream-state[data-state='streaming'] {
+  --stream-state-soft: rgba(74, 222, 128, 0.14);
+}
+[data-theme='dark'] #app-root .stream-state[data-state='offline'] {
+  --stream-state-soft: rgba(248, 113, 113, 0.14);
+}
+#app-root .stream-state__dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+#app-root .stream-state[data-state='streaming'] .stream-state__dot {
+  animation: stream-pulse 2s ease-in-out infinite;
+}
+@keyframes stream-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #app-root .stream-state[data-state='streaming'] .stream-state__dot {
+    animation: none;
+  }
+}
+
+#app-root .stream-freeze {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+#app-root .stream-freeze:hover {
+  border-color: var(--text-dim);
+  background: var(--bg-2);
+}
+#app-root .stream-freeze[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* ── 2. Filter band ───────────────────────────────────────────────── */
+#app-root .stream-filters {
   display: flex;
   align-items: center;
-  gap: var(--space-3, 12px);
-  padding: 8px var(--space-4, 16px);
+  gap: 6px;
+  padding: 12px var(--space-5, 24px);
   border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+#app-root .stream-filters__label {
+  margin-right: 4px;
+  font-family: var(--font-body);
+  font-size: var(--fs-chip);
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+#app-root .stream-filters__chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+#app-root .stream-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-chip);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-chip);
+  line-height: 1.5;
+  font-weight: 400;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+#app-root .stream-chip:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+#app-root .stream-chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+#app-root .stream-filters__window {
+  margin-left: auto;
+  padding-left: var(--space-3, 12px);
+  font-family: var(--font-body);
+  font-size: var(--fs-chip);
+  line-height: 1.5;
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 3. Table ─────────────────────────────────────────────────────── */
+#app-root .stream-table {
+  overflow: auto;
+  min-height: 0;
+}
+/* One track definition, two consumers — the sticky header and every row.
+   Kept in a custom property so the narrow breakpoint retunes both at once
+   and they can never drift apart. */
+#app-root .stream-table {
+  /* 92+84+140+130+88+110 fixed/min track widths, +48px of side padding. */
+  --stream-cols: 92px 84px minmax(140px, 1fr) 130px 88px 110px;
+  --stream-min: 692px;
+}
+#app-root .stream-thead,
+#app-root .stream-row {
+  display: grid;
+  grid-template-columns: var(--stream-cols);
+  align-items: center;
+  min-width: var(--stream-min);
+  gap: 0;
+}
+#app-root .stream-thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px var(--space-5, 24px);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip);
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+#app-root .stream-thead span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: var(--space-2, 8px);
+}
+
+#app-root .stream-row {
+  width: 100%;
+  margin: 0;
+  padding: 11px var(--space-5, 24px);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-align: left;
   cursor: pointer;
   transition: background 0.1s ease;
 }
-#app-root .row:hover {
-  background: var(--accent-soft);
-}
-#app-root .row.selected {
-  background: var(--accent-soft);
-  border-left: 2px solid var(--accent);
-  padding-left: calc(var(--space-4, 16px) - 2px);
-}
-#app-root .row .ts {
-  flex: 0 0 92px;
-  color: var(--text-dim);
-}
-#app-root .row .creative-thumb {
-  flex: 0 0 56px;
-  width: 56px;
-  height: 36px;
-  border-radius: 4px;
-  object-fit: cover;
-  background: var(--surface-sunken, rgba(0, 0, 0, 0.1));
-  border: 1px solid var(--border);
-  display: block;
-}
-#app-root .row .fmt {
-  flex: 0 0 60px;
-  color: var(--accent);
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
-#app-root .row .ctx {
-  flex: 1 1 auto;
-  min-width: 0;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Detail pane ──────────────────────────────────────────────────── */
-#app-root .detail {
-  grid-area: detail;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-#app-root .detail-tabs {
-  display: flex;
-  gap: 0;
-  padding: 0 var(--space-4, 16px);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-#app-root .tab {
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  color: var(--text-muted);
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 14px 16px 12px;
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-#app-root .tab:hover:not(.active):not(:disabled) {
-  color: var(--text);
-}
-#app-root .tab.active {
-  color: var(--text);
-  border-bottom-color: var(--accent);
-}
-#app-root .tab:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-#app-root .tab .badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: var(--surface-ink);
-  color: var(--text-inv);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0;
-}
-#app-root .tab .badge.danger {
-  background: #dc2626;
-  color: #fff;
-}
-#app-root .tab .badge.warn {
-  background: #f59e0b;
-  color: #18181b;
-}
-
-#app-root .detail-body {
-  flex: 1;
-  overflow: auto;
-  padding: var(--space-5, 24px);
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 12px;
-  line-height: 1.55;
-}
-#app-root .placeholder {
-  color: var(--text-dim);
-  padding: var(--space-7, 48px) var(--space-5, 24px);
-  text-align: center;
-  font-style: italic;
-  font-family: var(--font-body);
-}
-#app-root .loading {
-  color: var(--text-dim);
-  padding: var(--space-5, 24px);
-  font-family: var(--font-body);
-}
-
-/* Decoded view: label-value pairs */
-#app-root .decoded {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: var(--space-3, 12px) var(--space-4, 16px);
-}
-#app-root .decoded dt {
-  color: var(--text-dim);
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  margin: 0;
-  padding-top: 2px;
-}
-#app-root .decoded dd {
-  margin: 0;
-  color: var(--text);
-  word-break: break-word;
-}
-#app-root .decoded dd .pill {
-  display: inline-block;
-  padding: 2px 8px;
-  background: var(--accent-soft);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 11px;
-  margin-right: 4px;
-  margin-bottom: 4px;
-}
-
-/* Validation list */
-#app-root .findings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3, 12px);
-}
-#app-root .finding {
-  display: grid;
-  grid-template-columns: 16px 1fr;
-  gap: var(--space-3, 12px);
-  padding: var(--space-3, 12px);
+#app-root .stream-row:hover {
   background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
 }
-#app-root .finding-level {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-top: 6px;
-  background: var(--text-dim);
+#app-root .stream-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
-#app-root .finding-level.danger {
-  background: #dc2626;
-}
-#app-root .finding-level.warn {
-  background: #f59e0b;
-}
-#app-root .finding-level.info {
-  background: #3b82f6;
-}
-#app-root .finding-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-#app-root .finding-id {
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-#app-root .finding-msg {
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 13px;
-  line-height: 1.5;
-}
-#app-root .finding-path {
-  font-size: 11px;
-  color: var(--accent-secondary);
-}
-#app-root .findings-clean {
-  color: var(--text-dim);
-  padding: var(--space-5, 24px);
-  text-align: center;
-  font-family: var(--font-body);
-  font-style: italic;
-}
-
-/* Raw view */
-#app-root .raw pre {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--text);
-}
-
-#app-root .meta-line {
-  color: var(--text-dim);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding-bottom: var(--space-3, 12px);
-  margin-bottom: var(--space-4, 16px);
-  border-bottom: 1px solid var(--border);
-}
-
-/* ── Stage 2: Aggregates panel ───────────────────────────────────── */
-.stream-aggregates {
-  grid-area: header;
-  /* sits in header row, full width after the app-header */
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2, 8px);
-  padding: 6px var(--space-5, 24px);
-  background: var(--surface-2, var(--surface));
-  border-bottom: 1px solid var(--border);
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  min-height: 0;
-}
-.stream-aggregates:empty {
+#app-root .stream-row[hidden] {
   display: none;
 }
-.stream-agg-label {
+#app-root .stream-row:disabled {
+  cursor: default;
+}
+
+#app-root .stream-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: var(--space-2, 8px);
+}
+#app-root .stream-cell--time {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+#app-root .stream-cell--kind {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
   font-weight: 600;
-  color: var(--text-secondary, var(--text-muted));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
-.stream-agg-badge {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: 9999px;
-  background: var(--accent-muted, rgba(2, 132, 199, 0.15));
-  color: var(--accent, #0284c7);
-  font-size: 0.75rem;
-  font-weight: 500;
+#app-root .stream-cell--kind[data-kind='req'] {
+  color: var(--success);
 }
-.stream-agg-badge--src {
-  background: var(--surface-3, rgba(100, 116, 139, 0.15));
-  color: var(--text-secondary, #64748b);
+#app-root .stream-cell--kind[data-kind='res'] {
+  color: var(--accent-text);
 }
-.stream-agg-sep {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-}
-
-/* ── Stage 2: Grid layout with aggregates row ─────────────────────── */
-/* Override previous 2-row grid to account for the aggregates bar */
-#app-root.stream-view {
-  grid-template-rows: auto auto 1fr;
-  grid-template-areas: 'header header' 'aggs aggs' 'feed detail';
-}
-.stream-aggregates {
-  grid-area: aggs;
-}
-
-/* ── Stage 2: Action bar (Inspect + Copy) ────────────────────────── */
-.stream-action-bar {
-  display: flex;
-  gap: 8px;
-  padding: 8px 16px 4px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.stream-action-btn {
-  padding: 4px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--accent, #0284c7);
-  background: transparent;
-  color: var(--text-accent, #0369a1);
-  font-size: 0.78rem;
-  cursor: pointer;
-  font-family: inherit;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-.stream-action-btn:hover {
-  background: var(--accent, #0284c7);
-  color: var(--text-on-accent, #ffffff);
-}
-.stream-action-btn--secondary {
-  border-color: var(--border);
-  color: var(--text-muted);
-}
-.stream-action-btn--secondary:hover {
-  background: var(--surface-2, var(--surface));
+#app-root .stream-cell--source {
+  font-family: var(--font-mono);
   color: var(--text);
+  padding-right: var(--space-4, 16px);
+}
+#app-root .stream-cell--format {
+  font-size: var(--fs-chip);
+  color: var(--text-muted);
+}
+#app-root .stream-cell--size {
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+#app-root .stream-cell--findings {
+  font-size: var(--fs-chip);
+  font-weight: 600;
+  color: var(--text-dim);
+}
+#app-root .stream-cell--findings[data-sev='ok'] {
+  color: var(--success);
+}
+#app-root .stream-cell--findings[data-sev='warn'] {
+  color: var(--warning-text);
+}
+#app-root .stream-cell--findings[data-sev='danger'] {
+  color: var(--danger);
+}
+#app-root .stream-cell--findings[data-sev='pending'],
+#app-root .stream-cell--findings[data-sev='unknown'] {
+  font-weight: 400;
+}
+
+#app-root .stream-empty {
+  margin: 0;
+  padding: var(--space-6, 32px) var(--space-5, 24px);
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-style: italic;
+}
+#app-root .stream-empty[hidden] {
+  display: none;
+}
+
+/* Narrow shells: retune the fixed tracks before falling back to the
+   table's own horizontal scroll, so a 1024px window still shows all six
+   columns rather than clipping FINDINGS off the right edge. */
+@media (max-width: 1180px) {
+  #app-root .stream-table {
+    --stream-cols: 84px 60px minmax(120px, 1fr) 108px 74px 96px;
+    --stream-min: 574px;
+  }
+  #app-root .stream-head,
+  #app-root .stream-filters,
+  #app-root .stream-thead,
+  #app-root .stream-row {
+    padding-left: var(--space-4, 16px);
+    padding-right: var(--space-4, 16px);
+  }
 }
