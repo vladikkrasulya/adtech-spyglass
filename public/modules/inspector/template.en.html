@@ -120,51 +120,69 @@
         </svg>
       </summary>
       <div class="example-menu-list" role="menu">
-        <button data-action="load-demo" role="menuitem">🎲 random</button>
+        <button data-action="load-demo" role="menuitem">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1" />
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="15.5" cy="15.5" r="1" />
+          </svg>
+          random
+        </button>
         <div class="menu-divider"></div>
         <span class="menu-label">IAB 2.6 · valid</span>
         <button data-action="load-demo" data-type="iab-banner-valid" role="menuitem">
-          ✨ OpenRTB 2.6 banner
+          OpenRTB 2.6 banner
         </button>
         <button data-action="load-demo" data-type="iab-video-valid" role="menuitem">
-          ✨ OpenRTB 2.6 video
+          OpenRTB 2.6 video
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">control</span>
         <button data-action="load-demo" data-type="clean-banner" role="menuitem">
-          ✓ clean banner (no findings)
+          clean banner (no findings)
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">attack patterns</span>
         <button data-action="load-demo" data-type="frame-bust-form" role="menuitem">
-          🪞 frame-bust (form)
+          frame-bust (form)
         </button>
         <button data-action="load-demo" data-type="frame-bust-anchor" role="menuitem">
-          🪞 frame-bust (anchor)
+          frame-bust (anchor)
         </button>
         <button data-action="load-demo" data-type="frozen-thread" role="menuitem">
-          🧊 frozen thread
+          frozen thread
         </button>
-        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">🔥 heavy CPU</button>
+        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">heavy CPU</button>
         <button data-action="load-demo" data-type="trap-invisible-overlay" role="menuitem">
-          🪤 invisible overlay
+          invisible overlay
         </button>
         <button data-action="load-demo" data-type="auto-redirect" role="menuitem">
-          ↪️ auto-redirect
+          auto-redirect
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">VAST (video)</span>
         <button data-action="load-demo" data-type="vast-clean-inline" role="menuitem">
-          📺 clean VAST 4.2 InLine
+          clean VAST 4.2 InLine
         </button>
         <button data-action="load-demo" data-type="vast-broken-inline" role="menuitem">
-          📺 broken VAST (3 ERRORs)
+          broken VAST (3 ERRORs)
         </button>
         <button data-action="load-demo" data-type="vast-insecure-wrapper" role="menuitem">
-          📺 VAST Wrapper with http://
+          VAST Wrapper with http://
         </button>
         <button data-action="load-demo" data-type="vast-vpaid-deprecated" role="menuitem">
-          📺 VAST VPAID (deprecated)
+          VAST VPAID (deprecated)
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">oRTB 3.0</span>
@@ -180,16 +198,16 @@
         <div class="menu-divider"></div>
         <span class="menu-label">Pop / Clickunder</span>
         <button data-action="load-demo" data-type="pop-clean-request" role="menuitem">
-          🌀 clean popunder BidRequest
+          clean popunder BidRequest
         </button>
         <button data-action="load-demo" data-type="pop-clean-response" role="menuitem">
-          🌀 clean popunder BidResponse
+          clean popunder BidResponse
         </button>
         <button data-action="load-demo" data-type="pop-broken-adm" role="menuitem">
-          🌀 popunder with wrong adm
+          popunder with wrong adm
         </button>
         <button data-action="load-demo" data-type="popunder-feed" role="menuitem">
-          🌀 JSON-feed popunder
+          JSON-feed popunder
         </button>
       </div>
     </details>
@@ -215,22 +233,29 @@
         </svg>
       </summary>
       <div class="tools-menu-list" role="menu">
-        <a
-          href="/about"
-          target="_blank"
-          rel="noopener"
-          role="menuitem"
-          title="How it works · what ortbtools can and can't do"
-        >
-          docs ↗
-        </a>
         <button
           data-action="live"
           role="menuitem"
           id="liveBtn"
           title="Open the live RTB stream — watch synthetic samples flow past in realtime"
         >
-          📡 live
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4"
+            />
+            <circle cx="12" cy="12" r="1.5" />
+          </svg>
+          live
         </button>
         <button
           data-action="sim-bids"
@@ -238,7 +263,7 @@
           id="simBidsBtn"
           title="Simulate 3 DSP strategies with deterministic server-side rules — the raw BidRequest is processed transiently by ortbtools; no external model receives it"
         >
-          🤖 simulate
+          simulate
         </button>
         <button
           data-action="mirror"
@@ -246,7 +271,7 @@
           id="mirrorBtn"
           title="Generate the canonical counterpart of your paste"
         >
-          mirror ↔
+          mirror
         </button>
         <div class="menu-divider"></div>
         <div
@@ -535,7 +560,7 @@
             autocomplete="off"
             autocorrect="off"
             autocapitalize="off"
-            placeholder="1. paste BidRequest JSON here&#10;2. optional: paste BidResponse on the right&#10;3. click «analyze» or Ctrl+Enter&#10;&#10;no JSON? 🎲 example ▾ · 📡 live · mirror ↔&#10;? for shortcuts"
+            placeholder="1. paste a BidRequest here&#10;2. a BidResponse is optional — the Response tab above&#10;3. Analyze, or ⌘⏎&#10;&#10;no payload yet? Load sample ▾ in the bar above&#10;press ? for the shortcuts"
           ></textarea>
         </div>
         <div class="input-card-summary" data-card-summary="cardReq">
@@ -617,7 +642,7 @@
             autocomplete="off"
             autocorrect="off"
             autocapitalize="off"
-            placeholder="optional: paste BidResponse JSON here&#10;&#10;if both panes filled, mirror ↔ diffs against canonical"
+            placeholder="1. paste a BidResponse here&#10;2. with both sides filled, Tools ▾ → mirror diffs them&#10;3. Analyze, or ⌘⏎"
           ></textarea>
         </div>
         <div class="input-card-summary" data-card-summary="cardRes">
@@ -800,7 +825,7 @@
     <div class="tab-content active" id="tInspector">
       <div class="slot-grid" id="slotGrid">
         <div class="empty-hint" style="grid-column: 1/-1">
-          Paste BidRequest on the left — imp[] slots will show here
+          Paste a BidRequest — imp[] slots will show here
         </div>
       </div>
     </div>

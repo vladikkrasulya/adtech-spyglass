@@ -4830,3 +4830,102 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   font-weight: 700;
   padding: 0;
 }
+
+/* An empty editor gets no gutter. With nothing in it the column rendered as
+   a bare 44px tinted band running the full height of the panel, beside a
+   placeholder that then read as though it were indented — which is what
+   "the left field is broken" looked like. :empty is exact here because
+   renderGutter() emits one span per line and nothing at all for no text. */
+.line-gutter:empty {
+  display: none;
+}
+/* Scoped to the column so it outranks the editor's own padding rule, which
+   zeroes the left inset because the gutter normally supplies it. */
+.workbench-payload .line-gutter:empty + .input-card .json-input,
+.workbench-payload .json-editor > .line-gutter:empty ~ .json-input {
+  padding-left: var(--space-4);
+}
+
+/* ── Closed popovers must not paint ─────────────────────────────────────
+   A <details> hides its non-summary children by giving the content slot
+   `content-visibility: hidden` — which an absolutely positioned child
+   escapes. Every popover menu here is absolute, so all of them rendered
+   permanently: measured at 1920px, five tab-strip items sat stacked at
+   x=1713 with real boxes, on top of the findings list, whether or not the
+   menu was open. Invisible in a screenshot only because they landed on a
+   white panel; fully clickable, and the reason the same action counted
+   twice on screen.
+
+   display:none on the closed state is the whole fix, and it must be stated
+   for each menu rather than once on [open], because the positioning is what
+   creates the escape. */
+.tab-more:not([open]) .tab-more-menu,
+.kt-tools-menu:not([open]) .tools-menu-list,
+.kt-share-menu:not([open]) .tools-menu-list,
+.kt-example-menu:not([open]) .example-menu-list,
+.kt-lang-menu:not([open]) .kt-lang-menu-list {
+  display: none;
+}
+
+/* ── Touch targets ──────────────────────────────────────────────────────
+   WCAG 2.5.8 asks for 24x24 CSS px. The source-navigator's prev/next and
+   the footer's dialect chip measured 62x21 and 90x17 — reachable with a
+   mouse, a coin-toss with a thumb. */
+#srcNavBar .btn-icon,
+#srcNavBar button {
+  min-height: 24px;
+  padding: 3px 10px;
+}
+.app-footer .btn-icon {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Tab strip below 1100px ─────────────────────────────────────────────
+   Measured at 1024px: "Creative" ran to x=1074 and "More" to x=1142 in a
+   1024px viewport — both past the right edge. The strip scrolls, but a
+   control you must scroll to find is a control most people never find, and
+   "More" is the one that holds half the views.
+
+   So below the stacking breakpoint the strip keeps its four named tabs
+   scrollable and pins More to the edge, out of the scroll. */
+@media (max-width: 1100px) {
+  .tab-bar {
+    position: relative;
+    padding-right: 84px;
+  }
+  .tab-more {
+    position: absolute;
+    right: var(--space-3);
+    top: 0;
+    bottom: 0;
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    padding-left: var(--space-2);
+    box-shadow: -8px 0 8px -6px rgba(13, 23, 38, 0.12);
+  }
+}
+
+/* ── Footer below 1100px ────────────────────────────────────────────────
+   The bar is one nowrap row that scrolls, which keeps its height honest but
+   leaves the trailing controls — the dialect chip and reset — off the right
+   edge at 1024px and narrower, where nobody scrolls a status bar to find
+   them. Below the breakpoint the spec list drops (it is reference text, and
+   the same facts are in Docs) and the controls come back into view. */
+@media (max-width: 1100px) {
+  .app-footer .footer-extras > span[title],
+  .app-footer .footer-extras > a {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .app-footer {
+    padding: 0 var(--space-3);
+  }
+  .app-footer .footer-status-row {
+    gap: 10px;
+  }
+}

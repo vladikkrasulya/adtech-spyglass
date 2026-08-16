@@ -120,51 +120,69 @@
         </svg>
       </summary>
       <div class="example-menu-list" role="menu">
-        <button data-action="load-demo" role="menuitem">🎲 случайный</button>
+        <button data-action="load-demo" role="menuitem">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1" />
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="15.5" cy="15.5" r="1" />
+          </svg>
+          случайный
+        </button>
         <div class="menu-divider"></div>
         <span class="menu-label">IAB 2.6 · валидные</span>
         <button data-action="load-demo" data-type="iab-banner-valid" role="menuitem">
-          ✨ OpenRTB 2.6 banner
+          OpenRTB 2.6 banner
         </button>
         <button data-action="load-demo" data-type="iab-video-valid" role="menuitem">
-          ✨ OpenRTB 2.6 video
+          OpenRTB 2.6 video
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">контроль</span>
         <button data-action="load-demo" data-type="clean-banner" role="menuitem">
-          ✓ чистый баннер (ноль findings)
+          чистый баннер (ноль findings)
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">шаблоны атак</span>
         <button data-action="load-demo" data-type="frame-bust-form" role="menuitem">
-          🪞 frame-bust (форма)
+          frame-bust (форма)
         </button>
         <button data-action="load-demo" data-type="frame-bust-anchor" role="menuitem">
-          🪞 frame-bust (anchor)
+          frame-bust (anchor)
         </button>
         <button data-action="load-demo" data-type="frozen-thread" role="menuitem">
-          🧊 замороженная вкладка
+          замороженная вкладка
         </button>
-        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">🔥 heavy CPU</button>
+        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">heavy CPU</button>
         <button data-action="load-demo" data-type="trap-invisible-overlay" role="menuitem">
-          🪤 невидимый overlay
+          невидимый overlay
         </button>
         <button data-action="load-demo" data-type="auto-redirect" role="menuitem">
-          ↪️ авто-редирект
+          авто-редирект
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">VAST (видео)</span>
         <button data-action="load-demo" data-type="vast-clean-inline" role="menuitem">
-          📺 чистый VAST 4.2 InLine
+          чистый VAST 4.2 InLine
         </button>
         <button data-action="load-demo" data-type="vast-broken-inline" role="menuitem">
-          📺 сломанный VAST (3 ERROR)
+          сломанный VAST (3 ERROR)
         </button>
         <button data-action="load-demo" data-type="vast-insecure-wrapper" role="menuitem">
-          📺 VAST Wrapper с http://
+          VAST Wrapper с http://
         </button>
         <button data-action="load-demo" data-type="vast-vpaid-deprecated" role="menuitem">
-          📺 VAST VPAID (deprecated)
+          VAST VPAID (deprecated)
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">oRTB 3.0</span>
@@ -180,16 +198,16 @@
         <div class="menu-divider"></div>
         <span class="menu-label">Pop / Clickunder</span>
         <button data-action="load-demo" data-type="pop-clean-request" role="menuitem">
-          🌀 чистый popunder BidRequest
+          чистый popunder BidRequest
         </button>
         <button data-action="load-demo" data-type="pop-clean-response" role="menuitem">
-          🌀 чистый popunder BidResponse
+          чистый popunder BidResponse
         </button>
         <button data-action="load-demo" data-type="pop-broken-adm" role="menuitem">
-          🌀 popunder с неправильным adm
+          popunder с неправильным adm
         </button>
         <button data-action="load-demo" data-type="popunder-feed" role="menuitem">
-          🌀 JSON-feed popunder
+          JSON-feed popunder
         </button>
       </div>
     </details>
@@ -215,22 +233,29 @@
         </svg>
       </summary>
       <div class="tools-menu-list" role="menu">
-        <a
-          href="/ru/about"
-          target="_blank"
-          rel="noopener"
-          role="menuitem"
-          title="Как пользоваться · что ortbtools умеет и не умеет"
-        >
-          доки ↗
-        </a>
         <button
           data-action="live"
           role="menuitem"
           id="liveBtn"
           title="Открыть живой поток синтетических RTB-образцов — увидеть как идёт трафик в реальном времени"
         >
-          📡 live
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4"
+            />
+            <circle cx="12" cy="12" r="1.5" />
+          </svg>
+          live
         </button>
         <button
           data-action="sim-bids"
@@ -238,7 +263,7 @@
           id="simBidsBtn"
           title="Симуляция 3 DSP-стратегий по детерминированным серверным правилам — сырой BidRequest временно обрабатывает ortbtools; ни одна внешняя модель его не получает"
         >
-          🤖 simulate
+          simulate
         </button>
         <button
           data-action="mirror"
@@ -246,7 +271,7 @@
           id="mirrorBtn"
           title="Сгенерировать эталонную пару к вставленному"
         >
-          зеркало ↔
+          зеркало
         </button>
         <div class="menu-divider"></div>
         <div
@@ -533,7 +558,7 @@
             autocomplete="off"
             autocorrect="off"
             autocapitalize="off"
-            placeholder="1. вставь сюда BidRequest JSON&#10;2. опционально: вставь BidResponse справа&#10;3. нажми «анализировать» или Ctrl+Enter&#10;&#10;нет JSON? 🎲 пример ▾ · 📡 live · зеркало ↔&#10;? для всех хоткеев"
+            placeholder="1. вставь сюда BidRequest&#10;2. BidResponse — по желанию, вкладка «Ответ» выше&#10;3. «Анализировать», или ⌘⏎&#10;&#10;ещё нет payload? «Загрузить пример ▾» в полосе выше&#10;нажми ? для списка сокращений"
           ></textarea>
         </div>
         <div class="input-card-summary" data-card-summary="cardReq">
@@ -615,7 +640,7 @@
             autocomplete="off"
             autocorrect="off"
             autocapitalize="off"
-            placeholder="опционально: вставь BidResponse JSON сюда&#10;&#10;если оба поля заполнены — зеркало ↔ покажет diff против канонической"
+            placeholder="1. вставь сюда BidResponse&#10;2. когда заполнены обе стороны, «Инструменты ▾ → зеркало» их сверит&#10;3. «Анализировать», или ⌘⏎"
           ></textarea>
         </div>
         <div class="input-card-summary" data-card-summary="cardRes">
@@ -800,7 +825,7 @@
     <div class="tab-content active" id="tInspector">
       <div class="slot-grid" id="slotGrid">
         <div class="empty-hint" style="grid-column: 1/-1">
-          Вставь BidRequest слева — здесь появятся слоты imp[]
+          Вставь BidRequest — здесь появятся слоты imp[]
         </div>
       </div>
     </div>
