@@ -1,258 +1,349 @@
-/* Stage 5 — public/modules/insights/insights.css */
+/* ============================================================
+   public/modules/insights/insights.css
+
+   Laid out to the redesign mockup's Insights screen:
+
+     .ins-section    flex column filling #app-root, itself unscrolled
+     .ins-section__head  white band, hairline bottom rule — PINNED
+     .ins-body       the only scroller, 24px padding, 20px rhythm
+     .ins-statusbar  30px mono status bar — PINNED
+
+   The section used to be a single `overflow-y:auto` box, so the H1
+   and its controls scrolled away with the cards. Pinning them is what
+   makes the header read as chrome instead of as content.
+
+   Sizes that are literals rather than tokens (16px card titles, 21px
+   H1, 30px KPI figures) are the mockup's own scale; --fs-* has no step
+   at those values and rounding to the nearest one is precisely the
+   density drift this file exists to undo.
+   ============================================================ */
 
 .ins-section {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: var(--space-6, 32px) var(--space-5, 24px);
-  /* Scroll when content overflows shorter viewports. Constrained by the
-     parent #app-root (flex:1, overflow:auto) — adding overflow:auto here
-     means the section scrolls before the page does. */
   height: 100%;
-  overflow-y: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* The mockup's content region has no max-width — it fills whatever
+     the shell gives it. The old 1280px cap made the page grow outer
+     margins past ~1330px that the shell's own chrome does not have. */
+  overflow: hidden;
 }
 
-/* Header */
+/* ── Page-header band ─────────────────────────────────────────── */
+
 .ins-section__head {
-  margin-bottom: var(--space-5, 24px);
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4, 16px);
+  padding: 18px var(--space-5, 24px);
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--border);
 }
-.ins-section__head h1 {
-  margin: 0 0 6px;
-  font-size: var(--fs-xl, 28px);
+.ins-head__text {
+  min-width: 0;
+}
+.ins-head__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 21px;
   font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.015em;
   color: var(--text);
 }
-.ins-section__sub {
-  margin: 0 0 var(--space-4, 16px);
+.ins-head__sub {
+  margin: 2px 0 0;
+  font-size: var(--fs-sm, 13px);
+  line-height: 1.5;
   color: var(--text-muted, #46556b);
-  font-size: var(--fs-base, 15px);
-  max-width: 720px;
 }
 
-/* Header controls row */
-.ins-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.ins-updated {
-  font-size: 12px;
-  color: var(--text-muted, #46556b);
-  min-width: 80px;
-}
-.ins-toggle-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-muted);
-  cursor: pointer;
-  user-select: none;
-}
-.ins-toggle-label input[type='checkbox'] {
-  accent-color: var(--accent, #0284c7);
-}
-.ins-interval-select {
-  /* design-system.css sets a global `select { width: 100% }` for form
-     layouts — without this override the interval picker stretched across
-     the whole content column (2026-07-13 audit). */
+/* Right-aligned header control. `width:auto` overrides the global
+   `select { width: 100% }` that design-system.css sets for form
+   layouts — without it the control stretches the whole band. */
+.ins-head__select {
+  margin-left: auto;
+  flex-shrink: 0;
   width: auto;
-  padding: 4px 8px;
-  background: var(--bg-elev, #fff);
-  border: 1px solid var(--border);
+  height: 32px;
+  padding: 0 8px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-strong);
   border-radius: var(--r-sm, 6px);
-  font: inherit;
-  font-size: 12px;
+  font-family: inherit;
+  font-size: var(--fs-sm, 13px);
   color: var(--text);
   cursor: pointer;
 }
+.ins-head__select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 
-/* Widget grid */
+/* ── Scrolling body ───────────────────────────────────────────── */
+
+.ins-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ins-loading {
+  margin: 0;
+  font-size: var(--fs-sm, 13px);
+  color: var(--text-muted);
+}
+
+/* ── KPI strip ────────────────────────────────────────────────── */
+/* One rounded container whose background is the border colour; the
+   1px grid gap paints the hairline dividers between tiles. */
+.ins-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 9px);
+  overflow: hidden;
+}
+.ins-kpi {
+  background: var(--surface, #fff);
+  padding: var(--space-4, 16px);
+  min-width: 0;
+}
+.ins-kpi__label {
+  font-size: var(--fs-mono, 11px);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim, #5c6b82);
+}
+.ins-kpi__value {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.ins-kpi__value[data-tone='ok'] {
+  color: var(--success);
+}
+.ins-kpi__value[data-tone='bad'] {
+  color: var(--danger);
+}
+/* --warning is a fill colour (2.2:1 as text); --warning-text is the
+   AA-compliant glyph value of the same hue family. */
+.ins-kpi__value[data-tone='warn'] {
+  color: var(--warning-text);
+}
+
+/* ── Two-column area ──────────────────────────────────────────── */
+
 .ins-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: var(--space-4, 16px);
+  align-items: start;
 }
-@media (min-width: 1024px) {
-  .ins-grid {
-    grid-template-columns: 2fr 1fr 1fr;
-  }
+.ins-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  min-width: 0;
 }
 
-/* Widget card */
-.ins-widget {
-  background: var(--bg-elev, #fff);
+/* ── Card ─────────────────────────────────────────────────────── */
+
+.ins-card {
+  background: var(--surface, #fff);
   border: 1px solid var(--border);
-  border-radius: var(--r-md, 16px);
-  padding: var(--space-4, 16px) var(--space-5, 24px);
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
-  min-width: 0; /* prevent overflow */
+  border-radius: var(--r-md, 9px);
+  /* 16px on all four sides — the old `16px 24px` gave the cards half
+     again the horizontal padding of the mockup's. No shadow: the
+     mockup separates surfaces with the hairline alone. */
+  padding: var(--space-4, 16px);
+  min-width: 0;
 }
-
-.ins-widget__header {
+.ins-card__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: var(--space-3, 12px);
-  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
-.ins-widget__title {
-  margin: 0;
-  font-size: var(--fs-base, 15px);
+.ins-card__title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: normal;
+  color: var(--text);
+}
+.ins-card__head .ins-card__title {
+  margin-bottom: 0;
+}
+/* The mockup sets the right-hand list cards 2px tighter than the
+   ranked-findings card. */
+.ins-card--list .ins-card__title {
+  margin-bottom: 10px;
+}
+.ins-card__meta {
+  font-size: var(--fs-chip, 12px);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.ins-card__meta b {
+  font-family: var(--font-mono);
   font-weight: 600;
   color: var(--text);
 }
-.ins-widget__meta {
-  font-size: 12px;
-  color: var(--text-muted, #46556b);
-  white-space: nowrap;
+.ins-card__meta-sep {
+  padding: 0 2px;
+  color: var(--text-dim);
 }
 
-/* Widget 1 — Stream Activity (SVG area chart) */
+/* ── Findings by severity — ranked rows ───────────────────────── */
+
+.ins-find-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ins-find-row {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  gap: 12px;
+  align-items: center;
+}
+.ins-find-main {
+  min-width: 0;
+}
+.ins-find-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.ins-find-share {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono, 11px);
+  color: var(--text-dim, #5c6b82);
+}
+.ins-find-label {
+  font-size: var(--fs-sm, 13px);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ins-find-track {
+  height: 6px;
+  margin-top: 5px;
+  background: var(--bg-2, #e9eef4);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.ins-find-fill {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  transition: width 400ms ease;
+}
+/* Severity, not category identity: the bar says how bad, not what. */
+.ins-find-fill[data-sev='error'] {
+  background: var(--danger);
+}
+.ins-find-fill[data-sev='warning'] {
+  background: var(--warning);
+}
+.ins-find-fill[data-sev='info'] {
+  background: var(--accent);
+}
+.ins-find-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm, 13px);
+  font-weight: 600;
+  text-align: right;
+  color: var(--text);
+}
+
+/* ── Stream activity chart ────────────────────────────────────── */
+
 .ins-chart {
   display: block;
   width: 100%;
-  height: auto;
+  height: 132px;
   overflow: visible;
-}
-.ins-chart-area {
-  /* filled by JS */
 }
 .ins-chart-line {
   fill: none;
   stroke: var(--accent, #0284c7);
   stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
 }
 .ins-chart-axis {
   stroke: var(--border);
   stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+/* Chrome/Firefox interpolate the `d` attribute, so a refresh that
+   appends one point slides the curve left instead of jumping. */
+.ins-chart-area,
+.ins-chart-line {
+  transition: d 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Widget 2 — Validation Health (donut) */
-.ins-donut-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3, 12px);
-}
-.ins-donut {
-  display: block;
-}
-.ins-donut-label {
-  text-anchor: middle;
-  dominant-baseline: middle;
-}
-.ins-donut-pct {
-  font-size: 28px;
-  font-weight: 700;
-  fill: var(--text);
-}
-.ins-donut-sub {
-  font-size: 10px;
-  font-weight: 600;
-  fill: var(--text-muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.ins-donut-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  font-size: 13px;
-  color: var(--text);
-}
-.ins-donut-legend-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.ins-donut-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.ins-donut-legend-count {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--text-muted);
-}
+/* ── Side lists (Formats / Versions detected) ─────────────────── */
 
-/* Widget 3 — Spec Mix (bars) */
-.ins-mix-table {
-  width: 100%;
-  font-size: 13px;
-}
-.ins-mix-subtitle {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin: 0 0 8px;
-}
-.ins-mix-subtitle + .ins-mix-subtitle,
-.ins-mix-row + .ins-mix-subtitle {
-  margin-top: var(--space-3, 12px);
-}
-.ins-mix-row {
-  display: grid;
-  grid-template-columns: 72px 1fr 44px;
-  align-items: center;
+.ins-list {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  margin-bottom: 6px;
+  font-size: var(--fs-sm, 13px);
 }
-.ins-mix-label {
+/* Full-width space-between, so labels hug the left edge and figures
+   the right one at every card width — the old fixed 72/99/44 grid
+   left a dead gutter as soon as the column grew past 1440. */
+.ins-list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.ins-list-label {
   color: var(--text);
-  font-size: 13px;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.ins-mix-bar-wrap {
-  background: var(--bg-2, #ecf1f6);
-  border-radius: 3px;
-  height: 8px;
-  overflow: hidden;
-}
-.ins-mix-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 400ms ease;
-}
-.ins-mix-pct {
-  font-size: 12px;
+.ins-list-pct {
+  font-family: var(--font-mono);
   color: var(--text-muted);
-  text-align: right;
+  flex-shrink: 0;
+}
+.ins-list-row--empty {
+  color: var(--text-dim);
 }
 
-/* Empty / skeleton state */
-.ins-empty {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md, 16px);
-  padding: var(--space-6, 32px);
-  text-align: center;
+/* ── Empty / skeleton ─────────────────────────────────────────── */
+
+.ins-empty__body {
+  margin: 0 0 12px;
+  font-size: var(--fs-sm, 13px);
   color: var(--text-muted);
-}
-.ins-empty h2 {
-  margin: 0 0 8px;
-  font-size: var(--fs-lg, 19px);
-  font-weight: 600;
-  color: var(--text);
-}
-.ins-empty p {
-  margin: 0;
-  font-size: 14px;
 }
 .ins-skeleton-bar {
   background: var(--bg-2, #ecf1f6);
-  border-radius: 4px;
-  height: 12px;
-  margin: 8px auto;
+  border-radius: var(--r-chip, 3px);
+  height: 10px;
+  margin: 8px 0;
   animation: ins-pulse 1.5s ease-in-out infinite;
 }
 @keyframes ins-pulse {
@@ -264,37 +355,124 @@
     opacity: 0.4;
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .ins-skeleton-bar {
+    animation: none;
+  }
+  .ins-chart-area,
+  .ins-chart-line,
+  .ins-find-fill {
+    transition: none;
+  }
+}
 
-/* ── Premium thin scrollbar for the /insights container ─────────── */
-.ins-section::-webkit-scrollbar {
+/* ── Status bar ───────────────────────────────────────────────── */
+
+.ins-statusbar {
+  flex-shrink: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 var(--space-4, 16px);
+  background: var(--surface, #fff);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono, 11px);
+  color: var(--text-dim, #5c6b82);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ins-statusbar__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
+}
+.ins-statusbar__right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ins-status-state {
+  color: var(--text-muted);
+}
+.ins-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.ins-status-dot[data-state='ok'] {
+  background: var(--success);
+}
+.ins-status-dot[data-state='error'] {
+  background: var(--danger);
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+
+/* The spec-support string is the first thing to go when the bar runs
+   out of room — the state, engine and window are the load-bearing
+   three. */
+@media (max-width: 1100px) {
+  .ins-status-spec {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  /* Below the shell's desktop breakpoint #app-root no longer clips,
+     so the section flows with the document instead of pinning its
+     own chrome. */
+  .ins-section {
+    height: auto;
+    overflow: visible;
+  }
+  .ins-body {
+    overflow: visible;
+  }
+  .ins-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .ins-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ins-section__head {
+    flex-wrap: wrap;
+  }
+  .ins-head__select {
+    margin-left: 0;
+  }
+}
+
+/* ── Thin scrollbar on the body ───────────────────────────────── */
+
+.ins-body::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-.ins-section::-webkit-scrollbar-track {
+.ins-body::-webkit-scrollbar-track {
   background: transparent;
 }
-.ins-section::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-}
-[data-theme='light'] .ins-section::-webkit-scrollbar-thumb {
+.ins-body::-webkit-scrollbar-thumb {
   background: rgba(24, 24, 27, 0.18);
+  border-radius: var(--r-chip, 3px);
 }
-.ins-section::-webkit-scrollbar-thumb:hover {
+[data-theme='dark'] .ins-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+.ins-body::-webkit-scrollbar-thumb:hover {
   background: var(--accent, #0284c7);
 }
-.ins-section {
+.ins-body {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
-}
-
-/* ── Smooth slide animation on the area chart refresh ───────────────
-   Modern browsers (Chrome 78+, Firefox 89+) interpolate the `d`
-   attribute on <path> elements when CSS transition is applied. On
-   each refresh the chart re-renders the path with one extra point on
-   the right; the browser smoothly tweens from the old curve to the
-   new one over 600ms, creating the «повз вліво» effect. */
-.ins-chart-area,
-.ins-chart-line {
-  transition: d 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  scrollbar-color: var(--border-strong) transparent;
 }
