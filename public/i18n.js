@@ -254,10 +254,10 @@
       'quality.tooltip.info': 'Інфо',
       'strip.label.quality': 'якість',
       'strip.label.bid': 'виграшний бід',
-      'strip.label.size': 'розмір',
+      'strip.label.creative': 'банер',
       'strip.label.intent': 'інтент',
       'strip.hint.bid': 'Ціна виграшного біда з проаналізованої відповіді',
-      'strip.hint.size': 'Розмір креатива, оголошений imp.banner',
+      'strip.hint.creative': 'Розмір креатива, оголошений imp.banner',
       'strip.hint.intent': 'Тип показу, який impression оголошує в imp.ext.adtype',
 
       // ── theme toggle tooltips ─────────────────────────────
@@ -575,10 +575,10 @@
       'quality.tooltip.info': 'Info',
       'strip.label.quality': 'quality',
       'strip.label.bid': 'winning bid',
-      'strip.label.size': 'size',
+      'strip.label.creative': 'banner',
       'strip.label.intent': 'intent',
       'strip.hint.bid': 'The winning bid price from the analyzed response',
-      'strip.hint.size': 'The creative size imp.banner declares',
+      'strip.hint.creative': 'The creative size imp.banner declares',
       'strip.hint.intent': 'The ad type this impression declares in imp.ext.adtype',
 
       // ── theme toggle tooltips ─────────────────────────────
@@ -884,10 +884,10 @@
       'quality.tooltip.info': 'Инфо',
       'strip.label.quality': 'качество',
       'strip.label.bid': 'выигрышный бид',
-      'strip.label.size': 'размер',
+      'strip.label.creative': 'баннер',
       'strip.label.intent': 'интент',
       'strip.hint.bid': 'Цена выигрышного бида из проанализированного ответа',
-      'strip.hint.size': 'Размер креатива, объявленный imp.banner',
+      'strip.hint.creative': 'Размер креатива, объявленный imp.banner',
       'strip.hint.intent': 'Тип показа, который impression объявляет в imp.ext.adtype',
 
       'theme.tooltip.auto': 'тема: авто · клик → светлая',

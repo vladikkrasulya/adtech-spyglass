@@ -151,6 +151,10 @@
   --fs-chip: 12px;
   --fs-nav: 14px;
   --fs-card: 14px;
+  /* The verdict headline. The mockup sets it at 19px in Geologica; the
+     scale's neighbours are 17 and 20, and at this size the difference
+     between them is the difference between a sentence and a banner. */
+  --fs-verdict: 19px;
 }
 
 /* ------------------------------------------------------------
@@ -164,4 +168,17 @@
    ------------------------------------------------------------ */
 .kt-shell {
   --r-pill: 6px;
+}
+
+/* The mockup's page ground is #F2F5F8. The vendored --bg is #F6F8FA, tuned
+   for the marketing pages where a lighter field suits long prose. On the
+   workbench the ground is what the white panels are read against, and two
+   units of lightness is the difference between panels that sit on a surface
+   and panels that float on nothing. */
+.kt-shell {
+  --bg: #f2f5f8;
+}
+
+[data-theme='dark'] .kt-shell {
+  --bg: #0a111f;
 }

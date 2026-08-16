@@ -860,8 +860,13 @@ export async function mountInspector(root, ctx) {
   function updateCharCount(id) {
     const el = $(id);
     const count = $(id === 'bidReq' ? 'reqCount' : 'resCount');
-    const len = el.value.length;
-    count.textContent = len > 0 ? (len > 999 ? (len / 1000).toFixed(1) + 'k' : len) : '0';
+    // Bytes, with a unit and thin-space grouping — the mockup reads "1 284 B".
+    // The old form was a bare character count ("850"), which is neither the
+    // same number nor labelled as anything: a payload's size is what an
+    // exchange's body limit is measured in, and UTF-8 makes those two differ
+    // the moment a payload carries a non-ASCII domain or creative.
+    const len = new TextEncoder().encode(el.value).length;
+    count.textContent = len > 0 ? String(len).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' B' : '';
     count.className = 'char-count' + (len > 50000 ? ' warn' : '');
     // Manifesto rule 3: hide the char-count when the editor is empty.
     // '0' adds noise to the empty state (the "0 порожньо" pair reads as
@@ -905,7 +910,13 @@ export async function mountInspector(root, ctx) {
 
   function updateJsonBadge(id) {
     const el = $(id);
-    const badge = $(id === 'bidReq' ? 'reqBadge' : 'resBadge');
+    const badge = document.getElementById(id === 'bidReq' ? 'reqBadge' : 'resBadge');
+    // The per-editor badge left the payload column in v1.13.1 — validity is
+    // stated once, by the work bar's chip, where the mockup puts it. The
+    // element may simply be absent now, and the null check is the whole
+    // difference between that being a design decision and being a crash that
+    // takes the entire module's activate() down with it.
+    if (!el || !badge) return;
     // The request editor admits two wire shapes: OpenRTB JSON and a raw
     // HTTP(S) feed URL. Give the latter an explicit state instead of the
     // misleading red "invalid JSON" badge. The response editor remains
@@ -1587,20 +1598,15 @@ export async function mountInspector(root, ctx) {
     }
 
     // 2. Traffic + Format
-    let trafficEmoji = '💻';
+    // No emoji. They render in a different font per OS, carry their own
+    // colour, and sit off the baseline of the mono run beside them — the
+    // mockup's context chip is plain text end to end.
     let trafficLabel = 'Web';
     if (req.app) {
-      trafficEmoji = '📱';
       trafficLabel = 'In-App';
     } else if (req.site) {
       const dt = req.device && req.device.devicetype;
-      if (dt === 3 || dt === 7) {
-        trafficEmoji = '📺';
-        trafficLabel = 'CTV';
-      } else {
-        trafficEmoji = '💻';
-        trafficLabel = 'Web';
-      }
+      trafficLabel = dt === 3 || dt === 7 ? 'CTV' : 'Web';
     }
     let formatLabel = '';
     const imp0 = req.imp && req.imp[0];
@@ -1610,8 +1616,7 @@ export async function mountInspector(root, ctx) {
       else if (imp0.native) formatLabel = 'Native';
       else if (imp0.audio) formatLabel = 'Audio';
     }
-    const trafficValue =
-      trafficEmoji + ' ' + trafficLabel + (formatLabel ? ' (' + formatLabel + ')' : '');
+    const trafficValue = trafficLabel + (formatLabel ? ' (' + formatLabel + ')' : '');
 
     // 3. Device + OS
     let deviceLabel = '?';
@@ -1648,8 +1653,11 @@ export async function mountInspector(root, ctx) {
     if (regsExt.gdpr === 1 || regs.gdpr === 1) privBadges.push('GDPR');
     if (regsExt.us_privacy || regs.us_privacy) privBadges.push('CCPA');
     if (regs.gpp || regs.gpp_sid) privBadges.push('GPP');
+    // Flat text. The mockup's chip values are one run of type — a nested
+    // bordered pill inside a chip is a box inside a box saying the same
+    // thing twice, and it was the only place on the row with two edges.
     const privValue = privBadges.length
-      ? privBadges.map((b) => '<span class="priv-badge">' + escapeHtml(b) + '</span>').join('')
+      ? escapeHtml(privBadges.join(' '))
       : escapeHtml(t('strip.privacy.none'));
 
     // 5. Pricing
@@ -1746,7 +1754,7 @@ export async function mountInspector(root, ctx) {
     if (imp0 && imp0.banner && imp0.banner.w && imp0.banner.h) {
       sizeChip =
         '<div class="analysis-strip-block">' +
-        stripLabel('size') +
+        stripLabel('creative') +
         '<div class="analysis-strip-value">' +
         escapeHtml(imp0.banner.w + '×' + imp0.banner.h) +
         '</div>' +
@@ -5044,19 +5052,29 @@ export async function mountInspector(root, ctx) {
       btn.classList.toggle('is-active', on);
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
     });
+    refreshPayloadDots();
   }
 
   /** Mark the side you are NOT looking at as already filled. The two-pane
    *  layout told you this for free by simply being visible; a switch has to
    *  say it explicitly, or a pasted BidResponse becomes invisible. */
   function refreshPayloadDots() {
-    for (const [side, inputId] of [
-      ['Req', 'bidReq'],
-      ['Res', 'bidRes'],
+    // The dot marks the side you are NOT looking at. On the active tab it
+    // says nothing — you can see that pane's contents — while on the inactive
+    // one it is the only signal that a payload is waiting there. The first
+    // cut showed it on both, which made it read as decoration.
+    const active =
+      (document.querySelector('.payload-switch-btn.is-active') || {}).getAttribute &&
+      document.querySelector('.payload-switch-btn.is-active').getAttribute('data-payload');
+    for (const [side, inputId, key] of [
+      ['Req', 'bidReq', 'req'],
+      ['Res', 'bidRes', 'res'],
     ]) {
       const dot = document.getElementById('payloadDot' + side);
       const input = document.getElementById(inputId);
-      if (dot && input) dot.hidden = !String(input.value || '').trim();
+      if (!dot || !input) continue;
+      const filled = !!String(input.value || '').trim();
+      dot.hidden = !filled || key === active;
     }
   }
 
