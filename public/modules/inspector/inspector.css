@@ -4617,9 +4617,15 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
 .footer-status-row > * {
   flex-shrink: 0;
 }
-#stEntity,
-#stEntity + .footer-sep {
-  display: none;
+/* The mockup's footer opens with a state word ("ready"), not with the
+   analyzed entity — the verdict states the payload's outcome in a sentence
+   directly above, and repeating "example-publisher.com · critical errors"
+   here is the same claim in a worse place. #stEntity keeps its element and
+   its id (export.js and the status tests read it) and is simply not the
+   thing the bar leads with. */
+#stEntity {
+  color: var(--text-muted) !important;
+  font-weight: 400 !important;
 }
 
 /* The context chip carries a sentence of facts, not a labelled field, so it
@@ -4628,4 +4634,199 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   font-family: inherit;
   font-weight: 400;
   color: var(--text-muted);
+}
+
+/* ── Payload column, per the mockup ─────────────────────────────────────
+   ONE header row where there were two. The mockup pairs an inset segmented
+   pill with the byte count and four icon buttons; ours had a segmented tab
+   strip AND a card header carrying a title, a validity pill and four text
+   buttons — 93px of chrome above the first line of JSON, against 42px. */
+.payload-switch {
+  display: inline-flex;
+  align-self: flex-start;
+  margin: var(--space-3) var(--space-3) 0;
+  padding: 3px;
+  gap: 2px;
+  border: 0;
+  border-radius: var(--r-sm, 6px);
+  background: var(--bg-2);
+}
+.payload-switch-btn {
+  height: 27px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-chip, 3px);
+  margin-bottom: 0;
+  font-size: var(--fs-sm, 13px);
+}
+.payload-switch-btn.is-active {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  padding-bottom: 0;
+  box-shadow: 0 1px 2px rgba(13, 23, 38, 0.08);
+}
+/* Square, and on the side you are not reading. */
+.payload-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+}
+
+/* The header row: byte count on the left of a right-aligned icon cluster,
+   nothing else. The card title repeated the segment above it, and the
+   validity pill moved to the work bar where the mockup puts it. */
+.workbench-payload .input-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: 0 var(--space-3) 0 0;
+  border: 0;
+  background: transparent;
+  min-height: 34px;
+}
+.workbench-payload .char-count {
+  margin-right: auto;
+  padding-left: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip, 12px);
+  color: var(--text-dim);
+}
+.workbench-payload .btn-icon.icon-only {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm, 6px);
+  background: transparent;
+  color: var(--text-muted);
+}
+.workbench-payload .btn-icon.icon-only:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+.workbench-payload .btn-icon.icon-only svg {
+  display: block;
+}
+/* The collapse caret rendered outside the card's own clip box — a control
+   half off its panel. The column no longer collapses, so it goes. */
+.workbench-payload .btn-collapse-toggle,
+.workbench-payload .input-card-title,
+.workbench-payload .json-badge {
+  display: none;
+}
+
+/* Editor metrics the gutter has to agree with. */
+.workbench-payload .input-card .json-input {
+  padding: var(--space-3) var(--space-4) var(--space-3) 0;
+  line-height: 1.7;
+  tab-size: 8;
+}
+.line-gutter {
+  padding: var(--space-3) var(--space-2) var(--space-3) 0;
+  line-height: 1.7;
+  background: var(--bg);
+}
+
+/* ── Footer, mockup metrics ─────────────────────────────────────────────
+   30px tall, dim by default with only the state word and "online" stepping
+   up, 14px gaps and no literal middot separators — the mockup separates by
+   space, so a narrow viewport drops spacing rather than stacking glyphs. */
+.app-footer {
+  height: 30px;
+  padding: 0 var(--space-4);
+  color: var(--text-dim);
+  font-size: var(--fs-mono, 11px);
+  line-height: 1.5;
+}
+.footer-status-row {
+  gap: 14px;
+}
+.footer-sep {
+  display: none;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+}
+
+/* ── Verdict chips, mockup metrics ──────────────────────────────────────
+   Label 12px, value 700, both on a 1.5 leading so every chip lands on the
+   same 27.5px height. The label's inherited bottom margin was pushing the
+   value off optical centre. */
+.analysis-strip-block {
+  align-items: baseline;
+  padding: 4px 9px;
+  background: #e9eef4;
+}
+[data-theme='dark'] .analysis-strip-block {
+  background: var(--bg-2);
+}
+.analysis-strip-label {
+  margin: 0;
+  font-size: var(--fs-chip, 12px);
+  line-height: 1.5;
+}
+.analysis-strip-value {
+  font-weight: 700;
+  line-height: 1.5;
+}
+/* The accented chip is one run of type in the mockup, not a label and a
+   value in two sizes. */
+.analysis-strip-intent {
+  background: rgba(2, 132, 199, 0.1);
+}
+.analysis-strip-intent .analysis-strip-label,
+.analysis-strip-intent .analysis-strip-value {
+  font-family: inherit;
+  font-size: var(--fs-chip, 12px);
+  font-weight: 600;
+}
+.analysis-strip-context .analysis-strip-value {
+  font-size: var(--fs-chip, 12px);
+  font-weight: 400;
+}
+/* A hard square, as drawn. */
+.verdict-badge {
+  border-radius: 0;
+}
+.verdict-headline {
+  font-size: var(--fs-verdict, 19px);
+  line-height: 1.25;
+}
+.kt-share-menu > summary {
+  box-shadow: inset 0 -1px 0 0 rgba(13, 23, 38, 0.05);
+  text-transform: none;
+}
+
+/* ── Page ground ────────────────────────────────────────────────────────
+   The mockup's ground is #F2F5F8; ours was #F6F8FA, which is the marketing
+   pages' lighter tint. On a workbench the difference is the contrast the
+   white panels sit against. */
+.kt-shell .workbench,
+.kt-shell #tValidation.tab-content,
+.kt-shell .tab-content {
+  background: var(--bg);
+}
+
+/* Crosscheck's clean state is a bare green check in the mockup, not a chip
+   with a glyph in it — a passing check is the absence of a count, and a
+   grey box around a tick reads as one more thing to look at. */
+.tab-badge {
+  background: #e9eef4;
+}
+[data-theme='dark'] .tab-badge {
+  background: var(--bg-2);
+}
+#crossBadge {
+  background: transparent;
+  color: var(--success);
+  font-size: var(--fs-sm, 13px);
+  font-weight: 700;
+  padding: 0;
 }

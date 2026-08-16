@@ -425,7 +425,7 @@
         aria-selected="true"
         aria-controls="cardReq"
       >
-        запрос<span class="payload-dot" id="payloadDotReq" hidden></span>
+        Запрос<span class="payload-dot" id="payloadDotReq" hidden></span>
       </button>
       <button
         type="button"
@@ -435,57 +435,94 @@
         aria-selected="false"
         aria-controls="cardRes"
       >
-        ответ<span class="payload-dot" id="payloadDotRes" hidden></span>
+        Ответ<span class="payload-dot" id="payloadDotRes" hidden></span>
       </button>
     </div>
     <section class="input-section">
       <div class="input-card" id="cardReq">
         <div class="input-card-header">
-          <span class="input-card-title">запрос</span>
-          <div class="input-card-actions">
-            <span class="char-count" id="reqCount">0</span>
-            <span class="json-badge empty" id="reqBadge">пусто</span>
-            <button
-              data-action="save-sample"
-              class="btn-icon"
-              title="Сохранить текущий запрос/ответ в кабинет — шифруется твоим паролем. Гостей попросим войти сначала."
+          <span class="char-count" id="reqCount">0</span>
+          <button
+            data-action="save-sample"
+            class="btn-icon icon-only"
+            title="Сохранить текущий запрос/ответ в кабинет — шифруется твоим паролем. Гостей попросим войти сначала."
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              сохранить
-            </button>
-            <button
-              data-action="clear-input"
-              data-target="bidReq"
-              class="btn-icon"
-              title="Очистить поле"
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+              <path d="M17 21v-8H7v8M7 3v5h8" />
+            </svg>
+          </button>
+          <button
+            data-action="clear-input"
+            data-target="bidReq"
+            class="btn-icon icon-only"
+            title="Очистить поле"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              очистить
-            </button>
-            <button
-              data-action="format-json"
-              data-target="bidReq"
-              class="btn-icon"
-              title="Отформатировать JSON"
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            data-action="format-json"
+            data-target="bidReq"
+            class="btn-icon icon-only"
+            title="Отформатировать JSON"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              формат
-            </button>
-            <button
-              data-action="copy-text"
-              data-target="bidReq"
-              class="btn-icon"
-              title="Скопировать в буфер"
+              <path d="M4 6h16M4 12h10M4 18h14" />
+            </svg>
+          </button>
+          <button
+            data-action="copy-text"
+            data-target="bidReq"
+            class="btn-icon icon-only"
+            title="Скопировать в буфер"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              копия
-            </button>
-            <button
-              data-action="toggle-card"
-              data-target="cardReq"
-              class="btn-collapse-toggle"
-              title="Свернуть эту панель — освободить место, когда работаешь только с другой стороной. Клик ещё раз — развернёт назад."
-              aria-label="Свернуть / развернуть панель"
-            >
-              <span class="caret">▾</span>
-            </button>
-          </div>
+              <rect x="9" y="9" width="12" height="12" rx="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+          </button>
         </div>
         <div class="json-editor">
           <div class="line-gutter" id="gutterReq" aria-hidden="true"></div>
@@ -506,44 +543,68 @@
       </div>
       <div class="input-card" id="cardRes">
         <div class="input-card-header">
-          <span class="input-card-title">ответ</span>
-          <div class="input-card-actions">
-            <span class="char-count" id="resCount">0</span>
-            <span class="json-badge empty" id="resBadge">пусто</span>
-            <button
-              data-action="clear-input"
-              data-target="bidRes"
-              class="btn-icon"
-              title="Очистить поле"
+          <span class="char-count" id="resCount">0</span>
+          <button
+            data-action="clear-input"
+            data-target="bidRes"
+            class="btn-icon icon-only"
+            title="Очистить поле"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              очистить
-            </button>
-            <button
-              data-action="format-json"
-              data-target="bidRes"
-              class="btn-icon"
-              title="Отформатировать JSON"
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            data-action="format-json"
+            data-target="bidRes"
+            class="btn-icon icon-only"
+            title="Отформатировать JSON"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              формат
-            </button>
-            <button
-              data-action="copy-text"
-              data-target="bidRes"
-              class="btn-icon"
-              title="Скопировать в буфер"
+              <path d="M4 6h16M4 12h10M4 18h14" />
+            </svg>
+          </button>
+          <button
+            data-action="copy-text"
+            data-target="bidRes"
+            class="btn-icon icon-only"
+            title="Скопировать в буфер"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              копия
-            </button>
-            <button
-              data-action="toggle-card"
-              data-target="cardRes"
-              class="btn-collapse-toggle"
-              title="Свернуть эту панель — освободить место, когда работаешь только с другой стороной. Клик ещё раз — развернёт назад."
-              aria-label="Свернуть / развернуть панель"
-            >
-              <span class="caret">▾</span>
-            </button>
-          </div>
+              <rect x="9" y="9" width="12" height="12" rx="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+          </button>
         </div>
         <div class="json-editor">
           <div class="line-gutter" id="gutterRes" aria-hidden="true"></div>
@@ -848,7 +909,7 @@
     <span class="footer-sep">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.13.0</span></span
+      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.13.1</span></span
     >
     <span class="footer-extras">
       <span class="footer-sep">·</span>

@@ -6,6 +6,43 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.13.1 — the payload column, measured
+
+Second pass over the same audit. v1.13.0 fixed the shape; this fixes the
+half the shape sat on.
+
+- **One header row above the editor, not two.** The mockup pairs a segmented
+  Request/Response pill with the byte count and four icon buttons in 42px.
+  Ours stacked a tab strip on top of a card header carrying a title, a
+  validity pill and four text buttons — 93px of chrome above the first line
+  of JSON. The title repeated the segment above it, the validity pill moved
+  to the work bar where the mockup puts it, and the collapse caret went with
+  them: it rendered half outside its own card's clip box.
+- **The byte count is bytes.** It read "850" — a character count, unlabelled.
+  Payload size is what an exchange's body limit is measured in, and UTF-8
+  makes those two differ the moment a domain or creative is non-ASCII. Now
+  "850 B" with thin-space grouping, as drawn.
+- **The dot marks the side you are not on.** It was on the active tab, where
+  it says nothing you cannot already see; on the inactive one it is the only
+  signal a payload is waiting there.
+- **Chips flattened.** No emoji in the traffic value, no bordered pill nested
+  inside the privacy chip — the mockup's chip values are one run of type, and
+  a box inside a box was the only place on the row with two edges. Labels at
+  12px, values at 700, both on a 1.5 leading so every chip lands on the same
+  height. "banner" instead of "size": the mockup names the creative type.
+- **Footer at 30px**, dim by default, 14px gaps and no literal middot spans —
+  the mockup separates by space, so a narrow viewport drops spacing instead
+  of stacking glyphs.
+- **Page ground is #F2F5F8**, the mockup's. `--bg` is #F6F8FA in the vendored
+  sheet, tuned for marketing pages where a lighter field suits long prose; on
+  a workbench the ground is what the white panels are read against.
+- A null guard on `updateJsonBadge`. Removing the per-editor validity badge
+  left it dereferencing a missing element, and because it runs inside the
+  module's activate() the whole Inspector failed to mount — a blank workbench
+  with one line in the console. The element is legitimately optional now; the
+  check is what makes that a decision rather than a crash.
+- App version bumped `1.13.0 → 1.13.1`; Core `0.35.0`, CLI `0.1.1`.
+
 ### v1.13.0 — measured against the mockup, not remembered from it
 
 A side-by-side audit at one viewport, one payload and one theme found the

@@ -427,7 +427,7 @@
         aria-selected="true"
         aria-controls="cardReq"
       >
-        request<span class="payload-dot" id="payloadDotReq" hidden></span>
+        Request<span class="payload-dot" id="payloadDotReq" hidden></span>
       </button>
       <button
         type="button"
@@ -437,57 +437,94 @@
         aria-selected="false"
         aria-controls="cardRes"
       >
-        response<span class="payload-dot" id="payloadDotRes" hidden></span>
+        Response<span class="payload-dot" id="payloadDotRes" hidden></span>
       </button>
     </div>
     <section class="input-section">
       <div class="input-card" id="cardReq">
         <div class="input-card-header">
-          <span class="input-card-title">bid request</span>
-          <div class="input-card-actions">
-            <span class="char-count" id="reqCount">0</span>
-            <span class="json-badge empty" id="reqBadge">empty</span>
-            <button
-              data-action="save-sample"
-              class="btn-icon"
-              title="Save current request/response to your Cabinet — encrypted with your password. Signed-out users will be prompted to sign in first."
+          <span class="char-count" id="reqCount">0</span>
+          <button
+            data-action="save-sample"
+            class="btn-icon icon-only"
+            title="Save current request/response to your Cabinet — encrypted with your password. Signed-out users will be prompted to sign in first."
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              save
-            </button>
-            <button
-              data-action="clear-input"
-              data-target="bidReq"
-              class="btn-icon"
-              title="Clear field"
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+              <path d="M17 21v-8H7v8M7 3v5h8" />
+            </svg>
+          </button>
+          <button
+            data-action="clear-input"
+            data-target="bidReq"
+            class="btn-icon icon-only"
+            title="Clear field"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              clear
-            </button>
-            <button
-              data-action="format-json"
-              data-target="bidReq"
-              class="btn-icon"
-              title="Format JSON"
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            data-action="format-json"
+            data-target="bidReq"
+            class="btn-icon icon-only"
+            title="Format JSON"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              format
-            </button>
-            <button
-              data-action="copy-text"
-              data-target="bidReq"
-              class="btn-icon"
-              title="Copy to clipboard"
+              <path d="M4 6h16M4 12h10M4 18h14" />
+            </svg>
+          </button>
+          <button
+            data-action="copy-text"
+            data-target="bidReq"
+            class="btn-icon icon-only"
+            title="Copy to clipboard"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              copy
-            </button>
-            <button
-              data-action="toggle-card"
-              data-target="cardReq"
-              class="btn-collapse-toggle"
-              title="Collapse this pane — frees space when you only need the other side. Click again to expand."
-              aria-label="Collapse / expand panel"
-            >
-              <span class="caret">▾</span>
-            </button>
-          </div>
+              <rect x="9" y="9" width="12" height="12" rx="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+          </button>
         </div>
         <div class="json-editor">
           <div class="line-gutter" id="gutterReq" aria-hidden="true"></div>
@@ -508,44 +545,68 @@
       </div>
       <div class="input-card" id="cardRes">
         <div class="input-card-header">
-          <span class="input-card-title">bid response</span>
-          <div class="input-card-actions">
-            <span class="char-count" id="resCount">0</span>
-            <span class="json-badge empty" id="resBadge">empty</span>
-            <button
-              data-action="clear-input"
-              data-target="bidRes"
-              class="btn-icon"
-              title="Clear field"
+          <span class="char-count" id="resCount">0</span>
+          <button
+            data-action="clear-input"
+            data-target="bidRes"
+            class="btn-icon icon-only"
+            title="Clear field"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              clear
-            </button>
-            <button
-              data-action="format-json"
-              data-target="bidRes"
-              class="btn-icon"
-              title="Format JSON"
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            data-action="format-json"
+            data-target="bidRes"
+            class="btn-icon icon-only"
+            title="Format JSON"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              format
-            </button>
-            <button
-              data-action="copy-text"
-              data-target="bidRes"
-              class="btn-icon"
-              title="Copy to clipboard"
+              <path d="M4 6h16M4 12h10M4 18h14" />
+            </svg>
+          </button>
+          <button
+            data-action="copy-text"
+            data-target="bidRes"
+            class="btn-icon icon-only"
+            title="Copy to clipboard"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              copy
-            </button>
-            <button
-              data-action="toggle-card"
-              data-target="cardRes"
-              class="btn-collapse-toggle"
-              title="Collapse this pane — frees space when you only need the other side. Click again to expand."
-              aria-label="Collapse / expand panel"
-            >
-              <span class="caret">▾</span>
-            </button>
-          </div>
+              <rect x="9" y="9" width="12" height="12" rx="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+          </button>
         </div>
         <div class="json-editor">
           <div class="line-gutter" id="gutterRes" aria-hidden="true"></div>
@@ -849,7 +910,7 @@
     <span class="footer-sep">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.13.0</span></span
+      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.13.1</span></span
     >
     <span class="footer-extras">
       <span class="footer-sep">·</span>
