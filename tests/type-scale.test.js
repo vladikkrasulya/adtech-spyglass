@@ -53,7 +53,15 @@ const BUDGET = {
   'modules/admin-blog/admin-blog.css': 2,
   'modules/behavior/behavior.css': 4,
   'modules/blog/blog.css': 4,
-  'modules/dialects/dialects.css': 4,
+  // v2 rebuilt this page against the mockup: the severity chip rows, the
+  // rule-count row and the intro card went away, and with them all four of
+  // the literals that used to be budgeted here. Two remain, and both are
+  // sizes the mockup measures rather than sizes that drifted in — the
+  // page-header H1 at 21px (the scale's neighbours are 20 and 28, and the
+  // band is 90px tall by the mockup's own measurement, which 28px does not
+  // fit), and the active card's corner marks at 9px, which are registration
+  // ticks rather than text and must stay below the 11px eyebrow they frame.
+  'modules/dialects/dialects.css': 2,
   'modules/docs/docs.css': 9,
   'modules/insights/insights.css': 7,
   'modules/library/library.css': 2,

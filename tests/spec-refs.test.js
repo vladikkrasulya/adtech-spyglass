@@ -768,7 +768,16 @@ test('docs catalog: a scale the UI has never seen still gets a chip and a neutra
   }
 });
 
-test('dialect cards: the severity tally covers every row it counts', async () => {
+test('dialect cards: the rule count covers every row the catalog serves', async () => {
+  // What this test has always been about: a number printed on a dialect card
+  // must be the whole bucket, not the part of it the UI happens to have a
+  // colour for. It used to assert that through the per-severity chip rows,
+  // because that was the shape the page had; the v2 redesign replaced those
+  // rows with a single count (in the baseline card's description, in the
+  // overlay cards' mono footer), so the assertions move to where the number
+  // now lives. The guarantee is unchanged — and the fixture check at the
+  // bottom still proves the bucket contains rows on scales the validator
+  // never had, which is the omission that made this test necessary.
   const payload = servedCatalog('en');
   const harness = await mountSectionModule({
     specifier: '/modules/dialects/index.js',
@@ -786,67 +795,34 @@ test('dialect cards: the severity tally covers every row it counts', async () =>
       id.startsWith('extrtb.') ? 'ext-rtb' : id.startsWith('inpage-push.') ? 'inpage-push' : 'iab';
     const expected = new Map();
     for (const item of payload.items) {
-      const bucket = expected.get(bucketOf(item.id)) || {
-        total: 0,
-        families: new Set(),
-        chips: [],
-      };
+      const bucket = expected.get(bucketOf(item.id)) || { total: 0, families: new Set() };
       bucket.total++;
       bucket.families.add(item.family);
-      bucket.chips.push(`${item.severity}`);
       expected.set(bucketOf(item.id), bucket);
     }
 
-    const cards = [...harness.root.querySelectorAll('.dlc-card')];
+    const cards = [...harness.root.querySelectorAll('#dlc-shipped-root .dlc-card')];
     assert.equal(cards.length, 3, 'three built-in dialects');
 
     let accounted = 0;
     for (const card of cards) {
-      const slug = card.dataset.dialect;
-      const want = expected.get(slug) || { total: 0, families: new Set(), chips: [] };
-      const declared = Number(card.querySelector('.dlc-rule-count__num').textContent);
+      const slug = card.dataset.slug;
+      const want = expected.get(slug) || { total: 0, families: new Set() };
+      // The baseline card carries its count mid-description ("N finding
+      // ids"), the overlays at the end of the footer ("ext-rtb · N rules").
+      // Both mark it up as .dlc-card__count, so the assertion does not have
+      // to guess which digits in the copy are the number.
+      const carrier = card.querySelector('.dlc-card__count');
+      assert.ok(carrier, `${slug}: the card prints no rule count at all`);
+      const declared = Number(carrier.textContent.trim());
       assert.equal(declared, want.total, `${slug}: rule count disagrees with the served rows`);
-
-      const chips = [...card.querySelectorAll('.dlc-sev-chip')];
-      const counted = chips.reduce(
-        (sum, chip) => sum + Number(/^\s*(\d+)/.exec(chip.textContent)[1]),
-        0,
-      );
-      assert.equal(
-        counted,
-        declared,
-        `${slug}: the bar counts ${counted} of the ${declared} rules on the card`,
-      );
       accounted += declared;
-
-      // Every level actually present in the bucket has a chip carrying its
-      // own count. The pre-fix tally kept only error/warning/info and left
-      // the rest out of a number labelled as the whole bucket.
-      const wantChips = [...new Set(want.chips)]
-        .map((sev) => `${want.chips.filter((s) => s === sev).length} ${sev}`)
-        .sort();
-      assert.deepEqual(
-        chips.map((c) => c.textContent.trim()).sort(),
-        wantChips,
-        `${slug}: the severity bar is not the served distribution`,
-      );
-
-      // One row per scale, so `warn` is never lined up next to `warning`
-      // as if they were the same enum.
-      const rows = [...card.querySelectorAll('.dlc-sev-bar__label')].map((l) =>
-        l.textContent.trim(),
-      );
-      assert.equal(new Set(rows).size, rows.length, `${slug}: duplicate scale rows`);
-      assert.equal(
-        rows.length,
-        want.families.size,
-        `${slug}: ${want.families.size} scales served, ${rows.length} rows rendered`,
-      );
     }
     assert.equal(accounted, payload.count, 'the three cards must account for the whole catalog');
 
-    // The catch-all bucket is where the non-validator rows land; if it ever
-    // shows a single scale row again, they are being dropped as before.
+    // The catch-all bucket is where the non-validator rows land. If it ever
+    // stops serving more than one scale, this fixture has stopped exercising
+    // the omission the count exists to prevent.
     const iabFamilies = expected.get('iab').families;
     assert.ok(iabFamilies.size > 1, `the iab bucket serves only ${[...iabFamilies]}`);
   } finally {
