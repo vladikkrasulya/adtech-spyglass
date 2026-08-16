@@ -56,7 +56,14 @@ const BUDGET = {
   'modules/dialects/dialects.css': 4,
   'modules/docs/docs.css': 9,
   'modules/insights/insights.css': 7,
-  'modules/library/library.css': 2,
+  // The Samples redesign rewrote this sheet against the mockup, and the two
+  // literals it used to carry (14px on the tab strip, 14px on the loading /
+  // empty note) were both on elements the mockup does not have. Their
+  // replacements — the filter chips, the count, the column header — want 12px,
+  // which the v2 layer names --fs-chip. So the file went to zero without any
+  // step being rounded to a size the design did not ask for. Kept as an
+  // explicit 0 rather than deleted so the ground cannot be given back quietly.
+  'modules/library/library.css': 0,
   'modules/macros/styles.css': 4,
   // v2 moved .kt-nav__item off a hardcoded 14px onto --fs-sm. The rail is
   // persistent chrome, so that one literal was rendering off-scale eight
