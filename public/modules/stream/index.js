@@ -1,19 +1,54 @@
 /* ============================================================
    public/modules/stream/index.js — Stream module (ES module).
 
-   First feature module under the Phase B contract. Mounts the
-   live RTB observability stream into a host root element. Uses
-   ctx.signal for self-detaching listeners and ctx.addCleanup()
-   for resources without AbortSignal support (EventSource, dynamic
-   <link>, localStorage flush).
+   Renders the live RTB observability feed as ONE full-width table:
+   TIME / KIND / SOURCE / FORMAT / SIZE / FINDINGS, under a title
+   band (status pill + Pause) and a filter row. Clicking a row opens
+   that payload in the Inspector — the stream names what arrived,
+   the Inspector is where a payload is read.
+
+   Two cleanup channels, both used on purpose so the patterns stay
+   visible to future modules:
+
+     1. ctx.signal  — passed to addEventListener({ signal }) and
+                      fetch({ signal }); the registry's AbortController
+                      fires it on unmount so listeners detach on their own.
+     2. ctx.addCleanup(fn) — for things with no AbortSignal support:
+                      EventSource.close(), setInterval, the .stream-view
+                      class, the kt:lang-change unsubscribe. Runs LIFO.
+
+   Grading (the FINDINGS column) is the one piece of this page that
+   talks to the server per payload, and it is batched deliberately.
+   Every specimen the generator emits is a mutated clone of a corpus
+   fixture — the only thing that varies between two emissions of the
+   same fixture is the request id — so findings are a property of
+   `envelope.source`, not of the individual payload. We therefore grade
+   each SOURCE once, via one POST /api/v1/replay carrying up to 100
+   samples, and reuse the answer for every later row from that fixture.
+   With a ~28-fixture corpus that is a handful of calls per mount and
+   then nothing, instead of one /api/analyze round trip per second
+   (which would spend the whole 60/min/IP analyze budget on a page
+   nobody is reading closely).
    ============================================================ */
 'use strict';
 
-import { escapeHtml } from '/core/utils.js';
 import { specimenPath } from '/core/routes.js';
 
+/** Rows kept in the DOM. Older ones fall off the bottom. */
 const MAX_ROWS = 100;
-const THEME_KEY = 'kt-theme';
+/** Window the "N in the last hour" counter reports on. */
+const ROLLING_WINDOW_MS = 60 * 60 * 1000;
+/** Window the status pill's per-minute rate is measured over. */
+const RATE_WINDOW_MS = 60 * 1000;
+/** Coalescing delay before a grading batch goes out. */
+const GRADE_DEBOUNCE_MS = 400;
+/** Server caps /api/v1/replay at 100 samples per call; don't exceed it. */
+const GRADE_BATCH_MAX = 100;
+/** Hard stop on grading traffic from one mount, whatever happens. */
+const GRADE_CALL_BUDGET = 40;
+
+const FILTERS = ['all', 'requests', 'responses', 'findings', 'pops', 'vast'];
+const COLUMNS = ['time', 'kind', 'source', 'format', 'size', 'findings'];
 
 export default {
   id: 'stream',
@@ -32,110 +67,126 @@ export default {
     },
   },
 
-  /**
-   * Activates the Stream surface inside `root`.
-   *
-   * The contract has two cleanup channels and we use BOTH on purpose
-   * so the patterns are visible to future modules:
-   *
-   *   1. ctx.signal  — passed to addEventListener({ signal }) and
-   *                    fetch({ signal }). The registry's AbortController
-   *                    fires it automatically on unmount, so listeners
-   *                    detach without us tracking them.
-   *
-   *   2. ctx.addCleanup(fn) — explicit cleanup callbacks for things
-   *                    that don't accept AbortSignal: EventSource.close(),
-   *                    document.head additions, intervals. Called LIFO.
-   *
-   * Anything we put on `root.innerHTML` is auto-swept by the registry
-   * after both channels run, so DOM teardown is free.
-   */
   async mount(root, ctx) {
     // Scope the full-bleed stream grid to this mount. stream.css targets
     // #app-root.stream-view (not bare #app-root); without this class the
-    // persistent stylesheet would keep #app-root as a 2-column stream grid
-    // for the NEXT section the user navigates to. Removed on unmount.
+    // persistent stylesheet would keep #app-root as a stream grid for the
+    // NEXT section the user navigates to. Removed on unmount.
     root.classList.add('stream-view');
     ctx.addCleanup(() => root.classList.remove('stream-view'));
 
-    // Per-mount state lives in this closure. A re-mount gets fresh
-    // counters / caches automatically.
-    let received = 0;
-    let firstEvent = true;
-    let selectedRow = null;
-    let currentTab = 'decoded';
-    const analyzeCache = new Map();
-    let activeEnvelope = null;
-    let activeAnalysis = null;
+    const t = ctx.t;
 
-    // ── Rolling 1-hour aggregates (client-side, no chart — MVP text/badges) ─
-    // Each entry: { ts: Number, fmt: String, source: String }
-    const rollingEvents = [];
-    const ROLLING_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+    // ── Per-mount state. A re-mount gets fresh caches automatically. ──
+    /** @type {Array<object>} newest first; mirrors the DOM order of rows. */
+    const rows = [];
+    /** Source name → { sev, count, type }. One entry per corpus fixture. */
+    const gradeCache = new Map();
+    /** Source name → a representative specimen still waiting to be graded. */
+    const gradeQueue = new Map();
+    /** Timestamps of everything received, for the rate + hour counters. */
+    const arrivals = [];
+    /** Envelopes that arrived while paused, oldest first. */
+    const held = [];
 
-    // ── Load template HTML and inject into root. (Module CSS is loaded +
-    //    awaited by the registry via mod.css before mount — no FOUC.) ──
+    let activeFilter = 'all';
+    let paused = false;
+    let connState = 'connecting';
+    let gradeTimer = null;
+    let gradeInFlight = false;
+    let gradeCalls = 0;
+    let gradingGaveUp = false;
+
+    // ── Template + translations. The i18n table is imported dynamically
+    //    rather than statically so the server's ES-import version rewrite
+    //    (which only matches `from '…'` / `import('…')`) fingerprints it —
+    //    a static side-effect import would ship uncacheable-stale. ──
     const tplHref = new URL('./template.html', import.meta.url).href;
-    const html = await fetch(tplHref, { signal: ctx.signal }).then((r) => r.text());
+    const [html] = await Promise.all([
+      fetch(tplHref, { signal: ctx.signal }).then((r) => r.text()),
+      import('/modules/stream/i18n.js'),
+    ]);
     root.innerHTML = html;
 
-    // Cache element refs after innerHTML lands.
-    const feedEl = root.querySelector('#feed');
-    const detailBody = root.querySelector('#detailBody');
-    const counterEl = root.querySelector('#counter');
-    const dotEl = root.querySelector('#dot');
-    const stateEl = root.querySelector('#state');
-    const tabs = Array.from(root.querySelectorAll('.tab'));
-    const badgeValidation = root.querySelector('#badgeValidation');
-    const themeToggle = root.querySelector('#themeToggle');
-    const aggregatesPanel = root.querySelector('#aggregatesPanel');
+    const titleEl = root.querySelector('#streamTitle');
+    const ledeEl = root.querySelector('#streamLede');
+    const stateEl = root.querySelector('#streamState');
+    const stateTextEl = root.querySelector('#streamStateText');
+    const freezeEl = root.querySelector('#streamFreeze');
+    const filtersLabelEl = root.querySelector('#streamFiltersLabel');
+    const chipsEl = root.querySelector('#streamChips');
+    const windowEl = root.querySelector('#streamWindow');
+    const theadEl = root.querySelector('#streamThead');
+    const rowsEl = root.querySelector('#streamRows');
+    const emptyEl = root.querySelector('#streamEmpty');
 
-    // ── 3. Theme persistence (legacy kt-theme localStorage key). ───
-    try {
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === 'light' || saved === 'dark') {
-        document.documentElement.setAttribute('data-theme', saved);
-      }
-    } catch (_) {
-      /* localStorage may be blocked */
-    }
-    themeToggle.addEventListener(
+    // ── Static chrome ────────────────────────────────────────────────
+    const chips = FILTERS.map((name) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'stream-chip';
+      b.dataset.filter = name;
+      b.setAttribute('aria-pressed', String(name === activeFilter));
+      b.addEventListener(
+        'click',
+        () => {
+          activeFilter = name;
+          chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.filter === name)));
+          applyFilter();
+        },
+        { signal: ctx.signal },
+      );
+      chipsEl.append(b);
+      return b;
+    });
+
+    const headCells = COLUMNS.map((name) => {
+      const s = document.createElement('span');
+      s.dataset.col = name;
+      theadEl.append(s);
+      return s;
+    });
+
+    freezeEl.setAttribute('aria-pressed', 'false');
+    freezeEl.addEventListener(
       'click',
       () => {
-        const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-        const next = cur === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        try {
-          localStorage.setItem(THEME_KEY, next);
-        } catch (_) {
-          /* ignore */
+        paused = !paused;
+        if (!paused) {
+          // Flush oldest-first so the newest held row still lands on top.
+          while (held.length) addRow(held.shift());
+          applyFilter();
         }
+        renderLabels();
+        renderLive();
       },
       { signal: ctx.signal },
     );
 
-    // ── 4. Tabs — click handlers use ctx.signal so they detach when
-    //      the module is unmounted by registry. ──────────────────────
-    tabs.forEach((tab) => {
-      tab.addEventListener(
-        'click',
-        () => {
-          if (tab.disabled) return;
-          tabs.forEach((t) => t.classList.toggle('active', t === tab));
-          currentTab = tab.dataset.tab;
-          renderDetail({});
-        },
-        { signal: ctx.signal },
-      );
-    });
+    renderLabels();
+    renderLive();
 
-    // ── 5. SSE wiring. EventSource has no native AbortSignal, so we
-    //      register an explicit cleanup. Closes the connection cleanly
-    //      on unmount, freeing the per-IP slot in the server pool. ───
-    setState('connecting');
+    // Re-render every translated string when the seamless language switch
+    // fires. Row cells are re-rendered too: FINDINGS is the only cell whose
+    // text is a translated phrase rather than data.
+    ctx.addCleanup(
+      ctx.on('kt:lang-change', () => {
+        renderLabels();
+        renderLive();
+        rows.forEach((rec) => {
+          paintFindings(rec);
+          rec.el.title = rec.envelope.hash ? t('stream.row.open') : t('stream.row.no_permalink');
+        });
+      }),
+    );
+
+    // ── SSE. EventSource has no AbortSignal, so it gets an explicit
+    //    cleanup — closing it frees the per-IP slot in the server pool
+    //    and lets the demand-gated generator stop when we were the last
+    //    viewer. ────────────────────────────────────────────────────
     const es = new EventSource('/api/v1/stream');
-    es.addEventListener('open', () => setState('connected'), { signal: ctx.signal });
-    es.addEventListener('error', () => setState('error'), { signal: ctx.signal });
+    es.addEventListener('open', () => setConnState('streaming'), { signal: ctx.signal });
+    es.addEventListener('error', () => setConnState('offline'), { signal: ctx.signal });
     es.addEventListener(
       'message',
       (ev) => {
@@ -146,425 +197,523 @@ export default {
           console.warn('[stream] bad SSE frame', ev.data);
           return;
         }
-        appendRow(envelope);
+        arrivals.push(Date.now());
+        pruneArrivals();
+        if (paused) {
+          held.push(envelope);
+          if (held.length > MAX_ROWS) held.shift();
+        } else {
+          addRow(envelope);
+          applyFilter();
+        }
+        renderLive();
       },
       { signal: ctx.signal },
     );
     ctx.addCleanup(() => es.close());
 
-    // ── Internal helpers (closure-scoped) ──────────────────────────
+    // The pill reports a rate, so it has to decay on its own when nothing
+    // arrives — otherwise a dead stream keeps advertising its last speed.
+    const ticker = setInterval(() => {
+      pruneArrivals();
+      renderLive();
+    }, 2000);
+    ctx.addCleanup(() => clearInterval(ticker));
 
-    function setState(state) {
-      dotEl.className = 'dot ' + state;
-      stateEl.textContent = state;
-    }
+    // One cleanup for the grading debounce, registered once. Re-registering
+    // it inside scheduleGrade() would grow the queue by an entry per batch.
+    ctx.addCleanup(() => {
+      if (gradeTimer) clearTimeout(gradeTimer);
+    });
 
-    function fmtFrom(specimen) {
-      const imp0 = specimen.imp && specimen.imp[0];
-      if (imp0) {
-        if (imp0.banner) return 'banner';
-        if (imp0.video) return 'video';
-        if (imp0.native) return 'native';
-        if (imp0.audio) return 'audio';
-      }
-      // BidResponse-shaped specimens — peek at adm shape.
-      const bid0 =
-        specimen.seatbid &&
-        specimen.seatbid[0] &&
-        specimen.seatbid[0].bid &&
-        specimen.seatbid[0].bid[0];
-      if (bid0 && typeof bid0.adm === 'string') {
-        const head = bid0.adm.trimStart().slice(0, 64).toLowerCase();
-        if (head.includes('<vast') || head.includes('<?xml')) return 'video';
-        if (head.startsWith('{') && head.includes('"native"')) return 'native';
-        if (head.startsWith('<')) return 'banner';
-      }
-      if (specimen.seatbid) return 'response';
-      return '?';
-    }
-    function ctxFrom(specimen) {
-      if (specimen.site) return 'site=' + (specimen.site.domain || '?');
-      if (specimen.app) return 'app=' + (specimen.app.bundle || '?');
-      // BidResponse-shaped: surface seat / currency / bidid as fallback.
-      const seat = specimen.seatbid && specimen.seatbid[0] && specimen.seatbid[0].seat;
-      if (seat) return 'seat=' + seat;
-      if (specimen.bidid) return 'bidid=' + String(specimen.bidid).slice(0, 16);
-      if (Array.isArray(specimen.cur) && specimen.cur[0]) return 'cur=' + specimen.cur[0];
-      return 'ctx=?';
-    }
-    function timeStr(ms) {
-      const d = new Date(ms);
-      return (
-        d.toLocaleTimeString('en-US', { hour12: false }) +
-        '.' +
-        String(d.getMilliseconds()).padStart(3, '0')
-      );
-    }
+    // ══════════════════════════════════════════════════════════════════
+    //  Chrome rendering
+    // ══════════════════════════════════════════════════════════════════
 
-    function appendRow(envelope) {
-      if (firstEvent) {
-        feedEl.innerHTML = '';
-        firstEvent = false;
-      }
-      const row = document.createElement('div');
-      row.className = 'row';
-      const tsSpan = document.createElement('span');
-      tsSpan.className = 'ts';
-      tsSpan.textContent = timeStr(envelope.emittedAt);
-      // Synthetic placeholder thumbnail. <object> renders the SVG inline
-      // so root-styled colors theme correctly; falls back to <img>-like
-      // behavior if the asset 404s. Lazy-loaded so off-screen rows don't
-      // block initial paint when 100 rows replay on connect.
-      let thumbEl = null;
-      if (envelope.creative) {
-        thumbEl = document.createElement('img');
-        thumbEl.className = 'creative-thumb';
-        thumbEl.src = '/assets/creatives/' + encodeURIComponent(envelope.creative) + '.svg';
-        thumbEl.alt = '';
-        thumbEl.loading = 'lazy';
-        thumbEl.decoding = 'async';
-      }
-      const fmtSpan = document.createElement('span');
-      fmtSpan.className = 'fmt';
-      fmtSpan.textContent = fmtFrom(envelope.specimen);
-      const ctxSpan = document.createElement('span');
-      ctxSpan.className = 'ctx';
-      ctxSpan.textContent = ctxFrom(envelope.specimen);
-      if (thumbEl) row.append(tsSpan, thumbEl, fmtSpan, ctxSpan);
-      else row.append(tsSpan, fmtSpan, ctxSpan);
-      // Row click: signal-bound so it detaches with the rest on unmount.
-      row.addEventListener('click', () => selectRow(row, envelope), { signal: ctx.signal });
-
-      feedEl.insertBefore(row, feedEl.firstChild);
-      while (feedEl.children.length > MAX_ROWS) {
-        feedEl.removeChild(feedEl.lastChild);
-      }
-      received++;
-      counterEl.textContent = received + ' specimen' + (received === 1 ? '' : 's');
-      // Update rolling 1h aggregates
-      const now = Date.now();
-      rollingEvents.push({
-        ts: now,
-        fmt: fmtFrom(envelope.specimen),
-        source: envelope.source || '?',
+    /** Text that only changes when the locale does. */
+    function renderLabels() {
+      titleEl.textContent = t('stream.title');
+      ledeEl.textContent = t('stream.lede');
+      filtersLabelEl.textContent = t('stream.filter.label');
+      chips.forEach((c) => {
+        c.textContent = t('stream.filter.' + c.dataset.filter);
       });
-      // Prune entries older than 1 hour
-      while (rollingEvents.length && rollingEvents[0].ts < now - ROLLING_WINDOW_MS) {
-        rollingEvents.shift();
-      }
-      renderAggregates();
+      headCells.forEach((s) => {
+        s.textContent = t('stream.col.' + s.dataset.col);
+      });
+      freezeEl.textContent = paused ? t('stream.resume') : t('stream.pause');
+      freezeEl.title = paused ? t('stream.resume.hint') : t('stream.pause.hint');
+      freezeEl.setAttribute('aria-pressed', String(paused));
     }
 
-    function selectRow(row, envelope) {
-      if (selectedRow) selectedRow.classList.remove('selected');
-      row.classList.add('selected');
-      selectedRow = row;
-      activeEnvelope = envelope;
-      tabs.forEach((t) => (t.disabled = false));
+    /** Text that moves with the feed — runs on every frame and every tick. */
+    function renderLive() {
+      windowEl.textContent = t('stream.window', { count: arrivals.length });
+      const state = paused ? 'paused' : connState;
+      stateEl.dataset.state = state;
+      if (state === 'paused') {
+        stateTextEl.textContent = t('stream.state.paused', { held: held.length });
+      } else if (state === 'streaming') {
+        stateTextEl.textContent = t('stream.state.streaming', { rate: ratePerMinute() });
+      } else {
+        stateTextEl.textContent = t('stream.state.' + state);
+      }
+      renderEmpty();
+    }
 
-      renderDetail({ loading: true });
+    function renderEmpty() {
+      const visible = rows.some((r) => !r.el.hidden);
+      emptyEl.hidden = visible;
+      emptyEl.textContent = rows.length === 0 ? t('stream.empty') : t('stream.empty.filtered');
+    }
 
-      const cacheKey = envelope.specimen.id;
-      if (analyzeCache.has(cacheKey)) {
-        activeAnalysis = analyzeCache.get(cacheKey);
-        renderDetail({});
+    function setConnState(next) {
+      connState = next;
+      renderLive();
+    }
+
+    function pruneArrivals() {
+      const cutoff = Date.now() - ROLLING_WINDOW_MS;
+      while (arrivals.length && arrivals[0] < cutoff) arrivals.shift();
+    }
+
+    /** Observed arrivals in the last 60s — a measurement, not the configured
+     *  cadence, so a throttled or stalled generator shows as the lower number. */
+    function ratePerMinute() {
+      const cutoff = Date.now() - RATE_WINDOW_MS;
+      let n = 0;
+      for (let i = arrivals.length - 1; i >= 0 && arrivals[i] >= cutoff; i--) n++;
+      return n;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Payload shape → the six cells
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * Which side of the auction this payload is, and where its body lives.
+     * oRTB 3.0 wraps everything in { openrtb: { request | response } }, so
+     * `imp` / `seatbid` are one level deeper there than in 2.x.
+     */
+    function shapeOf(specimen) {
+      if (!specimen || typeof specimen !== 'object')
+        return { kind: 'unknown', body: {}, ver: null };
+      const env = specimen.openrtb;
+      if (env && typeof env === 'object') {
+        if (env.request && typeof env.request === 'object') {
+          return { kind: 'req', body: env.request, ver: '3.0' };
+        }
+        if (env.response && typeof env.response === 'object') {
+          return { kind: 'res', body: env.response, ver: '3.0' };
+        }
+        return { kind: 'unknown', body: env, ver: '3.0' };
+      }
+      if (Array.isArray(specimen.imp)) return { kind: 'req', body: specimen, ver: null };
+      if (Array.isArray(specimen.seatbid)) return { kind: 'res', body: specimen, ver: null };
+      // Vendor JSON feeds (clickunder / bid-redirect) are neither shape. The
+      // grader's validation.type settles it once the batch comes back.
+      return { kind: 'unknown', body: specimen, ver: null };
+    }
+
+    /** mtype values, oRTB 2.5 §5.25 — the response's own word for the media. */
+    const MTYPE = { 1: 'banner', 2: 'video', 3: 'audio', 4: 'native' };
+    /** bid.media subtree keys, oRTB 3.0 — `display` is what 2.x calls banner. */
+    const MEDIA_KEYS = {
+      display: 'banner',
+      banner: 'banner',
+      video: 'video',
+      audio: 'audio',
+      native: 'native',
+    };
+
+    /**
+     * The first bid's creative: which media the response declares it to be,
+     * and the markup string if it carries one. 2.x puts both on the bid
+     * (`mtype` + `adm`); 3.0 nests them under `bid.media.<mediatype>.adm`,
+     * which is why reading `bid.adm` alone left every 3.0 response unlabelled.
+     */
+    function firstCreative(body) {
+      const seat = Array.isArray(body.seatbid) ? body.seatbid[0] : null;
+      const bid = seat && Array.isArray(seat.bid) ? seat.bid[0] : null;
+      if (!bid || typeof bid !== 'object') return { media: '', adm: '' };
+      if (typeof bid.adm === 'string') {
+        return { media: MTYPE[bid.mtype] || '', adm: bid.adm };
+      }
+      const media = bid.media;
+      if (media && typeof media === 'object') {
+        for (const key of Object.keys(MEDIA_KEYS)) {
+          const slot = media[key];
+          if (slot && typeof slot === 'object') {
+            return { media: MEDIA_KEYS[key], adm: typeof slot.adm === 'string' ? slot.adm : '' };
+          }
+        }
+      }
+      return { media: MTYPE[bid.mtype] || '', adm: '' };
+    }
+
+    /** VAST major version declared in an adm string, or '' when it isn't VAST. */
+    function vastVersion(adm) {
+      const head = adm.slice(0, 400);
+      if (!/<\s*VAST/i.test(head)) return '';
+      const m = head.match(/<\s*VAST[^>]*\bversion\s*=\s*["'](\d+)/i);
+      return m ? 'vast-' + m[1] : 'vast';
+    }
+
+    /** True when any ext object on the path declares a pop/clickunder format. */
+    function popHint(ext) {
+      if (!ext || typeof ext !== 'object') return false;
+      const declared = [ext.adtype, ext.ad_format, ext.format, ext.type]
+        .filter((v) => typeof v === 'string')
+        .join(' ')
+        .toLowerCase();
+      return /pop|clickunder/.test(declared);
+    }
+
+    /**
+     * FORMAT cell: a media word plus the qualifier that actually distinguishes
+     * this payload from the next one of the same media — the oRTB major version
+     * for 3.0, the VAST version for video creatives, otherwise the inventory
+     * context. Mirrors the vocabulary core/format-detect.js uses so the word on
+     * the row is the word the Inspector will show.
+     */
+    function formatOf(specimen, shape) {
+      const body = shape.body;
+      let media = '';
+      let sub = '';
+      let vast = false;
+
+      if (shape.kind === 'req') {
+        const items = Array.isArray(body.imp)
+          ? body.imp
+          : Array.isArray(body.item)
+            ? body.item
+            : [];
+        for (const it of items) {
+          if (!it || typeof it !== 'object') continue;
+          const slot = it.spec && it.spec.placement ? it.spec.placement : it;
+          if (slot.banner || slot.display) media = media || 'banner';
+          if (slot.video) {
+            media = media || 'video';
+            const protocols = slot.video.protocols || slot.video.ctype;
+            if (Array.isArray(protocols) && protocols.some((p) => Number(p) >= 2)) vast = true;
+          }
+          if (slot.native) media = media || 'native';
+          if (slot.audio) media = media || 'audio';
+          if (popHint(it.ext) || popHint(slot.ext)) media = 'pops';
+        }
+        if (popHint(body.ext)) media = 'pops';
+      } else if (shape.kind === 'res') {
+        const creative = firstCreative(body);
+        media = creative.media;
+        const adm = creative.adm;
+        const v = vastVersion(adm);
+        if (v) {
+          media = media || 'video';
+          sub = v;
+          vast = true;
+        } else if (/^\s*\{/.test(adm) && /"(?:native|assets)"/.test(adm)) {
+          media = media || 'native';
+          sub = 'json';
+        } else if (/^\s*</.test(adm)) {
+          media = media || 'banner';
+          sub = 'html';
+        }
+        const seat = Array.isArray(body.seatbid) ? body.seatbid[0] : null;
+        const bid = seat && Array.isArray(seat.bid) ? seat.bid[0] : null;
+        if (bid && popHint(bid.ext)) media = 'pops';
+      } else if (body && (body.redirecturl || body.redirect_url)) {
+        // Single-object vendor feed: a redirect and a bid, no creative assets.
+        media = 'pops';
+        sub = 'jsonfeed';
+      }
+
+      // For an oRTB 3.0 payload the major version IS the distinguishing fact —
+      // it outranks the VAST version or the inventory context, the way the
+      // mockup's "banner · 3.0" row does. `vast` stays set either way so the
+      // vast filter still catches a 3.0 response carrying a VAST creative.
+      if (shape.ver === '3.0') sub = '3.0';
+      if (!sub) {
+        const site = body.site || (body.context && body.context.site);
+        const app = body.app || (body.context && body.context.app);
+        const dooh = body.dooh || (body.context && body.context.dooh);
+        const device = body.device || (body.context && body.context.device);
+        if (dooh) sub = 'dooh';
+        else if (device && Number(device.devicetype) === 7) sub = 'ctv';
+        else if (app) sub = 'inapp';
+        else if (site) sub = 'web';
+      }
+      return { media: media || '', sub, vast: vast || /^vast/.test(sub) };
+    }
+
+    /** "synthetic-pop-clean-request.json" → "synthetic · pop-clean-request". */
+    function sourceLabel(source) {
+      const name = String(source || '?').replace(/\.json$/i, '');
+      const cut = name.indexOf('-');
+      if (cut <= 0) return name;
+      return name.slice(0, cut) + ' · ' + name.slice(cut + 1);
+    }
+
+    function timeLabel(ms) {
+      const d = new Date(ms);
+      const p = (n) => String(n).padStart(2, '0');
+      return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    }
+
+    /** Wire size of the payload as it came off the stream, in KB to one place. */
+    function sizeLabel(specimen) {
+      let bytes;
+      try {
+        bytes = new TextEncoder().encode(JSON.stringify(specimen)).length;
+      } catch (_) {
+        return '';
+      }
+      return (bytes / 1024).toFixed(1) + ' KB';
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Rows
+    // ══════════════════════════════════════════════════════════════════
+
+    function addRow(envelope) {
+      const specimen = envelope.specimen || {};
+      const shape = shapeOf(specimen);
+      const fmt = formatOf(specimen, shape);
+      const rec = {
+        envelope,
+        source: String(envelope.source || '?'),
+        kind: shape.kind,
+        media: fmt.media,
+        vast: fmt.vast,
+        grade: null,
+        el: null,
+        cells: {},
+      };
+
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'stream-row';
+
+      const cell = (col, text) => {
+        const s = document.createElement('span');
+        s.className = 'stream-cell stream-cell--' + col;
+        s.textContent = text;
+        el.append(s);
+        return s;
+      };
+      rec.cells.time = cell('time', timeLabel(envelope.emittedAt || Date.now()));
+      rec.cells.kind = cell('kind', shape.kind === 'unknown' ? '?' : shape.kind);
+      rec.cells.kind.dataset.kind = shape.kind;
+      rec.cells.source = cell('source', sourceLabel(rec.source));
+      rec.cells.format = cell('format', [fmt.media, fmt.sub].filter(Boolean).join(' · '));
+      rec.cells.size = cell('size', sizeLabel(specimen));
+      rec.cells.findings = cell('findings', '');
+
+      if (envelope.hash) {
+        el.title = t('stream.row.open');
+        el.addEventListener('click', () => openInInspector(envelope.hash), { signal: ctx.signal });
+      } else {
+        // Nothing to link to: the permalink is the specimen cache key and the
+        // server attaches it on push. Say so rather than offering a dead click.
+        el.disabled = true;
+        el.title = t('stream.row.no_permalink');
+      }
+
+      rec.el = el;
+      rows.unshift(rec);
+      rowsEl.insertBefore(el, rowsEl.firstChild);
+      while (rows.length > MAX_ROWS) {
+        const dropped = rows.pop();
+        dropped.el.remove();
+      }
+      paintFindings(rec);
+      requestGrade(rec);
+      return rec;
+    }
+
+    function openInInspector(hash) {
+      // specimenPath() knows en is the no-prefix locale (/r/<hash>) while uk/ru
+      // are prefixed — building the path by hand here is how /en/r/<hash>, a
+      // route the server has never had, used to get shipped.
+      const target = specimenPath(hash, ctx.lang);
+      const shell = window.OrtbtoolsShell;
+      if (shell && typeof shell.navigateTo === 'function') shell.navigateTo(target);
+      else window.location.assign(target);
+    }
+
+    function applyFilter() {
+      for (const rec of rows) rec.el.hidden = !matchesFilter(rec);
+      renderEmpty();
+    }
+
+    function matchesFilter(rec) {
+      switch (activeFilter) {
+        case 'requests':
+          return rec.kind === 'req';
+        case 'responses':
+          return rec.kind === 'res';
+        case 'findings':
+          return !!rec.grade && (rec.grade.sev === 'danger' || rec.grade.sev === 'warn');
+        case 'pops':
+          return rec.media === 'pops';
+        case 'vast':
+          return rec.vast === true;
+        default:
+          return true;
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  FINDINGS — batched grading through /api/v1/replay
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * Agreement form for the "N blocking" cell.
+     *
+     * This is deliberately a TWO-form rule, not the three-form one in
+     * public/ortbtools.app.js (pluralKey), because the uk/ru strings here
+     * inflect a VERB rather than a noun: "1 блокує" against "2 / 5 / 11
+     * блокують". Verbs take the singular for a count ending in 1 (except
+     * 11) and the plural for everything else — 2-4 and 5+ are the same
+     * word, so a third form would be two identical strings pretending to
+     * be a distinction. Every other counted string on this page is phrased
+     * so one form covers all numbers.
+     */
+    function blockingForm(n) {
+      return n % 10 === 1 && n % 100 !== 11 ? 'one' : 'other';
+    }
+
+    function paintFindings(rec) {
+      const cellEl = rec.cells.findings;
+      const g = rec.grade;
+      if (!g) {
+        const pending = gradingGaveUp ? 'unknown' : 'pending';
+        cellEl.dataset.sev = pending;
+        cellEl.textContent = t('stream.findings.' + pending);
         return;
       }
-      analyzeSpecimen(envelope.specimen)
-        .then((result) => {
-          analyzeCache.set(cacheKey, result);
-          if (activeEnvelope === envelope) {
-            activeAnalysis = result;
-            renderDetail({});
+      cellEl.dataset.sev = g.sev;
+      if (g.sev === 'danger') {
+        cellEl.textContent = t('stream.findings.blocking.' + blockingForm(g.count), {
+          count: g.count,
+        });
+      } else if (g.sev === 'warn') {
+        cellEl.textContent = t('stream.findings.tofix', { count: g.count });
+      } else if (g.sev === 'ok') {
+        cellEl.textContent = t('stream.findings.clean');
+      } else {
+        cellEl.textContent = t('stream.findings.unknown');
+      }
+    }
+
+    function requestGrade(rec) {
+      const cached = gradeCache.get(rec.source);
+      if (cached) {
+        applyGrade(rec, cached);
+        return;
+      }
+      if (gradingGaveUp) return;
+      if (!gradeQueue.has(rec.source)) gradeQueue.set(rec.source, rec.envelope.specimen);
+      scheduleGrade();
+    }
+
+    function applyGrade(rec, grade) {
+      rec.grade = grade;
+      // The grader is authoritative about which side of the auction this is:
+      // vendor feeds carry neither `imp` nor `seatbid`, and only validate()
+      // knows that a bid-redirect body is a response.
+      if (rec.kind === 'unknown' && grade.type) {
+        if (/response/i.test(grade.type)) rec.kind = 'res';
+        else if (/request/i.test(grade.type)) rec.kind = 'req';
+        if (rec.kind !== 'unknown') {
+          rec.cells.kind.dataset.kind = rec.kind;
+          rec.cells.kind.textContent = rec.kind;
+        }
+      }
+      paintFindings(rec);
+    }
+
+    function scheduleGrade() {
+      if (gradeTimer || gradeInFlight || gradingGaveUp) return;
+      gradeTimer = setTimeout(flushGrades, GRADE_DEBOUNCE_MS);
+    }
+
+    function flushGrades() {
+      gradeTimer = null;
+      if (gradeInFlight || gradingGaveUp) return;
+      const batch = [...gradeQueue.entries()].slice(0, GRADE_BATCH_MAX);
+      if (batch.length === 0) return;
+      if (gradeCalls >= GRADE_CALL_BUDGET) {
+        // A corpus this size should have settled long ago; something is
+        // pathological. Stop rather than keep spending the analyze bucket.
+        gradingGaveUp = true;
+        rows.forEach(paintFindings);
+        return;
+      }
+      gradeCalls++;
+      gradeInFlight = true;
+      // Everything goes in as `bidReq`: validate() detects the payload type
+      // itself and returns it as validation.type, and sending a response under
+      // bidRes would only differ by skipping that detection.
+      const samples = batch.map(([source, specimen]) => ({ label: source, bidReq: specimen }));
+      fetch('/api/v1/replay?locale=' + encodeURIComponent(ctx.lang), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ samples }),
+        signal: ctx.signal,
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then((data) => {
+          gradeInFlight = false;
+          for (const result of (data && data.results) || []) {
+            if (!result || !result.label) continue;
+            gradeCache.set(result.label, toGrade(result));
+            gradeQueue.delete(result.label);
           }
+          for (const rec of rows) {
+            const g = gradeCache.get(rec.source);
+            if (g && rec.grade !== g) applyGrade(rec, g);
+          }
+          // A row that just turned out to have findings belongs in the
+          // "with findings" view, which was rendered before we knew.
+          applyFilter();
+          if (gradeQueue.size) scheduleGrade();
         })
         .catch((err) => {
-          // AbortError from ctx.signal during unmount — ignore quietly.
-          if (err && err.name === 'AbortError') return;
-          console.warn('[stream] analyze failed', err);
-          if (activeEnvelope === envelope) {
-            activeAnalysis = { error: err.message || 'analyze failed' };
-            renderDetail({});
-          }
+          gradeInFlight = false;
+          if (err && err.name === 'AbortError') return; // unmount, not a failure
+          // Rate limit or server trouble: one retry's worth of budget is
+          // already spent, so stop asking and say the column is unchecked
+          // instead of leaving every row spinning forever.
+          console.warn('[stream] grading failed', err);
+          gradingGaveUp = true;
+          rows.forEach(paintFindings);
         });
     }
 
-    async function analyzeSpecimen(specimen) {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bidReq: specimen }),
-        signal: ctx.signal,
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'HTTP ' + res.status);
+    function toGrade(result) {
+      if (!result || result.status === 'skipped') return { sev: 'unknown', count: 0, type: null };
+      const type = (result.validation && result.validation.type) || null;
+      const blocking = (result.critCount || 0) + (result.errorCount || 0);
+      const tofix = result.warningCount || 0;
+      // `invalid` means the payload failed to parse as either side at all —
+      // blocking even when the finding list came back empty.
+      if (result.status === 'invalid') {
+        return { sev: 'danger', count: Math.max(blocking, 1), type };
       }
-      return res.json();
-    }
-
-    function renderDetail(opts) {
-      const { loading } = opts || {};
-      if (loading || !activeAnalysis) {
-        detailBody.innerHTML = '<div class="loading">analyzing…</div>';
-        return;
-      }
-      if (activeAnalysis.error) {
-        detailBody.innerHTML =
-          '<div class="placeholder" style="color: #dc2626">' +
-          escapeHtml(activeAnalysis.error) +
-          '</div>';
-        return;
-      }
-      updateValidationBadge();
-      renderActionBar();
-      if (currentTab === 'decoded') return renderDecoded();
-      if (currentTab === 'validation') return renderValidation();
-      if (currentTab === 'raw') return renderRaw();
-    }
-
-    function renderActionBar() {
-      const existing = root.querySelector('.stream-action-bar');
-      if (existing) existing.remove();
-      const hash = activeEnvelope && activeEnvelope.hash;
-      if (!hash) return;
-      const lang = ctx.lang || 'en';
-      // F-12: both buttons used to hardcode '/' + lang + '/r/' + hash. For
-      // English that is /en/r/<hash> — a route the server has never had. There
-      // is no /en/r/ at all (the legacy /en/<section> redirect in
-      // lib/locale-routes.js is single-segment and doesn't reach it), so the
-      // copied permalink and the navigation button both 404'd for EN users.
-      // specimenPath() knows en is the no-prefix locale: /r/<hash>.
-      const permalink = specimenPath(hash, lang);
-      const bar = document.createElement('div');
-      bar.className = 'stream-action-bar';
-      const inspectBtn = document.createElement('button');
-      inspectBtn.className = 'stream-action-btn';
-      inspectBtn.textContent = 'Open in Inspector';
-      inspectBtn.addEventListener(
-        'click',
-        () => {
-          window.OrtbtoolsShell.navigateTo(permalink);
-        },
-        { signal: ctx.signal },
-      );
-      const copyBtn = document.createElement('button');
-      copyBtn.className = 'stream-action-btn stream-action-btn--secondary';
-      copyBtn.textContent = 'Copy permalink';
-      copyBtn.addEventListener(
-        'click',
-        () => {
-          const url = location.origin + permalink;
-          navigator.clipboard
-            .writeText(url)
-            .then(() => {
-              copyBtn.textContent = 'Copied!';
-              setTimeout(() => {
-                copyBtn.textContent = 'Copy permalink';
-              }, 1500);
-            })
-            .catch(() => {
-              copyBtn.textContent = url;
-            });
-        },
-        { signal: ctx.signal },
-      );
-      bar.append(inspectBtn, copyBtn);
-      const detail = root.querySelector('.detail');
-      if (detail) {
-        const tabsEl = detail.querySelector('.detail-tabs');
-        if (tabsEl) detail.insertBefore(bar, tabsEl);
-        else detail.prepend(bar);
-      }
-    }
-
-    function renderAggregates() {
-      if (!aggregatesPanel) return;
-      const now = Date.now();
-      const cutoff = now - ROLLING_WINDOW_MS;
-      const recent = rollingEvents.filter((e) => e.ts >= cutoff);
-      const total = recent.length;
-      const fmtCounts = {};
-      const srcCounts = {};
-      for (const e of recent) {
-        fmtCounts[e.fmt] = (fmtCounts[e.fmt] || 0) + 1;
-        srcCounts[e.source] = (srcCounts[e.source] || 0) + 1;
-      }
-      const topFmts = Object.entries(fmtCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 4)
-        .map(([k, v]) => '<span class="stream-agg-badge">' + escapeHtml(k) + ' ' + v + '</span>')
-        .join('');
-      const topSrcs = Object.entries(srcCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(
-          ([k, v]) =>
-            '<span class="stream-agg-badge stream-agg-badge--src">' +
-            escapeHtml(k) +
-            ' ' +
-            v +
-            '</span>',
-        )
-        .join('');
-      aggregatesPanel.innerHTML =
-        '<span class="stream-agg-label">Last hour: ' +
-        total +
-        ' specimens</span>' +
-        (topFmts ? ' &nbsp; ' + topFmts : '') +
-        (topSrcs ? ' &nbsp; <span class="stream-agg-sep">sources:</span> ' + topSrcs : '');
-    }
-
-    function updateValidationBadge() {
-      const findings = (activeAnalysis.validation && activeAnalysis.validation.findings) || [];
-      const danger = findings.filter((f) => f.level === 'error' || f.level === 'danger').length;
-      const warn = findings.filter((f) => f.level === 'warning' || f.level === 'warn').length;
-      const total = findings.length;
-      if (total === 0) {
-        badgeValidation.hidden = true;
-        return;
-      }
-      badgeValidation.hidden = false;
-      badgeValidation.textContent = total;
-      badgeValidation.className = 'badge';
-      if (danger > 0) badgeValidation.classList.add('danger');
-      else if (warn > 0) badgeValidation.classList.add('warn');
-    }
-
-    function renderDecoded() {
-      const sp = activeEnvelope.specimen;
-      const v = activeAnalysis.validation || {};
-      const ver = v.version || {};
-      const fmt = fmtFrom(sp);
-      const imp0 = (sp.imp && sp.imp[0]) || {};
-      const banner = imp0.banner || {};
-      const video = imp0.video || {};
-      const sctx = sp.site || sp.app || {};
-      const pub = sctx.publisher || {};
-      const geo = (sp.device && sp.device.geo) || {};
-
-      const meta =
-        '<div class="meta-line">' +
-        escapeHtml(activeEnvelope.source) +
-        ' · emitted ' +
-        new Date(activeEnvelope.emittedAt).toISOString() +
-        '</div>';
-
-      // Specimen fields are escaped before going into innerHTML: today the feed
-      // is the server's synthetic corpus, but this same renderer also displays
-      // /api/analyze output and is staged for real captured traffic — a string
-      // in any numeric-looking field must not be able to inject markup.
-      const num = (x) => escapeHtml(String(x));
-      const rows = [];
-      rows.push(['Type', escapeHtml(v.type || '?')]);
-      rows.push([
-        'Version',
-        ver.version
-          ? num(ver.version) + ' <span class="finding-id">conf ' + num(ver.confidence) + '</span>'
-          : '?',
-      ]);
-      rows.push(['Status', escapeHtml(v.status || '?')]);
-      rows.push(['Format', '<span class="pill">' + escapeHtml(fmt) + '</span>']);
-      if (banner.format && banner.format.length) {
-        rows.push([
-          'Banner sizes',
-          banner.format
-            .filter((f) => f && typeof f === 'object')
-            .map((f) => `<span class="pill">${num(f.w)}×${num(f.h)}</span>`)
-            .join(''),
-        ]);
-      } else if (banner.w && banner.h) {
-        rows.push(['Banner size', `<span class="pill">${num(banner.w)}×${num(banner.h)}</span>`]);
-      }
-      if (video.w && video.h) {
-        rows.push(['Video size', `<span class="pill">${num(video.w)}×${num(video.h)}</span>`]);
-        if (video.maxduration) {
-          rows.push([
-            'Video duration',
-            `${num(video.minduration || 0)}–${num(video.maxduration)}s`,
-          ]);
-        }
-      }
-      rows.push(['Context', sp.site ? 'site' : sp.app ? 'app' : '?']);
-      rows.push(['Domain / Bundle', escapeHtml(sctx.domain || sctx.bundle || '?')]);
-      if (pub.name) rows.push(['Publisher', escapeHtml(pub.name)]);
-      if (geo.country) {
-        rows.push([
-          'Geo',
-          [geo.country, geo.region, geo.city].filter(Boolean).map(escapeHtml).join(' · '),
-        ]);
-      }
-      if (imp0.bidfloor != null) {
-        rows.push([
-          'Bid floor',
-          num(imp0.bidfloor) +
-            ' ' +
-            (imp0.bidfloorcur ? num(imp0.bidfloorcur) : '<em>(no cur)</em>'),
-        ]);
-      }
-      rows.push(['Request id', escapeHtml(sp.id || '?')]);
-
-      detailBody.innerHTML =
-        meta +
-        '<dl class="decoded">' +
-        rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') +
-        '</dl>';
-    }
-
-    function renderValidation() {
-      const findings = (activeAnalysis.validation && activeAnalysis.validation.findings) || [];
-      if (findings.length === 0) {
-        detailBody.innerHTML =
-          '<div class="findings-clean">no validation findings — specimen is clean ✓</div>';
-        return;
-      }
-      const html = findings
-        .map((f) => {
-          const lvl = (f.level || 'info').toLowerCase();
-          const lvlClass =
-            lvl === 'error' || lvl === 'danger'
-              ? 'danger'
-              : lvl === 'warning' || lvl === 'warn'
-                ? 'warn'
-                : 'info';
-          return (
-            '<div class="finding">' +
-            `<div class="finding-level ${lvlClass}"></div>` +
-            '<div class="finding-body">' +
-            `<div class="finding-id">${escapeHtml(f.id || '')}</div>` +
-            `<div class="finding-msg">${escapeHtml(f.msg || '')}</div>` +
-            (f.path ? `<div class="finding-path">${escapeHtml(f.path)}</div>` : '') +
-            '</div>' +
-            '</div>'
-          );
-        })
-        .join('');
-      detailBody.innerHTML = '<div class="findings">' + html + '</div>';
-    }
-
-    function renderRaw() {
-      const meta =
-        '<div class="meta-line">' +
-        escapeHtml(activeEnvelope.source) +
-        ' · emitted ' +
-        new Date(activeEnvelope.emittedAt).toISOString() +
-        '</div>';
-      detailBody.innerHTML =
-        meta +
-        '<div class="raw"><pre>' +
-        escapeHtml(JSON.stringify(activeEnvelope.specimen, null, 2)) +
-        '</pre></div>';
+      if (blocking > 0) return { sev: 'danger', count: blocking, type };
+      if (tofix > 0) return { sev: 'warn', count: tofix, type };
+      return { sev: 'ok', count: 0, type };
     }
   },
 
   /**
-   * Optional unmount hook. Most cleanup is handled automatically:
-   *   - addEventListener({signal}) detaches when registry aborts.
-   *   - addCleanup queue runs (closes EventSource, removes <link>).
-   *   - registry sweeps root.innerHTML.
-   * Implementing unmount is only useful for non-resource teardown
-   * (state flushing, custom logging). For Stream there's nothing
-   * left to do, so we keep this minimal.
+   * Optional unmount hook. Everything is handled by the two cleanup
+   * channels already: listeners detach on ctx.signal, addCleanup closes
+   * the EventSource / clears the interval / drops .stream-view, and the
+   * registry sweeps root.innerHTML.
    */
   async unmount(_root) {
     // No-op. The contract documents that returning is sufficient.

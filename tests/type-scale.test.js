@@ -72,7 +72,15 @@ const BUDGET = {
   // as the items under it stops being a group title.
   'modules/nav/nav.css': 4,
   'modules/search/search.css': 6,
-  'modules/stream/stream.css': 9,
+  // Was 9. The v2 rewrite of /live (mockup parity: one full-width table
+  // instead of a feed + detail pane) rebuilt every rule in the file, and the
+  // mockup's own working sizes are the ones the scale already carries —
+  // 13px rows on --fs-sm, 12px chips/format/size/findings on --fs-chip,
+  // 11px KIND on --fs-mono, the h1 on --fs-lg. Nothing needed a literal, so
+  // this is 0 rather than a smaller budget. The test's own instruction on a
+  // drop is to write the new count here, which is what this is: ground won,
+  // ratcheted so it cannot be given back one `font-size: 12px` at a time.
+  'modules/stream/stream.css': 0,
   'modules/topbar/topbar.css': 1,
   'ortbtools-shell.css': 2,
   // Converted, with one deliberate exception: `.analysis-strip-label` stays at
