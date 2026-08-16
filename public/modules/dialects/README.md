@@ -1,72 +1,83 @@
 # dialects module
 
-Full-page CRUD UI for the user's saved dialects + their mappings.
-Lazy-loaded — only fetched when the user navigates to `/app/dialects`
-or any host route that calls `openDialectsPage(rootEl)`.
+The `/dialects` section: one page that holds every rule set the product
+knows about. Registered lazily in `public/shell-boot.js` and mounted into
+`#app-root` by `core/registry.js`; there is no other entry point.
 
-## Entry point
+## What the page shows
 
-```js
-import { openDialectsPage } from '/public/modules/dialects/index.js';
-await openDialectsPage(document.getElementById('appRoot'));
-```
+A fixed white page-header band (H1 + one-line subtitle) over a grey
+scrolling region holding up to three blocks. Each block opens with an
+uppercase eyebrow followed by a hairline rule that runs to the right
+edge — the only uppercase level on the page.
 
-The function takes ownership of the provided element (sets innerHTML
-on re-renders, attaches a single delegated click+change listener).
-Idempotent — calling twice is safe; the listener is bound once via
-`dataset.dialectsBound`.
+1. **Shipped overlays** — the three built-in dialects (`iab`, `ext-rtb`,
+   `inpage-push`) as cards: an `ACTIVE`/`AVAILABLE` mono eyebrow, a
+   Geologica title, a two-line description, and a mono footer line
+   (`iab · maintained`, `ext-rtb · 5 rules`). The active card is
+   outlined in accent and carries four `+` corner marks.
 
-## Dependencies
+   The card is a `<button>`. Clicking it makes that dialect active —
+   same `ortbtools_dialect_v1` key, same side effects, as the
+   inspector's footer picker (`setActiveDialect` in
+   `public/ortbtools.app.js`). The rule count in each card comes from
+   `GET /api/v1/finding-catalog` and is marked up as
+   `.dlc-card__count`, which is what `tests/spec-refs.test.js` asserts
+   against.
 
-- `/core/utils.js` — `$, escapeHtml, toast, t`
-- Backend endpoints under `/api/dialects` (see
-  `modules/dialects/handler.js`)
-- A `#modalRoot` element somewhere in the host page (existing convention
-  per `modules/simulate/index.js` etc.) — used by form dialogs.
+2. **Your overlays** — rendered only when the browser holds temporary
+   dialects (`OrtbtoolsIntelStorage.listTempDialects()`). Same card
+   language, so a dialect you built and one that shipped read alike.
+   Not in the mockup; the mockup had no way to know the feature exists.
 
-## Data flow
+3. **Discovered in your traffic** — the co-occurrence clusters
+   Discovery found locally, one row each: a derived title, the field
+   paths, how many payloads carried the whole cluster, a confidence
+   word, and a ghost **Build overlay** button. The block heading
+   carries a `N new` badge (clusters with a field first seen in the
+   last 24h) and a right-aligned reminder that only field paths are
+   involved.
 
-1. `openDialectsPage(rootEl)` → captures `rootEl`, attaches listeners,
-   renders, fires `loadDialects()`.
-2. `loadDialects()` → `GET /api/dialects` → updates `state.dialects` →
-   `rerender()`.
-3. User clicks **Open** on a dialect → `loadMappings(id)` →
-   `GET /api/dialects/:id/mappings` → switches `state.selectedDialectId`
-   → `rerender()` renders the detail view.
-4. Mutations (`POST`/`PATCH`/`DELETE`) go through `apiCall()` which
-   throws on `!response.ok || !data.success`. The catch shows
-   `t('dialects.toast.error')`; success cases show specific toast keys.
-5. Export uses direct nav: `window.location = '/api/dialects/:id/export'`
-   — server sets `Content-Disposition`, browser downloads.
-6. Import is a hidden `<input type=file>` triggered by the toolbar
-   Import button. The file is read with `file.text()`, parsed, posted.
+   "Build overlay" opens `window.OrtbtoolsIntelBuilder.open()` and then
+   clicks that modal's own "use cluster" button for the matching field
+   signature, so the reader lands in the builder with the row they were
+   looking at already selected. Best-effort: the modal lists its top 5
+   clusters, and a row outside that set simply opens the builder plain.
 
-## Drift detection
+## Data sources
 
-Skeleton-level: each mapping row carries a ⚠ badge if it has a stored
-`shape_fingerprint`. Clicking the badge shows the warning toast. Real
-drift will compare the stored fingerprint against the _current_ payload
-fingerprint at validation time — that integration lives in the analyze
-pipeline, not here.
+| what               | where                                                    |
+| ------------------ | -------------------------------------------------------- |
+| rule counts        | `GET /api/v1/finding-catalog`                            |
+| discovery clusters | `window.OrtbtoolsIntelStorage` (IndexedDB, this browser) |
+| custom overlays    | `OrtbtoolsIntelStorage.listTempDialects()`               |
+| active dialect     | `?dialect=` then `localStorage.ortbtools_dialect_v1`     |
 
-## Why no nicer modal/confirm UI
+Nothing on this page is sent anywhere. The catalog request carries no
+payload, and the cluster numbers are counts of what this browser has
+seen.
 
-Skeleton uses native `window.confirm()` for destructive ops. Acceptable
-for first cut; the existing share/recovery modules in `/public/modules/`
-have nicer modal patterns that this can adopt later. The `showFormDialog`
-helper already does forms via the standard `#modalRoot` pattern, so
-upgrading delete-confirm later is a small change.
+## Duplicated code, and why
 
-## State
+Two blocks are inlined copies rather than imports:
 
-```js
-state = {
-  rootEl: HTMLElement,
-  dialects: [...],
-  selectedDialectId: string | null,
-  mappings: [...],
-}
-```
+- `detectClusters()` — a trimmed copy of
+  `packages/core/intel/cluster.js`, with the same thresholds and the
+  same `fields.join('|')` signature `modules/intel/builder.js` uses.
+  Same convention (and the same KEEP IN SYNC comment) as that file;
+  `packages/` is not served to the browser.
+- `activeDialect()` / `setActiveDialect()` — mirror of the block in
+  `public/ortbtools.app.js`, which is a classic script with no exports.
 
-Module-level. Re-rendered on every state change via `rerender()` which
-sets `state.rootEl.innerHTML`.
+If the resolution order or the cluster thresholds move, both copies
+have to move with them.
+
+## Strings
+
+Localised copy lives in the `L` map at the top of `index.js` and is
+resolved with `pick(map, lang)` from `ctx.lang` — this module does not
+go through `window.t` / `public/i18n.js`, so there are no bracketed-id
+failures to worry about, but every string must carry `en`, `uk` and `ru`.
+
+`modules/dialects/i18n.js` is a leftover from an abandoned CRUD design
+and is imported by nothing.

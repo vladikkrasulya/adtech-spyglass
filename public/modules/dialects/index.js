@@ -1,21 +1,33 @@
 /* ============================================================
    public/modules/dialects/index.js — /dialects section module.
 
-   Stage 1 of ROADMAP. Single page:
+   One home for rule sets, in two blocks (per the v2 mockup):
 
-     1. Intro card — 3-locale description of what dialects are.
-     2. Built-in dialect catalog — cards for iab, ext-rtb, inpage-push.
-        Each card shows rule count + severity distribution (fetched from
-        /api/v1/finding-catalog) and a "Use this dialect" button that
-        copies the slug to clipboard.
-     3. User dialect builder — logged-in users get an "Open builder"
-        card that navigates to /uk/inspector and triggers
-        window.OrtbtoolsIntelBuilder.open() if available.
-        Anonymous users see a sign-in CTA.
+     1. SHIPPED OVERLAYS — the three built-in dialects as cards.
+        The card that is currently in effect carries an ACTIVE eyebrow,
+        an accent outline and four corner marks; the others say
+        AVAILABLE. Clicking a card makes it the active dialect (the
+        same `ortbtools_dialect_v1` key the inspector's footer picker
+        writes), which is what the old per-card "Copy slug" button was
+        a roundabout way of doing.
 
-   Backend endpoints used:
-     - GET /api/v1/finding-catalog
-     - GET /api/auth/me
+     2. DISCOVERED IN YOUR TRAFFIC — the field clusters Discovery
+        found locally, one row each: title, the field paths, how many
+        payloads carried the whole cluster, a confidence word, and a
+        "Build overlay" button that opens the Discovery builder with
+        that cluster preselected. This is the surface the footer chip
+        (modules/intel/banner.js) and the builder modal
+        (modules/intel/builder.js) used to be the only way into.
+
+     3. YOUR OVERLAYS — only rendered when the browser actually holds
+        temporary dialects built from (2). Not in the mockup, which
+        had no way to know the feature exists; same card language as
+        block 1 so it does not read as a new idea.
+
+   Data sources:
+     - GET /api/v1/finding-catalog        → rule counts per dialect
+     - window.OrtbtoolsIntelStorage       → local Discovery index (IDB)
+     - localStorage `ortbtools_dialect_v1`→ active dialect
    ============================================================ */
 'use strict';
 
@@ -26,6 +38,13 @@ function pick(map, lang) {
   return map[lang] || map[FALLBACK_LANG] || Object.values(map)[0] || '';
 }
 
+/** `{n}` style interpolation. Always feed the result through escapeHtml. */
+function fmt(str, params) {
+  return String(str).replace(/\{(\w+)\}/g, (m, k) =>
+    params && params[k] != null ? String(params[k]) : m,
+  );
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -34,76 +53,72 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-function localePrefix(lang) {
-  return lang === 'en' ? '' : '/' + lang;
+function tx(map, lang, params) {
+  return escapeHtml(fmt(pick(map, lang), params));
 }
 
 // ── Localised strings ─────────────────────────────────────────────
 
 const L = {
-  title: { en: 'Dialect catalog', uk: 'Каталог діалектів', ru: 'Каталог диалектов' },
+  title: { en: 'Dialects', uk: 'Діалекти', ru: 'Диалекты' },
   subtitle: {
-    en: 'Built-in validation overlays and the user dialect builder — tune ortbtools to your traffic.',
-    uk: 'Вбудовані overlay-валідатори та конструктор діалектів — налаштуй ortbtools під свій трафік.',
-    ru: 'Встроенные overlay-валидаторы и конструктор диалектов — настрой ortbtools под свой трафик.',
+    en: 'One home for rule sets — the overlays that ship with ortbtools, and the field clusters Discovery found in your own traffic.',
+    uk: 'Одне місце для наборів правил — overlay, що йдуть у комплекті, і кластери полів, які Discovery знайшов у твоєму трафіку.',
+    ru: 'Одно место для наборов правил — overlay, которые идут в комплекте, и кластеры полей, которые Discovery нашёл в твоём трафике.',
   },
 
-  introTitle: {
-    en: 'What are dialects?',
-    uk: 'Що таке діалекти?',
-    ru: 'Что такое диалекты?',
+  shippedHeading: {
+    en: 'Shipped overlays',
+    uk: 'Вбудовані overlay',
+    ru: 'Встроенные overlay',
   },
-  introBody: {
-    en: 'A dialect is a named validation overlay that extends or replaces the canonical IAB OpenRTB ruleset. The IAB baseline covers the public spec; dialect overlays add vendor-specific rules, suppress irrelevant warnings, or introduce new finding IDs that only make sense for a given traffic type. Select a dialect in the inspector footer — ortbtools activates the corresponding overlay alongside the base rules.',
-    uk: 'Діалект — це іменований validation overlay, який розширює або замінює канонічний IAB OpenRTB ruleset. Базовий IAB охоплює публічну специфікацію; overlay діалекту додає вендор-специфічні правила, пригнічує нерелевантні попередження або вводить нові finding ID, що мають сенс лише для конкретного типу трафіку. Вибери діалект у підвалі інспектора — ortbtools активує відповідний overlay разом з базовими правилами.',
-    ru: 'Диалект — это именованный validation overlay, который расширяет или заменяет канонический IAB OpenRTB ruleset. Базовый IAB покрывает публичную спецификацию; overlay диалекта добавляет вендор-специфичные правила, подавляет нерелевантные предупреждения или вводит новые finding ID, которые имеют смысл только для конкретного типа трафика. Выбери диалект в подвале инспектора — ortbtools активирует соответствующий overlay вместе с базовыми правилами.',
+  discoveredHeading: {
+    en: 'Discovered in your traffic',
+    uk: 'Знайдено у твоєму трафіку',
+    ru: 'Найдено в твоём трафике',
   },
-
-  builtinHeading: {
-    en: 'Built-in dialects',
-    uk: 'Вбудовані діалекти',
-    ru: 'Встроенные диалекты',
-  },
-  rulesLabel: {
-    en: 'rules',
-    uk: 'правила',
-    ru: 'правила',
-  },
-  useDialect: {
-    en: 'Copy slug',
-    uk: 'Копіювати slug',
-    ru: 'Копировать slug',
-  },
-  toastCopied: {
-    en: 'Dialect copied — paste in inspector footer',
-    uk: 'Діалект скопійовано — встав у підвал інспектора',
-    ru: 'Диалект скопирован — вставь в подвал инспектора',
+  customHeading: {
+    en: 'Your overlays',
+    uk: 'Твої overlay',
+    ru: 'Твои overlay',
   },
 
-  builderHeading: {
-    en: 'Your custom dialects',
-    uk: 'Твої власні діалекти',
-    ru: 'Твои собственные диалекты',
+  discoveredNote: {
+    en: 'field paths only — values never leave your browser',
+    uk: 'лише шляхи полів — значення не залишають браузер',
+    ru: 'только пути полей — значения не покидают браузер',
   },
-  builderDesc: {
-    en: 'Derive overlays from observed *.ext.* fields in your samples. Built in-browser; stored as plaintext account metadata.',
-    uk: 'Виводь overlay з *.ext.* полів у твоїх зразках. Будується в браузері; зберігається як відкриті метадані акаунта.',
-    ru: 'Выводи overlay из *.ext.* полей в твоих образцах. Строится в браузере; хранится как открытые метаданные аккаунта.',
+  newBadge: { en: '{n} new', uk: '{n} нових', ru: '{n} новых' },
+
+  eyebrowActive: { en: 'active', uk: 'активний', ru: 'активный' },
+  eyebrowAvailable: { en: 'available', uk: 'доступний', ru: 'доступный' },
+
+  maintained: { en: 'maintained', uk: 'підтримується', ru: 'поддерживается' },
+  rulesMeta: { en: '{n} rules', uk: '{n} правил', ru: '{n} правил' },
+  fieldsMeta: { en: '{n} fields', uk: '{n} полів', ru: '{n} полей' },
+
+  /* `payload` stays a bare Latin term in uk/ru, as it is everywhere else
+     in i18n.js; declining it ("PAYLOAD’ІВ") reads worse than leaving the
+     unit undeclined the way MB or ms would be. */
+  payloadsLabel: { en: 'payloads', uk: 'payload', ru: 'payload' },
+  confidenceLabel: { en: 'confidence', uk: 'впевненість', ru: 'уверенность' },
+  confHigh: { en: 'high', uk: 'висока', ru: 'высокая' },
+  confMedium: { en: 'medium', uk: 'середня', ru: 'средняя' },
+  confLow: { en: 'low', uk: 'низька', ru: 'низкая' },
+
+  buildOverlay: { en: 'Build overlay', uk: 'Зібрати overlay', ru: 'Собрать overlay' },
+  groupTitle: { en: '{name} group', uk: 'Група {name}', ru: 'Группа {name}' },
+
+  discoveredEmpty: {
+    en: 'Nothing yet. Discovery watches the ext.* field paths in payloads you analyse, entirely in this browser — run a few through the inspector and the clusters show up here.',
+    uk: 'Поки порожньо. Discovery дивиться на шляхи ext.* полів у payload, які ти аналізуєш, повністю в цьому браузері — прожени кілька через інспектор, і кластери зʼявляться тут.',
+    ru: 'Пока пусто. Discovery смотрит на пути ext.* полей в payload, которые ты анализируешь, полностью в этом браузере — прогони несколько через инспектор, и кластеры появятся здесь.',
   },
-  openBuilder: {
-    en: 'Open builder',
-    uk: 'Відкрити конструктор',
-    ru: 'Открыть конструктор',
-  },
-  anonPrompt: {
-    en: 'Sign in to create and manage custom dialects. Dialect names and mappings are readable by the server.',
-    uk: 'Увійди, щоб створювати власні діалекти. Назви й мапінги діалектів читає сервер.',
-    ru: 'Войди, чтобы создавать собственные диалекты. Названия и маппинги диалектов читает сервер.',
-  },
-  signIn: {
-    en: 'Sign in',
-    uk: 'Увійти',
-    ru: 'Войти',
+
+  toastActivated: {
+    en: '{name} is the active dialect',
+    uk: '{name} — активний діалект',
+    ru: '{name} — активный диалект',
   },
 
   loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
@@ -114,317 +129,430 @@ const L = {
   },
 };
 
-// ── Severity vocabulary ───────────────────────────────────────────
-//
-// The severity bar on each card used to tally exactly three buckets —
-// `severity === 'error' | 'warning' | 'info'` — and drop everything else on
-// the floor without a word. Measured against the catalog on 2026-08-14 that
-// silently omitted 58 of the 330 rows in the `iab` bucket: 34 crosscheck
-// rows on a different scale (crit / warn / ok), 23 mirror notes that carry
-// no level at all, and the single `question`. A count that leaves rows out
-// without saying so is the same defect the severity registry was built to
-// remove, so the bar now groups by `family` and covers every row.
-//
-// `unknown` (message text, no emitter) serves no rows today but is a family
-// the registry can return, so it is ordered and labelled here rather than
-// waiting for the next one to go missing.
-//
-// Nothing below is a closed list: a level added to findings.js tomorrow
-// gets its own chip from the data. Only order and labels are declared, and
-// both fall back to "last, shown verbatim".
-
-const FAMILY_UNKNOWN = 'unknown';
-const FAMILY_ORDER = ['validator', 'crosscheck', 'mirror-note', FAMILY_UNKNOWN];
-const SEVERITY_ORDER = [
-  'error',
-  'crit',
-  'warning',
-  'warn',
-  'question',
-  'info',
-  'ok',
-  'none',
-  FAMILY_UNKNOWN,
-];
-
-/** family token → the bar's row label. Unnamed families show their token. */
-const FAMILY_LABEL = {
-  validator: { en: 'Validation', uk: 'Валідація', ru: 'Валидация' },
-  crosscheck: { en: 'Crosscheck', uk: 'Крос-перевірка', ru: 'Кросс-проверка' },
-  'mirror-note': { en: 'Mirror notes', uk: 'Нотатки mirror', ru: 'Заметки mirror' },
-  [FAMILY_UNKNOWN]: { en: 'No emitter', uk: 'Без емітера', ru: 'Без эмитера' },
-};
-
-/** `${family}/${severity}` → the reading of that value on its own scale. */
-const SEVERITY_MEANING = {
-  'crosscheck/crit': { en: 'critical', uk: 'критично', ru: 'критично' },
-  'crosscheck/warn': { en: 'warning', uk: 'попередження', ru: 'предупреждение' },
-  'crosscheck/ok': { en: 'the check passed', uk: 'перевірку пройдено', ru: 'проверка пройдена' },
-  'mirror-note/none': { en: 'no level', uk: 'без рівня', ru: 'без уровня' },
-  'unknown/unknown': {
-    en: 'no rule emits this ID',
-    uk: 'жодне правило не видає цей ID',
-    ru: 'ни одно правило не выдаёт этот ID',
-  },
-};
-
-/**
- * dialects.css carries exactly three severity colours and they are the
- * validator's. Crosscheck `crit` is deliberately NOT painted with
- * `--error`: the two are separate enums, and giving them one colour would
- * assert in CSS the equivalence this change exists to stop asserting in
- * data. Unmapped pairs fall through to the neutral base `.dlc-sev-chip`,
- * which cannot contradict the word it carries — `ok` in particular must
- * never pick up a warning tint, it is the check passing.
- */
-const SEVERITY_CLASS = {
-  'validator/error': 'dlc-sev-chip--error',
-  'validator/warning': 'dlc-sev-chip--warning',
-  'validator/info': 'dlc-sev-chip--info',
-};
-
-function orderIndex(order, value) {
-  const i = order.indexOf(value);
-  return i < 0 ? order.length : i;
-}
-
-/**
- * A body cached before the severity registry landed has no `family`
- * (Cache-Control on the endpoint is 300s). 'unknown' is what the catalog
- * itself calls a row it cannot place — better than assuming the validator
- * scale.
- */
-function familyOf(item) {
-  return (item && item.family) || FAMILY_UNKNOWN;
-}
-
 // ── Built-in dialect definitions ──────────────────────────────────
+//
+// Titles match what the inspector's footer picker prints for the same
+// dialect (paintFooterDialect in ortbtools.app.js), so the card and the
+// footer name the same thing.
+//
+// `{n}` in a description is the live rule count from the catalog — the
+// mockup carries the number in the baseline's description ("214 finding
+// ids"), and reading it off the catalog keeps it from going stale.
 
 const BUILTIN_DIALECTS = [
   {
     slug: 'iab',
-    title: { en: 'IAB OpenRTB', uk: 'IAB OpenRTB', ru: 'IAB OpenRTB' },
+    /* the baseline is "maintained" rather than a rule count — the count
+       is in its description, where the mockup puts it. */
+    meta: 'maintained',
+    title: { en: 'Standard IAB', uk: 'Standard IAB', ru: 'Standard IAB' },
     desc: {
-      en: 'Canonical IAB OpenRTB 2.x / 3.0 baseline. Covers the full public specification — required fields, type constraints, enum validity, and payload integrity for banner, video, native, and audio impression objects.',
-      uk: "Канонічний IAB OpenRTB 2.x / 3.0 baseline. Охоплює повну публічну специфікацію — обов'язкові поля, обмеження типів, валідність enum та цілісність payload для banner, video, native та audio impression об'єктів.",
-      ru: 'Канонический IAB OpenRTB 2.x / 3.0 baseline. Покрывает полную публичную спецификацию — обязательные поля, ограничения типов, валидность enum и целостность payload для banner, video, native и audio impression объектов.',
+      en: 'Baseline oRTB 2.5 / 2.6 / 3.0 rules — required fields, types, enums, payload integrity. {n} finding ids, all with spec references.',
+      uk: 'Базові правила oRTB 2.5 / 2.6 / 3.0 — обовʼязкові поля, типи, enum, цілісність payload. {n} finding id, усі з посиланнями на специфікацію.',
+      ru: 'Базовые правила oRTB 2.5 / 2.6 / 3.0 — обязательные поля, типы, enum, целостность payload. {n} finding id, все со ссылками на спецификацию.',
     },
-    prefix: null, // iab = everything not extrtb. / inpage-push.
   },
   {
     slug: 'ext-rtb',
-    title: { en: 'Extended RTB', uk: 'Extended RTB', ru: 'Extended RTB' },
+    meta: 'rules',
+    title: { en: 'Vendor · RTB', uk: 'Vendor · RTB', ru: 'Vendor · RTB' },
     desc: {
-      en: 'Extended-RTB overlay — adds ext.bsection / ext.btags (vendor blocking taxonomy arrays), ext.subage* push-traffic detection, and restricts macros to AUCTION_PRICE / AUCTION_CURRENCY / AUCTION_LOSS. Use for traffic routed via extended-RTB-aware SSPs.',
-      uk: 'Extended-RTB overlay — додає ext.bsection / ext.btags (масиви вендорної блокуючої таксономії), виявлення push-трафіку через ext.subage*, та обмежує макроси до AUCTION_PRICE / AUCTION_CURRENCY / AUCTION_LOSS. Для трафіку через Extended-RTB-сумісні SSP.',
-      ru: 'Extended-RTB overlay — добавляет ext.bsection / ext.btags (массивы вендорной блокирующей таксономии), обнаружение push-трафика через ext.subage*, и ограничивает макросы до AUCTION_PRICE / AUCTION_CURRENCY / AUCTION_LOSS. Для трафика через Extended-RTB-совместимые SSP.',
+      en: 'Extra rules for extended-RTB vendors: ext.bsection / ext.btags blocking arrays, ext.subage push detection, restricted macro set.',
+      uk: 'Додаткові правила для extended-RTB вендорів: блокуючі масиви ext.bsection / ext.btags, виявлення push через ext.subage, обмежений набір макросів.',
+      ru: 'Дополнительные правила для extended-RTB вендоров: блокирующие массивы ext.bsection / ext.btags, обнаружение push через ext.subage, ограниченный набор макросов.',
     },
-    prefix: 'extrtb.',
   },
   {
     slug: 'inpage-push',
-    title: { en: 'In-Page Push', uk: 'In-Page Push', ru: 'In-Page Push' },
-    desc: {
-      en: 'In-page push creative format — validates bid.ext.title / image / url / icon / description / cta fields instead of adm/nurl. Suppresses the IAB payload_missing warning for push bids. Required, optional, and length rules for all creative fields.',
-      uk: "Формат In-page push креативів — валідує поля bid.ext.title / image / url / icon / description / cta замість adm/nurl. Пригнічує IAB попередження payload_missing для push-бідів. Обов'язкові, необов'язкові та правила довжини для всіх creative-полів.",
-      ru: 'Формат In-page push креативов — валидирует поля bid.ext.title / image / url / icon / description / cta вместо adm/nurl. Подавляет IAB предупреждение payload_missing для push-бидов. Обязательные, необязательные и правила длины для всех creative-полей.',
+    meta: 'rules',
+    title: {
+      en: 'Vendor · In-Page Push',
+      uk: 'Vendor · In-Page Push',
+      ru: 'Vendor · In-Page Push',
     },
-    prefix: 'inpage-push.',
+    desc: {
+      en: 'In-page push shapes that never pass IAB validation as-is — bid.ext.title / image / url instead of adm/nurl.',
+      uk: 'Формати in-page push, які не проходять IAB-валідацію як є — bid.ext.title / image / url замість adm/nurl.',
+      ru: 'Форматы in-page push, которые не проходят IAB-валидацию как есть — bid.ext.title / image / url вместо adm/nurl.',
+    },
   },
 ];
 
-// ── HTML renderers ────────────────────────────────────────────────
+// ── Active dialect ────────────────────────────────────────────────
+//
+// Mirrors activeDialect() / setActiveDialect() in ortbtools.app.js —
+// same storage key, same resolution order, same temp-dialect rules. It
+// is duplicated rather than imported because ortbtools.app.js is a
+// classic script with no exports; KEEP IN SYNC with its DIALECT_STORAGE_KEY
+// block if the resolution order ever changes.
 
-function renderShell(lang) {
-  return `
-    <section class="dlc-section">
-      <header class="dlc-section__head">
-        <h1>${escapeHtml(pick(L.title, lang))}</h1>
-        <p class="dlc-section__sub">${escapeHtml(pick(L.subtitle, lang))}</p>
-      </header>
-      <div class="dlc-intro">
-        <h2>${escapeHtml(pick(L.introTitle, lang))}</h2>
-        <p>${escapeHtml(pick(L.introBody, lang))}</p>
-      </div>
-      <div id="dlc-catalog-root">
-        <p class="dlc-loading">${escapeHtml(pick(L.loading, lang))}</p>
-      </div>
-      <div id="dlc-builder-root">
-        <p class="dlc-loading">${escapeHtml(pick(L.loading, lang))}</p>
-      </div>
-    </section>
-  `;
+const DIALECT_STORAGE_KEY = 'ortbtools_dialect_v1';
+const KNOWN_DIALECTS = new Set(['iab', 'ext-rtb', 'inpage-push']);
+
+function isTempDialect(value) {
+  return typeof value === 'string' && value.startsWith('temp:');
+}
+
+function activeDialect() {
+  try {
+    const fromUrl = new URLSearchParams(location.search).get('dialect');
+    if (fromUrl && (KNOWN_DIALECTS.has(fromUrl) || isTempDialect(fromUrl))) return fromUrl;
+    const fromStorage = localStorage.getItem(DIALECT_STORAGE_KEY);
+    if (fromStorage && (KNOWN_DIALECTS.has(fromStorage) || isTempDialect(fromStorage))) {
+      return fromStorage;
+    }
+  } catch (_e) {
+    /* private mode */
+  }
+  return 'iab';
+}
+
+function setActiveDialect(slug) {
+  if (!KNOWN_DIALECTS.has(slug) && !isTempDialect(slug)) return;
+  try {
+    localStorage.setItem(DIALECT_STORAGE_KEY, slug);
+  } catch (_e) {
+    /* quota / private mode — best effort */
+  }
+  // Keep the inspector's footer label and the intel spec cache in step.
+  // The URL is deliberately NOT rewritten here: ?dialect on /dialects
+  // would describe a page that is not the one doing the validating.
+  if (typeof window.paintFooterDialect === 'function') window.paintFooterDialect();
+  if (window.OrtbtoolsIntel && typeof window.OrtbtoolsIntel.activate === 'function') {
+    window.OrtbtoolsIntel.activate(isTempDialect(slug) ? slug : null);
+  }
+}
+
+// ── Discovery clusters ────────────────────────────────────────────
+//
+// Trimmed copy of packages/core/intel/cluster.js — KEEP IN SYNC. Same
+// inlining convention (and the same thresholds) as
+// modules/intel/builder.js, so the `fields.join('|')` signature this
+// produces matches the one the builder modal renders, which is what
+// lets "Build overlay" preselect a row's cluster in that modal.
+
+const MS_PER_DAY = 24 * 3600 * 1000;
+const MIN_FIELD_SCORE = 5;
+const MIN_COOCCURRENCE = 3;
+const MAX_CLUSTER_SIZE = 8;
+/** Same window modules/intel/observer.js calls a "new" observation. */
+const NEW_WITHIN_MS = 24 * 3600 * 1000;
+
+function applyDecay(prev, lastSeenAt, now) {
+  if (typeof prev !== 'number' || !Number.isFinite(prev) || prev <= 0) return 0;
+  if (typeof lastSeenAt !== 'number' || lastSeenAt <= 0) return prev;
+  const elapsed = now - lastSeenAt;
+  if (elapsed <= 0) return prev;
+  const halfLives = elapsed / MS_PER_DAY;
+  if (halfLives >= 30) return 0;
+  return prev * Math.pow(0.5, halfLives);
+}
+
+function pushMap(map, key, value) {
+  let arr = map.get(key);
+  if (!arr) {
+    arr = [];
+    map.set(key, arr);
+  }
+  arr.push(value);
 }
 
 /**
- * One row per family, so the reader is never asked to tell crosscheck
- * `warn` from validator `warning` by the word alone. The chip text stays
- * the verbatim token the catalog published; its reading on its own scale is
- * in the title.
+ * `payloads` is the smallest raw co-occurrence count between the anchor
+ * and any of its partners: a lower bound on how many payloads carried
+ * the whole cluster. `cohesion` divides that by the rarest member's own
+ * observation count — 1.0 means those fields have never been seen apart.
+ * Both are counts of payloads seen in THIS browser; nothing about them
+ * is sent anywhere.
  */
-function renderSevBar(lang, counts) {
-  return (counts.groups || [])
-    .map((group) => {
-      const label = escapeHtml(
-        FAMILY_LABEL[group.family] ? pick(FAMILY_LABEL[group.family], lang) : group.family,
-      );
-      const chips = group.facets
-        .map((f) => {
-          const cls = SEVERITY_CLASS[f.family + '/' + f.severity];
-          const meaning = SEVERITY_MEANING[f.family + '/' + f.severity];
-          const title = meaning ? ` title="${escapeHtml(pick(meaning, lang))}"` : '';
-          return `<span class="dlc-sev-chip${cls ? ' ' + cls : ''}"${title}>${f.n} ${escapeHtml(f.severity)}</span>`;
-        })
-        .join('');
-      return `
-    <div class="dlc-sev-bar">
-      <span class="dlc-sev-bar__label">${label}:</span>
-      <div class="dlc-sev-bar__track">${chips}</div>
-    </div>
-  `;
-    })
-    .join('');
-}
-
-function renderDialectCard(dialect, lang, stats) {
-  const counts = stats[dialect.slug] || { count: 0, groups: [] };
-  const rulesLabel = escapeHtml(pick(L.rulesLabel, lang));
-  const useLabel = escapeHtml(pick(L.useDialect, lang));
-  return `
-    <article class="dlc-card" data-dialect="${escapeHtml(dialect.slug)}">
-      <header class="dlc-card__head">
-        <h3 class="dlc-card__title">${escapeHtml(pick(dialect.title, lang))}</h3>
-        <span class="dlc-card__slug">${escapeHtml(dialect.slug)}</span>
-      </header>
-      <p class="dlc-card__desc">${escapeHtml(pick(dialect.desc, lang))}</p>
-      <div class="dlc-rule-count">
-        <span class="dlc-rule-count__num">${counts.count}</span>
-        <span>${rulesLabel}</span>
-      </div>
-      ${renderSevBar(lang, counts)}
-      <footer class="dlc-card__actions">
-        <button type="button" class="dlc-btn dlc-btn--primary" data-action="copy-dialect" data-slug="${escapeHtml(dialect.slug)}">
-          ${useLabel}
-        </button>
-      </footer>
-    </article>
-  `;
-}
-
-function renderCatalog(lang, stats) {
-  const heading = escapeHtml(pick(L.builtinHeading, lang));
-  const total = BUILTIN_DIALECTS.length;
-  const cards = BUILTIN_DIALECTS.map((d) => renderDialectCard(d, lang, stats)).join('');
-  return `
-    <div class="dlc-group">
-      <h2 class="dlc-group__title">
-        ${heading}
-        <span class="dlc-group__count">${total}</span>
-      </h2>
-      <div class="dlc-grid">${cards}</div>
-    </div>
-  `;
-}
-
-function renderBuilderCard(lang, isLoggedIn) {
-  const localeP = localePrefix(lang);
-  if (!isLoggedIn) {
-    const prompt = escapeHtml(pick(L.anonPrompt, lang));
-    const signIn = escapeHtml(pick(L.signIn, lang));
-    return `
-      <div class="dlc-builder-card">
-        <h2>${escapeHtml(pick(L.builderHeading, lang))}</h2>
-        <p>${prompt}</p>
-        <div class="dlc-builder-card__actions">
-          <a class="dlc-btn dlc-btn--primary" href="${localeP || ''}/account">${signIn}</a>
-        </div>
-      </div>
-    `;
+function detectClusters(observations, coOccurrences, now) {
+  const fieldScores = new Map();
+  const fieldCounts = new Map();
+  for (const r of observations || []) {
+    const decayed = applyDecay(r.decayedScore || 0, r.lastSeenAt || 0, now);
+    if (decayed > 0) {
+      fieldScores.set(r.path, decayed);
+      fieldCounts.set(r.path, Math.max(fieldCounts.get(r.path) || 0, r.count || 0));
+    }
   }
-  const desc = escapeHtml(pick(L.builderDesc, lang));
-  const openLabel = escapeHtml(pick(L.openBuilder, lang));
-  return `
-    <div class="dlc-builder-card">
-      <h2>${escapeHtml(pick(L.builderHeading, lang))}</h2>
-      <p>${desc}</p>
-      <div class="dlc-builder-card__actions">
-        <button type="button" class="dlc-btn dlc-btn--primary" data-action="open-builder">
-          ${openLabel}
-        </button>
-      </div>
-    </div>
-  `;
+
+  const adjacency = new Map();
+  const rawPairCount = new Map();
+  for (const c of coOccurrences || []) {
+    const decayed = applyDecay(
+      c.decayedScore != null ? c.decayedScore : c.count || 0,
+      c.lastSeenAt || 0,
+      now,
+    );
+    if (decayed < MIN_COOCCURRENCE) continue;
+    pushMap(adjacency, c.pathA, { partner: c.pathB, weight: decayed });
+    pushMap(adjacency, c.pathB, { partner: c.pathA, weight: decayed });
+    rawPairCount.set(c.pathA + ' ' + c.pathB, c.count || 0);
+    rawPairCount.set(c.pathB + ' ' + c.pathA, c.count || 0);
+  }
+
+  const anchors = Array.from(fieldScores.entries())
+    .filter(([, score]) => score >= MIN_FIELD_SCORE)
+    .sort((a, b) => b[1] - a[1])
+    .map(([path]) => path);
+
+  const clusters = [];
+  const seenSig = new Set();
+  for (const anchor of anchors) {
+    const partners = (adjacency.get(anchor) || [])
+      .filter(({ partner }) => (fieldScores.get(partner) || 0) >= MIN_FIELD_SCORE)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, MAX_CLUSTER_SIZE - 1)
+      .map((p) => p.partner);
+    if (partners.length < 2) continue;
+
+    const fields = [anchor, ...partners].sort();
+    const sig = fields.join('|');
+    if (seenSig.has(sig)) continue;
+    seenSig.add(sig);
+
+    let totalCount = 0;
+    for (const f of fields) totalCount += fieldScores.get(f) || 0;
+
+    let payloads = Infinity;
+    for (const partner of partners) {
+      payloads = Math.min(payloads, rawPairCount.get(anchor + ' ' + partner) || 0);
+    }
+    if (!Number.isFinite(payloads)) payloads = 0;
+
+    let rarest = Infinity;
+    for (const f of fields) rarest = Math.min(rarest, fieldCounts.get(f) || 0);
+    const cohesion = rarest > 0 ? payloads / rarest : 0;
+
+    const isNew = fields.some((f) => {
+      const rec = (observations || []).find((r) => r.path === f);
+      return rec && rec.firstSeenAt && now - rec.firstSeenAt <= NEW_WITHIN_MS;
+    });
+
+    clusters.push({
+      anchorPath: anchor,
+      fields,
+      sig,
+      totalCount,
+      payloads,
+      cohesion,
+      isNew,
+    });
+  }
+
+  clusters.sort((a, b) => b.totalCount - a.totalCount);
+  return clusters;
 }
 
-// ── Data fetching ─────────────────────────────────────────────────
+/**
+ * A cluster seen in fewer than MIN_FIELD_SCORE payloads is never called
+ * more than "low", however tightly its fields travel together — a
+ * perfect ratio over four payloads is a coincidence, not a pattern.
+ */
+function confidenceKey(cluster) {
+  if (cluster.payloads < MIN_FIELD_SCORE) return 'confLow';
+  if (cluster.cohesion >= 0.8) return 'confHigh';
+  if (cluster.cohesion >= 0.5) return 'confMedium';
+  return 'confLow';
+}
 
+/** `imp.ext.viewability_provider` → `Viewability provider`. */
+function prettifyLeaf(path) {
+  const leaf = String(path).split('.').pop() || String(path);
+  const words = leaf.replace(/[_-]+/g, ' ').trim();
+  if (!words) return String(path);
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+async function fetchClusters() {
+  const storage = window.OrtbtoolsIntelStorage;
+  if (!storage) return [];
+  try {
+    const [observations, coOccurrences] = await Promise.all([
+      storage.listObservations(),
+      storage.listCoOccurrences(),
+    ]);
+    return detectClusters(observations || [], coOccurrences || [], Date.now());
+  } catch (_e) {
+    // Discovery is best-effort; an IDB hiccup must not take the page down.
+    return [];
+  }
+}
+
+async function fetchCustomDialects() {
+  const storage = window.OrtbtoolsIntelStorage;
+  if (!storage) return [];
+  try {
+    return (await storage.listTempDialects()) || [];
+  } catch (_e) {
+    return [];
+  }
+}
+
+// ── Catalog counts ────────────────────────────────────────────────
+
+/**
+ * Counts EVERY row the catalog returns for a dialect, not just the rows
+ * on the validator's error/warning/info scale — crosscheck rows and
+ * mirror notes are rules too, and a count that quietly drops 58 of 330
+ * is the defect the severity registry was built to remove.
+ */
 async function fetchCatalogStats(signal) {
   const r = await fetch('/api/v1/finding-catalog', { signal });
   if (!r.ok) throw new Error('catalog HTTP ' + r.status);
   const data = await r.json();
   const items = data.items || [];
-
-  // Count per dialect by prefix
   const extrtb = items.filter((f) => f.id.startsWith('extrtb.'));
   const inpage = items.filter((f) => f.id.startsWith('inpage-push.'));
   const iab = items.filter((f) => !f.id.startsWith('extrtb.') && !f.id.startsWith('inpage-push.'));
-
-  /**
-   * Counts every row, keyed on family+severity.
-   *
-   * Each row is counted exactly ONCE, under its canonical `severity` — not
-   * once per entry in `severities` — so the numbers on a card still add up
-   * to the rule count printed above them. The four IDs that can be emitted
-   * at either of two levels (payload.duplicate_key and friends) are counted
-   * under the more severe one, which is what `severity` already means; the
-   * /docs/findings table is where both levels are shown.
-   */
-  function tally(arr) {
-    const byKey = new Map();
-    for (const item of arr) {
-      const family = familyOf(item);
-      const severity = (item && item.severity) || FAMILY_UNKNOWN;
-      const key = family + '/' + severity;
-      const rec = byKey.get(key) || { key, family, severity, n: 0 };
-      rec.n++;
-      byKey.set(key, rec);
-    }
-
-    const facets = [...byKey.values()];
-    const families = [];
-    for (const f of facets) if (families.indexOf(f.family) < 0) families.push(f.family);
-    families.sort((a, b) => orderIndex(FAMILY_ORDER, a) - orderIndex(FAMILY_ORDER, b));
-
-    return {
-      count: arr.length,
-      groups: families.map((family) => ({
-        family,
-        facets: facets
-          .filter((f) => f.family === family)
-          .sort(
-            (a, b) =>
-              orderIndex(SEVERITY_ORDER, a.severity) - orderIndex(SEVERITY_ORDER, b.severity),
-          ),
-      })),
-    };
-  }
-
   return {
-    iab: tally(iab),
-    'ext-rtb': tally(extrtb),
-    'inpage-push': tally(inpage),
+    iab: iab.length,
+    'ext-rtb': extrtb.length,
+    'inpage-push': inpage.length,
   };
 }
 
-async function fetchAuthState(signal) {
-  try {
-    const r = await fetch('/api/auth/me', { credentials: 'same-origin', signal });
-    if (!r.ok) return false;
-    const data = await r.json();
-    return !!(data && data.user);
-  } catch (_e) {
-    return false;
+// ── HTML renderers ────────────────────────────────────────────────
+
+function renderShell(lang) {
+  return `
+    <div class="dlc-page">
+      <div class="dlc-band">
+        <h1 class="dlc-band__title">${tx(L.title, lang)}</h1>
+        <p class="dlc-band__sub">${tx(L.subtitle, lang)}</p>
+      </div>
+      <div class="dlc-scroll">
+        <section class="dlc-block" id="dlc-shipped-root">
+          <p class="dlc-loading">${tx(L.loading, lang)}</p>
+        </section>
+        <section class="dlc-block" id="dlc-custom-root" hidden></section>
+        <section class="dlc-block" id="dlc-discovered-root">
+          <p class="dlc-loading">${tx(L.loading, lang)}</p>
+        </section>
+      </div>
+    </div>
+  `;
+}
+
+function renderBlockHead(lang, headingKey, opts) {
+  const o = opts || {};
+  const badge = o.badge
+    ? `<span class="dlc-badge">${tx(L.newBadge, lang, { n: o.badge })}</span>`
+    : '';
+  const note = o.note ? `<span class="dlc-block__note">${tx(L.discoveredNote, lang)}</span>` : '';
+  return `
+    <div class="dlc-block__head">
+      <span class="dlc-block__eyebrow">${tx(L[headingKey], lang)}</span>
+      ${badge}
+      <span class="dlc-block__rule"></span>
+      ${note}
+    </div>
+  `;
+}
+
+const CORNER_MARKS = ['tl', 'tr', 'bl', 'br']
+  .map((pos) => `<i class="dlc-card__mark dlc-card__mark--${pos}" aria-hidden="true">+</i>`)
+  .join('');
+
+function renderCard(lang, opts) {
+  const isActive = opts.isActive;
+  const eyebrow = isActive ? tx(L.eyebrowActive, lang) : tx(L.eyebrowAvailable, lang);
+  return `
+    <button type="button"
+            class="dlc-card${isActive ? ' dlc-card--active' : ''}"
+            data-action="activate"
+            data-slug="${escapeHtml(opts.slug)}"
+            aria-pressed="${isActive ? 'true' : 'false'}">
+      ${isActive ? CORNER_MARKS : ''}
+      <span class="dlc-card__eyebrow">${eyebrow}</span>
+      <span class="dlc-card__title">${escapeHtml(opts.title)}</span>
+      <span class="dlc-card__desc">${opts.descHtml}</span>
+      <span class="dlc-card__meta">${opts.metaHtml}</span>
+    </button>
+  `;
+}
+
+/**
+ * Escapes the copy first, then substitutes `{n}` for a marked-up count, so
+ * the rule count is one addressable element wherever a card puts it —
+ * mid-sentence in the baseline's description, at the end of an overlay's
+ * footer. The count is the card's one load-bearing number; leaving it as
+ * loose digits inside a paragraph makes it unassertable.
+ */
+function countedHtml(template, n) {
+  const value = n == null ? '—' : n;
+  return escapeHtml(template).replace(
+    '{n}',
+    '<span class="dlc-card__count">' + escapeHtml(value) + '</span>',
+  );
+}
+
+function renderShipped(lang, counts, active) {
+  const cards = BUILTIN_DIALECTS.map((d) => {
+    const n = counts[d.slug];
+    const metaHtml =
+      d.meta === 'maintained'
+        ? escapeHtml(d.slug + ' · ' + pick(L.maintained, lang))
+        : escapeHtml(d.slug + ' · ') + countedHtml(pick(L.rulesMeta, lang), n);
+    return renderCard(lang, {
+      slug: d.slug,
+      isActive: active === d.slug,
+      title: pick(d.title, lang),
+      descHtml: countedHtml(pick(d.desc, lang), n),
+      metaHtml,
+    });
+  }).join('');
+  return renderBlockHead(lang, 'shippedHeading') + `<div class="dlc-grid">${cards}</div>`;
+}
+
+function renderCustom(lang, specs, active) {
+  const cards = specs
+    .map((spec) =>
+      renderCard(lang, {
+        slug: spec.id,
+        isActive: active === spec.id,
+        title: spec.name || spec.id,
+        descHtml: escapeHtml((spec.fields || []).map((f) => f.path).join(' · ')),
+        metaHtml:
+          escapeHtml('custom · ') +
+          countedHtml(pick(L.fieldsMeta, lang), (spec.fields || []).length),
+      }),
+    )
+    .join('');
+  return renderBlockHead(lang, 'customHeading') + `<div class="dlc-grid">${cards}</div>`;
+}
+
+function renderDiscovered(lang, clusters) {
+  const newCount = clusters.filter((c) => c.isNew).length;
+  const head = renderBlockHead(lang, 'discoveredHeading', { badge: newCount || 0, note: true });
+  if (!clusters.length) {
+    return head + `<p class="dlc-empty">${tx(L.discoveredEmpty, lang)}</p>`;
   }
+  const rows = clusters
+    .map((c) => {
+      const confidence = tx(L[confidenceKey(c)], lang);
+      return `
+      <div class="dlc-row">
+        <div class="dlc-row__main">
+          <div class="dlc-row__title">${tx(L.groupTitle, lang, { name: prettifyLeaf(c.anchorPath) })}</div>
+          <div class="dlc-row__paths" title="${escapeHtml(c.fields.join(' · '))}">${escapeHtml(c.fields.join(' · '))}</div>
+        </div>
+        <div class="dlc-row__stat">
+          <div class="dlc-row__stat-num">${c.payloads}</div>
+          <div class="dlc-row__stat-label">${tx(L.payloadsLabel, lang)}</div>
+        </div>
+        <div class="dlc-row__stat dlc-row__stat--conf">
+          <div class="dlc-row__stat-num">${confidence}</div>
+          <div class="dlc-row__stat-label">${tx(L.confidenceLabel, lang)}</div>
+        </div>
+        <button type="button" class="dlc-ghost" data-action="build-overlay" data-sig="${escapeHtml(c.sig)}">
+          ${tx(L.buildOverlay, lang)}
+        </button>
+      </div>
+    `;
+    })
+    .join('');
+  return head + `<div class="dlc-rows">${rows}</div>`;
 }
 
 // ── Toast helper ─────────────────────────────────────────────────
@@ -434,26 +562,12 @@ function showToast(message, type, ctxToast) {
     ctxToast(message, type || 'success');
     return;
   }
-  // Fallback: inline transient element
   const el = document.createElement('div');
   el.textContent = message;
-  el.style.cssText = [
-    'position:fixed',
-    'bottom:24px',
-    'right:24px',
-    'background:#18181b',
-    'color:#fff',
-    'padding:10px 18px',
-    'border-radius:10px',
-    'font-size:13px',
-    'z-index:9999',
-    'box-shadow:0 4px 12px rgba(0,0,0,.3)',
-    'pointer-events:none',
-    'transition:opacity 300ms',
-  ].join(';');
+  el.className = 'dlc-toast';
   document.body.appendChild(el);
   setTimeout(() => {
-    el.style.opacity = '0';
+    el.classList.add('is-out');
     setTimeout(() => el.remove(), 320);
   }, 2400);
 }
@@ -465,85 +579,111 @@ export default {
   css: '/modules/dialects/dialects.css',
   route: '/dialects',
   manifest: {
-    title: { en: 'Dialect catalog', uk: 'Каталог діалектів', ru: 'Каталог диалектов' },
+    title: L.title,
   },
 
   async mount(root, ctx) {
     const lang = ctx.lang || FALLBACK_LANG;
-
-    // Render shell immediately
     root.innerHTML = renderShell(lang);
 
-    const catalogRoot = root.querySelector('#dlc-catalog-root');
-    const builderRoot = root.querySelector('#dlc-builder-root');
+    const shippedRoot = root.querySelector('#dlc-shipped-root');
+    const customRoot = root.querySelector('#dlc-custom-root');
+    const discoveredRoot = root.querySelector('#dlc-discovered-root');
 
-    // Fetch catalog stats and auth state in parallel
-    const [statsResult, isLoggedIn] = await Promise.allSettled([
-      fetchCatalogStats(ctx.signal),
-      fetchAuthState(ctx.signal),
-    ]);
+    let counts = {};
+    let countsFailed = false;
+    let clusters = [];
+    let customSpecs = [];
 
-    // Hydrate catalog
-    if (catalogRoot) {
+    async function loadAll() {
+      const [statsResult, clusterResult, customResult] = await Promise.allSettled([
+        fetchCatalogStats(ctx.signal),
+        fetchClusters(),
+        fetchCustomDialects(),
+      ]);
       if (statsResult.status === 'fulfilled') {
-        catalogRoot.innerHTML = renderCatalog(lang, statsResult.value);
+        counts = statsResult.value;
       } else if (statsResult.reason && statsResult.reason.name !== 'AbortError') {
-        catalogRoot.innerHTML = `<p class="dlc-error">${escapeHtml(pick(L.error, lang))}</p>`;
+        countsFailed = true;
       }
+      clusters = clusterResult.status === 'fulfilled' ? clusterResult.value : [];
+      customSpecs = customResult.status === 'fulfilled' ? customResult.value : [];
     }
 
-    // Hydrate builder card
-    if (builderRoot) {
-      const loggedIn = isLoggedIn.status === 'fulfilled' ? isLoggedIn.value : false;
-      builderRoot.innerHTML = renderBuilderCard(lang, loggedIn);
+    function paint() {
+      const active = activeDialect();
+      if (shippedRoot) {
+        shippedRoot.innerHTML = countsFailed
+          ? renderShipped(lang, counts, active) + `<p class="dlc-error">${tx(L.error, lang)}</p>`
+          : renderShipped(lang, counts, active);
+      }
+      if (customRoot) {
+        customRoot.hidden = customSpecs.length === 0;
+        customRoot.innerHTML = customSpecs.length ? renderCustom(lang, customSpecs, active) : '';
+      }
+      if (discoveredRoot) discoveredRoot.innerHTML = renderDiscovered(lang, clusters);
     }
 
-    // Click delegation
+    await loadAll();
+    if (ctx.signal && ctx.signal.aborted) return;
+    paint();
+
+    // A dialect built in the Discovery modal becomes active immediately —
+    // repaint so the new overlay shows up under "Your overlays" wearing
+    // the ACTIVE eyebrow instead of the page lying until the next visit.
+    window.addEventListener(
+      'ortbtools:intel-dialect-changed',
+      async () => {
+        customSpecs = await fetchCustomDialects();
+        paint();
+      },
+      { signal: ctx.signal },
+    );
+
     root.addEventListener(
       'click',
-      (e) => {
+      async (e) => {
         const btn = e.target.closest('[data-action]');
-        if (!btn) return;
+        if (!btn || !root.contains(btn)) return;
         const action = btn.dataset.action;
 
-        if (action === 'copy-dialect') {
+        if (action === 'activate') {
           e.preventDefault();
           const slug = btn.dataset.slug || '';
-          navigator.clipboard
-            .writeText(slug)
-            .then(() => {
-              showToast(pick(L.toastCopied, lang), 'success', ctx.toast);
-            })
-            .catch(() => {
-              showToast(slug, 'info', ctx.toast);
-            });
+          if (activeDialect() === slug) return;
+          setActiveDialect(slug);
+          paint();
+          const label =
+            (BUILTIN_DIALECTS.find((d) => d.slug === slug) || {}).title ||
+            ((customSpecs.find((s) => s.id === slug) || {}).name ?? slug);
+          showToast(
+            fmt(pick(L.toastActivated, lang), {
+              name: typeof label === 'string' ? label : pick(label, lang),
+            }),
+            'success',
+            ctx.toast,
+          );
           return;
         }
 
-        if (action === 'open-builder') {
+        if (action === 'build-overlay') {
           e.preventDefault();
-          const localeP = localePrefix(lang);
-          const inspectorPath = (localeP || '') + '/inspector';
-          // Try OrtbtoolsIntelBuilder first (from ortbtools.app.js Phase 9).
-          // If not available (SPA context), navigate to inspector.
-          if (
-            window.OrtbtoolsIntelBuilder &&
-            typeof window.OrtbtoolsIntelBuilder.open === 'function'
-          ) {
-            window.OrtbtoolsIntelBuilder.open();
-          } else if (
-            window.OrtbtoolsShell &&
-            typeof window.OrtbtoolsShell.navigateTo === 'function'
-          ) {
-            window.OrtbtoolsShell.navigateTo(inspectorPath);
-            // Dispatch the custom event after navigation settles
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('kt:open-dialect-builder'));
-            }, 200);
-          } else {
-            window.location.href = inspectorPath;
+          const builder = window.OrtbtoolsIntelBuilder;
+          if (!builder || typeof builder.open !== 'function') return;
+          await builder.open();
+          // The modal lists the same clusters under the same signature;
+          // clicking its "use" button for ours preselects the fields the
+          // reader was actually looking at. Purely a convenience — the
+          // modal is perfectly usable if the row is not among its top 5.
+          try {
+            const sig = btn.dataset.sig || '';
+            const pickBtn = document.querySelector(
+              '#ortbtoolsIntelBuilder [data-cluster-pick="' + CSS.escape(sig) + '"]',
+            );
+            if (pickBtn) pickBtn.click();
+          } catch (_e) {
+            /* preselection is best-effort */
           }
-          return;
         }
       },
       { signal: ctx.signal },
