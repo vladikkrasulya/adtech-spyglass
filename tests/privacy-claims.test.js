@@ -55,9 +55,21 @@ const FORBIDDEN = [
   {
     // Catches data / payload "never leaves the browser/device/tab" — but NOT
     // "the KEK / DEK / key never leaves the browser" (those subjects are absent
-    // from the list, and they are genuinely browser-only).
+    // from the list, and they are genuinely browser-only), and NOT the offline
+    // CLI's "payloads never leave the machine".
+    //
+    // That last exclusion is stated in this file's header and was NOT in the
+    // pattern: the header promised to leave the CLI's claim intact while the
+    // regex forbade it, so a TRUE sentence about a tool with no network calls
+    // at all (packages/cli depends only on @ortbtools/core and contains no
+    // fetch/http client — verified) failed the guard. A guard that fails on a
+    // true statement teaches people to route around it.
+    //
+    // The exclusion is deliberately narrow: only "the/your machine", which is
+    // the one scope where the claim holds. "never leaves the browser" from the
+    // web app stays forbidden, because the web app posts to /api/analyze.
     label: 'bid data / payload "never leaves the browser"',
-    re: /\b(?:bid[-\s]+stream\s+payload\s+values?|payload\s+values?|payloads?|bid\s+data|data)\s+never\s+leaves?\b/i,
+    re: /\b(?:bid[-\s]+stream\s+payload\s+values?|payload\s+values?|payloads?|bid\s+data|data)\s+never\s+leaves?\b(?!\s+(?:the|your)\s+machine\b)/i,
   },
   {
     // The "no ... payload values leave the user's browser" construction (the

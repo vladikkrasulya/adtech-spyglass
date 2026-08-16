@@ -175,10 +175,17 @@
    workbench the ground is what the white panels are read against, and two
    units of lightness is the difference between panels that sit on a surface
    and panels that float on nothing. */
+/* On :root as well as .kt-shell — design-system.css paints `body` from
+   --bg, and body is the shell's PARENT, so a token scoped to the shell
+   never reaches it. The page ground stayed #F6F8FA behind everything the
+   redesign had already moved to #F2F5F8; visible wherever the shell does
+   not cover the viewport, and on every over-scroll. */
+:root,
 .kt-shell {
   --bg: #f2f5f8;
 }
 
+[data-theme='dark'],
 [data-theme='dark'] .kt-shell {
   --bg: #0a111f;
 }

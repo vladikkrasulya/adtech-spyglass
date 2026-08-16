@@ -6,6 +6,61 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.14.0 — the other five pages, and an interface that does not break
+
+Streams, Samples, Dialects, Insights and Docs rebuilt against the design
+prototype, one agent per page in its own worktree — their module directories
+are disjoint, so five branches merged with one conflict, in the shared type-
+scale budget, where each side was right about its own file.
+
+- **Streams** is the mockup's table: TIME / KIND / SOURCE / FORMAT / SIZE /
+  FINDINGS, a working filter row, a live `streaming · N/min` pill measured
+  from actual arrivals rather than the configured cadence, and a Pause that
+  queues instead of dropping. The old standalone-app chrome (its own brand
+  lockup, a second theme toggle, a 40/60 split with an in-page inspector) is
+  gone. Findings are real: one batched replay grades every row on screen.
+- **Samples** is a table with a partner filter and a count, not a card grid.
+- **Dialects** gained the block it never had — "Discovered in your traffic",
+  with the field clusters and a Build-overlay route — plus the mockup's
+  ACTIVE/AVAILABLE cards.
+- **Insights** is four KPI tiles over two columns. Two tiles report what we
+  actually measure rather than the mockup's labels, and that is stated: we
+  have no per-rule frequency and no clean-payload rate to report.
+- **Docs** is the three-column reader, contents sidebar and article, instead
+  of a hub of cards pointing at /about.
+
+INTERFACE REPAIRS, found by pressing every control and measuring twelve
+resolutions from 360x800 to 2560x1440 across all six routes:
+
+- **Closed popovers painted.** A `<details>` hides its content slot, which an
+  absolutely positioned child escapes — so every menu rendered permanently.
+  Measured at 1920px: five tab-strip items stacked at x=1713 with real boxes,
+  over the findings list, clickable, whether the menu was open or not. Nine
+  switch-tab controls where four exist.
+- **Duplicate Docs.** The rail and the Tools menu both offered it.
+- **The empty editor.** The gutter rendered as a bare 44px band beside a
+  placeholder that then read as indented, and the placeholder still described
+  a layout from two releases ago ("paste a BidResponse on the right").
+- **The page ground was never applied.** `--bg` was scoped to `.kt-shell`,
+  and design-system.css paints `body` — the shell's parent. The ground stayed
+  #F6F8FA behind everything already moved to #F2F5F8.
+- **Breadcrumbs existed on one page.** The section name is derived from the
+  route by the topbar now, so a module cannot forget it; modules supply only
+  the detail. Verified on six routes in three locales.
+- **Touch targets** below WCAG 2.5.8's 24px floor: prev/next at 62x21, the
+  footer dialect chip at 90x17.
+- **Narrow screens.** At 1024px the tab strip's Creative and More ran past
+  the right edge and the footer's controls sat off-screen in a bar nobody
+  scrolls. More is pinned below 1100px; the footer drops its spec list.
+- Two defects the agents introduced and the guards caught: three literal NUL
+  bytes used as a map-key separator, and a privacy claim about payloads. The
+  claim was TRUE (it describes the offline CLI, which has no network calls at
+  all) and the guard's own header said it should pass — the regex was broader
+  than its documentation. The pattern now matches what it says.
+- Result across 12 resolutions x 6 routes: zero horizontal overflow, zero page
+  errors, zero zero-height containers, zero dead controls.
+- App version `1.13.1 → 1.14.0`; Core `0.35.0`, CLI `0.1.1`.
+
 ### v1.13.1 — the payload column, measured
 
 Second pass over the same audit. v1.13.0 fixed the shape; this fixes the

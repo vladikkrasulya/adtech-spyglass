@@ -287,8 +287,8 @@ function detectClusters(observations, coOccurrences, now) {
     if (decayed < MIN_COOCCURRENCE) continue;
     pushMap(adjacency, c.pathA, { partner: c.pathB, weight: decayed });
     pushMap(adjacency, c.pathB, { partner: c.pathA, weight: decayed });
-    rawPairCount.set(c.pathA + ' ' + c.pathB, c.count || 0);
-    rawPairCount.set(c.pathB + ' ' + c.pathA, c.count || 0);
+    rawPairCount.set(c.pathA + '\u241F' + c.pathB, c.count || 0);
+    rawPairCount.set(c.pathB + '\u241F' + c.pathA, c.count || 0);
   }
 
   const anchors = Array.from(fieldScores.entries())
@@ -316,7 +316,7 @@ function detectClusters(observations, coOccurrences, now) {
 
     let payloads = Infinity;
     for (const partner of partners) {
-      payloads = Math.min(payloads, rawPairCount.get(anchor + ' ' + partner) || 0);
+      payloads = Math.min(payloads, rawPairCount.get(anchor + '\u241F' + partner) || 0);
     }
     if (!Number.isFinite(payloads)) payloads = 0;
 

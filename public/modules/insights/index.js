@@ -130,7 +130,7 @@ function escapeHtml(s) {
    the mockup groups with a space in every locale, and a mono column of
    figures only lines up if the separator is the same width everywhere
    (a comma is not). NBSP, so "1 482" never breaks across two lines. */
-const NBSP = ' ';
+const NBSP = '\u00A0';
 function fmtNum(n) {
   const v = Math.max(0, Math.round(Number(n) || 0));
   return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
@@ -400,22 +400,13 @@ function renderShell(lang) {
    Painted defensively (the topbar module is not ours to change) and
    restored on unmount so a later section does not inherit our label. */
 function paintCrumbs(sectionText, scopeText) {
-  try {
-    const box = document.getElementById('ktCrumbs');
-    if (!box) return;
-    const section = document.getElementById('ktCrumbSection');
-    const idEl = document.getElementById('ktCrumbId');
-    const sep = box.querySelector('.kt-topbar__crumb-sep');
-    if (section) section.textContent = sectionText;
-    if (idEl) {
-      idEl.textContent = scopeText;
-      idEl.hidden = !scopeText;
-    }
-    if (sep) sep.hidden = !scopeText;
-    box.hidden = !sectionText;
-  } catch (_e) {
-    /* breadcrumb is chrome garnish — never let it break the section */
-  }
+  // The section half moved to the topbar in v1.14: it derives the name from
+  // the route, so every page has one whether or not its module remembers to
+  // paint it — which is exactly what four pages did not. This now supplies
+  // only the detail, and passes nothing on unmount so the next section does
+  // not inherit our window label.
+  void sectionText;
+  if (typeof window.ktSetCrumbDetail === 'function') window.ktSetCrumbDetail(scopeText || '');
 }
 
 // ── Main module ─────────────────────────────────────────────────

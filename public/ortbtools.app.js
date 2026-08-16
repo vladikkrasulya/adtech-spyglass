@@ -1115,17 +1115,11 @@ export async function mountInspector(root, ctx) {
    * from the same call, so the two cannot describe different payloads.
    */
   function paintCrumbs(id) {
-    const box = document.getElementById('ktCrumbs');
-    if (!box) return;
-    const section = document.getElementById('ktCrumbSection');
-    const idEl = document.getElementById('ktCrumbId');
-    if (section) section.textContent = t('nav.inspector');
+    // The section half is the topbar's job now — it derives it from the route,
+    // so every page has one whether or not its module remembers. This supplies
+    // only the detail: which payload is on screen.
     const clean = id && id !== '—' ? String(id) : '';
-    if (idEl) idEl.textContent = clean;
-    if (idEl) idEl.hidden = !clean;
-    const sep = box.querySelector('.kt-topbar__crumb-sep');
-    if (sep) sep.hidden = !clean;
-    box.hidden = false;
+    if (typeof window.ktSetCrumbDetail === 'function') window.ktSetCrumbDetail(clean);
   }
 
   // Domain masking for History list — protects users from accidentally

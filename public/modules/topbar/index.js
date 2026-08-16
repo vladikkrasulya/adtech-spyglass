@@ -314,13 +314,70 @@ export function mountTopbar(root, shellRoot) {
   };
   shellRoot.addEventListener('click', onShellClick);
 
+  // ── Breadcrumb ─────────────────────────────────────────────────────────
+  // The section half belongs to the topbar, not to whichever module happens
+  // to be mounted: every route has a name, and a module that forgets to
+  // paint one leaves the bar reading a bare "/" — which is what /live,
+  // /library, /dialects and /docs did, each having been built by someone
+  // who could only see their own page.
+  //
+  // A module may still add the DETAIL half (the Inspector prints the payload
+  // id, Insights the window) through window.ktSetCrumbDetail(). The section
+  // is derived here from the route, so it cannot go missing.
+  const SECTION_NAMES = {
+    '/inspector': { en: 'Inspector', uk: 'Інспектор', ru: 'Инспектор' },
+    '/live': { en: 'Streams', uk: 'Стріми', ru: 'Стримы' },
+    '/library': { en: 'Samples', uk: 'Зразки', ru: 'Образцы' },
+    '/dialects': { en: 'Dialects', uk: 'Діалекти', ru: 'Диалекты' },
+    '/insights': { en: 'Insights', uk: 'Інсайти', ru: 'Аналитика' },
+    '/docs': { en: 'Docs', uk: 'Доки', ru: 'Доки' },
+    '/blog': { en: 'Blog', uk: 'Блог', ru: 'Блог' },
+    '/behavior': { en: 'Behavior', uk: 'Behavior', ru: 'Behavior' },
+    '/account': { en: 'Account', uk: 'Кабінет', ru: 'Кабинет' },
+  };
+
+  function currentSectionName() {
+    let path = location.pathname.replace(/\/$/, '') || '/';
+    if (/^\/(uk|ru)(\/|$)/.test(path)) path = path.slice(3) || '/';
+    const entry = SECTION_NAMES[path] || SECTION_NAMES['/' + path.split('/')[1]];
+    if (!entry) return '';
+    const l = document.documentElement.getAttribute('lang') || 'en';
+    return entry[l] || entry.en;
+  }
+
+  let crumbDetail = '';
+  function paintCrumbs() {
+    const box = document.getElementById('ktCrumbs');
+    if (!box) return;
+    const section = currentSectionName();
+    const secEl = document.getElementById('ktCrumbSection');
+    const idEl = document.getElementById('ktCrumbId');
+    const sep = box.querySelector('.kt-topbar__crumb-sep');
+    if (secEl) secEl.textContent = section;
+    if (idEl) {
+      idEl.textContent = crumbDetail;
+      idEl.hidden = !crumbDetail;
+    }
+    if (sep) sep.hidden = !crumbDetail;
+    box.hidden = !section;
+  }
+  // A route change invalidates whatever detail the previous page set.
+  window.ktSetCrumbDetail = (text) => {
+    crumbDetail = text ? String(text) : '';
+    paintCrumbs();
+  };
+  paintCrumbs();
+
   // Auto-close drawer (and the mobile search overlay) on route change.
   const onRoute = () => {
     shellRoot.classList.remove('is-nav-open');
     closeSearch();
+    crumbDetail = '';
+    paintCrumbs();
   };
   window.addEventListener('popstate', onRoute);
   window.addEventListener('kt:pushstate', onRoute);
+  window.addEventListener('kt:lang-change', paintCrumbs);
 
   // Collapse the mobile search overlay on click-outside or Esc.
   const onDocClickSearch = (e) => {
