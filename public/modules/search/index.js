@@ -61,9 +61,9 @@ const HINT_LABELS = {
 };
 
 const PLACEHOLDERS = {
-  en: '🔎 search the site',
-  uk: '🔎 шукати по сайту',
-  ru: '🔎 искать по сайту',
+  en: 'Jump to section, finding or doc',
+  uk: 'Перейти до розділу, знахідки чи доки',
+  ru: 'Перейти к разделу, находке или доке',
 };
 
 // F-07: the results container announced itself with the hardcoded English

@@ -3,9 +3,12 @@
    toggled by .kt-shell.is-nav-open on the shell root. */
 
 :root {
-  --kt-nav-width: 220px;
-  --kt-nav-bg: var(--bg-2, #ecf1f6);
-  --kt-nav-border: var(--border, rgba(13, 23, 38, 0.08));
+  --kt-nav-width: 236px;
+  /* The rail is a white surface in the mockup, not a tinted panel — it reads
+     as the frame the page sits in rather than as another shaded region
+     competing with the results column. */
+  --kt-nav-bg: var(--surface, #ffffff);
+  --kt-nav-border: var(--border, rgba(13, 23, 38, 0.11));
   --kt-nav-item-hover: var(--accent-soft, rgba(2, 132, 199, 0.12));
   --kt-nav-item-active-bg: var(--accent, #0284c7);
   --kt-nav-item-active-fg: var(--text-on-accent, #ffffff);
@@ -60,9 +63,11 @@
 }
 .kt-nav__group-label {
   padding: 6px 12px;
-  font-size: var(--fs-mono, 11px);
+  /* Mockup: 10px with 1.2px tracking — smaller and wider than the label it
+     heads, which is what lets a group title recede without disappearing. */
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
   color: var(--text-dim, #5c6b82);
   text-transform: uppercase;
 }
@@ -82,10 +87,10 @@
   border-radius: var(--r-sm, 10px);
   text-decoration: none;
   color: var(--text);
-  /* Was a hardcoded 14px — off the --fs-* scale, and repeated on every
-     page because the rail is persistent chrome, so eight elements per
-     page rendered off-scale site-wide. */
-  font-size: var(--fs-sm, 13px);
+  /* Mockup measures 14px here. The scale's --fs-sm is 13px and --fs-base is
+     15px, so neither step lands on it; --fs-nav is the v2 layer's own 14px
+     token rather than a bare literal that nothing tracks. */
+  font-size: var(--fs-nav, 14px);
   font-weight: 500;
   transition: background-color 150ms ease;
 }
@@ -284,4 +289,91 @@
   to {
     opacity: 1;
   }
+}
+
+/* ── Rail badges, per the mockup ────────────────────────────────────────
+   Three kinds, each saying a different thing: a shortcut (accent on the
+   active row's white), a neutral count, and a bare status dot. The old
+   single treatment made "preview" a 52px text pill wider than some labels
+   it sat beside. */
+.kt-nav__badge {
+  flex-shrink: 0;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: var(--r-chip, 3px);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 15px;
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--bg-2);
+  color: var(--text-muted);
+}
+.kt-nav__badge--shortcut {
+  background: var(--surface);
+  color: var(--accent-text, var(--accent));
+}
+.kt-nav__item.is-active .kt-nav__badge--shortcut {
+  background: var(--surface);
+}
+.kt-nav__badge--status {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border-radius: 0;
+  background: var(--success);
+  opacity: 0.35;
+}
+
+/* ── Rail bottom ────────────────────────────────────────────────────────
+   The mockup anchors the account and the theme toggle here. Ours had an
+   empty 17px strip instead: its only child ("online") is display:none, so
+   it rendered as a bare hairline-topped bar. */
+.kt-nav__bottom {
+  margin-top: auto;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kt-nav__account,
+.kt-nav__theme {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-nav, 14px);
+  cursor: pointer;
+  text-align: left;
+}
+.kt-nav__theme {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.kt-nav__avatar {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--text-on-accent, #fff);
+  font-size: 11px;
+  font-weight: 700;
+}
+.kt-nav__avatar::before {
+  content: '◆';
+}
+.kt-nav__chev {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-dim);
+}
+.kt-shell.is-nav-collapsed .kt-nav__chev,
+.kt-shell.is-nav-collapsed .kt-nav__bottom .kt-nav__label {
+  display: none;
 }

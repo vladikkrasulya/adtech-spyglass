@@ -743,14 +743,15 @@ export async function mountInspector(root, ctx) {
     const type = String(validation.type || '');
     const status = String(validation.status || '');
 
-    const pillType = $('formatPillType');
-    pillType.textContent = type;
-    // Discriminator drives colour. "oRTB BidRequest" / "oRTB BidResponse" → ortb;
-    // anything with "Feed Response" → feed. Unknown stays neutral.
+    // The payload-type and version pills used to sit here. The mockup's work
+    // bar carries a validity chip and two selects and nothing else — the type
+    // and the version are both stated by the verdict's chip row a few pixels
+    // below, and printing them twice is what made this bar read as a wall of
+    // uppercase mono. `family` is still derived because the CSS that colours
+    // by payload family is keyed off it elsewhere.
     let family = 'unknown';
     if (/oRTB/i.test(type)) family = 'ortb';
     else if (/Feed Response/i.test(type)) family = 'feed';
-    pillType.dataset.format = family;
 
     const findings = (validation && validation.findings) || [];
     const errCount = findings.filter((f) => f.level === 'error').length;
@@ -832,22 +833,17 @@ export async function mountInspector(root, ctx) {
       verdictBox.hidden = false;
     }
 
-    const pillVer = $('formatPillVersion');
-    const v = validation.version;
-    // oRTB version pill only makes sense for oRTB-family payloads. JsonFeed
-    // formats don't have an oRTB version dimension — suppress to avoid
-    // showing a confusing "oRTB 2.5 ?" tag on e.g. a value-feed (rtb.php) payload.
-    if (family === 'ortb' && v && v.version && v.version !== 'unknown') {
-      const cf = v.confidence;
-      const cfTag = cf >= 1 ? '' : cf >= 0.5 ? ' ≈' : ' ?';
-      pillVer.textContent = 'oRTB ' + v.version + cfTag;
-      pillVer.title =
-        v.signals && v.signals.length
-          ? 'Detected via: ' + v.signals.join(', ')
-          : 'No version-specific markers — defaulted to spec baseline';
-      pillVer.hidden = false;
-    } else {
-      pillVer.hidden = true;
+    // Validity chip — the mockup's first element on the work bar, and the one
+    // fact the bar is best placed to state: whether the text in the editor is
+    // JSON at all. Everything downstream depends on it, and until v1.12.1 it
+    // was only visible inside the payload card's own header row.
+    const vChip = $('validityChip');
+    if (vChip) {
+      const bad = status === 'invalid';
+      vChip.dataset.state = bad ? 'invalid' : 'valid';
+      const label = $('validityChipText');
+      if (label) label.textContent = t(bad ? 'workbar.json_invalid' : 'workbar.json_valid');
+      vChip.hidden = false;
     }
 
     const pillDialect = $('formatPillDialect');
@@ -1095,6 +1091,30 @@ export async function mountInspector(root, ctx) {
     if (!card) return;
     const el = card.querySelector('[data-summary-id]');
     if (el) el.textContent = String(value || '—');
+    if (cardId === 'cardReq') paintCrumbs(value);
+  }
+
+  /**
+   * The topbar breadcrumb: which section, and which payload.
+   *
+   * The id was already computed for the collapsed-card summary and rendered
+   * into a span that measures 0x0 unless the card is folded — so the one
+   * string identifying what is on screen was, in practice, invisible. The
+   * mockup puts it in the title position; this paints the same value there,
+   * from the same call, so the two cannot describe different payloads.
+   */
+  function paintCrumbs(id) {
+    const box = document.getElementById('ktCrumbs');
+    if (!box) return;
+    const section = document.getElementById('ktCrumbSection');
+    const idEl = document.getElementById('ktCrumbId');
+    if (section) section.textContent = t('nav.inspector');
+    const clean = id && id !== '—' ? String(id) : '';
+    if (idEl) idEl.textContent = clean;
+    if (idEl) idEl.hidden = !clean;
+    const sep = box.querySelector('.kt-topbar__crumb-sep');
+    if (sep) sep.hidden = !clean;
+    box.hidden = false;
   }
 
   // Domain masking for History list — protects users from accidentally
@@ -1749,6 +1769,32 @@ export async function mountInspector(root, ctx) {
     // runs. Version keeps a chip even though the work bar states it too — the
     // work bar shows the *pinned* selector state, this shows what the payload
     // itself declares, and the two disagreeing is worth seeing.
+    // ONE context chip, as the mockup draws it: "web · mobile · UA/Kyiv ·
+    // wifi". Traffic, device, geo and connection are four facts about the
+    // same thing — where this impression runs — and splitting them into four
+    // labelled cells made the row read as a table of unrelated fields. The
+    // pieces are joined with the same middot the mockup uses and the cell
+    // carries no label, because a reader does not need one to know that
+    // "UA/Kyiv" is a place.
+    const ctxParts = [];
+    if (trafficLabel) ctxParts.push(trafficLabel.toLowerCase());
+    if (deviceLabel && deviceLabel !== '?') ctxParts.push(deviceLabel);
+    const geo = (req.device && req.device.geo) || {};
+    if (geo.country) ctxParts.push(geo.country + (geo.city ? '/' + geo.city : ''));
+    if (privBadges.length) ctxParts.push(privBadges.join(' '));
+    const contextChip = ctxParts.length
+      ? '<div class="analysis-strip-block analysis-strip-context">' +
+        '<div class="analysis-strip-value">' +
+        escapeHtml(ctxParts.join(' · ')) +
+        '</div>' +
+        '</div>'
+      : '';
+
+    // Five chips, the mockup's set and its order: what was bid, what the
+    // floor asks, what the slot is, what it declares itself to be, and where
+    // it runs. Version left the row because the work bar's own selector
+    // states it two rows up; the quality score left it because the mockup
+    // has no such concept and the verdict already says what to do.
     const stripHtml =
       bidChip +
       '<div class="analysis-strip-block analysis-strip-pricing">' +
@@ -1759,30 +1805,7 @@ export async function mountInspector(root, ctx) {
       '</div>' +
       sizeChip +
       intentChip +
-      '<div class="analysis-strip-block">' +
-      stripLabel('traffic') +
-      '<div class="analysis-strip-value">' +
-      escapeHtml(trafficValue) +
-      '</div>' +
-      '</div>' +
-      '<div class="analysis-strip-block">' +
-      stripLabel('device') +
-      '<div class="analysis-strip-value">' +
-      escapeHtml(deviceLabel) +
-      '</div>' +
-      '</div>' +
-      '<div class="analysis-strip-block">' +
-      stripLabel('privacy') +
-      '<div class="analysis-strip-value">' +
-      privValue +
-      '</div>' +
-      '</div>' +
-      '<div class="analysis-strip-block">' +
-      stripLabel('version') +
-      '<div class="analysis-strip-value"><span class="ver-badge">' +
-      escapeHtml(version) +
-      '</span></div>' +
-      '</div>';
+      contextChip;
 
     // Quality Pill (Feature #12) — 6th block
     const qualityBlock = (function () {
@@ -1849,6 +1872,10 @@ export async function mountInspector(root, ctx) {
       );
     })();
 
+    // The quality pill is not part of the mockup's chip row. It stays in the
+    // DOM (the strip's own browser test asserts it, and the score is a real
+    // signal) but as a trailing cell rather than a sixth labelled column
+    // competing with the five facts the mockup put there.
     const fullStripHtml = stripHtml + qualityBlock;
 
     // The chips live inside the verdict block — the mockup's context row
@@ -1973,6 +2000,11 @@ export async function mountInspector(root, ctx) {
         ? '<span class="finding-side">' + escapeHtml(t('finding.side.' + side)) + '</span>'
         : '';
 
+      // The `· line N` suffix is a placeholder here and filled by a post-pass
+      // over the rendered list. The line can only be known by resolving the
+      // pointer against the editor's current text, which source-nav already
+      // does for the jump this same chip performs — asking it once, after
+      // render, keeps one answer to that question instead of two.
       const pathChip = f.path
         ? '<button type="button" class="finding-path" data-action="goto-path" data-jsonpath="' +
           escapeHtml(f.path) +
@@ -1984,8 +2016,9 @@ export async function mountInspector(root, ctx) {
           '" title="Jump to this path in the JSON">' +
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
           'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-          '<path d="m9 18 6-6-6-6"/></svg>' +
+          '<span class="finding-path-text">' +
           escapeHtml(f.path) +
+          '</span><span class="finding-line" hidden></span>' +
           '</button>'
         : '';
       const specLink = f.specRef
@@ -1995,10 +2028,49 @@ export async function mountInspector(root, ctx) {
         : '';
       const code = f.id ? '<span class="finding-code">' + escapeHtml(f.id) + '</span>' : '';
 
+      // The mockup gives the reader ONE expanded card — the blocking one —
+      // and collapses everything below it to a title plus its path. Fifteen
+      // paragraphs stacked is not a list you scan, it is a document you read,
+      // and the group that matters is the one you have to scroll past.
+      //
+      // A CLASS, not `<details open>`. Opening the element also renders the
+      // lazy detail body — JSON path, current value, severity, spec ref, rule
+      // id — which is a 450px panel the mockup's lead card does not have. The
+      // difference the mockup draws is only whether the description and the
+      // action row are visible; the detail body stays behind a real click.
+      const expanded = lvl === 'error';
+
+      // The action a finding asks for, in the mockup's words. `question`
+      // findings ask you to map a field; everything else asks you to edit the
+      // payload, and both routes already exist behind data-action="goto-path".
+      const actionBtn =
+        lvl === 'question'
+          ? '<button type="button" class="finding-action finding-action-accent" ' +
+            'data-action="open-dialect-builder">' +
+            escapeHtml(t('finding.action.map')) +
+            '</button>'
+          : expanded && f.path
+            ? '<button type="button" class="finding-action" data-action="goto-path" ' +
+              'data-jsonpath="' +
+              escapeHtml(f.path) +
+              '" data-loc="' +
+              (f.location ? escapeHtml(JSON.stringify(f.location)).replace(/"/g, '&quot;') : '') +
+              '">' +
+              escapeHtml(t('finding.action.fix')) +
+              '</button>'
+            : '';
+
+      const foot =
+        pathChip || specLink || actionBtn
+          ? '<span class="finding-foot">' + pathChip + specLink + actionBtn + '</span>'
+          : '';
+
       return (
         '<details class="validation-item ' +
         cls +
-        ' finding-detail" data-finding-id="' +
+        ' finding-detail' +
+        (expanded ? ' is-lead' : '') +
+        '" data-finding-id="' +
         escapeHtml(f.id || '') +
         '" data-finding-path="' +
         escapeHtml(f.path || '') +
@@ -2008,17 +2080,23 @@ export async function mountInspector(root, ctx) {
         escapeHtml(f.specRef || '') +
         '">' +
         '<summary>' +
+        '<span class="finding-row">' +
         '<span class="finding-main">' +
         '<span class="finding-title">' +
         sideBadge +
         escapeHtml(title) +
         '</span>' +
         (rest ? '<span class="finding-desc">' + escapeHtml(rest) + '</span>' : '') +
-        ((pathChip || specLink) &&
-          '<span class="finding-foot">' + pathChip + specLink + '</span>') +
         '</span>' +
         code +
-        '<span class="finding-detail-toggle" aria-hidden="true">▾</span>' +
+        '</span>' +
+        foot +
+        (expanded
+          ? ''
+          : '<span class="finding-detail-toggle" aria-hidden="true">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+            'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="m6 9 6 6 6-6"/></svg></span>') +
         '</summary>' +
         '<div class="finding-detail-body" data-detail-rendered="0"></div>' +
         '</details>'
@@ -2071,8 +2149,48 @@ export async function mountInspector(root, ctx) {
     }
 
     container.innerHTML = (headerHtml || '') + groupsHtml();
+    paintFindingLines(container);
+    for (const id of Object.keys(GUTTER_OF)) renderGutter(id);
+    paintGutterSeverity(findings);
   }
   window.renderSeverityTabs = renderSeverityTabs;
+
+  /**
+   * Fill each path chip's "· line N" from the finding's own location.
+   *
+   * Done as one pass over the rendered list rather than inside the template:
+   * the line number is not a property of a finding, it is a property of the
+   * finding AGAINST the text currently in the editor. Only source-nav can
+   * answer that — it owns the pointer→offset map the jump uses — and asking
+   * it here means the number beside a chip and the line that chip scrolls to
+   * are computed by the same code. A second implementation in the template
+   * would be free to disagree, and the disagreement would be silent.
+   *
+   * A finding whose pointer does not resolve keeps its chip and shows no
+   * line, which is honest: the alternative is inventing one.
+   */
+  function paintFindingLines(root) {
+    const nav = window.OrtbtoolsSourceNav;
+    if (!nav || typeof nav.lineFor !== 'function') return;
+    for (const chip of root.querySelectorAll('.finding-path')) {
+      const slot = chip.querySelector('.finding-line');
+      if (!slot) continue;
+      let loc = null;
+      try {
+        loc = JSON.parse(chip.getAttribute('data-loc') || 'null');
+      } catch (_e) {
+        loc = null;
+      }
+      const line = loc ? nav.lineFor(loc) : null;
+      if (line) {
+        slot.textContent = ' · ' + t('finding.line', { n: line });
+        slot.hidden = false;
+      } else {
+        slot.textContent = '';
+        slot.hidden = true;
+      }
+    }
+  }
 
   function renderBehaviorTab() {
     const tab = $('tBehavior');
@@ -3217,15 +3335,13 @@ export async function mountInspector(root, ctx) {
           severity: severityFromFindings(findings),
         });
         // Feature #14: replace flat list with severity-filtered tabs.
-        const headerHtml =
-          repairsHtml +
-          '<div class="mono-label" style="margin-bottom:var(--space-3)">' +
-          escapeHtml(validation.type) +
-          ' · ' +
-          escapeHtml(humanStatus(validation.status)) +
-          versionPill +
-          '</div>';
-        renderSeverityTabs(valEl, findings, headerHtml);
+        // No breadcrumb line above the groups. It restated the payload type,
+        // the status and the version — all three already stated by the work
+        // bar and the verdict directly above it — and pushed the first group
+        // header, the thing this tab exists to show, a row further down. The
+        // URL-repair notice stays: it is the only part that says something
+        // nothing else does.
+        renderSeverityTabs(valEl, findings, repairsHtml);
       } else if (validation) {
         setTabBadge('validationBadge', { text: '✓', severity: 'ok' });
         // Clean state — still surface the detected oRTB version so the user
@@ -4961,6 +5077,97 @@ export async function mountInspector(root, ctx) {
   window.showPayloadSide = showPayloadSide;
   window.refreshPayloadDots = refreshPayloadDots;
 
+  // ── Line gutter ─────────────────────────────────────────────────────────
+  // The mockup numbers the payload's lines and tints the numbers that carry
+  // a finding — red where something blocks, amber where something should be
+  // fixed. It is the one place the two halves of this screen touch: a
+  // finding says "line 6" and the editor says which line that is.
+  //
+  // Built as a sibling column rather than inside the textarea, because a
+  // textarea cannot contain elements. That means the two must agree on
+  // exactly three things — font, line-height and vertical padding — and the
+  // CSS sets all three from the same tokens for both. It also means the
+  // gutter has to follow the editor's scroll, since only one of them has a
+  // scrollbar.
+  const GUTTER_OF = { bidReq: 'gutterReq', bidRes: 'gutterRes' };
+
+  function renderGutter(inputId) {
+    const input = document.getElementById(inputId);
+    const gutter = document.getElementById(GUTTER_OF[inputId]);
+    if (!input || !gutter) return;
+    const text = String(input.value || '');
+    // An empty editor shows no numbers at all: "1" beside a placeholder
+    // claims a line exists where none does.
+    const lines = text ? text.split('\n').length : 0;
+    if (gutter.childElementCount === lines) return;
+    const frag = document.createDocumentFragment();
+    for (let i = 1; i <= lines; i++) {
+      const el = document.createElement('span');
+      el.className = 'line-no';
+      el.dataset.line = String(i);
+      el.textContent = String(i);
+      frag.appendChild(el);
+    }
+    gutter.replaceChildren(frag);
+    syncGutterScroll(inputId);
+  }
+
+  function syncGutterScroll(inputId) {
+    const input = document.getElementById(inputId);
+    const gutter = document.getElementById(GUTTER_OF[inputId]);
+    if (input && gutter) gutter.scrollTop = input.scrollTop;
+  }
+
+  /**
+   * Tint the numbers that carry a finding.
+   *
+   * The line for a finding is resolved by source-nav, the same module the
+   * path chips ask — so a number tinted red in the gutter and a chip reading
+   * "line 6" cannot disagree about which line that is. Severity wins by
+   * worst-first: a line carrying both an error and a warning is red, because
+   * the reader is being told what to fix first, not what is most numerous.
+   */
+  function paintGutterSeverity(findings) {
+    const nav = window.OrtbtoolsSourceNav;
+    for (const id of Object.keys(GUTTER_OF)) {
+      const gutter = document.getElementById(GUTTER_OF[id]);
+      if (!gutter) continue;
+      for (const el of gutter.children) el.removeAttribute('data-severity');
+    }
+    if (!nav || typeof nav.lineFor !== 'function' || !Array.isArray(findings)) return;
+    const RANK = { error: 3, warning: 2, question: 1 };
+    const marks = {};
+    for (const f of findings) {
+      const lvl = f.level === 'danger' ? 'error' : f.level;
+      if (!RANK[lvl] || !f.location || !f.location.primary) continue;
+      const side = f.location.primary.side === 'response' ? 'bidRes' : 'bidReq';
+      const line = nav.lineFor(f.location);
+      if (!line) continue;
+      const key = side + ':' + line;
+      if (!marks[key] || RANK[lvl] > RANK[marks[key]]) marks[key] = lvl;
+    }
+    for (const [key, lvl] of Object.entries(marks)) {
+      const [side, line] = key.split(':');
+      const gutter = document.getElementById(GUTTER_OF[side]);
+      if (!gutter) continue;
+      const el = gutter.querySelector('.line-no[data-line="' + line + '"]');
+      if (el) el.dataset.severity = lvl;
+    }
+  }
+
+  function setupGutters() {
+    for (const id of Object.keys(GUTTER_OF)) {
+      const input = document.getElementById(id);
+      if (!input) continue;
+      input.addEventListener('input', () => renderGutter(id));
+      input.addEventListener('scroll', () => syncGutterScroll(id));
+      renderGutter(id);
+    }
+  }
+
+  window.renderGutter = renderGutter;
+  window.paintGutterSeverity = paintGutterSeverity;
+
   // ── Init ──────────────────────────────────────────────────────
   // Phase C-2: mount() guarantees the template DOM is injected before
   // calling mountInspector(), and the call itself is awaited inside
@@ -4973,6 +5180,7 @@ export async function mountInspector(root, ctx) {
     updateCharCount('bidRes');
     setupSidebarToggles();
     setupPayloadSwitch();
+    setupGutters();
     maybeShowInspectorOnboarding();
 
     // Dirty-tracking for save lifecycle. `value =` from JS doesn't fire
@@ -5886,6 +6094,8 @@ export async function mountInspector(root, ctx) {
       'resetLayout',
       'showPayloadSide',
       'refreshPayloadDots',
+      'renderGutter',
+      'paintGutterSeverity',
       // analysis + history (loadFromHistory/peekHistoryItem/deleteHistoryItem
       // are now local — driven by delegated handler on #hList)
       'runAnalysis',

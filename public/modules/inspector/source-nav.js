@@ -542,10 +542,29 @@
     }
   }
 
+  /**
+   * The 1-based source line a finding's location resolves to, or null when
+   * the payload has no such line (unresolved pointer, stale map, URL dialect
+   * without provenance). Public because the findings panel prints "· line N"
+   * beside each path chip, and the alternative — re-implementing the pointer
+   * walk there — would be a second answer to a question this module already
+   * answers, free to disagree with the jump the same chip performs.
+   */
+  function lineFor(location) {
+    if (!location || !location.primary) return null;
+    try {
+      const r = resolvePart(location.primary);
+      return r && r.ok ? r.line : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
   window.OrtbtoolsSourceNav = {
     init: init,
     onAnalyzed: onAnalyzed,
     navigate: navigate,
+    lineFor: lineFor,
     resetNavigation: resetNavigation,
     next: function () {
       step(1);

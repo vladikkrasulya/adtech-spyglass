@@ -220,3 +220,99 @@
 /* The theme toggle is injected by design-system.css as a fixed button.
    For Stage 0 we leave it floating (don't break the visual contract).
    Stage 1 task: relocate it into the .kt-theme-slot for tidiness. */
+
+/* ── Mockup fidelity ────────────────────────────────────────────────────
+   The bar is a white surface with a breadcrumb on the left and a compact
+   search pushed to the right. It used to be a page-coloured strip with a
+   480px search flush against the left edge and nothing identifying where
+   you were or what you were looking at. */
+.kt-topbar {
+  --kt-topbar-bg: var(--surface, #ffffff);
+  --kt-topbar-border: var(--border, rgba(13, 23, 38, 0.11));
+  gap: 12px;
+  height: 52px;
+}
+.kt-topbar__crumbs {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.kt-topbar__crumbs[hidden] {
+  display: none;
+}
+.kt-topbar__crumb-section {
+  font-family: 'Geologica', var(--font-sans, sans-serif);
+  font-size: var(--fs-base, 15px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.kt-topbar__crumb-sep {
+  color: var(--text-dim);
+}
+.kt-topbar__crumb-id {
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip, 12px);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* The search is a 300px control on the right, not a 480px banner on the
+   left: it is a way in, not the page's headline. */
+.kt-topbar__search {
+  position: relative;
+  flex: 0 0 auto;
+  width: 300px;
+  max-width: 300px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+.kt-topbar__search-icon {
+  position: absolute;
+  left: 10px;
+  width: 15px;
+  height: 15px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+.kt-topbar__search-input {
+  height: 32px;
+  padding: 0 42px 0 32px;
+  font: inherit;
+  font-size: var(--fs-sm, 13px);
+  background: var(--bg);
+  border-radius: var(--r-sm, 6px);
+}
+.kt-topbar__search-kbd {
+  position: absolute;
+  right: 8px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip, 3px);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono, 11px);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+/* The right-hand cluster no longer needs the auto margin — the search now
+   owns it — and its controls settle on one height instead of three. */
+.kt-topbar__actions {
+  margin-left: 0;
+  gap: 6px;
+}
+.kt-topbar__actions .kt-lang-toggle,
+.kt-topbar__actions .kt-theme-toggle,
+.kt-topbar__actions .kt-topbar__signin {
+  height: 28px;
+  border-radius: var(--r-sm, 6px);
+}
+.kt-topbar__search-btn {
+  display: none;
+}

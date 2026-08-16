@@ -6,6 +6,59 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.13.0 — measured against the mockup, not remembered from it
+
+A side-by-side audit at one viewport, one payload and one theme found the
+v1.12 Inspector was the mockup's ideas at the wrong measurements. Eight
+region auditors measured both surfaces; what follows is what they found.
+
+- **Columns are equal.** The mockup splits payload and results 681/681 — an
+  exact half. Ours ran `clamp(380px, 38%, 620px)` and produced 405/661, so
+  the editor lost 276px to a panel that did not need them. Now a two-column
+  grid, and the payload column carries the white surface while the results
+  column takes the page tint — the mockup's way round, and the reverse of
+  what shipped.
+- **The payload has a line gutter**, which it never had: numbered lines with
+  the numbers that carry a finding tinted by severity. The line comes from
+  `source-nav.lineFor()` — the same resolver the jump uses — so a gutter
+  number, a chip reading "· line 22" and the line that chip scrolls to are
+  one answer, not three.
+- **Two type steps were missing.** The vendored scale runs 11/13/15/17/20;
+  the mockup's working scale is 11/12/13/14/16/19. Everything that wanted 12
+  or 14 rounded down to 11, giving 305 elements at 11px against the mockup's
+  18 — the same layout at a different density. `--fs-chip` and `--fs-nav`
+  land those two steps in the ortbtools layer.
+- **Radii were over-applied.** The mockup renders 6px x33, 3px x11, 9px x5;
+  ours rendered 3px x105, because `--r-pill` had been set to 3px and took 37
+  controls down with the chips. `--r-pill` is a control radius again.
+- **Findings read as a list.** Only the blocking card keeps its description
+  and action row; the rest collapse to a title and a path, as drawn. Cards
+  gained the mockup's 9px radius, 14px titles, "Fix in editor" / "Map it"
+  buttons, and the line number in the path chip. The `needs your input` card
+  is a dashed outline with no severity bar — it is a question, not a fault.
+- **The work bar states validity.** A green `JSON valid` chip leads it, the
+  version and dialect selects follow in that order, and the payload-type and
+  version pills are gone — the verdict's chip row states both a few pixels
+  below. `Analyze` carries its `⌘⏎`.
+- **The topbar has a breadcrumb.** "Inspector / <payload id>" — until now the
+  id lived in a 0x0 span inside the editor card. The search moved right at
+  300px with a `⌘K` hint and a real magnifier instead of an emoji baked into
+  its placeholder.
+- **Five chips, not eight.** Traffic, device, geo and privacy are four facts
+  about one thing — where the impression runs — and now share one context
+  chip, as drawn.
+- **The rail** is white at 236px with 14px items, badges by kind (shortcut,
+  count, status dot) and a bottom block carrying the account and the theme
+  toggle. Its empty 17px footer strip — a bare hairline over a hidden
+  "online" — is gone.
+- **The footer is one line again** (34px, was 51px wrapping to three).
+- Three guards were repaired at their intent rather than their letter: the
+  strip-label count moved with the mockup's chip set, the reentrant guard
+  counts uses of `repairsHtml` instead of a markup shape the branches no
+  longer share, and the rail's icon check scopes to destinations now that the
+  bottom block reuses the row style.
+- App version bumped `1.12.1 → 1.13.0`; Core remains `0.35.0`, CLI `0.1.1`.
+
 ### v1.12.1 — the mockup's remaining chrome, and a tag that read as a broken id
 
 - The rail now collapses the way the prototype draws it: into a 56px icon rail, chevron in the

@@ -131,3 +131,37 @@
 .kt-shell [class*='avatar'] {
   border-radius: 50%;
 }
+
+/* ------------------------------------------------------------
+   Two steps the vendored scale does not have.
+
+   design-system.css defines 11/13/15/17/20/28/40/56/80/112. The mockup's
+   working scale is 11/12/13/14/16/19 — measured on its rendered page:
+   13px x44, 12px x28, 11px x18, 14px x16. Two of its four load-bearing
+   sizes, 12 and 14, fall between our steps, so every element that wanted
+   one of them was rounded down to 11px. Result: 305 elements at 11px on
+   our page against 18 in the mockup — the same layout at a different
+   density, which is most of what "it looks nothing like it" was.
+
+   Added here rather than in the vendored file: the portal has no need of
+   them, and its hash guard would fail. Named --fs-nav and --fs-card after
+   what they carry so a future reader can tell whether a use is legitimate.
+   ------------------------------------------------------------ */
+.kt-shell {
+  --fs-chip: 12px;
+  --fs-nav: 14px;
+  --fs-card: 14px;
+}
+
+/* ------------------------------------------------------------
+   Radii, corrected. The first cut set --r-pill to 3px, which took 37
+   call sites — buttons, selects, tabs — down with the chips. Measured
+   against the mockup: it renders 6px x33 (controls), 3px x11 (chips and
+   badges only), 9px x5 (cards and menus). Ours rendered 3px x105.
+
+   So --r-pill goes back to the control radius, and 3px stays where the
+   mockup puts it: --r-chip, applied explicitly.
+   ------------------------------------------------------------ */
+.kt-shell {
+  --r-pill: 6px;
+}
