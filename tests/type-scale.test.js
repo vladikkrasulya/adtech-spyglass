@@ -63,7 +63,14 @@ const BUDGET = {
   // ticks rather than text and must stay below the 11px eyebrow they frame.
   'modules/dialects/dialects.css': 2,
   'modules/docs/docs.css': 9,
-  'modules/insights/insights.css': 7,
+  // Insights was rebuilt to the redesign mockup and its seven literals came
+  // down to three. The ratchet is doing its job here, so the budget moves with
+  // it rather than absorbing the win. The three that remain are values the
+  // mockup measures, not sizes that drifted in: the H1 at 21px, the KPI figure
+  // at 30px, and the card title at 16px. The vendored scale's neighbours are
+  // 20/28/15-or-17 — one step off in each case, and one step is the whole
+  // difference between the mockup's density and ours.
+  'modules/insights/insights.css': 3,
   // The Samples redesign rewrote this sheet against the mockup, and the two
   // literals it used to carry (14px on the tab strip, 14px on the loading /
   // empty note) were both on elements the mockup does not have. Their
