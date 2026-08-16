@@ -85,27 +85,37 @@ body {
    The left sidebar is still in the DOM (history, library, the metric card)
    but is now an overlay drawer rather than a permanent 320px column — it is
    reference material, consulted occasionally, and it was charging rent. */
+/* Two equal columns, as the mockup draws them: measured there at 681/681 —
+   an exact half. The first cut gave the payload `clamp(380px, 38%, 620px)`
+   and produced 405/661, so the editor lost 276px to a panel that did not
+   need them. The mockup's container is a grid; so is this one, because
+   `1fr 1fr` states "equal" once instead of asking two flex bases to agree. */
 .workbench-split {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   min-height: 0;
   overflow: hidden;
 }
+/* The payload column is the white surface and the results column carries the
+   page tint — the mockup's way round, and the reverse of the first cut. The
+   payload is the thing being worked ON, so it gets the paper; the results
+   are its context, so they get the ground and the finding cards read as
+   white objects lying on it. */
 .workbench-payload {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  flex: 0 0 clamp(380px, 38%, 620px);
   border-right: 1px solid var(--border);
-  background: var(--bg-2);
+  background: var(--surface);
 }
 .center-panel {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  background: var(--bg);
 }
 
 /* ── Payload side ─────────────────────────────────────────────────────── */
@@ -114,7 +124,7 @@ body {
   gap: 2px;
   padding: var(--space-2) var(--space-3) 0;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-2);
+  background: var(--surface);
 }
 .payload-switch-btn {
   display: inline-flex;
@@ -162,7 +172,7 @@ body {
   min-height: 0;
   padding: var(--space-3);
   gap: 0;
-  background: var(--bg-2);
+  background: var(--surface);
 }
 /* One editor at a time. Both cards stay in the DOM — every handler, every
    test and the mirror/diff features address #bidReq and #bidRes directly.
@@ -4208,4 +4218,414 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   text-transform: lowercase;
   color: var(--text-muted);
   background: var(--bg-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOCKUP FIDELITY — measured corrections against the design prototype.
+   Every value below is what the mockup renders, taken from its computed
+   styles rather than eyeballed. Appended so cascade order settles the
+   earlier v2 rules without editing them in place.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Finding groups ─────────────────────────────────────────────────── */
+.findings-grouped {
+  gap: 18px;
+}
+.finding-group-label {
+  font-size: var(--fs-chip, 12px);
+  letter-spacing: 0.04em;
+}
+
+/* ── Finding cards ──────────────────────────────────────────────────────
+   The mockup gives a card 9px on all four corners, so the severity bar is
+   clipped by the rounded left edge rather than squaring it off. Only the
+   blocking card is expanded; the rest are one-line rows. */
+.validation-item.finding-detail {
+  border-radius: var(--r-md, 9px);
+  border-left-width: 3px;
+  overflow: hidden;
+}
+.validation-item.finding-detail > summary {
+  padding: 12px 14px;
+  gap: 10px;
+}
+/* Collapsed rows sit on one line: title and path side by side with the code
+   and chevron, vertically centred, 11px of padding instead of 12. */
+.validation-item.finding-detail:not(.is-lead) > summary {
+  align-items: center;
+  padding: 11px 14px;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-desc {
+  display: none;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-foot {
+  margin-top: 0;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-path {
+  padding: 0;
+  background: transparent;
+  color: var(--text-dim);
+}
+.validation-item.finding-detail:not(.is-lead) .finding-path svg,
+.validation-item.finding-detail:not(.is-lead) .finding-spec {
+  display: none;
+}
+
+.finding-title {
+  font-size: var(--fs-card, 14px);
+  line-height: 1.4;
+}
+/* The blocking card states its claim in bold; a collapsed row is a label,
+   not a headline, so it steps down a weight. */
+.validation-item.warning .finding-title,
+.validation-item.question .finding-title,
+.validation-item.info .finding-title {
+  font-weight: 500;
+}
+.finding-desc {
+  font-size: var(--fs-card, 14px);
+  line-height: 1.4;
+}
+.finding-path,
+.finding-spec {
+  font-size: var(--fs-chip, 12px);
+}
+.finding-path {
+  background: rgba(2, 132, 199, 0.1);
+}
+
+/* The action row spans the whole card in the mockup — a button pinned to
+   the card's right edge, not to the text column's. */
+.validation-item.finding-detail > summary {
+  flex-wrap: wrap;
+}
+.finding-main {
+  flex: 1 1 100%;
+}
+.validation-item.finding-detail.is-lead > summary .finding-foot {
+  flex: 1 1 100%;
+  margin-top: 8px;
+}
+.finding-action {
+  margin-left: auto;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm, 6px);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-chip, 12px);
+  font-weight: 500;
+  cursor: pointer;
+}
+.finding-action:hover {
+  border-color: var(--accent);
+  color: var(--accent-text, var(--accent));
+}
+.finding-action-accent {
+  border-color: var(--accent);
+  color: var(--accent-text, var(--accent));
+}
+
+/* The "needs your input" card is not a severity — the mockup draws it as a
+   dashed outline on all four sides with no leading bar at all, which is the
+   visual difference between "this is wrong" and "we are asking you". */
+.validation-item.question {
+  border: 1px dashed var(--border-strong);
+  border-left-width: 1px;
+  border-left-style: dashed;
+}
+.validation-item.question .finding-desc {
+  font-size: var(--fs-chip, 12px);
+  color: var(--text-dim);
+}
+
+.finding-detail-toggle {
+  display: inline-flex;
+  align-items: center;
+}
+.finding-detail-toggle svg {
+  display: block;
+}
+
+/* ── Tab strip ──────────────────────────────────────────────────────── */
+.tab-btn {
+  padding: 0 13px;
+  border-radius: var(--r-sm, 6px) var(--r-sm, 6px) 0 0;
+  font-weight: 400;
+}
+.tab-btn.active {
+  font-weight: 600;
+}
+/* "More" is pushed to the far edge and is a compact control, not a
+   full-height tab competing with the four named views. */
+.tab-more {
+  margin-left: auto;
+  align-items: center;
+}
+.tab-more > summary.tab-more-toggle {
+  align-self: center;
+  height: auto;
+  padding: 2px 8px;
+  border-bottom: 0;
+  margin-bottom: 0;
+  border-radius: var(--r-sm, 6px);
+}
+.tab-more:has(.tab-btn.active) > summary.tab-more-toggle {
+  border-bottom: 0;
+  background: var(--accent-soft);
+  color: var(--accent-text, var(--accent));
+}
+/* The findings count is the one badge the mockup fills solid — it is the
+   number the whole tab exists for. */
+.tab-badge {
+  line-height: 1.5;
+  min-width: 0;
+}
+.tab-badge.danger,
+#validationBadge[data-severity='error'] {
+  background: var(--danger);
+  color: #fff;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ── Work bar, per the mockup ───────────────────────────────────────────
+   Left: a validity chip, a hairline, then version and dialect — in that
+   order, because you pick the spec you are checking against before the
+   overlay you apply on top of it. Right: three controls at one height. */
+.workbar {
+  gap: 10px;
+  height: 52px;
+  min-height: 0;
+  padding: 0 var(--space-4);
+}
+.workbar-actions {
+  gap: var(--space-2);
+}
+.validity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: var(--r-chip, 3px);
+  background: rgba(21, 128, 61, 0.08);
+  color: var(--success);
+  font-size: var(--fs-sm, 13px);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.validity-chip[data-state='invalid'] {
+  background: rgba(220, 38, 38, 0.07);
+  color: var(--danger);
+}
+[data-theme='dark'] .validity-chip {
+  background: rgba(74, 222, 128, 0.1);
+}
+[data-theme='dark'] .validity-chip[data-state='invalid'] {
+  background: rgba(248, 113, 113, 0.1);
+}
+.workbar-divider {
+  width: 1px;
+  height: 20px;
+  flex-shrink: 0;
+  background: var(--border-strong);
+}
+
+/* Selects read as controls, not as labels shouting: the sans face at 12px,
+   sized to their content, with a neutral edge instead of brand blue. */
+.format-pill-select {
+  width: auto;
+  min-width: 0;
+  height: 30px;
+  padding: 0 26px 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm, 6px);
+  font-family: inherit;
+  font-size: var(--fs-chip, 12px);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+}
+.format-bar .format-pill:not(.format-pill-select) {
+  height: 28px;
+}
+
+/* Action buttons: 32px tall, 13px sentence-case label, 6px corners, and a
+   white ghost fill rather than a transparent one so the row reads as three
+   controls on a bar instead of two labels and a button. */
+.workbar .btn-sm,
+.workbar .kt-example-menu > summary,
+.workbar .kt-tools-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--r-sm, 6px);
+  font-family: inherit;
+  font-size: var(--fs-sm, 13px);
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1;
+}
+.workbar .btn-ghost.btn-sm,
+.workbar .kt-example-menu > summary,
+.workbar .kt-tools-menu > summary {
+  background: var(--surface);
+  box-shadow: inset 0 -1px 0 0 rgba(13, 23, 38, 0.05);
+}
+.workbar .btn-primary {
+  padding: 0 16px;
+  gap: 8px;
+  font-weight: 600;
+  border-color: var(--accent);
+}
+.btn-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono, 11px);
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* ── Line gutter ────────────────────────────────────────────────────────
+   The gutter and the textarea are two elements that must render text on
+   the same baselines, so every property that moves a line comes from the
+   same token in both: font, size, line-height, and the vertical padding
+   that offsets the first line. Get any one of them out of step and the
+   numbers drift a fraction of a line per row — invisible at the top of a
+   payload and a full line out by the bottom. */
+.json-editor {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.line-gutter {
+  flex: 0 0 auto;
+  min-width: 44px;
+  padding: var(--space-3) var(--space-2) var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm, 13px);
+  line-height: 1.55;
+  color: var(--text-dim);
+  user-select: none;
+}
+.line-no {
+  display: block;
+  white-space: pre;
+}
+/* A number carrying a finding takes that finding's colour — the one place
+   the payload and the results panel share a vocabulary. */
+.line-no[data-severity='error'] {
+  color: var(--danger);
+  font-weight: 700;
+}
+.line-no[data-severity='warning'] {
+  color: var(--warning-text, #b45309);
+  font-weight: 700;
+}
+.line-no[data-severity='question'] {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.workbench-payload .input-card .json-input {
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm, 13px);
+  line-height: 1.55;
+  border: 0;
+  background: transparent;
+}
+/* The editor card is the column now — no inner border or inset. */
+.workbench-payload .input-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.workbench-payload .input-section {
+  padding: 0;
+}
+
+/* Card internals: a top row that pairs the text column with the finding's
+   code on the right edge, then the action row beneath spanning the card. */
+.validation-item.finding-detail > summary {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.finding-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+.finding-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.validation-item.finding-detail:not(.is-lead) > summary {
+  flex-direction: row;
+  align-items: center;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-row {
+  flex: 1 1 auto;
+  align-items: center;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-foot {
+  flex: 0 0 auto;
+}
+
+/* ── Footer, one line ───────────────────────────────────────────────────
+   The mockup's footer is a single 17px strip: state, engine, the supported
+   specs, and the active dialect on the left; "online" on the right. Ours
+   carried the same set plus the analyzed entity, a source link and a reset
+   control, and at 1286px it wrapped to three rows — 51px of chrome under a
+   panel that needed the height.
+
+   Nothing is deleted: the row stops wrapping and scrolls instead, so the
+   trailing controls stay reachable while the strip keeps its one-line
+   height. The entity is dropped from it because the verdict states the
+   payload's outcome directly above, in a full sentence. */
+.app-footer {
+  height: 34px;
+  min-height: 0;
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.footer-status-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.footer-status-row::-webkit-scrollbar {
+  display: none;
+}
+.footer-status-row > * {
+  flex-shrink: 0;
+}
+#stEntity,
+#stEntity + .footer-sep {
+  display: none;
+}
+
+/* The context chip carries a sentence of facts, not a labelled field, so it
+   takes the value typography with no label beside it. */
+.analysis-strip-context .analysis-strip-value {
+  font-family: inherit;
+  font-weight: 400;
+  color: var(--text-muted);
 }

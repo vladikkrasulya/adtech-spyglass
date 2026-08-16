@@ -230,10 +230,19 @@ test('Streams keeps its "preview" qualifier after the rename', () => {
     const { w, root, unmount } = setup({ lang });
     const item = root.querySelector('.kt-nav__item[data-route="/live"]');
     assert.ok(item, `${lang}: /live must still be in the rail`);
-    assert.equal(
-      item.querySelector('.kt-nav__badge').textContent,
-      badge,
-      `${lang}: the preview qualifier must survive the shorter label`,
+    // The qualifier no longer renders as a text pill — the mockup marks a
+    // live section with a status dot, and a 52px word was wider than some of
+    // the destination names beside it. What may NOT change is that the
+    // disclosure stays reachable, so it is asserted on the accessible name
+    // and the tooltip below, where a screen reader and a hover both find it.
+    assert.ok(
+      item.querySelector('.kt-nav__badge--status'),
+      `${lang}: /live must carry its status marker`,
+    );
+    assert.match(
+      item.getAttribute('title'),
+      new RegExp(badge.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      `${lang}: the preview qualifier must survive in the tooltip`,
     );
     assert.match(
       item.getAttribute('aria-label'),
@@ -284,7 +293,11 @@ test('the rail renders line icons, not emoji', () => {
     `the rail still paints emoji: ${emoji ? [...new Set(emoji)].join(' ') : ''}`,
   );
 
-  const items = root.querySelectorAll('.kt-nav__item');
+  // Destinations only. The rail's bottom block (account, theme) reuses
+  // .kt-nav__item for its row styling but carries an avatar and a toggle
+  // glyph, not a section icon — scoping by data-route asks the question this
+  // test means: does every place you can NAVIGATE to have an icon.
+  const items = root.querySelectorAll('.kt-nav__item[data-route]');
   assert.ok(items.length >= 7, 'every section is still in the rail');
   for (const item of items) {
     const svg = item.querySelector('.kt-nav__icon svg');

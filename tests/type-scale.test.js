@@ -65,7 +65,12 @@ const BUDGET = {
   // qualifies so it cannot compete with a destination name.
   // v2.1 removed the floating collapse pill and its 16px arrow glyph —
   // the chevron is an svg now, which has no font size at all.
-  'modules/nav/nav.css': 2,
+  // Four now, and each one is a value the mockup measures rather than a
+  // literal that drifted in: the group label at 10px with 1.2px tracking,
+  // and the three badge variants at 10px/11px. The vendored scale's nearest
+  // step is 11px, which is the label size — a group title set the same size
+  // as the items under it stops being a group title.
+  'modules/nav/nav.css': 4,
   'modules/search/search.css': 6,
   'modules/stream/stream.css': 9,
   'modules/topbar/topbar.css': 1,

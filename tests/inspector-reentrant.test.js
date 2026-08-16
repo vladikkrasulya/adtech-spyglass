@@ -387,11 +387,17 @@ test('static: a repaired URL is shown and offered by Copy, and never written bac
   assert.match(APP, /ur\.repairs/, 'the renderer must read validation.urlRequest.repairs');
   // Prepended to BOTH validation-render branches — a repaired URL that then
   // validates clean is exactly the case worth stating.
-  assert.match(APP, /renderSeverityTabs\(valEl, findings, headerHtml\)/);
-  assert.equal(
-    (APP.match(/repairsHtml \+\n?\s*'<div class="mono-label"/g) || []).length,
-    2,
-    'both the findings branch and the clean branch must show the repairs',
+  assert.match(APP, /renderSeverityTabs\(valEl, findings, repairsHtml\)/);
+  // Both branches must carry the repairs. The original guard counted how many
+  // times repairsHtml was concatenated with a `mono-label` div — the shape the
+  // two branches happened to share at the time. When the findings branch
+  // dropped its breadcrumb (the mockup has none) the property held and the
+  // count did not, so the guard failed on a correct change. It now counts uses
+  // of the value itself, which is what "both branches show the repairs" means.
+  const uses = (APP.match(/\brepairsHtml\b/g) || []).length;
+  assert.ok(
+    uses >= 3,
+    `repairsHtml must be built once and used by both render branches — found ${uses} references`,
   );
   // Copy hands back the canonical URL; the textarea keeps the operator's text.
   assert.match(APP, /_lastUrlRepair\.repaired/, 'copy() must be able to reach the repaired URL');

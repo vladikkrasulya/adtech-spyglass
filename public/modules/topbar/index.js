@@ -47,9 +47,9 @@ function escapeHtml(s) {
 function renderTopbar(authUser) {
   const l = lang();
   const searchPlaceholder = pick({
-    en: '🔎 search the site',
-    uk: '🔎 шукати по сайту',
-    ru: '🔎 искать по сайту',
+    en: 'Jump to section, finding or doc',
+    uk: 'Перейти до розділу, знахідки чи доки',
+    ru: 'Перейти к разделу, находке или доке',
   });
   const navToggleLabel = pick({
     en: 'Toggle navigation',
@@ -104,7 +104,21 @@ function renderTopbar(authUser) {
       <span class="kt-topbar__brand-icon" aria-hidden="true">◆</span>
       <span class="kt-topbar__brand-text">ortbtools</span>
     </a>
+    <!-- Breadcrumb: which section you are in, and which payload you are
+         looking at. The mockup puts it where a browser puts a title, and it
+         is the only place the payload's id is visible at all — until now it
+         lived in a 0x0 span inside the editor card. Filled at runtime by
+         kt:inspector-ready / analyze; hidden while empty. -->
+    <div class="kt-topbar__crumbs" id="ktCrumbs" hidden>
+      <span class="kt-topbar__crumb-section" id="ktCrumbSection"></span>
+      <span class="kt-topbar__crumb-sep" aria-hidden="true">/</span>
+      <span class="kt-topbar__crumb-id" id="ktCrumbId"></span>
+    </div>
     <div class="kt-topbar__search">
+      <svg class="kt-topbar__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+      </svg>
       <input
         type="text"
         class="kt-topbar__search-input"
@@ -113,6 +127,7 @@ function renderTopbar(authUser) {
         spellcheck="false"
         aria-label="${escapeHtml(searchPlaceholder)}"
       />
+      <span class="kt-topbar__search-kbd" aria-hidden="true">⌘K</span>
     </div>
     <div class="kt-topbar__actions">
       <button type="button" class="kt-topbar__search-btn" data-action="toggle-search" aria-label="${escapeHtml(searchLabel)}" title="${escapeHtml(searchLabel)}">🔎</button>

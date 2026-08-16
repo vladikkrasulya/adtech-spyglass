@@ -43,18 +43,22 @@
     </svg>
   </button>
   <div class="format-bar" id="formatBar" hidden>
-    <span class="format-pill format-pill-type" id="formatPillType"></span>
-    <span class="format-pill format-pill-version" id="formatPillVersion" hidden></span>
-    <select
-      class="format-pill format-pill-select"
-      id="dialectSelector"
-      data-action="change-dialect"
-      title="Переключатель диалекта валидации — меняет правила, которые engine применяет к payload"
+    <span class="validity-chip" id="validityChip"
+      ><svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m5 13 4 4L19 7" /></svg
+      ><span id="validityChipText">JSON валидный</span></span
     >
-      <option value="iab">Standard IAB (oRTB 2.5)</option>
-      <option value="ext-rtb">Vendor · RTB</option>
-      <option value="inpage-push">Vendor · In-Page Push</option>
-    </select>
+    <span class="workbar-divider" aria-hidden="true"></span>
     <select
       class="format-pill format-pill-select"
       id="versionPinSelector"
@@ -66,6 +70,16 @@
       <option value="2.6">oRTB 2.6</option>
       <option value="3.0">oRTB 3.0</option>
     </select>
+    <select
+      class="format-pill format-pill-select"
+      id="dialectSelector"
+      data-action="change-dialect"
+      title="Переключатель диалекта валидации — меняет правила, которые engine применяет к payload"
+    >
+      <option value="iab">Standard IAB (oRTB 2.5)</option>
+      <option value="ext-rtb">Vendor · RTB</option>
+      <option value="inpage-push">Vendor · In-Page Push</option>
+    </select>
     <span class="format-pill format-pill-dialect" id="formatPillDialect" hidden></span>
   </div>
   <div class="workbar-actions">
@@ -74,7 +88,36 @@
         class="btn btn-ghost btn-sm"
         title="Загрузить синтетический пример — кликни чтобы раскрыть и выбрать случайный или конкретный шаблон атаки."
       >
-        🎲 пример ▾
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="8.5" cy="8.5" r="1" />
+          <circle cx="12" cy="12" r="1" />
+          <circle cx="15.5" cy="15.5" r="1" />
+        </svg>
+        Загрузить пример
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
       </summary>
       <div class="example-menu-list" role="menu">
         <button data-action="load-demo" role="menuitem">🎲 случайный</button>
@@ -156,7 +199,20 @@
         class="btn btn-ghost btn-sm"
         title="Всё, что не является главным действием: стрим, симулятор DSP и зеркало."
       >
-        инструменты ▾
+        Инструменты
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
       </summary>
       <div class="tools-menu-list" role="menu">
         <a
@@ -203,7 +259,7 @@
       </div>
     </details>
     <button data-action="analyze" class="btn btn-primary btn-sm" id="analyzeBtn">
-      анализировать
+      Анализировать<span class="btn-kbd">⌘⏎</span>
     </button>
     <!-- Language + theme toggles. Buttons live in the header so users can
              see at a glance which locale/theme is active. The IIFEs in <head>
@@ -431,15 +487,18 @@
             </button>
           </div>
         </div>
-        <textarea
-          id="bidReq"
-          class="json-input"
-          spellcheck="false"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          placeholder="1. вставь сюда BidRequest JSON&#10;2. опционально: вставь BidResponse справа&#10;3. нажми «анализировать» или Ctrl+Enter&#10;&#10;нет JSON? 🎲 пример ▾ · 📡 live · зеркало ↔&#10;? для всех хоткеев"
-        ></textarea>
+        <div class="json-editor">
+          <div class="line-gutter" id="gutterReq" aria-hidden="true"></div>
+          <textarea
+            id="bidReq"
+            class="json-input"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            placeholder="1. вставь сюда BidRequest JSON&#10;2. опционально: вставь BidResponse справа&#10;3. нажми «анализировать» или Ctrl+Enter&#10;&#10;нет JSON? 🎲 пример ▾ · 📡 live · зеркало ↔&#10;? для всех хоткеев"
+          ></textarea>
+        </div>
         <div class="input-card-summary" data-card-summary="cardReq">
           <span class="input-card-summary__label">id</span>
           <span class="input-card-summary__id" data-summary-id>—</span>
@@ -486,15 +545,18 @@
             </button>
           </div>
         </div>
-        <textarea
-          id="bidRes"
-          class="json-input"
-          spellcheck="false"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          placeholder="опционально: вставь BidResponse JSON сюда&#10;&#10;если оба поля заполнены — зеркало ↔ покажет diff против канонической"
-        ></textarea>
+        <div class="json-editor">
+          <div class="line-gutter" id="gutterRes" aria-hidden="true"></div>
+          <textarea
+            id="bidRes"
+            class="json-input"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            placeholder="опционально: вставь BidResponse JSON сюда&#10;&#10;если оба поля заполнены — зеркало ↔ покажет diff против канонической"
+          ></textarea>
+        </div>
         <div class="input-card-summary" data-card-summary="cardRes">
           <span class="input-card-summary__label">id</span>
           <span class="input-card-summary__id" data-summary-id>—</span>
@@ -588,13 +650,13 @@
 
     <div class="tab-bar">
       <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
-        находки <span class="tab-badge" id="validationBadge" hidden></span>
+        Находки <span class="tab-badge" id="validationBadge" hidden></span>
       </button>
       <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
-        импрессии <span class="tab-badge" id="inspectorBadge" hidden></span>
+        Импрессии <span class="tab-badge" id="inspectorBadge" hidden></span>
       </button>
       <button class="tab-btn" data-action="switch-tab" data-target="tCross">
-        сверка <span class="tab-badge" id="crossBadge" hidden></span>
+        Сверка <span class="tab-badge" id="crossBadge" hidden></span>
       </button>
       <button
         class="tab-btn"
@@ -602,11 +664,11 @@
         data-target="tCreative"
         title="Отрендеренный креатив и статистика мест — раньше постоянная правая колонка"
       >
-        креатив
+        Креатив
       </button>
       <details class="tab-more">
         <summary class="tab-btn tab-more-toggle">
-          ещё
+          Ещё
           <svg
             width="13"
             height="13"
@@ -786,7 +848,7 @@
     <span class="footer-sep">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.12.1</span></span
+      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.13.0</span></span
     >
     <span class="footer-extras">
       <span class="footer-sep">·</span>

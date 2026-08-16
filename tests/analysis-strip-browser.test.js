@@ -396,7 +396,13 @@ test('every strip label has a hint in all three locales', () => {
   const i18n = fs.readFileSync(path.join(ROOT, 'public/i18n.js'), 'utf8');
 
   const keys = [...new Set([...app.matchAll(/stripLabel\('([a-z]+)'\)/g)].map((m) => m[1]))];
-  assert.ok(keys.length >= 6, `expected the bar's labels, parsed ${keys.length}: ${keys}`);
+  // The count moved with the mockup: the bar's five labelled cells plus the
+  // quality pill. Traffic, device and privacy merged into one unlabelled
+  // context chip ("web · Google (Android) · UKR/Kyiv · GPP") because they are
+  // four facts about one thing, and a reader needs no label to know that
+  // "UKR/Kyiv" is a place. Floor for it: every label that IS rendered must
+  // still have its hint, which is what the loop below checks.
+  assert.ok(keys.length >= 4, `expected the bar's labels, parsed ${keys.length}: ${keys}`);
 
   for (const key of keys) {
     for (const kind of ['label', 'hint']) {

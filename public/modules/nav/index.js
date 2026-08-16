@@ -62,6 +62,11 @@ export const SECTIONS = [
     id: 'inspector',
     route: '/inspector',
     label: { en: 'Inspector', uk: 'Інспектор', ru: 'Инспектор' },
+    // The mockup prints the destination's own shortcut on the item — the
+    // cheapest possible way to teach one, since it sits beside the thing it
+    // opens rather than in a help screen nobody opens.
+    badge: { en: '⌘1', uk: '⌘1', ru: '⌘1' },
+    badgeKind: 'shortcut',
   },
   {
     group: 'workbench',
@@ -74,7 +79,11 @@ export const SECTIONS = [
     // forbids a locale or a redesign from removing one. It moves into the
     // badge slot so it survives the shorter label and the collapsed rail.
     label: { en: 'Streams', uk: 'Стріми', ru: 'Стримы' },
+    // The qualifier survives as the item's title/aria-label (asserted by
+    // tests/shell-nav-chrome) while the rail shows the mockup's status dot —
+    // the disclosure is kept, its 52px text pill is not.
     badge: { en: 'preview', uk: 'прев’ю', ru: 'превью' },
+    badgeKind: 'status',
   },
   {
     group: 'workbench',
@@ -158,8 +167,11 @@ function renderNav() {
         // of the accessible name, not a decoration beside it — a screen
         // reader must hear "Streams, preview", the same thing the eye reads.
         const badgeText = s.badge ? s.badge[l] || s.badge.en : '';
+        const kind = s.badgeKind || 'text';
         const badge = badgeText
-          ? `<span class="kt-nav__badge">${escapeHtml(badgeText)}</span>`
+          ? kind === 'status'
+            ? '<span class="kt-nav__badge kt-nav__badge--status" aria-hidden="true"></span>'
+            : `<span class="kt-nav__badge kt-nav__badge--${escapeHtml(kind)}">${escapeHtml(badgeText)}</span>`
           : '';
         const title = badgeText ? `${label} — ${badgeText}` : label;
         return `
@@ -199,8 +211,16 @@ function renderNav() {
     <nav class="kt-nav__nav" aria-label="Sections">
       ${groups}
     </nav>
-    <div class="kt-nav__footer">
-      <span class="kt-nav__status" aria-hidden="true">● online</span>
+    <div class="kt-nav__bottom">
+      <a class="kt-nav__item kt-nav__account" href="${escapeHtml(prefixLocale('/account'))}">
+        <span class="kt-nav__avatar" aria-hidden="true"></span>
+        <span class="kt-nav__label" id="ktNavAccount">${escapeHtml(pick({ en: 'Account', uk: 'Кабінет', ru: 'Кабинет' }))}</span>
+        <svg class="kt-nav__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <button type="button" class="kt-nav__item kt-nav__theme" data-action="toggle-theme">
+        <span class="kt-nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/></svg></span>
+        <span class="kt-nav__label">${escapeHtml(pick({ en: 'Dark', uk: 'Темна', ru: 'Тёмная' }))}</span>
+      </button>
     </div>
   `;
 }
