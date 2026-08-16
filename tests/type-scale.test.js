@@ -62,7 +62,15 @@ const BUDGET = {
   // fit), and the active card's corner marks at 9px, which are registration
   // ticks rather than text and must stay below the 11px eyebrow they frame.
   'modules/dialects/dialects.css': 2,
-  'modules/docs/docs.css': 9,
+  // v2 rebuilt this page as the mockup's three-column reader. Four literals
+  // remain, and each is a size the mockup measures that the vendored scale
+  // does not have: the 10px contents group label (it heads the items under
+  // it, and a group title set the same size as its items stops being a
+  // title — same argument as nav.css above), the 16px doc reading size (the
+  // scale steps 15 → 17 and neither is it), and the 22px/32px h2/h1 pair
+  // (the scale steps 20 → 28 → 40). Written as literals and budgeted here
+  // so raising one is a number someone has to change on purpose.
+  'modules/docs/docs.css': 4,
   // Insights was rebuilt to the redesign mockup and its seven literals came
   // down to three. The ratchet is doing its job here, so the budget moves with
   // it rather than absorbing the win. The three that remain are values the

@@ -1,136 +1,248 @@
-/* public/modules/docs/docs.css — Stage 1 docs section styles.
-   Visual language mirrors library.css (cards, badges, padding rhythm). */
+/* public/modules/docs/docs.css — the /docs reader.
 
-/* ── Shell ── */
-.docs-section {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--space-6, 32px) var(--space-5, 24px);
-}
+   The section is a three-column doc layout: the shell's rail, then a
+   white contents plane, then the article on the grey app ground. The
+   split between the two planes is the whole point — the sidebar is
+   navigation and reads as chrome, the article is prose and reads as
+   a page. A single grey plane with white cards floating on it (what
+   this used to be) says the opposite: that every topic is an object
+   you pick up, rather than a place you are already standing in.
 
-.docs-section__head {
-  margin-bottom: var(--space-5, 24px);
-}
-.docs-section__head h1 {
-  margin: 0 0 6px;
-  font-size: var(--fs-xl, 28px);
-  font-weight: 600;
-  color: var(--text);
-}
-.docs-section__sub {
-  margin: 0 0 var(--space-5, 24px);
-  color: var(--text-muted, #46556b);
-  font-size: var(--fs-base, 15px);
-  max-width: 720px;
-}
+   Sizes below are the mockup's measured values. Where the vendored
+   scale in design-system.css has a step, the token is used; where the
+   mockup names a size the scale does not carry — the 10px group label,
+   the 16px reading size, the 22px/32px display pair — the literal is
+   written out and budgeted in tests/type-scale.test.js. */
 
-/* ── Breadcrumb ── */
-.docs-breadcrumb {
+/* ── Reader frame ─────────────────────────────────────────────────
+   #app-root is `flex: 1; overflow: auto`, so the reader's own height
+   comes from min-height rather than height: the white plane reaches
+   the bottom of the viewport on a short article, and grows with a
+   long one instead of clipping it. */
+.docs-reader {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-muted, #46556b);
-  margin-bottom: var(--space-4, 16px);
+  align-items: stretch;
+  min-height: 100%;
 }
-.docs-breadcrumb a {
+
+/* ── Contents sidebar ── */
+.docs-toc {
+  flex: 0 0 260px;
+  width: 260px;
+  background: var(--surface, #fff);
+  border-right: 1px solid var(--border);
+}
+/* The list sticks while the article scrolls; the plane behind it does not,
+   so the white column still reaches the bottom of a short page.
+   The 20px gutter rides on the sticky element rather than on the plane —
+   20px, not --space-5 (24px), because the first group header has no top
+   padding of its own, so this number IS the gap above it and the mockup
+   measures it at 20. Put it on .docs-toc and it scrolls away, leaving the
+   first group header jammed against the topbar the moment you scroll the
+   344-row catalog.
+   max-height keeps a contents list taller than the window reachable: the
+   catalog's 15 entries fit at any normal height, but the list scrolls on
+   its own rather than hiding its tail on a short one. */
+.docs-toc__inner {
+  position: sticky;
+  top: 0;
+  display: block;
+  padding: 20px 0;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+/* Group header. Uppercase lives at this level and nowhere else on the
+   page — it is what tells four flat lists apart without a rule between
+   them. 10px is below the vendored scale's floor of 11px on purpose: a
+   group title set the same size as the items under it stops reading as
+   a title. */
+.docs-toc__group {
+  margin: 0;
+  padding: 18px 20px 10px;
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-dim, #5c6b82);
+}
+.docs-toc__group:first-child {
+  padding-top: 0;
+}
+
+.docs-toc__link {
+  display: block;
+  padding: 8px 20px;
+  border-left: 2px solid transparent;
+  font-size: var(--fs-sm, 13px);
+  line-height: 1.5;
   color: var(--text-muted, #46556b);
   text-decoration: none;
 }
-.docs-breadcrumb a:hover {
+.docs-toc__link:hover {
+  background: var(--bg-2, #ecf1f6);
   color: var(--text);
-  text-decoration: underline;
 }
-.docs-breadcrumb__sep {
-  opacity: 0.5;
-}
-.docs-breadcrumb__current {
-  color: var(--text);
-  font-weight: 500;
-}
-
-/* ── Overview welcome card ── */
-.docs-welcome {
-  background: var(--bg-elev, #fff);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent, #0284c7);
-  border-radius: var(--r-md, 16px);
-  padding: var(--space-5, 24px);
-  margin-bottom: var(--space-5, 24px);
-}
-.docs-welcome h2 {
-  margin: 0 0 8px;
-  font-size: var(--fs-lg, 20px);
+/* Active item: tint + a 2px left accent bar. The bar is what survives
+   at a glance — the tint alone reads as hover on a white plane. */
+.docs-toc__link.is-active {
+  background: var(--accent-soft, rgba(2, 132, 199, 0.1));
+  border-left-color: var(--accent, #0284c7);
   font-weight: 600;
   color: var(--text);
 }
-.docs-welcome p {
-  margin: 0;
-  color: var(--text-muted, #46556b);
-  font-size: 14px;
-  line-height: 1.6;
+.docs-toc__link:focus-visible {
+  outline: 2px solid var(--accent, #0284c7);
+  outline-offset: -2px;
 }
 
-/* ── Topic grid ── */
-.docs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-4, 16px);
-  margin-bottom: var(--space-6, 32px);
+/* ── Article column ── */
+.docs-column {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6, 32px) 40px;
 }
 
-.docs-card {
-  background: var(--bg-elev, #fff);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md, 16px);
-  padding: var(--space-4, 16px);
+.docs-article {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  text-decoration: none;
-  color: inherit;
-  transition:
-    border-color 150ms ease,
-    transform 150ms ease;
-  cursor: pointer;
+  gap: var(--space-4, 16px);
+  /* A reading measure, not a container width. Prose set to the full
+     1100px of this column loses the line the eye is on. */
+  max-width: 680px;
 }
-.docs-card:hover {
-  border-color: var(--accent, #0284c7);
-  transform: translateY(-1px);
+/* The finding catalog is a table, and a table is not prose — it gets
+   the column instead of the measure, and the column gives back some of
+   its 40px gutter. 344 rows behind a horizontal scrollbar whose last
+   column is the spec link is worse than a slightly tighter margin. */
+.docs-column--wide {
+  padding-right: var(--space-5, 24px);
+  padding-left: var(--space-5, 24px);
 }
-.docs-card__icon {
-  font-size: 24px;
-  line-height: 1;
+.docs-column--wide .docs-article {
+  max-width: none;
 }
-.docs-card__title {
+
+.docs-eyebrow {
   margin: 0;
-  font-size: var(--fs-base, 15px);
+  font-family: var(--font-mono, ui-monospace);
+  font-size: var(--fs-mono, 11px);
+  line-height: 1.5;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--text-dim, #5c6b82);
+}
+
+.docs-h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 32px;
   font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.64px;
   color: var(--text);
 }
-.docs-card__desc {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-muted, #46556b);
+.docs-h2 {
+  margin: 12px 0 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
   line-height: 1.5;
-  flex: 1;
+  letter-spacing: -0.33px;
+  color: var(--text);
 }
-.docs-card__action {
-  margin-top: auto;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-accent, #0369a1);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.docs-card--external .docs-card__action {
+
+/* 16px is the reading size the mockup sets for doc prose. The vendored
+   scale steps 15 → 17 and neither is it; a doc column is the one place
+   on the site where the difference is felt over a hundred lines. */
+.docs-lead,
+.docs-p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
   color: var(--text-muted, #46556b);
+}
+
+/* Inline literals you are meant to type. Relative size, not a step: mono at
+   the same pixel height as the body face reads a size larger, and the point
+   here is a quieter run of text, not a louder one. The padded mono chip is
+   the same shape the topbar's ⌘K badge uses. */
+.docs-code {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  border-radius: var(--r-chip, 3px);
+  background: var(--bg-2, #ecf1f6);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* ── Numbered callout ── */
+.docs-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 9px);
+  padding: 16px 18px;
+}
+.docs-callout__label {
+  font-size: var(--fs-sm, 13px);
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.78px;
+  text-transform: uppercase;
+  color: var(--text-muted, #46556b);
+}
+.docs-callout__row {
+  display: flex;
+  gap: 12px;
+}
+/* The ordinal is mono and accent-as-text: --accent alone is 3.5:1 on
+   light and fails AA, so the readable pair is the one the tokens name. */
+.docs-callout__num {
+  flex: 0 0 auto;
+  font-family: var(--font-mono, ui-monospace);
+  font-size: var(--fs-chip, 12px);
+  line-height: 1.5;
+  color: var(--accent-text, #0369a1);
+  font-variant-numeric: tabular-nums;
+}
+.docs-callout__text {
+  font-size: var(--fs-card, 14px);
+  line-height: 1.55;
+  color: var(--text);
+}
+.docs-callout__text b {
+  font-weight: 700;
+}
+
+/* ── Tinted info note ── */
+.docs-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--accent-soft, rgba(2, 132, 199, 0.1));
+  border-radius: var(--r-md, 9px);
+  padding: 12px 14px;
+  font-size: var(--fs-sm, 13px);
+  line-height: 1.5;
+  color: var(--text);
+}
+.docs-note__icon {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  color: var(--accent-text, #0369a1);
 }
 
 /* ── Finding catalog ── */
 .docs-catalog {
-  /* intentionally empty; children use lib-card-like patterns */
+  /* the reader shell supplies frame, measure and rhythm */
 }
 
 /* Filter chips */
@@ -147,7 +259,7 @@
   background: var(--bg-2, #ecf1f6);
   color: var(--text-muted, #46556b);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -187,7 +299,7 @@
   align-items: baseline;
   gap: 8px;
   margin: 0 0 6px;
-  font-size: 12px;
+  font-size: var(--fs-chip, 12px);
 }
 .docs-chip-group__name {
   font-weight: 600;
@@ -201,13 +313,13 @@
 }
 .docs-facets__note {
   margin: 0 0 var(--space-3, 12px);
-  font-size: 12px;
+  font-size: var(--fs-chip, 12px);
   color: var(--text-muted, #46556b);
 }
 
 /* Stats bar */
 .docs-stats {
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--text-muted, #46556b);
   margin-bottom: var(--space-3, 12px);
 }
@@ -215,22 +327,27 @@
 /* Table */
 .docs-table-wrap {
   overflow-x: auto;
+  background: var(--surface, #fff);
   border: 1px solid var(--border);
-  border-radius: var(--r-md, 16px);
+  border-radius: var(--r-md, 9px);
 }
 .docs-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .docs-table thead tr {
   background: var(--bg-2, #ecf1f6);
 }
+/* 10px gutters, not 14px. The longest finding id is 44 characters and cannot
+   wrap without becoming unreadable, so the id column has a hard floor of
+   ~360px; the 32px those four cells give back is what keeps the spec-ref
+   column on screen at 1440 now that a 260px contents plane shares the row. */
 .docs-table th {
-  padding: 10px 14px;
+  padding: 10px;
   text-align: left;
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--fs-chip, 12px);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted, #46556b);
@@ -238,7 +355,7 @@
   white-space: nowrap;
 }
 .docs-table td {
-  padding: 10px 14px;
+  padding: 10px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
   color: var(--text);
@@ -253,19 +370,21 @@
 /* ID cell — monospace */
 .docs-table .col-id {
   font-family: var(--font-mono, ui-monospace);
-  font-size: 12px;
+  font-size: var(--fs-chip, 12px);
   white-space: nowrap;
   color: var(--text-muted, #46556b);
 }
-/* Message cell — wraps */
+/* Message cell — wraps. 420px rather than 480: the table now shares the
+   window with a 260px contents plane, and the spec-ref column has to stay
+   on screen without a horizontal scroll to reach it. */
 .docs-table .col-msg {
-  max-width: 480px;
+  max-width: 420px;
   line-height: 1.5;
 }
 /* Spec ref link */
 .docs-table .col-spec a {
   color: var(--text-muted, #46556b);
-  font-size: 12px;
+  font-size: var(--fs-chip, 12px);
   text-decoration: none;
 }
 .docs-table .col-spec a:hover {
@@ -284,7 +403,7 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: var(--r-pill, 999px);
-  font-size: 11px;
+  font-size: var(--fs-mono, 11px);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -370,13 +489,13 @@
 }
 .docs-sev__or {
   margin: 0 4px;
-  font-size: 11px;
+  font-size: var(--fs-mono, 11px);
   color: var(--text-muted, #46556b);
 }
 .docs-sev__family {
   display: block;
   margin-top: 3px;
-  font-size: 10px;
+  font-size: var(--fs-mono, 11px);
   letter-spacing: 0.04em;
   color: var(--text-dim, #5c6b82);
 }
@@ -387,5 +506,55 @@
   padding: var(--space-6, 32px);
   text-align: center;
   color: var(--text-muted, #46556b);
-  font-size: 14px;
+  font-size: var(--fs-card, 14px);
+}
+
+/* ── Narrow windows ───────────────────────────────────────────────
+   Below 1024px the shell's own rail becomes an off-canvas drawer and
+   the content column takes the full width. A second 260px column at
+   that point would leave the article about 500px wide on a tablet, so
+   the contents flatten to a scrollable strip above the prose — still
+   present, still showing the active topic, no longer taking a third
+   of the window to do it. */
+@media (max-width: 1023px) {
+  .docs-reader {
+    display: block;
+  }
+  .docs-toc {
+    width: auto;
+    padding: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .docs-toc__inner {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 16px;
+    white-space: nowrap;
+  }
+  .docs-toc__group {
+    padding: 12px 8px 12px 0;
+  }
+  .docs-toc__group:first-child {
+    padding-top: 12px;
+  }
+  .docs-toc__links {
+    display: flex;
+    gap: 2px;
+  }
+  .docs-toc__link {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    padding: 12px 10px;
+  }
+  .docs-toc__link.is-active {
+    border-left-color: transparent;
+    border-bottom-color: var(--accent, #0284c7);
+  }
+  .docs-column {
+    padding: var(--space-5, 24px) 16px;
+  }
 }
