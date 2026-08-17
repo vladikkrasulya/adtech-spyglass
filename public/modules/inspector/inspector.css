@@ -220,14 +220,23 @@ body {
 
          ≤720px still releases the desktop scroll-lock so phones scroll the
          page instead of clipping it.
+
+         Written in GRID terms, deliberately. This block used to say
+         `flex-direction: column`, which is what stacked the split back when
+         it was a flex row. v2 rebuilt .workbench-split as `display: grid`
+         with `1fr 1fr` (see "The split" above) and this rule was never
+         translated, so it silently became a no-op — flex-direction means
+         nothing to a grid container. The split therefore kept two columns
+         all the way down: measured on a 390px phone, 195px of editor beside
+         195px of results. Stacking is a row template now, not a flex axis.
       */
 @media (max-width: 1100px) {
   .workbench-split {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     overflow-y: auto;
   }
   .workbench-payload {
-    flex: 0 0 auto;
     /* Enough for the payload to stay legible without pushing the verdict —
        the thing the reader came for — below the fold. */
     max-height: 42vh;
@@ -235,15 +244,12 @@ body {
     border-bottom: 1px solid var(--border);
   }
   .center-panel {
-    flex: 1 1 auto;
     min-height: 60vh;
   }
-  /* The drawer stays an overlay of its own width rather than going
-     full-bleed: it holds history, and history is for comparing against
-     what is on screen. */
-  .sidebar-left {
-    width: min(330px, 88vw);
-  }
+  /* The drawer keeps its own width rather than going full-bleed: it holds
+     history, and history is for comparing against what is on screen. That
+     width is set on .sidebar-left itself, further down this file — an
+     override here would be overridden right back, so there isn't one. */
 }
 @media (max-width: 720px) {
   /* Release the desktop scroll-lock — html/body and workbench above set
@@ -4927,5 +4933,49 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   }
   .app-footer .footer-status-row {
     gap: 10px;
+  }
+}
+
+/* ── The workbar on a phone ─────────────────────────────────────────────
+   MUST STAY LAST: the v2 sections above set .workbar / .workbar-actions
+   sizing outside any media query, and equal-specificity rules are decided
+   by source order. This is the second place in this release where a phone
+   rule sat above its own base and quietly lost; see the matching note at
+   the end of topbar.css.
+
+   Measured at 390px before this block: the three controls came to 435px of
+   content in a 318px slot, and the primary action — Analyze, the whole
+   point of the page — showed 24 of its 133 pixels. The labels are what
+   costs the room, so the two SECONDARY controls give theirs up and keep
+   their icon and caret; Analyze keeps its word, because a bare icon for
+   "run the thing" is a guess. Each summary carries a descriptive `title`,
+   which becomes the accessible name once the visible label is gone.
+
+   ⌘⏎ goes too: it is a promise about a keyboard the reader does not have. */
+@media (max-width: 720px) {
+  .workbar-actions .workbar-label,
+  #analyzeBtn .btn-kbd {
+    display: none;
+  }
+  .workbar-actions {
+    min-width: 0;
+  }
+  /* Icon + caret only — without this the summary keeps its label-era
+     padding and the saving is spent on empty space. */
+  .workbar .kt-example-menu > summary,
+  .workbar .kt-tools-menu > summary {
+    gap: 4px;
+    padding-left: 9px;
+    padding-right: 7px;
+  }
+  /* The room freed above goes into the touch target, not into slack. 32px
+     clears WCAG 2.5.8's 24px floor but is not what this codebase already
+     asks of a phone control — the tap-target block further up settles on
+     36–38px, and the workbar is 52px tall, so these can meet it. */
+  .workbar .kt-example-menu > summary,
+  .workbar .kt-tools-menu > summary,
+  .workbar #analyzeBtn,
+  .workbar-drawer-btn {
+    min-height: 36px;
   }
 }

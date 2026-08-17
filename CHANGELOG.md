@@ -6,6 +6,79 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.14.2 — the phone, and results that outlived their payload
+
+A second audit, run independently against the deployed v1.14.1, found the
+Inspector unusable on a phone and Clear leaving the previous analysis on
+screen. Both reproduced here; the phone was worse than reported.
+
+**The Inspector on a phone.** Measured at 390px before the fix: the topbar
+laid out 545px of content, so the language menu sat at x=496 — entirely off
+the screen; the workbar laid out 499px, so of Analyze, the primary action,
+24 of its 133 pixels were visible; and the split never stacked, giving the
+editor and the results 195px each.
+
+Two files, two causes, one shape — a correct responsive block that had been
+overtaken and was failing in silence:
+
+- `topbar.css` swaps the inline search for a 🔎 button at ≤600px, then
+  re-declared `.kt-topbar__search` and `.kt-topbar__search-btn` further down
+  the file outside any media query. Equal specificity, later source position,
+  so the phone rules lost. The block now sits last in the file with a note
+  saying why it must stay there, and the search is `flex: 0 1 300px` instead
+  of a rigid 300px, so it yields space rather than pushing its neighbours off
+  the screen.
+- `inspector.css` stacked the split with `flex-direction: column`, written
+  when `.workbench-split` was a flex row. v2 rebuilt it as a grid and the
+  rule quietly became a no-op. It is a row template now.
+- The workbar's two secondary controls drop their labels below 720px and keep
+  their icon and caret; Analyze keeps its word, because a bare icon for "run
+  the thing" is a guess. ⌘⏎ goes too — it promises a keyboard the reader does
+  not have. The freed room goes into the touch targets, which reach the 36px
+  this codebase already asks of a phone control.
+- The Tools menu had no icon of its own, so hiding its label left a bare
+  chevron. It has one now, in all three locales.
+
+**Clear must clear.** Clearing a payload emptied the editor and left the
+verdict, the quality score, the impression list, the tab badges, the browser
+tab title and 31 line numbers beside an empty editor — every one of them
+describing bytes no longer anywhere on screen.
+
+- The machinery already existed: `clearResultsForError()`, written for a
+  failed analyse, carrying the comment "A result that is not current must not
+  look current." Clear was never wired to it. It is now split into a shared
+  core and two callers, so the two paths cannot drift apart — anything a new
+  panel adds to the reset is inherited by both.
+- The empty state is captured from the template before the first analysis
+  paints over it, rather than re-authored here: the copy already exists in
+  three locales and a second set of strings would be a second thing to keep
+  in sync.
+- Assigning `.value` fires no `input` event, and the gutter is rebuilt only
+  on that event — hence the leftover line numbers. Clear tells it to run.
+
+**A button that emptied itself.** `flashButtonStatus()` saved and restored
+`textContent`, which for a button whose only child is an `<svg>` reads back
+as the empty string. One press of Clear replaced the ✕ with the word
+"cleared" and 1500ms later restored "" — a blank square for the rest of the
+session. All three editor buttons shared it. It saves `innerHTML` now.
+
+**Tests.** `mobile-inspector-browser.test.js` and
+`clear-resets-results-browser.test.js`, both in a real browser, both
+mutation-verified — seven separate revert-and-fail checks. Neither mentions
+a rule's position in a file: the defect WAS the rule order, so a test phrased
+in rules would have to be right about the same thing the code got wrong. They
+ask whether anything lies outside the screen, whether the primary action is
+whole, and whether the page after Clear is the page a visitor sees on
+arrival.
+
+`inspector-reentrant.test.js` stopped asserting which panels the error reset
+covers. It did that by slicing the function's source and requiring names to
+appear literally inside it, so it failed the moment the shared work moved —
+while the panels were still being reset, by the same call, on the same path.
+It was reading the shape of one function and reporting it as a property of
+the product. That claim now lives in the browser test, where it is observable
+rather than inferable.
+
 ### v1.14.1 — one control per job
 
 The v1.14 rail gained the mockup's bottom block — an account row and a

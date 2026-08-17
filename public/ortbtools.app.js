@@ -165,18 +165,28 @@ export async function mountInspector(root, ctx) {
   // WeakMap keyed by the button element so multiple buttons flash
   // independently; map entries auto-collect when buttons leave the DOM.
   const _flashTimers = new WeakMap();
+  /**
+   * Briefly replace a button's contents with "copied" / "cleared" / etc.
+   *
+   * Saves and restores innerHTML, not textContent. All three buttons this is
+   * called on are icon buttons whose content is an <svg>, and an element's
+   * textContent for an SVG child is the empty string — so the old version
+   * read back "", overwrote the icon with a word, and 1500ms later restored
+   * that empty string. One press of Clear left a blank 28×28 square where
+   * the ✕ had been, for the rest of the session.
+   */
   function flashButtonStatus(btn, key) {
     if (!btn) return;
     const prev = _flashTimers.get(btn);
     if (prev) {
       clearTimeout(prev.timeout);
-      btn.textContent = prev.original;
+      btn.innerHTML = prev.original;
     }
-    const original = (btn.textContent || '').trim();
+    const original = btn.innerHTML;
     btn.textContent = t(key);
     btn.classList.add('btn-icon--ok');
     const timeout = setTimeout(function () {
-      btn.textContent = original;
+      btn.innerHTML = original;
       btn.classList.remove('btn-icon--ok');
       _flashTimers.delete(btn);
     }, 1500);
@@ -257,6 +267,16 @@ export async function mountInspector(root, ctx) {
     _currentSampleMeta = null;
     _isDirty = false;
     clearMacros();
+    // Assigning .value fires no `input` event (per the HTML spec), and the
+    // gutter is only rebuilt on that event — so it kept numbering the lines
+    // of the payload we just deleted: 31 line numbers beside an empty
+    // editor. renderGutter draws nothing for empty text; it just has to be
+    // told to run.
+    renderGutter(id);
+    // …and the result computed from what was just deleted. Clearing only the
+    // editor left the verdict, the quality score and the impression list on
+    // screen, describing bytes that no longer existed anywhere.
+    clearResultsForEmpty();
     flashButtonStatus(btn, 'button.status.cleared');
   };
 
@@ -2688,6 +2708,127 @@ export async function mountInspector(root, ctx) {
   }
 
   /**
+   * The empty state the template ships with, captured once before the first
+   * analysis paints over it. Restoring it is how "clear" returns to a page
+   * that states nothing, instead of one that keeps stating the previous
+   * payload's verdict under an editor the user just emptied.
+   *
+   * Captured rather than re-authored because the copy already exists in three
+   * locales inside the templates; a second set of strings here would be a
+   * second thing to keep in sync, and it would drift.
+   */
+  const PRISTINE_PANEL_IDS = ['tValidation', 'tCross', 'tBehavior', 'slotGrid', 'quickStats'];
+  let _pristinePanels = null;
+  function capturePristinePanels() {
+    if (_pristinePanels) return;
+    _pristinePanels = {};
+    for (const id of PRISTINE_PANEL_IDS) {
+      const el = $(id);
+      if (el) _pristinePanels[id] = el.innerHTML;
+    }
+    // Not panels, but the same question: these three are overwritten by an
+    // analysis (and by a failed one) and have to be able to come back.
+    const ent = $('stEntity');
+    if (ent) _pristinePanels['@stEntity'] = ent.innerText;
+    const dot = $('statusDot');
+    if (dot) _pristinePanels['@statusDot'] = dot.className;
+    const stx = $('statusText');
+    if (stx) _pristinePanels['@statusText'] = stx.textContent;
+  }
+
+  /**
+   * Everything the last analysis left behind that is not panel copy: badges,
+   * the strip, the format bar and verdict, the creative preview, the export
+   * handle, the finding→source highlight. It has to die whether the analysis
+   * failed or the user cleared the payload out from under it, so it lives in
+   * one place and both callers below use it.
+   */
+  function resetAnalysisArtifacts() {
+    setTabBadge('inspectorBadge', { text: '' });
+    renderCategories({});
+    paintFormatSummary(null);
+    renderAnalysisStrip(null, []);
+    // Hides the verdict sentence along with the bar — see updateFormatBar.
+    updateFormatBar(null, null);
+    resetTabStatus();
+    paintCardSummary('cardReq', '—');
+    paintCardSummary('cardRes', '—');
+    clearMacros();
+    // The preview and the export bundle are both "the last analysis" too;
+    // leaving either behind is the same lie in a different panel.
+    _currentPreviewAdm = null;
+    _currentPreviewBaseContext = null;
+    _currentPreviewDims = null;
+    if ($('creativePreview')) setAdPreview(null, {}, null);
+    window.__ortbtoolsLast = null;
+    // No current analysis means no canonical repaired URL either — Copy must
+    // not keep offering the previous request's repair.
+    _lastUrlRepair = null;
+    // A stale finding→source highlight points at the previous payload's
+    // bytes; runAnalysis already resets it on entry, but a failure that
+    // happens after a successful analyse must not re-arm it either.
+    if (window.OrtbtoolsSourceNav) {
+      try {
+        window.OrtbtoolsSourceNav.resetNavigation();
+      } catch (_e) {
+        /* navigator is optional */
+      }
+    }
+  }
+
+  /**
+   * Clearing a payload must clear what was said about it. Before this, Clear
+   * emptied the editor and left the verdict, the quality score and the
+   * impression list standing — a full-page claim about bytes that were no
+   * longer anywhere on screen. Same principle as clearResultsForError below,
+   * without the alarm: nothing failed, there is simply nothing to report.
+   *
+   * Both panes clear the whole result on purpose. The analysis is computed
+   * from the request and the response together, and crosscheck, creative and
+   * impressions all mix the two — so there is no half of it that survives
+   * losing either side.
+   */
+  function clearResultsForEmpty() {
+    capturePristinePanels();
+    for (const id of PRISTINE_PANEL_IDS) {
+      const el = $(id);
+      if (el && _pristinePanels && id in _pristinePanels) el.innerHTML = _pristinePanels[id];
+    }
+    const info = $('mInfo');
+    if (info) {
+      info.innerHTML = '';
+      info.hidden = true;
+    }
+    const price = $('mPrice');
+    if (price) price.innerText = '$0.00';
+    const restore = (id, key, apply) => {
+      const el = $(id);
+      if (el && _pristinePanels && key in _pristinePanels) apply(el, _pristinePanels[key]);
+    };
+    restore('stEntity', '@stEntity', (el, v) => {
+      el.innerText = v;
+      el.dataset.status = '';
+    });
+    // These two carry the CONNECTION state, which clearResultsForError
+    // borrows to show its reason. After an error then a clear, leaving them
+    // red would report a failure that has been cleared away.
+    restore('statusDot', '@statusDot', (el, v) => {
+      el.className = v;
+    });
+    restore('statusText', '@statusText', (el, v) => {
+      el.textContent = v;
+    });
+    setTabBadge('validationBadge', { text: '', severity: null });
+    setTabBadge('crossBadge', { text: '', severity: null });
+    setTabBadge('behaviorBadge', { text: '' });
+    // The red and amber line numbers are findings too. A pane the user did
+    // not clear keeps its numbers — it still has text — but nothing may keep
+    // pointing at findings that no longer exist.
+    paintGutterSeverity([]);
+    resetAnalysisArtifacts();
+  }
+
+  /**
    * Wipe every panel the last analysis painted and put the reason in its
    * place. Pre-fix a failed analyse only raised a toast: the status bar still
    * read the PREVIOUS payload's entity, its findings stayed rendered, and the
@@ -2727,39 +2868,16 @@ export async function mountInspector(root, ctx) {
     if (price) price.innerText = '$0.00';
     setTabBadge('validationBadge', { text: '!', severity: 'error' });
     setTabBadge('crossBadge', { text: '—', severity: null });
-    setTabBadge('inspectorBadge', { text: '' });
-    renderCategories({});
-    paintFormatSummary(null);
-    renderAnalysisStrip(null, []);
-    updateFormatBar(null, null);
-    resetTabStatus();
-    paintCardSummary('cardReq', '—');
-    paintCardSummary('cardRes', '—');
-    clearMacros();
-    // The preview and the export bundle are both "the last analysis" too;
-    // leaving either behind is the same lie in a different panel.
-    _currentPreviewAdm = null;
-    _currentPreviewBaseContext = null;
-    _currentPreviewDims = null;
-    if ($('creativePreview')) setAdPreview(null, {}, null);
-    window.__ortbtoolsLast = null;
-    // No current analysis means no canonical repaired URL either — Copy must
-    // not keep offering the previous request's repair.
-    _lastUrlRepair = null;
-    // A stale finding→source highlight points at the previous payload's
-    // bytes; runAnalysis already resets it on entry, but a failure that
-    // happens after a successful analyse must not re-arm it either.
-    if (window.OrtbtoolsSourceNav) {
-      try {
-        window.OrtbtoolsSourceNav.resetNavigation();
-      } catch (_e) {
-        /* navigator is optional */
-      }
-    }
+    resetAnalysisArtifacts();
   }
 
   window.runAnalysis = async function (fromHist) {
     const myReqId = ++_analyzeReqSeq;
+    // Snapshot the untouched panels before this analysis writes over them —
+    // this is the only path that paints results, so here is the last moment
+    // the page still shows what it shipped with. Idempotent after the first
+    // call; Clear relies on it having happened.
+    capturePristinePanels();
     clearMacros();
     // Stage-1: drop any prior finding→source jump at the START of every analyze.
     // A failed/aborted analyze must not leave a stale highlight pointing at the

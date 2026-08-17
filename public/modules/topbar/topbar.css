@@ -188,33 +188,11 @@
   }
 }
 
-/* ── Phone search (≤600px): the inline input gets crushed to a ~30px sliver
-   in the crowded topbar row (hamburger + mini-brand + lang/theme/auth leave
-   flex:1 almost nothing). Swap it for a 🔎 toggle that expands the input to a
-   full-width overlay; focusing it opens the existing search dropdown. The
-   .kt-topbar is position:sticky → it's the containing block for the overlay.
-   Matches the dropdown's own 600px breakpoint in search.css. */
-@media (max-width: 600px) {
-  .kt-topbar__search-btn {
-    display: inline-flex;
-  }
-  .kt-topbar__search {
-    display: none;
-  }
-  .kt-topbar.is-search-open .kt-topbar__search {
-    display: block;
-    position: absolute;
-    left: 8px;
-    right: 8px;
-    top: 7px;
-    z-index: 60;
-    max-width: none;
-  }
-  .kt-topbar.is-search-open .kt-topbar__search-input {
-    width: 100%;
-    box-shadow: var(--shadow-md, 0 6px 18px rgba(24, 24, 27, 0.14));
-  }
-}
+/* The ≤600px phone block used to live here. It now sits at the very END of
+   this file — see "Phone search" there. It had to move: the mockup-fidelity
+   section below re-declares .kt-topbar__search and .kt-topbar__search-btn
+   outside any media query, at equal specificity, so whichever comes last
+   wins and the phone rules lost silently. */
 
 /* ── Reposition legacy floating chrome into the topbar slots ──── */
 /* The theme toggle is injected by design-system.css as a fixed button.
@@ -267,8 +245,13 @@
    left: it is a way in, not the page's headline. */
 .kt-topbar__search {
   position: relative;
-  flex: 0 0 auto;
-  width: 300px;
+  /* Shrinkable, not rigid. At a fixed 300px the search refused to give up a
+     pixel, so between ~600 and ~1024px it shoved the cluster to its right
+     (the language menu) past the viewport edge — measured at 390px: the menu
+     sat at x=496 on a 390px screen, entirely off it. The 300px is now a
+     preferred basis, kept wherever there is room for it. */
+  flex: 0 1 300px;
+  min-width: 0;
   max-width: 300px;
   margin-left: auto;
   display: flex;
@@ -315,4 +298,41 @@
 }
 .kt-topbar__search-btn {
   display: none;
+}
+
+/* ── Phone search (≤600px) ─────────────────────────────────────────────
+   The inline input gets crushed in the crowded topbar row (hamburger +
+   mini-brand + language leave it almost nothing). Swap it for a 🔎 toggle
+   that expands the input to a full-width overlay; focusing it opens the
+   existing search dropdown. .kt-topbar is position:sticky → it is the
+   containing block for that overlay. Matches the dropdown's own 600px
+   breakpoint in search.css.
+
+   THIS BLOCK MUST STAY LAST IN THE FILE. It overrides .kt-topbar__search
+   and .kt-topbar__search-btn, both of which are re-declared unconditionally
+   in the mockup-fidelity section above at the same specificity. It spent a
+   release sitting higher up, where it lost the cascade and did nothing:
+   phones kept the 300px desktop input, which pushed the language menu off
+   the screen entirely. Anything added after this must not touch those two
+   selectors outside a media query. */
+@media (max-width: 600px) {
+  .kt-topbar__search-btn {
+    display: inline-flex;
+  }
+  .kt-topbar__search {
+    display: none;
+  }
+  .kt-topbar.is-search-open .kt-topbar__search {
+    display: block;
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: 7px;
+    z-index: 60;
+    max-width: none;
+  }
+  .kt-topbar.is-search-open .kt-topbar__search-input {
+    width: 100%;
+    box-shadow: var(--shadow-md, 0 6px 18px rgba(24, 24, 27, 0.14));
+  }
 }

@@ -334,14 +334,21 @@ test('static: a failed analysis clears the results panel instead of leaving the 
     /console\.error\('Analysis error:', e\);[\s\S]{0,600}?if \(!ctx\.signal\.aborted\) clearResultsForError\(e\.message\)/,
     'the analyze catch must clear the panels, not just raise a toast',
   );
-  // The pieces that made a stale render read as the current one. Scoped to the
-  // function body so the assertion is about the reset, not about the file.
-  const start = APP.indexOf('function clearResultsForError(');
-  assert.ok(start > 0);
-  const body = APP.slice(start, APP.indexOf('\n  }\n', start));
-  for (const painted of ['tValidation', 'tCross', 'slotGrid', 'stEntity', '__ortbtoolsLast']) {
-    assert.ok(body.includes(painted), `clearResultsForError must reset ${painted}`);
-  }
+  // WHICH panels the reset covers is no longer asserted here.
+  //
+  // This test used to slice clearResultsForError's source and require the
+  // strings 'tValidation', 'stEntity', '__ortbtoolsLast' and so on to appear
+  // literally inside it. That passed for the right reason exactly once. When
+  // Clear was wired to the same reset, the shared work moved into
+  // resetAnalysisArtifacts() and this failed — while the panels were still
+  // being reset, by the same call, on the same path. It was reading the
+  // shape of one function and reporting it as a property of the product.
+  //
+  // The property itself is now checked where it is observable rather than
+  // inferable: tests/clear-resets-results-browser.test.js analyses a payload,
+  // then analyses a broken one, and requires the page to keep nothing from
+  // the first. What survives here is the part static analysis can honestly
+  // see — that the catch calls the reset at all.
 });
 
 test('static: response-only analysis does not accuse a request that was never sent', () => {
