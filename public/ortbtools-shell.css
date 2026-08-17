@@ -201,6 +201,27 @@
   display: none !important;
 }
 
+/* ── One theme toggle, one account ──────────────────────────────────────
+   The mockup puts both at the foot of the rail and ends the topbar with
+   the language selector — "Dark" appears exactly once on its whole page.
+   Ours had each control twice: a working toggle in the topbar and a dead
+   one in the rail, a sign-in button in the topbar and an Account row in
+   the rail. Two controls for one job, and in the theme's case only one of
+   them worked, so which one you pressed decided whether anything happened.
+
+   The rail's copies are now the live ones (the toggle carries
+   .kt-theme-toggle, which is what the shell binds; the account row listens
+   to auth:changed). The topbar's are hidden rather than deleted: the
+   topbar module still owns the auth fetch and writes its result into that
+   node, and removing the node would take the fetch's landing place with
+   it. Hidden, it keeps working and stops being a second button. */
+.kt-shell .kt-topbar .kt-theme-toggle,
+.kt-shell .kt-topbar .kt-topbar__signin,
+.kt-shell .kt-topbar .kt-topbar__profile,
+.kt-shell .kt-topbar #authWidget {
+  display: none !important;
+}
+
 /* ── Topbar lang + theme + sign-in styling ─────────────────────────
    Match the existing aesthetic the inspector header used so the
    relocated controls feel native to the new chrome. */

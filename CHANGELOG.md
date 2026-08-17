@@ -6,6 +6,39 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.14.1 — one control per job
+
+The v1.14 rail gained the mockup's bottom block — an account row and a
+theme toggle — while the topbar kept its copies of both. Two theme toggles
+and two account entries on one screen, and of the two theme buttons only
+the topbar's worked: which one you pressed decided whether anything
+happened.
+
+- The rail's theme button was DEAD. It carried `data-action="toggle-theme"`
+  while the shell binds `.kt-theme-toggle`. Giving it that class made it
+  work and simultaneously erased it — the shell's `apply()` writes a glyph
+  into the FIRST `.kt-theme-toggle`'s textContent, which is the rail's icon
+  and label. It is a proxy now: it keeps its own markup and forwards the
+  press to the one control the shell owns, so there is one state and one
+  implementation, and its label reads the result rather than predicting it.
+- The rail's account row now reflects the session (it listens to the same
+  `auth:changed` the topbar used) and the topbar's sign-in and theme
+  controls are hidden. Hidden, not deleted: the topbar module owns the auth
+  fetch and needs somewhere to write the result.
+- `tests/single-chrome-control-browser.test.js` names three jobs the chrome
+  may offer exactly once — switch the theme, reach the account, collapse the
+  rail — and checks all six routes in a real browser. Visibility is the whole
+  question, so a DOM-presence test would have failed on a correct page. The
+  pair that shipped differ in every attribute a text or action comparison
+  looks at ("Dark" + data-action vs "◐" + class); they are the same control
+  only by function, which is what the guard states. Restoring the duplicate
+  fails it with both positions named. It also presses the surviving control
+  and requires `data-theme` to move — a lone dead button passes a count and
+  fails a user.
+- Dead locals left by the chip refactor, five stale agent worktrees, and two
+  typecheck errors in the new test cleaned up.
+- App version `1.14.0 → 1.14.1`; Core `0.35.0`, CLI `0.1.1`.
+
 ### v1.14.0 — the other five pages, and an interface that does not break
 
 Streams, Samples, Dialects, Insights and Docs rebuilt against the design

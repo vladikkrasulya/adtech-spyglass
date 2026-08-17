@@ -749,9 +749,9 @@ export async function mountInspector(root, ctx) {
     // below, and printing them twice is what made this bar read as a wall of
     // uppercase mono. `family` is still derived because the CSS that colours
     // by payload family is keyed off it elsewhere.
-    let family = 'unknown';
-    if (/oRTB/i.test(type)) family = 'ortb';
-    else if (/Feed Response/i.test(type)) family = 'feed';
+    let _family = 'unknown';
+    if (/oRTB/i.test(type)) _family = 'ortb';
+    else if (/Feed Response/i.test(type)) _family = 'feed';
 
     const findings = (validation && validation.findings) || [];
     const errCount = findings.filter((f) => f.level === 'error').length;
@@ -1570,12 +1570,12 @@ export async function mountInspector(root, ctx) {
     //    c) high-confidence (≥0.8) engine detection from __ortbtoolsLast
     //    d) low-confidence engine fallback (prefixed with ≈)
     //    e) '?' if nothing found
-    let version = '?';
+    let _version = '?';
     if (req.openrtb && req.openrtb.ver) {
-      version = 'oRTB 3.0';
+      _version = 'oRTB 3.0';
     } else if (req.ext && req.ext.openrtb_version) {
       // Explicit self-declaration in payload — highest trust for 2.x
-      version = 'oRTB ' + req.ext.openrtb_version;
+      _version = 'oRTB ' + req.ext.openrtb_version;
     } else {
       // Use validation result from last analysis if available
       const lastVer =
@@ -1585,9 +1585,9 @@ export async function mountInspector(root, ctx) {
       if (lastVer && lastVer.version && lastVer.version !== 'unknown') {
         const cf = lastVer.confidence || 0;
         const cfTag = cf >= 0.8 ? '' : ' (≈)';
-        version = 'oRTB ' + lastVer.version + cfTag;
+        _version = 'oRTB ' + lastVer.version + cfTag;
       } else if (req.at !== undefined || req.imp) {
-        version = 'oRTB 2.x';
+        _version = 'oRTB 2.x';
       }
     }
 
@@ -1610,7 +1610,7 @@ export async function mountInspector(root, ctx) {
       else if (imp0.native) formatLabel = 'Native';
       else if (imp0.audio) formatLabel = 'Audio';
     }
-    const trafficValue = trafficLabel + (formatLabel ? ' (' + formatLabel + ')' : '');
+    const _trafficValue = trafficLabel + (formatLabel ? ' (' + formatLabel + ')' : '');
 
     // 3. Device + OS
     let deviceLabel = '?';
@@ -1650,7 +1650,7 @@ export async function mountInspector(root, ctx) {
     // Flat text. The mockup's chip values are one run of type — a nested
     // bordered pill inside a chip is a box inside a box saying the same
     // thing twice, and it was the only place on the row with two edges.
-    const privValue = privBadges.length
+    const _privValue = privBadges.length
       ? escapeHtml(privBadges.join(' '))
       : escapeHtml(t('strip.privacy.none'));
 

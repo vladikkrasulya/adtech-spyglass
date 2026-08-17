@@ -377,3 +377,16 @@
 .kt-shell.is-nav-collapsed .kt-nav__bottom .kt-nav__label {
   display: none;
 }
+
+/* The account avatar is empty until someone signs in — an initial only
+   means something when there is a name behind it. */
+.kt-nav__account[data-state='out'] .kt-nav__avatar {
+  background: var(--bg-2);
+  color: var(--text-dim);
+}
+.kt-nav__account[data-state='out'] .kt-nav__avatar::before {
+  content: '';
+}
+.kt-nav__account[data-state='in'] .kt-nav__avatar::before {
+  content: '';
+}

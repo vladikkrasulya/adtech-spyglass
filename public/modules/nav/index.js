@@ -212,14 +212,14 @@ function renderNav() {
       ${groups}
     </nav>
     <div class="kt-nav__bottom">
-      <a class="kt-nav__item kt-nav__account" href="${escapeHtml(prefixLocale('/account'))}">
+      <a class="kt-nav__item kt-nav__account" id="ktNavAccountRow" href="${escapeHtml(prefixLocale('/account'))}" data-internal>
         <span class="kt-nav__avatar" aria-hidden="true"></span>
-        <span class="kt-nav__label" id="ktNavAccount">${escapeHtml(pick({ en: 'Account', uk: 'Кабінет', ru: 'Кабинет' }))}</span>
+        <span class="kt-nav__label" id="ktNavAccount">${escapeHtml(pick({ en: 'Sign in', uk: 'Увійти', ru: 'Войти' }))}</span>
         <svg class="kt-nav__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
       </a>
-      <button type="button" class="kt-nav__item kt-nav__theme" data-action="toggle-theme">
+      <button type="button" class="kt-nav__item kt-nav__theme" data-action="toggle-theme" aria-label="${escapeHtml(pick({ en: 'Toggle theme', uk: 'Перемкнути тему', ru: 'Переключить тему' }))}">
         <span class="kt-nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/></svg></span>
-        <span class="kt-nav__label">${escapeHtml(pick({ en: 'Dark', uk: 'Темна', ru: 'Тёмная' }))}</span>
+        <span class="kt-nav__label" data-theme-label>${escapeHtml(pick({ en: 'Dark', uk: 'Темна', ru: 'Тёмная' }))}</span>
       </button>
     </div>
   `;
@@ -330,6 +330,86 @@ export function mountNav(root) {
   }
   bindCollapse();
 
+  // ── Theme row ───────────────────────────────────────────────────────────
+  // A PROXY, not a second toggle. The theme's state (auto → light → dark)
+  // lives in a closure in the shell's <head> IIFE, reachable only through
+  // the button it binds — and that IIFE's apply() overwrites the FIRST
+  // .kt-theme-toggle's textContent with a glyph. Giving the rail button
+  // that class made it work and simultaneously erased its icon and label.
+  //
+  // So the rail keeps its own markup and forwards the press to the single
+  // control the shell owns. One state, one implementation, and the label
+  // reads the result rather than predicting it.
+  function paintThemeLabel(root) {
+    const label = root.querySelector('[data-theme-label]');
+    if (!label) return;
+    const eff = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    label.textContent = pick(
+      eff === 'dark'
+        ? { en: 'Dark', uk: 'Темна', ru: 'Тёмная' }
+        : { en: 'Light', uk: 'Світла', ru: 'Светлая' },
+    );
+  }
+
+  const onThemeClick = (e) => {
+    const btn = e.target.closest('[data-action="toggle-theme"]');
+    if (!btn || !root.contains(btn)) return;
+    e.preventDefault();
+    const real = document.querySelector('.kt-theme-toggle');
+    if (real) real.click();
+    paintThemeLabel(root);
+  };
+  root.addEventListener('click', onThemeClick);
+  // The shell may flip the attribute for reasons of its own (system change,
+  // another surface), so follow the attribute rather than only our own click.
+  const themeObserver = new MutationObserver(() => paintThemeLabel(root));
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+  paintThemeLabel(root);
+
+  // ── Account row ─────────────────────────────────────────────────────────
+  // The rail's bottom block is the only place the product's account lives
+  // now — the topbar's sign-in button was the same control in a second
+  // place, which is what "duplicate buttons" meant. It listens to the same
+  // auth:changed the topbar used, so the two can never disagree about who
+  // is signed in; there is simply only one of them left.
+  function paintAccount(root, user) {
+    const row = root.querySelector('#ktNavAccountRow');
+    const label = root.querySelector('#ktNavAccount');
+    const avatar = row && row.querySelector('.kt-nav__avatar');
+    if (!row || !label) return;
+    if (user && user.email) {
+      const prefix = String(user.email).split('@')[0];
+      label.textContent = prefix;
+      row.title = user.email;
+      row.setAttribute('aria-label', user.email);
+      if (avatar) avatar.textContent = prefix.slice(0, 1).toUpperCase();
+      row.dataset.state = 'in';
+    } else {
+      label.textContent = pick({ en: 'Sign in', uk: 'Увійти', ru: 'Войти' });
+      row.removeAttribute('title');
+      row.setAttribute('aria-label', label.textContent);
+      if (avatar) avatar.textContent = '';
+      row.dataset.state = 'out';
+    }
+  }
+
+  let lastUser = null;
+  const onAuth = (ev) => {
+    lastUser = (ev && ev.detail && ev.detail.user) || null;
+    paintAccount(root, lastUser);
+  };
+  window.addEventListener('auth:changed', onAuth);
+  // The session may have resolved before this mounted.
+  try {
+    const s = window.ktSession || window.OrtbtoolsSession;
+    paintAccount(root, s && typeof s.getUser === 'function' ? s.getUser() : null);
+  } catch (_e) {
+    paintAccount(root, null);
+  }
+
   // Sync active state on every URL change (initial pushState + popstate).
   const onLocationChange = () => {
     refreshLocalisedHrefs(root);
@@ -341,12 +421,17 @@ export function mountNav(root) {
   const onLang = () => {
     root.innerHTML = renderNav();
     highlight(root);
+    paintAccount(root, lastUser);
+    paintThemeLabel(root);
     // Re-bind: renderNav() just replaced the collapse tab node.
     bindCollapse();
   };
   window.addEventListener('kt:lang-change', onLang);
 
   return function unmountNav() {
+    themeObserver.disconnect();
+    root.removeEventListener('click', onThemeClick);
+    window.removeEventListener('auth:changed', onAuth);
     if (boundCollapseBtn) boundCollapseBtn.removeEventListener('click', onCollapse);
     window.removeEventListener('popstate', onLocationChange);
     window.removeEventListener('kt:pushstate', onLocationChange);
