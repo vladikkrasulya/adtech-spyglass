@@ -51,6 +51,19 @@ export function openCorpusSaveModal() {
     return;
   }
 
+  // The modal's own click dispatcher.
+  //
+  // ROADMAP #18 moved modal chrome up to the shell, and <div id="modalRoot">
+  // is a SIBLING of <main id="app-root">, not a descendant. The delegated
+  // listener in ortbtools.app.js is bound to #app-root, so no click inside any
+  // modal reaches it. 'confirm-corpus-save' was written expecting that
+  // listener and therefore never fired once: the button rendered, the user
+  // pressed it, and nothing happened.
+  //
+  // Same shape as the fix in modules/save-sample and the local listener the
+  // history-merge modal already used.
+  bindCorpusModal();
+
   $('modalRoot').innerHTML =
     '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
     '<div class="modal-card">' +
@@ -119,3 +132,24 @@ export async function confirmCorpusSave() {
 // Subsequent calls: cached by the module loader, the assignments are no-ops.
 window.openCorpusSaveModal = openCorpusSaveModal;
 window.confirmCorpusSave = confirmCorpusSave;
+
+/**
+ * Bind the corpus modal's primary button to a #modalRoot-scoped listener.
+ *
+ * Guarded by a dataset flag rather than removeEventListener: modalRoot itself
+ * survives across modals (only its innerHTML is swapped), so binding on every
+ * open would stack handlers and fire confirmCorpusSave() once per previous
+ * open. One listener for the life of the page, matching on the action, is
+ * both simpler and immune to that.
+ */
+function bindCorpusModal() {
+  const root = $('modalRoot');
+  if (!root || root.dataset.corpusBound === '1') return;
+  root.dataset.corpusBound = '1';
+  root.addEventListener('click', (ev) => {
+    const el = ev.target.closest && ev.target.closest('[data-action]');
+    if (!el || el.dataset.action !== 'confirm-corpus-save') return;
+    ev.preventDefault();
+    if (typeof window.confirmCorpusSave === 'function') window.confirmCorpusSave();
+  });
+}

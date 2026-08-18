@@ -27,9 +27,14 @@
 
    Consumes (via /core/utils.js ES imports + globals):
      - $, escapeHtml, t           — DOM + i18n helpers
-     - window.closeModal          — modal lifecycle (we patch it
-                                    so any close path tears down
-                                    the EventSource)
+     - window.closeModal          — modal lifecycle. We still wrap it,
+                                    but the EventSource teardown hangs
+                                    off a MutationObserver on #modalRoot
+                                    instead: modal-host.js closes via its
+                                    own module-local binding, so wrapping
+                                    the global alone missed Escape and
+                                    backdrop and leaked the stream. See
+                                    the teardown block below.
 
    Note: toast() lives in the dispatcher's 'live-load' case (in
    ortbtools.app.js, which already imports it). The modal body
@@ -168,27 +173,77 @@ export function openLiveModal() {
     }
   });
 
-  // Close hook — cleanup. Patched onto closeModal so any close path
-  // (Esc, backdrop, button, follow-up modal) tears down the stream.
+  // ── Close hook — tear the stream down on EVERY close path ────────────
+  //
+  // This used to be a patch on window.closeModal alone, with a comment
+  // promising it caught "any close path (Esc, backdrop, button, follow-up
+  // modal)". It caught none of the interesting ones. /core/modal-host.js
+  // closes modals through its own MODULE-LOCAL `closeModal` binding:
+  // bindEscape() calls `closeModal()`, and the 'modal-backdrop-close' /
+  // 'modal-close' dispatcher cases call `closeModal()`. `window.closeModal =
+  // closeModal` at install time is a separate reference for outside callers,
+  // so reassigning the global never intercepted the host's own close.
+  //
+  // The result was an EventSource that outlived its modal. Escape or a click
+  // on the backdrop emptied #modalRoot and left the socket connected for the
+  // lifetime of the tab: the server kept a per-connection SSE slot open, a
+  // few open/close cycles walked into the stream endpoint's connection cap,
+  // and every abandoned stream went on firing 'message' — writing rows into
+  // whichever live modal was on screen next, because $('mLiveList') resolves
+  // by id against whatever DOM exists now, not the DOM this closure was born
+  // in.
+  //
+  // So watch the DOM instead of trying to enumerate the exits. #modalRoot is
+  // permanent chrome and every close path ends the same way — its contents
+  // are cleared or replaced — which makes "is our card still in the document"
+  // one question that answers all of them at once, including a follow-up
+  // modal that replaces ours without closing anything.
+  const modalRoot = $('modalRoot');
+  const liveCard = modalRoot ? modalRoot.querySelector('.kt-live-card') : null;
   const origClose = window.closeModal;
+  let observer = null;
   let teardown = false;
   function tearDownLive() {
     if (teardown) return;
     teardown = true;
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
     try {
       es.close();
     } catch {
       /* idempotent */
     }
     specimens.clear();
-    window.closeModal = origClose;
+    // Only hand the global back if it is still ours. Restoring
+    // unconditionally would clobber a later patcher's version.
+    if (window.closeModal === patchedClose) window.closeModal = origClose;
     window.__ortbtoolsLivePauseToggle = null;
     window.__ortbtoolsLiveSpecimens = null;
   }
-  window.closeModal = function () {
+
+  // window.MutationObserver rather than the bare global, for the same reason
+  // modal-host.js reaches for it that way: the jsdom harness the regression
+  // tests run in aliases browser APIs onto its fake window, not onto
+  // globalThis.
+  const MO = window.MutationObserver;
+  if (MO && liveCard) {
+    observer = new MO(() => {
+      if (!liveCard.isConnected) tearDownLive();
+    });
+    observer.observe(modalRoot, { childList: true, subtree: true });
+  }
+
+  // Kept as the belt to the observer's braces: it is the only teardown left
+  // in an environment without MutationObserver, and it makes the close paths
+  // that DO go through the global synchronous rather than microtask-deferred.
+  // tearDownLive() is idempotent, so both firing is a no-op.
+  function patchedClose() {
     tearDownLive();
     return origClose.apply(this, arguments);
-  };
+  }
+  window.closeModal = patchedClose;
 
   // Pause/resume toggle exposed for the dispatcher.
   window.__ortbtoolsLivePauseToggle = () => {

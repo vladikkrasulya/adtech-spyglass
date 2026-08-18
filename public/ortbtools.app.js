@@ -2085,6 +2085,30 @@ export async function mountInspector(root, ctx) {
         ? '<span class="finding-side">' + escapeHtml(t('finding.side.' + side)) + '</span>'
         : '';
 
+      // ── Which pane does this finding actually talk about? ────────────────
+      // `location.primary.side` is the authoritative answer and the only one
+      // allowed to be believed: finding-location.js derives it from the
+      // validate() call context and its header carries a HARD RULE against
+      // ever re-deriving it from an id or a path. The "[response] " prefix
+      // parsed above is the older, weaker signal — a display hack that only
+      // ever tagged the response half — so it stays as the fallback for
+      // findings that arrive without the location contract at all. That is a
+      // real population, not a theoretical one: the temp-dialect runtime
+      // (OrtbtoolsIntel.applyToFindings) pushes its own findings onto
+      // validation.findings in the browser, after the server attached
+      // locations to everything it produced.
+      //
+      // Carried on the <details> because the detail body is rendered lazily
+      // from `d.dataset` on first open, long after this closure is gone.
+      // Until it was, that body guessed the side with a regex over the
+      // finding id — precisely what the contract forbids — and got
+      // err-bid-currency-invalid wrong in the most confusing way available:
+      // its id has no `response.` prefix and its path is a bare `cur`, so the
+      // guess said "request", the panel printed the REQUEST's ["USD"], and
+      // the badge two lines above it said "response".
+      const locSide = f.location && f.location.primary ? f.location.primary.side : null;
+      const authoritativeSide = locSide === 'request' || locSide === 'response' ? locSide : side;
+
       // The `· line N` suffix is a placeholder here and filled by a post-pass
       // over the rendered list. The line can only be known by resolving the
       // pointer against the editor's current text, which source-nav already
@@ -2192,6 +2216,8 @@ export async function mountInspector(root, ctx) {
         escapeHtml(f.path || '') +
         '" data-finding-level="' +
         escapeHtml(lvl || '') +
+        '" data-finding-side="' +
+        escapeHtml(authoritativeSide || '') +
         '" data-finding-spec="' +
         escapeHtml(f.specRef || '') +
         '">' +
@@ -4456,6 +4482,45 @@ export async function mountInspector(root, ctx) {
   // Triggered by closeRecoveryKeyModal when historyStore has entries.
   // Encrypt + POST each local entry into the user's library serially —
   // sequential keeps the event loop responsive and gives honest progress.
+  // Local #modalRoot listener for this modal's two verbs.
+  //
+  // It has to be local: mountInspector's delegated dispatcher is bound to
+  // #app-root, and #modalRoot is a SIBLING of #app-root in the shell chrome
+  // (index.*.html closes </main> before declaring it), so a click inside any
+  // modal never bubbles anywhere near that dispatcher. Anything drawn into
+  // #modalRoot is handled either by /core/modal-host.js's own dispatcher or
+  // by a listener like this one; nothing else can see it.
+  //
+  // Bound ONCE per mount, and neither guard is decoration. The comment that
+  // used to sit here claimed "the modal teardown clears innerHTML so the
+  // listener detaches automatically with the orphaned DOM nodes" — which is
+  // false, and the kind of false that leaves no trace: the listener is on the
+  // #modalRoot NODE, and #modalRoot is permanent chrome that closeModal()
+  // empties but never replaces. So:
+  //   - the flag stops a re-open stacking a second live copy on the same
+  //     permanent node, which would run runHistoryMerge() twice off one
+  //     click — and the merge has no server-side idempotency key, so that is
+  //     duplicate samples in the user's library, not a wasted round trip;
+  //   - {signal: ctx.signal} stops an unmount leaving this mount's copy
+  //     attached to chrome that outlives it, still closing over this mount's
+  //     historyStore. Same reasoning as every other listener in here.
+  let _mergeActionsBound = false;
+  function bindHistoryMergeActions() {
+    if (_mergeActionsBound) return;
+    _mergeActionsBound = true;
+    $('modalRoot').addEventListener(
+      'click',
+      (ev) => {
+        const target = ev.target.closest('[data-action]');
+        if (!target) return;
+        const action = target.dataset.action;
+        if (action === 'merge-skip') return window.closeModal();
+        if (action === 'merge-import') return runHistoryMerge();
+      },
+      { signal: ctx.signal },
+    );
+  }
+
   function openHistoryMergeModal() {
     const count = historyStore.length;
     if (!count) return;
@@ -4477,15 +4542,7 @@ export async function mountInspector(root, ctx) {
       t('merge.btn.import', { count }) +
       '</button>' +
       '</div></div></div>';
-    // Local listener — the modal teardown clears innerHTML so the
-    // listener detaches automatically with the orphaned DOM nodes.
-    $('modalRoot').addEventListener('click', (ev) => {
-      const target = ev.target.closest('[data-action]');
-      if (!target) return;
-      const action = target.dataset.action;
-      if (action === 'merge-skip') return window.closeModal();
-      if (action === 'merge-import') return runHistoryMerge();
-    });
+    bindHistoryMergeActions();
   }
 
   async function runHistoryMerge() {
@@ -4636,12 +4693,39 @@ export async function mountInspector(root, ctx) {
   }
   window.getJsonAtPath = getJsonAtPath;
 
-  // Resolve a finding's path to its actual value in the user's pasted
-  // JSON. Tries bidReq first (most paths live there), falls back to
-  // bidRes for response-side findings (`response.*`, `seatbid*`).
-  function resolveFindingValue(path, findingId) {
+  // Resolve a finding's path to its actual value in the user's pasted JSON.
+  //
+  // `side` is the finding's OWN declared pane — data-finding-side, which comes
+  // from location.primary.side, which comes from the validate() call context.
+  // When we have it, it is the only thing consulted, and there is deliberately
+  // no cross-pane fallback: a response-side finding is answered out of the
+  // response, and if the path is not in the response the honest answer is
+  // "field missing" — which is what the panel's value_missing copy already
+  // says, and usually why the finding exists.
+  //
+  // The old code had no side to consult and guessed one from the finding id
+  // and path (`response.*`, `crosscheck.bid*`, `seatbid*`), then searched the
+  // other pane when the guess came up empty. Both halves were wrong in the
+  // same direction. Request and response share key names by design — `cur`,
+  // `id`, `bidfloor`, `at` — so the fallback did not merely fail to find the
+  // value, it reliably found a DIFFERENT one and printed it as fact:
+  // err-bid-currency-invalid (path `cur`, side response) showed the request's
+  // ["USD"] while complaining about the response's "usd", under a badge that
+  // correctly read "response". A panel disagreeing with itself is worse than a
+  // panel admitting it does not know.
+  //
+  // The heuristic survives below for findings that carry no location contract
+  // — browser-side temp-dialect findings, injected after the server attached
+  // locations to everything else. It is an explicit guess, so it keeps its
+  // cross-pane fallback: with no declared side, a value found somewhere is
+  // still better than nothing.
+  function resolveFindingValue(path, findingId, side) {
     const last = window.__ortbtoolsLast;
     if (!last) return { found: false };
+    if (side === 'request' || side === 'response') {
+      const v = getJsonAtPath(side === 'response' ? last.res : last.req, path);
+      return v === undefined ? { found: false } : { found: true, value: v };
+    }
     const isResponseSide =
       (findingId && /^response\b|^crosscheck\.bid\b/.test(findingId)) || /^seatbid\b/.test(path);
     const primary = isResponseSide ? last.res : last.req;
@@ -4649,6 +4733,54 @@ export async function mountInspector(root, ctx) {
     let v = getJsonAtPath(primary, path);
     if (v === undefined) v = getJsonAtPath(secondary, path);
     return v === undefined ? { found: false } : { found: true, value: v };
+  }
+
+  // ── `question` severity copy ─────────────────────────────────────────
+  // `question` has been a first-class engine level since v8 (packages/core
+  // findings.js LEVELS, its own group in renderSeverityTabs, its own rank in
+  // SEV_RANK) and on a real payload it is the most frequent level on screen —
+  // dialects.question.unknown_ext_signal fires once per ext key the active
+  // dialect does not know. public/i18n.js, though, only ever grew
+  // finding.severity copy for error/warning/info, so severityCopy() fell
+  // through to `{ label: level, text: '' }` and the detail panel's severity
+  // row rendered as "question · " — the bare English level name, a separator,
+  // and nothing. On the one level whose entire meaning is "this blocks
+  // nothing, I am asking you something", saying nothing is the worst
+  // available answer.
+  //
+  // The text has to be true, so it states the two facts an operator acts on:
+  // rollupStatus() filters LEVELS.QUESTION out before deciding the verdict
+  // (findings.js — a payload of nothing but questions rolls up `clean`), and
+  // the way to make one stop asking is to map the signal, which is what the
+  // card's own "Розмітити" button does.
+  //
+  // Registered through the per-module i18n channel every /modules/*/i18n.js
+  // already uses, rather than by editing public/i18n.js, and only when the
+  // central catalogue does not already answer: window.t returns '[key]' for a
+  // key it cannot resolve, which is the cheapest honest probe available. If
+  // the keys later land in public/i18n.js this block stands down instead of
+  // shadowing them. The label stays the raw English level name because its
+  // three siblings do — 'error'/'warning'/'info' are untranslated in all
+  // three locale blocks, and a lone localised 'питання' beside them would
+  // read as a different kind of thing.
+  const QUESTION_SEVERITY_I18N = {
+    id: 'inspector-severity-question',
+    keys: {
+      'finding.severity.question.label': { uk: 'question', en: 'question', ru: 'question' },
+      'finding.severity.question.text': {
+        uk: 'Не блокує — цей рівень не впливає на статус аналізу. Движок не впізнав сигнал і питає тебе: розмітиш його — і наступні payload читатимуться вже з ним.',
+        en: 'Not blocking — this level never changes the verdict. The engine did not recognise the signal and is asking you to name it; map it once and later payloads are read with it.',
+        ru: 'Не блокирует — этот уровень не влияет на статус анализа. Движок не распознал сигнал и спрашивает тебя: разметишь его — и следующие payload будут читаться уже с ним.',
+      },
+    },
+  };
+  let _questionCopyChecked = false;
+  function ensureQuestionSeverityCopy() {
+    if (_questionCopyChecked) return;
+    _questionCopyChecked = true;
+    if (typeof window.registerI18nModule !== 'function') return;
+    if (t('finding.severity.question.label') !== '[finding.severity.question.label]') return;
+    window.registerI18nModule(QUESTION_SEVERITY_I18N);
   }
 
   function severityCopy(level) {
@@ -4661,6 +4793,13 @@ export async function mountInspector(root, ctx) {
       };
     if (level === 'info')
       return { label: t('finding.severity.info.label'), text: t('finding.severity.info.text') };
+    if (level === 'question') {
+      ensureQuestionSeverityCopy();
+      return {
+        label: t('finding.severity.question.label'),
+        text: t('finding.severity.question.text'),
+      };
+    }
     return { label: level || '?', text: '' };
   }
 
@@ -4669,11 +4808,16 @@ export async function mountInspector(root, ctx) {
     const id = ds.findingId || '';
     const level = ds.findingLevel || '';
     const spec = ds.findingSpec || '';
+    // Written by buildFindingHtml from location.primary.side — the pane the
+    // server says this finding is about. Empty only for findings that reached
+    // the panel without a location contract; resolveFindingValue falls back to
+    // its old heuristic for exactly those.
+    const side = ds.findingSide || '';
 
     const sev = severityCopy(level);
     let valueBlock;
     if (path) {
-      const r = resolveFindingValue(path, id);
+      const r = resolveFindingValue(path, id, side);
       if (r.found) {
         const v = r.value;
         const formatted = typeof v === 'object' ? JSON.stringify(v, null, 2) : JSON.stringify(v);
@@ -4715,8 +4859,12 @@ export async function mountInspector(root, ctx) {
       '<div class="finding-detail-severity">' +
       '<strong>' +
       escapeHtml(sev.label) +
-      '</strong> · ' +
-      escapeHtml(sev.text) +
+      '</strong>' +
+      // The separator belongs to the text, not to the label. A level with no
+      // copy used to render "<strong>question</strong> · " and the trailing
+      // middot advertised a sentence that never arrived. Any future level
+      // that reaches the fallback branch now reads as a bare name instead.
+      (sev.text ? ' · ' + escapeHtml(sev.text) : '') +
       '</div></div>';
 
     const specBlock = spec

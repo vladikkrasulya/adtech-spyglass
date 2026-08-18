@@ -113,10 +113,15 @@
     // Ctrl/Cmd+S → save to library. Override browser "save page" default.
     // openSaveModal() already auth-gates and validates non-empty panes.
     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      // preventDefault ONLY when we are actually going to do something.
+      // It used to run first, unconditionally: on a fresh load the save
+      // module has not been imported yet, so window.openSaveModal is absent
+      // — the browser's own "save page" was suppressed and nothing replaced
+      // it. Pressing the shortcut looked like the app had frozen, and the
+      // one thing the key is for was taken away without being offered.
+      if (typeof window.openSaveModal !== 'function') return;
       e.preventDefault();
-      if (typeof window.openSaveModal === 'function') {
-        window.openSaveModal();
-      }
+      window.openSaveModal();
     }
     // Bare `m` → open mirror modal. Skipped while typing (so users can
     // type "m" inside the JSON textarea without hijack) and while a

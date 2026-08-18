@@ -155,6 +155,7 @@ export function openSaveModal() {
     '</div>' +
     '</div>' +
     '</div>';
+  bindHintActions();
   setTimeout(() => {
     $('mTitle').focus();
     S.wireEnterSubmit('mTitle', () => window.confirmSave());
@@ -164,6 +165,56 @@ export function openSaveModal() {
     // the UX when it lands. Skip on update flow where partner is set.
     if (!presetPartner) suggestPartnerForSave();
   }, 0);
+}
+
+// ── Partner-hint actions: a local #modalRoot listener ────────────────────
+// The two buttons the suggestion banner draws — "use the partner we matched"
+// and "create it" — were DEAD from the day the banner shipped, and dead in a
+// way nothing could report: they carry data-action, they look exactly like
+// every other button in the app, and the click simply reached no handler.
+//
+// The reason is structural. mountInspector's delegated dispatcher (the one
+// that owns the ~90 data-action verbs of the workbench) is bound to #app-root,
+// and since ROADMAP #18 moved modal chrome up to the shell, #modalRoot is a
+// SIBLING of #app-root — index.*.html closes </main> and only then declares
+// <div id="modalRoot">. So no click inside any modal bubbles to that
+// dispatcher, ever. Modal verbs are handled by /core/modal-host.js's own
+// #modalRoot-scoped dispatcher (which is why 'confirm-save' and 'modal-close'
+// on this same card work fine), and these two are not in its case list —
+// deliberately, since they are this module's private business and the host
+// deliberately only relocates the verbs it must.
+//
+// Hence a local listener, the same shape openBuilder() in
+// /modules/inspector/dialect-label.js uses for its own modal: delegated off
+// #modalRoot, matching only our two verbs, ignoring everything else that
+// bubbles through it.
+//
+// Bound once. #modalRoot is PERMANENT chrome — closeModal() clears its
+// innerHTML but never replaces the node — so a listener attached to it is not
+// torn down when the modal closes, and re-binding on every openSaveModal()
+// would give the fifth save modal five live copies of this handler and five
+// POSTs to /api/partners from one click on "create". The module itself is a
+// singleton (the ES module loader caches it after the first lazy import), so
+// module scope is exactly the right lifetime for the flag.
+let _hintActionsBound = false;
+function bindHintActions() {
+  if (_hintActionsBound) return;
+  const root = $('modalRoot');
+  if (!root) return;
+  _hintActionsBound = true;
+  root.addEventListener('click', (ev) => {
+    const el = ev.target.closest && ev.target.closest('[data-action]');
+    if (!el || !root.contains(el)) return;
+    const action = el.dataset.action;
+    if (action === 'hint-pick-partner') {
+      pickPartner(el.dataset.id);
+      return;
+    }
+    if (action === 'hint-create-partner') {
+      createPartnerFromHint(el.dataset.name || '');
+      return;
+    }
+  });
 }
 
 // Phase C-1: ask the deterministic server-side rules engine to identify

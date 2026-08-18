@@ -145,6 +145,166 @@
   // <100 elements; even adversarial cases top out around 1000.
   const AGGREGATE_SCAN_CAP = 5000;
 
+  // ── Painted-content test (audit 2026-08-18) ──────────────────────────
+  //
+  // The counterweight to the invisibility test in hook 7. Until this fix,
+  // "invisible" meant nothing more than "computed background-color is
+  // transparent and there is no background-image" — a description that
+  // fits the most common creative on earth. A plain <a href><img></a>
+  // banner has no background of its own; an <img> paints its *content*,
+  // so getComputedStyle returns rgba(0, 0, 0, 0) / none for it. The image
+  // fills ~94% of an iframe that is sized to the bid's own w/h, so every
+  // click on an ordinary banner was emitted as invisible_overlay_click and
+  // promoted to behavior.trap.invisible_overlay at ERROR — under a rule
+  // whose own comment reads "there is no legitimate creative that ships an
+  // invisible full-screen click target". The same blind spot fed the
+  // aggregate rule, where the <a> and the <img> both counted, for ~200%
+  // coverage across 2 contributors.
+  //
+  // So transparency alone no longer means invisible: the element must also
+  // *show nothing*. It must not be a replaced element that draws its own
+  // pixels, must have no visible border, no text of its own, and no
+  // descendant large enough to be what the click was aimed at. This keeps
+  // every true positive, because a click trap is by construction an empty
+  // transparent box — it has to be, or the user would see it and not click
+  // through it. (opacity < 0.05 is left as an unconditional verdict: an
+  // element at zero opacity paints nothing no matter what it contains.)
+  const PAINTING_TAGS = new Set([
+    'IMG',
+    'PICTURE',
+    'VIDEO',
+    'AUDIO',
+    'CANVAS',
+    'SVG',
+    'OBJECT',
+    'EMBED',
+    'INPUT',
+    'BUTTON',
+    'SELECT',
+    'TEXTAREA',
+  ]);
+  // How much of the candidate's own visible area a descendant must cover
+  // before we accept "the click was aimed at that, not at an overlay".
+  // Low enough for a logo inside a wrapper, high enough that the obvious
+  // evasion — hiding a 1×1 tracking gif inside the trap div — buys the
+  // attacker nothing.
+  const CONTENT_COVER_MIN = 0.25;
+  // Descendant sweep budget per candidate. Bounded because this runs for
+  // every candidate of the aggregate scan, which is itself capped at
+  // AGGREGATE_SCAN_CAP: without a budget the pair is quadratic on a
+  // deliberately deep DOM.
+  const CONTENT_PROBE_NODES = 64;
+  // Anything at or below this alpha is treated as painting nothing.
+  const ALPHA_EPSILON = 0.05;
+
+  // Alpha channel of a computed CSS color. '' and 'transparent' are what
+  // browsers report for "no color set"; everything else arrives as
+  // rgb()/rgba() from getComputedStyle, never as a keyword or hex.
+  function colorAlpha(css) {
+    const s = String(css || '');
+    if (s === '' || s === 'transparent') return 0;
+    const m = s.match(/^rgba?\(([^)]+)\)$/);
+    if (m) {
+      const parts = m[1].split(',');
+      if (parts.length === 4) {
+        const a = parseFloat(parts[3]);
+        return isNaN(a) ? 1 : a;
+      }
+    }
+    return 1;
+  }
+
+  // A border or shadow the user can actually see. Checked per side, and
+  // through the border *colour* — `border: 1px solid transparent` is a
+  // free evasion otherwise.
+  function hasVisibleEdge(style) {
+    try {
+      if (style.boxShadow && style.boxShadow !== 'none') return true;
+      if (
+        style.outlineStyle &&
+        style.outlineStyle !== 'none' &&
+        parseFloat(style.outlineWidth) > 0 &&
+        colorAlpha(style.outlineColor) >= ALPHA_EPSILON
+      ) {
+        return true;
+      }
+      const sides = ['Top', 'Right', 'Bottom', 'Left'];
+      for (let i = 0; i < sides.length; i++) {
+        const s = sides[i];
+        if (
+          style['border' + s + 'Style'] &&
+          style['border' + s + 'Style'] !== 'none' &&
+          parseFloat(style['border' + s + 'Width']) > 0 &&
+          colorAlpha(style['border' + s + 'Color']) >= ALPHA_EPSILON
+        ) {
+          return true;
+        }
+      }
+    } catch (_e) {
+      /* exotic style object — treat as no edge */
+    }
+    return false;
+  }
+
+  // Text nodes that belong to THIS element (not to its children), with a
+  // colour that renders. `color: transparent` text is a spacer, not paint.
+  function hasOwnVisibleText(el, style) {
+    try {
+      if (colorAlpha(style.color) < ALPHA_EPSILON) return false;
+      for (let n = el.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType === 3 && n.nodeValue && n.nodeValue.trim() !== '') return true;
+      }
+    } catch (_e) {
+      /* detached / exotic node — treat as no text */
+    }
+    return false;
+  }
+
+  // Does this element draw anything by itself? (Its own pixels, its own
+  // border, its own text, its own background.)
+  function paintsItself(el, style) {
+    if (PAINTING_TAGS.has(el.tagName)) return true;
+    if (colorAlpha(style.backgroundColor) >= ALPHA_EPSILON) return true;
+    if (style.backgroundImage && style.backgroundImage !== 'none') return true;
+    if (hasVisibleEdge(style)) return true;
+    if (hasOwnVisibleText(el, style)) return true;
+    return false;
+  }
+
+  // Is there a descendant that paints, and is big enough relative to this
+  // element that the click plausibly landed on IT? Depth-first with a
+  // node budget; `ownVisArea` is the candidate's viewport-clipped area.
+  function paintsThroughDescendants(el, ownVisArea, vw, vh) {
+    if (!(ownVisArea > 0)) return false;
+    let budget = CONTENT_PROBE_NODES;
+    const pending = [];
+    let node = el.firstElementChild;
+    while (node && budget-- > 0) {
+      try {
+        const st = window.getComputedStyle(node);
+        const opRaw = parseFloat(st.opacity);
+        const op = isNaN(opRaw) ? 1 : opRaw;
+        if (op >= ALPHA_EPSILON && paintsItself(node, st)) {
+          const r = node.getBoundingClientRect();
+          const w = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
+          const h = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+          if (w * h >= ownVisArea * CONTENT_COVER_MIN) return true;
+        }
+      } catch (_e) {
+        /* one unreadable node must not abort the sweep */
+      }
+      if (node.firstElementChild) {
+        if (node.nextElementSibling) pending.push(node.nextElementSibling);
+        node = node.firstElementChild;
+      } else if (node.nextElementSibling) {
+        node = node.nextElementSibling;
+      } else {
+        node = pending.pop() || null;
+      }
+    }
+    return false;
+  }
+
   // Phase 3 (malicious-ads) — gesture timing for auto-redirect classification.
   // Capture-phase listeners on the user-input events below update _lastGestureAt;
   // the navigation hooks (window.open / Location.* / anchor click / form.submit)
@@ -389,13 +549,20 @@
   //
   //    On every captured click we measure the target's bounding rect
   //    against the iframe viewport AND inspect computed opacity +
-  //    background alpha. A click on an element that
+  //    background alpha + whether the element shows anything at all. A
+  //    click on an element that
   //      - covers > 50% of viewport AND
-  //      - has opacity < 0.05 OR transparent background-color (no image)
+  //      - has opacity < 0.05, OR a transparent background (no image)
+  //        while painting nothing itself and holding no descendant big
+  //        enough to have been the click's real destination
   //    has no legitimate creative use case and is reported as
   //    `invisible_overlay_click`. The packages/core/behavior engine
   //    promotes each such event to a behavior.trap.invisible_overlay
   //    finding (severity: error).
+  //
+  //    That last clause is what separates a click trap from a banner —
+  //    see the PAINTING_TAGS / paintsItself block above for the incident
+  //    it comes from.
   //
   //    Capture phase: we run BEFORE author-attached handlers so even if
   //    the creative stops propagation we still observe the target.
@@ -450,23 +617,26 @@
               const style = window.getComputedStyle(el);
               const opacityRaw = parseFloat(style.opacity);
               const opacity = isNaN(opacityRaw) ? 1 : opacityRaw;
-              const bg = String(style.backgroundColor || '');
-              let bgAlpha = 1;
-              if (bg === 'transparent' || bg === '') {
-                bgAlpha = 0;
-              } else {
-                const m = bg.match(/^rgba?\(([^)]+)\)$/);
-                if (m) {
-                  const parts = m[1].split(',');
-                  if (parts.length === 4) {
-                    const a = parseFloat(parts[3]);
-                    bgAlpha = isNaN(a) ? 1 : a;
-                  }
-                }
-              }
+              const bgAlpha = colorAlpha(style.backgroundColor);
               const noBgImage = !style.backgroundImage || style.backgroundImage === 'none';
-              const isInvisible = opacity < 0.05 || (bgAlpha < 0.05 && noBgImage);
-              if (!isInvisible) return null;
+              // Two independent ways to be invisible. Written as early
+              // returns rather than one boolean so the descendant sweep —
+              // the only expensive step here — runs solely for candidates
+              // that got all the way to the transparency branch. This
+              // whole function runs once per element of the aggregate
+              // scan, so "expensive" compounds by AGGREGATE_SCAN_CAP.
+              //
+              // 1) opacity ~0: paints nothing, whatever it holds.
+              if (opacity < ALPHA_EPSILON) return { ratio, opacity, bgAlpha };
+              // 2) no background of its own — necessary, not sufficient.
+              if (bgAlpha >= ALPHA_EPSILON || !noBgImage) return null;
+              // …and it must also show nothing: no pixels of its own, and
+              // no descendant big enough to have been the click's real
+              // destination. Without these two clauses an ordinary
+              // <a><img></a> banner reads as a full-screen click trap —
+              // see the PAINTING_TAGS block above.
+              if (paintsItself(el, style)) return null;
+              if (paintsThroughDescendants(el, visArea, vw, vh)) return null;
               return { ratio, opacity, bgAlpha };
             } catch {
               return null;
