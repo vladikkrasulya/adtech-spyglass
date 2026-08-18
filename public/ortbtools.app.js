@@ -2596,8 +2596,8 @@ export async function mountInspector(root, ctx) {
   function loadFromHistory(idx) {
     const entry = historyStore[idx];
     if (!entry) return;
-    $('bidReq').value = entry.req || '';
-    $('bidRes').value = entry.res || '';
+    setEditorValue('bidReq', entry.req || '');
+    setEditorValue('bidRes', entry.res || '');
     updateCharCount('bidReq');
     updateCharCount('bidRes');
     _currentHistoryIdx = idx;
@@ -2808,6 +2808,79 @@ export async function mountInspector(root, ctx) {
   }
 
   /**
+   * Text of both panes at the moment the last analysis succeeded. Everything
+   * on the right describes THIS text and nothing else, so it is the only
+   * thing that can tell us whether the result still belongs to what is on
+   * screen. Null means "no analysis is currently claimed".
+   */
+  let _analyzedSnapshot = null;
+
+  function snapshotAnalyzedPayload() {
+    _analyzedSnapshot = {
+      req: ($('bidReq') && $('bidReq').value) || '',
+      res: ($('bidRes') && $('bidRes').value) || '',
+    };
+  }
+
+  /**
+   * Drop the result the moment the payload it describes stops being the
+   * payload on screen.
+   *
+   * Clear already did this for the empty case, but that is the narrow end of
+   * the same problem: analyse A, then load B from Demo/Saved/Live/Mirror or
+   * simply edit a character, and the verdict, quality score, findings and
+   * impression list from A stayed — a full-page claim about bytes that were
+   * no longer anywhere. Download made it concrete: it assembled payload B
+   * with analysis A into one file.
+   *
+   * The result is cleared, not badged as stale. A stale verdict left legible
+   * on screen is still read, and this tool's whole stance is that showing a
+   * wrong answer costs more than showing none. Re-running the analysis is one
+   * keystroke.
+   *
+   * The source markers go with it. Findings carry positions resolved against
+   * the analysed revision; over a different payload those wavy underlines and
+   * rail ticks point at whatever now happens to sit at those offsets.
+   */
+  function invalidateIfPayloadChanged() {
+    if (!_analyzedSnapshot) return;
+    const req = ($('bidReq') && $('bidReq').value) || '';
+    const res = ($('bidRes') && $('bidRes').value) || '';
+    if (req === _analyzedSnapshot.req && res === _analyzedSnapshot.res) return;
+    _analyzedSnapshot = null;
+    clearResultsForEmpty();
+    if (
+      window.OrtbtoolsSourceNav &&
+      typeof window.OrtbtoolsSourceNav.resetNavigation === 'function'
+    ) {
+      try {
+        window.OrtbtoolsSourceNav.resetNavigation();
+      } catch (_e) {
+        /* navigator is defensive; invalidation must never break on it */
+      }
+    }
+  }
+
+  /**
+   * The one way to put text into an editor from code.
+   *
+   * `el.value = …` fires no input event (per the HTML spec), so every
+   * programmatic load — history, sample, mirror, migrate, URL decode — used
+   * to slip past both the dirty flag and any result invalidation. Each site
+   * then remembered, or forgot, to call updateCharCount and renderGutter on
+   * its own. Routing them through here means a new loader cannot forget, and
+   * the next one added inherits the invalidation for free.
+   */
+  function setEditorValue(id, text) {
+    const el = $(id);
+    if (!el) return;
+    el.value = text == null ? '' : String(text);
+    updateCharCount(id);
+    renderGutter(id);
+    invalidateIfPayloadChanged();
+  }
+
+  /**
    * Clearing a payload must clear what was said about it. Before this, Clear
    * emptied the editor and left the verdict, the quality score and the
    * impression list standing — a full-page claim about bytes that were no
@@ -3004,7 +3077,7 @@ export async function mountInspector(root, ctx) {
           // holds our pretty-print, and stashing that would quietly discard the
           // operator's bytes on the second click instead of the first.
           _rawBeforePretty = rawReqBytes;
-          $('bidReq').value = JSON.stringify(req, null, 2);
+          setEditorValue('bidReq', JSON.stringify(req, null, 2));
           _prettyPrintedReq = $('bidReq').value;
         }
         if (resVal) {
@@ -3013,7 +3086,7 @@ export async function mountInspector(root, ctx) {
           // remember the text it replaced or the second analyse reports less
           // than the first.
           _rawBeforePrettyRes = rawResBytes;
-          $('bidRes').value = JSON.stringify(res, null, 2);
+          setEditorValue('bidRes', JSON.stringify(res, null, 2));
           _prettyPrintedRes = $('bidRes').value;
         }
         if (reqVal) updateCharCount('bidReq');
@@ -3402,6 +3475,10 @@ export async function mountInspector(root, ctx) {
           // navigator. It snapshots the current pane text as the analyzed
           // revision and builds the prev/next list. No payload values are
           // passed — only the location contract + live textarea text (local).
+          // The result now on screen belongs to exactly this text. Recorded
+          // here, at the one point an analysis is known to have succeeded, so
+          // invalidateIfPayloadChanged() has something to compare against.
+          snapshotAnalyzedPayload();
           if (window.OrtbtoolsSourceNav) {
             try {
               window.OrtbtoolsSourceNav.onAnalyzed((validation.findings || []).concat(cross || []));
@@ -4047,12 +4124,12 @@ export async function mountInspector(root, ctx) {
   };
 
   function pasteIntoReq(json) {
-    $('bidReq').value = JSON.stringify(json, null, 2);
+    setEditorValue('bidReq', JSON.stringify(json, null, 2));
     updateCharCount('bidReq');
     toast(t('toast.template_inserted_req'), 'success');
   }
   function pasteIntoRes(json) {
-    $('bidRes').value = JSON.stringify(json, null, 2);
+    setEditorValue('bidRes', JSON.stringify(json, null, 2));
     updateCharCount('bidRes');
     toast(t('toast.template_inserted_res'), 'success');
   }
@@ -4870,8 +4947,8 @@ export async function mountInspector(root, ctx) {
       const reqText = await session.decryptBlob(s.req_iv, s.bid_req);
       const resText = await session.decryptBlob(s.res_iv, s.bid_res);
       if (ctx.signal.aborted) return; // unmounted during fetch/decrypt — don't fill a remount's editors
-      $('bidReq').value = reqText;
-      $('bidRes').value = resText;
+      setEditorValue('bidReq', reqText);
+      setEditorValue('bidRes', resText);
       updateCharCount('bidReq');
       updateCharCount('bidRes');
       _currentSampleId = s.id;
@@ -4957,8 +5034,8 @@ export async function mountInspector(root, ctx) {
       const j = await fetch(url, { signal: ctx.signal }).then((r) => r.json());
       if (ctx.signal.aborted) return; // unmounted during the request
       if (!j || !j.success) throw new Error(j && j.error ? j.error : 'unexpected');
-      $('bidReq').value = JSON.stringify(j.bid_request, null, 2);
-      $('bidRes').value = JSON.stringify(j.bid_response, null, 2);
+      setEditorValue('bidReq', JSON.stringify(j.bid_request, null, 2));
+      setEditorValue('bidRes', JSON.stringify(j.bid_response, null, 2));
       updateCharCount('bidReq');
       updateCharCount('bidRes');
       _currentSampleId = null;
@@ -5354,6 +5431,10 @@ export async function mountInspector(root, ctx) {
         el.addEventListener('input', () => {
           _isDirty = true;
           clearMacros();
+          // Typing is the other way the payload stops matching the result.
+          // Programmatic loads go through setEditorValue(); this covers the
+          // keyboard, which fires input and never touches that helper.
+          invalidateIfPayloadChanged();
         });
     });
 

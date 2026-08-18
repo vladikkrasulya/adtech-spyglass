@@ -415,3 +415,136 @@ test(
     }
   },
 );
+
+/**
+ * The same rule, one step wider: a result must not outlive the payload it
+ * describes, whether that payload was cleared, edited, or replaced.
+ *
+ * Clear was only the narrow end. Analyse A, then type a character or load
+ * anything from Demo / Saved / Live / Mirror, and the verdict, quality score,
+ * findings and impression list from A stayed on screen describing bytes that
+ * were no longer there — and Download assembled payload B with analysis A
+ * into a single file.
+ *
+ * Programmatic loads are the reason this needed more than an input listener:
+ * `el.value = …` fires no input event, so every loader slipped past. They now
+ * route through setEditorValue(), and this test drives the app's own
+ * `load-demo` action rather than assigning the textarea directly — assigning
+ * it here would test the test, not the wiring.
+ */
+test(
+  'browser: a result does not outlive the payload it describes',
+  { timeout: 240000, skip: browserSkipReason },
+  async () => {
+    assert.ok(puppeteer);
+    assert.ok(chromeExecutable);
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ortbtools-stale-'));
+    const port = await getFreePort();
+    let serverInfo = null;
+    let browser = null;
+
+    const PAYLOAD_A = JSON.stringify(
+      {
+        id: 'AAA-stale-probe',
+        at: 1,
+        imp: [{ id: '1', banner: { w: 300, h: 250 }, bidfloor: 0.5 }],
+        site: { domain: 'a.example' },
+        device: { ip: '1.2.3.4', ua: 'Mozilla/5.0' },
+      },
+      null,
+      2,
+    );
+
+    try {
+      serverInfo = await startServer(port, dataDir);
+      browser = await puppeteer.launch({
+        headless: true,
+        executablePath: chromeExecutable,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ],
+      });
+      const page = await browser.newPage();
+      const pageErrors = [];
+      page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 200)));
+      // Loading over unsaved edits asks for confirmation; accept it, or the
+      // native dialog blocks every later evaluate() until the test times out.
+      page.on('dialog', (d) => d.accept().catch(() => {}));
+
+      await page.goto(`http://127.0.0.1:${port}/inspector`, {
+        waitUntil: 'networkidle2',
+        timeout: 60000,
+      });
+      await page.waitForSelector('#bidReq', { timeout: 30000 });
+
+      const typeIn = (text) =>
+        page.evaluate((v) => {
+          const ta = /** @type {any} */ (document.getElementById('bidReq'));
+          ta.value = v;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+        }, text);
+      const findingCount = () =>
+        page.evaluate(() => document.querySelectorAll('.validation-item').length);
+      const analyse = async () => {
+        await page.evaluate(() => {
+          const btn = document.querySelector('[data-action="analyze"]');
+          if (btn) /** @type {any} */ (btn).click();
+        });
+        await new Promise((r) => setTimeout(r, 3000));
+      };
+
+      await typeIn(PAYLOAD_A);
+      await analyse();
+      const analysed = await findingCount();
+      assert.ok(analysed > 0, 'the probe payload should produce findings to invalidate');
+
+      // 1. One keystroke is enough to make the result describe other bytes.
+      await page.evaluate(() => {
+        const ta = /** @type {any} */ (document.getElementById('bidReq'));
+        ta.value = ta.value + ' ';
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await new Promise((r) => setTimeout(r, 500));
+      assert.equal(
+        await findingCount(),
+        0,
+        'editing the payload left the previous analysis on screen',
+      );
+
+      // 2. A programmatic load through the app's own action must do the same.
+      await typeIn(PAYLOAD_A);
+      await analyse();
+      assert.ok((await findingCount()) > 0, 're-analysis should restore findings');
+
+      const loaded = await page.evaluate(() => {
+        const item = document.querySelector('[data-action="load-demo"]');
+        if (!item) return false;
+        /** @type {any} */ (item).click();
+        return true;
+      });
+      if (loaded) {
+        await new Promise((r) => setTimeout(r, 2500));
+        assert.equal(
+          await findingCount(),
+          0,
+          'loading a different payload left the previous analysis on screen',
+        );
+        const stillA = await page.evaluate(() => {
+          const ta = /** @type {any} */ (document.getElementById('bidReq'));
+          return String(ta.value || '').includes('AAA-stale-probe');
+        });
+        assert.equal(stillA, false, 'the demo load should have replaced the probe payload');
+      }
+
+      assert.deepEqual(pageErrors, [], `the page threw: ${pageErrors.join(' | ')}`);
+      await page.close();
+    } finally {
+      if (browser) await browser.close().catch(() => {});
+      if (serverInfo) await stopChild(serverInfo.proc);
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    }
+  },
+);
