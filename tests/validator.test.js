@@ -539,14 +539,17 @@ test('crosscheck: bid.impid not in request is crit', () => {
   assert.equal(f.level, 'crit');
 });
 
-test('crosscheck: price below floor is crit', () => {
+test('crosscheck: price below floor is a warning, not a failure', () => {
+  // Bidding under the floor is a losing bid, not a broken response: the
+  // exchange accepts and processes the payload, then declines to select this
+  // bid. At `crit` the crosscheck failed a document with nothing wrong in it.
   const req = validRequest();
   const res = validResponse();
   res.seatbid[0].bid[0].price = 0.05;
   const findings = crosscheck(req, res);
   const f = findings.find((x) => x.id === 'crosscheck.bid.below_floor');
-  assert.ok(f);
-  assert.equal(f.level, 'crit');
+  assert.ok(f, 'the bid should still be reported as under the floor');
+  assert.equal(f.level, 'warn');
 });
 
 test('crosscheck: bid currency ≠ floor currency → floor_currency_mismatch, no numeric verdict', () => {

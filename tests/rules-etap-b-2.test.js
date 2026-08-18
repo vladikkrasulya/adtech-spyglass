@@ -481,7 +481,11 @@ test('price-floor: PMP deal floor wins over imp floor', () => {
         bidfloor: 2.0,
         bidfloorcur: 'USD',
         pmp: {
-          deals: [{ dealid: 'deal-123', bidfloor: 1.0, bidfloorcur: 'USD' }],
+          // Deal's identifier is `id` (oRTB §3.2.12); `dealid` is the Bid-side
+          // field that references it. These fixtures carried `dealid` on the Deal,
+          // matching a bug in resolveFloor() that looked for the same non-field —
+          // so the pair agreed and the test passed while PMP floors never applied.
+          deals: [{ id: 'deal-123', bidfloor: 1.0, bidfloorcur: 'USD' }],
         },
       },
     ],
@@ -491,6 +495,35 @@ test('price-floor: PMP deal floor wins over imp floor', () => {
     !out.find((x) => x.id === 'err-bid-price-below-floor'),
     'deal floor (1.0) wins: price 1.2 passes',
   );
+});
+
+test('price-floor: the reported floor is the deal floor, not the imp floor', () => {
+  // Locks the field name. resolveFloor() used to match `deals[].dealid`, which
+  // no conforming Deal carries (the Deal's identifier is `id`), so the deal
+  // branch never ran and the imp floor was silently used instead. Asserting
+  // the VALUE in params — not just that a finding fired — is what catches a
+  // regression to the imp floor, since both floors can fail the same bid.
+  const res = {
+    id: 'resp1',
+    cur: 'USD',
+    seatbid: [{ bid: [{ id: 'b1', impid: 'imp1', price: 0.5, dealid: 'deal-九' }] }],
+  };
+  const req = {
+    cur: ['USD'],
+    imp: [
+      {
+        id: 'imp1',
+        bidfloor: 0.1,
+        bidfloorcur: 'USD',
+        pmp: { deals: [{ id: 'deal-九', bidfloor: 1.0, bidfloorcur: 'USD' }] },
+      },
+    ],
+  };
+  const out = priceFloor.validate(res, { type: 'ORTB_RESPONSE', req });
+  const hit = out.find((x) => x.id === 'err-bid-price-below-floor');
+  assert.ok(hit, 'price 0.5 is under the deal floor of 1.0');
+  assert.equal(hit.params.floor, 1.0, 'the deal floor must win over the imp floor of 0.1');
+  assert.equal(hit.level, 'warning', 'a losing bid is a warning, not a broken payload');
 });
 
 test('price-floor: PMP deal floor applies — bid below deal floor fails', () => {
@@ -507,7 +540,7 @@ test('price-floor: PMP deal floor applies — bid below deal floor fails', () =>
         bidfloor: 0.1,
         bidfloorcur: 'USD',
         pmp: {
-          deals: [{ dealid: 'deal-456', bidfloor: 1.0, bidfloorcur: 'USD' }],
+          deals: [{ id: 'deal-456', bidfloor: 1.0, bidfloorcur: 'USD' }],
         },
       },
     ],

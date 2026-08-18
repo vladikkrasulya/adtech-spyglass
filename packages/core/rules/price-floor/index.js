@@ -7,17 +7,32 @@
  *   - bid.price must be a non-negative finite number (>= 0). Negative prices
  *     are spec violations; zero is allowed per IAB §4.3.1 (second-price).
  *   - When ctx.req is available, finds the matching imp by bid.impid === imp.id
- *     and enforces bid.price >= floor:
- *       * PMP: if bid.dealid matches imp.pmp.deals[].dealid and that deal has
- *         its own bidfloor, the deal floor wins over imp-level floor.
+ *     and compares bid.price against the floor:
+ *       * PMP: if bid.dealid matches imp.pmp.deals[].id — the Deal's own
+ *         identifier — and that deal has its own bidfloor, the deal floor wins
+ *         over the imp-level floor.
  *       * Currency: if bidCur (bid.cur || res.cur || USD) differs from
- *         floorCur (imp.bidfloorcur || req.cur[0] || USD) → emit
- *         warn-currency-conversion-needed and SKIP the numeric compare.
+ *         floorCur (imp.bidfloorcur || USD, per the field's own spec default)
+ *         → emit warn-currency-conversion-needed and SKIP the numeric compare.
+ *         No conversion happens here; see below.
+ *
+ * ── Why no currency conversion ───────────────────────────────────────────
+ * lib/fx.js holds a USD rate table and the Inspector shows a converted figure
+ * beside a non-USD floor, but that number is display-only by design: "the same
+ * payload analyses the same way", and a live rate breaks that the moment it
+ * moves. So an incomparable pair produces a warning saying so, never a verdict
+ * derived from a rate. The operator still gets the USD reading in the strip —
+ * it just never becomes the answer.
+ *
+ * ── Severity ─────────────────────────────────────────────────────────────
+ * Only a malformed price is an ERROR. A bid that is merely under the floor is
+ * a WARNING: the response is valid oRTB, the exchange accepts and processes
+ * it, and the bid loses. See the comment at the comparison itself.
  *
  * Rules:
- *   err-bid-price-negative         — bid.price < 0, NaN, Infinity, or not a number
- *   err-bid-price-below-floor      — bid.price < matching floor (same currency)
- *   warn-currency-conversion-needed — bidCur != floorCur (no numeric compare done)
+ *   err-bid-price-negative          error   — price < 0, NaN, Infinity, or not a number
+ *   err-bid-price-below-floor       warning — price < matching floor, same currency
+ *   warn-currency-conversion-needed warning — bidCur != floorCur, no compare done
  */
 
 const { LEVELS, makeFinding } = require('../../findings');
@@ -26,18 +41,44 @@ const F = makeFinding;
 
 /**
  * Find the effective floor for a bid against an imp.
+ *
+ * Takes no request: nothing at request level participates in what a floor is
+ * priced in. `BidRequest.cur` is the list of currencies the exchange accepts,
+ * and reading it here is exactly the bug described below.
+ *
  * Returns { floor, floorCur, source } or null if no floor is set.
  */
-function resolveFloor(bid, imp, req) {
-  const reqCur0 = req && Array.isArray(req.cur) && req.cur.length > 0 ? req.cur[0] : 'USD';
+function resolveFloor(bid, imp) {
+  // `bidfloorcur` carries its own spec default of "USD" (oRTB 2.5/2.6 §3.2.4
+  // for Imp, §3.2.12 for Deal) and is NOT tied to `BidRequest.cur`. `cur` is
+  // only the list of currencies the exchange will ACCEPT bids in; it says
+  // nothing about how an unlabelled floor was priced.
+  //
+  // Falling back to `req.cur[0]` — as this did — silently renamed the floor's
+  // currency. On the ordinary "exchange accepts EUR, floor sent without an
+  // explicit currency" request that made a USD floor look like a EUR floor,
+  // the bid currency then matched it, and the numeric compare below ran on two
+  // different denominations and reported a verdict with no meaning.
+  //
+  // Reading the spec default instead means such a payload now trips the
+  // currency-mismatch warning rather than producing a confident wrong answer.
+  // That warning is the honest output: the payload really is ambiguous about
+  // what its floor is priced in, and that ambiguity costs real money.
+  const SPEC_DEFAULT_CUR = 'USD';
 
   // PMP deal floor — check if bid.dealid matches a deal on imp.pmp.deals[]
+  //
+  // The Deal object's identifier is `id` (§3.2.12); `dealid` is the Bid-side
+  // field (§3.2.4) that REFERS to it. Matching `d.dealid` compared a bid's
+  // deal id against a property no conforming Deal carries, so it never
+  // matched and a PMP deal's floor was never applied — the imp-level floor
+  // was used in its place, or none at all.
   if (bid.dealid && imp.pmp && Array.isArray(imp.pmp.deals)) {
-    const deal = imp.pmp.deals.find((d) => d && d.dealid === bid.dealid);
+    const deal = imp.pmp.deals.find((d) => d && d.id === bid.dealid);
     if (deal && typeof deal.bidfloor === 'number' && Number.isFinite(deal.bidfloor)) {
       return {
         floor: deal.bidfloor,
-        floorCur: deal.bidfloorcur || reqCur0,
+        floorCur: deal.bidfloorcur || SPEC_DEFAULT_CUR,
         source: 'deal',
       };
     }
@@ -47,7 +88,7 @@ function resolveFloor(bid, imp, req) {
   if (typeof imp.bidfloor === 'number' && Number.isFinite(imp.bidfloor) && imp.bidfloor > 0) {
     return {
       floor: imp.bidfloor,
-      floorCur: imp.bidfloorcur || reqCur0,
+      floorCur: imp.bidfloorcur || SPEC_DEFAULT_CUR,
       source: 'imp',
     };
   }
@@ -95,7 +136,7 @@ function validate(payload, ctx) {
         const imp = impMap.get(String(bid.impid));
         if (!imp) return;
 
-        const floorInfo = resolveFloor(bid, imp, req);
+        const floorInfo = resolveFloor(bid, imp);
         if (!floorInfo) return;
 
         const { floor, floorCur } = floorInfo;
@@ -117,10 +158,23 @@ function validate(payload, ctx) {
           return;
         }
 
-        // Same currency — do the numeric compare
+        // Same currency — do the numeric compare.
+        //
+        // WARNING, not ERROR: a bid under the floor breaks nothing. The
+        // payload is well-formed oRTB, the auction runs, the exchange
+        // processes and accepts the response — this bid simply does not win.
+        // That is an outcome to report, not a defect in the document, and at
+        // ERROR it rolled the whole payload up to "errors" and told the
+        // operator their perfectly valid response was broken.
+        //
+        // The rule id keeps its `err-` prefix on purpose: it is the key the
+        // messages/*.json translations and any consumer filter are written
+        // against, and renaming it would break them for a cosmetic gain. The
+        // message text was always right about this ("біржа відфільтрує цей
+        // бід") — only the level disagreed with it.
         if (bid.price < floor) {
           findings.push(
-            F('err-bid-price-below-floor', LEVELS.ERROR, path + '.price', {
+            F('err-bid-price-below-floor', LEVELS.WARNING, path + '.price', {
               price: bid.price,
               floor,
               impid: String(bid.impid),

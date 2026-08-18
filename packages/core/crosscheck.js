@@ -174,11 +174,16 @@ function crosscheck(req, res, _ctx) {
         // FX rate, so when they differ we flag the mismatch instead of emitting a
         // bogus above/below-floor verdict. (cur_not_in_request covers res.cur vs
         // req.cur separately; this catches the floor-vs-bid denomination.)
+        // Both `imp.bidfloorcur` and `BidResponse.cur` default to "USD" by
+        // spec, independently of `BidRequest.cur` — which is only the list of
+        // currencies the exchange ACCEPTS, not a statement about how either
+        // figure was priced. Falling through `req.cur[0]` made two different
+        // denominations look like one and produced a confident above/below
+        // verdict on an incomparable pair. See resolveFloor() in
+        // rules/price-floor for the same correction on the rules side.
         const floorCur =
-          (typeof imp.bidfloorcur === 'string' ? imp.bidfloorcur.toUpperCase() : null) ||
-          reqCurUp[0] ||
-          'USD';
-        const bidCur = resCurUp || reqCurUp[0] || 'USD';
+          (typeof imp.bidfloorcur === 'string' ? imp.bidfloorcur.toUpperCase() : null) || 'USD';
+        const bidCur = resCurUp || 'USD';
         if (hasExplicitFloor && floor > 0 && floorCur !== bidCur) {
           out.push(
             C('crosscheck.bid.floor_currency_mismatch', false, CROSS_LEVELS.WARN, `${bp}.price`, {
@@ -198,8 +203,13 @@ function crosscheck(req, res, _ctx) {
           const cur = winningByImp.get(bid.impid) || 0;
           if (price > cur) winningByImp.set(bid.impid, price);
         } else {
+          // WARN, not CRIT — see the same reasoning at the price-floor rule.
+          // Bidding under the floor is a losing bid, not a broken response:
+          // the exchange accepts and processes the payload, then declines to
+          // select this bid. Marking it CRIT failed the whole crosscheck for
+          // a document with nothing wrong in it.
           out.push(
-            C('crosscheck.bid.below_floor', false, CROSS_LEVELS.CRIT, `${bp}.price`, priceParams),
+            C('crosscheck.bid.below_floor', false, CROSS_LEVELS.WARN, `${bp}.price`, priceParams),
           );
         }
       }
