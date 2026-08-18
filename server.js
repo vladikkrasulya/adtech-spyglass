@@ -135,6 +135,15 @@ const telemetryLimiter = makeAnalyzeLimiter(TELEMETRY_MAX_PER_WINDOW);
 const GIST_WRITE_MAX_PER_WINDOW = Number(process.env.GIST_WRITE_MAX_PER_WINDOW) || 10;
 const gistWriteLimiter = makeAnalyzeLimiter(GIST_WRITE_MAX_PER_WINDOW);
 
+// Dialect labelling assistant. Keyed by USER id, not IP: the route is
+// auth-gated, and a shared office NAT should not have one person's labelling
+// session throttle everyone else's. Each miss in the deterministic lexicon
+// costs a GPU inference on this host, so the cap is tight — a human confirms
+// a handful of signals a minute, and a UI bug that retries in a loop is the
+// realistic threat, not an attacker.
+const AI_LABEL_MAX_PER_WINDOW = Number(process.env.AI_LABEL_MAX_PER_WINDOW) || 15;
+const aiLabelLimiter = makeAnalyzeLimiter(AI_LABEL_MAX_PER_WINDOW);
+
 // Public intel endpoint limiter — bounds request abuse independently of analyze.
 const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
 const INTEL_WINDOW_MS = 60_000;
@@ -909,6 +918,7 @@ const { createGistsModule } = require('./modules/gists/handler');
 // note in streamBufferPush below.
 // v8 — User Dialects feature
 const { createDialectsModule } = require('./modules/dialects/handler');
+const { createAiLabelModule } = require('./modules/ai-label/handler');
 const {
   loadUserDialect,
   getDefaultDialectForUser,
@@ -988,6 +998,7 @@ router.register(
 );
 router.register(createAccountModule({ auth, AnalyzeLog }));
 router.register(createDialectsModule({ auth, db }));
+router.register(createAiLabelModule({ auth, aiLabelLimiter }));
 router.register(createAdminModule({ db, Users, auth }));
 router.register(createAdminBlogModule());
 router.register(createBlogModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));

@@ -247,6 +247,10 @@ module.exports = {
   ALL_NON_STANDARD,
   STRING_HINT_KEYS,
   FLAG_HINT_KEYS,
+  // Exported for dialects/signal-lexicon.js, which resolves the same vendor
+  // allow-flags to a `pop` label. Duplicating the list there would leave two
+  // half-tables to keep in sync — the drift this file's header warns about.
+  POP_SHAPE_FLAG_KEYS,
   normaliseFormatName,
   scanExtForFormatHints,
   isPopFormat,
