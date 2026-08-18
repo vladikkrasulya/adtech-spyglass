@@ -144,6 +144,13 @@ const gistWriteLimiter = makeAnalyzeLimiter(GIST_WRITE_MAX_PER_WINDOW);
 const AI_LABEL_MAX_PER_WINDOW = Number(process.env.AI_LABEL_MAX_PER_WINDOW) || 15;
 const aiLabelLimiter = makeAnalyzeLimiter(AI_LABEL_MAX_PER_WINDOW);
 
+// Creative asset proxying. Keyed by user id — the route is auth-gated. One
+// creative rarely carries more than a handful of images, but a payload with
+// many bids could, and this is the only route that reaches a host the caller
+// picked: the cap bounds what our IP can be pointed at per minute.
+const ASSET_MAX_PER_WINDOW = Number(process.env.ASSET_MAX_PER_WINDOW) || 40;
+const assetLimiter = makeAnalyzeLimiter(ASSET_MAX_PER_WINDOW);
+
 // Public intel endpoint limiter — bounds request abuse independently of analyze.
 const INTEL_MAX_PER_WINDOW = Number(process.env.INTEL_MAX_PER_WINDOW) || 30;
 const INTEL_WINDOW_MS = 60_000;
@@ -919,6 +926,7 @@ const { createGistsModule } = require('./modules/gists/handler');
 // v8 — User Dialects feature
 const { createDialectsModule } = require('./modules/dialects/handler');
 const { createAiLabelModule } = require('./modules/ai-label/handler');
+const { createCreativeAssetModule } = require('./modules/creative-asset/handler');
 const {
   loadUserDialect,
   getDefaultDialectForUser,
@@ -999,6 +1007,7 @@ router.register(
 router.register(createAccountModule({ auth, AnalyzeLog }));
 router.register(createDialectsModule({ auth, db }));
 router.register(createAiLabelModule({ auth, aiLabelLimiter }));
+router.register(createCreativeAssetModule({ auth, assetLimiter }));
 router.register(createAdminModule({ db, Users, auth }));
 router.register(createAdminBlogModule());
 router.register(createBlogModule({ readLimiter, auth, READ_MAX_PER_WINDOW }));
