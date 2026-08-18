@@ -1324,6 +1324,69 @@ export async function mountInspector(root, ctx) {
       setDims(300, 250);
     }
     el.appendChild(iframe);
+    maybeOfferAssetInlining(el, resolved, dims);
+  }
+
+  /**
+   * Offer to render the creative's remote images, fetched by the server.
+   *
+   * The preview iframe's CSP allows `data:` and `blob:` only, on purpose —
+   * it is the chamber creative-probe.js measures from, and letting `https:`
+   * images load would fire every tracking pixel in attacker-supplied markup
+   * from this machine. So a banner whose art lives on a CDN renders empty,
+   * correctly. The server can fetch those bytes without anything identifying
+   * the analyst reaching the advertiser, and hand them back as data: URIs.
+   *
+   * A button rather than automatic: inlining spends outbound requests to a
+   * host the creative named, and doing that silently on every preview would
+   * move the problem one hop rather than solve it. The count is on the
+   * button so the ask is explicit.
+   *
+   * Re-rendering restarts the behaviour probe — resetBehavior() first, or the
+   * second pass double-counts every event the first one recorded.
+   */
+  function maybeOfferAssetInlining(host, creativeHtml, dims) {
+    const api = window.OrtbtoolsCreativeAssets;
+    if (!api || !host) return;
+    let urls = [];
+    try {
+      urls = api.collectRemoteUrls(creativeHtml);
+    } catch (_e) {
+      return;
+    }
+    if (!urls.length) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-ghost btn-sm creative-inline-assets';
+    btn.textContent = t('creative.assets.load', { n: urls.length });
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.textContent = t('creative.assets.loading');
+      try {
+        const res = await api.inlineAssets(creativeHtml);
+        if (res.inlined > 0) {
+          const frame = host.querySelector('iframe');
+          if (frame) {
+            resetBehavior();
+            frame.srcdoc = buildProbedSrcdoc(res.html);
+            _currentProbedIframe = frame;
+          }
+        }
+        toast(api.describe(res), res.inlined ? 'success' : 'error');
+        if (res.inlined && !res.failed.length) {
+          btn.remove();
+          return;
+        }
+      } catch (_e) {
+        toast(t('creative.assets.all_failed', { n: urls.length }), 'error');
+      }
+      btn.disabled = false;
+      btn.textContent = t('creative.assets.load', { n: urls.length });
+    });
+    host.appendChild(btn);
+    void dims;
   }
 
   // ── Creative-probe receiver ──────────────────────────────────

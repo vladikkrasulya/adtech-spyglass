@@ -134,6 +134,28 @@
         en: 'Could not save the mapping.',
         ru: 'Не удалось сохранить разметку.',
       },
+      // ── creative assets, fetched server-side so the preview CSP stays shut ──
+      'creative.assets.load': {
+        uk: 'Показати зображення ({n}) через сервер',
+        en: 'Load {n} image(s) via the server',
+        ru: 'Показать изображения ({n}) через сервер',
+      },
+      'creative.assets.loading': { uk: 'Завантажую…', en: 'Loading…', ru: 'Загружаю…' },
+      'creative.assets.loaded': {
+        uk: 'Завантажено зображень: {n}. Твій браузер до рекламодавця не звертався.',
+        en: 'Loaded {n} image(s). Your browser never contacted the advertiser.',
+        ru: 'Загружено изображений: {n}. Твой браузер к рекламодателю не обращался.',
+      },
+      'creative.assets.partial': {
+        uk: 'Завантажено {ok}, не вдалося {bad}.',
+        en: 'Loaded {ok}, {bad} failed.',
+        ru: 'Загружено {ok}, не удалось {bad}.',
+      },
+      'creative.assets.all_failed': {
+        uk: 'Жодне з {n} зображень не вдалося завантажити.',
+        en: 'None of the {n} images could be loaded.',
+        ru: 'Ни одно из {n} изображений загрузить не удалось.',
+      },
       'dialect.label.err.no_payload': {
         uk: 'Не бачу payload у редакторі — онови аналіз.',
         en: 'No payload in the editor — re-run the analysis.',
