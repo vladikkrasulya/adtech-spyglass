@@ -2065,11 +2065,42 @@ export async function mountInspector(root, ctx) {
       // The action a finding asks for, in the mockup's words. `question`
       // findings ask you to map a field; everything else asks you to edit the
       // payload, and both routes already exist behind data-action="goto-path".
+      // A `question` finding gets two routes, because the two are not the same
+      // act. "Розмітити" opens the picker and the user names the signal
+      // themselves. "Спитати агента" asks the server first — a deterministic
+      // lexicon, then the local model for what the lexicon abstains on — and
+      // opens the same picker with the proposal filled in and badged with
+      // where it came from. Neither writes anything; the save is the click
+      // inside the picker, because a saved mapping silently re-applies to
+      // every future payload the user analyses.
+      //
+      // The signal travels on the button rather than being re-derived from
+      // the payload at click time: by then the editor may have been edited,
+      // and labelling a signal the analysis never saw is worse than not
+      // offering the button.
+      const qData =
+        lvl === 'question' && f.params
+          ? ' data-signal-path="' +
+            escapeHtml(f.params.path || f.path || '') +
+            '" data-signal-value="' +
+            escapeHtml(String(f.params.value == null ? '' : f.params.value)) +
+            '" data-shape-signature="' +
+            escapeHtml(f.params.shape_signature || '') +
+            '"'
+          : '';
       const actionBtn =
         lvl === 'question'
           ? '<button type="button" class="finding-action finding-action-accent" ' +
-            'data-action="open-dialect-builder">' +
+            'data-action="open-dialect-builder"' +
+            qData +
+            '>' +
             escapeHtml(t('finding.action.map')) +
+            '</button>' +
+            '<button type="button" class="finding-action finding-action-agent" ' +
+            'data-action="ask-dialect-agent"' +
+            qData +
+            '>' +
+            escapeHtml(t('dialect.label.ask')) +
             '</button>'
           : expanded && f.path
             ? '<button type="button" class="finding-action" data-action="goto-path" ' +
@@ -5675,6 +5706,33 @@ export async function mountInspector(root, ctx) {
             const safe = document.getElementById('creativePreviewSafe');
             if (safe) safe.classList.add('is-revealed');
             return;
+          }
+          // — dialect labelling (question findings) —
+          //
+          // Both read the signal off the button's own dataset; see the render
+          // for why it travels there rather than being re-derived. The module
+          // is loaded via a plain <script defer> alongside source-nav, so if
+          // it somehow did not load we say so instead of doing nothing — the
+          // original complaint about this control was a click that produced
+          // no visible response whatsoever.
+          case 'open-dialect-builder':
+          case 'ask-dialect-agent': {
+            const dl = window.OrtbtoolsDialectLabel;
+            if (!dl) {
+              toast(t('dialect.label.err.generic'), 'error');
+              return;
+            }
+            const sig = {
+              path: el.dataset.signalPath || '',
+              value: el.dataset.signalValue || '',
+              shapeSignature: el.dataset.shapeSignature || '',
+            };
+            if (!sig.path) {
+              toast(t('dialect.label.err.no_payload'), 'error');
+              return;
+            }
+            if (action === 'ask-dialect-agent') return dl.askAgent(el, sig);
+            return dl.openBuilder(sig, null);
           }
           case 'goto-path': {
             // Stage-1: exact finding→source navigation via the location

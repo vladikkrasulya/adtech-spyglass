@@ -5268,3 +5268,147 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
     min-height: 36px;
   }
 }
+
+/* ── dialect labelling: the two routes off a `question` card ─────────────
+   "Розмітити" keeps the accent outline: it is the committing act, and the
+   user names the signal themselves. "Спитати агента" is deliberately
+   quieter — it only fetches a proposal, and a control that merely offers
+   help should not compete with the one that decides. Same size and shape,
+   so they read as a pair rather than as primary/secondary of different
+   kinds. */
+.finding-action-agent {
+  border-style: dashed;
+  color: var(--text-dim);
+}
+.finding-action-agent:hover:not(:disabled) {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent-text, var(--accent));
+}
+.finding-action-agent:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+/* ── the picker ─────────────────────────────────────────────────────── */
+.dl-card {
+  max-width: 520px;
+  width: 92vw;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+}
+.dl-signal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dl-signal code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--fs-chip, 12px);
+  background: var(--surface-alt, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.dl-lbl {
+  font-size: var(--fs-chip, 12px);
+  color: var(--text-dim);
+}
+.dl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* An author `display` beats the UA stylesheet's `[hidden] { display: none }`,
+   so the new-dialect name field stayed on screen while reporting hidden=true.
+   Every toggled .dl-field needs this or the attribute is decorative. */
+.dl-field[hidden] {
+  display: none;
+}
+.dl-field select,
+.dl-field input {
+  font: inherit;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+.dl-field select:focus-visible,
+.dl-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* The proposal block. A table lookup and a language model's guess must not
+   look alike — the badge is the whole point, and it is why `source` is in
+   the API response at all. */
+.dl-proposal {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dl-proposal.dl-low {
+  border-left-color: var(--text-warning, #b4740b);
+}
+.dl-proposal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dl-proposal-title {
+  font-weight: 600;
+  font-size: var(--fs-chip, 12px);
+}
+.dl-src {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+.dl-src-lexicon {
+  background: var(--accent-soft);
+  color: var(--accent-text, var(--accent));
+}
+.dl-src-model {
+  background: transparent;
+  border: 1px dashed var(--border-strong, var(--border));
+  color: var(--text-dim);
+}
+.dl-conf {
+  margin-left: auto;
+  font-size: var(--fs-chip, 12px);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.dl-reason,
+.dl-src-hint,
+.dl-warn {
+  margin: 0;
+  font-size: var(--fs-chip, 12px);
+}
+.dl-reason {
+  color: var(--text);
+}
+.dl-src-hint {
+  color: var(--text-dim);
+}
+.dl-warn {
+  color: var(--text-warning, #b4740b);
+}
+.dl-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
