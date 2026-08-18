@@ -326,6 +326,31 @@ function writeInt(value, length) {
 }
 
 /** Set bit positions in a bitfield string, as 1-based ids. */
+/**
+ * Ceiling on how many vendor ids a range-encoded section may expand to.
+ *
+ * Vendor ids are a 16-bit field, so a TC string can name at most 65535
+ * DISTINCT vendors. Expanding past that is therefore never information —
+ * it is duplicates produced by overlapping ranges, which is exactly what a
+ * hostile string sends.
+ *
+ * Why a ceiling is needed at all: `numEntries` is itself a 12-bit field
+ * (up to 4095 entries), and each entry may span a full 1..65535 range.
+ * Nothing bounded the product, so ~5.6KB of consent string expanded to
+ * roughly 268 million array elements — measured at 2.5GB RSS before this
+ * change, reached from the public /api/analyze with no authentication.
+ * The pre-existing comment at the expansion site reasoned that "a corrupt
+ * 16-bit range can span 65535 ids, which is bounded and fine" — true of one
+ * range, and the loop runs over all of them.
+ *
+ * Findings are unaffected: every per-entry check (range_start_zero,
+ * range_inverted, range_exceeds_max, ranges_not_ascending) fires from the
+ * `ranges` array, which is still recorded in full. Only the flattened id
+ * list — used for GVL cross-checks that sample the first 16 hits — stops
+ * growing.
+ */
+const MAX_EXPANDED_VENDOR_IDS = 65535;
+
 function bitsToIds(bitfield) {
   /** @type {number[]} */
   const ids = [];
@@ -441,10 +466,19 @@ function parseRestrictionVendors(reader, out, segmentName, field) {
       );
       continue;
     }
-    for (let id = start; id <= end; id += 1) ids.push(id);
+    // Capped: see MAX_EXPANDED_VENDOR_IDS. `ranges` above keeps the full
+    // picture, so no per-entry finding loses its evidence.
+    for (let id = start; id <= end && ids.length < MAX_EXPANDED_VENDOR_IDS; id += 1) {
+      ids.push(id);
+    }
   }
   section.ids = ids;
-  if (section.ids.length) section.maxVendorId = Math.max(...section.ids);
+  // Tracked with a loop, not Math.max(...ids): spreading a large array into
+  // an argument list throws RangeError (Maximum call stack size exceeded) —
+  // measured here from about a million elements up.
+  let maxSeen = 0;
+  for (const id of ids) if (id > maxSeen) maxSeen = id;
+  section.maxVendorId = maxSeen;
   return section;
 }
 
@@ -539,7 +573,11 @@ function parseVendorSection(reader, out, segmentName, field) {
 
     // Guard the id expansion, not the report: a corrupt 16-bit range can span
     // 65535 ids, which is bounded and fine, but we still only expand sane ones.
-    if (start >= 1 && end >= start) for (let id = start; id <= end; id += 1) ids.push(id);
+    if (start >= 1 && end >= start) {
+      for (let id = start; id <= end && ids.length < MAX_EXPANDED_VENDOR_IDS; id += 1) {
+        ids.push(id);
+      }
+    }
   }
 
   section.ids = ids;

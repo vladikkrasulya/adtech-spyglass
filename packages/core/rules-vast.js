@@ -34,13 +34,65 @@ function countTag(adm, tag) {
   return (adm.match(re) || []).length;
 }
 
+/**
+ * Walk every `<tag …>` OPEN TAG in `adm`, calling `fn(openTagText, endIndex)`.
+ *
+ * ── Why indexOf and not a regex ──────────────────────────────────────────
+ * The obvious pattern for this is `<tag\b[^>]*>`, and it is quadratic on
+ * hostile input. `adm` is attacker-controlled — it arrives in a bid
+ * response someone pastes, or POSTs to the public /api/analyze. Feed it
+ * `'<MediaFile '.repeat(20000)` — twenty thousand open-tag starts and not
+ * one `>` — and at every start `[^>]*` runs to the end of the string, fails
+ * to find what follows, and backtracks the whole way. Measured on this
+ * repo before the change: 27KB → 104ms, 54KB → 381ms, 107KB → 1507ms,
+ * 215KB → 6070ms. Doubling the input quadrupled the time, so the 2MB body
+ * cap upstream was not a bound on anything — it permitted minutes of
+ * blocked event loop from one unauthenticated request.
+ *
+ * Scanning with indexOf is linear and has no backtracking to exploit: find
+ * the next `<tag`, find the next `>`, hand over the slice, continue past
+ * it. An unterminated final tag ends the walk, because no later `>` can
+ * close it either.
+ *
+ * Case-insensitive to match the `/i` the regexes carried; XML tag names in
+ * VAST are conventionally cased but real payloads are not conventional.
+ *
+ * @param {string} adm
+ * @param {string} tag  bare tag name, e.g. 'MediaFile'
+ * @param {(openTag: string, endIndex: number) => void} fn
+ */
+function forEachOpenTag(adm, tag, fn) {
+  const hay = adm.toLowerCase();
+  const needle = '<' + tag.toLowerCase();
+  let i = 0;
+  while ((i = hay.indexOf(needle, i)) !== -1) {
+    const after = hay.charCodeAt(i + needle.length);
+    // `\b` in the original: the tag name must not run on into a longer one,
+    // so `<MediaFiles>` is not a `<MediaFile>`. NaN (end of string) passes.
+    const isWordChar =
+      (after >= 97 && after <= 122) || (after >= 48 && after <= 57) || after === 95;
+    if (isWordChar) {
+      i += needle.length;
+      continue;
+    }
+    const close = adm.indexOf('>', i + needle.length);
+    if (close === -1) return; // unterminated — nothing after it can close either
+    fn(adm.slice(i, close + 1), close);
+    i = close + 1;
+  }
+}
+
 // Pull all attribute=value pairs of `attr` from any `<tag>` occurrence.
 // Used to find apiFramework="VPAID" etc.
 function getAttrValues(adm, tag, attr) {
-  const re = new RegExp(`<${tag}\\b[^>]*\\s${attr}\\s*=\\s*["']([^"']+)["']`, 'gi');
+  // Runs against ONE open tag at a time, so the bounded backtracking here
+  // is over an attribute list, not over the whole document.
+  const attrRe = new RegExp(`\\s${attr}\\s*=\\s*["']([^"']+)["']`, 'i');
   const out = [];
-  let m;
-  while ((m = re.exec(adm)) !== null) out.push(m[1]);
+  forEachOpenTag(adm, tag, (openTag) => {
+    const m = attrRe.exec(openTag);
+    if (m) out.push(m[1]);
+  });
   return out;
 }
 
@@ -117,11 +169,24 @@ function validateVast(adm, path) {
   const SECURE_TAGS = ['MediaFile', 'VASTAdTagURI', 'ClickThrough', 'ClickTracking', 'Impression'];
   let insecureCount = 0;
   let firstUrl = null;
+  // Walked open-tag-first for the same linearity reason as getAttrValues —
+  // the old `<tag\b[^>]*>([\s\S]*?)</tag>` was the second quadratic pattern.
+  //
+  // Handling `/>` explicitly also fixes a miss the old regex had: a
+  // self-closing `<MediaFile/>` has no `</MediaFile>`, so the lazy
+  // `[\s\S]*?` ran past it to the NEXT closing tag and swallowed whatever
+  // lay between — including an insecure URL that should have been flagged.
+  // An empty element has no content, so there is nothing to scan and we
+  // move on rather than reaching forward into a different element.
+  const lowerAdm = adm.toLowerCase();
   for (const tag of SECURE_TAGS) {
-    const re = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'gi');
-    let m;
-    while ((m = re.exec(adm)) !== null) {
-      const url = (m[1] || '')
+    const closeTag = '</' + tag.toLowerCase() + '>';
+    forEachOpenTag(adm, tag, (openTag, endIndex) => {
+      if (/\/>$/.test(openTag)) return;
+      const closeAt = lowerAdm.indexOf(closeTag, endIndex + 1);
+      if (closeAt === -1) return;
+      const url = adm
+        .slice(endIndex + 1, closeAt)
         .replace(/^<!\[CDATA\[/i, '')
         .replace(/\]\]>$/, '')
         .trim();
@@ -129,7 +194,7 @@ function validateVast(adm, path) {
         insecureCount++;
         if (!firstUrl) firstUrl = url.slice(0, 120);
       }
-    }
+    });
   }
   if (insecureCount > 0) {
     findings.push(
