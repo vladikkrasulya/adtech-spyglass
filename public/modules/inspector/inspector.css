@@ -3710,12 +3710,28 @@ button.cross-path:focus-visible,
   }
 }
 
-/* ── Stage-1: finding→source highlight overlay (source-nav.js) ─────────────
-   Backdrop-mirror technique: the overlay sits BEHIND the textarea carrying its
-   exact geometry/typography/background (set inline by alignOverlay); the
-   textarea is transparent on top so only the <mark> backgrounds show through.
-   The overlay is decorative (aria-hidden) and never intercepts input. */
+/* ── The payload backdrop (source-nav.js) ──────────────────────────────────
+   A <textarea> cannot colour its own text, so everything the editor paints —
+   JSON syntax AND finding marks — is painted by ONE element behind it,
+   carrying the textarea's exact geometry and typography (set inline by
+   alignOverlay) and scrolled in lockstep. The textarea sits on top with its
+   own ink turned transparent, which leaves the caret, the native selection,
+   undo/redo, IME and every screen reader reading the REAL control. The
+   backdrop is decorative (aria-hidden) and never intercepts input.
+
+   There is deliberately only one of these. Two mirrors of the same text —
+   one for syntax, one for findings — drift against each other the moment a
+   font loads late or a scrollbar appears, and the drift reads as colour
+   sitting a pixel off its glyphs. */
 .input-card {
+  position: relative;
+}
+/* The rail needs an edge to hang off, and the backdrop needs a containing
+   block that is the editor row rather than the whole card (which includes the
+   header). Making the row the positioned ancestor moves BOTH — the textarea's
+   offsetTop/offsetLeft and the backdrop's origin — into the same frame, so
+   alignOverlay's numbers stay self-consistent. */
+.json-editor {
   position: relative;
 }
 .input-card .json-input {
@@ -3732,53 +3748,326 @@ button.cross-path:focus-visible,
   pointer-events: none;
   user-select: none;
   color: transparent;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
+  /* The textarea does not wrap (see .json-input — a payload is code, and
+     re-flowing it on every column resize loses the reader their place), so
+     the backdrop must not either. alignOverlay copies the live value on top;
+     this is the pre-layout default. */
+  white-space: pre;
   font-family: var(--font-mono);
 }
-.src-hl {
+/* Syntax on: the backdrop is now the thing you actually read, so it takes the
+   base ink and the textarea gives its own up. Both switch together, in one
+   class each, so there is no state where the text is painted twice or not at
+   all. */
+.src-hl-overlay.has-syntax {
+  color: var(--syn-punct);
+}
+.json-input.has-syntax {
   color: transparent;
-  border-radius: 2px;
+  caret-color: var(--accent);
 }
-.src-hl--exact {
-  background: rgba(255, 206, 84, 0.45);
-  box-shadow: 0 0 0 1px rgba(245, 171, 53, 0.85);
-}
-.src-hl--container {
-  background: rgba(120, 170, 255, 0.28);
-}
-.src-hl--related {
-  background: rgba(120, 170, 255, 0.18);
-  outline: 1px dashed rgba(120, 170, 255, 0.6);
+/* The selection band must be see-through, or selecting text would black out
+   the very colours this whole layer exists to show. --selection-bg is already
+   a translucent token used shell-wide for exactly this. */
+.json-input.has-syntax::selection {
+  background: var(--selection-bg);
+  color: transparent;
 }
 
-/* prev/next finding controls */
-.src-nav-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-2) 0;
+/* ── Layer 1: JSON grammar ─────────────────────────────────────────────────
+   Quiet on purpose. Punctuation is the backdrop's own colour and gets no
+   element at all — which is also what keeps the node count survivable on a
+   large payload. */
+.jt-k {
+  color: var(--syn-key);
 }
-.src-nav-bar[hidden] {
+.jt-s {
+  color: var(--syn-str);
+}
+.jt-n {
+  color: var(--syn-num);
+}
+.jt-b {
+  color: var(--syn-lit);
+  font-weight: 600;
+}
+
+/* ── Layer 2: what the field MEANS in oRTB ─────────────────────────────────
+   Declared after layer 1 so it wins on equal specificity, which is the point:
+   a semantic key is a key first and a join/price/size second, and the second
+   fact is the one worth seeing. 700 weight is doing as much work as the hue
+   here — at 13px, hue alone lost the race against a screenful of syntax.
+   Safe on metrics because the face is monospace: advance width does not
+   change with weight, so the backdrop cannot drift from the textarea. */
+.jt-link,
+.jt-money,
+.jt-shape,
+.jt-creative,
+.jt-brand {
+  font-weight: 700;
+}
+.jt-link {
+  color: var(--sem-link);
+}
+.jt-money {
+  color: var(--sem-money);
+}
+.jt-shape {
+  color: var(--sem-shape);
+}
+.jt-creative {
+  color: var(--sem-creative);
+}
+.jt-brand {
+  color: var(--sem-brand);
+}
+/* ext.* is marked by TEXTURE rather than by hue: it is not a category of
+   meaning, it is the absence of one — a region the spec does not describe.
+   A dotted rule says that without spending one of the five hues the actual
+   spec fields need. */
+.jt-vendor {
+  color: var(--sem-vendor);
+  font-weight: 600;
+  text-decoration: underline dotted var(--sem-vendor);
+  text-underline-offset: 3px;
+}
+
+/* ── Layer 3: findings, in the same pass ───────────────────────────────────
+   Two treatments, and the split between them is the whole information design
+   of this editor: BACKGROUND means "this is what you jumped to", UNDERLINE
+   means "there is a finding here". Colour never changes meaning between the
+   two, because colour is already spoken for by layer 2. */
+.src-hl,
+.src-fx {
+  border-radius: 2px;
+  /* Without syntax the backdrop's text is invisible and only the tint shows
+     (the textarea's own ink is on top). With syntax the marks must let the
+     token colours through. */
+  color: inherit;
+  background: none;
+}
+.src-hl-overlay:not(.has-syntax) .src-hl,
+.src-hl-overlay:not(.has-syntax) .src-fx {
+  color: transparent;
+}
+.src-hl--exact {
+  background: var(--fx-exact);
+  box-shadow: 0 0 0 1px var(--fx-exact-line);
+}
+.src-hl--container {
+  background: var(--fx-container);
+}
+.src-hl--related {
+  background: var(--fx-related);
+  outline: 1px dashed var(--fx-container);
+}
+/* Resting markers. Wavy underline is the editor convention for "diagnostic
+   here" and, unlike a background, it can sit under coloured text without
+   costing it contrast. */
+.src-fx {
+  text-decoration: underline wavy;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+.src-fx--error {
+  text-decoration-color: var(--danger);
+}
+.src-fx--warning {
+  text-decoration-color: var(--warning);
+}
+.src-fx--question,
+.src-fx--info {
+  text-decoration-color: var(--text-dim);
+}
+
+/* ── "there is more to the right" ──────────────────────────────────────────
+   The editor scrolls horizontally rather than wrapping (see markClipped() in
+   source-nav.js for why: gutter numbers are LOGICAL lines, and one 13KB VAST
+   in `adm` would wrap into ~150 visual lines and bury the payload). The price
+   of that is a line cut dead at the panel edge with nothing to say so, since
+   `scrollbar-width: thin` renders as an overlay scrollbar on some platforms
+   and draws nothing until you are already scrolling.
+
+   So the edge states it itself, and only while it is true — the class comes
+   off the moment the line is fully scrolled into view. Sits above the
+   textarea (z-index 1) but takes no pointer events, so selecting or clicking
+   through it works normally. */
+.json-editor.is-clipped-right::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 26px;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0), var(--bg));
+}
+/* Stop short of the rail, which is a column of its own and must stay legible. */
+.json-editor.has-finding-rail.is-clipped-right::after {
+  right: 14px;
+}
+
+/* ── The finding rail ──────────────────────────────────────────────────────
+   Zed's minimap gutter, reduced to the one thing it is for here: every
+   finding in the payload as a tick at its own height, so the shape of the
+   problem is legible without scrolling and any one of them is one click away.
+   This is what replaced the ‹prev / next› stepper, which could only ever
+   answer "what is the next one".
+
+   The rail is a real column, not an overlay: .json-editor gains padding for
+   it so the ticks can never land on top of the textarea's scrollbar. */
+.json-editor.has-finding-rail {
+  padding-right: 14px;
+}
+.finding-rail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  display: flex;
+  justify-content: center;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+}
+.finding-rail[hidden] {
   display: none;
 }
-/* prev/next buttons carry a glyph+text label ("‹ назад" / "далі ›"). They only
-   had the generic .btn-icon (built for single-glyph icon buttons), so the angle
-   glyph sat off the text baseline and read as "crooked". Center the content
-   vertically and use the mono face (consistent glyph metrics) so the chevron and
-   the label line up. */
-.src-nav-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-mono);
-  line-height: 1;
+.finding-tick {
+  position: absolute;
+  right: 3px;
+  width: 8px;
+  height: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 1px;
+  cursor: pointer;
+  /* The hit target is 3px tall on screen but 11px to the pointer — a tick
+     that is honest about where the finding is, and still clickable. */
+  box-shadow: 0 0 0 4px transparent;
+  transition: transform var(--t-fast) var(--ease);
 }
-.src-nav-status {
+.finding-tick:hover,
+.finding-tick:focus-visible {
+  transform: scaleX(1.6);
+  outline: none;
+}
+.finding-tick:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.finding-tick--error {
+  background: var(--danger);
+}
+.finding-tick--warning {
+  background: var(--warning);
+}
+.finding-tick--question,
+.finding-tick--info {
+  background: var(--text-dim);
+}
+
+/* ── The caret popover ─────────────────────────────────────────────────────
+   Shown for whichever finding the caret is inside — by click or by arrow key,
+   since both move selectionStart. Anchored to the LINE rather than the
+   column: a column anchor needs per-character measurement that a late-loading
+   webfont silently invalidates, and the line is the unit being read anyway. */
+.src-pop {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  max-width: 620px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--text-dim);
+  border-radius: var(--r-chip, 3px);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-chip, 12px);
+  color: var(--text);
+}
+.src-pop[hidden] {
+  display: none;
+}
+.src-pop--error {
+  border-left-color: var(--danger);
+}
+.src-pop--warning {
+  border-left-color: var(--warning);
+}
+.src-pop-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.src-pop-where {
+  flex: 0 0 auto;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-mono, 11px);
   color: var(--text-dim);
 }
+.src-pop-go {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-chip, 3px);
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.src-pop-go:hover {
+  background: var(--accent-soft);
+}
+/* The card the popover sends you to, announcing itself on arrival. */
+.finding.is-flashed,
+[data-finding-id].is-flashed {
+  animation: finding-flash 1.2s var(--ease);
+}
+@keyframes finding-flash {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  20% {
+    background-color: var(--accent-soft);
+  }
+}
+
+/* The shell's global reduced-motion rule (design-system.css) names specific
+   decorative classes rather than sweeping every animation, so anything new has
+   to opt in for itself. The flash still HAPPENS — the reader who followed a
+   popover to a card needs to see which card — it just stops moving: a held
+   tint for the same 1.2s the class is on, instead of a pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .finding-tick {
+    transition: none;
+  }
+  .finding.is-flashed,
+  [data-finding-id].is-flashed {
+    animation: none;
+    background-color: var(--accent-soft);
+  }
+}
+
+/* Highlighting off, said out loud. A payload past the tokenizer's ceiling
+   renders monochrome, and monochrome is the exact thing this layer exists to
+   remove — so it has to read as a size decision, not a broken editor. */
+.syntax-off-note {
+  margin-left: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono, 11px);
+  color: var(--text-dim);
+}
+.syntax-off-note[hidden] {
+  display: none;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

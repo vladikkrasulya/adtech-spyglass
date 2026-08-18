@@ -189,3 +189,92 @@
 [data-theme='dark'] .kt-shell {
   --bg: #0a111f;
 }
+
+/* ------------------------------------------------------------
+   Payload syntax tokens — the editor's own palette.
+
+   WHY THESE ARE VALUES AND NOT var(--accent) & friends
+   ------------------------------------------------------------
+   Most of this file re-points existing tokens. This block declares new
+   ones, because the vendored palette has no vocabulary for code: it
+   carries one code token (--code-num), and design-system.css says in
+   its own comment that --code-num is 3.2:1 on white and therefore
+   LARGE TEXT ONLY. The payload editor is 13px mono. Reusing it here
+   would have been "token-pure" and unreadable.
+
+   So the values are stated once, here, in the ortbtools-owned layer —
+   never in the vendored sheet, whose sha256 is CI-guarded — and every
+   call site downstream uses the token, never a literal.
+
+   CONTRAST, MEASURED (not eyeballed)
+   ------------------------------------------------------------
+   The editor card and the backdrop are both transparent, so the real
+   ground is --bg: #F2F5F8 light, #0A111F dark. Every colour below was
+   checked against that ground AND against the three finding-mark tints
+   composited over it, because a token sitting inside a highlighted
+   range is read through that tint. Worst cell in the whole matrix:
+
+     light  4.67:1  (--syn-link on the container tint)
+     dark   4.61:1  (--syn-punct on the exact tint)
+
+   Both clear the 4.5:1 AA floor for normal text. Nothing here relies
+   on the large-text exemption.
+
+   TWO LAYERS, AND WHY THE SECOND ONE SHOUTS
+   ------------------------------------------------------------
+   --syn-* is ordinary JSON grammar. It is deliberately quiet: it is
+   scaffolding, and the reader did not open this tool to admire a
+   coloured brace.
+
+   --sem-* is the oRTB semantic layer — the fields packages/core
+   actually joins on and refuses bids over. Those are the answer to the
+   question the reader arrived with, so they get a distinct hue AND 700
+   weight (see .jt-* in inspector.css). The weight is what keeps the
+   semantic layer from drowning in the syntax layer; hue alone was not
+   enough at 13px. Bold is metric-safe here because the face is
+   monospace, where advance width does not change with weight.
+   ------------------------------------------------------------ */
+.kt-shell {
+  /* grammar */
+  --syn-punct: #4e5d74; /* braces, brackets, commas, colons */
+  --syn-key: #0d1726; /* ordinary object key */
+  --syn-str: #8c4b1f; /* string value */
+  --syn-num: #0c5f59; /* number */
+  --syn-lit: #3b5578; /* true / false / null */
+
+  /* oRTB meaning */
+  --sem-link: #0369a1; /* id, impid, cid, crid, seat — the joins */
+  --sem-money: #116430; /* price, bidfloor, cur, at */
+  --sem-shape: #6d28d9; /* banner/video/native + w/h/format */
+  --sem-creative: #a21caf; /* adm, nurl, burl, iurl */
+  --sem-brand: #b91c1c; /* adomain, bcat, badv, battr */
+  --sem-vendor: #46556b; /* ext.* — outside the spec by definition */
+
+  /* Finding tints. Stated as component + alpha so the same declaration
+     composites correctly on either ground, instead of two hard-coded
+     blends that would drift apart. */
+  --fx-exact: rgba(245, 158, 11, 0.18);
+  --fx-exact-line: rgba(180, 83, 9, 0.85);
+  --fx-container: rgba(2, 132, 199, 0.12);
+  --fx-related: rgba(2, 132, 199, 0.08);
+}
+
+[data-theme='dark'] .kt-shell {
+  --syn-punct: #8fa0bc;
+  --syn-key: #e9eef7;
+  --syn-str: #e8b08a;
+  --syn-num: #5eead4;
+  --syn-lit: #a8bedc;
+
+  --sem-link: #7dd3fc;
+  --sem-money: #5ce68f;
+  --sem-shape: #c4b5fd;
+  --sem-creative: #f0abfc;
+  --sem-brand: #fca5a5;
+  --sem-vendor: #93a5c1;
+
+  --fx-exact: rgba(245, 158, 11, 0.24);
+  --fx-exact-line: rgba(251, 191, 36, 0.9);
+  --fx-container: rgba(56, 189, 248, 0.16);
+  --fx-related: rgba(56, 189, 248, 0.1);
+}

@@ -15,29 +15,6 @@
   const SPEC = {
     id: 'inspector-nav',
     keys: {
-      'inspector.nav.prev': { uk: '‹ назад', en: '‹ prev', ru: '‹ назад' },
-      'inspector.nav.next': { uk: 'далі ›', en: 'next ›', ru: 'далее ›' },
-      'inspector.nav.locatable': {
-        uk: '{n} зі знайденим місцем',
-        en: '{n} locatable',
-        ru: '{n} с найденным местом',
-      },
-      'inspector.nav.none_locatable': {
-        uk: 'місце не знайдено',
-        en: 'none locatable',
-        ru: 'место не найдено',
-      },
-      'inspector.nav.edited': {
-        uk: 'змінено — запусти аналіз знову',
-        en: 'edited — re-run analyze',
-        ru: 'изменено — запусти анализ снова',
-      },
-      'inspector.nav.no_location': {
-        uk: 'немає точного місця',
-        en: 'no precise location',
-        ru: 'нет точного места',
-      },
-      'inspector.nav.idle': { uk: '—', en: '—', ru: '—' },
       'inspector.nav.jumped': {
         uk: 'Перехід до {display} у {side}, рядок {line} колонка {col}',
         en: 'Jumped to {display} in {side}, line {line} column {col}',
@@ -60,10 +37,35 @@
       },
       'inspector.nav.side.request': { uk: 'запиті', en: 'request', ru: 'запросе' },
       'inspector.nav.side.response': { uk: 'відповіді', en: 'response', ru: 'ответе' },
-      'inspector.nav.toolbar': {
-        uk: 'Навігація по знайдених місцях у коді',
-        en: 'Finding source navigation',
-        ru: 'Навигация по найденным местам в коде',
+      // The rail that replaced the ‹prev / next› stepper: an ARIA toolbar of
+      // one tick per finding down the right edge of the editor.
+      'inspector.nav.rail': {
+        uk: 'Знахідки в цьому payload',
+        en: 'Findings in this payload',
+        ru: 'Находки в этом payload',
+      },
+      'inspector.nav.tick': {
+        uk: 'рядок {line}: {what}',
+        en: 'line {line}: {what}',
+        ru: 'строка {line}: {what}',
+      },
+      'inspector.nav.at_line': {
+        uk: 'рядок {line}',
+        en: 'line {line}',
+        ru: 'строка {line}',
+      },
+      // Popover action: from the place in the code to the card that explains it.
+      'inspector.nav.to_card': {
+        uk: 'відкрити знахідку',
+        en: 'open the finding',
+        ru: 'открыть находку',
+      },
+      // Said out loud when the payload is past the highlighter's ceiling, so a
+      // monochrome editor reads as a size decision and not as a broken one.
+      'inspector.nav.syntax_off': {
+        uk: 'підсвітку вимкнено — payload завеликий',
+        en: 'highlighting off — payload too large',
+        ru: 'подсветка выключена — payload слишком большой',
       },
       'inspector.nav.jump': {
         uk: 'Перейти до цього місця в коді',

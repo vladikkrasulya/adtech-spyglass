@@ -3,7 +3,8 @@
 /**
  * jsdom harness for the client navigation controller (public/modules/inspector/
  * source-nav.js) over the real browser source-map copy. Asserts behaviour, DOM
- * structure, XSS-safety, cross-pane navigation, stale lifecycle and prev/next —
+ * structure, XSS-safety, cross-pane navigation, stale lifecycle, the resting
+ * finding-marker layer and keyboard stepping —
  * NOT pixel layout (jsdom has no layout engine; alignment is verified manually).
  */
 
@@ -21,9 +22,14 @@ const NAV_SRC = fs.readFileSync(path.join(ROOT, 'public/modules/inspector/source
 function setup(reqText, resText) {
   const dom = new JSDOM(
     `<!DOCTYPE html><body>
-      <div class="input-card" id="cardReq"><textarea id="bidReq"></textarea></div>
-      <div class="input-card" id="cardRes"><textarea id="bidRes"></textarea></div>
-      <div id="srcNavBar"></div></body>`,
+      <div class="input-card" id="cardReq">
+        <div class="input-card-header"><span class="char-count">0</span></div>
+        <div class="json-editor"><textarea id="bidReq"></textarea></div>
+      </div>
+      <div class="input-card" id="cardRes">
+        <div class="input-card-header"><span class="char-count">0</span></div>
+        <div class="json-editor"><textarea id="bidRes"></textarea></div>
+      </div></body>`,
     { runScripts: 'outside-only' },
   );
   const w = dom.window;
@@ -35,7 +41,12 @@ function setup(reqText, resText) {
   return w;
 }
 const overlay = (w, side) => w.OrtbtoolsSourceNav.__test.panes()[side].overlay;
-const marks = (ov) => Array.from(ov.querySelectorAll('mark'));
+const rail = (w, side) => w.OrtbtoolsSourceNav.__test.panes()[side].rail;
+// The ACTIVE jump highlight only. The resting finding-marker layer also emits
+// <mark>, so a bare querySelectorAll('mark') would conflate the two — which is
+// exactly the distinction most of these tests are about.
+const marks = (ov) => Array.from(ov.querySelectorAll('mark.src-hl'));
+const restingMarks = (ov) => Array.from(ov.querySelectorAll('mark.src-fx'));
 
 const PRETTY = (o) => JSON.stringify(o, null, 2);
 
@@ -171,7 +182,7 @@ test('stale: editing a pane tears down highlight + disables nav until re-analyze
   el.dispatchEvent(new w.Event('input', { bubbles: true }));
   assert.equal(marks(overlay(w, 'response')).length, 0, 'highlight torn down on edit');
   assert.equal(w.OrtbtoolsSourceNav.navigate(loc), false, 'navigation disabled while stale');
-  assert.equal(w.document.getElementById('srcNavBar').hidden, true);
+  assert.equal(rail(w, 'response').hidden, true, 'rail emptied with the stale revision');
 });
 
 test('prev/next cycles navigable findings across panes with wrap-around', () => {
@@ -292,8 +303,7 @@ test('teardown removes document keydown, overlays, live region + toolbar state',
   assert.equal(w.OrtbtoolsSourceNav.__test.panes(), null);
   assert.equal(w.document.querySelector('.src-hl-overlay'), null, 'overlays removed');
   assert.equal(w.document.querySelector('[aria-live]'), null, 'live region removed');
-  assert.equal(w.document.getElementById('srcNavBar').children.length, 0, 'toolbar emptied');
-  assert.equal(w.document.getElementById('srcNavBar').hidden, true, 'toolbar hidden');
+  assert.equal(w.document.querySelector('.finding-rail'), null, 'rails removed');
 });
 
 test('Esc clears the active highlight even while the textarea HAS focus', () => {
@@ -331,38 +341,93 @@ test('failed analyze: resetNavigation() at analyze start leaves no stale jump', 
   assert.equal(marks(overlay(w, 'response')).length, 0, 'prior highlight dropped at analyze start');
   assert.equal(w.OrtbtoolsSourceNav.__test.state(), null, 'navigation revision cleared');
   assert.equal(w.OrtbtoolsSourceNav.navigate(loc), false, 'no stale jump without a fresh analysis');
-  assert.equal(w.document.getElementById('srcNavBar').hidden, true);
+  assert.equal(rail(w, 'response').hidden, true, 'rail cleared with the revision');
 });
 
 // ── CP3.2: clickable crosscheck (data-loc), Esc-status, toolbar aria, geometry ──
 
-test('CP3.2: Esc clears the highlight AND drops the stale active-location status', () => {
+test('Esc clears the ACTIVE jump but keeps the resting finding markers', () => {
   const res = { seatbid: [{ bid: [{ price: 1 }] }] };
   const w = setup('', PRETTY(res));
   const loc = FL.buildNormalLocation(
     { id: 'x', path: 'seatbid[0].bid[0].price' },
     { side: 'response', kind: 'ortb' },
   );
-  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', location: loc }]);
+  w.OrtbtoolsSourceNav.onAnalyzed([
+    { id: 'x', level: 'error', msg: 'Price is wrong.', location: loc },
+  ]);
+  assert.equal(restingMarks(overlay(w, 'response')).length, 1, 'the finding is marked at rest');
   assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
-  const active = w.OrtbtoolsSourceNav.__test.status();
-  assert.ok(active && /:\d+:\d+$/.test(active), 'status shows the active location (…:line:col)');
+  assert.equal(marks(overlay(w, 'response')).length, 1, 'active jump painted');
+  assert.equal(
+    restingMarks(overlay(w, 'response')).length,
+    0,
+    'the active treatment REPLACES the resting one at the same range — never both',
+  );
   // Esc dispatched FROM the focused textarea (bubbles to the document handler)
   const el = w.document.getElementById('bidRes');
   el.focus();
   el.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-  assert.equal(marks(overlay(w, 'response')).length, 0, 'highlight cleared');
-  const after = w.OrtbtoolsSourceNav.__test.status();
-  assert.notEqual(after, active, 'status no longer the stale active location');
-  assert.match(after, /locatable/, 'status returned to the neutral list state');
+  assert.equal(marks(overlay(w, 'response')).length, 0, 'active highlight cleared');
+  assert.equal(
+    restingMarks(overlay(w, 'response')).length,
+    1,
+    'Esc dismisses what you jumped to, NOT the map of what is wrong',
+  );
 });
 
-test('CP3.2: buildControls localizes the toolbar aria-label on init', () => {
-  const w = setup('{"a":1}', '');
-  const bar = w.document.getElementById('srcNavBar');
+test('the rail carries a localized toolbar name and one tick per marked finding', () => {
+  const res = { seatbid: [{ bid: [{ price: 1, impid: 'i1' }] }] };
+  const w = setup('', PRETTY(res));
+  const items = [
+    {
+      id: 'a',
+      level: 'error',
+      msg: 'Price is wrong.',
+      location: FL.buildNormalLocation(
+        { id: 'a', path: 'seatbid[0].bid[0].price' },
+        { side: 'response', kind: 'ortb' },
+      ),
+    },
+    {
+      id: 'b',
+      level: 'warning',
+      msg: 'Impid is odd.',
+      location: FL.buildNormalLocation(
+        { id: 'b', path: 'seatbid[0].bid[0].impid' },
+        { side: 'response', kind: 'ortb' },
+      ),
+    },
+  ];
+  w.OrtbtoolsSourceNav.onAnalyzed(items);
+  const r = rail(w, 'response');
   // window.t is absent in the harness → tr() resolves to the EN default; the key
   // exists in uk/en/ru per source-nav-i18n.test.js (locale parity).
-  assert.equal(bar.getAttribute('aria-label'), 'Finding source navigation');
+  assert.equal(r.getAttribute('aria-label'), 'Findings in this payload');
+  assert.equal(r.getAttribute('role'), 'toolbar');
+  const ticks = r.querySelectorAll('.finding-tick');
+  assert.equal(ticks.length, 2, 'one tick per marked finding');
+  assert.ok(ticks[0].classList.contains('finding-tick--error'));
+  assert.ok(ticks[1].classList.contains('finding-tick--warning'));
+  // Roving tabindex: the rail is ONE tab stop, not one per finding.
+  assert.equal(ticks[0].tabIndex, 0);
+  assert.equal(ticks[1].tabIndex, -1);
+  // Every tick names its line and its finding for a screen reader.
+  assert.match(ticks[0].getAttribute('aria-label'), /line \d+: Price is wrong\./);
+});
+
+test('a passing crosscheck is not a place in the payload — ok findings get no marker', () => {
+  const res = { seatbid: [{ bid: [{ price: 1 }] }] };
+  const w = setup('', PRETTY(res));
+  const loc = FL.buildNormalLocation(
+    { id: 'x', path: 'seatbid[0].bid[0].price' },
+    { side: 'response', kind: 'ortb' },
+  );
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'x', level: 'ok', msg: 'Fine.', location: loc }]);
+  assert.equal(restingMarks(overlay(w, 'response')).length, 0);
+  assert.equal(rail(w, 'response').hidden, true, 'and no rail tick either');
+  // …but it is still navigable, because the user can still click its path chip.
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
 });
 
 test('CP3.2: window resize refreshes overlay geometry while active; teardown stops it', () => {
