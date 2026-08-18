@@ -232,15 +232,18 @@ test('invalid user.gender is warning with gender param', () => {
 
 // ── New strict rules (2026-05-05): at, bidfloorcur, GDPR consent ────────
 
-test('missing at is error "request.at_required"', () => {
+test('missing at is informational, not an error', () => {
+  // `at` carries a spec default of 2, and a field with a default cannot be
+  // required — the default is what the exchange applies when it is absent.
+  // At ERROR this rolled a spec-compliant payload up to "errors".
   const req = validRequest();
   delete req.at;
   const { findings, status } = validate(req);
   const f = findById(findings, 'request.at_required');
   assert.ok(f, 'expected request.at_required finding');
-  assert.equal(f.level, 'error');
+  assert.equal(f.level, 'info');
   assert.equal(f.path, 'at');
-  assert.equal(status, 'errors');
+  assert.notEqual(status, 'errors', 'a missing default must not fail the payload');
   // at_invalid must NOT also fire when at is missing — separate rules.
   assert.equal(findById(findings, 'request.at_invalid'), undefined);
 });

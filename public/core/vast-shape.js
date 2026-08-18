@@ -60,17 +60,46 @@
   }
 
   /**
-   * Walk past legal prolog content — whitespace, comments, processing
-   * instructions and a DOCTYPE — and return the index of the root element's
-   * `<`, or -1. Linear: each construct is skipped with one indexOf, and the
-   * cursor only ever moves forward.
+   * Walk past legal prolog content — a byte-order mark, whitespace, comments,
+   * processing instructions and a DOCTYPE — and return the index of the root
+   * element's `<`, or -1. Linear: each construct is skipped with one indexOf,
+   * and the cursor only ever moves forward.
    *
    * A DOCTYPE is skipped rather than rejected. Deciding whether to allow one is
    * the parser's job, and it gives an accurate reason; refusing here would only
    * turn that into "this is not VAST", which is both wrong and unhelpful.
+   *
+   * ── WHY THE BOM IS SKIPPED HERE, AND ONLY AT OFFSET 0 ────────────────────
+   * A UTF-8 BOM (U+FEFF) in front of `<VAST` is not exotic — plenty of XML
+   * writers emit one by default, and a whole class of partner systems ships
+   * VAST that starts with it. Three other places in this codebase already know
+   * that: `decoders/index.js` strips it with the note "some partner systems
+   * prepend it to UTF-8 payloads", and raw-json.js and source-map.js each skip
+   * it as well. But `bid.adm` passes through none of them. It arrives as a
+   * string inside an already-parsed JSON bid response and lands here verbatim,
+   * which is how the one entry point that never learned the lesson stayed
+   * broken while the rest of the codebase had it written down.
+   *
+   * Until this skip existed the consequence was the whole cascade this file's
+   * header describes as fixed, re-entered by a different door: `isVastShape`
+   * returned false, so format-detect tagged the creative with no format and no
+   * VAST protocol at all, and rules-response.js never called `validateVast`.
+   * A broken VAST tag came back reporting zero findings — the inspector's worst
+   * possible answer, because "nothing found" reads as "nothing wrong".
+   *
+   * It is skipped as a signature at offset 0 rather than folded into
+   * `isWhitespace`, because that is precisely what XML says it is. U+FEFF
+   * leading the document is an encoding signature; anywhere else it is
+   * ZERO WIDTH NO-BREAK SPACE, a perfectly ordinary character that is NOT
+   * whitespace (XML 1.0 §2.3) and must not be allowed to separate prolog
+   * constructs. Only one is consumed: a second BOM is content, not a signature.
+   *
+   * Compared by char code rather than against a literal, because a raw U+FEFF
+   * in source is both an eslint no-irregular-whitespace error and a violation
+   * of the invisible-character guard in tests/no-raw-control-chars.test.js.
    */
   function rootElementStart(s) {
-    let i = 0;
+    let i = s.charCodeAt(0) === 0xfeff ? 1 : 0;
     const n = s.length;
     for (;;) {
       while (i < n && isWhitespace(s[i])) i++;

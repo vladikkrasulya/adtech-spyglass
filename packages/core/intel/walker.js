@@ -77,6 +77,49 @@ const PII_PATTERNS = [
 ];
 
 /**
+ * Which side of the auction is this document? The walker is handed one
+ * payload at a time with no out-of-band hint about its kind, and for
+ * exactly one entry point that matters: the top-level `ext`. It is the
+ * only ext object that exists on BOTH a BidRequest and a BidResponse, so
+ * it is the only one whose logical prefix has to be decided rather than
+ * read off the containing member — `imp[].ext` can only be a request and
+ * `seatbid[].bid[].ext` can only be a response, and those branches guard
+ * themselves with an Array.isArray().
+ *
+ * This used to be resolved by not resolving it: findExtEntryPoints added
+ * `payload.ext` twice, once as `req.ext` and once as `res.ext`, and let
+ * the cycle guard in walkSubtree decide. That is why the `res.ext.*`
+ * namespace was uninhabited — the guard was entered on the first visit,
+ * so the second entry point walked nothing at all, and every bid
+ * response's top-level ext was filed under `req.ext.*`. Harmless-looking
+ * until you follow where those strings go: the Dialect Builder seeds
+ * temp-dialect field paths straight from walker output, so a user
+ * building a rule out of a discovered response field would write
+ * "req.ext.X is required" and then see a bogus ERROR on every real
+ * BidRequest, which is a document that has never had that field.
+ *
+ * Signals, most decisive first:
+ *   - seatbid[] / nbr / bidid — members of Object: BidResponse and of
+ *     nothing else (oRTB 2.6 §3.3.1)
+ *   - imp[] — a required member of Object: BidRequest (§3.2.1)
+ * A fragment carrying neither (a bare `{ext:{…}}`, a partial paste) keeps
+ * the historical `req` default: requests are the overwhelming majority of
+ * what the inspector sees, and guessing `res` for an unlabelled fragment
+ * would scatter one vendor's fields across two namespaces — worse than
+ * being consistently wrong in the rare case.
+ */
+function payloadSide(payload) {
+  const looksResponse =
+    Array.isArray(payload.seatbid) ||
+    typeof payload.nbr === 'number' ||
+    typeof payload.bidid === 'string';
+  // A document that reads as both is malformed; `req` is the safer guess
+  // because the request-side entry points below are the richer set.
+  if (looksResponse && !Array.isArray(payload.imp)) return 'res';
+  return 'req';
+}
+
+/**
  * Entry points: every place inside a payload where ext lives. The
  * walker enters AT each ext object, never above it — so canonical
  * fields like `bid.id` / `imp.banner.w` / `user.id` are never seen.
@@ -89,8 +132,10 @@ function findExtEntryPoints(payload) {
     if (val && typeof val === 'object') entries.push({ logicalPath, value: val });
   };
 
+  // The single ambiguous entry point — namespaced by shape, see payloadSide().
+  tryAdd(payloadSide(payload) + '.ext', payload.ext);
+
   // Request-side
-  tryAdd('req.ext', payload.ext);
   tryAdd('req.site.ext', payload.site && payload.site.ext);
   tryAdd('req.app.ext', payload.app && payload.app.ext);
   tryAdd('req.user.ext', payload.user && payload.user.ext);
@@ -110,7 +155,6 @@ function findExtEntryPoints(payload) {
   }
 
   // Response-side
-  tryAdd('res.ext', payload.ext);
   if (Array.isArray(payload.seatbid)) {
     for (const sb of payload.seatbid) {
       tryAdd('res.seatbid.ext', sb && sb.ext);
@@ -136,23 +180,37 @@ function isPiiPath(component) {
 /**
  * Recursively walk an ext-rooted subtree. emits leaf paths via `out.push`.
  * Stops at MAX_DEPTH to bound CPU and protect against pathological nesting.
+ *
+ * `ancestors` is the cycle guard, and it is scoped to the CURRENT descent
+ * path — added on the way down, removed on the way back up. It used to be
+ * a single WeakSet of "everything visited anywhere", shared by every entry
+ * point of one extraction, which quietly conflated two different
+ * questions: "would descending here loop forever?" (only true for an
+ * ancestor of the current node) and "have I laid eyes on this object
+ * before?" (true for a sibling, an alias, or the same object reached by a
+ * second entry point — none of which loop). The visited-set reading is
+ * what erased the whole `res.ext` namespace, and it would equally erase
+ * any two ext subtrees that happen to be the same object. An
+ * ancestor-chain guard still terminates on a real cycle and records
+ * everything a real payload can hold.
  */
-function walkSubtree(value, basePath, depth, out, seen) {
+function walkSubtree(value, basePath, depth, out, ancestors) {
   if (depth > MAX_DEPTH) return;
   if (value == null) return;
-  // Cycle guard. Pathological self-referential JSON is rare but a probe
-  // wouldn't be wise to loop forever on it.
-  if (typeof value === 'object') {
-    if (seen.has(value)) return;
-    seen.add(value);
-  }
 
   if (Array.isArray(value)) {
+    // Arrays are recorded whole and never descended into, so they cannot
+    // be part of a cycle we would follow — no need to mark them.
     out.push({ path: basePath, type: 'array', valueShape: fingerprintValue(value) });
     return;
   }
 
   if (typeof value === 'object') {
+    // Cycle guard. Pathological self-referential JSON is rare (JSON.parse
+    // cannot even produce it) but a probe wouldn't be wise to loop forever
+    // on whatever a non-JSON caller hands it.
+    if (ancestors.has(value)) return;
+    ancestors.add(value);
     // For objects we record the leaf value of each key. We don't record
     // the parent object itself as a leaf — only its keyed children.
     for (const k of Object.keys(value)) {
@@ -183,8 +241,11 @@ function walkSubtree(value, basePath, depth, out, seen) {
         type: Array.isArray(child) ? 'array' : 'object',
         valueShape: fingerprintValue(child),
       });
-      walkSubtree(child, childPath, depth + 1, out, seen);
+      walkSubtree(child, childPath, depth + 1, out, ancestors);
     }
+    // Back out of the current path: this node can legitimately reappear
+    // somewhere that is not below itself.
+    ancestors.delete(value);
   }
   // primitives at the entrypoint level (rare — ext should be an object)
   // are intentionally ignored: ext itself shouldn't be a scalar.
@@ -199,9 +260,11 @@ function walkSubtree(value, basePath, depth, out, seen) {
 function extractFields(payload) {
   const entries = findExtEntryPoints(payload);
   const out = [];
-  const seen = new WeakSet();
+  // One guard per entry point, and path-scoped within it — see walkSubtree.
+  // A guard shared across entry points made a second entry point that
+  // pointed at an already-walked object silently produce nothing.
   for (const { logicalPath, value } of entries) {
-    walkSubtree(value, logicalPath, 1, out, seen);
+    walkSubtree(value, logicalPath, 1, out, new WeakSet());
   }
   return out;
 }

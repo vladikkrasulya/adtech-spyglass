@@ -92,6 +92,26 @@ function deviceTypeToContext(dt) {
   return null;
 }
 
+// AdCOM 1.0 List: Creative Subtypes — Audio/Video. This is `ctype` on a 3.0
+// VideoPlacement / the Ad's video, and it is NOT the 2.x `protocols` list: the
+// numbering differs from the first entry (AdCOM 1 = VAST 1.0, where oRTB 2.x
+// 1 = VAST 1.0 but 2 = VAST 2.0 against AdCOM's 2 = VAST 2.0 … the two tables
+// diverge from 4 onward, where AdCOM starts its wrapper block). Mapping 3.0
+// `ctype` through `videoProtocolToFamily` would therefore report a VAST 4.0
+// request as VAST 3.0 wrapper, which is why this is a separate table.
+//   1 VAST 1.0   2 VAST 2.0   3 VAST 3.0
+//   4 VAST 1.0 Wrapper   5 VAST 2.0 Wrapper   6 VAST 3.0 Wrapper
+//   7 VAST 4.0   8 VAST 4.0 Wrapper
+//   9 DAAST 1.0  10 DAAST 1.0 Wrapper
+//   11 VAST 4.1  12 VAST 4.1 Wrapper   13 VAST 4.2   14 VAST 4.2 Wrapper
+function adcomCtypeToFamily(c) {
+  if (c === 2 || c === 5) return PROTOCOLS.VAST_2;
+  if (c === 3 || c === 6) return PROTOCOLS.VAST_3;
+  if (c === 7 || c === 8 || c === 11 || c === 12 || c === 13 || c === 14) return PROTOCOLS.VAST_4;
+  if (c === 9 || c === 10) return PROTOCOLS.DAAST;
+  return null;
+}
+
 function isObj(x) {
   return x != null && typeof x === 'object' && !Array.isArray(x);
 }
@@ -125,6 +145,22 @@ function isCanonicalUrlRequest(o) {
  * same one definition.
  */
 const { isVastShape, detectVastVersion } = require('./vast-shape');
+
+/**
+ * Does an envelope-less payload look like the inner body of a 3.0 BidResponse?
+ *
+ * `bid.media` has no counterpart anywhere in 2.x, so one of them is enough.
+ * Kept as a local five-liner rather than importing `detect.js`'s fuller
+ * `detect30ResponseSignals`: this file's contract is zero dependencies beyond
+ * the two pure helper modules it already pulls, so it can be bundled for the
+ * browser and run on every keystroke.
+ */
+function hasAdComBidMedia(o) {
+  if (!isObj(o) || !Array.isArray(o.seatbid)) return false;
+  return o.seatbid.some(
+    (sb) => isObj(sb) && Array.isArray(sb.bid) && sb.bid.some((b) => isObj(b) && isObj(b.media)),
+  );
+}
 
 function hasPopBidRowShape(row) {
   return isObj(row) && 'url' in row && 'bid' in row;
@@ -305,6 +341,86 @@ function detectFormat(payload, userDialect) {
             // Standalone trigger: no mtype, no HTML tag-shape in adm, but adm
             // looks like a window.open / bare URL — most likely pop. Tag it.
             formats.add(FORMATS.POPS);
+          }
+        }
+      }
+    }
+
+    // ── oRTB 3.0 / AdCOM path
+    //
+    // The third axis was written for 2.x shapes only and answered
+    // `{formats:[],contexts:[],protocols:[],confidence:0}` — "nothing is
+    // known" — for a perfectly readable 3.0 CTV video request. Nothing was
+    // unknown about it: the slot is at `item[].spec.placement.video`, the
+    // channel at `context.app`, the screen at `context.device`. Only the
+    // addresses had changed, and the equivalent 2.5 payload answered
+    // video + inapp + ctv with confidence 1.
+    //
+    // The output vocabulary stays the 2.x one on purpose. AdCOM says
+    // "display" where oRTB 2.x says "banner", but this axis exists so the UI
+    // and the LLM context can talk about a payload without first asking which
+    // version wrote it; a version-dependent tag set would defeat that. So
+    // AdCOM display → `banner`, and the version question stays where it
+    // belongs, on `detectVersion`.
+    const env30 = isObj(p.openrtb) ? p.openrtb : null;
+    const req30 = env30 && isObj(env30.request) ? env30.request : Array.isArray(p.item) ? p : null;
+    if (req30) {
+      for (const it of Array.isArray(req30.item) ? req30.item : []) {
+        if (!isObj(it) || !isObj(it.spec) || !isObj(it.spec.placement)) continue;
+        const pm = it.spec.placement;
+        if (pm.display) formats.add(FORMATS.BANNER);
+        if (pm.audio) formats.add(FORMATS.AUDIO);
+        if (pm.native) formats.add(FORMATS.NATIVE);
+        if (pm.video) {
+          formats.add(FORMATS.VIDEO);
+          if (isObj(pm.video) && Array.isArray(pm.video.ctype)) {
+            for (const c of pm.video.ctype) {
+              const fam = adcomCtypeToFamily(c);
+              if (fam) protocols.add(fam);
+            }
+          }
+        }
+      }
+      const ctx30 = isObj(req30.context) ? req30.context : {};
+      if (ctx30.app) contexts.add(CONTEXTS.INAPP);
+      if (ctx30.site) contexts.add(CONTEXTS.WEB);
+      if (ctx30.dooh) contexts.add(CONTEXTS.DOOH);
+      if (isObj(ctx30.device)) {
+        // AdCOM names the device kind `type`; 2.x calls it `devicetype`. The
+        // enumerated list behind both is the same one, so accept either name
+        // rather than deciding which spelling a sender "should" have used.
+        const dev30 = ctx30.device;
+        const dt = dev30.type != null ? dev30.type : dev30.devicetype;
+        const ctxFromDt30 = deviceTypeToContext(dt);
+        if (ctxFromDt30) contexts.add(ctxFromDt30);
+      }
+    }
+
+    // 3.0 response. `bid.media` is AdCOM's Media, whose `ad` child is the Ad
+    // object that actually owns display/video/audio/native — see
+    // `resolveAdCom` in rules-response-30.js, which accepts the same two
+    // shapes for the same reason (real senders and this repo's own samples
+    // emit the flat one).
+    const res30 = env30 && isObj(env30.response) ? env30.response : hasAdComBidMedia(p) ? p : null;
+    if (res30) {
+      for (const sb of Array.isArray(res30.seatbid) ? res30.seatbid : []) {
+        if (!isObj(sb) || !Array.isArray(sb.bid)) continue;
+        for (const bid of sb.bid) {
+          if (!isObj(bid) || !isObj(bid.media)) continue;
+          const ad = isObj(bid.media.ad) ? bid.media.ad : bid.media;
+          if (ad.display) formats.add(FORMATS.BANNER);
+          if (ad.audio) formats.add(FORMATS.AUDIO);
+          if (ad.native) formats.add(FORMATS.NATIVE);
+          if (ad.video) {
+            formats.add(FORMATS.VIDEO);
+            const adm = isObj(ad.video) ? ad.video.adm : null;
+            if (isVastShape(adm)) {
+              const ver = detectVastVersion(adm);
+              const major = ver ? ver.split('.')[0] : null;
+              if (major === '2') protocols.add(PROTOCOLS.VAST_2);
+              else if (major === '3') protocols.add(PROTOCOLS.VAST_3);
+              else if (major === '4') protocols.add(PROTOCOLS.VAST_4);
+            }
           }
         }
       }

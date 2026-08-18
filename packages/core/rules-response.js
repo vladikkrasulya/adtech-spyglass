@@ -90,7 +90,29 @@ function validateResponse(res, ctx) {
     findings.push(F('response.seatbid_empty_no_nbr', LEVELS.ERROR, 'seatbid'));
   }
 
-  (res.seatbid || []).forEach((sb, i) => {
+  // Array.isArray, not `|| []` — on both `seatbid` and `bid` below.
+  //
+  // The `|| []` form defends against null and undefined and against nothing
+  // else: a bare object passes it untouched and then `({}).forEach` throws a
+  // TypeError. Both fields arrive as bare objects from adapters that emit a
+  // single element without its wrapper (`seatbid: {seat, bid: […]}`,
+  // `bid: {id, impid, price}`), which is precisely the "field is present,
+  // type is wrong" class this validator exists to name.
+  //
+  // Nothing between here and the HTTP layer catches that throw — core's
+  // validate() has no try around validateResponse — so the operator's
+  // answer was an HTTP 400 whose body read "(sb.bid || []).forEach is not a
+  // function": no verdict, no findings, and a message about our source code
+  // rather than their payload.
+  //
+  // Both malformed shapes are already reported by the checks above and just
+  // below (seatbid_or_nbr_required for a non-array seatbid, seatbid.empty for
+  // a non-array bid), so the loops need no new finding — only to stop
+  // destroying the response that carries them. This mirrors the `seatbid:
+  // [null]` / `bid: [null]` coercions already inside the loops: same class of
+  // defect, one level further out.
+  const seats = Array.isArray(res.seatbid) ? res.seatbid : [];
+  seats.forEach((sb, i) => {
     const sNum = i + 1;
     const sp = `seatbid[${i}]`;
     // R4: tolerate `seatbid:[null]` — coerce so `.bid` checks fire instead of throwing.
@@ -99,7 +121,8 @@ function validateResponse(res, ctx) {
       findings.push(F('response.seatbid.empty', LEVELS.ERROR, `${sp}.bid`, { num: sNum }));
     }
 
-    (sb.bid || []).forEach((b, j) => {
+    const bids = Array.isArray(sb.bid) ? sb.bid : [];
+    bids.forEach((b, j) => {
       const bNum = j + 1;
       const bp = `${sp}.bid[${j}]`;
       const params = { sNum, bNum };

@@ -17,6 +17,32 @@ const F = makeFinding;
 
 const NATIVE_ASSET_SUBTYPES = ['title', 'img', 'video', 'data'];
 
+// A slot dimension is a *positive* finite number. `isNum` from helpers.js is
+// the wrong predicate for sizes: it answers true for 0 and for -300, and a
+// banner declared 0×0 (or -300×-250, which is what a signed-integer overflow
+// in an upstream adapter looks like on the wire) is not a slot any creative
+// can fill. Kept local to this file — helpers.js `isNum` is the general
+// numeric guard used for prices, floors and enum codes, where zero and
+// negatives are legitimate values.
+const isPosNum = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+
+// oRTB §3.2.10 (Object: Format) — a single entry of `banner.format[]` is
+// usable only if it actually carries a size: either the fixed pair w+h, or
+// the relative-sizing pair wratio+hratio.
+//
+// wmin is deliberately NOT demanded alongside the ratios even though the spec
+// lists the three together. Ratios on their own already tell the exchange
+// which shape to send, the wmin-less form is widespread, and we have no
+// separate finding id with which to say "ratios fine, wmin missing" — so
+// requiring it would mean raising a hard ERROR on a payload that does
+// communicate a size. Under-reporting one detail beats mislabelling the slot
+// as sizeless.
+function isUsableFormat(f) {
+  if (!isObj(f)) return false;
+  if (isPosNum(f.w) && isPosNum(f.h)) return true;
+  return isPosNum(f.wratio) && isPosNum(f.hratio);
+}
+
 function validateRequest(req, ctx) {
   const findings = [];
   const dialect = (ctx && ctx.dialect) || null;
@@ -26,13 +52,43 @@ function validateRequest(req, ctx) {
   if (!Array.isArray(req.imp) || !req.imp.length) {
     findings.push(F('request.imp_required', LEVELS.ERROR, 'imp'));
   }
-  if (!req.site && !req.app) findings.push(F('request.no_site_or_app', LEVELS.ERROR, 'site/app'));
-  // oRTB §3.2.1: "site OR app, never both". Some SSPs reject; others
-  // silently pick one and discard the other's targeting context.
-  // Surface as WARNING — the request still has *some* targeting surface,
-  // but the inventory side is ambiguous.
-  else if (req.site && req.app)
+  // ── Distribution channel: exactly one of site / app / dooh ───────────────
+  //
+  // HISTORY. This rule knew two channels for as long as it existed, because
+  // oRTB 2.5 had two. 2.6 §3.2.1 added a third — `dooh` (Object: DOOH,
+  // §3.2.16) — for billboards, kiosks and transit screens: inventory that is
+  // neither a web page nor an app. Every other part of this engine had
+  // already learned about it. detect.js counts a `dooh` object as a 2.6
+  // signal, format-detect.js emits CONTEXTS.DOOH, unknown-fields.js maps the
+  // object to V26, the 3.0 rules filter over exactly ['site','app','dooh'],
+  // and the knowledge base ships ortb-2.6/request/dooh/billboard-roadside.json
+  // as a reference payload. Only this line stayed at two — so the engine's own
+  // reference DOOH request came back with an ERROR saying it had no
+  // distribution channel, on a payload the version detector had just
+  // fingerprinted as 2.6 with confidence 1 *because of* that same `dooh`
+  // object. Two parts of one engine reading the same field and disagreeing
+  // about whether it exists.
+  //
+  // Written as a filter over a channel list rather than a chain of booleans
+  // for two reasons: a fourth channel becomes one string instead of a new
+  // branch, and "more than one channel present" now reports identically no
+  // matter which pair collided (the old `else if` could only ever see the
+  // site+app collision).
+  const channels = ['site', 'app', 'dooh'].filter((k) => req[k]);
+  if (channels.length === 0) {
+    findings.push(F('request.no_site_or_app', LEVELS.ERROR, 'site/app'));
+  } else if (channels.length > 1) {
+    // oRTB §3.2.1: "site OR app, never both". Some SSPs reject; others
+    // silently pick one and discard the other's targeting context.
+    // Surface as WARNING — the request still has *some* targeting surface,
+    // but the inventory side is ambiguous.
     findings.push(F('request.site_and_app_both', LEVELS.WARNING, 'site/app'));
+  }
+  // DOOH *alone* is what relaxes the client-identity checks further down. A
+  // request carrying dooh together with site or app is already flagged as
+  // ambiguous above, and one of those two channels does imply a real client
+  // — so it keeps the strict device rules.
+  const doohOnly = channels.length === 1 && channels[0] === 'dooh';
 
   // Impression ids must be unique within a request. A bid answers with
   // `bid.impid`, so two impressions sharing an id make that reference
@@ -71,7 +127,11 @@ function validateRequest(req, ctx) {
         eids
           .map(
             (e) =>
-              `${(e && e.source) || ''}|${((e && e.uids) || []).map((u) => (u && u.id) || '').join(',')}`,
+              // Array.isArray, not `|| []`: `uids` is an array per §3.2.27,
+              // but a sender that emitted a single uid without the wrapper
+              // hands us an object, and `({}).map` is a TypeError that takes
+              // the whole verdict down instead of producing a finding.
+              `${(e && e.source) || ''}|${(Array.isArray(e && e.uids) ? e.uids : []).map((u) => (u && u.id) || '').join(',')}`,
           )
           .sort(),
       );
@@ -85,11 +145,41 @@ function validateRequest(req, ctx) {
     }
   }
 
-  // at is required per oRTB §3.2.1. Missing or non-numeric → error.
-  // Present-but-wrong-value (3, 4, "first", …) → at_invalid warning below.
-  if (req.at == null || typeof req.at !== 'number') {
+  // at — auction type. ABSENT is not the same defect as PRESENT-BUT-BROKEN,
+  // and the two used to share one branch and one level.
+  //
+  // The BidRequest table marks only `id` and `imp` required; `at` carries a
+  // spec default of 2. A field with a default cannot be required — the default
+  // exists precisely so the field can be omitted, and an exchange reading a
+  // payload without `at` knows exactly what it means. Reporting that at ERROR
+  // rolled the whole payload up to "errors" and told an operator their
+  // spec-compliant request was broken, which is the same class of false alarm
+  // as the 500+ carve-out below.
+  //
+  // Absent → INFO: worth knowing you are relying on the default, because many
+  // SSPs do want it stated, but nothing is wrong.
+  // Present with a non-numeric value ("first", null-ish object) → ERROR: that
+  // is a real defect, the sender tried to say something and failed.
+  //
+  // The 500+ carve-out: oRTB §3.2.1 defines 1 (First Price) and 2 (Second
+  // Price Plus) and then, in the same table row, says "Exchange-specific
+  // auction types can be defined using values greater than 500." The old
+  // membership test knew only the two enumerated values, so a request naming
+  // a private auction type — at: 501, which the spec explicitly blesses —
+  // came back as at_invalid. Telling an operator their spec-compliant
+  // payload is non-standard is worse than saying nothing: it sends them
+  // looking for a bug that is not there.
+  //
+  // The sibling rule for imp.video.protocols in this same file had already
+  // carved the exchange-specific range out (`v < 500`) — this one had simply
+  // not been updated with it. The threshold is spelled the same way here on
+  // purpose, so the two cannot drift into disagreeing about where the
+  // vendor range starts.
+  if (req.at == null) {
+    findings.push(F('request.at_required', LEVELS.INFO, 'at'));
+  } else if (typeof req.at !== 'number') {
     findings.push(F('request.at_required', LEVELS.ERROR, 'at'));
-  } else if (req.at !== 1 && req.at !== 2) {
+  } else if (req.at !== 1 && req.at !== 2 && req.at < 500) {
     findings.push(F('request.at_invalid', LEVELS.WARNING, 'at', { at: req.at }));
   }
 
@@ -167,9 +257,29 @@ function validateRequest(req, ctx) {
   // ── Device ───────────────────────────────────────────────────────────────
   const dev = req.device || {};
   if (!isObj(req.device)) findings.push(F('request.device_required', LEVELS.ERROR, 'device'));
-  if (!dev.ip && !dev.ipv6)
-    findings.push(F('request.device.ip_required', LEVELS.ERROR, 'device.ip'));
-  if (!isStr(dev.ua)) findings.push(F('request.device.ua_required', LEVELS.ERROR, 'device.ua'));
+  // `ip` and `ua` are how a bidder reaches a *client*: geo and fraud scoring
+  // off the address, browser and OS off the agent string. A DOOH panel has
+  // neither in the sense those checks assume. The spec hedges on the agent
+  // itself (§3.2.18 device.ua: "can be omitted if the device is not a
+  // browser"), and a roadside billboard's egress IP says nothing about the
+  // audience standing in front of it — `dooh.venuetype` and `device.geo` are
+  // what carry that, and the 2.6 DOOH samples send exactly those.
+  //
+  // So the level moves rather than the rule: on a DOOH-only request these
+  // drop to INFO. Dropping the checks entirely would lose the signal for an
+  // operator who did mean to send an address; leaving them at ERROR is what
+  // made every spec-shaped DOOH request roll up to "errors" and hid the
+  // findings that were actually about the payload.
+  if (!dev.ip && !dev.ipv6) {
+    findings.push(
+      F('request.device.ip_required', doohOnly ? LEVELS.INFO : LEVELS.ERROR, 'device.ip'),
+    );
+  }
+  if (!isStr(dev.ua)) {
+    findings.push(
+      F('request.device.ua_required', doohOnly ? LEVELS.INFO : LEVELS.ERROR, 'device.ua'),
+    );
+  }
   if (dev.geo && dev.geo.country && !ISO_3166_ALPHA3.test(dev.geo.country)) {
     findings.push(
       F('request.device.geo.country_invalid', LEVELS.WARNING, 'device.geo.country', {
@@ -220,7 +330,22 @@ function validateRequest(req, ctx) {
   }
 
   // ── Per-impression ───────────────────────────────────────────────────────
-  (req.imp || []).forEach((imp, i) => {
+  // Array.isArray, not `|| []`. A bare object under `imp` is a shape we see
+  // often enough to name — a sender that had one impression and forgot the
+  // wrapper — and `({}).forEach` is a TypeError, not a finding. Nothing on
+  // the way out catches it: core/index.js wraps runRulePlugins in a try but
+  // not validateRequest, so the throw travelled all the way to the analyze
+  // handler's catch and the operator's answer to "my imp is an object, is
+  // that OK?" was an HTTP 400 quoting this line — no verdict, no findings,
+  // no mention of imp. A payload whose field is present with the wrong type
+  // is the first thing an inspector exists to catch; falling over on it is
+  // the worst available outcome.
+  //
+  // The root check above already emits request.imp_required for exactly this
+  // shape, so nothing here needs to report it. The loop only has to survive
+  // long enough for that finding to be returned.
+  const imps = Array.isArray(req.imp) ? req.imp : [];
+  imps.forEach((imp, i) => {
     findings.push(...validateImp(imp, i));
   });
 
@@ -388,7 +513,11 @@ function detectNonStandardFormats(req) {
   }
 
   harvest(req.ext, 'ext');
-  (req.imp || []).forEach((imp, i) => {
+  // Same Array.isArray guard as the main per-impression loop: this pass runs
+  // *after* it, so a non-array `imp` that no longer throws there must not
+  // throw here either — otherwise the fix above just moves the crash twelve
+  // lines down.
+  (Array.isArray(req.imp) ? req.imp : []).forEach((imp, i) => {
     harvest(imp && imp.ext, `imp[${i}].ext`);
     if (imp && imp.banner) harvest(imp.banner.ext, `imp[${i}].banner.ext`);
     if (imp && imp.video) harvest(imp.video.ext, `imp[${i}].video.ext`);
@@ -426,9 +555,33 @@ function validateImp(imp, i) {
   if (!hasFormat) findings.push(F('imp.format_required', LEVELS.ERROR, p, { num }));
 
   if (imp.banner) {
-    const b = imp.banner;
-    const hasFormatArr = Array.isArray(b.format) && b.format.length > 0;
-    if ((!isNum(b.w) || !isNum(b.h)) && !hasFormatArr) {
+    // Same tolerance as the imp-level coercion above, one level down. A
+    // sender writing `banner: "300x250"` (or `banner: 1`, or `banner: true`)
+    // has declared "this slot is a banner" in a shape no field check can
+    // read. Coercing to an empty object makes the size rule below say the
+    // true thing about that payload — there is no readable size — instead of
+    // throwing on `'pos' in "300x250"`, which is what the `in` operator does
+    // to a primitive and which took the entire verdict down with it.
+    const b = isObj(imp.banner) ? imp.banner : {};
+    // oRTB §3.2.10: a Format object carries a size — either the fixed pair
+    // w+h or the relative pair wratio+hratio. The previous check counted
+    // format[] entries and never looked inside them:
+    //
+    //     Array.isArray(b.format) && b.format.length > 0
+    //
+    // so `format: [{}]`, `format: [null]` and `format: [{w:"300",h:"250"}]`
+    // (strings — what a payload reassembled from a query string looks like)
+    // all read as "a size is present" and silenced this rule for the whole
+    // impression. Nothing downstream re-checks format[] either — there is no
+    // other rule in this engine that reads format[].w — so the verdict on a
+    // slot with no usable size anywhere in it was a clean bill of health.
+    //
+    // The fixed-size leg gained the same scrutiny via isPosNum: `isNum(0)`
+    // and `isNum(-300)` are both true, so `banner:{w:0,h:0}` used to pass as
+    // a size through the very same gap.
+    const hasFixedSize = isPosNum(b.w) && isPosNum(b.h);
+    const hasUsableFormat = Array.isArray(b.format) && b.format.some(isUsableFormat);
+    if (!hasFixedSize && !hasUsableFormat) {
       findings.push(F('imp.banner.size_required', LEVELS.ERROR, `${p}.banner`, { num }));
     }
     if ('pos' in b) {

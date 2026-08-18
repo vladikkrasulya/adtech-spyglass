@@ -14,7 +14,9 @@
  *       * Currency: if bidCur (bid.cur || res.cur || USD) differs from
  *         floorCur (imp.bidfloorcur || USD, per the field's own spec default)
  *         → emit warn-currency-conversion-needed and SKIP the numeric compare.
- *         No conversion happens here; see below.
+ *         No conversion happens here; see below. Every code is uppercased and
+ *         trimmed first (normCur) — ISO 4217 is case-insensitive, and letter
+ *         case must never decide whether the floor gets checked at all.
  *
  * ── Why no currency conversion ───────────────────────────────────────────
  * lib/fx.js holds a USD rate table and the Inspector shows a converted figure
@@ -38,6 +40,39 @@
 const { LEVELS, makeFinding } = require('../../findings');
 
 const F = makeFinding;
+
+// Every currency code that reaches a comparison in this file goes through here
+// first. ISO 4217 codes are case-insensitive by definition, so "usd" and "USD"
+// name the same currency — but this rule used to compare the raw strings, and
+// the mismatch branch below does a hard `return` that SKIPS the numeric floor
+// compare entirely. A feed shipping lowercase therefore silenced the floor
+// check outright: a bid at $0.05 against a $0.16 floor came back as nothing but
+// "conversion needed", with the UI printing the absurd pair "bidCur: USD,
+// floorCur: usd". Money the operator was meant to see went unreported because
+// of letter case.
+//
+// crosscheck.js already normalises (see its "Real-world feeds sometimes ship
+// lowercase" comment), so the two engines disagreed on identical payloads —
+// crosscheck said below_floor, this rule said "can't compare". Same normalising
+// here makes them agree again.
+//
+// The trim is deliberate too, and goes one step past crosscheck: padding is a
+// transport artifact of hand-assembled and CSV-sourced payloads, not a
+// different currency, and "USD " suppressed the compare for the same reason
+// "usd" did. A code that is only whitespace carries no information at all, so
+// it falls back rather than becoming an empty-string "currency" that matches
+// nothing. Non-strings (a numeric 840, say) fall back for the same reason —
+// the previous `imp.bidfloorcur || 'USD'` would have passed 840 straight into
+// a string compare.
+//
+// Note what is deliberately NOT done: no validation that the result is a real
+// ISO 4217 code. Reporting "XYZ is not a currency" would need a finding id,
+// and every id has to exist in messages/*.json to render. Out of scope here.
+function normCur(raw, fallback) {
+  if (typeof raw !== 'string') return fallback;
+  const norm = raw.trim().toUpperCase();
+  return norm.length > 0 ? norm : fallback;
+}
 
 /**
  * Find the effective floor for a bid against an imp.
@@ -78,7 +113,7 @@ function resolveFloor(bid, imp) {
     if (deal && typeof deal.bidfloor === 'number' && Number.isFinite(deal.bidfloor)) {
       return {
         floor: deal.bidfloor,
-        floorCur: deal.bidfloorcur || SPEC_DEFAULT_CUR,
+        floorCur: normCur(deal.bidfloorcur, SPEC_DEFAULT_CUR),
         source: 'deal',
       };
     }
@@ -88,7 +123,7 @@ function resolveFloor(bid, imp) {
   if (typeof imp.bidfloor === 'number' && Number.isFinite(imp.bidfloor) && imp.bidfloor > 0) {
     return {
       floor: imp.bidfloor,
-      floorCur: imp.bidfloorcur || SPEC_DEFAULT_CUR,
+      floorCur: normCur(imp.bidfloorcur, SPEC_DEFAULT_CUR),
       source: 'imp',
     };
   }
@@ -110,8 +145,10 @@ function validate(payload, ctx) {
     });
   }
 
-  // Determine response-level currency (default USD)
-  const resCur = typeof payload.cur === 'string' && payload.cur.length > 0 ? payload.cur : 'USD';
+  // Determine response-level currency (default USD per oRTB §3.3), normalised
+  // so a lowercase `"cur": "usd"` on the response side cannot silence the floor
+  // compare any more than a lowercase `bidfloorcur` can.
+  const resCur = normCur(payload.cur, 'USD');
 
   payload.seatbid.forEach((sb, si) => {
     if (!sb || !Array.isArray(sb.bid)) return;
@@ -141,10 +178,19 @@ function validate(payload, ctx) {
 
         const { floor, floorCur } = floorInfo;
 
-        // Determine bid currency
-        const bidCur = typeof bid.cur === 'string' && bid.cur.length > 0 ? bid.cur : resCur;
+        // Determine bid currency. `bid.cur` is not an oRTB 2.x field, but real
+        // bidders emit it and it is the narrowest statement available about
+        // what THIS bid is priced in, so it wins over the response-level `cur`
+        // when present. Normalised like every other code here.
+        const bidCur = normCur(bid.cur, resCur);
 
-        // Currency mismatch → warn and skip numeric compare
+        // Currency mismatch → warn and skip numeric compare.
+        //
+        // Both sides are already normalised, so reaching this branch now means
+        // two genuinely different currencies — not the same one spelled two
+        // ways. The reported params are the normalised codes on purpose: they
+        // are what the comparison actually ran on, and echoing the raw strings
+        // is what produced the nonsensical "USD vs usd" readout.
         if (bidCur !== floorCur) {
           findings.push(
             F('warn-currency-conversion-needed', LEVELS.WARNING, path + '.price', {

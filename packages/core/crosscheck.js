@@ -24,10 +24,18 @@ function crosscheck(req, res, _ctx) {
   // stable.
   const out = [];
 
-  if (!isObj(req) || !Array.isArray(req.imp)) {
+  // Both sides are read through a VIEW rather than directly. For a 2.x payload
+  // the view is the payload itself plus the paths this file always used; for a
+  // 3.0 envelope it is a projection of `openrtb.request.item[]` and
+  // `openrtb.response.seatbid[].bid[]` into that same shape, carrying the real
+  // 3.0 paths so every finding still points at what the user pasted. See
+  // buildRequestView() at the bottom of this file for the why.
+  const reqView = buildRequestView(req);
+  if (!reqView) {
     return [C('crosscheck.no_request', false, CROSS_LEVELS.CRIT, 'req')];
   }
-  if (!isObj(res)) {
+  const resView = buildResponseView(res);
+  if (!resView) {
     return [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
   }
   // No-bid response (oRTB §3.3.1: just `id` + `nbr` reason code) still
@@ -36,17 +44,18 @@ function crosscheck(req, res, _ctx) {
   // then early-return on no-bid so the rest of crosscheck (bcat / badv /
   // floor compare) doesn't run against an absent seatbid.
   const idFinding =
-    res.id === req.id
-      ? C('crosscheck.id_match', true, CROSS_LEVELS.OK, 'id', { id: req.id })
-      : C('crosscheck.id_mismatch', false, CROSS_LEVELS.CRIT, 'id', {
-          reqId: req.id,
-          resId: res.id,
+    resView.id === reqView.id
+      ? C('crosscheck.id_match', true, CROSS_LEVELS.OK, `${resView.base}id`, { id: reqView.id })
+      : C('crosscheck.id_mismatch', false, CROSS_LEVELS.CRIT, `${resView.base}id`, {
+          reqId: reqView.id,
+          resId: resView.id,
         });
 
-  if (typeof res.nbr === 'number' && (!Array.isArray(res.seatbid) || !res.seatbid.length)) {
+  const seatbid = resView.seatbid;
+  if (typeof resView.nbr === 'number' && (!Array.isArray(seatbid) || !seatbid.length)) {
     return [idFinding];
   }
-  if (!Array.isArray(res.seatbid) || !res.seatbid.length) {
+  if (!Array.isArray(seatbid) || !seatbid.length) {
     return [C('crosscheck.no_response', false, CROSS_LEVELS.CRIT, 'res')];
   }
 
@@ -62,32 +71,52 @@ function crosscheck(req, res, _ctx) {
   // ISO 4217 codes are case-insensitive by spec. Real-world feeds sometimes
   // ship lowercase ("usd") — uppercase-normalize both sides before compare
   // so we don't fire a `cur_not_in_request` false-positive on the case alone.
-  const reqCur = Array.isArray(req.cur) ? req.cur : ['USD'];
+  const reqCur = Array.isArray(reqView.cur) ? reqView.cur : ['USD'];
   const reqCurUp = reqCur.map((c) => (typeof c === 'string' ? c.toUpperCase() : c));
-  const resCurUp = typeof res.cur === 'string' ? res.cur.toUpperCase() : res.cur;
-  if (res.cur && !reqCurUp.includes(resCurUp)) {
+  const resCurUp = typeof resView.cur === 'string' ? resView.cur.toUpperCase() : resView.cur;
+  if (resView.cur && !reqCurUp.includes(resCurUp)) {
     out.push(
-      C('crosscheck.cur_not_in_request', false, CROSS_LEVELS.WARN, 'cur', {
-        cur: res.cur,
+      C('crosscheck.cur_not_in_request', false, CROSS_LEVELS.WARN, `${resView.base}cur`, {
+        cur: resView.cur,
         allowed: JSON.stringify(reqCur),
       }),
     );
-  } else if (res.cur) {
-    out.push(C('crosscheck.cur_allowed', true, CROSS_LEVELS.OK, 'cur', { cur: res.cur }));
-  } else if (Array.isArray(req.cur) && req.cur.length && !reqCurUp.includes('USD')) {
+  } else if (resView.cur) {
     out.push(
-      C('crosscheck.cur_default_usd_mismatch', false, CROSS_LEVELS.WARN, 'cur', {
+      C('crosscheck.cur_allowed', true, CROSS_LEVELS.OK, `${resView.base}cur`, {
+        cur: resView.cur,
+      }),
+    );
+  } else if (Array.isArray(reqView.cur) && reqView.cur.length && !reqCurUp.includes('USD')) {
+    out.push(
+      C('crosscheck.cur_default_usd_mismatch', false, CROSS_LEVELS.WARN, `${reqView.base}cur`, {
         allowed: JSON.stringify(reqCur),
       }),
     );
   }
 
-  // index imp by id for O(1) bid.impid resolution
+  // Index imp by id for O(1) bid.impid resolution.
+  //
+  // Keys are normalised with String() on BOTH sides. oRTB types `imp.id` and
+  // `bid.impid` as strings, but numeric slot ids are common in real feeds, and
+  // a Map keyed on the raw value then failed to match `1` against `"1"`. The
+  // cost was not one missing finding: an unresolved impid skips the rest of
+  // the per-bid block, so price↔floor, bcat, badv and size were never checked
+  // and the auction summary reported 0 filled slots / 0.0000 top price for an
+  // auction that really cleared. rules/price-floor already normalised with
+  // String() at both ends, so the two engines gave opposite answers on the
+  // same payload — this is the side that was wrong.
+  //
+  // `imp.id != null && imp.id !== ''` rather than a truthiness test: `imp.id`
+  // of `0` is a perfectly addressable slot id that the old `if (imp && imp.id)`
+  // dropped from the index entirely, which fell into the same silent hole.
   const impById = new Map();
-  for (const imp of req.imp) if (imp && imp.id) impById.set(imp.id, imp);
+  for (const imp of reqView.imp) {
+    if (isObj(imp) && imp.id != null && imp.id !== '') impById.set(String(imp.id), imp);
+  }
 
-  const bcat = Array.isArray(req.bcat) ? new Set(req.bcat) : new Set();
-  const badv = Array.isArray(req.badv) ? new Set(req.badv) : new Set();
+  const bcat = Array.isArray(reqView.bcat) ? new Set(reqView.bcat) : new Set();
+  const badv = Array.isArray(reqView.badv) ? new Set(reqView.badv) : new Set();
   let totalBids = 0;
   let bidsAboveFloor = 0;
   const winningByImp = new Map();
@@ -95,346 +124,414 @@ function crosscheck(req, res, _ctx) {
   // emit at most one finding per slot regardless of how many bids hit it.
   const floorNoteEmitted = new Set();
 
-  res.seatbid.forEach((sb, sbi) => {
-    if (!isObj(sb)) return; // R4: tolerate `seatbid:[null]`
-    const bids = Array.isArray(sb.bid) ? sb.bid : [];
-    bids.forEach((bid, bi) => {
-      if (!isObj(bid)) return; // R4: tolerate `bid:[null]`
-      totalBids++;
-      const bp = `seatbid[${sbi}].bid[${bi}]`;
-      const sNum = sbi + 1;
-      const bNum = bi + 1;
-      const baseParams = { sNum, bNum };
+  // One entry per real bid, already carrying its display path and the field
+  // names to hang leaves off (2.x `impid`/`cat`/`adm` vs 3.0
+  // `item`/`media.cat`/`media.display.adm`). The nested forEach that used to
+  // live here is inside flattenBids() now, R4 null-tolerance included.
+  for (const entry of flattenBids(resView)) {
+    const bid = entry.bid;
+    const bp = entry.path;
+    const leaf = entry.leaf;
+    totalBids++;
+    const baseParams = { sNum: entry.sNum, bNum: entry.bNum };
 
-      // 3a. impid resolution
-      const imp = impById.get(bid.impid);
-      if (!imp) {
-        out.push(
-          C('crosscheck.bid.impid_unresolved', false, CROSS_LEVELS.CRIT, `${bp}.impid`, {
-            ...baseParams,
-            impid: bid.impid,
-          }),
-        );
-        return;
-      }
+    // 3a. impid resolution. Normalised through String() the same way the
+    // index was built — see the comment there for what a missed match costs.
+    const impKey = bid.impid == null ? null : String(bid.impid);
+    const imp = impKey === null ? undefined : impById.get(impKey);
+    if (!imp) {
       out.push(
-        C('crosscheck.bid.impid_resolved', true, CROSS_LEVELS.OK, `${bp}.impid`, {
+        C('crosscheck.bid.impid_unresolved', false, CROSS_LEVELS.CRIT, `${bp}.${leaf.impid}`, {
           ...baseParams,
           impid: bid.impid,
         }),
       );
+      continue;
+    }
+    out.push(
+      C('crosscheck.bid.impid_resolved', true, CROSS_LEVELS.OK, `${bp}.${leaf.impid}`, {
+        ...baseParams,
+        impid: bid.impid,
+      }),
+    );
 
-      // 3b. price vs floor
-      // bid.price is REQUIRED per oRTB §3.2.5. Number(null|undefined|"abc")
-      // collapses to NaN, then `|| 0` would silently make a broken bid LOOK
-      // like 0 — which then false-positive passes a 0-floor and pollutes
-      // bidsAboveFloor + topPrice. Surface invalid prices as their own CRIT
-      // finding and skip the floor compare. bcat/badv/sizes still run.
-      //
-      // imp.bidfloor is OPTIONAL per spec — missing means "no minimum" (=0).
-      // Spec-valid, but operationally a "no floor" auction means every bid
-      // above 0 wins on price alone. Surface it as WARN once per imp so the
-      // integrator sees that the price-vs-floor compare is degenerate.
-      const hasExplicitFloor =
-        imp.bidfloor !== undefined && imp.bidfloor !== null && imp.bidfloor !== '';
-      if (!hasExplicitFloor && !floorNoteEmitted.has(bid.impid)) {
-        const impIdx = req.imp.findIndex((i) => i && i.id === bid.impid);
+    // 3b. price vs floor
+    // bid.price is REQUIRED per oRTB §3.2.5. Number(null|undefined|"abc")
+    // collapses to NaN, then `|| 0` would silently make a broken bid LOOK
+    // like 0 — which then false-positive passes a 0-floor and pollutes
+    // bidsAboveFloor + topPrice. Surface invalid prices as their own CRIT
+    // finding and skip the floor compare. bcat/badv/sizes still run.
+    //
+    // imp.bidfloor is OPTIONAL per spec — missing means "no minimum" (=0).
+    // Spec-valid, but operationally a "no floor" auction means every bid
+    // above 0 wins on price alone. Surface it as WARN once per imp so the
+    // integrator sees that the price-vs-floor compare is degenerate.
+    //
+    // A floor counts as SET only when it is a finite number, which is the
+    // same test rules/price-floor applies (`typeof imp.bidfloor === 'number'`)
+    // and the same one `imp.bidfloor_invalid` fires on in rules-request.js.
+    // The old test was "present and not empty-string", and everything after
+    // it went through `Number(imp.bidfloor) || 0`. Both halves lied, in
+    // opposite directions, on inputs that arrive in real feeds:
+    //
+    //   bidfloor: "1,50"  → not a number, so `|| 0` made it 0.0000, the
+    //                       "no explicit floor" WARN was suppressed because
+    //                       the field was present, and a 0.65 bid collected a
+    //                       green "price 0.6500 ≥ floor 0.0000". We printed a
+    //                       floor the request does not contain.
+    //   bidfloor: true    → Number(true) is 1, so the bid was declared BELOW a
+    //   bidfloor: [1.5]   → 1.0000 / 1.5000 floor that exists nowhere.
+    //
+    // Both now resolve to "no usable floor": the WARN fires (it is the honest
+    // statement — no minimum is in force for this slot), and the numeric
+    // verdict is skipped below rather than invented. The request-side
+    // `imp.bidfloor_invalid` WARNING already names the malformed field, so
+    // nothing is lost by not repeating the type complaint here; a dedicated
+    // crosscheck id for it would need text in messages/*.json to render at
+    // all, which is the same trade rules/price-floor documents for currency
+    // codes.
+    const floorRaw = imp.bidfloor;
+    const floorPresent = floorRaw !== undefined && floorRaw !== null && floorRaw !== '';
+    const hasExplicitFloor = typeof floorRaw === 'number' && Number.isFinite(floorRaw);
+    // Present but unusable: distinct from absent, because "absent" has a
+    // spec-defined meaning (no minimum = 0) that we CAN compare against,
+    // while a garbage floor leaves us with no number at all.
+    const floorUnusable = floorPresent && !hasExplicitFloor;
+    if (!hasExplicitFloor && !floorNoteEmitted.has(impKey)) {
+      const impIdx = reqView.imp.findIndex(
+        (i) => isObj(i) && i.id != null && String(i.id) === impKey,
+      );
+      out.push(
+        C(
+          'crosscheck.bid.no_floor_set',
+          false,
+          CROSS_LEVELS.WARN,
+          impIdx >= 0
+            ? `${reqView.impBase}[${impIdx}].${reqView.floorLeaf}`
+            : `${reqView.impBase}.${reqView.floorLeaf}`,
+          { impid: bid.impid },
+        ),
+      );
+      floorNoteEmitted.add(impKey);
+    }
+    const floor = hasExplicitFloor ? floorRaw : 0;
+    const priceRaw = bid.price;
+    const priceIsValid =
+      priceRaw !== null && priceRaw !== undefined && Number.isFinite(Number(priceRaw));
+    if (!priceIsValid) {
+      out.push(
+        C('crosscheck.bid.price_invalid', false, CROSS_LEVELS.CRIT, `${bp}.${leaf.price}`, {
+          ...baseParams,
+          raw: priceRaw === undefined ? 'undefined' : JSON.stringify(priceRaw),
+        }),
+      );
+    } else if (floorUnusable) {
+      // Nothing to compare against, and any number printed here would be one
+      // the request does not contain — so no verdict, the same call the
+      // currency-mismatch branch below makes for the same reason. The bid is
+      // still a winning-bid contender; it just isn't ranked against a floor.
+      const price = Number(priceRaw);
+      const cur = winningByImp.get(impKey) || 0;
+      if (price > cur) winningByImp.set(impKey, price);
+    } else {
+      const price = Number(priceRaw);
+      const priceParams = {
+        ...baseParams,
+        price: price.toFixed(4),
+        floor: floor.toFixed(4),
+      };
+      // Currency-safety: bid prices settle in the response currency, while the
+      // floor is denominated in imp.bidfloorcur (default = request currency).
+      // Comparing the raw numbers across currencies is meaningless without an
+      // FX rate, so when they differ we flag the mismatch instead of emitting a
+      // bogus above/below-floor verdict. (cur_not_in_request covers res.cur vs
+      // req.cur separately; this catches the floor-vs-bid denomination.)
+      // Both `imp.bidfloorcur` and `BidResponse.cur` default to "USD" by
+      // spec, independently of `BidRequest.cur` — which is only the list of
+      // currencies the exchange ACCEPTS, not a statement about how either
+      // figure was priced. Falling through `req.cur[0]` made two different
+      // denominations look like one and produced a confident above/below
+      // verdict on an incomparable pair. See resolveFloor() in
+      // rules/price-floor for the same correction on the rules side.
+      const floorCur =
+        (typeof imp.bidfloorcur === 'string' ? imp.bidfloorcur.toUpperCase() : null) || 'USD';
+      const bidCur = resCurUp || 'USD';
+      if (hasExplicitFloor && floor > 0 && floorCur !== bidCur) {
         out.push(
           C(
-            'crosscheck.bid.no_floor_set',
+            'crosscheck.bid.floor_currency_mismatch',
             false,
             CROSS_LEVELS.WARN,
-            impIdx >= 0 ? `imp[${impIdx}].bidfloor` : 'imp.bidfloor',
-            { impid: bid.impid },
-          ),
-        );
-        floorNoteEmitted.add(bid.impid);
-      }
-      const floor = Number(imp.bidfloor) || 0;
-      const priceRaw = bid.price;
-      const priceIsValid =
-        priceRaw !== null && priceRaw !== undefined && Number.isFinite(Number(priceRaw));
-      if (!priceIsValid) {
-        out.push(
-          C('crosscheck.bid.price_invalid', false, CROSS_LEVELS.CRIT, `${bp}.price`, {
-            ...baseParams,
-            raw: priceRaw === undefined ? 'undefined' : JSON.stringify(priceRaw),
-          }),
-        );
-      } else {
-        const price = Number(priceRaw);
-        const priceParams = {
-          ...baseParams,
-          price: price.toFixed(4),
-          floor: floor.toFixed(4),
-        };
-        // Currency-safety: bid prices settle in the response currency, while the
-        // floor is denominated in imp.bidfloorcur (default = request currency).
-        // Comparing the raw numbers across currencies is meaningless without an
-        // FX rate, so when they differ we flag the mismatch instead of emitting a
-        // bogus above/below-floor verdict. (cur_not_in_request covers res.cur vs
-        // req.cur separately; this catches the floor-vs-bid denomination.)
-        // Both `imp.bidfloorcur` and `BidResponse.cur` default to "USD" by
-        // spec, independently of `BidRequest.cur` — which is only the list of
-        // currencies the exchange ACCEPTS, not a statement about how either
-        // figure was priced. Falling through `req.cur[0]` made two different
-        // denominations look like one and produced a confident above/below
-        // verdict on an incomparable pair. See resolveFloor() in
-        // rules/price-floor for the same correction on the rules side.
-        const floorCur =
-          (typeof imp.bidfloorcur === 'string' ? imp.bidfloorcur.toUpperCase() : null) || 'USD';
-        const bidCur = resCurUp || 'USD';
-        if (hasExplicitFloor && floor > 0 && floorCur !== bidCur) {
-          out.push(
-            C('crosscheck.bid.floor_currency_mismatch', false, CROSS_LEVELS.WARN, `${bp}.price`, {
+            `${bp}.${leaf.price}`,
+            {
               ...priceParams,
               bidCur: bidCur,
               floorCur: floorCur,
-            }),
-          );
-          // Can't rank against the floor, but the bid is still a winning-bid contender.
-          const cur = winningByImp.get(bid.impid) || 0;
-          if (price > cur) winningByImp.set(bid.impid, price);
-        } else if (price >= floor) {
-          bidsAboveFloor++;
-          out.push(
-            C('crosscheck.bid.above_floor', true, CROSS_LEVELS.OK, `${bp}.price`, priceParams),
-          );
-          const cur = winningByImp.get(bid.impid) || 0;
-          if (price > cur) winningByImp.set(bid.impid, price);
-        } else {
-          // WARN, not CRIT — see the same reasoning at the price-floor rule.
-          // Bidding under the floor is a losing bid, not a broken response:
-          // the exchange accepts and processes the payload, then declines to
-          // select this bid. Marking it CRIT failed the whole crosscheck for
-          // a document with nothing wrong in it.
-          out.push(
-            C('crosscheck.bid.below_floor', false, CROSS_LEVELS.WARN, `${bp}.price`, priceParams),
-          );
-        }
-      }
-
-      // 3c. bcat — hierarchical match.
-      // IAB Content Taxonomy uses hyphen-separated hierarchy: in 1.x
-      // "IAB1" is the top-level category and "IAB1-1" is a leaf under it;
-      // in 2.x the equivalent is plain "1" and "1-7". A blocker that lists
-      // a parent ("IAB1" or "1") must also reject any child whose id starts
-      // with `<parent>-…`. Pre-v0.25.0 we did exact-string match only, so a
-      // bid with cat=["IAB1-1"] could clear a bcat=["IAB1"] block (false
-      // clean verdict). Strict prefix `${parent}-` prevents accidentally
-      // matching siblings like "IAB10" against bcat=["IAB1"].
-      if (Array.isArray(bid.cat) && bcat.size) {
-        const violated = bid.cat.filter((c) => {
-          if (typeof c !== 'string') return false;
-          if (bcat.has(c)) return true;
-          for (const blocked of bcat) {
-            if (typeof blocked !== 'string') continue;
-            if (c.startsWith(blocked + '-')) return true;
-          }
-          return false;
-        });
-        if (violated.length) {
-          out.push(
-            C('crosscheck.bid.cat_blocked', false, CROSS_LEVELS.CRIT, `${bp}.cat`, {
-              ...baseParams,
-              categories: JSON.stringify(violated),
-            }),
-          );
-        } else {
-          out.push(C('crosscheck.bid.cat_clean', true, CROSS_LEVELS.OK, `${bp}.cat`, baseParams));
-        }
-      }
-
-      // 3d. badv
-      if (Array.isArray(bid.adomain) && badv.size) {
-        const violated = bid.adomain.filter((d) => badv.has(d));
-        if (violated.length) {
-          out.push(
-            C('crosscheck.bid.adomain_blocked', false, CROSS_LEVELS.CRIT, `${bp}.adomain`, {
-              ...baseParams,
-              domains: JSON.stringify(violated),
-            }),
-          );
-        }
-      }
-
-      // 3d-pop. adomain vs landing host for pop bids
-      //
-      // Pops bypass the publisher's anti-phishing list and the user only
-      // sees the LANDING domain after the new tab opens. If bid.adomain
-      // (= the advertiser the SSP/exchange thinks it's buying for) doesn't
-      // match the host the adm actually navigates to, that's either a
-      // mis-declared advertiser (operational) or an outright spoof
-      // (security). Both deserve a CRIT.
-      //
-      // Heuristic match: exact eTLD+1 equality, OR landing host is a
-      // subdomain of an adomain entry. ("ads.brand.com" ⊆ "brand.com" OK.)
-      // Anything else → mismatch.
-      const isPopBid =
-        isObj(bid.ext) && scanExtForFormatHints(bid.ext, '').some((h) => isPopFormat(h.format));
-      if (isPopBid && typeof bid.adm === 'string' && Array.isArray(bid.adomain)) {
-        const landingHost = extractPopLandingHost(bid.adm);
-        if (landingHost && bid.adomain.length) {
-          const adomainLc = bid.adomain
-            .filter((d) => typeof d === 'string')
-            .map((d) =>
-              d
-                .toLowerCase()
-                .replace(/^https?:\/\//, '')
-                .replace(/\/.*$/, ''),
-            );
-          const matches = adomainLc.some(
-            (ad) => landingHost === ad || landingHost.endsWith('.' + ad),
-          );
-          if (!matches) {
-            out.push(
-              C(
-                'crosscheck.bid.pop.adomain_landing_mismatch',
-                false,
-                CROSS_LEVELS.CRIT,
-                `${bp}.adm`,
-                {
-                  ...baseParams,
-                  declared: JSON.stringify(adomainLc),
-                  landing: landingHost,
-                },
-              ),
-            );
-          } else {
-            out.push(
-              C('crosscheck.bid.pop.adomain_landing_match', true, CROSS_LEVELS.OK, `${bp}.adm`, {
-                ...baseParams,
-                host: landingHost,
-              }),
-            );
-          }
-        }
-      }
-
-      // 3e. banner size
-      if (imp.banner && (bid.w || bid.h)) {
-        const formatList = Array.isArray(imp.banner.format)
-          ? imp.banner.format.filter(isObj) // R4: drop null entries in banner.format
-          : [];
-        const declared = imp.banner.w && imp.banner.h ? [{ w: imp.banner.w, h: imp.banner.h }] : [];
-        const allSizes = [...declared, ...formatList];
-        const fits = allSizes.some(
-          (f) => isObj(f) && Number(f.w) === Number(bid.w) && Number(f.h) === Number(bid.h),
+            },
+          ),
         );
-        if (allSizes.length && !fits) {
-          out.push(
-            C('crosscheck.bid.size_mismatch', false, CROSS_LEVELS.WARN, `${bp}.size`, {
-              ...baseParams,
-              w: bid.w,
-              h: bid.h,
-              allowed: allSizes.map((f) => `${f.w}×${f.h}`).join(', '),
-            }),
-          );
-        } else if (allSizes.length) {
-          out.push(
-            C('crosscheck.bid.size_match', true, CROSS_LEVELS.OK, `${bp}.size`, {
-              ...baseParams,
-              w: bid.w,
-              h: bid.h,
-            }),
-          );
-        }
-      }
-
-      // 3f. native asset crossmatch
-      if (imp.native && bid.adm) {
-        const cm = nativeAssetCrosscheck(imp.native, bid.adm);
-        if (cm.errorKey) {
-          out.push(C(cm.errorKey, false, CROSS_LEVELS.WARN, `${bp}.adm`, baseParams));
-        } else {
-          if (cm.missing.length) {
-            out.push(
-              C(
-                'crosscheck.bid.native_missing_assets',
-                false,
-                CROSS_LEVELS.CRIT,
-                `${bp}.adm`,
-                {
-                  ...baseParams,
-                  missing: cm.missing.join(', '),
-                },
-                cm,
-              ),
-            );
-          } else {
-            // "Complete" only ever meant "the required ids are present". Say so
-            // only when the assets under those ids are also usable — otherwise a
-            // bid that renders blank collects a green tick.
-            const fitness = nativeAssetFitness(imp.native, bid.adm);
-            if (!fitness.length) {
-              out.push(
-                C(
-                  'crosscheck.bid.native_complete',
-                  true,
-                  CROSS_LEVELS.OK,
-                  `${bp}.adm`,
-                  {
-                    ...baseParams,
-                    count: cm.requiredIds.length,
-                  },
-                  cm,
-                ),
-              );
-            }
-            for (const issue of fitness) {
-              out.push(
-                C(
-                  `crosscheck.bid.native_${issue.code}`,
-                  false,
-                  issue.code === 'unsafe_scheme' ? CROSS_LEVELS.CRIT : CROSS_LEVELS.WARN,
-                  `${bp}.adm`,
-                  {
-                    ...baseParams,
-                    ...issue.params,
-                    assetId: issue.id >= 0 ? issue.id : '',
-                  },
-                  issue,
-                ),
-              );
-            }
-          }
-          if (cm.extra.length) {
-            out.push(
-              C(
-                'crosscheck.bid.native_extra_assets',
-                false,
-                CROSS_LEVELS.WARN,
-                `${bp}.adm`,
-                {
-                  ...baseParams,
-                  extra: cm.extra.join(', '),
-                },
-                cm,
-              ),
-            );
-          }
-        }
-      }
-
-      // 3g. video VAST. Sniff via the canonical helper so this file and
-      //     rules-vast.js share the same anchored regex.
-      if (imp.video && bid.adm) {
-        const isVast = isVastShape(String(bid.adm));
+        // Can't rank against the floor, but the bid is still a winning-bid contender.
+        const cur = winningByImp.get(impKey) || 0;
+        if (price > cur) winningByImp.set(impKey, price);
+      } else if (price >= floor) {
+        bidsAboveFloor++;
         out.push(
           C(
-            isVast ? 'crosscheck.bid.video_vast' : 'crosscheck.bid.video_not_vast',
-            isVast,
-            isVast ? CROSS_LEVELS.OK : CROSS_LEVELS.WARN,
-            `${bp}.adm`,
-            baseParams,
+            'crosscheck.bid.above_floor',
+            true,
+            CROSS_LEVELS.OK,
+            `${bp}.${leaf.price}`,
+            priceParams,
+          ),
+        );
+        const cur = winningByImp.get(impKey) || 0;
+        if (price > cur) winningByImp.set(impKey, price);
+      } else {
+        // WARN, not CRIT — see the same reasoning at the price-floor rule.
+        // Bidding under the floor is a losing bid, not a broken response:
+        // the exchange accepts and processes the payload, then declines to
+        // select this bid. Marking it CRIT failed the whole crosscheck for
+        // a document with nothing wrong in it.
+        out.push(
+          C(
+            'crosscheck.bid.below_floor',
+            false,
+            CROSS_LEVELS.WARN,
+            `${bp}.${leaf.price}`,
+            priceParams,
           ),
         );
       }
-    });
-  });
+    }
+
+    // 3c. bcat — hierarchical match.
+    // IAB Content Taxonomy uses hyphen-separated hierarchy: in 1.x
+    // "IAB1" is the top-level category and "IAB1-1" is a leaf under it;
+    // in 2.x the equivalent is plain "1" and "1-7". A blocker that lists
+    // a parent ("IAB1" or "1") must also reject any child whose id starts
+    // with `<parent>-…`. Pre-v0.25.0 we did exact-string match only, so a
+    // bid with cat=["IAB1-1"] could clear a bcat=["IAB1"] block (false
+    // clean verdict). Strict prefix `${parent}-` prevents accidentally
+    // matching siblings like "IAB10" against bcat=["IAB1"].
+    if (Array.isArray(bid.cat) && bcat.size) {
+      const violated = bid.cat.filter((c) => {
+        if (typeof c !== 'string') return false;
+        if (bcat.has(c)) return true;
+        for (const blocked of bcat) {
+          if (typeof blocked !== 'string') continue;
+          if (c.startsWith(blocked + '-')) return true;
+        }
+        return false;
+      });
+      if (violated.length) {
+        out.push(
+          C('crosscheck.bid.cat_blocked', false, CROSS_LEVELS.CRIT, `${bp}.${leaf.cat}`, {
+            ...baseParams,
+            categories: JSON.stringify(violated),
+          }),
+        );
+      } else {
+        out.push(
+          C('crosscheck.bid.cat_clean', true, CROSS_LEVELS.OK, `${bp}.${leaf.cat}`, baseParams),
+        );
+      }
+    }
+
+    // 3d. badv
+    if (Array.isArray(bid.adomain) && badv.size) {
+      const violated = bid.adomain.filter((d) => badv.has(d));
+      if (violated.length) {
+        out.push(
+          C('crosscheck.bid.adomain_blocked', false, CROSS_LEVELS.CRIT, `${bp}.${leaf.adomain}`, {
+            ...baseParams,
+            domains: JSON.stringify(violated),
+          }),
+        );
+      }
+    }
+
+    // 3d-pop. adomain vs landing host for pop bids
+    //
+    // Pops bypass the publisher's anti-phishing list and the user only
+    // sees the LANDING domain after the new tab opens. If bid.adomain
+    // (= the advertiser the SSP/exchange thinks it's buying for) doesn't
+    // match the host the adm actually navigates to, that's either a
+    // mis-declared advertiser (operational) or an outright spoof
+    // (security). Both deserve a CRIT.
+    //
+    // Heuristic match: exact eTLD+1 equality, OR landing host is a
+    // subdomain of an adomain entry. ("ads.brand.com" ⊆ "brand.com" OK.)
+    // Anything else → mismatch.
+    const isPopBid =
+      isObj(bid.ext) && scanExtForFormatHints(bid.ext, '').some((h) => isPopFormat(h.format));
+    if (isPopBid && typeof bid.adm === 'string' && Array.isArray(bid.adomain)) {
+      const landingHost = extractPopLandingHost(bid.adm);
+      if (landingHost && bid.adomain.length) {
+        const adomainLc = bid.adomain
+          .filter((d) => typeof d === 'string')
+          .map((d) =>
+            d
+              .toLowerCase()
+              .replace(/^https?:\/\//, '')
+              .replace(/\/.*$/, ''),
+          );
+        const matches = adomainLc.some(
+          (ad) => landingHost === ad || landingHost.endsWith('.' + ad),
+        );
+        if (!matches) {
+          out.push(
+            C(
+              'crosscheck.bid.pop.adomain_landing_mismatch',
+              false,
+              CROSS_LEVELS.CRIT,
+              `${bp}.${leaf.adm}`,
+              {
+                ...baseParams,
+                declared: JSON.stringify(adomainLc),
+                landing: landingHost,
+              },
+            ),
+          );
+        } else {
+          out.push(
+            C(
+              'crosscheck.bid.pop.adomain_landing_match',
+              true,
+              CROSS_LEVELS.OK,
+              `${bp}.${leaf.adm}`,
+              {
+                ...baseParams,
+                host: landingHost,
+              },
+            ),
+          );
+        }
+      }
+    }
+
+    // 3e. banner size
+    if (imp.banner && (bid.w || bid.h)) {
+      const formatList = Array.isArray(imp.banner.format)
+        ? imp.banner.format.filter(isObj) // R4: drop null entries in banner.format
+        : [];
+      const declared = imp.banner.w && imp.banner.h ? [{ w: imp.banner.w, h: imp.banner.h }] : [];
+      const allSizes = [...declared, ...formatList];
+      const fits = allSizes.some(
+        (f) => isObj(f) && Number(f.w) === Number(bid.w) && Number(f.h) === Number(bid.h),
+      );
+      if (allSizes.length && !fits) {
+        out.push(
+          C('crosscheck.bid.size_mismatch', false, CROSS_LEVELS.WARN, `${bp}.size`, {
+            ...baseParams,
+            w: bid.w,
+            h: bid.h,
+            allowed: allSizes.map((f) => `${f.w}×${f.h}`).join(', '),
+          }),
+        );
+      } else if (allSizes.length) {
+        out.push(
+          C('crosscheck.bid.size_match', true, CROSS_LEVELS.OK, `${bp}.size`, {
+            ...baseParams,
+            w: bid.w,
+            h: bid.h,
+          }),
+        );
+      }
+    }
+
+    // 3f. native asset crossmatch
+    if (imp.native && bid.adm) {
+      const cm = nativeAssetCrosscheck(imp.native, bid.adm);
+      if (cm.errorKey) {
+        out.push(C(cm.errorKey, false, CROSS_LEVELS.WARN, `${bp}.${leaf.adm}`, baseParams));
+      } else {
+        if (cm.missing.length) {
+          out.push(
+            C(
+              'crosscheck.bid.native_missing_assets',
+              false,
+              CROSS_LEVELS.CRIT,
+              `${bp}.${leaf.adm}`,
+              {
+                ...baseParams,
+                missing: cm.missing.join(', '),
+              },
+              cm,
+            ),
+          );
+        } else {
+          // "Complete" only ever meant "the required ids are present". Say so
+          // only when the assets under those ids are also usable — otherwise a
+          // bid that renders blank collects a green tick.
+          const fitness = nativeAssetFitness(imp.native, bid.adm);
+          if (!fitness.length) {
+            out.push(
+              C(
+                'crosscheck.bid.native_complete',
+                true,
+                CROSS_LEVELS.OK,
+                `${bp}.${leaf.adm}`,
+                {
+                  ...baseParams,
+                  count: cm.requiredIds.length,
+                },
+                cm,
+              ),
+            );
+          }
+          for (const issue of fitness) {
+            out.push(
+              C(
+                `crosscheck.bid.native_${issue.code}`,
+                false,
+                issue.code === 'unsafe_scheme' ? CROSS_LEVELS.CRIT : CROSS_LEVELS.WARN,
+                `${bp}.${leaf.adm}`,
+                {
+                  ...baseParams,
+                  ...issue.params,
+                  assetId: issue.id >= 0 ? issue.id : '',
+                },
+                issue,
+              ),
+            );
+          }
+        }
+        if (cm.extra.length) {
+          out.push(
+            C(
+              'crosscheck.bid.native_extra_assets',
+              false,
+              CROSS_LEVELS.WARN,
+              `${bp}.${leaf.adm}`,
+              {
+                ...baseParams,
+                extra: cm.extra.join(', '),
+              },
+              cm,
+            ),
+          );
+        }
+      }
+    }
+
+    // 3g. video VAST. Sniff via the canonical helper so this file and
+    //     rules-vast.js share the same anchored regex.
+    if (imp.video && bid.adm) {
+      const isVast = isVastShape(String(bid.adm));
+      out.push(
+        C(
+          isVast ? 'crosscheck.bid.video_vast' : 'crosscheck.bid.video_not_vast',
+          isVast,
+          isVast ? CROSS_LEVELS.OK : CROSS_LEVELS.WARN,
+          `${bp}.${leaf.adm}`,
+          baseParams,
+        ),
+      );
+    }
+  }
 
   // 4. summary
-  const impsTotal = req.imp.length;
+  const impsTotal = reqView.imp.length;
   const impsFilled = winningByImp.size;
   // Math.max(0, ...arr) hits stack-arg limits on responses with many
   // thousand bids (spread copies each into call args). Reduce avoids it.
@@ -452,6 +549,233 @@ function crosscheck(req, res, _ctx) {
   );
 
   return out;
+}
+
+/* ── oRTB 3.0 views ──────────────────────────────────────────────────────────
+ *
+ * Crosscheck asks semantic questions — "does this response answer the request
+ * it claims to answer, at a price the request would accept, with a creative the
+ * request allows". Those questions are identical in 2.x and 3.0; only the
+ * spelling changed. 3.0 wraps everything in an `openrtb` envelope, renames
+ * `imp[]` to `request.item[]`, `bidfloor`/`bidfloorcur` to `flr`/`flrcu`,
+ * `bid.impid` to `bid.item`, and moves the creative under `bid.media`.
+ *
+ * Pre-fix this file tested `Array.isArray(req.imp)` and nothing else, so a
+ * valid 3.0 pair — both sides `clean` through validate(), which has routed 3.0
+ * to its own rule set since v0.38 — came back as a single CRIT claiming no
+ * BidRequest had been pasted, and every crosscheck the user actually came for
+ * (id, currency, floor, bcat/badv, size) was silently skipped. Two failures in
+ * one: a false statement about the input, and the absence of the analysis.
+ *
+ * Rather than teach each rule two field names, the envelope is projected ONCE
+ * into the 2.x shape the rules already read. The view carries the display path
+ * base and the leaf names alongside the values, so a 3.0 finding points at
+ * `openrtb.response.seatbid[0].bid[0].media.display.adm` — where the data
+ * really is — instead of at a 2.x path the pasted document does not contain.
+ *
+ * Deliberately NOT projected: native. AdCOM's `nativefmt`/`native` asset model
+ * is a different shape from the 2.x `native.request` JSON string that
+ * nativeAssetCrosscheck() parses, and a wrong mapping would produce confident
+ * "missing required asset" CRITs on a correct payload. Silence beats a wrong
+ * answer; a 3.0 native crosscheck is its own piece of work.
+ *
+ * Mixed pairs (3.0 request + 2.x response, or the reverse) are projected side
+ * by side and compared anyway: that pairing is itself a bug worth seeing, and
+ * the id/floor comparisons are what expose it.
+ */
+
+/** Leaf field names as 2.x spells them. Frozen: shared by every 2.x bid. */
+const LEAF_2X = Object.freeze({
+  impid: 'impid',
+  price: 'price',
+  cat: 'cat',
+  adomain: 'adomain',
+  adm: 'adm',
+});
+
+/**
+ * The `openrtb.<key>` node of a 3.0 envelope, or null when the payload isn't
+ * one. Mirrors detect.js's envelope test: presence of the envelope child is
+ * what makes a payload 3.0, `ver` is not consulted (a broken `ver` is still a
+ * 3.0 attempt, and validate() already reports it).
+ */
+function inner30(payload, key) {
+  if (!isObj(payload) || !isObj(payload.openrtb)) return null;
+  const node = payload.openrtb[key];
+  return isObj(node) ? node : null;
+}
+
+/**
+ * Request view, or null when there is no request to crosscheck against.
+ *
+ * @param {any} req
+ * @returns {{id:unknown, cur:unknown, imp:Array<any>, base:string, impBase:string,
+ *            floorLeaf:string, bcat:unknown, badv:unknown}|null}
+ */
+function buildRequestView(req) {
+  if (!isObj(req)) return null;
+  const r30 = inner30(req, 'request');
+  if (r30 && Array.isArray(r30.item)) {
+    // AdCOM puts the blocklists on `context.restrictions`; a few feeds hang the
+    // same object off the request root. Read both — the alternative is silently
+    // running bcat/badv against an empty set and reporting "cat_clean" on a bid
+    // the publisher blocks.
+    const restrictions =
+      (isObj(r30.context) && isObj(r30.context.restrictions) && r30.context.restrictions) ||
+      (isObj(r30.restrictions) && r30.restrictions) ||
+      {};
+    return {
+      id: r30.id,
+      cur: r30.cur,
+      imp: r30.item.map(projectItem30),
+      base: 'openrtb.request.',
+      impBase: 'openrtb.request.item',
+      floorLeaf: 'flr',
+      bcat: restrictions.bcat,
+      badv: restrictions.badv,
+    };
+  }
+  if (!Array.isArray(req.imp)) return null;
+  return {
+    id: req.id,
+    cur: req.cur,
+    imp: req.imp,
+    base: '',
+    impBase: 'imp',
+    floorLeaf: 'bidfloor',
+    bcat: req.bcat,
+    badv: req.badv,
+  };
+}
+
+/**
+ * One 3.0 `item` → the 2.x `imp` fields the rules below read.
+ * Non-objects pass through untouched so the R4 null-tolerance downstream
+ * (`isObj(imp)` in the index loop) still sees what it expects.
+ */
+function projectItem30(item) {
+  if (!isObj(item)) return item;
+  const spec = isObj(item.spec) ? item.spec : {};
+  const placement = isObj(spec.placement) ? spec.placement : {};
+  const out = { id: item.id, bidfloor: item.flr, bidfloorcur: item.flrcu };
+  if (isObj(placement.display)) {
+    // AdCOM DisplayPlacement carries one fixed w/h plus `displayfmt[]`
+    // alternatives — the same split 2.x makes between banner.w/h and
+    // banner.format[].
+    const d = placement.display;
+    out.banner = {
+      w: d.w,
+      h: d.h,
+      format: Array.isArray(d.displayfmt) ? d.displayfmt : undefined,
+    };
+  }
+  if (placement.video != null) out.video = placement.video;
+  return out;
+}
+
+/**
+ * Response view, or null when `res` is not an object at all. A missing or
+ * empty `seatbid` is NOT null here: the caller distinguishes no-bid (with
+ * `nbr`) from an empty response, and that decision stays where it was.
+ *
+ * @param {any} res
+ * @returns {{id:unknown, nbr:unknown, cur:unknown, seatbid:unknown, base:string, v30:boolean}|null}
+ */
+function buildResponseView(res) {
+  if (!isObj(res)) return null;
+  const r30 = inner30(res, 'response');
+  if (r30) {
+    return {
+      id: r30.id,
+      nbr: r30.nbr,
+      cur: r30.cur,
+      seatbid: r30.seatbid,
+      base: 'openrtb.response.',
+      v30: true,
+    };
+  }
+  return { id: res.id, nbr: res.nbr, cur: res.cur, seatbid: res.seatbid, base: '', v30: false };
+}
+
+/**
+ * Flatten `seatbid[].bid[]` into one entry per REAL bid, each carrying the
+ * display path of the bid and the leaf names to append to it. Skipping
+ * non-objects here (R4: `seatbid:[null]`, `bid:[null]`) keeps the numbering
+ * identical to the nested forEach this replaced — sNum/bNum are still the
+ * array positions as written, so a payload with a null seat doesn't renumber
+ * the seats after it.
+ *
+ * @param {{seatbid:any, base:string, v30:boolean}} view
+ * @returns {Array<{bid:any, path:string, leaf:Object, sNum:number, bNum:number}>}
+ */
+function flattenBids(view) {
+  const out = [];
+  const seats = Array.isArray(view.seatbid) ? view.seatbid : [];
+  seats.forEach((sb, sbi) => {
+    if (!isObj(sb)) return;
+    const bids = Array.isArray(sb.bid) ? sb.bid : [];
+    bids.forEach((bid, bi) => {
+      if (!isObj(bid)) return;
+      const path = `${view.base}seatbid[${sbi}].bid[${bi}]`;
+      const entry = view.v30
+        ? projectBid30(bid, path)
+        : { bid: bid, path: path, leaf: LEAF_2X, sNum: 0, bNum: 0 };
+      entry.sNum = sbi + 1;
+      entry.bNum = bi + 1;
+      out.push(entry);
+    });
+  });
+  return out;
+}
+
+/**
+ * One 3.0 bid → the 2.x bid fields the rules read, plus the leaf names that
+ * point back at where each of them actually lives.
+ */
+function projectBid30(bid, path) {
+  // The 3.0 spec nests the AdCOM Ad object under `media.ad`; this repo's own
+  // rules-response-30.js reads `media.adomain` / `media.display` straight off
+  // media, which is what most real 3.0 traffic ships. Accept both, and record
+  // which one was found so the finding path names the field the user pasted
+  // rather than the one the spec would have preferred.
+  const media = isObj(bid.media) ? bid.media : {};
+  const wrapped = isObj(media.ad);
+  const ad = wrapped ? media.ad : media;
+  const mediaPath = wrapped ? 'media.ad' : 'media';
+  const display = isObj(ad.display) ? ad.display : null;
+  const video = isObj(ad.video) ? ad.video : null;
+  // Which subobject the markup came from decides the adm path. Display first,
+  // matching the order the 2.x rules resolve a creative in.
+  const admFrom =
+    display && typeof display.adm === 'string'
+      ? 'display'
+      : video && typeof video.adm === 'string'
+        ? 'video'
+        : null;
+  const projected = {
+    id: bid.id,
+    impid: bid.item,
+    price: bid.price,
+    cat: ad.cat,
+    adomain: ad.adomain,
+    adm: admFrom === 'display' ? display.adm : admFrom === 'video' ? video.adm : undefined,
+    w: display ? display.w : undefined,
+    h: display ? display.h : undefined,
+    ext: bid.ext,
+  };
+  return {
+    bid: projected,
+    path: path,
+    leaf: {
+      impid: 'item',
+      price: 'price',
+      cat: `${mediaPath}.cat`,
+      adomain: `${mediaPath}.adomain`,
+      adm: admFrom ? `${mediaPath}.${admFrom}.adm` : mediaPath,
+    },
+    sNum: 0,
+    bNum: 0,
+  };
 }
 
 // Try to parse a native payload that may be wrapped in 1-3 layers of

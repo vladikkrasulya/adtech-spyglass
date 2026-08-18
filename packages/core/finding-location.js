@@ -14,6 +14,12 @@
  *     dialect:   'ortb-json' | 'url' | 'vast' | 'envelope'
  *   }
  *
+ * `target` picks WHICH token of the resolved node to highlight: 'value' (the
+ * default), 'node' for a whole object/array, or 'key' for the field NAME — the
+ * one the client falls back out of on its own when the resolved entry has no
+ * key of its own. 'key' exists for the defects that ARE the name rather than
+ * what it holds: a key written twice, a key misspelled (see KEY_TARGET below).
+ *
  * HARD RULE: `side` comes ONLY from the validate() call context (request vs
  * response) passed in by the caller — never from an id/path regex or a
  * default. Crosscheck findings declare primary/related explicitly via the
@@ -127,6 +133,37 @@
     return loc(null, [], dialect || 'ortb-json');
   };
 
+  /**
+   * Findings whose subject is the KEY, not the value sitting behind it.
+   *
+   * A key written twice, a key spelled `bidfloorcurr`, a key that belongs on a
+   * different object: in every one of these the value is innocent and the NAME
+   * is the defect. Pointing at the value would underline `0.5` and tell the
+   * reader to fix the number when what is wrong is the word beside it — and for
+   * a duplicate key it would underline whichever of the two values the map kept,
+   * which is the one thing about the finding that is not in dispute.
+   *
+   * Asking for the key is always safe: the client's rangeFromEntry falls back to
+   * the value range on its own whenever the resolved entry has no key of its own
+   * (a root object, an array element), so a wrong guess here degrades to today's
+   * behaviour rather than to a broken jump.
+   */
+  const KEY_TARGET = {
+    'payload.duplicate_key': true,
+    'payload.field_misspelled': true,
+    'payload.field_wrong_object': true,
+    'payload.field_wrong_version': true,
+    'payload.field_unrecognized': true,
+  };
+  // Own-property lookup, not `KEY_TARGET[id]`. Finding ids are namespaced and
+  // none of them is `constructor` or `toString` today, but a plain-object table
+  // indexed by a string that arrives from a finding answers truthy for every
+  // name on Object.prototype, and a table that says yes to ids it has never
+  // heard of is a table that will be wrong the first time one is added.
+  function targetFor(id) {
+    return Object.prototype.hasOwnProperty.call(KEY_TARGET, id) ? 'key' : 'value';
+  }
+
   // Dialect is a RENDERING/precision hint only — NEVER side. Side is always the
   // call-context value. This explicit family list selects how to resolve the
   // pointer (JSON vs VAST-container vs envelope-no-jump); it does not infer side.
@@ -134,12 +171,37 @@
     const id = (finding && finding.id) || '';
     if (ctx && ctx.kind === 'url') return 'url';
     if (id.indexOf('vast.') === 0) return 'vast';
-    if (
-      id.indexOf('payload.') === 0 ||
-      id.indexOf('version.') === 0 ||
-      id.indexOf('jsonfeed.') === 0
-    )
-      return 'envelope';
+    if (id.indexOf('version.') === 0 || id.indexOf('jsonfeed.') === 0) return 'envelope';
+    // `payload.` is ONE prefix over TWO different kinds of finding, and the
+    // blanket 'envelope' this used to return threw away a position that had
+    // already been computed and was exact.
+    //
+    // Half the family really is about the payload as a whole and carries no
+    // path at all — invalid_root, unknown_type, ambiguous_both_sides,
+    // raw_scan_truncated. The other half names a real oRTB place that the
+    // source map resolves to the byte: duplicate_key and unsafe_number arrive
+    // with `imp[0].bidfloor` straight out of the raw scan, field_misspelled with
+    // `imp[0].bidfloorcurr` out of the unknown-field walk.
+    //
+    // Losing the second half cost more than a dead jump. paintGutterSeverity
+    // skips any finding without a `location.primary`, so an ERROR-level
+    // duplicate bid floor left its line UNPAINTED in the gutter — and an
+    // unpainted line is not a missing feature, it is the gutter asserting that
+    // nothing is wrong there, on the one line where money is ambiguous.
+    //
+    // The discriminator is the path itself rather than a list of ids: a payload
+    // finding that can name a JSON position IS an ortb-json finding whatever it
+    // is called, and any new one inherits the behaviour without an edit here.
+    // The pointer round-trip is part of the test on purpose — raw-json.js and
+    // unknown-fields.js both build their paths from KEYS AS WRITTEN, so a key
+    // literally named `a.b` comes back bracket-quoted into something the display
+    // grammar cannot parse. That one stays envelope instead of becoming an
+    // ortb-json finding with no pointer, which is what the corpus invariant
+    // ("every ortb-json path parses") is there to catch.
+    if (id.indexOf('payload.') === 0) {
+      const p = (finding && finding.path) || '';
+      return p && pathToPointer(p) !== null ? 'ortb-json' : 'envelope';
+    }
     return 'ortb-json';
   }
 
@@ -157,8 +219,14 @@
     const pointer = pathToPointer(path);
     if (pointer === null) return NONE(dialect);
     const precision = dialect === 'vast' ? 'container' : 'exact';
+    // A duplicate key resolves to ONE entry, because a source map is keyed by
+    // pointer and a pointer cannot name two places. The entry it keeps is the
+    // last occurrence — which is also the value `JSON.parse` kept and therefore
+    // the value every other rule in the same run was reading. Landing there is
+    // the honest answer to "where is this": it is the occurrence that won.
+    const target = targetFor((finding && finding.id) || '');
     // VAST → the adm JSON value (container; no claim of an exact XML node).
-    return loc(P(ctx.side, pointer, path, 'value', precision), [], dialect);
+    return loc(P(ctx.side, pointer, path, target, precision), [], dialect);
   }
 
   /**

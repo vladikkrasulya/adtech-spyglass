@@ -75,6 +75,46 @@ const SIGNALS_2_6 = [
   'imp[].refresh',
   'acat',
   'dooh',
+  // ── Fields 2.6 PROMOTED out of `ext` into the core objects. ───────────────
+  //
+  // These were missing until the 2026-08-18 audit, and their absence had a
+  // specific, embarrassing consequence: this repo's own 2.5→2.6 migrator
+  // (`migrate/rules.js`) writes exactly this set — `regs.gdpr`,
+  // `regs.us_privacy`, `user.consent`, `user.eids`, `source.schain`,
+  // `*.cattax` — and its output, fed straight back into `validate()`, came
+  // back "2.5, confidence 0.3, signals: []" with an INFO reading "No
+  // version-specific fields found". Five fields that do not exist in 2.5 were
+  // sitting in the payload while the detector said it had seen none. Pinning
+  // `expectedVersion:'2.6'` then produced a `version.mismatch` whose text
+  // claims the payload "contains version-2.5-only fields" — also on an empty
+  // signal list.
+  //
+  // Each entry is cross-checked against the independently hand-typed registry
+  // in `unknown-fields.js`, which had already marked them V26 from the
+  // migration table rather than from this list (Source.schain, Regs.gdpr,
+  // User.consent, User.eids). `regs.us_privacy` and the Content/Producer/root
+  // `cattax` entries are recorded there as ALL only because the registry's
+  // stated policy is to fall back to ALL when nothing in the repo anchors the
+  // boundary — 2.5's Regs object has `coppa` and `ext` and nothing else, and
+  // `cattax` arrived with the Content Taxonomy 2.x support in 2.6.
+  //
+  // Deliberately NOT added: `content.prodq`. The registry types it V26 because
+  // the only repo anchor is the migration rule that moves `videoquality` into
+  // it — but that rule exists because 2.6 REMOVED `videoquality`, not because
+  // it added `prodq`. `prodq` is in the 2.5 Content object (it replaced
+  // `videoquality` back in 2.4), so treating it as a definitive 2.6 marker
+  // would flip real 2.5 payloads to 2.6 at confidence 1 off a single field —
+  // the exact failure `version.single_marker` exists to warn about.
+  'regs.gdpr',
+  'regs.us_privacy',
+  'user.consent',
+  'user.eids',
+  'source.schain',
+  'cattax',
+  'site.content.cattax',
+  'app.content.cattax',
+  'site.content.producer.cattax',
+  'app.content.producer.cattax',
   // BidResponse
   'seatbid[].bid[].mtype',
   'seatbid[].bid[].apis',
@@ -247,6 +287,52 @@ function looksLike30Envelope(obj) {
   return false;
 }
 
+/**
+ * Signals that a payload is the INNER body of a 3.0 BidResponse — the shape
+ * an operator gets when they copy a response out of a log or a proxy dump,
+ * where the `{openrtb:{ver,response:…}}` wrapper has already been peeled off.
+ *
+ * Why this exists (audit 2026-08-18). The envelope test above is the only 3.0
+ * signal the detector had, and it is asymmetric in practice: the inner body of
+ * a 3.0 REQUEST still carries a root `item[]` and is caught, while the inner
+ * body of a 3.0 RESPONSE carries `seatbid[]` — a key 2.x owns — and fell all
+ * the way through to the 2.x response rules. The result was not "we don't
+ * know", it was four confident and wrong statements about a readable payload:
+ * `bid.impid` missing (3.0 replaced it with `bid.item`), neither adm nor nurl
+ * set (the markup is in `media.…display.adm`), adomain missing (it is in
+ * `media`), and `item` / `media` reported as fields OpenRTB does not define.
+ * Those last two are the giveaway — the fields the engine could not place are
+ * precisely the 3.0-only fields that identify the version.
+ *
+ * The claim is kept narrow on purpose:
+ *  - `bid.item` and `bid.media` have no 2.x counterpart at all, so either one
+ *    is a definitive marker where it appears;
+ *  - a single `bid.impid` anywhere vetoes the whole claim. A payload carrying
+ *    both the 2.x and the 3.0 reference is a mixture, and resolving a mixture
+ *    by silent preference is the failure this function was written to end.
+ *
+ * @param {any} obj
+ * @returns {string[]} matched signal paths; empty means "not a 3.0 body"
+ */
+function detect30ResponseSignals(obj) {
+  if (!isObj(obj) || !Array.isArray(obj.seatbid)) return [];
+  const signals = new Set();
+  for (const sb of obj.seatbid) {
+    if (!isObj(sb) || !Array.isArray(sb.bid)) continue;
+    for (const b of sb.bid) {
+      if (!isObj(b)) continue;
+      if (b.impid != null) return [];
+      // `item` is a scalar reference to request `item.id`; an object or array
+      // under that key is somebody else's `item`, not AdCOM's.
+      if (typeof b.item === 'string' || typeof b.item === 'number') {
+        signals.add('seatbid[].bid[].item');
+      }
+      if (isObj(b.media)) signals.add('seatbid[].bid[].media');
+    }
+  }
+  return Array.from(signals);
+}
+
 function detectType(obj) {
   // String inputs are URL-style requests (clickunder/teaser/pop GETs). The
   // analyze pipeline passes pasted text verbatim when JSON.parse fails — we
@@ -317,6 +403,7 @@ function detectType(obj) {
  *
  *   confidence = 1   any 2.6 marker found
  *   confidence = 1   3.0 envelope detected
+ *   confidence = 0.7 3.0-only bid fields with no envelope (a pasted inner body)
  *   confidence = 0.7 only 2.5 markers found (might still be 2.6 with no 2.6-only fields populated)
  *   confidence = 0.3 no markers at all (defaulted to 2.5)
  *   confidence = 0   non-object / can't tell
@@ -343,6 +430,16 @@ function detectVersion(payload) {
     return { version: VERSIONS.V_3_0, confidence: 1, signals };
   }
 
+  // 3.0 inner body — the envelope was stripped somewhere upstream, but the
+  // bids still speak 3.0. Confidence 0.7 rather than 1: the fields are
+  // definitive (nothing in 2.x is named `bid.item` / `bid.media`), yet the
+  // structural proof — the envelope itself — is not in front of us, so we
+  // do not claim the same certainty as a payload that carries it.
+  const sig30 = detect30ResponseSignals(p);
+  if (sig30.length) {
+    return { version: VERSIONS.V_3_0, confidence: 0.7, signals: sig30 };
+  }
+
   const sig26 = collectMatches(payload, SIGNALS_2_6);
   if (sig26.length) {
     return { version: VERSIONS.V_2_6, confidence: 1, signals: sig26 };
@@ -358,4 +455,11 @@ function detectVersion(payload) {
   return { version: VERSIONS.V_2_5, confidence: 0.3, signals: [] };
 }
 
-module.exports = { detectType, detectVersion, looksLike30Envelope, TYPES, VERSIONS };
+module.exports = {
+  detectType,
+  detectVersion,
+  looksLike30Envelope,
+  detect30ResponseSignals,
+  TYPES,
+  VERSIONS,
+};

@@ -3,11 +3,18 @@
 /**
  * Co-occurrence cluster detection — Phase 7b foundation. Pure function.
  *
- * Given the field-observation index and the co-occurrence index for a
- * single bucket, surface groups of fields that consistently appear
- * together. These clusters are what the Dialect Builder UI presents as
- * pre-cooked candidate dialects ("here are 4 fields that always travel
- * together — turn them into a temporary dialect?").
+ * Given the field-observation index and the co-occurrence index, surface
+ * groups of fields that consistently appear together. These clusters are
+ * what the Dialect Builder UI presents as pre-cooked candidate dialects
+ * ("here are 4 fields that always travel together — turn them into a
+ * temporary dialect?").
+ *
+ * `opts.bucket` narrows the read to one domain bucket; without it the
+ * function reads across all of them and aggregates. This header used to
+ * say "for a single bucket", which is not how its only production caller
+ * uses it — the builder passes the unfiltered index — and the code
+ * underneath had been written to the header rather than to the caller.
+ * See the accumulation comments in detectClusters for what that cost.
  *
  * Algorithm v1 (intentionally simple for 7b):
  *   1. Apply decay to all observation + co-occurrence scores at read time.
@@ -58,14 +65,41 @@ function detectClusters(observations, coOccurrences, opts) {
   const co = (coOccurrences || []).filter((r) => !o.bucket || r.bucket === o.bucket);
 
   // Decay-at-read-time so dormant fields fall below threshold without writes.
+  //
+  // Accumulate, never overwrite. An observation row is keyed by
+  // (bucket, path), so the same path arrives once per bucket it was ever
+  // seen in — and when the caller passes no `opts.bucket`, which is
+  // exactly what the Dialect Builder does (it feeds the whole
+  // storage.listObservations() in unfiltered), every one of those rows
+  // lands on the same map key. A `set` made the last row win, and row
+  // order is storage order, not score order. A field seen 400× in
+  // `display` and once in `push` therefore came out with a score of 1,
+  // fell under MIN_FIELD_SCORE, and took its entire cluster down with it:
+  // the builder showed "no candidates" sitting on top of hundreds of
+  // observations. Summing is also the honest aggregate for an unfiltered
+  // read — the question being asked is "how much evidence exists for this
+  // field, anywhere", and bucket separation is what `opts.bucket` is for.
   const fieldScores = new Map();
   for (const r of obs) {
     const decayed = applyDecay(r.decayedScore || 0, r.lastSeenAt || 0, now);
-    if (decayed > 0) fieldScores.set(r.path, decayed);
+    if (decayed > 0) fieldScores.set(r.path, (fieldScores.get(r.path) || 0) + decayed);
   }
 
-  // Adjacency: pathA → [{ partner, weight }] where partner = pathB and
-  // weight = decayed co-occurrence count.
+  // Adjacency: pathA → Map(partner → summed decayed co-occurrence weight).
+  //
+  // A Map of partners rather than a list of rows, for the same
+  // cross-bucket reason plus one of its own: an unfiltered read hands us
+  // the same (pathA, pathB) pair once per bucket, and a plain list turned
+  // that into a duplicated partner — the same field name appearing twice
+  // inside one cluster's `fields`, its weight double-counted in
+  // coOccurrenceCount, and a two-field pair sneaking past the "need ≥3
+  // fields" check by presenting the same partner twice.
+  //
+  // The minCo floor is applied AFTER the sum, not per row, because that is
+  // what MIN_COOCCURRENCE means: how often the two fields were seen
+  // together — not how often they were seen together inside a single
+  // bucket. For a bucket-filtered read there is one row per pair, so the
+  // two readings coincide and nothing changes.
   const adjacency = new Map();
   for (const c of co) {
     const decayed = applyDecay(
@@ -73,9 +107,15 @@ function detectClusters(observations, coOccurrences, opts) {
       c.lastSeenAt || 0,
       now,
     );
-    if (decayed < minCo) continue;
-    push(adjacency, c.pathA, { partner: c.pathB, weight: decayed });
-    push(adjacency, c.pathB, { partner: c.pathA, weight: decayed });
+    if (decayed <= 0) continue;
+    bump(adjacency, c.pathA, c.pathB, decayed);
+    bump(adjacency, c.pathB, c.pathA, decayed);
+  }
+  for (const [path, partners] of adjacency) {
+    for (const [partner, weight] of partners) {
+      if (weight < minCo) partners.delete(partner);
+    }
+    if (partners.size === 0) adjacency.delete(path);
   }
 
   // Anchor each strong field; harvest its top partners (also strong fields).
@@ -88,13 +128,11 @@ function detectClusters(observations, coOccurrences, opts) {
   const seenSignatures = new Set();
 
   for (const anchor of anchors) {
-    const partners = (adjacency.get(anchor) || [])
-      .filter(
-        ({ partner }) => fieldScores.has(partner) && fieldScores.get(partner) >= minFieldScore,
-      )
-      .sort((a, b) => b.weight - a.weight)
+    const partners = Array.from(adjacency.get(anchor) || [])
+      .filter(([partner]) => fieldScores.has(partner) && fieldScores.get(partner) >= minFieldScore)
+      .sort((a, b) => b[1] - a[1])
       .slice(0, MAX_CLUSTER_SIZE - 1)
-      .map((p) => p.partner);
+      .map(([partner]) => partner);
 
     if (partners.length < 2) continue; // Need ≥3 fields total to qualify
 
@@ -106,7 +144,7 @@ function detectClusters(observations, coOccurrences, opts) {
     let totalCount = 0;
     for (const f of fields) totalCount += fieldScores.get(f) || 0;
     let coOccurrenceCount = 0;
-    for (const { partner, weight } of adjacency.get(anchor) || []) {
+    for (const [partner, weight] of adjacency.get(anchor) || []) {
       if (fields.includes(partner)) coOccurrenceCount += weight;
     }
 
@@ -123,13 +161,13 @@ function detectClusters(observations, coOccurrences, opts) {
   return clusters;
 }
 
-function push(map, key, value) {
-  let arr = map.get(key);
-  if (!arr) {
-    arr = [];
-    map.set(key, arr);
+function bump(adjacency, path, partner, weight) {
+  let partners = adjacency.get(path);
+  if (!partners) {
+    partners = new Map();
+    adjacency.set(path, partners);
   }
-  arr.push(value);
+  partners.set(partner, (partners.get(partner) || 0) + weight);
 }
 
 module.exports = {

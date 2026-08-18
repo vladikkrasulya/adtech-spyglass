@@ -48,6 +48,53 @@
 const TEMP_DIALECT_ID_PREFIX = 'temp:';
 
 /**
+ * Walker vocabulary → oRTB structure. The walker's logical paths drop
+ * array indices, which walkSegments below already handles by descending
+ * into arrays. But for the bid array it drops something more: the whole
+ * intermediate container. A field physically at
+ * `seatbid[0].bid[2].ext.vendor_macro` is filed by the walker as
+ * `res.bid.ext.vendor_macro` (walker.js findExtEntryPoints —
+ * `tryAdd('res.bid.ext', …)`), because "the bid's ext" is how an analyst
+ * names it, not "the ext of the bid of the seatbid".
+ *
+ * Those exact strings come straight back here: the Dialect Builder seeds
+ * `spec.fields` from walker output, so the resolver has to speak the
+ * walker's dialect and not just oRTB's. Until it did, every `res.bid.*`
+ * field was unresolvable — walkSegments looked for the key `bid` on the
+ * response root, oRTB keeps it two levels down, so the lookup returned
+ * undefined. That read as "missing", which is the worst possible failure
+ * mode for a required field: an ERROR raised against a field that is
+ * physically present, and an ERROR moves rollupStatus, so a perfectly
+ * clean bid response was painted as broken. The quieter half of the same
+ * bug: expectedType was never checked for any res.bid.* field either,
+ * because a value that never resolves is never type-tested.
+ *
+ * Kept as an explicit table rather than a "if the key is missing, try
+ * skipping a level" search. The walker's prefixes are a closed set, while
+ * a fuzzy search would happily resolve `res.bid.ext.x` against some
+ * unrelated `bid` key nested elsewhere and report a confident false
+ * present — which is exactly the class of wrong answer this resolver
+ * exists to avoid.
+ */
+const LOGICAL_PATH_EXPANSIONS = [
+  // The physical form is still index-free; walkSegments descends the
+  // seatbid[] and bid[] arrays on its own.
+  { from: ['res', 'bid'], to: ['res', 'seatbid', 'bid'] },
+];
+
+function expandLogicalSegments(segments) {
+  for (const { from, to } of LOGICAL_PATH_EXPANSIONS) {
+    if (from.every((seg, i) => segments[i] === seg)) {
+      return to.concat(segments.slice(from.length));
+    }
+  }
+  // Already-physical paths (`res.seatbid.bid.ext.x`) match no prefix and
+  // pass through untouched — both spellings must keep resolving, because
+  // dialects saved before this expansion existed used the long one.
+  return segments;
+}
+
+/**
  * Resolve a logical path against a payload pair (`req` for req.* paths,
  * `res` for res.* paths). Logical paths from the walker collapse array
  * indices, so we resolve by walking through arrays at the matching
@@ -57,11 +104,15 @@ const TEMP_DIALECT_ID_PREFIX = 'temp:';
  * Examples:
  *   resolvePath({req, res}, 'req.imp.ext.subage') →
  *     req.imp[0].ext.subage (or imp[1].ext.subage, etc. — first non-undefined)
+ *   resolvePath({req, res}, 'res.bid.ext.vendor_macro') →
+ *     res.seatbid[0].bid[0].ext.vendor_macro (first non-undefined)
  */
 function resolvePath(payloadPair, logicalPath) {
+  if (!payloadPair || typeof payloadPair !== 'object') return undefined;
   if (!logicalPath || typeof logicalPath !== 'string') return undefined;
-  const segments = logicalPath.split('.');
-  if (segments.length < 2) return undefined;
+  const raw = logicalPath.split('.');
+  if (raw.length < 2) return undefined;
+  const segments = expandLogicalSegments(raw);
   const root =
     segments[0] === 'req' ? payloadPair.req : segments[0] === 'res' ? payloadPair.res : undefined;
   if (root == null) return undefined;

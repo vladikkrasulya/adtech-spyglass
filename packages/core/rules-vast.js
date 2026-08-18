@@ -270,14 +270,45 @@ function validateVast(adm, path) {
   //   VAST §3.7: HH:MM:SS or HH:MM:SS.mmm; minutes/seconds are range-checked 00–59.
   //   Content may be CDATA-wrapped — strip markers before validating.
   if (hasTag(adm, 'Linear') && hasTag(adm, 'Duration')) {
-    const durRe = /<Duration\b[^>]*>([\s\S]*?)<\/Duration>/gi;
+    // Walked with forEachOpenTag for the same reason R6 is — and, as there,
+    // because of what the lazy pair-matching regex did to a SELF-CLOSING tag.
+    //
+    // The old pattern was `<Duration\b[^>]*>([\s\S]*?)</Duration>`. Against
+    // `<Duration/>` the `[^>]*` happily consumed the `/`, so an empty element
+    // matched as an OPENING tag, and `[\s\S]*?` then ran forward to the next
+    // creative's `</Duration>`. What landed in the list was a slab of markup —
+    //
+    //   "<MediaFiles><MediaFile …>https://a</MediaFile></MediaFiles></Linear>
+    //    </Creative><Creative><Linear><Duration>00:00:30"
+    //
+    // — reported to the user as an invalid "timecode" 150 characters long. Two
+    // failures in one: garbage in `val`, and the genuine `00:00:30` from the
+    // second creative was swallowed into that slab and never checked at all.
+    // R8 stayed silent throughout, because `hasTag('Duration')` is satisfied by
+    // the empty tag. An ad pod with one broken creative therefore produced one
+    // nonsense warning and zero real validation.
+    //
+    // An empty `<Duration/>` is now read as what it is — a Duration whose
+    // content is the empty string — and fails the timecode test on its own
+    // merits. That is deliberately NOT R6's "self-closing has no content, skip
+    // it" rule: for a URL scan emptiness means nothing to look at, but here
+    // emptiness IS the defect. It also makes `<Duration/>` and
+    // `<Duration></Duration>` behave identically, which they must — XML says
+    // they are the same element, yet the old code gave one a bogus finding and
+    // the other a correct one.
     const durations = [];
-    let dm;
-    while ((dm = durRe.exec(adm)) !== null) {
-      const raw = (dm[1] || '').trim();
+    const CLOSE_DURATION = '</duration>';
+    forEachOpenTag(adm, 'Duration', (openTag, endIndex) => {
+      if (/\/>$/.test(openTag)) {
+        durations.push('');
+        return;
+      }
+      const closeAt = lowerAdm.indexOf(CLOSE_DURATION, endIndex + 1);
+      if (closeAt === -1) return; // unterminated — the parser reports that, not us
+      const raw = adm.slice(endIndex + 1, closeAt).trim();
       const cdata = /^<!\[CDATA\[([\s\S]*?)\]\]>$/.exec(raw);
       durations.push(cdata ? cdata[1].trim() : raw);
-    }
+    });
     const firstBadDur = durations.find((v) => !/^\d{2}:[0-5]\d:[0-5]\d(?:\.\d{1,3})?$/.test(v));
     if (firstBadDur !== undefined)
       findings.push(F('vast.duration_invalid', LEVELS.WARNING, path, { val: firstBadDur }));

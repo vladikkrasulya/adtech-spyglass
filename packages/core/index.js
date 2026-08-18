@@ -122,6 +122,83 @@ function refusalFindings(refusal) {
   return [F('request.url.unparseable', LEVELS.ERROR, '', { detail: refusal.detail || '' })];
 }
 
+/**
+ * ── The 3.0 rule blackout, and how it is lifted ─────────────────────────────
+ *
+ * Version dispatch below routes a 3.0 payload to `validateRequest30` /
+ * `validateResponse30` and nothing else. Everything that runs OUTSIDE that
+ * dispatch — the eleven rule plugins, `validateConsent`, `validateTcfPermission`
+ * — kept receiving the root envelope and kept reading 2.x paths on it:
+ * `req.imp`, `req.tmax`, `req.cur`, `source.schain`, `user.consent`. In a 3.0
+ * envelope every one of those lives under `openrtb.request.…`, so all of them
+ * matched nothing and returned empty. A 3.0 request with a broken SupplyChain,
+ * a negative `tmax`, a currency code that is not ISO-4217 and an implausible TC
+ * string came back `status:'clean'` with a single INFO note. The plugin
+ * registry meanwhile advertises "ext.schain (oRTB 3.0)" in its own comment.
+ *
+ * The fix is a projection, not a rewrite: hand those rules the sub-objects they
+ * were written for, then stamp the real 3.0 path back onto whatever they
+ * report, so a finding still points at the node the operator can click.
+ *
+ * What is deliberately NOT projected is `context.device` (and `context.site` /
+ * `context.app`). AdCOM's Device is not oRTB 2.x's Device wearing a new
+ * address: `os` is an integer from an enumerated list where 2.x has a free
+ * string, and the device kind is `type`, not `devicetype`. The `client-hints`
+ * plugin reads exactly those two as 2.x strings, so feeding it an AdCOM Device
+ * would not be applying a rule to 3.0 — it would be asserting 2.x facts about
+ * an object that does not have them. That gap is real and stays visible here
+ * rather than being papered over with a rule that happens to produce output.
+ */
+const CONTEXT_ROOTS_30 = new Set(['regs', 'user']);
+
+/**
+ * Fields of a 3.0 Request whose name AND meaning survive unchanged from 2.x,
+ * plus the two `context` children AdCOM defines the same way 2.6 does.
+ *
+ * `seat` / `wseat` are excluded on purpose: 3.0 replaced 2.x's `wseat[]` +
+ * `bseat[]` pair with a `seat[]` list plus a `wseat` FLAG that says whether the
+ * list is a whitelist. Same word, inverted type — the one shape of collision
+ * that reads as harmless and is not.
+ */
+const REQUEST_KEYS_30 = ['id', 'test', 'at', 'tmax', 'cur', 'source', 'ext'];
+
+function project30Request(req30) {
+  const ctx = isObj(req30.context) ? req30.context : {};
+  /** @type {Record<string, any>} */
+  const view = {};
+  for (const k of REQUEST_KEYS_30) {
+    if (req30[k] !== undefined) view[k] = req30[k];
+  }
+  for (const k of CONTEXT_ROOTS_30) {
+    if (ctx[k] !== undefined) view[k] = ctx[k];
+  }
+  return view;
+}
+
+/**
+ * Re-address findings produced against a projected view.
+ *
+ * A finding with an empty path is an envelope-level statement and stays that
+ * way — pointing it at `openrtb.request` would claim a precision it does not
+ * have. Everything else gets the prefix its first segment earns: `regs` and
+ * `user` came out of `context`, the rest out of `request`.
+ *
+ * @param {Array<any>} findings
+ * @param {string} base          e.g. 'openrtb.request'
+ * @param {string} [contextBase] e.g. 'openrtb.request.context'
+ * @returns {Array<any>} the same array, mutated in place
+ */
+function reprefixFindings(findings, base, contextBase) {
+  for (const f of findings) {
+    const p = f.path;
+    if (typeof p !== 'string' || p === '') continue;
+    const head = p.split(/[.[]/, 1)[0];
+    const prefix = contextBase && CONTEXT_ROOTS_30.has(head) ? contextBase : base;
+    f.path = `${prefix}.${p}`;
+  }
+  return findings;
+}
+
 function validate(payload, opts) {
   const o = opts || {};
   // `opts.rawText` is the payload exactly as it arrived, before any parse.
@@ -269,38 +346,71 @@ function validate(payload, opts) {
     // "no_site_or_app", etc.) so we route by version BEFORE rule dispatch.
     if (version && version.version === VERSIONS.V_3_0) {
       findings = validateRequest30(payload, { dialect });
+      // See the projection note above: the plugin / consent / TCF groups are
+      // written against 2.x paths, so on 3.0 they get the sub-objects those
+      // paths describe and their findings are re-addressed afterwards.
+      const req30 = isObj(pl.openrtb) && isObj(pl.openrtb.request) ? pl.openrtb.request : null;
+      if (req30) {
+        const view = project30Request(req30);
+        const projected = runRulePlugins(view, 'ORTB_REQUEST', { dialect, version, userDialect })
+          .concat(validateConsent(view).findings)
+          .concat(validateTcfPermission(view).findings);
+        findings = findings.concat(
+          reprefixFindings(projected, 'openrtb.request', 'openrtb.request.context'),
+        );
+      }
     } else {
       findings = validateRequest(payload, { dialect, version });
+      // Plugin pass — modular rules from packages/core/rules/<name>/.
+      // Plugins join findings BEFORE dedup+sort in finalize(), so a
+      // plugin can't shadow a legacy finding accidentally. See
+      // packages/core/rules/README.md for the contract.
+      const pluginFindings = runRulePlugins(payload, 'ORTB_REQUEST', {
+        dialect,
+        version,
+        userDialect,
+      });
+      if (pluginFindings.length) findings = findings.concat(pluginFindings);
     }
-    // Plugin pass — modular rules from packages/core/rules/<name>/.
-    // Plugins join findings BEFORE dedup+sort in finalize(), so a
-    // plugin can't shadow a legacy finding accidentally. See
-    // packages/core/rules/README.md for the contract.
-    const pluginFindings = runRulePlugins(payload, 'ORTB_REQUEST', {
-      dialect,
-      version,
-      userDialect,
-    });
-    if (pluginFindings.length) findings = findings.concat(pluginFindings);
   } else if (t === TYPES.ORTB_RESPONSE) {
     // Same version dispatch on the response side. 3.0 BidResponse lives
     // under `openrtb.response` and uses `bid.item` (not 2.x `bid.impid`).
     if (version && version.version === VERSIONS.V_3_0) {
       findings = validateResponse30(payload);
+      // Same projection as the request side. The 3.0 Response object carries
+      // `cur` and `seatbid[].bid[].price` under exactly those names, so the
+      // currency and price-floor plugins apply verbatim once they are handed
+      // the response instead of the envelope wrapped around it.
+      // With no envelope the payload IS the response body (a paste out of a
+      // log — see `detect30ResponseSignals`), and its paths are already
+      // root-relative, so nothing needs re-addressing.
+      const hasEnv30 = isObj(pl.openrtb);
+      const res30 = hasEnv30 ? (isObj(pl.openrtb.response) ? pl.openrtb.response : null) : pl;
+      if (res30) {
+        const projected = runRulePlugins(res30, 'ORTB_RESPONSE', {
+          dialect,
+          version,
+          userDialect,
+          req: o.pairReq || null,
+        });
+        findings = findings.concat(
+          hasEnv30 ? reprefixFindings(projected, 'openrtb.response') : projected,
+        );
+      }
     } else {
       findings = validateResponse(payload, { dialect, version });
+      // Plugin pass — response-side. Modular rules with appliesTo:'ORTB_RESPONSE'
+      // run here. Paired req context may be available via opts.pairReq when
+      // the caller (e.g. analyze handler) supplies it for floor/currency checks.
+      // Standalone paste mode: pairReq is undefined → ctx.req is null.
+      const responsePluginFindings = runRulePlugins(payload, 'ORTB_RESPONSE', {
+        dialect,
+        version,
+        userDialect,
+        req: o.pairReq || null,
+      });
+      if (responsePluginFindings.length) findings = findings.concat(responsePluginFindings);
     }
-    // Plugin pass — response-side. Modular rules with appliesTo:'ORTB_RESPONSE'
-    // run here. Paired req context may be available via opts.pairReq when
-    // the caller (e.g. analyze handler) supplies it for floor/currency checks.
-    // Standalone paste mode: pairReq is undefined → ctx.req is null.
-    const responsePluginFindings = runRulePlugins(payload, 'ORTB_RESPONSE', {
-      dialect,
-      version,
-      userDialect,
-      req: o.pairReq || null,
-    });
-    if (responsePluginFindings.length) findings = findings.concat(responsePluginFindings);
   } else if (t === TYPES.VENDOR_FEED) {
     const r = validateFeedResponse(payload);
     findings = r.findings;
