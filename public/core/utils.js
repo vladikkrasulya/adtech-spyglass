@@ -13,13 +13,37 @@
 /* DOM helper — short alias for document.getElementById. */
 export const $ = (id) => document.getElementById(id);
 
-/* Safe HTML escape for any user-provided string. Uses the browser's
-   own text-node serialisation so it's exhaustive (no manual table). */
+/* Safe HTML escape for any user-provided string — TEXT *and* ATTRIBUTE
+   position.
+
+   This used to build a text node and read back innerHTML, on the reasoning
+   that the browser's own serialiser must be exhaustive. It is not, and the
+   comment saying so is why nobody checked: text-node serialisation escapes
+   `&`, `<` and `>` and deliberately leaves quotes alone, because inside text
+   a quote needs no escaping. Every one of this project's call sites that
+   interpolates into an attribute — `class="…${escapeHtml(v)}"` — was
+   therefore injectable with a single `"`, which closes the attribute and
+   lets the rest of the value become new attributes. A blog post whose
+   category was `guide" onmouseover="…` shipped a live event handler onto
+   the page, and `script-src 'unsafe-inline'` meant CSP did not stand in the
+   way. Twelve modules import this function; ten call sites in blog/index.js
+   and four in admin-blog/index.js sit in attribute position.
+
+   The server-side helper of the same name in lib/seo.js always escaped
+   quotes. Two functions, one name, different behaviour — the client half
+   was the wrong one, and it was the half handling content the server had
+   already decided was safe to hand over.
+
+   An explicit table now, covering both quote characters. `&` runs first or
+   it would double-escape the entities the later replacements introduce. */
 export function escapeHtml(s) {
   if (s == null) return '';
-  const d = document.createElement('div');
-  d.appendChild(document.createTextNode(String(s)));
-  return d.innerHTML;
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /* Toast notification — appends a transient pill into #toastContainer
