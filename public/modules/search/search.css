@@ -12,6 +12,11 @@
 .kt-topbar__search-input {
   cursor: text;
   color: var(--text);
+  /* The placeholder is longer than the field on HD (235 px of text in
+     226 px of room). Inputs default to text-overflow:clip, so the last
+     word was sheared mid-letter right against the ⌘K badge with no sign
+     that anything was missing. */
+  text-overflow: ellipsis;
   transition:
     border-color var(--t-fast, 150ms),
     box-shadow var(--t-fast, 150ms);
@@ -30,7 +35,19 @@
 .sg-search-dropdown {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+
+  /* Anchored to the input's RIGHT edge, not its left.
+     The search sits in the right end of the topbar (input x=1543 on a
+     1920 viewport), so a 480 px panel pinned to `left: 0` ended at
+     x=2023 — 103 px past the screen with no horizontal scroll to reach
+     it, shearing every result description mid-word. Pinning the right
+     edges together keeps the panel inside the viewport at every width
+     the topbar itself fits in. `--sg-dd-shift` is the escape hatch the
+     module's JS uses if the panel would fall off the LEFT instead. */
+  right: 0;
+  left: auto;
+  margin-right: var(--sg-dd-shift, 0px);
+
   width: 480px;
   max-width: calc(100vw - 32px);
   max-height: 480px;
@@ -83,12 +100,18 @@
   }
 }
 
-/* Mobile: full-width with gutters */
+/* Mobile: full-width with gutters.
+   Centring used translateX(-50%), which the entrance animation overwrote
+   on its very first frame (it animates `transform`, fill mode `both`), so
+   the panel settled half a screen to the right. Centring by margin leaves
+   `transform` to the animation alone. */
 @media (max-width: 600px) {
   .sg-search-dropdown {
     width: calc(100vw - 16px);
+    right: auto;
     left: 50%;
-    transform: translateX(-50%);
+    margin-right: 0;
+    margin-left: calc((100vw - 16px) / -2);
   }
 }
 

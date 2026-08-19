@@ -21,15 +21,31 @@
   border-radius: var(--r-md);
 }
 
+/* Two explanatory paragraphs, not labels.
+   Both used to carry .mono-label — spaced monospace capitals, 11–13 px,
+   run across the panel's full 810 px (≈120 characters on a 2K panel).
+   That treatment is for a three-word legend; here it was applied to the
+   sentence warning that Apply overwrites the editor and to the one
+   listing what the rule set does NOT cover. Word shape matters most
+   exactly where the text describes a destructive action, so these get
+   the sans face at body scale and a measure that can be read. */
+.mig-hint,
+.mig-scope {
+  max-width: 68ch;
+  font-family: var(--font-sans, inherit);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-muted, var(--text-dim));
+}
+
 .mig-hint {
   padding: var(--space-2) var(--space-3) 0;
-  opacity: 0.8;
 }
 
 .mig-scope {
   margin-top: var(--space-4);
-  opacity: 0.7;
-  font-size: 0.8rem;
 }
 
 .mig-clean {

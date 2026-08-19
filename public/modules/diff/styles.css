@@ -28,11 +28,31 @@
   gap: var(--space-1);
   cursor: pointer;
   white-space: nowrap;
+  /* Was inheriting body size (15px) beside an 11px mono legend, so the two
+     halves of one control row sat on visibly different scales. */
+  font-size: var(--fs-sm);
+  line-height: 1.2;
 }
 
+/* The legend and its options are one row; centring the flex line is what
+   makes their optical baselines agree despite the size difference. */
+.diff-optgroup .mono-label {
+  line-height: 1.2;
+}
+
+/* A full explanatory sentence, not a label.
+   It used to carry .mono-label: 11px spaced monospace capitals stretched
+   across the whole 810 px panel — the exact treatment that destroys word
+   shape, applied to the text that explains what the comparison does. */
 .diff-hint {
   padding: var(--space-2) var(--space-3) 0;
-  opacity: 0.8;
+  max-width: 68ch;
+  font-family: var(--font-sans, inherit);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-muted, var(--text-dim));
 }
 
 .diff-sides {

@@ -391,7 +391,7 @@
       `<button type="button" class="btn" data-action="mig-none">${escapeHtml(tt('migrate.select_none'))}</button>` +
       `<button type="button" class="btn" data-action="mig-refresh">${escapeHtml(tt('migrate.refresh'))}</button>` +
       `</div>` +
-      `<div class="mig-hint mono-label">${escapeHtml(tt('migrate.apply_hint'))}</div>`
+      `<div class="mig-hint">${escapeHtml(tt('migrate.apply_hint'))}</div>`
     );
   }
 
@@ -416,14 +416,14 @@
       return (
         outcomeHtml() +
         `<div class="mig-clean">${escapeHtml(tt('migrate.none'))}</div>` +
-        `<div class="mig-scope mono-label">${escapeHtml(tt('migrate.scope'))}</div>`
+        `<div class="mig-scope">${escapeHtml(tt('migrate.scope'))}</div>`
       );
     }
     return (
       outcomeHtml() +
       barHtml() +
       `<div class="mig-list" id="migrateList">${proposals.map(proposalHtml).join('')}</div>` +
-      `<div class="mig-scope mono-label">${escapeHtml(tt('migrate.scope'))}</div>`
+      `<div class="mig-scope">${escapeHtml(tt('migrate.scope'))}</div>`
     );
   }
 

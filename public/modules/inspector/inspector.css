@@ -5412,3 +5412,255 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   gap: 8px;
   margin-top: 4px;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2026-08-19 — layout + typography repairs (inspector CSS group)
+   Every rule below is deliberately last in the file: each one contests a
+   declaration that already exists above it, and source order is the only
+   thing that decides a tie between two selectors of equal weight.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. The drawer takes a column; it stops covering the editor ────────────
+   `.sidebar-left` was an absolutely-positioned overlay at z-index 40 with an
+   opaque background, so opening "Підсумок / Формат / Історія" painted 330px
+   of panel straight over the JSON editor without the editor giving up a
+   single pixel. Measured at 2560×1440: the drawer occupied x 236…566 while
+   #bidReq stayed at x 280 w 1103 — the gutter and the first ~36 characters
+   of every line vanished, and elementFromPoint(350,600) answered
+   `div.history-item`, so the clicks went to the drawer too.
+
+   The split is already a grid. A drawer that wants to sit BESIDE the editor
+   therefore only needs to become a grid track: the first one. Nothing about
+   the toggle, its localStorage key or resetLayout() changes — `display:none`
+   when closed already removes it from flow, so the closed layout stays the
+   two equal columns it was.
+
+   Overlay is kept below 1100px, where the split stacks into rows and there is
+   no width to share in the first place. */
+@media (min-width: 1101px) {
+  body:not(.sb-left-hidden) .workbench-split {
+    grid-template-columns: clamp(260px, 20%, 330px) minmax(0, 1fr) minmax(0, 1fr);
+  }
+  body:not(.sb-left-hidden) .sidebar-left {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    width: auto;
+    min-width: 0;
+    transform: none;
+    /* A cast shadow says "this floats above the page". It does not any more. */
+    box-shadow: none;
+  }
+}
+
+/* ── 2. Finding rows — the sentence outranks the rule id again ────────────
+   `--fs-card` and `--fs-chip` are fixed px on .kt-shell, so the card text
+   stayed 14px/12px on every display while `--fs-mono` — which the rule id
+   uses — climbed to 17px at 4K. The result was an inverted hierarchy: the
+   machine identifier was the biggest, brightest thing in the row and the
+   Ukrainian sentence a human actually reads was smaller than it.
+
+   Two local steps, scoped to the inspector so no other module inherits them,
+   following the same breakpoints the file already uses for --fs-*. */
+.workbench {
+  --fs-finding: var(--fs-card, 14px);
+  --fs-finding-meta: var(--fs-chip, 12px);
+}
+@media (min-width: 1600px) {
+  .workbench {
+    --fs-finding: clamp(14px, 0.66vw, 17px);
+    --fs-finding-meta: clamp(12px, 0.55vw, 14px);
+  }
+}
+@media (min-width: 2800px) {
+  .workbench {
+    --fs-finding: 19px;
+    --fs-finding-meta: 15px;
+  }
+}
+.finding-title,
+.finding-desc {
+  font-size: var(--fs-finding);
+}
+/* A sentence has a measure, but only the 4K panel is wide enough to break it:
+   below that the row is narrower than the limit and capping it would only buy
+   extra wrapped lines in a list that is already 23 rows long. `ch` is taken
+   from --fs-finding, so the measure tracks the scale step. */
+@media (min-width: 2800px) {
+  .finding-title,
+  .finding-desc {
+    max-width: 96ch;
+  }
+}
+.validation-item.question .finding-desc {
+  font-size: var(--fs-finding-meta);
+}
+.finding-path,
+.finding-spec,
+.finding-code {
+  font-size: var(--fs-finding-meta);
+}
+.finding-code {
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+/* The rule id trailed the sentence at the row's right edge, which on 4K left
+   ~1000px of nothing between the two — the shorter the finding, the wider the
+   void. It is an annotation on the sentence, so it goes next to the sentence:
+   `.finding-main` stops growing and the id follows it across the gap. */
+.finding-row .finding-main {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+/* Collapsed rows rendered in two different shapes depending on whether the
+   foot fitted: `flex-wrap: wrap` on the summary let `.finding-foot` fall to a
+   second line, and with it the chevron, so identical findings produced 46px
+   and 72px rows in the same list. `.finding-row` grew from its content width,
+   which is what pushed the foot off the line — zero-basis instead, and the
+   row keeps one shape. Question cards keep wrapping: their foot carries two
+   buttons and genuinely needs the second line.
+
+   1500px, not the 1100px stacking breakpoint: the results panel is half the
+   viewport, so below that it is under ~630px and holding the foot on the
+   title's line costs the sentence more width than the tidy shape is worth.
+   Measured at 1366: six rows went 577px → 614px total and the spread grew.
+   At 1920 the same change goes 402px → 321px with two row shapes instead of
+   three, so the rule starts where it starts paying. */
+@media (min-width: 1500px) {
+  .validation-item.finding-detail:not(.is-lead):not(.question) > summary {
+    flex-wrap: nowrap;
+  }
+  .validation-item.finding-detail:not(.is-lead) .finding-row {
+    flex: 1 1 0;
+  }
+}
+
+/* ── 3. Impression cards — one floor line, one baseline ───────────────────
+   The cards stretch to a common height but their content was top-packed, so
+   `floor` — the single number you scan across the row — sat at three
+   different heights (spread 62px at 2K, 85px at 4K). Pin it to the bottom.
+
+   The grid also used `auto-fill`, which reserved empty 240px tracks: three
+   cards in a 1770px panel left 1034px of ruled nothing beside them. `auto-fit`
+   collapses the empty tracks, and a measure keeps the cards from becoming
+   600px-wide boxes holding four short lines. */
+.slot-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  max-width: 1080px;
+}
+.slot-card {
+  display: flex;
+  flex-direction: column;
+}
+.slot-floor {
+  margin-top: auto;
+}
+/* The chips carry 8px of their own padding, so their text started 8px right
+   of every plain line above and below them and the card's left edge wobbled.
+   Pull the row back by exactly that padding and the text edges line up. */
+.slot-card .slot-type-row {
+  margin-left: -8px;
+}
+
+/* ── 4. One underline means one thing ─────────────────────────────────────
+   The active tab is marked with a 2px accent underline plus bold text. A tab
+   holding a warning badge was marked with a 2px amber underline plus bold
+   text. Two tabs therefore read as selected at once, and which panel was
+   actually on screen could only be learned by looking at the panel. Severity
+   already has a carrier that the active state does not use — the badge — so
+   the underline goes back to meaning "you are here". */
+.tab-btn:has(.tab-badge.danger):not(.active),
+.tab-btn:has(.tab-badge.warn):not(.active) {
+  border-bottom-color: transparent;
+  font-weight: 400;
+}
+
+/* "Ще" sits 589px from the last tab with no border and a 30px box against
+   the tabs' 42px, so it read as stray text rather than as the menu it is.
+   Give it an edge. */
+.tab-more > summary.tab-more-toggle {
+  padding: 4px var(--space-3);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.tab-more > summary.tab-more-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.tab-more[open] > summary.tab-more-toggle {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.tab-more:has(.tab-btn.active) > summary.tab-more-toggle {
+  border: 1px solid var(--accent);
+}
+
+/* ── 5. The work bar is one row of one height ─────────────────────────────
+   Measured 28 / 30 / 32px across the validity chip, the two selects and the
+   three buttons, all optically centred on the same line — so the row read as
+   three sizes of control rather than one strip. And the selects, which decide
+   which rule set runs at all, were the smallest text in the whole chrome at a
+   hard-coded 12px while the decorative chip beside them scaled to 19px. */
+.workbar .validity-chip,
+.workbar .format-pill-select,
+.workbar .btn-sm,
+.workbar .kt-example-menu > summary,
+.workbar .kt-tools-menu > summary {
+  height: 32px;
+}
+.workbar .validity-chip {
+  display: inline-flex;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.workbar .format-pill-select {
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: max(12px, var(--fs-mono));
+}
+
+/* ── 6. The samples menu can be reached to its last item ──────────────────
+   988px tall from y=98 with no max-height and no scroll of its own, on a page
+   whose html and body are both overflow:hidden — the last entry ended 1px
+   below a 1080px viewport and one more sample would have put it out of reach.
+   The first item also stacked its icon ABOVE its label, because the global
+   reset makes svg a block and the item was `display: block`. */
+.kt-example-menu .example-menu-list {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.kt-example-menu .example-menu-list button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.kt-example-menu .example-menu-list button > svg {
+  flex: 0 0 auto;
+}
+
+/* ── 7. `.creative-actions` — the seam agreed with the creative group ─────
+   The "show images through the server" button used to be appended inside
+   `.preview-container`, which is overflow:hidden at a fixed 300×250 and is
+   covered by `.preview-safe-overlay`: the button was cut in half and
+   unclickable. ortbtools.app.js now mounts it in a sibling container after
+   the preview frame; this file only says how that container looks. Nothing
+   in inspector.css positions `.creative-inline-assets` — there never was such
+   a rule, so there is none to remove. */
+.creative-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.creative-actions:empty {
+  display: none;
+}
+.creative-actions .creative-inline-assets {
+  max-width: 100%;
+}

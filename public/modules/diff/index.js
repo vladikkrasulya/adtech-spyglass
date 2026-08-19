@@ -211,9 +211,12 @@
       radio('diffMode', 'semantic', mode, 'diff.mode.semantic') +
       radio('diffMode', 'raw', mode, 'diff.mode.raw') +
       `</div>` +
-      `<button type="button" class="btn" id="diffRun">${escapeHtml(tt('diff.run'))}</button>` +
+      // Bare `.btn` carries no background of its own, so the browser's own
+      // buttonface grey showed through and the tab's primary action read as
+      // disabled next to the live blue radio markers.
+      `<button type="button" class="btn btn-primary" id="diffRun">${escapeHtml(tt('diff.run'))}</button>` +
       `</div>` +
-      `<div class="diff-hint mono-label">${escapeHtml(
+      `<div class="diff-hint">${escapeHtml(
         tt(mode === 'semantic' ? 'diff.mode.semantic_hint' : 'diff.mode.raw_hint'),
       )}</div>`
     );
@@ -239,7 +242,31 @@
     render(container, `<div class="empty-hint">${escapeHtml(tt('diff.empty'))}</div>`);
   }
 
+  /**
+   * Re-read the Inspector into side A.
+   *
+   * The whole tab was rendered once, on `kt:inspector-ready` — before the
+   * user had pasted anything. Side A was therefore snapshotted empty and
+   * never refreshed: the pane stayed blank and its label kept saying "· 0"
+   * even after a comparison had just run off 2941 bytes of the same
+   * payload. compare() always read the editor live, so the RESULT was
+   * right while the panel describing its input was a lie.
+   *
+   * Patching the two nodes in place rather than re-rendering keeps side B's
+   * text, caret and scroll position — the user's own typing — untouched.
+   */
+  function syncSideA(container) {
+    if (!container) return;
+    const pane = container.querySelector('#diffPaneA');
+    if (!pane) return;
+    const aText = readSideA();
+    if (pane.value !== aText) pane.value = aText;
+    const label = pane.parentElement && pane.parentElement.querySelector('.mono-label');
+    if (label) label.textContent = `${tt('diff.side_a')} · ${aText.length}`;
+  }
+
   function runAndRender(container) {
+    syncSideA(container);
     const outcome = compare();
     lastResult = outcome.result || null;
     const body = outcome.error
@@ -283,10 +310,33 @@
 
   // ── Wiring ───────────────────────────────────────────────────────
 
+  /**
+   * Side A has to follow the editor without the tab owning the editor.
+   *
+   * Two triggers, because either one alone leaves a stale panel: typing
+   * while the tab is open, and opening the tab after typing. There is no
+   * tab-switch event to listen to (window.switchTab just toggles classes),
+   * so the second is observed off the `.tab-content` class instead.
+   */
+  function watchInspector(container) {
+    document.addEventListener('input', (e) => {
+      const el = /** @type {any} */ (e.target);
+      if (el && (el.id === 'bidReq' || el.id === 'bidRes')) syncSideA(container);
+    });
+
+    const panel = container.closest('.tab-content');
+    if (!panel || typeof MutationObserver !== 'function') return;
+    new MutationObserver(() => {
+      if (panel.classList.contains('active')) syncSideA(container);
+    }).observe(panel, { attributes: true, attributeFilter: ['class'] });
+  }
+
   function mount() {
     const container = document.getElementById('diffContainer');
     if (!container) return;
     renderInto(container);
+    syncSideA(container);
+    watchInspector(container);
 
     container.addEventListener('input', (e) => {
       const el = /** @type {any} */ (e.target);

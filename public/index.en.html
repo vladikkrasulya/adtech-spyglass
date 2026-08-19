@@ -192,8 +192,31 @@
         } catch (e) {}
       })();
     </script>
+    <!-- Sidebar-width reservation, set BEFORE first paint. Whether the rail is
+         collapsed lives in localStorage and is applied to .kt-shell by the nav
+         module — long after the first frame. Mirroring it onto <html> here lets
+         nav.css reserve the right width (236px or 56px) straight away. nav.css
+         scopes that rule to the still-empty <aside>, so this attribute never
+         has to follow later toggles. -->
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem('kt-nav-collapsed') === '1') {
+            document.documentElement.setAttribute('data-nav-collapsed', '1');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="stylesheet" href="/ortbtools-shell.css" />
     <link rel="stylesheet" href="/ortbtools-v2.css" />
+    <!-- Chrome stylesheets, render-blocking on purpose. shell-boot.js loads
+         these too, but only after DOMContentLoaded — until they landed the rail
+         was 0 wide and the topbar 0 tall, so the application was laid out at
+         x=0 and then shoved 236px right and 53px down the moment the chrome
+         mounted (one 0.173 layout shift at 1366px, before any interaction).
+         Linked here, the frame exists before anything is painted into it. -->
+    <link rel="stylesheet" href="/modules/nav/nav.css" />
+    <link rel="stylesheet" href="/modules/topbar/topbar.css" />
   </head>
   <body>
     <!-- Multi-section shell. kt-shell hosts the

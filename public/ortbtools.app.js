@@ -1169,6 +1169,14 @@ export async function mountInspector(root, ctx) {
   function setAdPreview(adm, macroContext, dims) {
     const el = $('creativePreview');
     el.innerHTML = '';
+    // The asset-inlining button lives OUTSIDE the preview frame (see
+    // creativeActionsHost) and therefore survives `el.innerHTML = ''`.
+    // Clearing the frame is what makes a creative "new", so the offer that
+    // belonged to the previous one has to go with it — otherwise a VAST or
+    // native response (branches that never reach maybeOfferAssetInlining)
+    // would keep offering to inline the images of a banner that is no
+    // longer on screen.
+    clearCreativeActions();
     // Phase 8: re-apply safe-demo blur on every new creative. The user
     // explicitly reveals each creative; we don't carry the reveal state
     // across impressions because that would defeat the screenshot-safety
@@ -1328,6 +1336,57 @@ export async function mountInspector(root, ctx) {
   }
 
   /**
+   * The strip of controls that act on the preview, as a sibling AFTER the
+   * preview frame — never inside it.
+   *
+   * `.preview-container` is a fixed-size clipper: it takes its width and
+   * height from the bid's own dimensions (300×250 for the common banner),
+   * sets `overflow:hidden`, and centres its children with flexbox. A control
+   * appended in there is a second flex item next to a `width:100%` iframe, so
+   * the row it forms is wider than the box that centres it: the iframe slides
+   * left by half the button's width and the button hangs off the right edge,
+   * where the clipper cuts it in half. Measured at 1366×768 before this
+   * moved: the 264px button started at x=1101 inside a clipper ending at
+   * x=1234 — 131px and the end of its own label amputated — while the iframe
+   * sat 131px left of the frame it was supposed to fill. `.preview-safe-
+   * overlay` covers the same box at z-index 5, so what survived the clip was
+   * unclickable anyway until the creative was revealed.
+   *
+   * Hence a container of our own, after `.preview-safe` (after the overlay's
+   * containing block, not just after the clipper — inside `.preview-safe` the
+   * overlay would still be painted on top of it). `.creative-actions` is the
+   * agreed seam: this file owns putting controls in it, inspector.css owns
+   * how it looks.
+   *
+   * Created on demand and removed when empty, so a creative with no remote
+   * assets leaves no styled gap between the preview and the slot stats.
+   *
+   * @param {boolean} [create] mount the container if it isn't there yet
+   * @returns {HTMLElement|null}
+   */
+  function creativeActionsHost(create) {
+    const existing = document.getElementById('creativeActions');
+    if (existing) return existing;
+    if (!create) return null;
+    // After the safe-mode wrapper when there is one; the bare preview
+    // container is the fallback for a DOM that predates it.
+    const anchor =
+      document.getElementById('creativePreviewSafe') || document.getElementById('creativePreview');
+    if (!anchor || !anchor.parentNode) return null;
+    const box = document.createElement('div');
+    box.id = 'creativeActions';
+    box.className = 'creative-actions';
+    anchor.parentNode.insertBefore(box, anchor.nextSibling);
+    return box;
+  }
+
+  /** Drop the actions strip entirely — an empty one would still take margin. */
+  function clearCreativeActions() {
+    const box = document.getElementById('creativeActions');
+    if (box && box.parentNode) box.parentNode.removeChild(box);
+  }
+
+  /**
    * Offer to render the creative's remote images, fetched by the server.
    *
    * The preview iframe's CSP allows `data:` and `blob:` only, on purpose —
@@ -1344,6 +1403,10 @@ export async function mountInspector(root, ctx) {
    *
    * Re-rendering restarts the behaviour probe — resetBehavior() first, or the
    * second pass double-counts every event the first one recorded.
+   *
+   * `host` stays the preview container: it is where the iframe to re-point
+   * lives. The button itself goes to `.creative-actions`, outside the frame —
+   * see creativeActionsHost for why.
    */
   function maybeOfferAssetInlining(host, creativeHtml, dims) {
     const api = window.OrtbtoolsCreativeAssets;
@@ -1355,6 +1418,8 @@ export async function mountInspector(root, ctx) {
       return;
     }
     if (!urls.length) return;
+    const actions = creativeActionsHost(true);
+    if (!actions) return;
 
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -1376,7 +1441,10 @@ export async function mountInspector(root, ctx) {
         }
         toast(api.describe(res), res.inlined ? 'success' : 'error');
         if (res.inlined && !res.failed.length) {
+          // Nothing left to ask for. Take the empty strip with it rather
+          // than leave a styled container holding no controls.
           btn.remove();
+          if (!actions.children.length) clearCreativeActions();
           return;
         }
       } catch (_e) {
@@ -1385,7 +1453,7 @@ export async function mountInspector(root, ctx) {
       btn.disabled = false;
       btn.textContent = t('creative.assets.load', { n: urls.length });
     });
-    host.appendChild(btn);
+    actions.appendChild(btn);
     void dims;
   }
 

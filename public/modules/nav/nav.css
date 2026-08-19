@@ -4,6 +4,10 @@
 
 :root {
   --kt-nav-width: 236px;
+  /* Collapsed rail width. A token rather than a literal because two rules
+     need the same number now: the collapsed rail itself, and the pre-mount
+     width reservation that sits next to it. */
+  --kt-nav-width-collapsed: 56px;
   /* The rail is a white surface in the mockup, not a tinted panel — it reads
      as the frame the page sits in rather than as another shaded region
      competing with the results column. */
@@ -230,7 +234,25 @@
     overflow-y: auto;
   }
   .kt-shell.is-nav-collapsed .kt-nav {
-    width: 56px;
+    width: var(--kt-nav-width-collapsed);
+  }
+  /* ── Pre-mount width reservation ────────────────────────────────
+     This file is linked from <head> in index.{uk,en,ru}.html, so the rule
+     above gives the rail its 236px from the first paint instead of after
+     shell-boot's async loadStylesheet() — which is what used to shove the
+     whole application 236px to the right at ~100-240 ms.
+
+     The collapsed rail needs this one extra rule. `.is-nav-collapsed` is
+     put on .kt-shell by mountNav(), so before the mount nothing in the CSS
+     knows the stored choice; a pre-paint script in the shell HTML copies it
+     to <html data-nav-collapsed="1"> and this reserves 56px for it. `:empty`
+     pins the rule to the un-mounted <aside>: nothing updates the attribute
+     when the user later expands the rail, and without `:empty` that stale
+     attribute would hold an expanded rail at 56px for the rest of the
+     session. mountNav() adds the class before it writes innerHTML, so the
+     handover happens inside one layout — 56px throughout, no second jump. */
+  html[data-nav-collapsed='1'] .kt-nav:empty {
+    width: var(--kt-nav-width-collapsed);
   }
   .kt-shell.is-nav-collapsed .kt-nav__brand-text,
   .kt-shell.is-nav-collapsed .kt-nav__label,

@@ -564,12 +564,38 @@ export function initSearch(inputEl, _shellRoot) {
     }
   }
 
+  /**
+   * Keep the open panel inside the viewport.
+   *
+   * The panel is anchored to the input's right edge in CSS, which is right
+   * for a topbar search that lives at the right end of the bar. Should the
+   * input ever sit close to the LEFT edge instead (a narrow shell, a
+   * different surface), that same anchor would push the panel off the other
+   * side — so measure once per open and nudge it back with a margin. The
+   * common case measures, finds nothing to do, and clears the variable.
+   */
+  const VIEWPORT_GUTTER = 8;
+  function keepOnScreen() {
+    dropdownEl.style.removeProperty('--sg-dd-shift');
+    const rect = dropdownEl.getBoundingClientRect();
+    if (rect.width === 0) return;
+    // Positive shift pulls the panel right (margin-right shrinks the offset
+    // from the anchor), which is what a left overflow needs.
+    const overflowLeft = VIEWPORT_GUTTER - rect.left;
+    if (overflowLeft > 0) {
+      const room = Math.max(0, document.documentElement.clientWidth - VIEWPORT_GUTTER - rect.right);
+      const shift = Math.min(overflowLeft, room);
+      if (shift > 0) dropdownEl.style.setProperty('--sg-dd-shift', `-${Math.round(shift)}px`);
+    }
+  }
+
   function openDropdown(content) {
     dropdownEl.innerHTML = content;
     dropdownEl.hidden = false;
     inputEl.setAttribute('aria-expanded', 'true');
     selectedIndex = -1;
     inputEl.removeAttribute('aria-activedescendant');
+    keepOnScreen();
 
     // Wire hint chip clicks
     dropdownEl.querySelectorAll('[data-suggest]').forEach((chip) => {
