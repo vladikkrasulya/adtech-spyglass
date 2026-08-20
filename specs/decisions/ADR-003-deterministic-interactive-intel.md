@@ -2,6 +2,11 @@
 
 **Status**: Accepted
 **Date**: 2026-07-22
+**Amended by**: [ADR-012](./ADR-012-bounded-model-assist-on-dialect-labelling.md) (2026-08-20) —
+narrows the scope clause below for one path only. A local model may assist **dialect signal
+labelling** under seven bounded conditions. Everything else in this record stands: `/api/intel/*`,
+news relevance, Inspector validation, behavior analysis, Core, and the CLI remain deterministic,
+and the regression test still asserts it.
 
 ## Context
 

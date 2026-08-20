@@ -6,6 +6,67 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### The labeller that was never reachable, and the record that should have preceded it
+
+The dialect signal labeller shipped on 2026-08-18 and answered "local model
+unavailable" to every request until 2026-08-20. Inside the container
+`localhost:11434` resolves to the container, so the health check failed before
+any model call. The browser degraded exactly as designed — it named the
+condition and offered the manual builder — which is why a feature that had
+never once run for a user looked implemented.
+
+**The gate that kept it that way.** `tests/model-free-contract.test.js`
+forbade the string `OLLAMA_URL` in `docker-compose.yml` and `.env.example`, so
+the one variable needed to reach the host could not be added. That guard was
+enforcing ADR-003, which lists "keep local Ollama on interactive paths" among
+its rejected alternatives — rejected because it couples product availability to
+host model infrastructure, which is precisely the failure that occurred. The
+guard was narrowed to what it actually protects: interactive intel and news
+relevance require no model, asserted now by checking those handlers import one
+rather than by banning a substring. A new test pins the original defect — the
+labeller must be wired to a reachable host, never to the container itself.
+
+**One shared model instead of a private one.** Asking the host for a derived
+model evicted the model the rest of the fleet keeps resident: 6.25s to load
+ours, 6.4s for the next caller to reload theirs. The persona moved out of the
+host Modelfile into `lib/label-persona.js` and now travels as the request's
+system prompt against the shared model. Measured on ten ambiguous signals the
+two routes answer identically; the first request returns in ~2.0s instead of
+~8.1s, and nothing is evicted. The persona also stopped being untracked — the
+text that separates a useful suggestion from a confidently wrong one is now
+reviewable.
+
+**A confidence scale that only governed half the labels.** Seven of nineteen
+answers came back at exactly 1.0, including on an empty value the persona's own
+text caps at 0.3, because the scale's anchors described format words and left
+the `ignore` and `informational` branches with nothing to anchor to. The scale
+now governs every label; the ceilings are a final pass over the number rather
+than advice; and a ceiling is a maximum, not a target — an earlier wording,
+"lower the number to it", turned each ceiling into an anchor and pushed honest
+0.1s up to 0.3. Tuning set: 19/19 labels, mean deviation 0.195 → 0.011. Hold-out
+set, written after the persona was frozen: 9/10, 0.065 → 0.005. No answer at
+exactly 1.0 on either. `scripts/label-calibration.js` is the bench that measured
+it; it needs a live model, so it is run by hand and never gates CI.
+
+**Findings that lost an argument with their own annotations.** On a collapsed
+finding the sentence, the rule id and the path chip shared one line, and two of
+the three were rigid while the sentence carried `min-width: 0`. The only element
+that could yield was the one the reader came for: at a narrow results panel a
+finding rendered 74px wide and 98px tall, one word per line, with the rule id
+overflowing its row and painting across the chip beside it. The annotations now
+shrink and truncate; the sentence keeps a floor. Question cards, whose foot
+carries two buttons, were additionally excluded from a zero-basis row rule that
+their neighbouring rule already excluded them from.
+
+`docs/PRIVACY.md` gained the section this feature should have shipped with,
+naming field by field what may accompany a signal to the model — the allowlist,
+sibling key names without their values, and the two limits that bound it. The
+decision itself is recorded in
+[ADR-012](specs/decisions/ADR-012-bounded-model-assist-on-dialect-labelling.md),
+which amends one clause of ADR-003 for this path only, and in feature package
+[005](specs/005-dialect-signal-labeller/spec.md). Both were written after the
+code shipped and say so.
+
 ### One live stream, one OpenRTB shape rule
 
 - Retired the Inspector's legacy Live modal, its toolbar action, styles,
