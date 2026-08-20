@@ -204,6 +204,11 @@ test(
       serverInfo = await startServer(port, dataDir);
       browser = await puppeteer.launch({
         headless: true,
+        // Explicit, because the default is what the flaky runs hit: a single
+        // CDP call missing its deadline aborts the whole file with
+        // 'Runtime.callFunctionOn timed out'. Serial execution removed the
+        // contention that caused it; this is the belt to that pair of braces.
+        protocolTimeout: 120_000,
         executablePath: chromeExecutable,
         args: [
           '--no-sandbox',

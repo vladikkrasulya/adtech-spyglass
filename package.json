@@ -11,15 +11,16 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "ORTBTOOLS_DATA_DIR=$(mktemp -d -t ortbtools-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test tests/*.test.js",
+    "test": "node scripts/run-tests.js",
     "test:watch": "ORTBTOOLS_DATA_DIR=$(mktemp -d -t ortbtools-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --watch tests/*.test.js",
-    "test:coverage": "ORTBTOOLS_DATA_DIR=$(mktemp -d -t ortbtools-test-XXXXXX) NODE_ENV=test LOG_LEVEL=silent node --test --experimental-test-coverage tests/*.test.js",
+    "test:coverage": "node scripts/run-tests.js --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage"
+    "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage",
+    "test:browser": "node --test --test-concurrency=1 $(grep -rl puppeteer tests/*.test.js)"
   },
   "dependencies": {
     "@ortbtools/core": "*",
