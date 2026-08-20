@@ -313,9 +313,9 @@
   color: var(--text);
 }
 .docs-chip.is-active {
-  background: var(--accent, #0284c7);
-  border-color: var(--accent, #0284c7);
-  color: var(--text-on-accent, #ffffff);
+  background: var(--control-primary-background, #0369a1);
+  border-color: var(--control-primary-background, #0369a1);
+  color: var(--control-primary-foreground, #ffffff);
 }
 /* Per-chip row count. The chips are one per (family, severity) pair now, so
    the number is the only way to see that a facet is not empty before

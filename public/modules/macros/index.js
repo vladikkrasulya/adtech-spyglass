@@ -451,7 +451,7 @@
               ${badgesHtml ? `<div style="margin-top:var(--space-1);display:flex;flex-wrap:wrap;gap:4px;">${badgesHtml}</div>` : ''}
             </td>
             <td style="text-align:right;">
-              <button class="btn btn-ghost btn-xs btn-copy-macro-url" data-url="${escapeHtml(evaluatedUrl)}" title="${escapeHtml(tt('macros.copy'))}">
+              <button class="btn btn-ghost btn-sm btn-copy-macro-url" data-url="${escapeHtml(evaluatedUrl)}" title="${escapeHtml(tt('macros.copy'))}">
                 📋 ${escapeHtml(tt('macros.copy'))}
               </button>
             </td>

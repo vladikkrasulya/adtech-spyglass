@@ -6,6 +6,27 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.14.3 — one control language, including phones
+
+- Added an ortbtools-owned control layer across every public shell. Primary,
+  secondary and destructive actions now share stable geometry, visible focus,
+  disabled/loading/open states and contrast-safe filled colours without
+  changing the brighter brand accent used for links and decoration. Language
+  disclosures now use one bounded, theme-aware component on the SPA, Account
+  and About pages.
+- Rebuilt the Account controls that previously fell through to browser
+  defaults: secondary/export actions are real product buttons, preference
+  choices are labelled native buttons with pressed state, semantic pills have
+  readable ink, and localized Dialects links keep their locale.
+- Kept validation settings reachable on phones through a compact Inspector
+  disclosure, separated the scrollable result tabs from the visible More
+  control, exposed saved-item actions to touch and keyboard users, and made
+  source navigation and creative reveal complete focus-safe interactions.
+- Made mobile Search symmetrical and keyboard-complete, and replaced Streams'
+  hidden horizontal outcome column with a two-line row that keeps Findings in
+  the first viewport. Shared modals now wrap their action rows on phones, and
+  their select labels are explicitly associated with their controls.
+
 ### The labeller that was never reachable, and the record that should have preceded it
 
 The dialect signal labeller shipped on 2026-08-18 and answered "local model

@@ -178,6 +178,19 @@
   background: var(--accent-soft);
   color: var(--accent-text);
 }
+#app-root .stream-freeze:focus-visible,
+#app-root .stream-reconnect:focus-visible,
+#app-root .stream-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+#app-root .stream-freeze:active,
+#app-root .stream-reconnect:active,
+#app-root .stream-chip:active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
 
 /* Shown only while the stream is down for good — see template.html. Carries
    the accent because in that state it is the only thing on the page that can
@@ -199,8 +212,9 @@
     background 0.15s ease;
 }
 #app-root .stream-reconnect:hover {
-  background: var(--accent);
-  color: var(--surface);
+  border-color: var(--control-primary-background);
+  background: var(--control-primary-background);
+  color: var(--control-primary-foreground);
 }
 #app-root .stream-reconnect[hidden] {
   display: none;
@@ -362,7 +376,7 @@
   cursor: pointer;
   transition: background 0.1s ease;
 }
-#app-root .stream-row:hover {
+#app-root .stream-row:not(:disabled):hover {
   background: var(--bg-2);
 }
 #app-root .stream-row:focus-visible {
@@ -374,6 +388,9 @@
 }
 #app-root .stream-row:disabled {
   cursor: default;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-2) 45%, transparent);
+  opacity: 0.72;
 }
 
 /* Replayed rows — payloads the server handed us out of its buffer rather than
@@ -495,5 +512,78 @@
   #app-root .stream-row {
     padding-left: var(--space-4, 16px);
     padding-right: var(--space-4, 16px);
+  }
+}
+
+/* Phones get a compact two-line row instead of a six-column table that must
+   be discovered by horizontal swiping. The first line keeps the decision
+   fields visible together (time, source, findings); the second carries the
+   compact metadata (kind, format, size). Wider layouts retain the shared
+   six-track table above unchanged. */
+@media (max-width: 600px) {
+  #app-root .stream-table {
+    --stream-cols: 112px minmax(0, 1fr) max-content;
+    --stream-min: 0px;
+    overflow-x: hidden;
+  }
+  #app-root .stream-thead {
+    grid-template-areas: 'time source findings';
+    column-gap: var(--space-2, 8px);
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  #app-root .stream-thead [data-col='time'] {
+    grid-area: time;
+  }
+  #app-root .stream-thead [data-col='source'] {
+    grid-area: source;
+  }
+  #app-root .stream-thead [data-col='findings'] {
+    grid-area: findings;
+    justify-self: end;
+    padding-right: 0;
+  }
+  #app-root .stream-thead [data-col='kind'],
+  #app-root .stream-thead [data-col='format'],
+  #app-root .stream-thead [data-col='size'] {
+    display: none;
+  }
+  #app-root .stream-row {
+    grid-template-areas:
+      'time source findings'
+      'kind format size';
+    column-gap: var(--space-2, 8px);
+    row-gap: 3px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  #app-root .stream-cell {
+    min-width: 0;
+    padding-right: 0;
+  }
+  #app-root .stream-cell--time {
+    grid-area: time;
+  }
+  #app-root .stream-cell--source {
+    grid-area: source;
+  }
+  #app-root .stream-cell--findings {
+    grid-area: findings;
+    justify-self: end;
+    text-align: right;
+  }
+  #app-root .stream-cell--kind {
+    grid-area: kind;
+  }
+  #app-root .stream-cell--format {
+    grid-area: format;
+  }
+  #app-root .stream-cell--size {
+    grid-area: size;
+    justify-self: end;
+    text-align: right;
+  }
+  #app-root .stream-row[data-replay='1']::before {
+    top: 20px;
   }
 }

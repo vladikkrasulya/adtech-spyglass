@@ -85,7 +85,7 @@ export function openUnlockModal() {
     '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
     t('unlock.subtitle', { email: escapeHtml(user.email) }) +
     '</div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="unlockPwInput">' +
     t('auth.label.password') +
     '</label><input id="unlockPwInput" type="password" autocomplete="current-password"></div>' +
     '<div id="unlockError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +

@@ -551,6 +551,11 @@ body {
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
 }
+.tools-menu-list .sim-price-wrap input:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 /* The lang + theme toggles default to fixed-position floating circles
          (design-system.css). In ortbtools we render them inline in the header
          instead — so users can see the active locale/theme alongside the
@@ -690,6 +695,14 @@ body {
 .kt-example-menu .example-menu-list button:hover {
   background: var(--bg-2);
 }
+.kt-example-menu .example-menu-list button:focus-visible,
+.tools-menu-list > button:focus-visible,
+.tools-menu-list > a:focus-visible,
+.kt-lang-menu-list a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--bg-2);
+}
 .kt-example-menu .example-menu-list .menu-divider {
   height: 1px;
   background: var(--border);
@@ -703,6 +716,94 @@ body {
   letter-spacing: 0.08em;
   color: var(--text-dim);
   font-weight: 600;
+}
+
+/* All action popovers are native disclosures, not application menus. Their
+   children keep ordinary button/link/input semantics and Tab order. The open
+   trigger carries the same accent edge as the panel so the two read as one
+   control; the trailing chevron reflects the disclosure state. */
+.kt-example-menu > summary > svg:last-child,
+.kt-tools-menu > summary > svg:last-child,
+.kt-share-menu > summary > svg:last-child,
+.tab-more > summary > svg:last-child,
+.kt-lang-menu .kt-lang-caret,
+.workbar-settings-caret {
+  display: inline-block;
+  transition: transform var(--t-fast) var(--ease-out);
+  transform-origin: center;
+}
+.kt-example-menu[open] > summary,
+.kt-tools-menu[open] > summary,
+.kt-share-menu[open] > summary,
+.kt-lang-menu[open] > summary {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.kt-example-menu[open] > summary > svg:last-child,
+.kt-tools-menu[open] > summary > svg:last-child,
+.kt-share-menu[open] > summary > svg:last-child,
+.tab-more[open] > summary > svg:last-child,
+.kt-lang-menu[open] .kt-lang-caret,
+.workbar-settings-menu[open] .workbar-settings-caret {
+  transform: rotate(180deg);
+}
+.kt-example-menu > summary:focus-visible,
+.kt-tools-menu > summary:focus-visible,
+.kt-share-menu > summary:focus-visible,
+.tab-more > summary:focus-visible,
+.workbar-settings-menu > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Version and dialect are validation inputs, not result-only readouts. Desktop
+   keeps them in the dense inline format bar; phones receive a compact trigger
+   and a labelled disclosure panel with synchronized native selects. */
+.workbar-settings-menu {
+  display: none;
+  position: relative;
+  flex: 0 0 auto;
+}
+.workbar-settings-toggle {
+  list-style: none;
+}
+.workbar-settings-toggle::-webkit-details-marker {
+  display: none;
+}
+.workbar-settings-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 120;
+  width: min(280px, calc(100vw - 16px));
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+.workbar-settings-title {
+  margin-bottom: var(--space-3);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.workbar-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: var(--fs-chip, 12px);
+}
+.workbar-settings-field + .workbar-settings-field {
+  margin-top: var(--space-3);
+}
+.workbar-settings-field .format-pill-select {
+  width: 100%;
+  height: 36px;
+  border-radius: 6px;
+  font-size: var(--fs-sm);
 }
 
 /* First-visit onboarding — subtle banner + pulse on the example menu. */
@@ -1004,17 +1105,10 @@ body {
 .preview-safe-overlay__btn:hover {
   background: var(--accent-soft);
 }
-
-/* Phase 8: secondary login CTA in the left sidebar — outline-only so
-   it doesn't compete with the primary "Analyze" button in the header. */
-.btn-secondary {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-}
-.btn-secondary:hover {
-  background: var(--bg-2);
-  border-color: var(--text-dim);
+.preview-safe-overlay__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: var(--accent-soft);
 }
 
 /* Phase 8: clickable JSONPath in findings. Inherits the validation-item
@@ -1471,11 +1565,10 @@ body:not(.sb-left-hidden) .sidebar-left {
 }
 .history-item {
   position: relative;
-  padding: var(--space-3);
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--surface);
-  cursor: pointer;
   transition:
     background-color var(--t-fast),
     border-color var(--t-fast);
@@ -1484,9 +1577,28 @@ body:not(.sb-left-hidden) .sidebar-left {
   background: var(--bg-2);
   border-color: var(--border-strong);
 }
-.history-item:focus-visible {
+.history-item:focus-within {
+  border-color: var(--accent);
+}
+.history-item-load,
+.saved-item-load {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: var(--space-3);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.history-item-load:focus-visible,
+.saved-item-load:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 /* Active = currently loaded into the editor. Accent border + soft tint
          so the user can scan the list and instantly see "this is what I'm
@@ -1507,6 +1619,7 @@ body:not(.sb-left-hidden) .sidebar-left {
   right: 4px;
   display: flex;
   gap: 2px;
+  z-index: 1;
   opacity: 0;
   transition: opacity var(--t-fast);
 }
@@ -1531,6 +1644,13 @@ body:not(.sb-left-hidden) .sidebar-left {
   color: var(--text);
   border-color: var(--text-dim);
 }
+.history-act-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  background: var(--bg-2);
+  color: var(--text);
+  border-color: var(--text-dim);
+}
 .history-act-btn.danger:hover {
   background: rgba(220, 38, 38, 0.1);
   color: var(--danger);
@@ -1545,6 +1665,9 @@ body:not(.sb-left-hidden) .sidebar-left {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.history-item-load .history-title {
+  padding-right: 72px;
 }
 .history-meta {
   font-family: var(--font-mono);
@@ -1596,11 +1719,10 @@ body:not(.sb-left-hidden) .sidebar-left {
   overflow-y: auto;
 }
 .saved-item {
-  padding: var(--space-3);
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--surface);
-  cursor: pointer;
   transition:
     background-color var(--t-fast),
     border-color var(--t-fast);
@@ -1609,6 +1731,9 @@ body:not(.sb-left-hidden) .sidebar-left {
 .saved-item:hover {
   background: var(--bg-2);
   border-color: var(--border-strong);
+}
+.saved-item:focus-within {
+  border-color: var(--accent);
 }
 .saved-item-title {
   font-family: var(--font-mono);
@@ -1619,7 +1744,7 @@ body:not(.sb-left-hidden) .sidebar-left {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 38px;
+  padding-right: 76px;
 }
 .saved-item-meta {
   font-family: var(--font-mono);
@@ -1635,10 +1760,12 @@ body:not(.sb-left-hidden) .sidebar-left {
   right: 6px;
   display: flex;
   gap: 2px;
+  z-index: 1;
   opacity: 0;
   transition: opacity var(--t-fast);
 }
-.saved-item:hover .saved-item-actions {
+.saved-item:hover .saved-item-actions,
+.saved-item:focus-within .saved-item-actions {
   opacity: 1;
 }
 .saved-act-btn {
@@ -1655,9 +1782,30 @@ body:not(.sb-left-hidden) .sidebar-left {
   color: var(--text);
   border-color: var(--border-strong);
 }
+.saved-act-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  color: var(--text);
+  border-color: var(--border-strong);
+}
 .saved-act-btn.danger:hover {
   color: var(--danger);
   border-color: var(--danger);
+}
+@media (hover: none), (pointer: coarse) {
+  .saved-item-actions,
+  .history-actions {
+    opacity: 1;
+  }
+  .history-act-btn,
+  .saved-act-btn,
+  .drawer-close,
+  #srcNavBar .btn-icon,
+  #srcNavBar button,
+  .app-footer .btn-icon {
+    min-width: 28px;
+    min-height: 28px;
+  }
 }
 .saved-empty {
   color: var(--text-dim);
@@ -2094,13 +2242,9 @@ body:not(.sb-left-hidden) .sidebar-left {
   border: 1px solid var(--border);
   white-space: nowrap;
 }
-/* The readouts are secondary information, and on a phone the workbar is a
-   single nowrap row that must fit the primary action. The site audit asked
-   for these to appear before the first analysis rather than after it — a
-   desktop complaint — and honouring it everywhere pushed Analyze off a
-   360px screen: the bar took 148px of a 360px row and left 115px for three
-   controls that need 143. Below the phone breakpoint the bar stays out of
-   that row; the same facts are in the results panel once an analysis lands. */
+/* The dense desktop readout/select row would push Analyze off a 360px screen.
+   Phones keep it out of this row; equivalent version+dialect controls remain
+   available in .workbar-settings-menu immediately beside the drawer trigger. */
 @media (max-width: 720px) {
   .format-bar {
     display: none;
@@ -2186,28 +2330,26 @@ body:not(.sb-left-hidden) .sidebar-left {
   border-bottom: 1px solid var(--border);
   padding: 0 var(--space-4);
   background: var(--surface);
-  /* The strip holds 5+ tabs; when the right rail squeezes the column the
-     trailing tab clipped MID-LETTER even at 1440px (2026-07-13 audit) —
-     the overflow/scroll-hint treatment used to be mobile-only. */
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+/* Only the four named tabs scroll. More is a sibling outside this clipping
+   box, so its popover can escape vertically while the named views remain
+   reachable on a phone. One element cannot have overflow-x:auto and a truly
+   visible Y axis — CSS computes the latter to auto — hence the wrapper. */
+.tab-list-scroll {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-items: stretch;
   overflow-x: auto;
   overflow-y: hidden;
   flex-wrap: nowrap;
+  overscroll-behavior-inline: contain;
   scrollbar-width: none; /* Firefox */
 }
-.tab-bar::-webkit-scrollbar {
+.tab-list-scroll::-webkit-scrollbar {
   display: none;
-}
-.tab-bar::after {
-  content: '';
-  position: sticky;
-  right: 0;
-  top: 0;
-  width: 44px;
-  height: 100%;
-  background: linear-gradient(to right, transparent, var(--surface) 75%, var(--surface));
-  pointer-events: none;
-  flex-shrink: 0;
-  margin-left: -44px;
 }
 .tab-btn {
   flex-shrink: 0;
@@ -2257,8 +2399,8 @@ body:not(.sb-left-hidden) .sidebar-left {
   line-height: 1.2;
 }
 .tab-btn.active .tab-badge {
-  background: var(--accent);
-  color: var(--text-on-accent);
+  background: var(--control-primary-background, #0369a1);
+  color: var(--control-primary-foreground, #ffffff);
 }
 /* Severity-aware badges. .tab-btn .tab-badge.X has the same
          specificity (0,0,3,0) as .tab-btn.active .tab-badge — source order
@@ -3343,9 +3485,9 @@ button.cross-path:focus-visible,
   color: var(--text);
 }
 .severity-chip.active {
-  background: var(--accent, #0284c7);
-  border-color: var(--accent, #0284c7);
-  color: var(--text-on-accent, #ffffff);
+  background: var(--control-primary-background, #0369a1);
+  border-color: var(--control-primary-background, #0369a1);
+  color: var(--control-primary-foreground, #ffffff);
 }
 .severity-chip .chip-dot {
   display: inline-block;
@@ -3957,6 +4099,30 @@ button.cross-path:focus-visible,
 .src-pop-go:hover {
   background: var(--accent-soft);
 }
+.src-pop-go:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: var(--accent-soft);
+}
+@media (max-width: 720px) {
+  .src-pop {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    max-width: calc(100vw - 16px);
+  }
+  .src-pop-title {
+    flex: 1 1 100%;
+  }
+  .src-pop-where {
+    flex: 1 1 auto;
+    white-space: normal;
+  }
+  .src-pop-go {
+    min-height: 32px;
+    margin-left: auto;
+  }
+}
 /* The card the popover sends you to, announcing itself on arrival. */
 .finding.is-flashed,
 [data-finding-id].is-flashed {
@@ -4090,6 +4256,9 @@ button.cross-path:focus-visible,
   align-items: stretch;
   overflow: visible;
 }
+.tab-list-scroll {
+  min-height: 42px;
+}
 .tab-btn {
   display: inline-flex;
   align-items: center;
@@ -4166,6 +4335,11 @@ button.cross-path:focus-visible,
   margin-bottom: 0;
 }
 .tab-more-menu .tab-btn:hover {
+  background: var(--bg-2);
+}
+.tab-more-menu .tab-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
   background: var(--bg-2);
 }
 .tab-more-menu .tab-btn.active {
@@ -4298,9 +4472,8 @@ button.cross-path:focus-visible,
 
 /* Contrast repairs measured by the light-theme probe before v1.12.0
    shipped. The quality pill's translucent red composites to a mid-pink
-   in light theme, leaving 11px/700 red text at 3.22:1; the active tab's
-   count badge was white on the raw accent at 4.10:1. Both get the
-   darker on-surface colours; the dark theme keeps its own pairs. */
+   in light theme, leaving 11px/700 red text at 3.22:1. Active tab count
+   badges use the shared contrast-safe primary-control pair above. */
 .analysis-strip .quality-pill.q-critical {
   color: #991b1b;
 }
@@ -4310,11 +4483,6 @@ button.cross-path:focus-visible,
 .analysis-strip .quality-pill.q-needs-attention {
   color: var(--warning-text, #b45309);
 }
-.tab-btn.active .tab-badge {
-  background: var(--bg-2);
-  color: var(--text);
-}
-
 /* ── V2 drawer + workbar trigger + finding-side badge ──────────────────
    The drawer trigger is a quiet icon button at the workbar's left edge —
    the standard place a panel toggle lives — instead of a bare ▶ inside
@@ -4340,6 +4508,11 @@ button.cross-path:focus-visible,
 .workbar-drawer-btn:hover {
   color: var(--text);
   border-color: var(--border-strong);
+}
+.workbar-drawer-btn:focus-visible,
+.drawer-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .workbar-drawer-btn svg {
   width: 16px;
@@ -4750,7 +4923,7 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   padding: 0 16px;
   gap: 8px;
   font-weight: 600;
-  border-color: var(--accent);
+  border-color: var(--control-primary-background, #0369a1);
 }
 .btn-kbd {
   font-family: var(--font-mono);
@@ -5237,7 +5410,8 @@ body:has(.app-footer) .toast-container {
 .kt-tools-menu:not([open]) .tools-menu-list,
 .kt-share-menu:not([open]) .tools-menu-list,
 .kt-example-menu:not([open]) .example-menu-list,
-.kt-lang-menu:not([open]) .kt-lang-menu-list {
+.kt-lang-menu:not([open]) .kt-lang-menu-list,
+.workbar-settings-menu:not([open]) .workbar-settings-panel {
   display: none;
 }
 
@@ -5257,29 +5431,40 @@ body:has(.app-footer) .toast-container {
 }
 
 /* ── Tab strip below 1100px ─────────────────────────────────────────────
-   Measured at 1024px: "Creative" ran to x=1074 and "More" to x=1142 in a
-   1024px viewport — both past the right edge. The strip scrolls, but a
-   control you must scroll to find is a control most people never find, and
-   "More" is the one that holds half the views.
-
-   So below the stacking breakpoint the strip keeps its four named tabs
-   scrollable and pins More to the edge, out of the scroll. */
+   The named tabs shrink into their own horizontal scroller. More is a normal
+   flex sibling, so it stays visible without absolute positioning and its menu
+   is not clipped by the scroller's overflow boundary. Keep the viewport size
+   clamps here, but leave the base downward placement intact: at tablet widths
+   the tab strip starts the results pane, so an upward menu would be clipped by
+   that pane and sit behind the payload editor. */
 @media (max-width: 1100px) {
-  .tab-bar {
-    position: relative;
-    padding-right: 84px;
+  .tab-list-scroll {
+    flex: 1 1 auto;
   }
   .tab-more {
-    position: absolute;
-    right: var(--space-3);
-    top: 0;
-    bottom: 0;
-    margin-left: 0;
-    display: flex;
-    align-items: center;
+    position: relative;
+    flex: 0 0 auto;
     background: var(--surface);
-    padding-left: var(--space-2);
+    margin-left: var(--space-2);
     box-shadow: -8px 0 8px -6px rgba(13, 23, 38, 0.12);
+  }
+  .tab-more-menu {
+    right: 0;
+    width: min(200px, calc(100vw - 16px));
+    min-width: 0;
+    max-height: min(50dvh, 320px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* On a phone the stacked editor puts the tab strip near the bottom of the
+   initial viewport, so the same menu needs the opposite direction. The
+   600px boundary deliberately matches the phone chrome/breadcrumb mode. */
+@media (max-width: 600px) {
+  .tab-more-menu {
+    top: auto;
+    bottom: calc(100% + 4px);
   }
 }
 
@@ -5321,6 +5506,57 @@ body:has(.app-footer) .toast-container {
 
    ⌘⏎ goes too: it is a promise about a keyboard the reader does not have. */
 @media (max-width: 720px) {
+  .workbar-settings-menu {
+    display: inline-flex;
+    align-items: center;
+  }
+  .workbar-settings-panel {
+    /* Align to the workbar's inset, not the trigger's left edge. This keeps
+       the 280px panel inside even a 320px viewport. */
+    left: -40px;
+  }
+  .workbar-settings-toggle {
+    min-width: 42px;
+    min-height: 36px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .workbar-settings-toggle > svg {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+  }
+  .workbar-settings-caret {
+    font-size: var(--fs-mono);
+    line-height: 1;
+  }
+  .workbar-settings-menu[open] > .workbar-settings-toggle {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+  .kt-example-menu .example-menu-list {
+    left: 50%;
+    right: auto;
+    width: min(240px, calc(100vw - 16px));
+    min-width: 0;
+    transform: translateX(-50%);
+  }
+  .kt-tools-menu > .tools-menu-list {
+    left: 50%;
+    right: auto;
+    width: min(230px, calc(100vw - 16px));
+    min-width: 0;
+    transform: translateX(-50%);
+  }
   .workbar-actions .workbar-label,
   #analyzeBtn .btn-kbd {
     display: none;
@@ -5345,6 +5581,54 @@ body:has(.app-footer) .toast-container {
   .workbar #analyzeBtn,
   .workbar-drawer-btn {
     min-height: 36px;
+  }
+}
+
+/* The route breadcrumb duplicates the only available destination on a phone
+   and consumes the width needed by language/theme controls. Keep this route
+   scoped: Inspector CSS can remain cached after navigating elsewhere. */
+@media (max-width: 600px) {
+  body:has(#app-root.workbench) .kt-topbar__crumbs {
+    display: none;
+  }
+}
+
+/* 320px is still a supported viewport. Tighten only spacing and secondary
+   disclosure chrome; the localized primary label remains visible. */
+@media (max-width: 360px) {
+  .workbar {
+    gap: 4px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .workbar-drawer-btn {
+    width: 36px;
+    margin-right: 0;
+  }
+  .workbar-settings-toggle {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+  }
+  .workbar-settings-caret,
+  .workbar .kt-example-menu > summary > svg:last-child,
+  .workbar .kt-tools-menu > summary > svg:last-child {
+    display: none;
+  }
+  .workbar-actions {
+    gap: 4px;
+  }
+  .workbar .kt-example-menu > summary,
+  .workbar .kt-tools-menu > summary {
+    gap: 0;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+  .workbar #analyzeBtn {
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: var(--fs-chip, var(--fs-mono));
+    white-space: nowrap;
   }
 }
 
@@ -5750,4 +6034,24 @@ body:has(.app-footer) .toast-container {
 }
 .creative-actions .creative-inline-assets {
   max-width: 100%;
+}
+
+/* Keep phone workbar popovers in the workbar's viewport-sized containing
+   block. Centering each menu on its tiny icon trigger lets the right-most
+   Tools menu escape even when every trigger itself fits. */
+@media (max-width: 720px) {
+  .workbar {
+    position: relative;
+  }
+  .workbar .kt-example-menu,
+  .workbar .kt-tools-menu {
+    position: static;
+  }
+  .workbar .kt-example-menu > .example-menu-list,
+  .workbar .kt-tools-menu > .tools-menu-list {
+    top: calc(100% + 4px);
+    right: 8px;
+    left: auto;
+    transform: none;
+  }
 }

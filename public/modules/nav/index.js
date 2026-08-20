@@ -216,7 +216,7 @@ function renderNav() {
         <span class="kt-nav__brand-icon" aria-hidden="true">◆</span>
         <span class="kt-nav__brand-text">ortbtools</span>
       </a>
-      <button type="button" class="kt-nav__collapse-tab" data-action="collapse-nav" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}">
+      <button type="button" class="kt-nav__collapse-tab" data-action="collapse-nav" aria-controls="kt-nav-root" aria-label="${escapeHtml(collapseLabel)}" title="${escapeHtml(collapseLabel)}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 8-4 4 4 4"/></svg>
       </button>
     </div>
@@ -248,12 +248,29 @@ function isNavCollapsed() {
   return !!(shell && shell.classList.contains('is-nav-collapsed'));
 }
 
+/** The rail becomes an off-canvas drawer below the shell breakpoint. In that
+ * mode there is nothing to collapse into an icon rail: the control in the
+ * rail head closes the drawer and returns focus to the topbar trigger. */
+function isDrawerMode() {
+  try {
+    if (typeof window.matchMedia === 'function') {
+      return window.matchMedia('(max-width: 1023px)').matches;
+    }
+  } catch (_) {
+    /* fall through to the viewport width */
+  }
+  return Number(window.innerWidth || 0) <= 1023;
+}
+
 /** Accessible name for the collapse tab. The button is a toggle: its label
  *  must describe what the NEXT activation does, and it must agree with the
  *  ‹ / › arrow nav.css swaps on .is-nav-collapsed. Pre-fix the label was
  *  computed once, always as "collapse", so in the collapsed state the control
  *  announced the opposite of the action it performs (F-10). */
 function collapseTabLabel() {
+  if (isDrawerMode()) {
+    return pick({ en: 'Close navigation', uk: 'Закрити меню', ru: 'Закрыть меню' });
+  }
   return isNavCollapsed()
     ? pick({ en: 'Expand sidebar', uk: 'Розгорнути меню', ru: 'Развернуть меню' })
     : pick({ en: 'Collapse sidebar', uk: 'Згорнути меню', ru: 'Свернуть меню' });
@@ -267,6 +284,11 @@ function syncCollapseTab(root) {
   const label = collapseTabLabel();
   btn.setAttribute('aria-label', label);
   btn.setAttribute('title', label);
+  const shell = document.querySelector('.kt-shell');
+  const expanded = isDrawerMode()
+    ? !!(shell && shell.classList.contains('is-nav-open'))
+    : !isNavCollapsed();
+  btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
 }
 
 function highlight(root) {
@@ -320,6 +342,16 @@ export function mountNav(root) {
   const onCollapse = (e) => {
     e.preventDefault();
     if (!shellRoot) return;
+    if (isDrawerMode()) {
+      shellRoot.classList.remove('is-nav-open');
+      syncCollapseTab(root);
+      const opener = document.querySelector('.kt-topbar__nav-toggle, [data-action="toggle-nav"]');
+      if (opener) {
+        opener.setAttribute('aria-expanded', 'false');
+        if (typeof opener.focus === 'function') opener.focus();
+      }
+      return;
+    }
     const collapsed = shellRoot.classList.toggle('is-nav-collapsed');
     try {
       localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
@@ -341,6 +373,10 @@ export function mountNav(root) {
     syncCollapseTab(root);
   }
   bindCollapse();
+  const onViewportChange = () => syncCollapseTab(root);
+  const onDrawerState = () => syncCollapseTab(root);
+  window.addEventListener('resize', onViewportChange);
+  window.addEventListener('kt:nav-drawer-state', onDrawerState);
 
   // ── Theme row ───────────────────────────────────────────────────────────
   // A PROXY, not a second toggle. The theme's state (auto → light → dark)
@@ -515,6 +551,8 @@ export function mountNav(root) {
     window.removeEventListener('popstate', onLocationChange);
     window.removeEventListener('kt:pushstate', onLocationChange);
     window.removeEventListener('kt:lang-change', onLang);
+    window.removeEventListener('resize', onViewportChange);
+    window.removeEventListener('kt:nav-drawer-state', onDrawerState);
     root.innerHTML = '';
   };
 }

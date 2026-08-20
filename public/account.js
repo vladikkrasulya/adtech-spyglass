@@ -534,7 +534,8 @@
     }
   }
 
-  // Preferences (localStorage-only). Read on init, click-to-toggle.
+  // Preferences. Native pressed buttons remain keyboard-operable while the
+  // active class and ARIA state mirror the persisted value.
   function setupPreferences() {
     function setRadio(group, key, fallback, applyFn) {
       const root = $(group);
@@ -548,10 +549,9 @@
       if (!current) current = fallback;
       const apply = (val) => {
         root.querySelectorAll('.cab-radio').forEach((el) => {
-          el.classList.toggle(
-            'active',
-            el.dataset[group.replace('pref', '').toLowerCase()] === val,
-          );
+          const selected = el.dataset[group.replace('pref', '').toLowerCase()] === val;
+          el.classList.toggle('active', selected);
+          el.setAttribute('aria-pressed', String(selected));
         });
         if (applyFn) applyFn(val);
       };
@@ -1005,7 +1005,7 @@
               sourceTag +
               notes +
               '</span>' +
-              '<button class="btn btn-ghost btn-sm corpus-delete-btn" data-action="corpus-delete" data-corpus-id="' +
+              '<button class="btn btn-danger btn-sm corpus-delete-btn" data-action="corpus-delete" data-corpus-id="' +
               escapeHtml(e.id) +
               '" title="' +
               escapeHtml(T('corpus.cabinet.delete_title')) +

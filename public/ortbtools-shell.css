@@ -247,7 +247,7 @@
   cursor: pointer;
   list-style: none;
   padding: 6px 10px;
-  border-radius: var(--r-pill, 999px);
+  border-radius: var(--control-radius, 6px);
   border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
   background: var(--bg-elev, #fff);
   font-size: 13px;
@@ -261,13 +261,18 @@
 .kt-topbar .kt-lang-toggle:hover {
   background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
+.kt-topbar .kt-lang-menu[open] > summary.kt-lang-toggle {
+  border-color: var(--accent, #0284c7);
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  color: var(--text);
+}
 .kt-topbar .kt-lang-menu .kt-lang-menu-list {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
   background: var(--bg-elev, #fff);
   border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
-  border-radius: var(--r-sm, 10px);
+  border-radius: var(--control-menu-radius, 10px);
   padding: 4px;
   min-width: 180px;
   box-shadow: var(--shadow-md);
@@ -282,14 +287,15 @@
   text-decoration: none;
   color: var(--text);
   font-size: 13px;
-  border-radius: var(--r-sm, 10px);
+  border-radius: var(--control-radius, 6px);
 }
 .kt-topbar .kt-lang-menu .kt-lang-menu-list a:hover {
   background: var(--accent-soft, rgba(2, 132, 199, 0.12));
 }
 .kt-topbar .kt-lang-menu .kt-lang-menu-list a[aria-current='true'] {
-  background: var(--accent, #0284c7);
-  color: var(--accent-ink, #0d1726);
+  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  color: var(--text);
+  font-weight: 600;
 }
 
 .kt-topbar button.kt-theme-toggle {

@@ -131,7 +131,7 @@ export function openForgotPasswordFlow() {
     '<div style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--space-3)">' +
     t('forgot.subtitle') +
     '</div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="forgotEmailInput">' +
     t('auth.label.email') +
     '</label><input id="forgotEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
     '<div id="forgotMessage" style="font-size:var(--fs-sm);color:var(--text-dim);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
@@ -228,7 +228,7 @@ export async function openPasswordResetFlow(token) {
     radioBox('wipe', 'wipe', 'var(--danger)') +
     '</div>' +
     '<div id="resetModeFields"></div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="resetNewPwInput">' +
     t('reset.label.new_password') +
     '</label>' +
     '<input id="resetNewPwInput" type="password" autocomplete="new-password"></div>' +
@@ -258,7 +258,7 @@ export function updateResetModeUI() {
   };
   if (mode === 'rotate') {
     f.innerHTML =
-      '<div class="modal-row"><label>' +
+      '<div class="modal-row"><label for="resetOldPwInput">' +
       t('reset.label.old_password') +
       '</label>' +
       '<input id="resetOldPwInput" type="password" autocomplete="current-password" value="' +
@@ -267,7 +267,7 @@ export function updateResetModeUI() {
     setTimeout(() => $('resetOldPwInput')?.focus(), 0);
   } else if (mode === 'recover') {
     f.innerHTML =
-      '<div class="modal-row"><label>' +
+      '<div class="modal-row"><label for="resetRecoveryInput">' +
       t('reset.label.recovery') +
       '</label>' +
       '<input id="resetRecoveryInput" type="text" autocomplete="off" placeholder="xxxx-xxxx-xxxx-xxxx-..." style="font-family:monospace" value="' +

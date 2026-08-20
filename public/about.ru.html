@@ -61,6 +61,7 @@
     <link rel="apple-touch-icon" href="/icon.svg" />
     <link rel="mask-icon" href="/icon.svg" color="#0284C7" />
     <link rel="stylesheet" href="/design-system.css?v=13" />
+    <link rel="stylesheet" href="/ortbtools-controls.css?v=1" />
     <script>
       (function () {
         try {
@@ -100,7 +101,7 @@
           apply();
           if (mq.addEventListener) mq.addEventListener('change', apply);
           else if (mq.addListener) mq.addListener(apply);
-          // The toggle lives in the static markup at the end of <body>.
+          // The toggle lives in the static topnav action group.
           // It used to be created here and appended at DOMContentLoaded,
           // which left the live document with one more body child than the
           // freshly-fetched locale document (DOMParser runs no scripts).
@@ -397,75 +398,6 @@
         gap: var(--space-2);
         margin: 0 0 var(--space-4);
       }
-      /* 3-locale dropdown — same family as index pages, scoped to top-nav. */
-      .kt-lang-menu {
-        position: relative;
-        display: inline-flex;
-      }
-      .kt-lang-menu summary {
-        list-style: none;
-        cursor: pointer;
-        user-select: none;
-      }
-      .kt-lang-menu summary::-webkit-details-marker {
-        display: none;
-      }
-      .kt-lang-menu summary.kt-lang-toggle {
-        height: 32px;
-        min-width: 56px;
-        padding: 0 var(--space-3);
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--surface);
-        color: var(--text);
-        border: 1px solid var(--border);
-        border-radius: var(--r-pill);
-        font-family: var(--font-mono);
-        font-size: var(--fs-mono);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        position: static;
-        width: auto;
-      }
-      .kt-lang-menu summary.kt-lang-toggle:hover {
-        border-color: var(--text-dim);
-      }
-      .kt-lang-menu .kt-lang-caret {
-        font-size: 9px;
-        opacity: 0.55;
-      }
-      .kt-lang-menu[open] summary.kt-lang-toggle {
-        border-color: var(--text-dim);
-      }
-      .kt-lang-menu-list {
-        position: absolute;
-        top: calc(100% + 4px);
-        right: 0;
-        min-width: 200px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r-md);
-        box-shadow: var(--shadow-md);
-        padding: 4px 0;
-        z-index: 100;
-      }
-      .kt-lang-menu-list a {
-        display: block;
-        padding: 8px var(--space-4);
-        color: var(--text);
-        text-decoration: none;
-        font-family: var(--font-mono);
-        font-size: var(--fs-sm);
-        letter-spacing: 0;
-      }
-      .kt-lang-menu-list a:hover {
-        background: var(--bg-2);
-      }
-      .kt-lang-menu-list a[aria-current='true'] {
-        background: var(--accent-soft);
-        font-weight: 600;
-      }
       /* v0.41.2 perf — same backdrop-filter reduction as account pages */
       .kt-topnav {
         backdrop-filter: blur(4px);
@@ -491,17 +423,27 @@
           <a href="#example">Пример</a>
           <a href="#sources">Источники</a>
         </nav>
-        <details class="kt-lang-menu">
-          <summary class="kt-lang-toggle" title="язык: Русский">
-            <span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span>
-          </summary>
-          <div class="kt-lang-menu-list" role="menu">
-            <a href="/about" role="menuitem" lang="en">EN · English</a>
-            <a href="/uk/about" role="menuitem" lang="uk">UK · Українська</a>
-            <a href="/ru/about" role="menuitem" lang="ru" aria-current="true">RU · Русский</a>
-          </div>
-        </details>
-        <a href="/ru/" class="btn btn-ghost btn-sm">← ortbtools</a>
+        <div class="kt-topnav-actions">
+          <details class="kt-lang-menu">
+            <summary class="kt-lang-toggle" title="язык: Русский">
+              <span class="kt-lang-current">RU</span><span class="kt-lang-caret">▾</span>
+            </summary>
+            <div class="kt-lang-menu-list">
+              <a href="/about" lang="en">EN · English</a>
+              <a href="/uk/about" lang="uk">UK · Українська</a>
+              <a href="/ru/about" lang="ru" aria-current="true">RU · Русский</a>
+            </div>
+          </details>
+          <button
+            class="kt-theme-toggle"
+            type="button"
+            aria-label="Переключить тему"
+            title="тема: авто · клик → светлая"
+          >
+            ◐
+          </button>
+          <a href="/ru/" class="btn btn-ghost btn-sm">← ortbtools</a>
+        </div>
       </div>
     </header>
 
@@ -523,7 +465,7 @@
           <a href="#contact">Контакт</a>
         </nav>
         <div class="doc-prose">
-          <span class="eyebrow">docs · <span data-ortbtools-version>v1.14.2</span></span>
+          <span class="eyebrow">docs · <span data-ortbtools-version>v1.14.3</span></span>
           <h1 style="margin-top: var(--space-3)">Как пользоваться ortbtools</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             Приватный инспектор OpenRTB-трафика. Вставь JSON, получи разбор: правильно ли
@@ -1408,7 +1350,7 @@ findings[]: { id, level, path, params, msg, specRef }
               font-size: var(--fs-sm);
             "
           >
-            <span data-ortbtools-version>v1.14.2</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
+            <span data-ortbtools-version>v1.14.3</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
             vast 4.x · <a href="/ru/" style="color: var(--text-dim)">↗ ortbtools</a> ·
             <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>
@@ -1416,16 +1358,7 @@ findings[]: { id, level, path, params, msg, specRef }
       </div>
     </section>
 
-    <button
-      class="kt-theme-toggle"
-      type="button"
-      aria-label="Переключить тему"
-      title="тема: авто · клик → светлая"
-    >
-      ◐
-    </button>
-
-    <script src="/lang-switch.js?v=1"></script>
+    <script src="/lang-switch.js?v=3"></script>
     <script src="/version.js?v=1"></script>
     <script src="/telemetry.js?v=1"></script>
   </body>
