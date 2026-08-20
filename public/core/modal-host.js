@@ -20,7 +20,7 @@
      - #modalRoot is now a SIBLING of #app-root, not a descendant — so any
        modal-content click (submit/cancel/backdrop/mode-switch buttons
        rendered by auth/unlock/recovery/password-reset/save-sample/
-       edit-sample/partners/corpus-save/simulate/mirror/live) is
+       edit-sample/partners/corpus-save/simulate/mirror) is
        structurally invisible to root's dispatcher regardless of which
        section is active. Those cases live here instead, delegated off
        #modalRoot itself — scoping by DOM subtree, not by section state,
@@ -184,26 +184,7 @@ function bindModalDispatcher(modalRoot) {
         closeModal();
         return window.signOut && window.signOut();
 
-      // — live modal (Inspector-toolbar-triggered only, but its content now
-      // renders into #modalRoot, outside root's dispatch reach) —
-      case 'live-pause':
-        return window.__ortbtoolsLivePauseToggle && window.__ortbtoolsLivePauseToggle();
-      case 'live-load': {
-        const id = Number(el.dataset.rowId);
-        const map = window.__ortbtoolsLiveSpecimens;
-        const spec = map && map.get ? map.get(id) : null;
-        if (!spec) return;
-        const isReq = Array.isArray(spec.imp);
-        const target = isReq ? 'bidReq' : 'bidRes';
-        const ta = document.getElementById(target);
-        if (!ta) return;
-        ta.value = JSON.stringify(spec, null, 2);
-        if (typeof window.updateCharCount === 'function') window.updateCharCount(target);
-        closeModal();
-        return;
-      }
-
-      // — mirror modal (same reasoning as live) —
+      // — mirror modal —
       case 'mirror-copy': {
         const out = document.getElementById('mMirrorOutput');
         if (!out) return;
@@ -265,7 +246,7 @@ function bindModalDispatcher(modalRoot) {
 //
 // The fix lives HERE rather than in the thirteen modules that actually
 // render modal markup (auth, unlock, recovery, password-reset, save-sample,
-// edit-sample, corpus-save, partners, simulate, mirror, live, embed,
+// edit-sample, dialect-label, corpus-save, partners, simulate, mirror, embed,
 // shortcuts) because #modalRoot is the ONE node all of them pass through —
 // the same reason Esc and backdrop-close already live here. All thirteen
 // emit the identical `.modal-backdrop > .modal-card` shape with exactly one
@@ -326,7 +307,7 @@ function upgradeModalCard(card) {
   card.setAttribute('role', 'dialog');
   card.setAttribute('aria-modal', 'true');
   // Needed so the host can park focus on the card itself for modals whose
-  // renderer does not focus a field of its own (mirror/live/shortcuts/embed).
+  // renderer does not focus a field of its own (mirror/shortcuts/embed).
   if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex', '-1');
 
   const title = card.querySelector('.modal-title');

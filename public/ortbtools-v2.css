@@ -104,6 +104,32 @@
 }
 
 /* ------------------------------------------------------------
+   Compact badge text needs its own ink tokens.
+
+   The palette tokens for warning, danger and info are intended for fills
+   and rules; some miss AA when used as 9px text over their translucent
+   tint. Search used to compensate with fourteen theme-specific hex values
+   in the component stylesheet. Keep the AA-safe choices in the owned token
+   layer instead, so every badge consumer gets one semantic, theme-aware
+   contract.
+   ------------------------------------------------------------ */
+.kt-shell {
+  --badge-warning-ink: #92400e;
+  --badge-danger-ink: #b91c1c;
+  --badge-info-ink: #1d4ed8;
+  --badge-success-ink: #166534;
+  --badge-reference-ink: #6d28d9;
+}
+
+[data-theme='dark'] .kt-shell {
+  --badge-warning-ink: #fbbf24;
+  --badge-danger-ink: #f87171;
+  --badge-info-ink: #93c5fd;
+  --badge-success-ink: #4ade80;
+  --badge-reference-ink: #c4b5fd;
+}
+
+/* ------------------------------------------------------------
    --code-num carried #B7791F on white: 3.2:1. Numbers in a payload
    are the single thing an operator reads most, at 11px, and they
    were the least legible glyphs on the page. They are data, not

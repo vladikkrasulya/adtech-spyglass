@@ -272,6 +272,46 @@ function envelope(n, emittedAt) {
   };
 }
 
+test('3.0 auction sides render correctly and rows use the localized Inspector handoff', async () => {
+  const h = await mountStream({ realmSalt: 'stream-ortb30-handoff' });
+  const socket = h.latest();
+  let closed = false;
+  try {
+    const navigations = [];
+    h.root.ownerDocument.defaultView.OrtbtoolsShell = {
+      navigateTo: (target) => navigations.push(target),
+    };
+    socket.open();
+    socket.deliver({
+      source: 'openrtb30-request.json',
+      hash: 'abcdef123456',
+      emittedAt: Date.now() - 1,
+      specimen: { openrtb: { ver: '3.0', request: { id: 'req-3', item: [] } } },
+    });
+    socket.deliver({
+      source: 'openrtb30-response.json',
+      hash: '123456abcdef',
+      emittedAt: Date.now(),
+      specimen: { openrtb: { ver: '3.0', response: { id: 'res-3', seatbid: [] } } },
+    });
+
+    const rows = h.rowEls();
+    assert.deepEqual(
+      rows.map((row) => row.querySelector('.stream-cell--kind').textContent),
+      ['res', 'req'],
+      'wrapped responses and requests keep their auction side',
+    );
+    rows[0].click();
+    assert.deepEqual(navigations, ['/uk/r/123456abcdef']);
+
+    h.close();
+    closed = true;
+    assert.equal(socket.closed, true, 'leaving the stream releases its one EventSource');
+  } finally {
+    if (!closed) h.close();
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════════
 //  1. Reconnect replay must not duplicate rows
 // ═══════════════════════════════════════════════════════════════════════

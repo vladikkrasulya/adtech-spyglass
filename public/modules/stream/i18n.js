@@ -1,8 +1,8 @@
 /* ============================================================
    modules/stream/i18n.js — per-module translations for /live.
 
-   Same queue-push contract as modules/live/i18n.js and
-   modules/share/i18n.js: push a { id, keys } spec into
+   Same queue-push contract as modules/share/i18n.js: push a
+   { id, keys } spec into
    window.kt_i18n_modules, or call window.registerI18nModule
    directly when /i18n.js has already drained the queue (which is
    the case here — the stream module is imported by the section

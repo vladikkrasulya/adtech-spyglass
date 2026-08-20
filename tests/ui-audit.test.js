@@ -3,7 +3,7 @@
 /**
  * tests/ui-audit.test.js — the inspector's interface, audited 2026-08-18.
  *
- * Five defects, one theme: a surface that answered confidently while being
+ * Four defects, one theme: a surface that answered confidently while being
  * wrong, or answered nothing at all, and in every case did it silently.
  *
  *  1. THE DETAIL PANEL READ THE OTHER PANE. `resolveFindingValue()` guessed
@@ -28,15 +28,12 @@
  *     cannot see a click inside any modal. save-sample's two hint verbs were
  *     in neither that dispatcher's reach nor modal-host's case list.
  *
- *  4. THE LIVE STREAM OUTLIVED ITS MODAL. The teardown hung off a patch of
- *     window.closeModal, but /core/modal-host.js closes through its own
- *     module-local binding — Escape and backdrop never touched the global,
- *     so the EventSource stayed connected for the life of the tab.
+ *  4. THE INSPECTOR SHIPPED A SECOND LIVE CLIENT. It consumed another one of
+ *     the eight SSE slots per IP and carried its own auction-shape rules,
+ *     already divergent from the canonical /live section. The duplicate is
+ *     retired; Streams remains permanently reachable from the rail.
  *
- *  5. (found while fixing 3) The history-merge modal re-bound its listener to
- *     permanent chrome on every open.
- *
- * Three of the five are asserted against the SHIPPED SOURCE, not a restatement
+ * Two of the four are asserted against the SHIPPED SOURCE, not a restatement
  * of it: the functions under test are sliced out of public/ortbtools.app.js by
  * name and evaluated, so a rewrite that reintroduces the defect fails here
  * rather than passing a paraphrase.
@@ -518,7 +515,7 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 // and almost every lazy module in public/modules ends with a usage note that
 // quotes its OWN specifier in a line comment:
 //
-//   //   await import('/modules/live/index.js'); window.openLiveModal();
+//   //   await import('/modules/mirror/index.js'); window.openMirrorModal();
 //
 // A regex cannot tell a comment from code, so the module looks like it imports
 // itself and the loader — correctly, on the evidence it has — refuses the
@@ -682,160 +679,63 @@ test('the suggestion listener is bound once, however many times the modal opens'
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 4. The live stream closes on every close path
+// 4. The duplicate Live modal stays retired
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/** Counting EventSource stand-in. The whole defect is a create/close ledger. */
-function makeEventSourceSpy() {
-  const ledger = { created: 0, closed: 0, live: new Set() };
-  class FakeEventSource {
-    constructor(url) {
-      this.url = url;
-      this.listeners = new Map();
-      ledger.created++;
-      ledger.live.add(this);
-    }
-    addEventListener(type, fn) {
-      this.listeners.set(type, fn);
-    }
-    close() {
-      if (!ledger.live.has(this)) return;
-      ledger.live.delete(this);
-      ledger.closed++;
-    }
-  }
-  return { ledger, FakeEventSource };
-}
-
-/**
- * Boot the REAL modal host over a shell DOM, then open the REAL live modal.
- * Nothing about the close paths is simulated: Escape goes through
- * modal-host's own document keydown listener, the backdrop click through its
- * own #modalRoot dispatcher — the two paths that the old window.closeModal
- * patch could not see, because both call modal-host's module-local binding.
- */
-async function liveHarness(salt) {
-  const dom = shellDom();
-  const win = dom.window;
-  win.t = (k) => k;
-  const { ledger, FakeEventSource } = makeEventSourceSpy();
-  const restore = withGlobals(win, {
-    EventSource: FakeEventSource,
-    history: win.history,
-    location: win.location,
-    URLSearchParams: win.URLSearchParams,
-  });
-  const loader = browserLoader(salt);
-  const host = await loader.import('/core/modal-host.js');
-  host.installModalHost();
-  const live = await loader.import('/modules/live/index.js');
-  return { dom, win, ledger, live, restore };
-}
-
-test('live: Escape closes the modal AND the EventSource', async () => {
-  const h = await liveHarness('ui-audit-live-escape');
-  try {
-    h.live.openLiveModal();
-    assert.equal(h.ledger.created, 1, 'the modal must have opened a stream');
-    assert.equal(h.ledger.closed, 0);
-
-    h.win.document.dispatchEvent(
-      new h.win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+test('the canonical /live section is the only live-stream surface', () => {
+  for (const locale of ['en', 'uk', 'ru']) {
+    const template = fs.readFileSync(
+      path.join(PUBLIC_ROOT, 'modules', 'inspector', `template.${locale}.html`),
+      'utf8',
     );
-    await tick();
-
-    assert.equal(
-      h.win.document.getElementById('modalRoot').children.length,
-      0,
-      'Escape must empty #modalRoot (this is the path modal-host owns)',
-    );
-    assert.equal(
-      h.ledger.closed,
-      1,
-      'the EventSource must be closed too — it used to survive Escape and keep an SSE ' +
-        'slot open on the server for the rest of the tab session',
-    );
-    assert.equal(h.win.__ortbtoolsLiveSpecimens, null, 'the specimen map must be released');
-  } finally {
-    h.restore();
-    h.win.close();
+    assert.doesNotMatch(template, /\bid=["']liveBtn["']/u, `${locale}: duplicate button`);
+    assert.doesNotMatch(template, /\bdata-action=["']live["']/u, `${locale}: duplicate action`);
   }
-});
 
-test('live: a backdrop click closes the EventSource', async () => {
-  const h = await liveHarness('ui-audit-live-backdrop');
-  try {
-    h.live.openLiveModal();
-    const backdrop = h.win.document.querySelector('#modalRoot .modal-backdrop');
-    assert.ok(backdrop, 'the live modal must render a backdrop');
-    backdrop.dispatchEvent(new h.win.MouseEvent('click', { bubbles: true }));
-    await tick();
-    assert.equal(h.win.document.getElementById('modalRoot').children.length, 0);
-    assert.equal(h.ledger.closed, 1);
-  } finally {
-    h.restore();
-    h.win.close();
+  for (const relative of [
+    'modules/live/index.js',
+    'modules/live/i18n.js',
+    'modules/live/README.md',
+  ]) {
+    assert.equal(fs.existsSync(path.join(PUBLIC_ROOT, relative)), false, relative);
   }
-});
 
-test('live: the close button and a replacing modal both close the EventSource', async () => {
-  const h = await liveHarness('ui-audit-live-button');
-  try {
-    h.live.openLiveModal();
-    h.win.document
-      .querySelector('#modalRoot [data-action="modal-close"]')
-      .dispatchEvent(new h.win.MouseEvent('click', { bubbles: true }));
-    await tick();
-    assert.equal(h.ledger.closed, 1, 'close button');
-
-    // A follow-up modal that REPLACES ours without closing anything — the one
-    // path a close-hook of any kind cannot see.
-    h.live.openLiveModal();
-    assert.equal(h.ledger.created, 2);
-    h.win.document.getElementById('modalRoot').innerHTML = '<div class="modal-card">other</div>';
-    await tick();
-    assert.equal(h.ledger.closed, 2, 'replaced modal');
-  } finally {
-    h.restore();
-    h.win.close();
-  }
-});
-
-test('live: opens and closes balance over repeated open/close cycles', async () => {
-  // The user-visible consequence was cumulative: each abandoned stream held a
-  // connection AND kept firing 'message' into whatever modal was on screen
-  // next, because $('mLiveList') resolves by id against the live document.
-  const h = await liveHarness('ui-audit-live-cycles');
-  try {
-    for (let i = 0; i < 5; i++) {
-      h.live.openLiveModal();
-      h.win.document.dispatchEvent(
-        new h.win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
-      );
-      await tick();
+  const streamEndpointOwners = [];
+  for (const file of jsFilesUnder(PUBLIC_ROOT)) {
+    const source = fs.readFileSync(file, 'utf8');
+    if (source.includes('/api/v1/stream')) {
+      streamEndpointOwners.push(path.relative(PUBLIC_ROOT, file).split(path.sep).join('/'));
     }
-    assert.equal(h.ledger.created, 5);
-    assert.equal(h.ledger.closed, 5, 'every stream opened must be a stream closed');
-    assert.equal(h.ledger.live.size, 0, 'no EventSource may outlive its modal');
-  } finally {
-    h.restore();
-    h.win.close();
   }
-});
+  assert.deepEqual(
+    streamEndpointOwners,
+    ['modules/stream/index.js'],
+    'only the canonical Streams module may consume the SSE endpoint',
+  );
 
-test('live: window.closeModal is handed back exactly as found', async () => {
-  const h = await liveHarness('ui-audit-live-unpatch');
-  try {
-    const before = h.win.closeModal;
-    h.live.openLiveModal();
-    assert.notEqual(h.win.closeModal, before, 'the wrapper is installed while the modal is up');
-    h.win.document.dispatchEvent(
-      new h.win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
-    );
-    await tick();
-    assert.equal(h.win.closeModal, before, 'and removed again on teardown');
-  } finally {
-    h.restore();
-    h.win.close();
-  }
+  const modalHost = fs.readFileSync(path.join(PUBLIC_ROOT, 'core/modal-host.js'), 'utf8');
+  const inspectorCss = fs.readFileSync(
+    path.join(PUBLIC_ROOT, 'modules/inspector/inspector.css'),
+    'utf8',
+  );
+  assert.doesNotMatch(APP_SRC, /case\s+['"]live['"]|\/modules\/live\//u);
+  assert.doesNotMatch(
+    modalHost,
+    /live-(?:load|pause)|__ortbtoolsLive/u,
+    'legacy modal dispatch must not return',
+  );
+  assert.doesNotMatch(inspectorCss, /\.kt-live-/u, 'legacy modal CSS must not return');
+
+  const shellBoot = fs.readFileSync(path.join(PUBLIC_ROOT, 'shell-boot.js'), 'utf8');
+  const nav = fs.readFileSync(path.join(PUBLIC_ROOT, 'modules/nav/index.js'), 'utf8');
+  assert.match(
+    shellBoot,
+    /registry\.registerLazy\('stream', '\/live',/u,
+    'the canonical section remains registered',
+  );
+  assert.match(
+    nav,
+    /id:\s*'live',[\s\S]{0,80}?route:\s*'\/live'/u,
+    'Streams remains permanently reachable from the rail',
+  );
 });

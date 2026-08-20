@@ -85,7 +85,7 @@ itself owns its removal.
 
 Navigation, topbar, search integration, shell session, and the modal host are outside the active
 section lifecycle. Feature/action modules such as auth, save/edit sample, partners, mirror, simulate,
-live modal, corpus save, share/embed, unlock, recovery, password reset, and shortcuts are loaded by an
+corpus save, share/embed, unlock, recovery, password reset, and shortcuts are loaded by an
 owning action or shell service.
 
 Cross-feature communication prefers direct ES imports for static dependencies and the `kt:*`

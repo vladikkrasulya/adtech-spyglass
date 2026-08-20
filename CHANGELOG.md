@@ -6,6 +6,23 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### One live stream, one OpenRTB shape rule
+
+- Retired the Inspector's legacy Live modal, its toolbar action, styles,
+  translations and modal-host dispatch. The canonical `/live` Streams section
+  remains in the persistent rail, so opening a feed now consumes one SSE slot
+  and there is no second 50-row implementation to keep in sync.
+- Centralized browser-side OpenRTB shape classification for 2.x and wrapped
+  3.0 payloads. The `/live` table and `/r/{hash}` Inspector handoff now share
+  the same rule; a 3.0 response loads into `bidRes`, while a 3.0 request loads
+  into `bidReq`, with the full envelope preserved.
+- Replaced the Search component's hardcoded hex colours with theme-aware badge
+  ink tokens in the ortbtools-owned v2 layer. The new token contract is guarded
+  in both themes and keeps every 9px badge at WCAG AA contrast over its tint.
+- Added regressions for the 2.x/3.0 request-response matrix, localized
+  `/live` → Inspector navigation, EventSource cleanup, duplicate-surface
+  retirement and Search token/contrast integrity.
+
 ### v1.14.2 — the phone, and results that outlived their payload
 
 A second audit, run independently against the deployed v1.14.1, found the

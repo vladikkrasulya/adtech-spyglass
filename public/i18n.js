@@ -72,7 +72,6 @@
       'modal.edit_sample.title': 'редагувати запит',
       // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
-      // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'Шлях у JSON',
       'finding.detail.value_at_path': 'Поточне значення',
       'finding.detail.value_missing': 'Поле відсутнє у вставленому JSON (тому й знахідка).',
@@ -391,7 +390,6 @@
       'modal.edit_sample.title': 'edit sample',
       // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
-      // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'JSON path',
       'finding.detail.value_at_path': 'Current value',
       'finding.detail.value_missing':
@@ -711,7 +709,6 @@
       'modal.edit_sample.title': 'редактировать запрос',
       // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
-      // modal.live.* + toast.live_* keys live in modules/live/i18n.js
       'finding.detail.path': 'Путь в JSON',
       'finding.detail.value_at_path': 'Текущее значение',
       'finding.detail.value_missing':

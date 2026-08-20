@@ -28,6 +28,7 @@
 
 // Note: ?v=… is auto-injected by server.js rewriteAssetVersions() — no manual bump needed.
 import { mountInspector } from '/ortbtools.app.js';
+import { loadSpecimenIntoEditor } from '/modules/inspector/specimen-handoff.js';
 
 // Bundle hash for the inspector module. The literal `__INSPECTOR_BUNDLE_HASH__`
 // is replaced at serve time by server.js → injectModuleBundleHashes() with the
@@ -173,22 +174,7 @@ export default {
         if (resp.ok) {
           const data = await resp.json();
           const specimen = data.specimen;
-          if (specimen) {
-            const reqEl = document.getElementById('bidReq');
-            const resEl = document.getElementById('bidRes');
-            // Detect shape: BidRequest has imp[], BidResponse has seatbid[]
-            if (Array.isArray(specimen.imp) && reqEl) {
-              reqEl.value = JSON.stringify(specimen, null, 2);
-              reqEl.dispatchEvent(new Event('input', { bubbles: true }));
-            } else if (Array.isArray(specimen.seatbid) && resEl) {
-              resEl.value = JSON.stringify(specimen, null, 2);
-              resEl.dispatchEvent(new Event('input', { bubbles: true }));
-            } else if (reqEl) {
-              // Fallback: put in request editor
-              reqEl.value = JSON.stringify(specimen, null, 2);
-              reqEl.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-          }
+          if (specimen) loadSpecimenIntoEditor(specimen);
           // Replace /r/<hash> with /<lang>/inspector for a clean URL state.
           const cleanUrl = location.pathname.replace(/\/r\/[0-9a-f]+/i, '/inspector');
           history.replaceState(history.state, '', cleanUrl);

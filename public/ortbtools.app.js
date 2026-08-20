@@ -5290,13 +5290,10 @@ export async function mountInspector(root, ctx) {
   // below). State + crypto access goes through the OrtbtoolsSession
   // facade — no closure-private references in the module.
 
-  // ── Live + Simulate modals — MOVED to modules/{live,simulate}/ (lazy) ──
-  // Both fetch on first click of their topnav buttons (`case 'live'`
-  // and `case 'sim-bids'` in the dispatcher below). Pre-migration this
-  // block held openLiveModal (~164 LOC, EventSource + tail list) and
-  // openSimBidsModal (~105 LOC, deterministic 3-strategy DSP demo). Together
-  // they used to add ~280 LOC + 23 i18n keys × 3 locales to the initial
-  // bundle. Now they're lazy — only loaded for users who click.
+  // ── Simulate modal — MOVED to modules/simulate/ (lazy) ──────────────
+  // It fetches on first click (`case 'sim-bids'` in the dispatcher below).
+  // Pre-migration this block held openSimBidsModal (~105 LOC, deterministic
+  // 3-strategy DSP demo); it now stays out of the initial bundle until used.
 
   // ── Mirror modal — MOVED to modules/mirror/ (lazy-loaded) ────────────
   // The implementation lives in /modules/mirror/index.js and is fetched
@@ -5920,26 +5917,6 @@ export async function mountInspector(root, ctx) {
           // — top bar / chrome —
           case 'analyze':
             return runAnalysis();
-          case 'live': {
-            // Lazy-load the live module on first click. Subsequent
-            // clicks hit the browser's ES module cache for free.
-            if (typeof window.openLiveModal === 'function') {
-              return window.openLiveModal();
-            }
-            (async () => {
-              try {
-                await Promise.all([
-                  import('/modules/live/i18n.js'),
-                  import('/modules/live/index.js'),
-                ]);
-                window.openLiveModal();
-              } catch (err) {
-                console.error('[live] lazy import failed:', err);
-                toast(t('toast.error_generic', { error: 'live module load failed' }), 'error');
-              }
-            })();
-            return;
-          }
           case 'sim-bids': {
             // Lazy-load the simulate module on first click.
             if (typeof window.openSimBidsModal === 'function') {
@@ -6009,9 +5986,6 @@ export async function mountInspector(root, ctx) {
               });
             return;
           }
-          // 'live-pause' / 'live-load' moved to /core/modal-host.js — their
-          // buttons render inside the live modal, which lives in #modalRoot
-          // (shell-owned, outside root's reach — ROADMAP #18).
           case 'mirror': {
             // Lazy-load the mirror module on first click. Subsequent
             // clicks hit the browser's ES module cache for free.
@@ -6033,8 +6007,8 @@ export async function mountInspector(root, ctx) {
             return;
           }
           // 'mirror-copy' / 'mirror-load' / 'mirror-mode-change' / 'mirror-share'
-          // moved to /core/modal-host.js — same reasoning as live-pause/live-load
-          // above; their buttons render inside the mirror modal (#modalRoot).
+          // moved to /core/modal-host.js because their buttons render inside
+          // shell-owned #modalRoot, outside the Inspector root's reach.
           case 'save-sample': {
             // Lazy-load the save-sample module on first click. Subsequent
             // clicks hit the browser's ES module cache for free. The

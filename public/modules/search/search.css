@@ -23,12 +23,12 @@
 }
 .kt-topbar__search-input:focus {
   outline: none;
-  border-color: var(--accent, #0284c7);
-  box-shadow: 0 0 0 3px var(--accent-soft, rgba(2, 132, 199, 0.12));
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
   color: var(--text);
 }
 .kt-topbar__search-input::placeholder {
-  color: var(--text-dim, #5c6b82);
+  color: var(--text-dim);
 }
 
 /* ── Dropdown panel ─────────────────────────────────────── */
@@ -56,24 +56,20 @@
   z-index: 1000;
 
   border-radius: var(--r-md, 16px);
-  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
+  border: 1px solid var(--border);
 
   /* Glassmorphism */
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
 
-  box-shadow: var(
-    --shadow-lg,
-    0 12px 32px rgba(24, 24, 27, 0.12),
-    0 4px 8px rgba(24, 24, 27, 0.06)
-  );
+  box-shadow: var(--shadow-lg);
 
   /* Entrance animation */
   animation: sg-dropdown-in var(--t-fast, 150ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
 
-/* Dark theme glass — navy from --bg-elev #121C30. Was the pre-Signal
+/* Dark theme glass — based on the elevated surface token. Was the pre-Signal
    warm-graphite rgba(42,38,34,…), a brown panel on the navy theme. */
 [data-theme='dark'] .sg-search-dropdown {
   background: rgba(18, 28, 48, 0.88);
@@ -82,10 +78,10 @@
 /* Fallback: no backdrop-filter support */
 @supports not (backdrop-filter: blur(20px)) {
   .sg-search-dropdown {
-    background: var(--bg-elev, #ffffff);
+    background: var(--bg-elev);
   }
   [data-theme='dark'] .sg-search-dropdown {
-    background: var(--bg-elev, #121c30);
+    background: var(--bg-elev);
   }
 }
 
@@ -127,7 +123,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-dim, #5c6b82);
+  color: var(--text-dim);
 }
 .sg-search-hint__chips {
   display: flex;
@@ -138,17 +134,17 @@
   display: inline-block;
   padding: 3px 9px;
   border-radius: var(--r-pill, 999px);
-  background: var(--bg-2, #ecf1f6);
-  border: 1px solid var(--border, rgba(13, 23, 38, 0.08));
+  background: var(--bg-2);
+  border: 1px solid var(--border);
   font-size: 12px;
-  color: var(--text-muted, #46556b);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background var(--t-fast, 150ms);
   user-select: none;
 }
 .sg-search-hint__chip:hover {
-  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
-  color: var(--text, #0d1726);
+  background: var(--accent-soft);
+  color: var(--text);
 }
 
 /* ── "Nothing found" ───────────────────────────────────── */
@@ -156,7 +152,7 @@
   padding: 24px 16px;
   text-align: center;
   font-size: 13px;
-  color: var(--text-dim, #5c6b82);
+  color: var(--text-dim);
 }
 
 /* ── Group header ───────────────────────────────────────── */
@@ -164,7 +160,7 @@
   padding: 6px 0 4px;
 }
 .sg-search-group + .sg-search-group {
-  border-top: 1px solid var(--border, rgba(13, 23, 38, 0.08));
+  border-top: 1px solid var(--border);
   margin-top: 2px;
   padding-top: 8px;
 }
@@ -179,12 +175,12 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--text-dim, #5c6b82);
+  color: var(--text-dim);
 }
 .sg-search-group__count {
   font-size: 10px;
-  color: var(--text-dim, #5c6b82);
-  background: var(--bg-2, #ecf1f6);
+  color: var(--text-dim);
+  background: var(--bg-2);
   padding: 1px 6px;
   border-radius: 8px;
 }
@@ -200,16 +196,16 @@
   margin: 0 4px;
   transition: background var(--t-fast, 150ms);
   text-decoration: none;
-  color: var(--text, #0d1726);
+  color: var(--text);
   min-width: 0;
 }
 .sg-search-row:hover,
 .sg-search-row.is-selected {
-  background: var(--accent-soft, rgba(2, 132, 199, 0.12));
+  background: var(--accent-soft);
   outline: none;
 }
 .sg-search-row.is-selected {
-  outline: 2px solid var(--accent, #0284c7);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -229,63 +225,56 @@
 }
 .sg-badge--sample {
   background: rgba(234, 179, 8, 0.18);
-  color: #92650a;
+  color: var(--badge-warning-ink);
 }
 .sg-badge--behavior {
   background: rgba(220, 38, 38, 0.12);
-  color: #b91c1c;
+  color: var(--badge-danger-ink);
 }
 .sg-badge--finding-error {
   background: rgba(220, 38, 38, 0.14);
-  color: #b91c1c;
+  color: var(--badge-danger-ink);
 }
 .sg-badge--finding-warning {
   background: rgba(245, 158, 11, 0.18);
-  color: #92650a;
+  color: var(--badge-warning-ink);
 }
 .sg-badge--finding-info {
   background: rgba(59, 130, 246, 0.14);
-  color: #1d4ed8;
+  color: var(--badge-info-ink);
 }
 .sg-badge--blog {
   background: rgba(22, 163, 74, 0.14);
-  color: #15803d;
+  color: var(--badge-success-ink);
 }
 /* Reference guides (the server-rendered /openrtb/*, /vast, /native,
    /iab-categories pages). Violet keeps them distinct from samples (amber),
    scenarios (red), findings (red/amber/blue) and blog posts (green). */
 .sg-badge--landing {
   background: rgba(139, 92, 246, 0.14);
-  color: #6d28d9;
+  color: var(--badge-reference-ink);
 }
 
 [data-theme='dark'] .sg-badge--sample {
   background: rgba(234, 179, 8, 0.22);
-  color: #fbbf24;
 }
 [data-theme='dark'] .sg-badge--behavior {
   background: rgba(220, 38, 38, 0.2);
-  color: #f87171;
 }
 [data-theme='dark'] .sg-badge--finding-error {
   background: rgba(220, 38, 38, 0.22);
-  color: #f87171;
 }
 [data-theme='dark'] .sg-badge--finding-warning {
   background: rgba(245, 158, 11, 0.22);
-  color: #fbbf24;
 }
 [data-theme='dark'] .sg-badge--finding-info {
   background: rgba(59, 130, 246, 0.22);
-  color: #93c5fd;
 }
 [data-theme='dark'] .sg-badge--blog {
   background: rgba(22, 163, 74, 0.22);
-  color: #4ade80;
 }
 [data-theme='dark'] .sg-badge--landing {
   background: rgba(139, 92, 246, 0.22);
-  color: #c4b5fd;
 }
 
 /* ── Row text ───────────────────────────────────────────── */
@@ -299,14 +288,14 @@
 .sg-search-row__title {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text, #0d1726);
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .sg-search-row__preview {
   font-size: 11px;
-  color: var(--text-dim, #5c6b82);
+  color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -314,8 +303,8 @@
 
 /* ── Highlight mark ─────────────────────────────────────── */
 mark.search-hit {
-  background: var(--accent, #0284c7);
-  color: var(--accent-ink, #0d1726);
+  background: var(--accent);
+  color: var(--accent-ink);
   border-radius: 2px;
   padding: 0 1px;
   font-style: normal;
@@ -326,7 +315,7 @@ mark.search-hit {
   padding: 16px;
   text-align: center;
   font-size: 12px;
-  color: var(--text-dim, #5c6b82);
+  color: var(--text-dim);
   animation: sg-pulse 1.2s ease-in-out infinite;
 }
 @keyframes sg-pulse {

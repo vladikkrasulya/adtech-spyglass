@@ -33,6 +33,7 @@
 'use strict';
 
 import { specimenPath } from '/core/routes.js';
+import { classifyAuctionPayload } from '/core/auction-shape.js';
 
 /** Rows kept in the DOM. Older ones fall off the bottom. */
 const MAX_ROWS = 100;
@@ -559,31 +560,6 @@ export default {
     //  Payload shape → the six cells
     // ══════════════════════════════════════════════════════════════════
 
-    /**
-     * Which side of the auction this payload is, and where its body lives.
-     * oRTB 3.0 wraps everything in { openrtb: { request | response } }, so
-     * `imp` / `seatbid` are one level deeper there than in 2.x.
-     */
-    function shapeOf(specimen) {
-      if (!specimen || typeof specimen !== 'object')
-        return { kind: 'unknown', body: {}, ver: null };
-      const env = specimen.openrtb;
-      if (env && typeof env === 'object') {
-        if (env.request && typeof env.request === 'object') {
-          return { kind: 'req', body: env.request, ver: '3.0' };
-        }
-        if (env.response && typeof env.response === 'object') {
-          return { kind: 'res', body: env.response, ver: '3.0' };
-        }
-        return { kind: 'unknown', body: env, ver: '3.0' };
-      }
-      if (Array.isArray(specimen.imp)) return { kind: 'req', body: specimen, ver: null };
-      if (Array.isArray(specimen.seatbid)) return { kind: 'res', body: specimen, ver: null };
-      // Vendor JSON feeds (clickunder / bid-redirect) are neither shape. The
-      // grader's validation.type settles it once the batch comes back.
-      return { kind: 'unknown', body: specimen, ver: null };
-    }
-
     /** mtype values, oRTB 2.5 §5.25 — the response's own word for the media. */
     const MTYPE = { 1: 'banner', 2: 'video', 3: 'audio', 4: 'native' };
     /** bid.media subtree keys, oRTB 3.0 — `display` is what 2.x calls banner. */
@@ -724,7 +700,7 @@ export default {
       // it outranks the VAST version or the inventory context, the way the
       // mockup's "banner · 3.0" row does. `vast` stays set either way so the
       // vast filter still catches a 3.0 response carrying a VAST creative.
-      if (shape.ver === '3.0') sub = '3.0';
+      if (shape.version === '3.0') sub = '3.0';
       if (!sub) {
         const site = body.site || (body.context && body.context.site);
         const app = body.app || (body.context && body.context.app);
@@ -798,7 +774,7 @@ export default {
 
     function addRow(envelope) {
       const specimen = envelope.specimen || {};
-      const shape = shapeOf(specimen);
+      const shape = classifyAuctionPayload(specimen);
       const fmt = formatOf(specimen, shape);
       const now = Date.now();
       const emitted = emittedAtOf(envelope);
