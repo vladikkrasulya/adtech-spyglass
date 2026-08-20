@@ -1,0 +1,88 @@
+# Tasks: Theme Cycle Visible Feedback
+
+**Input**: Design documents from `specs/007-theme-cycle-visible-feedback/`
+
+**Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md)
+
+**Tests**: FR-008 requires coverage pinned to both system preferences. The original defect survived
+because the only browser check inherited the developer machine's preference; the new coverage is
+written first and is expected to fail until T003 lands.
+
+## Phase 1: Establish the contract
+
+- [x] T001 (FR-008, SC-001, SC-002, SC-003, SC-004) Add `tests/theme-cycle.test.js` covering the
+      successor function under both system preferences: first press repaints from either, one full
+      cycle returns to auto, the resolved theme takes both values, and exactly one press is silent
+- [x] T002 (FR-008) Extend the browser cycle expectation in
+      `tests/single-chrome-control-browser.test.js` to the new order and run it under both pinned
+      media features rather than light alone
+
+**Checkpoint**: The contract is expressed and red.
+
+---
+
+## Phase 2: User Story 1 - The first press does something visible (Priority: P1)
+
+- [x] T003 [US1] (FR-001, FR-002, FR-003) Replace the successor expression in the head IIFE of
+      `public/index.en.html`, `public/index.uk.html`, `public/index.ru.html`,
+      `public/about.en.html`, `public/about.uk.html`, and `public/about.ru.html` so auto moves to the
+      value opposite the resolved theme and auto is reached from the system-matching value
+
+**Checkpoint**: The first press repaints from either system preference.
+
+---
+
+## Phase 3: User Story 2 - The silent press is the honest one (Priority: P2)
+
+- [x] T004 [US2] (FR-004) Update the control's title and glyph in the same six files so both name the
+      state the next press will produce
+- [x] T005 [US2] (FR-005, FR-007) Confirm the rail label in `public/modules/nav/index.js` and the
+      Account radios in `public/account.js` still agree with the stored state; change them only if
+      they disagree
+
+**Checkpoint**: Every press says something, including the one that does not repaint.
+
+---
+
+## Phase 4: Release and Evidence
+
+- [x] T006 (FR-006) Verify the six localized shells carry an identical cycle and diff clean against
+      each other
+- [x] T007 Bump the app-only release to `1.14.4` across `package.json`, `package-lock.json`,
+      `public/version.js`, localized static fallbacks, baseline version contracts, and `CHANGELOG.md`
+- [x] T008 (SC-005) Run `npm run ci`, `bash scripts/npm-pack-smoke.sh`, `bash scripts/ci-docker-smoke.sh`,
+      and `git diff --check`; record exact results in this file
+- [x] T009 Add the feature to `specs/ROADMAP.md` and re-run Spec Kit analysis against this package
+- [ ] T010 Commit the feature scope, push, and wait for green hosted CI on the exact merge SHA
+
+## Dependencies & Execution Order
+
+- T001–T002 precede T003; the contract is written before the behavior changes.
+- T004 depends on T003, because the title can only name a successor that exists.
+- Phase 4 depends on all user stories.
+- Deployment is **not** in this task list. It is a separate external mutation requiring its own
+  authorization under Constitution VIII, and the 2026-08-20 authorization was scoped to `1.14.3`.
+
+## Evidence
+
+### T008 — 2026-08-20, `1.14.4` candidate
+
+Run on a settled tree. The first attempt at this gate is not reported here because it was invalid
+twice over: its `EXIT=$?` was captured after a pipe through `tail` and therefore recorded `tail`'s
+status rather than the command's, and `specs/ROADMAP.md` was edited while the run was in flight. The
+first defect hid a real `format:check` failure on two unformatted files; the second meant even the
+passing sections measured a tree that no longer existed. Both were corrected and the gate re-run from
+a stopped tree with real exit codes.
+
+- `npm run ci`: **exit 0** — 137 non-browser + 15 browser files, no browser retry on this run.
+- Coverage, unit phase, `--experimental-test-coverage`: **87.88% lines, 87.38% branches, 84.40%
+  functions** (1.14.3 recorded 87.85 / 87.35 / 84.39).
+- `bash scripts/npm-pack-smoke.sh`: **exit 0**.
+- `bash scripts/ci-docker-smoke.sh`: **exit 0**, 5 PASS.
+- `git diff --check`: **exit 0**.
+- Mutation evidence for T001: restoring the old successor in `public/index.en.html` fails four of the
+  nine cycle checks; restoring the file returns all nine to green.
+- Mutation evidence carried over from the 1.14.3 release: stubbing the head IIFE's `set()` to a no-op
+  still fails `single-chrome-control-browser.test.js`, so the liveness guarantee survived the rewrite.
+
+- Production evidence is recorded if and when T011 is separately authorized.

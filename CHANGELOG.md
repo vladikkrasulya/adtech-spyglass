@@ -6,6 +6,31 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.14.4 — the theme button that answered on the first press
+
+- Reordered the shell theme cycle. It has three states (auto, light, dark) and
+  two appearances, so one press in the cycle cannot repaint — that is
+  arithmetic, and ordering can only decide which press it is. It used to be the
+  first press out of auto: on a light-preferring machine auto already resolved
+  to light, so moving to explicit light changed nothing on screen. That is the
+  press every new visitor makes, and there it read as a broken button. The
+  silent press now sits on the return into auto, where an unchanged appearance
+  is the correct answer because the stored value already equals the system's.
+- The control's title and glyph now name the state the next press will produce,
+  so the press that cannot repaint still answers the user.
+- Translated the Russian shell's theme control. `public/index.ru.html` shipped
+  the English titles and an English fallback `aria-label` while the Ukrainian
+  shell was translated; nothing compared the two, so the gap sat in production.
+  A regression now asserts that no localized shell leaves an English state name
+  behind.
+- Dropped the stale static `title` from the About pages' theme button. It
+  hardcoded the old cycle, and the correct value depends on the visitor's system
+  preference, so no static value can be right; the shell script sets it.
+- Added `tests/theme-cycle.test.js`, which pins the cycle under **both** system
+  preferences instead of inheriting the developer machine's. That omission is
+  how the original defect shipped, and how the browser check guarding this
+  control stayed red on CI for eighteen runs while passing locally.
+
 ### v1.14.3 — one control language, including phones
 
 - Added an ortbtools-owned control layer across every public shell. Primary,

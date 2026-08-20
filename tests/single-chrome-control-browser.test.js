@@ -250,13 +250,15 @@ test(
       // data-theme", and asserting that is how this check spent four days
       // failing on CI while passing on every developer machine.
       //
-      // The control cycles THREE states — auto → light → dark → auto — stored
+      // The control cycles THREE states — auto → the value opposite what is on
+      // screen → the system-matching value → auto — stored
       // under 'kt-theme' by the head IIFE in public/index.*.html, which owns
       // that key. `data-theme` carries only the RESOLVED theme, so it is only
-      // ever 'light' or 'dark'. When the machine prefers light and the stored
-      // state is auto, the first press moves auto → light and the resolved
-      // value does not move: light → light. That is correct behaviour, and a
-      // two-state assertion calls it a failure. Developer machines here run a
+      // ever 'light' or 'dark'. Three states over two appearances means one
+      // press in the cycle cannot repaint; 007 moved that press onto the
+      // return INTO auto, where an unchanged appearance is correct, and off
+      // the first press out of auto, which every new visitor makes. A
+      // two-state assertion calls the whole arrangement a failure. Developer machines here run a
       // dark desktop, so the assertion happened to hold locally and broke on
       // GitHub's light-defaulting runner — the classic shape of a test that
       // encodes its author's environment.
@@ -265,80 +267,97 @@ test(
       // auto, and walk the whole cycle. Liveness — the thing this check is
       // actually for — is that the resolved theme reaches BOTH values over one
       // cycle. A dead button cannot do that.
-      await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
-      await page.goto(`${serverInfo.url}/inspector`, {
-        waitUntil: 'networkidle2',
-        timeout: 30000,
-      });
-      await delay(2200);
-      await page.evaluate(() => {
-        try {
-          localStorage.removeItem('kt-theme');
-        } catch (_e) {
-          /* blocked storage degrades to auto, which is the state we want */
-        }
-      });
-      await page.reload({ waitUntil: 'networkidle2', timeout: 30000 });
-      await delay(2200);
-
-      const readState = () =>
-        page.evaluate(() => {
-          const label = document.querySelector('[data-theme-label]');
-          let stored = null;
+      for (const scheme of ['light', 'dark']) {
+        const sys = scheme;
+        const opp = scheme === 'dark' ? 'light' : 'dark';
+        await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: scheme }]);
+        await page.goto(`${serverInfo.url}/inspector`, {
+          waitUntil: 'networkidle2',
+          timeout: 30000,
+        });
+        await delay(2200);
+        await page.evaluate(() => {
           try {
-            stored = localStorage.getItem('kt-theme');
+            localStorage.removeItem('kt-theme');
           } catch (_e) {
-            stored = null;
+            /* blocked storage degrades to auto, which is the state we want */
           }
-          return {
-            stored,
-            resolved: document.documentElement.getAttribute('data-theme'),
-            label: label ? (label.textContent || '').trim() : null,
-          };
         });
+        await page.reload({ waitUntil: 'networkidle2', timeout: 30000 });
+        await delay(2200);
 
-      const pressTheme = () =>
-        page.evaluate(() => {
-          const all = [
-            ...document.querySelectorAll('.kt-theme-toggle, [data-action="toggle-theme"]'),
-          ];
-          const visible = all.find((e) => e.getBoundingClientRect().width > 0);
-          /** @type {any} */ (visible || all[0]).click();
-        });
+        const readState = () =>
+          page.evaluate(() => {
+            const label = document.querySelector('[data-theme-label]');
+            let stored = null;
+            try {
+              stored = localStorage.getItem('kt-theme');
+            } catch (_e) {
+              stored = null;
+            }
+            return {
+              stored,
+              resolved: document.documentElement.getAttribute('data-theme'),
+              label: label ? (label.textContent || '').trim() : null,
+            };
+          });
 
-      const walk = [await readState()];
-      for (let i = 0; i < 3; i += 1) {
-        await pressTheme();
-        await delay(600);
-        walk.push(await readState());
+        const pressTheme = () =>
+          page.evaluate(() => {
+            const all = [
+              ...document.querySelectorAll('.kt-theme-toggle, [data-action="toggle-theme"]'),
+            ];
+            const visible = all.find((e) => e.getBoundingClientRect().width > 0);
+            /** @type {any} */ (visible || all[0]).click();
+          });
+
+        const walk = [await readState()];
+        for (let i = 0; i < 3; i += 1) {
+          await pressTheme();
+          await delay(600);
+          walk.push(await readState());
+        }
+
+        const trail = walk
+          .map((s) => `${s.stored === null ? 'auto' : s.stored}/${s.resolved}`)
+          .join(' → ');
+
+        assert.deepEqual(
+          walk.map((s) => s.stored),
+          [null, opp, sys, null],
+          `${scheme}: the theme control did not walk auto → ${opp} → ${sys} → auto (${trail})`,
+        );
+
+        const resolvedSeen = new Set(walk.map((s) => s.resolved));
+        assert.ok(
+          resolvedSeen.has('light') && resolvedSeen.has('dark'),
+          `the one visible theme control never reached both resolved themes — a dead ` +
+            `button looks exactly like this (${trail})`,
+        );
+
+        // The press that does not move the resolved theme must still say
+        // something, or the user presses a button and the interface answers with
+        // nothing at all.
+        assert.notEqual(
+          walk[0].resolved,
+          walk[1].resolved,
+          `${scheme}: the first press out of auto must repaint — that is the press every ` +
+            `new visitor makes (${trail})`,
+        );
+
+        assert.equal(
+          walk[2].resolved,
+          walk[3].resolved,
+          `${scheme}: the silent press must be the return into auto, not any other (${trail})`,
+        );
+
+        assert.notEqual(
+          walk[3].label,
+          walk[2].label,
+          `${scheme}: the press into auto left the label unchanged at "${walk[2].label}", so the ` +
+            `one press that cannot repaint gives the user no feedback either`,
+        );
       }
-
-      const trail = walk
-        .map((s) => `${s.stored === null ? 'auto' : s.stored}/${s.resolved}`)
-        .join(' → ');
-
-      assert.deepEqual(
-        walk.map((s) => s.stored),
-        [null, 'light', 'dark', null],
-        `the theme control did not walk auto → light → dark → auto (${trail})`,
-      );
-
-      const resolvedSeen = new Set(walk.map((s) => s.resolved));
-      assert.ok(
-        resolvedSeen.has('light') && resolvedSeen.has('dark'),
-        `the one visible theme control never reached both resolved themes — a dead ` +
-          `button looks exactly like this (${trail})`,
-      );
-
-      // The press that does not move the resolved theme must still say
-      // something, or the user presses a button and the interface answers with
-      // nothing at all.
-      assert.notEqual(
-        walk[1].label,
-        walk[0].label,
-        `auto → light left the label unchanged at "${walk[0].label}", so the one press ` +
-          `that cannot move the resolved theme gives the user no feedback either`,
-      );
     } finally {
       if (browser) await browser.close().catch(() => {});
       if (serverInfo) await stopChild(serverInfo.proc);
