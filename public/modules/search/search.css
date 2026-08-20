@@ -104,6 +104,9 @@
 @media (max-width: 600px) {
   .sg-search-dropdown {
     width: calc(100vw - 16px);
+    /* Clear the desktop cap: otherwise the panel is centred as 374px wide
+       but rendered at 358px, producing 8px/24px asymmetric gutters. */
+    max-width: none;
     right: auto;
     left: 50%;
     margin-right: 0;
@@ -131,20 +134,36 @@
   gap: 6px;
 }
 .sg-search-hint__chip {
+  appearance: none;
   display: inline-block;
   padding: 3px 9px;
   border-radius: var(--r-pill, 999px);
   background: var(--bg-2);
   border: 1px solid var(--border);
+  font-family: inherit;
   font-size: 12px;
+  line-height: 1.5;
   color: var(--text-muted);
   cursor: pointer;
-  transition: background var(--t-fast, 150ms);
+  transition:
+    background var(--t-fast, 150ms),
+    border-color var(--t-fast, 150ms),
+    color var(--t-fast, 150ms);
   user-select: none;
 }
-.sg-search-hint__chip:hover {
+.sg-search-hint__chip:hover,
+.sg-search-hint__chip:focus-visible {
   background: var(--accent-soft);
+  border-color: var(--accent);
   color: var(--text);
+}
+.sg-search-hint__chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sg-search-hint__chip:active {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 /* ── "Nothing found" ───────────────────────────────────── */

@@ -1,0 +1,359 @@
+/* ============================================================
+   ortbtools product controls
+
+   Loaded immediately after the vendored design system on every public
+   surface. This file owns application-level button states and the shared
+   standalone topnav controls; route styles may refine geometry, but should
+   not have to reinvent interaction states.
+   ============================================================ */
+
+:root {
+  /* Filled controls need a darker light-theme blue than the brand accent:
+     #fff on #0369a1 is 5.93:1. Keep --accent unchanged for links, outlines,
+     decoration and product identity. */
+  --control-primary-background: #0369a1;
+  --control-primary-hover: #075985;
+  --control-primary-foreground: #ffffff;
+  --control-danger-foreground: #ffffff;
+  --control-success-ink: #166534;
+  --control-warning-ink: #92400e;
+  --control-danger-ink: #b91c1c;
+  --control-radius: 6px;
+  --control-menu-radius: 10px;
+}
+
+[data-theme='dark'] {
+  --control-primary-background: #38bdf8;
+  --control-primary-hover: #5fcbfa;
+  --control-primary-foreground: #0a111f;
+  --control-danger-foreground: #0a111f;
+  --control-success-ink: var(--success);
+  --control-warning-ink: var(--warning);
+  --control-danger-ink: var(--danger);
+}
+
+/* Product controls have stable geometry on standalone pages and SPA routes;
+   neither depends on whether the shell's v2 token layer is present. */
+.btn {
+  border-radius: var(--control-radius);
+}
+
+.btn-primary {
+  background: var(--control-primary-background);
+  color: var(--control-primary-foreground);
+  border-color: var(--control-primary-background);
+}
+
+.btn-primary:hover:not(:disabled):not([aria-disabled='true']):not([aria-busy='true']):not(
+    .is-loading
+  ) {
+  background: var(--control-primary-hover);
+  border-color: var(--control-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.btn-secondary:hover:not(:disabled):not([aria-disabled='true']):not([aria-busy='true']):not(
+    .is-loading
+  ) {
+  background: var(--bg-2);
+  border-color: var(--text-dim);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: var(--control-danger-foreground);
+  border-color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled):not([aria-disabled='true']):not([aria-busy='true']):not(
+    .is-loading
+  ) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Native disabled, ARIA-disabled anchors, and asynchronous buttons must read
+   as unavailable before the user tries them. aria-disabled remains a semantic
+   contract for the caller; pointer-events prevents it looking hover-active. */
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: saturate(0.55);
+}
+
+.btn[aria-disabled='true'] {
+  pointer-events: none;
+}
+
+.btn[aria-busy='true'],
+.btn.is-loading {
+  opacity: 0.68;
+  cursor: progress;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.btn-primary:disabled,
+.btn-primary[aria-disabled='true'],
+.btn-primary[aria-busy='true'],
+.btn-primary.is-loading {
+  background: var(--control-primary-background);
+  border-color: var(--control-primary-background);
+}
+
+.btn-secondary:disabled,
+.btn-secondary[aria-disabled='true'],
+.btn-secondary[aria-busy='true'],
+.btn-secondary.is-loading {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+.btn-ghost:disabled,
+.btn-ghost[aria-disabled='true'],
+.btn-ghost[aria-busy='true'],
+.btn-ghost.is-loading {
+  background: transparent;
+  border-color: var(--border-strong);
+}
+
+.btn-danger:disabled,
+.btn-danger[aria-disabled='true'],
+.btn-danger[aria-busy='true'],
+.btn-danger.is-loading {
+  background: var(--danger);
+}
+
+/* Filled selection chips use the same accessible foreground/background pair
+   as primary buttons. Route-specific chip selectors consume these tokens too. */
+.chip.active,
+.lang-badge.active {
+  background: var(--control-primary-background);
+  border-color: var(--control-primary-background);
+  color: var(--control-primary-foreground);
+}
+
+/* Disclosure buttons retain their quiet hierarchy while making the open
+   state explicit. */
+details[open] > summary.btn-secondary,
+details[open] > summary.btn-ghost,
+.btn-secondary[aria-expanded='true'],
+.btn-ghost[aria-expanded='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: none;
+}
+
+/* ── Shared language disclosure ─────────────────────────────────────── */
+
+/* Account and About are server-rendered surfaces, so their language, theme,
+   and back controls share one small action group in the document flow. The
+   vendored design system deliberately makes a bare .kt-theme-toggle float at
+   the viewport corner; the topnav qualifier below is the explicit opt-in to
+   normal header geometry. */
+.kt-topnav > .kt-topnav-inner {
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+}
+
+.kt-topnav .kt-brand {
+  min-width: 0;
+}
+
+.kt-topnav .kt-brand > :last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kt-topnav-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+.kt-topnav .kt-theme-toggle {
+  position: static;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+  font-size: var(--fs-md);
+  transform: none;
+}
+
+.kt-topnav .kt-theme-toggle:hover {
+  border-color: var(--text-dim);
+  background: var(--bg-2);
+  transform: none;
+}
+
+.kt-topnav .kt-theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.kt-lang-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.kt-lang-menu > summary.kt-lang-toggle {
+  position: static;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  width: auto;
+  min-width: 56px;
+  height: 36px;
+  padding: 0 var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+
+.kt-lang-menu > summary.kt-lang-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.kt-lang-menu > summary.kt-lang-toggle::marker {
+  content: '';
+}
+
+.kt-lang-menu > summary.kt-lang-toggle:hover {
+  border-color: var(--text-dim);
+  background: var(--bg-2);
+  transform: none;
+}
+
+.kt-lang-menu > summary.kt-lang-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.kt-lang-menu[open] > summary.kt-lang-toggle {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  transform: none;
+}
+
+.kt-lang-menu .kt-lang-caret {
+  opacity: 0.6;
+  transition: transform var(--t-fast);
+}
+
+.kt-lang-menu[open] .kt-lang-caret {
+  transform: rotate(180deg);
+}
+
+.kt-lang-menu > .kt-lang-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-end: 0;
+  z-index: 100;
+  min-width: 200px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-menu-radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* Author display rules override the browser's native closed-details rule.
+   Keep the popup out of layout, paint and hit-testing until it is open. */
+details.kt-lang-menu:not([open]) > .kt-lang-menu-list {
+  display: none !important;
+}
+
+.kt-lang-menu > .kt-lang-menu-list a {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--control-radius);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+
+.kt-lang-menu > .kt-lang-menu-list a:hover {
+  background: var(--bg-2);
+}
+
+.kt-lang-menu > .kt-lang-menu-list a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.kt-lang-menu > .kt-lang-menu-list a[aria-current='true'] {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .kt-topnav > .kt-topnav-inner {
+    gap: var(--space-3);
+    padding-inline: var(--space-3);
+  }
+
+  /* The brand is already a route back to ortbtools. Removing the duplicate
+     text link leaves the 320px header enough room for two complete 36px
+     controls without a second row or an edge-clipped logo. */
+  .kt-topnav-actions > a.btn {
+    display: none;
+  }
+
+  /* On phones the disclosure becomes part of the header's vertical footprint
+     while open. The menu remains absolutely positioned for a stable trigger,
+     and the reserved 128px is its measured three-row height plus the 4px gap;
+     main content therefore starts below it instead of being painted over. */
+  .kt-topnav > .kt-topnav-inner:has(.kt-lang-menu[open]) {
+    padding-bottom: calc(var(--space-3) + 128px);
+  }
+
+  .kt-lang-menu > .kt-lang-menu-list {
+    width: max-content;
+    min-width: min(200px, calc(100vw - var(--space-6)));
+    max-width: calc(100vw - var(--space-6));
+    overflow-wrap: anywhere;
+  }
+}

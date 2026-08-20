@@ -106,6 +106,7 @@
 
   let _root = null;
   let _stylesInjected = false;
+  let _returnFocus = null;
   // Field state in the open modal: path → boolean (checked).
   let _selection = new Map();
 
@@ -123,7 +124,7 @@
       '.ortbtools-intel-modal{',
       '  background:var(--surface, #fff);',
       '  color:var(--text, #1a1a1a);',
-      '  border-radius:10px;',
+      '  border-radius:var(--control-menu-radius, var(--r-md, 10px));',
       '  border:1px solid var(--border, #e0e0e0);',
       '  width:min(780px, 100%);max-height:80vh;',
       '  display:flex;flex-direction:column;',
@@ -139,10 +140,10 @@
       '.ortbtools-intel-modal__close{',
       '  background:transparent;border:none;cursor:pointer;',
       '  font-size:20px;line-height:1;color:var(--text-dim, #999);',
-      '  padding:4px 8px;border-radius:4px;',
+      '  padding:4px 8px;border-radius:var(--control-radius, var(--r-sm, 6px));',
       '}',
       '.ortbtools-intel-modal__close:hover{background:var(--bg-2, #f3f3f3);color:var(--text)}',
-      '.ortbtools-intel-modal__body{padding:16px 20px;overflow-y:auto;flex:1}',
+      '.ortbtools-intel-modal__body{padding:16px 20px;overflow-y:auto;flex:1;min-height:0}',
       '.ortbtools-intel-modal__field{',
       '  display:block;font-size:12px;color:var(--text-muted, #666);',
       '  margin-bottom:6px;',
@@ -151,18 +152,22 @@
       '  display:flex;gap:8px;align-items:center;margin-bottom:14px;',
       '}',
       '.ortbtools-intel-modal__name-input{',
-      '  flex:1;padding:6px 10px;font:13px var(--font-body, system-ui, sans-serif);',
+      '  flex:1;min-width:0;padding:6px 10px;font:13px var(--font-body, system-ui, sans-serif);',
       '  background:var(--surface);border:1px solid var(--border, #e0e0e0);',
-      '  border-radius:4px;color:var(--text);',
+      '  border-radius:var(--control-radius, var(--r-sm, 6px));color:var(--text);',
       '}',
-      '.ortbtools-intel-modal__name-input:focus{outline:none;border-color:var(--accent, #ffc83d)}',
+      '.ortbtools-intel-modal__name-input:focus-visible{',
+      '  outline:2px solid var(--focus, var(--accent, #0284c7));outline-offset:2px;',
+      '  border-color:var(--focus, var(--accent, #0284c7));',
+      '}',
       '.ortbtools-intel-modal__suggest-btn{',
       '  flex-shrink:0;padding:6px 12px;font:12px var(--font-body, system-ui, sans-serif);',
       '  background:var(--bg-2, #f8f8f8);color:var(--text);',
-      '  border:1px solid var(--border, #e0e0e0);border-radius:4px;cursor:pointer;',
+      '  border:1px solid var(--border, #e0e0e0);',
+      '  border-radius:var(--control-radius, var(--r-sm, 6px));cursor:pointer;',
       '  white-space:nowrap;',
       '}',
-      '.ortbtools-intel-modal__suggest-btn:hover{',
+      '.ortbtools-intel-modal__suggest-btn:not(:disabled):hover{',
       '  background:var(--accent-soft, #fff4d4);border-color:var(--accent, #ffc83d);',
       '}',
       '.ortbtools-intel-modal__suggest-btn:disabled{',
@@ -185,8 +190,9 @@
       '  margin-bottom:6px;',
       '}',
       '.ortbtools-intel-cluster__use-btn{',
-      '  background:var(--accent, #ffc83d);color:var(--text);',
-      '  border:none;border-radius:4px;padding:5px 12px;',
+      '  background:var(--control-primary-background, var(--accent, #0369a1));',
+      '  color:var(--control-primary-foreground, #fff);',
+      '  border:none;border-radius:var(--control-radius, var(--r-sm, 6px));padding:5px 12px;',
       '  font:12px var(--font-body);font-weight:600;cursor:pointer;',
       '  margin-left:auto;',
       '}',
@@ -227,25 +233,49 @@
       '}',
       '.ortbtools-intel-modal__footer-info{',
       '  font:11px var(--font-mono);color:var(--text-dim);',
-      '  margin-right:auto;',
+      '  margin-right:auto;min-width:0;overflow-wrap:anywhere;',
       '}',
       '.ortbtools-intel-modal__btn{',
       '  padding:6px 14px;font:13px var(--font-body);',
-      '  border-radius:4px;cursor:pointer;',
+      '  border-radius:var(--control-radius, var(--r-sm, 6px));cursor:pointer;',
       '  border:1px solid var(--border, #e0e0e0);',
       '  background:var(--surface);color:var(--text);',
       '}',
-      '.ortbtools-intel-modal__btn:hover{background:var(--bg-2)}',
+      '.ortbtools-intel-modal__btn:not(:disabled):hover{background:var(--bg-2)}',
       '.ortbtools-intel-modal__btn--primary{',
-      '  background:var(--accent, #ffc83d);border-color:var(--accent);',
-      '  color:var(--text);font-weight:600;',
+      '  background:var(--control-primary-background, var(--accent, #0369a1));',
+      '  border-color:var(--control-primary-background, var(--accent, #0369a1));',
+      '  color:var(--control-primary-foreground, #fff);font-weight:600;',
+      '}',
+      '.ortbtools-intel-modal__btn--primary:not(:disabled):hover{',
+      '  background:var(--control-primary-hover, #075985);',
+      '  border-color:var(--control-primary-hover, #075985);',
       '}',
       '.ortbtools-intel-modal__btn--primary:disabled{',
       '  opacity:0.5;cursor:not-allowed;',
       '}',
+      '.ortbtools-intel-modal__close:focus-visible,',
+      '.ortbtools-intel-modal__suggest-btn:focus-visible,',
+      '.ortbtools-intel-cluster__use-btn:focus-visible,',
+      '.ortbtools-intel-modal__btn:focus-visible,',
+      '.ortbtools-intel-fieldlist__row input:focus-visible{',
+      '  outline:2px solid var(--focus, var(--accent, #0284c7));outline-offset:2px;',
+      '}',
       '.ortbtools-intel-modal__empty{',
       '  text-align:center;padding:30px;',
       '  color:var(--text-dim);font-size:12px;',
+      '}',
+      '@media (max-width:480px){',
+      '  .ortbtools-intel-modal-bg{padding:12px}',
+      '  .ortbtools-intel-modal{max-height:calc(100dvh - 24px)}',
+      '  .ortbtools-intel-modal__header,',
+      '  .ortbtools-intel-modal__body{padding:12px}',
+      '  .ortbtools-intel-modal__name-row{flex-direction:column;align-items:stretch}',
+      '  .ortbtools-intel-modal__name-input{width:100%;box-sizing:border-box}',
+      '  .ortbtools-intel-modal__suggest-btn{width:100%;white-space:normal}',
+      '  .ortbtools-intel-modal__footer{padding:12px;flex-wrap:wrap}',
+      '  .ortbtools-intel-modal__footer-info{flex:1 0 100%;margin-right:0}',
+      '  .ortbtools-intel-modal__btn{flex:1 1 8rem}',
       '}',
     ].join('');
     const style = document.createElement('style');
@@ -261,17 +291,17 @@
     _root.id = 'ortbtoolsIntelBuilder';
     _root.hidden = true;
     _root.innerHTML = [
-      '<div class="ortbtools-intel-modal" role="dialog" aria-modal="true" aria-labelledby="ortbtoolsIntelBuilderTitle">',
+      '<div class="ortbtools-intel-modal" role="dialog" aria-modal="true" aria-labelledby="ortbtoolsIntelBuilderTitle" tabindex="-1">',
       '  <div class="ortbtools-intel-modal__header">',
       '    <span aria-hidden="true">🧬</span>',
       '    <span class="ortbtools-intel-modal__title" id="ortbtoolsIntelBuilderTitle"></span>',
-      '    <button class="ortbtools-intel-modal__close" aria-label="Close" data-builder-close>×</button>',
+      '    <button type="button" class="ortbtools-intel-modal__close" aria-label="Close" data-builder-close>×</button>',
       '  </div>',
       '  <div class="ortbtools-intel-modal__body" data-builder-body></div>',
       '  <div class="ortbtools-intel-modal__footer">',
       '    <span class="ortbtools-intel-modal__footer-info" data-builder-info></span>',
-      '    <button class="ortbtools-intel-modal__btn" data-builder-cancel></button>',
-      '    <button class="ortbtools-intel-modal__btn ortbtools-intel-modal__btn--primary" data-builder-create disabled></button>',
+      '    <button type="button" class="ortbtools-intel-modal__btn" data-builder-cancel></button>',
+      '    <button type="button" class="ortbtools-intel-modal__btn ortbtools-intel-modal__btn--primary" data-builder-create disabled></button>',
       '  </div>',
       '</div>',
     ].join('');
@@ -283,10 +313,51 @@
     _root.querySelector('[data-builder-close]').addEventListener('click', close);
     _root.querySelector('[data-builder-cancel]').addEventListener('click', close);
     _root.querySelector('[data-builder-create]').addEventListener('click', create);
-    document.addEventListener('keydown', (ev) => {
-      if (!_root.hidden && ev.key === 'Escape') close();
-    });
+    document.addEventListener('keydown', handleModalKeydown);
     return _root;
+  }
+
+  function focusableControls() {
+    if (!_root) return [];
+    return Array.from(
+      _root.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter(
+      (el) =>
+        !el.hidden &&
+        !el.closest('[hidden]') &&
+        el.getAttribute('aria-hidden') !== 'true' &&
+        el.style.display !== 'none',
+    );
+  }
+
+  function handleModalKeydown(ev) {
+    if (!_root || _root.hidden) return;
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      close();
+      return;
+    }
+    if (ev.key !== 'Tab') return;
+
+    const controls = focusableControls();
+    if (!controls.length) {
+      ev.preventDefault();
+      _root.querySelector('[role="dialog"]')?.focus();
+      return;
+    }
+
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    const active = document.activeElement;
+    if (ev.shiftKey && (active === first || !_root.contains(active))) {
+      ev.preventDefault();
+      last.focus();
+    } else if (!ev.shiftKey && (active === last || !_root.contains(active))) {
+      ev.preventDefault();
+      first.focus();
+    }
   }
 
   // Lookup against the central i18n bundle (window.t). Single source of
@@ -316,17 +387,32 @@
 
   async function open() {
     ensureRoot();
+    if (_root.hidden) {
+      const active = document.activeElement;
+      _returnFocus = active && typeof active.focus === 'function' ? active : null;
+    }
     const t = localised();
     _root.querySelector('#ortbtoolsIntelBuilderTitle').textContent = t.title;
     _root.querySelector('[data-builder-cancel]').textContent = t.cancel;
     _root.querySelector('[data-builder-create]').textContent = t.create;
     _root.hidden = false;
+    _root.querySelector('[data-builder-close]')?.focus();
     _selection = new Map();
     await render();
+    if (_root.hidden) return;
+    const initial =
+      _root.querySelector('[data-builder-name]') || _root.querySelector('[data-builder-close]');
+    if (initial) initial.focus();
   }
 
   function close() {
-    if (_root) _root.hidden = true;
+    if (!_root || _root.hidden) return;
+    _root.hidden = true;
+    const target = _returnFocus;
+    _returnFocus = null;
+    if (target && target.isConnected && typeof target.focus === 'function') {
+      target.focus({ preventScroll: true });
+    }
   }
 
   async function render() {
@@ -355,12 +441,14 @@
     // label-row layout keeps name + button on the same line so the input
     // doesn't shift when the button appears/disappears.
     parts.push(
-      '<label class="ortbtools-intel-modal__field">' + escapeHtml(t.nameLabel) + '</label>',
+      '<label class="ortbtools-intel-modal__field" for="ortbtoolsIntelBuilderName">' +
+        escapeHtml(t.nameLabel) +
+        '</label>',
       '<div class="ortbtools-intel-modal__name-row">',
-      '  <input type="text" class="ortbtools-intel-modal__name-input" data-builder-name placeholder="' +
+      '  <input type="text" id="ortbtoolsIntelBuilderName" class="ortbtools-intel-modal__name-input" data-builder-name placeholder="' +
         escapeHtml(t.namePlaceholder) +
         '">',
-      '  <button class="ortbtools-intel-modal__suggest-btn" data-suggest-name title="' +
+      '  <button type="button" class="ortbtools-intel-modal__suggest-btn" data-suggest-name title="' +
         escapeHtml(t.suggestNameTooltip || 'Suggest name with deterministic server-side rules') +
         '">🤖 ' +
         escapeHtml(t.suggestName || 'Suggest') +
@@ -384,7 +472,7 @@
             ' fields · score ' +
             cl.totalCount.toFixed(0) +
             '</span>',
-          '    <button class="ortbtools-intel-cluster__use-btn" data-cluster-pick="' +
+          '    <button type="button" class="ortbtools-intel-cluster__use-btn" data-cluster-pick="' +
             escapeAttr(cl.fields.join('|')) +
             '">' +
             escapeHtml(t.useCluster) +

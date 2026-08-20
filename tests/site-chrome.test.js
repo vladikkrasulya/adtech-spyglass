@@ -278,6 +278,78 @@ test('topbar: the compact brand keeps the locale prefix', () => {
 
 // ── search ───────────────────────────────────────────────────────────────
 
+test('topbar: mobile nav and search disclosures expose and restore their state', async () => {
+  const w = makeDom();
+  const { root, unmount } = mountTopbar(w);
+  const shell = w.document.querySelector('.kt-shell');
+
+  const navToggle = root.querySelector('[data-action="toggle-nav"]');
+  assert.equal(navToggle.getAttribute('aria-controls'), 'kt-nav-root');
+  assert.equal(navToggle.getAttribute('aria-expanded'), 'false');
+  navToggle.click();
+  assert.equal(shell.classList.contains('is-nav-open'), true);
+  assert.equal(navToggle.getAttribute('aria-expanded'), 'true');
+  navToggle.click();
+  assert.equal(shell.classList.contains('is-nav-open'), false);
+  assert.equal(navToggle.getAttribute('aria-expanded'), 'false');
+
+  const searchToggle = root.querySelector('[data-action="toggle-search"]');
+  const search = root.querySelector('.kt-topbar__search');
+  const input = root.querySelector('.kt-topbar__search-input');
+  assert.equal(searchToggle.getAttribute('aria-controls'), search.id);
+  assert.equal(searchToggle.getAttribute('aria-expanded'), 'false');
+
+  searchToggle.click();
+  assert.equal(root.classList.contains('is-search-open'), true);
+  assert.equal(searchToggle.getAttribute('aria-expanded'), 'true');
+  await tick();
+  assert.equal(w.document.activeElement, input, 'opening places focus in the search field');
+
+  input.dispatchEvent(
+    new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+  );
+  await tick();
+  assert.equal(root.classList.contains('is-search-open'), false);
+  assert.equal(searchToggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(w.document.activeElement, searchToggle, 'Escape restores focus to the opener');
+
+  const langList = root.querySelector('.kt-lang-menu-list');
+  assert.equal(langList.getAttribute('role'), null, 'native details does not claim menu semantics');
+  assert.ok(
+    [...langList.querySelectorAll('a')].every((link) => !link.hasAttribute('role')),
+    'language links keep native link semantics',
+  );
+  unmount();
+});
+
+test('mobile rail close control follows every topbar drawer transition', async () => {
+  const w = makeDom();
+  Object.defineProperty(w, 'innerWidth', { configurable: true, value: 390 });
+  w.matchMedia = (query) => ({
+    matches: query.includes('max-width: 1023px'),
+    media: query,
+    addEventListener() {},
+    removeEventListener() {},
+  });
+  const nav = mountNav(w);
+  const topbar = mountTopbar(w);
+  await tick();
+  const opener = topbar.root.querySelector('[data-action="toggle-nav"]');
+  const close = nav.root.querySelector('[data-action="collapse-nav"]');
+
+  assert.equal(close.getAttribute('aria-expanded'), 'false');
+  opener.click();
+  assert.equal(close.getAttribute('aria-expanded'), 'true', 'opening through topbar syncs rail');
+
+  w.dispatchEvent(new w.CustomEvent('kt:pushstate'));
+  assert.equal(close.getAttribute('aria-expanded'), 'false', 'route close syncs rail');
+  await tick();
+
+  topbar.unmount();
+  nav.unmount();
+  w.close();
+});
+
 /** Loads the search module into jsdom with a scripted fetch, and exposes the
  *  internals the cache cases need. */
 function loadSearch(w) {

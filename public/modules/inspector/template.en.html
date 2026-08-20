@@ -21,6 +21,7 @@
 </div>
 <header class="workbar">
   <button
+    type="button"
     class="workbar-drawer-btn"
     id="toggleSidebarLeft"
     data-static-icon="1"
@@ -28,6 +29,8 @@
     data-side="left"
     title="History & summary"
     aria-label="History & summary"
+    aria-controls="inspectorSidebarLeft"
+    aria-expanded="false"
   >
     <svg
       viewBox="0 0 24 24"
@@ -42,6 +45,57 @@
       <path d="M9 4v16" />
     </svg>
   </button>
+  <details class="workbar-settings-menu">
+    <summary
+      class="workbar-settings-toggle"
+      title="Validation settings"
+      aria-label="Validation settings"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
+        <path
+          d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.6v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2V9.6h.4A1.7 1.7 0 0 0 4.1 8a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.2l.06.06A1.7 1.7 0 0 0 8.5 3.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V2h4v.1A1.7 1.7 0 0 0 15 3.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.4v4h-.4a1.7 1.7 0 0 0-1.7 1.6Z"
+        />
+      </svg>
+      <span class="workbar-settings-caret" aria-hidden="true">▾</span>
+    </summary>
+    <div class="workbar-settings-panel">
+      <div class="workbar-settings-title">Validation settings</div>
+      <label class="workbar-settings-field" for="versionPinSelectorMobile">
+        <span>Expected version</span>
+        <select
+          class="format-pill format-pill-select"
+          id="versionPinSelectorMobile"
+          data-action="change-version-pin"
+        >
+          <option value="">auto</option>
+          <option value="2.5">oRTB 2.5</option>
+          <option value="2.6">oRTB 2.6</option>
+          <option value="3.0">oRTB 3.0</option>
+        </select>
+      </label>
+      <label class="workbar-settings-field" for="dialectSelectorMobile">
+        <span>Validation dialect</span>
+        <select
+          class="format-pill format-pill-select"
+          id="dialectSelectorMobile"
+          data-action="change-dialect"
+        >
+          <option value="iab">Standard IAB (oRTB 2.5)</option>
+          <option value="ext-rtb">Vendor · RTB</option>
+          <option value="inpage-push">Vendor · In-Page Push</option>
+        </select>
+      </label>
+    </div>
+  </details>
   <div class="format-bar" id="formatBar" hidden>
     <span class="validity-chip" id="validityChip"
       ><svg
@@ -63,6 +117,7 @@
       class="format-pill format-pill-select"
       id="versionPinSelector"
       data-action="change-version-pin"
+      aria-label="Expected oRTB version"
       title="Expected oRTB version. If detection lands elsewhere, the engine emits a warning with the field paths that triggered the flip. Leave on 'auto' to trust the detector."
     >
       <option value="">auto</option>
@@ -74,6 +129,7 @@
       class="format-pill format-pill-select"
       id="dialectSelector"
       data-action="change-dialect"
+      aria-label="Validation dialect"
       title="Validation-dialect switch — changes the rule set the engine applies to the payload"
     >
       <option value="iab">Standard IAB (oRTB 2.5)</option>
@@ -119,8 +175,8 @@
           <path d="m6 9 6 6 6-6" />
         </svg>
       </summary>
-      <div class="example-menu-list" role="menu">
-        <button data-action="load-demo" role="menuitem">
+      <div class="example-menu-list">
+        <button data-action="load-demo">
           <svg
             width="15"
             height="15"
@@ -141,74 +197,52 @@
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">IAB 2.6 · valid</span>
-        <button data-action="load-demo" data-type="iab-banner-valid" role="menuitem">
-          OpenRTB 2.6 banner
-        </button>
-        <button data-action="load-demo" data-type="iab-video-valid" role="menuitem">
-          OpenRTB 2.6 video
-        </button>
+        <button data-action="load-demo" data-type="iab-banner-valid">OpenRTB 2.6 banner</button>
+        <button data-action="load-demo" data-type="iab-video-valid">OpenRTB 2.6 video</button>
         <div class="menu-divider"></div>
         <span class="menu-label">control</span>
-        <button data-action="load-demo" data-type="clean-banner" role="menuitem">
-          clean banner (no findings)
-        </button>
+        <button data-action="load-demo" data-type="clean-banner">clean banner (no findings)</button>
         <div class="menu-divider"></div>
         <span class="menu-label">attack patterns</span>
-        <button data-action="load-demo" data-type="frame-bust-form" role="menuitem">
-          frame-bust (form)
-        </button>
-        <button data-action="load-demo" data-type="frame-bust-anchor" role="menuitem">
-          frame-bust (anchor)
-        </button>
-        <button data-action="load-demo" data-type="frozen-thread" role="menuitem">
-          frozen thread
-        </button>
-        <button data-action="load-demo" data-type="heavy-cpu" role="menuitem">heavy CPU</button>
-        <button data-action="load-demo" data-type="trap-invisible-overlay" role="menuitem">
+        <button data-action="load-demo" data-type="frame-bust-form">frame-bust (form)</button>
+        <button data-action="load-demo" data-type="frame-bust-anchor">frame-bust (anchor)</button>
+        <button data-action="load-demo" data-type="frozen-thread">frozen thread</button>
+        <button data-action="load-demo" data-type="heavy-cpu">heavy CPU</button>
+        <button data-action="load-demo" data-type="trap-invisible-overlay">
           invisible overlay
         </button>
-        <button data-action="load-demo" data-type="auto-redirect" role="menuitem">
-          auto-redirect
-        </button>
+        <button data-action="load-demo" data-type="auto-redirect">auto-redirect</button>
         <div class="menu-divider"></div>
         <span class="menu-label">VAST (video)</span>
-        <button data-action="load-demo" data-type="vast-clean-inline" role="menuitem">
-          clean VAST 4.2 InLine
-        </button>
-        <button data-action="load-demo" data-type="vast-broken-inline" role="menuitem">
+        <button data-action="load-demo" data-type="vast-clean-inline">clean VAST 4.2 InLine</button>
+        <button data-action="load-demo" data-type="vast-broken-inline">
           broken VAST (3 ERRORs)
         </button>
-        <button data-action="load-demo" data-type="vast-insecure-wrapper" role="menuitem">
+        <button data-action="load-demo" data-type="vast-insecure-wrapper">
           VAST Wrapper with http://
         </button>
-        <button data-action="load-demo" data-type="vast-vpaid-deprecated" role="menuitem">
+        <button data-action="load-demo" data-type="vast-vpaid-deprecated">
           VAST VPAID (deprecated)
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">oRTB 3.0</span>
-        <button data-action="load-demo" data-type="ortb30-clean" role="menuitem">
-          🆕 clean 3.0 BidRequest
-        </button>
-        <button data-action="load-demo" data-type="ortb30-broken-envelope" role="menuitem">
+        <button data-action="load-demo" data-type="ortb30-clean">🆕 clean 3.0 BidRequest</button>
+        <button data-action="load-demo" data-type="ortb30-broken-envelope">
           🆕 broken 3.0 BidRequest
         </button>
-        <button data-action="load-demo" data-type="ortb30-clean-response" role="menuitem">
+        <button data-action="load-demo" data-type="ortb30-clean-response">
           🆕 clean 3.0 BidResponse
         </button>
         <div class="menu-divider"></div>
         <span class="menu-label">Pop / Clickunder</span>
-        <button data-action="load-demo" data-type="pop-clean-request" role="menuitem">
+        <button data-action="load-demo" data-type="pop-clean-request">
           clean popunder BidRequest
         </button>
-        <button data-action="load-demo" data-type="pop-clean-response" role="menuitem">
+        <button data-action="load-demo" data-type="pop-clean-response">
           clean popunder BidResponse
         </button>
-        <button data-action="load-demo" data-type="pop-broken-adm" role="menuitem">
-          popunder with wrong adm
-        </button>
-        <button data-action="load-demo" data-type="popunder-feed" role="menuitem">
-          JSON-feed popunder
-        </button>
+        <button data-action="load-demo" data-type="pop-broken-adm">popunder with wrong adm</button>
+        <button data-action="load-demo" data-type="popunder-feed">JSON-feed popunder</button>
       </div>
     </details>
 
@@ -247,10 +281,9 @@
           <path d="m6 9 6 6 6-6" />
         </svg>
       </summary>
-      <div class="tools-menu-list" role="menu">
+      <div class="tools-menu-list">
         <button
           data-action="sim-bids"
-          role="menuitem"
           id="simBidsBtn"
           title="Simulate 3 DSP strategies with deterministic server-side rules — the raw BidRequest is processed transiently by ortbtools; no external model receives it"
         >
@@ -258,7 +291,6 @@
         </button>
         <button
           data-action="mirror"
-          role="menuitem"
           id="mirrorBtn"
           title="Generate the canonical counterpart of your paste"
         >
@@ -285,10 +317,10 @@
       <summary class="kt-lang-toggle" title="lang: English">
         <span class="kt-lang-current">EN</span><span class="kt-lang-caret">▾</span>
       </summary>
-      <div class="kt-lang-menu-list" role="menu">
-        <a href="/" role="menuitem" lang="en" aria-current="true">EN · English</a>
-        <a href="/uk/" role="menuitem" lang="uk">UK · Українська</a>
-        <a href="/ru/" role="menuitem" lang="ru">RU · Русский</a>
+      <div class="kt-lang-menu-list">
+        <a href="/" lang="en" aria-current="true">EN · English</a>
+        <a href="/uk/" lang="uk">UK · Українська</a>
+        <a href="/ru/" lang="ru">RU · Русский</a>
       </div>
     </details>
     <button class="kt-theme-toggle" type="button" aria-label="Toggle theme">◐</button>
@@ -341,13 +373,16 @@
 <!-- ── Main grid ── -->
 <main class="workbench-split">
   <!-- Left sidebar -->
-  <aside class="sidebar-left">
+  <aside class="sidebar-left" id="inspectorSidebarLeft" aria-hidden="true">
     <button
+      type="button"
       class="drawer-close"
       data-action="toggle-sidebar"
       data-side="left"
       title="Close the panel"
       aria-label="Close the panel"
+      aria-controls="inspectorSidebarLeft"
+      aria-expanded="false"
     >
       <svg
         viewBox="0 0 24 24"
@@ -688,9 +723,8 @@
               <path d="m6 9 6 6 6-6" />
             </svg>
           </summary>
-          <div class="tools-menu-list" role="menu">
+          <div class="tools-menu-list">
             <button
-              role="menuitem"
               id="shareLinkBtn"
               data-action="share-link"
               title="Copy a permalink — the fragment is absent from the initial request; opening it submits the payload to /api/analyze"
@@ -698,7 +732,6 @@
               share link
             </button>
             <button
-              role="menuitem"
               id="embedBtn"
               data-action="open-embed"
               title="Get an iframe snippet to embed this view in a blog, Notion or doc"
@@ -706,7 +739,6 @@
               embed
             </button>
             <button
-              role="menuitem"
               id="downloadBundleBtn"
               data-action="download-bundle"
               title="Download a JSON bundle (request + response + findings) for sharing or attaching to a bug ticket"
@@ -719,23 +751,25 @@
     </div>
 
     <div class="tab-bar">
-      <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
-        Findings <span class="tab-badge" id="validationBadge" hidden></span>
-      </button>
-      <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
-        Impressions <span class="tab-badge" id="inspectorBadge" hidden></span>
-      </button>
-      <button class="tab-btn" data-action="switch-tab" data-target="tCross">
-        Crosscheck <span class="tab-badge" id="crossBadge" hidden></span>
-      </button>
-      <button
-        class="tab-btn"
-        data-action="switch-tab"
-        data-target="tCreative"
-        title="Rendered creative and placement stats — was a permanent right column"
-      >
-        Creative
-      </button>
+      <div class="tab-list-scroll">
+        <button class="tab-btn" data-action="switch-tab" data-target="tValidation">
+          Findings <span class="tab-badge" id="validationBadge" hidden></span>
+        </button>
+        <button class="tab-btn active" data-action="switch-tab" data-target="tInspector">
+          Impressions <span class="tab-badge" id="inspectorBadge" hidden></span>
+        </button>
+        <button class="tab-btn" data-action="switch-tab" data-target="tCross">
+          Crosscheck <span class="tab-badge" id="crossBadge" hidden></span>
+        </button>
+        <button
+          class="tab-btn"
+          data-action="switch-tab"
+          data-target="tCreative"
+          title="Rendered creative and placement stats — was a permanent right column"
+        >
+          Creative
+        </button>
+      </div>
       <details class="tab-more">
         <summary class="tab-btn tab-more-toggle">
           More
@@ -753,7 +787,7 @@
             <path d="m6 9 6 6 6-6" />
           </svg>
         </summary>
-        <div class="tab-more-menu" role="menu">
+        <div class="tab-more-menu">
           <button
             class="tab-btn"
             data-action="switch-tab"
@@ -872,8 +906,10 @@
         <div class="preview-container" id="creativePreview">
           <div class="preview-placeholder">waiting for adm — paste BidResponse</div>
         </div>
-        <div class="preview-safe-overlay" data-action="reveal-creative" role="button" tabindex="0">
-          <button type="button" class="preview-safe-overlay__btn">Show creative</button>
+        <div class="preview-safe-overlay">
+          <button type="button" class="preview-safe-overlay__btn" data-action="reveal-creative">
+            Show creative
+          </button>
         </div>
       </div>
       <div class="section-title section-title--sub" style="margin-top: var(--space-3)">
@@ -919,7 +955,7 @@
     <span class="footer-sep">·</span>
     <span style="color: var(--text-dim)"
       >engine
-      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.14.2</span></span
+      <span id="engineVer" style="color: var(--text)" data-ortbtools-version>v1.14.3</span></span
     >
     <span class="footer-extras">
       <span class="footer-sep">·</span>

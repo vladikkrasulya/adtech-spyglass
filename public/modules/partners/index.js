@@ -109,7 +109,7 @@ export function openPartnerModal() {
     '<div id="pList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:var(--space-3);max-height:240px;overflow-y:auto">' +
     partnerListHtml() +
     '</div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="pName">' +
     t('partner.label.add_new') +
     '</label><input id="pName" type="text" placeholder="' +
     escapeHtml(t('partner.placeholder')) +

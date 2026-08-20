@@ -97,10 +97,10 @@ export function openCorpusSaveModal() {
       t('modal.corpus_save.summary' + pluralKeySuffix(usable.length), { count: usable.length }),
     ) +
     '</div></div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label id="corpusLabelLegend">' +
     escapeHtml(t('modal.corpus_save.label')) +
     '</label>' +
-    '<div class="kt-corpus-labels">' +
+    '<div class="kt-corpus-labels" role="radiogroup" aria-labelledby="corpusLabelLegend">' +
     '<label><input type="radio" name="corpusLabel" value="legitimate"> ' +
     escapeHtml(t('modal.corpus_save.label.legitimate')) +
     '</label>' +
@@ -111,7 +111,7 @@ export function openCorpusSaveModal() {
     escapeHtml(t('modal.corpus_save.label.ambiguous')) +
     '</label>' +
     '</div></div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="corpusNotes">' +
     escapeHtml(t('modal.corpus_save.notes')) +
     '</label>' +
     '<textarea id="corpusNotes" rows="3" placeholder="' +

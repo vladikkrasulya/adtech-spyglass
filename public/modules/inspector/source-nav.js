@@ -652,7 +652,10 @@
     popover = document.createElement('div');
     popover.className = 'src-pop';
     popover.hidden = true;
-    popover.setAttribute('role', 'status');
+    // This surface contains an action, so it is a non-modal dialog rather than
+    // a live-region status. Keyboard focus stays in the editor until Tab moves
+    // directly to the action (see onKeydown).
+    popover.setAttribute('role', 'dialog');
     document.body.appendChild(popover);
     return popover;
   }
@@ -678,11 +681,14 @@
 
     const title = document.createElement('span');
     title.className = 'src-pop-title';
+    title.id = 'src-pop-title';
     title.appendChild(document.createTextNode(markerLabel(m)));
     pop.appendChild(title);
+    pop.setAttribute('aria-labelledby', title.id);
 
     const where = document.createElement('span');
     where.className = 'src-pop-where';
+    where.id = 'src-pop-where';
     where.appendChild(
       document.createTextNode(
         (m.item.location.primary.display || '') +
@@ -691,13 +697,18 @@
       ),
     );
     pop.appendChild(where);
+    pop.setAttribute('aria-describedby', where.id);
 
     const go = document.createElement('button');
     go.type = 'button';
     go.className = 'src-pop-go';
     go.textContent = tr('inspector.nav.to_card', 'open the finding');
     go.addEventListener('click', function () {
+      hidePopover();
       revealCard(m.item.id);
+    });
+    go.addEventListener('blur', function (e) {
+      if (!pop.contains(e.relatedTarget)) hidePopover();
     });
     pop.appendChild(go);
 
@@ -721,17 +732,35 @@
     } catch (_e) {
       return;
     }
-    // Below the marked line, clamped inside the editor so a marker scrolled
-    // out of view does not leave a popover floating over the page chrome.
+    // Prefer below the marked line, flip above when there is no room, then
+    // clamp the complete box to the visible editor/viewport intersection.
+    // Checking only the anchor left the action below the screen on the last
+    // visible line of a short/mobile viewport.
     const y = rect.top + padTop + m.line * lh - p.el.scrollTop;
     if (y < rect.top || y > rect.bottom) {
       popover.hidden = true;
       return;
     }
     popover.hidden = false;
-    popover.style.top = Math.round(y + 4) + 'px';
-    popover.style.left = Math.round(rect.left) + 'px';
-    popover.style.maxWidth = Math.round(rect.width) + 'px';
+    const docEl = document.documentElement;
+    const viewportWidth = window.innerWidth || (docEl && docEl.clientWidth) || rect.right;
+    const viewportHeight = window.innerHeight || (docEl && docEl.clientHeight) || rect.bottom;
+    const gutter = 8;
+    const editorRight = Math.min(rect.right, viewportWidth - gutter);
+    const left = Math.max(gutter, Math.min(rect.left, editorRight));
+    const maxWidth = Math.max(1, editorRight - left);
+    popover.style.left = Math.round(left) + 'px';
+    popover.style.maxWidth = Math.round(maxWidth) + 'px';
+
+    const popRect = popover.getBoundingClientRect();
+    const popHeight = popRect.height || popover.offsetHeight || 0;
+    const minTop = Math.max(gutter, rect.top);
+    const visibleBottom = Math.min(rect.bottom, viewportHeight - gutter);
+    const maxTop = Math.max(minTop, visibleBottom - popHeight);
+    let top = y + 4;
+    if (popHeight && top + popHeight > visibleBottom) top = y - lh - popHeight - 4;
+    top = Math.max(minTop, Math.min(top, maxTop));
+    popover.style.top = Math.round(top) + 'px';
   }
   /**
    * The other half of the two-way link: from a place in the code to the card
@@ -757,6 +786,14 @@
       card.scrollIntoView();
     }
     card.classList.add('is-flashed');
+    const focusTarget = card.firstElementChild;
+    if (focusTarget && focusTarget.tagName === 'SUMMARY') {
+      try {
+        focusTarget.focus({ preventScroll: true });
+      } catch (_e) {
+        focusTarget.focus();
+      }
+    }
     setTimeout(function () {
       card.classList.remove('is-flashed');
     }, 1200);
@@ -1046,7 +1083,19 @@
         { signal: signal },
       );
     });
-    el.addEventListener('blur', hidePopover, { signal: signal });
+    el.addEventListener(
+      'blur',
+      function (e) {
+        if (popover && e.relatedTarget && popover.contains(e.relatedTarget)) return;
+        const itemAtBlur = popoverItem;
+        setTimeout(function () {
+          if (!popover || popover.hidden || popoverItem !== itemAtBlur) return;
+          if (popover.contains(document.activeElement)) return;
+          hidePopover();
+        }, 0);
+      },
+      { signal: signal },
+    );
     return pane;
   }
 
@@ -1101,6 +1150,20 @@
     return t === 'textarea' || t === 'input' || t === 'select' || el.isContentEditable;
   }
   function onKeydown(e) {
+    if (e.key === 'Tab' && popover && !popover.hidden && popoverItem) {
+      const source = panes && panes[popoverItem.side] && panes[popoverItem.side].el;
+      const action = popover.querySelector('.src-pop-go');
+      if (!e.shiftKey && e.target === source && action) {
+        e.preventDefault();
+        action.focus();
+        return;
+      }
+      if (e.shiftKey && e.target === action && source) {
+        e.preventDefault();
+        source.focus();
+        return;
+      }
+    }
     // Alt+↓ / Alt+↑ cycle findings even from inside the editor. This is the
     // stepper's keyboard contract, kept after its buttons were removed.
     if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
@@ -1113,7 +1176,16 @@
     // The resting marker layer survives: Esc dismisses what you jumped to, not
     // the map of what is wrong.
     if (e.key === 'Escape') {
-      if (popover && !popover.hidden) hidePopover();
+      if (popover && !popover.hidden) {
+        const source =
+          popoverItem && panes && panes[popoverItem.side] && panes[popoverItem.side].el;
+        const focusWasInside = popover.contains(document.activeElement);
+        hidePopover();
+        if (focusWasInside && source) {
+          e.preventDefault();
+          source.focus();
+        }
+      }
       if (highlightActive) {
         clearHighlights();
         if (analyzed) analyzed.cursor = -1;
@@ -1175,6 +1247,10 @@
       geometryRefreshes: function () {
         return geometryRefreshCount;
       },
+      popover: function () {
+        return popover;
+      },
+      positionPopover: positionPopover,
     },
   };
 })();

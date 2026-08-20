@@ -256,7 +256,17 @@ export async function mountInspector(root, ctx) {
     // the menu open over the content they just revealed — close it. The
     // summary itself gets no active class; CSS marks it via :has().
     const more = btn.closest('details.tab-more');
-    if (more) more.open = false;
+    if (more) {
+      more.open = false;
+      const summary = more.firstElementChild;
+      if (summary && summary.tagName === 'SUMMARY') {
+        try {
+          summary.focus({ preventScroll: true });
+        } catch (_e) {
+          summary.focus();
+        }
+      }
+    }
   };
 
   window.clearInput = function (id, btn) {
@@ -2253,6 +2263,7 @@ export async function mountInspector(root, ctx) {
           '" title="Jump to this path in the JSON">' +
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
           'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M5 12h14M13 6l6 6-6 6"></path></svg>' +
           '<span class="finding-path-text">' +
           escapeHtml(f.path) +
           '</span><span class="finding-line" hidden></span>' +
@@ -2800,21 +2811,12 @@ export async function mountInspector(root, ctx) {
         return (
           '<div class="history-item' +
           activeCls +
-          '" tabindex="0" data-action="history-load" data-idx="' +
-          i +
           '">' +
-          '<div class="history-actions">' +
-          '<button class="history-act-btn" data-action="history-peek" data-idx="' +
+          '<button type="button" class="history-item-load" data-action="history-load" data-idx="' +
           i +
-          '" title="' +
-          escapeHtml(t('tooltip.peek_no_load')) +
-          '">👁</button>' +
-          '<button class="history-act-btn danger" data-action="history-delete" data-idx="' +
-          i +
-          '" title="' +
-          escapeHtml(t('tooltip.history_delete')) +
-          '">×</button>' +
-          '</div>' +
+          '"' +
+          (i === _currentHistoryIdx ? ' aria-current="true"' : '') +
+          '>' +
           '<div class="history-title">' +
           // Phase 8: domain-mask sensitive sources so the History list
           // is safe to show in screenshots / pair-debugging / live
@@ -2832,6 +2834,22 @@ export async function mountInspector(root, ctx) {
           '">' +
           escapeHtml(humanStatus(e.status) || e.status || '') +
           '</span>' +
+          '</div></button>' +
+          '<div class="history-actions">' +
+          '<button type="button" class="history-act-btn" data-action="history-peek" data-idx="' +
+          i +
+          '" title="' +
+          escapeHtml(t('tooltip.peek_no_load')) +
+          '" aria-label="' +
+          escapeHtml(t('tooltip.peek_no_load')) +
+          '">👁</button>' +
+          '<button type="button" class="history-act-btn danger" data-action="history-delete" data-idx="' +
+          i +
+          '" title="' +
+          escapeHtml(t('tooltip.history_delete')) +
+          '" aria-label="' +
+          escapeHtml(t('tooltip.history_delete')) +
+          '">×</button>' +
           '</div></div>'
         );
       })
@@ -5204,21 +5222,10 @@ export async function mountInspector(root, ctx) {
           if (s.res_len) pieces.push('res ~' + plainKb(s.res_len) + 'k');
           if (s.status) pieces.push(escapeHtml(humanStatus(s.status)));
           return (
-            '<div class="saved-item" data-action="sample-load" data-id="' +
+            '<div class="saved-item">' +
+            '<button type="button" class="saved-item-load" data-action="sample-load" data-id="' +
             s.id +
             '">' +
-            '<div class="saved-item-actions">' +
-            '<button class="saved-act-btn" data-action="sample-edit" data-id="' +
-            s.id +
-            '" title="' +
-            escapeHtml(t('tooltip.partner_edit')) +
-            '">edit</button>' +
-            '<button class="saved-act-btn danger" data-action="sample-delete" data-id="' +
-            s.id +
-            '" title="' +
-            escapeHtml(t('tooltip.delete')) +
-            '">×</button>' +
-            '</div>' +
             '<div class="saved-item-title">' +
             escapeHtml(s.title) +
             '</div>' +
@@ -5228,7 +5235,23 @@ export async function mountInspector(root, ctx) {
             '</span>' +
             (pieces.length ? '<span>·</span><span>' + pieces.join(' · ') + '</span>' : '') +
             '</div>' +
-            '</div>'
+            '</button>' +
+            '<div class="saved-item-actions">' +
+            '<button type="button" class="saved-act-btn" data-action="sample-edit" data-id="' +
+            s.id +
+            '" title="' +
+            escapeHtml(t('tooltip.partner_edit')) +
+            '" aria-label="' +
+            escapeHtml(t('tooltip.partner_edit')) +
+            '">edit</button>' +
+            '<button type="button" class="saved-act-btn danger" data-action="sample-delete" data-id="' +
+            s.id +
+            '" title="' +
+            escapeHtml(t('tooltip.delete')) +
+            '" aria-label="' +
+            escapeHtml(t('tooltip.delete')) +
+            '">×</button>' +
+            '</div></div>'
           );
         })
         .join('');
@@ -5418,7 +5441,19 @@ export async function mountInspector(root, ctx) {
       toast('🎲 ' + j.label, 'success');
       dismissInspectorOnboarding();
       // Auto-close the dropdown after pick.
-      document.querySelectorAll('.kt-example-menu[open]').forEach((d) => d.removeAttribute('open'));
+      document.querySelectorAll('.kt-example-menu[open]').forEach((d) => {
+        const returnFocus = d.contains(document.activeElement);
+        d.removeAttribute('open');
+        if (!returnFocus) return;
+        const summary = d.firstElementChild;
+        if (summary && summary.tagName === 'SUMMARY') {
+          try {
+            summary.focus({ preventScroll: true });
+          } catch (_e) {
+            summary.focus();
+          }
+        }
+      });
     } catch (e) {
       if (ctx.signal.aborted) return; // unmounted — swallow the abort, don't toast into a remount
       console.error('[loadDemoSample]', e);
@@ -5528,8 +5563,41 @@ export async function mountInspector(root, ctx) {
     return 'respect';
   }
 
-  function toggleSidebar(side) {
+  function syncSidebarState(side) {
     const cls = 'sb-' + side + '-hidden';
+    const isHidden = document.body.classList.contains(cls);
+    const btn = document.getElementById(
+      side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
+    );
+    if (btn && !btn.hasAttribute('data-static-icon')) btn.textContent = arrowFor(side, isHidden);
+
+    if (side === 'left') {
+      const expanded = String(!isHidden);
+      root
+        .querySelectorAll('[data-action="toggle-sidebar"][data-side="left"]')
+        .forEach((control) => {
+          control.setAttribute('aria-controls', 'inspectorSidebarLeft');
+          control.setAttribute('aria-expanded', expanded);
+        });
+      const panel = document.getElementById('inspectorSidebarLeft');
+      if (panel) panel.setAttribute('aria-hidden', String(isHidden));
+    }
+    return isHidden;
+  }
+
+  function focusWithoutScroll(el) {
+    if (!el || typeof el.focus !== 'function') return;
+    try {
+      el.focus({ preventScroll: true });
+    } catch (_e) {
+      el.focus();
+    }
+  }
+
+  function toggleSidebar(side, trigger) {
+    const cls = 'sb-' + side + '-hidden';
+    const panel = side === 'left' ? document.getElementById('inspectorSidebarLeft') : null;
+    const focusWasInside = !!(panel && panel.contains(document.activeElement));
     const isHidden = document.body.classList.toggle(cls);
     try {
       // Refresh both flag AND timestamp on every toggle. Active users keep
@@ -5540,10 +5608,20 @@ export async function mountInspector(root, ctx) {
     } catch (_e) {
       /* private mode */
     }
-    const btn = document.getElementById(
-      side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
-    );
-    if (btn && !btn.hasAttribute('data-static-icon')) btn.textContent = arrowFor(side, isHidden);
+    syncSidebarState(side);
+
+    if (side === 'left') {
+      const opener = document.getElementById('toggleSidebarLeft');
+      if (isHidden && (focusWasInside || (trigger && trigger.classList.contains('drawer-close')))) {
+        focusWithoutScroll(opener);
+      } else if (!isHidden && trigger === opener) {
+        const isOverlay =
+          typeof window.matchMedia === 'function'
+            ? window.matchMedia('(max-width: 1100px)').matches
+            : window.innerWidth <= 1100;
+        if (isOverlay && panel) focusWithoutScroll(panel.querySelector('.drawer-close'));
+      }
+    }
   }
 
   function setupSidebarToggles() {
@@ -5583,11 +5661,7 @@ export async function mountInspector(root, ctx) {
         // contextual override; long-term preference is still saved).
       }
 
-      const btn = document.getElementById(
-        side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
-      );
-      if (btn && !btn.hasAttribute('data-static-icon'))
-        btn.textContent = arrowFor(side, document.body.classList.contains(cls));
+      syncSidebarState(side);
     });
   }
 
@@ -5610,11 +5684,7 @@ export async function mountInspector(root, ctx) {
       } catch (_e) {
         /* */
       }
-      const btn = document.getElementById(
-        side === 'left' ? 'toggleSidebarLeft' : 'toggleSidebarRight',
-      );
-      if (btn && !btn.hasAttribute('data-static-icon'))
-        btn.textContent = arrowFor(side, side === 'left');
+      syncSidebarState(side);
     });
     toast(t('toast.layout.reset'));
   }
@@ -5904,6 +5974,21 @@ export async function mountInspector(root, ctx) {
     // {signal: ctx.signal} auto-detaches on module unmount.
     const root = document.getElementById('app-root') || document.body;
 
+    // Desktop and phone render the same two native validation controls in
+    // different chrome. Keep each pair as one logical value: the desktop copy
+    // remains the canonical seam consumed by analyze/share, while a change in
+    // either copy is mirrored immediately to its peer.
+    function actionSelects(action) {
+      return Array.from(root.querySelectorAll('select[data-action="' + action + '"]'));
+    }
+    function syncActionSelects(action, value) {
+      actionSelects(action).forEach((select) => {
+        if (Array.from(select.options).some((option) => option.value === value)) {
+          select.value = value;
+        }
+      });
+    }
+
     root.addEventListener(
       'click',
       (ev) => {
@@ -6132,9 +6217,9 @@ export async function mountInspector(root, ctx) {
             return;
           }
           case 'reveal-creative': {
-            // Click anywhere on the overlay reveals; the inner button
-            // bubbles up here too. setAdPreview re-applies blur on
-            // every new creative so the reveal is per-impression.
+            // The real button owns this action (the surrounding overlay is
+            // presentational only). setAdPreview re-applies blur on every new
+            // creative so the reveal is per-impression.
             const safe = document.getElementById('creativePreviewSafe');
             if (safe) safe.classList.add('is-revealed');
             return;
@@ -6182,7 +6267,7 @@ export async function mountInspector(root, ctx) {
 
           // — layout —
           case 'toggle-sidebar':
-            return toggleSidebar(el.dataset.side);
+            return toggleSidebar(el.dataset.side, el);
           case 'reset-layout':
             return resetLayout();
           case 'switch-tab':
@@ -6279,21 +6364,6 @@ export async function mountInspector(root, ctx) {
       { signal: ctx.signal },
     );
 
-    // Keyboard activation for history rows. Click is covered above;
-    // keydown stays scoped to data-action="history-load" so we don't
-    // intercept the Ctrl+Enter shortcut bound on textareas below.
-    root.addEventListener(
-      'keydown',
-      (ev) => {
-        if (ev.key !== 'Enter' && ev.key !== ' ') return;
-        const el = ev.target.closest('[data-action="history-load"]');
-        if (!el || !root.contains(el)) return;
-        ev.preventDefault();
-        loadFromHistory(Number(el.dataset.idx));
-      },
-      { signal: ctx.signal },
-    );
-
     // Change-event dispatcher for <select data-action="…"> controls.
     // The click-dispatcher above doesn't fire on dropdown value changes,
     // so we mirror it here for the small set of select-based actions.
@@ -6308,6 +6378,7 @@ export async function mountInspector(root, ctx) {
         if (!el || !root.contains(el)) return;
         const action = el.dataset.action;
         if (action === 'change-dialect') {
+          syncActionSelects(action, el.value);
           setActiveDialect(el.value);
           // Re-run analysis if the editors hold a payload — engine output
           // is dialect-sensitive (e.g. inpage-push suppresses the
@@ -6326,6 +6397,7 @@ export async function mountInspector(root, ctx) {
           } catch {
             /* storage disabled / quota — pin stays in-memory only */
           }
+          syncActionSelects(action, el.value);
           if ($('bidReq').value || $('bidRes').value) runAnalysis();
         }
       },
@@ -6360,7 +6432,8 @@ export async function mountInspector(root, ctx) {
     // поза меню — закрити", so Escape closes them too.
     const POPOVER_MENUS =
       '.kt-example-menu[open], .kt-lang-menu[open], ' +
-      '.kt-tools-menu[open], .kt-share-menu[open], .tab-more[open]';
+      '.kt-tools-menu[open], .kt-share-menu[open], .tab-more[open], ' +
+      '.workbar-settings-menu[open]';
     document.addEventListener(
       'click',
       (ev) => {
@@ -6376,7 +6449,20 @@ export async function mountInspector(root, ctx) {
       'keydown',
       (ev) => {
         if (ev.key !== 'Escape') return;
-        document.querySelectorAll(POPOVER_MENUS).forEach((d) => d.removeAttribute('open'));
+        const opened = Array.from(document.querySelectorAll(POPOVER_MENUS));
+        if (!opened.length) return;
+        ev.preventDefault();
+        const active = document.activeElement;
+        const owner = opened.find((d) => active && d.contains(active));
+        opened.forEach((d) => d.removeAttribute('open'));
+        const summary = owner && owner.firstElementChild;
+        if (summary && summary.tagName === 'SUMMARY') {
+          try {
+            summary.focus({ preventScroll: true });
+          } catch (_e) {
+            summary.focus();
+          }
+        }
       },
       { signal: ctx.signal },
     );
@@ -6518,9 +6604,8 @@ export async function mountInspector(root, ctx) {
     // silently ignored — the <select> falls back to its first option.
     try {
       const savedPin = localStorage.getItem('ortbtools_version_pin');
-      const pinEl = $('versionPinSelector');
-      if (pinEl && savedPin && ['2.5', '2.6', '3.0'].includes(savedPin)) {
-        pinEl.value = savedPin;
+      if (savedPin && ['2.5', '2.6', '3.0'].includes(savedPin)) {
+        syncActionSelects('change-version-pin', savedPin);
       }
     } catch {
       /* localStorage disabled — pin stays at 'auto' for this session */
@@ -6531,12 +6616,15 @@ export async function mountInspector(root, ctx) {
     // (fired when builder creates a new dialect) so the dropdown stays
     // current without a page reload.
     async function repaintDialectOptions() {
-      if (!dialectSel || !window.OrtbtoolsIntel) return;
+      const selects = actionSelects('change-dialect');
+      if (!selects.length || !window.OrtbtoolsIntel) return;
       // Strip prior temp options — keep the first three built-ins.
       const built = ['iab', 'ext-rtb', 'inpage-push'];
-      Array.from(dialectSel.options)
-        .filter((o) => !built.includes(o.value))
-        .forEach((o) => o.remove());
+      selects.forEach((select) => {
+        Array.from(select.options)
+          .filter((o) => !built.includes(o.value))
+          .forEach((o) => o.remove());
+      });
       let temps = [];
       try {
         temps = await window.OrtbtoolsIntel.listTempDialects();
@@ -6544,14 +6632,16 @@ export async function mountInspector(root, ctx) {
         /* */
       }
       for (const spec of temps || []) {
-        const opt = document.createElement('option');
-        opt.value = spec.id;
-        opt.textContent = '✦ ' + (spec.name || 'Custom');
-        dialectSel.appendChild(opt);
+        selects.forEach((select) => {
+          const opt = document.createElement('option');
+          opt.value = spec.id;
+          opt.textContent = '✦ ' + (spec.name || 'Custom');
+          select.appendChild(opt);
+        });
       }
       // Re-set the value AFTER appending — otherwise a temp-dialect
       // initial value gets lost when its option doesn't exist yet.
-      dialectSel.value = activeDialect();
+      syncActionSelects('change-dialect', activeDialect());
       updateCustomDialectIndicator();
     }
     repaintDialectOptions();
@@ -6596,7 +6686,7 @@ export async function mountInspector(root, ctx) {
         pill.hidden = true;
       }
     }
-    if (dialectSel) dialectSel.value = initialDialect;
+    if (dialectSel) syncActionSelects('change-dialect', initialDialect);
 
     // Phase 8 URL params: ?reset=token | ?verified=1 | ?verify_error=...
     const qp = new URLSearchParams(location.search);

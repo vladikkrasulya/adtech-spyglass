@@ -58,6 +58,41 @@
       return null;
     });
 
+  // A language picker is a native disclosure, not an ARIA menu: its links
+  // stay in the ordinary Tab order. Add the two pieces native <details>
+  // intentionally does not provide so every shell and standalone page feels
+  // like the same dropdown — outside-click dismissal and Escape with focus
+  // restoration. Delegation survives SPA chrome re-renders and locale morphs.
+  function closeLangDisclosures(except, restoreFocus) {
+    const opened = Array.from(document.querySelectorAll('details.kt-lang-menu[open]'));
+    const active = document.activeElement;
+    const owner =
+      opened.find((menu) => active && menu.contains(active)) || opened[opened.length - 1];
+    opened.forEach((menu) => {
+      if (menu !== except) menu.removeAttribute('open');
+    });
+    if (!restoreFocus || !owner || owner === except) return;
+    const summary = owner.querySelector(':scope > summary');
+    if (!summary) return;
+    try {
+      summary.focus({ preventScroll: true });
+    } catch (_e) {
+      summary.focus();
+    }
+  }
+
+  document.addEventListener('click', (event) => {
+    const current = event.target.closest && event.target.closest('details.kt-lang-menu');
+    closeLangDisclosures(current, false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (!document.querySelector('details.kt-lang-menu[open]')) return;
+    event.preventDefault();
+    closeLangDisclosures(null, true);
+  });
+
   // Selectors whose contents are dynamic / user-state — never morph these.
   // Most are inspector-specific; on surfaces that don't have them (e.g.
   // /about) the matches just return false and the morph proceeds normally.

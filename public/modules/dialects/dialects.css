@@ -357,8 +357,8 @@ body:has(.dlc-page) .ortbtools-intel-chip {
   transition: background-color 150ms ease;
 }
 .dlc-ghost:hover {
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--control-primary-background, #0369a1);
+  color: var(--control-primary-foreground, #ffffff);
 }
 .dlc-ghost:focus-visible {
   outline: 2px solid var(--accent);

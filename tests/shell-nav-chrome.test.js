@@ -41,18 +41,24 @@ const NAV_SRC = fs.readFileSync(path.join(__dirname, '..', 'public/modules/nav/i
  *  `export` keywords are dropped and the public API is bridged onto window —
  *  same approach as tests/source-nav.test.js. The module body is otherwise
  *  untouched. */
-function setup({ lang = 'uk', collapsed = false } = {}) {
+function setup({ lang = 'uk', collapsed = false, drawer = false, open = false } = {}) {
   const dom = new JSDOM(
     `<!DOCTYPE html><html lang="${lang}"><body>
-       <div class="kt-shell">
+       <div class="kt-shell${open ? ' is-nav-open' : ''}">
          <aside id="kt-nav-root" class="kt-nav"></aside>
-         <header id="kt-topbar-root"></header>
+         <header id="kt-topbar-root"><button type="button" class="kt-topbar__nav-toggle" data-action="toggle-nav">Menu</button></header>
          <main id="app-root"></main>
        </div>
      </body></html>`,
     { runScripts: 'outside-only', url: `https://ortbtools.test/${lang}/inspector` },
   );
   const w = dom.window;
+  w.matchMedia = (query) => ({
+    matches: drawer && query.includes('max-width: 1023px'),
+    media: query,
+    addEventListener() {},
+    removeEventListener() {},
+  });
   if (collapsed) w.localStorage.setItem('kt-nav-collapsed', '1');
   w.eval(NAV_SRC.replace(/^export /gmu, '') + '\nwindow.__nav = { mountNav, canonicalize };');
   const root = w.document.getElementById('kt-nav-root');
@@ -139,6 +145,7 @@ test('F-10: unmount detaches the listener from the CURRENT tab, not the mount-ti
 
 const EXPANDED = { uk: 'Згорнути меню', ru: 'Свернуть меню', en: 'Collapse sidebar' };
 const COLLAPSED = { uk: 'Розгорнути меню', ru: 'Развернуть меню', en: 'Expand sidebar' };
+const DRAWER_CLOSE = { uk: 'Закрити меню', ru: 'Закрыть меню', en: 'Close navigation' };
 
 test('F-10: collapse tab announces the action it will perform, in every locale', () => {
   for (const l of ['uk', 'ru', 'en']) {
@@ -189,6 +196,35 @@ test('F-10: the label re-localises AND keeps the collapsed sense across a lang s
   assert.equal(tab(w).getAttribute('aria-label'), EXPANDED.ru);
   unmount();
   w.close();
+});
+
+test('mobile collapse control closes the drawer, preserves desktop preference, and returns focus', () => {
+  for (const lang of ['uk', 'ru', 'en']) {
+    const { w, shell, unmount } = setup({ lang, collapsed: true, drawer: true, open: true });
+    const opener = w.document.querySelector('.kt-topbar__nav-toggle');
+
+    assert.equal(tab(w).getAttribute('aria-label'), DRAWER_CLOSE[lang], `${lang}: close action`);
+    assert.equal(tab(w).getAttribute('aria-expanded'), 'true', `${lang}: open drawer state`);
+    tab(w).click();
+
+    assert.equal(shell.classList.contains('is-nav-open'), false, `${lang}: drawer closes`);
+    assert.equal(
+      shell.classList.contains('is-nav-collapsed'),
+      true,
+      `${lang}: desktop preference is untouched`,
+    );
+    assert.equal(w.localStorage.getItem('kt-nav-collapsed'), '1', `${lang}: storage is untouched`);
+    assert.equal(tab(w).getAttribute('aria-expanded'), 'false', `${lang}: closed drawer state`);
+    assert.equal(
+      opener.getAttribute('aria-expanded'),
+      'false',
+      `${lang}: opener state follows close`,
+    );
+    assert.equal(w.document.activeElement, opener, `${lang}: focus returns to the opener`);
+
+    unmount();
+    w.close();
+  }
 });
 
 // ── 3. Sanity: the re-render that caused all this still does its job ─────
