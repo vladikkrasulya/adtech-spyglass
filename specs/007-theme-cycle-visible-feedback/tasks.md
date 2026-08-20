@@ -53,7 +53,7 @@ written first and is expected to fail until T003 lands.
 - [x] T008 (SC-005) Run `npm run ci`, `bash scripts/npm-pack-smoke.sh`, `bash scripts/ci-docker-smoke.sh`,
       and `git diff --check`; record exact results in this file
 - [x] T009 Add the feature to `specs/ROADMAP.md` and re-run Spec Kit analysis against this package
-- [ ] T010 Commit the feature scope, push, and wait for green hosted CI on the exact merge SHA
+- [x] T010 Commit the feature scope, push, and wait for green hosted CI on the exact merge SHA
 
 ## Dependencies & Execution Order
 
@@ -80,9 +80,15 @@ a stopped tree with real exit codes.
 - `bash scripts/npm-pack-smoke.sh`: **exit 0**.
 - `bash scripts/ci-docker-smoke.sh`: **exit 0**, 5 PASS.
 - `git diff --check`: **exit 0**.
+- Hosted CI on the PR candidate ([#66](https://github.com/vladikkrasulya/adtech-spyglass/pull/66)):
+  **success**, 7m59s — longer than 1.14.3's run because the browser cycle check now walks both system
+  preferences instead of one.
+- Merged as `c608fbb`; hosted CI re-run on that exact merge SHA: **success**.
 - Mutation evidence for T001: restoring the old successor in `public/index.en.html` fails four of the
   nine cycle checks; restoring the file returns all nine to green.
 - Mutation evidence carried over from the 1.14.3 release: stubbing the head IIFE's `set()` to a no-op
   still fails `single-chrome-control-browser.test.js`, so the liveness guarantee survived the rewrite.
 
-- Production evidence is recorded if and when T011 is separately authorized.
+- Production evidence is recorded if and when a deployment is separately authorized. There is no
+  task for it in this list on purpose: the 2026-08-20 authorization named `1.14.3` explicitly, and
+  a task numbered here would imply a mandate this package does not have.
