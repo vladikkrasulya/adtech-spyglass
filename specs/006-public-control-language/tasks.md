@@ -108,7 +108,7 @@ labels, focus trap/restore, disclosure state, and coarse-pointer target sizes.
       `specs/006-public-control-language/`
 - [x] T020 (SC-007) Run focused version/UI tests, `npm run ci`, `bash scripts/npm-pack-smoke.sh`,
       `bash scripts/ci-docker-smoke.sh`, and `git diff --check`; record exact results in this file
-- [ ] T021 Commit only the feature scope, push through the authorized GitHub path, wait for green
+- [x] T021 Commit only the feature scope, push through the authorized GitHub path, wait for green
       hosted CI, run the mandatory backup verification, deploy the exact main SHA through
       `scripts/deploy.sh`, and verify public/local provenance
 
@@ -188,4 +188,35 @@ it, wait for green hosted CI, run the mandatory backup verification, and deploy 
 SHA as app `1.14.3` through `scripts/deploy.sh`. It does not extend to Core/CLI versions, npm
 publication, data migration, or any other external mutation.
 
-- Production evidence is recorded when T021 completes.
+### Production evidence (T021, 2026-08-20)
+
+- Feature commit `1b262f3` on `codex/ui-control-cohesion-20260820`; 76 files, +4883/-1052.
+- A second commit, `8633b51`, repairs `tests/single-chrome-control-browser.test.js`. That check had
+  failed **every hosted CI run since the commit that introduced it** — 18 consecutive red runs on
+  `main` from 2026-08-17, last green `50c5799` on 2026-08-16 — while passing on every developer
+  machine. It asserted that one press of the theme control must flip `data-theme`, but the control
+  cycles three states (auto → light → dark → auto) and `data-theme` carries only the resolved theme;
+  under a light-preferring machine the first press moves auto → light and the resolved value does not
+  move. Developer desktops here prefer dark, GitHub's runner prefers light, so the check inverted its
+  verdict with the environment. It now pins `prefers-color-scheme`, starts from a known auto, walks
+  the full cycle, and requires the resolved theme to reach both values — verified by mutation
+  (stubbing the head IIFE's `set()` makes the rewritten check fail). This defect predates 006 and is
+  fixed here only because the release could not reach a green CI without it.
+- Hosted CI on the PR candidate: **success**, 4m54s, run `32391169318`.
+- Merged as `9d1b883`. Hosted CI re-run on that exact merge SHA: **success** — the deployed SHA was
+  gated on its own run, not on its parent's.
+- Pre-deploy backup gate: `scripts/backup-db.sh` at 18:02; archives `0600 root:root` in a `0700`
+  directory; `gzip -t` and `tar -tzf` both clean; the SQLite archive was decompressed and
+  `PRAGMA integrity_check` returned `ok` across 12 tables. The script exiting zero and the backup
+  being restorable are different claims; the second one was checked.
+- `scripts/deploy.sh`: exit 0, `DEPLOY OK: v1.14.3 (9d1b883) is live`. Readiness reached healthy at
+  t=6s; production smoke PASS on health, `BUILD_SHA=9d1b883`, `/api/analyze`, SSE `/api/v1/stream`,
+  all nine localized pages, all three localized blog posts, container health, and `RestartCount=0`.
+- Deploy state: `STATUS=ACTIVE`, `ACTIVE_BUILD_SHA=9d1b883`, `PREV_BUILD_SHA=84cc6ea` retained as the
+  rollback identity.
+- Independent post-deploy verification, not the script's own smoke: container `ortbtools:9d1b883`,
+  `restart=always`, `health=healthy`, `RestartCount=0`; OCI labels `revision=9d1b8833…`,
+  `version=1.14.3`; `/api/health` reports `build.sha 9d1b883`; `https://ortbtools.com/` 302 to
+  `/inspector`; `https://ortbtools.com/uk/inspector` 200; the publicly served `version.js` reports
+  `v1.14.3`; and `https://ortbtools.com/ortbtools-controls.css` returns 200 at 9513 bytes, confirming
+  the new control layer reached production rather than only the image.
