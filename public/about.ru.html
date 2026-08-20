@@ -82,12 +82,13 @@
             var s = get();
             return s === 'light' || s === 'dark' ? s : mq.matches ? 'dark' : 'light';
           }
-          function apply() {
+          function apply(opts) {
             document.documentElement.setAttribute('data-theme', eff());
             var b = document.querySelector('.kt-theme-toggle');
             if (b) {
               var s = get();
               b.textContent = s === null ? '◐' : s === 'dark' ? '☀' : '☾';
+              if (opts && opts.keepTitle) return;
               b.title =
                 s === null
                   ? 'тема: авто · клик → светлая'
@@ -99,23 +100,34 @@
           apply();
           if (mq.addEventListener) mq.addEventListener('change', apply);
           else if (mq.addListener) mq.addListener(apply);
-          function inject() {
-            if (document.querySelector('.kt-theme-toggle')) return;
-            var b = document.createElement('button');
-            b.className = 'kt-theme-toggle';
-            b.type = 'button';
-            b.setAttribute('aria-label', 'Переключить тему');
+          // The toggle lives in the static markup at the end of <body>.
+          // It used to be created here and appended at DOMContentLoaded,
+          // which left the live document with one more body child than the
+          // freshly-fetched locale document (DOMParser runs no scripts).
+          // lang-switch.js abandons the morph on the first child-count
+          // mismatch, so nothing on this page ever translated. Bind to the
+          // node that is already there.
+          function bind() {
+            var b = document.querySelector('.kt-theme-toggle');
+            if (!b || b.dataset.ktThemeBound) return;
+            b.dataset.ktThemeBound = '1';
             b.addEventListener('click', function () {
               var s = get();
               set(s === null ? 'light' : s === 'light' ? 'dark' : null);
               apply();
             });
-            document.body.appendChild(b);
             apply();
           }
           if (document.readyState === 'loading')
-            document.addEventListener('DOMContentLoaded', inject);
-          else inject();
+            document.addEventListener('DOMContentLoaded', bind);
+          else bind();
+          // After a seamless language swap the morph copies the fetched
+          // document's (empty) button text over the live glyph. Repaint it —
+          // but leave the title alone: the morph just put the NEW locale's
+          // wording there, and the strings below are baked in this locale.
+          window.addEventListener('kt:lang-change', function () {
+            apply({ keepTitle: true });
+          });
         } catch (e) {}
       })();
     </script>
@@ -189,36 +201,81 @@
       /* Sticky TOC у правому жолобі (аудит 2026-07-13: права колонка була
          порожня на всі ~13 000px висоти). Fixed у вільному жолобі контейнера
          1200px; ховається, коли жолоб зникає. */
+      /* Below 1280px there is no free gutter, and the TOC used to simply
+         vanish (display:none) — together with .kt-topnav-links, which
+         design-system.css hides under 768px. That left a twelve-section,
+         ~13 000px document with no navigation at all on a phone. Render the
+         same list in the flow instead: a bordered card above the article,
+         chips that wrap. The fixed-gutter treatment is re-applied at 1280px. */
       .doc-toc {
-        display: none;
+        display: block;
+        margin: 0 0 var(--space-6, 32px);
+        padding: var(--space-4, 16px);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md, 16px);
+        background: var(--surface);
+      }
+      .doc-toc .mono-label {
+        display: block;
+        margin-bottom: var(--space-3, 12px);
+      }
+      .doc-toc a {
+        display: inline-block;
+        margin: 0 var(--space-4, 16px) 6px 0;
+        color: var(--text-muted);
+        font-size: var(--fs-sm);
+        text-decoration: none;
+        transition: color var(--t-fast);
+      }
+      .doc-toc a:hover {
+        color: var(--text);
+      }
+      /* One in-page nav at a time: below 1280px the header links would have
+         to share a 768px bar with the brand, the language menu and the back
+         button — which is what pushed "← ortbtools" 98px off a 768px screen.
+         The in-flow TOC above covers navigation there. */
+      @media (max-width: 1279px) {
+        .kt-topnav-links {
+          display: none;
+        }
       }
       @media (min-width: 1280px) {
         .doc-toc {
-          display: block;
           position: fixed;
           top: 110px;
           right: calc((100vw - var(--maxw-wide, 1200px)) / 2 + var(--space-5, 24px));
           width: 210px;
-        }
-        .doc-toc .mono-label {
-          display: block;
-          margin-bottom: var(--space-3, 12px);
+          margin: 0;
+          padding: 0;
+          border: 0;
+          background: transparent;
         }
         .doc-toc a {
           display: block;
+          margin: 0;
           padding: 5px 0 5px 12px;
           border-left: 2px solid var(--border);
-          color: var(--text-muted);
-          font-size: var(--fs-sm);
-          text-decoration: none;
           transition:
             color var(--t-fast),
             border-color var(--t-fast);
         }
         .doc-toc a:hover {
-          color: var(--text);
           border-left-color: var(--accent);
         }
+      }
+      /* .kt-topnav is position:sticky and 61px tall; without this every
+         in-page anchor parked its heading at top:0, i.e. completely behind
+         the header, and the reader landed mid-paragraph. */
+      .doc-prose h1[id],
+      .doc-prose h2[id],
+      .doc-prose h3[id] {
+        scroll-margin-top: 80px;
+      }
+      /* Bare URLs in "Sources" are long, unbreakable tokens; on a 390px
+         screen they ran 30px past the viewport, and <html> clips rather than
+         scrolls, so the tail was simply unreadable. */
+      .doc-prose a {
+        overflow-wrap: anywhere;
       }
       .doc-prose h1 {
         font-size: clamp(34px, 6vw, 54px);
@@ -427,6 +484,7 @@
           <a href="#whats-new">Что нового</a>
           <a href="#use">Что умеет</a>
           <a href="#layers">Как работает</a>
+          <a href="#behavior">Поведение</a>
           <a href="#wont">Что не делает</a>
           <a href="#data">Данные</a>
           <a href="#privacy">Приватность</a>
@@ -454,11 +512,15 @@
           <a href="#whats-new">Что нового</a>
           <a href="#use">Что умеет</a>
           <a href="#layers">Как работает</a>
+          <a href="#behavior">Поведение</a>
           <a href="#wont">Что не делает</a>
           <a href="#data">Данные</a>
           <a href="#privacy">Приватность</a>
+          <a href="#reading">Как читать</a>
           <a href="#example">Пример</a>
+          <a href="#versions">Версии</a>
           <a href="#sources">Источники</a>
+          <a href="#contact">Контакт</a>
         </nav>
         <div class="doc-prose">
           <span class="eyebrow">docs · <span data-ortbtools-version>v1.14.2</span></span>
@@ -1122,7 +1184,7 @@ findings[]: { id, level, path, params, msg, specRef }
 
           <hr />
 
-          <h2>Как читать результат</h2>
+          <h2 id="reading">Как читать результат</h2>
           <p>Каждая находка (<code>finding</code>) выглядит так:</p>
           <pre><code>{
   "id": "imp.banner.size_required",
@@ -1195,7 +1257,7 @@ findings[]: { id, level, path, params, msg, specRef }
 
           <hr />
 
-          <h2>Поддерживаемые версии</h2>
+          <h2 id="versions">Поддерживаемые версии</h2>
           <table class="doc-table">
             <thead>
               <tr>
@@ -1280,10 +1342,10 @@ findings[]: { id, level, path, params, msg, specRef }
             <li>
               <strong>IAB Content Taxonomy 1.0</strong> —
               <a
-                href="https://github.com/InteractiveAdvertisingBureau/Content-Taxonomy"
+                href="https://github.com/InteractiveAdvertisingBureau/Taxonomies"
                 target="_blank"
                 rel="noopener"
-                >github.com/InteractiveAdvertisingBureau/Content-Taxonomy</a
+                >github.com/InteractiveAdvertisingBureau/Taxonomies</a
               >
             </li>
             <li>
@@ -1326,7 +1388,7 @@ findings[]: { id, level, path, params, msg, specRef }
 
           <hr />
 
-          <h2>Вопросы + контакт</h2>
+          <h2 id="contact">Вопросы + контакт</h2>
           <p>
             Bug, feature request, «почему не работает» —
             <a href="mailto:hi@ortbtools.com">hi@ortbtools.com</a>.
@@ -1353,6 +1415,15 @@ findings[]: { id, level, path, params, msg, specRef }
         </div>
       </div>
     </section>
+
+    <button
+      class="kt-theme-toggle"
+      type="button"
+      aria-label="Переключить тему"
+      title="тема: авто · клик → светлая"
+    >
+      ◐
+    </button>
 
     <script src="/lang-switch.js?v=1"></script>
     <script src="/version.js?v=1"></script>

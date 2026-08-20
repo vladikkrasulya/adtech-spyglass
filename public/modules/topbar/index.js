@@ -36,6 +36,17 @@ function pick(map) {
   return map[l] || map.en || '';
 }
 
+/** '' on EN, '/uk' or '/ru' otherwise. Every internal href the topbar prints
+ *  must carry it — the compact brand (visible below 1024px, i.e. on every
+ *  phone and most tablets) shipped a hardcoded "/inspector", so tapping the
+ *  logo on /uk/* or /ru/* silently dropped the user's language: the address
+ *  bar said EN while the page still rendered UK, and the next reload made the
+ *  switch permanent. The rail's brand has always used the prefixed form. */
+function localePrefix() {
+  const l = lang();
+  return l === 'en' ? '' : '/' + l;
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -100,7 +111,7 @@ function renderTopbar(authUser) {
     <button type="button" class="kt-topbar__nav-toggle" data-action="toggle-nav" aria-label="${escapeHtml(navToggleLabel)}">
       <span aria-hidden="true">☰</span>
     </button>
-    <a class="kt-topbar__brand-mini" href="/inspector" data-internal>
+    <a class="kt-topbar__brand-mini" href="${escapeHtml(localePrefix() + '/inspector')}" data-internal>
       <span class="kt-topbar__brand-icon" aria-hidden="true">◆</span>
       <span class="kt-topbar__brand-text">ortbtools</span>
     </a>
@@ -377,7 +388,14 @@ export function mountTopbar(root, shellRoot) {
   };
   window.addEventListener('popstate', onRoute);
   window.addEventListener('kt:pushstate', onRoute);
-  window.addEventListener('kt:lang-change', paintCrumbs);
+  // NOTE: kt:lang-change is deliberately NOT wired to paintCrumbs here.
+  // Listeners run in registration order, and onLang (registered further down)
+  // replaces the whole topbar DOM via doRender(). A paintCrumbs bound here
+  // would run FIRST — painting the outgoing #ktCrumbs node, which doRender
+  // then throws away and replaces with a fresh one carrying the `hidden`
+  // attribute from the template. That is why the breadcrumb vanished on every
+  // language switch and only came back on the next route change. onLang calls
+  // paintCrumbs itself, after the re-render, where it can actually stick.
 
   // Collapse the mobile search overlay on click-outside or Esc.
   const onDocClickSearch = (e) => {
@@ -408,6 +426,10 @@ export function mountTopbar(root, shellRoot) {
       searchCleanup = null;
     }
     doRender(); // keeps _authUser
+    // The crumb nodes are part of what doRender() just replaced, so repaint
+    // them here — after the new DOM exists. crumbDetail lives in this closure
+    // and survives the re-render, so both halves come back in the new locale.
+    paintCrumbs();
     const newToggle = root.querySelector('[data-action="toggle-nav"]');
     if (newToggle) newToggle.addEventListener('click', onToggle);
     // Re-init search on new input

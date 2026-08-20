@@ -2195,6 +2195,19 @@ body:not(.sb-left-hidden) .sidebar-left {
   border: 1px solid var(--border);
   white-space: nowrap;
 }
+/* The readouts are secondary information, and on a phone the workbar is a
+   single nowrap row that must fit the primary action. The site audit asked
+   for these to appear before the first analysis rather than after it — a
+   desktop complaint — and honouring it everywhere pushed Analyze off a
+   360px screen: the bar took 148px of a 360px row and left 115px for three
+   controls that need 143. Below the phone breakpoint the bar stays out of
+   that row; the same facts are in the results panel once an analysis lands. */
+@media (max-width: 720px) {
+  .format-bar {
+    display: none;
+  }
+}
+
 .format-pill[hidden] {
   display: none;
 }

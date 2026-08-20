@@ -81,6 +81,35 @@
   outline-offset: 1px;
 }
 
+/* Manual refresh / retry. The section shipped with exactly ONE interactive
+   node — the cadence select — so there was no way to ask for fresh data:
+   not from a stale view, and not from the "Failed to load analytics." dead
+   end. Same visual weight as the select, since it sits next to it. */
+.ins-btn {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 12px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm, 6px);
+  font-family: inherit;
+  font-size: var(--fs-sm, 13px);
+  color: var(--text);
+  cursor: pointer;
+}
+.ins-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ins-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ins-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 /* ── Scrolling body ───────────────────────────────────────────── */
 
 .ins-body {
@@ -122,14 +151,23 @@
   letter-spacing: 0.08em;
   color: var(--text-dim, #5c6b82);
 }
+/* The figure must never be silently cut. A fixed 30px mono figure needed
+   157px for "1 236 600" inside a 152px tile at 1024px (138px at 390px), and
+   the strip's `overflow:hidden` shaved the tail off with no ellipsis and no
+   other tell — leaving a smaller, entirely plausible number on screen.
+   Two guards, in order: shrink the type with the viewport, and — for figures
+   no size will save (a 21-glyph Number.MAX_SAFE_INTEGER) — allow the break
+   that mono digits joined by NBSP would otherwise refuse, so the number
+   wraps to a second line instead of losing its tail. */
 .ins-kpi__value {
   margin-top: 4px;
   font-family: var(--font-mono);
-  font-size: 30px;
+  font-size: clamp(20px, 2.4vw, 30px);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.02em;
   color: var(--text);
+  overflow-wrap: anywhere;
 }
 .ins-kpi__value[data-tone='ok'] {
   color: var(--success);
@@ -170,13 +208,6 @@
   padding: var(--space-4, 16px);
   min-width: 0;
 }
-.ins-card__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
 .ins-card__title {
   margin: 0 0 12px;
   font-family: var(--font-display);
@@ -186,27 +217,10 @@
   letter-spacing: normal;
   color: var(--text);
 }
-.ins-card__head .ins-card__title {
-  margin-bottom: 0;
-}
 /* The mockup sets the right-hand list cards 2px tighter than the
    ranked-findings card. */
 .ins-card--list .ins-card__title {
   margin-bottom: 10px;
-}
-.ins-card__meta {
-  font-size: var(--fs-chip, 12px);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-.ins-card__meta b {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--text);
-}
-.ins-card__meta-sep {
-  padding: 0 2px;
-  color: var(--text-dim);
 }
 
 /* ── Findings by severity — ranked rows ───────────────────────── */
@@ -216,9 +230,14 @@
   flex-direction: column;
   gap: 10px;
 }
+/* The count column sizes to its content with 52px as a FLOOR, not a cap.
+   As a hard 52px it fitted "99 999" and clipped everything from 100 000 up
+   with no ellipsis and no overflow tell — "9 007 199 254 740 992" read as
+   "9 007 199". The floor keeps the mono column aligned for ordinary
+   four/five-digit counts, exactly as before. */
 .ins-find-row {
   display: grid;
-  grid-template-columns: 1fr 52px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
 }
@@ -266,10 +285,12 @@
   background: var(--accent);
 }
 .ins-find-count {
+  min-width: 52px;
   font-family: var(--font-mono);
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
   text-align: right;
+  white-space: nowrap;
   color: var(--text);
 }
 

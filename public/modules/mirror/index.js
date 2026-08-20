@@ -26,8 +26,63 @@
      - $, escapeHtml, toast, t   — DOM + i18n helpers
      - window.closeModal          — modal lifecycle
      - window.buildShareUrl       — provided by modules/share/ when present
+     - window.tLocale             — active UI locale, for ?locale= below
    ============================================================ */
 import { $, escapeHtml, toast, t } from '/core/utils.js';
+
+// ── Request context ──────────────────────────────────────────────────
+//
+// /api/v1/mirror localises its notes and picks its rule overlay from the
+// query string, and defaults to uk + iab when the query is silent. This
+// client used to call it bare, so the "choices and reasons" list came back
+// Ukrainian on the English and Russian surfaces — a modal whose chrome was
+// English and whose explanations were not — and the self-test was always
+// computed against plain IAB even for a user working in a vendor dialect.
+
+const LOCALES = ['uk', 'en', 'ru'];
+const KNOWN_DIALECTS = ['iab', 'ext-rtb', 'inpage-push'];
+const DIALECT_STORAGE_KEY = 'ortbtools_dialect_v1';
+
+/** The locale the reader is actually looking at: <html lang> is the app's
+ *  source of truth (window.tLocale reads it), localStorage is the fallback. */
+function requestLocale() {
+  try {
+    if (typeof window.tLocale === 'function') {
+      const l = window.tLocale();
+      if (LOCALES.includes(l)) return l;
+    }
+    const fromHtml = document.documentElement.getAttribute('lang');
+    if (LOCALES.includes(fromHtml)) return fromHtml;
+  } catch (_e) {
+    /* fall through */
+  }
+  return 'uk';
+}
+
+/** Same resolution order the app uses for /api/analyze: ?dialect= first,
+ *  then localStorage, then iab. Temporary dialects exist only in the
+ *  author's browser, so — as with analyze — the server gets the parent. */
+function requestDialect() {
+  try {
+    const fromUrl = new URLSearchParams(location.search).get('dialect');
+    if (fromUrl && KNOWN_DIALECTS.includes(fromUrl)) return fromUrl;
+    if (fromUrl && fromUrl.startsWith('temp:')) return 'iab';
+    const stored = localStorage.getItem(DIALECT_STORAGE_KEY);
+    if (stored && KNOWN_DIALECTS.includes(stored)) return stored;
+  } catch (_e) {
+    /* private mode — the default is correct */
+  }
+  return 'iab';
+}
+
+function mirrorEndpoint() {
+  return (
+    '/api/v1/mirror?locale=' +
+    encodeURIComponent(requestLocale()) +
+    '&dialect=' +
+    encodeURIComponent(requestDialect())
+  );
+}
 
 // Compact one-deep JSON diff for the mirror modal. Top-level keys
 // only (deeper subtrees are stringified as leaves), three change
@@ -142,7 +197,7 @@ export async function openMirrorModal() {
     $('modalRoot').innerHTML = loadingTemplate();
     let result;
     try {
-      const r = await fetch('/api/v1/mirror', {
+      const r = await fetch(mirrorEndpoint(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input: sourceInput, mode: currentMode }),

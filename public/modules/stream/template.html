@@ -27,6 +27,12 @@
       <span class="stream-state__dot" aria-hidden="true"></span>
       <span class="stream-state__text" id="streamStateText"></span>
     </span>
+    <!-- Only shown while the stream is down for good. EventSource treats any
+         non-200 — including the server's 429 connection cap — as terminal and
+         never retries, so a page that lost its socket that way needs a way
+         back that isn't F5. index.js unhides this and also retries on its own
+         with a backoff. -->
+    <button class="stream-reconnect" id="streamReconnect" type="button" hidden></button>
     <button class="stream-freeze" id="streamFreeze" type="button"></button>
   </div>
 </header>

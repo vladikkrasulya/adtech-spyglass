@@ -55,6 +55,23 @@
         en: 'connection lost',
         ru: 'связь потеряна',
       },
+      // The server's 429. Named separately because it is the one outage the
+      // reader can clear without waiting for anybody: close the other tabs.
+      'stream.state.capped': {
+        uk: 'ліміт зʼєднань з цієї адреси',
+        en: 'connection limit for this address',
+        ru: 'лимит соединений с этого адреса',
+      },
+      'stream.reconnect': {
+        uk: 'Підключитись знову',
+        en: 'Reconnect',
+        ru: 'Подключиться снова',
+      },
+      'stream.reconnect.hint': {
+        uk: 'Спробувати відкрити стрім ще раз, не перезавантажуючи сторінку',
+        en: 'Try opening the stream again without reloading the page',
+        ru: 'Попробовать открыть стрим ещё раз, не перезагружая страницу',
+      },
       'stream.pause': {
         uk: 'Пауза',
         en: 'Pause',
@@ -171,6 +188,18 @@
         en: 'nothing matches this filter yet',
         ru: 'под этот фильтр пока ничего не подходит',
       },
+      // An empty table under a dead socket is not "waiting" — nothing is on
+      // its way. These two say which of the two silences it is.
+      'stream.empty.offline': {
+        uk: 'звʼязку зі стрімом немає — payload не надійде, доки він не відновиться',
+        en: 'the stream is disconnected — no payload will arrive until it is back',
+        ru: 'связи со стримом нет — payload не придёт, пока она не восстановится',
+      },
+      'stream.empty.capped': {
+        uk: 'сервер відхилив підключення: з цієї адреси вже відкрито забагато стрімів (ліміт 8). Закрий зайві вкладки — або натисни «Підключитись знову».',
+        en: 'the server refused the connection: this address already holds too many streams (limit 8). Close the other tabs — or press “Reconnect”.',
+        ru: 'сервер отклонил подключение: с этого адреса уже открыто слишком много стримов (лимит 8). Закрой лишние вкладки — или нажми «Подключиться снова».',
+      },
 
       // ── row affordance ───────────────────────────────────
       'stream.row.open': {
@@ -182,6 +211,13 @@
         uk: 'Цей payload ще не має постійного посилання',
         en: 'This payload has no permalink yet',
         ru: 'У этого payload ещё нет постоянной ссылки',
+      },
+      // Shown on the TIME cell of a row that came out of the server's replay
+      // buffer rather than off the live generator.
+      'stream.row.replay': {
+        uk: 'з буфера повтору — подія сталася раніше, це не щойно',
+        en: 'from the replay buffer — this happened earlier, not just now',
+        ru: 'из буфера повтора — событие произошло раньше, это не только что',
       },
     },
   };

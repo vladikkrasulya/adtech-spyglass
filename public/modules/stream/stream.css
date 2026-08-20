@@ -161,6 +161,33 @@
   color: var(--accent-text);
 }
 
+/* Shown only while the stream is down for good — see template.html. Carries
+   the accent because in that state it is the only thing on the page that can
+   change anything. */
+#app-root .stream-reconnect {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+#app-root .stream-reconnect:hover {
+  background: var(--accent);
+  color: var(--surface);
+}
+#app-root .stream-reconnect[hidden] {
+  display: none;
+}
+
 /* ── 2. Filter band ───────────────────────────────────────────────── */
 #app-root .stream-filters {
   display: flex;
@@ -231,9 +258,13 @@
    Kept in a custom property so the narrow breakpoint retunes both at once
    and they can never drift apart. */
 #app-root .stream-table {
-  /* 92+84+140+130+88+110 fixed/min track widths, +48px of side padding. */
-  --stream-cols: 92px 84px minmax(140px, 1fr) 130px 88px 110px;
-  --stream-min: 692px;
+  /* 112+84+140+130+88+110 fixed/min track widths, +48px of side padding.
+     TIME is wider than a clock reading needs because a payload from the
+     server's replay buffer can be from another day, and index.js prints
+     "DD.MM HH:MM:SS" for those rather than a bare time that would read as
+     "just now". Ellipsising the date would defeat the point of showing it. */
+  --stream-cols: 112px 84px minmax(140px, 1fr) 130px 88px 110px;
+  --stream-min: 712px;
 }
 #app-root .stream-thead,
 #app-root .stream-row {
@@ -265,6 +296,7 @@
 }
 
 #app-root .stream-row {
+  position: relative;
   width: 100%;
   margin: 0;
   padding: 11px var(--space-5, 24px);
@@ -291,6 +323,40 @@
 }
 #app-root .stream-row:disabled {
   cursor: default;
+}
+
+/* Replayed rows — payloads the server handed us out of its buffer rather than
+   off the live generator. They are real, so they stay readable; they just did
+   not happen now, so they must not sit in the feed looking like they did.
+
+   The marker lives in the row's own left padding instead of inside the TIME
+   cell: the cell is a fixed grid track, and a glyph competing with a
+   "DD.MM HH:MM:SS" reading would push the date into an ellipsis. The words
+   behind the symbol are on the cell's title (index.js paintTime). */
+#app-root .stream-row[data-replay='1'] {
+  background: color-mix(in srgb, var(--bg-2) 55%, transparent);
+}
+#app-root .stream-row[data-replay='1']:hover {
+  background: var(--bg-2);
+}
+#app-root .stream-row[data-replay='1']::before {
+  content: '↺';
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip);
+  line-height: 1;
+  color: var(--text-muted);
+}
+#app-root .stream-row[data-replay='1'] .stream-cell--time {
+  color: var(--text-muted);
+}
+@media (max-width: 1180px) {
+  #app-root .stream-row[data-replay='1']::before {
+    left: 3px;
+  }
 }
 
 #app-root .stream-cell {
@@ -369,8 +435,8 @@
    columns rather than clipping FINDINGS off the right edge. */
 @media (max-width: 1180px) {
   #app-root .stream-table {
-    --stream-cols: 84px 60px minmax(120px, 1fr) 108px 74px 96px;
-    --stream-min: 574px;
+    --stream-cols: 102px 60px minmax(120px, 1fr) 108px 74px 96px;
+    --stream-min: 592px;
   }
   #app-root .stream-head,
   #app-root .stream-filters,

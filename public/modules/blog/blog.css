@@ -10,11 +10,44 @@
 .blog-head {
   margin-bottom: var(--space-5, 24px);
 }
+.blog-head__top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3, 12px);
+}
 .blog-head h1 {
   margin: 0 0 6px;
   font-size: var(--fs-xl, 28px);
   font-weight: 600;
   color: var(--text);
+}
+
+/* RSS: the feed existed at /blog/rss.xml but nothing in the UI pointed at it. */
+.blog-rss {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid var(--border, #3f3f46);
+  border-radius: 20px;
+  font-size: var(--fs-sm, 13px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #46556b);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.blog-rss:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+.blog-rss__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f26522;
+  flex: none;
 }
 .blog-sub {
   margin: 0 0 var(--space-4, 20px);
@@ -44,7 +77,7 @@
   border: 1px solid var(--border, #3f3f46);
   background: transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   font-weight: 500;
   color: var(--text-muted, #46556b);
   cursor: pointer;
@@ -83,6 +116,67 @@
   color: var(--text-muted);
 }
 
+/* ── Failure state (list + post) ─────────────────────────── */
+.blog-error {
+  grid-column: 1 / -1;
+  padding: var(--space-5, 24px);
+  text-align: center;
+  color: var(--text-muted);
+}
+.blog-error__msg {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: var(--fs-base, 15px);
+}
+.blog-error__detail {
+  margin: 0 0 var(--space-3, 12px);
+  font-size: var(--fs-sm, 13px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.blog-retry,
+.blog-more {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #3f3f46);
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-sm, 13px);
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.blog-retry:hover,
+.blog-more:hover {
+  border-color: var(--accent, #0284c7);
+  color: var(--accent, #0284c7);
+}
+
+/* ── Pager ───────────────────────────────────────────────── */
+.blog-pager {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  margin-top: var(--space-5, 24px);
+}
+.blog-pager[hidden] {
+  display: none;
+}
+.blog-pager__count {
+  margin: 0;
+  font-size: var(--fs-sm, 13px);
+  color: var(--text-muted);
+}
+.blog-pager .blog-loading,
+.blog-pager .blog-error {
+  padding: 0;
+}
+
 /* ── Card ────────────────────────────────────────────────── */
 .blog-card {
   display: flex;
@@ -111,6 +205,10 @@
   font-size: var(--fs-md, 16px);
   font-weight: 600;
   line-height: 1.4;
+  /* Firehose titles carry raw URLs and long identifiers; without this an
+     unbroken token sets the grid column's min-content width and blows the
+     card out of the layout. */
+  overflow-wrap: anywhere;
 }
 .blog-card__title a {
   color: var(--text);
@@ -126,6 +224,7 @@
   color: var(--text-muted, #46556b);
   line-height: 1.5;
   overflow: hidden;
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -134,7 +233,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-sm, 13px);
   color: var(--text-muted, #46556b);
 }
 .blog-card__date {
@@ -207,19 +306,20 @@
   font-weight: 700;
   line-height: 1.3;
   color: var(--text);
+  overflow-wrap: anywhere;
 }
 .blog-post__meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
   color: var(--text-muted);
 }
 .blog-post__src {
   color: var(--accent, #0284c7);
   text-decoration: none;
-  font-size: 12px;
+  font-size: var(--fs-sm, 13px);
 }
 .blog-post__src:hover {
   text-decoration: underline;
@@ -230,6 +330,12 @@
   line-height: 1.7;
   color: var(--text);
   font-size: var(--fs-base, 15px);
+  /* A single unbroken token (long URL, base64 blob, hash, ORTB id) used to
+     stretch the paragraph to ~2000px inside a 662px column and run off the
+     right edge of the article card — no ancestor here scrolls or clips.
+     `anywhere` (not `break-word`) so the token also stops inflating the
+     element's min-content width. */
+  overflow-wrap: anywhere;
 }
 .blog-post__body h1,
 .blog-post__body h2,
@@ -260,11 +366,14 @@
   padding: 12px 16px;
   overflow-x: auto;
   margin: 0 0 1em;
+  /* Code blocks keep their own horizontal scroll — the inherited
+     `overflow-wrap: anywhere` must not start breaking source lines. */
+  overflow-wrap: normal;
 }
 .blog-post__body pre code {
   background: none;
   padding: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm, 13px);
 }
 .blog-post__body a {
   color: var(--accent, #0284c7);

@@ -92,6 +92,7 @@ const L = {
 
   eyebrowActive: { en: 'active', uk: 'активний', ru: 'активный' },
   eyebrowAvailable: { en: 'available', uk: 'доступний', ru: 'доступный' },
+  eyebrowExpired: { en: 'expired', uk: 'протермінований', ru: 'просроченный' },
 
   maintained: { en: 'maintained', uk: 'підтримується', ru: 'поддерживается' },
   rulesMeta: { en: '{n} rules', uk: '{n} правил', ru: '{n} правил' },
@@ -119,6 +120,42 @@ const L = {
     en: '{name} is the active dialect',
     uk: '{name} — активний діалект',
     ru: '{name} — активный диалект',
+  },
+
+  /* An expired overlay is still applied by the runtime — it just adds a
+     `temp.dialect_expired` note to every analysis. So this is a warning
+     about what the reader will see next, not a refusal. */
+  toastActivatedExpired: {
+    en: '{name} is active, but it expired on {date} — rebuild it from a cluster',
+    uk: '{name} активний, але протермінований {date} — збери його заново з кластера',
+    ru: '{name} активен, но просрочен {date} — собери его заново из кластера',
+  },
+
+  expiredOn: { en: 'expired {date}', uk: 'протерміновано {date}', ru: 'просрочен {date}' },
+  validUntil: { en: 'until {date}', uk: 'до {date}', ru: 'до {date}' },
+
+  untitledOverlay: {
+    en: 'Untitled overlay',
+    uk: 'Overlay без назви',
+    ru: 'Overlay без названия',
+  },
+  noFields: {
+    en: 'no field paths — this overlay checks nothing',
+    uk: 'жодного шляху поля — цей overlay нічого не перевіряє',
+    ru: 'ни одного пути поля — этот overlay ничего не проверяет',
+  },
+
+  removeOverlay: { en: 'Remove', uk: 'Видалити', ru: 'Удалить' },
+  confirmRemove: {
+    en: 'Remove the overlay “{name}”? Discovery can build it again from the same cluster.',
+    uk: 'Видалити overlay «{name}»? Discovery збере його знову з того ж кластера.',
+    ru: 'Удалить overlay «{name}»? Discovery соберёт его снова из того же кластера.',
+  },
+  toastRemoved: { en: '{name} removed', uk: '{name} видалено', ru: '{name} удалён' },
+  toastRemoveFailed: {
+    en: 'Could not remove {name}',
+    uk: 'Не вдалося видалити {name}',
+    ru: 'Не удалось удалить {name}',
   },
 
   loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
@@ -180,11 +217,26 @@ const BUILTIN_DIALECTS = [
 
 // ── Active dialect ────────────────────────────────────────────────
 //
-// Mirrors activeDialect() / setActiveDialect() in ortbtools.app.js —
-// same storage key, same resolution order, same temp-dialect rules. It
-// is duplicated rather than imported because ortbtools.app.js is a
-// classic script with no exports; KEEP IN SYNC with its DIALECT_STORAGE_KEY
-// block if the resolution order ever changes.
+// Shares the storage key and the temp-dialect rules with activeDialect() /
+// setActiveDialect() in ortbtools.app.js. It is duplicated rather than
+// imported because ortbtools.app.js is a classic script with no exports;
+// KEEP IN SYNC with its DIALECT_STORAGE_KEY block.
+//
+// The one place the two deliberately DIVERGE is `?dialect=`. In the
+// inspector the parameter is part of the page's own state — its
+// setActiveDialect writes the URL back on every change, so reading the URL
+// first is self-consistent there. Here it is not: this page's
+// setActiveDialect leaves the URL alone (a ?dialect on /dialects would
+// describe a page that does no validating), so a URL-first read made the
+// page immovable — every card click wrote localStorage and toasted, while
+// the ACTIVE eyebrow and aria-pressed stayed on whatever the URL said.
+// Measured on /dialects?dialect=ext-rtb: two clicks, two toasts naming two
+// different dialects, storage on a third, and not one pixel changed.
+//
+// So on this page the parameter is a REQUEST to change the setting, taken
+// once at mount (takeUrlDialect below) and then removed from the URL;
+// everything after that reads the stored value, which is also the value the
+// inspector will validate against. The page can no longer contradict itself.
 
 const DIALECT_STORAGE_KEY = 'ortbtools_dialect_v1';
 const KNOWN_DIALECTS = new Set(['iab', 'ext-rtb', 'inpage-push']);
@@ -193,22 +245,45 @@ function isTempDialect(value) {
   return typeof value === 'string' && value.startsWith('temp:');
 }
 
+function isKnownDialect(value) {
+  return KNOWN_DIALECTS.has(value) || isTempDialect(value);
+}
+
+/** The dialect actually in effect: the stored choice, or the baseline. */
 function activeDialect() {
   try {
-    const fromUrl = new URLSearchParams(location.search).get('dialect');
-    if (fromUrl && (KNOWN_DIALECTS.has(fromUrl) || isTempDialect(fromUrl))) return fromUrl;
     const fromStorage = localStorage.getItem(DIALECT_STORAGE_KEY);
-    if (fromStorage && (KNOWN_DIALECTS.has(fromStorage) || isTempDialect(fromStorage))) {
-      return fromStorage;
-    }
+    if (fromStorage && isKnownDialect(fromStorage)) return fromStorage;
   } catch (_e) {
     /* private mode */
   }
   return 'iab';
 }
 
+/**
+ * Reads `?dialect=` once and strips it from the URL, so a reload (or the
+ * next repaint) cannot resurrect a value the reader has since changed.
+ * Returns the requested slug when it names something we can activate, else
+ * null. Stripping happens for any `?dialect`, valid or not — leaving an
+ * unusable one in the address bar is the same lie in slower motion.
+ */
+function takeUrlDialect() {
+  let requested = null;
+  try {
+    const url = new URL(location.href);
+    requested = url.searchParams.get('dialect');
+    if (requested == null) return null;
+    url.searchParams.delete('dialect');
+    const query = url.searchParams.toString();
+    history.replaceState(history.state, '', url.pathname + (query ? '?' + query : '') + url.hash);
+  } catch (_e) {
+    return null;
+  }
+  return isKnownDialect(requested) ? requested : null;
+}
+
 function setActiveDialect(slug) {
-  if (!KNOWN_DIALECTS.has(slug) && !isTempDialect(slug)) return;
+  if (!isKnownDialect(slug)) return;
   try {
     localStorage.setItem(DIALECT_STORAGE_KEY, slug);
   } catch (_e) {
@@ -456,10 +531,20 @@ const CORNER_MARKS = ['tl', 'tr', 'bl', 'br']
 
 function renderCard(lang, opts) {
   const isActive = opts.isActive;
-  const eyebrow = isActive ? tx(L.eyebrowActive, lang) : tx(L.eyebrowAvailable, lang);
+  // EXPIRED outranks AVAILABLE but not ACTIVE: an expired overlay that is in
+  // effect is still in effect, and the eyebrow's job is to name the state the
+  // reader is in. The expiry is then carried by the meta line, which shows it
+  // for the active card too.
+  const eyebrow = isActive
+    ? tx(L.eyebrowActive, lang)
+    : opts.isExpired
+      ? tx(L.eyebrowExpired, lang)
+      : tx(L.eyebrowAvailable, lang);
   return `
     <button type="button"
-            class="dlc-card${isActive ? ' dlc-card--active' : ''}"
+            class="dlc-card${isActive ? ' dlc-card--active' : ''}${
+              opts.isExpired ? ' dlc-card--expired' : ''
+            }"
             data-action="activate"
             data-slug="${escapeHtml(opts.slug)}"
             aria-pressed="${isActive ? 'true' : 'false'}">
@@ -505,19 +590,61 @@ function renderShipped(lang, counts, active) {
   return renderBlockHead(lang, 'shippedHeading') + `<div class="dlc-grid">${cards}</div>`;
 }
 
-function renderCustom(lang, specs, active) {
+/**
+ * A temporary overlay carries `validUntil` (the builder sets it 30 days
+ * out). Past that moment the runtime still applies the overlay, but every
+ * analysis it touches carries a `temp.dialect_expired` note — see
+ * applyTempDialect in modules/intel/index.js. So an expired overlay is not
+ * dead, it is spent, and the card has to say which of the two it is instead
+ * of reading exactly like a fresh one.
+ */
+function isExpiredSpec(spec, now) {
+  return !!(spec && spec.validUntil && now > spec.validUntil);
+}
+
+function shortDate(ts, lang) {
+  const d = new Date(Number(ts));
+  if (Number.isNaN(d.getTime())) return '';
+  const loc = lang === 'uk' ? 'uk-UA' : lang === 'ru' ? 'ru-RU' : 'en-GB';
+  return d.toLocaleDateString(loc, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function renderCustom(lang, specs, active, now) {
   const cards = specs
-    .map((spec) =>
-      renderCard(lang, {
+    .map((spec) => {
+      const fields = spec.fields || [];
+      const expired = isExpiredSpec(spec, now);
+      const name = spec.name || pick(L.untitledOverlay, lang);
+      // A spec with no field paths validates nothing. "custom · 0 fields"
+      // over an empty description let that read as a card that had simply
+      // not loaded yet.
+      const descHtml = fields.length
+        ? escapeHtml(fields.map((f) => f.path).join(' · '))
+        : tx(L.noFields, lang);
+      const life = spec.validUntil
+        ? ' · ' +
+          tx(expired ? L.expiredOn : L.validUntil, lang, { date: shortDate(spec.validUntil, lang) })
+        : '';
+      const card = renderCard(lang, {
         slug: spec.id,
         isActive: active === spec.id,
-        title: spec.name || spec.id,
-        descHtml: escapeHtml((spec.fields || []).map((f) => f.path).join(' · ')),
+        isExpired: expired,
+        title: name,
+        descHtml,
         metaHtml:
-          escapeHtml('custom · ') +
-          countedHtml(pick(L.fieldsMeta, lang), (spec.fields || []).length),
-      }),
-    )
+          escapeHtml('custom · ') + countedHtml(pick(L.fieldsMeta, lang), fields.length) + life,
+      });
+      // The remove control sits UNDER the card rather than inside it: the
+      // card is itself a <button>, and a button inside a button is not
+      // markup a browser will honour. It is also the only way to get rid of
+      // an overlay from the UI — storage.deleteTempDialect() had no caller
+      // anywhere in public/ before this.
+      const remove =
+        `<button type="button" class="dlc-cardx" data-action="delete-temp"` +
+        ` data-slug="${escapeHtml(spec.id)}"` +
+        ` aria-label="${tx(L.confirmRemove, lang, { name })}">${tx(L.removeOverlay, lang)}</button>`;
+      return `<div class="dlc-cardwrap">${card}${remove}</div>`;
+    })
     .join('');
   return renderBlockHead(lang, 'customHeading') + `<div class="dlc-grid">${cards}</div>`;
 }
@@ -557,10 +684,20 @@ function renderDiscovered(lang, clusters) {
 
 // ── Toast helper ─────────────────────────────────────────────────
 
+/**
+ * Shows one toast and returns the element it created, so the caller can take
+ * it back down again. The shell's toast() (ctx.toast) appends into
+ * #toastContainer and returns nothing, so the element is identified by
+ * comparing the container's last child before and after the call — the only
+ * handle available without reaching into shell-owned code.
+ */
 function showToast(message, type, ctxToast) {
+  const host = document.getElementById('toastContainer');
   if (ctxToast) {
+    const before = host ? host.lastElementChild : null;
     ctxToast(message, type || 'success');
-    return;
+    const after = host ? host.lastElementChild : null;
+    return after && after !== before ? after : null;
   }
   const el = document.createElement('div');
   el.textContent = message;
@@ -570,6 +707,49 @@ function showToast(message, type, ctxToast) {
     el.classList.add('is-out');
     setTimeout(() => el.remove(), 320);
   }, 2400);
+  return el;
+}
+
+/**
+ * Announcing the active dialect is a statement about the CURRENT state, not
+ * an entry in a log — so this page keeps at most one of them on screen.
+ *
+ * Measured before this existed: twelve quick card clicks queued twelve
+ * toasts, seventeen after a few more, stacking 912px down the right-hand
+ * column and burying the third card behind toasts that contradicted each
+ * other (audit/dialects-04-toast-stack.png). Two mechanisms fix that:
+ * activations inside COALESCE_MS collapse into one announcement (rapid
+ * switching says only where you landed), and a new announcement removes the
+ * previous one if it is still standing.
+ */
+const TOAST_COALESCE_MS = 320;
+
+function createAnnouncer(ctxToast) {
+  let timer = null;
+  let pending = null;
+  let live = null;
+
+  function flush() {
+    timer = null;
+    const next = pending;
+    pending = null;
+    if (!next) return;
+    if (live && live.isConnected) live.remove();
+    live = showToast(next.message, next.type, ctxToast);
+  }
+
+  return {
+    say(message, type) {
+      pending = { message, type: type || 'success' };
+      clearTimeout(timer);
+      timer = setTimeout(flush, TOAST_COALESCE_MS);
+    },
+    cancel() {
+      clearTimeout(timer);
+      timer = null;
+      pending = null;
+    },
+  };
 }
 
 // ── Module export ─────────────────────────────────────────────────
@@ -612,6 +792,7 @@ export default {
 
     function paint() {
       const active = activeDialect();
+      const now = Date.now();
       if (shippedRoot) {
         shippedRoot.innerHTML = countsFailed
           ? renderShipped(lang, counts, active) + `<p class="dlc-error">${tx(L.error, lang)}</p>`
@@ -619,13 +800,31 @@ export default {
       }
       if (customRoot) {
         customRoot.hidden = customSpecs.length === 0;
-        customRoot.innerHTML = customSpecs.length ? renderCustom(lang, customSpecs, active) : '';
+        customRoot.innerHTML = customSpecs.length
+          ? renderCustom(lang, customSpecs, active, now)
+          : '';
       }
       if (discoveredRoot) discoveredRoot.innerHTML = renderDiscovered(lang, clusters);
     }
 
+    const announcer = createAnnouncer(ctx.toast);
+    ctx.addCleanup(() => announcer.cancel());
+
     await loadAll();
     if (ctx.signal && ctx.signal.aborted) return;
+
+    // `?dialect=` is honoured ONCE, here, as a request to change the stored
+    // setting — see takeUrlDialect. A temp overlay that this browser has no
+    // record of is dropped rather than activated: the runtime would find no
+    // spec behind it, and the page would name an overlay nobody can see.
+    const requested = takeUrlDialect();
+    if (
+      requested &&
+      requested !== activeDialect() &&
+      (!isTempDialect(requested) || customSpecs.some((s) => s && s.id === requested))
+    ) {
+      setActiveDialect(requested);
+    }
     paint();
 
     // A dialect built in the Discovery modal becomes active immediately —
@@ -653,16 +852,54 @@ export default {
           if (activeDialect() === slug) return;
           setActiveDialect(slug);
           paint();
+          const spec = customSpecs.find((s) => s && s.id === slug) || null;
           const label =
             (BUILTIN_DIALECTS.find((d) => d.slug === slug) || {}).title ||
-            ((customSpecs.find((s) => s.id === slug) || {}).name ?? slug);
-          showToast(
-            fmt(pick(L.toastActivated, lang), {
-              name: typeof label === 'string' ? label : pick(label, lang),
-            }),
-            'success',
-            ctx.toast,
-          );
+            ((spec || {}).name ?? pick(L.untitledOverlay, lang));
+          const name = typeof label === 'string' ? label : pick(label, lang);
+          // An expired overlay is applied with a `temp.dialect_expired` note
+          // on every analysis. Saying "✓ active" and nothing else is how the
+          // reader ends up reading that note as a surprise.
+          if (isExpiredSpec(spec, Date.now())) {
+            announcer.say(
+              fmt(pick(L.toastActivatedExpired, lang), {
+                name,
+                date: shortDate(spec.validUntil, lang),
+              }),
+              'error',
+            );
+          } else {
+            announcer.say(fmt(pick(L.toastActivated, lang), { name }), 'success');
+          }
+          return;
+        }
+
+        if (action === 'delete-temp') {
+          e.preventDefault();
+          const slug = btn.dataset.slug || '';
+          const spec = customSpecs.find((s) => s && s.id === slug);
+          const storage = window.OrtbtoolsIntelStorage;
+          if (!spec || !storage || typeof storage.deleteTempDialect !== 'function') return;
+          const name = spec.name || pick(L.untitledOverlay, lang);
+          if (!window.confirm(fmt(pick(L.confirmRemove, lang), { name }))) return;
+          try {
+            await storage.deleteTempDialect(slug);
+          } catch (_err) {
+            announcer.say(fmt(pick(L.toastRemoveFailed, lang), { name }), 'error');
+            return;
+          }
+          if (ctx.signal && ctx.signal.aborted) return;
+          // Deleting the overlay that was in effect must not leave the app
+          // pointed at a spec nothing can resolve any more — fall back to the
+          // dialect it was built on top of, or the baseline.
+          if (activeDialect() === slug) {
+            const parent = spec.parentDialect;
+            setActiveDialect(KNOWN_DIALECTS.has(parent) ? parent : 'iab');
+          }
+          customSpecs = await fetchCustomDialects();
+          if (ctx.signal && ctx.signal.aborted) return;
+          paint();
+          announcer.say(fmt(pick(L.toastRemoved, lang), { name }), 'success');
           return;
         }
 

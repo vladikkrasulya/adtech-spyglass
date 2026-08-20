@@ -6,8 +6,8 @@
    1. PRODUCING the embed: opens a modal where the user copies an
       <iframe> snippet pointing at the current bid via the share-link
       URL primitive (`?embed=1#req=…&res=…`). Reuses share module's
-      buildShareUrl + appends `?embed=1` so the loaded view strips
-      chrome.
+      buildShareUrl + sets `embed=1` in the query (see withEmbedFlag)
+      so the loaded view strips chrome.
 
    2. RENDERING the embed: when the URL has `?embed=1`, the inline
       head-IIFE in each HTML file already sets `data-embed="1"` on
@@ -38,6 +38,30 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  /**
+   * Add `embed=1` to a share URL's query, whatever that URL looks like.
+   *
+   * This used to be `shareUrl.replace('/?#', '/?embed=1#')`, a string swap
+   * that only matched a link built at the site root. The inspector lives at
+   * /inspector (and /uk/inspector, /ru/inspector), so the substring was
+   * never there, replace() returned the input untouched, and the snippet
+   * shipped an iframe of the FULL app — header, sidebar, editors and all —
+   * with no sign that anything had gone wrong. Parsing the URL instead
+   * means the flag lands whatever the pathname is, and it survives the
+   * query share links now carry (?dialect=…).
+   */
+  function withEmbedFlag(shareUrl) {
+    try {
+      const u = new URL(shareUrl, location.href);
+      u.searchParams.set('embed', '1');
+      return u.toString();
+    } catch (_e) {
+      // Unparseable URL — refuse rather than hand back a snippet that
+      // silently embeds the whole application.
+      return null;
+    }
   }
 
   function buildSnippet(url, width, height) {
@@ -82,9 +106,11 @@
       toastErr(tt('toast.share_link_failed', { error: e.message || String(e) }));
       return;
     }
-    // Append `?embed=1` — share.js builds with `/?#req=…`, we slot embed=1
-    // into the existing query.
-    const embedUrl = shareUrl.replace('/?#', '/?embed=1#');
+    const embedUrl = withEmbedFlag(shareUrl);
+    if (!embedUrl) {
+      toastErr(tt('toast.share_link_failed', { error: 'invalid share URL' }));
+      return;
+    }
     if (embedUrl.length > 7000) {
       toastErr(tt('toast.share_link_too_long', { size: embedUrl.length }));
       return;

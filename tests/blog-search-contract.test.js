@@ -218,7 +218,14 @@ test('F-06: a finding result links to the row id /docs/findings actually renders
         'the finding result row',
       );
 
-      const row = window.document.querySelector('.sg-search-row');
+      // Selected by destination, not by position. The query 'vast' also
+      // matches the /vast landing now that landings are searchable, and for
+      // that word a landing ranking first is the right answer — but what this
+      // test guards is the ANCHOR FORMAT, not the ordering. Asserting on
+      // `querySelector` alone froze a ranking decision it was never about.
+      const rows = [...window.document.querySelectorAll('.sg-search-row')];
+      const row = rows.find((r) => (r.dataset.searchUrl || '').includes('/docs/findings#'));
+      assert.ok(row, `no finding result among: ${rows.map((r) => r.dataset.searchUrl).join(', ')}`);
       // Pre-fix this was '/docs/findings#vast.version_missing' — docs renders
       // <tr id="finding-vast.version_missing">, so nothing ever matched.
       assert.equal(row.dataset.searchUrl, '/docs/findings#finding-vast.version_missing');
@@ -275,15 +282,27 @@ test('F-07: the results dropdown is a complete, localized combobox reachable fro
       input.dispatchEvent(new window.Event('focus'));
       input.value = 'vast';
       input.dispatchEvent(new window.Event('input', { bubbles: true }));
-      await waitFor(() => doc.querySelectorAll('.sg-search-row').length === 2, 'both findings');
+      // Both fixture findings must appear; the exact row COUNT is not the
+      // contract. 'vast' also matches the /vast landing now that landings are
+      // searchable, and pinning the number here turned a deliberate feature
+      // into a failure. What F-07 is about is the combobox semantics below —
+      // roles, unique ids, tab order — and those hold for any number of rows.
+      await waitFor(
+        () =>
+          [...doc.querySelectorAll('.sg-search-row')].filter((r) =>
+            (r.dataset.searchUrl || '').includes('/docs/findings#'),
+          ).length === 2,
+        'both findings',
+      );
 
       assert.equal(input.getAttribute('aria-expanded'), 'true');
       const rows = Array.from(doc.querySelectorAll('.sg-search-row'));
-      assert.deepEqual(
-        rows.map((r) => r.getAttribute('role')),
-        ['option', 'option'],
+      assert.ok(rows.length >= 2, 'at least the two findings are listed');
+      assert.ok(
+        rows.every((r) => r.getAttribute('role') === 'option'),
+        'every row is an option',
       );
-      assert.equal(new Set(rows.map((r) => r.id)).size, 2, 'option ids are unique');
+      assert.equal(new Set(rows.map((r) => r.id)).size, rows.length, 'option ids are unique');
       assert.ok(
         rows.every((r) => r.getAttribute('tabindex') === '-1'),
         'options stay out of the tab order — the input holds focus',
@@ -309,7 +328,12 @@ test('F-07: the results dropdown is a complete, localized combobox reachable fro
       assert.equal(input.getAttribute('aria-activedescendant'), rows[0].id);
 
       key('Enter');
-      assert.deepEqual(navigations, ['/uk/docs/findings#finding-vast.version_missing']);
+      // Enter follows the row the keyboard actually highlighted. Naming a URL
+      // here instead pinned the ranking: 'vast' now also matches the /vast
+      // landing, so rows[0] is legitimately a different destination than it
+      // was, while the contract — Enter goes where the highlight is — is
+      // unchanged.
+      assert.deepEqual(navigations, [rows[0].dataset.searchUrl]);
       assert.equal(input.getAttribute('aria-expanded'), 'false');
       assert.equal(input.getAttribute('aria-activedescendant'), null);
 

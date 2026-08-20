@@ -18,6 +18,13 @@ import { blogPostPath, localePath, stripLocale } from '/core/routes.js';
 
 const FALLBACK_LANG = 'en';
 
+// One page of cards. The API caps `limit` at 100 and reports the unpaged
+// `count`, so the listing pages through with offset instead of asking for a
+// single fixed slab — before this, `limit=50` with no offset made post 51 and
+// everything after it unreachable from the UI on a corpus the firehose grows
+// every day.
+const PAGE_SIZE = 50;
+
 const CATEGORY_LABELS = {
   news: { en: 'News', uk: 'Новини', ru: 'Новости' },
   analysis: { en: 'Deep-dives', uk: 'Розбори', ru: 'Разборы' },
@@ -39,7 +46,31 @@ const L = {
   editorial: { en: 'editorial', uk: 'редакційне', ru: 'редакционное' },
   firehose: { en: 'firehose', uk: 'firehose', ru: 'firehose' },
   notFound: { en: 'Post not found.', uk: 'Пост не знайдено.', ru: 'Пост не найден.' },
+  listFailed: {
+    en: 'Could not load the posts.',
+    uk: 'Не вдалося завантажити пости.',
+    ru: 'Не удалось загрузить посты.',
+  },
+  postFailed: {
+    en: 'Could not load the post.',
+    uk: 'Не вдалося завантажити пост.',
+    ru: 'Не удалось загрузить пост.',
+  },
+  retry: { en: 'Try again', uk: 'Спробувати ще раз', ru: 'Повторить' },
+  showMore: { en: 'Show more', uk: 'Показати ще', ru: 'Показать ещё' },
+  rss: { en: 'RSS feed', uk: 'RSS-стрічка', ru: 'RSS-лента' },
 };
+
+// "Showing 50 of 66" — a plain interpolation per locale, no plural rules
+// needed (the numbers are always ≥ 1 when this line is shown at all).
+const SHOWN_OF = {
+  en: (shown, total) => `Showing ${shown} of ${total}`,
+  uk: (shown, total) => `Показано ${shown} з ${total}`,
+  ru: (shown, total) => `Показано ${shown} из ${total}`,
+};
+function shownOf(shown, total, lang) {
+  return (SHOWN_OF[lang] || SHOWN_OF[FALLBACK_LANG])(shown, total);
+}
 
 function pick(map, lang) {
   if (!map) return '';
@@ -160,7 +191,12 @@ async function mountListing(root, ctx, lang) {
   root.innerHTML = `
     <section class="blog-section">
       <header class="blog-head">
-        <h1>${escapeHtml(pick(L.title, lang))}</h1>
+        <div class="blog-head__top">
+          <h1>${escapeHtml(pick(L.title, lang))}</h1>
+          <a class="blog-rss" href="/blog/rss.xml" type="application/rss+xml"
+             data-external title="${escapeHtml(pick(L.rss, lang))}"
+             aria-label="${escapeHtml(pick(L.rss, lang))}"><span class="blog-rss__dot" aria-hidden="true"></span>RSS</a>
+        </div>
         <p class="blog-sub">${escapeHtml(pick(L.subtitle, lang))}</p>
         <div class="blog-filters">
           <div class="blog-chips" id="catChips">
@@ -174,29 +210,155 @@ async function mountListing(root, ctx, lang) {
       <div class="blog-grid" id="blogGrid">
         <div class="blog-loading">${escapeHtml(pick(L.loading, lang))}</div>
       </div>
+      <div class="blog-pager" id="blogPager" hidden></div>
     </section>
   `;
 
-  async function loadAndRender() {
+  // Paging + request-ordering state.
+  //
+  // `generation` is bumped by every load. A response whose generation is stale
+  // is dropped on the floor: the chip classes are flipped synchronously on
+  // click, so without this the SLOWEST response won the grid while the chip
+  // showed the LAST click — the UI confidently displaying UK cards under an
+  // active RU chip. `inFlight` additionally cancels the superseded request so
+  // a slow ClickHouse doesn't keep a pointless socket open.
+  let generation = 0;
+  let inFlight = null;
+  let loaded = [];
+  let total = 0;
+
+  function pagerEl() {
+    return root.querySelector('#blogPager');
+  }
+
+  function hidePager() {
+    const pager = pagerEl();
+    if (!pager) return;
+    pager.innerHTML = '';
+    pager.hidden = true;
+  }
+
+  // Localized failure block. The technical detail (HTTP 503, Failed to fetch)
+  // stays, but as a secondary line — the primary message is in the user's
+  // language and there is always a way forward.
+  function errorHtml(detail) {
+    return `
+      <div class="blog-error" role="alert">
+        <p class="blog-error__msg">${escapeHtml(pick(L.listFailed, lang))}</p>
+        ${detail ? `<p class="blog-error__detail">${escapeHtml(detail)}</p>` : ''}
+        <button type="button" class="blog-retry" data-retry>${escapeHtml(pick(L.retry, lang))}</button>
+      </div>`;
+  }
+
+  function wireRetry(container, append) {
+    const btn = container && container.querySelector('[data-retry]');
+    if (!btn) return;
+    btn.addEventListener('click', () => loadAndRender({ append }), { signal: ctx.signal });
+  }
+
+  function renderPager() {
+    const pager = pagerEl();
+    if (!pager) return;
+    const hasMore = loaded.length < total;
+    if (!loaded.length || (!hasMore && total <= PAGE_SIZE)) {
+      hidePager();
+      return;
+    }
+    pager.hidden = false;
+    pager.innerHTML = `
+      <p class="blog-pager__count">${escapeHtml(shownOf(loaded.length, total, lang))}</p>
+      ${hasMore ? `<button type="button" class="blog-more" data-more>${escapeHtml(pick(L.showMore, lang))}</button>` : ''}
+    `;
+    const more = pager.querySelector('[data-more]');
+    if (more) {
+      more.addEventListener('click', () => loadAndRender({ append: true }), { signal: ctx.signal });
+    }
+  }
+
+  function renderGrid() {
     const grid = root.querySelector('#blogGrid');
     if (!grid) return;
-    grid.innerHTML = `<div class="blog-loading">${escapeHtml(pick(L.loading, lang))}</div>`;
+    if (!loaded.length) {
+      grid.innerHTML = `<p class="blog-empty">${escapeHtml(pick(L.noItems, lang))}</p>`;
+      hidePager();
+      return;
+    }
+    grid.innerHTML = loaded.map((post) => renderCard(post, lang)).join('');
+    renderPager();
+  }
+
+  async function loadAndRender({ append = false } = {}) {
+    const grid = root.querySelector('#blogGrid');
+    if (!grid) return;
+
+    const gen = ++generation;
+    if (inFlight) inFlight.abort();
+    const ctrl = new AbortController();
+    inFlight = ctrl;
+    const onOuterAbort = () => ctrl.abort();
+    if (ctx.signal.aborted) return;
+    ctx.signal.addEventListener('abort', onOuterAbort, { once: true });
+
+    const offset = append ? loaded.length : 0;
+    if (append) {
+      const pager = pagerEl();
+      if (pager) {
+        pager.hidden = false;
+        pager.innerHTML = `<p class="blog-loading">${escapeHtml(pick(L.loading, lang))}</p>`;
+      }
+    } else {
+      loaded = [];
+      total = 0;
+      hidePager();
+      grid.innerHTML = `<div class="blog-loading">${escapeHtml(pick(L.loading, lang))}</div>`;
+    }
 
     try {
-      const params = new URLSearchParams({ limit: '50' });
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+      if (offset) params.set('offset', String(offset));
       if (activeCat) params.set('category', activeCat);
       if (activeLang) params.set('lang', activeLang);
-      const resp = await fetch(`/api/v1/blog/list?${params}`, { signal: ctx.signal });
+      const resp = await fetch(`/api/v1/blog/list?${params}`, { signal: ctrl.signal });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
-      if (!data.ok || !data.items.length) {
-        grid.innerHTML = `<p class="blog-empty">${escapeHtml(pick(L.noItems, lang))}</p>`;
-        return;
+      if (gen !== generation) return; // a newer filter click already won
+      if (!data.ok || !Array.isArray(data.items)) throw new Error('bad response');
+      const items = data.items;
+      let added = items.length;
+      if (append) {
+        // The firehose inserts while the reader is paging: a post published
+        // between page 1 and page 2 shifts the window and would otherwise
+        // repeat the item that fell across the boundary.
+        const seen = new Set(loaded.map((p) => `${p.slug}:${p.lang}`));
+        const fresh = items.filter((p) => !seen.has(`${p.slug}:${p.lang}`));
+        added = fresh.length;
+        loaded = loaded.concat(fresh);
+      } else {
+        loaded = items;
       }
-      grid.innerHTML = data.items.map((post) => renderCard(post, lang)).join('');
+      total = Number.isFinite(data.count) ? data.count : loaded.length;
+      // A short page, an empty page, or a page that added nothing new is the
+      // real end of the list — never leave "Show more" pointing at nothing.
+      if (items.length < PAGE_SIZE || !added) total = loaded.length;
+      renderGrid();
     } catch (e) {
+      if (gen !== generation) return;
       if (e.name === 'AbortError') return;
-      grid.innerHTML = `<p class="blog-empty">Error: ${escapeHtml(e.message)}</p>`;
+      if (append) {
+        const pager = pagerEl();
+        if (pager) {
+          pager.hidden = false;
+          pager.innerHTML = errorHtml(e.message);
+          wireRetry(pager, true);
+        }
+      } else {
+        grid.innerHTML = errorHtml(e.message);
+        hidePager();
+        wireRetry(grid, false);
+      }
+    } finally {
+      ctx.signal.removeEventListener('abort', onOuterAbort);
+      if (inFlight === ctrl) inFlight = null;
     }
   }
 
@@ -230,6 +392,9 @@ async function mountListing(root, ctx, lang) {
     { signal: ctx.signal },
   );
 
+  // Deliberately not awaited: mount() must return as soon as the shell has a
+  // painted section (header + chips + loading state). Awaiting here would hold
+  // the whole section mount hostage to a slow ClickHouse.
   loadAndRender();
 }
 
@@ -267,46 +432,76 @@ function renderCard(post, uiLang) {
 // ── Single Post View ───────────────────────────────────────────────────────
 
 async function mountPost(root, ctx, uiLang, postLang, slug) {
-  root.innerHTML = `
-    <section class="blog-section blog-post-section">
-      <div class="blog-loading">${escapeHtml(pick(L.loading, uiLang))}</div>
-    </section>
-  `;
-  let ownerNode = root.firstElementChild;
+  let ownerNode = null;
   const ownsMount = () =>
     !ctx.signal.aborted && root.isConnected && ownerNode && root.contains(ownerNode);
 
-  try {
-    const resp = await fetch(
-      `/api/v1/blog/post?slug=${encodeURIComponent(slug)}&lang=${encodeURIComponent(postLang)}`,
-      { signal: ctx.signal },
-    );
-    if (!ownsMount()) return;
-    if (!resp.ok) {
-      if (resp.status === 404) {
-        root.innerHTML = `
-          <section class="blog-section blog-post-section">
-            <a class="blog-back" href="${escapeHtml(localePath('/blog', uiLang))}">${escapeHtml(pick(L.backToList, uiLang))}</a>
-            <p class="blog-empty">${escapeHtml(pick(L.notFound, uiLang))}</p>
-          </section>`;
-        return;
-      }
-      throw new Error('HTTP ' + resp.status);
-    }
-    const data = await resp.json();
-    if (!ownsMount()) return;
-    if (!data.ok || !data.post) throw new Error('bad response');
+  // Every full-view swap goes through setView() so ownerNode always names the
+  // node this mount owns — a late response from a previous mount must never
+  // overwrite a newer one.
+  function setView(html) {
+    root.innerHTML = html;
+    ownerNode = root.firstElementChild;
+  }
 
-    const post = data.post;
-    const catKey = post.category || 'guide';
-    const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
-    const dateStr = formatDate(post.published_at, postLang);
+  const backLink = () =>
+    `<a class="blog-back" href="${escapeHtml(localePath('/blog', uiLang))}">${escapeHtml(pick(L.backToList, uiLang))}</a>`;
 
-    if (!ownsMount()) return;
-    const originalBody = String(post.body || '');
-    root.innerHTML = `
+  // The failure view keeps the "← Back to blog" link. It used to replace the
+  // whole root with a bare "Error: Failed to fetch", which left the reader on
+  // a dead page with no in-content way back to the listing.
+  function renderFailure(detail) {
+    setView(`
       <section class="blog-section blog-post-section">
-        <a class="blog-back" href="${escapeHtml(localePath('/blog', uiLang))}">${escapeHtml(pick(L.backToList, uiLang))}</a>
+        ${backLink()}
+        <div class="blog-error" role="alert">
+          <p class="blog-error__msg">${escapeHtml(pick(L.postFailed, uiLang))}</p>
+          ${detail ? `<p class="blog-error__detail">${escapeHtml(detail)}</p>` : ''}
+          <button type="button" class="blog-retry" data-retry>${escapeHtml(pick(L.retry, uiLang))}</button>
+        </div>
+      </section>`);
+    const btn = root.querySelector('[data-retry]');
+    if (btn) btn.addEventListener('click', () => load(), { signal: ctx.signal });
+  }
+
+  async function load() {
+    setView(`
+    <section class="blog-section blog-post-section">
+      <div class="blog-loading">${escapeHtml(pick(L.loading, uiLang))}</div>
+    </section>
+  `);
+
+    try {
+      const resp = await fetch(
+        `/api/v1/blog/post?slug=${encodeURIComponent(slug)}&lang=${encodeURIComponent(postLang)}`,
+        { signal: ctx.signal },
+      );
+      if (!ownsMount()) return;
+      if (!resp.ok) {
+        if (resp.status === 404) {
+          setView(`
+          <section class="blog-section blog-post-section">
+            ${backLink()}
+            <p class="blog-empty">${escapeHtml(pick(L.notFound, uiLang))}</p>
+          </section>`);
+          return;
+        }
+        throw new Error('HTTP ' + resp.status);
+      }
+      const data = await resp.json();
+      if (!ownsMount()) return;
+      if (!data.ok || !data.post) throw new Error('bad response');
+
+      const post = data.post;
+      const catKey = post.category || 'guide';
+      const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
+      const dateStr = formatDate(post.published_at, postLang);
+
+      if (!ownsMount()) return;
+      const originalBody = String(post.body || '');
+      setView(`
+      <section class="blog-section blog-post-section">
+        ${backLink()}
         <article class="blog-post">
           <header class="blog-post__head">
             <span class="blog-badge blog-badge--${escapeHtml(catKey)}">${escapeHtml(catLabel)}</span>
@@ -320,29 +515,31 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
           <div class="blog-post__body"></div>
         </article>
       </section>
-    `;
-    ownerNode = root.firstElementChild;
+    `);
 
-    const bodyEl = root.querySelector('.blog-post__body');
-    const ownsBody = () => ownsMount() && bodyEl && root.contains(bodyEl);
-    if (!ownsBody()) return;
+      const bodyEl = root.querySelector('.blog-post__body');
+      const ownsBody = () => ownsMount() && bodyEl && root.contains(bodyEl);
+      if (!ownsBody()) return;
 
-    try {
-      const { renderBlogBody } = await import('/modules/blog/markdown-renderer.js');
-      if (!ownsBody()) return;
-      const fragment = renderBlogBody(originalBody, {
-        source: post.source,
-        limitedHtml: safeRenderMarkdown(originalBody),
-        baseUrl: document.baseURI,
-      });
-      if (!ownsBody()) return;
-      bodyEl.replaceChildren(fragment);
-    } catch {
-      if (!ownsBody()) return;
-      bodyEl.textContent = originalBody;
+      try {
+        const { renderBlogBody } = await import('/modules/blog/markdown-renderer.js');
+        if (!ownsBody()) return;
+        const fragment = renderBlogBody(originalBody, {
+          source: post.source,
+          limitedHtml: safeRenderMarkdown(originalBody),
+          baseUrl: document.baseURI,
+        });
+        if (!ownsBody()) return;
+        bodyEl.replaceChildren(fragment);
+      } catch {
+        if (!ownsBody()) return;
+        bodyEl.textContent = originalBody;
+      }
+    } catch (e) {
+      if (e.name === 'AbortError' || !ownsMount()) return;
+      renderFailure(e.message);
     }
-  } catch (e) {
-    if (e.name === 'AbortError' || !ownsMount()) return;
-    root.innerHTML = `<section class="blog-section"><p class="blog-empty">Error: ${escapeHtml(e.message)}</p></section>`;
   }
+
+  await load();
 }

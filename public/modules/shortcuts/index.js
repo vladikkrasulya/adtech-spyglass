@@ -67,13 +67,21 @@
     const root = document.getElementById('modalRoot');
     if (!root) return;
     ensureStyle();
-    const rows = [
-      ['?', tt('shortcuts.row.help')],
-      ['Ctrl + Enter', tt('shortcuts.row.run')],
-      ['Ctrl + S', tt('shortcuts.row.save')],
-      ['M', tt('shortcuts.row.mirror')],
-      ['Esc', tt('shortcuts.row.close')],
-    ];
+    // Run / Save / Mirror all act on the Inspector's editor: Ctrl+Enter is
+    // bound in ortbtools.app.js#handleKeydown, the other two above. On a
+    // section that has no editor they cannot fire, and listing them there
+    // was the help screen telling the user about keys that do nothing —
+    // which is how the dead M and Ctrl+S went unnoticed for so long.
+    const editorRows = inspectorSurfaceReady()
+      ? [
+          ['Ctrl + Enter', tt('shortcuts.row.run')],
+          ['Ctrl + S', tt('shortcuts.row.save')],
+          ['M', tt('shortcuts.row.mirror')],
+        ]
+      : [];
+    const rows = [['?', tt('shortcuts.row.help')]]
+      .concat(editorRows)
+      .concat([['Esc', tt('shortcuts.row.close')]]);
     const body = rows
       .map(function (r) {
         return '<tr><td>' + renderKeys(r[0]) + '</td><td>' + escapeHtml(r[1]) + '</td></tr>';
@@ -100,6 +108,60 @@
     return !!(root && root.children.length);
   }
 
+  // ── Lazy actions ────────────────────────────────────────────────────────
+  // Save and Mirror live in modules that are imported on FIRST CLICK of the
+  // matching toolbar button (ortbtools.app.js, cases 'save-sample' /
+  // 'mirror') — and that import is the only thing that installs
+  // window.openSaveModal / window.openMirrorModal. This handler used to call
+  // those globals "if they exist", so both shortcuts did nothing on a fresh
+  // page and started working only after the user had performed the same
+  // action with the mouse: the keyboard was available exactly when it was no
+  // longer needed, while the cheat-sheet below promised it unconditionally.
+  // Doing the import here — the same two module specifiers, so the browser's
+  // module cache is shared with the toolbar path — is what makes the key
+  // equal to the button.
+  const LAZY_ACTIONS = {
+    save: {
+      global: 'openSaveModal',
+      modules: ['/modules/save-sample/i18n.js', '/modules/save-sample/index.js'],
+    },
+    mirror: {
+      global: 'openMirrorModal',
+      modules: ['/modules/mirror/i18n.js', '/modules/mirror/index.js'],
+    },
+  };
+  const _loading = Object.create(null);
+
+  /** Both actions read the Inspector's request editor the instant they open
+   *  (openSaveModal/openMirrorModal both do $('bidReq').value), so on a
+   *  section that has no editor — /library, /docs, /blog — there is nothing
+   *  for them to act on. The keys are then left to the browser rather than
+   *  swallowed for a no-op, and the cheat-sheet stops listing them. */
+  function inspectorSurfaceReady() {
+    return !!document.getElementById('bidReq');
+  }
+
+  function runLazyAction(name) {
+    const spec = LAZY_ACTIONS[name];
+    if (!spec) return;
+    if (typeof window[spec.global] === 'function') {
+      window[spec.global]();
+      return;
+    }
+    if (_loading[name]) return; // import already in flight — ignore the repeat
+    _loading[name] = true;
+    Promise.all(spec.modules.map((m) => import(m)))
+      .then(function () {
+        if (typeof window[spec.global] === 'function') window[spec.global]();
+      })
+      .catch(function (err) {
+        console.error('[shortcuts] ' + name + ' module load failed:', err);
+      })
+      .then(function () {
+        _loading[name] = false;
+      });
+  }
+
   document.addEventListener('keydown', function (e) {
     // `?` (Shift+/) opens cheat-sheet — only when not typing into a field
     // (otherwise pasting/editing JSON containing '?' would pop the modal).
@@ -114,14 +176,14 @@
     // openSaveModal() already auth-gates and validates non-empty panes.
     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
       // preventDefault ONLY when we are actually going to do something.
-      // It used to run first, unconditionally: on a fresh load the save
-      // module has not been imported yet, so window.openSaveModal is absent
-      // — the browser's own "save page" was suppressed and nothing replaced
+      // It used to run first, unconditionally: on a section with no editor
+      // the browser's own "save page" was suppressed and nothing replaced
       // it. Pressing the shortcut looked like the app had frozen, and the
       // one thing the key is for was taken away without being offered.
-      if (typeof window.openSaveModal !== 'function') return;
+      if (!inspectorSurfaceReady()) return;
       e.preventDefault();
-      window.openSaveModal();
+      runLazyAction('save');
+      return;
     }
     // Bare `m` → open mirror modal. Skipped while typing (so users can
     // type "m" inside the JSON textarea without hijack) and while a
@@ -129,10 +191,12 @@
     if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (isTypingTarget(e.target)) return;
       if (isModalOpen()) return;
+      // Same order as Ctrl+S above: decide FIRST, swallow the key second.
+      // preventDefault used to run before the availability check, so on a
+      // section without an editor the key was eaten for nothing.
+      if (!inspectorSurfaceReady()) return;
       e.preventDefault();
-      if (typeof window.openMirrorModal === 'function') {
-        window.openMirrorModal();
-      }
+      runLazyAction('mirror');
     }
   });
 

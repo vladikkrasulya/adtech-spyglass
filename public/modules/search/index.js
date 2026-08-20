@@ -44,6 +44,7 @@ function escHtml(s) {
 }
 
 const GROUP_LABELS = {
+  landing: { en: 'Reference guides', uk: 'Довідники', ru: 'Справочники' },
   sample: { en: 'Samples', uk: 'Зразки', ru: 'Образцы' },
   behavior: { en: 'Behavior scenarios', uk: 'Сценарії поведінки', ru: 'Поведенческие сценарии' },
   finding: { en: 'Finding catalog', uk: 'Документація помилок', ru: 'Каталог ошибок' },
@@ -88,17 +89,129 @@ const FINDING_ANCHOR_PREFIX = 'finding-';
 // mounted search widget (topbar re-mounts on kt:lang-change).
 let _instanceSeq = 0;
 
+// ── Reference guides (server-rendered landing pages) ─────────────
+// The six guides under lib/landings.js were reachable from sitemap.xml and
+// nothing else: no rail entry, no footer link, and — until now — no search
+// hit, so a user who did not already know the URL could not get to them from
+// inside the app at all. They are static server content with no listing
+// endpoint, hence a literal table; tests/site-chrome.test.js compares the
+// routes here against lib/landings.js so a new guide cannot quietly go
+// missing from search again. (The SSR cross-links that would also give them
+// crawlable internal weight belong to lib/landings.js + the index.*.html
+// shells — different owners, still open.)
+const LANDING_PAGES = [
+  {
+    route: '/openrtb/2-6',
+    title: {
+      en: 'OpenRTB 2.6 Validator',
+      uk: 'Валідатор OpenRTB 2.6',
+      ru: 'Валидатор OpenRTB 2.6',
+    },
+    summary: {
+      en: 'Ad pods, SupplyChain, DOOH — what 2.6 adds over 2.5, and a validator for it.',
+      uk: 'Ad pods, SupplyChain, DOOH — що 2.6 додає до 2.5, і валідатор для цього.',
+      ru: 'Ad pods, SupplyChain, DOOH — что 2.6 добавляет к 2.5, и валидатор для этого.',
+    },
+    keywords: 'openrtb 2.6 bidrequest bidresponse pod schain ctv',
+  },
+  {
+    route: '/openrtb/2-5',
+    title: {
+      en: 'OpenRTB 2.5 Validator',
+      uk: 'Валідатор OpenRTB 2.5',
+      ru: 'Валидатор OpenRTB 2.5',
+    },
+    summary: {
+      en: 'The version most exchanges still speak, and the fields that break it.',
+      uk: 'Версія, якою досі говорить більшість бірж, і поля, що її ламають.',
+      ru: 'Версия, на которой до сих пор говорит большинство бирж, и поля, что её ломают.',
+    },
+    keywords: 'openrtb 2.5 bidrequest bidresponse imp banner video',
+  },
+  {
+    route: '/openrtb/3-0',
+    title: {
+      en: 'OpenRTB 3.0 Validator',
+      uk: 'Валідатор OpenRTB 3.0',
+      ru: 'Валидатор OpenRTB 3.0',
+    },
+    summary: {
+      en: 'The layered rewrite: OpenRTB 3.0 envelope plus AdCOM objects.',
+      uk: 'Шарова переробка: конверт OpenRTB 3.0 плюс обʼєкти AdCOM.',
+      ru: 'Слоёная переработка: конверт OpenRTB 3.0 плюс объекты AdCOM.',
+    },
+    keywords: 'openrtb 3.0 adcom layered envelope item',
+  },
+  {
+    route: '/vast',
+    title: { en: 'VAST Validator', uk: 'Валідатор VAST', ru: 'Валидатор VAST' },
+    summary: {
+      en: 'Paste a VAST document and see what a player would refuse to play.',
+      uk: 'Встав VAST-документ і побач, що саме плеєр відмовиться програти.',
+      ru: 'Вставь VAST-документ и увидь, что именно плеер откажется проиграть.',
+    },
+    keywords: 'vast xml inline wrapper video creative mediafile',
+  },
+  {
+    route: '/native',
+    title: {
+      en: 'OpenRTB Native Validator',
+      uk: 'Валідатор OpenRTB Native',
+      ru: 'Валидатор OpenRTB Native',
+    },
+    summary: {
+      en: 'Native 1.2 request/response — assets, required flags, and the usual mismatches.',
+      uk: 'Native 1.2 запит/відповідь — ассети, обовʼязкові прапорці й типові розбіжності.',
+      ru: 'Native 1.2 запрос/ответ — ассеты, обязательные флаги и типичные расхождения.',
+    },
+    keywords: 'native 1.2 assets title img data eventtrackers',
+  },
+  {
+    route: '/iab-categories',
+    title: {
+      en: 'IAB Content Taxonomy — Category Codes',
+      uk: 'Контент-таксономія IAB — коди категорій',
+      ru: 'Контент-таксономия IAB — коды категорий',
+    },
+    summary: {
+      en: 'IAB category codes for cat / bcat / sectioncat, in one searchable table.',
+      uk: 'Коди категорій IAB для cat / bcat / sectioncat — одна таблиця з пошуком.',
+      ru: 'Коды категорий IAB для cat / bcat / sectioncat — одна таблица с поиском.',
+    },
+    keywords: 'iab category taxonomy cat bcat sectioncat iab1 content',
+  },
+];
+
 // ── Data fetch + cache ───────────────────────────────────────────
 
 let _index = null; // cached flat item array
 let _indexPromise = null; // in-flight load promise
+let _indexLang = null; // locale the cache was built for
 
+/** Drop the cached index. Exported for the topbar/tests; called automatically
+ *  by loadIndex() whenever the document locale no longer matches the cache. */
+export function resetSearchIndex() {
+  _index = null;
+  _indexPromise = null;
+  _indexLang = null;
+}
+
+// The cache is module-level, so it outlives every initSearch()/cleanup() cycle
+// — which is the point (one fetch per page load, not one per topbar re-mount)
+// but was also the bug: /api/v1/finding-catalog and /api/v1/blog/list are
+// fetched WITH ?lang=, so the cache is locale-specific, and nothing invalidated
+// it on kt:lang-change. After a language switch the panel came back half
+// translated: group headers localised (they are picked at render time) on top
+// of result titles still in the previous language. Keying the cache by the
+// locale it was built for is what makes the two halves agree.
 async function loadIndex() {
+  const lang = getLang();
+  if (_indexLang !== null && _indexLang !== lang) resetSearchIndex();
+  _indexLang = lang;
   if (_index) return _index;
   if (_indexPromise) return _indexPromise;
 
   _indexPromise = (async () => {
-    const lang = getLang();
     const results = await Promise.allSettled([
       fetch('/api/v1/sample/list').then((r) => (r.ok ? r.json() : Promise.reject(r.status))),
       fetch('/api/v1/behavior/scenarios').then((r) => (r.ok ? r.json() : Promise.reject(r.status))),
@@ -183,7 +296,24 @@ async function loadIndex() {
       console.warn('[search] blog fetch failed:', results[3].reason);
     }
 
-    _index = items;
+    // Reference guides are static content shipped by the server (see
+    // lib/landings.js) — no endpoint lists them, so the routes and their H1s
+    // live in LANDING_PAGES above and tests/site-chrome.test.js asserts the
+    // two stay in step.
+    LANDING_PAGES.forEach((p) =>
+      items.push({
+        type: 'landing',
+        route: p.route,
+        title: pickStrFrom(p.title, lang),
+        summary: pickStrFrom(p.summary, lang),
+        keywords: p.keywords,
+      }),
+    );
+
+    // A locale switch during the fetch invalidated this result before it
+    // arrived — publishing it now would re-poison the cache the switch just
+    // cleared. The caller still gets the items it asked for.
+    if (_indexLang === lang) _index = items;
     return items;
   })();
 
@@ -223,8 +353,14 @@ function scoreItem(item, tokens) {
     if (desc.includes(tok)) tokScore += 1.0;
 
     // ID / slug also searchable at 1.5 (precise match on ID is useful)
-    const id = (item.id || item.slug || '').toLowerCase();
+    const id = (item.id || item.slug || item.route || '').toLowerCase();
     if (id.includes(tok)) tokScore += 1.5;
+
+    // Reference guides carry a hand-written keyword line (the words an
+    // operator actually types — "schain", "bcat", "wrapper") which appears
+    // in no other field. Weight 1.0: a synonym match, not a title match.
+    const kw = (item.keywords || '').toLowerCase();
+    if (kw.includes(tok)) tokScore += 1.0;
 
     if (tokScore === 0) return 0; // token not matched — filter out
     score += tokScore;
@@ -251,7 +387,7 @@ function search(query) {
   }
 
   // Sort each group, take top 5
-  const typeOrder = ['sample', 'behavior', 'finding', 'blog'];
+  const typeOrder = ['landing', 'sample', 'behavior', 'finding', 'blog'];
   const result = [];
   let total = 0;
   for (const type of typeOrder) {
@@ -273,6 +409,9 @@ function buildUrl(item) {
   const lang = getLang();
   const prefix = lang === 'en' ? '' : '/' + lang;
   switch (item.type) {
+    case 'landing':
+      // Server-rendered page: a normal locale-prefixed path, no query.
+      return `${prefix}${item.route}`;
     case 'sample':
       return `${prefix}/inspector?sample=${encodeURIComponent(item.slug)}`;
     case 'behavior':
@@ -375,6 +514,7 @@ function truncate(text, len) {
 // ── Badge ────────────────────────────────────────────────────────
 
 function badgeClass(item) {
+  if (item.type === 'landing') return 'sg-badge--landing';
   if (item.type === 'sample') return 'sg-badge--sample';
   if (item.type === 'behavior') return 'sg-badge--behavior';
   if (item.type === 'blog') return 'sg-badge--blog';
@@ -387,6 +527,7 @@ function badgeClass(item) {
 }
 
 function badgeText(item) {
+  if (item.type === 'landing') return 'doc';
   if (item.type === 'sample') return item.format || 'smpl';
   if (item.type === 'behavior') return item.category || 'scn';
   if (item.type === 'finding') return item.severity || 'info';

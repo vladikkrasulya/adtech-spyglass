@@ -392,20 +392,32 @@ export async function mountInspector(root, ctx) {
     return isTempDialect(d) ? 'iab' : d;
   }
 
-  // P2 #26 — footer dialect label is state-style ("Dialect: <name> ▾")
+  // P2 #26 — footer dialect label is state-style ("Dialect: <name>")
   // instead of feature-badge ("🧬 custom dialect"). Paint the value
   // from the canonical activeDialect getter so it stays in sync with
   // the format-bar's dialect picker, URL ?dialect, and localStorage.
-  function paintFooterDialect() {
+  //
+  // No "▾" here any more. The chip does not open a list of dialects — it
+  // opens the temporary-dialect BUILDER — and a chevron next to the word
+  // "Dialect:" promised a switch that clicking it never delivered. The
+  // switch is the <select> in the work bar, which is now on screen from the
+  // first paint (see setWorkbarReadoutsVisible); this chip only reports
+  // which dialect that switch currently sits on.
+  function paintFooterDialect(explicit) {
     const valueEl = document.querySelector('.footer-dialect-value');
     if (!valueEl) return;
-    const d = activeDialect();
+    // Callers that just changed the dialect pass it in; everyone else (mount,
+    // the intel-dialect-changed listener) reads the canonical state.
+    const d =
+      typeof explicit === 'string' && (KNOWN_DIALECTS.has(explicit) || isTempDialect(explicit))
+        ? explicit
+        : activeDialect();
     let label;
-    if (d === 'iab') label = 'IAB ▾';
-    else if (d === 'ext-rtb') label = 'Vendor · RTB ▾';
-    else if (d === 'inpage-push') label = 'Vendor · In-Page Push ▾';
-    else if (isTempDialect(d)) label = 'custom ▾';
-    else label = d + ' ▾';
+    if (d === 'iab') label = 'IAB';
+    else if (d === 'ext-rtb') label = 'Vendor · RTB';
+    else if (d === 'inpage-push') label = 'Vendor · In-Page Push';
+    else if (isTempDialect(d)) label = 'custom';
+    else label = d;
     valueEl.textContent = label;
   }
   window.paintFooterDialect = paintFooterDialect;
@@ -525,22 +537,6 @@ export async function mountInspector(root, ctx) {
     } catch (_e) {
       /* storage quota / private mode — best effort, the URL reflects state */
     }
-    paintFooterDialect();
-    // Notify the intel module so its activeSpec cache invalidates and
-    // applyToFindings reaches for the right spec on the next analyze.
-    if (
-      isTempDialect(dialect) &&
-      window.OrtbtoolsIntel &&
-      typeof window.OrtbtoolsIntel.activate === 'function'
-    ) {
-      window.OrtbtoolsIntel.activate(dialect);
-    } else if (
-      !isTempDialect(dialect) &&
-      window.OrtbtoolsIntel &&
-      typeof window.OrtbtoolsIntel.activate === 'function'
-    ) {
-      window.OrtbtoolsIntel.activate(null);
-    }
     // Keep the URL in sync for the current tab so a refresh and a
     // shared-link copy both surface the active dialect, but ONLY for
     // dialects that mean something to a recipient. Phase 9b tightens
@@ -556,6 +552,14 @@ export async function mountInspector(root, ctx) {
     //     URL-display fix.
     //   - Everything else (ext-rtb, inpage-push, future named
     //     dialects) is shareable — we write it.
+    //
+    // This has to happen BEFORE anything repaints. activeDialect() reads the
+    // URL first and localStorage second, so while a stale ?dialect= is still
+    // in the address bar, every reader of the state — the footer chip here,
+    // and paintFooterDialect() again from the intel-dialect-changed listener
+    // — resolves to the dialect the user just left. Switching away from
+    // ext-rtb or inpage-push left the footer stating the OLD dialect until
+    // some unrelated repaint came along.
     try {
       const url = new URL(location.href);
       if (dialect === 'iab' || isTempDialect(dialect)) {
@@ -566,6 +570,25 @@ export async function mountInspector(root, ctx) {
       history.replaceState({}, '', url.toString());
     } catch (_e) {
       /* */
+    }
+    // Belt and braces: paint from the value we were just handed, so the label
+    // is right even if replaceState above threw (sandboxed iframe, exotic
+    // history state) and the URL still says otherwise.
+    paintFooterDialect(dialect);
+    // Notify the intel module so its activeSpec cache invalidates and
+    // applyToFindings reaches for the right spec on the next analyze.
+    if (
+      isTempDialect(dialect) &&
+      window.OrtbtoolsIntel &&
+      typeof window.OrtbtoolsIntel.activate === 'function'
+    ) {
+      window.OrtbtoolsIntel.activate(dialect);
+    } else if (
+      !isTempDialect(dialect) &&
+      window.OrtbtoolsIntel &&
+      typeof window.OrtbtoolsIntel.activate === 'function'
+    ) {
+      window.OrtbtoolsIntel.activate(null);
     }
   }
 
@@ -742,24 +765,61 @@ export async function mountInspector(root, ctx) {
     }
   }
 
+  // The work bar's left half holds two different kinds of thing, and only one
+  // of them is about a payload:
+  //   - READOUTS — the validity chip and the dialect-overlay pill. They state
+  //     something about the analysis that just ran, so before the first one
+  //     they have nothing true to say and must stay down.
+  //   - CONTROLS — the version pin and the dialect switch. They are INPUTS to
+  //     the next analysis; a reader needs them before pressing Analyze, not
+  //     after.
+  // Hiding the whole strip until a result landed took the dialect switch down
+  // with the chip, so on a fresh tab the only dialect-shaped control on screen
+  // was the footer chip — and that one opens the dialect BUILDER, which on an
+  // empty session can only answer "not enough data yet". Someone who simply
+  // wanted to validate against a vendor dialect had nowhere to go.
+  function setWorkbarReadoutsVisible(on) {
+    const chip = $('validityChip');
+    if (chip) {
+      chip.hidden = !on;
+      // .validity-chip declares display:inline-flex, and an author `display`
+      // beats the UA stylesheet's [hidden] { display: none } — the attribute
+      // alone would leave the chip on screen.
+      chip.style.display = on ? '' : 'none';
+    }
+    const divider = document.querySelector('#formatBar .workbar-divider');
+    if (divider) {
+      // The divider exists to separate the chip from the controls; with no
+      // chip it is a rule floating on its own.
+      divider.hidden = !on;
+      divider.style.display = on ? '' : 'none';
+    }
+  }
+
   // Format pill — surfaces detected payload type, status, version, dialect
-  // as a coloured pill row above the inspector tabs. Hidden until first
-  // analysis result lands. Categorises type into oRTB-family vs JsonFeed-
-  // family for colour coding (see CSS .format-pill-type[data-format]).
+  // as a coloured pill row above the inspector tabs. The readouts are hidden
+  // until the first analysis result lands. Categorises type into oRTB-family
+  // vs JsonFeed-family for colour coding (see CSS .format-pill-type[data-format]).
   function updateFormatBar(validation, dialect) {
     const bar = $('formatBar');
     if (!bar) return;
     if (!validation || !validation.type) {
-      bar.hidden = true;
-      // The verdict has to leave with the bar. It is rendered further down
-      // this function, so an early return here would have left the previous
-      // payload's sentence sitting above an empty workbench — stating an
-      // outcome for something the user already cleared.
+      // The strip stays — it carries the two selects. Only what it SAYS about
+      // a payload goes away.
+      bar.hidden = false;
+      setWorkbarReadoutsVisible(false);
+      const stalePill = $('formatPillDialect');
+      if (stalePill) stalePill.hidden = true;
+      // The verdict has to leave with the readouts. It is rendered further
+      // down this function, so an early return here would have left the
+      // previous payload's sentence sitting above an empty workbench —
+      // stating an outcome for something the user already cleared.
       const staleVerdict = $('verdict');
       if (staleVerdict) staleVerdict.hidden = true;
       return;
     }
     bar.hidden = false;
+    setWorkbarReadoutsVisible(true);
     const type = String(validation.type || '');
     const status = String(validation.status || '');
 
@@ -6422,6 +6482,15 @@ export async function mountInspector(root, ctx) {
     // values, so an empty boot collapses, a hydrated boot (history nav)
     // reveals.
     refreshEmptyStateChrome();
+
+    // A freshly mounted Inspector has run no analysis, which is exactly the
+    // state a Clear leaves behind — so paint it through the same function
+    // rather than trusting the template's initial attributes. That keeps the
+    // two states identical (a cleared page must be indistinguishable from a
+    // freshly loaded one — tests/clear-resets-results-browser.test.js) and it
+    // is what puts the version pin and the dialect switch on screen before
+    // the first Analyze instead of after it.
+    updateFormatBar(null, null);
 
     // Sync the dialect selector with the resolved active dialect.
     // activeDialect() reads ?dialect=… first, then localStorage; sync the

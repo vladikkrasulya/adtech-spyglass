@@ -42,13 +42,20 @@
    344-row catalog.
    max-height keeps a contents list taller than the window reachable: the
    catalog's 15 entries fit at any normal height, but the list scrolls on
-   its own rather than hiding its tail on a short one. */
+   its own rather than hiding its tail on a short one.
+   The window here is what is left of it BELOW the topbar. The column starts
+   at the top of #app-root, which begins under the 52px topbar, so a plain
+   100vh always hung exactly one topbar past the bottom edge of the screen —
+   and the list's own scrollbar cannot claw that back, since it only plays the
+   overflow beyond its own height. Under ~779px of window the last entry,
+   "Embedding a view", was then unreachable by any scroll at all. Subtracting
+   the topbar's own token keeps the two in step if that height ever moves. */
 .docs-toc__inner {
   position: sticky;
   top: 0;
   display: block;
   padding: 20px 0;
-  max-height: 100vh;
+  max-height: calc(100vh - var(--kt-topbar-height, 52px));
   overflow-y: auto;
 }
 

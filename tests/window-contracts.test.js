@@ -121,6 +121,21 @@ function extractAssignments(src) {
   for (const m of src.matchAll(/window\.(\w+)\s*=(?!=)/g)) {
     names.add(m[1]);
   }
+  // A global can also be installed with defineProperty rather than plain
+  // assignment, and modules/auth does exactly that on purpose: the three
+  // auth entry points are declared non-configurable so the Inspector's
+  // unmount sweep cannot delete them. Before that, `delete
+  // window.openAuthModal` on a module that only ever evaluates once left
+  // the sign-in button dead until a reload. Counting only `window.X =`
+  // would read that deliberate hardening as three phantom names.
+  for (const m of src.matchAll(/Object\.defineProperty\(\s*window\s*,\s*['"`](\w+)['"`]/g)) {
+    names.add(m[1]);
+  }
+  // …and through the tiny helper that wraps it, whose whole argument list is
+  // the name being installed: `expose('openAuthModal', openAuthModal)`.
+  for (const m of src.matchAll(/\bexpose\(\s*['"`](\w+)['"`]/g)) {
+    names.add(m[1]);
+  }
   return names;
 }
 

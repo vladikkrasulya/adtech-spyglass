@@ -103,14 +103,34 @@ export function openCorpusSaveModal() {
     '</div></div></div>';
 }
 
+/* One POST at a time.
+ *
+ * The modal used to stay live and clickable for the whole round-trip
+ * (closeModal() only ran AFTER `await fetch`), so a double-click posted the
+ * same events twice and the corpus grew two identical rows — which then
+ * counted twice in the confusion matrix, corrupting the very metric the
+ * corpus exists to produce. Guarded by a module-level flag AND by disabling
+ * the button: the flag is what actually stops the second call (a programmatic
+ * window.confirmCorpusSave() bypasses the disabled attribute), the disabled
+ * state is what tells the user why nothing is happening. */
+let _saveInFlight = false;
+
 export async function confirmCorpusSave() {
+  if (_saveInFlight) return;
+
   const events = (window.__ortbtoolsBehavior && window.__ortbtoolsBehavior.events) || [];
   const usable = events.filter((e) => e.kind !== 'probe_ready');
   const labelEl = document.querySelector('input[name="corpusLabel"]:checked');
   const label = labelEl ? labelEl.value : 'fraud';
   const notes = ($('corpusNotes')?.value || '').trim();
   const sourceSampleId = window._currentSampleId || null;
+  const btn = document.querySelector('[data-action="confirm-corpus-save"]');
 
+  _saveInFlight = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+  }
   try {
     const r = await fetch('/api/behavior/corpus', {
       method: 'POST',
@@ -123,6 +143,15 @@ export async function confirmCorpusSave() {
     toast(t('toast.corpus_saved', { count: usable.length, label }), 'success');
   } catch (e) {
     toast(t('toast.corpus_save_failed', { error: e.message }), 'error');
+  } finally {
+    // Re-arm only for a modal that is still on screen — on success closeModal()
+    // has already detached the button, and a retry has to start from a fresh
+    // open (which re-renders the button enabled).
+    _saveInFlight = false;
+    if (btn && btn.isConnected) {
+      btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+    }
   }
 }
 

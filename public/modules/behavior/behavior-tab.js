@@ -152,8 +152,28 @@
     return '<div class="behavior-timeline">' + heading + items + '</div>';
   }
 
+  /**
+   * Replace the tab body, but keep the corpus capture bar alive.
+   *
+   * The bar is not ours: ortbtools.app.js's injectCorpusBar() prepends it to
+   * the same container immediately AFTER our synchronous first paint, and it
+   * is re-injected only from renderBehaviorTab() — which nothing calls on a
+   * tab switch. So a plain `innerHTML =` here deleted the ONLY entry point to
+   * the corpus flow ~155ms after it appeared (measured: inserted t=1ms,
+   * destroyed t=155ms, when the debounced /api/analyze-behavior response
+   * landed) and it never came back. The bar survived only when the analysis
+   * FAILED — i.e. exactly when it was least useful.
+   *
+   * Detaching the live node instead of re-rendering it keeps the parent the
+   * sole owner of the bar's markup, count and listeners; we only carry it
+   * across the wipe. When the tab goes empty (render()'s no-events branch)
+   * the bar is dropped on purpose — there is nothing left to save.
+   */
   function paint(container, findings, events, opts) {
+    const bar = container.querySelector(':scope > .kt-corpus-bar');
+    if (bar) bar.remove();
     container.innerHTML = renderFindings(findings, opts) + renderTimeline(events, opts);
+    if (bar) container.insertAdjacentElement('afterbegin', bar);
   }
 
   function fetchAnalysis(events, locale) {

@@ -934,7 +934,15 @@ const ICON_INFO =
   'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
   '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>';
 
-function renderContents(lang, activeId) {
+/**
+ * `topicBase` is what a topic link points at when the reader is NOT the page
+ * being rendered. On /docs a topic is a fragment of the page you are already
+ * on, so the href stays `#id`; on /docs/findings the same fragment would name
+ * a topic the catalog does not render, so the href carries the reader's path
+ * as well — which is also what a middle-click or ⌘-click opens.
+ */
+function renderContents(lang, activeId, topicBase) {
+  const base = topicBase || '';
   const groups = CONTENTS.map((g) => {
     const links = g.items
       .map((id) => {
@@ -942,7 +950,7 @@ function renderContents(lang, activeId) {
         const title = isCatalog
           ? pick(L.catalogTitle, lang)
           : pick(TOPIC_BY_ID.get(id).title, lang);
-        const href = isCatalog ? localePath('/docs/findings', lang) : '#' + id;
+        const href = isCatalog ? localePath('/docs/findings', lang) : base + '#' + id;
         const on = id === activeId;
         // data-topic marks the fragment links the module handles itself;
         // the catalog link is a real navigation and is left to the router.
@@ -1035,10 +1043,10 @@ function renderArticle(topicId, lang) {
  * sidebar + article column. `wide` drops the 680px reading measure for the
  * finding catalog, whose table needs the room a paragraph does not.
  */
-function renderReaderShell(lang, activeId, innerHtml, wide) {
+function renderReaderShell(lang, activeId, innerHtml, wide, topicBase) {
   return (
     `<div class="docs-reader">` +
-    renderContents(lang, activeId) +
+    renderContents(lang, activeId, topicBase) +
     `<div class="docs-column${wide ? ' docs-column--wide' : ''}" data-article>${innerHtml}</div>` +
     `</div>`
   );
@@ -1053,8 +1061,13 @@ function topicFromHash() {
   return TOPIC_BY_ID.has(raw) ? raw : DEFAULT_TOPIC;
 }
 
-function mountReader(root, lang, signal) {
-  let active = topicFromHash();
+/**
+ * `initialId` is passed only when the reader takes over a root the catalog was
+ * holding: the topic is already known at that point, and reading it back out of
+ * location.hash would race the pushState that put it there.
+ */
+function mountReader(root, lang, signal, initialId) {
+  let active = TOPIC_BY_ID.has(initialId) ? initialId : topicFromHash();
   root.innerHTML = renderReaderShell(lang, active, renderArticle(active, lang), false);
 
   const column = root.querySelector('[data-article]');
@@ -1234,10 +1247,21 @@ async function fetchCatalog(lang, signal) {
 async function mountCatalog(root, lang, signal) {
   // The catalog is a topic in the section, not a page that escaped it: same
   // contents sidebar, same article column, only the measure is widened.
-  root.innerHTML = renderReaderShell(lang, CATALOG_ENTRY, renderCatalogArticle(lang), true);
+  const readerPath = localePath('/docs', lang);
+  root.innerHTML = renderReaderShell(
+    lang,
+    CATALOG_ENTRY,
+    renderCatalogArticle(lang),
+    true,
+    readerPath,
+  );
 
   let allItems = [];
   let activeFilter = 'all';
+  // Set the moment this root stops being the catalog and becomes the reader.
+  // Everything below that writes into the page checks it, because the catalog
+  // fetch can still land after the handover.
+  let handedOver = false;
 
   const statsEl = root.querySelector('[data-stats]');
   const facetsEl = root.querySelector('[data-facets]');
@@ -1285,16 +1309,48 @@ async function mountCatalog(root, lang, signal) {
     );
   }
 
+  // The contents sidebar this page draws is the reader's, fragment links and
+  // all — but the delegated handler that answers them lives in mountReader(),
+  // so on the catalog all fourteen of them used to do nothing at all: no
+  // article, no URL change, not even a moved active mark. The only way back
+  // into a doc was the shell's own rail.
+  //
+  // A topic is a different route from here (/docs, not /docs/findings), so the
+  // click is a real move: push the reader's URL with the fragment — the shell's
+  // navigateTo() cannot be used, it keeps pathname+search and drops the hash,
+  // which is the whole address here — announce it the way the shell does so nav
+  // and breadcrumbs follow, then render the reader into this same root. Both
+  // paths are the same module, so there is nothing for the registry to swap;
+  // Back still leaves through popstate and re-mounts the catalog.
+  root.addEventListener(
+    'click',
+    (e) => {
+      if (handedOver) return; // the reader's own handler owns the sidebar now
+      const link = e.target.closest && e.target.closest('.docs-toc__link[data-topic]');
+      if (!link) return;
+      e.preventDefault();
+      const id = link.dataset.topic;
+      handedOver = true;
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.pushState({ path: readerPath }, '', readerPath + '#' + id);
+        window.dispatchEvent(new CustomEvent('kt:pushstate', { detail: { path: readerPath } }));
+      }
+      mountReader(root, lang, signal, id);
+    },
+    { signal },
+  );
+
   // Fetch data
   try {
     allItems = await fetchCatalog(lang, signal);
+    if (handedOver) return;
     const dualCount = allItems.filter((i) => severitiesOf(i).length > 1).length;
     if (facetsEl) {
       facetsEl.innerHTML = renderFacets(buildFacets(allItems), allItems.length, dualCount, lang);
     }
     applyFilter(activeFilter);
   } catch (e) {
-    if (e.name === 'AbortError') return;
+    if (e.name === 'AbortError' || handedOver) return;
     // Written into contentWrap, not `.docs-loading`: that element was
     // replaced by contentWrap above before the fetch ever started, so the
     // old `root.querySelector('.docs-loading')` here always found null and

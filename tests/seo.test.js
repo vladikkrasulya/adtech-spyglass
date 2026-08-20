@@ -314,6 +314,9 @@ test('renderSitemap: indexable sections + /about + approved posts only; no xhtml
     'https://ortbtools.com/library',
     'https://ortbtools.com/uk/library',
     'https://ortbtools.com/docs',
+    'https://ortbtools.com/docs/findings',
+    'https://ortbtools.com/uk/docs/findings',
+    'https://ortbtools.com/ru/docs/findings',
     'https://ortbtools.com/dialects',
     'https://ortbtools.com/behavior',
     'https://ortbtools.com/openrtb/2-6',
@@ -330,14 +333,16 @@ test('renderSitemap: indexable sections + /about + approved posts only; no xhtml
   // approved posts appear as plain per-locale <loc> (no xhtml cluster).
   assert.ok(xml.includes('<loc>https://ortbtools.com/blog/en/welcome</loc>'));
   assert.ok(xml.includes('<loc>https://ortbtools.com/blog/ru/welcome</loc>'));
-  // 12 indexable concepts × 3 locales = 36 + 3 approved post locs = 39.
-  assert.equal((xml.match(/<loc>/g) || []).length, 39);
+  // 13 indexable concepts × 3 locales = 39 + 3 approved post locs = 42.
+  // (13th = /docs/findings, the finding catalog: a routable sub-page that used
+  // to fall back to the inspector's canonical and never reached the sitemap.)
+  assert.equal((xml.match(/<loc>/g) || []).length, 42);
   assert.equal((xml.match(/<url>/g) || []).length, (xml.match(/<\/url>/g) || []).length);
 });
 
-test('renderSitemap: exactly 36 locs on a corpus with zero approved posts', () => {
+test('renderSitemap: exactly 39 locs on a corpus with zero approved posts', () => {
   const xml = seo.renderSitemap([]);
-  assert.equal((xml.match(/<loc>/g) || []).length, 36);
+  assert.equal((xml.match(/<loc>/g) || []).length, 39);
   assert.ok(!/xhtml/.test(xml));
 });
 

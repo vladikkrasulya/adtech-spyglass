@@ -1,7 +1,7 @@
 /* ============================================================
    modules/password-reset/i18n.js — per-module translations.
 
-   31 keys × 3 locales for the forgot-password / reset-password flow.
+   36 keys × 3 locales for the forgot-password / reset-password flow.
    Loaded LAZY by index.js — pushed into window.kt_i18n_modules
    queue, drained by central /i18n.js (or registered directly via
    window.registerI18nModule when the queue has already been drained).
@@ -181,10 +181,39 @@
         en: 'Wrong recovery key',
         ru: 'Неверный recovery key',
       },
+      // No {error} placeholder any more: the server's sentence is
+      // English-only, so appending it produced half-Ukrainian toasts.
+      // The reason now comes from the code map in index.js
+      // (humanResetError) and this is only the last-resort fallback.
       'reset.err.link_invalid': {
-        uk: 'Посилання недійсне або застаріле: {error}',
-        en: 'Link is invalid or expired: {error}',
-        ru: 'Ссылка недействительна или устарела: {error}',
+        uk: 'Посилання недійсне або застаріле — запитай нове',
+        en: 'Link is invalid or expired — request a new one',
+        ru: 'Ссылка недействительна или устарела — запроси новую',
+      },
+      'reset.err.link_stale': {
+        uk: 'Посилання більше не дійсне — запитай нове',
+        en: 'Link is no longer valid — request a new one',
+        ru: 'Ссылка больше не действительна — запроси новую',
+      },
+      'reset.err.rate_limited': {
+        uk: 'Забагато спроб скидання — спробуй за 15 хвилин',
+        en: 'Too many reset attempts — try again in 15 minutes',
+        ru: 'Слишком много попыток сброса — попробуй через 15 минут',
+      },
+      'reset.err.bad_request': {
+        uk: 'Не вдалося обробити запит — відкрий посилання з листа заново',
+        en: 'Could not process the request — open the link from the email again',
+        ru: 'Не удалось обработать запрос — открой ссылку из письма заново',
+      },
+      'reset.err.sessions_partial': {
+        uk: 'Пароль змінено частково — спробуй ще раз і вважай старі сесії активними',
+        en: 'Password reset only partially applied — retry, and treat old sessions as still active',
+        ru: 'Пароль изменён частично — попробуй ещё раз и считай старые сессии активными',
+      },
+      'reset.err.generic': {
+        uk: 'Не вдалося скинути пароль — спробуй ще раз',
+        en: 'Could not reset the password — try again',
+        ru: 'Не удалось сбросить пароль — попробуй ещё раз',
       },
     },
   };

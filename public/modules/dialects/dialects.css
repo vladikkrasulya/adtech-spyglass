@@ -163,6 +163,57 @@ body:has(.dlc-page) .ortbtools-intel-chip {
   border-color: var(--accent);
 }
 
+/* ── Your overlays: card + its own remove control ─────────────────
+   The card is a <button>, so the remove control cannot live inside it.
+   It sits under the card in a wrapper that occupies the grid cell, which
+   also keeps it clear of the ACTIVE corner marks. */
+.dlc-cardwrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.dlc-cardwrap > .dlc-card {
+  flex: 1;
+}
+.dlc-cardx {
+  align-self: flex-end;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm, 6px);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: var(--fs-chip, 12px);
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
+}
+.dlc-cardx:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.dlc-cardx:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* An overlay past its validUntil is still applied — it just adds an
+   `expired` note to every analysis. Dashed instead of solid, and a warning
+   eyebrow: spent, not broken, and never the same card as a fresh one. */
+.dlc-card--expired {
+  border-style: dashed;
+}
+.dlc-card--expired .dlc-card__eyebrow {
+  color: var(--warning);
+}
+.dlc-card--expired .dlc-card__title,
+.dlc-card--expired .dlc-card__desc {
+  color: var(--text-dim);
+}
+
 .dlc-card__mark {
   position: absolute;
   font-family: var(--font-mono);

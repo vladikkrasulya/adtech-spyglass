@@ -4,10 +4,10 @@
    Analytics dashboard over analytics.validation_logs (ClickHouse),
    laid out to the redesign mockup's Insights screen:
 
-     page-header band (title + right-aligned control, pinned)
+     page-header band (title + right-aligned controls, pinned)
      ├─ KPI strip        — four hairline-divided tiles, mono figures
      ├─ main column      — "Findings by severity" ranked bars
-     │                     + "Stream activity" area chart
+     │                     + "Analysis activity" area chart
      ├─ side column      — "Formats" / "Versions detected" lists
      └─ status bar       — engine + scope + freshness, pinned bottom
 
@@ -35,11 +35,15 @@
                      the header's right-aligned control carries the
                      refresh cadence instead of a period. The fixed
                      scope is restated in the breadcrumb and footer,
-                     as the mockup restates its own.
+                     as the mockup restates its own. Next to it sits
+                     a manual Refresh, because a cadence alone is not
+                     a way to ask for data now.
 
-   The Stream Activity chart has no mockup counterpart but is real
-   product data; it keeps the main column under the findings card
-   rather than being dropped.
+   The activity chart has no mockup counterpart but is real product
+   data; it keeps the main column under the findings card rather
+   than being dropped. It counts /api/analyze calls — the only writer
+   of analytics.validation_logs — which is why it is NOT called
+   "stream activity": /live is the streams section.
    ============================================================ */
 'use strict';
 
@@ -62,12 +66,15 @@ const L = {
 
   // Cards
   findingsTitle: { en: 'Findings by severity', uk: 'Знахідки за рівнем', ru: 'Находки по уровню' },
-  activityTitle: { en: 'Stream activity', uk: 'Активність стріму', ru: 'Активность потока' },
+  /* NOT "Stream activity". analytics.validation_logs is written from exactly
+     one place — modules/analyze/handler.js — so every point on this chart is
+     an /api/analyze call. The synthetic stream stopped writing there, and the
+     product has a separate /live section for streams, which is precisely what
+     a card called "Stream activity" sent people looking for. */
+  activityTitle: { en: 'Analysis activity', uk: 'Активність аналізів', ru: 'Активность анализов' },
   formatsTitle: { en: 'Formats', uk: 'Формати', ru: 'Форматы' },
   versionsTitle: { en: 'Versions detected', uk: 'Виявлені версії', ru: 'Обнаруженные версии' },
 
-  total: { en: 'total', uk: 'всього', ru: 'всего' },
-  peak: { en: 'peak', uk: 'пік', ru: 'пик' },
   errors: { en: 'Errors', uk: 'Помилки', ru: 'Ошибки' },
   warnings: { en: 'Warnings', uk: 'Попередження', ru: 'Предупреждения' },
   info: { en: 'Notices', uk: 'Нотатки', ru: 'Заметки' },
@@ -80,6 +87,8 @@ const L = {
   refreshOff: { en: 'Refresh: off', uk: 'Оновлення: вимк.', ru: 'Обновление: выкл.' },
   refresh15: { en: 'Refresh: 15s', uk: 'Оновлення: 15 с', ru: 'Обновление: 15 с' },
   refresh30: { en: 'Refresh: 30s', uk: 'Оновлення: 30 с', ru: 'Обновление: 30 с' },
+  refreshNow: { en: 'Refresh', uk: 'Оновити', ru: 'Обновить' },
+  retry: { en: 'Try again', uk: 'Спробувати ще раз', ru: 'Попробовать снова' },
 
   // Status bar
   stReady: { en: 'ready', uk: 'готово', ru: 'готово' },
@@ -129,7 +138,9 @@ function escapeHtml(s) {
 /* Thousands grouped with a no-break space rather than toLocaleString():
    the mockup groups with a space in every locale, and a mono column of
    figures only lines up if the separator is the same width everywhere
-   (a comma is not). NBSP, so "1 482" never breaks across two lines. */
+   (a comma is not). NBSP, so "1 482" never breaks across two lines — except
+   in the KPI tiles, where insights.css deliberately overrides that for a
+   figure too long for any type size, so it wraps instead of being clipped. */
 const NBSP = '\u00A0';
 function fmtNum(n) {
   const v = Math.max(0, Math.round(Number(n) || 0));
@@ -175,13 +186,18 @@ function renderFindings(m, lang) {
     { key: 'info', label: pick(L.info, lang), count: m.info },
   ].sort((a, b) => b.count - a.count);
 
+  /* One denominator for both the number and the picture. The bar used to be
+     normalised to max(count) while the label printed count/total, so the top
+     row was ALWAYS drawn full-width whatever percentage sat next to it —
+     "82.0%" painted at 100%, "16.7%" at 20.3%. The eye reads bar length, so
+     the card systematically overstated the dominant severity. */
   const findingTotal = rows.reduce((s, r) => s + r.count, 0);
-  const max = Math.max(...rows.map((r) => r.count), 1);
 
   const body = rows
     .map((r) => {
-      const width = Math.max(0, Math.min(100, (r.count / max) * 100));
-      const share = findingTotal ? ((r.count / findingTotal) * 100).toFixed(1) + '%' : '—';
+      const pct = findingTotal ? (r.count / findingTotal) * 100 : 0;
+      const width = Math.max(0, Math.min(100, pct));
+      const share = findingTotal ? pct.toFixed(1) + '%' : '—';
       return `
       <div class="ins-find-row">
         <div class="ins-find-main">
@@ -222,19 +238,16 @@ function chartPaths(points, W, H, pad) {
   return { area, line };
 }
 
-function renderActivity(data, m, lang) {
+/* No "total N · peak N" strip on this card any more: those were, to the
+   digit, the "Analyses" and "Peak per minute" KPI tiles two hundred pixels
+   above — the same two numbers under two different names. The KPI strip
+   keeps them; the chart keeps the shape. */
+function renderActivity(data, lang) {
   const points = data.stream_activity || [];
   const W = 600,
     H = 150,
     PAD = 16;
   const { area, line } = chartPaths(points, W, H, PAD);
-
-  const meta = `
-    <span class="ins-card__meta">
-      ${escapeHtml(pick(L.total, lang))} <b>${escapeHtml(fmtNum(m.analyses))}</b>
-      <span class="ins-card__meta-sep" aria-hidden="true">·</span>
-      ${escapeHtml(pick(L.peak, lang))} <b>${escapeHtml(fmtNum(m.peak))}</b>
-    </span>`;
 
   const body = `
     <svg class="ins-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
@@ -250,14 +263,7 @@ function renderActivity(data, m, lang) {
       ${line ? `<path d="${escapeHtml(line)}" class="ins-chart-line"/>` : ''}
     </svg>`;
 
-  return `
-    <div class="ins-card">
-      <div class="ins-card__head">
-        <h2 class="ins-card__title">${escapeHtml(pick(L.activityTitle, lang))}</h2>
-        ${meta}
-      </div>
-      ${body}
-    </div>`;
+  return card(pick(L.activityTitle, lang), body);
 }
 
 // ── Side lists (Formats / Versions detected) ────────────────────
@@ -344,7 +350,7 @@ function renderBody(data, lang) {
     `<div class="ins-grid">
        <div class="ins-col ins-col--main">
          ${renderFindings(m, lang)}
-         ${renderActivity(data, m, lang)}
+         ${renderActivity(data, lang)}
        </div>
        <div class="ins-col ins-col--side">
          ${renderSide(data, lang)}
@@ -372,6 +378,9 @@ function renderShell(lang) {
           <option value="15">${escapeHtml(pick(L.refresh15, lang))}</option>
           <option value="30">${escapeHtml(pick(L.refresh30, lang))}</option>
         </select>
+        <button type="button" class="ins-btn" id="ins-refresh-now">
+          ${escapeHtml(pick(L.refreshNow, lang))}
+        </button>
       </header>
 
       <div class="ins-body" id="ins-body-root">
@@ -436,6 +445,7 @@ export default {
     const stateLabel = container.querySelector('#ins-status-state');
     const statusDot = container.querySelector('#ins-status-dot');
     const refreshSelect = container.querySelector('#ins-refresh-select');
+    const refreshBtn = container.querySelector('#ins-refresh-now');
 
     paintCrumbs(pick(L.title, lang), pick(L.scope, lang));
 
@@ -464,7 +474,14 @@ export default {
         secs < 5 ? pick(L.updatedNow, lang) : pick(L.updatedAgo, lang).replace('{n}', secs);
     }
 
+    let loading = false;
+
     async function loadAndRender() {
+      // One request at a time: the manual button plus a live interval can
+      // otherwise overlap and paint the older response last.
+      if (loading) return;
+      loading = true;
+      if (refreshBtn) refreshBtn.disabled = true;
       try {
         const data = await fetchSummary();
         lastFetch = Date.now();
@@ -474,11 +491,21 @@ export default {
       } catch (_e) {
         setState('error');
         if (!bodyRoot.querySelector('.ins-kpis')) {
+          // With a retry control. Before this the failure state was a dead
+          // end: the page had no button at all, so the only ways out of
+          // "Failed to load analytics." were a full reload or arming a
+          // cadence and waiting up to 30s.
           bodyRoot.innerHTML =
             `<div class="ins-card ins-empty"><p class="ins-empty__body">` +
             escapeHtml(pick(L.errFetch, lang)) +
-            `</p></div>`;
+            `</p>` +
+            `<button type="button" class="ins-btn" data-ins-retry>` +
+            escapeHtml(pick(L.retry, lang)) +
+            `</button></div>`;
         }
+      } finally {
+        loading = false;
+        if (refreshBtn) refreshBtn.disabled = false;
       }
     }
 
@@ -492,14 +519,29 @@ export default {
       // unparseable value may fall back to the default.
       const parsed = Number(refreshSelect.value);
       const intervalSec = Number.isFinite(parsed) ? parsed : 30;
-      if (intervalSec <= 0) return;
+      if (intervalSec <= 0) return 0;
       refreshTimer = setInterval(() => {
         if (ctx && ctx.signal && ctx.signal.aborted) return;
         loadAndRender();
       }, intervalSec * 1000);
+      return intervalSec;
     }
 
-    refreshSelect.addEventListener('change', scheduleRefresh);
+    refreshSelect.addEventListener('change', () => {
+      // Arming a cadence also refreshes NOW. Previously the change handler
+      // only wound up a setInterval, so picking "15s" while staring at a
+      // stale (or failed) view did nothing at all for a full 15 seconds.
+      // Picking "off" only stops the timer — it must not fire a request.
+      if (scheduleRefresh() > 0) loadAndRender();
+    });
+
+    if (refreshBtn) refreshBtn.addEventListener('click', () => loadAndRender());
+
+    // Delegated: bodyRoot survives, its innerHTML does not.
+    bodyRoot.addEventListener('click', (ev) => {
+      const target = ev.target;
+      if (target && target.closest && target.closest('[data-ins-retry]')) loadAndRender();
+    });
 
     // Tick the "updated N ago" footer string every 5s
     updateLabelTimer = setInterval(updateAgoLabel, 5000);

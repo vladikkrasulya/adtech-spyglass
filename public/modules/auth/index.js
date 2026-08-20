@@ -22,10 +22,10 @@
                 yet on /api/auth/me).
      - REGISTER → OrtbtoolsSession.bootstrap(password) returns
                   { state, recoveryKey }; we POST the state to
-                  /api/auth/setup-encryption ourselves and hand the
-                  recoveryKey to window.showRecoveryKeyModal — that
-                  modal is still closure-private in ortbtools.app.js
-                  (recovery-key flow is its own future migration).
+                  /api/auth/setup-encryption ourselves and show the
+                  recoveryKey by importing /modules/recovery/
+                  OURSELVES (see showRecoveryKey below) — the shell
+                  wrapper this used to call was never reachable.
 
    Exposed window APIs (consumed by ortbtools.app.js dispatcher cases
    'open-auth' and 'do-auth', plus the auth-gate fallbacks in
@@ -33,17 +33,21 @@
      - window.openAuthModal(mode)  — 'login' | 'register'
      - window.doLogin()            — POST /api/auth/login
      - window.doRegister()         — POST /api/auth/register
+   These three are installed NON-CONFIGURABLE (see expose() at the
+   bottom) — the Inspector's unmount sweep still lists them, and a
+   `delete window.openAuthModal` on a module that only evaluates once
+   left the sign-in button permanently dead until F5.
 
    Consumes (via OrtbtoolsSession + /core/utils.js + window globals):
      - OrtbtoolsSession.{api, refreshPartners, refreshSamples,
-                        renderAuthWidget, setUser,
+                        renderAuthWidget, renderVerifyBanner, setUser,
                         openFromPassword, bootstrap}
      - $, escapeHtml, toast, t              — DOM + i18n helpers
      - window.closeModal                    — modal lifecycle
-     - window.showRecoveryKeyModal          — recovery-key reveal
-                                              (post-register only;
-                                              still closure-private
-                                              in ortbtools.app.js)
+     - /modules/recovery/                   — recovery-key reveal
+                                              (post-register + legacy
+                                              login bootstrap),
+                                              imported on demand
      - window.snapshotPendingHistoryMerge() — sets the closure-
                                               private flag that
                                               chains the import-
@@ -67,6 +71,28 @@ function humanAuthError(e) {
   if (code === 'invalid_credentials') return t('auth.err.invalid_creds');
   if (code === 'rate_limited') return t('auth.err.rate_limited');
   return e.message || t('toast.error_generic', { error: '' }).replace(/[:\s]+$/, '');
+}
+
+// ── Single-flight guard for the submit button ────────────────────
+// The primary button used to stay live for the whole round-trip, so a
+// double click sent TWO requests. On register the second one came back
+// 409 and painted "this email is already registered" over an account
+// that had just been created (and signed in) by the first; on login it
+// minted a SECOND server session, orphaning the first for its full
+// 30-day TTL because the second Set-Cookie overwrote the cookie.
+// One flag, because only one auth modal can be on screen at a time.
+let _authInFlight = false;
+
+function setAuthBusy(busy) {
+  _authInFlight = busy;
+  // Queried live rather than cached: openAuthModal rewrites #modalRoot
+  // wholesale on every login↔register switch, so any held reference is
+  // stale by the time the user submits.
+  const btn = document.querySelector('#modalRoot [data-action="do-auth"]');
+  if (btn) {
+    btn.disabled = busy;
+    btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+  }
 }
 
 export function openAuthModal(mode) {
@@ -126,10 +152,16 @@ export function openAuthModal(mode) {
   setTimeout(() => {
     // Restore prior values from previous mode (preserved across switches).
     // Don't auto-focus password if it was empty — focus email first.
-    if (prevEmail) $('authEmailInput').value = prevEmail;
-    if (prevPassword) $('authPasswordInput').value = prevPassword;
-    const focusTarget = prevEmail && !prevPassword ? 'authPasswordInput' : 'authEmailInput';
-    $(focusTarget).focus();
+    const emailEl = $('authEmailInput');
+    const passwordEl = $('authPasswordInput');
+    // A modal that was replaced or closed inside the same tick (submit on
+    // Enter, an Esc, the recovery-key modal taking over) leaves these null,
+    // and the deferred focus used to die with "Cannot read properties of
+    // null" — an uncaught error for something nobody is waiting on.
+    if (!emailEl || !passwordEl) return;
+    if (prevEmail) emailEl.value = prevEmail;
+    if (prevPassword) passwordEl.value = prevPassword;
+    (prevEmail && !prevPassword ? passwordEl : emailEl).focus();
   }, 0);
   // Submit on Enter — wired AFTER assignment of window.doLogin/Register
   // below, so by the time a key is pressed both fns are reachable.
@@ -145,11 +177,13 @@ export function openAuthModal(mode) {
 }
 
 export async function doLogin() {
+  if (_authInFlight) return;
   const session = window.OrtbtoolsSession;
   const email = $('authEmailInput').value.trim();
   const password = $('authPasswordInput').value;
   const errEl = $('authError');
   errEl.textContent = '';
+  setAuthBusy(true);
   try {
     const j = await session.api('POST', 'api/auth/login', { email, password });
     session.setUser(j.user);
@@ -158,27 +192,37 @@ export async function doLogin() {
     //     password, unwrap DEK, keep in memory for this session.
     //   - Existing pre-Phase-7 user with no crypto state yet → bootstrap
     //     now (we have the password in hand). Show recovery key.
+    let recoveryShown = false;
     if (j.encryption) {
       await session.openFromPassword(password, j.encryption, { extractable: true });
     } else {
-      await bootstrapAndShowRecovery(password);
+      recoveryShown = await bootstrapAndShowRecovery(password);
     }
     session.renderAuthWidget();
-    if (typeof window.closeModal === 'function') window.closeModal();
+    session.renderVerifyBanner();
+    // Closing unconditionally would tear down the recovery-key modal the
+    // legacy-bootstrap path just opened — and closeModal() routes into the
+    // "did you really save it?" confirm gate, so the user would be asked
+    // about a key they were never shown. Only close when nothing replaced us.
+    if (!recoveryShown && typeof window.closeModal === 'function') window.closeModal();
     toast(t('toast.hello', { email: j.user.email }), 'success');
     await session.refreshPartners();
     session.refreshSamples();
   } catch (e) {
     errEl.textContent = humanAuthError(e);
+  } finally {
+    setAuthBusy(false);
   }
 }
 
 export async function doRegister() {
+  if (_authInFlight) return;
   const session = window.OrtbtoolsSession;
   const email = $('authEmailInput').value.trim();
   const password = $('authPasswordInput').value;
   const errEl = $('authError');
   errEl.textContent = '';
+  setAuthBusy(true);
   try {
     const j = await session.api('POST', 'api/auth/register', { email, password });
     // Product telemetry: a bare counter. No email, no user id — the beacon
@@ -196,10 +240,17 @@ export async function doRegister() {
     if (typeof window.snapshotPendingHistoryMerge === 'function') {
       window.snapshotPendingHistoryMerge();
     }
-    await bootstrapAndShowRecovery(password); // brand-new user → always bootstrap
+    // brand-new user → always bootstrap
+    const recoveryShown = await bootstrapAndShowRecovery(password);
     session.renderAuthWidget();
-    // Don't closeModal() — bootstrapAndShowRecovery opened the recovery
-    // modal; closing here would dismiss it before user saves the key.
+    session.renderVerifyBanner();
+    // Normally we must NOT closeModal() — bootstrapAndShowRecovery replaced
+    // #modalRoot with the recovery-key modal and closing would dismiss the
+    // key before the user saved it. But when the reveal did not happen
+    // (recovery module failed to load), leaving the filled-in "create
+    // account" form on screen reads as "nothing happened" even though the
+    // account exists and is signed in — so close it in that case.
+    if (!recoveryShown && typeof window.closeModal === 'function') window.closeModal();
     toast(t('toast.account_created', { email: j.user.email }), 'success');
     // Server attempts the verify email synchronously; if delivery failed
     // (Resend down, domain unverified, etc.) surface a warning so the
@@ -211,32 +262,94 @@ export async function doRegister() {
     session.refreshSamples();
   } catch (e) {
     errEl.textContent = humanAuthError(e);
+  } finally {
+    setAuthBusy(false);
   }
+}
+
+// Puts the freshly-generated recovery key on screen. Returns true only
+// when the modal is actually up — callers use that to decide whether
+// they may close #modalRoot themselves.
+//
+// This used to hand the key to window.openRecoveryKeyModalLazy and, as a
+// fallback, to window.showRecoveryKeyModal. NEITHER of those is ever
+// defined on this path: the lazy wrapper is a closure-local function in
+// ortbtools.app.js that is never assigned to window, and
+// showRecoveryKeyModal only exists once /modules/recovery/ has been
+// imported — which nothing on the register path did. So both branches
+// were skipped and the one and only copy of the recovery key was
+// dropped on the floor, silently, while the server kept the wrap and
+// reported recovery_configured:true. We import the module ourselves.
+async function showRecoveryKey(recoveryKey) {
+  // Still prefer the shell wrapper when it exists — it is the same
+  // import plus the shell's own bookkeeping.
+  if (typeof window.openRecoveryKeyModalLazy === 'function') {
+    await window.openRecoveryKeyModalLazy(recoveryKey);
+    return typeof window.showRecoveryKeyModal === 'function';
+  }
+  if (typeof window.showRecoveryKeyModal !== 'function') {
+    try {
+      await Promise.all([
+        import('/modules/recovery/i18n.js'),
+        import('/modules/recovery/index.js'),
+      ]);
+    } catch (err) {
+      console.error('[auth] recovery module lazy import failed:', err);
+    }
+  }
+  if (typeof window.showRecoveryKeyModal !== 'function') {
+    // Never pretend this went fine: without the key the only route back
+    // into the library after a forgotten password is the wipe mode.
+    toast(t('auth.err.recovery_modal_failed'), 'error');
+    return false;
+  }
+  window.showRecoveryKeyModal(recoveryKey);
+  return true;
 }
 
 // Generates DEK + recovery key via the facade, persists the opaque
 // crypto state to the server, and shows the recovery key once. The
 // facade keeps the DEK in its closure; we never see raw bytes here.
-// `openRecoveryKeyModalLazy` is the shell-side wrapper that lazy-
-// imports /modules/recovery/ on first use and then calls
-// window.showRecoveryKeyModal — recovery has its own module already.
+// Resolves to whether the recovery modal actually took over #modalRoot.
 async function bootstrapAndShowRecovery(password) {
   const session = window.OrtbtoolsSession;
   const { state, recoveryKey } = await session.bootstrap(password);
   await session.api('POST', 'api/auth/setup-encryption', state);
-  if (typeof window.openRecoveryKeyModalLazy === 'function') {
-    await window.openRecoveryKeyModalLazy(recoveryKey);
-  } else if (typeof window.showRecoveryKeyModal === 'function') {
-    // Defensive fallback: if shell didn't expose the lazy wrapper for
-    // some reason, fall back to the directly-exposed modal.
-    window.showRecoveryKeyModal(recoveryKey);
-  }
+  return showRecoveryKey(recoveryKey);
 }
 
 // Expose for the dispatcher in ortbtools.app.js. The dispatcher does:
 //   await import('/modules/auth/index.js'); window.openAuthModal(mode);
 // — first call: fetches + evaluates + these assignments run.
 // Subsequent calls: cached by the module loader, assignments are no-ops.
-window.openAuthModal = openAuthModal;
-window.doLogin = doLogin;
-window.doRegister = doRegister;
+//
+// configurable:false is load-bearing, not paranoia. Inspector's unmount
+// sweep (ortbtools.app.js) still lists these three names and runs
+// `delete window[name]` on them — a leftover from when they were plain
+// globals defined inside mountInspector. They are an ES module now:
+// leaving Inspector deleted them, and coming back re-`import()`ed a
+// module the loader had already evaluated, so these assignments never
+// ran a second time. The sign-in button was then dead for the rest of
+// the page's life (lazyOpenAuth threw into console.error, the user saw
+// nothing at all). A non-configurable property makes that delete a
+// no-op — the sweep already wraps it in try/catch specifically for
+// "non-configurable, ignore". writable stays true so an intentional
+// reassignment still works.
+function expose(name, fn) {
+  try {
+    Object.defineProperty(window, name, {
+      value: fn,
+      writable: true,
+      enumerable: true,
+      configurable: false,
+    });
+  } catch (_e) {
+    // Host object that refuses redefinition — plain assignment is still
+    // better than nothing.
+    window[name] = fn;
+  }
+}
+
+expose('openAuthModal', openAuthModal);
+expose('doLogin', doLogin);
+expose('doRegister', doRegister);

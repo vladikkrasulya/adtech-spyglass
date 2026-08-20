@@ -9,9 +9,22 @@
  *   - validation_totals: sum of error/warning/info counts
  *   - format_mix: top formats by count + pct
  *   - version_mix: top versions by count + pct
+ *
+ * The gate (lib/analytics-enabled) is checked FIRST. Every writer of
+ * analytics.validation_logs already honours it — lib/validation-log.js,
+ * lib/event-log.js and lib/product-telemetry.js all no-op when ClickHouse is
+ * not configured — but this reader did not, so the documented self-host setup
+ * (".env.example: leave CLICKHOUSE_USER empty → analytics modules no-op") made
+ * /insights answer 500 analytics_failed on every load, once per auto-refresh
+ * tick, after burning the full outbound fetch timeout. A disabled telemetry
+ * backend is an EMPTY dataset, not a server fault: we answer 200 with a
+ * zero-filled window plus `enabled: false`, which the Insights page already
+ * renders as its "Stream is warming up" state. 5xx stays reserved for a
+ * ClickHouse that is configured and genuinely broken.
  */
 
 const { sendJson, sendError } = require('../../lib/http');
+const { isClickHouseAnalyticsEnabled } = require('../../lib/analytics-enabled');
 const log = require('../../lib/logger').child('analytics');
 
 const CH_URL = (process.env.CLICKHOUSE_URL || 'http://clickhouse:8123').replace(/\/+$/, '');
@@ -78,7 +91,26 @@ function zeroFillMinutes(rows) {
   return result;
 }
 
+/** The shape of an hour with nothing in it — same keys, all empty. */
+function emptySummary() {
+  return {
+    ok: true,
+    enabled: false,
+    window: '1h',
+    stream_activity: zeroFillMinutes([]),
+    validation_totals: { errors: 0, warnings: 0, info: 0 },
+    format_mix: [],
+    version_mix: [],
+  };
+}
+
 async function handleSummary(req, res) {
+  // Telemetry off (self-host / privacy) → an empty window, not an error. No
+  // outbound fetch, no error log, no 8s timeout on a host that has no CH.
+  if (!isClickHouseAnalyticsEnabled()) {
+    res.setHeader('Cache-Control', 'public, max-age=15');
+    return sendJson(res, 200, emptySummary());
+  }
   try {
     const [activityRows, totalsRows, formatRows, versionRows] = await Promise.all([
       queryCh(
@@ -131,6 +163,7 @@ async function handleSummary(req, res) {
     res.setHeader('Cache-Control', 'public, max-age=15');
     sendJson(res, 200, {
       ok: true,
+      enabled: true,
       window: '1h',
       stream_activity,
       validation_totals,

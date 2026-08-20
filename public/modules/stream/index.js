@@ -40,6 +40,27 @@ const MAX_ROWS = 100;
 const ROLLING_WINDOW_MS = 60 * 60 * 1000;
 /** Window the status pill's per-minute rate is measured over. */
 const RATE_WINDOW_MS = 60 * 1000;
+/**
+ * Frame keys remembered for de-duplication. The server replays its whole
+ * buffer (STREAM_REPLAY_MAX = 50) on EVERY connection, and EventSource
+ * reconnects by itself after any hiccup, so without this a flaky link turns
+ * one payload into as many rows as it was replayed. Four times MAX_ROWS is
+ * comfortably more than the replay window and still bounded.
+ */
+const SEEN_MAX = MAX_ROWS * 4;
+/**
+ * A frame that reaches us older than this was sitting in the server's replay
+ * buffer, not just emitted. The generator is demand-gated but the buffer is
+ * not, so on a quiet server the "live" feed opens with minutes- or hours-old
+ * payloads; they are shown, but never as if they had just happened.
+ */
+const REPLAY_AGE_MS = 10 * 1000;
+/** First wait before we re-open a stream that closed for good. */
+const RECONNECT_BASE_MS = 2000;
+/** Ceiling for the reconnect backoff. */
+const RECONNECT_MAX_MS = 30 * 1000;
+/** EventSource.CLOSED. Read as a number so a stubbed EventSource still works. */
+const ES_CLOSED = 2;
 /** Coalescing delay before a grading batch goes out. */
 const GRADE_DEBOUNCE_MS = 400;
 /** Server caps /api/v1/replay at 100 samples per call; don't exceed it. */
@@ -84,14 +105,34 @@ export default {
     const gradeCache = new Map();
     /** Source name → a representative specimen still waiting to be graded. */
     const gradeQueue = new Map();
-    /** Timestamps of everything received, for the rate + hour counters. */
+    /**
+     * EMISSION timestamps of every distinct payload seen, oldest first — not
+     * receipt timestamps. A 50-frame replay burst lands in one millisecond;
+     * counting receipts made the pill claim 50 payloads in 0.7s, and up to
+     * 231/min for a generator pinned at 60/min. What the reader wants to know
+     * is how fast the auction is going, and that is when the payloads were
+     * emitted.
+     */
     const arrivals = [];
     /** Envelopes that arrived while paused, oldest first. */
     const held = [];
+    /** Frame keys already rendered — see SEEN_MAX. */
+    const seen = new Set();
+    /** Same keys in insertion order, so the oldest can be evicted. */
+    const seenOrder = [];
 
     let activeFilter = 'all';
     let paused = false;
     let connState = 'connecting';
+    /** '' | 'capped' — why the socket is down, when we managed to find out. */
+    let downReason = '';
+    /**
+     * True only when EventSource has closed for good and the retry is ours.
+     * A plain network hiccup leaves it false: the browser is already
+     * reconnecting, and flashing a "Reconnect" button at a socket that is
+     * mid-retry invites a click that cancels its own recovery.
+     */
+    let ownsRetry = false;
     let gradeTimer = null;
     let gradeInFlight = false;
     let gradeCalls = 0;
@@ -113,6 +154,7 @@ export default {
     const stateEl = root.querySelector('#streamState');
     const stateTextEl = root.querySelector('#streamStateText');
     const freezeEl = root.querySelector('#streamFreeze');
+    const reconnectEl = root.querySelector('#streamReconnect');
     const filtersLabelEl = root.querySelector('#streamFiltersLabel');
     const chipsEl = root.querySelector('#streamChips');
     const windowEl = root.querySelector('#streamWindow');
@@ -175,42 +217,203 @@ export default {
         renderLive();
         rows.forEach((rec) => {
           paintFindings(rec);
+          paintTime(rec);
           rec.el.title = rec.envelope.hash ? t('stream.row.open') : t('stream.row.no_permalink');
         });
       }),
     );
 
-    // ── SSE. EventSource has no AbortSignal, so it gets an explicit
-    //    cleanup — closing it frees the per-IP slot in the server pool
-    //    and lets the demand-gated generator stop when we were the last
-    //    viewer. ────────────────────────────────────────────────────
-    const es = new EventSource('/api/v1/stream');
-    es.addEventListener('open', () => setConnState('streaming'), { signal: ctx.signal });
-    es.addEventListener('error', () => setConnState('offline'), { signal: ctx.signal });
-    es.addEventListener(
-      'message',
-      (ev) => {
-        let envelope;
-        try {
-          envelope = JSON.parse(ev.data);
-        } catch (_) {
-          console.warn('[stream] bad SSE frame', ev.data);
-          return;
-        }
-        arrivals.push(Date.now());
-        pruneArrivals();
-        if (paused) {
-          held.push(envelope);
-          if (held.length > MAX_ROWS) held.shift();
-        } else {
-          addRow(envelope);
-          applyFilter();
-        }
-        renderLive();
+    // ── SSE ──────────────────────────────────────────────────────────
+    //
+    // EventSource has no AbortSignal, so the socket gets an explicit cleanup —
+    // closing it frees the per-IP slot in the server pool and lets the
+    // demand-gated generator stop when we were the last viewer.
+    //
+    // It also has a failure mode the spec makes permanent: on any non-200 the
+    // browser closes the connection and NEVER retries. The server answers 429
+    // once one IP holds 8 concurrent streams — a shared NAT, a corporate
+    // proxy, or simply the user's own tabs — and that used to leave this page
+    // dead until F5, showing "connection lost" above "waiting for the first
+    // payload…", two sentences that contradict each other and neither of which
+    // named the reason. So the reconnect is ours: connect() owns the socket,
+    // and a terminal close schedules a retry instead of ending the session.
+    let es = null;
+    let reconnectTimer = null;
+    let reconnectAttempts = 0;
+
+    connect();
+    ctx.addCleanup(closeStream);
+    ctx.addCleanup(() => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    });
+
+    reconnectEl.addEventListener(
+      'click',
+      () => {
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+        reconnectAttempts = 0;
+        connect();
       },
       { signal: ctx.signal },
     );
-    ctx.addCleanup(() => es.close());
+
+    function closeStream() {
+      if (!es) return;
+      const dead = es;
+      es = null;
+      try {
+        dead.close();
+      } catch (_) {
+        /* already gone */
+      }
+    }
+
+    function connect() {
+      closeStream();
+      let next;
+      try {
+        next = new EventSource('/api/v1/stream');
+      } catch (err) {
+        console.warn('[stream] EventSource unavailable', err);
+        setConnState('offline');
+        return;
+      }
+      es = next;
+      setConnState('connecting');
+
+      // Every listener checks it is still the current socket: a retry can be
+      // scheduled while the old one is mid-teardown, and a stale error must
+      // not push the fresh connection back offline.
+      next.addEventListener(
+        'open',
+        () => {
+          if (next !== es) return;
+          reconnectAttempts = 0;
+          downReason = '';
+          ownsRetry = false;
+          setConnState('streaming');
+        },
+        { signal: ctx.signal },
+      );
+
+      next.addEventListener(
+        'error',
+        () => {
+          if (next !== es) return;
+          // readyState CONNECTING means the browser is already retrying on
+          // its own; opening a second socket there would only spend another
+          // slot from the very pool that may have refused us.
+          ownsRetry = next.readyState === ES_CLOSED;
+          setConnState('offline');
+          if (ownsRetry) {
+            closeStream();
+            scheduleReconnect();
+            explainOutage();
+          }
+        },
+        { signal: ctx.signal },
+      );
+
+      next.addEventListener(
+        'message',
+        (ev) => {
+          if (next !== es) return;
+          let envelope;
+          try {
+            envelope = JSON.parse(ev.data);
+          } catch (_) {
+            console.warn('[stream] bad SSE frame', ev.data);
+            return;
+          }
+          // The replay window overlaps everything we already have. Drop the
+          // repeats here, before they can become rows, arrivals or held
+          // frames — one gate for all three.
+          if (!claimFrame(envelope)) return;
+          arrivals.push(emittedAtOf(envelope));
+          pruneArrivals();
+          if (paused) {
+            held.push(envelope);
+            if (held.length > MAX_ROWS) held.shift();
+          } else {
+            addRow(envelope);
+            applyFilter();
+          }
+          renderLive();
+        },
+        { signal: ctx.signal },
+      );
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimer || ctx.signal.aborted) return;
+      const step = Math.min(reconnectAttempts, 4);
+      const wait = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * Math.pow(2, step));
+      reconnectAttempts++;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, wait);
+    }
+
+    /**
+     * Ask the endpoint why it hung up. EventSource hands out an untyped
+     * `error` event with no status on it, so the connection cap — the one
+     * outage the reader can actually do something about — is invisible from
+     * the socket alone. fetch does expose the status; the response is dropped
+     * as soon as we have it, which on a 200 releases the slot the server just
+     * counted for the probe.
+     */
+    function explainOutage() {
+      if (typeof fetch !== 'function') return;
+      const probe = new AbortController();
+      const stopProbe = () => probe.abort();
+      ctx.signal.addEventListener('abort', stopProbe, { once: true });
+      fetch('/api/v1/stream', { headers: { Accept: 'text/event-stream' }, signal: probe.signal })
+        .then((res) => {
+          probe.abort();
+          if (ctx.signal.aborted) return;
+          downReason = res.status === 429 ? 'capped' : '';
+          renderLive();
+        })
+        .catch(() => {
+          /* offline, or the abort above — the generic message already fits */
+        })
+        .finally(() => ctx.signal.removeEventListener('abort', stopProbe));
+    }
+
+    /** Emission time of an envelope, falling back to now for a malformed one. */
+    function emittedAtOf(envelope) {
+      const ms = Number(envelope && envelope.emittedAt);
+      return Number.isFinite(ms) && ms > 0 ? ms : Date.now();
+    }
+
+    /**
+     * Identity of a frame. `hash` is the server's own sha1 of the specimen and
+     * every emission mutates the request id, so two frames share a hash only
+     * when they are literally the same emission replayed. The fallback keeps
+     * de-duplication working if a frame ever arrives before the hash is
+     * attached.
+     *
+     * @returns {boolean} true when this frame has not been seen yet.
+     */
+    function claimFrame(envelope) {
+      const spec = (envelope && envelope.specimen) || {};
+      const key =
+        envelope && typeof envelope.hash === 'string' && envelope.hash
+          ? envelope.hash
+          : String((envelope && envelope.source) || '?') +
+            '|' +
+            String((envelope && envelope.emittedAt) || '') +
+            '|' +
+            String(spec.id || '');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      seenOrder.push(key);
+      while (seenOrder.length > SEEN_MAX) seen.delete(seenOrder.shift());
+      return true;
+    }
 
     // The pill reports a rate, so it has to decay on its own when nothing
     // arrives — otherwise a dead stream keeps advertising its last speed.
@@ -244,6 +447,8 @@ export default {
       freezeEl.textContent = paused ? t('stream.resume') : t('stream.pause');
       freezeEl.title = paused ? t('stream.resume.hint') : t('stream.pause.hint');
       freezeEl.setAttribute('aria-pressed', String(paused));
+      reconnectEl.textContent = t('stream.reconnect');
+      reconnectEl.title = t('stream.reconnect.hint');
     }
 
     /** Text that moves with the feed — runs on every frame and every tick. */
@@ -255,20 +460,39 @@ export default {
         stateTextEl.textContent = t('stream.state.paused', { held: held.length });
       } else if (state === 'streaming') {
         stateTextEl.textContent = t('stream.state.streaming', { rate: ratePerMinute() });
+      } else if (state === 'offline' && downReason === 'capped') {
+        stateTextEl.textContent = t('stream.state.capped');
       } else {
         stateTextEl.textContent = t('stream.state.' + state);
       }
+      // The retry control belongs to the one state it can act on: the stream
+      // is down AND nobody else is already bringing it back.
+      reconnectEl.hidden = !(state === 'offline' && ownsRetry);
       renderEmpty();
     }
 
     function renderEmpty() {
       const visible = rows.some((r) => !r.el.hidden);
       emptyEl.hidden = visible;
-      emptyEl.textContent = rows.length === 0 ? t('stream.empty') : t('stream.empty.filtered');
+      if (rows.length > 0) {
+        emptyEl.textContent = t('stream.empty.filtered');
+        return;
+      }
+      // An empty table under a dead socket is not "waiting for the first
+      // payload" — nothing is on its way. Say which of the two it is, and when
+      // the reason is the connection cap, say that instead: it is the only
+      // outage the reader can actually clear (close the other tabs).
+      if (connState === 'offline') {
+        emptyEl.textContent =
+          downReason === 'capped' ? t('stream.empty.capped') : t('stream.empty.offline');
+      } else {
+        emptyEl.textContent = t('stream.empty');
+      }
     }
 
     function setConnState(next) {
       connState = next;
+      if (next !== 'offline') downReason = '';
       renderLive();
     }
 
@@ -277,12 +501,21 @@ export default {
       while (arrivals.length && arrivals[0] < cutoff) arrivals.shift();
     }
 
-    /** Observed arrivals in the last 60s — a measurement, not the configured
-     *  cadence, so a throttled or stalled generator shows as the lower number. */
+    /**
+     * Distinct payloads EMITTED in the last 60s — a measurement of the feed,
+     * not of our socket, so a throttled or stalled generator shows as the
+     * lower number and a replay burst is credited to the minutes it actually
+     * happened in. Scans the whole (hour-bounded) array rather than walking
+     * back from the end: a reconnect can splice older-but-unseen frames in
+     * after newer ones, and a rate that depends on sort order is a rate that
+     * will be wrong exactly when the connection misbehaves.
+     */
     function ratePerMinute() {
       const cutoff = Date.now() - RATE_WINDOW_MS;
       let n = 0;
-      for (let i = arrivals.length - 1; i >= 0 && arrivals[i] >= cutoff; i--) n++;
+      for (let i = 0; i < arrivals.length; i++) {
+        if (arrivals[i] >= cutoff) n++;
+      }
       return n;
     }
 
@@ -453,10 +686,23 @@ export default {
       return name.slice(0, cut) + ' · ' + name.slice(cut + 1);
     }
 
-    function timeLabel(ms) {
+    /**
+     * A bare HH:MM:SS is only honest for a payload from today. The server
+     * replays its buffer to every new viewer and the generator only runs while
+     * someone is watching, so the top of a freshly opened feed can be hours or
+     * days old — printed as a clock reading, that reads as "just now". A
+     * payload from another day therefore carries its date.
+     */
+    function timeLabel(ms, now) {
       const d = new Date(ms);
       const p = (n) => String(n).padStart(2, '0');
-      return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+      const clock = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+      const today = new Date(now);
+      const sameDay =
+        d.getFullYear() === today.getFullYear() &&
+        d.getMonth() === today.getMonth() &&
+        d.getDate() === today.getDate();
+      return sameDay ? clock : p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + clock;
     }
 
     /** Wire size of the payload as it came off the stream, in KB to one place. */
@@ -478,12 +724,20 @@ export default {
       const specimen = envelope.specimen || {};
       const shape = shapeOf(specimen);
       const fmt = formatOf(specimen, shape);
+      const now = Date.now();
+      const emitted = emittedAtOf(envelope);
+      // Old on arrival = it came out of the server's replay buffer, not off
+      // the live generator. Both are real payloads; only one of them just
+      // happened, and the row has to say which.
+      const replayed = now - emitted > REPLAY_AGE_MS;
       const rec = {
         envelope,
         source: String(envelope.source || '?'),
         kind: shape.kind,
         media: fmt.media,
         vast: fmt.vast,
+        emitted,
+        replayed,
         grade: null,
         el: null,
         cells: {},
@@ -492,6 +746,7 @@ export default {
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'stream-row';
+      if (replayed) el.dataset.replay = '1';
 
       const cell = (col, text) => {
         const s = document.createElement('span');
@@ -500,7 +755,8 @@ export default {
         el.append(s);
         return s;
       };
-      rec.cells.time = cell('time', timeLabel(envelope.emittedAt || Date.now()));
+      rec.cells.time = cell('time', timeLabel(emitted, now));
+      paintTime(rec);
       rec.cells.kind = cell('kind', shape.kind === 'unknown' ? '?' : shape.kind);
       rec.cells.kind.dataset.kind = shape.kind;
       rec.cells.source = cell('source', sourceLabel(rec.source));
@@ -580,6 +836,23 @@ export default {
      */
     function blockingForm(n) {
       return n % 10 === 1 && n % 100 !== 11 ? 'one' : 'other';
+    }
+
+    /**
+     * The TIME cell's tooltip: the full timestamp, and — for a payload that
+     * came out of the replay buffer — that fact in words. The CSS marker on
+     * its own is a symbol nobody can look up, and the row's accessible name
+     * would carry no trace of it at all.
+     */
+    function paintTime(rec) {
+      const stamp = new Date(rec.emitted);
+      let full;
+      try {
+        full = stamp.toLocaleString(ctx.lang);
+      } catch (_) {
+        full = stamp.toISOString();
+      }
+      rec.cells.time.title = rec.replayed ? full + ' · ' + t('stream.row.replay') : full;
     }
 
     function paintFindings(rec) {

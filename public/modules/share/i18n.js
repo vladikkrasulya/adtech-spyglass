@@ -33,6 +33,15 @@
         en: "Couldn't decode share link: {error}",
         ru: 'Не удалось декодировать share-ссылку: {error}',
       },
+      // A share link that fails to decode has, in practice, one cause:
+      // a chat client truncated it. The message names that cause and
+      // says what to do next; the raw stream error is kept in brackets
+      // for a bug report but is no longer the whole message.
+      'toast.share_link_truncated': {
+        uk: 'Share-посилання обрізане або пошкоджене — месенджери часто ріжуть довгі URL. Попроси надіслати payload файлом або зашифрованим посиланням. ({error})',
+        en: 'This share link is truncated or damaged — chat clients often cut long URLs. Ask for the payload as a file or an encrypted link instead. ({error})',
+        ru: 'Share-ссылка обрезана или повреждена — мессенджеры часто режут длинные URL. Попроси прислать payload файлом или зашифрованной ссылкой. ({error})',
+      },
       'toast.share_link_failed': {
         uk: 'Не вдалося згенерувати посилання: {error}',
         en: "Couldn't build share link: {error}",

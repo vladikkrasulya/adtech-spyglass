@@ -493,7 +493,25 @@ const LOCALE_REDIRECT_TABLE = {
   '/dialects': { uk: '/uk/dialects', ru: '/ru/dialects' },
   '/blog': { uk: '/uk/blog', ru: '/ru/blog' },
   '/docs': { uk: '/uk/docs', ru: '/ru/docs' },
+  // The findings catalog is a real sub-route (locale-routes SPA_SUBROUTES) with
+  // its own SEO entry, so it observes the cookie like any other front door.
+  '/docs/findings': { uk: '/uk/docs/findings', ru: '/ru/docs/findings' },
 };
+
+// The programmatic-SEO landings (/vast, /native, /openrtb/2-6, …) are the site's
+// MAIN search entry points, and they were the only front doors that ignored
+// kt-lang: a visitor who had chosen Ukrainian got /uk/inspector from the nav but
+// a plain EN /vast from Google. Generated from landings.landingPaths() rather
+// than hand-listed, so a new landing cannot be born already forgetting the
+// language the visitor picked. /uk + /ru variants are served by
+// resolveLocaleRoute's ukLanding/ruLanding branches.
+// (require'd inline: the shared `landings` binding is declared with the other
+// module requires far below, and this table is built at load time.)
+for (const p of require('./lib/landings').landingPaths()) {
+  if (!LOCALE_REDIRECT_TABLE[p]) {
+    LOCALE_REDIRECT_TABLE[p] = { uk: `/uk${p}`, ru: `/ru${p}` };
+  }
+}
 
 /**
  * Carry the incoming query string onto a redirect target.
@@ -601,6 +619,11 @@ function serveStaticFile(req, res) {
     // Preserve incoming query string so URLs like /uk?auth=login survive
     // the locale-root → /uk/inspector redirect (Stage 1 sign-in flow).
     const target = withIncomingQuery(route.redirect, req.url);
+    // An embed snippet points at the share-link form (`/?embed=1#…`), which
+    // lands on the / → /inspector canonicalisation first. Chrome enforces the
+    // framing headers on the redirect hop too, so the relaxation has to travel
+    // with it or the frame dies before it ever reaches the shell.
+    if (isEmbedRequest(req.url)) applyEmbedFrameHeaders(res);
     // 301 (permanent) by default: locale-root + .html/legacy canonicalisations
     // are stable. route.status overrides it (root / → 302, see resolveLocaleRoute).
     res.writeHead(route.status || 301, { Location: target, 'Cache-Control': 'no-cache' });
@@ -666,7 +689,15 @@ function serveStaticFile(req, res) {
           if (lookup.status === 'confirmed_absent') {
             // Slug genuinely does not exist (fresh authoritative miss) → a REAL
             // 404, NOT a 200 self-canonical shell that would manufacture a Soft 404.
+            // The STATUS stays 404; only the body changes: the shell, carrying a
+            // localized "post not found" article and a link back to the locale's
+            // blog. The pretty screen already existed in modules/blog/index.js,
+            // but only on the SPA path — i.e. never for the person who actually
+            // hits a dead post, who arrives from a search result or a stale link
+            // and used to get a white page reading "Not Found".
             blogNotFound = true;
+            txt = seo.applySeoToHtml(txt, seo.postSeo(r.slug, r.postLang, null, {}));
+            txt = seo.injectPostNotFoundSsr(txt, r.uiLang);
           } else {
             // 'found' → SSR + per-indexability robots/hreflang. 'unavailable'
             // (ClickHouse down) → 200 noindex shell, NEVER a false 404. Firehose
@@ -682,7 +713,10 @@ function serveStaticFile(req, res) {
               txt,
               seo.postSeo(r.slug, r.postLang, post, { indexable, existingLangs }),
             );
-            if (post) txt = seo.injectPostSsr(txt, post);
+            // r.uiLang = the SHELL locale (/uk/blog/... → 'uk'), so the SSR
+            // chrome (back link, category label) speaks the page's language and
+            // links back to /uk/blog instead of dropping the reader into EN.
+            if (post) txt = seo.injectPostSsr(txt, post, r.uiLang);
           }
         } else {
           const meta = seo.sectionSeo(r.sectionPath, r.uiLang);
@@ -698,12 +732,23 @@ function serveStaticFile(req, res) {
         captureException(seoErr, { request: { url: req.url }, source: 'seo-rewrite' });
       }
       if (blogNotFound) {
-        res.writeHead(404, {
+        const notFoundBody = Buffer.from(txt, 'utf8');
+        const gz = maybeGzip(notFoundBody, req, ct);
+        const headers = {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'no-cache',
-        });
-        res.end('Not Found');
+          Vary: 'Accept-Encoding',
+        };
+        if (gz.encoding) headers['Content-Encoding'] = gz.encoding;
+        res.writeHead(404, headers);
+        res.end(gz.body);
         return;
+      }
+      // Only the SPA shell is frameable, and only in embed mode — see
+      // applyEmbedFrameHeaders. `normalized` is the resolved public/ path, so a
+      // direct /index.uk.html?embed=1 is covered exactly like /uk/inspector.
+      if (EMBEDDABLE_SHELLS.has(path.basename(normalized)) && isEmbedRequest(req.url)) {
+        applyEmbedFrameHeaders(res);
       }
       body = Buffer.from(txt, 'utf8');
     } else if (ct === 'application/javascript') {
@@ -1313,6 +1358,47 @@ function applyBaselineHeaders(res) {
   // ortbtools landing/docs are public — no global X-Robots-Tag. Admin/auth
   // surfaces aren't crawler-relevant (no GET-renders to index), so a global
   // noindex would just hurt the public demo's discoverability.
+}
+
+// ── Embed mode: the one surface meant to live in someone else's page ────────
+//
+// The embed modal's whole promise is "paste this snippet into your blog, Notion
+// or doc". The baseline above then guaranteed it could never work anywhere but
+// ortbtools.com: frame-ancestors 'self' + X-Frame-Options: SAMEORIGIN went out
+// on every response, so a third-party page got ERR_BLOCKED_BY_RESPONSE and a
+// grey Chrome placeholder. A feature that is blocked by its own origin is not a
+// feature.
+//
+// The relaxation is deliberately the smallest one that makes it work:
+//   - only the SPA shell documents (index.{en,uk,ru}.html) — never /account,
+//     /about, an API response or an asset;
+//   - only when the request carries the ?embed=1 flag that the shell's own
+//     pre-paint IIFE reads to strip the chrome;
+//   - X-Frame-Options is REMOVED rather than rewritten: it has no "any origin"
+//     value, and leaving SAMEORIGIN next to a permissive frame-ancestors is the
+//     classic way to be blocked by browsers that still honour the older header.
+//
+// Clickjacking exposure stays small because the session cookie is SameSite=Lax
+// (auth.js): in a cross-site iframe it is simply not sent, so a framed embed is
+// always an anonymous, read-only inspector — there is no signed-in state inside
+// the frame to steal a click from.
+const EMBED_CSP = CSP.replace("frame-ancestors 'self'", 'frame-ancestors *');
+const EMBEDDABLE_SHELLS = new Set(['index.en.html', 'index.uk.html', 'index.ru.html']);
+
+/** True when the request asks for embed mode (same test as the shell IIFE). */
+function isEmbedRequest(reqUrl) {
+  const qIdx = (reqUrl || '').indexOf('?');
+  if (qIdx < 0) return false;
+  try {
+    return new URLSearchParams(reqUrl.slice(qIdx + 1)).has('embed');
+  } catch {
+    return false;
+  }
+}
+
+function applyEmbedFrameHeaders(res) {
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Content-Security-Policy', EMBED_CSP);
 }
 
 // ── Request-logging middleware ─────────────────────────────────────────────

@@ -42,6 +42,39 @@
     }
   }
 
+  // Sortable timestamp for a `created_at` of unknown shape.
+  //
+  // /api/samples returns created_at as unix-ms NUMBER (e.g. 1787173499000).
+  // Sorting used to call `(b.created_at || '').localeCompare(...)`, which a
+  // number does not have — so the very first comparison threw TypeError and
+  // took the whole cabinet bootstrap down with it. Array.sort skips the
+  // comparator for a 0- or 1-element array, which is why the crash only
+  // appeared once an account had two saved samples.
+  //
+  // Other surfaces (and older rows) may still hand us an ISO string, so
+  // normalize everything to a number and compare numerically. Unparseable
+  // values sort last (0) rather than poisoning the comparison with NaN.
+  function timeKey(v) {
+    if (v == null || v === '') return 0;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+    const asNumber = Number(v);
+    if (v !== true && v !== false && Number.isFinite(asNumber)) return asNumber;
+    const parsed = Date.parse(String(v));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  // Run one card renderer without letting its failure abort the rest of the
+  // bootstrap. Before this, a single throwing renderer killed init() — and
+  // with it bindSectionRouting(), so the eight cabinet sections all rendered
+  // at once and the sidebar stopped switching.
+  function safeRender(name, fn) {
+    try {
+      fn();
+    } catch (e) {
+      console.error('cabinet: ' + name + ' failed to render', e);
+    }
+  }
+
   // "{key}={n}" pairs joined into a compact one-line summary, sorted by n DESC.
   // Used for byVersion / byFormat / byStatus aggregates.
   function distLine(obj, opts) {
@@ -215,10 +248,11 @@
       ul.innerHTML = '<li class="cab-empty">' + escapeHtml(T('cabinet.recent.empty')) + '</li>';
       return;
     }
-    // Sort by created_at desc, take first 10
+    // Sort by created_at desc, take first 10. created_at is unix-ms — see
+    // timeKey() for why this is not a string compare.
     const sorted = samples
       .slice()
-      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+      .sort((a, b) => timeKey(b.created_at) - timeKey(a.created_at))
       .slice(0, 10);
     ul.innerHTML = sorted
       .map((s) => {
@@ -374,7 +408,7 @@
 
     // Date range of saved samples.
     if (samples.length) {
-      const sorted = samples.slice().sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+      const sorted = samples.slice().sort((a, b) => timeKey(a.created_at) - timeKey(b.created_at));
       $('insightFirst').textContent = fmtDate(sorted[0].created_at);
       $('insightLast').textContent = fmtDate(sorted[sorted.length - 1].created_at);
     } else {
@@ -405,6 +439,11 @@
         if (applyFn) applyFn(val);
       };
       apply(current);
+      // init() re-runs on kt:lang-change; binding again would stack a second
+      // click handler on the same radio group (double localStorage write,
+      // double navigation).
+      if (root.dataset.prefBound) return;
+      root.dataset.prefBound = '1';
       root.addEventListener('click', (ev) => {
         const r = ev.target.closest('.cab-radio');
         if (!r) return;
@@ -478,13 +517,36 @@
     setRadio('prefDialect', 'ortbtools_dialect_v1', 'iab', null);
   }
 
-  async function signOut() {
+  async function signOut(dest) {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (_e) {
       /* swallow */
     }
-    location.href = '/';
+    location.href = dest || '/';
+  }
+
+  // "Forgot recovery key? → Sign out and reset" ships in the localized
+  // account.{en,uk,ru}.html as a bare <a href="/uk">. It navigates home and
+  // does nothing else: the session cookie survives, so the user lands back
+  // in the app still signed in while believing a reset has begun.
+  //
+  // Those files are not owned here, so instead of rewriting the markup we
+  // tag the control at runtime and let the existing [data-action] dispatcher
+  // do the logout. The match is deliberately structural rather than
+  // text-based (the label is translated three ways): the only .btn anchor in
+  // #security that points at a locale root. If the markup ever grows a real
+  // data-action="signout-and-reset" this is a no-op and the dispatcher
+  // branch below handles it directly; if the markup changes shape, nothing
+  // matches and behaviour degrades to today's plain link.
+  function upgradeSignoutAndReset() {
+    const sec = document.getElementById('security');
+    if (!sec) return;
+    sec.querySelectorAll('a.btn[href]').forEach((a) => {
+      if (a.dataset.action) return;
+      if (!/^\/(?:uk|ru)?\/?$/.test(a.getAttribute('href') || '')) return;
+      a.dataset.action = 'signout-and-reset';
+    });
   }
 
   async function init() {
@@ -494,8 +556,8 @@
       return;
     }
     showBody();
-    setProfile(me);
-    setupPreferences();
+    safeRender('profile', () => setProfile(me));
+    safeRender('preferences', () => setupPreferences());
     // Profile is fast — render immediately. The four data calls below are
     // independent; run them in parallel and let each panel render as data
     // arrives.
@@ -507,7 +569,7 @@
       loadMatrix(),
       loadDialects(),
     ]);
-    renderDialectsCard(dialects);
+    safeRender('dialects', () => renderDialectsCard(dialects));
     // Count the legacy IV-presence marker, not cryptographically verified rows.
     const ivMarkedCount = samples.filter((s) => s.is_encrypted).length;
     const assignedCount = samples.filter((s) => s.partner_id != null).length;
@@ -533,11 +595,11 @@
       samples.length === 0 && partners.length === 0 && ivMarkedCount === 0 && assignedCount === 0;
     const hint = $('libraryEmptyHint');
     if (hint) hint.hidden = !allZero;
-    setRecent(samples);
-    setLibraryInsights(samples, partners);
-    setUsage(insights);
-    setCorpus(corpus);
-    setMatrix(matrix);
+    safeRender('recent', () => setRecent(samples));
+    safeRender('library-insights', () => setLibraryInsights(samples, partners));
+    safeRender('usage', () => setUsage(insights));
+    safeRender('corpus', () => setCorpus(corpus));
+    safeRender('matrix', () => setMatrix(matrix));
   }
 
   // Refresh corpus card after delete (no full re-init needed). Also
@@ -719,15 +781,31 @@
       if (!entries.length) {
         list.innerHTML = '<div class="corpus-empty">' + T('corpus.cabinet.empty') + '</div>';
       } else {
+        // .corpus-row is a 4-column grid (120px 180px 1fr auto). Emit EXACTLY
+        // four children, always — source and notes are optional, so they used
+        // to make the child count swing between 3 and 5:
+        //   - 3 children (no source, no notes) put the × button in the 1fr
+        //     track, stretching it into a 456px-wide bar mid-row;
+        //   - 5 children pushed the button onto an implicit second row.
+        // Wrapping both optional bits in one always-present cell fixes the
+        // count. min-width:0 lets the 1fr track shrink below the note's
+        // intrinsic width (without it an 800-char note blew the track out to
+        // 5289px and carried the × button off-screen, making the entry
+        // impossible to delete); overflow-wrap is inherited by the note span
+        // so long unbroken text wraps instead of overflowing.
         list.innerHTML = entries
           .map((e) => {
             const labelClass = 'corpus-label-' + e.label;
             const dt = e.createdAt ? fmtDate(e.createdAt) : '—';
             const sourceTag = e.sourceSampleId
-              ? '<span class="corpus-source">↳ sample #' + e.sourceSampleId + '</span>'
+              ? '<span class="corpus-source">↳ sample #' + escapeHtml(e.sourceSampleId) + '</span>'
               : '';
             const notes = e.notes
-              ? '<span class="corpus-notes">' + escapeHtml(e.notes) + '</span>'
+              ? '<span class="corpus-notes" title="' +
+                escapeHtml(e.notes) +
+                '">' +
+                escapeHtml(e.notes) +
+                '</span>'
               : '';
             return (
               '<div class="corpus-row">' +
@@ -741,12 +819,14 @@
               ' · ' +
               (e.eventCount || 0) +
               ' events</span>' +
+              '<span class="corpus-detail" style="min-width:0;overflow-wrap:anywhere">' +
               sourceTag +
               notes +
+              '</span>' +
               '<button class="btn btn-ghost btn-sm corpus-delete-btn" data-action="corpus-delete" data-corpus-id="' +
-              e.id +
+              escapeHtml(e.id) +
               '" title="' +
-              T('corpus.cabinet.delete_title') +
+              escapeHtml(T('corpus.cabinet.delete_title')) +
               '">×</button>' +
               '</div>'
             );
@@ -764,6 +844,11 @@
     if (action === 'signout') {
       ev.preventDefault();
       signOut();
+    } else if (action === 'signout-and-reset') {
+      // Same destination the link always promised — but the session is
+      // actually terminated first, which is the whole point of "reset".
+      ev.preventDefault();
+      signOut(t.getAttribute('href') || '/');
     } else if (action === 'forgot-password') {
       ev.preventDefault();
       // Send the user back to the main app and trigger forgot-password modal.
@@ -808,10 +893,17 @@
   //
   // We pushState the hash so back works; updateState on the initial
   // load just paints the hash without adding a history entry.
+  let sectionRoutingBound = false;
   function bindSectionRouting() {
+    // init() re-runs on kt:lang-change. The lang morph copies text into the
+    // existing nodes rather than replacing them, so the listeners and the
+    // captured node lists below stay valid — re-binding would only stack a
+    // second document-level click handler (double pushState per click).
+    if (sectionRoutingBound) return;
     const sections = [...document.querySelectorAll('.cab-section')];
     const navItems = [...document.querySelectorAll('.cab-nav-item')];
     if (!sections.length || !navItems.length) return;
+    sectionRoutingBound = true;
     const validSectionIds = new Set(sections.map((s) => s.id));
 
     // Find the .cab-section ancestor of a given element id (or the
@@ -901,8 +993,17 @@
   const _origInit = init;
   // eslint-disable-next-line no-func-assign -- intentional decorator pattern: wrap init() to also bind section routing after the original init runs
   init = async function () {
-    await _origInit.apply(this, arguments);
-    bindSectionRouting();
+    // `finally`, not a plain sequence: routing is the difference between a
+    // usable cabinet and eight sections stacked into one scroll, so it must
+    // survive a data-fetch or renderer failure inside init().
+    try {
+      await _origInit.apply(this, arguments);
+    } catch (e) {
+      console.error('cabinet: init failed', e);
+    } finally {
+      safeRender('section-routing', bindSectionRouting);
+      safeRender('signout-and-reset', upgradeSignoutAndReset);
+    }
   };
 
   if (document.readyState === 'loading') {
@@ -910,4 +1011,23 @@
   } else {
     init();
   }
+
+  // The seamless language switch (lang-switch.js) morphs text out of the
+  // freshly-fetched locale document. Every value this file painted — email,
+  // member-since, the four Library counters, the heatmap, the recent list —
+  // exists in that document only as the placeholder "—" (or "Loading…"), so
+  // the morph faithfully copies the placeholder over the live data and the
+  // cabinet goes blank. Nodes this file filled with child <span>s (the
+  // profile pills, corpus counts, matrix table) are skipped by the morph
+  // instead, and stay in the OLD language — so the page ends up both empty
+  // and bilingual until a manual reload.
+  //
+  // Re-running init() repaints everything from the API in the new locale.
+  // It is safe to call repeatedly: the renderers are pure overwrites, and
+  // the two things that bind listeners (section routing, preferences) are
+  // guarded above. window.t reads <html lang>, which lang-switch.js has
+  // already updated by the time this event fires.
+  window.addEventListener('kt:lang-change', () => {
+    init();
+  });
 })();

@@ -52,7 +52,11 @@ const BUDGET = {
   'design-system.css': 5,
   'modules/admin-blog/admin-blog.css': 2,
   'modules/behavior/behavior.css': 4,
-  'modules/blog/blog.css': 4,
+  // Was 4. The site audit added four more literals here, and rather than
+  // raise the ceiling the whole file moved onto the scale: every 12px and
+  // 13px small-label size is now var(--fs-sm). Two remain, and they are the
+  // budget now — this number only ever goes down.
+  'modules/blog/blog.css': 2,
   // v2 rebuilt this page against the mockup: the severity chip rows, the
   // rule-count row and the intro card went away, and with them all four of
   // the literals that used to be budgeted here. Two remain, and both are
@@ -78,7 +82,7 @@ const BUDGET = {
   // at 30px, and the card title at 16px. The vendored scale's neighbours are
   // 20/28/15-or-17 — one step off in each case, and one step is the whole
   // difference between the mockup's density and ours.
-  'modules/insights/insights.css': 3,
+  'modules/insights/insights.css': 2,
   // The Samples redesign rewrote this sheet against the mockup, and the two
   // literals it used to carry (14px on the tab strip, 14px on the loading /
   // empty note) were both on elements the mockup does not have. Their

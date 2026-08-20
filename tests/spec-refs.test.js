@@ -518,10 +518,32 @@ async function mountSectionModule({ specifier, url, lang, realmSalt, payload }) 
   });
 
   const controller = new window.AbortController();
+  // The ctx a real mount receives is the one documented in
+  // public/core/registry.js — not just lang+signal. This harness used to pass
+  // two of those fields, so a module reaching for any of the rest died here
+  // with "ctx.addCleanup is not a function" while working perfectly in the
+  // app. Supplying the whole contract keeps the stub honest, and the cleanup
+  // queue is real so a module that registers teardown gets it run.
+  /** @type {Array<() => void>} */
+  const cleanups = [];
+  const ctx = {
+    lang,
+    signal: controller.signal,
+    theme: 'light',
+    t: (key) => key,
+    toast: () => {},
+    escapeHtml: (v) => String(v == null ? '' : v),
+    emit: () => {},
+    on: () => {},
+    off: () => {},
+    addCleanup: (fn) => {
+      if (typeof fn === 'function') cleanups.push(fn);
+    },
+  };
   try {
     const loader = createBrowserEsmLoader({ realmSalt });
     const mod = await loader.import(specifier);
-    await mod.default.mount(root, { lang, signal: controller.signal });
+    await mod.default.mount(root, ctx);
   } catch (error) {
     controller.abort();
     restoreGlobals();

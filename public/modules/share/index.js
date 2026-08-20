@@ -6,7 +6,18 @@
    and re-runs validation. Hash fragments NEVER reach the server,
    which preserves ortbtools's zero-knowledge posture.
 
-   URL shape: ortbtools.com/?#req=<b64url(deflate(json))>&res=<...>
+   URL shape: ortbtools.com/inspector?#req=<b64url(deflate(json))>&res=<...>
+
+   The link also carries the two pieces of *analysis context* that
+   decide what the recipient sees. Without them the same payload is
+   read by a different rule set and the recipient's finding count
+   silently disagrees with the author's:
+     - ?dialect=<vendor> in the query — where the app itself keeps it
+       (activeDialect() reads location.search first), so the link
+       restores the vendor overlay the author was working under.
+     - #…&pin=<2.5|2.6|3.0> in the fragment — the version pin, which
+       otherwise lives only in the author's localStorage and cannot
+       travel at all.
 
    Encoding pipeline:
      text → UTF-8 → CompressionStream('deflate-raw') → bytes → base64url
@@ -40,20 +51,50 @@
     return typeof CompressionStream !== 'undefined' && typeof DecompressionStream !== 'undefined';
   }
 
+  // Both halves of a {Compression,Decompression}Stream can reject, and the
+  // writable half is the one that carries the useful message. Feeding it
+  // without ever looking at the returned promises means that on malformed
+  // input — a share link a chat client truncated, which is exactly what
+  // URL_BUDGET exists to avoid — the rejection escapes as an uncaught
+  // error, twice (write and close), while the readable half reports a bare
+  // "Failed to fetch". So: keep a handle on the writable side, await it,
+  // and prefer its message when both fail.
+  function pumpInto(writable, bytes) {
+    const writer = writable.getWriter();
+    const state = { error: null };
+    state.done = writer
+      .write(bytes)
+      .then(() => writer.close())
+      .catch((e) => {
+        state.error = e;
+      });
+    return state;
+  }
+
+  async function drain(pump, read) {
+    let out;
+    try {
+      out = await read;
+    } catch (readError) {
+      await pump.done;
+      throw pump.error || readError;
+    }
+    await pump.done;
+    if (pump.error) throw pump.error;
+    return out;
+  }
+
   async function compress(text) {
     const cs = new CompressionStream('deflate-raw');
-    const writer = cs.writable.getWriter();
-    writer.write(new TextEncoder().encode(text));
-    writer.close();
-    return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+    const pump = pumpInto(cs.writable, new TextEncoder().encode(text));
+    const buf = await drain(pump, new Response(cs.readable).arrayBuffer());
+    return new Uint8Array(buf);
   }
 
   async function decompress(bytes) {
     const ds = new DecompressionStream('deflate-raw');
-    const writer = ds.writable.getWriter();
-    writer.write(bytes);
-    writer.close();
-    return await new Response(ds.readable).text();
+    const pump = pumpInto(ds.writable, bytes);
+    return await drain(pump, new Response(ds.readable).text());
   }
 
   function b64uEncode(bytes) {
@@ -81,6 +122,46 @@
     return typeof window.t === 'function' ? window.t(key, params) : '[' + key + ']';
   }
 
+  // ── Analysis context that has to travel with the payload ────────────
+  //
+  // A share link that carries only the bytes is not a share of the
+  // analysis: open it and the engine re-runs under whatever dialect and
+  // version the *recipient* happens to have, so the finding count differs
+  // from the one the author was looking at when they copied the link.
+  //
+  // The dialect goes in the query because that is where the app already
+  // reads it from (activeDialect() checks location.search before
+  // localStorage) — buildShareUrl used to throw location.search away.
+  // Temp dialects (`temp:<uuid>`) are deliberately not shareable: they
+  // live in the author's IndexedDB and mean nothing to a recipient, which
+  // is the same rule setActiveDialect() applies to the address bar.
+  const PINNABLE_VERSIONS = ['2.5', '2.6', '3.0'];
+
+  /** origin + pathname + the query worth sharing, as a string with no '#'. */
+  function shareBase() {
+    let query = '';
+    try {
+      const dialect = new URLSearchParams(location.search).get('dialect');
+      if (dialect && dialect !== 'iab' && !dialect.startsWith('temp:')) {
+        query = '?dialect=' + encodeURIComponent(dialect);
+      }
+    } catch (_e) {
+      /* exotic URL — share the payload without the overlay */
+    }
+    return location.origin + location.pathname + query;
+  }
+
+  /**
+   * The version pin, as a fragment parameter or null. It lives only in
+   * localStorage and the <select>, so unless the link carries it the
+   * recipient silently falls back to auto-detection.
+   */
+  function pinParam() {
+    const el = document.getElementById('versionPinSelector');
+    const v = el && el.value;
+    return v && PINNABLE_VERSIONS.includes(v) ? 'pin=' + v : null;
+  }
+
   async function buildShareUrl(reqText, resText) {
     const parts = [];
     if (reqText && reqText.trim()) {
@@ -89,7 +170,13 @@
     if (resText && resText.trim()) {
       parts.push('res=' + b64uEncode(await compress(resText)));
     }
-    return location.origin + location.pathname + '?#' + parts.join('&');
+    const pin = pinParam();
+    if (pin) parts.push(pin);
+    // The trailing '?' with no query is kept for links that carry no
+    // dialect: the shape `…/inspector?#req=` is what the docs and the
+    // existing links in the wild look like.
+    const base = shareBase();
+    return base + (base.indexOf('?') === -1 ? '?' : '') + '#' + parts.join('&');
   }
 
   // ── Encrypted gists — the overflow path for payloads too big to fit a URL ──
@@ -134,7 +221,11 @@
       throw new Error(body.error || 'HTTP ' + resp.status);
     }
     // The key is appended client-side and never travelled with the request.
-    return location.origin + location.pathname + '#gist=' + body.id + '&key=' + keyB64u;
+    // Dialect + pin ride along for the same reason they do on a plain
+    // share link: without them the recipient re-analyses under their own
+    // settings and sees a different verdict.
+    const pin = pinParam();
+    return shareBase() + '#gist=' + body.id + '&key=' + keyB64u + (pin ? '&' + pin : '');
   }
 
   async function loadGist(id, keyB64u) {
@@ -213,6 +304,18 @@
     }
   }
 
+  /**
+   * Apply a pin carried by the link, before analysis runs. Set without
+   * dispatching 'change': the pin describes the link the reader opened,
+   * it is not a preference they chose, so it must not be written into
+   * their localStorage behind their back.
+   */
+  function applyPin(value) {
+    if (!value || !PINNABLE_VERSIONS.includes(value)) return;
+    const el = document.getElementById('versionPinSelector');
+    if (el) el.value = value;
+  }
+
   /** Put text into a pane and let the rest of the app notice. */
   function fillPane(id, text) {
     const el = document.getElementById(id);
@@ -248,6 +351,7 @@
         const bundle = await loadGist(gistId, gistKey);
         if (bundle.req) fillPane('bidReq', bundle.req);
         if (bundle.res) fillPane('bidRes', bundle.res);
+        applyPin(params.get('pin'));
         if (typeof window.runAnalysis === 'function') {
           await Promise.resolve();
           window.runAnalysis();
@@ -278,6 +382,7 @@
           el.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
+      applyPin(params.get('pin'));
       if (typeof window.runAnalysis === 'function') {
         // Defer one tick so the input events finish updating badges before
         // analysis starts reading values.
@@ -287,7 +392,11 @@
       toastOk(tt('toast.share_link_loaded'));
       return true;
     } catch (e) {
-      toastErr(tt('toast.share_link_invalid', { error: e.message || String(e) }));
+      // Everything on this path — base64url decode, inflate — fails for
+      // one practical reason: the link that arrived is not the link that
+      // was sent. Say that, instead of forwarding a stream-internals
+      // message the reader can do nothing with.
+      toastErr(tt('toast.share_link_truncated', { error: e.message || String(e) }));
       return false;
     }
   }

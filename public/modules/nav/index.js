@@ -62,11 +62,16 @@ export const SECTIONS = [
     id: 'inspector',
     route: '/inspector',
     label: { en: 'Inspector', uk: 'Інспектор', ru: 'Инспектор' },
-    // The mockup prints the destination's own shortcut on the item — the
-    // cheapest possible way to teach one, since it sits beside the thing it
-    // opens rather than in a help screen nobody opens.
-    badge: { en: '⌘1', uk: '⌘1', ru: '⌘1' },
-    badgeKind: 'shortcut',
+    // NO badge. The mockup printed "⌘1" here — "the cheapest possible way to
+    // teach a shortcut, since it sits beside the thing it opens". It taught a
+    // shortcut that does not exist: nothing in public/ binds a digit key
+    // (grep for metaKey finds only k, s, ? and m), so ⌘1 / Ctrl+1 / bare 1 all
+    // left the user exactly where they were. Nor can it be implemented — in
+    // every desktop browser Ctrl/⌘+1…8 is a reserved tab-switch chord a page
+    // cannot preventDefault. A label that promises a key the app can never own
+    // is worse than no label, so the promise is withdrawn rather than faked.
+    // (The .kt-nav__badge--shortcut styling stays in nav.css for the day a
+    // real, bindable chord earns a badge here.)
   },
   {
     group: 'workbench',
@@ -396,18 +401,64 @@ export function mountNav(root) {
     }
   }
 
+  /** Read the signed-in user from whatever session surface exists.
+   *  The shell facade (window.OrtbtoolsSession) exposes the user as a GETTER
+   *  — `user` — and has never had a getUser() method. The old fallback called
+   *  `s.getUser()` behind a `typeof … === 'function'` guard, so the guard was
+   *  false on every page load and the rail was painted with a hardcoded null. */
+  function readSessionUser() {
+    try {
+      const s = window.ktSession || window.OrtbtoolsSession;
+      if (!s) return null;
+      if (typeof s.getUser === 'function') return s.getUser() || null;
+      return s.user || null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
   let lastUser = null;
+  // True once a real auth:changed has been seen: a live sign-in/sign-out
+  // always outranks a value that came back from the boot request.
+  let sawAuthEvent = false;
   const onAuth = (ev) => {
+    sawAuthEvent = true;
     lastUser = (ev && ev.detail && ev.detail.user) || null;
     paintAccount(root, lastUser);
   };
   window.addEventListener('auth:changed', onAuth);
-  // The session may have resolved before this mounted.
-  try {
-    const s = window.ktSession || window.OrtbtoolsSession;
-    paintAccount(root, s && typeof s.getUser === 'function' ? s.getUser() : null);
-  } catch (_e) {
-    paintAccount(root, null);
+
+  // The boot may resolve BEFORE or AFTER this mounts, and — the half that was
+  // missing — the canonical boot (session.ensureBooted) assigns its user
+  // directly instead of going through setUser(), so it dispatches NO
+  // auth:changed at all. auth:changed therefore only ever fires for a sign-in
+  // performed in this very tab; on every reload with a live cookie the rail
+  // had nothing to listen to and kept saying "Sign in" while the page was
+  // showing the user their own private samples. Two reads, in this order:
+  //   1. synchronous facade read — covers a boot that already finished;
+  //   2. the canonical boot promise — the SAME in-flight /api/auth/me that
+  //      shell-boot and the topbar already share, so it costs no extra
+  //      request and cannot disagree with them.
+  lastUser = readSessionUser();
+  paintAccount(root, lastUser);
+  if (!lastUser) {
+    // Dynamic, not static: this module is also evaluated outside the shell's
+    // module graph (the jsdom harness runs the file as a plain script), where
+    // a bare `import` at the top would be a syntax error and this one is just
+    // a rejected promise. A rail that stays anonymous is the pre-existing
+    // behaviour, so failing here loses nothing.
+    import('/core/session.js')
+      .then((m) => m && m.session && m.session.ensureBooted())
+      .then((res) => {
+        if (sawAuthEvent) return; // a live auth event already owns the row
+        const u = (res && res.user) || readSessionUser();
+        if (!u) return;
+        lastUser = u;
+        paintAccount(root, lastUser);
+      })
+      .catch(() => {
+        /* no session module (or offline) — the rail stays anonymous */
+      });
   }
 
   // Sync active state on every URL change (initial pushState + popstate).

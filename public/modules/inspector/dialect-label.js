@@ -146,9 +146,24 @@
    * @param {object} sig  { path, value, shapeSignature }
    * @param {object|null} suggestion  { label, confidence, reason, source }
    */
+  /**
+   * Aborts the listener belonging to the previously-opened picker.
+   *
+   * #modalRoot outlives every modal — only its innerHTML is swapped — so a
+   * listener added on open and never removed simply accumulates. The count
+   * showed up as triangular numbers in the audit: one press of Save created
+   * 1 dialect, then 3, then 6, because the Nth open ran the handler N times.
+   * Module-level rather than per-call so a picker opened while another is
+   * still mounted cannot leave the older one attached.
+   */
+  let _pickerAbort = null;
+
   async function openBuilder(sig, suggestion) {
     const root = document.getElementById('modalRoot');
     if (!root) return;
+    if (_pickerAbort) _pickerAbort.abort();
+    _pickerAbort = new AbortController();
+    const listenerSignal = _pickerAbort.signal;
 
     let dialects = [];
     try {
@@ -274,46 +289,50 @@
       newWrap.hidden = dialectSel.value !== '__new';
     });
 
-    root.addEventListener('click', async (ev) => {
-      const el = ev.target.closest('[data-action]');
-      if (!el) return;
-      const action = el.dataset.action;
-      if (action === 'dl-cancel' || action === 'modal-backdrop-close') {
-        if (action === 'modal-backdrop-close' && ev.target !== el) return;
-        return window.closeModal && window.closeModal();
-      }
-      if (action !== 'dl-save') return;
-
-      const btn = document.getElementById('dlSave');
-      btn.disabled = true;
-      btn.textContent = t('dialect.label.saving');
-      try {
-        let dialectId = dialectSel.value;
-        if (dialectId === '__new') {
-          const name = (document.getElementById('dlNewName').value || '').trim() || 'My dialect';
-          dialectId = (await createDialect(name)).id;
+    root.addEventListener(
+      'click',
+      async (ev) => {
+        const el = ev.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        if (action === 'dl-cancel' || action === 'modal-backdrop-close') {
+          if (action === 'modal-backdrop-close' && ev.target !== el) return;
+          return window.closeModal && window.closeModal();
         }
-        const label = document.getElementById('dlLabel').value;
-        await saveMapping(dialectId, {
-          signal_path: signalPath,
-          signal_value: String(sig.value),
-          semantic_label: label,
-          shape_fingerprint: sig.shapeSignature || null,
-          notes: (document.getElementById('dlNotes').value || '').trim() || null,
-        });
-        if (window.closeModal) window.closeModal();
-        toast(t('dialect.label.saved', { label }), 'success');
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = t('dialect.label.save');
-        toast(
-          e && e.code === 'unauthorized'
-            ? t('dialect.label.err.unauthorized')
-            : t('dialect.label.err.save'),
-          'error',
-        );
-      }
-    });
+        if (action !== 'dl-save') return;
+
+        const btn = document.getElementById('dlSave');
+        btn.disabled = true;
+        btn.textContent = t('dialect.label.saving');
+        try {
+          let dialectId = dialectSel.value;
+          if (dialectId === '__new') {
+            const name = (document.getElementById('dlNewName').value || '').trim() || 'My dialect';
+            dialectId = (await createDialect(name)).id;
+          }
+          const label = document.getElementById('dlLabel').value;
+          await saveMapping(dialectId, {
+            signal_path: signalPath,
+            signal_value: String(sig.value),
+            semantic_label: label,
+            shape_fingerprint: sig.shapeSignature || null,
+            notes: (document.getElementById('dlNotes').value || '').trim() || null,
+          });
+          if (window.closeModal) window.closeModal();
+          toast(t('dialect.label.saved', { label }), 'success');
+        } catch (e) {
+          btn.disabled = false;
+          btn.textContent = t('dialect.label.save');
+          toast(
+            e && e.code === 'unauthorized'
+              ? t('dialect.label.err.unauthorized')
+              : t('dialect.label.err.save'),
+            'error',
+          );
+        }
+      },
+      { signal: listenerSignal },
+    );
   }
 
   // ── the agent ─────────────────────────────────────────────────────────

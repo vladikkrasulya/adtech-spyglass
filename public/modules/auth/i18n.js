@@ -1,7 +1,7 @@
 /* ============================================================
    modules/auth/i18n.js — per-module translations.
 
-   13 keys × 3 locales. Loaded LAZY by index.js — pushed into
+   14 keys × 3 locales. Loaded LAZY by index.js — pushed into
    window.kt_i18n_modules queue, drained by central /i18n.js (or
    registered directly via window.registerI18nModule when the queue
    has already been drained, which is always the case here since
@@ -90,6 +90,14 @@
         uk: 'Забагато спроб — спробуй пізніше',
         en: 'Too many attempts — try again later',
         ru: 'Слишком много попыток — попробуй позже',
+      },
+      // Shown only when /modules/recovery/ fails to load right after the
+      // key was generated. The key is gone at that point, so the message
+      // says what it costs instead of "something went wrong".
+      'auth.err.recovery_modal_failed': {
+        uk: 'Не вдалося показати recovery key. Перезавантаж сторінку — якщо ключ не зʼявиться, зміни пароль у кабінеті, щоб отримати новий.',
+        en: 'Could not show the recovery key. Reload the page — if it does not appear, change your password in the cabinet to get a new one.',
+        ru: 'Не удалось показать recovery key. Перезагрузи страницу — если ключ не появится, смени пароль в кабинете, чтобы получить новый.',
       },
       'toast.hello': {
         uk: 'Привіт, {email}',

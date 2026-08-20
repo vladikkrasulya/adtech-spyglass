@@ -56,6 +56,25 @@ export async function openSimBidsModal() {
     t('btn.cancel') +
     '</button></div></div></div>';
 
+  // The modal is already on screen showing a spinner. Every exit from here
+  // has to replace that spinner with something — a dead `return` leaves
+  // "Computing strategies…" turning forever, which is a worse lie than any
+  // error message. renderFailure() is the single exit that does it.
+  function renderFailure(msg) {
+    $('modalRoot').innerHTML =
+      '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
+      '<div class="modal-card">' +
+      '<div class="modal-title">' +
+      escapeHtml(t('modal.simbids.title')) +
+      '</div>' +
+      '<div class="modal-row"><div class="finding finding-error">' +
+      escapeHtml(msg) +
+      '</div></div>' +
+      '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
+      t('btn.close') +
+      '</button></div></div></div>';
+  }
+
   let results;
   try {
     const r = await fetch('/api/intel/simulate-bids', {
@@ -65,27 +84,26 @@ export async function openSimBidsModal() {
     });
     const j = await r.json();
     if (!j.success) {
-      const msg =
+      renderFailure(
         j.code === 'ollama_unavailable'
           ? t('modal.simbids.ollama_down')
-          : j.error || 'simulation_failed';
-      $('modalRoot').innerHTML =
-        '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-        '<div class="modal-card">' +
-        '<div class="modal-title">' +
-        escapeHtml(t('modal.simbids.title')) +
-        '</div>' +
-        '<div class="modal-row"><div class="finding finding-error">' +
-        escapeHtml(msg) +
-        '</div></div>' +
-        '<div class="modal-actions"><button class="btn btn-ghost btn-sm" data-action="modal-close">' +
-        t('btn.close') +
-        '</button></div></div></div>';
+          : j.error || 'simulation_failed',
+      );
       return;
     }
     results = j.strategies;
   } catch (e) {
-    toast(t('toast.simbids_failed', { error: e.message }), 'error');
+    // Network failure or a 5xx that isn't JSON. The toast alone was the
+    // only signal here, and inside an embed there is no toast at all.
+    renderFailure(t('toast.simbids_failed', { error: e.message || String(e) }));
+    toast(t('toast.simbids_failed', { error: e.message || String(e) }), 'error');
+    return;
+  }
+
+  // A 200 whose body carries no strategies would otherwise throw on
+  // .map() below — outside the try, with the spinner still up.
+  if (!Array.isArray(results) || !results.length) {
+    renderFailure(t('toast.simbids_failed', { error: 'empty response' }));
     return;
   }
 

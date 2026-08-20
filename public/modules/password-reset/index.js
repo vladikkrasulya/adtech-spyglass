@@ -64,6 +64,50 @@ import { $, escapeHtml, toast, t } from '/core/utils.js';
 // it inaccessible from the shell or other modules.
 let _resetCtx = null;
 
+// ── Server error code → localized message ──────────────────────────
+// The reset endpoints answer with a machine code (`code`) AND an
+// English sentence (`error`). This module used to print the English
+// sentence straight into #resetError / a toast, so a Ukrainian user
+// hitting the rate limit read "Too many reset attempts. Try again in
+// 15 minutes." inside an otherwise Ukrainian modal. Same shape as
+// humanAuthError() in /modules/auth/. `fallbackKey` lets the caller
+// pick the right generic sentence for its own screen.
+//
+// Unmapped codes deliberately degrade to a localized generic line
+// instead of the server's English — the raw pair is logged so a code
+// we forgot is still debuggable from the console.
+function humanResetError(e, fallbackKey) {
+  const code = (e && e.code) || '';
+  switch (code) {
+    case 'rate_limited':
+      return t('reset.err.rate_limited');
+    case 'expired':
+      return t('reset.err.link_expired');
+    case 'malformed':
+    case 'tampered':
+    case 'wrong-purpose':
+    case 'invalid_token':
+      return t('reset.err.link_tampered');
+    case 'stale_token':
+      return t('reset.err.link_stale');
+    case 'invalid_credentials':
+      return t('reset.err.old_wrong');
+    case 'weak_password':
+      return t('reset.err.short_password');
+    case 'invalid_mode':
+    case 'invalid_state':
+    case 'invalid_request':
+      return t('reset.err.bad_request');
+    case 'sessions_invalidate_failed':
+      return t('reset.err.sessions_partial');
+    default:
+      if (code || (e && e.message)) {
+        console.warn('[password-reset] unmapped server error:', code, e && e.message);
+      }
+      return t(fallbackKey || 'reset.err.generic');
+  }
+}
+
 // Lets the shell's closeModal() know a reset is in progress so it can
 // strip ?reset= from the URL on Esc/backdrop close. Cleared whenever
 // _resetCtx is cleared. We keep this on window because closeModal()
@@ -132,7 +176,7 @@ export async function doForgotPassword() {
     msgEl.textContent = t('forgot.sent');
   } catch (e) {
     msgEl.style.color = 'var(--danger)';
-    msgEl.textContent = e.message || t('toast.error_generic', { error: '' });
+    msgEl.textContent = humanResetError(e);
   }
 }
 
@@ -145,7 +189,7 @@ export async function openPasswordResetFlow(token) {
       token,
     });
   } catch (e) {
-    toast(t('reset.err.link_invalid', { error: e.message || '' }), 'error');
+    toast(humanResetError(e, 'reset.err.link_invalid'), 'error');
     // Strip ?reset= from URL so refresh doesn't re-trigger.
     history.replaceState({}, '', location.pathname);
     return;
@@ -368,7 +412,7 @@ export async function doResetPassword() {
     Session.refreshSamples();
     toast(t('toast.password_reset'), 'success');
   } catch (e) {
-    errEl.textContent = e.message || t('error.generic');
+    errEl.textContent = humanResetError(e);
   }
   // Note: dekBytes goes out of scope here. The local `let` does not
   // cross the function boundary; no reference is retained anywhere.
