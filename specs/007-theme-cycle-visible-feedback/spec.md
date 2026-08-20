@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-20
 
-**Status**: Verification
+**Status**: Complete
 
 **Input**: Follow-up recorded during the 1.14.3 release: the shell theme control can be pressed and
 leave the page looking identical, and that press is the first one a new visitor makes.
