@@ -280,6 +280,27 @@ test('F-07: the results dropdown is a complete, localized combobox reachable fro
 
       input.focus();
       input.dispatchEvent(new window.Event('focus'));
+      await waitFor(
+        () => doc.querySelectorAll('.sg-search-hint__chip').length === 4,
+        'starter-query buttons',
+      );
+
+      assert.equal(listbox.getAttribute('role'), 'dialog');
+      assert.equal(input.getAttribute('aria-haspopup'), 'dialog');
+      assert.equal(listbox.getAttribute('aria-label'), 'Введіть запит для пошуку');
+      const suggestions = [...doc.querySelectorAll('.sg-search-hint__chip')];
+      assert.ok(
+        suggestions.every(
+          (chip) => chip.tagName === 'BUTTON' && chip.type === 'button' && chip.tabIndex === 0,
+        ),
+        'starter queries are native keyboard-focusable buttons',
+      );
+
+      suggestions[0].focus();
+      suggestions[0].click();
+      assert.equal(input.value, 'gdpr', 'button activation applies the suggested query');
+      assert.equal(doc.activeElement, input, 'activation returns focus to the combobox');
+
       input.value = 'vast';
       input.dispatchEvent(new window.Event('input', { bubbles: true }));
       // Both fixture findings must appear; the exact row COUNT is not the
@@ -296,6 +317,8 @@ test('F-07: the results dropdown is a complete, localized combobox reachable fro
       );
 
       assert.equal(input.getAttribute('aria-expanded'), 'true');
+      assert.equal(input.getAttribute('aria-haspopup'), 'listbox');
+      assert.equal(listbox.getAttribute('role'), 'listbox');
       const rows = Array.from(doc.querySelectorAll('.sg-search-row'));
       assert.ok(rows.length >= 2, 'at least the two findings are listed');
       assert.ok(

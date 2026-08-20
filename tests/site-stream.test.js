@@ -50,10 +50,42 @@ const { createBrowserEsmLoader } = require('./browser-esm-loader');
 const ROOT = path.join(__dirname, '..');
 const STREAM_DIR = path.join(ROOT, 'public', 'modules', 'stream');
 const TEMPLATE = fs.readFileSync(path.join(STREAM_DIR, 'template.html'), 'utf8');
+const STREAM_CSS = fs.readFileSync(path.join(STREAM_DIR, 'stream.css'), 'utf8');
 
 const ES_CONNECTING = 0;
 const ES_OPEN = 1;
 const ES_CLOSED = 2;
+
+test('phone stream rows expose findings without changing the desktop table contract', () => {
+  assert.match(STREAM_CSS, /--stream-cols:\s*112px 84px minmax\(140px, 1fr\)/u);
+  assert.match(STREAM_CSS, /--stream-min:\s*712px/u);
+  assert.match(
+    STREAM_CSS,
+    /@media \(max-width: 600px\)[\s\S]*--stream-cols:\s*112px minmax\(0, 1fr\) max-content;[\s\S]*--stream-min:\s*0px;[\s\S]*overflow-x:\s*hidden;/u,
+    'the phone layout fits its scrollport instead of clipping later columns',
+  );
+  assert.match(
+    STREAM_CSS,
+    /grid-template-areas:\s*\n\s*'time source findings'\s*\n\s*'kind format size';/u,
+    'the first mobile line contains FINDINGS and the second keeps the remaining metadata',
+  );
+  for (const col of ['kind', 'format', 'size']) {
+    assert.match(
+      STREAM_CSS,
+      new RegExp("\\[data-col='" + col + "'\\]", 'u'),
+      `the ${col} desktop heading is explicitly handled at phone width`,
+    );
+  }
+});
+
+test('unavailable stream rows do not advertise the live-row hover treatment', () => {
+  assert.match(STREAM_CSS, /\.stream-row:not\(:disabled\):hover\s*\{/u);
+  assert.doesNotMatch(STREAM_CSS, /\.stream-row:hover\s*\{/u);
+  assert.match(
+    STREAM_CSS,
+    /\.stream-row:disabled\s*\{[^}]*cursor:\s*default;[^}]*color:\s*var\(--text-muted\);[^}]*opacity:\s*0\.72;/su,
+  );
+});
 
 /**
  * The module resolves its template against `import.meta.url`. Under the ESM
@@ -354,6 +386,7 @@ test('a frame with no hash still dedupes on source + emittedAt + specimen id', a
     es.deliver(bare);
     es.deliver(bare);
     assert.equal(h.rowEls().length, 1);
+    assert.equal(h.rowEls()[0].disabled, true, 'a row with no Inspector handoff is unavailable');
   } finally {
     h.close();
   }

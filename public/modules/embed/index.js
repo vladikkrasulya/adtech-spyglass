@@ -132,7 +132,7 @@
       escapeHtml(tt('embed.body')) +
       '</div>' +
       '<div class="modal-row">' +
-      '<label>' +
+      '<label for="embedHeight">' +
       escapeHtml(tt('embed.label.height')) +
       '</label>' +
       '<select id="embedHeight">' +
@@ -143,7 +143,7 @@
       '</select>' +
       '</div>' +
       '<div class="modal-row">' +
-      '<label>' +
+      '<label for="embedSnippet">' +
       escapeHtml(tt('embed.label.snippet')) +
       '</label>' +
       '<textarea id="embedSnippet" rows="7" readonly style="font-family:var(--font-mono);font-size:12px">' +

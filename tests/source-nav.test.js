@@ -491,3 +491,111 @@ test('CP3.2: crosscheck data-loc round-trips through HTML parsing and navigates 
     'related: request cur highlighted cross-pane',
   );
 });
+
+test('caret popover is a labelled dialog with a complete keyboard/focus round trip', () => {
+  const req = { id: 'r1', imp: [{ id: 'i1' }] };
+  const w = setup(PRETTY(req), '');
+  const source = w.document.getElementById('bidReq');
+  source.getBoundingClientRect = () => ({
+    top: 20,
+    right: 340,
+    bottom: 220,
+    left: 20,
+    width: 320,
+    height: 200,
+  });
+  // jsdom intentionally omits these browser APIs; the production path uses
+  // both only after the user follows the popover action.
+  w.CSS = { escape: (value) => String(value).replace(/"/g, '\\"') };
+
+  const card = w.document.createElement('details');
+  card.dataset.findingId = 'focus-round-trip';
+  const summary = w.document.createElement('summary');
+  summary.textContent = 'Finding explanation';
+  card.appendChild(summary);
+  let scrolls = 0;
+  card.scrollIntoView = () => scrolls++;
+  w.document.body.appendChild(card);
+
+  const loc = FL.buildNormalLocation(
+    { id: 'focus-round-trip', path: 'imp[0].id' },
+    { side: 'request', kind: 'ortb' },
+  );
+  w.OrtbtoolsSourceNav.onAnalyzed([
+    { id: 'focus-round-trip', level: 'error', msg: 'Impression id is invalid.', location: loc },
+  ]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
+
+  const pop = w.OrtbtoolsSourceNav.__test.popover();
+  assert.ok(pop && !pop.hidden, 'popover is visible at the selected finding');
+  assert.equal(pop.getAttribute('role'), 'dialog');
+  assert.equal(pop.getAttribute('aria-labelledby'), 'src-pop-title');
+  assert.equal(pop.getAttribute('aria-describedby'), 'src-pop-where');
+  const go = pop.querySelector('.src-pop-go');
+  assert.ok(go, 'dialog exposes one ordinary button action');
+
+  const tab = new w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  source.dispatchEvent(tab);
+  assert.equal(tab.defaultPrevented, true, 'Tab is routed directly to the contextual action');
+  assert.equal(w.document.activeElement, go);
+  assert.equal(pop.hidden, false, 'moving focus into the dialog does not dismiss it');
+
+  const escape = new w.KeyboardEvent('keydown', {
+    key: 'Escape',
+    bubbles: true,
+    cancelable: true,
+  });
+  go.dispatchEvent(escape);
+  assert.equal(escape.defaultPrevented, true);
+  assert.equal(pop.hidden, true);
+  assert.equal(w.document.activeElement, source, 'Escape returns to the source textarea');
+
+  source.dispatchEvent(new w.KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  assert.equal(pop.hidden, false, 'caret movement can reopen the contextual action');
+  pop.querySelector('.src-pop-go').click();
+  assert.equal(pop.hidden, true);
+  assert.equal(scrolls, 1, 'the action reveals the matching finding card');
+  assert.equal(w.document.activeElement, summary, 'focus follows the visual jump to the card');
+  w.OrtbtoolsSourceNav.teardown();
+  w.close();
+});
+
+test('caret popover clamps its complete box to the visible editor and viewport', () => {
+  const req = { id: 'r1', imp: [{ id: 'i1' }] };
+  const w = setup(PRETTY(req), '');
+  Object.defineProperty(w, 'innerWidth', { configurable: true, value: 320 });
+  Object.defineProperty(w, 'innerHeight', { configurable: true, value: 200 });
+  const source = w.document.getElementById('bidReq');
+  source.getBoundingClientRect = () => ({
+    top: 20,
+    right: 410,
+    bottom: 180,
+    left: -20,
+    width: 430,
+    height: 160,
+  });
+  const loc = FL.buildNormalLocation(
+    { id: 'clamp', path: 'imp[0].id' },
+    { side: 'request', kind: 'ortb' },
+  );
+  w.OrtbtoolsSourceNav.onAnalyzed([
+    { id: 'clamp', level: 'warning', msg: 'Check this id.', location: loc },
+  ]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
+  const pop = w.OrtbtoolsSourceNav.__test.popover();
+  pop.getBoundingClientRect = () => ({ height: 60 });
+  w.OrtbtoolsSourceNav.__test.markers('request')[0].line = 9;
+  w.OrtbtoolsSourceNav.__test.positionPopover();
+
+  const top = Number.parseFloat(pop.style.top);
+  const left = Number.parseFloat(pop.style.left);
+  const maxWidth = Number.parseFloat(pop.style.maxWidth);
+  assert.ok(top >= 20 && top + 60 <= 180, `vertical box is visible: top=${top}`);
+  assert.ok(left >= 8, `left edge respects the viewport gutter: left=${left}`);
+  assert.ok(
+    left + maxWidth <= 312,
+    `right edge respects the viewport gutter: right=${left + maxWidth}`,
+  );
+  w.OrtbtoolsSourceNav.teardown();
+  w.close();
+});

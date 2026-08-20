@@ -108,7 +108,7 @@ function renderTopbar(authUser) {
   // The IIFE in HTML head also re-binds .kt-theme-toggle on
   // kt:inspector-ready, so the topbar copy gets wired automatically.
   return `
-    <button type="button" class="kt-topbar__nav-toggle" data-action="toggle-nav" aria-label="${escapeHtml(navToggleLabel)}">
+    <button type="button" class="kt-topbar__nav-toggle" data-action="toggle-nav" aria-controls="kt-nav-root" aria-expanded="false" aria-label="${escapeHtml(navToggleLabel)}">
       <span aria-hidden="true">☰</span>
     </button>
     <a class="kt-topbar__brand-mini" href="${escapeHtml(localePrefix() + '/inspector')}" data-internal>
@@ -125,7 +125,7 @@ function renderTopbar(authUser) {
       <span class="kt-topbar__crumb-sep" aria-hidden="true">/</span>
       <span class="kt-topbar__crumb-id" id="ktCrumbId"></span>
     </div>
-    <div class="kt-topbar__search">
+    <div class="kt-topbar__search" id="ktTopbarSearch">
       <svg class="kt-topbar__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
@@ -141,15 +141,15 @@ function renderTopbar(authUser) {
       <span class="kt-topbar__search-kbd" aria-hidden="true">⌘K</span>
     </div>
     <div class="kt-topbar__actions">
-      <button type="button" class="kt-topbar__search-btn" data-action="toggle-search" aria-label="${escapeHtml(searchLabel)}" title="${escapeHtml(searchLabel)}">🔎</button>
+      <button type="button" class="kt-topbar__search-btn" data-action="toggle-search" aria-controls="ktTopbarSearch" aria-expanded="false" aria-label="${escapeHtml(searchLabel)}" title="${escapeHtml(searchLabel)}">🔎</button>
       <details class="kt-lang-menu">
         <summary class="kt-lang-toggle" title="${escapeHtml(langTitle)}">
           <span class="kt-lang-current">${escapeHtml(langCurrent)}</span><span class="kt-lang-caret">▾</span>
         </summary>
-        <div class="kt-lang-menu-list" role="menu">
-          <a href="/" role="menuitem" lang="en"${l === 'en' ? ' aria-current="true"' : ''}>EN · English</a>
-          <a href="/uk/" role="menuitem" lang="uk"${l === 'uk' ? ' aria-current="true"' : ''}>UK · Українська</a>
-          <a href="/ru/" role="menuitem" lang="ru"${l === 'ru' ? ' aria-current="true"' : ''}>RU · Русский</a>
+        <div class="kt-lang-menu-list">
+          <a href="/" lang="en"${l === 'en' ? ' aria-current="true"' : ''}>EN · English</a>
+          <a href="/uk/" lang="uk"${l === 'uk' ? ' aria-current="true"' : ''}>UK · Українська</a>
+          <a href="/ru/" lang="ru"${l === 'ru' ? ' aria-current="true"' : ''}>RU · Русский</a>
         </div>
       </details>
       <button class="kt-theme-toggle" type="button" aria-label="${escapeHtml(themeLabel)}" title="${escapeHtml(themeLabel)}">◐</button>
@@ -164,24 +164,43 @@ export function mountTopbar(root, shellRoot) {
   let _authUser = null;
 
   // ── Nav toggle (declared early — doRender references it) ────────────
+  const setNavOpen = (expanded) => {
+    shellRoot.classList.toggle('is-nav-open', expanded);
+    const opener = root.querySelector('[data-action="toggle-nav"]');
+    if (opener) opener.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    window.dispatchEvent(
+      new CustomEvent('kt:nav-drawer-state', {
+        detail: { expanded },
+      }),
+    );
+  };
   const onToggle = (e) => {
     e.preventDefault();
-    shellRoot.classList.toggle('is-nav-open');
+    setNavOpen(!shellRoot.classList.contains('is-nav-open'));
   };
 
   // ── Mobile search toggle (≤600px): expand the inline input into a
   // full-width overlay (CSS .is-search-open on .kt-topbar) and focus it,
   // which opens the existing search dropdown. Declared early — doRender
   // references it. ───────────────────────────────────────────────────────
-  const closeSearch = () => root.classList.remove('is-search-open');
+  const closeSearch = ({ restoreFocus = false } = {}) => {
+    const wasOpen = root.classList.contains('is-search-open');
+    root.classList.remove('is-search-open');
+    const trigger = root.querySelector('[data-action="toggle-search"]');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    if (restoreFocus && wasOpen && trigger) setTimeout(() => trigger.focus(), 0);
+  };
   const onToggleSearch = (e) => {
     e.preventDefault();
     e.stopPropagation();
     const opening = !root.classList.contains('is-search-open');
     root.classList.toggle('is-search-open', opening);
+    e.currentTarget.setAttribute('aria-expanded', opening ? 'true' : 'false');
     if (opening) {
       const inp = root.querySelector('.kt-topbar__search-input');
       if (inp) setTimeout(() => inp.focus(), 0);
+    } else {
+      e.currentTarget.focus();
     }
   };
 
@@ -215,10 +234,19 @@ export function mountTopbar(root, shellRoot) {
   // ── Full topbar render (preserves _authUser across re-renders) ───────
   function doRender(user) {
     _authUser = user !== undefined ? user : _authUser;
+    // A locale render replaces both the mobile search trigger and the field;
+    // never leave the persistent root claiming an overlay whose nodes are gone.
+    closeSearch();
     root.innerHTML = renderTopbar(_authUser);
     // Re-wire toggle (it's a fresh DOM node after innerHTML).
     const newToggle = root.querySelector('[data-action="toggle-nav"]');
-    if (newToggle) newToggle.addEventListener('click', onToggle);
+    if (newToggle) {
+      newToggle.setAttribute(
+        'aria-expanded',
+        shellRoot.classList.contains('is-nav-open') ? 'true' : 'false',
+      );
+      newToggle.addEventListener('click', onToggle);
+    }
     const newSearchToggle = root.querySelector('[data-action="toggle-search"]');
     if (newSearchToggle) newSearchToggle.addEventListener('click', onToggleSearch);
     wireSignIn();
@@ -321,7 +349,7 @@ export function mountTopbar(root, shellRoot) {
     if (nav && nav.contains(e.target)) return;
     const tb = root.querySelector('[data-action="toggle-nav"]');
     if (tb && tb.contains(e.target)) return;
-    shellRoot.classList.remove('is-nav-open');
+    setNavOpen(false);
   };
   shellRoot.addEventListener('click', onShellClick);
 
@@ -381,7 +409,7 @@ export function mountTopbar(root, shellRoot) {
 
   // Auto-close drawer (and the mobile search overlay) on route change.
   const onRoute = () => {
-    shellRoot.classList.remove('is-nav-open');
+    setNavOpen(false);
     closeSearch();
     crumbDetail = '';
     paintCrumbs();
@@ -405,15 +433,25 @@ export function mountTopbar(root, shellRoot) {
     closeSearch();
   };
   const onKeySearch = (e) => {
-    if (e.key === 'Escape' && root.classList.contains('is-search-open')) closeSearch();
+    if (e.key === 'Escape' && root.classList.contains('is-search-open')) {
+      e.preventDefault();
+      closeSearch({ restoreFocus: true });
+    }
+  };
+  const onFocusOutSearch = () => {
+    setTimeout(() => {
+      if (!root.classList.contains('is-search-open')) return;
+      const search = root.querySelector('.kt-topbar__search');
+      if (!search || !search.contains(document.activeElement)) closeSearch();
+    }, 0);
   };
   document.addEventListener('click', onDocClickSearch);
   document.addEventListener('keydown', onKeySearch);
+  root.addEventListener('focusout', onFocusOutSearch);
 
   // Re-check auth on SPA navigation (covers going from /inspector to
   // /library after sign-in — the profile pill must persist).
   const onPushState = () => {
-    shellRoot.classList.remove('is-nav-open');
     updateAuthArea(); // best-effort; anon fallback on network failure
   };
   window.addEventListener('kt:pushstate', onPushState);
@@ -466,6 +504,7 @@ export function mountTopbar(root, shellRoot) {
     shellRoot.removeEventListener('click', onShellClick);
     document.removeEventListener('click', onDocClickSearch);
     document.removeEventListener('keydown', onKeySearch);
+    root.removeEventListener('focusout', onFocusOutSearch);
     window.removeEventListener('popstate', onRoute);
     window.removeEventListener('kt:pushstate', onRoute);
     window.removeEventListener('kt:pushstate', onPushState);

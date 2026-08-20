@@ -114,10 +114,10 @@ export function openAuthModal(mode) {
     '<div class="modal-subtitle" style="font-size:var(--fs-sm);color:var(--text-dim);margin:calc(-1*var(--space-2)) 0 var(--space-4);line-height:1.4">' +
     t('auth.subtitle') +
     '</div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="authEmailInput">' +
     t('auth.label.email') +
     '</label><input id="authEmailInput" type="email" autocomplete="email" placeholder="you@example.com"></div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="authPasswordInput">' +
     t(isReg ? 'auth.label.password_hint' : 'auth.label.password') +
     '</label><input id="authPasswordInput" type="password" autocomplete="' +
     (isReg ? 'new-password' : 'current-password') +
