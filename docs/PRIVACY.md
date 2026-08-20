@@ -410,6 +410,42 @@ else. Operators who want no outbound call at all can set `FX_DISABLED=1`, which 
 the fetch itself; the endpoint then answers 503 and floors are shown in their own
 currency with no conversion.
 
+### The dialect labeller (the one model that sees payload-derived data)
+
+When the engine meets a vendor `ext` key it does not recognise, the Inspector offers a
+button that asks for a guess at what the key means. Most of those questions are answered
+by a lookup table with no model involved (`packages/core/dialects/signal-lexicon.js`).
+For the genuinely ambiguous remainder, a **language model running on the same host** is
+asked — reached over the docker host-gateway, never over the internet. There is no
+cloud fallback: if the local model is unreachable the feature answers 503 and the
+manual builder takes over. Pointing `OLLAMA_URL` at a remote host would break the
+promise in this section, which is why `docker-compose.yml` says so beside the value.
+
+What is sent to it is not the payload. `redactImp()` in `modules/ai-label/handler.js`
+builds an **allowlist** — a denylist would fail open the first time a vendor invented a
+field — and only these travel:
+
+- the signal's own path and value (e.g. `imp[0].ext.adtype` and `8`), which is the
+  question being asked;
+- a structural sketch of the impression: `banner` width/height and format count,
+  `video` dimensions/`startdelay`/`placement`/`plcmt`/`linearity`/`mimes`, whether
+  `audio` or `native` are present, and the numbers `instl`, `secure`, `rwdd`,
+  `bidfloor`;
+- the **names** of sibling `ext` keys, never their values — an `allowShock` next to the
+  signal is what marks pop inventory, but what it is set to is the vendor's business.
+
+Everything else is dropped, including every string the publisher put in the payload:
+`native.request` (the asset layout) travels as `{present: true}`, and no site, app,
+user, device, or identifier field is in the allowlist at all. `tests/ai-label.test.js`
+asserts the allowlist's shape, that sibling values never travel, and that unknown
+vendor fields are dropped entirely.
+
+Two further limits, both deliberate: the feature is **auth-gated** and only fires on an
+explicit click, so nothing reaches the model while you are just analysing; and its
+answer is a **suggestion that is never persisted** — saving it into your dialect stays a
+separate, human action. Failures are logged as a shape only (`{code, path}`), never with
+payload contents.
+
 ### Logging
 
 The server uses pino-based structured logging (`lib/logger.js`). The default log

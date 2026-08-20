@@ -5,8 +5,17 @@
  *
  * Historical changelogs/audits intentionally keep the old architecture. This
  * guard covers current operator, contributor, package, and public-copy surfaces
- * so a removed Ollama bridge cannot be advertised or configured again by
+ * so the removed intel-llm bridge cannot be advertised or configured again by
  * accident.
+ *
+ * ── What this does NOT forbid ────────────────────────────────────────────
+ * Mentioning ollama at all. Until 2026-08-20 this file blocked the string
+ * `OLLAMA_URL` everywhere, which meant the dialect labeller (modules/ai-label,
+ * added in cd609b3) could not be given the one env var it needs to reach the
+ * host — so it shipped returning 503 to every request, with CI green the whole
+ * time. The contract that actually matters is narrower and is asserted below:
+ * INTEL and news relevance stay deterministic. The labeller is a separate,
+ * auth-gated, suggestion-only feature and is allowed its wiring.
  */
 
 const { test } = require('node:test');
@@ -48,7 +57,6 @@ const CURRENT_SURFACES = [
 const RETIRED_CLAIMS = [
   { label: 'deleted setup guide', re: /LLM_SETUP\.md/i },
   { label: 'deleted bridge source', re: /\bintel-llm\.js\b/i },
-  { label: 'retired Ollama environment', re: /\bOLLAMA_(?:URL|MODEL|TIMEOUT_MS)\b/ },
   { label: 'retired Ollama network', re: /\bollama_default\b/i },
   { label: 'local LLM product claim', re: /\blocal\s+LLM\b/i },
   { label: 'LLM bridge product claim', re: /\bLLM[- ]bridge\b/i },
@@ -68,10 +76,26 @@ test('interactive intel runtime is wired only to deterministic rules', () => {
   const server = read('server.js');
   const handler = read('modules/intel/handler.js');
 
-  assert.doesNotMatch(compose, /OLLAMA_|ollama_default|intel-llm/i);
+  assert.doesNotMatch(compose, /ollama_default|intel-llm/i);
   assert.match(server, /require\(['"]\.\/lib\/intel-rules['"]\)/);
   assert.match(handler, /engine:\s*["']rules["']/);
   assert.doesNotMatch(handler, /require\([^\n]*intel-llm/i);
+  // The narrow contract: intel resolves without a model, whatever else on the
+  // box happens to have one. A require() here is the drift worth catching.
+  assert.doesNotMatch(handler, /require\([^\n]*(?:ollama|openrouter)/i);
+  assert.doesNotMatch(read('lib/intel-rules.js'), /require\([^\n]*(?:ollama|openrouter)/i);
+});
+
+test('the dialect labeller is wired to a reachable host, not to localhost', () => {
+  // The bug this pins: `localhost` inside the container is the container.
+  const compose = read('docker-compose.yml');
+  assert.match(compose, /OLLAMA_URL=/, 'compose must give the labeller an ollama URL');
+  assert.doesNotMatch(
+    compose,
+    /OLLAMA_URL=https?:\/\/(?:localhost|127\.0\.0\.1)\b/,
+    'OLLAMA_URL must not point at the container itself',
+  );
+  assert.match(compose, /host\.docker\.internal:host-gateway/, 'host-gateway alias required');
 });
 
 test('canonical Core contract locks deterministic, network-free validation semantics', () => {

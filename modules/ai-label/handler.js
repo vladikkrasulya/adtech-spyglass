@@ -24,7 +24,7 @@
  *   1. packages/core/dialects/signal-lexicon.js — deterministic. Resolves
  *      the majority (format words corroborated by the impression, pop
  *      allow-flags, bookkeeping keys) with no model call at all.
- *   2. The local persona (lib/ollama.js) — only for what the lexicon
+ *   2. The local model (lib/ollama.js) — only for what the lexicon
  *      abstains on. Nothing leaves the host; see redactImp() below for
  *      what the model is even allowed to see.
  *
@@ -36,9 +36,11 @@
  * Response 401: not signed in (mappings are user-scoped; a suggestion the
  *   user cannot save is a dead end, so the gate matches the save route).
  * Response 429: rate limited — the model call is GPU-bound.
- * Response 503: { error: 'labeller_unavailable', reason } — Ollama down or
- *   persona missing. The client must degrade to the manual builder, not
- *   pretend the feature is thinking.
+ * Response 503: { code: 'labeller_unavailable', error } — Ollama unreachable
+ *   or the model absent. The client must degrade to the manual builder, not
+ *   pretend the feature is thinking. `code` is what the UI branches on;
+ *   `error` is the human sentence (see lib/http.js sendError's argument
+ *   order — they are easy to transpose).
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
@@ -174,8 +176,8 @@ function createAiLabelModule({ auth, aiLabelLimiter } = {}) {
         res,
         503,
         'labeller_unavailable',
-        health.reason === 'persona_missing'
-          ? `Model "${health.model}" is not loaded on this host.`
+        health.reason === 'model_missing'
+          ? `Model "${health.model}" is not available on this host.`
           : 'Local model service is unreachable.',
       );
     }
