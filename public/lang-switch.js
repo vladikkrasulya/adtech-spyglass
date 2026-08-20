@@ -513,33 +513,45 @@
   // menu lives inside that template, so DOMContentLoaded fires BEFORE the
   // menu DOM exists. Pre-fix this left lang links unbound — the browser
   // followed the href directly, server redirected via kt-lang cookie,
-  // and the page snapped back to the previous locale. Re-bind once the
+  // and the page snapped back to the previous locale. Re-bind when the
   // inspector signals readiness.
-  window.addEventListener(
-    'kt:inspector-ready',
-    () => {
-      bindLangLinks();
-      bindThemeTooltipI18n();
-      // Restore textarea content saved before a lang-switch full navigation.
-      try {
-        const reqVal = sessionStorage.getItem('_ot_restore_bidReq');
-        const resVal = sessionStorage.getItem('_ot_restore_bidRes');
-        if (reqVal !== null) {
-          const el = document.getElementById('bidReq');
-          if (el) el.value = reqVal;
-          sessionStorage.removeItem('_ot_restore_bidReq');
-        }
-        if (resVal !== null) {
-          const el = document.getElementById('bidRes');
-          if (el) el.value = resVal;
-          sessionStorage.removeItem('_ot_restore_bidRes');
-        }
-      } catch (_) {
-        /* storage disabled */
+  //
+  // NOT `{ once: true }`, and that is the whole point. The inspector remounts
+  // on EVERY lang switch and fires this event again, but the one-shot listener
+  // was already spent by the first mount at page load — so the restore below
+  // never ran on the path it exists for, and typing a payload then switching
+  // language emptied the textarea. Worse, the value survived one switch in
+  // sessionStorage and the NEXT switch snapshotted the (now empty) textarea
+  // over it, so the payload was gone for good. Measured on /inspector: paste,
+  // switch to uk → textarea empty, `_ot_restore_bidReq` still holding the
+  // text; switch again → key deleted.
+  //
+  // Re-running is safe: bindLangLinks() and bindThemeTooltipI18n() are both
+  // guarded by their own dataset markers, and the restore removes the keys it
+  // consumes, so every mount after the first is a no-op unless a fresh
+  // snapshot is waiting.
+  window.addEventListener('kt:inspector-ready', () => {
+    bindLangLinks();
+    bindThemeTooltipI18n();
+    // Restore textarea content saved before a lang switch (SPA remount or
+    // full navigation — both routes park it in sessionStorage first).
+    try {
+      const reqVal = sessionStorage.getItem('_ot_restore_bidReq');
+      const resVal = sessionStorage.getItem('_ot_restore_bidRes');
+      if (reqVal !== null) {
+        const el = document.getElementById('bidReq');
+        if (el) el.value = reqVal;
+        sessionStorage.removeItem('_ot_restore_bidReq');
       }
-    },
-    { once: true },
-  );
+      if (resVal !== null) {
+        const el = document.getElementById('bidRes');
+        if (el) el.value = resVal;
+        sessionStorage.removeItem('_ot_restore_bidRes');
+      }
+    } catch (_) {
+      /* storage disabled */
+    }
+  });
 
   // Browser back/forward — re-morph without pushing a new history entry.
   window.addEventListener('popstate', (e) => {

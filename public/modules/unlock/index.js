@@ -25,8 +25,13 @@
    Consumes:
      - $, escapeHtml, toast, t            from /core/utils.js
      - window.closeModal                  modal lifecycle
-     - window.openAuthModal               fallback when guest hits
-                                          unlock without a session
+     - window.lazyOpenAuth                fallback when a guest hits
+                                          unlock, or when the session
+                                          turns out to be dead on submit
+                                          (imports /modules/auth/ first;
+                                          window.openAuthModal is only a
+                                          last-resort fallback because it
+                                          exists only after that import)
      - window.OrtbtoolsSession.user        currently signed-in user
      - window.OrtbtoolsSession.api         HTTP helper (for /auth/me)
      - window.OrtbtoolsSession.openFromPassword
@@ -41,17 +46,35 @@
 
    Auth gate: the dispatcher's 'open-unlock' case is responsible
    for the guest fallback (it's a UX courtesy — falling through to
-   openAuthModal means the user can sign in fresh). Inside this
+   the sign-in modal means the user can sign in fresh). Inside this
    module, openUnlockModal() also re-checks via
    OrtbtoolsSession.user as a defensive guard — if the cookie
    evaporated between dispatcher and modal open, we redirect.
+   That guard reads a CLIENT-SIDE cache, so it cannot see a cookie
+   that died server-side; doUnlock() therefore re-checks against
+   the /api/auth/me answer before interpreting anything else as a
+   crypto or password problem.
    ============================================================ */
 import { $, escapeHtml, toast, t } from '/core/utils.js';
+
+// Every "you are not signed in after all" exit from this modal routes
+// here. window.openAuthModal only exists once /modules/auth/ has been
+// imported, and nothing on the unlock path imports it — so calling it
+// directly was a coin flip that landed on "nothing happens at all"
+// whenever the user reached unlock without having opened the sign-in
+// modal earlier in the page's life. window.lazyOpenAuth (installed at
+// boot by /core/modal-host.js) does the import first; the same call the
+// topbar and save-sample gates already make.
+function openAuthInstead(mode) {
+  if (typeof window.lazyOpenAuth === 'function') return window.lazyOpenAuth(mode || 'login');
+  if (typeof window.openAuthModal === 'function') return window.openAuthModal(mode || 'login');
+  if (typeof window.closeModal === 'function') window.closeModal();
+}
 
 export function openUnlockModal() {
   const user = window.OrtbtoolsSession && window.OrtbtoolsSession.user;
   if (!user) {
-    return window.openAuthModal && window.openAuthModal('login');
+    return openAuthInstead('login');
   }
   $('modalRoot').innerHTML =
     '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
@@ -99,6 +122,21 @@ export async function doUnlock() {
     // facade to derive KEK + unwrap DEK; the raw key never leaves
     // the shell closure.
     const me = await session.api('GET', 'api/auth/me');
+    // The cookie can die between opening this modal and submitting it —
+    // a sign-out in another tab, a password reset, ordinary expiry. The
+    // `session.user` this modal greeted the user by is a stale client-side
+    // copy, and /api/auth/me answers 200 with user:null + encryption:null
+    // rather than 401, so without this branch the next line told someone
+    // whose account IS encrypted that "encryption is not set up" — a false
+    // statement about their account, printed inside a modal still showing
+    // their email, with no way forward. Say what actually happened and
+    // hand them the sign-in modal.
+    if (!me.user) {
+      if (typeof session.clearSession === 'function') session.clearSession();
+      toast(t('unlock.err.session_expired'), 'error');
+      openAuthInstead('login');
+      return;
+    }
     if (!me.encryption) {
       errEl.textContent = t('unlock.err.no_crypto');
       return;

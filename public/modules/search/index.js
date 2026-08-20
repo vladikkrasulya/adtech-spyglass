@@ -61,6 +61,20 @@ const HINT_LABELS = {
   loading: { en: 'Loading index…', uk: 'Завантаження…', ru: 'Загрузка…' },
 };
 
+// Starter queries offered in the empty state. They used to be rendered as
+// "Try: gdpr" — a hardcoded English lead-in repeated four times, under a
+// title that pickStr() had already localised, so /uk and /ru showed an
+// English half-sentence inside a Ukrainian panel.
+//
+// The lead-in is gone rather than translated, because the two halves of
+// "Try: gdpr" are different KINDS of string: "Try:" is prose and belongs in
+// a locale map, while `gdpr` is a query token fed straight back into the
+// index and must stay in Latin in every locale. Dropping the prose leaves
+// only the token, which is the same in all three locales by definition —
+// and the chips keep their pill shape, pointer cursor and hover, which is
+// what says "clickable" here, not the word "Try".
+const HINT_SUGGESTIONS = ['gdpr', 'vast', 'ortb', 'banner'];
+
 const PLACEHOLDERS = {
   en: 'Jump to section, finding or doc',
   uk: 'Перейти до розділу, знахідки чи доки',
@@ -559,10 +573,10 @@ function renderDropdown(state, query, groups, idPrefix) {
       <div class="sg-search-hint" role="presentation">
         <div class="sg-search-hint__title">${escHtml(label)}</div>
         <div class="sg-search-hint__chips">
-          <span class="sg-search-hint__chip" data-suggest="gdpr">Try: gdpr</span>
-          <span class="sg-search-hint__chip" data-suggest="vast">Try: vast</span>
-          <span class="sg-search-hint__chip" data-suggest="ortb">Try: ortb</span>
-          <span class="sg-search-hint__chip" data-suggest="banner">Try: banner</span>
+          ${HINT_SUGGESTIONS.map(
+            (term) =>
+              `<span class="sg-search-hint__chip" data-suggest="${escHtml(term)}">${escHtml(term)}</span>`,
+          ).join('')}
         </div>
       </div>
     `;
@@ -891,8 +905,33 @@ export function initSearch(inputEl, _shellRoot) {
   };
 
   // ── Cmd+K / Ctrl+K global hotkey ────────────────────────────
+  //
+  // The chord is matched on TWO axes, because `e.key === 'k'` alone was
+  // false in two situations a user reaches without doing anything unusual:
+  //
+  //   1. CASE. With Caps Lock on, or with Shift held, the browser reports
+  //      'K'. Measured on /uk/inspector: Ctrl+k focused the input and opened
+  //      the panel, Ctrl+Shift+K and a synthetic key:'K' (what Caps Lock
+  //      produces) did neither — while the Ctrl+S handler two files over has
+  //      always tested both cases. So this was an inconsistency, not a
+  //      decision, and the only shortcut the topbar advertises was the one
+  //      that could silently stop working.
+  //   2. LAYOUT. On the Ukrainian and Russian layouts this product is built
+  //      for, the same physical key reports 'к' — a Cyrillic letter that no
+  //      `=== 'k'` test can ever match. `e.code` names the physical key
+  //      regardless of the layout mapped onto it, which is what makes the
+  //      chord survive a layout switch mid-session.
+  //
+  // Alt is excluded: Ctrl+Alt is AltGr on Windows/European layouts, and
+  // swallowing a key the user pressed to TYPE a character would be a worse
+  // bug than the one being fixed here.
+  const isSearchChord = (e) =>
+    (e.metaKey || e.ctrlKey) &&
+    !e.altKey &&
+    (String(e.key).toLowerCase() === 'k' || e.code === 'KeyK');
+
   const onGlobalKey = (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    if (isSearchChord(e)) {
       e.preventDefault();
       inputEl.focus();
       inputEl.select();

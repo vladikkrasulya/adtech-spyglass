@@ -68,18 +68,33 @@ const L = {
     uk: 'Очікується:',
     ru: 'Ожидается:',
   },
+  filterLabel: {
+    en: 'Category filter',
+    uk: 'Фільтр за категорією',
+    ru: 'Фильтр по категории',
+  },
   loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
   error: {
     en: 'Failed to load scenarios.',
-    uk: 'Помилка завантаження сценаріїв.',
-    ru: 'Ошибка загрузки сценариев.',
+    uk: 'Не вдалось завантажити сценарії.',
+    ru: 'Не удалось загрузить сценарии.',
   },
+  retry: { en: 'Try again', uk: 'Спробувати ще раз', ru: 'Попробовать снова' },
   empty: {
     en: 'No scenarios match this filter.',
     uk: 'Немає сценаріїв за цим фільтром.',
     ru: 'Нет сценариев по этому фильтру.',
   },
-  statsAll: { en: '{n} scenarios', uk: '{n} сценаріїв', ru: '{n} сценариев' },
+  /* Counted noun: one / 2-4 / 5+. The catalog is eleven scenarios today, so
+     the stored "{n} сценаріїв" happened to be right — it would have read
+     "1 сценаріїв" / "3 сценаріїв" the moment the catalog changed size.
+     statsFiltered needs no triple: "{n} з {t} …" governs the genitive
+     plural whatever {t} is. */
+  statsAll: {
+    en: ['{n} scenario', '{n} scenarios', '{n} scenarios'],
+    uk: ['{n} сценарій', '{n} сценарії', '{n} сценаріїв'],
+    ru: ['{n} сценарий', '{n} сценария', '{n} сценариев'],
+  },
   statsFiltered: {
     en: '{n} of {t} scenarios',
     uk: '{n} з {t} сценаріїв',
@@ -87,11 +102,107 @@ const L = {
   },
 };
 
+/* ── Expected-findings summary ──────────────────────────────────────
+   samples/behavior-scenarios.json localizes name/description/demonstrates
+   as per-locale maps but stores expected.severity_summary as one plain
+   string — "0 errors, ~9 info", "2+ errors, 3+ warnings". So the uk and ru
+   hubs printed English under a "Очікується:" / "Ожидается:" label.
+
+   The catalog is not this module's file to edit, so the sentence is
+   rebuilt at render time from the numbers it already contains. Anything
+   the grammar below does not recognise is passed through untouched: a
+   summary shape nobody anticipated must still reach the reader verbatim
+   rather than being silently dropped. English is returned as stored —
+   the catalog is already written in it. */
+
+const SEV_UNIT = {
+  // one / 2-4 / 5+ — same order as pluralForm()'s return value.
+  error: {
+    uk: ['помилка', 'помилки', 'помилок'],
+    ru: ['ошибка', 'ошибки', 'ошибок'],
+  },
+  warning: {
+    uk: ['попередження', 'попередження', 'попереджень'],
+    ru: ['предупреждение', 'предупреждения', 'предупреждений'],
+  },
+  // "info" is the engine's third severity; /insights names it Нотатки/Заметки.
+  info: {
+    uk: ['нотатка', 'нотатки', 'нотаток'],
+    ru: ['заметка', 'заметки', 'заметок'],
+  },
+};
+
+const L_AT_LEAST = { uk: 'від', ru: 'от' };
+const L_IF = { uk: 'якщо', ru: 'если' };
+
+const SUMMARY_TOKEN = /^(~)?(\d+)(\+)?\s+(errors?|warnings?|infos?|notices?)$/i;
+
+/** Slavic one / 2-4 / 5+ → 0 / 1 / 2. Mirrors pluralKey() in
+ *  public/ortbtools.app.js, pinned by tests/plural-forms.test.js: 11 takes
+ *  the 5+ form, 21 the singular, 111 the 5+ form again. */
+function pluralForm(n, lang) {
+  if (lang !== 'uk' && lang !== 'ru') return n === 1 ? 0 : 1;
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 0;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 1;
+  return 2;
+}
+
+function severityKey(word) {
+  const w = word.toLowerCase();
+  if (w.startsWith('error')) return 'error';
+  if (w.startsWith('warning')) return 'warning';
+  return 'info';
+}
+
+function localizeSummary(raw, lang) {
+  const src = String(raw == null ? '' : raw).trim();
+  if (!src || (lang !== 'uk' && lang !== 'ru')) return src;
+
+  // Split off a trailing condition — "1 error if bid.price < imp.bidfloor".
+  // The condition itself is a code expression and stays verbatim.
+  let head = src;
+  let cond = '';
+  const ifAt = src.search(/\s+if\s+/i);
+  if (ifAt !== -1) {
+    head = src.slice(0, ifAt);
+    cond = src.slice(ifAt).replace(/^\s+if\s+/i, '');
+  }
+
+  const parts = [];
+  for (const chunk of head.split(',')) {
+    const piece = chunk.trim();
+    if (!piece) continue;
+    const m = SUMMARY_TOKEN.exec(piece);
+    if (!m) return src; // unknown shape — hand back the catalog's own words
+    const [, approx, digits, atLeast, unit] = m;
+    const n = Number(digits);
+    const forms = SEV_UNIT[severityKey(unit)][lang];
+    if (atLeast) {
+      // "2+ errors" → "від 2 помилок": the genitive plural the preposition wants.
+      parts.push(`${L_AT_LEAST[lang]} ${n} ${forms[2]}`);
+    } else {
+      parts.push(`${approx || ''}${n} ${forms[pluralForm(n, lang)]}`);
+    }
+  }
+  if (!parts.length) return src;
+
+  const sentence = parts.join(', ');
+  return cond ? `${sentence}, ${L_IF[lang]} ${cond}` : sentence;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────
 
 function pick(map, lang) {
   if (!map) return '';
   return map[lang] || map[FALLBACK_LANG] || Object.values(map)[0] || '';
+}
+
+/** Same lookup for a [one, few, many] triple, inflected for `n`. */
+function pickPlural(map, lang, n) {
+  const forms = (map && (map[lang] || map[FALLBACK_LANG])) || [];
+  return forms[pluralForm(n, lang)] || forms[forms.length - 1] || '';
 }
 
 function escapeHtml(s) {
@@ -111,8 +222,11 @@ function localePrefix(lang) {
 function renderShell(lang) {
   const chips = ['all', 'baseline', 'privacy', 'creative', 'crosscheck', 'malicious']
     .map((cat) => {
-      const active = cat === 'all' ? ' is-active' : '';
-      return `<button type="button" class="bhv-chip${active}" data-cat="${escapeHtml(cat)}">${escapeHtml(pick(CATEGORY_LABEL[cat], lang))}</button>`;
+      const on = cat === 'all';
+      // aria-pressed, because .is-active is a colour and a screen reader
+      // cannot see colour: without it every chip reads identically and the
+      // filter in force is unknowable.
+      return `<button type="button" class="bhv-chip${on ? ' is-active' : ''}" aria-pressed="${on}" data-cat="${escapeHtml(cat)}">${escapeHtml(pick(CATEGORY_LABEL[cat], lang))}</button>`;
     })
     .join('');
 
@@ -126,10 +240,10 @@ function renderShell(lang) {
         <h2>${escapeHtml(pick(L.welcomeTitle, lang))}</h2>
         <p>${escapeHtml(pick(L.welcomeBody, lang))}</p>
       </div>
-      <div class="bhv-chips" role="group" aria-label="category filter">
+      <div class="bhv-chips" role="group" aria-label="${escapeHtml(pick(L.filterLabel, lang))}">
         ${chips}
       </div>
-      <p class="bhv-stats" data-bhv-stats></p>
+      <p class="bhv-stats" data-bhv-stats hidden></p>
       <div class="bhv-grid" data-bhv-grid>
         <p class="bhv-loading">${escapeHtml(pick(L.loading, lang))}</p>
       </div>
@@ -145,7 +259,8 @@ function renderCard(item, lang, localeP) {
   const badgeCls = 'bhv-card__badge--' + escapeHtml(cat);
   const badgeLabel = escapeHtml(pick(CATEGORY_LABEL[cat] || CATEGORY_LABEL.baseline, lang));
 
-  const expChips = (item.expected.key_findings || [])
+  const expected = item.expected || {};
+  const expChips = (expected.key_findings || [])
     .slice(0, 2)
     .map((f) => `<span class="bhv-card__exp-chip">${escapeHtml(f)}</span>`)
     .join('');
@@ -163,7 +278,7 @@ function renderCard(item, lang, localeP) {
       <p class="bhv-card__desc">${desc}</p>
       <div class="bhv-card__expected">
         <span class="bhv-card__exp-label">${escapeHtml(pick(L.expectedLabel, lang))}</span>
-        <span class="bhv-card__exp-summary">${escapeHtml(item.expected.severity_summary)}</span>
+        <span class="bhv-card__exp-summary">${escapeHtml(localizeSummary(expected.severity_summary, lang))}</span>
         ${expChips}
       </div>
       <div class="bhv-card__demonstrates">${demonstrates}</div>
@@ -221,8 +336,9 @@ export default {
     function updateStats(count) {
       if (!statsEl) return;
       const total = allItems.length;
+      statsEl.hidden = false;
       if (activeFilter === 'all') {
-        statsEl.textContent = pick(L.statsAll, lang).replace('{n}', total);
+        statsEl.textContent = pickPlural(L.statsAll, lang, total).replace('{n}', total);
       } else {
         statsEl.textContent = pick(L.statsFiltered, lang)
           .replace('{n}', count)
@@ -235,7 +351,9 @@ export default {
 
       // Update chip active states
       root.querySelectorAll('.bhv-chip').forEach((chip) => {
-        chip.classList.toggle('is-active', chip.dataset.cat === cat);
+        const on = chip.dataset.cat === cat;
+        chip.classList.toggle('is-active', on);
+        chip.setAttribute('aria-pressed', String(on));
       });
 
       // Re-render grid
@@ -267,6 +385,13 @@ export default {
           return;
         }
 
+        // Retry after a failed catalog load
+        if (e.target.closest('[data-bhv-retry]')) {
+          e.preventDefault();
+          load();
+          return;
+        }
+
         // Run & Inspect — SPA navigation via OrtbtoolsShell
         const runBtn = e.target.closest('[data-action="run-inspect"]');
         if (runBtn) {
@@ -284,15 +409,37 @@ export default {
       { signal: ctx.signal },
     );
 
-    // Fetch scenarios
-    try {
-      allItems = await fetchScenarios(ctx.signal);
-      applyFilter('all');
-    } catch (e) {
-      if (e.name !== 'AbortError') {
-        grid.innerHTML = `<p class="bhv-empty">${escapeHtml(pick(L.error, lang))}: ${escapeHtml(e.message)}</p>`;
+    /* Fetch (and re-fetch) the catalog.
+     *
+     * The failure branch used to print `pick(L.error) + ': ' + e.message`,
+     * which glued a full stop straight onto a colon — "Помилка завантаження
+     * сценаріїв.: Failed to fetch" — and then showed the reader the
+     * browser's own English string, in every locale, as the explanation.
+     * It was also a dead end: no way back but a page reload. The message
+     * that helps a developer goes to the console; the reader gets one
+     * localized sentence and a button. */
+    async function load() {
+      grid.innerHTML = `<p class="bhv-loading">${escapeHtml(pick(L.loading, lang))}</p>`;
+      try {
+        allItems = await fetchScenarios(ctx.signal);
+        applyFilter('all');
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.error('[behavior] scenario catalog failed to load:', e);
+        // No catalog means no count — an empty <p> still occupies its margin.
+        if (statsEl) {
+          statsEl.textContent = '';
+          statsEl.hidden = true;
+        }
+        grid.innerHTML =
+          `<div class="bhv-error" role="alert">` +
+          `<p class="bhv-error__text">${escapeHtml(pick(L.error, lang))}</p>` +
+          `<button type="button" class="bhv-btn" data-bhv-retry>${escapeHtml(pick(L.retry, lang))}</button>` +
+          `</div>`;
       }
     }
+
+    await load();
   },
 
   async unmount(_root) {

@@ -50,6 +50,22 @@
         en: 'paused · {held} held',
         ru: 'пауза · {held} в очереди',
       },
+      // The queue is bounded (MAX_ROWS): past that point the count keeps
+      // rising but only the newest {kept} will come back on Resume. Said in
+      // the pill rather than only in a tooltip — a reader who paused for
+      // three minutes and got a hundred rows back would otherwise have no
+      // way to know the rest was ever there. No counted noun follows either
+      // number on purpose, so no locale needs plural agreement here.
+      'stream.state.paused.capped': {
+        uk: 'пауза · {held} · покажу {kept}',
+        en: 'paused · {held} · will show {kept}',
+        ru: 'пауза · {held} · покажу {kept}',
+      },
+      'stream.state.paused.hint': {
+        uk: 'Черга на паузі обмежена: збережено лише останні {kept}, старіше вже витіснено.',
+        en: 'The paused queue is capped: only the newest {kept} survive, older ones are already dropped.',
+        ru: 'Очередь на паузе ограничена: сохранены только последние {kept}, более старые уже вытеснены.',
+      },
       'stream.state.offline': {
         uk: 'звʼязок втрачено',
         en: 'connection lost',
@@ -142,6 +158,48 @@
       'stream.col.format': { uk: 'формат', en: 'format', ru: 'формат' },
       'stream.col.size': { uk: 'розмір', en: 'size', ru: 'размер' },
       'stream.col.findings': { uk: 'знахідки', en: 'findings', ru: 'находки' },
+
+      // ── kind cell ────────────────────────────────────────
+      // The cell itself keeps the Latin REQ / RES: they are the trade's own
+      // shorthand in all three locales (like `vast` among the chips), the
+      // track is 60px wide at the narrow breakpoint, and «ВІДПОВІДЬ» there
+      // would ellipsise to «ВІД…». The translated word goes on the cell's
+      // title and into the row's accessible name instead, so a screen reader
+      // and a hover both get the language they asked for.
+      'stream.kind.req': {
+        uk: 'запит',
+        en: 'request',
+        ru: 'запрос',
+      },
+      'stream.kind.res': {
+        uk: 'відповідь',
+        en: 'response',
+        ru: 'ответ',
+      },
+      'stream.kind.unknown': {
+        uk: 'невідомий тип',
+        en: 'unknown kind',
+        ru: 'неизвестный тип',
+      },
+
+      // ── format cell ──────────────────────────────────────
+      // A payload can be well-formed enough to place on the feed and still
+      // declare no media anywhere (an oRTB 3.0 item with no spec, say). The
+      // cell then used to print a bare qualifier — "3.0" — which reads as if
+      // the version were the format. This word says what is actually missing.
+      'stream.format.unknown': {
+        uk: 'невідомо',
+        en: 'unknown',
+        ru: 'неизвестно',
+      },
+
+      // ── size cell ────────────────────────────────────────
+      // Unit only; the number is formatted by Intl in the active locale.
+      'stream.size.kb': {
+        uk: 'КБ',
+        en: 'KB',
+        ru: 'КБ',
+      },
 
       // ── findings cell ────────────────────────────────────
       'stream.findings.clean': {

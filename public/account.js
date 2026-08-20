@@ -18,6 +18,90 @@
   const $ = (id) => document.getElementById(id);
   const T = (k, p) => (typeof window.t === 'function' ? window.t(k, p) : k);
 
+  // ── Cabinet-local i18n ────────────────────────────────────────
+  // Keys only this controller renders. public/i18n.js exposes
+  // registerI18nModule() for exactly this (see its "Per-module i18n
+  // registration" block) and is loaded before account.js in
+  // account.{en,uk,ru}.html, so the table is merged before first paint.
+  //
+  // What this replaces: three English literals that reached every locale —
+  // pill('muted', 'not configured'), the suggestion engine's 'rules', and a
+  // concatenated ' events' in the corpus list — plus 'патернів' used as if a
+  // Slavic noun had one plural form.
+  if (typeof window.registerI18nModule === 'function') {
+    window.registerI18nModule({
+      id: 'cabinet',
+      keys: {
+        'cabinet.dialects.engine_rules': { en: 'rules', uk: 'правила', ru: 'правила' },
+        'cabinet.dialects.export_empty': {
+          en: 'Nothing to export yet — create a dialect first.',
+          uk: 'Ще нема чого експортувати — спершу створи діалект.',
+          ru: 'Пока нечего экспортировать — сначала создай диалект.',
+        },
+        'cabinet.corpus.event_one': { en: 'event', uk: 'подія', ru: 'событие' },
+        'cabinet.corpus.events': { en: 'events', uk: 'події', ru: 'события' },
+        'cabinet.corpus.events_many': { en: 'events', uk: 'подій', ru: 'событий' },
+        'cabinet.matrix.pattern_one': { en: 'pattern', uk: 'патерн', ru: 'паттерн' },
+        'cabinet.matrix.patterns': { en: 'patterns', uk: 'патерни', ru: 'паттерна' },
+        'cabinet.matrix.patterns_many': { en: 'patterns', uk: 'патернів', ru: 'паттернов' },
+        'cabinet.verify.resend': {
+          en: 'send confirmation',
+          uk: 'надіслати лист',
+          ru: 'отправить письмо',
+        },
+        'cabinet.verify.sending': { en: 'sending…', uk: 'надсилаємо…', ru: 'отправляем…' },
+        'cabinet.verify.sent': { en: 'sent ✓', uk: 'надіслано ✓', ru: 'отправлено ✓' },
+        'cabinet.verify.sent_hint': {
+          en: 'Confirmation email sent — check your inbox.',
+          uk: 'Лист із підтвердженням надіслано — перевір пошту.',
+          ru: 'Письмо с подтверждением отправлено — проверь почту.',
+        },
+        'cabinet.verify.failed': { en: 'not sent', uk: 'не надіслано', ru: 'не отправлено' },
+        'cabinet.verify.failed_hint': {
+          en: "Couldn't send the confirmation email. Try again later.",
+          uk: 'Не вдалось надіслати лист із підтвердженням. Спробуй пізніше.',
+          ru: 'Не удалось отправить письмо с подтверждением. Попробуй позже.',
+        },
+        'cabinet.verify.rate_limited': {
+          en: 'too often',
+          uk: 'забагато спроб',
+          ru: 'слишком часто',
+        },
+        'cabinet.verify.rate_limited_hint': {
+          en: 'Too many requests — the limit is 5 per hour. Try again later.',
+          uk: 'Забагато запитів — ліміт 5 на годину. Спробуй пізніше.',
+          ru: 'Слишком много запросов — лимит 5 в час. Попробуй позже.',
+        },
+      },
+    });
+  }
+
+  function activeLocale() {
+    if (typeof window.tLocale === 'function') return window.tLocale();
+    const l = document.documentElement.getAttribute('lang');
+    return l === 'en' || l === 'ru' || l === 'uk' ? l : 'uk';
+  }
+
+  // Mirror of pluralKey() in public/ortbtools.app.js, whose rule is pinned by
+  // tests/plural-forms.test.js: Ukrainian and Russian need three forms, and
+  // the non-obvious cases are 11-14 (5+ form) and 21 (singular). Copied
+  // rather than imported because that file is a browser IIFE with no export
+  // surface and the cabinet never loads it; the right end state is one shared
+  // /core/plural.js, which is a change to a file this pass does not own.
+  function pluralKey(n, one, few, many) {
+    if (activeLocale() === 'en') return n === 1 ? one : few;
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+
+  /** `n` followed by the correctly-inflected noun. */
+  function counted(n, one, few, many) {
+    return n + ' ' + T(pluralKey(n, one, few, many));
+  }
+
   function escapeHtml(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;')
@@ -158,6 +242,9 @@
     }, 1000);
   }
 
+  // Latest dialect list, shared with the click handler bound once below.
+  let exportable = [];
+
   function renderDialectsCard(dialects) {
     // Null-guarded throughout — future ID drift in account.{lang}.html
     // won't crash init (per spyglass_cabinet_draft.md convention).
@@ -182,15 +269,32 @@
       $defName.textContent = def ? def.name : '—';
     }
     // Keep the legacy DOM id for compatibility; suggestions are deterministic.
-    if ($llm) $llm.textContent = 'rules';
+    // The word is the value of a translated row ("Suggestion engine"), not an
+    // identifier, so it is translated too — it read 'rules' in every locale.
+    if ($llm) $llm.textContent = T('cabinet.dialects.engine_rules');
+
+    // "Export all" used to run an empty for-loop on a fresh account: no
+    // download, no message, no disabled state — indistinguishable from a
+    // broken button. Disable it while there is nothing to export and say why
+    // in the tooltip. `exportable` is module-scoped rather than captured by
+    // the handler because init() re-runs on kt:lang-change and the handler is
+    // bound once, so a captured array would go stale after the first render.
+    exportable = dialects;
+    if ($btnExport) {
+      const empty = dialects.length === 0;
+      $btnExport.disabled = empty;
+      if (empty) $btnExport.title = T('cabinet.dialects.export_empty');
+      else $btnExport.removeAttribute('title');
+    }
 
     if ($btnExport && !$btnExport.dataset.bound) {
       $btnExport.dataset.bound = '1';
       $btnExport.addEventListener('click', async function () {
+        if (!exportable.length || $btnExport.disabled) return;
         $btnExport.disabled = true;
         try {
-          for (let i = 0; i < dialects.length; i += 1) {
-            const d = dialects[i];
+          for (let i = 0; i < exportable.length; i += 1) {
+            const d = exportable[i];
             try {
               const data = await api('/api/dialects/' + encodeURIComponent(d.id) + '/export');
               downloadJson(d.name || 'dialect-' + d.id, data);
@@ -199,7 +303,7 @@
             }
           }
         } finally {
-          $btnExport.disabled = false;
+          $btnExport.disabled = exportable.length === 0;
         }
       });
     }
@@ -221,14 +325,27 @@
     if (u.email_verified_at) {
       $('profVerified').innerHTML = pill('ok', T('cabinet.pill.verified'));
     } else {
-      $('profVerified').innerHTML = pill('warn', T('cabinet.pill.not_verified'));
+      // The row used to state the problem and offer nothing: the only resend
+      // control in the product lives in the inspector's banner, so a user who
+      // came straight to the cabinet could read "not verified" and had no way
+      // to act on it from the page that reports it. The endpoint already
+      // exists (POST /api/auth/verify-email/request, modules/auth/handler.js);
+      // this gives it a button next to the pill. The markup is injected here
+      // rather than added to account.{en,uk,ru}.html because those files are
+      // not owned by this pass — same reason upgradeSignoutAndReset() tags its
+      // control at runtime.
+      $('profVerified').innerHTML =
+        pill('warn', T('cabinet.pill.not_verified')) +
+        '<button type="button" class="btn btn-ghost btn-sm" data-action="resend-verification">' +
+        escapeHtml(T('cabinet.verify.resend')) +
+        '</button>';
     }
     const since = $('profSince');
     if (since) since.textContent = u.created_at ? fmtDate(u.created_at) : '—';
     if (me.encryption && me.encryption.dek_wrapped) {
       $('profCrypto').innerHTML = pill('ok', T('cabinet.pill.enabled'));
     } else {
-      $('profCrypto').innerHTML = pill('muted', 'not configured');
+      $('profCrypto').innerHTML = pill('muted', T('cabinet.pill.not_configured'));
     }
     const recovery = $('profRecovery');
     if (recovery) {
@@ -517,6 +634,44 @@
     setRadio('prefDialect', 'ortbtools_dialect_v1', 'iab', null);
   }
 
+  // POST /api/auth/verify-email/request deliberately answers 200 with
+  // `email_sent: false` when the mailer is misconfigured — the contract
+  // comment in modules/auth/handler.js explains why (5xx bodies get replaced
+  // by the edge's own error page). So "it returned 200" is not "it was sent",
+  // and the three outcomes — sent, not sent, rate-limited (429, 5/hour/IP) —
+  // are reported separately instead of all reading as success.
+  async function resendVerification(btn) {
+    if (btn.disabled) return;
+    const restore = T('cabinet.verify.resend');
+    btn.disabled = true;
+    btn.removeAttribute('title');
+    btn.textContent = T('cabinet.verify.sending');
+    let key = 'cabinet.verify.failed';
+    try {
+      const r = await fetch('/api/auth/verify-email/request', {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      if (r.status === 429) {
+        key = 'cabinet.verify.rate_limited';
+      } else {
+        const j = await r.json().catch(() => null);
+        if (r.ok && j && j.email_sent) key = 'cabinet.verify.sent';
+      }
+    } catch (_e) {
+      /* network blip — the default failure message already covers it */
+    }
+    btn.textContent = T(key);
+    btn.title = T(key + '_hint');
+    // Sent is terminal: the next step is in the user's inbox, not here.
+    if (key === 'cabinet.verify.sent') return;
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.removeAttribute('title');
+      btn.textContent = restore;
+    }, 5000);
+  }
+
   async function signOut(dest) {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -638,31 +793,51 @@
 
     const summaryEl = $('matrixSummary');
     const tableEl = $('matrixTable');
-    if (!matrix || !matrix.totals || matrix.totals.fraud + matrix.totals.legitimate === 0) {
-      if (summaryEl) summaryEl.innerHTML = '';
+    const totals = matrix && matrix.totals;
+
+    // The summary survives the gate below on purpose: "3 fraud · 0 legitimate"
+    // is exactly the number the empty-state hint is asking the reader to
+    // change, so hiding it would leave the instruction without its progress.
+    if (summaryEl) {
+      summaryEl.innerHTML =
+        totals && totals.fraud + totals.legitimate > 0
+          ? '<span><strong>' +
+            totals.fraud +
+            '</strong> ' +
+            T('corpus.label.fraud') +
+            '</span>' +
+            ' · <span><strong>' +
+            totals.legitimate +
+            '</strong> ' +
+            T('corpus.label.legitimate') +
+            '</span>' +
+            ' · <span>' +
+            escapeHtml(
+              counted(
+                totals.patterns,
+                'cabinet.matrix.pattern_one',
+                'cabinet.matrix.patterns',
+                'cabinet.matrix.patterns_many',
+              ),
+            ) +
+            '</span>'
+          : '';
+    }
+
+    // Both classes, not their sum. matrix.empty promises "at least one
+    // legitimate AND one fraud" in all three locales, and the runner needs
+    // both to mean anything: with zero legitimate entries lib/corpus-matrix.js
+    // computes fp = 0 and tn = totalLegit - fp = 0, so every pattern that
+    // fires at all reports precision 100% and FP 0. Reproduced on this stand
+    // with 3 fraud / 0 legitimate: behavior.bot.click_burst showed 100%
+    // precision on a detector that had never seen a negative example. The
+    // pre-fix condition was `fraud + legitimate === 0`, which let that table
+    // render and contradicted the very sentence it replaced.
+    if (!totals || !totals.fraud || !totals.legitimate) {
       if (tableEl) {
         tableEl.innerHTML = '<div class="matrix-empty">' + T('matrix.empty') + '</div>';
       }
       return;
-    }
-
-    if (summaryEl) {
-      summaryEl.innerHTML =
-        '<span><strong>' +
-        matrix.totals.fraud +
-        '</strong> ' +
-        T('corpus.label.fraud') +
-        '</span>' +
-        ' · <span><strong>' +
-        matrix.totals.legitimate +
-        '</strong> ' +
-        T('corpus.label.legitimate') +
-        '</span>' +
-        ' · <span>' +
-        matrix.totals.patterns +
-        ' ' +
-        T('matrix.summary.patterns') +
-        '</span>';
     }
 
     if (tableEl) {
@@ -817,8 +992,15 @@
               '<span class="corpus-meta">' +
               dt +
               ' · ' +
-              (e.eventCount || 0) +
-              ' events</span>' +
+              escapeHtml(
+                counted(
+                  e.eventCount || 0,
+                  'cabinet.corpus.event_one',
+                  'cabinet.corpus.events',
+                  'cabinet.corpus.events_many',
+                ),
+              ) +
+              '</span>' +
               '<span class="corpus-detail" style="min-width:0;overflow-wrap:anywhere">' +
               sourceTag +
               notes +
@@ -849,6 +1031,9 @@
       // actually terminated first, which is the whole point of "reset".
       ev.preventDefault();
       signOut(t.getAttribute('href') || '/');
+    } else if (action === 'resend-verification') {
+      ev.preventDefault();
+      resendVerification(t);
     } else if (action === 'forgot-password') {
       ev.preventDefault();
       // Send the user back to the main app and trigger forgot-password modal.

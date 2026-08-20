@@ -46,9 +46,12 @@
 </div>
 
 <main class="stream-table" id="streamTable">
-  <!-- Visual column header. aria-hidden because each row is a single
-       button whose accessible name already reads its cells in order;
-       announcing six mono labels before every row would only repeat. -->
+  <!-- Visual column header. aria-hidden because index.js gives each row an
+       explicit aria-label that reads the same six cells in the same order,
+       separated and with the Latin REQ/RES spelled out; announcing six mono
+       labels before every row would only repeat. (Left to the browser, the
+       name came out as one unbroken run — "23:14:46RESsynthetic · …1.4 KBclean"
+       — which is why it is stated rather than inherited.) -->
   <div class="stream-thead" id="streamThead" aria-hidden="true"></div>
   <div class="stream-rows" id="streamRows">
     <p class="stream-empty" id="streamEmpty"></p>

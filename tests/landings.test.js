@@ -103,6 +103,19 @@ test('injectLanding: idempotent css link (does not double-inject)', () => {
   assert.equal((out.match(/modules\/landing\/landing\.css/g) || []).length, 1);
 });
 
+// The filter box is the one landing control that is inert without JS (its
+// handler lives in public/modules/landing/index.js), so injectLanding hides it
+// for no-JS readers via a <noscript><style> in <head>. Table landings only.
+test('injectLanding: hides the inert filter for no-JS readers, once, table-only', () => {
+  let out = landings.injectLanding(SHELL, '/iab-categories', 'en');
+  assert.match(out, /<noscript><style>\.landing__filter\{display:none\}<\/style><\/noscript>/);
+  assert.match(out, /<noscript>[\s\S]*<\/head>/i); // inside <head>, per spec
+  out = landings.injectLanding(out, '/iab-categories', 'en');
+  assert.equal((out.match(/landing__filter\{display:none\}/g) || []).length, 1);
+  // A landing with no filter must not carry the rule.
+  assert.doesNotMatch(landings.injectLanding(SHELL, '/openrtb/2-6', 'en'), /<noscript>/i);
+});
+
 // ── full landing set (Track B) ──────────────────────────────────────────────
 test('all six Track-B landings are configured', () => {
   for (const p of EXPECTED) assert.ok(landings.isLanding(p), `missing landing ${p}`);
@@ -147,13 +160,24 @@ test('native-clean fixture is valid JSON with a stringified native request', () 
 });
 
 // ── /iab-categories table ────────────────────────────────────────────────────
-test('iab-categories: renders a filterable tier-1 table, no CTA', () => {
+test('iab-categories: renders a filterable tier-1 table + a CTA into the validator', () => {
   const html = landings.renderLandingBody('/iab-categories', 'en');
   assert.match(html, /data-landing-filter/); // filter input present
   assert.match(html, /<code>IAB1<\/code>/); // a tier-1 code
   assert.match(html, /Arts &amp; Entertainment/); // decoded + escaped label
   assert.equal((html.match(/data-landing-row/g) || []).length, 26); // 26 tier-1 codes
-  assert.doesNotMatch(html, /landing__cta/); // sample: null → no CTA wrapper
+  // This landing used to carry `sample: null`, and an earlier revision of this
+  // test froze that as intent. It was not intent: the lede ends "…then open any
+  // bid in the validator to see codes decoded inline", and the page that
+  // explains IABx codes was the one page with no door into the product that
+  // decodes them. The CTA sample is load-bearing, not decorative —
+  // iab-banner-valid carries site.cat = ["IAB19-6"], a child of the IAB19 row
+  // rendered above, so the reader lands on a bid where a code from this very
+  // table is sitting in cat[]. Assert the link *and* its parent row, so
+  // repointing the CTA at a sample with no taxonomy in it fails here.
+  assert.match(html, /class="landing__cta"/);
+  assert.match(html, /href="\/inspector\?sample=iab-banner-valid"/);
+  assert.match(html, /<code>IAB19<\/code>/);
 });
 
 test('iab-categories: page localizes (uk differs from en)', () => {

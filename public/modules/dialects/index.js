@@ -57,6 +57,39 @@ function tx(map, lang, params) {
   return escapeHtml(fmt(pick(map, lang), params));
 }
 
+/**
+ * Which agreement form a count takes. Same rule as pluralKey() in
+ * public/ortbtools.app.js — Ukrainian and Russian want three (1 поле,
+ * 2 поля, 5 полів) and the teens are the trap: 11 takes the 5+ form while
+ * 21 takes the singular. English needs two, so it never asks for `few`.
+ *
+ * The rule is duplicated rather than imported because this module carries
+ * its own string table (there is no i18n key here to hang forms off), and
+ * because ortbtools.app.js is a browser IIFE with no export surface. The
+ * rule is what must not drift; tests/plural-forms.test.js pins it.
+ */
+function pluralForm(lang, n) {
+  if (lang !== 'uk' && lang !== 'ru') return n === 1 ? 'one' : 'many';
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'one';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'few';
+  return 'many';
+}
+
+/**
+ * `pick()` for a counted string. The locale entry is `{one, few, many}`
+ * instead of a bare string; a plain string still works so uncounted keys
+ * need no change.
+ */
+function pickCounted(map, lang, n) {
+  const forms = pick(map, lang);
+  if (typeof forms === 'string') return forms;
+  if (!forms) return '';
+  const key = pluralForm(lang, n);
+  return forms[key] || forms.many || forms.one || '';
+}
+
 // ── Localised strings ─────────────────────────────────────────────
 
 const L = {
@@ -88,15 +121,29 @@ const L = {
     uk: 'лише шляхи полів — значення не залишають браузер',
     ru: 'только пути полей — значения не покидают браузер',
   },
-  newBadge: { en: '{n} new', uk: '{n} нових', ru: '{n} новых' },
+  /* The badge counts clusters, so the uk/ru adjective agrees with an
+     implied masculine noun: 1 новий кластер, 2 нові, 5 нових. */
+  newBadge: {
+    en: { one: '{n} new', many: '{n} new' },
+    uk: { one: '{n} новий', few: '{n} нові', many: '{n} нових' },
+    ru: { one: '{n} новый', few: '{n} новых', many: '{n} новых' },
+  },
 
   eyebrowActive: { en: 'active', uk: 'активний', ru: 'активный' },
   eyebrowAvailable: { en: 'available', uk: 'доступний', ru: 'доступный' },
   eyebrowExpired: { en: 'expired', uk: 'протермінований', ru: 'просроченный' },
 
   maintained: { en: 'maintained', uk: 'підтримується', ru: 'поддерживается' },
-  rulesMeta: { en: '{n} rules', uk: '{n} правил', ru: '{n} правил' },
-  fieldsMeta: { en: '{n} fields', uk: '{n} полів', ru: '{n} полей' },
+  rulesMeta: {
+    en: { one: '{n} rule', many: '{n} rules' },
+    uk: { one: '{n} правило', few: '{n} правила', many: '{n} правил' },
+    ru: { one: '{n} правило', few: '{n} правила', many: '{n} правил' },
+  },
+  fieldsMeta: {
+    en: { one: '{n} field', many: '{n} fields' },
+    uk: { one: '{n} поле', few: '{n} поля', many: '{n} полів' },
+    ru: { one: '{n} поле', few: '{n} поля', many: '{n} полей' },
+  },
 
   /* `payload` stays a bare Latin term in uk/ru, as it is everywhere else
      in i18n.js; declining it ("PAYLOAD’ІВ") reads worse than leaving the
@@ -512,7 +559,9 @@ function renderShell(lang) {
 function renderBlockHead(lang, headingKey, opts) {
   const o = opts || {};
   const badge = o.badge
-    ? `<span class="dlc-badge">${tx(L.newBadge, lang, { n: o.badge })}</span>`
+    ? `<span class="dlc-badge">${escapeHtml(
+        fmt(pickCounted(L.newBadge, lang, o.badge), { n: o.badge }),
+      )}</span>`
     : '';
   const note = o.note ? `<span class="dlc-block__note">${tx(L.discoveredNote, lang)}</span>` : '';
   return `
@@ -578,7 +627,7 @@ function renderShipped(lang, counts, active) {
     const metaHtml =
       d.meta === 'maintained'
         ? escapeHtml(d.slug + ' · ' + pick(L.maintained, lang))
-        : escapeHtml(d.slug + ' · ') + countedHtml(pick(L.rulesMeta, lang), n);
+        : escapeHtml(d.slug + ' · ') + countedHtml(pickCounted(L.rulesMeta, lang, n), n);
     return renderCard(lang, {
       slug: d.slug,
       isActive: active === d.slug,
@@ -632,7 +681,9 @@ function renderCustom(lang, specs, active, now) {
         title: name,
         descHtml,
         metaHtml:
-          escapeHtml('custom · ') + countedHtml(pick(L.fieldsMeta, lang), fields.length) + life,
+          escapeHtml('custom · ') +
+          countedHtml(pickCounted(L.fieldsMeta, lang, fields.length), fields.length) +
+          life,
       });
       // The remove control sits UNDER the card rather than inside it: the
       // card is itself a <button>, and a button inside a button is not

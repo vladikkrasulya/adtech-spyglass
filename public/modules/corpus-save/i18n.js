@@ -1,7 +1,9 @@
 /* ============================================================
    modules/corpus-save/i18n.js — per-module translations.
 
-   11 keys × 3 locales. Loaded LAZY by index.js — pushed into
+   11 messages × 3 locales — 15 keys, because two of the messages are
+   counted nouns and carry all three Slavic plural forms
+   (*_one / *_few / *_many). Loaded LAZY by index.js — pushed into
    window.kt_i18n_modules queue, drained by central /i18n.js (or
    registered directly via window.registerI18nModule when the queue
    has already been drained, which is always the case here since
@@ -25,10 +27,28 @@
         en: 'save behavior as corpus',
         ru: 'сохранить behavior как corpus',
       },
-      'modal.corpus_save.summary': {
-        uk: 'Поточний probe має {count} події. Збережемо їх з міткою для подальшого аналізу.',
+      /* Counted noun, so three forms per Slavic locale — 1 / 2-4 / 5+.
+         The single stored string read "має {count} події", which is the
+         2-4 form: it was wrong for one event ("1 події"), wrong from five
+         up ("7 події"), and wrong in Russian for everything but 5+
+         ("1 событий"). English needs two of the three and was wrong at
+         one ("1 events"). Selected by pluralKeySuffix() in index.js,
+         which mirrors pluralKey() in public/ortbtools.app.js — the rule
+         pinned by tests/plural-forms.test.js. */
+      'modal.corpus_save.summary_one': {
+        uk: 'Поточний probe захопив {count} подію. Збережемо її з міткою для подальшого аналізу.',
+        en: 'Current probe captured {count} event. Save it with a label for later analysis.',
+        ru: 'Текущий probe захватил {count} событие. Сохраним его с меткой для дальнейшего анализа.',
+      },
+      'modal.corpus_save.summary_few': {
+        uk: 'Поточний probe захопив {count} події. Збережемо їх з міткою для подальшого аналізу.',
         en: 'Current probe captured {count} events. Save them with a label for later analysis.',
-        ru: 'Текущий probe имеет {count} событий. Сохраним их с меткой для дальнейшего анализа.',
+        ru: 'Текущий probe захватил {count} события. Сохраним их с меткой для дальнейшего анализа.',
+      },
+      'modal.corpus_save.summary_many': {
+        uk: 'Поточний probe захопив {count} подій. Збережемо їх з міткою для подальшого аналізу.',
+        en: 'Current probe captured {count} events. Save them with a label for later analysis.',
+        ru: 'Текущий probe захватил {count} событий. Сохраним их с меткой для дальнейшего анализа.',
       },
       'modal.corpus_save.label': {
         uk: 'Як класифікувати',
@@ -60,10 +80,24 @@
         en: 'What triggered this label, anything worth remembering…',
         ru: 'Что триггернуло эту метку, что стоит запомнить на будущее…',
       },
-      'toast.corpus_saved': {
-        uk: 'Збережено в corpus · {count} events як «{label}»',
+      /* Same three forms. {label} used to interpolate the raw machine value
+         — the Ukrainian toast said «fraud» — so it now receives the short
+         localized name from corpus.label.* in the central catalog, which is
+         what the cabinet already prints next to each stored row. */
+      'toast.corpus_saved_one': {
+        uk: 'Збережено в corpus · {count} подію як «{label}»',
+        en: 'Saved to corpus · {count} event as "{label}"',
+        ru: 'Сохранено в corpus · {count} событие как «{label}»',
+      },
+      'toast.corpus_saved_few': {
+        uk: 'Збережено в corpus · {count} події як «{label}»',
         en: 'Saved to corpus · {count} events as "{label}"',
-        ru: 'Сохранено в corpus · {count} events как «{label}»',
+        ru: 'Сохранено в corpus · {count} события как «{label}»',
+      },
+      'toast.corpus_saved_many': {
+        uk: 'Збережено в corpus · {count} подій як «{label}»',
+        en: 'Saved to corpus · {count} events as "{label}"',
+        ru: 'Сохранено в corpus · {count} событий как «{label}»',
       },
       'toast.corpus_save_failed': {
         uk: 'Не вдалось зберегти: {error}',

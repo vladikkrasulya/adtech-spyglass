@@ -12,6 +12,18 @@
    click: ~7KB across this file + i18n.js. On subsequent clicks:
    cached by the module loader, zero extra fetch.
 
+   ── This is the SECOND live feed in the product ──────────────────
+   public/modules/stream/ owns /live: the same SSE endpoint, a
+   hundred rows instead of fifty, grading, filters, replay marking,
+   its own reconnect. This modal predates it and survives only
+   because the Inspector's Tools ▾ menu still offers it (#liveBtn in
+   modules/inspector/template.{en,uk,ru}.html, dispatched from
+   ortbtools.app.js). Two viewers open at once also spend two of the
+   eight per-IP SSE slots. Retiring the button — and this file with
+   it — is the real fix; until someone owns those two files, the
+   rules here are kept in step with stream/index.js rather than
+   allowed to drift further apart.
+
    Exposed window APIs (consumed by ortbtools.app.js dispatcher
    cases 'live-pause' and 'live-load'):
      - window.openLiveModal()              — entry point
@@ -53,25 +65,64 @@ export function openLiveModal() {
   const specimens = new Map();
   let rowSeq = 0;
 
+  /** The document's locale, for Intl. Falls back the way window.t does. */
+  function activeLocale() {
+    const l = document.documentElement.getAttribute('lang');
+    return l === 'en' || l === 'uk' || l === 'ru' ? l : 'uk';
+  }
+
+  /**
+   * Which side of the auction a specimen is, and where its body lives.
+   *
+   * oRTB 3.0 wraps both sides in { openrtb: { request | response } }, so a
+   * check for a top-level `imp` / `seatbid` misses them entirely: every 3.0
+   * payload on the feed showed "?" in this modal while /live named it. Same
+   * rule as public/modules/stream/index.js shapeOf() — see the note in this
+   * file's header about the two implementations.
+   */
+  function shapeOf(spec) {
+    const env = spec && spec.openrtb;
+    if (env && typeof env === 'object') {
+      if (env.request && typeof env.request === 'object') return { kind: 'req', body: env.request };
+      if (env.response && typeof env.response === 'object')
+        return { kind: 'res', body: env.response };
+      return { kind: '?', body: env };
+    }
+    if (Array.isArray(spec && spec.imp)) return { kind: 'req', body: spec };
+    if (Array.isArray(spec && spec.seatbid)) return { kind: 'res', body: spec };
+    return { kind: '?', body: spec || {} };
+  }
+
+  /** "300×250" off the first banner slot, in either oRTB generation. */
+  function bannerHint(body) {
+    const items = Array.isArray(body.imp) ? body.imp : Array.isArray(body.item) ? body.item : [];
+    const first = items[0];
+    if (!first || typeof first !== 'object') return '';
+    const slot = first.spec && first.spec.placement ? first.spec.placement : first;
+    const b = slot.banner || slot.display;
+    if (!b || typeof b !== 'object') return '';
+    if (b.w && b.h) return `${b.w}×${b.h}`;
+    if (Array.isArray(b.format) && b.format[0] && b.format[0].w && b.format[0].h)
+      return `${b.format[0].w}×${b.format[0].h}`;
+    return '';
+  }
+
   function rowHtml(env) {
-    const time = new Date(env.emittedAt || Date.now()).toLocaleTimeString('uk-UA', {
-      hour12: false,
-    });
+    let time;
+    try {
+      time = new Date(env.emittedAt || Date.now()).toLocaleTimeString(activeLocale(), {
+        hour12: false,
+      });
+    } catch (_) {
+      time = new Date(env.emittedAt || Date.now()).toTimeString().slice(0, 8);
+    }
     const source = String(env.source || '?');
     const spec = env.specimen || {};
     const id = ++rowSeq;
     specimens.set(id, spec);
-    // quick shape detection — request has imp[], response has seatbid[]
-    const isReq = Array.isArray(spec.imp);
-    const kind = isReq ? 'req' : Array.isArray(spec.seatbid) ? 'res' : '?';
-    // optional banner-size hint
-    let sizeHint = '';
-    if (isReq && spec.imp[0] && spec.imp[0].banner) {
-      const b = spec.imp[0].banner;
-      if (b.w && b.h) sizeHint = `${b.w}×${b.h}`;
-      else if (Array.isArray(b.format) && b.format[0])
-        sizeHint = `${b.format[0].w}×${b.format[0].h}`;
-    }
+    const shape = shapeOf(spec);
+    const kind = shape.kind;
+    const sizeHint = kind === 'req' ? bannerHint(shape.body) : '';
     return (
       '<div class="kt-live-row" data-action="live-load" data-row-id="' +
       id +

@@ -119,20 +119,32 @@ const T = {
   notAnalyzed: { en: 'not analyzed', uk: 'не аналізовано', ru: 'не анализировано' },
   copyJson: { en: 'Copy JSON', uk: 'Копіювати JSON', ru: 'Копировать JSON' },
   loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
-  countCatalog: {
-    en: '{n} samples · {m} categories',
-    uk: '{n} зразків · {m} категорій',
-    ru: '{n} образцов · {m} категорий',
+  /* Counted nouns, one entry per agreement form — see pluralForm() below.
+     Both numbers in the two-part counts inflect independently: "1 зразок ·
+     3 категорії" is one singular and one 2-4 form in the same line, which
+     is exactly the case a single stored plural got wrong. */
+  countSamples: {
+    en: { one: '{n} sample', many: '{n} samples' },
+    uk: { one: '{n} зразок', few: '{n} зразки', many: '{n} зразків' },
+    ru: { one: '{n} образец', few: '{n} образца', many: '{n} образцов' },
   },
-  countSaved: {
-    en: '{n} samples · {m} partners',
-    uk: '{n} зразків · {m} партнерів',
-    ru: '{n} образцов · {m} партнёров',
+  countCategories: {
+    en: { one: '{m} category', many: '{m} categories' },
+    uk: { one: '{m} категорія', few: '{m} категорії', many: '{m} категорій' },
+    ru: { one: '{m} категория', few: '{m} категории', many: '{m} категорий' },
   },
+  countPartners: {
+    en: { one: '{m} partner', many: '{m} partners' },
+    uk: { one: '{m} партнер', few: '{m} партнери', many: '{m} партнерів' },
+    ru: { one: '{m} партнёр', few: '{m} партнёра', many: '{m} партнёров' },
+  },
+  /* "k of n" — the noun agrees with the TOTAL, not with the matched count,
+     and uk/ru put it in the genitive after «з»/«из»: "3 з 29 зразків" but
+     "1 з 1 зразка". Two forms are enough there, so few repeats many. */
   countFiltered: {
-    en: '{k} of {n} samples',
-    uk: '{k} з {n} зразків',
-    ru: '{k} из {n} образцов',
+    en: { one: '{k} of {n} sample', many: '{k} of {n} samples' },
+    uk: { one: '{k} з {n} зразка', few: '{k} з {n} зразків', many: '{k} з {n} зразків' },
+    ru: { one: '{k} из {n} образца', few: '{k} из {n} образцов', many: '{k} из {n} образцов' },
   },
   emptyCatalog: { en: 'No samples yet.', uk: 'Поки що зразків немає.', ru: 'Образцов пока нет.' },
   emptyFacet: {
@@ -158,11 +170,40 @@ const T = {
     ru: 'Сохранений пока нет. Сохрани образец в инспекторе, чтобы добавить первое.',
   },
   loadFailed: { en: 'Could not load', uk: 'Не вдалося завантажити', ru: 'Не удалось загрузить' },
+  retry: { en: 'Try again', uk: 'Спробувати ще раз', ru: 'Попробовать ещё раз' },
 };
 
 function pick(map, lang) {
   if (!map) return '';
   return map[lang] || map[FALLBACK_LANG] || Object.values(map)[0] || '';
+}
+
+/**
+ * Which agreement form a count takes. Same rule as pluralKey() in
+ * public/ortbtools.app.js — Ukrainian and Russian want three (1 зразок,
+ * 2 зразки, 5 зразків) and the teens are the trap: 11 takes the 5+ form
+ * while 21 takes the singular. English needs two, so it never asks for
+ * `few`.
+ *
+ * Duplicated rather than imported: this module carries its own string
+ * table, and ortbtools.app.js is a browser IIFE with no export surface.
+ * The rule is what must not drift; tests/plural-forms.test.js pins it.
+ */
+function pluralForm(lang, n) {
+  if (lang !== 'uk' && lang !== 'ru') return n === 1 ? 'one' : 'many';
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'one';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'few';
+  return 'many';
+}
+
+/** `pick()` + `fill()` for a counted string whose locale entry is
+ *  `{one, few, many}`; `n` chooses the form, `vars` fills the slots. */
+function counted(map, lang, n, vars) {
+  const forms = pick(map, lang);
+  const s = typeof forms === 'string' ? forms : forms[pluralForm(lang, n)] || forms.many || '';
+  return fill(s, vars);
 }
 
 function fill(s, vars) {
@@ -280,15 +321,24 @@ function countText(state, lang) {
   // what is on screen against that total, because a count that ignores the
   // filter next to it is a count nobody can use.
   if (state.scope === 'catalog') {
+    // A failed fetch is not an empty catalog. "0 samples · 0 categories" next
+    // to "Could not load" are two contradictory statements a foot apart, and
+    // the confident one is the wrong one — say nothing and let the error in
+    // the body be the page's single answer.
+    if (state.catalogError) return '';
     const items = state.catalog || [];
     if (state.facet !== 'all') {
-      return fill(pick(T.countFiltered, lang), {
+      return counted(T.countFiltered, lang, items.length, {
         k: visibleItems(state).length,
         n: items.length,
       });
     }
     const cats = new Set(items.map((i) => i.category)).size;
-    return fill(pick(T.countCatalog, lang), { n: items.length, m: cats });
+    return (
+      counted(T.countSamples, lang, items.length, { n: items.length }) +
+      ' · ' +
+      counted(T.countCategories, lang, cats, { m: cats })
+    );
   }
   // Nothing to count until we know there is a library to count: "0 samples ·
   // 0 partners" beside a sign-in prompt reads as an empty library rather than
@@ -296,10 +346,17 @@ function countText(state, lang) {
   if (!state.saved || state.saved.state !== 'ok') return '';
   const items = savedSamples(state);
   if (state.facet !== 'all') {
-    return fill(pick(T.countFiltered, lang), { k: visibleItems(state).length, n: items.length });
+    return counted(T.countFiltered, lang, items.length, {
+      k: visibleItems(state).length,
+      n: items.length,
+    });
   }
   const partners = new Set(items.filter((s) => s.partner_id != null).map((s) => s.partner_id)).size;
-  return fill(pick(T.countSaved, lang), { n: items.length, m: partners });
+  return (
+    counted(T.countSamples, lang, items.length, { n: items.length }) +
+    ' · ' +
+    counted(T.countPartners, lang, partners, { m: partners })
+  );
 }
 
 /* ── rows ──────────────────────────────────────────────────────── */
@@ -403,7 +460,14 @@ function renderBody(state, lang, localeP, t) {
   if (state.scope === 'catalog') {
     if (state.catalog == null) return note(escapeHtml(pick(T.loading, lang)));
     if (state.catalogError) {
-      return note(escapeHtml(pick(T.loadFailed, lang) + ': ' + state.catalogError));
+      // A transient 5xx used to leave the page with a sentence and no way
+      // out — reloading the whole document was the only retry the UI
+      // offered, and it throws away the scope and facet the user had set.
+      return note(
+        `<p>${escapeHtml(pick(T.loadFailed, lang) + ': ' + state.catalogError)}</p>`,
+        `<button type="button" class="lib-btn lib-btn--primary" data-action="retry-catalog">` +
+          `${escapeHtml(pick(T.retry, lang))}</button>`,
+      );
     }
     const items = visibleItems(state);
     const head = colHead([
@@ -639,8 +703,31 @@ export default {
     const filterRow = root.querySelector('[data-filters]');
     const bodyEl = root.querySelector('[data-body]');
 
+    /* The filter row is re-rendered wholesale, so whatever was focused inside
+       it is destroyed by the repaint and focus falls back to <body>. Toggling
+       a scope chip with the keyboard therefore sent the user back to the top
+       of the page to tab in again — the control they had just operated no
+       longer existed. Restoring here rather than at the call site because the
+       saved scope repaints a SECOND time when its data lands, which would
+       undo any refocus done next to the click.
+
+       The identity carried across the repaint is the control's own data
+       attribute, not the element: `[data-scope="saved"]` is the same control
+       before and after, and `[data-facet]` is the one select. Anything else
+       focused in the row (nothing today) is left alone rather than guessed
+       at. preventScroll keeps a restore from nudging the page. */
+    const focusSelectorOf = (el) => {
+      if (!el || !filterRow.contains(el)) return null;
+      if (el.dataset && el.dataset.scope) return `[data-scope="${el.dataset.scope}"]`;
+      if (el.matches && el.matches('[data-facet]')) return '[data-facet]';
+      return null;
+    };
     const paintFilters = () => {
+      const restore = focusSelectorOf(document.activeElement);
       filterRow.innerHTML = renderFilters(state, lang);
+      if (!restore) return;
+      const el = filterRow.querySelector(restore);
+      if (el) el.focus({ preventScroll: true });
     };
     const paintBody = () => {
       bodyEl.innerHTML = renderBody(state, lang, localeP, t);
@@ -651,6 +738,27 @@ export default {
     };
 
     paintFilters();
+
+    /* One loader for the first paint and for the retry button, so a retry
+       lands in exactly the state the first attempt did instead of being a
+       second, subtly different code path. Clearing catalogError first puts
+       the "Loading…" note back — without it a failed retry looks identical
+       to a click that did nothing. */
+    const loadCatalog = async () => {
+      state.catalog = null;
+      state.catalogError = null;
+      paintFilters();
+      paintBody();
+      try {
+        state.catalog = await fetchCatalog(ctx.signal);
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        state.catalog = [];
+        state.catalogError = e.message;
+      }
+      paintFilters();
+      paintBody();
+    };
 
     const hydrateSaved = async () => {
       if (state.savedHydrated) return;
@@ -684,6 +792,22 @@ export default {
           if (next === 'saved') hydrateSaved();
           return;
         }
+        const retryBtn = e.target.closest('[data-action="retry-catalog"]');
+        if (retryBtn) {
+          const hadFocus = document.activeElement === retryBtn;
+          loadCatalog().then(() => {
+            if (!hadFocus) return;
+            // The button that was clicked no longer exists. Land on whatever
+            // now stands in its place — the new retry button if the load
+            // failed again, otherwise the scope chip directly above the body
+            // that replaced it, so the keyboard is not dropped at <body>.
+            const next =
+              bodyEl.querySelector('[data-action="retry-catalog"]') ||
+              filterRow.querySelector('[data-scope="catalog"]');
+            if (next) next.focus({ preventScroll: true });
+          });
+          return;
+        }
         const copyBtn = e.target.closest('[data-action="copy-sample"]');
         if (copyBtn) {
           // The row is a stretched link; a click on its action must not
@@ -712,15 +836,7 @@ export default {
     // first paint, and a click during the catalog round-trip would otherwise
     // land on nothing. Switching scope mid-flight is safe — both paints read
     // state.scope, so the catalog's arrival repaints whichever view is current.
-    try {
-      state.catalog = await fetchCatalog(ctx.signal);
-    } catch (e) {
-      if (e.name === 'AbortError') return;
-      state.catalog = [];
-      state.catalogError = e.message;
-    }
-    paintFilters();
-    paintBody();
+    await loadCatalog();
   },
 
   async unmount(_root) {

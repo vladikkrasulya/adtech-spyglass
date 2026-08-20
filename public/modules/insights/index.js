@@ -100,15 +100,20 @@ const L = {
   updatedAgo: { en: 'updated {n}s ago', uk: 'оновлено {n} с тому', ru: 'обновлено {n} с назад' },
   updatedNow: { en: 'just updated', uk: 'щойно оновлено', ru: 'только что обновлено' },
 
+  /* The empty state used to say "Stream is warming up" and promise data "in
+     about a minute". Both halves were false. This window counts /api/analyze
+     calls (see the header note) — nothing is warming up, no stream feeds it,
+     and on an installation with no traffic the figures never arrive on their
+     own. The copy now names the one action that fills the window. */
   emptyTitle: {
-    en: 'Stream is warming up',
-    uk: 'Стрім запускається',
-    ru: 'Поток запускается',
+    en: 'No analyses in this window',
+    uk: 'Немає аналізів за це вікно',
+    ru: 'Нет анализов за это окно',
   },
   emptyBody: {
-    en: 'Data will appear here in about a minute once the validation stream emits events.',
-    uk: "Дані з'являться тут приблизно за хвилину, коли валідаційний стрім почне надсилати події.",
-    ru: 'Данные появятся здесь примерно через минуту после начала эмиссии событий потоком.',
+    en: 'This window counts /api/analyze calls — there were none in the last hour. Run a payload through the Inspector, then press Refresh.',
+    uk: 'Це вікно рахує виклики /api/analyze — за останню годину не було жодного. Прожени payload через Інспектор і натисни «Оновити».',
+    ru: 'Это окно считает вызовы /api/analyze — за последний час не было ни одного. Прогони payload через Инспектор и нажми «Обновить».',
   },
   loading: { en: 'Loading…', uk: 'Завантаження…', ru: 'Загрузка…' },
   errFetch: {
@@ -326,14 +331,31 @@ function metricsOf(data) {
   };
 }
 
+/* The pulsing bars belong to the state that is actually waiting on a
+   response. They used to sit on the OPPOSITE state: the empty card drew
+   three of them forever while the status bar said "ready · just updated",
+   and the real load drew none at all — a bare "Loading…" line on an
+   otherwise blank page. So the page animated when nothing was happening
+   and sat still when something was. Same markup, swapped states.
+   (insights.css already stops the pulse under prefers-reduced-motion.) */
+const SKELETON_BARS =
+  `<div class="ins-skeleton-bar" style="width:60%"></div>` +
+  `<div class="ins-skeleton-bar" style="width:80%"></div>` +
+  `<div class="ins-skeleton-bar" style="width:45%"></div>`;
+
+function renderLoading(lang) {
+  return `
+    <div class="ins-card ins-empty">
+      <p class="ins-loading">${escapeHtml(pick(L.loading, lang))}</p>
+      ${SKELETON_BARS}
+    </div>`;
+}
+
 function renderEmpty(lang) {
   return `
     <div class="ins-card ins-empty">
       <h2 class="ins-card__title">${escapeHtml(pick(L.emptyTitle, lang))}</h2>
       <p class="ins-empty__body">${escapeHtml(pick(L.emptyBody, lang))}</p>
-      <div class="ins-skeleton-bar" style="width:60%"></div>
-      <div class="ins-skeleton-bar" style="width:80%"></div>
-      <div class="ins-skeleton-bar" style="width:45%"></div>
     </div>`;
 }
 
@@ -383,8 +405,8 @@ function renderShell(lang) {
         </button>
       </header>
 
-      <div class="ins-body" id="ins-body-root">
-        <p class="ins-loading">${escapeHtml(pick(L.loading, lang))}</p>
+      <div class="ins-body" id="ins-body-root" aria-live="polite" aria-busy="true">
+        ${renderLoading(lang)}
       </div>
 
       <footer class="ins-statusbar" id="ins-statusbar">
@@ -482,6 +504,10 @@ export default {
       if (loading) return;
       loading = true;
       if (refreshBtn) refreshBtn.disabled = true;
+      // The status bar's word and the body's picture now agree: aria-busy is
+      // the same claim spoken to assistive tech that the skeleton makes
+      // visually, and both are true only while a request is in flight.
+      bodyRoot.setAttribute('aria-busy', 'true');
       try {
         const data = await fetchSummary();
         lastFetch = Date.now();
@@ -505,6 +531,7 @@ export default {
         }
       } finally {
         loading = false;
+        bodyRoot.setAttribute('aria-busy', 'false');
         if (refreshBtn) refreshBtn.disabled = false;
       }
     }

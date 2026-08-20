@@ -28,6 +28,26 @@ const L = {
   promote: { en: 'Promote →MD', uk: 'Promote →MD', ru: 'Promote →MD' },
   reject: { en: 'Reject', uk: 'Відхилити', ru: 'Отклонить' },
   slugPrompt: { en: 'Enter slug for this post:', uk: 'Введіть slug:', ru: 'Введите slug:' },
+  // The drafts table shipped with its column headers and its two action
+  // tooltips written straight into the markup in English, so under uk and ru
+  // the only part of this page still speaking English was the part naming
+  // what each column and each button does.
+  colTitle: { en: 'Title', uk: 'Заголовок', ru: 'Заголовок' },
+  colCategory: { en: 'Category', uk: 'Категорія', ru: 'Категория' },
+  colLang: { en: 'Lang', uk: 'Мова', ru: 'Язык' },
+  colSummary: { en: 'Summary', uk: 'Опис', ru: 'Описание' },
+  colCreated: { en: 'Created', uk: 'Створено', ru: 'Создан' },
+  colActions: { en: 'Actions', uk: 'Дії', ru: 'Действия' },
+  publishHint: {
+    en: 'Publish to the database',
+    uk: 'Опублікувати в базу',
+    ru: 'Опубликовать в базу',
+  },
+  promoteHint: {
+    en: 'Promote to a markdown post',
+    uk: 'Перенести в markdown-пост',
+    ru: 'Перенести в markdown-пост',
+  },
 };
 
 function pick(map, lang) {
@@ -53,11 +73,20 @@ function clearToken() {
   } catch {}
 }
 
-function formatDate(s) {
+// `new Date('nonsense')` does not throw, so this try/catch never fired: it
+// returned an Invalid Date and `toLocaleString()` on one is the literal
+// English string "Invalid Date". A draft that reached the queue without a
+// usable created_at printed that in the Created column. Same call as the
+// public listing makes — and the same answer: state no date rather than a
+// wrong one.
+function formatDate(s, lang) {
+  if (!s) return '';
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return '';
   try {
-    return new Date(s).toLocaleString();
+    return d.toLocaleString(lang === 'uk' ? 'uk-UA' : lang === 'ru' ? 'ru-RU' : 'en-US');
   } catch {
-    return s || '';
+    return String(s).slice(0, 16).replace('T', ' ');
   }
 }
 
@@ -237,10 +266,10 @@ function renderTable(drafts, lang) {
       <td class="ablog-td">${escapeHtml(d.category)}</td>
       <td class="ablog-td">${escapeHtml(d.lang)}</td>
       <td class="ablog-td ablog-td--summary">${escapeHtml((d.summary || '').slice(0, 100))}${(d.summary || '').length > 100 ? '…' : ''}</td>
-      <td class="ablog-td ablog-td--date">${escapeHtml(formatDate(d.created_at))}</td>
+      <td class="ablog-td ablog-td--date">${escapeHtml(formatDate(d.created_at, lang))}</td>
       <td class="ablog-td ablog-td--actions">
-        <button class="ablog-btn ablog-btn--publish" data-action="publish" data-id="${escapeHtml(d.id)}" title="Publish to DB">${escapeHtml(pick(L.publish, lang))}</button>
-        <button class="ablog-btn ablog-btn--promote" data-action="promote" data-id="${escapeHtml(d.id)}" title="Promote to markdown">${escapeHtml(pick(L.promote, lang))}</button>
+        <button class="ablog-btn ablog-btn--publish" data-action="publish" data-id="${escapeHtml(d.id)}" title="${escapeHtml(pick(L.publishHint, lang))}">${escapeHtml(pick(L.publish, lang))}</button>
+        <button class="ablog-btn ablog-btn--promote" data-action="promote" data-id="${escapeHtml(d.id)}" title="${escapeHtml(pick(L.promoteHint, lang))}">${escapeHtml(pick(L.promote, lang))}</button>
         <button class="ablog-btn ablog-btn--reject"  data-action="reject"  data-id="${escapeHtml(d.id)}">${escapeHtml(pick(L.reject, lang))}</button>
       </td>
     </tr>`,
@@ -251,7 +280,12 @@ function renderTable(drafts, lang) {
       <table class="ablog-table">
         <thead>
           <tr>
-            <th>Title</th><th>Category</th><th>Lang</th><th>Summary</th><th>Created</th><th>Actions</th>
+            <th>${escapeHtml(pick(L.colTitle, lang))}</th>
+            <th>${escapeHtml(pick(L.colCategory, lang))}</th>
+            <th>${escapeHtml(pick(L.colLang, lang))}</th>
+            <th>${escapeHtml(pick(L.colSummary, lang))}</th>
+            <th>${escapeHtml(pick(L.colCreated, lang))}</th>
+            <th>${escapeHtml(pick(L.colActions, lang))}</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>

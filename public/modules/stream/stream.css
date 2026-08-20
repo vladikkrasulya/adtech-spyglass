@@ -76,6 +76,24 @@
   flex-shrink: 0;
 }
 
+/* Phone widths: the status pill and its button take their own row.
+   They do not shrink (the pill's text is nowrap, and it is at its widest —
+   "paused · 130 · will show 100" — exactly when the reader most needs to read
+   it), so on one row they were taking 276 of 360px and leaving the h1 clipped
+   under the pill with the lede breaking one word per line. */
+@media (max-width: 479px) {
+  #app-root .stream-head {
+    flex-wrap: wrap;
+  }
+  #app-root .stream-head__text,
+  #app-root .stream-head__actions {
+    flex: 1 1 100%;
+  }
+  #app-root .stream-head__actions {
+    margin-left: 0;
+  }
+}
+
 /* Status pill. The soft fills are local rather than tokens because the
    system has --success / --danger as ink only; both pairs are stated per
    theme so neither borrows the other's ground. */
@@ -189,9 +207,16 @@
 }
 
 /* ── 2. Filter band ───────────────────────────────────────────────── */
+/* baseline, not center: only .stream-filters__chips wraps, so once the chips
+   need a second row a centred label lines up with the MIDDLE of the block and
+   reads as if it belonged to one row rather than to all of them — at 390px
+   uk put "показати" between [усе][запити] and [попи][vast]. Aligning on the
+   first baseline keeps the label (and the count) beside the FIRST chip row at
+   every width, with no breakpoint to keep in sync with the translations. On a
+   single row it is indistinguishable from center. */
 #app-root .stream-filters {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 6px;
   padding: 12px var(--space-5, 24px);
   border-bottom: 1px solid var(--border);
@@ -247,6 +272,32 @@
   color: var(--text-dim);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* Phone widths only. The count is ~95px of a row the chips already have to
+   wrap into: at 390px uk it was the difference between two chip rows and
+   three. Below 480px it moves under them, onto the page's left inset — in
+   line with the filter label above it and the TIME column below. Above that
+   it stays inline, where it costs the chips nothing they were not already
+   going to spend (measured: en/uk/ru all wrap at 540px either way). */
+@media (max-width: 479px) {
+  #app-root .stream-filters {
+    flex-wrap: wrap;
+    row-gap: var(--space-2, 8px);
+  }
+  /* Basis 0 rather than the default auto: a wrapping flex container places an
+     item by its max-content width, and the chip block's 399px does not fit
+     beside the label — so it would take a line of its own and leave "показати"
+     stranded above nothing. With a zero basis it stays on the label's line and
+     grows into whatever is left, wrapping inside itself as before. */
+  #app-root .stream-filters__chips {
+    flex: 1 1 0;
+  }
+  #app-root .stream-filters__window {
+    flex: 0 0 100%;
+    margin-left: 0;
+    padding-left: 0;
+  }
 }
 
 /* ── 3. Table ─────────────────────────────────────────────────────── */

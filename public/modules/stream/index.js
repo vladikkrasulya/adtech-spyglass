@@ -80,7 +80,11 @@ export default {
   css: '/modules/stream/stream.css?v=__STREAM_BUNDLE_HASH__',
   route: '/live',
   manifest: {
-    title: { en: 'Stream', uk: 'Стрім', ru: 'Стрим' },
+    // shell-boot's updateSectionTitle() puts this in the tab on every SPA
+    // section swap, so it is the same name the rail and the page's own h1
+    // carry — plural, matching `stream.title`. It used to be singular, which
+    // made switching language on /live rename the section in the tab.
+    title: { en: 'Streams', uk: 'Стріми', ru: 'Стримы' },
     description: {
       en: 'Live OpenRTB observability feed',
       uk: 'Живий потік OpenRTB-трафіку',
@@ -114,8 +118,18 @@ export default {
      * emitted.
      */
     const arrivals = [];
-    /** Envelopes that arrived while paused, oldest first. */
+    /** Envelopes that arrived while paused, oldest first. Bounded by MAX_ROWS. */
     const held = [];
+    /**
+     * How many payloads have arrived during THIS pause — including the ones
+     * `held` has already had to drop. The array is capped at MAX_ROWS, so
+     * reporting held.length froze the pill on "100 held" after 100 seconds
+     * while the feed kept running: on a 210-payload pause the page showed
+     * "100 held" beside a window counter that had gone up by 210. The queue
+     * still keeps only the newest MAX_ROWS — that part was never wrong — so
+     * what the pill owes the reader is the real figure plus the cap.
+     */
+    let heldTotal = 0;
     /** Frame keys already rendered — see SEEN_MAX. */
     const seen = new Set();
     /** Same keys in insertion order, so the oldest can be evicted. */
@@ -194,6 +208,8 @@ export default {
       'click',
       () => {
         paused = !paused;
+        // Each pause counts from zero, whichever direction the toggle went.
+        heldTotal = 0;
         if (!paused) {
           // Flush oldest-first so the newest held row still lands on top.
           while (held.length) addRow(held.shift());
@@ -216,9 +232,16 @@ export default {
         renderLabels();
         renderLive();
         rows.forEach((rec) => {
+          // Everything on a row that is a translated word or a locale-formatted
+          // number: the findings phrase, the KIND title, the FORMAT fallback,
+          // the KB unit and its decimal separator, the timestamp tooltip — and
+          // the accessible name, which is built out of all of them.
+          paintKind(rec);
+          paintFormat(rec);
+          paintSize(rec);
           paintFindings(rec);
           paintTime(rec);
-          rec.el.title = rec.envelope.hash ? t('stream.row.open') : t('stream.row.no_permalink');
+          paintRowName(rec);
         });
       }),
     );
@@ -334,6 +357,7 @@ export default {
           arrivals.push(emittedAtOf(envelope));
           pruneArrivals();
           if (paused) {
+            heldTotal++;
             held.push(envelope);
             if (held.length > MAX_ROWS) held.shift();
           } else {
@@ -456,8 +480,20 @@ export default {
       windowEl.textContent = t('stream.window', { count: arrivals.length });
       const state = paused ? 'paused' : connState;
       stateEl.dataset.state = state;
+      stateEl.removeAttribute('title');
       if (state === 'paused') {
-        stateTextEl.textContent = t('stream.state.paused', { held: held.length });
+        // Past the cap the queue is losing its oldest frames, and saying so
+        // is the difference between a counter that stopped and a counter that
+        // is telling the reader what Resume will actually hand back.
+        if (heldTotal > MAX_ROWS) {
+          stateTextEl.textContent = t('stream.state.paused.capped', {
+            held: heldTotal,
+            kept: MAX_ROWS,
+          });
+          stateEl.title = t('stream.state.paused.hint', { kept: MAX_ROWS });
+        } else {
+          stateTextEl.textContent = t('stream.state.paused', { held: heldTotal });
+        }
       } else if (state === 'streaming') {
         stateTextEl.textContent = t('stream.state.streaming', { rate: ratePerMinute() });
       } else if (state === 'offline' && downReason === 'capped') {
@@ -560,14 +596,12 @@ export default {
     };
 
     /**
-     * The first bid's creative: which media the response declares it to be,
-     * and the markup string if it carries one. 2.x puts both on the bid
-     * (`mtype` + `adm`); 3.0 nests them under `bid.media.<mediatype>.adm`,
-     * which is why reading `bid.adm` alone left every 3.0 response unlabelled.
+     * What one bid declares: which media it says it is, and the markup string
+     * if it carries one. 2.x puts both on the bid (`mtype` + `adm`); 3.0 nests
+     * them under `bid.media.<mediatype>.adm`, which is why reading `bid.adm`
+     * alone left every 3.0 response unlabelled.
      */
-    function firstCreative(body) {
-      const seat = Array.isArray(body.seatbid) ? body.seatbid[0] : null;
-      const bid = seat && Array.isArray(seat.bid) ? seat.bid[0] : null;
+    function creativeOfBid(bid) {
       if (!bid || typeof bid !== 'object') return { media: '', adm: '' };
       if (typeof bid.adm === 'string') {
         return { media: MTYPE[bid.mtype] || '', adm: bid.adm };
@@ -582,6 +616,32 @@ export default {
         }
       }
       return { media: MTYPE[bid.mtype] || '', adm: '' };
+    }
+
+    /**
+     * The creative this response is best described by. Reading bid[0] and
+     * stopping was enough for a clean response and wrong for every response
+     * that leads with a bid declaring nothing: the deep-response-errors
+     * specimen opens with a priced bid that has neither `media` nor `adm`,
+     * three bids before the one carrying a VAST 4 creative, so the FORMAT
+     * cell printed a bare "3.0" and the `vast` filter never caught the row.
+     *
+     * So walk the bids and prefer the first that carries actual markup —
+     * markup is what the Inspector will open — falling back to the first that
+     * at least names a media type. Bounded by the response's own bid count.
+     */
+    function firstCreative(body) {
+      const seats = Array.isArray(body.seatbid) ? body.seatbid : [];
+      let declared = null;
+      for (const seat of seats) {
+        const bids = seat && Array.isArray(seat.bid) ? seat.bid : [];
+        for (const bid of bids) {
+          const got = creativeOfBid(bid);
+          if (got.adm) return got;
+          if (got.media && !declared) declared = got;
+        }
+      }
+      return declared || { media: '', adm: '' };
     }
 
     /** VAST major version declared in an adm string, or '' when it isn't VAST. */
@@ -705,15 +765,31 @@ export default {
       return sameDay ? clock : p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + clock;
     }
 
-    /** Wire size of the payload as it came off the stream, in KB to one place. */
-    function sizeLabel(specimen) {
-      let bytes;
+    /** Wire size of the payload as it came off the stream, in bytes, or null. */
+    function byteSize(specimen) {
       try {
-        bytes = new TextEncoder().encode(JSON.stringify(specimen)).length;
+        return new TextEncoder().encode(JSON.stringify(specimen)).length;
       } catch (_) {
-        return '';
+        return null;
       }
-      return (bytes / 1024).toFixed(1) + ' KB';
+    }
+
+    /**
+     * The SIZE reading in the active locale. Both halves were English before:
+     * the unit was a hardcoded " KB" under a translated «РОЗМІР» header, and
+     * the decimal point stayed a point in uk/ru, where the separator is a
+     * comma. Intl is asked for the number and i18n for the unit.
+     */
+    function sizeLabel(bytes) {
+      if (typeof bytes !== 'number' || !Number.isFinite(bytes)) return '';
+      const kb = bytes / 1024;
+      let n;
+      try {
+        n = kb.toLocaleString(ctx.lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      } catch (_) {
+        n = kb.toFixed(1);
+      }
+      return n + ' ' + t('stream.size.kb');
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -735,7 +811,13 @@ export default {
         source: String(envelope.source || '?'),
         kind: shape.kind,
         media: fmt.media,
+        sub: fmt.sub,
         vast: fmt.vast,
+        // Measured once. The KB reading is re-rendered on a language change
+        // (the unit is a translated word), and re-serialising the specimen
+        // for every row on every switch would be the page's only O(payload)
+        // work in a handler that must feel instant.
+        bytes: byteSize(specimen),
         emitted,
         replayed,
         grade: null,
@@ -757,21 +839,21 @@ export default {
       };
       rec.cells.time = cell('time', timeLabel(emitted, now));
       paintTime(rec);
-      rec.cells.kind = cell('kind', shape.kind === 'unknown' ? '?' : shape.kind);
-      rec.cells.kind.dataset.kind = shape.kind;
+      rec.cells.kind = cell('kind', '');
       rec.cells.source = cell('source', sourceLabel(rec.source));
-      rec.cells.format = cell('format', [fmt.media, fmt.sub].filter(Boolean).join(' · '));
-      rec.cells.size = cell('size', sizeLabel(specimen));
+      rec.cells.format = cell('format', '');
+      rec.cells.size = cell('size', '');
       rec.cells.findings = cell('findings', '');
+      paintKind(rec);
+      paintFormat(rec);
+      paintSize(rec);
 
       if (envelope.hash) {
-        el.title = t('stream.row.open');
         el.addEventListener('click', () => openInInspector(envelope.hash), { signal: ctx.signal });
       } else {
         // Nothing to link to: the permalink is the specimen cache key and the
         // server attaches it on push. Say so rather than offering a dead click.
         el.disabled = true;
-        el.title = t('stream.row.no_permalink');
       }
 
       rec.el = el;
@@ -782,6 +864,7 @@ export default {
         dropped.el.remove();
       }
       paintFindings(rec);
+      paintRowName(rec);
       requestGrade(rec);
       return rec;
     }
@@ -855,6 +938,76 @@ export default {
       rec.cells.time.title = rec.replayed ? full + ' · ' + t('stream.row.replay') : full;
     }
 
+    /**
+     * The translated word for a side of the auction. Written as three literal
+     * keys rather than `t('stream.kind.' + kind)` so the i18n coverage test's
+     * static scan of this file can see every key that ships.
+     */
+    function kindWord(kind) {
+      if (kind === 'req') return t('stream.kind.req');
+      if (kind === 'res') return t('stream.kind.res');
+      return t('stream.kind.unknown');
+    }
+
+    /**
+     * KIND cell. The visible token stays REQ / RES — trade shorthand that
+     * survives a 60px track — and the translated word rides on the cell's
+     * title and in the row's accessible name.
+     */
+    function paintKind(rec) {
+      const cellEl = rec.cells.kind;
+      cellEl.textContent = rec.kind === 'unknown' ? '?' : rec.kind;
+      cellEl.dataset.kind = rec.kind;
+      cellEl.title = kindWord(rec.kind);
+    }
+
+    /** FORMAT cell: media word plus qualifier, never a bare qualifier. */
+    function paintFormat(rec) {
+      const media = rec.media || t('stream.format.unknown');
+      rec.cells.format.textContent = [media, rec.sub].filter(Boolean).join(' · ');
+    }
+
+    function paintSize(rec) {
+      rec.cells.size.textContent = sizeLabel(rec.bytes);
+    }
+
+    /**
+     * The row's accessible name.
+     *
+     * The row is one <button> holding six <span>s, and a name assembled from
+     * them by the browser has nothing between the cells: a screen reader read
+     * "23:14:46RESsynthetic · trap-invisible-overlay1.4 KBclean" as a single
+     * run. So the name is stated rather than inherited — the same six readings
+     * in the same order, separated, with the Latin REQ/RES spelled out as the
+     * translated word and the replay fact (which lives in a CSS ::before glyph
+     * and would otherwise be invisible to a reader) said in words.
+     *
+     * Must be re-run whenever any cell changes: grading fills FINDINGS and can
+     * settle KIND minutes after the row was drawn.
+     */
+    function paintRowName(rec) {
+      const parts = [
+        rec.cells.time.textContent,
+        kindWord(rec.kind),
+        rec.cells.source.textContent,
+        rec.cells.format.textContent,
+        rec.cells.size.textContent,
+        rec.cells.findings.textContent,
+      ].filter(Boolean);
+      if (rec.replayed) parts.push(t('stream.row.replay'));
+      parts.push(rec.envelope.hash ? t('stream.row.open') : t('stream.row.no_permalink'));
+      rec.el.setAttribute('aria-label', parts.join(', '));
+      // The hover hint stays the action (or the reason there isn't one) —
+      // the cells beside the pointer already say the rest.
+      rec.el.title = rec.envelope.hash ? t('stream.row.open') : t('stream.row.no_permalink');
+    }
+
+    /** FINDINGS changed → the accessible name that quotes it changed too. */
+    function repaintGrade(rec) {
+      paintFindings(rec);
+      paintRowName(rec);
+    }
+
     function paintFindings(rec) {
       const cellEl = rec.cells.findings;
       const g = rec.grade;
@@ -897,12 +1050,10 @@ export default {
       if (rec.kind === 'unknown' && grade.type) {
         if (/response/i.test(grade.type)) rec.kind = 'res';
         else if (/request/i.test(grade.type)) rec.kind = 'req';
-        if (rec.kind !== 'unknown') {
-          rec.cells.kind.dataset.kind = rec.kind;
-          rec.cells.kind.textContent = rec.kind;
-        }
+        if (rec.kind !== 'unknown') paintKind(rec);
       }
       paintFindings(rec);
+      paintRowName(rec);
     }
 
     function scheduleGrade() {
@@ -919,7 +1070,7 @@ export default {
         // A corpus this size should have settled long ago; something is
         // pathological. Stop rather than keep spending the analyze bucket.
         gradingGaveUp = true;
-        rows.forEach(paintFindings);
+        rows.forEach(repaintGrade);
         return;
       }
       gradeCalls++;
@@ -962,7 +1113,7 @@ export default {
           // instead of leaving every row spinning forever.
           console.warn('[stream] grading failed', err);
           gradingGaveUp = true;
-          rows.forEach(paintFindings);
+          rows.forEach(repaintGrade);
         });
     }
 

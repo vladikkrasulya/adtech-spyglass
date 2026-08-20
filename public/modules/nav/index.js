@@ -198,6 +198,13 @@ function renderNav() {
   }).join('');
 
   const collapseLabel = collapseTabLabel();
+  // The landmark's accessible name. It is how a screen reader announces the
+  // rail ("Sections, navigation") and how it appears in the landmark list —
+  // i.e. the first thing said about this region — and it was the one string
+  // in the rail still hardcoded English: items, group headings, the collapse
+  // tab, the theme row and the account row all go through pick(). A Ukrainian
+  // reader heard six localised items introduced by an English word.
+  const navLabel = pick({ en: 'Sections', uk: 'Розділи', ru: 'Разделы' });
   // The collapse control lives IN the rail head beside the brand, as the
   // prototype draws it — a small bordered square with a chevron. Its earlier
   // form was a blue pill floating at the rail's outer edge mid-viewport,
@@ -213,7 +220,7 @@ function renderNav() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 8-4 4 4 4"/></svg>
       </button>
     </div>
-    <nav class="kt-nav__nav" aria-label="Sections">
+    <nav class="kt-nav__nav" aria-label="${escapeHtml(navLabel)}">
       ${groups}
     </nav>
     <div class="kt-nav__bottom">
@@ -345,15 +352,36 @@ export function mountNav(root) {
   // So the rail keeps its own markup and forwards the press to the single
   // control the shell owns. One state, one implementation, and the label
   // reads the result rather than predicting it.
+  // The shell's toggle cycles THREE states — auto → light → dark → auto —
+  // and stores them under 'kt-theme' (absent = auto; see the head IIFE in
+  // public/index.*.html, which is the owner of that key). The rail read only
+  // `data-theme`, which carries the RESOLVED theme and therefore can only
+  // ever be 'light' or 'dark'. So on a fresh session the row said "Темна"
+  // while the control beside it said "тема: авто · клік → світла": the label
+  // named a state the app was not in, and one of the three states had no
+  // spelling at all. Reading the stored value restores it — the same source
+  // the glyph and the title already use, so the two can no longer disagree.
+  const THEME_LABELS = {
+    auto: { en: 'Auto', uk: 'Авто', ru: 'Авто' },
+    light: { en: 'Light', uk: 'Світла', ru: 'Светлая' },
+    dark: { en: 'Dark', uk: 'Темна', ru: 'Тёмная' },
+  };
+
+  function storedTheme() {
+    try {
+      const v = localStorage.getItem('kt-theme');
+      return v === 'light' || v === 'dark' ? v : 'auto';
+    } catch (_e) {
+      // Private mode / blocked storage: the shell's own get() degrades to
+      // null here too, which it treats as auto. Say the same thing it does.
+      return 'auto';
+    }
+  }
+
   function paintThemeLabel(root) {
     const label = root.querySelector('[data-theme-label]');
     if (!label) return;
-    const eff = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-    label.textContent = pick(
-      eff === 'dark'
-        ? { en: 'Dark', uk: 'Темна', ru: 'Тёмная' }
-        : { en: 'Light', uk: 'Світла', ru: 'Светлая' },
-    );
+    label.textContent = pick(THEME_LABELS[storedTheme()]);
   }
 
   const onThemeClick = (e) => {

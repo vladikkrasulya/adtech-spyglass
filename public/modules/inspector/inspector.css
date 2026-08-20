@@ -28,6 +28,11 @@
      (#0284C7 / #38BDF8) and --bg-elev (#FFFFFF / #121C30) per theme. */
   --accent-rgb: 2, 132, 199;
   --bg-elev-rgb: 255, 255, 255;
+  /* Height of the inspector's status bar, stated once. It is read from two
+     places that must agree: the bar itself, and the toast layer that has to
+     clear it (#toastContainer is a child of <body>, outside .kt-shell, so a
+     token scoped to the shell would never reach it). */
+  --app-footer-h: 30px;
 }
 [data-theme='dark'] {
   --text-warning: #fcd34d;
@@ -3565,6 +3570,27 @@ button.cross-path:focus-visible,
   color: var(--text);
   flex-shrink: 0;
 }
+/* The score is the only bare number in the chip row — its neighbours all
+   carry a unit ("0.65 $", "0.16 USD", "300×250"). Read cold, "0" beside a red
+   border says "zero critical findings", which is the opposite of what it
+   means: this is 0 out of 100, and it is red because the payload scored
+   nothing. The denominator is already written out in the pill's own tooltip
+   ("… Total: 0/100"); it just was not on the face of it, and a tooltip is
+   not where a number's unit belongs.
+
+   "/100" is the same four characters in uk, ru and en, which is why it can
+   live here rather than in a translated string — but the renderer in
+   ortbtools.app.js is the durable owner of the pill's text, and this should
+   graduate into it. Set on the score span rather than the pill so the
+   count-up animation, which rewrites .quality-score's textContent every
+   16ms, cannot wipe it. */
+.quality-score::after {
+  content: '/100';
+  font-size: var(--fs-mono);
+  font-weight: 500;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
 .quality-status {
   font-size: var(--fs-mono);
   font-weight: 700;
@@ -4666,19 +4692,58 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
 .tab-btn.active {
   font-weight: 600;
 }
-/* "More" is pushed to the far edge and is a compact control, not a
-   full-height tab competing with the four named views. */
+/* "More" is a quieter control than the four named views — but it is one of
+   them, and `margin-left: auto` was pushing it to the far edge of a strip
+   that spans the whole centre panel. Measured on this build: 368px of empty
+   rule between "Creative" and "More" at 1920px, 619px at 2560px, 1213px at
+   3840px. At that distance it stops reading as the tail of the tab group and
+   starts reading as an unrelated control parked in the corner — the four
+   tabs look like the whole strip, and the half of the views that live behind
+   "More" look like they do not exist.
+
+   So it sits one gap after the last named view, and takes the strip's own
+   height instead of floating 30px tall inside a 42px row. The muted colour
+   and the absent underline are what keep it secondary; distance was never
+   doing that job. */
 .tab-more {
-  margin-left: auto;
-  align-items: center;
+  margin-left: var(--space-2);
+  align-items: stretch;
+  /* Above the scroll-hint gradient, and this is the important half of the
+     "the chevron is barely visible" report. `.tab-bar::after` is a 44px
+     right-edge fade to --surface, and it is a LATER flex sibling carrying
+     `margin-left: -44px` — so it is painted directly on top of whatever ends
+     the row, which is this control, at every width where the strip does not
+     actually overflow (sticky has no constraint to satisfy then, so it never
+     moves to the edge). Screenshot-sampled at 1920px: the chevron's darkest
+     rendered pixel was #E2E5E9 — 1.26:1 against white, on a mark whose
+     declared colour is 5.4:1. It was not drawn in a pale grey; it was drawn
+     correctly and then washed out by a white gradient lying over it.
+     `.tab-more` is already `position: relative`, so one stacking step is the
+     whole fix, and the hint still fades the tabs it is there to fade. */
+  z-index: 1;
 }
 .tab-more > summary.tab-more-toggle {
-  align-self: center;
+  align-self: stretch;
   height: auto;
-  padding: 2px 8px;
+  padding: 0 11px;
   border-bottom: 0;
   margin-bottom: 0;
-  border-radius: var(--r-sm, 6px);
+  border-radius: var(--r-sm, 6px) var(--r-sm, 6px) 0 0;
+}
+/* The other half. Out from under the gradient the chevron still measured
+   2.14:1 light / 2.72:1 dark, because a 24-unit viewBox at stroke-width 1.5
+   painted at 13px puts 0.81 device pixels of ink down: antialiasing spreads
+   that across two pixel rows at part coverage, and no pixel ever reaches the
+   declared colour. WCAG 1.4.11 asks 3:1 of a control's own indicator, and
+   this chevron is the only thing saying the control opens something.
+   Widening the stroke (a presentation attribute loses to any CSS rule) and
+   taking one more pixel of box gets a full-coverage stroke: measured 5.04:1
+   light, 6.34:1 dark, at the same colour as the word beside it. */
+.tab-more > summary.tab-more-toggle svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  stroke-width: 2.25;
 }
 .tab-more:has(.tab-btn.active) > summary.tab-more-toggle {
   border-bottom: 0;
@@ -5045,11 +5110,34 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
    up, 14px gaps and no literal middot separators — the mockup separates by
    space, so a narrow viewport drops spacing rather than stacking glyphs. */
 .app-footer {
-  height: 30px;
+  height: var(--app-footer-h, 30px);
   padding: 0 var(--space-4);
   color: var(--text-dim);
   font-size: var(--fs-mono, 11px);
   line-height: 1.5;
+}
+/* ── Toasts stand clear of the status bar ───────────────────────────────
+   #toastContainer is pinned `bottom: var(--space-4)` (16px) by
+   core/modal-host.css, which is 14px inside a 30px status bar. Measured on
+   this build at every desktop width: the copy-link toast covered the top
+   41–43% of the live "online / offline" indicator and won the stacking
+   order (elementFromPoint over the overlap returns the toast), so the word
+   was sliced in half lengthwise for as long as the toast was up — and the
+   one thing a status light is for is being readable at the moment something
+   just happened.
+
+   Lifted to clear the bar plus a gap. Scoped to `body:has(.app-footer)` for
+   two reasons: it is the inspector's bar, so no other section pays for it,
+   and the :has() gives this enough specificity to win over modal-host.css
+   regardless of which stylesheet the loader appends last — both files are
+   injected at runtime, so source order here is not something to rely on.
+
+   The durable owner of the toast layer is core/modal-host.css; that file
+   belongs to the shell, so the offset is declared from the side that knows
+   the bar's height. Same reason inspector.css already reaches for
+   .toast-container under [data-embed='1'] further up. */
+body:has(.app-footer) .toast-container {
+  bottom: calc(var(--app-footer-h, 30px) + var(--space-3));
 }
 .footer-status-row {
   gap: 14px;
@@ -5098,6 +5186,57 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
 .analysis-strip-context .analysis-strip-value {
   font-size: var(--fs-chip, 12px);
   font-weight: 400;
+}
+/* ── The chip row wraps on the free-text chip, not on the score ─────────
+   The row is five chips and it wraps. Which one falls to the second line is
+   decided by DOM order, and the score was last, so at 1920px the second row
+   held the score alone with 651px of empty rule beside it — a lopsided band
+   under the headline, and the one chip that carries a verdict placed where
+   the eye reads "leftover".
+
+   The context chip is the one that should absorb the slack: it is a run of
+   prose ("web · Google (Android) · NGA · GDPR GPP"), it has no label to lose,
+   and every strip value already carries its full text as a `title` (set in
+   renderAnalysisStrip), so an ellipsised tail is recoverable — which is not
+   true of a score. So it goes last visually and is allowed to shrink. DOM
+   order is untouched — same source order for screen readers and for the
+   `title` pass in renderAnalysisStrip — and nothing here is focusable, so
+   the visual/DOM split costs no tab order.
+
+   `flex: 1 1 0` is doing the load-bearing work, not `order`: flex breaks
+   lines on an item's HYPOTHETICAL size, before any shrinking happens, so a
+   chip that merely *could* shrink still wraps at its full content width. A
+   zero basis clamped by `min-width` makes the chip ask for 140px when the
+   line is being collected and take whatever is left over once it is —
+   capped at its own text width so a 4K row does not hand it 1100px of
+   tinted background to sit in.
+
+   Keyed on the bar's own width, and only from 420px up. Below that the trade
+   inverts: a 358px bar (390px phone) leaves the context chip ~43px, which is
+   "w…" — and there a second row is cheap, because the bar is the only thing
+   competing for that space. Measured, uk, this build's payload:
+
+     bar 810px (1920px window)  2 rows, 651px trailing empty  →  1 row
+     bar 756px (1024px window)  2 rows                        →  1 row
+     bar 568px (600px window)   2 rows                        →  1 row
+     bar 358px (390px phone)    2 rows                        →  unchanged
+
+   1366px is the one that stays at two rows above the threshold — its fact
+   chips alone are wider than the column — but the second row now carries two
+   chips instead of a lone pill, and its leftover drops 118px → 91px. */
+@container analysis-strip (min-width: 420px) {
+  .analysis-strip-context {
+    order: 1;
+    flex: 1 1 0;
+    min-width: 140px;
+    max-width: max-content;
+  }
+  .analysis-strip-context .analysis-strip-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
 }
 /* A hard square, as drawn. */
 .verdict-badge {

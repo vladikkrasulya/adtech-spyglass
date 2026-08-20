@@ -27,6 +27,11 @@
         en: 'Show this help',
         ru: 'Показать эту справку',
       },
+      'shortcuts.row.search': {
+        uk: 'Глобальний пошук',
+        en: 'Global search',
+        ru: 'Глобальный поиск',
+      },
       'shortcuts.row.run': {
         uk: 'Запустити аналіз',
         en: 'Run analysis',

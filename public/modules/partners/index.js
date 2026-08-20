@@ -154,6 +154,46 @@ export async function confirmAddPartner() {
   }
 }
 
+/**
+ * The locale, read the way i18n.js's activeLocale() reads it — <html lang>
+ * first, the stored preference second, Ukrainian as the default — because
+ * `t()` resolves the string but exposes no getter for the locale it resolved
+ * in, and the plural form below has to agree with that same choice.
+ */
+function activeLang() {
+  const fromHtml =
+    document.documentElement.getAttribute('lang') ||
+    document.documentElement.getAttribute('data-lang');
+  if (fromHtml === 'en' || fromHtml === 'uk' || fromHtml === 'ru') return fromHtml;
+  try {
+    const v = localStorage.getItem('kt-lang');
+    if (v === 'en' || v === 'ru') return v;
+  } catch (_e) {
+    /* storage blocked — same default as i18n.js */
+  }
+  return 'uk';
+}
+
+/**
+ * Which of the three `confirm.delete_partner_with_count_*` keys a count
+ * takes. Same rule as pluralKey() in public/ortbtools.app.js — Ukrainian and
+ * Russian want three forms (1 зразок, 2 зразки, 5 зразків) and the teens are
+ * the trap: 11 takes the 5+ form while 21 takes the singular. English needs
+ * two, so `few` and `many` carry the same sentence there.
+ *
+ * This is the last thing a user reads before a destructive action; "1
+ * зразок(ів)" was a machine talking at exactly the wrong moment.
+ */
+function pluralKeySuffix(n) {
+  const lang = activeLang();
+  if (lang !== 'uk' && lang !== 'ru') return n === 1 ? 'one' : 'many';
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'one';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'few';
+  return 'many';
+}
+
 export async function deletePartner(id) {
   // Fetch count first so the user sees how many samples are about to
   // become unassigned. Cheap (single COUNT query). Falls back to the
@@ -167,7 +207,7 @@ export async function deletePartner(id) {
   }
   const message =
     count != null && count > 0
-      ? t('confirm.delete_partner_with_count', { count })
+      ? t('confirm.delete_partner_with_count_' + pluralKeySuffix(count), { count })
       : t('confirm.delete_partner');
   if (!confirm(message)) return;
   try {

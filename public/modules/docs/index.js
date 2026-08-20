@@ -57,6 +57,14 @@ const L = {
   // no page-level h1 of its own any more, only the active topic's.
   contents: { en: 'Contents', uk: 'Зміст', ru: 'Содержание' },
 
+  // The permalink mark on an article subheading. `{t}` is the heading, so a
+  // page with sixteen of these does not offer sixteen identically named links.
+  anchorLabel: {
+    en: 'Link to section “{t}”',
+    uk: 'Посилання на розділ «{t}»',
+    ru: 'Ссылка на раздел «{t}»',
+  },
+
   // Contents groups. Uppercase belongs to this level only — the group
   // header — and to nothing else on the page.
   groupStart: { en: 'Getting started', uk: 'Початок роботи', ru: 'Начало работы' },
@@ -991,13 +999,63 @@ function inline(map, lang) {
   return escapeHtml(pick(map, lang)).replace(/`([^`]+)`/g, '<code class="docs-code">$1</code>');
 }
 
+/**
+ * Stable fragment id for an article subheading.
+ *
+ * Slugged from the ENGLISH heading, never from the rendered one: an anchor
+ * copied out of the Ukrainian page has to keep working when it is opened in
+ * English, and a slug of «Що не робить» would not survive the trip. A heading
+ * with no English text gets no id rather than an empty one.
+ */
+function headingId(map) {
+  return slug(pick(map, FALLBACK_LANG)).replace(/^-+|-+$/gu, '');
+}
+
+/**
+ * Subheading slug → the topic whose article carries it.
+ *
+ * A URL has one fragment to spend and the topic already spends it, so a
+ * subheading is not addressable as a fragment of its own — /docs#url-payloads
+ * used to render the FIRST topic and say nothing. Resolving through this map
+ * makes the id on the heading an address: the owning topic opens and the
+ * heading is scrolled to.
+ *
+ * First registration wins, and a slug that collides with a topic id is not
+ * registered at all — a topic must keep addressing its own article.
+ */
+const HEADING_TOPIC = new Map();
+for (const topic of TOPICS) {
+  for (const block of topic.body) {
+    if (block.t !== 'h2') continue;
+    const id = headingId(block.v);
+    if (!id || TOPIC_BY_ID.has(id) || HEADING_TOPIC.has(id)) continue;
+    HEADING_TOPIC.set(id, topic.id);
+  }
+}
+
 /** Article body blocks → HTML. Sizes are the stylesheet's business, not this. */
 function renderBlocks(blocks, lang) {
   return blocks
     .map((b) => {
       if (b.t === 'lead') return `<p class="docs-lead">${inline(b.v, lang)}</p>`;
       if (b.t === 'p') return `<p class="docs-p">${inline(b.v, lang)}</p>`;
-      if (b.t === 'h2') return `<h2 class="docs-h2">${escapeHtml(pick(b.v, lang))}</h2>`;
+      if (b.t === 'h2') {
+        const text = escapeHtml(pick(b.v, lang));
+        const id = headingId(b.v);
+        if (!id) return `<h2 class="docs-h2">${text}</h2>`;
+        // The permalink is aria-hidden and out of the tab order on purpose.
+        // A focusable link inside a heading lends the heading its own name,
+        // so every h2 would be announced as its title followed by "link to
+        // section <that same title>". The address it copies is reachable
+        // without it — the id is on the heading, and the contents list is
+        // what keyboard navigation of this page already goes through.
+        const label = pick(L.anchorLabel, lang).replace('{t}', pick(b.v, lang));
+        return (
+          `<h2 class="docs-h2" id="${escapeHtml(id)}">${text}` +
+          `<a class="docs-h2__anchor" href="#${escapeHtml(id)}" tabindex="-1"` +
+          ` aria-hidden="true" title="${escapeHtml(label)}">#</a></h2>`
+        );
+      }
       if (b.t === 'note') {
         return `<div class="docs-note">${ICON_INFO}<span>${inline(b.v, lang)}</span></div>`;
       }
@@ -1052,13 +1110,45 @@ function renderReaderShell(lang, activeId, innerHtml, wide, topicBase) {
   );
 }
 
-/** The fragment names the topic; anything unknown falls back to the first. */
-function topicFromHash() {
+/**
+ * What the fragment addresses: a topic, a subheading inside one, or nothing.
+ *
+ * `known` is false only for a fragment that names neither — the case where the
+ * first topic is rendered as a fallback and the address in the bar therefore
+ * describes something that is not on screen. A bare /docs is `known`: it asks
+ * for the section, gets the section's first topic, and needs no fragment
+ * written into it to be honest about that.
+ */
+function resolveHash() {
   const raw = (typeof location !== 'undefined' && location.hash ? location.hash : '').replace(
     /^#/,
     '',
   );
-  return TOPIC_BY_ID.has(raw) ? raw : DEFAULT_TOPIC;
+  if (TOPIC_BY_ID.has(raw)) return { topic: raw, heading: '', known: true };
+  const owner = HEADING_TOPIC.get(raw);
+  if (owner) return { topic: owner, heading: raw, known: true };
+  return { topic: DEFAULT_TOPIC, heading: '', known: raw === '' };
+}
+
+/**
+ * The nearest ancestor that actually scrolls.
+ *
+ * The article column is not it: #app-root is `flex: 1; overflow: auto`, so the
+ * column has no scrollbar of its own and the `column.scrollTop = 0` this
+ * replaced set a property nothing read. Switching topics half-way down a long
+ * article left the reader half-way down the next one, below its title.
+ */
+function scrollingAncestor(el) {
+  const view = typeof window !== 'undefined' && window.getComputedStyle ? window : null;
+  let node = el && el.parentElement;
+  while (node) {
+    const overflow = view ? view.getComputedStyle(node).overflowY : '';
+    if ((overflow === 'auto' || overflow === 'scroll') && node.scrollHeight > node.clientHeight) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
 }
 
 /**
@@ -1067,13 +1157,59 @@ function topicFromHash() {
  * location.hash would race the pushState that put it there.
  */
 function mountReader(root, lang, signal, initialId) {
-  let active = TOPIC_BY_ID.has(initialId) ? initialId : topicFromHash();
+  const opened = TOPIC_BY_ID.has(initialId)
+    ? { topic: initialId, heading: '', known: true }
+    : resolveHash();
+  let active = opened.topic;
   root.innerHTML = renderReaderShell(lang, active, renderArticle(active, lang), false);
 
   const column = root.querySelector('[data-article]');
 
-  function show(id, push) {
-    active = TOPIC_BY_ID.has(id) ? id : DEFAULT_TOPIC;
+  /**
+   * An address that named nothing is rewritten to the topic that answered it.
+   * /docs#nonexistent rendered "What ortbtools checks" and left the fragment
+   * standing, so the URL described a page that was not on screen and stayed
+   * wrong when it was copied to someone else.
+   *
+   * replaceState, not pushState: that address was never a place, so Back must
+   * not have to walk back out through it. The entry's own state object is
+   * passed straight back in — this rewrites the URL of an entry the shell
+   * created, and clearing what it put there is not this module's business.
+   */
+  function straighten(at) {
+    if (at.known || typeof window === 'undefined' || !window.history) return;
+    window.history.replaceState(window.history.state, '', '#' + at.topic);
+  }
+
+  /** The heading a fragment names, looked up by id rather than by selector. */
+  function headingEl(id) {
+    if (!column || !id) return null;
+    for (const h of column.querySelectorAll('.docs-h2')) if (h.id === id) return h;
+    return null;
+  }
+
+  /**
+   * Put the reader where the address says. A heading fragment is scrolled to
+   * here rather than by the browser: the article does not exist yet when the
+   * page loads, so the one native attempt at it has already failed by then.
+   */
+  function reveal(heading) {
+    const el = headingEl(heading);
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView();
+      return;
+    }
+    const scroller = scrollingAncestor(column);
+    if (scroller) scroller.scrollTop = 0;
+  }
+
+  function show(id, push, heading) {
+    const next = TOPIC_BY_ID.has(id) ? id : DEFAULT_TOPIC;
+    // Whether the topic MOVED is what decides the history entry. Clicking the
+    // topic you are already reading used to push a duplicate every time, so
+    // five clicks on "CLI" cost five presses of Back to leave it.
+    const moved = next !== active;
+    active = next;
     if (column) column.innerHTML = renderArticle(active, lang);
     for (const a of root.querySelectorAll('.docs-toc__link[data-topic]')) {
       const on = a.dataset.topic === active;
@@ -1081,11 +1217,17 @@ function mountReader(root, lang, signal, initialId) {
       if (on) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
     }
-    if (push && typeof window !== 'undefined' && window.history) {
+    if (push && moved && typeof window !== 'undefined' && window.history) {
+      // A null state, as before: lang-switch.js re-morphs the page on any
+      // popstate whose state carries `lang`, so copying the current entry's
+      // state into a new one would make Back into a topic do more than move.
       window.history.pushState(null, '', '#' + active);
     }
-    if (column) column.scrollTop = 0;
+    reveal(heading);
   }
+
+  straighten(opened);
+  if (opened.heading) reveal(opened.heading);
 
   // Delegated so the handler survives the contents being re-rendered, and
   // preventDefault()ed so switching topics does not scroll the shell to an
@@ -1094,7 +1236,25 @@ function mountReader(root, lang, signal, initialId) {
   root.addEventListener(
     'click',
     (e) => {
-      const link = e.target.closest && e.target.closest('.docs-toc__link[data-topic]');
+      if (!e.target.closest) return;
+      // The heading permalink is answered here for the same reason the
+      // contents links are: shell-boot.js intercepts every internal <a> on
+      // the document and hands it to navigateTo(), which keeps pathname and
+      // search and drops the fragment — so left-clicking a bare `#heading`
+      // link would be swallowed and do nothing at all. A modified click still
+      // reaches the browser, and the address it copies is the same one.
+      const plain = !e.button && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+      const mark = plain && e.target.closest('.docs-h2__anchor');
+      if (mark) {
+        e.preventDefault();
+        const id = (mark.getAttribute('href') || '').replace(/^#/, '');
+        if (id && typeof window !== 'undefined' && window.history) {
+          window.history.pushState(null, '', '#' + id);
+        }
+        reveal(id);
+        return;
+      }
+      const link = e.target.closest('.docs-toc__link[data-topic]');
       if (!link) return;
       e.preventDefault();
       show(link.dataset.topic, true);
@@ -1103,7 +1263,20 @@ function mountReader(root, lang, signal, initialId) {
   );
 
   if (typeof window !== 'undefined' && window.addEventListener) {
-    const onPop = () => show(topicFromHash(), false);
+    const onPop = () => {
+      const at = resolveHash();
+      straighten(at);
+      // A fragment inside the article you are already reading — a permalink
+      // click, or Back to one — must not redraw it: the browser has scrolled
+      // to the heading by then, and replacing the column would throw away the
+      // element it scrolled to. Back to the plain topic likewise leaves the
+      // scroll position the browser restored alone.
+      if (at.topic === active) {
+        if (at.heading) reveal(at.heading);
+        return;
+      }
+      show(at.topic, false, at.heading);
+    };
     window.addEventListener('popstate', onPop, { signal });
     window.addEventListener('hashchange', onPop, { signal });
   }

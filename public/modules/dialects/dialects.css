@@ -251,12 +251,20 @@ body:has(.dlc-page) .ortbtools-intel-chip {
 .dlc-card--active .dlc-card__eyebrow {
   color: var(--accent-text);
 }
+/* An overlay's name is whatever the builder's text field was given, so it can
+   be one unbroken 300-character run with no space to break at. Without this
+   the title alone widened the card grid's scroll box to 3537px against a
+   1130px viewport — a horizontal scrollbar on the whole page and a heading
+   running off the right edge, while the description under it (which has the
+   property) wrapped correctly. Same value as .dlc-card__desc / .dlc-card__meta
+   below, so all three lines of a card break the same way. */
 .dlc-card__title {
   margin-top: 6px;
   font-family: var(--font-display);
   font-size: var(--fs-md, 17px);
   font-weight: 600;
   color: var(--text);
+  overflow-wrap: anywhere;
 }
 .dlc-card__desc {
   margin-top: 4px;

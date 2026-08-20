@@ -1,7 +1,7 @@
 /* ============================================================
    modules/unlock/i18n.js — per-module translations.
 
-   7 keys × 3 locales. Loaded LAZY by the unlock dispatcher case
+   8 keys × 3 locales. Loaded LAZY by the unlock dispatcher case
    alongside index.js — pushed into window.kt_i18n_modules queue,
    drained by central /i18n.js (or registered directly via
    window.registerI18nModule when the queue has already been
@@ -34,6 +34,15 @@
         uk: 'Шифрування не налаштовано — спробуй увійти спочатку',
         en: 'Encryption not set up — sign in first',
         ru: 'Шифрование не настроено — попробуй сначала войти',
+      },
+      // Shown when the cookie session died while this modal was open
+      // (sign-out in another tab, password reset, expiry). Deliberately
+      // not "wrong password" and not "encryption not set up" — both were
+      // wrong about the account rather than about the session.
+      'unlock.err.session_expired': {
+        uk: 'Сесія завершилась — увійди ще раз',
+        en: 'Your session ended — sign in again',
+        ru: 'Сессия завершилась — войди ещё раз',
       },
       'unlock.err.wrong_password': {
         uk: 'Невірний пароль',

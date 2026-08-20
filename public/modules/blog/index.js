@@ -57,6 +57,10 @@ const L = {
     ru: 'Не удалось загрузить пост.',
   },
   retry: { en: 'Try again', uk: 'Спробувати ще раз', ru: 'Повторить' },
+  // The one string in the post view that never went through pick(): a
+  // firehose item's link back to the source read "original ↗" under all
+  // three locales, in a meta row where the date beside it was localised.
+  original: { en: 'original ↗', uk: 'оригінал ↗', ru: 'оригинал ↗' },
   showMore: { en: 'Show more', uk: 'Показати ще', ru: 'Показать ещё' },
   rss: { en: 'RSS feed', uk: 'RSS-стрічка', ru: 'RSS-лента' },
 };
@@ -119,15 +123,77 @@ function safeRenderMarkdown(src) {
 // Blog URLs now come from /core/routes.js, which is also what search builds
 // its blog links with — two call sites, one spelling.
 
+// A published_at the platform cannot parse, or none at all.
+//
+// `new Date('not-a-date')` does not throw, so the old try/catch never fired:
+// it returned an Invalid Date, and `toLocaleDateString()` on one is the
+// literal string "Invalid Date" — in English, under every locale. That is
+// what the card footer and the article meta line printed. `new Date(null)`
+// is worse than useless: it is 1 January 1970, a confident wrong answer.
+//
+// modules/blog/handler.js already settled this question for the RSS feed —
+// a pubDate it cannot parse is omitted, because a missing date is valid and
+// a fabricated one is not. The UI now gives the same answer.
+function parseDate(isoStr) {
+  if (!isoStr) return null;
+  const d = new Date(isoStr);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function formatDate(isoStr, lang) {
+  const d = parseDate(isoStr);
+  if (!d) return '';
   try {
-    return new Date(isoStr).toLocaleDateString(
-      lang === 'uk' ? 'uk-UA' : lang === 'ru' ? 'ru-RU' : 'en-US',
-      { year: 'numeric', month: 'long', day: 'numeric' },
-    );
+    return d.toLocaleDateString(lang === 'uk' ? 'uk-UA' : lang === 'ru' ? 'ru-RU' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   } catch {
-    return isoStr ? isoStr.slice(0, 10) : '';
+    return String(isoStr).slice(0, 10);
   }
+}
+
+/** The machine-readable half of a <time>. Empty when the date did not parse,
+ *  so the attribute is omitted rather than emitted invalid. */
+function dateAttr(isoStr) {
+  const d = parseDate(isoStr);
+  return d ? d.toISOString() : '';
+}
+
+/** `<time datetime="…">Label</time>`. With no date to state it collapses to
+ *  nothing — except where a class was asked for, because .blog-card__date is
+ *  the `flex: 1` spacer that holds the language pill against the card's right
+ *  edge, and dropping the element would slide the pill inward on exactly the
+ *  cards that already look wrong. */
+function timeTag(isoStr, lang, className) {
+  const label = formatDate(isoStr, lang);
+  const cls = className ? ` class="${escapeHtml(className)}"` : '';
+  if (!label) return cls ? `<span${cls}></span>` : '';
+  const attr = dateAttr(isoStr);
+  return `<time${cls}${attr ? ` datetime="${escapeHtml(attr)}"` : ''}>${escapeHtml(label)}</time>`;
+}
+
+// Topic tags. The model has carried them since it was written — the reader
+// parser fills them, the list and post endpoints both return them — and no
+// view had ever rendered one. They are the author's own words, so they are
+// shown verbatim and escaped; the `#` is what marks them as topics without
+// a noun that would need three translations.
+//
+// Not links: filtering by tag needs a `tag` parameter on
+// /api/v1/blog/list, which modules/blog/handler.js does not accept yet. A
+// chip that looks clickable and does nothing is worse than a plain one.
+const MAX_TAGS = 6;
+function renderTags(tags) {
+  if (!Array.isArray(tags)) return '';
+  const list = tags
+    .map((t) => String(t == null ? '' : t).trim())
+    .filter(Boolean)
+    .slice(0, MAX_TAGS);
+  if (!list.length) return '';
+  return `<span class="blog-post__tags">${list
+    .map((t) => `<span class="blog-post__tag">#${escapeHtml(t)}</span>`)
+    .join('')}</span>`;
 }
 
 /** Parse /blog/{lang}/{slug} or /{locale}/blog/{lang}/{slug} from pathname */
@@ -401,7 +467,6 @@ async function mountListing(root, ctx, lang) {
 function renderCard(post, uiLang) {
   const catKey = post.category || 'guide';
   const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
-  const dateStr = formatDate(post.published_at, post.lang || uiLang);
   const sourceLabel =
     post.source === 'markdown' ? pick(L.editorial, uiLang) : pick(L.firehose, uiLang);
   const sourceIcon = post.source === 'markdown' ? '📝' : '📰';
@@ -422,7 +487,7 @@ function renderCard(post, uiLang) {
       </h2>
       <p class="blog-card__summary">${escapeHtml(post.summary)}</p>
       <footer class="blog-card__foot">
-        <time class="blog-card__date">${escapeHtml(dateStr)}</time>
+        ${timeTag(post.published_at, post.lang || uiLang, 'blog-card__date')}
         <span class="blog-card__lang">${escapeHtml((post.lang || '').toUpperCase())}</span>
       </footer>
     </article>
@@ -495,7 +560,6 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
       const post = data.post;
       const catKey = post.category || 'guide';
       const catLabel = pick(CATEGORY_LABELS[catKey] || { en: catKey }, uiLang);
-      const dateStr = formatDate(post.published_at, postLang);
 
       if (!ownsMount()) return;
       const originalBody = String(post.body || '');
@@ -507,9 +571,10 @@ async function mountPost(root, ctx, uiLang, postLang, slug) {
             <span class="blog-badge blog-badge--${escapeHtml(catKey)}">${escapeHtml(catLabel)}</span>
             <h1 class="blog-post__title">${escapeHtml(post.title)}</h1>
             <div class="blog-post__meta">
-              <time>${escapeHtml(dateStr)}</time>
+              ${timeTag(post.published_at, postLang, '')}
               <span class="blog-card__lang">${escapeHtml((post.lang || '').toUpperCase())}</span>
-              ${safeHref(post.url) ? `<a class="blog-post__src" href="${escapeHtml(safeHref(post.url))}" target="_blank" rel="noopener nofollow">original ↗</a>` : ''}
+              ${safeHref(post.url) ? `<a class="blog-post__src" href="${escapeHtml(safeHref(post.url))}" target="_blank" rel="noopener nofollow">${escapeHtml(pick(L.original, uiLang))}</a>` : ''}
+              ${renderTags(post.tags)}
             </div>
           </header>
           <div class="blog-post__body"></div>

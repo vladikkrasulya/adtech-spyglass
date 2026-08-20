@@ -5,6 +5,9 @@
      ?              → open cheat-sheet (skipped while typing)
      Ctrl/Cmd+S     → save current sample to library (auth-gated by openSaveModal)
      Ctrl/Cmd+Enter → already wired via ortbtools.app.js#handleKeydown
+     Ctrl/Cmd+K     → already wired via modules/search/index.js (listed by the
+                      cheat-sheet, bound there — the sheet documents every key
+                      the page answers, not only the ones this file installs)
      Esc            → already wired via ortbtools.app.js DOMContentLoaded handler
 
    Self-contained: injects its own <style> on first use. Reuses the existing
@@ -79,7 +82,21 @@
           ['M', tt('shortcuts.row.mirror')],
         ]
       : [];
+    // Ctrl/⌘+K — the one binding that works on EVERY section, and the only
+    // one the product advertises outside this sheet: the topbar prints a ⌘K
+    // hint right inside the search field. It was missing here, so the help
+    // screen listed three keys that need an editor and omitted the one that
+    // never does. Gated the same way the editor rows are, on the control the
+    // key acts on: /modules/search/ installs the global handler when it
+    // mounts onto that input, so where there is no input there is no chord,
+    // and the sheet must not promise one. Spelled "Ctrl" to match the rows
+    // beside it — the handler accepts Ctrl and ⌘ alike, so it is true on
+    // every platform.
+    const searchRows = document.querySelector('.kt-topbar__search-input')
+      ? [['Ctrl + K', tt('shortcuts.row.search')]]
+      : [];
     const rows = [['?', tt('shortcuts.row.help')]]
+      .concat(searchRows)
       .concat(editorRows)
       .concat([['Esc', tt('shortcuts.row.close')]]);
     const body = rows

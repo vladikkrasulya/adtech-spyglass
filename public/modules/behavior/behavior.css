@@ -265,12 +265,39 @@
   overflow: visible;
 }
 
+/* These three are messages ABOUT the grid, not cells in it. Without the
+   span they were laid into the first auto-fill track — a ~300px column on
+   a 1440px page — so "Не вдалось завантажити сценарії." wrapped mid-phrase
+   in the top-left corner and read as a broken card rather than a notice. */
+.bhv-loading,
+.bhv-empty,
+.bhv-error {
+  grid-column: 1 / -1;
+}
 .bhv-loading,
 .bhv-empty {
   padding: var(--space-6, 32px);
   text-align: center;
   color: var(--text-muted, #46556b);
   font-size: 14px;
+}
+
+/* Failed catalog load: one localized sentence and a way out of it. */
+.bhv-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-6, 32px);
+  text-align: center;
+}
+.bhv-error__text {
+  margin: 0;
+  color: var(--text-muted, #46556b);
+  font-size: var(--fs-sm, 13px);
+}
+.bhv-error .bhv-btn {
+  flex: 0 0 auto;
 }
 
 /* Stats bar */

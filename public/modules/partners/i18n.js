@@ -1,7 +1,8 @@
 /* ============================================================
    modules/partners/i18n.js — per-module translations.
 
-   11 keys × 3 locales. Loaded LAZY by index.js — pushed into
+   12 keys × 3 locales (the delete confirm is three of them — one per
+   plural form; see the note above them). Loaded LAZY by index.js — pushed into
    window.kt_i18n_modules queue, drained by central /i18n.js (or
    registered directly via window.registerI18nModule when the queue
    has already been drained, which is always the case here since
@@ -61,14 +62,31 @@
         ru: 'Не удалось удалить партнёра: {error}',
       },
       'confirm.delete_partner': {
-        uk: 'Видалити цього партнера? Запити що були з ним повʼязані стануть "без партнера" (не видаляються).',
+        uk: 'Видалити цього партнера? Зразки, що були з ним повʼязані, стануть "без партнера" (не видаляються).',
         en: 'Delete this partner? Linked samples become "no partner" (they’re not deleted).',
-        ru: 'Удалить этого партнёра? Запросы, которые с ним были связаны, станут "без партнёра" (не удаляются).',
+        ru: 'Удалить этого партнёра? Образцы, которые с ним были связаны, станут "без партнёра" (не удаляются).',
       },
-      'confirm.delete_partner_with_count': {
-        uk: 'Видалити цього партнера? {count} запит(ів) що зараз йому привʼязані стануть "без партнера" (записи НЕ видаляються).',
-        en: 'Delete this partner? {count} sample(s) currently assigned to it will become "no partner" (they are NOT deleted).',
-        ru: 'Удалить этого партнёра? {count} запрос(ов), которые сейчас к нему привязаны, станут "без партнёра" (записи НЕ удаляются).',
+      /* Three keys, not one: this is the last thing a user reads before a
+         destructive action, and "1 запит(ів)" is a machine talking. The
+         counted noun is now the same word the Samples screen uses for the
+         same rows (зразок / образец), not "запит"/"запрос" — the count is
+         of saved samples, and a confirm that renames them mid-sentence
+         makes the reader wonder what else is about to be deleted.
+         index.js picks the form; see pluralKeySuffix() there. */
+      'confirm.delete_partner_with_count_one': {
+        uk: 'Видалити цього партнера? {count} зразок, що зараз йому привʼязаний, стане "без партнера" (записи НЕ видаляються).',
+        en: 'Delete this partner? {count} sample currently assigned to it will become "no partner" (it is NOT deleted).',
+        ru: 'Удалить этого партнёра? {count} образец, который сейчас к нему привязан, станет "без партнёра" (записи НЕ удаляются).',
+      },
+      'confirm.delete_partner_with_count_few': {
+        uk: 'Видалити цього партнера? {count} зразки, що зараз йому привʼязані, стануть "без партнера" (записи НЕ видаляються).',
+        en: 'Delete this partner? {count} samples currently assigned to it will become "no partner" (they are NOT deleted).',
+        ru: 'Удалить этого партнёра? {count} образца, которые сейчас к нему привязаны, станут "без партнёра" (записи НЕ удаляются).',
+      },
+      'confirm.delete_partner_with_count_many': {
+        uk: 'Видалити цього партнера? {count} зразків, що зараз йому привʼязані, стануть "без партнера" (записи НЕ видаляються).',
+        en: 'Delete this partner? {count} samples currently assigned to it will become "no partner" (they are NOT deleted).',
+        ru: 'Удалить этого партнёра? {count} образцов, которые сейчас к нему привязаны, станут "без партнёра" (записи НЕ удаляются).',
       },
     },
   };

@@ -26,10 +26,10 @@ fires AFTER the modal is open (from the modal's primary button or
   from `/core/utils.js`. Exports `openUnlockModal()` and
   `doUnlock()`. Self-registers both on `window.openUnlockModal` /
   `window.doUnlock` for the dispatcher.
-- `i18n.js` — 7 keys × 3 locales: `modal.unlock.title`,
+- `i18n.js` — 8 keys × 3 locales: `modal.unlock.title`,
   `unlock.subtitle`, `unlock.err.no_crypto`,
-  `unlock.err.wrong_password`, `btn.unlock`, `btn.signout_instead`,
-  `toast.library_unlocked`.
+  `unlock.err.session_expired`, `unlock.err.wrong_password`,
+  `btn.unlock`, `btn.signout_instead`, `toast.library_unlocked`.
 - `README.md` — this file.
 
 ## Window APIs (provides)
@@ -42,8 +42,12 @@ fires AFTER the modal is open (from the modal's primary button or
 ## Window APIs (consumes)
 
 - `window.closeModal` — modal lifecycle (provided by ortbtools.app.js).
-- `window.openAuthModal` — guest fallback (provided by ortbtools.app.js;
-  the unlock modal is for signed-in-but-locked users only).
+- `window.lazyOpenAuth` — guest fallback and dead-session escape
+  (installed at boot by `/core/modal-host.js`; it imports
+  `/modules/auth/` before opening the modal). `window.openAuthModal` is
+  kept only as a last-resort fallback: it exists solely _after_ that
+  import, so calling it directly did nothing at all for a user who
+  reached unlock without having opened sign-in earlier.
 - `window.OrtbtoolsSession.user` — currently signed-in user (read for
   the email-in-subtitle + presence guard).
 - `window.OrtbtoolsSession.api` — HTTP helper (for `/api/auth/me`).
@@ -60,11 +64,18 @@ fires AFTER the modal is open (from the modal's primary button or
 
 The dispatcher's `'open-unlock'` case lazy-loads this module
 unconditionally (no cookie ⇒ `OrtbtoolsSession.user` is null ⇒ the
-modal redirects to `openAuthModal('login')` itself). `doUnlock()`
-relies on the live cookie for the `/api/auth/me` round-trip; if the
-cookie has expired between modal-open and submit, the API call fails
-and we surface `unlock.err.wrong_password` (best-effort UX — the user
-re-tries via the auth modal).
+modal sends the user to the sign-in modal itself).
+
+`OrtbtoolsSession.user` is a client-side cache, so that guard cannot
+see a cookie that died server-side — a sign-out in another tab, a
+password reset, plain expiry. `/api/auth/me` does not answer 401 for
+that case either: it answers `200 {user: null, encryption: null}`.
+`doUnlock()` therefore checks `me.user` FIRST and, when it is null,
+clears the local session, says `unlock.err.session_expired`, and opens
+sign-in. Only after that check may a null `me.encryption` be read as
+"this account has no crypto state" and a thrown `openFromPassword` as
+"wrong password" — before it, both messages were confident statements
+about the account when the truth was about the session.
 
 ## DOM events / contracts
 

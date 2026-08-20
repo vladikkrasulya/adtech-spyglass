@@ -2693,6 +2693,39 @@ export async function mountInspector(root, ctx) {
       return [];
     }
   })();
+  /**
+   * The clock time of a history entry, in the locale the PAGE is in.
+   *
+   * `new Date().toLocaleTimeString()` with no argument formats in the
+   * BROWSER's locale, which has nothing to do with the one the user chose
+   * here: on a machine set to en-US the Ukrainian sidebar listed
+   * "11:54:02 AM ПОПЕРЕДЖЕННЯ" — an English 12-hour clock inside a
+   * Ukrainian row, when uk uses a 24-hour one. Everything else numeric in
+   * this file already goes through activeLocaleTag(); the timestamp had
+   * simply been left out of it.
+   *
+   * Formatted at RENDER time from the stored epoch rather than at write
+   * time, for two reasons: entries already sitting in localStorage — whose
+   * `time` string was frozen in whatever locale wrote them — are corrected
+   * the moment the list repaints, and a language switch re-renders the list
+   * (kt:lang-change → renderHistory), so the rows follow the switch instead
+   * of keeping the clock of the locale they were recorded in.
+   *
+   * `e.time` remains the fallback for pre-`ts` entries, which the loader
+   * above deliberately still accepts.
+   */
+  function historyTime(e) {
+    if (!e) return '';
+    if (typeof e.ts === 'number' && isFinite(e.ts)) {
+      try {
+        return new Date(e.ts).toLocaleTimeString(activeLocaleTag());
+      } catch (_err) {
+        /* bad tag or ancient engine — fall through to the stored string */
+      }
+    }
+    return e.time || '';
+  }
+
   function persistHistory() {
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(historyStore.slice(0, HISTORY_MAX)));
@@ -2792,7 +2825,7 @@ export async function mountInspector(root, ctx) {
           '</div>' +
           '<div class="history-meta">' +
           '<span>' +
-          escapeHtml(e.time) +
+          escapeHtml(historyTime(e)) +
           '</span>' +
           '<span class="history-status ' +
           cls +
@@ -2848,7 +2881,7 @@ export async function mountInspector(root, ctx) {
       '<span>' +
       escapeHtml(e.title || t('fallback.history_entry')) +
       ' · ' +
-      escapeHtml(e.time || '') +
+      escapeHtml(historyTime(e)) +
       '</span>' +
       '<span class="mono-label" style="color:var(--text-dim)">' +
       escapeHtml(humanStatus(e.status) || e.status || '') +
@@ -3881,7 +3914,12 @@ export async function mountInspector(root, ctx) {
           res: resVal ? JSON.stringify(res, null, 2) : '',
           title: entity,
           status,
-          time: new Date().toLocaleTimeString(),
+          // Superseded by historyTime(), which formats from `ts` at render
+          // time. Still written — and now written in the page's locale
+          // rather than the browser's — because it is the fallback an older
+          // cached bundle, and the loader's pre-`ts` migration path, both
+          // still read.
+          time: new Date().toLocaleTimeString(activeLocaleTag()),
         });
         if (historyStore.length > HISTORY_MAX) historyStore.length = HISTORY_MAX;
         // Fresh analysis is always at index 0 — pin the active highlight

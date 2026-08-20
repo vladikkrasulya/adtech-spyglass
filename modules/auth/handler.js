@@ -45,6 +45,19 @@ const log = require('../../lib/logger').child('auth');
 const { readJson, sendJson, sendError } = require('../../lib/http');
 
 /**
+ * The ONE string the client is allowed to see when an outbound email
+ * doesn't happen. Everything upstream of it — Resend's API text, and in
+ * particular tokens.js's `EMAIL_TOKEN_SECRET missing or too short (need
+ * >= 32 chars). Generate with: openssl rand -hex 32` — names server
+ * configuration and must not cross the HTTP boundary. Registration used
+ * to forward `err.message` verbatim in `email_error`, and the
+ * verify-email resend forwarded it as a 500 body that the UI pasted
+ * straight into a toast. The real cause goes to the log and to the admin
+ * alert, where the person who can fix it will actually read it.
+ */
+const EMAIL_UNSENT_PUBLIC_MSG = 'Email provider error — try again in a few minutes.';
+
+/**
  * @param {{
  *   auth: any,
  *   Users: any,
@@ -111,7 +124,8 @@ function createAuthRoutesModule(deps) {
           // dev-mode short-circuit returns { dev: true, link } and doesn't actually deliver
           emailSent = !result || !('dev' in result) || !result.dev;
         } catch (err) {
-          emailError = err.message;
+          // Generic on the wire, specific in the log + admin alert.
+          emailError = EMAIL_UNSENT_PUBLIC_MSG;
           log.error({ err }, 'register verify-email send failed');
           notifyAdmin(
             `Verify email send failed for new user <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
@@ -233,6 +247,13 @@ function createAuthRoutesModule(deps) {
         'Too many verify-email requests. Try again later (limit: 5/hour/IP).',
       );
     }
+    // Both failure branches below answer 200 with `email_sent: false`
+    // rather than 5xx — Cloudflare's edge intercepts 5xx and serves its
+    // own branded HTML error page, which makes the JSON unreachable from
+    // the browser (the toast then reads as a parse error, not as "we
+    // couldn't send"). Signing used to be the one branch that still
+    // answered 500, so a misconfigured token secret produced exactly the
+    // swallowed body this contract exists to avoid.
     let tok;
     try {
       tok = signToken({
@@ -242,11 +263,17 @@ function createAuthRoutesModule(deps) {
         expirySeconds: VERIFY_TOKEN_TTL,
       });
     } catch (err) {
-      return sendError(res, 500, 'verify_email_failed', err.message);
+      log.error({ err }, 'verify-email request sign failed');
+      notifyAdmin(
+        `Verify-email token signing failed for <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
+        { tag: 'email-send-fail', level: 'error' },
+      );
+      return sendJson(res, 200, {
+        success: true,
+        email_sent: false,
+        email_error: EMAIL_UNSENT_PUBLIC_MSG,
+      });
     }
-    // Return 200 with `email_sent: false` rather than 5xx — Cloudflare's
-    // edge intercepts 5xx and serves its own branded HTML error page,
-    // which makes the JSON unreachable from the browser.
     return sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).then(
       () => sendJson(res, 200, { success: true, email_sent: true }),
       (sendErr) => {
@@ -258,7 +285,7 @@ function createAuthRoutesModule(deps) {
         sendJson(res, 200, {
           success: true,
           email_sent: false,
-          email_error: 'Email provider error — try again in a few minutes.',
+          email_error: EMAIL_UNSENT_PUBLIC_MSG,
         });
       },
     );

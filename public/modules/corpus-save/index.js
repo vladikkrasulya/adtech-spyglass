@@ -43,6 +43,28 @@
    ============================================================ */
 import { $, escapeHtml, toast, t } from '/core/utils.js';
 
+/**
+ * Suffix of the plural key an event count needs: `_one` / `_few` / `_many`.
+ *
+ * The i18n interpolator has no plural machinery — it substitutes {vars} and
+ * nothing else — so a counted noun has to pick its own key. The rule is the
+ * same one pluralKey() applies in public/ortbtools.app.js and
+ * tests/plural-forms.test.js pins: 11 takes the 5+ form, 21 the singular,
+ * 111 the 5+ form again. English has two forms, so it never reaches _many.
+ */
+function pluralKeySuffix(n) {
+  const locale =
+    (typeof window.tLocale === 'function' && window.tLocale()) ||
+    document.documentElement.getAttribute('lang') ||
+    'en';
+  if (locale !== 'uk' && locale !== 'ru') return n === 1 ? '_one' : '_few';
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return '_one';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return '_few';
+  return '_many';
+}
+
 export function openCorpusSaveModal() {
   const events = (window.__ortbtoolsBehavior && window.__ortbtoolsBehavior.events) || [];
   const usable = events.filter((e) => e.kind !== 'probe_ready');
@@ -71,7 +93,9 @@ export function openCorpusSaveModal() {
     escapeHtml(t('modal.corpus_save.title')) +
     '</div>' +
     '<div class="modal-row"><div class="kt-corpus-summary">' +
-    escapeHtml(t('modal.corpus_save.summary', { count: usable.length })) +
+    escapeHtml(
+      t('modal.corpus_save.summary' + pluralKeySuffix(usable.length), { count: usable.length }),
+    ) +
     '</div></div>' +
     '<div class="modal-row"><label>' +
     escapeHtml(t('modal.corpus_save.label')) +
@@ -140,7 +164,15 @@ export async function confirmCorpusSave() {
     const j = await r.json();
     if (!j.success) throw new Error(j.error || 'corpus_save_failed');
     if (typeof window.closeModal === 'function') window.closeModal();
-    toast(t('toast.corpus_saved', { count: usable.length, label }), 'success');
+    toast(
+      t('toast.corpus_saved' + pluralKeySuffix(usable.length), {
+        count: usable.length,
+        // The stored value is a machine token; the reader gets the short
+        // localized name the cabinet uses for the same row.
+        label: t('corpus.label.' + label),
+      }),
+      'success',
+    );
   } catch (e) {
     toast(t('toast.corpus_save_failed', { error: e.message }), 'error');
   } finally {

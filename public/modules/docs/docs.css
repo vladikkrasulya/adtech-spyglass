@@ -151,14 +151,47 @@
   letter-spacing: -0.64px;
   color: var(--text);
 }
+/* scroll-margin is what keeps an anchored heading off the top edge of the
+   scroller: the article scrolls inside #app-root, which begins directly
+   under the topbar, so /docs#url-payloads would otherwise land the heading
+   flush against that line with no air above it. */
 .docs-h2 {
   margin: 12px 0 0;
+  scroll-margin-top: var(--space-5, 24px);
   font-family: var(--font-display);
   font-size: 22px;
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: -0.33px;
   color: var(--text);
+}
+
+/* The permalink mark on a subheading. It occupies its space at all times —
+   only the opacity moves — so revealing it does not reflow the heading it
+   sits on. Relative size, like .docs-code: it is a mark beside a title, not
+   a step on the scale.
+   pointer-events, not a `(hover: none)` media query: an element at opacity 0
+   is still tappable, and an invisible target sitting in the line of a heading
+   is worse on a phone than no permalink at all. Tying the target to the same
+   :hover that reveals it means it can only be hit once it is visible — and it
+   keeps the rule out of a media feature that headless browsers and hybrid
+   touch/mouse machines answer differently. */
+.docs-h2__anchor {
+  margin-left: 8px;
+  font-size: 0.62em;
+  font-weight: 500;
+  color: var(--text-dim, #5c6b82);
+  text-decoration: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+.docs-h2:hover .docs-h2__anchor {
+  opacity: 1;
+  pointer-events: auto;
+}
+.docs-h2__anchor:hover {
+  color: var(--accent, #0284c7);
 }
 
 /* 16px is the reading size the mockup sets for doc prose. The vendored

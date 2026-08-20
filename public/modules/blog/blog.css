@@ -392,6 +392,103 @@
   font-style: italic;
 }
 
+/* ── Post body: GFM tables ───────────────────────────────────
+   `table` has been in the sanitizer's allow-list since the Markdown pass,
+   but nothing in this sheet ever styled one. A field reference — the format
+   a spec blog leans on hardest — arrived with the UA defaults: no frame, no
+   header rule, no row separators, and 1px of cell padding running values
+   into their neighbours. Three columns of loose text, not a table.
+
+   Sized like .docs-table, which is where this site already renders field
+   references. Two deliberate differences: no `text-transform: uppercase` on
+   the header (docs headers are fixed chrome labels — these are the author's
+   own words, and `imp.bidfloor` must not become IMP.BIDFLOOR), and no
+   `white-space: nowrap`, because a Markdown table has no column budget and
+   an unwrappable header is what pushes one off the card. */
+.blog-post__body table {
+  /* `display: block` is what gives the table an overflow context of its own,
+     so a cell that cannot wrap (one long ORTB id) scrolls inside the frame
+     instead of stretching the article. `fit-content` + `max-width: 100%`
+     keeps a two-column table at its own width and caps a wide one at the
+     column — the body's inherited `overflow-wrap: anywhere` then wraps the
+     cells rather than letting the row run off the edge. */
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  overflow: auto;
+  margin: 0 0 1em;
+  border: 1px solid var(--border, #3f3f46);
+  border-radius: var(--r-md, 16px);
+  border-collapse: collapse;
+  font-size: var(--fs-sm, 13px);
+  line-height: 1.5;
+}
+.blog-post__body thead tr {
+  background: var(--bg-elev-2, #ecf1f6);
+}
+.blog-post__body th {
+  padding: 8px 12px;
+  font-weight: 600;
+  color: var(--text-muted, #46556b);
+  border-bottom: 1px solid var(--border-strong, #3f3f46);
+  vertical-align: bottom;
+  /* The body sets `overflow-wrap: anywhere` so a 200-char token cannot run
+     off the card, and cells keep it. A column HEADING must not: at 390px it
+     turned "Required" into "Req / uire / d" and the reader lost the label
+     that tells them what the column is. Opting the header back out gives
+     each column a floor of one whole word — which is what tips a genuinely
+     wide table into scrolling inside its frame instead of shredding. */
+  overflow-wrap: normal;
+}
+/* GFM's `:---:` and `---:` reach the cell as an `align` attribute, which is a
+   presentational hint that ANY author rule outranks — a blanket
+   `th { text-align: left }` would silently drop the author's column
+   alignment. So the left default only claims the cells nobody aligned. */
+.blog-post__body th:not([align]) {
+  text-align: left;
+}
+.blog-post__body td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border, #3f3f46);
+  vertical-align: top;
+  color: var(--text);
+}
+.blog-post__body tbody tr:last-child td {
+  border-bottom: none;
+}
+.blog-post__body tbody tr:hover td {
+  background: var(--bg-elev-2, #ecf1f6);
+}
+/* A `code` span is the common table cell in a field reference. Inside a cell
+   its own chip background stacks on the row's, so it keeps the type colour
+   and gives the background back. */
+.blog-post__body td code,
+.blog-post__body th code {
+  background: none;
+  padding: 0;
+  color: var(--text);
+}
+
+/* ── Post body: tags ─────────────────────────────────────────
+   Every post has carried `tags` through the API since the model was written
+   and no view had ever shown one. The `#` prefix is the label — it reads as
+   a topic in all three locales without a word that would need translating. */
+.blog-post__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.blog-post__tag {
+  padding: 2px 8px;
+  border: 1px solid var(--border, #3f3f46);
+  border-radius: var(--r-pill, 999px);
+  font-size: var(--fs-mono, 11px);
+  font-weight: 500;
+  color: var(--text-muted, #46556b);
+  white-space: nowrap;
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 600px) {
   .blog-grid {
