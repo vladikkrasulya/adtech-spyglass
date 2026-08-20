@@ -376,7 +376,7 @@
     return (
       `<div class="mig-outcome" role="status">` +
       `<span>${escapeHtml(parts.join(' · '))}</span>` +
-      `<button type="button" class="btn" id="migrateUndo">${escapeHtml(tt('migrate.undo'))}</button>` +
+      `<button type="button" class="btn btn-secondary btn-sm" id="migrateUndo">${escapeHtml(tt('migrate.undo'))}</button>` +
       `</div>`
     );
   }
@@ -385,11 +385,11 @@
     const count = selectedCount();
     return (
       `<div class="mig-bar">` +
-      `<button type="button" class="btn primary" id="migrateApply"${count ? '' : ' disabled'}>` +
+      `<button type="button" class="btn btn-primary btn-sm" id="migrateApply"${count ? '' : ' disabled'}>` +
       `${escapeHtml(tt('migrate.apply', { count: count }))}</button>` +
-      `<button type="button" class="btn" data-action="mig-all">${escapeHtml(tt('migrate.select_all'))}</button>` +
-      `<button type="button" class="btn" data-action="mig-none">${escapeHtml(tt('migrate.select_none'))}</button>` +
-      `<button type="button" class="btn" data-action="mig-refresh">${escapeHtml(tt('migrate.refresh'))}</button>` +
+      `<button type="button" class="btn btn-secondary btn-sm" data-action="mig-all">${escapeHtml(tt('migrate.select_all'))}</button>` +
+      `<button type="button" class="btn btn-ghost btn-sm" data-action="mig-none">${escapeHtml(tt('migrate.select_none'))}</button>` +
+      `<button type="button" class="btn btn-ghost btn-sm" data-action="mig-refresh">${escapeHtml(tt('migrate.refresh'))}</button>` +
       `</div>` +
       `<div class="mig-hint">${escapeHtml(tt('migrate.apply_hint'))}</div>`
     );

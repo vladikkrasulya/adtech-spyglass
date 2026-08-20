@@ -10,8 +10,8 @@
    chip that appears when the count crosses zero, and disappears (or
    stays dismissed) until the user looks again.
 
-   Phase 7b will add a click-through to a Dialect Builder pane. For
-   now, click-through is a no-op (button is `title`-tooltipped instead).
+   The primary control opens the Dialect Builder; the secondary control
+   dismisses the signal for 24 hours.
    ============================================================ */
 (function () {
   'use strict';
@@ -48,14 +48,21 @@
       '  font-size:14px;line-height:1;',
       '  flex-shrink:0;',
       '}',
-      '.ortbtools-intel-chip__body{flex:1;min-width:0}',
+      '.ortbtools-intel-chip__body{',
+      '  flex:1;min-width:0;',
+      '  appearance:none;border:0;background:transparent;padding:2px;',
+      '  color:inherit;font:inherit;text-align:left;cursor:pointer;',
+      '  border-radius:6px;',
+      '}',
       '.ortbtools-intel-chip__title{',
+      '  display:block;',
       '  font-weight:600;',
       '  font-size:12px;',
       '  color:var(--text, #1a1a1a);',
       '  margin-bottom:2px;',
       '}',
       '.ortbtools-intel-chip__sub{',
+      '  display:block;',
       '  font-size:11px;',
       '  color:var(--text-muted, #666);',
       '  font-family:var(--font-mono, ui-monospace, monospace);',
@@ -64,12 +71,22 @@
       '.ortbtools-intel-chip__close{',
       '  background:transparent;border:none;cursor:pointer;',
       '  color:var(--text-dim, #999);',
-      '  font-size:14px;line-height:1;',
-      '  padding:2px 6px;border-radius:3px;',
+      '  display:grid;place-items:center;',
+      '  width:32px;height:32px;padding:0;',
+      '  font-size:16px;line-height:1;',
+      '  border-radius:6px;',
+      '}',
+      '.ortbtools-intel-chip__body:focus-visible,',
+      '.ortbtools-intel-chip__close:focus-visible{',
+      '  outline:2px solid var(--focus, #0284c7);outline-offset:2px;',
       '}',
       '.ortbtools-intel-chip__close:hover{',
       '  background:var(--bg-2, #f3f3f3);',
       '  color:var(--text, #1a1a1a);',
+      '}',
+      '.ortbtools-intel-chip__announcement{',
+      '  position:absolute;width:1px;height:1px;padding:0;margin:-1px;',
+      '  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;',
       '}',
       '@media (prefers-reduced-motion: reduce){',
       '  .ortbtools-intel-chip{transition:none}',
@@ -84,16 +101,15 @@
     _root = document.createElement('div');
     _root.className = 'ortbtools-intel-chip';
     _root.id = 'ortbtoolsIntelChip';
-    _root.setAttribute('role', 'status');
-    _root.setAttribute('aria-live', 'polite');
     _root.hidden = true;
     _root.innerHTML = [
+      '<span class="ortbtools-intel-chip__announcement" role="status" aria-live="polite" data-intel-announcement></span>',
       '<span class="ortbtools-intel-chip__icon" aria-hidden="true">🧬</span>',
-      '<div class="ortbtools-intel-chip__body" data-intel-open style="cursor:pointer">',
-      '  <div class="ortbtools-intel-chip__title" data-intel-title></div>',
-      '  <div class="ortbtools-intel-chip__sub" data-intel-sub></div>',
-      '</div>',
-      '<button class="ortbtools-intel-chip__close" aria-label="Dismiss" title="Dismiss for 24h" data-intel-close>×</button>',
+      '<button type="button" class="ortbtools-intel-chip__body" data-intel-open>',
+      '  <span class="ortbtools-intel-chip__title" data-intel-title></span>',
+      '  <span class="ortbtools-intel-chip__sub" data-intel-sub></span>',
+      '</button>',
+      '<button type="button" class="ortbtools-intel-chip__close" aria-label="Dismiss" title="Dismiss for 24h" data-intel-close>×</button>',
     ].join('');
     document.body.appendChild(_root);
     _root.querySelector('[data-intel-close]').addEventListener('click', dismiss);
@@ -141,6 +157,9 @@
     const sub = formatBucketBreakdown(summary.byBucket);
     root.querySelector('[data-intel-title]').textContent = title;
     root.querySelector('[data-intel-sub]').textContent = sub;
+    root.querySelector('[data-intel-announcement]').textContent = [title, sub]
+      .filter(Boolean)
+      .join('. ');
     root.hidden = false;
   }
 

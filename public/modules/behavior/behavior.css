@@ -71,15 +71,15 @@
   color: var(--text);
 }
 .bhv-chip.is-active {
-  background: var(--accent, #0284c7);
-  border-color: var(--accent, #0284c7);
-  color: var(--accent-ink, #0d1726);
+  background: var(--control-primary-background, #0369a1);
+  border-color: var(--control-primary-background, #0369a1);
+  color: var(--control-primary-foreground, #ffffff);
 }
 
 /* Grid */
 .bhv-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: var(--space-4, 16px);
 }
 
@@ -239,12 +239,13 @@
   border-color: var(--accent, #0284c7);
 }
 .bhv-btn--primary {
-  background: var(--accent, #0284c7);
-  color: var(--accent-ink, #0d1726);
-  border-color: var(--accent, #0284c7);
+  background: var(--control-primary-background, #0369a1);
+  color: var(--control-primary-foreground, #ffffff);
+  border-color: var(--control-primary-background, #0369a1);
 }
 .bhv-btn--primary:hover {
-  background: var(--accent-hover, #0e96dc);
+  background: var(--control-primary-hover, #075985);
+  border-color: var(--control-primary-hover, #075985);
 }
 
 /* Details expansion */

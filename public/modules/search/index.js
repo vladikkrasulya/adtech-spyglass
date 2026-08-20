@@ -570,12 +570,12 @@ function renderDropdown(state, query, groups, idPrefix) {
     // Hint card
     const label = pickStr(HINT_LABELS.typeToSearch);
     return `
-      <div class="sg-search-hint" role="presentation">
+      <div class="sg-search-hint">
         <div class="sg-search-hint__title">${escHtml(label)}</div>
         <div class="sg-search-hint__chips">
           ${HINT_SUGGESTIONS.map(
             (term) =>
-              `<span class="sg-search-hint__chip" data-suggest="${escHtml(term)}">${escHtml(term)}</span>`,
+              `<button type="button" class="sg-search-hint__chip" data-suggest="${escHtml(term)}">${escHtml(term)}</button>`,
           ).join('')}
         </div>
       </div>
@@ -744,22 +744,30 @@ export function initSearch(inputEl, _shellRoot) {
     }
   }
 
-  function openDropdown(content) {
+  /**
+   * The result popup is a listbox; the empty-query starter actions are real
+   * buttons and therefore live in a dialog instead of pretending to be
+   * listbox options. The combobox points at the same popup id in both modes,
+   * while aria-haspopup follows the semantics currently on screen.
+   */
+  function setPopupMode(mode) {
+    const hints = mode === 'hints';
+    dropdownEl.setAttribute('role', hints ? 'dialog' : 'listbox');
+    dropdownEl.setAttribute(
+      'aria-label',
+      hints ? pickStr(HINT_LABELS.typeToSearch) : pickStr(A11Y_LABELS.results),
+    );
+    inputEl.setAttribute('aria-haspopup', hints ? 'dialog' : 'listbox');
+  }
+
+  function openDropdown(content, mode = 'results') {
+    setPopupMode(mode);
     dropdownEl.innerHTML = content;
     dropdownEl.hidden = false;
     inputEl.setAttribute('aria-expanded', 'true');
     selectedIndex = -1;
     inputEl.removeAttribute('aria-activedescendant');
     keepOnScreen();
-
-    // Wire hint chip clicks
-    dropdownEl.querySelectorAll('[data-suggest]').forEach((chip) => {
-      chip.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        inputEl.value = chip.dataset.suggest;
-        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-    });
   }
 
   function closeDropdown() {
@@ -768,15 +776,19 @@ export function initSearch(inputEl, _shellRoot) {
     selectedIndex = -1;
     inputEl.setAttribute('aria-expanded', 'false');
     inputEl.removeAttribute('aria-activedescendant');
+    // Hand the hidden popup back in its baseline combobox state. Tests and
+    // assistive technology inspecting the closed widget should not inherit a
+    // stale dialog role from the last empty-query hint view.
+    setPopupMode('results');
   }
 
   function renderCurrent(query) {
     if (!indexLoaded) {
-      openDropdown(renderDropdown('loading', query, null, idPrefix));
+      openDropdown(renderDropdown('loading', query, null, idPrefix), query ? 'results' : 'hints');
       return;
     }
     const groups = search(query);
-    openDropdown(renderDropdown('ready', query, groups, idPrefix));
+    openDropdown(renderDropdown('ready', query, groups, idPrefix), query ? 'results' : 'hints');
   }
 
   // ── Index load ───────────────────────────────────────────────
@@ -787,7 +799,7 @@ export function initSearch(inputEl, _shellRoot) {
     // otherwise aria-activedescendant would keep pointing at a row id that
     // this write has just removed from the DOM.
     if (!dropdownEl.hidden) {
-      openDropdown(renderDropdown('loading', query, null, idPrefix));
+      openDropdown(renderDropdown('loading', query, null, idPrefix), query ? 'results' : 'hints');
     }
     try {
       await loadIndex();
@@ -868,6 +880,10 @@ export function initSearch(inputEl, _shellRoot) {
       // in the combobox, from where ArrowDown reopens it.
       inputEl.focus();
     } else if (e.key === 'Tab') {
+      // Empty-query suggestions are native buttons in a dialog popup. Let Tab
+      // enter that small button group; result options remain virtual and keep
+      // the established combobox behaviour below.
+      if (dropdownEl.querySelector('[data-suggest]')) return;
       // No preventDefault: closing and letting focus move on to the next
       // topbar control is exactly the expected combobox behaviour.
       closeDropdown();
@@ -888,13 +904,48 @@ export function initSearch(inputEl, _shellRoot) {
     scrollToAnchor(url);
   }
 
-  // Click on a result row
+  function applySuggestion(chip) {
+    inputEl.value = chip.dataset.suggest || '';
+    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+    // Pointer activation temporarily moves focus to the button. Put it back
+    // on the combobox so ArrowDown immediately works on the result list.
+    inputEl.focus();
+  }
+
+  // Click on a starter query or result row.
   const onDropdownClick = (e) => {
+    const chip = e.target.closest('[data-suggest]');
+    if (chip) {
+      e.preventDefault();
+      applySuggestion(chip);
+      return;
+    }
     const row = e.target.closest('.sg-search-row');
     if (row) {
       e.preventDefault();
       navigate(row.dataset.searchUrl);
     }
+  };
+
+  const onDropdownKeydown = (e) => {
+    const chip = e.target.closest('[data-suggest]');
+    if (!chip) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeDropdown();
+      inputEl.focus();
+    }
+    // Enter and Space intentionally need no handler: native <button>
+    // activation emits the click consumed above.
+  };
+
+  // Once keyboard focus leaves both the combobox and its hint buttons, the
+  // popup is no longer the active interaction. Delay one task so
+  // document.activeElement already names the destination of Tab/Shift+Tab.
+  const onSearchFocusOut = () => {
+    setTimeout(() => {
+      if (!searchWrapper.contains(document.activeElement)) closeDropdown();
+    }, 0);
   };
 
   // Click outside → close
@@ -946,6 +997,8 @@ export function initSearch(inputEl, _shellRoot) {
   inputEl.addEventListener('input', onInput);
   inputEl.addEventListener('keydown', onKeydown);
   dropdownEl.addEventListener('click', onDropdownClick);
+  dropdownEl.addEventListener('keydown', onDropdownKeydown);
+  searchWrapper.addEventListener('focusout', onSearchFocusOut);
   document.addEventListener('keydown', onGlobalKey);
   document.addEventListener('click', onDocClick);
 
@@ -955,6 +1008,8 @@ export function initSearch(inputEl, _shellRoot) {
     inputEl.removeEventListener('input', onInput);
     inputEl.removeEventListener('keydown', onKeydown);
     dropdownEl.removeEventListener('click', onDropdownClick);
+    dropdownEl.removeEventListener('keydown', onDropdownKeydown);
+    searchWrapper.removeEventListener('focusout', onSearchFocusOut);
     document.removeEventListener('keydown', onGlobalKey);
     document.removeEventListener('click', onDocClick);
     closeDropdown();

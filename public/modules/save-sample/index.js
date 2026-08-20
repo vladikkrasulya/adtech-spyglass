@@ -127,12 +127,12 @@ export function openSaveModal() {
     '<div class="modal-title">' +
     escapeHtml(headerText) +
     '</div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="mTitle">' +
     t('sample.label.title') +
     '</label><input id="mTitle" type="text" value="' +
     escapeHtml(String(title)) +
     '"></div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="mPartner">' +
     t('sample.label.partner') +
     '</label><select id="mPartner">' +
     S.partnerOptionsHtml(presetPartner) +
@@ -141,7 +141,7 @@ export function openSaveModal() {
     // suggestPartnerForSave() once the save modal is mounted.
     '<div id="mPartnerHint" class="modal-hint" hidden></div>' +
     '</div>' +
-    '<div class="modal-row"><label>' +
+    '<div class="modal-row"><label for="mNotes">' +
     t('sample.label.notes') +
     '</label><textarea id="mNotes">' +
     escapeHtml(presetNotes) +

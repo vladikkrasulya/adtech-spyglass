@@ -155,9 +155,16 @@ function startServer(port, dataDir) {
   });
 }
 
-/* The narrowest phones still in wide use, plus one large phone. 390 is the
-   iPhone 12–15 class and the width the audit reported against. */
-const PHONE_WIDTHS = [360, 390, 414];
+/* Exercise every translation at the hard 320px floor, then retain the common
+   Ukrainian phone widths from the original regression. */
+const PHONE_CASES = [
+  { width: 320, height: 568, route: '/inspector', label: 'en 320px' },
+  { width: 320, height: 568, route: '/uk/inspector', label: 'uk 320px' },
+  { width: 320, height: 568, route: '/ru/inspector', label: 'ru 320px' },
+  { width: 360, height: 844, route: '/uk/inspector', label: 'uk 360px' },
+  { width: 390, height: 844, route: '/uk/inspector', label: 'uk 390px' },
+  { width: 414, height: 844, route: '/uk/inspector', label: 'uk 414px' },
+];
 
 /* Chrome that is offered on a phone must be offered whole. The rail and its
    contents are excluded on purpose: below 1024px the rail IS off-screen, as
@@ -166,6 +173,8 @@ const MUST_BE_WHOLE = [
   { name: 'the language menu', selector: '.kt-topbar .kt-lang-menu' },
   { name: 'the search button', selector: '.kt-topbar__search-btn' },
   { name: 'the nav hamburger', selector: '.kt-topbar__nav-toggle' },
+  { name: 'the history drawer', selector: '#toggleSidebarLeft' },
+  { name: 'validation settings', selector: '.workbar-settings-menu > summary' },
   { name: 'Analyze', selector: '#analyzeBtn' },
   { name: 'the sample menu', selector: '.workbar .kt-example-menu > summary' },
   { name: 'the tools menu', selector: '.workbar .kt-tools-menu > summary' },
@@ -204,10 +213,11 @@ test(
         ],
       });
 
-      for (const width of PHONE_WIDTHS) {
+      for (const phone of PHONE_CASES) {
+        const { width, height, route, label } = phone;
         const page = await browser.newPage();
-        await page.setViewport({ width, height: 844, isMobile: true, hasTouch: true });
-        await page.goto(`${serverInfo.url}/uk/inspector`, {
+        await page.setViewport({ width, height, isMobile: true, hasTouch: true });
+        await page.goto(`${serverInfo.url}${route}`, {
           waitUntil: 'networkidle2',
           timeout: 30000,
         });
@@ -270,6 +280,71 @@ test(
 
             const split = document.querySelector('.workbench-split');
             const editor = document.querySelector('.workbench-payload');
+            const crumb = document.querySelector('.kt-topbar__crumbs');
+
+            const workbarControls = [
+              '#toggleSidebarLeft',
+              '.workbar-settings-menu > summary',
+              '.workbar .kt-example-menu > summary',
+              '.workbar .kt-tools-menu > summary',
+              '#analyzeBtn',
+            ]
+              .map((selector) => {
+                const el = document.querySelector(selector);
+                if (!el || getComputedStyle(el).display === 'none') return null;
+                const r = el.getBoundingClientRect();
+                return { selector, left: r.left, right: r.right };
+              })
+              .filter(Boolean)
+              .sort((a, b) => a.left - b.left);
+            const workbarOverlaps = [];
+            for (let i = 1; i < workbarControls.length; i += 1) {
+              const before = workbarControls[i - 1];
+              const after = workbarControls[i];
+              if (before.right > after.left + 0.5) {
+                workbarOverlaps.push(`${before.selector} overlaps ${after.selector}`);
+              }
+            }
+
+            const popupBounds = [];
+            for (const [name, detailsSelector, menuSelector] of [
+              ['settings', '.workbar-settings-menu', '.workbar-settings-panel'],
+              ['examples', '.workbar .kt-example-menu', '.example-menu-list'],
+              ['tools', '.workbar .kt-tools-menu', '.tools-menu-list'],
+            ]) {
+              const details = /** @type {HTMLDetailsElement | null} */ (
+                document.querySelector(detailsSelector)
+              );
+              const menu = /** @type {HTMLElement | null} */ (
+                details && details.querySelector(menuSelector)
+              );
+              if (!details || !menu) continue;
+              details.open = true;
+              const r = menu.getBoundingClientRect();
+              popupBounds.push({ name, left: r.left, right: r.right });
+              details.open = false;
+            }
+
+            const more = /** @type {HTMLDetailsElement | null} */ (
+              document.querySelector('.tab-more')
+            );
+            let morePlacement = null;
+            if (more) {
+              const summary = /** @type {HTMLElement} */ (more.querySelector('summary'));
+              const menu = /** @type {HTMLElement} */ (more.querySelector('.tab-more-menu'));
+              summary.scrollIntoView({ block: 'center', inline: 'nearest' });
+              more.open = true;
+              const sr = summary.getBoundingClientRect();
+              const mr = menu.getBoundingClientRect();
+              morePlacement = {
+                summaryTop: sr.top,
+                top: mr.top,
+                bottom: mr.bottom,
+                left: mr.left,
+                right: mr.right,
+              };
+              more.open = false;
+            }
             return {
               clipped,
               overflowing,
@@ -277,6 +352,10 @@ test(
               columns: split ? getComputedStyle(split).gridTemplateColumns : '(no split)',
               editorWidth: editor ? Math.round(editor.getBoundingClientRect().width) : 0,
               pageScrollWidth: document.documentElement.scrollWidth,
+              crumbHidden: !crumb || getComputedStyle(crumb).display === 'none',
+              workbarOverlaps,
+              popupBounds,
+              morePlacement,
             };
           },
           width,
@@ -287,13 +366,13 @@ test(
         assert.deepEqual(
           seen.clipped,
           [],
-          `${width}px: controls run off the screen — ${seen.clipped.join('; ')}. ` +
+          `${label}: controls run off the screen — ${seen.clipped.join('; ')}. ` +
             'A control the phone cannot show is a control the phone does not have.',
         );
 
         assert.ok(
           seen.search.button || (seen.search.typingRoom !== null && seen.search.typingRoom >= 80),
-          `${width}px: search is offered but not usable — no 🔎 button, and the inline field ` +
+          `${label}: search is offered but not usable — no 🔎 button, and the inline field ` +
             `leaves ${seen.search.typingRoom}px for text after its icon and ⌘K hint. ` +
             'Either give the phone the button, or leave the field enough room to read what ' +
             'is being typed.',
@@ -302,7 +381,7 @@ test(
         assert.deepEqual(
           seen.overflowing,
           [],
-          `${width}px: ${seen.overflowing.join('; ')}. Content wider than its row is content ` +
+          `${label}: ${seen.overflowing.join('; ')}. Content wider than its row is content ` +
             'past the right edge of the phone.',
         );
 
@@ -313,23 +392,94 @@ test(
         assert.equal(
           columnCount,
           1,
-          `${width}px: the workbench still has ${columnCount} columns (${seen.columns}). ` +
+          `${label}: the workbench still has ${columnCount} columns (${seen.columns}). ` +
             'Side-by-side editor and results on a phone leave both too narrow to read.',
         );
 
         assert.ok(
           seen.editorWidth >= width * 0.9,
-          `${width}px: the editor is only ${seen.editorWidth}px wide. Stacked, it should have ` +
+          `${label}: the editor is only ${seen.editorWidth}px wide. Stacked, it should have ` +
             'very nearly the whole screen.',
         );
 
         assert.ok(
           seen.pageScrollWidth <= width + 1,
-          `${width}px: the page itself scrolls sideways (${seen.pageScrollWidth}px).`,
+          `${label}: the page itself scrolls sideways (${seen.pageScrollWidth}px).`,
         );
+
+        if (width === 320) {
+          assert.equal(
+            seen.crumbHidden,
+            true,
+            `${label}: redundant breadcrumb consumes topbar room`,
+          );
+          assert.deepEqual(
+            seen.workbarOverlaps,
+            [],
+            `${label}: workbar controls overlap — ${seen.workbarOverlaps.join('; ')}`,
+          );
+          const escapedPopups = seen.popupBounds.filter(
+            (popup) => popup.left < 7.5 || popup.right > width - 7.5,
+          );
+          assert.deepEqual(
+            escapedPopups,
+            [],
+            `${label}: workbar popover escapes the 8px viewport gutter: ${JSON.stringify(escapedPopups)}`,
+          );
+          assert.ok(seen.morePlacement, `${label}: More menu is missing`);
+          assert.ok(
+            seen.morePlacement.bottom <= seen.morePlacement.summaryTop + 1,
+            `${label}: More opens downward (${JSON.stringify(seen.morePlacement)})`,
+          );
+          assert.ok(
+            seen.morePlacement.top >= 7.5 &&
+              seen.morePlacement.left >= 7.5 &&
+              seen.morePlacement.right <= width - 7.5 &&
+              seen.morePlacement.bottom <= height - 7.5,
+            `${label}: More is not viewport-clamped (${JSON.stringify(seen.morePlacement)})`,
+          );
+        }
 
         await page.close();
       }
+
+      // A compact desktop/tablet has enough room below the strip, while the
+      // payload editor occupies the space above it. Opening More upward here
+      // paints its buttons behind the textarea: they look present in layout
+      // measurements but pointer hit-testing reaches the editor instead.
+      const compact = await browser.newPage();
+      await compact.setViewport({ width: 800, height: 600 });
+      await compact.goto(`${serverInfo.url}/inspector`, {
+        waitUntil: 'networkidle2',
+        timeout: 30000,
+      });
+      await delay(2400);
+      const compactMore = await compact.evaluate(() => {
+        const more = /** @type {HTMLDetailsElement} */ (document.querySelector('.tab-more'));
+        const summary = /** @type {HTMLElement} */ (more.querySelector('summary'));
+        const menu = /** @type {HTMLElement} */ (more.querySelector('.tab-more-menu'));
+        const diff = /** @type {HTMLElement} */ (menu.querySelector('[data-target="tDiff"]'));
+        more.open = true;
+        const sr = summary.getBoundingClientRect();
+        const mr = menu.getBoundingClientRect();
+        const dr = diff.getBoundingClientRect();
+        const hit = document.elementFromPoint(dr.left + dr.width / 2, dr.top + dr.height / 2);
+        return {
+          summaryBottom: sr.bottom,
+          menuTop: mr.top,
+          hitTarget: hit === diff || diff.contains(hit),
+        };
+      });
+      assert.ok(
+        compactMore.menuTop >= compactMore.summaryBottom - 1,
+        `at 800x600 More must open downward, got ${JSON.stringify(compactMore)}`,
+      );
+      assert.equal(
+        compactMore.hitTarget,
+        true,
+        'at 800x600 a More action must receive the pointer instead of the payload editor',
+      );
+      await compact.close();
 
       // The desktop layout must survive the phone fix: this is the pair the
       // mockup specifies, and the ≤1100px block is one bad selector away

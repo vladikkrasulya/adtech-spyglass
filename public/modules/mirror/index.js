@@ -270,10 +270,10 @@ export async function openMirrorModal() {
 
     const modeChecked = (m) => (currentMode === m ? ' checked' : '');
     const modeRow =
-      '<div class="modal-row"><label>' +
+      '<div class="modal-row"><label id="mMirrorModeLabel">' +
       escapeHtml(t('modal.mirror.mode_label')) +
       '</label>' +
-      '<div class="kt-mirror-modes">' +
+      '<div class="kt-mirror-modes" role="radiogroup" aria-labelledby="mMirrorModeLabel">' +
       '<label><input type="radio" name="mMirrorMode" value="minimal" data-action="mirror-mode-change"' +
       modeChecked('minimal') +
       '> ' +
@@ -323,7 +323,7 @@ export async function openMirrorModal() {
       stChip +
       '</div>' +
       modeRow +
-      '<div class="modal-row"><label>' +
+      '<div class="modal-row"><label for="mMirrorOutput">' +
       escapeHtml(t('modal.mirror.output_label')) +
       '</label>' +
       '<textarea id="mMirrorOutput" rows="14" readonly>' +

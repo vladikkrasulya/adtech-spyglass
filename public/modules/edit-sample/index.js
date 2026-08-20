@@ -48,17 +48,17 @@ export async function editSample(id) {
       '<div class="modal-title">' +
       t('modal.edit_sample.title') +
       '</div>' +
-      '<div class="modal-row"><label>' +
+      '<div class="modal-row"><label for="mTitle">' +
       t('sample.label.title') +
       '</label><input id="mTitle" type="text" value="' +
       escapeHtml(s.title) +
       '"></div>' +
-      '<div class="modal-row"><label>' +
+      '<div class="modal-row"><label for="mPartner">' +
       t('sample.label.partner') +
       '</label><select id="mPartner">' +
       S.partnerOptionsHtml(s.partner_id) +
       '</select></div>' +
-      '<div class="modal-row"><label>' +
+      '<div class="modal-row"><label for="mNotes">' +
       t('sample.label.notes_short') +
       '</label><textarea id="mNotes">' +
       escapeHtml(s.notes || '') +

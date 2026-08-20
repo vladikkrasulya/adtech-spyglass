@@ -85,18 +85,16 @@
 .lib-head .lib-btn {
   margin-left: auto;
 }
-/* --accent-ink resolves to #0D1726 in our light theme — near-black on the
-   accent fill, 3.6:1, under the AA floor for body text. --text-on-accent is
-   the token that already carries "readable ON the accent" in both themes
-   (white on sky-600 light, #0A111F on sky-400 dark). */
+/* Filled controls use a dedicated contrast-safe pair without changing the
+   brighter brand accent used by links and decoration. */
 .lib-btn--primary {
-  background: var(--accent, #0284c7);
-  border-color: var(--accent, #0284c7);
-  color: var(--text-on-accent, #fff);
+  background: var(--control-primary-background, #0369a1);
+  border-color: var(--control-primary-background, #0369a1);
+  color: var(--control-primary-foreground, #ffffff);
 }
 .lib-btn--primary:hover {
-  background: var(--accent-hover, #0e96dc);
-  border-color: var(--accent-hover, #0e96dc);
+  background: var(--control-primary-hover, #075985);
+  border-color: var(--control-primary-hover, #075985);
 }
 .lib-btn:focus-visible {
   outline: 2px solid var(--accent, #0284c7);
