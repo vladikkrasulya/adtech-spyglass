@@ -78,23 +78,43 @@
               v === null ? localStorage.removeItem(K) : localStorage.setItem(K, v);
             } catch (e) {}
           }
+          function sys() {
+            return mq.matches ? 'dark' : 'light';
+          }
+          // Three states (auto/light/dark) over two appearances: one press in
+          // the cycle cannot repaint. Ordering cannot remove it, only place it.
+          // It sits on the return INTO auto, where an unchanged appearance is
+          // the correct answer — the stored value already equals the system's.
+          // It used to sit on the first press OUT of auto, which is the press
+          // every new visitor makes, and there it read as a broken button.
+          function next() {
+            var s = get();
+            var a = sys();
+            var o = a === 'dark' ? 'light' : 'dark';
+            return s === null ? o : s === o ? a : null;
+          }
+          var NAME = { auto: 'авто', light: 'світла', dark: 'темна' };
+          function title(cur, nxt) {
+            return (
+              'тема: ' +
+              NAME[cur === null ? 'auto' : cur] +
+              ' · клік → ' +
+              NAME[nxt === null ? 'auto' : nxt]
+            );
+          }
           function eff() {
             var s = get();
-            return s === 'light' || s === 'dark' ? s : mq.matches ? 'dark' : 'light';
+            return s === 'light' || s === 'dark' ? s : sys();
           }
           function apply(opts) {
             document.documentElement.setAttribute('data-theme', eff());
             var b = document.querySelector('.kt-theme-toggle');
             if (b) {
               var s = get();
-              b.textContent = s === null ? '◐' : s === 'dark' ? '☀' : '☾';
+              var n = next();
+              b.textContent = n === null ? '◐' : n === 'dark' ? '☾' : '☀';
               if (opts && opts.keepTitle) return;
-              b.title =
-                s === null
-                  ? 'тема: авто · клік → світла'
-                  : s === 'light'
-                    ? 'тема: світла · клік → темна'
-                    : 'тема: темна · клік → авто';
+              b.title = title(s, n);
             }
           }
           apply();
@@ -112,8 +132,7 @@
             if (!b || b.dataset.ktThemeBound) return;
             b.dataset.ktThemeBound = '1';
             b.addEventListener('click', function () {
-              var s = get();
-              set(s === null ? 'light' : s === 'light' ? 'dark' : null);
+              set(next());
               apply();
             });
             apply();
@@ -433,14 +452,7 @@
               <a href="/ru/about" lang="ru">RU · Русский</a>
             </div>
           </details>
-          <button
-            class="kt-theme-toggle"
-            type="button"
-            aria-label="Перемкнути тему"
-            title="тема: авто · клік → світла"
-          >
-            ◐
-          </button>
+          <button class="kt-theme-toggle" type="button" aria-label="Перемкнути тему">◐</button>
           <a href="/uk/" class="btn btn-ghost btn-sm">← ortbtools</a>
         </div>
       </div>
@@ -464,7 +476,7 @@
           <a href="#contact">Контакт</a>
         </nav>
         <div class="doc-prose">
-          <span class="eyebrow">docs · <span data-ortbtools-version>v1.14.3</span></span>
+          <span class="eyebrow">docs · <span data-ortbtools-version>v1.14.4</span></span>
           <h1 style="margin-top: var(--space-3)">Як користуватися ortbtools</h1>
           <p style="font-size: var(--fs-lg); color: var(--text)">
             Приватний інспектор OpenRTB-трафіку. Вставив JSON, отримав розбір: чи правильно
@@ -1344,7 +1356,7 @@ findings[]: { id, level, path, params, msg, specRef }
               font-size: var(--fs-sm);
             "
           >
-            <span data-ortbtools-version>v1.14.3</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
+            <span data-ortbtools-version>v1.14.4</span> · openrtb 2.5 / 2.6 / 3.0 · native 1.x ·
             vast 4.x · <a href="/uk/" style="color: var(--text-dim)">↗ ortbtools</a> ·
             <a href="https://ortbtools.com/" style="color: var(--text-dim)">ortbtools.com</a>
           </p>

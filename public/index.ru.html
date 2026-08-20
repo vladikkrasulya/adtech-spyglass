@@ -99,22 +99,42 @@
               v === null ? localStorage.removeItem(K) : localStorage.setItem(K, v);
             } catch (e) {}
           }
+          function sys() {
+            return mq.matches ? 'dark' : 'light';
+          }
+          // Three states (auto/light/dark) over two appearances: one press in
+          // the cycle cannot repaint. Ordering cannot remove it, only place it.
+          // It sits on the return INTO auto, where an unchanged appearance is
+          // the correct answer — the stored value already equals the system's.
+          // It used to sit on the first press OUT of auto, which is the press
+          // every new visitor makes, and there it read as a broken button.
+          function next() {
+            var s = get();
+            var a = sys();
+            var o = a === 'dark' ? 'light' : 'dark';
+            return s === null ? o : s === o ? a : null;
+          }
+          var NAME = { auto: 'авто', light: 'светлая', dark: 'тёмная' };
+          function title(cur, nxt) {
+            return (
+              'тема: ' +
+              NAME[cur === null ? 'auto' : cur] +
+              ' · клик → ' +
+              NAME[nxt === null ? 'auto' : nxt]
+            );
+          }
           function eff() {
             var s = get();
-            return s === 'light' || s === 'dark' ? s : mq.matches ? 'dark' : 'light';
+            return s === 'light' || s === 'dark' ? s : sys();
           }
           function apply() {
             document.documentElement.setAttribute('data-theme', eff());
             var b = document.querySelector('.kt-theme-toggle');
             if (b) {
               var s = get();
-              b.textContent = s === null ? '◐' : s === 'dark' ? '☀' : '☾';
-              b.title =
-                s === null
-                  ? 'theme: auto · click → light'
-                  : s === 'light'
-                    ? 'theme: light · click → dark'
-                    : 'theme: dark · click → auto';
+              var n = next();
+              b.textContent = n === null ? '◐' : n === 'dark' ? '☾' : '☀';
+              b.title = title(s, n);
             }
           }
           apply();
@@ -136,15 +156,14 @@
               b.className = 'kt-theme-toggle';
               b.type = 'button';
               b.dataset.fallback = '1';
-              b.setAttribute('aria-label', 'Toggle theme');
+              b.setAttribute('aria-label', 'Переключить тему');
               document.body.appendChild(b);
               btns = [b];
             }
             Array.prototype.forEach.call(btns, function (b) {
               if (b.dataset.themeBound) return;
               b.addEventListener('click', function () {
-                var s = get();
-                set(s === null ? 'light' : s === 'light' ? 'dark' : null);
+                set(next());
                 apply();
               });
               b.dataset.themeBound = '1';
