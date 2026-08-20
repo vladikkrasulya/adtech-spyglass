@@ -4849,7 +4849,40 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   align-items: center;
 }
 .validation-item.finding-detail:not(.is-lead) .finding-foot {
-  flex: 0 0 auto;
+  /* `0 0 auto` made the annotation rigid and the sentence the only thing that
+     could give. With `.finding-main { min-width: 0 }` above, that meant a long
+     rule id or a two-button foot could squeeze the sentence to 74px — one word
+     per line, 98px tall, with the chip drawn across it. The sentence is the
+     row's content and the chip is an annotation on it, so when the two compete
+     the annotation yields: it may shrink, and its path truncates. */
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-main {
+  /* A floor, not a width: below roughly this the sentence stops being a
+     sentence and starts being a column of syllables. */
+  min-width: 20ch;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-path {
+  min-width: 0;
+  overflow: hidden;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-code {
+  /* Same story as the foot: `flex-shrink: 0` meant a long rule id could not
+     give, so it overflowed its row and painted straight across the path chip
+     beside it — `request.device.geo.country_invalid` and `device.geo.country`
+     rendered on top of each other as one unreadable smear. It is an
+     annotation on the sentence, so it truncates instead. */
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.validation-item.finding-detail:not(.is-lead) .finding-path > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Footer, one line ───────────────────────────────────────────────────
@@ -5578,7 +5611,15 @@ body:has(.app-footer) .toast-container {
   .validation-item.finding-detail:not(.is-lead):not(.question) > summary {
     flex-wrap: nowrap;
   }
-  .validation-item.finding-detail:not(.is-lead) .finding-row {
+  /* `:not(.question)` here for the same reason as the rule above, and it was
+     missing: a question card's summary keeps wrapping, but a zero-basis
+     `.finding-row` competes with the foot for the FIRST line instead of
+     letting it fall to the second. The foot carries a path chip and two
+     buttons (~415px), so the row lost to it and `.finding-main` collapsed to
+     0px wide — the sentence wrapped one character per line, 176px tall, with
+     the foot beside it rather than under it. Only above 1500px, which is why
+     the phone-width audits never saw it. */
+  .validation-item.finding-detail:not(.is-lead):not(.question) .finding-row {
     flex: 1 1 0;
   }
 }
