@@ -89,6 +89,26 @@ a stopped tree with real exit codes.
 - Mutation evidence carried over from the 1.14.3 release: stubbing the head IIFE's `set()` to a no-op
   still fails `single-chrome-control-browser.test.js`, so the liveness guarantee survived the rewrite.
 
-- Production evidence is recorded if and when a deployment is separately authorized. There is no
-  task for it in this list on purpose: the 2026-08-20 authorization named `1.14.3` explicitly, and
-  a task numbered here would imply a mandate this package does not have.
+### Production (2026-08-21)
+
+Deployment was authorized separately on 2026-08-21, after the package was already closed — which is
+why no task is numbered for it above. The 2026-08-20 authorization named `1.14.3` explicitly and was
+not stretched to cover this release.
+
+- Pre-deploy backup gate: `scripts/backup-db.sh` at 09:11; archives `0600 root:root` in a `0700`
+  directory; `gzip -t` and `tar -tzf` clean; the SQLite archive was decompressed and
+  `PRAGMA integrity_check` returned `ok` across 12 tables. Yesterday's verified backup was not reused
+  — the contract asks for a fresh one per deployment.
+- `scripts/deploy.sh`: exit 0, `DEPLOY OK: v1.14.4 (bfe754a) is live`. Smoke PASS on health,
+  `BUILD_SHA`, `/api/analyze`, SSE, all nine localized pages, all three localized posts, container
+  health, `RestartCount=0`.
+- Deploy state: `STATUS=ACTIVE`, `ACTIVE_BUILD_SHA=bfe754a`, `PREV_BUILD_SHA=9d1b883` retained.
+- Independent verification, not the deploy script's own smoke: container `ortbtools:bfe754a`,
+  `restart=always`, `healthy`, 0 restarts; OCI labels `revision=bfe754a26…`, `version=1.14.4`;
+  `/api/health` reports `build.sha bfe754a`; public `version.js` reports `v1.14.4`.
+- The repair itself was verified in the served production HTML rather than inferred from the version
+  number. `https://ortbtools.com/ru/inspector` and `/ru/about` both carry the new successor
+  (`s === null ? o : s === o ? a : null`), the Russian state names
+  (`{ auto: 'авто', light: 'светлая', dark: 'тёмная' }`) and the Russian `aria-label`
+  (`Переключить тему`). A grep for the old successor returns zero occurrences. Shipping the version
+  and shipping the fix are different claims; the second one was checked.
