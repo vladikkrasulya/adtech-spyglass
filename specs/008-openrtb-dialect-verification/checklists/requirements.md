@@ -1,4 +1,4 @@
-# Specification Quality Checklist: OpenRTB Shadow Verification
+# Specification Quality Checklist: OpenRTB Dialect Verification
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-08-21
@@ -25,9 +25,10 @@
 ## Honesty About What Is Measured
 
 - [x] The spec states which line measures precision and which measures recall, and does not conflate them
-- [x] It states that route relevance and prevalence are two of five priority inputs, not the whole
 - [x] It records the consequence of dropping the recall line rather than leaving it implied
 - [x] Corpus figures distinguish adapters read from adapters that produced rules
+- [x] The removed route-relevance line is recorded with the reason, the rejected candidates, and what would unpark it — not silently dropped
+- [x] The package name no longer refers to the removed line
 
 ## Feature Readiness
 
@@ -40,7 +41,8 @@
 
 - The user in every story is the maintainer, not an end user, because this package deliberately ships
   no user-visible change. That is the scope, not an omission.
-- SC-002's 80% membership agreement, SC-003's 100-observation denominator, SC-004's 5% / 0.5%
-  budgets, SC-005's 20–50 range and SC-006's 15-adapter sample are the numeric gates the assessment
-  required in place of a calendar. They are first proposals and may be tightened at planning; what
-  matters is that the experiment cannot end on elapsed time alone.
+- SC-001's 20–50 range and SC-003's 15-adapter stratified sample are the numeric gates that replaced
+  a calendar. They are first proposals and may be tightened at planning.
+- The route-relevance line was specified here and removed at clarification once review established
+  that `/api/v1/stream` is a synthetic generator, `/api/analyze` carries no partner route, and account
+  partner labels are self-declared. Parking it was preferred to approximating it.
