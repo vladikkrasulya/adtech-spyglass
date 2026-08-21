@@ -24,7 +24,7 @@
 
 ## Honesty About What Is Measured
 
-- [x] The spec states which line measures precision and which measures recall, and does not conflate them
+- [x] Each line states what its frozen sample can and cannot support: B1 audits precision on a purposive sample, B2 yields adjudicated omissions — neither generalises to the corpus
 - [x] It records the consequence of dropping the recall line rather than leaving it implied
 - [x] Corpus figures distinguish adapters read from adapters that produced rules
 - [x] The removed route-relevance line is recorded with the reason, the rejected candidates, and what would unpark it — not silently dropped
@@ -46,3 +46,6 @@
 - The route-relevance line was specified here and removed at clarification once review established
   that `/api/v1/stream` is a synthetic generator, `/api/analyze` carries no partner route, and account
   partner labels are self-declared. Parking it was preferred to approximating it.
+- The statistical contract was settled at clarification: bounded audit. Frozen pre-registered
+  samples, pass/fail/inconclusive outcomes, adjudicated omissions, and an explicit prohibition
+  (FR-009) on corpus-wide precision/recall claims.

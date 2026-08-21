@@ -20,12 +20,26 @@ after review established that no route-bearing record source exists.
 > A third line, shadow measurement of route relevance on live traffic, was specified here and then
 > **removed at clarification**. See [Deferred: route relevance](#deferred-route-relevance).
 
+## Clarifications
+
+### Session 2026-08-21
+
+- Q: What authoritative route-bearing record source should 008 use? → A: None exists; park route-relevance measurement and keep 008 scoped to B1/B2 verification.
+- Q: Must 008 produce statistically generalisable corpus-wide precision/recall estimates, or verify
+  pre-registered bounded samples? → A: **Bounded audit.** Both lines verify frozen, pre-registered
+  samples; every case resolves to pass, fail or inconclusive; omissions are adjudicated observations.
+  No corpus-wide precision or recall claim is permitted from these samples: B1's sample is
+  deliberately purposive (most destructive, most frequent), which no reweighting turns into an
+  unbiased estimator, and B2's single blind reader is a second opinion whose own recall is unknown,
+  not a reference standard.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - The maintainer learns whether the statements are true (Priority: P1)
 
-As the maintainer, I can see the measured precision of the dialect corpus, so that no statement is
-ever surfaced on the strength of a single unreviewed reading.
+As the maintainer, I can see pass/fail/inconclusive outcomes for a frozen, pre-registered sample of
+the most consequential rules, so that no statement from that sample is ever surfaced on the strength
+of a single unreviewed reading.
 
 **Why this priority**: A false statement about a partner is worse than silence — it sends someone to
 change a payload that was already correct.
@@ -44,18 +58,20 @@ fail and negative-control results per rule.
 
 ---
 
-### User Story 2 - The maintainer learns how much was missed (Priority: P1)
+### User Story 2 - The maintainer learns what a blind reading finds that the corpus lacks (Priority: P1)
 
-As the maintainer, I can see an estimate of how many dialect rules the extraction never produced, so
-that the corpus's silence can be interpreted rather than trusted.
+As the maintainer, I can see the adjudicated omissions that an independent blind reading surfaces on
+a frozen sample of adapters, so that the corpus's silence on those adapters is checked rather than
+trusted — while knowing this audits the sample, not the corpus.
 
 **Why this priority**: The likeliest way this work misleads is not a false statement but a missing
-one — staying quiet about a partner that would in fact break the payload. Precision is estimable
-today; recall is not estimated at all. It shares P1 with precision because a surfaced finding is
-gated on both.
+one — staying quiet about a partner that would in fact break the payload. A bounded audit cannot
+price that risk corpus-wide, but it can catch it where it looks, and every adjudicated omission is a
+real defect fixed. It shares P1 with precision because a surfaced finding is gated on both.
 
-**Independent Test**: An independent reader works a stratified sample of whole adapters without sight
-of the corpus; the result is diffed against it and the miss rate reported.
+**Independent Test**: An independent reader works a frozen stratified sample of whole adapters
+without sight of the corpus; the diff is adjudicated and confirmed omissions are reported as counts
+against the named sample.
 
 **Acceptance Scenarios**:
 
@@ -63,8 +79,8 @@ of the corpus; the result is diffed against it and the miss rate reported.
    without access to the existing corpus entry for that adapter.
 2. **Given** both readings, **When** they are diffed, **Then** rules present only in the independent
    reading are reported as misses with their evidence.
-3. **Given** the sample is complete, **When** the miss rate is computed, **Then** it is reported with
-   its sample size and stratification, not as a bare percentage.
+3. **Given** the sample is complete, **When** results are reported, **Then** omissions are reported
+   as adjudicated counts against the named sample — never extrapolated to the corpus.
 
 ### Edge Cases
 
@@ -86,6 +102,14 @@ of the corpus; the result is diffed against it and the miss rate reported.
   error, a negative control, and a pinned adapter revision.
 - **FR-002**: The blind re-read MUST be produced without sight of the corpus and MUST report misses
   with evidence, sample size and stratification.
+- **FR-006**: Both samples MUST be frozen and recorded before any case is executed; a sample changed
+  after first execution invalidates the run.
+- **FR-007**: Every executed case MUST resolve to exactly one of pass, fail or inconclusive;
+  inconclusive is a recorded outcome, not an excuse to re-run until green.
+- **FR-008**: Each candidate omission from the blind re-read MUST be adjudicated against the adapter
+  source before being counted; disagreements of disposition route to B1 as precision findings.
+- **FR-009**: No produced artifact may state or imply a corpus-wide precision or recall figure;
+  results are statements about the frozen samples only.
 - **FR-003**: Every recorded statement MUST be attributable to a named adapter at a named commit; a
   statement phrased at exchange or partner level is a defect.
 - **FR-004**: The existing IAB validation path MUST be unchanged in behaviour, output and ordering.
@@ -110,8 +134,8 @@ of the corpus; the result is diffed against it and the miss rate reported.
   the case tests the rule rather than the harness.
 - **SC-003**: The blind re-read covers a stratified sample of at least 15 adapters, drawn across the
   size and disposition strata of the corpus rather than from its head.
-- **SC-004**: The miss rate is reported with sample size, stratification and a stated confidence
-  interval; a bare percentage does not satisfy this.
+- **SC-004**: Every omission report names the frozen sample, the adjudication outcome of each
+  candidate, and the count of confirmed omissions; it contains no extrapolated rate.
 - **SC-005**: Every rule whose witness case fails is marked in the corpus within the same change that
   discovered it; a failing rule never remains indistinguishable from a passing one.
 - **SC-006**: No user-visible output changes; existing IAB findings for a corpus of payloads are
@@ -125,11 +149,11 @@ of the corpus; the result is diffed against it and the miss rate reported.
   `0ba352315253f6692af6497d553cfb12909a1b8b`: 1188 rules from **270 adapters read**, of which **232
   produced at least one rule** and 38 returned none; 336 confirmed by a second reader; four confirmed
   at runtime, three of which had been unverified.
-- Consequence severity and user actionability — two of the five priority inputs — are authored
-  judgements, not measurements, and are out of scope here. This package supplies route relevance and
-  prevalence only.
-- If the blind re-read is dropped from scope, recall stays unmeasured, and the surfaced finding
-  cannot be opened on precision evidence alone.
+- Consequence severity, user actionability, route relevance and traffic prevalence are outside this
+  package. It produces verification evidence about the extracted corpus, not a priority ranking.
+- Corpus-wide recall remains unmeasured **by design** under the bounded audit; the blind re-read
+  produces adjudicated omissions on its sample, which is evidence of defect presence, not a recall
+  estimate. Opening any surfaced finding still requires a separate recall decision.
 - Route relevance is **not** measured by this package; see below.
 
 ## Deferred: route relevance
