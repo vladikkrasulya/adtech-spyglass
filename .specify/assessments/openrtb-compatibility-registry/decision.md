@@ -1,0 +1,105 @@
+# Decision: OpenRTB Compatibility Registry
+
+- **Slug**: openrtb-compatibility-registry
+- **Decided**: 2026-08-21
+- **Superseded**: 2026-08-21
+- **Verdict**: go — feature 008 limited to a bounded B1/B2 sample audit
+- **Prior verdict (superseded)**: go — scoped to shadow measurement and targeted verification only
+- **Artifacts reviewed**: intake.md · research.md · problem.md · concept.md
+
+## Supersession — 2026-08-21
+
+This is the controlling decision for feature 008. The original scorecard, rationale, and handoff
+below are preserved as history and no longer authorize implementation.
+
+- **Route-relevance line A is parked.** No authoritative route-bearing source exists in the evidence
+  set to establish the real partner route for a stream record. Feature 008 therefore excludes
+  real-route evaluation, shadow counters, the shadow selector, top-K calculation or stabilization,
+  measurement windows, and any gate derived from them.
+- **Feature 008 is a B1/B2 bounded sample audit only.** B1 exercises a bounded sample of held rules
+  with witnesses and negative controls; its results describe that sample and **do not estimate corpus
+  precision**. B2 independently re-reads and diffs a bounded, stratified sample of adapter source;
+  its results describe that sample and **do not estimate true recall or corpus-wide recall**. Neither
+  audit supports corpus-level extrapolation.
+- **C remains separately gated.** Feature 008 authorizes no surfaced finding or interface. C does
+  not open when B1/B2 complete and cannot rely on top-K evidence from the parked A line; it requires
+  a separate evidence review and decision.
+
+### Current go handoff for feature 008
+
+- **In scope**: the bounded B1 witness/negative-control sample audit and bounded B2 independent
+  source-re-read/diff sample audit, with sample-level findings and provenance.
+- **Out of scope**: A; all shadow, top-K, traffic-relevance, and real-route work; corpus precision or
+  recall estimates; C and every user-facing finding or interface.
+- **Interpretation constraint**: report audited-sample results only. Do not characterize either
+  sample as a corpus estimate or use it to unlock C.
+
+## Original scorecard (superseded)
+
+| Criterion              | Rating       | Justification                                                                                                                                                                                                                                      |
+| ---------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Problem validity       | **strong**   | Observed, not argued: one request through a local exchange produced four materially different outgoing requests, including a silently overwritten `imp.tagid`. The sender's own validator calls all four inputs valid.                             |
+| Evidence strength      | **adequate** | 1188 rules across 232 adapters, each with a `file.go:LINE` citation; 1186 resolve at a pinned commit; 336 confirmed by a second reader; four confirmed at runtime. Held back from `strong` by unknown recall — see Risk posture.                   |
+| Value vs. inaction     | **strong**   | Inaction keeps the product reporting success on payloads that arrive altered. The gap is currently invisible and is exactly what integration debugging costs days on.                                                                              |
+| Feasibility / appetite | **adequate** | Option A adds counters to an existing endpoint; Option B is bounded to 20–50 rules. No new service, no new dependency, no auction participation. Held back because the selection problem the feature ultimately depends on is genuinely unsolved.  |
+| Strategic fit          | **strong**   | Additive to the IAB baseline as Constitution IV and ADR-003 require, and squarely the project's stated direction — depth on one transaction, raw bytes as truth.                                                                                   |
+| Risk posture           | **adequate** | Licence risk is closed by sourcing from Apache-2.0 adapters with the prohibited set quarantined; privacy by an aggregate-only schema; over-claiming by fixing the message form to the adapter and commit. Recall risk is real and only partly met. |
+
+## Original verdict & rationale (superseded)
+
+**Go**, but only for shadow traffic-relevance measurement (A) and verification (B), and B is two
+lines because they measure different things. Coverage is settled and is not the problem — 190
+partners have an applicable rule on an ordinary request.
+
+An earlier draft of this rationale claimed A and B attack rank quality and recall. They do not, and
+the correction matters more than the wording:
+
+| Line                                                                 | Measures                       | Does **not** measure                                  |
+| -------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------- |
+| A                                                                    | route relevance and prevalence | whether a rule is true, or how bad its consequence is |
+| B1 — witness inputs, negative controls, pinned SHAs                  | precision on rules we hold     | rules absent from the corpus                          |
+| B2 — blind re-read of whole adapters, then diffed against the corpus | recall                         | anything about traffic                                |
+
+**B1 cannot measure recall**, because it can only test rules that already exist. Only B2 can, and
+if B2 falls outside appetite, that is an honest choice with a consequence: recall stays unmeasured,
+and a stable top-K no longer opens Option C by itself — C would need its own recall gate.
+
+Rank quality remains **unaddressed by measurement**. A supplies two of the five priority inputs;
+consequence severity and user actionability have to be authored.
+
+The surfaced finding (concept Option C) is **explicitly out of this go**. Building it now would
+encode a guess about ranking that A exists to replace. It returns for its own decision once top-K is
+stable.
+
+Two claims from the first draft of this assessment were withdrawn at the gate rather than softened:
+that shadow counting measures _importance_ (it measures prevalence), and that mass verification of
+the remaining 849 rules is free (it is not, which is why B is a prioritised sample). Both corrections
+came from review, and the record says so.
+
+The `adequate` on evidence strength is not a formality. 140 rules reviewed produced 13 substantive
+corrections, one deletion, and 16 rules the first pass never saw. Precision is defensible; **recall
+is unmeasured**, and that is the single most likely way this feature would mislead someone — not by
+stating something false, but by staying silent about a partner that would in fact break the payload.
+
+## Original go handoff to `/speckit-specify` (superseded)
+
+- **Problem**: a payload valid per IAB reaches a partner materially altered, and nothing says so.
+- **Chosen approach**: one package covering shadow traffic-relevance measurement on the stream path
+  (A), witness-based precision verification of 20–50 prioritised rules (B1), and a blind stratified
+  re-read of whole adapters diffed against the corpus (B2). No user-facing output in this scope.
+- **In scope**: aggregate counters (`eligible`, `actionable`, `error`, `shadow_winner`) scored only
+  against the partner on the record's real route; ruleset and adapter versions recorded; the selector
+  run in shadow; witness-input verification with negative controls and pinned adapter SHAs.
+- **Out of scope**: any surfaced finding or interface; scoring a payload against all profiles;
+  becoming an auction participant; any use of the quarantined documentation set.
+- **Success metrics**: top-K stable across two consecutive windows; sufficient denominators; runtime
+  overhead inside budget. Downstream, the measure of the feature is that a user fixes a payload and
+  the statement disappears on re-check — never clicks.
+- **Carried-forward open questions**:
+  - What composite priority function ranks a rule? Provenance strength, consequence severity, user
+    actionability and route relevance are required alongside frequency; their weighting is unknown.
+  - What is the true recall of the extraction? B2 is scoped to answer this; if it is dropped, C
+    requires a separate recall gate and a stable top-K is not sufficient to open it.
+  - How is the partner route on a stream record determined, and what happens when it is absent?
+  - Does the divergence between a Prebid adapter and the partner's own exchange matter enough to
+    measure where licensed documentation exists to compare against (Google, Xandr)?
