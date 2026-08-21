@@ -49,3 +49,7 @@
 - The statistical contract was settled at clarification: bounded audit. Frozen pre-registered
   samples, pass/fail/inconclusive outcomes, adjudicated omissions, and an explicit prohibition
   (FR-009) on corpus-wide precision/recall claims.
+- The B1 oracle was settled at clarification: same-adapter minimal pair plus a positive execution
+  control (FR-001, FR-010). SC-001 no longer demands a pass count — every frozen case resolves to
+  pass/fail/inconclusive and all three are reported; SC-002's mismatched-adapter check was removed as
+  an invalid oracle, since distinct adapters may legitimately share behaviour (FR-011).

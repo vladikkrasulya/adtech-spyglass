@@ -32,6 +32,11 @@ after review established that no route-bearing record source exists.
   deliberately purposive (most destructive, most frequent), which no reweighting turns into an
   unbiased estimator, and B2's single blind reader is a second opinion whose own recall is unknown,
   not a reference standard.
+- Q: How does B1 prove a witness fired because of the rule's stated condition rather than harness
+  accident? → A: **Same-adapter minimal pair plus a positive execution control.** Each case pairs a
+  triggering input with a minimally changed non-triggering input on the _same_ pinned adapter, and a
+  separate control proves the harness executed that adapter at all. A mismatched-adapter check is not
+  a valid oracle — two adapters may legitimately share behaviour — and is optional colour only.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -51,9 +56,13 @@ fail and negative-control results per rule.
 
 1. **Given** a prioritised rule, **When** its witness input is processed by the pinned adapter,
    **Then** the observed output or error matches the rule's claim, or the rule is marked failing.
-2. **Given** the same rule, **When** its negative control is processed, **Then** the claimed
-   behaviour does **not** occur, proving the witness tests the rule and not the harness.
-3. **Given** a rule whose adapter revision has moved, **When** the suite runs, **Then** the result is
+2. **Given** the same rule and the same pinned adapter, **When** the minimal-pair input — differing
+   only in the rule's stated condition — is processed, **Then** the claimed behaviour does **not**
+   occur, isolating the condition rather than assuming behaviour is unique across adapters.
+3. **Given** any adapter in the run, **When** the positive execution control is checked, **Then**
+   there is direct evidence the pinned adapter executed; a vacuous pass is impossible to record as a
+   pass.
+4. **Given** a rule whose adapter revision has moved, **When** the suite runs, **Then** the result is
    reported against the recorded revision and the drift is visible.
 
 ---
@@ -84,8 +93,8 @@ against the named sample.
 
 ### Edge Cases
 
-- A witness input exercises a rule that a sibling adapter also implements; the case must fail if run
-  against the sibling, or it is testing the harness rather than the rule.
+- A sibling adapter legitimately shares the tested behaviour; the case's validity rests on its
+  same-adapter minimal pair, so shared behaviour across adapters neither passes nor fails anything.
 - The adapter revision has moved since the rule was recorded; the result is reported against the
   recorded revision and the drift is named, never silently re-baselined.
 - The blind reader and the corpus disagree on a rule's disposition rather than its existence; that is
@@ -98,8 +107,14 @@ against the named sample.
 
 ### Functional Requirements
 
-- **FR-001**: The witness suite MUST cover 20–50 prioritised rules, each with an expected output or
-  error, a negative control, and a pinned adapter revision.
+- **FR-001**: The witness suite MUST cover 20–50 prioritised rules. Each case MUST comprise, against
+  the same pinned adapter revision: a triggering input with its expected output or error, and a
+  **minimal-pair** input — minimally changed so the rule's stated condition no longer holds — with
+  the expectation that the claimed behaviour does not occur.
+- **FR-010**: Each run MUST include a positive execution control per adapter, proving the harness
+  actually executed the pinned adapter; a minimal pair on an unexecuted adapter passes vacuously.
+- **FR-011**: Cross-adapter comparison MAY be recorded as observational colour but MUST NOT gate a
+  case: distinct adapters may legitimately share the same behaviour.
 - **FR-002**: The blind re-read MUST be produced without sight of the corpus and MUST report misses
   with evidence, sample size and stratification.
 - **FR-006**: Both samples MUST be frozen and recorded before any case is executed; a sample changed
@@ -119,8 +134,8 @@ against the named sample.
 
 - **Dialect rule** — a field, a disposition, a claim, a citation to a source line, a verification
   status, and the ruleset version that contains it.
-- **Witness case** — a prioritised rule, a crafted input, an expected result, a negative control, and
-  the adapter revision the expectation was recorded against.
+- **Witness case** — a prioritised rule, a triggering input with its expected result, a same-adapter
+  minimal-pair input, and the adapter revision both expectations were recorded against.
 - **Blind reading** — an independent extraction over one sampled adapter, produced without the
   corpus, retained for diffing.
 
@@ -128,10 +143,12 @@ against the named sample.
 
 ### Measurable Outcomes
 
-- **SC-001**: At least 20 and no more than 50 rules carry a passing witness case with a passing
-  negative control, each recorded against a named adapter revision.
-- **SC-002**: Every witness case fails when run against a deliberately mismatched adapter, proving
-  the case tests the rule rather than the harness.
+- **SC-001**: The frozen B1 sample contains 20–50 rules; **every** sampled case is executed and
+  resolves to pass, fail or inconclusive, and the three counts are reported per adapter revision. A
+  target pass count is not a success criterion — a fail honestly recorded satisfies the audit.
+- **SC-002**: Every pass is backed by its same-adapter minimal pair (the claimed behaviour absent
+  when the condition is removed) and by the adapter's positive execution control; a pass lacking
+  either is reclassified inconclusive.
 - **SC-003**: The blind re-read covers a stratified sample of at least 15 adapters, drawn across the
   size and disposition strata of the corpus rather than from its head.
 - **SC-004**: Every omission report names the frozen sample, the adjudication outcome of each
