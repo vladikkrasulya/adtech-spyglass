@@ -8,9 +8,11 @@ them.
 
 ## D1 — Where B1 executes
 
-**Decision**: The existing local lab — `prebid-server:local` (built from the pinned commit
-`0ba3523`) plus the mock DSP, both on the isolated `ortb-lab` docker network. Documented at
-`~/.local/share/ortbtools-research/prebid-2026-08-20/lab/README.md`.
+**Decision**: `prebid-server:local` (built from the pinned commit `0ba3523`) plus the mock DSP on a
+Docker bridge created with `--internal`. Neither PBS nor the mock has a published host port; the
+preflight and witness runner execute as one-shot clients on that bridge. The run has a fail-closed
+preflight: direct egress must fail, every sampled adapter must have an explicit mock route, and every
+observed outgoing URI must use the mock host.
 
 **Rationale**: Already proven: one auction request produced four materially different outgoing
 requests, and all four divergences matched extracted rules. `"test": 1` yields
@@ -23,9 +25,10 @@ re-implements request assembly and would test our harness, not the adapter path.
 endpoints — rejected outright (out of scope by spec; also returns only 401s, so it is worse
 evidence, not just riskier).
 
-**Consequence adopted**: two upstream defects are part of the run book — `m152`'s endpoint fails
-prebid-server's own URL validation at startup (override it), and `ix` requires an explicit
-`DISABLED=false`.
+**Consequence adopted**: endpoint overrides are defense in depth, not the security boundary. Some
+adapters choose a hard-coded or secondary endpoint despite the ordinary endpoint setting; PBS also
+attempts vendor-list fetches during startup. Therefore the internal network is mandatory and a
+configuration that merely lists overrides is not accepted as isolated.
 
 ## D2 — Where the audit lives
 
@@ -44,33 +47,43 @@ product gate to a 46 MB research clone and a docker lab the CI runner does not h
 
 ## D3 — How B2 blindness is enforced
 
-**Decision**: Process isolation. Each blind reading is produced by a fresh agent whose prompt
-contains the adapter directory path and the extraction taxonomy (the nine dispositions), and
-nothing else — no corpus file path, no prior results, no batch context. The corpus diff happens in a
-separate later step by a different invocation.
+**Decision**: Process and filesystem isolation. Each blind reading is produced by a fresh invocation
+inside a mount namespace that contains a copied adapter subtree, the extraction taxonomy and its own
+output path, and masks the research corpus, repository, assessment record, prior results and
+quarantine tree. The corpus diff happens only after all readings have been validated, hashed and
+made immutable.
 
-**Rationale**: Blindness by instruction ("do not look") is not verifiable; blindness by absence of
-the pointer is. The reader cannot cite what it was never given a path to.
+**Rationale**: Blindness by instruction ("do not look") is not verifiable. The original proposal
+withheld the corpus path in the prompt but still gave the agent an unrestricted shared filesystem;
+that did not enforce blindness. Mount-level absence makes the boundary inspectable.
 
 **Alternatives considered**: A human second reader — unavailable. The same agent re-reading with the
-corpus withheld from the prompt but present on disk — weaker, because tool access could find it;
-mitigated by also keeping the corpus outside the sampled adapter's directory tree and checking the
-reading's citations only reference the adapter's own files.
+corpus withheld from the prompt but present on disk — rejected because discovery remained possible.
 
 ## D4 — B1 sample construction (before freezing)
 
-**Decision**: Purposive, two strata, frozen as a manifest before any execution:
+**Decision**: Purposive, four explicit quotas, frozen as a 48-member manifest before any valid
+generation-2 execution:
 
-1. **Most destructive** (~60% of the sample): all `forbidden` (9), the `dropped` and `rewritten`
-   rules whose fields carry money or identity semantics (`bidfloor`, `tagid`, `schain`,
-   `publisher.id`), and the loop-scope/aliasing defects verification itself flagged (`lockerdome`,
-   `smartyads`, `huaweiads` signing-key case).
-2. **Most frequent on canonical inputs** (~40%): top rules by manifestation across the 3103-fixture
-   offline pass (`coverage-exercised-2026-08-20.json`), excluding those already in stratum 1.
+1. all nine `forbidden` rules;
+2. three source-verified multi-impression defects: LockerDome survivor indexing, SmartyAds final-imp
+   routing and HuaweiAds final-imp authorization inputs;
+3. twelve bounded money/identity rules, split evenly by theme and deliberately covering loss and
+   rewrite across distinct field families rather than taking an alphabetical prefix; and
+4. twenty-four canonical-fixture champions, at most one per adapter.
 
-**Rationale**: The spec fixes 20–50; the clarification fixes purposive-not-probability; the two
-strata match the two ways a wrong rule hurts most — badly and often. Frequency stratum uses fixture
-manifestation, which is evidence about canonical inputs, not traffic — already recorded honestly.
+The earlier selector is invalid. It capped an unbounded 104-rule money/identity candidate set by
+alphabetical order, omitted the named defects and described `coverage-exercised-2026-08-20.json` as
+frequency even though that file contains only one binary row per exercised rule. Generation 2 keeps
+that file only as an eligibility gate. Its retained selector recomputes a per-fixture count from
+adapter-owned exemplary/supplemental JSON: comparable OpenRTB-shaped expected bodies, impressions
+correlated by ID, and an exact path drop/change counted at most once per fixture. It chooses each
+adapter's strongest rule, then ranks champions by count with bytewise identity tie-breaks.
+
+**Rationale**: The first three quotas protect consequence and known blind spots; the fourth protects
+repeat manifestation on canonical adapter inputs without calling it traffic frequency. The selector
+script, source inputs and counts are retained and hashed. This remains a purposive sample, not a
+probability sample and not an importance score.
 
 ## D5 — B2 stratification of ≥15 adapters
 
@@ -87,12 +100,16 @@ blindness.
 
 **Decision**: Each candidate omission is adjudicated by reading the cited adapter lines directly.
 Outcomes: `confirmed-omission` (enters the corpus as a new rule in the same change), `disposition-
-disagreement` (routes to B1 as a precision finding, per spec edge case), `not-a-rule` (generic
-plumbing; recorded with reason), `reader-error`. All four counts are reported per adapter.
+disagreement` (enters a named precision follow-up queue without changing the frozen B1 sample),
+`not-a-rule` (generic plumbing; recorded with reason), `reader-error`. All four counts are reported
+per adapter. Candidate identity uses adapter + normalized field + disposition + condition; free-text
+detail and citation are preserved on both sides and never exact-matched as the sole oracle.
 
 ## D7 — Versions and pinning
 
-**Decision**: Every artifact records: corpus file + its extraction date, prebid-server commit
-`0ba352315253f6692af6497d553cfb12909a1b8b`, the docker image digest of `prebid-server:local`, and
-the mock DSP script hash. The witness expectation is recorded against the image digest, not the
-commit alone, because the image is what executed.
+**Decision**: Every retained run records the corpus file and extraction date; corpus before/after
+hashes; prebid-server commit `0ba352315253f6692af6497d553cfb12909a1b8b`; Docker image digest;
+mock, lab-config, endpoint-map, runner, case-bundle, manifest and selection-input hashes; exact
+preflight output; and the invocation timestamp. The witness expectation is recorded against the
+image digest, not the commit alone, because the image is what executed. Earlier invalid attempts are
+retained under immutable run IDs instead of being overwritten.

@@ -9,9 +9,32 @@ destructive drop. It also proposed scoring each payload against all profiles, wh
 measured hypothetical compatibility rather than the relevance of the route actually taken. Both are
 corrected below rather than quietly rewritten.
 
-## Options
+## Supersession — 2026-08-21
 
-### Option A — Shadow traffic-relevance measurement
+This section is the controlling scope. The shaped options and recommendation below remain intact as
+history, but they do not authorize implementation unless this supersession restates them.
+
+- **A is parked.** The available evidence contains no authoritative route-bearing source that can
+  establish the partner route actually taken by a stream record. Feature 008 therefore does not
+  authorize real-route scoring, shadow counters, a shadow selector, top-K stabilization windows, or
+  any other traffic-relevance work.
+- **Feature 008 is a bounded B1/B2 sample audit only.** B1 runs purpose-built witnesses and negative
+  controls against a bounded sample of held rules. It reports fidelity and defects in that sample;
+  **it does not estimate corpus precision**. B2 independently re-reads a bounded, stratified sample
+  of adapter source and diffs that sample against the corpus. It reports omissions and mismatches in
+  that sample; **it does not estimate true recall or corpus-wide recall**. Neither line's result may
+  be extrapolated to the corpus.
+- **C remains separately gated.** The bounded audit does not authorize a surfaced finding, and C
+  does not open on audit completion, top-K behavior, or any result from the parked A line. C requires
+  its own evidence and decision.
+
+## Original options (superseded historical record)
+
+The option text below records the reasoning before this supersession. Its descriptions of B1 as a
+precision measure, B2 as a recall measure, and A/C sequencing are historical claims, not current
+scope or measurement guarantees.
+
+### Option A — Shadow traffic-relevance measurement (parked)
 
 Count, per stream record, which rules were evaluable and which actually fired — **scored only against
 the partner on the record's real route**, never against all 385 profiles. No interface, no user-facing
@@ -52,7 +75,7 @@ encode a guess.
 
 Keep the corpus as research. Costs nothing further, delivers nothing.
 
-## Evidence for the recommendation
+## Historical evidence for the superseded recommendation
 
 Coverage is settled (190 partners, 553 rules on an ordinary request). Correctness is not: 140 rules
 reviewed yielded 13 corrections, 1 deletion, 16 omissions. Selection is unsolved.
@@ -69,9 +92,10 @@ it — it claimed A and B together attack rank quality and recall, and they do n
 A supplies two of the five priority inputs. Nothing here supplies consequence severity or user
 actionability; those must be authored, not measured.
 
-Recommended sequence: **A, B1 and B2 in parallel → run the selector in shadow → only then C.**
+Superseded sequence, retained only as history: **A, B1 and B2 in parallel → run the selector in
+shadow → only then C.**
 
-## Consequence adopted as a constraint
+## Constraints recorded with the superseded sequence
 
 - **Priority is composite, never frequency alone**: rule provenance strength; severity of consequence;
   whether the user can act on it; relevance to the real partner route; frequency on traffic. A supplies
@@ -81,7 +105,7 @@ Recommended sequence: **A, B1 and B2 in parallel → run the selector in shadow 
 - **Never an auction participant.** No live partner endpoints; the stand runs against a local mock.
 - Dialect statements are additive to IAB findings and may not reorder or suppress them.
 
-## What would overturn this
+## Historical overturn conditions (superseded)
 
 - Top-K never stabilises across windows — then ranking is not learnable from traffic, and C needs a
   different basis or should not be built.

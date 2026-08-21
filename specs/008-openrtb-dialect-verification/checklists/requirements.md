@@ -25,7 +25,7 @@
 ## Honesty About What Is Measured
 
 - [x] Each line states what its frozen sample can and cannot support: B1 audits precision on a purposive sample, B2 yields adjudicated omissions — neither generalises to the corpus
-- [x] It records the consequence of dropping the recall line rather than leaving it implied
+- [x] It records the consequence of dropping B2 rather than leaving it implied
 - [x] Corpus figures distinguish adapters read from adapters that produced rules
 - [x] The removed route-relevance line is recorded with the reason, the rejected candidates, and what would unpark it — not silently dropped
 - [x] The package name no longer refers to the removed line

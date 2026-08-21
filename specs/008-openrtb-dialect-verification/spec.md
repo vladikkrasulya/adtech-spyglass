@@ -7,15 +7,15 @@
 
 **Created**: 2026-08-21
 
-**Status**: Draft
+**Status**: Verification
 
 **Input**: Handoff from [assessment decision](../../.specify/assessments/openrtb-compatibility-registry/decision.md)
 (verdict: go). Narrowed at clarification on 2026-08-21: the shadow-measurement line was removed
 after review established that no route-bearing record source exists.
 
-> **Scope note**: This package produces **no user-visible output at all**. It answers the two
-> questions that can be answered today — whether the dialect statements we hold are true, and how
-> many we never found.
+> **Scope note**: This package produces **no user-visible output at all**. It records outcomes for a
+> frozen purposive sample of dialect statements and adjudicated omissions found by a blind reader in
+> a separate frozen adapter sample. Neither result is extrapolated beyond its named sample.
 >
 > A third line, shadow measurement of route relevance on live traffic, was specified here and then
 > **removed at clarification**. See [Deferred: route relevance](#deferred-route-relevance).
@@ -32,11 +32,24 @@ after review established that no route-bearing record source exists.
   deliberately purposive (most destructive, most frequent), which no reweighting turns into an
   unbiased estimator, and B2's single blind reader is a second opinion whose own recall is unknown,
   not a reference standard.
+- Q: FR-006 freezes the samples. When execution reveals that a frozen input is broken — an adapter
+  that never ran, a contrast that compares a generated UUID — may it be repaired? → A: **Yes, before
+  the first canonical result is reported, and only with the whole history retained.** The _manifest_
+  generation freezes sample membership and never changes. The _execution bundle_ — cases, controls,
+  runner, endpoint map, lab config — may be repaired and re-frozen while no canonical result stands
+  on it, provided every superseded attempt keeps its outcomes, its journal, its bundle bytes and a
+  written reason. A repair that changes membership, an assertion or an expected value is out of
+  scope for this clause; it invalidates the sample, not just the run.
+
 - Q: How does B1 prove a witness fired because of the rule's stated condition rather than harness
   accident? → A: **Same-adapter minimal pair plus a positive execution control.** Each case pairs a
-  triggering input with a minimally changed non-triggering input on the _same_ pinned adapter, and a
-  separate control proves the harness executed that adapter at all. A mismatched-adapter check is not
-  a valid oracle — two adapters may legitimately share behaviour — and is optional colour only.
+  triggering input with a minimally changed contrast on the _same_ pinned adapter, and a separate
+  control proves the harness executed that adapter at all. For conditional behaviour the contrast is
+  a non-triggering input. For an unconditional projection/drop/rewrite, it adds or removes one
+  source-valid standard field and proves that the two outbound observations collapse to the same
+  value because that field cannot survive. If neither contrast is honest and executable, the case is
+  pre-registered as `inconclusive-oracle`. A mismatched-adapter check is not a valid oracle — two
+  adapters may legitimately share behaviour — and is optional colour only.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -57,8 +70,9 @@ fail and negative-control results per rule.
 1. **Given** a prioritised rule, **When** its witness input is processed by the pinned adapter,
    **Then** the observed output or error matches the rule's claim, or the rule is marked failing.
 2. **Given** the same rule and the same pinned adapter, **When** the minimal-pair input — differing
-   only in the rule's stated condition — is processed, **Then** the claimed behaviour does **not**
-   occur, isolating the condition rather than assuming behaviour is unique across adapters.
+   by exactly the pre-registered causal field — is processed, **Then** either the conditional
+   behaviour is absent or an unconditional projection produces the pre-registered collapsed output,
+   isolating the claim rather than assuming behaviour is unique across adapters.
 3. **Given** any adapter in the run, **When** the positive execution control is checked, **Then**
    there is direct evidence the pinned adapter executed; a vacuous pass is impossible to record as a
    pass.
@@ -90,6 +104,8 @@ against the named sample.
    reading are reported as misses with their evidence.
 3. **Given** the sample is complete, **When** results are reported, **Then** omissions are reported
    as adjudicated counts against the named sample — never extrapolated to the corpus.
+4. **Given** the readings are complete, **When** the corpus is first exposed for diffing, **Then**
+   every reading has already been schema-checked, hashed and made immutable.
 
 ### Edge Cases
 
@@ -98,10 +114,12 @@ against the named sample.
 - The adapter revision has moved since the rule was recorded; the result is reported against the
   recorded revision and the drift is named, never silently re-baselined.
 - The blind reader and the corpus disagree on a rule's disposition rather than its existence; that is
-  a precision finding surfacing inside a recall exercise and must be routed to B1, not counted as a
-  miss.
-- A sampled adapter yields no rules in either reading; this confirms a thin passthrough rather than
-  indicating a failed sample.
+  a precision finding surfacing inside an omission exercise. It enters a named follow-up queue and
+  does not mutate the already-frozen B1 cohort.
+- A sampled adapter yields no rules in either reading; the audit records that no omission was found
+  for that adapter. It does not infer that the adapter is a passthrough.
+- The lab leaves any route capable of egress or produces an outgoing URI outside the
+  mock allowlist; the run aborts before a behavioral outcome is recorded.
 
 ## Requirements _(mandatory)_
 
@@ -109,26 +127,43 @@ against the named sample.
 
 - **FR-001**: The witness suite MUST cover 20–50 prioritised rules. Each case MUST comprise, against
   the same pinned adapter revision: a triggering input with its expected output or error, and a
-  **minimal-pair** input — minimally changed so the rule's stated condition no longer holds — with
-  the expectation that the claimed behaviour does not occur.
+  **minimal-pair** input with exactly the pre-registered causal delta. For conditional behaviour the
+  delta MUST make the stated condition false and the claimed behaviour MUST not occur. For an
+  unconditional projection/drop/rewrite, the delta MUST add or remove one source-valid field and the
+  expected outbound observations MUST collapse, proving that field cannot survive the claimed
+  transformation. A case without either honest executable contrast MUST be pre-registered as
+  `inconclusive-oracle` and MUST NOT produce a pass.
 - **FR-010**: Each run MUST include a positive execution control per adapter, proving the harness
   actually executed the pinned adapter; a minimal pair on an unexecuted adapter passes vacuously.
 - **FR-011**: Cross-adapter comparison MAY be recorded as observational colour but MUST NOT gate a
   case: distinct adapters may legitimately share the same behaviour.
 - **FR-002**: The blind re-read MUST be produced without sight of the corpus and MUST report misses
-  with evidence, sample size and stratification.
-- **FR-006**: Both samples MUST be frozen and recorded before any case is executed; a sample changed
-  after first execution invalidates the run.
+  with evidence, sample size and stratification. An enforced access boundary MUST expose only the
+  copied adapter subtree, extraction taxonomy and that reader's output.
+- **FR-006**: Both samples MUST be frozen and recorded before any case is executed. Before the first
+  valid B1 run, its complete case bundle, runner, endpoint map, lab configuration and execution
+  controls MUST also be hashed and frozen. A changed frozen input invalidates that run generation:
+  every attempt standing on the superseded bytes MUST be retained with its outcomes, its journal, the
+  bundle bytes it cited and a written reason, and MUST NOT be reported. Manifest membership is not
+  repairable under this clause — changing it invalidates the sample itself.
 - **FR-007**: Every executed case MUST resolve to exactly one of pass, fail or inconclusive;
   inconclusive is a recorded outcome, not an excuse to re-run until green.
 - **FR-008**: Each candidate omission from the blind re-read MUST be adjudicated against the adapter
-  source before being counted; disagreements of disposition route to B1 as precision findings.
+  source before being counted; disposition disagreements enter a named precision follow-up queue and
+  remain open unless separately resolved.
 - **FR-009**: No produced artifact may state or imply a corpus-wide precision or recall figure;
   results are statements about the frozen samples only.
 - **FR-003**: Every recorded statement MUST be attributable to a named adapter at a named commit; a
   statement phrased at exchange or partner level is a defect.
 - **FR-004**: The existing IAB validation path MUST be unchanged in behaviour, output and ordering.
 - **FR-005**: The quarantined documentation set MUST NOT be read, referenced, or derived from.
+- **FR-012**: All blind readings MUST be present, schema-valid, citation-allowlisted, indexed by hash
+  and made immutable before the corpus is exposed for diffing or adjudication.
+- **FR-013**: B1 MUST run with egress structurally denied. Every sampled adapter route and every
+  accepted execution control MUST resolve to the pinned mock; a preflight or URI-allowlist failure
+  aborts the run.
+- **FR-014**: Aborted or invalidated attempts MUST be retained under immutable run identifiers with
+  their reason. A canonical result MUST never overwrite an earlier attempt.
 
 ### Key Entities
 
@@ -144,11 +179,13 @@ against the named sample.
 ### Measurable Outcomes
 
 - **SC-001**: The frozen B1 sample contains 20–50 rules; **every** sampled case is executed and
-  resolves to pass, fail or inconclusive, and the three counts are reported per adapter revision. A
-  target pass count is not a success criterion — a fail honestly recorded satisfies the audit.
-- **SC-002**: Every pass is backed by its same-adapter minimal pair (the claimed behaviour absent
-  when the condition is removed) and by the adapter's positive execution control; a pass lacking
-  either is reclassified inconclusive.
+  resolves to pass, fail or inconclusive, and the three counts are reported per adapter revision —
+  where a single pinned image digest covers every adapter in the run, the run states that collapse
+  explicitly rather than leaving an aggregate to be read as a per-revision figure. A target pass
+  count is not a success criterion — a fail honestly recorded satisfies the audit.
+- **SC-002**: Every pass is backed by its same-adapter minimal pair (conditional behaviour absent, or
+  an unconditional transformation isolated by the pre-registered collapsed-output contrast) and by
+  the adapter's positive execution control; a pass lacking either is reclassified inconclusive.
 - **SC-003**: The blind re-read covers a stratified sample of at least 15 adapters, drawn across the
   size and disposition strata of the corpus rather than from its head.
 - **SC-004**: Every omission report names the frozen sample, the adjudication outcome of each
@@ -157,8 +194,14 @@ against the named sample.
   discovered it; a failing rule never remains indistinguishable from a passing one.
 - **SC-006**: No user-visible output changes; existing IAB findings for a corpus of payloads are
   byte-identical before and after.
-- **SC-007**: The quarantined documentation set is not read at any point, verified by the absence of
-  any citation to it in the produced artifacts.
+- **SC-007**: The quarantined documentation set is not read at any point, verified by the enforced
+  reader access boundary and by recursively validating every produced source citation against the
+  pinned adapter-source allowlist.
+- **SC-008**: The retained B1 run proves direct egress is denied, no lab port is published to the
+  host, a one-shot client on the internal bridge can reach PBS and the mock, and every observed
+  outgoing URI uses the mock host.
+- **SC-009**: The tracked evidence summary names content hashes for the retained audit bundle and
+  corpus before/after states, and the bundle is retrievable from the recorded local path.
 
 ## Assumptions
 

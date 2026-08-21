@@ -2,10 +2,39 @@
 
 - **Slug**: openrtb-compatibility-registry
 - **Decided**: 2026-08-21
-- **Verdict**: go — scoped to shadow measurement and targeted verification only
+- **Superseded**: 2026-08-21
+- **Verdict**: go — feature 008 limited to a bounded B1/B2 sample audit
+- **Prior verdict (superseded)**: go — scoped to shadow measurement and targeted verification only
 - **Artifacts reviewed**: intake.md · research.md · problem.md · concept.md
 
-## Scorecard
+## Supersession — 2026-08-21
+
+This is the controlling decision for feature 008. The original scorecard, rationale, and handoff
+below are preserved as history and no longer authorize implementation.
+
+- **Route-relevance line A is parked.** No authoritative route-bearing source exists in the evidence
+  set to establish the real partner route for a stream record. Feature 008 therefore excludes
+  real-route evaluation, shadow counters, the shadow selector, top-K calculation or stabilization,
+  measurement windows, and any gate derived from them.
+- **Feature 008 is a B1/B2 bounded sample audit only.** B1 exercises a bounded sample of held rules
+  with witnesses and negative controls; its results describe that sample and **do not estimate corpus
+  precision**. B2 independently re-reads and diffs a bounded, stratified sample of adapter source;
+  its results describe that sample and **do not estimate true recall or corpus-wide recall**. Neither
+  audit supports corpus-level extrapolation.
+- **C remains separately gated.** Feature 008 authorizes no surfaced finding or interface. C does
+  not open when B1/B2 complete and cannot rely on top-K evidence from the parked A line; it requires
+  a separate evidence review and decision.
+
+### Current go handoff for feature 008
+
+- **In scope**: the bounded B1 witness/negative-control sample audit and bounded B2 independent
+  source-re-read/diff sample audit, with sample-level findings and provenance.
+- **Out of scope**: A; all shadow, top-K, traffic-relevance, and real-route work; corpus precision or
+  recall estimates; C and every user-facing finding or interface.
+- **Interpretation constraint**: report audited-sample results only. Do not characterize either
+  sample as a corpus estimate or use it to unlock C.
+
+## Original scorecard (superseded)
 
 | Criterion              | Rating       | Justification                                                                                                                                                                                                                                      |
 | ---------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -16,7 +45,7 @@
 | Strategic fit          | **strong**   | Additive to the IAB baseline as Constitution IV and ADR-003 require, and squarely the project's stated direction — depth on one transaction, raw bytes as truth.                                                                                   |
 | Risk posture           | **adequate** | Licence risk is closed by sourcing from Apache-2.0 adapters with the prohibited set quarantined; privacy by an aggregate-only schema; over-claiming by fixing the message form to the adapter and commit. Recall risk is real and only partly met. |
 
-## Verdict & Rationale
+## Original verdict & rationale (superseded)
 
 **Go**, but only for shadow traffic-relevance measurement (A) and verification (B), and B is two
 lines because they measure different things. Coverage is settled and is not the problem — 190
@@ -52,7 +81,7 @@ corrections, one deletion, and 16 rules the first pass never saw. Precision is d
 is unmeasured**, and that is the single most likely way this feature would mislead someone — not by
 stating something false, but by staying silent about a partner that would in fact break the payload.
 
-## If go — Handoff to `/speckit-specify`
+## Original go handoff to `/speckit-specify` (superseded)
 
 - **Problem**: a payload valid per IAB reaches a partner materially altered, and nothing says so.
 - **Chosen approach**: one package covering shadow traffic-relevance measurement on the stream path

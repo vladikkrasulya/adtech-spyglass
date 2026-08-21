@@ -20,13 +20,15 @@ corpus-wide precision or recall figure. The product tree does not change.
 artifact inside the pinned docker image (never compiled here)
 
 **Primary Dependencies**: `prebid-server:local` image (commit `0ba3523`), mock DSP (node:22-alpine),
-docker network `ortb-lab`; no new product dependency
+an internal Docker network, and a mount-namespace sandbox for blind readers; no new product
+dependency
 
 **Storage**: JSON artifacts under `~/.local/share/ortbtools-research/prebid-2026-08-20/audit/`;
 no product schema change
 
-**Testing**: The audit _is_ the test surface; its own harness sanity is covered by the execution
-controls (FR-010) and quickstart guards. `npm run ci` intentionally does not run it (research D2)
+**Testing**: The audit _is_ the test surface. Harness sanity is covered by fail-closed lab preflight,
+separate mock-backed execution controls, manifest/case/runner hash checks and explicit error-surface
+assertions. `npm run ci` intentionally does not run it (research D2)
 
 **Target Platform**: The vkbox host with docker; fully offline from partners
 
@@ -35,9 +37,11 @@ controls (FR-010) and quickstart guards. `npm run ci` intentionally does not run
 **Performance Goals**: None user-facing. Whole B1 run repeatable in under an hour so a failed freeze
 can be re-cut cheaply
 
-**Constraints**: Frozen manifests before execution (FR-006); pass requires minimal pair + execution
-control (SC-002); no corpus-wide claims (FR-009); quarantine never read (FR-005); product
-byte-identical (FR-004, SC-006)
+**Constraints**: Frozen manifests and full B1 execution bundle before valid execution (FR-006);
+immutable blind readings before unblinding (FR-012); structural egress denial and mock-only routes
+(FR-013); pass requires minimal pair + separate execution control (SC-002); no corpus-wide claims
+(FR-009); quarantine physically absent from reader sandboxes (FR-005); product byte-identical
+(FR-004, SC-006)
 
 **Scale/Scope**: 20–50 witness cases; ≥15 blind-read adapters of 270; one corpus file mutated
 
@@ -47,8 +51,8 @@ _GATE: evaluated before Phase 0; re-checked after Phase 1._
 
 - **I — Spec Kit memory**: package opened through assess → decide with three recorded
   clarifications before any execution; this plan precedes the work.
-- **II — Evidence-backed truth**: the package's entire purpose. Every outcome cites input, observed
-  wire body, and pinned world; inconclusive is a recorded outcome, not a retry loop.
+- **II — Evidence-backed truth**: the package's entire purpose. Every outcome cites frozen input,
+  complete observed wire evidence and a content-addressed world; invalid attempts remain visible.
 - **III — Privacy/security**: witness inputs synthetic and marked; artifacts outside the tracked
   tree; no payload from any real party exists anywhere in this work.
 - **IV — Compatible contracts**: no Core/API/CLI/storage change; IAB findings byte-identical.
@@ -85,17 +89,37 @@ specs/008-openrtb-dialect-verification/
 
 ```text
 ~/.local/share/ortbtools-research/prebid-2026-08-20/
-├── lab/                          # existing: pbs.yaml, mock-dsp.js, README
-├── derived/                      # existing corpus + coverage artifacts
-└── audit/                        # NEW
-    ├── manifest-b1.json          # frozen before execution
-    ├── manifest-b2.json
-    ├── cases/*.json              # witness case definitions
-    ├── run-witness.js            # runner: POST /openrtb2/auction, assert on httpcalls
-    ├── results-b1.json
-    ├── readings/*.json           # blind readings, one per sampled adapter
-    ├── adjudication-b2.json
-    └── guards.sh                 # quickstart §5 checks
+├── lab/                            # existing: pbs.yaml, mock-dsp.js, README
+├── derived/                        # existing corpus + coverage artifacts
+├── prebid-server/                  # pinned Apache-2.0 source; the citation allowlist root
+└── audit/                          # NEW
+    ├── manifests/                  # immutable generations + invalidation records
+    ├── selectors/                  # the retained, hashed sample selector
+    ├── schemas/                    # case, control and guard schemas
+    ├── cases/*.json                # witness case definitions
+    ├── controls/*.json             # one positive execution control per adapter
+    ├── authoring/                  # case generator + bundle builder
+    ├── pbs-audit.yaml              # frozen lab config
+    ├── endpoint-map-v2.json        # mock-only routes and their query contracts
+    ├── world-v2.json               # pinned containers, network and hashes
+    ├── preflight.js, preflight-v2.json   # historical preflight; never authorizes a run
+    ├── pre-run-guard.js, pre-run-guards/ # immediate, expiring topology guard
+    ├── validate-b1.js, validation-b1.json
+    ├── bundle-b1.json              # hashes for runner, cases, controls, config and selector
+    ├── freeze-b1.js                # fd-based freeze of every bound input
+    ├── run-witness.js              # runner: POST /openrtb2/auction, assert on httpcalls
+    ├── runs-b1/<run-id>/           # summary.json + hash-chained journal.jsonl, never overwritten
+    │   └── <run-id>.bundle.json    # the exact bundle bytes that run cited
+    ├── diagnostics/                # non-canonical sweeps + the input-repair record
+    ├── reader-sandbox/<run-id>/    # blind-reader mount records and staging
+    ├── readings/<run-id>/          # one reading per adapter + index.json (+ .sha256)
+    ├── candidates-b2.json          # machine diff, pre-adjudication
+    ├── adjudication-b2-batch-{a,b}.json, adjudication-b2.json
+    ├── merge-adjudication-b2.js, mutate-corpus.js
+    ├── evidence/                   # corpus before/after copies
+    ├── corpus-mutation-report.json # machine-readable corpus diff
+    ├── bundle-digest.json          # recursive digest of this tree
+    └── guards.sh + guards.js       # quickstart section 5 checks
 ```
 
 **Structure Decision**: the repository holds governance and evidence summaries only; execution and
