@@ -7,7 +7,7 @@
 
 **Created**: 2026-08-21
 
-**Status**: Verification
+**Status**: Complete
 
 **Input**: Handoff from [assessment decision](../../.specify/assessments/openrtb-compatibility-registry/decision.md)
 (verdict: go). Narrowed at clarification on 2026-08-21: the shadow-measurement line was removed
