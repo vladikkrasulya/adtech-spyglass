@@ -114,8 +114,33 @@ governance and a content-addressed evidence summary only.
       every unresolved follow-up is named
 - [x] T023 Run Spec Kit analysis, then `speckit-converge`; append and complete any convergence tasks
       and rerun both until the package is clean
-- [ ] T024 Commit only confirmed feature paths, push the existing PR, wait for green required checks
+- [x] T024 Commit only confirmed feature paths, push the existing PR, wait for green required checks
       on the PR head, merge PR #69, read back the actual merge SHA and verify post-merge CI/status
+
+### Merge and production (T024)
+
+Recorded after the fact, which is the whole point of leaving the box open until now.
+
+- Local `npm run ci` on the committed bytes: **exit 0** (numbers above).
+- PR [#69](https://github.com/vladikkrasulya/adtech-spyglass/pull/69), head `ad7d27b`: hosted CI
+  **success**. Merged 2026-08-21T13:27:36Z as **`b412778`**, read back from `origin/main` rather than
+  assumed. Post-merge CI on that exact merge SHA: **success**.
+- Pre-deploy backup gate, run fresh rather than reusing the 03:30 cron archive: `scripts/backup-db.sh`
+  at 15:33 — SQLite 3176480 bytes and content archive both `0600 root:root` in a `0700` directory,
+  `gzip -t` and `tar -tzf` clean, and the decompressed database returned `PRAGMA integrity_check = ok`
+  across 12 tables.
+- `scripts/deploy.sh`: **exit 0**, `DEPLOY OK: v1.14.4 (b412778) is live`. Smoke **18/18** — health,
+  BUILD_SHA match, `/api/analyze` findings, SSE, nine localized pages, three localized posts,
+  container health, `RestartCount=0`. No rollback attempted.
+- Deploy state: `STATUS=ACTIVE`, `ACTIVE_BUILD_SHA=b412778`, `PREV_BUILD_SHA=bfe754a` retained with
+  its rollback image.
+- Independent verification, not the deploy script's own smoke: container `ortbtools:b412778`,
+  `restart=always`, `healthy`, 0 restarts; OCI labels `revision=b41277835f90…`, `version=1.14.4`;
+  public `https://ortbtools.com/api/health` reports `build.sha b412778`; served `version.js` still
+  reports `v1.14.4`.
+- **The version did not move, and that is the result.** 008 changed no product file, so a release that
+  bumped the public version would have been the bug. What shipped is a new build SHA over
+  byte-identical product code, which is what SC-006 asks for.
 
 ### Convergence (T023)
 
@@ -129,8 +154,8 @@ explicit declaration of their loss, the digest's `corpusAfterSha256` equal to th
 It also caught the one thing this file had got wrong: **T024 had been checked before it happened.**
 Nothing was committed, PR #69 was open, and the merge SHA the task asks to read back did not exist.
 That is the same defect the analysis had just called CRITICAL on T021 — and checking the box also
-silences the governance assertion built to catch it. T024 is unchecked again, the package sits at
-`Verification`, and it closes in the commit that can actually cite a merge SHA.
+silences the governance assertion built to catch it. T024 was unchecked again and the package sat at
+`Verification` until this commit, which cites the merge SHA rather than promising one.
 
 ### Spec Kit analysis (T023)
 
