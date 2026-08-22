@@ -4201,6 +4201,16 @@ button.cross-path:focus-visible,
   background: transparent;
   padding: 0;
 }
+/* The band-era dark tint above (`[data-theme='dark'] .analysis-strip`) has
+   specificity 0,2,0 and outranks the 0,1,0 rule directly above this comment,
+   so `background: transparent` never reached dark theme and the strip kept
+   painting a slab wherever its chips did not cover it — read, correctly, as a
+   control that had failed to load. Later source order cannot beat higher
+   specificity, so the theme-scoped rule has to be answered in kind. The parent
+   (#verdict) owns the surface; the strip owns none. */
+[data-theme='dark'] .analysis-strip {
+  background: transparent;
+}
 .analysis-strip-block {
   flex: 0 0 auto;
   flex-direction: row;
@@ -4948,8 +4958,20 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
 }
 .line-gutter {
   flex: 0 0 auto;
-  min-width: 44px;
-  padding: var(--space-3) var(--space-2) var(--space-3) 0;
+  /* `flex: 0 0 auto` already content-sizes this column to its widest number,
+     so the floor was the only thing setting the width — and 44px sat above
+     every realistic digit count. At --fs-sm one monospace digit advances
+     ~7.8px, so even four digits plus the right padding is under 40px, and the
+     column stayed 44px flat from 1 line to 5000.
+
+     2ch is the floor rather than a px constant for two reasons. It resolves
+     against this element's own --font-mono at --fs-sm, so it stays exact when
+     the font falls back or the size clamps. And it is what holds the width
+     still across 9 -> 10, the boundary ordinary typing crosses constantly —
+     nothing moves from 1 to 99 lines, which is the range a payload actually
+     lives in. */
+  min-width: calc(2ch + var(--space-2) + var(--space-4));
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -5200,7 +5222,11 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   tab-size: 8;
 }
 .line-gutter {
-  padding: var(--space-3) var(--space-2) var(--space-3) 0;
+  /* Same padding as the base block above. These two disagreed on the left
+     value, and this one wins the tie, so the base declaration was decorative.
+     They are kept identical rather than merged because each block owns a
+     different concern and the file's layering convention is to restate. */
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
   line-height: 1.7;
   background: var(--bg);
 }

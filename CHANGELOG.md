@@ -6,6 +6,39 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.14.5 — three defects the tests were not watching
+
+- A finding that belongs to the response now takes you to the response. The
+  jump revealed a payload by removing `is-collapsed`, the fold mechanism of the
+  old two-pane layout where both editors were visible and either could be
+  folded. The one-editor tab layout hides the inactive payload with a different
+  class, so the jump removed a class that was not what hid the pane, painted its
+  highlight where nobody could see it, and left the reader on a payload with
+  nothing wrong in it. The reveal now happens in `navigate()` — the one function
+  the finding action, the source rail and Alt-arrow stepping all pass through —
+  and keys off the primary location, so a finding with related parts on both
+  payloads still shows the side that was asked for.
+- The line-number gutter is as wide as its numbers. `flex: 0 0 auto` already
+  content-sized the column; a `min-width: 44px` floor simply sat above every
+  realistic digit count, so the width was 44px flat from one line to five
+  thousand. The floor is now expressed in `ch`, which both tracks digit count
+  and holds the width still across 9 to 10 lines — the boundary ordinary typing
+  crosses constantly, where a moving column would shift text under the cursor.
+- The verdict strip no longer paints a dark slab beside its chips. A band-era
+  dark-theme tint outranked the later rule that zeroes the strip's chrome —
+  higher specificity, and later source order cannot beat it — so the container
+  kept drawing a background the current layout does not want, and any width the
+  chips did not cover read as a control that had failed to load.
+
+Each of the three arrives with a regression demonstrated to fail first: the jump
+contract under jsdom, and the gutter's geometry and the strip's computed
+background in a real browser, because neither is a claim jsdom can make.
+
+Not included, deliberately: the workbar gear rendering unstyled is a stale
+stylesheet reaching a tab left open across a deploy, not a rule error. Its
+repair changes cache semantics in `server.js` and gets its own release so it can
+be rolled back on its own.
+
 ### v1.14.4 — the theme button that answered on the first press
 
 - Reordered the shell theme cycle. It has three states (auto, light, dark) and
