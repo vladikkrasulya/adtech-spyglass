@@ -6,6 +6,22 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.14.6 — the confirmation that did not fit its own button
+
+- Copy, format and clear now confirm inside the button without painting over
+  their neighbours. The confirmation swapped the button's contents for a
+  localized word, which is the right idea and stays — a corner toast is missed
+  when the cursor is already on the button. But these are 28×28 icon controls,
+  and "отформатировано" is 62px of text in a 26px box with visible overflow, so
+  the word escaped and struck through its own border and the icon beside it.
+  Icon-only buttons now show a check mark, which is confirmation in the space
+  actually available; the word moves to `aria-label` for its duration, so a
+  screen reader hears the outcome rather than a bare glyph, and the previous
+  label is restored exactly — including having had none.
+
+The regression measures the box rather than counting characters, in Russian
+because "отформатировано" is the widest status string the product ships.
+
 ### v1.14.5 — three defects the tests were not watching
 
 - A finding that belongs to the response now takes you to the response. The

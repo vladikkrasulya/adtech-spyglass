@@ -181,16 +181,42 @@ export async function mountInspector(root, ctx) {
     if (prev) {
       clearTimeout(prev.timeout);
       btn.innerHTML = prev.original;
+      if (prev.label === null) btn.removeAttribute('aria-label');
+      else if (prev.label !== undefined) btn.setAttribute('aria-label', prev.label);
     }
     const original = btn.innerHTML;
-    btn.textContent = t(key);
+    const word = t(key);
+    // An icon-only control is a 28x28 square. "отформатировано" is 62px of
+    // text, `overflow` is visible, and the word escaped the button and painted
+    // over its neighbours — reported as the label struck through by its own
+    // border. The in-button confirmation is still the right idea (the comment
+    // above says why: a corner toast is missed when the cursor is on the
+    // button), so it stays — it just has to fit. A check mark is confirmation
+    // at the same place, in the space actually available.
+    //
+    // The word is not lost: it moves to aria-label for the duration, so a
+    // screen reader hears "отформатировано" rather than a bare glyph, and the
+    // previous label is restored exactly — including having had none.
+    const iconOnly = btn.classList.contains('icon-only');
+    let label;
+    if (iconOnly) {
+      label = btn.hasAttribute('aria-label') ? btn.getAttribute('aria-label') : null;
+      btn.textContent = '✓';
+      btn.setAttribute('aria-label', word);
+    } else {
+      btn.textContent = word;
+    }
     btn.classList.add('btn-icon--ok');
     const timeout = setTimeout(function () {
       btn.innerHTML = original;
       btn.classList.remove('btn-icon--ok');
+      if (iconOnly) {
+        if (label === null) btn.removeAttribute('aria-label');
+        else btn.setAttribute('aria-label', label);
+      }
       _flashTimers.delete(btn);
     }, 1500);
-    _flashTimers.set(btn, { timeout, original });
+    _flashTimers.set(btn, { timeout, original, label: iconOnly ? label : undefined });
   }
 
   // Expose toast on window so non-module IIFE scripts (share/index.js,
