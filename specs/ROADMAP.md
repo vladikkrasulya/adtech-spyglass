@@ -53,6 +53,14 @@ reconciled its requirements and evidence, and separated the unrelated compatibil
 The package records that order explicitly; it is recovery of traceability, not a claim that planning
 preceded the already completed browser work.
 
+The dialect direction is **paused** as of 2026-08-22, by the owner's decision, from a closed state
+rather than an abandoned one: 008 is complete, merged and deployed, the corpus stands at 1233 rules
+with every mutation carrying provenance, and the lab containers are stopped with their image and
+data retained. What remains open is named in the 008 row above — seven disposition disagreements in
+the adjudication follow-up queue, twelve rules the end-to-end oracle cannot isolate, and route
+relevance parked until a record-bearing source exists. Resuming starts from that row and from the
+audit bundle beside the corpus; nothing resumable lives only in a conversation.
+
 ## Fleet Standard Follow-Ups
 
 These are ordered future assessments, not installed capabilities or authorized implementation. Each
