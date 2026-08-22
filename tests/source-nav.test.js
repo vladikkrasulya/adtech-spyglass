@@ -599,3 +599,63 @@ test('caret popover clamps its complete box to the visible editor and viewport',
   w.OrtbtoolsSourceNav.teardown();
   w.close();
 });
+
+// ── The jump must reveal the payload it lands in ──────────────────────────
+//
+// navigate() used to reveal a pane only through expand(), which removes the
+// class `is-collapsed` — the fold mechanism of the OLD two-pane layout, where
+// both textareas were visible and either could be folded away. The one-editor
+// tab layout that replaced it hides the inactive payload behind a tab with a
+// DIFFERENT class, so expand() removed a class that was not what hid the pane.
+// A response-side jump taken from the request tab therefore painted its
+// highlight into a pane nobody could see, and the user was left looking at a
+// payload with nothing wrong in it.
+//
+// The reveal belongs in navigate() rather than in the finding-action
+// dispatcher, because the source rail and Alt+↓/↑ stepping reach the same
+// function by different routes; fixing the dispatcher alone would leave both
+// of those still jumping into a hidden pane.
+
+test('jump reveals the payload that owns the primary location', () => {
+  const w = setup(PRETTY({ id: 'req-1' }), PRETTY({ id: 'res-1', seatbid: [] }));
+  const shown = [];
+  w.showPayloadSide = (side) => shown.push(side);
+
+  const loc = FL.buildNormalLocation({ id: 'r', path: 'id' }, { side: 'response', kind: 'ortb' });
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'r', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
+
+  assert.deepEqual(shown, ['res'], 'a response-side jump reveals the response payload');
+});
+
+test('jump reveals the PRIMARY side, not whichever related part is last', () => {
+  const w = setup(PRETTY({ id: 'req-1', imp: [{ id: 'i1' }] }), PRETTY({ id: 'res-1' }));
+  const shown = [];
+  w.showPayloadSide = (side) => shown.push(side);
+
+  // Primary on the request, a related part on the response. The paint loop
+  // walks request-then-response, so a reveal driven from inside that loop
+  // would end on 'res' and steal the tab from the primary location.
+  const loc = FL.buildNormalLocation(
+    { id: 'p', path: 'imp[0].id' },
+    { side: 'request', kind: 'ortb' },
+  );
+  loc.related = [
+    FL.buildNormalLocation({ id: 'p2', path: 'id' }, { side: 'response', kind: 'ortb' }).primary,
+  ];
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'p', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc));
+
+  assert.deepEqual(shown, ['req'], 'the primary side wins over a related part');
+});
+
+test('jump still completes where the host page exposes no tab function', () => {
+  // jsdom here, but also the real standalone shells: source-nav must not
+  // require a global it merely prefers.
+  const w = setup(PRETTY({ id: 'req-1' }), '');
+  assert.equal(typeof w.showPayloadSide, 'undefined', 'precondition: no tab function');
+
+  const loc = FL.buildNormalLocation({ id: 'q', path: 'id' }, { side: 'request', kind: 'ortb' });
+  w.OrtbtoolsSourceNav.onAnalyzed([{ id: 'q', location: loc }]);
+  assert.ok(w.OrtbtoolsSourceNav.navigate(loc), 'navigate succeeds without the global');
+});

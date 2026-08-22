@@ -422,3 +422,140 @@ test('every strip label has a hint in all three locales', () => {
     }
   }
 });
+
+// ── The strip paints no background of its own ────────────────────────────
+//
+// The dark rectangle the owner asked about beside the context chip was not an
+// empty chip: it was .analysis-strip's own background showing through wherever
+// the chips did not cover it. A band-era rule, `[data-theme='dark']
+// .analysis-strip` (specificity 0,2,0), outranked the later V2 rule that zeroes
+// the strip's chrome with `background: transparent` (0,1,0) — later source
+// order cannot beat higher specificity, so the tint survived the layout change
+// that removed the band it was drawn for.
+//
+// The parent (#verdict) paints the surface. The strip must paint nothing, in
+// either theme, or any width it does not fill reads as a control that failed
+// to load.
+
+test(
+  'browser: the analysis strip paints no background in either theme',
+  { timeout: 240000, skip: browserSkipReason },
+  async () => {
+    assert.ok(puppeteer);
+    assert.ok(chromeExecutable);
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ortbtools-stripbg-'));
+    const port = await getFreePort();
+    let serverInfo = null;
+    let browser = null;
+
+    try {
+      serverInfo = await new Promise((resolve, reject) => {
+        const proc = spawn(process.execPath, [path.join(ROOT, 'server.js')], {
+          env: {
+            ...process.env,
+            PORT: String(port),
+            NODE_ENV: 'test',
+            LOG_LEVEL: 'info',
+            ORTBTOOLS_DATA_DIR: dataDir,
+            ORTBTOOLS_ANALYTICS_DISABLED: '1',
+            NEWS_CRAWLER_DISABLED: '1',
+            FX_DISABLED: '1',
+          },
+          cwd: ROOT,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        let started = false;
+        const timer = setTimeout(() => {
+          if (!started) {
+            proc.kill();
+            reject(new Error('Server did not start within 10s'));
+          }
+        }, 10000);
+        const onData = (chunk) => {
+          if (!started && chunk.toString().includes('listening')) {
+            started = true;
+            clearTimeout(timer);
+            resolve({ proc, url: `http://127.0.0.1:${port}` });
+          }
+        };
+        proc.stdout.on('data', onData);
+        proc.stderr.on('data', onData);
+        proc.on('error', (e) => {
+          clearTimeout(timer);
+          reject(e);
+        });
+        proc.on('exit', (c) => {
+          if (!started) {
+            clearTimeout(timer);
+            reject(new Error(`Server exited ${c}`));
+          }
+        });
+      });
+
+      browser = await puppeteer.launch({
+        headless: true,
+        protocolTimeout: 120_000,
+        executablePath: chromeExecutable,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      });
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1440, height: 900 });
+      await page.goto(`${serverInfo.url}/inspector`, {
+        waitUntil: 'networkidle2',
+        timeout: 60000,
+      });
+      await page.waitForSelector('#bidReq', { timeout: 30000 });
+
+      // The strip only exists after an analysis; a bare page load has no
+      // verdict to draw. One payload with a finding is enough — the assertion
+      // is about the container's background, not about what fills it.
+      await page.evaluate(
+        (v) => {
+          const el = /** @type {any} */ (document.getElementById('bidReq'));
+          el.value = v;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        JSON.stringify({
+          id: 'bg-1',
+          imp: [{ id: '1', banner: { w: 300, h: 250 } }],
+          site: { page: 'https://example.com/a', publisher: { id: 'p' } },
+        }),
+      );
+      await page.evaluate(() =>
+        /** @type {any} */ (document.querySelector('[data-action="analyze"]')).click(),
+      );
+      await page.waitForSelector('#analysisStrip', { timeout: 20000 });
+      await delay(400);
+
+      const bgFor = async (theme) =>
+        page.evaluate((th) => {
+          document.documentElement.setAttribute('data-theme', th);
+          const strip = document.getElementById('analysisStrip');
+          if (!strip) return null;
+          return getComputedStyle(strip).backgroundColor;
+        }, theme);
+
+      const transparent = (v) => v === 'rgba(0, 0, 0, 0)' || v === 'transparent';
+
+      const dark = await bgFor('dark');
+      assert.ok(dark !== null, 'the strip exists');
+      assert.ok(
+        transparent(dark),
+        `dark theme must not paint a band behind the chips (got ${dark})`,
+      );
+
+      const light = await bgFor('light');
+      assert.ok(
+        transparent(light),
+        `light theme must not paint a band behind the chips (got ${light})`,
+      );
+    } finally {
+      if (browser) await browser.close().catch(() => {});
+      if (serverInfo) {
+        serverInfo.proc.kill();
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    }
+  },
+);

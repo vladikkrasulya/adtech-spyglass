@@ -831,6 +831,24 @@
       );
       return false;
     }
+    // The one-editor tab layout hides the inactive payload behind a tab, and
+    // hides it with a class expand() does not touch — expand() removes
+    // `is-collapsed`, the fold mechanism of the old two-pane layout where both
+    // textareas were visible. A jump into the hidden side therefore painted an
+    // overlay nobody could see, and left the reader on a payload with nothing
+    // wrong in it.
+    //
+    // Reveal here, not in the finding-action dispatcher: the source rail and
+    // Alt+↓/↑ stepping reach navigate() by their own routes, and all three
+    // should behave the same. Key off pr.side — the PRIMARY location — because
+    // the paint loop below walks both sides, so revealing from inside it would
+    // end on whichever side happens to be last and steal the tab from the
+    // location the user actually asked for. The guard keeps this working where
+    // the host page exposes no tab function, which is the standalone shells
+    // and every jsdom test.
+    if (typeof window.showPayloadSide === 'function') {
+      window.showPayloadSide(pr.side === 'response' ? 'res' : 'req');
+    }
     const bySide = { request: [], response: [] };
     bySide[pr.side].push({
       range: pr.range,
