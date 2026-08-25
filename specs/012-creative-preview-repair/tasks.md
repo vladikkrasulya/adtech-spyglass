@@ -280,6 +280,33 @@ moment when the tree and the index agree.
 Fixed by rewording the note rather than adding the file to `FILE_ALLOWLIST`: that list is for
 historical documents that must quote the old name to be useful, and this note is not one.
 
-### Production evidence
+### Production evidence — 2026-08-25
 
-None. Deployment is a separately authorized action and was not performed.
+Deployed under the standing authorization added the same day
+([ADR-013](../decisions/ADR-013-standing-release-authorization.md)), through `scripts/deploy.sh` with
+every gate armed.
+
+- **Version**: `v1.15.0` · **Image**: `ortbtools:1b41d5b` · **Git SHA**: `1b41d5b`
+- Readiness: `http=ok docker=healthy` at t=6s.
+- Smoke: **18/18 PASS**, including `BUILD_SHA=1b41d5b matches expected`, `/api/analyze returns
+findings`, `/api/v1/stream emits SSE`, all nine locale pages 200, `container health=healthy`,
+  `RestartCount=0`. `SMOKE OK`, then `DEPLOY OK: v1.15.0 (1b41d5b) is live.`
+- No rollback was triggered.
+
+Verified in the running container rather than inferred from the deploy's own output:
+
+```
+/version.js                → const VERSION = 'v1.15.0'
+/api/health                → build.sha 1b41d5b
+/inspector, /uk/inspector, /ru/inspector → each carries creative-classify.js and /core/vast-shape.js
+/creative-probe.js         → carries ortbtools-preview-refusal
+dialect-label.i18n.js      → the refusal sentence present in all three locales
+```
+
+One correction worth keeping: the first check probed `/en` and reported the classifier tag missing.
+That was the probe being wrong, not the deploy — the Inspector is served at `/inspector`, and `/en`
+never carried those modules. Recorded because a false alarm about a live deploy is exactly the kind
+of thing that should not be quietly deleted.
+
+The local preview that stood in for production while this was undeployed has been stopped; the
+container is the only thing serving `1.15.0` now.
