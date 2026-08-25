@@ -165,9 +165,11 @@ and compare.
       `public/about.{en,ru,uk}.html`, `public/modules/inspector/template.{en,ru,uk}.html`,
       `specs/000-platform-baseline/contracts/locales-versioning.md`,
       `specs/000-platform-baseline/{spec,plan}.md`, and `CHANGELOG.md`
-- [ ] T030 Commit the feature scope with explicit paths. **Never `git add -A`** — this worktree is
-      shared with other sessions and currently carries an unrelated modification to
-      `specs/011-local-model-maximum/tasks.md` that is not ours to stage
+- [x] T030 Committed as `03dda77` on `main`, 35 paths staged explicitly. `specs/011-local-model-maximum/tasks.md`
+      was left unstaged — it belongs to another session working in this same worktree. `git diff --check`
+      exit 0. `.specify/feature.json` is gitignored and stays local, which is correct: it is the
+      machine-local pointer to the active package, not a tracked artifact. Push and deployment are
+      separate actions and were not performed
 
 ## Dependencies & Execution Order
 
