@@ -335,6 +335,23 @@ async function clickAndCollect(h, id) {
   return h.events.filter((e) => e && String(e.kind).indexOf('invisible_overlay') === 0);
 }
 
+test('probe/bot — an untrusted geometric-center click emits center_synth_click', async () => {
+  const h = mountProbe('<button id="target">open</button>');
+  try {
+    h.doc.getElementById('target').getBoundingClientRect = () => rect(0, 0, 300, 250);
+    h.doc
+      .getElementById('target')
+      .dispatchEvent(new h.win.MouseEvent('click', { bubbles: true, clientX: 150, clientY: 125 }));
+    for (let i = 0; i < 3; i++) await new Promise((resolve) => h.win.setTimeout(resolve, 0));
+    const hit = h.events.find((event) => event && event.kind === 'center_synth_click');
+    assert.ok(hit, 'the probe must emit its center-click signal');
+    assert.equal(hit.centerDistancePx, 0);
+    assert.equal(hit.isTrusted, false);
+  } finally {
+    h.dom.window.close();
+  }
+});
+
 /** Full-viewport rect for the mounted window. */
 function viewport(win, scale) {
   const s = scale == null ? 1 : scale;

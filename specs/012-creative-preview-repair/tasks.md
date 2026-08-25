@@ -26,15 +26,11 @@ green, so the gate is written first and its red state is recorded below before a
       `public/modules/inspector/creative-classify.js` into jsdom the way `tests/macro-evaluator.test.js`
       loads the macro engine; assert the normative order, that only `markup` satisfies `isFrameable`,
       and that `result.body` is unchanged except on the base64 row
-- [ ] T003 [P] (FR-009, SC-005) Eviction case — **covered structurally, not functionally.** The
-      enforcing assertion lives in `tests/creative-preview-seal.test.js` ("refusals travel on their own
-      message type and never enter the behaviour buffer"): it reads the parent receiver and fails if
-      the refusal branch stops preceding `pushBehaviorEvent`, if it stops returning, or if the probe
-      starts routing refusals through `send()`. That is what actually prevents the eviction, and it
-      fails on the reordering that would reintroduce it. What is NOT written is the functional version
-      — a browser render emitting more than `BEHAVIOR_EVENTS_MAX` refusals, asserting the behaviour
-      findings are unchanged. Stated plainly rather than marked done: the structural test cannot catch
-      a future change that keeps the ordering but shares the store some other way
+- [x] T003 [P] (FR-009, SC-005) Add the functional eviction case to
+      `tests/creative-preview-browser.test.js`: in real Chromium authenticate a refusal batch larger
+      than the 500-event behaviour ring, prove the parent ledger truncates at 200 without inserting a
+      refusal into the behaviour store, and prove a legitimate navigation event survives. The earlier
+      structural assertion in `tests/creative-preview-seal.test.js` remains as the fast first gate
 
 ## Phase 2: Foundational — the classifier and the transport
 
@@ -53,8 +49,8 @@ green, so the gate is written first and its red state is recorded below before a
       `public/index.ru.html` and `public/index.uk.html`, next to `creative-assets.js`
 - [x] T007 (FR-007, FR-008) In `public/creative-probe.js`, register a `securitypolicyviolation`
       listener on `window` in the capture phase; deduplicate by `(effectiveDirective, blockedURI)`;
-      batch on a short timer; cap per render and set `truncated` on reaching it; send as
-      `ortbtools-preview-refusal`, never through the behaviour `send()` path
+      batch on a private, non-cancellable task signal; cap per render and set `truncated` on reaching
+      it; send as `ortbtools-preview-refusal`, never through the behaviour `send()` path
 - [x] T008 (FR-009) In the parent receiver in `public/ortbtools.app.js`, accept the new type: apply the
       existing `event.source` pinning check, reset the watchdog clock, update the refusal ledger, and
       return **before** `pushBehaviorEvent`. Clear the ledger in `setAdPreview` alongside
@@ -84,7 +80,7 @@ preview column without opening developer tools.
 and compare.
 
 - [x] T013 [US2] (FR-004) Replace the inline native gate in `setAdPreview`
-      (`public/ortbtools.app.js:1381`) with a route on `kind === 'native'` from the classifier, passing
+      (`50c6294:public/ortbtools.app.js:1381`) with a route on `kind === 'native'` from the classifier, passing
       `result.native` — already normalised to the wrapped shape — straight to `renderNativeToHtml`.
       The gate is deleted, not widened: two native detectors that must agree by hand is the duplication
       Principle V prohibits, and it is how this defect arose
@@ -113,7 +109,7 @@ and compare.
       a number. **Changed during implementation, on looking at the rendered result.** The task as
       written was to replace the note; two things made that wrong. The ledger host is created on
       demand, so no template element is needed. And the note is guarded by a deliberate assertion
-      (`tests/macro-evaluator.test.js:418`, "explicit trade-off wording") — it is a recorded decision,
+      (`50c6294:tests/macro-evaluator.test.js:418`, "explicit trade-off wording") — it is a recorded decision,
       and it is genuinely useful before anything is pasted, when the ledger has nothing to say. What
       the screenshot showed was not a wrong note but a duplicated one: the vague sentence sat directly
       above the specific one, and the eye lands on the vague one first. So it is hidden for exactly as
@@ -142,7 +138,8 @@ and compare.
       byte-identical to their pre-change values, and `public/modules/inspector/creative-classify.js`
       contains no `fetch`, `XMLHttpRequest`, `new Image`, or `sendBeacon` — the structural check
       `tests/macro-evaluator.test.js` already applies to the macro engine, applied to the new module
-- [x] T023 [US5] Turn T001 green and confirm `tests/macro-evaluator-browser.test.js:251`'s
+- [x] T023 [US5] Turn T001 green and confirm
+      `50c6294:tests/macro-evaluator-browser.test.js:251`'s
       `trapRequests === 0` still holds unchanged
 
 ## Phase 8: Cross-cutting and close-out
@@ -155,7 +152,7 @@ and compare.
 - [x] T026 [P] Update `specs/ROADMAP.md` with this package's status
 - [x] T027 (SC-001…SC-008) Walk [quickstart.md](./quickstart.md) §5 by hand in the running app and
       record what each of the five payload shapes shows, before and after
-- [ ] T028 Run `npm run ci` and `npm run test:browser` with real exit codes; record them in Evidence.
+- [x] T028 Run `npm run ci` and `npm run test:browser` with real exit codes; record them in Evidence.
       The browser phase is sensitive to other Chrome instances on this machine — check for a foreign
       Chrome before believing a failure
 - [x] T029 Released as app **`1.15.0`** — a minor, not a patch: the preview gains user-visible
@@ -170,6 +167,32 @@ and compare.
       exit 0. `.specify/feature.json` is gitignored and stays local, which is correct: it is the
       machine-local pointer to the active package, not a tracked artifact. Push and deployment are
       separate actions and were not performed
+
+## Phase 9: v1.16.0 remediation and verification
+
+- [x] T031 (FR-018, FR-019) Authenticate both reserved frame messages with current-frame identity and
+      a fresh 192-bit per-render capability; remove the capability-bearing script before creative
+      markup parses; construct telemetry through captured intrinsics; await the content-hashed probe
+      in every `runAnalysis` entry point, including callers exposed before mount completes
+- [x] T032 (FR-008, FR-009, FR-024) Enforce parent-owned batch, string and 200-entry caps with
+      canonical deduplication whose exact/truncated result is independent of duplicate ordering, and
+      exercise the cap plus behaviour isolation in real Chromium
+- [x] T033 (FR-012, FR-020, FR-021) Track the classified or synthetic body actually mounted, refresh
+      it after an asset-inlined rerender, and reject a delayed inline response when a newer preview or
+      iframe has replaced the request's source
+- [x] T034 (FR-020, FR-021, FR-022) Send the bounded executing body as canonical padded UTF-8 base64,
+      preserve legacy `{ events, adm }`, run static rules with zero visible events, reject malformed or
+      oversized transport, and prevent stale same-count/previous-creative responses from repainting
+- [x] T035 (FR-001, FR-003, FR-005, FR-023) Close classifier and locale edge cases: valid unpadded
+      base64, fail-closed missing Core VAST detection, Chromium directive aliases, and localized VAST
+      truncation with placeholder parity in English, Ukrainian and Russian
+- [x] T036 (FR-024) Add the non-skipped real-Chrome matrix for hashed and delayed probe loading,
+      retained mutable-intrinsic objects, capability authentication, both cap orderings, actual CSP
+      events, non-cancellable refusal flushing, inert fallbacks, Native parity, static-only analysis,
+      stale asset results, and localized trimming
+- [x] T037 (FR-025, SC-012) Harden the existing creative-asset host guard so WHATWG-canonical IPv4-mapped IPv6
+      literals inherit the embedded IPv4 classification before any socket opens; cover compressed,
+      expanded, loopback, link-local and public control forms in focused tests
 
 ## Dependencies & Execution Order
 
@@ -248,7 +271,7 @@ the measurements:
    was created last ended up first, and "Load 2 image(s) via the server" was above the sentence
    explaining why there were none. The column now reads frame → what happened → what you can do.
 
-### T028 — gates
+### T028 — v1.15.0 release gates (historical)
 
 Settled tree, exit codes captured directly, not through a pipeline. An earlier run reported "exit 0"
 through a `| tail` and was wrong about it; the numbers below are from the command's own status.
@@ -265,7 +288,7 @@ through a `| tail` and was wrong about it; the numbers below are from the comman
     owner link, and separately rejected a `[~]` task marker as a gap in the ID sequence. There is no
     partial state in this repository's task convention; T003 is therefore recorded as open.
 
-### T028 — a gate that only bites after `git add`
+### T028 — v1.15.0 gate that only bit after `git add` (historical)
 
 `npm run ci` was green three times before the commit and red on the first `git push`, from the
 identical tree. `tests/brand-guard.test.js` walks `git ls-files`, so while this package was untracked
@@ -279,6 +302,29 @@ moment when the tree and the index agree.
 
 Fixed by rewording the note rather than adding the file to `FILE_ALLOWLIST`: that list is for
 historical documents that must quote the old name to be useful, and this note is not one.
+
+### T028 — v1.16.0 remediation gates, 2026-08-25
+
+Run from the explicitly staged, settled 52-file release scope, with direct command exit codes:
+
+- `npm run ci`: **exit 0** — formatting, ESLint (0 errors; 4 pre-existing unused-disable warnings),
+  JSDoc/TypeScript, 141 non-browser files and 18 serial browser files all green; no browser retry or
+  skip. Coverage: **88.06% lines, 87.46% branches, 84.47% functions**.
+- `npm run test:browser`: **exit 0** — 30 tests, 30 pass, 0 fail, 0 cancelled, 0 skipped, and no
+  pending cases. This independent
+  invocation includes the real-Chrome capability, CSP, non-cancellable flush, classification,
+  source-parity and stale-render matrix.
+- `bash scripts/ci-docker-smoke.sh`: **exit 0** — immutable image built, ephemeral `/data` run became
+  healthy, `/api/analyze` returned findings, the hashed Blog/vendor graph was intact, Node was
+  `v22.22.3`, and `better-sqlite3` plus `bcrypt` loaded inside the container.
+- Focused version/governance/Spec Kit/API/host-boundary suite: **63/63 pass**; backup simulation:
+  **exit 0**; final independent release-document review: **CLEAN**.
+- The independent preview-boundary reviewer reproduced and then verified closure of fabricated
+  policy-event, replaced-timer, and guessed numeric timer-handle cases. Its final focused Chromium
+  run passed **1/1** with no directly related regression.
+
+This evidence is for `1.16.0`; the counts above supersede the historical `1.15.0` gate counts for the
+current release candidate without rewriting the earlier release record.
 
 ### Production evidence — 2026-08-25
 

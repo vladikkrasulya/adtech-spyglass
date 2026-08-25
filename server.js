@@ -361,6 +361,10 @@ const ES_IMPORT_RE = /(\b(?:from|import\s*\()\s*['"])(\/[^'"?]+\.(?:js|css))(?:\
 // module-CSS edits ship unversioned and stick behind browser/CDN cache. Strings
 // already carrying ?v=… don't match — the closing quote must immediately follow .css.
 const MODULE_CSS_STR_RE = /(['"])(\/modules\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+\.css)\1/g;
+// Runtime fetch used to inline the creative probe. It is not an ES import, so
+// without an explicit pass the CDN can serve a stale probe beside a fresh
+// parent receiver and silently break the authenticated channel contract.
+const PROBE_JS_STR_RE = /(['"])(\/creative-probe\.js)\1/g;
 
 function rewriteAssetVersions(content, sourceType, visited) {
   let result = content;
@@ -383,6 +387,12 @@ function rewriteAssetVersions(content, sourceType, visited) {
   // chrome loadStylesheet() calls) so module-CSS edits actually reach browsers.
   if (sourceType === 'js') {
     result = result.replace(MODULE_CSS_STR_RE, (match, quote, asset) => {
+      const filepath = path.join(PUBLIC_DIR, asset);
+      const hash = fileHash(filepath, visited);
+      if (!hash) return match;
+      return `${quote}${asset}?v=${hash}${quote}`;
+    });
+    result = result.replace(PROBE_JS_STR_RE, (match, quote, asset) => {
       const filepath = path.join(PUBLIC_DIR, asset);
       const hash = fileHash(filepath, visited);
       if (!hash) return match;

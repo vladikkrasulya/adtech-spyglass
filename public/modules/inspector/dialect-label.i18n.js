@@ -226,6 +226,11 @@
         en: 'vast · video xml · preview-only, no playback',
         ru: 'vast · видео xml · только просмотр, без воспроизведения',
       },
+      'creative.kind.trimmed': {
+        uk: '… обрізано (приховано {n} символів)',
+        en: '… trimmed ({n} chars hidden)',
+        ru: '… обрезано (скрыто {n} символов)',
+      },
       'creative.macros.unresolved': {
         uk: 'Нерозвʼязані макроси в розмітці: {list}. Вони лишились літералами — аукціону не було.',
         en: 'Unresolved macros in the markup: {list}. They stay literal — no auction took place.',

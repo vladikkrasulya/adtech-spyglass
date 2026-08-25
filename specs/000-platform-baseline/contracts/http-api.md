@@ -28,10 +28,20 @@ returns validation/crosscheck/category/format metadata, and does not persist raw
 Authenticated calls additionally write account-scoped derived counts; configured analytics can
 receive derived validation metrics.
 
-`POST /api/analyze-behavior` runs the behavior engine server-side over probe events and optional
-creative markup. Events beyond the accepted bound are head/tail sampled. The endpoint returns
-findings, status, accepted event count, and truncation metadata; it does not save a Behavior Corpus
-entry.
+`POST /api/analyze-behavior` runs the behavior engine server-side over the required probe-event array
+and optional creative source. Events beyond the accepted bound are head/tail sampled. Legacy
+`{ events, adm }` remains accepted. The hosted Inspector uses additive
+`{ events, adm_b64, adm_truncated }`: `adm_b64` is canonical padded base64 of valid UTF-8 no larger
+than 1 MiB decoded, takes precedence over `adm`, and is rejected when non-canonical, invalid UTF-8, or
+oversized. `adm_truncated`, when present, is boolean. Empty events are valid so static rules can scan
+the selected executing body without a runtime-visible probe event.
+
+The endpoint returns findings, status, accepted event count, event truncation metadata, and additive
+`meta.admTruncated` for caller-declared creative-source truncation. Creative source is processed
+transiently, not logged as request context, and does not create a Behavior Corpus entry. The browser
+selects macro-resolved/classified/once-decoded markup or escaped synthetic Native HTML before
+probe/CSP instrumentation; details of that selection and the 1 MiB UTF-8 window live in
+[the frontend contract](./frontend-modules.md).
 
 These two endpoints are the documented HTTP integration contract. Their request, response, error,
 and additive-versioning semantics remain in [docs/api-v1.md](../../../docs/api-v1.md). Other routes
@@ -89,10 +99,20 @@ Wrapped-key fields are opaque to the server. Reset and wipe behavior is part of
 | Behavior Corpus   | list/create/delete and matrix under `/api/behavior/corpus`                    | Current user's explicitly saved probe events              |
 | User dialects     | dialect CRUD/import/export plus mapping CRUD under `/api/dialects`            | Current user only                                         |
 | Partner inference | `POST /api/intel/suggest-partner`                                             | Transient deterministic inference for signed-in save flow |
+| Creative asset    | `POST /api/creative/asset`                                                    | Signed-in, explicit-click raster inlining                 |
 | Outbound proxy    | `POST /api/proxy`                                                             | Signed-in allowlisted test harness                        |
 
 Workspace handlers perform the auth gate themselves and always scope persistence calls by user id.
 A partner deletion unassigns its samples; it does not transfer another user's data.
+
+The creative-asset route is a separate caller-chosen-host SSRF boundary. Before a socket opens, it
+accepts only HTTP(S) on default ports, canonicalizes literal and DNS-returned addresses (including
+IPv4-mapped IPv6 and WHATWG hexadecimal forms) before private-address classification, and rejects a
+hostname if any answer is private. The connection is pinned to the validated address while retaining
+the original hostname for HTTP `Host`, TLS SNI, and certificate validation. Redirects are not
+followed. Responses must match the raster-image MIME allowlist (which excludes SVG) and stay within
+the configured byte and timeout bounds. Authentication and rate limiting are additional controls,
+not substitutes for these socket-level guarantees.
 
 ### Operator and Optional Error Ingest
 
@@ -113,6 +133,7 @@ the configured internal upstream. It is not a general reverse proxy.
 - SSE limits concurrent connections per client and stops the generator when the last subscriber
   leaves.
 - Auth has account/IP-oriented registration/login/recovery limiters and persistent session expiry.
+- The authenticated creative-asset fetch enforces the caller-chosen-host boundary documented above.
 - The authenticated outbound proxy uses a static hostname allowlist, HTTP/HTTPS only, approved
   ports, redirect revalidation, response-size cap, and timeout. The user intentionally sends its
   request body to the selected external allowlisted host.
@@ -143,6 +164,8 @@ compatibility. Creative containment is separately enforced by the iframe sandbox
 - Analyze, behavior, mirror, replay, and Intel do not forward submitted payloads to a model.
 - `/api/proxy` is an explicit authenticated user-requested transmission to a small code-reviewed
   allowlist.
+- `/api/creative/asset` is an explicit authenticated user-requested image fetch to a creative-named
+  host, subject to the pinned-address SSRF boundary above.
 - Resend receives transactional email data only from auth flows when configured.
 - ClickHouse receives the derived/operational/content entities described in
   [data-model.md](../data-model.md).

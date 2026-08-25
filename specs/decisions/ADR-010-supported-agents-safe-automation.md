@@ -1,7 +1,8 @@
 # ADR-010: Supported Agents and Safe Automation Boundary
 
-**Status**: Accepted
+**Status**: Accepted; amended by ADR-013
 **Date**: 2026-08-11
+**Amended by**: [ADR-013](./ADR-013-standing-release-authorization.md)
 
 ## Context
 
@@ -22,8 +23,12 @@ canonical memory.
 
 The accepted extension set contains only the reviewed bundled `assess` extension. The gold path is
 manual: assess when uncertain, specify, clarify, plan, checklist, tasks, analyze, implement bounded
-phases, verify, and converge. No workflow may commit, push, publish, deploy, or mutate production
-without separate authorization.
+phases, verify, and converge. The original uniform rule required separate authorization before any
+commit, push, publish, deploy, or production mutation. ADR-013 supersedes that clause: authored
+in-scope commits, non-force pushes to `main`, the mandatory pre-deploy backup, and the documented
+deploy/rollback flows carry standing authorization under their gates; publication, restore,
+destructive actions, direct `/data` access outside those flows, and other explicit-class actions do
+not. Workflow or tool availability never expands authorization.
 
 The initial boundary excludes generic or non-multi-install-safe agents, `agent-context`, Git mutation
 hooks, `constitution-sync`, the unhardened bundled bug flow, community/URL packages, and automatic or
@@ -41,7 +46,8 @@ distribution bundle must each pass assessment, source review, fixture tests, and
 - Install `agent-context` to recreate root rulebooks. Rejected because it would restore parallel
   policy copies.
 - Run the bundled or community workflow unattended. Rejected because current flows omit or weaken
-  required clarification, analysis, checklist, convergence, and authorization gates.
+  required clarification, analysis, checklist, convergence, and the constitution's action-specific
+  standing/explicit authorization gates.
 - Support no generated adapters. Rejected because each agent would need bespoke manual onboarding.
 
 ## Consequences
@@ -59,6 +65,7 @@ distribution bundle must each pass assessment, source review, fixture tests, and
 ## Related Artifacts
 
 - [Agent integration contract](../001-spec-kit-foundation/contracts/agent-integration.md)
+- [ADR-013: Standing release authorization](./ADR-013-standing-release-authorization.md)
 - [Foundation research](../001-spec-kit-foundation/research.md)
 - [Current roadmap](../ROADMAP.md)
 - [Project-memory index](../README.md)

@@ -1,25 +1,30 @@
 #!/bin/bash
-# Pre-push hook: runs the same checks GitHub CI runs.
-# Catches red CI before it ever lands. Bypass with `git push --no-verify`
-# if you really need to (but you almost never do).
+# Pre-push hook: runs the local repository gate before any push that updates main.
+# Hosted CI additionally owns its package and Docker smoke jobs. Never bypass a
+# failing local or hosted gate.
 #
 # Enable once per clone: `git config core.hooksPath .githooks`
 
 set -e
 
-# Skip if we're on a branch that doesn't go to main (e.g. local-only).
-# Push to forks / experimental branches doesn't need the full check.
-remote="$1"
-url="$2"
-branch=$(git rev-parse --abbrev-ref HEAD)
+# Git supplies every proposed ref update on stdin as:
+#   <local ref> <local object> <remote ref> <remote object>
+# The destination ref is the security boundary: feature:main and HEAD:main
+# require the same gate as main:main, while main:feature does not.
+updates_main=0
+while read -r _local_ref _local_oid remote_ref _remote_oid; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    updates_main=1
+  fi
+done
 
-if [ "$branch" != "main" ]; then
-  echo "[pre-push] non-main branch ($branch) — skipping CI checks"
+if [ "$updates_main" -ne 1 ]; then
+  echo "[pre-push] no update to refs/heads/main — skipping CI checks"
   exit 0
 fi
 
-echo "[pre-push] running format:check + lint + typecheck + tests…"
-echo "           same as GitHub CI. ~10s. --no-verify to skip."
+echo "[pre-push] running the local repository gate: npm run ci…"
+echo "           hosted CI will additionally run package and Docker smoke jobs."
 echo
 
 # Run the unified ci script. Fails fast on first error.

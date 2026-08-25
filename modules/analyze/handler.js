@@ -1,6 +1,7 @@
 'use strict';
 
 const log = require('../../lib/logger').child('analyze');
+const { TextDecoder } = require('node:util');
 
 /**
  * modules/analyze/handler.js — POST /api/analyze + /api/analyze-behavior.
@@ -35,7 +36,7 @@ const log = require('../../lib/logger').child('analyze');
  *   }));
  */
 
-const { readJson, sendJson, sendError } = require('../../lib/http');
+const { readJson, sendJson, sendError, makeError } = require('../../lib/http');
 // Stage-1 finding→source navigation — additive `finding.location` candidate.
 // Pure core module (no payload values, no side regex); side comes from the
 // per-pane validate() call context below.
@@ -45,6 +46,36 @@ let _logValidation = null;
 try {
   ({ logValidation: _logValidation } = require('../../lib/validation-log'));
 } catch (_) {}
+
+const BEHAVIOR_ADM_MAX_BYTES = 1024 * 1024;
+const BEHAVIOR_ADM_B64_MAX_LENGTH = 4 * Math.ceil(BEHAVIOR_ADM_MAX_BYTES / 3);
+const STRICT_BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+function decodeBehaviorAdm(adm, admB64) {
+  // `adm` remains accepted for API compatibility. The browser uses adm_b64:
+  // its deterministic 4/3 expansion cannot be amplified by JSON escaping.
+  if (admB64 === undefined) return typeof adm === 'string' ? adm : '';
+  if (
+    typeof admB64 !== 'string' ||
+    admB64.length > BEHAVIOR_ADM_B64_MAX_LENGTH ||
+    admB64.length % 4 !== 0 ||
+    !STRICT_BASE64_RE.test(admB64)
+  ) {
+    throw makeError('invalid_input', 'adm_b64 must be canonical base64 within the 1 MiB limit');
+  }
+  const bytes = Buffer.from(admB64, 'base64');
+  if (bytes.length > BEHAVIOR_ADM_MAX_BYTES || bytes.toString('base64') !== admB64) {
+    throw makeError('invalid_input', 'adm_b64 must be canonical base64 within the 1 MiB limit');
+  }
+  try {
+    // Preserve a leading U+FEFF. It is part of the frame body and Core's VAST
+    // detector deliberately understands it; TextDecoder strips it unless
+    // ignoreBOM is enabled.
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch (_e) {
+    throw makeError('invalid_input', 'adm_b64 must contain valid UTF-8');
+  }
+}
 
 /**
  * @param {{
@@ -370,9 +401,12 @@ function createAnalyzeModule(deps) {
     }
     const locale = resolveLocale(parsed);
     readJson(req)
-      .then(({ events, adm }) => {
+      .then(({ events, adm, adm_b64: admB64, adm_truncated: admTruncated }) => {
         if (!Array.isArray(events)) {
           return sendError(res, 400, 'invalid_input', 'events array is required');
+        }
+        if (admTruncated !== undefined && typeof admTruncated !== 'boolean') {
+          return sendError(res, 400, 'invalid_input', 'adm_truncated must be boolean');
         }
         // Server-side events cap (v0.25.0; head-only → head+tail in
         // v0.37.1 after Pro-audit P1-003). Probe-side already emits
@@ -398,20 +432,26 @@ function createAnalyzeModule(deps) {
           ? events.slice(0, HEAD_SAMPLE).concat(events.slice(-TAIL_SAMPLE))
           : events;
 
-        // Phase 6: optional `adm` field carries the raw creative string for
-        // static-payload analysis (obfuscation/miner/XSS pattern matching +
-        // entropy). Engine treats it as opt-in; callers that omit it get
-        // the pre-Phase-6 runtime-only pipeline.
+        // Phase 6: optional legacy `adm` or canonical UTF-8 `adm_b64` carries
+        // the creative source for static-payload analysis (obfuscation,
+        // miner/XSS patterns, entropy). Callers that omit both retain the
+        // runtime-only pipeline.
+        const creativeAdm = decodeBehaviorAdm(adm, admB64);
         const r = analyzeBehavior(capped, {
           locale,
-          adm: typeof adm === 'string' ? adm : '',
+          adm: creativeAdm,
         });
         sendJson(res, 200, {
           success: true,
           findings: r.findings,
           status: r.status,
           eventCount: r.eventCount,
-          meta: { locale, truncated, maxEvents: MAX_EVENTS },
+          meta: {
+            locale,
+            truncated,
+            maxEvents: MAX_EVENTS,
+            admTruncated: admTruncated === true,
+          },
         });
       })
       .catch((e) => sendError(res, e.status || 400, e.code || 'bad_request', e.message));

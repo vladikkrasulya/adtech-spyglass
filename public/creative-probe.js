@@ -78,6 +78,33 @@
   window.__ortbtoolsProbe = true;
 
   const PROBE_VERSION = 1;
+  const PROBE_CHANNEL = '__ORTBTOOLS_PROBE_CHANNEL__';
+  const _probeScript = document.currentScript;
+  let _postToParent = null;
+  let _defineOwn = null;
+  let _objectKeys = null;
+  let _now = null;
+  let _queueTask = null;
+  let _MessageChannel = null;
+  let _string = null;
+  let _arrayPush = null;
+  let _channelReady = false;
+  try {
+    // Capture the cross-origin-safe method before creative code gets a turn.
+    // The per-render capability stays in this closure and the script element
+    // carrying its literal value is removed before payload markup parses.
+    _postToParent = parent.postMessage.bind(parent);
+    _defineOwn = Object.defineProperty;
+    _objectKeys = Object.keys;
+    _now = Date.now.bind(Date);
+    _queueTask =
+      typeof window.queueMicrotask === 'function' ? window.queueMicrotask.bind(window) : null;
+    _MessageChannel = window.MessageChannel;
+    _string = String;
+    _arrayPush = Array.prototype.push.call.bind(Array.prototype.push);
+  } catch (_e) {
+    /* no usable parent means telemetry remains disabled */
+  }
 
   const NAV_TRIGGER_HOVER = new Set([
     'mouseover',
@@ -338,14 +365,59 @@
 
   function send(payload) {
     try {
-      const msg = Object.assign(
-        { type: 'ortbtools-probe', v: PROBE_VERSION, ts: Date.now() },
-        payload || {},
-      );
-      parent.postMessage(msg, '*');
+      if (!_channelReady || !_defineOwn || !_now) return;
+      const msg = payload && typeof payload === 'object' ? payload : {};
+      // Do not call mutable realm globals here. Creative code runs before most
+      // events and can replace Object.assign or install inherited setters; a
+      // captured intrinsic plus own data properties keeps the capability in
+      // the probe closure until structured clone begins.
+      _defineOwn(msg, 'type', {
+        value: 'ortbtools-probe',
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+      _defineOwn(msg, 'v', {
+        value: PROBE_VERSION,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+      _defineOwn(msg, 'ts', {
+        value: _now(),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+      _defineOwn(msg, 'channel', {
+        value: PROBE_CHANNEL,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+      if (_postToParent) _postToParent(msg, '*');
     } catch (_e) {
       /* parent gone */
     }
+  }
+
+  function defineData(target, key, value) {
+    if (!_defineOwn) return;
+    _defineOwn(target, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+  }
+
+  function copyOwnData(target, source) {
+    if (!source || typeof source !== 'object' || !_objectKeys) return target;
+    const keys = _objectKeys(source);
+    for (let i = 0; i < keys.length; i++) {
+      defineData(target, keys[i], source[keys[i]]);
+    }
+    return target;
   }
 
   function classifyTrigger() {
@@ -373,7 +445,7 @@
     } catch (_e) {
       /* feature missing — falls through to gesture-time heuristic */
     }
-    const msSinceGesture = _lastGestureAt ? Date.now() - _lastGestureAt : -1;
+    const msSinceGesture = _lastGestureAt && _now ? _now() - _lastGestureAt : -1;
     return {
       userActivationActive: isActive,
       userActivationEverActive: hasBeenActive,
@@ -384,18 +456,14 @@
 
   function reportNavigation(method, url, extra) {
     const c = classifyTrigger();
-    const payload = Object.assign(
-      {
-        kind: c.kind || 'navigation',
-        method: method,
-        url: String(url == null ? '' : url),
-        trigger: c.trigger,
-      },
-      navContext(),
-    );
-    if (extra) {
-      for (const k in extra) payload[k] = extra[k];
-    }
+    const payload = {
+      kind: c.kind || 'navigation',
+      method: method,
+      url: String(url == null ? '' : url),
+      trigger: c.trigger,
+    };
+    copyOwnData(payload, navContext());
+    copyOwnData(payload, extra);
     send(payload);
   }
 
@@ -772,13 +840,13 @@
     document.addEventListener(
       'click',
       function (e) {
-        const now = Date.now();
+        const now = _now ? _now() : 0;
 
         // 9.A center-synth detection
         try {
           const t = e && e.target;
           if (t && typeof t.getBoundingClientRect === 'function') {
-            const _rect = t.getBoundingClientRect();
+            const rect = t.getBoundingClientRect();
             // Skip degenerate targets (1×1 hit-areas trivially "centered").
             if (rect.width > 4 && rect.height > 4) {
               const cx = rect.left + rect.width / 2;
@@ -862,7 +930,7 @@
       document.addEventListener(
         gtype,
         function () {
-          _lastGestureAt = Date.now();
+          _lastGestureAt = _now ? _now() : 0;
         },
         true,
       );
@@ -909,20 +977,17 @@
             }
           }
           if (target !== '_top' && target !== '_parent') return;
-          send(
-            Object.assign(
-              {
-                kind: 'frame_bust_anchor',
-                method: 'a[target=' + target + '].click',
-                url: String(a.getAttribute('href') || a.href || ''),
-                trigger: 'click',
-                tagName: 'A',
-                target: target,
-                isTrusted: !!(e && e.isTrusted),
-              },
-              navContext(),
-            ),
-          );
+          const payload = {
+            kind: 'frame_bust_anchor',
+            method: 'a[target=' + target + '].click',
+            url: String(a.getAttribute('href') || a.href || ''),
+            trigger: 'click',
+            tagName: 'A',
+            target: target,
+            isTrusted: !!(e && e.isTrusted),
+          };
+          copyOwnData(payload, navContext());
+          send(payload);
         } catch (_err) {
           /* */
         }
@@ -949,19 +1014,16 @@
       try {
         const target = String(this.target || this.getAttribute('target') || '').toLowerCase();
         if (target === '_top' || target === '_parent') {
-          send(
-            Object.assign(
-              {
-                kind: 'frame_bust_form',
-                method: 'form.submit',
-                url: String(this.action || this.getAttribute('action') || ''),
-                trigger: 'no-event',
-                tagName: 'FORM',
-                target: target,
-              },
-              navContext(),
-            ),
-          );
+          const payload = {
+            kind: 'frame_bust_form',
+            method: 'form.submit',
+            url: String(this.action || this.getAttribute('action') || ''),
+            trigger: 'no-event',
+            tagName: 'FORM',
+            target: target,
+          };
+          copyOwnData(payload, navContext());
+          send(payload);
         }
       } catch (_e) {
         /* measurement failed — still delegate to native */
@@ -981,20 +1043,17 @@
           if (!f || f.tagName !== 'FORM') return;
           const target = String(f.target || f.getAttribute('target') || '').toLowerCase();
           if (target !== '_top' && target !== '_parent') return;
-          send(
-            Object.assign(
-              {
-                kind: 'frame_bust_form',
-                method: 'submit-event',
-                url: String(f.action || f.getAttribute('action') || ''),
-                trigger: 'submit',
-                tagName: 'FORM',
-                target: target,
-                isTrusted: !!(e && e.isTrusted),
-              },
-              navContext(),
-            ),
-          );
+          const payload = {
+            kind: 'frame_bust_form',
+            method: 'submit-event',
+            url: String(f.action || f.getAttribute('action') || ''),
+            trigger: 'submit',
+            tagName: 'FORM',
+            target: target,
+            isTrusted: !!(e && e.isTrusted),
+          };
+          copyOwnData(payload, navContext());
+          send(payload);
         } catch (_err) {
           /* */
         }
@@ -1019,7 +1078,7 @@
       const cpuObserver = new PerformanceObserver(function (list) {
         try {
           const entries = list.getEntries();
-          const now = Date.now();
+          const now = _now ? _now() : 0;
           for (let i = 0; i < entries.length; i++) {
             const dur = entries[i].duration || 0;
             _longTaskTotalMs += dur;
@@ -1137,12 +1196,9 @@
       url: '',
       trigger: classifyTrigger().trigger,
     };
-    if (extra) {
-      for (const k in extra) {
-        if (Object.prototype.hasOwnProperty.call(extra, k)) payload[k] = extra[k];
-      }
-    }
-    send(Object.assign(payload, navContext()));
+    copyOwnData(payload, extra);
+    copyOwnData(payload, navContext());
+    send(payload);
   }
 
   // 16) Notification.requestPermission — push prompt, the canonical
@@ -1337,33 +1393,68 @@
   //
   //     - Batched and capped. Violations arrive in bursts, and a
   //       pathological creative must not be able to turn counting into a
-  //       message storm or grow parent memory without bound.
+  //       message storm or grow parent memory without bound. The batch signal
+  //       is a private MessagePort task rather than a numbered timer handle a
+  //       creative could guess and cancel.
   const REFUSAL_CAP = 200;
-  const REFUSAL_FLUSH_MS = 120;
+  const REFUSAL_DIRECTIVE_MAX = 64;
+  const REFUSAL_URI_MAX = 2048;
   const _refusalSeen = new Set();
+  const _refusalHas = _refusalSeen.has.bind(_refusalSeen);
+  const _refusalAdd = _refusalSeen.add.bind(_refusalSeen);
   let _refusalQueue = [];
-  let _refusalTimer = null;
+  let _refusalCount = 0;
+  let _refusalScheduled = false;
   let _refusalTruncated = false;
 
   function flushRefusals() {
-    _refusalTimer = null;
+    _refusalScheduled = false;
     if (!_refusalQueue.length && !_refusalTruncated) return;
     const items = _refusalQueue;
     _refusalQueue = [];
     try {
-      parent.postMessage(
-        {
-          type: 'ortbtools-preview-refusal',
-          v: PROBE_VERSION,
-          ts: Date.now(),
-          items: items,
-          truncated: _refusalTruncated,
-        },
-        '*',
-      );
+      if (_channelReady && _postToParent)
+        _postToParent(
+          {
+            type: 'ortbtools-preview-refusal',
+            v: PROBE_VERSION,
+            ts: _now ? _now() : 0,
+            channel: PROBE_CHANNEL,
+            items: items,
+            truncated: _refusalTruncated,
+          },
+          '*',
+        );
     } catch (_e) {
       /* parent gone */
     }
+  }
+
+  let _signalRefusalFlush = null;
+  try {
+    if (typeof _MessageChannel === 'function') {
+      const taskChannel = new _MessageChannel();
+      const postTask = taskChannel.port2.postMessage.bind(taskChannel.port2);
+      taskChannel.port1.onmessage = flushRefusals;
+      if (typeof taskChannel.port1.start === 'function') taskChannel.port1.start();
+      _signalRefusalFlush = function () {
+        postTask(0);
+      };
+    }
+  } catch (_e) {
+    _signalRefusalFlush = null;
+  }
+
+  function scheduleRefusalFlush() {
+    if (_refusalScheduled) return;
+    _refusalScheduled = true;
+    try {
+      if (_signalRefusalFlush) return _signalRefusalFlush();
+      if (_queueTask) return _queueTask(flushRefusals);
+    } catch (_e) {
+      /* fall through to an immediate, non-cancellable flush */
+    }
+    flushRefusals();
   }
 
   try {
@@ -1371,25 +1462,41 @@
       'securitypolicyviolation',
       function (e) {
         try {
+          // Creative code can construct and dispatch this event class. Only a
+          // browser-originated violation is evidence that the frame actually
+          // refused a resource.
+          if (!e || e.isTrusted !== true || !_string || !_arrayPush) return;
           // `effectiveDirective` is the one the browser actually applied;
           // `violatedDirective` carries the whole source list on some engines
           // and would make two spellings of one refusal look like two.
-          const directive = String(
+          const directive = _string(
             (e && (e.effectiveDirective || e.violatedDirective)) || 'unknown',
           );
-          const blockedUri = String((e && e.blockedURI) || '');
-          const key = directive + '|' + blockedUri;
-          if (_refusalSeen.has(key)) return;
-          if (_refusalSeen.size >= REFUSAL_CAP) {
+          const blockedUri = _string((e && e.blockedURI) || '');
+          if (
+            !directive ||
+            directive.length > REFUSAL_DIRECTIVE_MAX ||
+            blockedUri.length > REFUSAL_URI_MAX
+          ) {
             if (!_refusalTruncated) {
               _refusalTruncated = true;
-              if (!_refusalTimer) _refusalTimer = setTimeout(flushRefusals, REFUSAL_FLUSH_MS);
+              scheduleRefusalFlush();
             }
             return;
           }
-          _refusalSeen.add(key);
-          _refusalQueue.push({ directive: directive, blockedUri: blockedUri });
-          if (!_refusalTimer) _refusalTimer = setTimeout(flushRefusals, REFUSAL_FLUSH_MS);
+          const key = directive + '|' + blockedUri;
+          if (_refusalHas(key)) return;
+          if (_refusalCount >= REFUSAL_CAP) {
+            if (!_refusalTruncated) {
+              _refusalTruncated = true;
+              scheduleRefusalFlush();
+            }
+            return;
+          }
+          _refusalAdd(key);
+          _refusalCount++;
+          _arrayPush(_refusalQueue, { directive: directive, blockedUri: blockedUri });
+          scheduleRefusalFlush();
         } catch (_e) {
           /* a refusal we cannot describe is still not worth throwing over */
         }
@@ -1400,5 +1507,11 @@
     /* */
   }
 
-  send({ kind: 'probe_ready', method: 'init', url: '', trigger: 'no-event' });
+  try {
+    if (_probeScript && _probeScript.parentNode) _probeScript.parentNode.removeChild(_probeScript);
+    _channelReady = !_probeScript || !_probeScript.isConnected;
+  } catch (_e) {
+    _channelReady = false;
+  }
+  if (_channelReady) send({ kind: 'probe_ready', method: 'init', url: '', trigger: 'no-event' });
 })();

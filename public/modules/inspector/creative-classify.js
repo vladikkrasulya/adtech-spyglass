@@ -119,12 +119,14 @@
     if (s.length < MIN_BASE64_LENGTH || s.length > MAX_DECODE_INPUT) return null;
     if (!BASE64_BODY.test(s)) return null;
     const compact = s.replace(/\s+/g, '');
-    // A real base64 payload is a whole number of 4-character groups once its
-    // padding is counted. Rejecting the rest keeps `atob` from succeeding on
-    // something that was never encoded.
-    if (compact.length % 4 !== 0) return null;
+    // RFC 4648 padding is optional in common transports. A remainder of one
+    // can never represent complete base64 data; remainders two and three are
+    // valid unpadded input and are normalised only for `atob`.
+    const remainder = compact.length % 4;
+    if (remainder === 1) return null;
+    const normalized = remainder ? compact + '='.repeat(4 - remainder) : compact;
     try {
-      const binary = atob(compact);
+      const binary = atob(normalized);
       // atob yields one character per byte. Creatives are UTF-8, and reading
       // those bytes as characters would mangle every non-ASCII glyph in the
       // markup — so go back through the bytes explicitly.
@@ -157,19 +159,14 @@
     //    regex is how it came to disagree with the format detector about a
     //    document that opens with a byte-order mark or an XML comment.
     const vast = typeof window !== 'undefined' && window.OrtbtoolsVastShape;
-    if (vast && typeof vast.isVastShape === 'function') {
-      if (vast.isVastShape(trimmed)) return out('vast', 'core isVastShape');
-    } else if (
-      /^\uFEFF?\s*(?:<\?[\s\S]*?\?>\s*|<!--[\s\S]*?-->\s*)*<(?:[A-Za-z_][\w.-]*:)?VAST\b/i.test(
-        trimmed,
-      )
-    ) {
-      // Fallback for a page that did not load the core copy. Deliberately
-      // more permissive than the regex it replaces, and deliberately not the
-      // primary path — if this branch is taken, /core/vast-shape.js is missing
-      // its script tag.
-      return out('vast', 'fallback VAST sniff (core detector not loaded)');
+    if (!vast || typeof vast.isVastShape !== 'function') {
+      // The core detector is a safety dependency: without it, `<VAST>` would
+      // fall through to the generic markup rule and reach `srcdoc`. Failing
+      // the whole classification closed is safer than restoring a second
+      // private detector that can drift from Core.
+      return out('unidentified', 'core VAST detector unavailable');
     }
+    if (vast.isVastShape(trimmed)) return out('vast', 'core isVastShape');
 
     // 2 & 3. JSON. Native if it carries assets anywhere we accept, otherwise a
     //        payload we can name but not render — which is still infinitely

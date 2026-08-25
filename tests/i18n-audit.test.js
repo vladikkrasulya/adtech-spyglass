@@ -76,6 +76,27 @@ function unresolvedVars(msg) {
   return String(msg || '').match(/\{\w+\}/g) || [];
 }
 
+/**
+ * @typedef {{id: string, keys: Record<string, Record<string, string>>}} BrowserModuleDictionary
+ */
+
+/**
+ * @param {string} relativePath
+ * @returns {BrowserModuleDictionary}
+ */
+function loadBrowserModuleDictionary(relativePath) {
+  const source = fs.readFileSync(path.join(__dirname, '..', relativePath), 'utf8');
+  let registered = null;
+  const window = {
+    registerI18nModule(spec) {
+      registered = spec;
+    },
+  };
+  new Function('window', source)(window);
+  assert.ok(registered, `${relativePath} did not register an i18n module`);
+  return /** @type {BrowserModuleDictionary} */ (/** @type {unknown} */ (registered));
+}
+
 function loadSamples() {
   return fs
     .readdirSync(SAMPLES)
@@ -197,6 +218,33 @@ test('catalogs: every locale consumes the SAME parameters for the same finding i
     }
   }
   assert.deepEqual(drift, [], 'placeholder drift between locales');
+});
+
+test('Inspector module dictionary keeps locale and placeholder parity', () => {
+  const spec = loadBrowserModuleDictionary('public/modules/inspector/dialect-label.i18n.js');
+  assert.equal(spec.id, 'inspector-dialect-label');
+  assert.ok(spec.keys['creative.kind.trimmed'], 'the localized VAST trim notice is required');
+
+  const drift = [];
+  for (const [key, translations] of Object.entries(spec.keys)) {
+    const base = templateVars(translations.en);
+    for (const locale of ['uk', 'en', 'ru']) {
+      const value = translations[locale];
+      if (typeof value !== 'string' || !value.trim()) {
+        drift.push(`${key}: missing ${locale}`);
+        continue;
+      }
+      const variables = templateVars(value);
+      const onlyLocale = [...variables].filter((name) => !base.has(name));
+      const onlyEnglish = [...base].filter((name) => !variables.has(name));
+      if (onlyLocale.length || onlyEnglish.length) {
+        drift.push(
+          `${key}: ${locale}-only={${onlyLocale.join(',')}} en-only={${onlyEnglish.join(',')}}`,
+        );
+      }
+    }
+  }
+  assert.deepEqual(drift, [], 'module dictionary locale/placeholder drift');
 });
 
 test('catalogs: no finding over the sample corpus renders an unresolved placeholder', () => {

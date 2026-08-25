@@ -1073,7 +1073,8 @@ export async function mountInspector(root, ctx) {
   // Lazy-loaded source of /creative-probe.js — fetched once and inlined
   // into the iframe srcdoc so the probe runs BEFORE creative scripts.
   // Inlining avoids cross-origin nuance with sandbox `srcdoc` + opaque
-  // origin loading external `<script src>`. Prefetch fires on DOMReady.
+  // origin loading external `<script src>`. Inspector activation awaits this
+  // once so the first creative cannot race ahead of its measurement probe.
   let _probeSource = null;
   let _probeSourcePromise = null;
 
@@ -1082,10 +1083,16 @@ export async function mountInspector(root, ctx) {
   // any other frame on the page (other ad slots, GTM, third-party widgets)
   // could otherwise send forged `ortbtools-probe` messages and poison
   // __ortbtoolsBehavior.events. Cleared on every new preview; set only
-  // when the banner-iframe branch actually mounts a probed iframe (VAST
-  // and native preview branches don't get a probe → null guard rejects
-  // their events too).
+  // when a banner or synthetic-native branch mounts a probed iframe.
   let _currentProbedIframe = null;
+  // A fresh, unguessable capability is closed over by each inlined probe and
+  // removed from the iframe DOM before creative code parses. Source pinning
+  // rejects other frames; this capability rejects creative code that shares
+  // the current frame and tries to forge the probe's reserved message types.
+  let _currentProbeChannel = null;
+  // Invalidates delayed work (currently server-side asset inlining) when a
+  // newer preview replaces the creative it was started for.
+  let _previewRenderRevision = 0;
 
   // Phase 4 — frozen-thread watchdog. The probe sends a 1Hz heartbeat
   // (creative-probe.js hook 15); the parent receiver below updates
@@ -1148,6 +1155,10 @@ export async function mountInspector(root, ctx) {
   // creative emitting hundreds of violations evict the navigation evidence
   // it is being measured for. Separate message type, separate store, never
   // sent to /api/analyze-behavior.
+  const REFUSAL_CAP = 200;
+  const REFUSAL_BATCH_CAP = 200;
+  const REFUSAL_DIRECTIVE_MAX = 64;
+  const REFUSAL_URI_MAX = 2048;
   let _refusals = null;
 
   function resetRefusals() {
@@ -1178,6 +1189,27 @@ export async function mountInspector(root, ctx) {
   }
 
   /**
+   * Reduce browser-specific CSP directive spellings to the resource groups
+   * the interface promises. Chromium commonly reports `script-src-elem` and
+   * `style-src-elem`; exposing those raw spellings would miss the localized
+   * dictionary and print a placeholder instead of a useful kind.
+   *
+   * @param {string} directive
+   * @returns {string}
+   */
+  function refusalKind(directive) {
+    const value = String(directive || '').toLowerCase();
+    if (/^img-src(?:-elem)?$/.test(value)) return 'img-src';
+    if (/^script-src(?:-elem|-attr)?$/.test(value)) return 'script-src';
+    if (/^style-src(?:-elem|-attr)?$/.test(value)) return 'style-src';
+    if (value === 'font-src') return 'font-src';
+    if (value === 'frame-src' || value === 'child-src') return 'frame-src';
+    if (value === 'connect-src' || value === 'worker-src') return 'connect-src';
+    if (value === 'media-src') return 'media-src';
+    return 'default-src';
+  }
+
+  /**
    * Fold one batch of refusals into the ledger.
    *
    * Deduplicated again on this side even though the frame already
@@ -1185,24 +1217,53 @@ export async function mountInspector(root, ctx) {
    * existing iframe's srcdoc (the asset-inlining path does exactly that)
    * starts a second probe against the same ledger.
    *
+   * The creative itself runs in the source-pinned frame and can call
+   * `parent.postMessage`, so source pinning alone is not trust. The receiver
+   * now authenticates the hidden probe channel; this reducer still repeats
+   * the cap and bounded schema as parent-owned defense in depth.
+   *
    * @param {Array<{directive: string, blockedUri: string}>} items
    * @param {boolean} truncated
+   * @returns {boolean} whether the visible ledger changed
    */
   function recordRefusals(items, truncated) {
     if (!_refusals) resetRefusals();
-    if (truncated) _refusals.truncated = true;
-    if (!Array.isArray(items)) return;
-    for (const it of items) {
-      if (!it || typeof it !== 'object') continue;
-      const directive = String(it.directive || 'unknown');
-      const blockedUri = String(it.blockedUri || '');
+    let changed = false;
+    const markTruncated = () => {
+      if (_refusals.truncated) return;
+      _refusals.truncated = true;
+      changed = true;
+    };
+    if (truncated === true) markTruncated();
+    if (!Array.isArray(items)) return changed;
+    const acceptedLength = Math.min(items.length, REFUSAL_BATCH_CAP);
+    if (items.length > acceptedLength) markTruncated();
+
+    for (let i = 0; i < acceptedLength; i++) {
+      const it = items[i];
+      if (!it || typeof it !== 'object' || Array.isArray(it)) continue;
+      if (typeof it.directive !== 'string' || typeof it.blockedUri !== 'string') continue;
+      const blockedUri = it.blockedUri;
+      if (it.directive.length > REFUSAL_DIRECTIVE_MAX || blockedUri.length > REFUSAL_URI_MAX) {
+        markTruncated();
+        continue;
+      }
+      const directive = it.directive.trim().toLowerCase();
+      if (!directive) continue;
       const key = directive + '|' + blockedUri;
       if (_refusals.seen.has(key)) continue;
+      if (_refusals.count >= REFUSAL_CAP) {
+        markTruncated();
+        break;
+      }
       _refusals.seen.add(key);
       _refusals.count++;
       _refusals.hosts.add(refusalHost(blockedUri));
-      _refusals.kinds.set(directive, (_refusals.kinds.get(directive) || 0) + 1);
+      const kind = refusalKind(directive);
+      _refusals.kinds.set(kind, (_refusals.kinds.get(kind) || 0) + 1);
+      changed = true;
     }
+    return changed;
   }
 
   function stopWatchdog() {
@@ -1254,15 +1315,28 @@ export async function mountInspector(root, ctx) {
     return _probeSourcePromise;
   }
 
+  function freshProbeChannel() {
+    try {
+      const bytes = new Uint8Array(24);
+      window.crypto.getRandomValues(bytes);
+      return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+    } catch (_e) {
+      return null;
+    }
+  }
+
   function buildProbedSrcdoc(creativeHtml) {
     // Inject a restrictive Content-Security-Policy meta tag into the creative iframe
     // so no external images, scripts, fonts, or network beacons can load over HTTPS during preview.
     const cspMeta =
       "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src 'none'; media-src 'none'; frame-src 'none';\">";
-    if (!_probeSource) return cspMeta + creativeHtml;
+    const channel = _probeSource ? freshProbeChannel() : null;
+    if (!channel) return { html: cspMeta + creativeHtml, channel: null };
     // Wrap in a <script> at the very top so listeners are hooked before
-    // creative HTML parses any inline handlers.
-    return '<script>' + _probeSource + '</' + 'script>' + cspMeta + creativeHtml;
+    // creative HTML parses any inline handlers. The placeholder lives only in
+    // the trusted probe source, never in payload markup.
+    const probe = _probeSource.replace('__ORTBTOOLS_PROBE_CHANNEL__', channel);
+    return { html: '<script>' + probe + '</' + 'script>' + cspMeta + creativeHtml, channel };
   }
 
   function resetBehavior() {
@@ -1270,14 +1344,64 @@ export async function mountInspector(root, ctx) {
     renderBehaviorTab();
   }
 
-  // Phase 6 — cap the adm copy that gets posted alongside probe events to
-  // /api/analyze-behavior. The engine's scanner truncates internally to
-  // 100 KB, but we cap the wire payload to 64 KB to keep round-trips fast
-  // and avoid re-sending the full creative on every Behavior-tab render
-  // (a banner adm can be 200KB+ when it embeds base64 sprites). Pattern
-  // matches always fire in the head of the creative (loader / decoder),
-  // so the prefix is sufficient.
-  const ADM_TRANSPORT_LIMIT = 64 * 1024;
+  // Phase 6 — match the behavior scanner's one-megabyte source bound.
+  // A previous 64 KB prefix cap was unsafe: padding at the front let code in
+  // the tail execute in the frame while disappearing from static analysis.
+  // The copy is UTF-8 + base64 on the wire: unlike a raw JSON string, quotes
+  // and control bytes cannot expand unpredictably past the 2 MiB body cap.
+  const ADM_TRANSPORT_LIMIT_BYTES = 1024 * 1024;
+  let _behaviorCreativeRevision = 0;
+
+  function base64Utf8Prefix(value) {
+    const bytes = new TextEncoder().encode(value);
+    let end = Math.min(bytes.length, ADM_TRANSPORT_LIMIT_BYTES);
+    if (end < bytes.length) {
+      // Never cut through a UTF-8 sequence. At most three bytes need to be
+      // removed before TextDecoder's fatal mode accepts the prefix.
+      const decoder = new TextDecoder('utf-8', { fatal: true });
+      while (end > 0) {
+        try {
+          decoder.decode(bytes.subarray(0, end));
+          break;
+        } catch (_e) {
+          end--;
+        }
+      }
+    }
+    const bounded = bytes.subarray(0, end);
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bounded.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, bounded.subarray(i, i + chunk));
+    }
+    return { encoded: btoa(binary), truncated: end < bytes.length };
+  }
+
+  /**
+   * Keep the static behavior scanner on the same creative representation the
+   * frame receives, within the scanner's supported one-megabyte window. The
+   * transport bound is independent of classification; base64 wrappers and
+   * unresolved input must never be scanned in place of different bytes that
+   * actually execute.
+   *
+   * @param {string} body creative body before probe/CSP instrumentation
+   */
+  function setBehaviorCreativeAdm(body) {
+    try {
+      if (!window.__ortbtoolsBehavior) {
+        window.__ortbtoolsBehavior = { events: [], startedAt: Date.now() };
+      }
+      const transported = base64Utf8Prefix(String(body || ''));
+      window.__ortbtoolsBehavior.creative_adm_b64 = transported.encoded;
+      window.__ortbtoolsBehavior.creative_adm_truncated = transported.truncated;
+      window.__ortbtoolsBehavior.creative_revision = ++_behaviorCreativeRevision;
+      // Static rules must run even when the creative emits no visible runtime
+      // events. Re-rendering here schedules that request for the final body.
+      renderBehaviorTab();
+    } catch (_e) {
+      /* the preview must remain usable if this optional analysis context fails */
+    }
+  }
 
   // ── Phase 8: helpers ─────────────────────────────────────────────
 
@@ -1335,6 +1459,7 @@ export async function mountInspector(root, ctx) {
   // See the `goto-path` action handler.
 
   function setAdPreview(adm, macroContext, dims) {
+    _previewRenderRevision++;
     const el = $('creativePreview');
     el.innerHTML = '';
     // The asset-inlining button lives OUTSIDE the preview frame (see
@@ -1381,9 +1506,10 @@ export async function mountInspector(root, ctx) {
       }
     };
     // Drop the previous probed iframe ref before any branch runs — the
-    // VAST + native + empty-adm branches never reassign it, and we don't
+    // VAST + inert-text + empty-adm branches never reassign it, and we don't
     // want stale messages from a torn-down iframe to slip through.
     _currentProbedIframe = null;
+    _currentProbeChannel = null;
     // Watchdog must reset alongside the iframe ref: a torn-down iframe
     // shouldn't keep ticking a stale heartbeat-clock from the previous
     // creative, and the new probe will lazy-start a fresh watchdog when
@@ -1399,18 +1525,6 @@ export async function mountInspector(root, ctx) {
       el.innerHTML = '<div class="preview-empty">' + escapeHtml(t('preview.no_adm')) + '</div>';
       setDims(0, 0);
       return;
-    }
-    // Phase 6: park the creative source on __ortbtoolsBehavior so that
-    // modules/behavior/index.js can include it in the /api/analyze-behavior
-    // POST body. Truncated to ADM_TRANSPORT_LIMIT — the engine's scanner
-    // truncates internally too, but bounding wire size keeps the per-render
-    // round-trip fast (Behavior tab re-fetches on every probe event).
-    try {
-      const admStr = String(adm);
-      window.__ortbtoolsBehavior.creative_adm =
-        admStr.length > ADM_TRANSPORT_LIMIT ? admStr.slice(0, ADM_TRANSPORT_LIMIT) : admStr;
-    } catch (_e) {
-      /* defensive — shouldn't fail, but the rest of preview must run */
     }
     // Resolve known macros via the shared evaluator.
     // macroContext carries the same overrides as the Macro table:
@@ -1434,11 +1548,11 @@ export async function mountInspector(root, ctx) {
     const cls =
       classifier && typeof classifier.classify === 'function'
         ? classifier.classify(resolved)
-        : // A page that failed to load the module keeps the old behaviour
-          // rather than showing nothing. Stated in `reason` so it is
-          // visible in a debug session instead of being a silent downgrade.
+        : // Classification is a safety dependency. Restoring the old catch-all
+          // when the module is absent would paint URLs and arbitrary payloads
+          // as markup, so the degraded path is deliberately inert.
           {
-            kind: 'markup',
+            kind: 'unidentified',
             body: resolved,
             decoded: false,
             native: null,
@@ -1477,28 +1591,28 @@ export async function mountInspector(root, ctx) {
     //    it was only ever being given the wrong thing.
     if (cls.kind === 'native') {
       try {
+        const nativeHtml = renderNativeToHtml(cls.native);
         const iframe = document.createElement('iframe');
         iframe.setAttribute('sandbox', 'allow-scripts');
         iframe.style.cssText = 'border:none;background:#fff;width:100%;height:100%';
-        iframe.srcdoc = buildProbedSrcdoc(renderNativeToHtml(cls.native));
+        setBehaviorCreativeAdm(nativeHtml);
+        const probed = buildProbedSrcdoc(nativeHtml);
+        iframe.srcdoc = probed.html;
         // Native ads vary wildly in shape; the synthetic render is a
         // typical card layout that fits 320×260 reasonably. Caller can
         // override later via dims if request specified them.
         setDims(dims && dims.w ? dims.w : 320, dims && dims.h ? dims.h : 260);
         setRevealable(true);
         _currentProbedIframe = iframe;
+        _currentProbeChannel = probed.channel;
         el.appendChild(iframe);
-        // The images a native card points at are remote like any other, and
-        // the escape hatch used to be unreachable from here because this
-        // branch returned before it — hero and icon were grey rectangles
-        // permanently, with no button to do anything about it.
-        maybeOfferAssetInlining(el, renderNativeToHtml(cls.native), dims);
         return;
       } catch (err) {
         // Now this actually fires. The old gate rejected an envelope-less
         // payload without throwing, so the diagnostic never appeared and the
         // failure was completely silent — which is how the defect survived.
         console.error('[ortbtools] native render failed', err);
+        setBehaviorCreativeAdm('');
         renderInertText(el, cls.body, t('creative.kind.unidentified'), 0);
         setDims(320, 260);
         setRevealable(false);
@@ -1531,12 +1645,15 @@ export async function mountInspector(root, ctx) {
     // where the decoded body IS the creative and the encoding was never part
     // of it. Nothing else about the bytes is touched — the behaviour engine
     // and the static scanner read exactly what goes in here.
-    iframe.srcdoc = buildProbedSrcdoc(cls.body);
+    setBehaviorCreativeAdm(cls.body);
+    const probed = buildProbedSrcdoc(cls.body);
+    iframe.srcdoc = probed.html;
     // Pin THIS iframe as the only legitimate probe source. The receiver
     // below rejects every postMessage whose `event.source` doesn't match
-    // this contentWindow — so even on a page with multiple iframes, only
-    // our just-mounted creative can populate __ortbtoolsBehavior.events.
+    // this contentWindow; the per-render channel then distinguishes the hidden
+    // probe from creative code sharing that frame.
     _currentProbedIframe = iframe;
+    _currentProbeChannel = probed.channel;
     // Phase 9: responsive sizing replaces the JS scale-to-fit math.
     // .preview-safe sizes itself via aspect-ratio + max-width:100% from
     // the --bid-w / --bid-h CSS vars; the iframe just fills its parent.
@@ -1698,7 +1815,7 @@ export async function mountInspector(root, ctx) {
     if (hidden > 0) {
       const note = document.createElement('div');
       note.className = 'mono-label preview-text-trimmed';
-      note.textContent = '… trimmed (' + hidden + ' chars hidden)';
+      note.textContent = t('creative.kind.trimmed', { n: hidden });
       wrap.appendChild(note);
     }
     host.appendChild(wrap);
@@ -1813,7 +1930,8 @@ export async function mountInspector(root, ctx) {
     for (const [directive, n] of _refusals.kinds) {
       const key = 'creative.blocked.kind.' + directive;
       const label = t(key);
-      kindParts.push((label === key ? directive : label) + ' · ' + n);
+      const missing = label === key || label === '[' + key + ']';
+      kindParts.push((missing ? directive : label) + ' · ' + n);
     }
     kinds.textContent = t('creative.blocked.kinds') + ': ' + kindParts.join(', ');
     details.appendChild(kinds);
@@ -1868,14 +1986,26 @@ export async function mountInspector(root, ctx) {
     btn.textContent = t('creative.assets.load', { n: urls.length });
     btn.addEventListener('click', async () => {
       if (btn.disabled) return;
+      const requestedRevision = _previewRenderRevision;
+      const requestedFrame = host.querySelector('iframe');
       btn.disabled = true;
       btn.textContent = t('creative.assets.loading');
       try {
         const res = await api.inlineAssets(creativeHtml);
+        if (
+          _previewRenderRevision !== requestedRevision ||
+          !requestedFrame ||
+          !requestedFrame.isConnected ||
+          host.querySelector('iframe') !== requestedFrame
+        )
+          return;
         if (res.inlined > 0) {
-          const frame = host.querySelector('iframe');
-          if (frame) {
+          if (requestedFrame) {
+            // This is a new rendering of the same creative. Invalidate any
+            // other delayed work before updating parent-owned preview state.
+            _previewRenderRevision++;
             resetBehavior();
+            setBehaviorCreativeAdm(res.html);
             // The refusals about to be raised belong to this second render,
             // not the first — otherwise the count doubles for every asset
             // that is still remote after inlining.
@@ -1888,8 +2018,10 @@ export async function mountInspector(root, ctx) {
             // about the artwork.
             const safe = document.getElementById('creativePreviewSafe');
             if (safe) safe.classList.remove('is-revealed');
-            frame.srcdoc = buildProbedSrcdoc(res.html);
-            _currentProbedIframe = frame;
+            const probed = buildProbedSrcdoc(res.html);
+            requestedFrame.srcdoc = probed.html;
+            _currentProbedIframe = requestedFrame;
+            _currentProbeChannel = probed.channel;
           }
         }
         toast(api.describe(res), res.inlined ? 'success' : 'error');
@@ -1901,6 +2033,7 @@ export async function mountInspector(root, ctx) {
           return;
         }
       } catch (_e) {
+        if (_previewRenderRevision !== requestedRevision) return;
         toast(t('creative.assets.all_failed', { n: urls.length }), 'error');
       }
       btn.disabled = false;
@@ -3627,6 +3760,11 @@ export async function mountInspector(root, ctx) {
   }
 
   window.runAnalysis = async function (fromHist) {
+    // `runAnalysis` is intentionally exposed for share/shortcut/lang-change
+    // callers before the module finishes mounting. Every entry point must
+    // still wait for the authenticated probe source, or an early external
+    // call can create an unmeasured allow-scripts iframe.
+    await loadProbeSource();
     const myReqId = ++_analyzeReqSeq;
     // Snapshot the untouched panels before this analysis writes over them —
     // this is the only path that paints results, so here is the last moment
@@ -6302,10 +6440,10 @@ export async function mountInspector(root, ctx) {
     // chrome, not Inspector-mount-scoped, so this can't be a ctx.signal-bound
     // per-mount listener anymore without missing Esc on every other section.
 
-    // Prefetch the creative-probe source so it's ready when the first
-    // adm renders. Fire-and-forget — setAdPreview gracefully renders
-    // without the probe if the fetch hasn't resolved yet.
-    loadProbeSource();
+    // Complete the one-time probe fetch before exposing Analyze handlers.
+    // A failed fetch remains fail-closed: preview still renders, but no
+    // unauthenticated substitute is accepted as probe telemetry.
+    await loadProbeSource();
 
     // Receive postMessage events from the in-iframe creative probe.
     // Origin will be 'null' for sandboxed iframes (opaque origin), so we
@@ -6321,9 +6459,10 @@ export async function mountInspector(root, ctx) {
         const d = e.data;
         if (!d || (d.type !== 'ortbtools-probe' && d.type !== 'ortbtools-preview-refusal')) return;
         // Spoof-protection: only accept messages from the currently-mounted
-        // probed iframe. Drops events when no iframe is active (VAST/native
+        // probed iframe. Drops events when no iframe is active (VAST/inert
         // previews, between-creative gap) and from any unrelated frame.
         if (!_currentProbedIframe || e.source !== _currentProbedIframe.contentWindow) return;
+        if (!_currentProbeChannel || d.channel !== _currentProbeChannel) return;
         // Content-policy refusals are counted, never recorded as behaviour.
         // They return BEFORE pushBehaviorEvent on purpose: that buffer is
         // capped at BEHAVIOR_EVENTS_MAX and drops its oldest entries, so a
@@ -6332,11 +6471,19 @@ export async function mountInspector(root, ctx) {
         // still count as liveness — a frame reporting refusals is a frame
         // whose thread is running.
         if (d.type === 'ortbtools-preview-refusal') {
+          // The channel authenticates the hidden probe; the schema and
+          // parent-owned cap remain authoritative defense in depth.
+          if (
+            d.v !== 1 ||
+            !Number.isFinite(d.ts) ||
+            !Array.isArray(d.items) ||
+            typeof d.truncated !== 'boolean'
+          )
+            return;
           _lastHeartbeatAt = Date.now();
           _frozenAlerted = false;
           if (!_watchdogTimer) startWatchdog();
-          recordRefusals(d.items, !!d.truncated);
-          renderRefusalLedger();
+          if (recordRefusals(d.items, d.truncated)) renderRefusalLedger();
           return;
         }
         // Phase 4 watchdog liveness: every accepted probe message resets

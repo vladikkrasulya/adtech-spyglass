@@ -163,6 +163,21 @@ test('§1 row 4 — base64 wrapping markup decodes once and renders as markup', 
   assert.match(got.reason, /^base64 → /);
 });
 
+test('§1 row 4 — valid base64 without optional padding decodes to the same markup', () => {
+  const { api } = loadClassifier({ withVastCore: true });
+  const inner = '<div data-case="unpadded">Sale ends today</div>';
+  const padded = b64(inner);
+  const unpadded = padded.replace(/=+$/, '');
+  assert.notEqual(unpadded.length % 4, 0, 'fixture must actually omit padding');
+
+  const withPadding = api.classify(padded);
+  const withoutPadding = api.classify(unpadded);
+  assert.equal(withoutPadding.kind, 'markup');
+  assert.equal(withoutPadding.decoded, true);
+  assert.equal(withoutPadding.body, inner);
+  assert.deepEqual(withoutPadding, withPadding);
+});
+
 test('§1 row 4 — base64 wrapping envelope-less native survives the decode', () => {
   const { api } = loadClassifier({ withVastCore: true });
   const got = api.classify(b64(JSON.stringify({ assets: [{ id: 1 }] })));
@@ -235,11 +250,23 @@ test('VAST recognition delegates to the core detector when it is loaded', () => 
   assert.equal(got.reason, 'core isVastShape', 'must take the delegated path, not the fallback');
 });
 
-test('a page missing the core detector still recognises VAST, and says so', () => {
+test('a page missing the core detector fails classification closed', () => {
   const withoutCore = loadClassifier();
-  const got = withoutCore.api.classify('<VAST version="3.0"><Ad/></VAST>');
-  assert.equal(got.kind, 'vast');
-  assert.match(got.reason, /fallback/, 'the fallback must be identifiable in the reason');
+  for (const body of ['<VAST version="3.0"><Ad/></VAST>', '<div>banner</div>']) {
+    const got = withoutCore.api.classify(body);
+    assert.equal(got.kind, 'unidentified');
+    assert.match(got.reason, /core VAST detector unavailable/);
+    assert.equal(withoutCore.api.isFrameable(got), false);
+  }
+});
+
+test('VAST recognition has no private fallback detector', () => {
+  const raw = fs.readFileSync(
+    path.join(ROOT, 'public/modules/inspector/creative-classify.js'),
+    'utf8',
+  );
+  assert.doesNotMatch(raw, /fallback VAST sniff/);
+  assert.doesNotMatch(raw, /<(?:\\?[^\n]*)?VAST\\b/);
 });
 
 // ── structural: this module reaches no network, ever ─────────────

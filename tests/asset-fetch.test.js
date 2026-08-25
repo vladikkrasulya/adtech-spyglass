@@ -63,6 +63,24 @@ test('IPv6 literals are checked directly, not left to a failing lookup', async (
   assert.equal(await refusalCode('http://[fd00::1]/x'), 'host_blocked');
 });
 
+test('WHATWG-canonical IPv4-mapped IPv6 cannot disguise private IPv4', async () => {
+  // new URL() rewrites the dotted source spelling into these hexadecimal
+  // forms before resolveSafely sees it. They must still take the IPv4 policy.
+  for (const u of [
+    'http://[::ffff:127.0.0.1]/x',
+    'http://[::ffff:7f00:1]/x',
+    'http://[::ffff:10.1.2.3]/x',
+    'http://[::ffff:169.254.169.254]/latest/meta-data/',
+    'http://[0:0:0:0:0:ffff:a9fe:a9fe]/latest/meta-data/',
+  ]) {
+    assert.equal(await refusalCode(u), 'host_blocked', u);
+  }
+});
+
+test('a public IPv4-mapped literal remains allowed', async () => {
+  assert.equal(await refusalCode('http://[::ffff:203.0.113.9]/asset.png'), null);
+});
+
 test('malformed input is refused, never thrown raw', async () => {
   for (const u of ['not a url', '', '///', 'http://']) {
     const code = await refusalCode(u);

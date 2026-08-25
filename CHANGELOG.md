@@ -6,6 +6,56 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.16.0 — the preview and its scanner agree on what actually ran
+
+- Bound and authenticated the creative probe boundary. Every probed render now
+  gets a fresh 192-bit capability held in the probe closure; the script element
+  containing it is removed before creative markup parses, and the parent
+  requires both that capability and the current iframe source. The parent still
+  treats refusal batches as hostile input: schema and string limits are checked,
+  no more than 200 entries are inspected or retained, duplicates do not consume
+  capacity or make an exact ledger order-dependent, and refusals remain outside
+  the behavior-event ring. Probe payloads no longer pass through mutable realm
+  helpers that could retain the object before its capability is posted, and an
+  early external Analyze call waits for the probe instead of mounting an
+  unmeasured frame.
+
+- Static behavior analysis now scans the same classified body that reaches the
+  frame: decoded base64 markup, macro-resolved markup, synthetic Native HTML, or
+  the asset-inlined rerender. It runs even when the creative emits no visible
+  runtime event, rejects stale responses after a newer render, and no longer
+  scans an encoded wrapper while different bytes execute.
+
+- Delayed server-side asset results are now tied to the preview revision and
+  iframe that requested them, so a response for an older creative cannot
+  overwrite a newer frame or replace its static-analysis source.
+
+- Replaced the raw creative JSON field used by the browser with a canonical
+  base64 UTF-8 transport bounded at 1 MiB. This has deterministic wire expansion,
+  so quote- and control-heavy creative source cannot exceed the 2 MiB parser cap
+  merely through JSON escaping. The endpoint validates canonical base64 and
+  UTF-8 while preserving the legacy `{ events, adm }` API shape for callers.
+
+- Closed the remaining classifier and localization gaps: valid unpadded base64
+  is accepted for one decode round, a missing shared VAST detector fails closed,
+  URLs and arbitrary payloads never regain the old markup fallback, Chromium's
+  element-specific CSP directives map to localized resource kinds, and the VAST
+  truncation note is translated in English, Ukrainian, and Russian. Native
+  preview makes no advertiser/third-party creative network request and no
+  longer exposes the server asset-inlining action in this wave.
+
+- Added real-Chrome coverage for key classification paths, authenticated probe,
+  refusal cap and isolation, CSP directive aliases, inert VAST/URL paths,
+  decoded static-analysis bytes, static-only findings, Native parity, degraded
+  classifier loading, and Ukrainian truncation copy. Added an API regression for
+  the exact 1 MiB serialization-safe transport boundary.
+
+- Hardened the existing creative-asset host guard against WHATWG's hexadecimal
+  serialization of IPv4-mapped IPv6 literals. Compressed and expanded mapped
+  loopback, RFC1918 and link-local addresses now inherit the embedded IPv4
+  classification before any connection, while public mapped controls remain
+  allowed.
+
 ### v1.15.0 — the preview says what it refused, and stops painting payloads as creatives
 
 - The creative box stops showing gibberish. Its third branch was an unconditional

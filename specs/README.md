@@ -42,9 +42,12 @@ Spec Kit is the working-memory lifecycle, not merely a documentation layout:
 6. Run the repository gates required by the changed surface, including `npm run ci` before merge.
 7. Run convergence. If it appends missing work, implement and verify those tasks, then converge
    again.
-8. Commit, push, deploy, and roll back under the standing authorization in
-   [Principle VIII](../.specify/memory/constitution.md) and its conditions. Treat npm publication,
-   data migration, destructive data actions, and issue creation as separate actions requiring
+8. Under the standing authorization in
+   [Principle VIII](../.specify/memory/constitution.md), stage only authored in-scope changes, run the
+   required gates against that settled scope, then commit and non-force push the reviewed commit to
+   `main`. Complete the canonical pre-deploy backup and use only the documented deploy and rollback
+   flows. Mechanism availability never expands that scope. npm publication, data migration or restore,
+   destructive data actions, direct `/data` access outside those flows, and issue creation require
    explicit authorization at the time.
 
 Supported agents expose this route through generated Spec Kit skills or commands. Invocation syntax

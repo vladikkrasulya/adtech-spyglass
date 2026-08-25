@@ -100,9 +100,15 @@ SPECIFY_FEATURE_DIRECTORY=specs/NNN-feature \
 The command persists `.specify/feature.json` locally. Do not commit that
 pointer, and change it deliberately when switching features.
 
-The bundled headless workflow is not a substitute for these review gates.
-Commits, pushes, pull requests, releases, and deployments always require
-explicit authorization; a completed Spec Kit plan does not authorize them.
+The bundled headless workflow is not a substitute for these review gates, and
+having a tool, credential, hook, or command available never expands
+authorization. Under Constitution Principle VIII, stage only authored in-scope
+changes, run the required gates against that settled scope, then commit and
+non-force push the reviewed commit to `main`. Complete the mandatory pre-deploy
+backup and use only the documented deploy and rollback flows. npm publication,
+data migration or restore, destructive operations, direct `/data` access
+outside those flows, force-push, and history rewriting require explicit
+per-action authorization.
 
 All tracked Spec Kit files are public repository content. Use synthetic or
 redacted evidence only: never put payload bodies, credentials, tokens, DSNs,
@@ -171,7 +177,8 @@ on the same checks in GitHub CI. Do not bypass a failing gate.
   production mutations into one pull request.
 - Do not commit generated secrets, local data, `.env`, or production evidence.
 
-Open a pull request against `main`, include the active spec path and exact
-verification commands, and wait for green CI before merge. Deployment is a
-separate, explicitly authorized operation governed by the release/deploy
-contract and operations runbook.
+When using a pull request, target `main`, include the active spec path and exact
+verification commands, and wait for green hosted CI before merge. A production
+deployment carries standing authorization only after the required hosted gates
+and the separate backup gate pass, and only through the release/deploy contract
+and operations runbook. Rollback remains the always-authorized safety action.

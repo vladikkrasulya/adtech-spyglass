@@ -66,7 +66,7 @@ The repository contains three independently versioned surfaces:
 
 | Surface           | Current version | Source of truth              | Coupled repository surfaces                                        |
 | ----------------- | --------------- | ---------------------------- | ------------------------------------------------------------------ |
-| Web application   | `1.15.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
+| Web application   | `1.16.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
 | `@ortbtools/core` | `0.35.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
 | `@ortbtools/cli`  | `0.1.1`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
 
@@ -104,8 +104,11 @@ heading is not the version `package.json` declares. Core and CLI version lines a
 the application entry that ships them rather than carrying headings of their own. The requirement is
 enforced because it was previously only stated: five releases reached production with the file still
 claiming its history was complete, because the version-consistency gate asks whether the version
-surfaces agree with each other, never whether the release was written down. A version bump alone does not publish npm packages, create a Git tag/release, or deploy the
-application. Those remain separately authorized actions under
+surfaces agree with each other, never whether the release was written down. A version bump alone does
+not publish npm packages, create a Git tag/release, or deploy the application, and mechanism
+availability never expands authorization. Authored in-scope commits, non-force pushes to `main`, the
+canonical pre-deploy backup, and documented deploy/rollback flows follow the constitution's standing
+conditions. npm publication and other explicit-class actions still require a separate decision under
 [the release and deploy contract](./release-deploy.md).
 
 ## Required Verification

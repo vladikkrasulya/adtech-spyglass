@@ -1,25 +1,29 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 -> 2.0.0 (2026-08-25)
-- Reason: the owner directed that the agent operator carry release actions.
-  "Зміни те правило, ти будеш цим займатись" — 2026-08-25, after a release sat
-  undeployed because every step needed a separate decision.
-- MAJOR because it redefines a governance obligation: production mutation no
-  longer always requires a separate operator decision.
-- Amended: Principle VIII (authorization split into standing and explicit
-  classes, with conditions); Project Constraints (release actions carry the
-  standing authorization; peer work in a dirty tree named explicitly);
-  Governance (two-class rule, and the duty to stop on an unmet condition).
-- Consistency review: specs/README.md step 8 updated to the same split.
-  ADR-006's consequence that deployment is "a separately authorized external
-  mutation" is superseded by ADR-013. Historical records that mention a
-  "separately authorized deployment" (ROADMAP rows, closed feature tasks,
-  002/003/009 artifacts) are left as written — they describe what was true then
-  and are not normative.
-- Unchanged: npm publication, data migration, destructive data actions, and
-  issue creation still require explicit per-action authorization.
-- Previous version 1.0.0 added principles I-VIII, Project Constraints, and
-  Spec-Driven Delivery.
+- Version change: 2.0.0 -> 2.1.0 (2026-08-25)
+- Reason: materially complete the 2.0.0 authorization split so the agent
+  operator can carry a reviewed release through its bounded, reversible path
+  without a second conversation at each release step.
+- MINOR because this amendment adds standing authorization for authored,
+  in-scope commits and the canonical backup gate, and makes that backup a
+  mandatory obligation immediately before a standing-authorized deployment.
+- Expanded: Principle VIII action-specific standing conditions; the canonical
+  pre-deploy backup as part of deployment authorization; the explicit-only
+  boundary for direct `/data` access outside documented flows; and the rule that
+  tool or mechanism availability never expands authorization.
+- Synchronized current owners: `specs/README.md`, `CONTRIBUTING.md`, the release,
+  versioning, and agent-integration contracts, the operations runbook, ADR-010,
+  ADR-013, the decision index, and the pre-push hook. Added a focused governance
+  consistency test over that explicit allowlist.
+- Historical closed feature, assessment, audit, changelog, and dated deployment
+  records are left as written because they describe the authorization actually
+  used at the time rather than current policy.
+- Unchanged: npm publication, data migration or restore, destructive data
+  actions, issue creation, force-pushing, and history rewriting require explicit
+  per-action authorization.
+- Previous version 2.0.0 introduced the standing/explicit authorization split;
+  version 1.0.0 added principles I-VIII, Project Constraints, and Spec-Driven
+  Delivery.
 - Follow-up TODOs: none
 -->
 
@@ -108,23 +112,35 @@ contract changes. Unpublished packages MUST NOT have executable registry-install
 deploys use an immutable image tagged with the exact Git SHA, readiness and smoke gates, and automatic
 rollback; a restart of an old image is not a deployment.
 
-Planning, task generation, and code changes do not authorize external mutations by themselves. Two
-classes are distinguished, because they fail differently:
+Planning, task generation, code changes, tool installation, credentials, and mechanism availability
+do not expand authorization by themselves. Two classes are distinguished because they fail
+differently:
 
-**Standing authorization (agent operator).** Pushing to `main`, deploying the app image, and rolling
-it back are pre-authorized, subject to every condition below. They are reversible, gated in the
-script, and the cost of asking each time was found to exceed the cost of the mistake they guard
-against. The agent operator MUST: deploy only through `scripts/deploy.sh` from a clean
-`HEAD == main == origin/main` with repository gates green; leave readiness, smoke, and automatic
-rollback armed; deploy only an image built in that run from that SHA; and report the version, image
-tag, Git SHA, and gate outcomes afterwards, whether or not the deploy succeeded. Rolling back is
-always authorized — the safety action never waits for a decision.
+**Standing authorization (agent operator).** The following bounded actions are pre-authorized under
+their action-specific conditions:
 
-**Explicit authorization, per action.** npm publication, data migration, destructive data actions,
-issue creation, force-pushing, history rewriting, anything touching `/data` as a target rather than a
-mount, and any deploy that would bypass a gate, disable automatic rollback, or activate an image not
-built in that run. These are not reversible by re-running the script, so each requires a stated scope,
-evidence, and a decision at the time.
+- stage only authored, in-scope changes from the current task, run the required repository gates
+  against that settled scope, and then commit it; never include unrelated or peer-owned work;
+- non-force push those reviewed commits to `main` from a clean worktree after the required local gates
+  pass, then wait for the required hosted gates before deployment;
+- immediately before deployment, run the documented `scripts/backup-db.sh` flow and verify the fresh
+  SQLite and persistent-content archives; this operator gate is part of the standing deployment
+  authorization even though `deploy.sh` does not create or validate it;
+- deploy only through `scripts/deploy.sh` from a clean `HEAD == main == origin/main`, with repository
+  gates green, using an image built in that run from that SHA, while leaving application/database/build
+  readiness, smoke, and automatic rollback armed; and
+- roll back through `deploy.sh`'s automatic path or the documented `scripts/rollback.sh` flow. Rollback
+  is always authorized and never waits for a decision because it is the safety action.
+
+After deployment or rollback, the agent operator MUST report the version, image tag, Git SHA, and gate
+outcomes whether the operation succeeded or failed.
+
+**Explicit authorization, per action.** npm publication, data migration or restore, destructive data
+actions, issue creation, force-pushing, history rewriting, direct access to `/data` outside the
+documented backup/deploy/rollback flows, and any release operation that would bypass a gate, disable
+automatic rollback, or activate an image outside the documented exact-SHA flow. These actions are not
+made safe merely because a command or credential is available; each requires a stated scope, evidence,
+and a decision at the time.
 
 ## Project Constraints
 
@@ -139,11 +155,12 @@ evidence, and a decision at the time.
 - The only runtime mount is `/data`; application source, modules, packages, samples, and design assets
   are baked into the image.
 - Preserve unrelated user changes in a dirty worktree. Never stage or commit work this session did
-  not author; a dirty tree blocks deployment by design and the block is cleared by its author, not
-  around.
+  not author; a dirty tree blocks push and deployment by design and the block is cleared by its author,
+  not around.
 - Destructive data actions and irreversible external mutations require exact targets and explicit
-  authorization. Gated, reversible release actions — push, deploy, rollback — carry the standing
-  authorization defined in Principle VIII and its conditions.
+  authorization. Authored in-scope commits, non-force pushes to `main`, the canonical pre-deploy
+  backup, deployment, and rollback carry the standing authorization defined in Principle VIII and its
+  conditions.
 
 Canonical ownership is intentionally split by concern:
 
@@ -193,4 +210,4 @@ gated, reversible release actions are pre-authorized under stated conditions; ir
 require a separate, explicit operator decision. An agent that cannot satisfy a stated condition MUST
 stop and say which one, rather than proceed or work around it.
 
-**Version**: 2.0.0 | **Ratified**: 2026-08-11 | **Last Amended**: 2026-08-25
+**Version**: 2.1.0 | **Ratified**: 2026-08-11 | **Last Amended**: 2026-08-25

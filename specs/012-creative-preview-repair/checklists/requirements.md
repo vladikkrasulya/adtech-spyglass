@@ -29,7 +29,9 @@
 - [x] Causes are ordered by whether each alone would produce the reported symptom
 - [x] The eighth finding (quirks mode) is recorded with the command that demonstrates it
 - [x] Options rejected under adversarial verification are recorded with their reasons, so they are not re-proposed
-- [x] The unrelated live defect found in passing is named, scoped out, and routed to its own change
+- [x] The mapped-address defect found in passing is named and bounded as a separate narrowing change
+- [x] Mapped private targets, the permitted public control, and the zero-request boundary have a
+      numbered requirement, measurable criterion, owning security contract, and focused tests
 
 ## Boundary Discipline
 

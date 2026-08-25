@@ -15,8 +15,9 @@ Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/ortbtools/`.
 - **Logs**: `docker logs ortbtools --tail 200 -f` (container stdout/stderr via pino)
 - **SQLite DB**: `/srv/DATA/AppData/ortbtools/ortbtools.db` (WAL mode — also
   `ortbtools.db-shm` + `ortbtools.db-wal` in the same dir, all three are live state)
-- **Latest backup**: `/srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz`
-  — daily at 03:30 via `/etc/cron.d/ortbtools-backup`
+- **Latest backup set** (daily at 03:30 via `/etc/cron.d/ortbtools-backup`):
+  `/srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz` and
+  `/srv/DATA/Backups/ortbtools/content-posts-$(date +%Y-%m-%d).tar.gz`
 - **Restart**: `cd /srv/DATA/Stacks/ortbtools && docker compose restart`
 - **Secrets vault**: `/srv/DATA/.secrets/api-tokens.env` (mode 0600, owner vk)
 
@@ -658,7 +659,7 @@ Order matters — kill the old credential at the provider before updating the co
 
 ## 6. Backups
 
-### 6.1 Daily SQLite backup (cron)
+### 6.1 Daily SQLite and persistent-content backup (cron)
 
 Script: `/srv/DATA/Stacks/ortbtools/scripts/backup-db.sh`
 
@@ -669,11 +670,17 @@ Cron entry (`/etc/cron.d/ortbtools-backup`):
 ```
 
 The script uses `sqlite3 "$SRC" ".backup '$DEST'"` — this is the correct WAL-aware
-backup method. It is NOT a file copy. A bare `cp ortbtools.db` taken while the app is
-running risks a torn page or a snapshot that doesn't include WAL-flushed transactions.
+database backup method. It is NOT a file copy. A bare `cp ortbtools.db` taken while the app is
+running risks a torn page or a snapshot that doesn't include WAL-flushed transactions. The same run
+also writes `content-posts/` to a temporary tarball and atomically moves the completed archive into
+place.
 
-Retention: 30 days. Output: `/srv/DATA/Backups/ortbtools/ortbtools-YYYY-MM-DD.db.gz`.
-Check the log at `/var/log/ortbtools-backup.log` for failures.
+Retention: 30 days. Each successful run produces this complete pair:
+
+- `/srv/DATA/Backups/ortbtools/ortbtools-YYYY-MM-DD.db.gz`
+- `/srv/DATA/Backups/ortbtools/content-posts-YYYY-MM-DD.tar.gz`
+
+Check the log at `/var/log/ortbtools-backup.log` for failures or a skipped half of the pair.
 
 Do not rely on a dated inventory in this runbook. The archives are root-only; verify the current
 inventory and the cron outcome at operation time:
@@ -753,13 +760,14 @@ Off-site replica confirmed fresh as of 2026-05-10.
 
 **What gets backed up:**
 
-| Data                       | Mechanism                               | Recovery path                   |
-| -------------------------- | --------------------------------------- | ------------------------------- |
-| `ortbtools.db` + WAL       | Both: cron `.backup` + restic           | `.gz` files or `restic restore` |
-| `ortbtools.db-shm`, `-wal` | restic (file-level)                     | `restic restore`                |
-| Application source         | git repo (source of truth)              | clean checkout + image rebuild  |
-| Secrets vault              | `/srv/DATA/.secrets` included in restic | `restic restore`                |
-| Project `.env`             | host runtime configuration              | restore or recreate explicitly  |
+| Data                        | Mechanism                               | Recovery path                   |
+| --------------------------- | --------------------------------------- | ------------------------------- |
+| `ortbtools.db` + WAL        | Both: cron `.backup` + restic           | `.gz` files or `restic restore` |
+| `ortbtools.db-shm`, `-wal`  | restic (file-level)                     | `restic restore`                |
+| Persistent `content-posts/` | Both: cron tar archive + restic         | `.tar.gz` or `restic restore`   |
+| Application source          | git repo (source of truth)              | clean checkout + image rebuild  |
+| Secrets vault               | `/srv/DATA/.secrets` included in restic | `restic restore`                |
+| Project `.env`              | host runtime configuration              | restore or recreate explicitly  |
 
 Application source is baked into the image and needs no separate runtime backup.
 A clean Git checkout plus a rebuild recreates it.
@@ -767,20 +775,56 @@ A clean Git checkout plus a rebuild recreates it.
 ### 6.3 Manual backup (on-demand)
 
 ```bash
+(
+set -euo pipefail
+
+backup_started_at="$(date +%s)"
 sudo -n /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh
-# Output: /srv/DATA/Backups/ortbtools/ortbtools-$(date +%Y-%m-%d).db.gz
+
+backup_date="$(date +%Y-%m-%d)"
+backup_dir="/srv/DATA/Backups/ortbtools"
+db_archive="$backup_dir/ortbtools-$backup_date.db.gz"
+content_archive="$backup_dir/content-posts-$backup_date.tar.gz"
+
+# Both halves must exist and must have been written by this invocation.
+sudo -n test -s "$db_archive"
+sudo -n test -s "$content_archive"
+test "$(sudo -n stat -c %Y "$db_archive")" -ge "$backup_started_at"
+test "$(sudo -n stat -c %Y "$content_archive")" -ge "$backup_started_at"
+
+# Validate the gzip stream, then restore only into an isolated temporary directory.
+sudo -n gzip -t "$db_archive"
+verify_dir="$(mktemp -d)"
+cleanup_backup_verify() {
+  rm -f -- "$verify_dir/ortbtools.db"
+  rmdir -- "$verify_dir"
+}
+trap cleanup_backup_verify EXIT
+sudo -n sh -c 'gunzip -c -- "$1" > "$2"' sh "$db_archive" "$verify_dir/ortbtools.db"
+integrity_result="$(sudo -n sqlite3 "$verify_dir/ortbtools.db" 'PRAGMA integrity_check;')"
+test "$integrity_result" = "ok"
+
+# Validate and list the persistent-content archive without extracting it.
+sudo -n tar tzf "$content_archive" >/dev/null
+sudo -n stat -c '%n %s bytes %y' "$db_archive" "$content_archive"
+)
 ```
 
-If a file for today already exists, `gzip -f` will overwrite it.
+If today's files already exist, this run replaces both completed archives.
 
-`deploy.sh` does not create, validate, or inspect a backup. Immediately before an authorized
-production deployment, run the command above and verify the fresh database gzip (including a SQLite
-integrity check from a temporary restore) plus the persistent-content tar archive. This is a separate
-operator gate; keep its evidence with the deployment record.
+`deploy.sh` does not create, validate, or inspect a backup. Immediately before every production
+deployment, run the command above and verify the fresh database gzip (including a SQLite integrity
+check from a temporary restore) plus the persistent-content tar archive. This is a separate operator
+gate, but it is included in Constitution Principle VIII's standing deployment authorization and does
+not require another approval. Keep its evidence with the deployment record.
 
 ### 6.4 Restore from backup
 
 **Scenario: DB corrupt or accidental data loss, restore from gzip backup.**
+
+Restore, destructive recovery, and direct `/data` access outside the documented backup, deploy, and
+rollback flows remain explicit-only operations. An available archive or command does not authorize
+using it.
 
 ```bash
 # 1. Stop the container so no new writes race with the restore
@@ -1006,7 +1050,9 @@ to source — everything ships in the image.
 ### 9.1 Deploy
 
 First complete the separate backup gate in §6.3. The deployment script deliberately does not create
-or inspect backup archives.
+or inspect backup archives. The canonical backup and deployment flows carry standing authorization
+only under Constitution Principle VIII's conditions; tool access or available credentials do not
+expand that scope.
 
 ```bash
 cd /srv/DATA/Stacks/ortbtools
@@ -1197,7 +1243,8 @@ roll back to any image older than `PRIVACY_BASELINE_SHA`. It verifies the
 expected previous `BUILD_SHA` and prints `CRITICAL` if the smoke fails.
 `rollback.sh` is the designated recovery action for a stuck/mid-transition
 `deploy-state.env` — it is intentionally NOT gated by `deploy.sh`'s own
-preflight check.
+preflight check. The documented rollback flow is the always-authorized safety action; it never waits
+for another approval. Direct `/data` access or restore outside this flow remains explicit-only.
 
 ### 9.3 Updating the vendored `design-system.css`
 

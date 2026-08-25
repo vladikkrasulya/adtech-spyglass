@@ -1,8 +1,9 @@
 # ADR-013: Standing Release Authorization for the Agent Operator
 
-**Status**: Accepted
+**Status**: Accepted; expanded by constitution 2.1.0
 **Date**: 2026-08-25
-**Amends**: [ADR-006](./ADR-006-immutable-exact-sha-deployments.md)
+**Amends**: [ADR-006](./ADR-006-immutable-exact-sha-deployments.md) and
+[ADR-010](./ADR-010-supported-agents-safe-automation.md)
 
 ## Context
 
@@ -27,20 +28,33 @@ the price was paid by the safe one far more often.
 
 Authorization splits into two classes.
 
-**Standing authorization.** Push to `main`, deploy the app image, and roll it back are pre-authorized
-for the agent operator, subject to conditions:
+**Standing authorization.** The agent operator may perform these bounded actions without another
+conversation, subject to their action-specific conditions:
 
+- stage only authored, in-scope changes from the current task, run the required repository gates
+  against that settled scope, and then commit it;
+- non-force push those reviewed commits to `main` from a clean worktree after the required local gates
+  pass, then wait for the required hosted gates before deployment;
+- immediately before deployment, run the documented `scripts/backup-db.sh` flow and verify fresh
+  SQLite and persistent-content archives. This operator gate is part of the standing deployment
+  authorization even though `deploy.sh` does not create or validate it;
 - deploy only through `scripts/deploy.sh`, from a clean `HEAD == main == origin/main` with repository
-  gates green;
-- leave readiness, smoke and automatic rollback armed;
-- activate only an image built in that run from that SHA;
-- report the version, image tag, Git SHA and gate outcomes afterwards, on success or failure;
-- rollback is always authorized and never waits for a decision.
+  gates green; leave application/database/build readiness, smoke and automatic rollback armed; and
+  activate only an image built in that run from that SHA;
+- roll back through `deploy.sh`'s automatic path or the documented `scripts/rollback.sh` flow. Rollback
+  is always authorized and never waits for a decision.
 
-**Explicit authorization, per action.** npm publication, data migration, destructive data actions,
-issue creation, force-push, history rewriting, anything targeting `/data` rather than mounting it,
-and any deploy that would bypass a gate, disable automatic rollback, or activate an image not built
-in that run.
+After deployment or rollback, report the version, image tag, Git SHA and gate outcomes, on success or
+failure.
+
+**Explicit authorization, per action.** npm publication, data migration or restore, destructive data
+actions, issue creation, force-push, history rewriting, direct access to `/data` outside the documented
+backup/deploy/rollback flows, and any release operation that would bypass a gate, disable automatic
+rollback, or activate an image outside the documented exact-SHA flow.
+
+Planning, task generation, installed tools, available credentials, and executable mechanism
+availability never expand authorization or either class. An available command is not authorization
+for an action outside the standing list.
 
 An agent that cannot satisfy a condition stops and says which one. It does not proceed, and it does
 not work around the condition — including a dirty tree caused by another session's uncommitted work,
@@ -71,17 +85,17 @@ script, where it would also block the automated rollback path — the one action
 ## Consequences
 
 - A finished, gated release reaches production without a second conversation. That is the point.
-- The blast radius is bounded by what `deploy.sh` already enforces, not by a promise: the conditions
-  above are the script's existing gates plus a reporting duty, so the authorization cannot be
-  satisfied while a gate is off.
+- The blast radius is bounded by the required repository and hosted gates, the separate pre-deploy
+  backup gate, and what `deploy.sh` enforces. The backup prerequisite and reporting duty are operator
+  gates outside the script, so their evidence is part of satisfying the authorization.
 - The reporting duty replaces the approval step. The owner stops being the gate and becomes the
   reader, which requires the report to be honest about failures, not only successes.
 - Irreversible mutations become more visible, not less. They were previously one item in a list of
   six that all required asking; now they are the only things that do.
 - ADR-006's consequence that building, tagging, activating or rolling back production remains a
-  separately authorized external mutation no longer holds. Everything else in ADR-006 — immutable
-  images, exact-SHA tags, `/data` as the only mount, the retained rollback target — is unchanged and
-  is what makes this decision safe.
+  separately authorized external mutation no longer holds. ADR-010's uniform requirement for separate
+  authorization before every commit, push, or deploy is likewise superseded. Everything else in those
+  decisions remains unchanged.
 - The risk accepted: a bad release can now reach production without a human pause. It is bounded by
   the smoke gate and automatic rollback, and by the fact that a rollback needs no permission. The
   risk not accepted is an unreviewable one — anything the script cannot undo stays behind an
@@ -94,6 +108,7 @@ script, where it would also block the automated rollback path — the one action
 
 - [Constitution, Principle VIII](../../.specify/memory/constitution.md)
 - [ADR-006: Immutable exact-SHA deployments](./ADR-006-immutable-exact-sha-deployments.md)
+- [ADR-010: Supported agents and safe automation](./ADR-010-supported-agents-safe-automation.md)
 - [Release/deploy contract](../000-platform-baseline/contracts/release-deploy.md)
 - [Deployment script](../../scripts/deploy.sh)
 - [Operations runbook](../../docs/OPERATIONS.md)

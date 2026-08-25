@@ -42,10 +42,15 @@ the project-memory index, and route every `go` decision through `speckit.specify
 5. Generate tasks and run cross-artifact analysis until clean.
 6. Implement bounded phases and run proportional tests.
 7. Run repository CI and convergence; repeat only if convergence appends work.
-8. Review, commit, push, publish, or deploy only with separate authorization.
+8. Review the result. Under Constitution Principle VIII, stage only authored in-scope changes, run the
+   required gates against that settled scope, then commit and non-force push the reviewed commit to
+   `main`. Complete the mandatory pre-deploy backup and use only the documented deploy/rollback flows.
+   npm publication, restore, destructive operations, and direct `/data` access outside those flows
+   remain explicit-only.
 
 The bundled headless workflow is installed as an upstream artifact but is not the canonical path
-because it omits several gates. No workflow is run automatically in CI or a production worktree.
+because it omits several gates. No workflow is run automatically in CI or a production worktree, and
+the availability of any workflow, tool, credential, or command never expands authorization.
 
 ## Exclusions
 

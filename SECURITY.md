@@ -71,3 +71,25 @@ The full invariant, compatibility grammar, dependency provenance, and deliberate
 source-link/promotion-integrity scope are recorded in the
 [Content/SEO contract](./specs/000-platform-baseline/contracts/content-seo.md) and
 [ADR-011](./specs/decisions/ADR-011-browser-markdown-sanitization.md).
+
+## Creative asset outbound boundary
+
+`POST /api/creative/asset` is the authenticated, explicit-click path that can fetch a remote image
+named by pasted creative markup. The browser never contacts the advertiser directly. Because the URL
+is caller-controlled, the route treats it as an SSRF boundary before opening a socket:
+
+- only HTTP(S) on the default HTTP/HTTPS ports is accepted;
+- literal and DNS-returned addresses are canonicalized before classification, including every valid
+  IPv4-mapped IPv6 spelling and WHATWG's hexadecimal form, so the embedded IPv4 address inherits the
+  loopback, RFC1918, link-local, and CGNAT policy;
+- every DNS answer must be public, and the request connects to the already-validated address while
+  retaining the original host for HTTP `Host`, TLS SNI, and certificate validation;
+- redirects are not followed; and
+- only an explicit raster-image MIME allowlist is accepted (SVG is excluded), with response-size and
+  timeout bounds.
+
+Authentication and rate limiting constrain who can initiate the request, but they never replace the
+network boundary above. A change to creative-asset URL parsing, address normalization/classification,
+DNS resolution, connection targeting, redirects, response types, size, or timeout must update the
+[HTTP/server contract](./specs/000-platform-baseline/contracts/http-api.md) and its asset-fetch and
+traffic-class regression tests in the same change.

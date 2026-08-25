@@ -4,11 +4,11 @@ The validation engine behind [ortbtools.com](https://ortbtools.com) has three
 surfaces. The hosted inspector and HTTP API run `@ortbtools/core` server-side;
 the CLI workspace runs the same engine locally without network calls:
 
-| Surface                                       | Best for                           |
-| --------------------------------------------- | ---------------------------------- |
-| Web inspector (`/inspector`)                  | Humans: paste, read, share         |
-| `@ortbtools/cli` (local repository workspace) | Scripts, CI pipelines, log triage  |
-| `POST /api/analyze`                           | Programmatic integration over HTTP |
+| Surface                                       | Best for                                                |
+| --------------------------------------------- | ------------------------------------------------------- |
+| Web inspector (`/inspector`)                  | Humans: paste, read, share                              |
+| `@ortbtools/cli` (local repository workspace) | Scripts, CI pipelines, log triage                       |
+| `POST /api/analyze`, `/api/analyze-behavior`  | Programmatic validation and behavior analysis over HTTP |
 
 `@ortbtools/cli` is not currently published to npm. References to it in this
 document describe the workspace in this repository, not a registry install.
@@ -146,16 +146,31 @@ Run the behavior/anti-fraud engine over probe events captured by the in-iframe
 
 **Rate limit:** 20 calls/min/IP.
 
+Creative source is processed transiently for static rules and is not persisted or logged as request
+context. The hosted Inspector sends the macro-resolved/classified body selected to execute (or escaped
+synthetic Native HTML), not a base64 creative wrapper or raw Native JSON. Static analysis is valid
+with an empty `events` array.
+
 ### Request body
 
 ```jsonc
 {
   "events": [], // required — array of probe events (probe emits summarized
   // events; >1000 are head+tail sampled at 500/500)
-  "adm": "<div>…", // optional — raw creative markup for static analysis
-  // (obfuscation/miner/XSS patterns + entropy)
+  "adm": "<div>…", // optional legacy string form; remains supported
+  "adm_b64": "PGRpdj7igKY8L2Rpdj4=", // optional preferred form: canonical padded
+  // base64 of valid UTF-8, decoded size <= 1 MiB. When present it takes
+  // precedence over adm.
+  "adm_truncated": false, // optional boolean; true means the caller sent
+  // only the deterministic UTF-8-safe 1 MiB source prefix
 }
 ```
+
+The hosted Inspector uses `adm_b64` because its deterministic 4/3 expansion avoids the unpredictable
+JSON escaping of quote/control-heavy markup. For a source at or under 1 MiB, decoding it yields the
+complete body selected for the frame before probe/CSP instrumentation. The endpoint rejects
+non-canonical base64, invalid UTF-8, decoded data over 1 MiB, and a non-boolean `adm_truncated` with
+`400 invalid_input`.
 
 ### Response `200`
 
@@ -165,9 +180,28 @@ Run the behavior/anti-fraud engine over probe events captured by the in-iframe
   "findings": [], // same finding shape as /api/analyze
   "status": "clean",
   "eventCount": 42,
-  "meta": { "locale": "en", "truncated": false, "maxEvents": 1000 },
+  "meta": {
+    "locale": "en",
+    "truncated": false, // event-list sampling occurred
+    "maxEvents": 1000,
+    "admTruncated": false, // caller declared a bounded creative-source prefix
+  },
 }
 ```
+
+`eventCount` and `meta.truncated` describe only the runtime event array. `meta.admTruncated` describes
+the independently bounded static creative source.
+
+### Errors
+
+Errors use the same envelope shown for `/api/analyze`.
+
+| Status | `code`              | When                                                                                                                                     |
+| ------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 400    | `invalid_input`     | `events` is not an array; `adm_b64` is not canonical padded base64 of valid UTF-8 up to 1 MiB decoded; or `adm_truncated` is not boolean |
+| 400    | `invalid_json`      | Body is not valid JSON                                                                                                                   |
+| 400    | `payload_too_large` | Request body exceeds the 2 MiB parser limit                                                                                              |
+| 429    | `rate_limited`      | Per-IP behavior limiter tripped                                                                                                          |
 
 ---
 

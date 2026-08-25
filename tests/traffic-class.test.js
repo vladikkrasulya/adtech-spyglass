@@ -226,6 +226,10 @@ test('private, loopback, link-local and CGNAT addresses are internal', () => {
     '127.0.0.1',
     '::1',
     '::ffff:127.0.0.1',
+    '::ffff:7f00:1',
+    '::ffff:a01:203',
+    '0:0::ffff:127.0.0.1',
+    '0:0:0:0:0:ffff:a9fe:a9fe',
     '10.0.0.7',
     '172.16.0.1',
     '172.31.255.254',
@@ -260,6 +264,10 @@ test('normalizeIp strips brackets, zone ids and the v4-mapped prefix', () => {
   assert.equal(normalizeIp('[2001:db8::1]'), '2001:db8::1');
   assert.equal(normalizeIp('fe80::1%eth0'), 'fe80::1');
   assert.equal(normalizeIp('::ffff:203.0.113.9'), '203.0.113.9');
+  assert.equal(normalizeIp('[::ffff:7f00:1]'), '127.0.0.1');
+  assert.equal(normalizeIp('0:0::ffff:127.0.0.1'), '127.0.0.1');
+  assert.equal(normalizeIp('0:0:0:0:0:ffff:a9fe:a9fe'), '169.254.169.254');
+  assert.equal(normalizeIp('::ffff:cb00:7109'), '203.0.113.9');
   assert.equal(normalizeIp('  203.0.113.9  '), '203.0.113.9');
   assert.equal(normalizeIp('unknown'), '');
   assert.equal(normalizeIp(42), '');

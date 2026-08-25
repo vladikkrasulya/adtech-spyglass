@@ -3,8 +3,11 @@
 **Owners**: package manifests, Dockerfile/Compose, GitHub workflows, `scripts/deploy*.sh`,
 `scripts/rollback.sh`, smoke/backup scripts, and [docs/OPERATIONS.md](../../../docs/OPERATIONS.md)
 
-This contract describes the mechanism. It does not authorize a commit, push, package publication,
-deployment, rollback, image deletion, data restore, or other production mutation.
+This contract describes the mechanism; mechanism availability never expands authorization. The
+constitution grants standing authorization only for authored in-scope commits, non-force pushes to
+`main` after required gates, the canonical pre-deploy backup, and the documented deploy/rollback
+flows under their conditions. Package publication, image deletion, data migration or restore,
+destructive operations, and direct `/data` access outside those flows remain explicit-only actions.
 
 ## Independent Release Surfaces
 
@@ -19,8 +22,10 @@ defaults to dry run, runs the full CI/package gates, publishes Core before a dep
 requires separate registry credentials. A live publish is restricted to `main` and follows
 [docs/NPM_PUBLISH.md](../../../docs/NPM_PUBLISH.md).
 
-An app SemVer bump does not deploy an image. A Core/CLI bump does not publish a package. Each external
-mutation requires separate authorization and post-action verification.
+An app SemVer bump does not deploy an image. A Core/CLI bump does not publish a package. Commit, push,
+backup, deploy, and rollback follow the constitution's standing conditions and require post-action
+verification where applicable; npm publication and other explicit-class mutations require a separate
+decision.
 
 ## Production Image
 
@@ -79,14 +84,16 @@ The canonical deployment script fails before changing the running service unless
 8. both candidate and rollback target satisfy the immutable privacy-floor ancestry check.
 
 Backup readiness is a separate operator gate and is not created or validated by `deploy.sh`. Before
-an authorized production deployment, the operator runs the WAL-aware backup script and verifies the
-fresh SQLite and persistent-content archives. `backup-db.sh` owns the backup directory/archive
+every production deployment, the operator runs the WAL-aware backup script and verifies the fresh
+SQLite and persistent-content archives. This separate gate is included in the standing deployment
+authorization; it does not require another approval. `backup-db.sh` owns the backup directory/archive
 permission contract (`0700`/`0600`); the exact command and verification procedure live in the
 operations runbook.
 
 The deployment script fetches remote Git state, builds the image, writes operator-owned state, and
-controls Docker. Running it is therefore an explicitly authorized production operation, never an
-ordinary implementation/test step.
+controls Docker. Running it is therefore a standing-authorized production operation only after all
+documented conditions pass, never an ordinary implementation/test step or permission to bypass a
+gate.
 
 ## Crash-Safe Transition
 
@@ -121,8 +128,8 @@ A candidate is committed to `ACTIVE` only after:
 The readiness gate is application/database health plus expected build identity. The optional
 `sentry.ready` field reports only whether the local SDK retained a parsed destination; it is not a
 deployment gate and does not prove upstream delivery. A real controlled delivery check is a separate
-operator procedure after explicitly authorized configuration/deployment work. Telegram remains an
-independent incident channel.
+operator procedure after explicitly authorized configuration work and the resulting
+standing-authorized gated deployment. Telegram remains an independent incident channel.
 
 If the host/process stops during an unverified phase, Docker must not resurrect the candidate
 automatically. The in-flight state blocks a new blind deploy and requires an operator to inspect and
@@ -201,5 +208,6 @@ evidence authority.
 A dependency/runtime, image-content, mount, provenance, health, readiness, smoke, permission,
 privacy-floor, transition, rollback, backup, or publication change updates this contract, the
 operator/public package document, and its regression/simulation tests together. Before handoff, run
-the packaging/deployment and complete gates in [quickstart.md](../quickstart.md). Production deploy
-or npm publication remains a separate decision after merge.
+the packaging/deployment and complete gates in [quickstart.md](../quickstart.md). After merge, a
+production deploy follows the standing authorization only after its hosted-CI and backup conditions;
+npm publication remains a separate explicit decision.

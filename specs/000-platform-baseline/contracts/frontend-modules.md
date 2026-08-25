@@ -111,30 +111,53 @@ toasting into a later mount.
 
 ## Creative Preview and Behavior Probe
 
-Banner, Native, and VAST-derived creative content is rendered in an iframe with
-`sandbox="allow-scripts"`; `allow-same-origin` is never added. The parent inlines the probe before
-creative markup, keeps the expected iframe window identity, validates `postMessage` source, and
-stores at most the bounded rolling event window for the active preview.
+The creative body is macro-resolved and classified once before display. Raw payload bytes reach
+`srcdoc` only when classified as markup. Native is the rendering exception: wrapped and envelope-less
+Native normalize to the same object, are escaped into standalone synthetic HTML, and only that
+generated card reaches a probed frame. Raw Native JSON, VAST, generic JSON, bare URLs, prose, failed
+base64, and dependency-failure fallbacks remain inert text assigned with `textContent` in the parent.
 
-The probe reports instrumentation events to the parent. The parent watchdog covers failure modes
-where a frozen iframe cannot report for itself. Behavior findings are computed through the server
-endpoint; an explicit authenticated Corpus save is a separate persistence action. Preview markup
-must never be promoted into the parent origin or logged as request context.
+Padded and valid unpadded base64 decode at most once. VAST delegates to the generated browser copy of
+the single Core detector. Missing Core or classifier is a failed safety dependency and classification
+fails closed to `unidentified`; the preview has no second VAST regex or catch-all markup fallback.
 
-A creative body is classified before any display decision, and only a body classified as markup may
-reach a frame. Every other kind — VAST, native, JSON, a bare URL, base64 that does not decode to a
-creative, and anything unidentified — is presented as inert text assigned to the parent DOM as text,
-never parsed. VAST recognition is delegated to the single canonical detector rather than restated in
-the preview.
+Framed banner markup and synthetic Native HTML use `sandbox="allow-scripts"`;
+`allow-same-origin` is never added. The frame content policy stays sealed. Wave 1 exposes no
+asset-inlining/network action for Native. The pre-existing explicit banner asset action retains its
+route and limits; when it repoints a banner frame, it also replaces the static-analysis source with
+the rewritten HTML and creates a new probe generation.
 
-The frame-to-parent channel carries two message types. Instrumentation events keep their existing
-type and enter the bounded behavior event window. Content-policy refusals travel as a separate type,
-are deduplicated by refused directive and refused resource, are bounded per render, and are counted
-into a per-render ledger that is discarded on the next mount. Refusals MUST NOT enter the behavior
-event window, appear in the behavior analysis request, or change the number or content of behavior
-findings for a payload — that window is capped and drops its oldest entries, so a creative emitting
-many refusals could otherwise evict the evidence it is being measured for. Both types are subject to
-the same iframe-window identity check.
+Inspector activation awaits the one-time probe source fetch before Analyze is exposed. The runtime
+`/creative-probe.js` URL receives the file's content hash from the static rewriter, preventing a stale
+cached probe from being paired with a fresh parent receiver. The parent inlines the probe before the
+creative and keeps the expected iframe window identity.
+
+Source identity alone is not authentication because creative code runs inside that current frame and
+can call `parent.postMessage`. Each render therefore creates a cryptographically random capability
+closed over by the trusted probe. The probe captures the parent send function, removes its own
+capability-bearing script element before payload markup parses, and only then enables telemetry. Both
+reserved message types require current-frame `event.source` and the current capability; failed probe
+load/random generation fails telemetry closed.
+
+Instrumentation messages enter the bounded rolling behavior window; the parent watchdog covers a
+frozen iframe that cannot report. Refusal messages take a separate reducer and never enter that
+window or its request. The probe and parent independently cap a refusal render at 200. The parent
+also validates version, finite timestamp, boolean truncation, array/string schema, a 200-item batch,
+64-character directive, and 2048-character blocked-URI bounds before deduplicating
+`(directive, blockedUri)`. Overflow is visibly truncated. Chromium directive aliases normalize to
+stable localized image/script/style/frame/font/connection/media/other groups.
+
+Static behavior rules analyze the selected executing body before probe/CSP instrumentation:
+macro-resolved/classified/once-decoded markup or escaped synthetic Native HTML. The browser sends
+canonical base64 of a valid UTF-8 prefix up to 1 MiB plus explicit truncation state over the existing
+same-origin `/api/analyze-behavior` endpoint. Static analysis runs with zero runtime-visible events;
+render generation and creative revision reject stale results. Source is transient, not persisted or
+logged as request context. An explicit authenticated Corpus save remains the only Behavior
+persistence action.
+
+The reveal overlay is independent of sizing and appears only for revealable frames. VAST and other
+text views are scrollable and unrevealable; VAST trimming and normalized refusal kinds resolve through
+the three-locale module dictionary. Preview markup must never be promoted into the parent origin.
 
 ## Browser State Ownership
 

@@ -32,6 +32,7 @@
 
   let _pendingTimer = null;
   let _lastEventCount = -1;
+  let _renderGeneration = 0;
 
   function escapeHtml(s) {
     return String(s == null ? '' : s)
@@ -176,26 +177,20 @@
     if (bar) container.insertAdjacentElement('afterbegin', bar);
   }
 
-  function fetchAnalysis(events, locale) {
-    // Phase 6: piggy-back the current creative's adm so the engine can
-    // run static-payload scans (obfuscation, miners, XSS markers, entropy).
-    // setAdPreview parks a (truncated) copy on __ortbtoolsBehavior so we
-    // don't have to wire a new function-arg pipeline through the parent.
-    // Empty string when no preview is mounted — engine treats that as
-    // "skip static analysis" and runs runtime-only rules.
-    let adm = '';
-    try {
-      const ctx = window.__ortbtoolsBehavior;
-      if (ctx && typeof ctx.creative_adm === 'string') adm = ctx.creative_adm;
-    } catch (_e) {
-      /* noop */
-    }
+  function fetchAnalysis(events, locale, admB64, admTruncated) {
+    // Phase 6: piggy-back the exact bounded UTF-8 creative window so the
+    // engine can run static-payload scans. Base64 keeps JSON escaping from
+    // turning quote/control-heavy markup into a request over the 2 MiB cap.
     return fetch(
       '/api/analyze-behavior' + (locale ? '?locale=' + encodeURIComponent(locale) : ''),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ events: events, adm: adm }),
+        body: JSON.stringify({
+          events: events,
+          adm_b64: admB64,
+          adm_truncated: admTruncated === true,
+        }),
       },
     )
       .then(function (r) {
@@ -228,19 +223,37 @@
   function render(container, allEvents, opts) {
     if (!container) return;
     opts = opts || {};
+    const generation = ++_renderGeneration;
     const events = (allEvents || []).filter(function (e) {
       return e && e.kind !== 'probe_ready';
     });
+    let admB64 = '';
+    let admTruncated = false;
+    let creativeRevision = 0;
+    try {
+      const ctx = window.__ortbtoolsBehavior;
+      if (ctx && typeof ctx.creative_adm_b64 === 'string') admB64 = ctx.creative_adm_b64;
+      if (ctx) {
+        admTruncated = ctx.creative_adm_truncated === true;
+        creativeRevision = Number(ctx.creative_revision) || 0;
+      }
+    } catch (_e) {
+      /* noop */
+    }
 
     if (!events.length) {
       container.innerHTML =
         '<div class="empty-hint">' + escapeHtml(opts.emptyMessage || '') + '</div>';
       _lastEventCount = 0;
-      return;
+      if (!admB64) {
+        if (_pendingTimer) clearTimeout(_pendingTimer);
+        _pendingTimer = null;
+        return;
+      }
+    } else {
+      // Fast path: render timeline first, before the fetch resolves.
+      paint(container, [], events, opts);
     }
-
-    // Fast path: render timeline first, before the fetch resolves.
-    paint(container, [], events, opts);
 
     // Debounce the engine call. Multiple probe events can fire in quick
     // succession (e.g. addEventListener wrap + click on the same trap);
@@ -249,14 +262,21 @@
     const eventsSnapshot = (allEvents || []).slice();
     _pendingTimer = setTimeout(function () {
       _pendingTimer = null;
-      fetchAnalysis(eventsSnapshot, opts.locale).then(function (data) {
+      fetchAnalysis(eventsSnapshot, opts.locale, admB64, admTruncated).then(function (data) {
         if (!data || !data.success) return;
-        // The container may have been re-rendered for a *newer* set of
-        // events while the request was in flight; only paint if the
-        // visible event count still matches what we requested.
-        const current = (window.__ortbtoolsBehavior && window.__ortbtoolsBehavior.events) || [];
-        if (current.length !== eventsSnapshot.length) return;
-        paint(container, data.findings || [], events, opts);
+        // A newer render may have the same event count (the 500-entry ring can
+        // replace one-for-one) or a new creative with zero events. Generation
+        // + creative revision close both stale-response races.
+        const current = window.__ortbtoolsBehavior || {};
+        if (generation !== _renderGeneration) return;
+        if ((Number(current.creative_revision) || 0) !== creativeRevision) return;
+        const findings = data.findings || [];
+        if (!findings.length && !events.length) {
+          container.innerHTML =
+            '<div class="empty-hint">' + escapeHtml(opts.emptyMessage || '') + '</div>';
+          return;
+        }
+        paint(container, findings, events, opts);
       });
     }, 150);
 
