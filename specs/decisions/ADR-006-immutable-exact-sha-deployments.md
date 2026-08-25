@@ -40,8 +40,11 @@ rollback; unknown or interrupted transition state fails closed for operator revi
   path.
 - Persistent data and promoted content must remain compatible across candidate and rollback images;
   deployment scripts never treat `/data` as disposable.
-- Building, tagging, activating, or rolling back production remains a separately authorized external
-  mutation, not an implied consequence of merge.
+- ~~Building, tagging, activating, or rolling back production remains a separately authorized external
+  mutation, not an implied consequence of merge.~~ **Superseded by
+  [ADR-013](./ADR-013-standing-release-authorization.md) (2026-08-25):** these actions now carry a
+  standing authorization under stated conditions. Every other consequence here stands, and it is what
+  makes that authorization safe — the gates below are exactly what bounds it.
 
 ## Related Artifacts
 
