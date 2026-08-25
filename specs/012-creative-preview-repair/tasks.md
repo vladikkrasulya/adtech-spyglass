@@ -265,6 +265,21 @@ through a `| tail` and was wrong about it; the numbers below are from the comman
     owner link, and separately rejected a `[~]` task marker as a gap in the ID sequence. There is no
     partial state in this repository's task convention; T003 is therefore recorded as open.
 
+### T028 — a gate that only bites after `git add`
+
+`npm run ci` was green three times before the commit and red on the first `git push`, from the
+identical tree. `tests/brand-guard.test.js` walks `git ls-files`, so while this package was untracked
+it was outside the guard's scope entirely; committing brought it in, and one line in
+`checklists/requirements.md` quoting the retired brand name failed it.
+
+Recorded because the lesson is about ordering, not about the name: a gate scoped to tracked files
+cannot be trusted until the files are staged. Running `npm run ci` before `git add` proves less than
+it appears to. The `pre-push` hook is what caught it — the same `npm run ci`, run at the only
+moment when the tree and the index agree.
+
+Fixed by rewording the note rather than adding the file to `FILE_ALLOWLIST`: that list is for
+historical documents that must quote the old name to be useful, and this note is not one.
+
 ### Production evidence
 
 None. Deployment is a separately authorized action and was not performed.

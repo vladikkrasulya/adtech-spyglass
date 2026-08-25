@@ -93,9 +93,10 @@ II is the reason the package is trusted:
   string with backslash-escaped quotes, so the pickaxe search as written matched nothing and would have
   read as "no such commit". Replaced with an invocation verified against a real run. The conclusion it
   supported was independently correct; the evidence for it was not.
-- `public/spyglass.app.js` did not exist at `adfaccd`. It was renamed to `ortbtools.app.js` in `29262b9`
-  a month earlier. The pre-change state is now cited at `adfaccd^:public/ortbtools.app.js:881`, with the
-  initial-commit shape noted separately.
+- The pre-change state was cited against a file under the retired brand name — a file that no longer
+  existed at `adfaccd`, having been renamed to `public/ortbtools.app.js` in `29262b9` a month earlier.
+  It is now cited at `adfaccd^:public/ortbtools.app.js:881`, with the initial-commit shape noted
+  separately.
 - `console.error` cited at `:1398`; it is at `:1400`.
 
 Mechanical: terminology standardised on `unidentified`; two `[P]` markers removed from tasks that
