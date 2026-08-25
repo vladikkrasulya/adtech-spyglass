@@ -1133,6 +1133,78 @@ export async function mountInspector(root, ctx) {
     }
   }
 
+  // ── Refusal ledger ───────────────────────────────────────────
+  // What the frame refused to load, for the creative currently on screen.
+  //
+  // The frame's policy blocks every https sub-resource on purpose, so a
+  // CDN-hosted banner renders empty and what is left on screen is alt text,
+  // click URLs the creative prints itself, and unresolved macro literals.
+  // That residue reads as a crash. This ledger is how the panel says
+  // "12 resources refused across 4 hosts" instead — the difference between
+  // a tool that refused and a tool that broke.
+  //
+  // Deliberately NOT part of __ortbtoolsBehavior: that buffer is capped and
+  // drops its oldest entries, so routing refusals through it would let a
+  // creative emitting hundreds of violations evict the navigation evidence
+  // it is being measured for. Separate message type, separate store, never
+  // sent to /api/analyze-behavior.
+  let _refusals = null;
+
+  function resetRefusals() {
+    _refusals = { seen: new Set(), count: 0, hosts: new Set(), kinds: new Map(), truncated: false };
+  }
+  resetRefusals();
+
+  /**
+   * The host an identifier names, for the "across N hosts" count.
+   *
+   * A blocked URI is not always a URL: policies report `inline`, `eval`, and
+   * `data` for the sources that have no origin, and some engines truncate a
+   * cross-origin URI to its origin. Those are grouped under their own label
+   * rather than dropped — a refusal we cannot attribute is still a refusal,
+   * and silently discarding it would understate the count.
+   *
+   * @param {string} uri
+   * @returns {string}
+   */
+  function refusalHost(uri) {
+    if (!uri) return 'unknown';
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(uri)) return uri; // 'inline', 'eval', 'self'
+    try {
+      return new URL(uri).host || uri;
+    } catch (_e) {
+      return uri;
+    }
+  }
+
+  /**
+   * Fold one batch of refusals into the ledger.
+   *
+   * Deduplicated again on this side even though the frame already
+   * deduplicates: the frame's set dies with the frame, and re-pointing an
+   * existing iframe's srcdoc (the asset-inlining path does exactly that)
+   * starts a second probe against the same ledger.
+   *
+   * @param {Array<{directive: string, blockedUri: string}>} items
+   * @param {boolean} truncated
+   */
+  function recordRefusals(items, truncated) {
+    if (!_refusals) resetRefusals();
+    if (truncated) _refusals.truncated = true;
+    if (!Array.isArray(items)) return;
+    for (const it of items) {
+      if (!it || typeof it !== 'object') continue;
+      const directive = String(it.directive || 'unknown');
+      const blockedUri = String(it.blockedUri || '');
+      const key = directive + '|' + blockedUri;
+      if (_refusals.seen.has(key)) continue;
+      _refusals.seen.add(key);
+      _refusals.count++;
+      _refusals.hosts.add(refusalHost(blockedUri));
+      _refusals.kinds.set(directive, (_refusals.kinds.get(directive) || 0) + 1);
+    }
+  }
+
   function stopWatchdog() {
     if (_watchdogTimer) {
       clearInterval(_watchdogTimer);
@@ -1273,6 +1345,18 @@ export async function mountInspector(root, ctx) {
     // would keep offering to inline the images of a banner that is no
     // longer on screen.
     clearCreativeActions();
+    // The explanation strip belongs to the creative that is leaving, and so
+    // does the refusal ledger: a count carried over from the previous
+    // creative would be a number about something no longer on screen.
+    clearCreativeNotes();
+    resetRefusals();
+    // Repaint immediately at zero: that is what brings the standing notice
+    // back for the creative now arriving, which may refuse nothing at all.
+    renderRefusalLedger();
+    // Nothing is revealable until a branch says otherwise. Branches that
+    // mount no frame never set it, so the overlay stays off by default
+    // rather than by each branch remembering to turn it off.
+    setRevealable(false);
     // Phase 8: re-apply safe-demo blur on every new creative. The user
     // explicitly reveals each creative; we don't carry the reveal state
     // across impressions because that would defeat the screenshot-safety
@@ -1339,75 +1423,115 @@ export async function mountInspector(root, ctx) {
       window.OrtbtoolsMacros && typeof window.OrtbtoolsMacros.resolveAdmMacros === 'function'
         ? window.OrtbtoolsMacros.resolveAdmMacros(String(adm), macroContext || {})
         : String(adm);
-    const trimmed = resolved.trim();
+    // ── What IS this body? ────────────────────────────────────────────
+    // Asked once, before anything decides how to show it. The branch order
+    // below used to end in an unconditional catch-all, so a payload that was
+    // not markup — envelope-less native, a bare URL, base64, plain text —
+    // was handed to the browser and painted as a line of garbage. Only
+    // `markup` reaches a frame now. See
+    // specs/012-creative-preview-repair/contracts/creative-preview.md §1.
+    const classifier = window.OrtbtoolsCreativeClassify;
+    const cls =
+      classifier && typeof classifier.classify === 'function'
+        ? classifier.classify(resolved)
+        : // A page that failed to load the module keeps the old behaviour
+          // rather than showing nothing. Stated in `reason` so it is
+          // visible in a debug session instead of being a silent downgrade.
+          {
+            kind: 'markup',
+            body: resolved,
+            decoded: false,
+            native: null,
+            reason: 'classifier absent',
+          };
 
-    // 1) VAST XML → show as expandable XML preview. We can't actually play
-    //    video here (no VAST player + sandbox-allow-scripts is too narrow).
-    //    8000 chars is generous for modern VAST 4.x with multiple wrappers;
-    //    surface a "trimmed" hint when we hit it so the user isn't surprised.
-    //    NOTE: regex must stay in lockstep with `isVastShape` in
-    //    packages/core/format-detect.js — anchored at start, accepts
-    //    `<?xml` declaration or bare `<VAST`.
-    if (/^(<\?xml|<VAST)/i.test(trimmed)) {
+    if (cls.decoded) addCreativeNote(t('creative.kind.decoded'));
+    noteUnresolvedMacros(cls.body);
+
+    // 1) VAST XML → readable text. We can't play video here (no VAST player,
+    //    and `allow-scripts` alone is too narrow), so the document itself is
+    //    the useful thing. It is NOT revealable: no reveal will ever turn
+    //    this text into a picture, and offering the overlay over it covered
+    //    readable content with a control that promised a creative.
+    if (cls.kind === 'vast') {
       const VAST_MAX = 8000;
-      const truncated = trimmed.length > VAST_MAX;
-      const display = truncated ? trimmed.slice(0, VAST_MAX) : trimmed;
-      const note = truncated
-        ? `<div class="mono-label" style="margin-top:var(--space-2);color:var(--text-dim)">… trimmed (${trimmed.length - VAST_MAX} chars hidden)</div>`
-        : '';
-      el.innerHTML = `
-        <div style="padding:var(--space-4);font-family:var(--font-mono);font-size:11px;color:var(--text-muted);overflow:auto;height:100%;width:100%">
-          <div class="mono-label" style="margin-bottom:var(--space-2)">vast · video xml · preview-only (no playback)</div>
-          <pre style="white-space:pre-wrap;word-break:break-word;margin:0;color:var(--text)">${escapeHtml(display)}</pre>
-          ${note}
-        </div>`;
+      const body = cls.body.trim();
+      const truncated = body.length > VAST_MAX;
+      renderInertText(
+        el,
+        truncated ? body.slice(0, VAST_MAX) : body,
+        t('creative.kind.vast'),
+        truncated ? body.length - VAST_MAX : 0,
+      );
       // VAST is text-content; size to a generic 16:9 video frame.
       setDims(640, 360);
+      setRevealable(false);
       return;
     }
 
-    // 2) Native JSON → synthesize a standalone HTML card and pipe it through
-    //    the probe identically to banner adm. Without this, clicks on the
-    //    rendered native were invisible to the Behavior engine (the previous
-    //    implementation injected the card directly into the parent DOM and
-    //    never mounted a probed iframe). The card uses a plain <a href>
-    //    without target=_top: a click attempts iframe-self navigation, which
-    //    the probe's Location.href setter hook captures as a `navigation`
-    //    event — same tracking signal as a banner adm without the
-    //    frame_bust_anchor false-positive label.
-    if (trimmed.startsWith('{')) {
+    // 2) Native → synthesize a standalone HTML card and pipe it through the
+    //    probe identically to banner adm, so a click on the card is measured
+    //    exactly as a click on a banner is. The classifier accepts the
+    //    payload whether or not it carries the `{"native": …}` wrapper and
+    //    hands back the wrapped shape, so this renderer needs no change —
+    //    it was only ever being given the wrong thing.
+    if (cls.kind === 'native') {
       try {
-        const j = JSON.parse(trimmed);
-        if (j && j.native && Array.isArray(j.native.assets)) {
-          const iframe = document.createElement('iframe');
-          iframe.setAttribute('sandbox', 'allow-scripts');
-          iframe.style.cssText = 'border:none;background:#fff;width:100%;height:100%';
-          iframe.srcdoc = buildProbedSrcdoc(renderNativeToHtml(j.native));
-          // Native ads vary wildly in shape; the synthetic render is a
-          // typical card layout that fits 320×260 reasonably. Caller can
-          // override later via dims if request specified them.
-          setDims(dims && dims.w ? dims.w : 320, dims && dims.h ? dims.h : 260);
-          _currentProbedIframe = iframe;
-          el.appendChild(iframe);
-          return;
-        }
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('sandbox', 'allow-scripts');
+        iframe.style.cssText = 'border:none;background:#fff;width:100%;height:100%';
+        iframe.srcdoc = buildProbedSrcdoc(renderNativeToHtml(cls.native));
+        // Native ads vary wildly in shape; the synthetic render is a
+        // typical card layout that fits 320×260 reasonably. Caller can
+        // override later via dims if request specified them.
+        setDims(dims && dims.w ? dims.w : 320, dims && dims.h ? dims.h : 260);
+        setRevealable(true);
+        _currentProbedIframe = iframe;
+        el.appendChild(iframe);
+        // The images a native card points at are remote like any other, and
+        // the escape hatch used to be unreachable from here because this
+        // branch returned before it — hero and icon were grey rectangles
+        // permanently, with no button to do anything about it.
+        maybeOfferAssetInlining(el, renderNativeToHtml(cls.native), dims);
+        return;
       } catch (err) {
-        // Surface the failure: a silent catch here means a blank iframe AND
-        // no probe → watchdog spams frozen_thread with no diagnostic trail.
-        // Logging lets us see ReferenceErrors / parse failures / asset shape
-        // mismatches immediately. Falls through to the banner-iframe branch
-        // below so the user still sees *something* (even if just raw JSON).
-        console.error('[ortbtools] native render failed, falling back to banner branch', err);
+        // Now this actually fires. The old gate rejected an envelope-less
+        // payload without throwing, so the diagnostic never appeared and the
+        // failure was completely silent — which is how the defect survived.
+        console.error('[ortbtools] native render failed', err);
+        renderInertText(el, cls.body, t('creative.kind.unidentified'), 0);
+        setDims(320, 260);
+        setRevealable(false);
+        return;
       }
     }
 
-    // 3) Banner HTML → iframe sandbox.
+    // 3) Anything that is not markup is named, and shown as inert text. It is
+    //    never parsed, never fetched, never linked.
+    if (cls.kind !== 'markup') {
+      const label =
+        cls.kind === 'json'
+          ? t('creative.kind.json')
+          : cls.kind === 'url'
+            ? t('creative.kind.url')
+            : t('creative.kind.unidentified');
+      renderInertText(el, cls.body, label, 0);
+      setDims(300, 250);
+      setRevealable(false);
+      return;
+    }
+
+    // 4) Banner HTML → iframe sandbox.
     // If we know native banner dimensions, render the iframe at native size
     // and scale-to-fit the (narrow) preview container, preserving aspect.
     // Otherwise fall back to legacy 100%-of-container behaviour.
     const iframe = document.createElement('iframe');
     iframe.setAttribute('sandbox', 'allow-scripts');
-    iframe.srcdoc = buildProbedSrcdoc(resolved);
+    // `cls.body`, not `resolved`: identical for every kind except base64,
+    // where the decoded body IS the creative and the encoding was never part
+    // of it. Nothing else about the bytes is touched — the behaviour engine
+    // and the static scanner read exactly what goes in here.
+    iframe.srcdoc = buildProbedSrcdoc(cls.body);
     // Pin THIS iframe as the only legitimate probe source. The receiver
     // below rejects every postMessage whose `event.source` doesn't match
     // this contentWindow — so even on a page with multiple iframes, only
@@ -1427,8 +1551,9 @@ export async function mountInspector(root, ctx) {
       // creative still renders 100% width inside its iframe.
       setDims(300, 250);
     }
+    setRevealable(true);
     el.appendChild(iframe);
-    maybeOfferAssetInlining(el, resolved, dims);
+    maybeOfferAssetInlining(el, cls.body, dims);
   }
 
   /**
@@ -1464,10 +1589,15 @@ export async function mountInspector(root, ctx) {
     const existing = document.getElementById('creativeActions');
     if (existing) return existing;
     if (!create) return null;
-    // After the safe-mode wrapper when there is one; the bare preview
-    // container is the fallback for a DOM that predates it.
+    // After the notes strip when there is one, so the column reads frame →
+    // what happened → what you can do about it. Both containers insert after
+    // the same wrapper, so without this the one created LAST ends up first,
+    // and the button about the pictures sits above the sentence explaining
+    // why there are none.
     const anchor =
-      document.getElementById('creativePreviewSafe') || document.getElementById('creativePreview');
+      document.getElementById('creativeNotes') ||
+      document.getElementById('creativePreviewSafe') ||
+      document.getElementById('creativePreview');
     if (!anchor || !anchor.parentNode) return null;
     const box = document.createElement('div');
     box.id = 'creativeActions';
@@ -1480,6 +1610,221 @@ export async function mountInspector(root, ctx) {
   function clearCreativeActions() {
     const box = document.getElementById('creativeActions');
     if (box && box.parentNode) box.parentNode.removeChild(box);
+  }
+
+  /**
+   * The strip where the preview EXPLAINS itself — refusals, what the payload
+   * turned out to be, macros left literal.
+   *
+   * Its own container rather than `.creative-actions` for the same reason
+   * that one exists: `.preview-container` is a fixed-size clipper, and a
+   * sibling inside it is a second flex item that pushes the frame sideways
+   * and gets cut in half. Notes go after the safe wrapper, buttons after the
+   * notes, so the order down the column is frame → explanation → controls.
+   *
+   * @param {boolean} [create]
+   * @returns {HTMLElement|null}
+   */
+  function creativeNotesHost(create) {
+    const existing = document.getElementById('creativeNotes');
+    if (existing) return existing;
+    if (!create) return null;
+    const anchor =
+      document.getElementById('creativePreviewSafe') || document.getElementById('creativePreview');
+    if (!anchor || !anchor.parentNode) return null;
+    const box = document.createElement('div');
+    box.id = 'creativeNotes';
+    box.className = 'creative-notes';
+    anchor.parentNode.insertBefore(box, anchor.nextSibling);
+    return box;
+  }
+
+  function clearCreativeNotes() {
+    const box = document.getElementById('creativeNotes');
+    if (box && box.parentNode) box.parentNode.removeChild(box);
+  }
+
+  /**
+   * Whether this preview holds something a reveal could actually uncover.
+   *
+   * Sizing and revealability used to be one signal: `setDims` set
+   * `data-has-creative`, and the CSS used that same attribute both to size
+   * the box and to switch the reveal overlay on. The VAST branch calls
+   * `setDims` purely to get a 16:9 frame, and inherited an overlay over
+   * readable text that no reveal would ever change — a control promising a
+   * creative, sitting on top of the only content there was, with
+   * `pointer-events: auto` so the text underneath could not even be
+   * selected. Two jobs, two attributes.
+   *
+   * @param {boolean} yes
+   */
+  function setRevealable(yes) {
+    const safe = document.getElementById('creativePreviewSafe');
+    if (!safe) return;
+    if (yes) safe.dataset.revealable = '1';
+    else delete safe.dataset.revealable;
+  }
+
+  /**
+   * Show a creative body as text, inside the preview box.
+   *
+   * Built node by node with `textContent`. The old VAST branch assembled an
+   * HTML string around `escapeHtml(display)` and assigned it to `innerHTML`;
+   * that worked, but it put an escaping function on the path between hostile
+   * payload and the parent origin, and the baseline contract forbids
+   * promoting preview markup into the parent origin at all. Assigning text
+   * performs no parse, so there is nothing to get wrong.
+   *
+   * @param {HTMLElement} host
+   * @param {string} text the body to show
+   * @param {string} label what this payload is, in the analyst's locale
+   * @param {number} hidden characters trimmed off the end, 0 when none
+   */
+  function renderInertText(host, text, label, hidden) {
+    host.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-text';
+
+    const head = document.createElement('div');
+    head.className = 'mono-label preview-text-label';
+    head.textContent = label;
+    wrap.appendChild(head);
+
+    const pre = document.createElement('pre');
+    pre.className = 'preview-text-body';
+    pre.textContent = text;
+    wrap.appendChild(pre);
+
+    if (hidden > 0) {
+      const note = document.createElement('div');
+      note.className = 'mono-label preview-text-trimmed';
+      note.textContent = '… trimmed (' + hidden + ' chars hidden)';
+      wrap.appendChild(note);
+    }
+    host.appendChild(wrap);
+  }
+
+  /**
+   * Name the macros that stayed literal, below the frame.
+   *
+   * Deliberately a note and not a rewrite. An unresolved `${AUCTION_PRICE}`
+   * is correct for an inert preview where no auction happened, and it is
+   * also, when it sits inside creative JavaScript, a `SyntaxError` that stops
+   * the creative building at all — so the analyst needs to know it is there.
+   * Substituting it would change the bytes the behaviour engine scores and
+   * the static scanner reads, which is the one thing this path must not do.
+   *
+   * Both spellings are looked for: the evaluator only understands `${MACRO}`,
+   * so GAM's `%%CLICK_URL_UNESC%%` passes through untouched and is exactly
+   * the kind of literal that reads as garbage in the box.
+   *
+   * @param {string} body
+   */
+  function noteUnresolvedMacros(body) {
+    if (typeof body !== 'string' || !body) return;
+    const found = new Set();
+    const patterns = [/\$\{([A-Z0-9_]+)(?::[A-Z0-9_]+)?\}/g, /%%([A-Z0-9_]+)%%/g];
+    for (const re of patterns) {
+      let m;
+      while ((m = re.exec(body)) !== null) {
+        found.add(m[0]);
+        if (found.size >= 8) break;
+      }
+    }
+    if (!found.size) return;
+    addCreativeNote(
+      t('creative.macros.unresolved', { list: Array.from(found).join(', ') }),
+      'creative-note-hint',
+    );
+  }
+
+  /**
+   * Add one line to the notes strip.
+   *
+   * `textContent`, never `innerHTML`, and no escaping helper: every string
+   * that lands here is payload-derived or contains payload-derived
+   * substitutions, and an escaping function is a correctness dependency
+   * standing between hostile input and the analyst's own session. Assigning
+   * text performs no parse at all, so there is nothing to get wrong. See
+   * specs/012-creative-preview-repair/contracts/creative-preview.md §2.
+   *
+   * @param {string} text
+   * @param {string} [cls]
+   */
+  function addCreativeNote(text, cls) {
+    const host = creativeNotesHost(true);
+    if (!host) return;
+    const line = document.createElement('div');
+    line.className = 'creative-note' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    host.appendChild(line);
+  }
+
+  /**
+   * State what the frame refused to load, for the creative on screen.
+   *
+   * Nothing is said when nothing was refused — a creative that renders
+   * completely from its own markup must not carry a line claiming otherwise.
+   */
+  function renderRefusalLedger() {
+    const existing = document.getElementById('creativeBlocked');
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    // The standing notice above the frame says external resources are blocked.
+    // That is true and worth saying before anything is pasted — but once the
+    // ledger can say it with a number and a host list, two statements about
+    // the same fact compete, and the vaguer one is the one people learn to
+    // ignore. Stand it down for exactly as long as something better is on
+    // screen. Measured by looking: with both present the reader's eye lands on
+    // the general sentence first and the specific one reads as a repeat.
+    const standing = document.querySelector('.preview-csp-notice');
+    if (standing) standing.hidden = !!(_refusals && _refusals.count);
+    if (!_refusals || !_refusals.count) return;
+    const host = creativeNotesHost(true);
+    if (!host) return;
+
+    const box = document.createElement('div');
+    box.id = 'creativeBlocked';
+    box.className = 'creative-note creative-note-blocked';
+
+    const summary = document.createElement('div');
+    summary.textContent = t(
+      _refusals.truncated ? 'creative.blocked.summary_truncated' : 'creative.blocked.summary',
+      { n: _refusals.count, hosts: _refusals.hosts.size },
+    );
+    box.appendChild(summary);
+
+    const hint = document.createElement('div');
+    hint.className = 'creative-note-hint';
+    hint.textContent = t('creative.blocked.hint');
+    box.appendChild(hint);
+
+    // The kind breakdown is the reason this ledger is worth building: a bare
+    // count cannot tell the analyst whether the creative needed pictures or
+    // needed to execute, and that is precisely the question the next decision
+    // about this preview turns on.
+    const details = document.createElement('details');
+    const summaryEl = document.createElement('summary');
+    summaryEl.textContent = t('creative.blocked.details');
+    details.appendChild(summaryEl);
+
+    const kinds = document.createElement('div');
+    kinds.className = 'creative-note-hint';
+    const kindParts = [];
+    for (const [directive, n] of _refusals.kinds) {
+      const key = 'creative.blocked.kind.' + directive;
+      const label = t(key);
+      kindParts.push((label === key ? directive : label) + ' · ' + n);
+    }
+    kinds.textContent = t('creative.blocked.kinds') + ': ' + kindParts.join(', ');
+    details.appendChild(kinds);
+
+    const hosts = document.createElement('div');
+    hosts.className = 'creative-note-hint';
+    hosts.textContent = t('creative.blocked.hosts') + ': ' + Array.from(_refusals.hosts).join(', ');
+    details.appendChild(hosts);
+
+    box.appendChild(details);
+    host.appendChild(box);
   }
 
   /**
@@ -1531,6 +1876,18 @@ export async function mountInspector(root, ctx) {
           const frame = host.querySelector('iframe');
           if (frame) {
             resetBehavior();
+            // The refusals about to be raised belong to this second render,
+            // not the first — otherwise the count doubles for every asset
+            // that is still remote after inlining.
+            resetRefusals();
+            renderRefusalLedger();
+            // Consent was given over a box that was empty, because the
+            // pictures had not arrived yet. Re-blur before they do: a reveal
+            // clicked on nothing is not a reveal of the artwork that lands a
+            // moment later, and the screenshot-safety guarantee is exactly
+            // about the artwork.
+            const safe = document.getElementById('creativePreviewSafe');
+            if (safe) safe.classList.remove('is-revealed');
             frame.srcdoc = buildProbedSrcdoc(res.html);
             _currentProbedIframe = frame;
           }
@@ -5962,11 +6319,26 @@ export async function mountInspector(root, ctx) {
       'message',
       (e) => {
         const d = e.data;
-        if (!d || d.type !== 'ortbtools-probe') return;
+        if (!d || (d.type !== 'ortbtools-probe' && d.type !== 'ortbtools-preview-refusal')) return;
         // Spoof-protection: only accept messages from the currently-mounted
         // probed iframe. Drops events when no iframe is active (VAST/native
         // previews, between-creative gap) and from any unrelated frame.
         if (!_currentProbedIframe || e.source !== _currentProbedIframe.contentWindow) return;
+        // Content-policy refusals are counted, never recorded as behaviour.
+        // They return BEFORE pushBehaviorEvent on purpose: that buffer is
+        // capped at BEHAVIOR_EVENTS_MAX and drops its oldest entries, so a
+        // creative that emits more refusals than the cap would evict the
+        // navigation and frame-bust evidence it is being measured for. They
+        // still count as liveness — a frame reporting refusals is a frame
+        // whose thread is running.
+        if (d.type === 'ortbtools-preview-refusal') {
+          _lastHeartbeatAt = Date.now();
+          _frozenAlerted = false;
+          if (!_watchdogTimer) startWatchdog();
+          recordRefusals(d.items, !!d.truncated);
+          renderRefusalLedger();
+          return;
+        }
         // Phase 4 watchdog liveness: every accepted probe message resets
         // the freeze timer. Heartbeats (kind:'heartbeat') are 1Hz pings
         // sent purely for this purpose — they update liveness but DON'T

@@ -1306,5 +1306,99 @@
     /* */
   }
 
+  // 22) securitypolicyviolation — the refusal ledger.
+  //
+  //     Not an instrumentation hook: this one exists so the PANEL can say
+  //     something true. The frame's policy refuses every https sub-resource
+  //     by design, so a CDN-hosted banner renders empty and the analyst is
+  //     left reading alt text and macro literals, which looks exactly like a
+  //     broken tool. Counting the refusals here is what lets the parent say
+  //     "12 resources refused across 4 hosts" instead of showing residue.
+  //
+  //     Four details, each of them load-bearing:
+  //
+  //     - It rides its OWN message type. The parent forwards every
+  //       non-heartbeat `ortbtools-probe` message into a 500-entry ring that
+  //       drops the oldest; a creative emitting 600 refusals would evict the
+  //       navigation and frame-bust evidence it is being measured for. That
+  //       is an evidence-eviction primitive, not a cosmetic bug, so refusals
+  //       never touch `send()`.
+  //
+  //     - The listener sits on `window` in the CAPTURE phase.
+  //       `document.open()` detaches document-level listeners, and it is
+  //       reachable on precisely the most tangled creatives — the ones whose
+  //       refusals are most worth knowing about.
+  //
+  //     - Deduplicated by (directive, blockedURI). The srcdoc document is
+  //       governed by two overlapping policies — the injected meta and the
+  //       page policy it inherits — so one refused resource can raise two
+  //       violations. An inflated count is worse than no count: it is a
+  //       number the analyst would be wrong to trust.
+  //
+  //     - Batched and capped. Violations arrive in bursts, and a
+  //       pathological creative must not be able to turn counting into a
+  //       message storm or grow parent memory without bound.
+  const REFUSAL_CAP = 200;
+  const REFUSAL_FLUSH_MS = 120;
+  const _refusalSeen = new Set();
+  let _refusalQueue = [];
+  let _refusalTimer = null;
+  let _refusalTruncated = false;
+
+  function flushRefusals() {
+    _refusalTimer = null;
+    if (!_refusalQueue.length && !_refusalTruncated) return;
+    const items = _refusalQueue;
+    _refusalQueue = [];
+    try {
+      parent.postMessage(
+        {
+          type: 'ortbtools-preview-refusal',
+          v: PROBE_VERSION,
+          ts: Date.now(),
+          items: items,
+          truncated: _refusalTruncated,
+        },
+        '*',
+      );
+    } catch (_e) {
+      /* parent gone */
+    }
+  }
+
+  try {
+    window.addEventListener(
+      'securitypolicyviolation',
+      function (e) {
+        try {
+          // `effectiveDirective` is the one the browser actually applied;
+          // `violatedDirective` carries the whole source list on some engines
+          // and would make two spellings of one refusal look like two.
+          const directive = String(
+            (e && (e.effectiveDirective || e.violatedDirective)) || 'unknown',
+          );
+          const blockedUri = String((e && e.blockedURI) || '');
+          const key = directive + '|' + blockedUri;
+          if (_refusalSeen.has(key)) return;
+          if (_refusalSeen.size >= REFUSAL_CAP) {
+            if (!_refusalTruncated) {
+              _refusalTruncated = true;
+              if (!_refusalTimer) _refusalTimer = setTimeout(flushRefusals, REFUSAL_FLUSH_MS);
+            }
+            return;
+          }
+          _refusalSeen.add(key);
+          _refusalQueue.push({ directive: directive, blockedUri: blockedUri });
+          if (!_refusalTimer) _refusalTimer = setTimeout(flushRefusals, REFUSAL_FLUSH_MS);
+        } catch (_e) {
+          /* a refusal we cannot describe is still not worth throwing over */
+        }
+      },
+      true,
+    );
+  } catch (_e) {
+    /* */
+  }
+
   send({ kind: 'probe_ready', method: 'init', url: '', trigger: 'no-event' });
 })();

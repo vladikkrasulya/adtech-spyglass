@@ -6,6 +6,54 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.15.0 — the preview says what it refused, and stops painting payloads as creatives
+
+- The creative box stops showing gibberish. Its third branch was an unconditional
+  catch-all: anything that was not VAST-shaped and did not match one exact native
+  envelope was handed to the browser as markup and painted. Four payload shapes
+  took that path — native without the `{"native": …}` wrapper, a bare URL, base64,
+  and text that is not markup at all — and every one came out as a line of
+  garbage. The envelope-less native case threw nothing, so the `console.error`
+  meant to leave a trail never fired and the failure was completely silent. A
+  creative body is now classified once, before anything decides how to show it,
+  and only markup reaches a frame. Everything else is named and shown as inert
+  text: native renders as a card either way, base64 is decoded and says so, a URL
+  is identified and is neither followed nor fetched.
+
+- A blocked creative explains itself. The frame refuses every `https:`
+  sub-resource by design, so a CDN-hosted banner renders empty and what is left —
+  alt text, click URLs the creative prints itself, unresolved macro literals —
+  reads as a crash. It has read that way since `adfaccd` on 2026-08-12, a commit
+  titled "feat: add inert OpenRTB macro evaluator" that also, unmentioned, began
+  injecting a content policy into every creative frame. The policy is unchanged
+  and this release does not touch it. What changes is that the panel now says
+  "the frame refused N resource(s) across M host(s)", with the refused kinds and
+  hosts listable and the deliberate-refusal stated in words. The standing notice
+  above the frame stands down while the specific one is on screen. Unresolved
+  macros are named below the frame, never substituted into it.
+
+- VAST is readable. The XML view sized itself with the same flag that switches
+  the reveal overlay on, so it sat under a control promising a creative that no
+  reveal would ever produce, with `pointer-events: auto` over the only content
+  there was. Sizing and revealability are now separate; the text scrolls.
+
+- VAST recognition has one implementation again. The preview carried its own
+  anchored regex, which a byte-order mark or a leading XML comment defeated; it
+  now calls the canonical detector, whose generated browser copy had been shipping
+  with no consumer at all.
+
+Refusals travel on their own frame-to-parent message type and never enter the
+behaviour event window. That window is capped and drops its oldest entries, so
+routing refusals through it would have let a creative emitting a few hundred
+violations evict the navigation and frame-bust evidence it is being measured for.
+
+No new network request exists anywhere in this release — not from the browser,
+not from the server. The frame's content policy and its `sandbox` attribute are
+byte-identical to 1.14.6, and a new characterisation test fails if either changes
+in either direction. That test exists because the change which silenced the
+preview shipped green: the only assertion near this behaviour checked the
+opposite property, that a creative reaches no network.
+
 ### v1.14.6 — the confirmation that did not fit its own button
 
 - Copy, format and clear now confirm inside the button without painting over

@@ -111,6 +111,14 @@
   border-radius: var(--r-sm);
 }
 
+/* `display: flex` above outranks the user-agent's `[hidden] { display: none }`,
+   so without this the notice cannot be stood down at all. It is stood down
+   only while the refusal ledger is saying the same thing with a number — see
+   renderRefusalLedger in ortbtools.app.js. */
+.preview-csp-notice[hidden] {
+  display: none;
+}
+
 .preview-csp-notice .preview-csp-icon {
   font-size: 13px;
 }

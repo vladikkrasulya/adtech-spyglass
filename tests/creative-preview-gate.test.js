@@ -39,11 +39,38 @@ const APP = fs.readFileSync(path.join(ROOT, 'public/ortbtools.app.js'), 'utf8');
 const LOCALES = ['en', 'uk', 'ru'];
 
 test('the overlay is hidden unless a creative is actually present', () => {
+  // Refined in 012-creative-preview-repair. `data-has-creative` answered this
+  // question and ALSO sized the box, and those turned out to be different
+  // questions: the VAST branch sets it purely to get a 16:9 frame, so readable
+  // XML ended up under an overlay promising a creative that no reveal would
+  // ever produce — with `pointer-events: auto`, so the text underneath could
+  // not even be selected. `data-revealable` is set only by the branches that
+  // mount something a reveal can actually uncover.
   assert.match(
     CSS,
-    /\.preview-safe:not\(\[data-has-creative='1'\]\)\s+\.preview-safe-overlay\s*\{[^}]*display:\s*none/,
-    'inspector.css must hide .preview-safe-overlay when data-has-creative is not "1", or the ' +
+    /\.preview-safe:not\(\[data-revealable='1'\]\)\s+\.preview-safe-overlay\s*\{[^}]*display:\s*none/,
+    'inspector.css must hide .preview-safe-overlay when data-revealable is not "1", or the ' +
       'tool offers to reveal an empty box and covers its own "paste BidResponse" message doing it',
+  );
+});
+
+test('revealability defaults to off, and only real creatives turn it on', () => {
+  // The gate above is inert if a branch forgets to clear the flag. Clearing it
+  // once at the top of setAdPreview, rather than in each branch that shows no
+  // creative, is what makes "no overlay" the default rather than something
+  // every future branch has to remember.
+  assert.match(
+    APP,
+    /setRevealable\(false\);[\s\S]{0,400}?Phase 8: re-apply safe-demo blur/,
+    'setAdPreview must clear revealability before any branch runs',
+  );
+  assert.match(APP, /function setRevealable\(yes\)/, 'setRevealable must exist');
+  // Text-mode previews size themselves but must never be revealable.
+  const vastBranch = APP.slice(APP.indexOf("if (cls.kind === 'vast')"));
+  assert.match(
+    vastBranch.slice(0, 800),
+    /setRevealable\(false\)/,
+    'the VAST text view must not offer a reveal',
   );
 });
 

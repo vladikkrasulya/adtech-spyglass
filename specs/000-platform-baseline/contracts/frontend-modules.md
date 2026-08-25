@@ -121,6 +121,21 @@ where a frozen iframe cannot report for itself. Behavior findings are computed t
 endpoint; an explicit authenticated Corpus save is a separate persistence action. Preview markup
 must never be promoted into the parent origin or logged as request context.
 
+A creative body is classified before any display decision, and only a body classified as markup may
+reach a frame. Every other kind — VAST, native, JSON, a bare URL, base64 that does not decode to a
+creative, and anything unidentified — is presented as inert text assigned to the parent DOM as text,
+never parsed. VAST recognition is delegated to the single canonical detector rather than restated in
+the preview.
+
+The frame-to-parent channel carries two message types. Instrumentation events keep their existing
+type and enter the bounded behavior event window. Content-policy refusals travel as a separate type,
+are deduplicated by refused directive and refused resource, are bounded per render, and are counted
+into a per-render ledger that is discarded on the next mount. Refusals MUST NOT enter the behavior
+event window, appear in the behavior analysis request, or change the number or content of behavior
+findings for a payload — that window is capped and drops its oldest entries, so a creative emitting
+many refusals could otherwise evict the evidence it is being measured for. Both types are subject to
+the same iframe-window identity check.
+
 ## Browser State Ownership
 
 - Raw Inspector history is a bounded same-origin `localStorage` ring and synchronizes across tabs.

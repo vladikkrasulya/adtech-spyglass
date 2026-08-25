@@ -1071,9 +1071,14 @@ body {
    is broken. Measured on production: with no response pasted the iframe had no
    srcdoc at all and the overlay was still inviting the click.
 
-   `data-has-creative` already carries the answer — setAdPreview sets it on
-   every render. Nothing was asking it. */
-.preview-safe:not([data-has-creative='1']) .preview-safe-overlay {
+   `data-has-creative` was the first answer to that, but it turned out to be
+   answering a different question: it also SIZES the box, and the VAST branch
+   sets it purely to get a 16:9 frame. So readable XML ended up under an
+   overlay that promised a creative, with `pointer-events: auto` on top of the
+   only content there was — unreadable and unselectable. Sizing and
+   revealability are two jobs; `data-revealable` is set only by the branches
+   that actually mount something a reveal can uncover. */
+.preview-safe:not([data-revealable='1']) .preview-safe-overlay {
   display: none;
 }
 .preview-safe-overlay {
@@ -6060,6 +6065,70 @@ body:has(.app-footer) .toast-container {
 }
 .creative-actions .creative-inline-assets {
   max-width: 100%;
+}
+
+/* ── 8. `.creative-notes` — where the preview explains itself ─────────────
+   The frame refuses every https sub-resource by design, so a CDN-hosted
+   banner renders empty and what is left on screen — alt text, click URLs the
+   creative prints itself, macro literals — reads as a crash. This strip is
+   where the panel says what actually happened. It sits outside the clipping
+   preview container for the same reason `.creative-actions` does: anything
+   appended inside a fixed-size `overflow:hidden` box next to a `width:100%`
+   iframe pushes the frame sideways and gets cut in half. */
+.creative-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: left;
+}
+.creative-notes:empty {
+  display: none;
+}
+.creative-note-hint {
+  color: var(--text-dim);
+  font-size: var(--fs-xs, 11px);
+}
+.creative-note-blocked {
+  border-left: 2px solid var(--border);
+  padding-left: var(--space-2);
+}
+.creative-note-blocked summary {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: var(--fs-xs, 11px);
+}
+.creative-note-blocked details > .creative-note-hint {
+  overflow-wrap: anywhere;
+}
+
+/* Text-mode preview: VAST, and any payload that is not markup. It must
+   SCROLL — the old VAST view clipped at the box edge with no way to reach the
+   rest of the document, which is most of the reason it read as broken. */
+.preview-text {
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+  text-align: left;
+}
+.preview-text-label {
+  margin-bottom: var(--space-2);
+}
+.preview-text-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  color: var(--text);
+}
+.preview-text-trimmed {
+  margin-top: var(--space-2);
+  color: var(--text-dim);
 }
 
 /* Keep phone workbar popovers in the workbar's viewport-sized containing

@@ -293,6 +293,11 @@
     <script src="/modules/inspector/dialect-label.i18n.js?v=1" defer></script>
     <script src="/modules/inspector/dialect-label.js?v=1" defer></script>
     <script src="/modules/inspector/creative-assets.js?v=1" defer></script>
+    <!-- The creative classifier decides what an `adm` IS before anything decides
+         how to show it; /core/vast-shape.js is the one canonical VAST detector it
+         delegates to, so the preview and the format detector cannot disagree. -->
+    <script src="/core/vast-shape.js?v=1" defer></script>
+    <script src="/modules/inspector/creative-classify.js?v=1" defer></script>
     <script type="module" src="/shell-boot.js"></script>
     <!-- Classic <script> utilities. They wait for `kt:inspector-ready`
          (emitted by inspector mount() once template DOM is injected)
