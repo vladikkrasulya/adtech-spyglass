@@ -3183,6 +3183,80 @@ export async function mountInspector(root, ctx) {
     );
   }
 
+  // The push material IS the creative (spec 014): icon (#1 per the owner),
+  // large image (#2), title/description, click link. Mirrors the 013 baseline
+  // signature: a price key + a click key + at least one creative key. Object →
+  // itself; array (the materials-list form) → its first matching element, the
+  // same first-of-many convention the oRTB path uses for seatbid[0].bid[0].
+  function findPushMaterial(res) {
+    const isMat = (o) => {
+      if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
+      const hasPrice = 'cpc' in o || 'price' in o;
+      const hasClick = 'click_url' in o || 'link' in o;
+      const hasCreative =
+        'title' in o ||
+        'description' in o ||
+        'image' in o ||
+        'image_url' in o ||
+        'icon' in o ||
+        'icon_url' in o;
+      return hasPrice && hasClick && hasCreative;
+    };
+    if (isMat(res)) return res;
+    if (Array.isArray(res)) {
+      for (const m of res) if (isMat(m)) return m;
+    }
+    return null;
+  }
+
+  function renderPushToHtml(m) {
+    // Same discipline as renderNativeToHtml above: fully self-contained
+    // document, every material-sourced string entity-escaped, no target
+    // attribute on the anchor. The card enters setAdPreview as markup and
+    // travels the probed sandbox exactly like banner adm — images load
+    // in-frame the same way banner markup and the iurl fallback already do;
+    // nothing is fetched server-side.
+    const icon =
+      typeof m.icon === 'string' ? m.icon : typeof m.icon_url === 'string' ? m.icon_url : null;
+    const img =
+      typeof m.image === 'string' ? m.image : typeof m.image_url === 'string' ? m.image_url : null;
+    const title = typeof m.title === 'string' ? m.title : null;
+    const desc = typeof m.description === 'string' ? m.description : null;
+    const link =
+      typeof m.link === 'string' ? m.link : typeof m.click_url === 'string' ? m.click_url : '#';
+    return (
+      '<!doctype html><html><head><meta charset="utf-8"><style>' +
+      "html,body{margin:0;padding:0;background:#fff;color:#1a1a1a;font:13px/1.4 system-ui,-apple-system,'Segoe UI',sans-serif}" +
+      'a.card{display:block;text-decoration:none;color:inherit;padding:12px;box-sizing:border-box;height:100%;overflow:auto}' +
+      '.label{font:10px/1 ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;color:#888;margin-bottom:8px}' +
+      '.row{display:flex;gap:10px;align-items:flex-start}' +
+      '.icon{width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0;background:#f3f3f3}' +
+      '.body{flex:1;min-width:0}' +
+      '.t{font-weight:600;font-size:13px;line-height:1.35;margin-bottom:4px}' +
+      '.t.muted{color:#888;font-weight:400}' +
+      '.d{font-size:11.5px;color:#555;line-height:1.45}' +
+      '.hero{width:100%;max-height:160px;border-radius:6px;overflow:hidden;background:#f3f3f3;margin-top:10px}' +
+      '.hero img{width:100%;height:100%;object-fit:cover;display:block}' +
+      '.u{font:10px/1.3 ui-monospace,monospace;color:#888;margin-top:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '</style></head><body>' +
+      '<a class="card" href="' +
+      escapeHtml(link) +
+      '" rel="noopener noreferrer">' +
+      '<div class="label">push · synthetic render</div>' +
+      '<div class="row">' +
+      (icon ? '<img class="icon" src="' + escapeHtml(icon) + '" alt="">' : '') +
+      '<div class="body">' +
+      (title
+        ? '<div class="t">' + escapeHtml(title) + '</div>'
+        : '<div class="t muted">No title</div>') +
+      (desc ? '<div class="d">' + escapeHtml(desc) + '</div>' : '') +
+      '</div></div>' +
+      (img ? '<div class="hero"><img src="' + escapeHtml(img) + '" alt=""></div>' : '') +
+      (link && link !== '#' ? '<div class="u">→ ' + escapeHtml(link) + '</div>' : '') +
+      '</a></body></html>'
+    );
+  }
+
   // ── Analysis ──────────────────────────────────────────────────
   // History: in-memory ring of recent analyses, persisted to localStorage so
   // a refresh doesn't lose state. Cap at HISTORY_MAX entries to keep the
@@ -3512,11 +3586,18 @@ export async function mountInspector(root, ctx) {
    * `allowUrlString` is the request pane only: a bare URL is a legitimate
    * request shape there (clickunder/teaser/pop GET), decoded server-side.
    */
-  function assertJsonRoot(value, paneText, paneLabelKey, allowUrlString) {
+  function assertJsonRoot(value, paneText, paneLabelKey, allowUrlString, allowArrayRoot) {
     // Empty pane is not an error — the caller substitutes `{}` and the
     // request-only / response-only branches take it from there.
     if (!paneText) return;
     if (allowUrlString && typeof value === 'string') return;
+    // The response pane legitimately holds an ARRAY root: the push-materials
+    // feed is a JSON list, the backend validates it as one, and detection has
+    // claimed the array shape since before 013. Rejecting it here refused the
+    // whole list form at the door while the engine behind the door supported
+    // it (found by the 014 array-preview case). The request pane stays strict:
+    // no known request shape has an array root.
+    if (allowArrayRoot && Array.isArray(value)) return;
     if (value && typeof value === 'object' && !Array.isArray(value)) return;
     const root = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
     throw new Error(t('error.json_root_not_object', { pane: t(paneLabelKey), root }));
@@ -3841,8 +3922,8 @@ export async function mountInspector(root, ctx) {
       // threw a TypeError from the middle of the render, after the toast but
       // before anything on screen had been touched. Reject the root here, by
       // name, while nothing has been painted yet.
-      assertJsonRoot(req, reqVal, 'peek.label.bid_req', true);
-      assertJsonRoot(res, resVal, 'peek.label.bid_res', false);
+      assertJsonRoot(req, reqVal, 'peek.label.bid_req', true, false);
+      assertJsonRoot(res, resVal, 'peek.label.bid_res', false, true);
       // Simulated clearing price: use ONLY the user's explicit input.
       // Do NOT fallback to bid.price, bidfloor, or 0.00 — an empty field
       // means "clearing price unknown" and macros stay literal.
@@ -3909,10 +3990,19 @@ export async function mountInspector(root, ctx) {
       const seatbid = res.seatbid ? res.seatbid[0] : null;
       const bid = seatbid && seatbid.bid ? seatbid.bid[0] : {};
       let adm;
+      let pushMaterial = null;
       if (bid && bid.native && Array.isArray(bid.native.assets)) {
         adm = JSON.stringify({ native: bid.native });
       } else {
         adm = findAdm(res);
+        // Push materials (spec 014) carry no adm/iurl, so findAdm dead-ends on
+        // them by construction — this seam fires exactly where the panel used
+        // to give up with the empty state. Synthesize the notification card
+        // and let it travel the markup pipeline like any banner creative.
+        if (!adm) {
+          pushMaterial = findPushMaterial(res);
+          if (pushMaterial) adm = renderPushToHtml(pushMaterial);
+        }
       }
       // Winning-bid price. Per oRTB §4.3.2 bid.cur overrides the response's
       // cur, which in turn defaults to USD — the hardcoded '$' here labelled
@@ -3921,11 +4011,19 @@ export async function mountInspector(root, ctx) {
         (typeof bid.cur === 'string' && bid.cur.trim()) ||
         (res && typeof res.cur === 'string' && res.cur.trim()) ||
         'USD';
-      $('mPrice').innerText = adm
-        ? bid.price
-          ? formatMoney(bid.price, bidCur)
-          : 'BID'
-        : formatMoney(0, bidCur);
+      // Push materials price per click, not per bid, and carry no currency
+      // field — USD matches the response-side default above. Number() also
+      // admits the numeric-string cpc that feed.push.bid_string_type merely
+      // warns about: a chip beside the rendered card should show the value
+      // the SSP will parseFloat, not a placeholder.
+      const pushPrice = pushMaterial ? Number(pushMaterial.cpc ?? pushMaterial.price) : NaN;
+      $('mPrice').innerText = Number.isFinite(pushPrice)
+        ? formatMoney(pushPrice, bidCur)
+        : adm
+          ? bid.price
+            ? formatMoney(bid.price, bidCur)
+            : 'BID'
+          : formatMoney(0, bidCur);
       // Banner dimensions: prefer bid.{w,h} (winning creative size), fall back
       // to req.imp[0].banner.{w,h}, then to format[0] when banner has multi-size.
       // Used by setAdPreview to render at native size and scale-to-fit the
@@ -3940,6 +4038,10 @@ export async function mountInspector(root, ctx) {
           previewDims = { w: Number(b.format[0].w), h: Number(b.format[0].h) };
         }
       }
+      // Synthetic push card: a typical notification aspect. The markup
+      // branch's scale-to-fit handles the narrow sidebar as it does for
+      // fixed-size banners.
+      if (!previewDims && pushMaterial) previewDims = { w: 360, h: 300 };
       // Build a shared macro context for the preview — same sources as
       // extractBidTrackers uses. The preview resolves adm through the
       // same evaluator as the Macro tab so results are always in sync.

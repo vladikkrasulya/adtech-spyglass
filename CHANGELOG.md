@@ -6,6 +6,23 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.17.0 — the push creative is drawn, icon first
+
+- The creative panel now synthesizes a push-notification card for push-material
+  responses (single object and materials list): icon first, headline and body
+  text, the large image second, and the click destination — labeled
+  `push · synthetic render` and piped through the same probed, sandboxed,
+  statically-scanned pipeline as banner and native creatives. Payload strings
+  enter the document only entity-escaped. The frame policy is untouched: remote
+  icon/image bytes stay blocked in-frame by the preview CSP and load through
+  the existing explicit server-side "load assets" action, which the push card
+  inherits. The price chip shows the material's cpc instead of a placeholder.
+
+- The response editor accepts an array root: the push-materials list — a shape
+  the engine has validated since before 013 — previously died at the door with
+  "root is not an object" and could never be analyzed from the page. The
+  request editor stays strict.
+
 ### v1.16.0 — the preview and its scanner agree on what actually ran
 
 - Bound and authenticated the creative probe boundary. Every probed render now

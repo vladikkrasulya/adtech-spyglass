@@ -311,13 +311,13 @@ test('static: a JSON root that is not a plain object is rejected before anything
   assert.match(APP, /function assertJsonRoot\(/, 'expected an explicit root-shape check');
   assert.match(
     APP,
-    /assertJsonRoot\(req, reqVal, 'peek\.label\.bid_req', true\)/,
-    'the request pane is checked (and still admits a bare URL string)',
+    /assertJsonRoot\(req, reqVal, 'peek\.label\.bid_req', true, false\)/,
+    'the request pane is checked (a bare URL string is admitted, an array root is not)',
   );
   assert.match(
     APP,
-    /assertJsonRoot\(res, resVal, 'peek\.label\.bid_res', false\)/,
-    'the response pane is checked, and a URL is not a response',
+    /assertJsonRoot\(res, resVal, 'peek\.label\.bid_res', false, true\)/,
+    'the response pane is checked; a URL is not a response, an array (materials feed, 014) is',
   );
   // The check must run before the first property read, not after.
   assert.ok(
