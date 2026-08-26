@@ -56,6 +56,24 @@ All notable changes to ortbtools are documented here. Format follows
   classification before any connection, while public mapped controls remain
   allowed.
 
+- The Inspector now recognizes the single-object push-materials response — the
+  baseline shape most push auctions reply with (owner ruling 2026-08-26) — as
+  `Push-Materials Feed Response (single)` instead of a blocking
+  `payload.unknown_type`. The push validator accepts the mainstream field
+  aliases (`tId` for the identifier, `image` for the large creative, `icon` for
+  the icon slot) identically in the single-object and list forms, `linkTtl`
+  draws no noise, and the `push` format tag fires when the click key is `link`.
+  No finding IDs or messages changed; @ortbtools/core 0.35.0 → 0.36.0
+  (spec 013, contract in `specs/013-single-push-recognition/contracts/`).
+
+- The dialect labeller reaches Ollama through the kt-shared service alias
+  (`http://ollama:11434`) instead of the Docker host-gateway; the model-free
+  contract test pins the new wiring and the privacy boundary is unchanged.
+
+- Operations: the ClickHouse usage-rollup schema is documented with
+  `SimpleAggregateFunction(sum, …)` columns — plain `UInt64` under
+  AggregatingMergeTree silently kept one row's value on merge.
+
 ### v1.15.0 — the preview says what it refused, and stops painting payloads as creatives
 
 - The creative box stops showing gibberish. Its third branch was an unconditional
