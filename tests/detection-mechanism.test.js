@@ -137,3 +137,78 @@ test('new finding messages resolve in all three locales (no raw key leaks)', () 
     assert.ok(!/\{validated\}/.test(f.msg), `${locale}: unsubstituted param`);
   }
 });
+
+// ── 013: single-object push-materials response (baseline shape) ─────────────
+// A single push material — priced, clickable creative — is how most push
+// auctions respond (owner ruling 2026-08-26). Synthetic replica of the
+// reported payload: same key set and value shapes, synthetic values.
+
+const pushSingleReplica = () => ({
+  tId: '00000000-0000-4000-8000-000000000001',
+  title: 'Synthetic push headline',
+  description: 'Synthetic push body text',
+  icon: 'https://ads.example.com/icn.png',
+  image: 'https://ads.example.com/img.jpg',
+  link: 'https://ads.example.com/click',
+  linkTtl: 1900000000000,
+  cpc: 0.01,
+  crid: 'SYNTHETICCRID000000000000000000',
+  cid: 'SYNTHETICCID0000000000000000000',
+});
+
+test('013: single push-material object is claimed as a vendor feed', () => {
+  assert.strictEqual(core.detectType(pushSingleReplica()), core.TYPES.VENDOR_FEED);
+});
+
+test('013: generic objects below the push signature bar stay unknown', () => {
+  // click key alone
+  assert.strictEqual(core.detectType({ link: 'https://x' }), core.TYPES.UNKNOWN);
+  // click + creative but no price key
+  assert.strictEqual(core.detectType({ title: 't', link: 'https://x' }), core.TYPES.UNKNOWN);
+  // click + price but no creative key
+  assert.strictEqual(core.detectType({ cpc: 0.01, link: 'https://x' }), core.TYPES.UNKNOWN);
+  // price + creative but no click key
+  assert.strictEqual(core.detectType({ cpc: 0.01, title: 't' }), core.TYPES.UNKNOWN);
+});
+
+test('013: push-like keys never re-classify structurally claimed payloads', () => {
+  const noise = { title: 't', link: 'https://x', cpc: 0.01 };
+  assert.strictEqual(core.detectType({ imp: [{ id: '1' }], ...noise }), core.TYPES.ORTB_REQUEST);
+  assert.strictEqual(
+    core.detectType({ seatbid: [{ bid: [] }], ...noise }),
+    core.TYPES.ORTB_RESPONSE,
+  );
+  assert.strictEqual(
+    core.detectType({ openrtb: { ver: '3.0', request: {} }, ...noise }),
+    core.TYPES.ORTB_REQUEST,
+  );
+  assert.strictEqual(
+    core.detectType({ version: 'https://jsonfeed.org/version/1.1', items: [], ...noise }),
+    core.TYPES.JSON_FEED,
+  );
+  // result-wrapped clickunder keeps its family (still VENDOR_FEED, but the
+  // wrapper branch wins — asserted via the resolved feed type).
+  const r = core.validate({
+    result: { status: 'BID', listing: { url: 'https://x', bid: 1 } },
+    ...noise,
+  });
+  assert.strictEqual(r.type, 'Clickunder Feed Response (single)');
+});
+
+test('013: unique-key single-bid vendors keep precedence over the push signature', () => {
+  // Bid-price feed carrying push-like keys must stay bid-price.
+  const r = core.validate({
+    bid_price: 0.5,
+    link: 'https://x',
+    title: 't',
+    image: 'https://ads.example.com/i.jpg',
+    cpc: 0.01,
+  });
+  assert.strictEqual(r.type, 'Bid-Price Feed Response');
+});
+
+test('013: recognized single push object produces no unknown_type', () => {
+  const r = core.validate(pushSingleReplica());
+  assert.strictEqual(r.type, 'Push-Materials Feed Response (single)');
+  assert.ok(!ids(r).includes('payload.unknown_type'));
+});

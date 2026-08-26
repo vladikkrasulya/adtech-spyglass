@@ -273,3 +273,53 @@ test('KB loader: unknown format returns []', () => {
 test('KB loader: loadSample with bogus id returns null', () => {
   assert.equal(kb.loadSample('bogus-id-9999'), null);
 });
+
+// ── 013: push tag with the `link` click-key alias (single + array item) ─────
+
+test('detectFormat: single push object with link click key → PUSH (013)', () => {
+  const r = detectFormat({
+    tId: '00000000-0000-4000-8000-000000000001',
+    title: 'Synthetic push headline',
+    description: 'Synthetic push body text',
+    icon: 'https://ads.example.com/icn.png',
+    image: 'https://ads.example.com/img.jpg',
+    link: 'https://ads.example.com/click',
+    linkTtl: 1900000000000,
+    cpc: 0.01,
+    crid: 'SYNTHETICCRID000000000000000000',
+    cid: 'SYNTHETICCID0000000000000000000',
+  });
+  assert.ok(r.formats.includes(FORMATS.PUSH));
+});
+
+test('detectFormat: array item with link click key → PUSH (013)', () => {
+  const r = detectFormat([
+    {
+      title: 'h',
+      image: 'https://cdn.example/img.jpg',
+      link: 'https://click.example/c/1',
+      cpc: 0.01,
+    },
+  ]);
+  assert.ok(r.formats.includes(FORMATS.PUSH));
+});
+
+test('detectFormat: bid-price single object (no title/image) stays untagged (013)', () => {
+  const r = detectFormat({
+    bid_price: 0.5,
+    link: 'https://lp.example',
+    notification_url: 'https://n.example',
+  });
+  assert.ok(!r.formats.includes(FORMATS.PUSH));
+});
+
+test('detectFormat: ext.widget_id still wins over push with link click key (013)', () => {
+  const r = detectFormat({
+    title: 'h',
+    image: 'https://cdn.example/img.jpg',
+    link: 'https://click.example/c/1',
+    ext: { widget_id: 'w-1' },
+  });
+  assert.ok(r.formats.includes(FORMATS.INPAGE));
+  assert.ok(!r.formats.includes(FORMATS.PUSH));
+});

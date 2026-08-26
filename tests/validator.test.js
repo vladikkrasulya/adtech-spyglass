@@ -1132,3 +1132,116 @@ test('push-materials feed: numeric price (fallback) → no bid finding', () => {
   assert.equal(findByIdInResult(r, 'feed.push.bid_required'), undefined);
   assert.equal(findByIdInResult(r, 'feed.push.bid_string_type'), undefined);
 });
+
+// ── 013: single-object push-materials response (baseline shape) ─────────────
+// Synthetic replica of the reported payload — same key set and value shapes,
+// synthetic values (no production records in tests, Constitution III/VII).
+
+const pushSingleReplica = () => ({
+  tId: '00000000-0000-4000-8000-000000000001',
+  title: 'Synthetic push headline',
+  description: 'Synthetic push body text',
+  icon: 'https://ads.example.com/icn.png',
+  image: 'https://ads.example.com/img.jpg',
+  link: 'https://ads.example.com/click',
+  linkTtl: 1900000000000,
+  cpc: 0.01,
+  crid: 'SYNTHETICCRID000000000000000000',
+  cid: 'SYNTHETICCID0000000000000000000',
+});
+
+test('013 US1: synthetic replica end-to-end — recognized, no unknown_type', () => {
+  const r = validate(pushSingleReplica());
+  assert.equal(r.type, 'Push-Materials Feed Response (single)');
+  assert.equal(findByIdInResult(r, 'payload.unknown_type'), undefined);
+});
+
+test('013 US1: single object and one-element array produce equivalent findings', () => {
+  const single = validate(pushSingleReplica());
+  const arr = validate([pushSingleReplica()]);
+  assert.equal(arr.type, 'Push-Materials Feed Response');
+  // Same finding ids in the same order; paths differ only by the [0] prefix.
+  assert.deepEqual(
+    single.findings.map((f) => f.id),
+    arr.findings.map((f) => f.id),
+  );
+  const stripPrefix = (p) => p.replace(/^\[0\]\.?/, '');
+  assert.deepEqual(
+    single.findings.map((f) => f.path),
+    arr.findings.map((f) => stripPrefix(f.path)),
+  );
+});
+
+// ── 013 US2: alias acceptance (id/tId, image_url/image, icon_url/icon/nurl) ──
+
+test('013 US2: aliases satisfy presence checks in both shapes', () => {
+  const material = {
+    tId: 't-1',
+    link: 'https://ads.example.com/click',
+    cpc: 0.01,
+    title: 'h',
+    image: 'https://ads.example.com/img.jpg',
+    icon: 'https://ads.example.com/icn.png',
+  };
+  for (const r of [validate({ ...material }), validate([{ ...material }])]) {
+    assert.equal(findByIdInResult(r, 'feed.push.id_required'), undefined);
+    assert.equal(findByIdInResult(r, 'feed.push.click_url_required'), undefined);
+    assert.equal(findByIdInResult(r, 'feed.push.image_url_recommended'), undefined);
+    assert.equal(findByIdInResult(r, 'feed.push.nurl_recommended'), undefined);
+  }
+});
+
+test('013 US2: absence under all names keeps the existing findings', () => {
+  // No id/tId, no image_url/image, no icon_url/icon/nurl.
+  const bare = { link: 'https://x', cpc: 0.01, title: 'h' };
+  for (const r of [validate({ ...bare }), validate([{ ...bare }])]) {
+    assert.ok(findByIdInResult(r, 'feed.push.id_required'));
+    assert.ok(findByIdInResult(r, 'feed.push.image_url_recommended'));
+    assert.ok(findByIdInResult(r, 'feed.push.nurl_recommended'));
+  }
+});
+
+test('013 US2: both names present → single finding stream, no duplicates', () => {
+  const r = validate({
+    id: 'canonical',
+    tId: 'alias',
+    click_url: 'https://x',
+    link: 'https://y',
+    cpc: 0.01,
+    title: 'h',
+    image_url: 'https://x/i.jpg',
+    image: 'https://y/i.jpg',
+  });
+  const idFindings = r.findings.filter((f) => f.id === 'feed.push.id_required');
+  assert.equal(idFindings.length, 0);
+  const seen = new Set();
+  for (const f of r.findings) {
+    const key = `${f.id}|${f.path}`;
+    assert.ok(!seen.has(key), `duplicate finding ${key}`);
+    seen.add(key);
+  }
+});
+
+test('013 US2: alias present with non-string value keeps the existing finding', () => {
+  const r = validate({ tId: 123, link: 'https://x', cpc: 0.01, title: 'h' });
+  assert.ok(findByIdInResult(r, 'feed.push.id_required'));
+});
+
+test('013 US2: single-shape price tiers match the array behavior', () => {
+  const base = { tId: 't-1', link: 'https://x', title: 'h' };
+  const rString = validate({ ...base, cpc: '0.01' });
+  assert.ok(findByIdInResult(rString, 'feed.push.bid_string_type'));
+  assert.equal(findByIdInResult(rString, 'feed.push.bid_required'), undefined);
+  const rBad = validate({ ...base, cpc: 'free' });
+  assert.ok(findByIdInResult(rBad, 'feed.push.bid_not_numeric'));
+  const rAbsent = validate({ ...base, price: undefined, cpc: undefined, image: 'https://x/i' });
+  assert.ok(findByIdInResult(rAbsent, 'feed.push.bid_required'));
+  assert.equal(rAbsent.type, 'Push-Materials Feed Response (single)');
+});
+
+test('013 US2: linkTtl draws no findings (FR-008)', () => {
+  const r = validate(pushSingleReplica());
+  for (const f of r.findings) {
+    assert.ok(!String(f.path).includes('linkTtl'), `finding on linkTtl: ${f.id}`);
+  }
+});

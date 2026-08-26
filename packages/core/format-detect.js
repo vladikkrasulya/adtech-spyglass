@@ -204,7 +204,11 @@ function detectFeedFormat(o, tags) {
       return;
     }
   }
-  const hasClick = 'clickurl' in o || 'clickUrl' in o || 'click_url' in o || 'redirectUrl' in o;
+  // `link` joined 013's baseline push shape (owner ruling 2026-08-26): alone
+  // it is too generic to claim anything, but here it only ever combines with
+  // the image+title bar below, same as the other click spellings.
+  const hasClick =
+    'clickurl' in o || 'clickUrl' in o || 'click_url' in o || 'redirectUrl' in o || 'link' in o;
   const hasImage = 'image' in o || 'icon' in o;
   const hasTitle = 'title' in o || 'name' in o;
   const hasRedirect = 'redirecturl' in o || 'redirect_url' in o;

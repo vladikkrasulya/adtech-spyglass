@@ -56,6 +56,7 @@ function validateFeedResponse(arrOrObj) {
     if (vendor === 'valuefeed') return validateValueFeed(arrOrObj);
     if (vendor === 'bidprice') return validateBidPriceFeed(arrOrObj);
     if (vendor === 'bidredirect') return validateBidRedirectFeed(arrOrObj);
+    if (vendor === 'push') return validatePushSingle(arrOrObj);
   }
 
   return {
@@ -153,60 +154,79 @@ function validateLinkFeed(o) {
   };
 }
 
-// ── Push-materials feed (array) ─────────────────────────────────────
+// ── Push-materials feed (array or single object) ────────────────────
+
+// Shared per-material body — the array feed and the single-object response
+// (013: baseline shape per the 2026-08-26 owner ruling, not a vendor dialect)
+// MUST produce the same findings for the same material, so there is exactly
+// one place that knows the field contract. `prefix` is `[i]` for array
+// elements and '' for the standalone object (root-relative paths).
+function validatePushMaterial(m, num, prefix, findings) {
+  const fp = (name) => (prefix ? `${prefix}.${name}` : name);
+  // R4: tolerate a null/primitive feed entry (`[null]`) — coerce so the
+  // field checks below fire `feed.push.*_required` instead of throwing.
+  if (!isObj(m)) m = {};
+  // Alias pairs (013): the same logical fields arrive under different
+  // physical names across push integrations — `tId` for the identifier,
+  // `image` for the large creative, `icon` for the icon slot. Presence under
+  // either name satisfies the check; absence under all names keeps the
+  // existing finding, which names the canonical key.
+  if (!isStr(m.id) && !isStr(m.tId)) {
+    findings.push(F('feed.push.id_required', LEVELS.ERROR, fp('id'), { num }));
+  }
+  if (!isStr(m.click_url) && !isStr(m.link)) {
+    findings.push(F('feed.push.click_url_required', LEVELS.ERROR, fp('click_url'), { num }));
+  }
+  if (!isNum(m.cpc) && !isNum(m.price)) {
+    // 3-tier: distinguish missing / wrong-type-but-parseable / wrong-type-unparseable.
+    // The narrow original "missing" message confused users when cpc was present
+    // as a numeric string (most SSPs do parseFloat, so it works in practice
+    // but violates the spec). Now we tell them WHAT is wrong, not just that
+    // something is.
+    const cpcStr = typeof m.cpc === 'string' ? m.cpc : null;
+    const priceStr = typeof m.price === 'string' ? m.price : null;
+    const cpcParsed = cpcStr != null ? parseFloat(cpcStr) : NaN;
+    const priceParsed = priceStr != null ? parseFloat(priceStr) : NaN;
+    const parseable = Number.isFinite(cpcParsed)
+      ? cpcStr
+      : Number.isFinite(priceParsed)
+        ? priceStr
+        : null;
+    if (parseable != null) {
+      findings.push(
+        F('feed.push.bid_string_type', LEVELS.WARNING, fp('cpc'), { num, val: parseable }),
+      );
+    } else if (cpcStr != null || priceStr != null) {
+      findings.push(F('feed.push.bid_not_numeric', LEVELS.ERROR, fp('cpc'), { num }));
+    } else {
+      findings.push(F('feed.push.bid_required', LEVELS.ERROR, fp('cpc'), { num }));
+    }
+  }
+  if (!isStr(m.title)) {
+    findings.push(F('feed.push.title_recommended', LEVELS.WARNING, fp('title'), { num }));
+  }
+  if (!isStr(m.image_url) && !isStr(m.image)) {
+    findings.push(F('feed.push.image_url_recommended', LEVELS.WARNING, fp('image_url'), { num }));
+  }
+  if (!isStr(m.icon_url) && !isStr(m.icon) && !isStr(m.nurl)) {
+    findings.push(F('feed.push.nurl_recommended', LEVELS.WARNING, fp('nurl'), { num }));
+  }
+}
 
 function validatePushMaterialsFeed(arr) {
   const findings = [];
   arr.forEach((m, i) => {
-    const num = i + 1;
-    const p = `[${i}]`;
-    // R4: tolerate a null/primitive feed entry (`[null]`) — coerce so the
-    // field checks below fire `feed.push.*_required` instead of throwing.
-    if (!isObj(m)) m = {};
-    if (!isStr(m.id)) {
-      findings.push(F('feed.push.id_required', LEVELS.ERROR, `${p}.id`, { num }));
-    }
-    if (!isStr(m.click_url) && !isStr(m.link)) {
-      findings.push(F('feed.push.click_url_required', LEVELS.ERROR, `${p}.click_url`, { num }));
-    }
-    if (!isNum(m.cpc) && !isNum(m.price)) {
-      // 3-tier: distinguish missing / wrong-type-but-parseable / wrong-type-unparseable.
-      // The narrow original "missing" message confused users when cpc was present
-      // as a numeric string (most SSPs do parseFloat, so it works in practice
-      // but violates the spec). Now we tell them WHAT is wrong, not just that
-      // something is.
-      const cpcStr = typeof m.cpc === 'string' ? m.cpc : null;
-      const priceStr = typeof m.price === 'string' ? m.price : null;
-      const cpcParsed = cpcStr != null ? parseFloat(cpcStr) : NaN;
-      const priceParsed = priceStr != null ? parseFloat(priceStr) : NaN;
-      const parseable = Number.isFinite(cpcParsed)
-        ? cpcStr
-        : Number.isFinite(priceParsed)
-          ? priceStr
-          : null;
-      if (parseable != null) {
-        findings.push(
-          F('feed.push.bid_string_type', LEVELS.WARNING, `${p}.cpc`, { num, val: parseable }),
-        );
-      } else if (cpcStr != null || priceStr != null) {
-        findings.push(F('feed.push.bid_not_numeric', LEVELS.ERROR, `${p}.cpc`, { num }));
-      } else {
-        findings.push(F('feed.push.bid_required', LEVELS.ERROR, `${p}.cpc`, { num }));
-      }
-    }
-    if (!isStr(m.title)) {
-      findings.push(F('feed.push.title_recommended', LEVELS.WARNING, `${p}.title`, { num }));
-    }
-    if (!isStr(m.image_url)) {
-      findings.push(
-        F('feed.push.image_url_recommended', LEVELS.WARNING, `${p}.image_url`, { num }),
-      );
-    }
-    if (!isStr(m.icon_url) && !isStr(m.nurl)) {
-      findings.push(F('feed.push.nurl_recommended', LEVELS.WARNING, `${p}.nurl`, { num }));
-    }
+    validatePushMaterial(m, i + 1, `[${i}]`, findings);
   });
   return { type: 'Push-Materials Feed Response', findings };
+}
+
+// Single push material outside an array — same field contract, root-relative
+// paths. `(single)` suffix follows the clickunder/link-feed convention.
+function validatePushSingle(o) {
+  const findings = [];
+  validatePushMaterial(o, 1, '', findings);
+  return { type: 'Push-Materials Feed Response (single)', findings };
 }
 
 // ── Single-bid shape discrimination ─────────────────────────────────
@@ -218,6 +238,20 @@ function detectSingleBidShape(o) {
   if ('clickUrl' in o || ('value' in o && 'nUrl' in o)) return 'valuefeed';
   if ('notification_url' in o || 'bid_price' in o) return 'bidprice';
   if ('redirecturl' in o) return 'bidredirect';
+  // Push single object LAST — its signature is a key combination, not a
+  // unique key, so every unique-key vendor above must keep winning (a
+  // bid-price response carries `link` + `title` too). Mirrors the claim in
+  // detect.js looksLikeJsonFeedSingle(); spec 013.
+  const hasPrice = 'cpc' in o || 'price' in o;
+  const hasClick = 'click_url' in o || 'link' in o;
+  const hasCreative =
+    'title' in o ||
+    'description' in o ||
+    'image' in o ||
+    'image_url' in o ||
+    'icon' in o ||
+    'icon_url' in o;
+  if (hasPrice && hasClick && hasCreative) return 'push';
   return null;
 }
 
