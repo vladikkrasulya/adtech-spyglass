@@ -86,7 +86,7 @@ test('interactive intel runtime is wired only to deterministic rules', () => {
   assert.doesNotMatch(read('lib/intel-rules.js'), /require\([^\n]*(?:ollama|openrouter)/i);
 });
 
-test('the dialect labeller is wired to a reachable host, not to localhost', () => {
+test('the dialect labeller is wired to Ollama on the shared Docker network', () => {
   // The bug this pins: `localhost` inside the container is the container.
   const compose = read('docker-compose.yml');
   assert.match(compose, /OLLAMA_URL=/, 'compose must give the labeller an ollama URL');
@@ -95,7 +95,9 @@ test('the dialect labeller is wired to a reachable host, not to localhost', () =
     /OLLAMA_URL=https?:\/\/(?:localhost|127\.0\.0\.1)\b/,
     'OLLAMA_URL must not point at the container itself',
   );
-  assert.match(compose, /host\.docker\.internal:host-gateway/, 'host-gateway alias required');
+  assert.match(compose, /OLLAMA_URL=http:\/\/ollama:11434\b/, 'kt-shared Ollama alias required');
+  assert.match(compose, /-[ ]+kt-shared\b/, 'service must join kt-shared');
+  assert.match(compose, /kt-shared:\s*\n\s*external:\s*true/, 'kt-shared must stay external');
 });
 
 test('canonical Core contract locks deterministic, network-free validation semantics', () => {

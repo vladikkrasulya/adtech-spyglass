@@ -463,11 +463,14 @@ CREATE TABLE IF NOT EXISTS analytics.ortbtools_usage_daily
   traffic_class   LowCardinality(String),
   visitors_state  AggregateFunction(uniq, String),
   sessions_state  AggregateFunction(uniq, String),
-  events          UInt64,
-  analyses        UInt64,
-  registrations   UInt64,
-  macro_uses      UInt64,
-  share_uses      UInt64
+  -- SimpleAggregateFunction(sum, …), NOT plain UInt64: AggregatingMergeTree
+  -- collapses same-key rows on merge, and a plain column keeps ONE row's value
+  -- instead of the sum — counters silently shrink (bit us until 2026-08-26).
+  events          SimpleAggregateFunction(sum, UInt64),
+  analyses        SimpleAggregateFunction(sum, UInt64),
+  registrations   SimpleAggregateFunction(sum, UInt64),
+  macro_uses      SimpleAggregateFunction(sum, UInt64),
+  share_uses      SimpleAggregateFunction(sum, UInt64)
 )
 ENGINE = AggregatingMergeTree
 PARTITION BY toYYYYMM(day)

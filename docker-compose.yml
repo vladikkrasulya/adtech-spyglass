@@ -34,10 +34,10 @@ services:
       # ORTBTOOLS_TAG also lives here so compose interpolation + plain `up -d`
       # resolve the deployed image tag after a reboot.
       - .env
-    # The app talks to the host's ollama for ONE feature (the dialect
-    # labeller). Without this the container resolves `localhost:11434` to
-    # itself and every /api/dialects/suggest-label returns 503 — which is
-    # exactly what shipped between cd609b3 and 2026-08-20.
+    # Retained for unrelated host-side integrations. The dialect labeller uses
+    # Ollama's service alias on kt-shared and does not traverse a published host
+    # port; the production runner intentionally no longer binds Docker's
+    # host-gateway address.
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     environment:
@@ -47,10 +47,10 @@ services:
       # OpenRouter news-translation pipeline (.env key) and the local dialect
       # labeller below.
       #
-      # Host ollama, reached over the docker host-gateway. Never point this at
-      # a remote host: the labeller's input is a fragment of a payload the user
-      # pasted, and docs/PRIVACY.md promises it does not leave the box.
-      - OLLAMA_URL=http://host.docker.internal:11434
+      # Local Ollama through the existing kt-shared service alias. Never point
+      # this at a remote host: the labeller's input is a fragment of a payload
+      # the user pasted, and docs/PRIVACY.md promises it does not leave the box.
+      - OLLAMA_URL=http://ollama:11434
       # Blog content root. Persisted UNDER the existing /data volume (no second
       # mount) and seeded from the repo's content/posts on first deploy. Keeps
       # promoted posts out of the git working tree and out of the image layer.

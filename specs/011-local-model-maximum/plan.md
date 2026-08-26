@@ -16,8 +16,8 @@ labels every unmet gate. Plus the operational fixes in two sibling stacks (done)
 **Language/Version**: Python 3.13 (runner, taxonomy generator, router, scorers); Go 1.27 (miner,
 user-local toolchain at `~/.local/go-toolchain`, checksum-verified 2026-08-23)
 **Primary Dependencies**: stdlib only on the Python side; `golang.org/x/tools/go/packages` for the
-miner; ollama 0.32.9 on `:11434` (GPU, shared, four consumers) and `:11435` (CPU, deep, capped
-32 GB / 12 CPUs)
+miner; ollama 0.32.9 on `:11434` (GPU, shared) and the isolated benchmark contour on `:11435`
+(CPU-only, capped at 32 GB / 8 CPUs; normally stopped)
 **Storage**: `~/.local/share/ortbtools-research/bench/` — `runs/` (immutable), `taxonomy/`,
 `miner/`, `router/`, `data/`; research corpus snapshot `prebid-2026-08-20/` (Apache-2.0, commit
 `0ba3523`)
@@ -86,16 +86,22 @@ specs/011-local-model-maximum/   # this package (spec, plan, tasks, checklists, 
 ## Phases (as executed)
 
 - **P0 reproducibility** — runner + workloads; baseline x3 for extraction (8B, 31B, v2,
-  think=false) and triage (8B, 31B, think=false/true). _Done except the last 31B runs in flight._
+  think=false) and triage (8B, 31B, think=false/true). _Done; the 31B runs are complete and the
+  model is retired._
 - **P0 operational debt** — defaults fixed, regression tests, retirement procedure, fast/deep
   smoke with RAM verification. _Done; committed in both stacks._
 - **P1 taxonomy v3** — merged taxonomy, generator, gate, adjudication of GumGum + 7. _Done; gates
   pass._
 - **P1 honest benchmark** — splits (50/17/17; 101 triage cases family-disjoint); first dev run
-  (triage 8B 81%, `POLICY_GATE` 0/5 on an unseen family). _Built; manifests not yet frozen._
+  (triage 8B 81%, `POLICY_GATE` 0/5 on an unseen family). _Done: manifests frozen; triage holdout
+  opened once in `t047`; extraction holdout remains sealed._
 - **P1 prompt v3 + miner** — miner built and measured (98.9%); prompt-fragment generated; raw 8B
-  fact extraction on GumGum escalates 9/11 facts. _Miner done; prompt tuning next._
-- **P1 router** — per-fact, cached, guarded. _Built; no-deep smoke passes; deep comparison next._
-- **P2 optimisation** — one variable at a time on tune; promotion on dev; holdout once. _Next._
+  fact extraction on GumGum escalates 9/11 facts. _Executed through the measured T032 series;
+  miner is done, but no extraction candidate reached the dev promotion gate._
+- **P1 router** — per-fact, cached, guarded. _Built and smoke-tested. The 31B comparison was closed
+  by the owner's retirement decision; escalations now go to the human queue._
+- **P2 optimisation** — one variable at a time on tune; promotion on dev; holdout once. _Partially
+  executed. T037/T038/T040 and the per-candidate series are measured; T034–T036 and T039 remain
+  open, and no extraction candidate was promoted._
 - **Report** — before/after, confusion matrices, Pareto, rejected hypotheses, migration proposal,
-  rollback, exact host state. _Last._
+  rollback, exact host state. _Done in [report.md](./report.md); seven follow-up tasks remain open._
