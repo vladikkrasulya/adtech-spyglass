@@ -141,3 +141,9 @@ product-wise this ships as one unit).
 - T014 rerun: `npm run ci` → exit 0, 0 failures («усе зелено — 141 + 18 файлів»).
 - T016: authored paths committed from the shared dirty worktree; peer-owned modifications left untouched.
 - T017: stop condition reported to the owner and recorded durably in the 013 ROADMAP row — push/deploy stay blocked while the worktree carries peer-owned modifications (docker-compose.yml, docs/OPERATIONS.md, specs/011-*, tests/model-free-contract.test.js); once it settles, release follows the standing path (green gates → non-force push → hosted gates → fresh backup → exact-SHA deploy).
+- Release 2026-08-26: hosted CI first failed at `npm ci` (CLI range `^0.35.0` + stale lock left
+  behind by the Core bump — fixed at `17945d6`, range/lock convention per `79a5ad0`); hosted CI
+  green on `17945d6` (run 33000130063); fresh verified backups (db 3173304 B + content-posts,
+  gunzip/tar-tested); `deploy.sh` → DEPLOY OK `v1.16.0` (`17945d6`), full smoke PASS,
+  RestartCount=0; live `/api/analyze` on the synthetic replica → `Push-Materials Feed Response
+(single)`, no `payload.unknown_type`.
