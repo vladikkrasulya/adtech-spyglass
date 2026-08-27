@@ -107,6 +107,7 @@ module.exports = [
       'public/vendor/',
       'dist/',
       'build/',
+      '.claude/worktrees/',
     ],
   },
 ];

@@ -79,5 +79,8 @@ resolved with `pick(map, lang)` from `ctx.lang` — this module does not
 go through `window.t` / `public/i18n.js`, so there are no bracketed-id
 failures to worry about, but every string must carry `en`, `uk` and `ru`.
 
-`modules/dialects/i18n.js` is a leftover from an abandoned CRUD design
-and is imported by nothing.
+`modules/dialects/i18n.js` used to exist here — a leftover from an
+abandoned CRUD design, imported by nothing. It was deleted (FR-010,
+`specs/015-trilingual-output-parity`) rather than wired in, so it could
+not produce a false pass or false fail under the key-set-parity check
+FR-009 added to `tests/i18n-audit.test.js`.

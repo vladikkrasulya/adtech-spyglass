@@ -198,6 +198,48 @@ function loadRegisteredBrowserSpecs() {
   return { specs, skipped };
 }
 
+/**
+ * The central `I18N` table in public/i18n.js — ~1300 lines of hand-written
+ * uk/en/ru object literals plus several later batches merged in via loops
+ * (`cab`, `tier4`, ...) — is a `const` sealed inside that file's own IIFE, so
+ * nothing outside it (including `window.t()`) exposes the raw per-locale
+ * strings; `window.t()` only returns ONE locale's resolution of one key at a
+ * time, chosen by `activeLocale()`, and never the other two locales' text to
+ * compare against.
+ *
+ * Rather than re-deriving the whole table by regex (fragile against the
+ * very hand-edits this guard exists to catch), this patches a single
+ * `window.__i18nTableForAudit = I18N;` line onto the real source, in
+ * memory, immediately before its closing `})();` — the same
+ * extract-and-eval-a-copy approach tests/plural-forms.test.js already uses
+ * to reach a function sealed inside a different browser IIFE. The app's own
+ * `window.tInfo()` reports key counts for exactly this table, so a count
+ * mismatch here would mean the patch point moved.
+ */
+function loadCentralI18NTable() {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public/i18n.js'), 'utf8');
+  const closeMarker = '\n})();';
+  const at = src.lastIndexOf(closeMarker);
+  assert.notEqual(at, -1, 'public/i18n.js must still end with its self-invoking closure');
+  const patched = src.slice(0, at) + '\n  window.__i18nTableForAudit = I18N;' + src.slice(at);
+  const ctx = makeBrowserSandbox();
+  vm.runInContext(patched, ctx, { filename: 'public/i18n.js (audit copy, I18N exposed)' });
+  const table = ctx.window.__i18nTableForAudit;
+  assert.ok(table && table.uk && table.en && table.ru, 'expected the patched I18N table');
+  const info = ctx.window.tInfo();
+  assert.equal(
+    Object.keys(table.uk).length,
+    info.keys_uk,
+    'uk key count must match window.tInfo()',
+  );
+  assert.equal(
+    Object.keys(table.ru).length,
+    info.keys_ru,
+    'ru key count must match window.tInfo()',
+  );
+  return table;
+}
+
 // Ukrainian-only letters (і/ї/є/ґ) must never appear in a Russian value, and
 // Russian-only letters (ы/ъ/э/ё) must never appear in a Ukrainian value — the
 // two alphabets overlap almost completely, so a value written in the wrong
@@ -680,7 +722,340 @@ test('script hygiene: core and browser catalogs never use another locale exclusi
   assert.deepEqual(violations, [], 'a locale value used another locale exclusive alphabet');
 });
 
-// ── 6. resolve() falls back requested → en → uk, never straight to uk ───────
+// ── 6. lexical calques: a wrong word can spell itself with the RIGHT ────────
+//      alphabet, so the script-hygiene scan above cannot see it ────────────
+
+/**
+ * The script-hygiene scan two tests up catches a value written in the wrong
+ * ALPHABET. It structurally cannot catch a value written in the wrong
+ * LANGUAGE using letters the two alphabets share — and Ukrainian and Russian
+ * share almost all of theirs. That gap is not hypothetical: this very
+ * feature shipped «rules-движок» inside an otherwise-Ukrainian sentence in
+ * public/modules/simulate/i18n.js (fixed alongside this guard), and
+ * packages/core/dialects/signal-lexicon.js carried the same word in its own
+ * uk reason table until a human read the diff. Every letter in «движок»
+ * exists in the Ukrainian alphabet too, so it read as plausible text at a
+ * glance and sailed through every automated check that existed at the time.
+ *
+ * This guard and the script-hygiene one are deliberately two separate checks
+ * covering two separate defect classes — a shared alphabet does not imply a
+ * shared vocabulary, and a value can fail either check without failing the
+ * other. Neither subsumes the other, so neither may be deleted in favor of
+ * the other.
+ *
+ * DESIGN: precision over coverage. A false positive here teaches the next
+ * person to weaken the guard, which loses the real defects it does catch —
+ * so this list stays small, and every entry is a word that is simply WRONG
+ * in its flagged locale, never a stylistic preference between two correct
+ * options. Two consequences follow:
+ *
+ *   - Entries that risk colliding with an unrelated, legitimate word (e.g.
+ *     "відмінити" shares its "відмін-" stem with the ordinary adjective
+ *     "відмінний" = "excellent") are matched by an explicit, finite list of
+ *     inflected forms rather than an open stem, so the unrelated word can
+ *     never match.
+ *   - "любий" in the "any" sense (a suggested candidate) is deliberately
+ *     NOT included: its ordinary sense is "beloved/dear", a common
+ *     legitimate adjective, and no unambiguous phrase-level pattern for the
+ *     calque sense turned up anywhere in this catalog to anchor a safe
+ *     match against. A miss here is preferable to flagging someone's dear.
+ */
+
+// Cyrillic letters that count as "still inside the word" for boundary
+// purposes — both alphabets combined, so the same boundary works regardless
+// of which locale is being scanned. JS `\b` is ASCII-only (`\w` = [A-Za-z0-9_])
+// and does not know Cyrillic exists, so without this every Cyrillic
+// "boundary" is silently a non-boundary — a bare `\bслідуючий\b` would match
+// exactly as well glued inside a longer word as standing alone.
+const CYR_WORD_CHAR = 'а-яёіїєґА-ЯЁІЇЄҐ';
+
+/**
+ * A regex that matches `alternation` (one or more `|`-joined literal
+ * Cyrillic forms, already safe to embed — none of this file's entries use
+ * regex metacharacters) only when it is not glued to further Cyrillic
+ * letters on either side.
+ */
+function cyrWordPattern(alternation) {
+  return new RegExp(`(?<![${CYR_WORD_CHAR}])(?:${alternation})(?![${CYR_WORD_CHAR}])`, 'giu');
+}
+
+/**
+ * One entry = one wrong form (or a finite family of inflections of it) that
+ * must never appear in the given locale, the correct replacement, and WHY —
+ * printed on failure so the guard teaches instead of just failing.
+ *
+ * @typedef {{id: string, forms: string[], right: string, reason: string, _pattern?: RegExp}} CalqueEntry
+ */
+
+/** @type {CalqueEntry[]} */
+const UK_FORBIDDEN = [
+  // The confirmed defect this guard exists for (see file header above).
+  {
+    id: 'ru-engine-noun',
+    forms: ['движок'],
+    right: 'рушій',
+    reason:
+      'Russian noun for "engine" — every letter also exists in Ukrainian, so ' +
+      'the script-hygiene scan cannot see it sitting inside Ukrainian prose.',
+  },
+  {
+    id: 'take-part-calque',
+    forms: [
+      'приймати участь',
+      'приймаю участь',
+      'приймаєш участь',
+      'приймає участь',
+      'приймаємо участь',
+      'приймаєте участь',
+      'приймають участь',
+      'прийняти участь',
+      'прийняв участь',
+      'прийняла участь',
+      'прийняли участь',
+    ],
+    right: 'брати участь (agree the verb: бере/беруть/... участь)',
+    reason:
+      'Word-for-word calque of Russian "принимать участие"; standard ' +
+      'Ukrainian is "брати участь".',
+  },
+  {
+    id: 'during-calque',
+    forms: ['на протязі'],
+    right: 'протягом',
+    reason: 'Calque of Russian "в течение"; the Ukrainian preposition is "протягом".',
+  },
+  {
+    id: 'coincide-calque',
+    // No legitimate Ukrainian word begins with this stem in any inflection —
+    // the correct verb family ("збігатися") shares none of it — so an open
+    // stem match is safe here, unlike the finite lists below.
+    forms: ['співпада'],
+    right: 'збігатися (збігається/збігаються/...)',
+    reason: 'Calque of Russian "совпадать"; standard Ukrainian is "збігатися".',
+  },
+  {
+    id: 'cancel-calque',
+    forms: [
+      'відмінити',
+      'відміняти',
+      'відміняю',
+      'відміняєш',
+      'відміняє',
+      'відміняємо',
+      'відміняєте',
+      'відміняють',
+      'відмінив',
+      'відмінила',
+      'відмінили',
+      'відміню',
+      'відміниш',
+      'відмінить',
+    ],
+    right: 'скасувати',
+    reason:
+      'Calque of Russian "отменить". Matched as an exact-form list, not a ' +
+      '"відмін-" stem, because that stem also starts the unrelated, ' +
+      'legitimate word "відмінний" ("excellent").',
+  },
+  {
+    id: 'next-calque',
+    forms: [
+      'слідуючий',
+      'слідуюча',
+      'слідуюче',
+      'слідуючі',
+      'слідуючого',
+      'слідуючій',
+      'слідуючим',
+      'слідуючими',
+      'слідуючих',
+    ],
+    right: 'наступний',
+    reason:
+      'Calque of Russian "следующий". Matched as an exact-form list, not a ' +
+      '"слідуюч-" stem, because that stem also starts the bare gerund ' +
+      '"слідуючи" ("while following", from the legitimate verb "слідувати").',
+  },
+  {
+    id: 'conclude-contract-calque',
+    forms: [
+      'заключати',
+      'заключаю',
+      'заключаєш',
+      'заключає',
+      'заключаємо',
+      'заключаєте',
+      'заключають',
+      'заключив',
+      'заключила',
+      'заключили',
+      'заключу',
+      'заключиш',
+      'заключить',
+    ],
+    right: 'укладати',
+    reason:
+      'Calque of Russian "заключать" (a contract). Matched as an exact-form ' +
+      'list, not a "заключ-" stem, because that stem also starts the ' +
+      'unrelated, legitimate word "заключний" ("final/concluding").',
+  },
+  {
+    id: 'nothing-else-calque',
+    forms: ['більш нічого'],
+    right: 'більше нічого',
+    reason:
+      '"більш" is the comparative form used before an adjective ("більш ' +
+      'складний"); before a pronoun like "нічого" standard Ukrainian requires "більше".',
+  },
+  {
+    id: 'as-role-calque',
+    forms: ['у якості', 'в якості'],
+    right: 'як',
+    reason: 'Calque of Russian "в качестве"; standard Ukrainian just uses "як" (e.g. "як член").',
+  },
+];
+
+/** @type {CalqueEntry[]} */
+const RU_FORBIDDEN = [
+  // The mirror direction: Ukrainian words with no ru-exclusive letter (see
+  // the script-hygiene UK_ONLY_LETTERS set above), so they read as plausible
+  // Russian at a glance the same way «движок» read as plausible Ukrainian.
+  {
+    id: 'also-uk-word',
+    forms: ['також'],
+    right: 'также',
+    reason:
+      'Ukrainian for "also/too"; no letter here is Ukrainian-exclusive, so it is invisible to the alphabet scan.',
+  },
+  {
+    id: 'so-that-uk-word',
+    forms: ['щоб'],
+    right: 'чтобы',
+    reason:
+      'Ukrainian conjunction "in order to/so that"; Russian uses "чтобы" (or informal "чтоб"), never "щоб".',
+  },
+  {
+    id: 'own-uk-word',
+    forms: [
+      'власний',
+      'власна',
+      'власне',
+      'власні',
+      'власного',
+      'власній',
+      'власним',
+      'власними',
+      'власних',
+    ],
+    right: 'собственный (and its forms)',
+    reason: 'Ukrainian adjective "own"; the Russian equivalent is "собственный".',
+  },
+  {
+    id: 'developer-uk-word',
+    forms: ['розробник', 'розробники', 'розробника', 'розробників'],
+    right: 'разработчик (and its forms)',
+    reason: 'Ukrainian for "developer"; the Russian equivalent is "разработчик".',
+  },
+  {
+    id: 'only-uk-word',
+    forms: ['лише'],
+    right: 'только',
+    reason: 'Ukrainian for "only"; the Russian equivalent is "только".',
+  },
+  {
+    id: 'any-uk-word',
+    forms: [
+      'будь-який',
+      'будь-яка',
+      'будь-яке',
+      'будь-які',
+      'будь-якого',
+      'будь-якій',
+      'будь-яким',
+      'будь-якими',
+      'будь-яких',
+    ],
+    right: 'любой (and its forms)',
+    reason: 'Ukrainian "any/whichever"; the Russian equivalent is "любой".',
+  },
+];
+
+const CALQUE_TABLES = { uk: UK_FORBIDDEN, ru: RU_FORBIDDEN };
+
+// Precompile once — every entry's forms joined into a single alternation, so
+// scanning a value is one regex exec per entry, not one per form.
+for (const table of Object.values(CALQUE_TABLES)) {
+  for (const entry of table) {
+    entry._pattern = cyrWordPattern(entry.forms.join('|'));
+  }
+}
+
+// A small, explicitly-named allowlist for a legitimate hit — a quoted
+// example of the wrong form, a comment about the calque itself. Empty today;
+// add an entry only for a real, confirmed case, and say why right here.
+const LEXICAL_CALQUE_EXCEPTIONS = new Set([
+  // 'core:uk:some.id:ru-engine-noun' — none needed yet.
+]);
+
+function lexicalCalqueViolations(sourceTag, id, locale, value) {
+  const table = CALQUE_TABLES[locale];
+  if (!table || typeof value !== 'string') return [];
+  const out = [];
+  for (const entry of table) {
+    if (LEXICAL_CALQUE_EXCEPTIONS.has(`${sourceTag}:${locale}:${id}:${entry.id}`)) continue;
+    entry._pattern.lastIndex = 0;
+    const m = entry._pattern.exec(value);
+    if (m) {
+      out.push(
+        `${sourceTag}/${id} (${locale}) uses "${m[0]}" — should be "${entry.right}": ${entry.reason}`,
+      );
+    }
+  }
+  return out;
+}
+
+test('lexical calques: no Ukrainian value uses a Russian word/calque, and no Russian value uses a Ukrainian one', () => {
+  // Core catalogs first: only uk/ru carry calque risk (en has no Cyrillic at
+  // all, already pinned by the script-hygiene test above).
+  const violations = [];
+  for (const locale of ['uk', 'ru']) {
+    for (const [id, value] of Object.entries(CATALOGS[locale])) {
+      if (id[0] === '_') continue;
+      violations.push(...lexicalCalqueViolations('core', id, locale, value));
+    }
+  }
+
+  // Then every browser module dictionary the app actually registers — same
+  // real-merge loader the script-hygiene test uses above, not a re-derived
+  // guess at what should be there.
+  const { specs } = loadRegisteredBrowserSpecs();
+  assert.ok(specs.length >= 15, `expected most module catalogs to load, got ${specs.length}`);
+  for (const spec of specs) {
+    for (const [key, translations] of Object.entries(spec.keys || {})) {
+      for (const locale of ['uk', 'ru']) {
+        violations.push(
+          ...lexicalCalqueViolations(`browser:${spec.id}`, key, locale, translations[locale]),
+        );
+      }
+    }
+  }
+
+  // Finally the central public/i18n.js table itself — the single largest
+  // hand-maintained slab of uk/ru prose in the app (~1300 lines), and the
+  // one place neither loader above reaches: it is not a packages/core
+  // catalog and it never calls window.registerI18nModule. Skipping it would
+  // leave the app's biggest surface for exactly this defect class unguarded.
+  const central = loadCentralI18NTable();
+  for (const locale of ['uk', 'ru']) {
+    for (const [key, value] of Object.entries(central[locale])) {
+      violations.push(...lexicalCalqueViolations('central', key, locale, value));
+    }
+  }
+
+  assert.deepEqual(violations, [], 'a locale value used a calque or borrowed word from the other');
+});
+
+// ── 7. resolve() falls back requested → en → uk, never straight to uk ───────
 
 test('messages/index.js resolve(): falls back requested -> en -> uk, never straight to uk', () => {
   // resolve() used to go straight from the requested locale to a hard-coded

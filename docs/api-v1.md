@@ -36,8 +36,13 @@ retention boundary.
 
 | Param     | Values                            | Default | Effect                       |
 | --------- | --------------------------------- | ------- | ---------------------------- |
-| `locale`  | `en` · `uk` · `ru`                | `uk`    | Language of finding messages |
+| `locale`  | `en` · `uk` · `ru`                | `en`    | Language of finding messages |
 | `dialect` | `iab` · `ext-rtb` · `inpage-push` | `iab`   | Validation dialect overlay   |
+
+`locale`'s default changed from `uk` to `en` on 2026-08-27
+([ADR-014](../specs/decisions/ADR-014-default-locale-english.md)) — a breaking
+change for any caller that omits `?locale=`: it used to receive Ukrainian
+finding text and now receives English.
 
 ### Request body (JSON)
 
@@ -211,5 +216,8 @@ Errors use the same envelope shown for `/api/analyze`.
   `version` command report the running versions.
 - Rule ids are stable identifiers: renames/removals are MAJOR-version events
   in core; additions are MINOR.
+- **2026-08-27** — `locale`'s default changed from `uk` to `en`
+  ([ADR-014](../specs/decisions/ADR-014-default-locale-english.md)), a
+  breaking change for callers that omit `?locale=`.
 - This document: `docs/api-v1.md` — contract revisions are listed in
   `CHANGELOG.md`.

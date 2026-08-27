@@ -98,7 +98,7 @@
   "crosscheck.bid.cat_blocked": "Сідбід #{sNum} → ставка #{bNum}: категорії {categories} є у блоклісті bcat запиту — креатив заборонений видавцем, ставка не пройде.",
   "crosscheck.bid.adomain_blocked": "Сідбід #{sNum} → ставка #{bNum}: домен рекламодавця {domains} є у блоклісті badv — видавець забанив цей бренд, ставка не пройде.",
   "crosscheck.bid.size_match": "Сідбід #{sNum} → ставка #{bNum}: розмір креативу {w}×{h} підходить під слот.",
-  "crosscheck.bid.size_mismatch": "Сідбід #{sNum} → ставка #{bNum}: розмір креативу {w}×{h} не співпадає з жодним з допустимих ({allowed}). Креатив може обрізатись або не вставитись у плейсмент.",
+  "crosscheck.bid.size_mismatch": "Сідбід #{sNum} → ставка #{bNum}: розмір креативу {w}×{h} не збігається з жодним з допустимих ({allowed}). Креатив може обрізатись або не вставитись у плейсмент.",
   "crosscheck.bid.native_complete": "Сідбід #{sNum} → ставка #{bNum}: усі {count} обовʼязкових native-ассетів на місці.",
   "crosscheck.bid.native_missing_assets": "Сідбід #{sNum} → ставка #{bNum}: у native-відповіді не вистачає обовʼязкових ассетів (id: {missing}). Без них SSP не зможе зібрати креатив — додай ці поля у adm.native.assets[].",
   "crosscheck.bid.native_extra_assets": "Сідбід #{sNum} → ставка #{bNum}: у native-відповіді є несподівані ассети (id: {extra}). Запит їх не вимагав — SSP їх ігноруватиме, але це маркер невідповідності темплейтів.",

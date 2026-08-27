@@ -7,6 +7,7 @@ dist/
 build/
 coverage/
 package-lock.json
+.claude/worktrees/
 
 # Spec Kit package-owned output. Reformatting these files would invalidate
 # managed hashes and create upgrade churn. Authored project memory remains in
