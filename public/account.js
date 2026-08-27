@@ -850,10 +850,18 @@
         '<span class="matrix-cell matrix-id">' +
         T('matrix.col.pattern') +
         '</span>' +
-        '<span class="matrix-cell matrix-num" title="True Positive">TP</span>' +
-        '<span class="matrix-cell matrix-num" title="False Positive">FP</span>' +
-        '<span class="matrix-cell matrix-num" title="False Negative">FN</span>' +
-        '<span class="matrix-cell matrix-num" title="True Negative">TN</span>' +
+        '<span class="matrix-cell matrix-num" title="' +
+        T('matrix.tp_tooltip') +
+        '">TP</span>' +
+        '<span class="matrix-cell matrix-num" title="' +
+        T('matrix.fp_tooltip') +
+        '">FP</span>' +
+        '<span class="matrix-cell matrix-num" title="' +
+        T('matrix.fn_tooltip') +
+        '">FN</span>' +
+        '<span class="matrix-cell matrix-num" title="' +
+        T('matrix.tn_tooltip') +
+        '">TN</span>' +
         '<span class="matrix-cell matrix-num">' +
         T('matrix.col.precision') +
         '</span>' +

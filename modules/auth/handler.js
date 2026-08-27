@@ -23,8 +23,8 @@ const log = require('../../lib/logger').child('auth');
  *     client's freshly-wrapped material. So the factory closure has no
  *     stateful slots and `module.exports` exposes only the factory.
  *   - All helpers that the legacy handler called via closure (publicUser,
- *     publicEncryption, getPublicBaseUrl, setLocaleCookie, signToken,
- *     verifyToken, TokenError, sendVerifyEmail, sendResetEmail,
+ *     publicEncryption, getPublicBaseUrl, setLocaleCookie, readLocaleCookie,
+ *     signToken, verifyToken, TokenError, sendVerifyEmail, sendResetEmail,
  *     notifyAdmin, notifyEscape, VERIFY_TOKEN_TTL, RESET_TOKEN_TTL) are
  *     received via DI so this module stays unit-testable. None of them
  *     are stored on `module.exports`.
@@ -37,9 +37,14 @@ const log = require('../../lib/logger').child('auth');
  *     sendVerifyEmail, sendResetEmail,
  *     notifyAdmin, notifyEscape,
  *     publicUser, publicEncryption,
- *     getPublicBaseUrl, setLocaleCookie,
+ *     getPublicBaseUrl, setLocaleCookie, readLocaleCookie,
  *     VERIFY_TOKEN_TTL, RESET_TOKEN_TTL,
  *   }));
+ *   readLocaleCookie is server.js's existing `kt-lang` cookie parser (the
+ *   twin of setLocaleCookie, both defined ~server.js:258-292) — this module
+ *   reuses it for resolveEmailLocale() rather than re-parsing `Cookie:`
+ *   itself. If an older server.js wiring omits it, resolveEmailLocale()
+ *   degrades to preferred_locale -> 'en' instead of throwing.
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
@@ -54,8 +59,20 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
  * verify-email resend forwarded it as a 500 body that the UI pasted
  * straight into a toast. The real cause goes to the log and to the admin
  * alert, where the person who can fix it will actually read it.
+ *
+ * Keyed by locale — this string is interpolated as `{error}` into the
+ * already-localized `toast.send_failed` on the client (public/i18n.js), so
+ * an English constant here produced a mixed-language toast for uk/ru users.
+ * Resolved per-call via resolveEmailLocale() below, same priority order as
+ * the email templates themselves.
  */
-const EMAIL_UNSENT_PUBLIC_MSG = 'Email provider error — try again in a few minutes.';
+const EMAIL_UNSENT_PUBLIC_MSG = {
+  en: 'Email provider error — try again in a few minutes.',
+  uk: 'Помилка провайдера пошти — спробуй ще раз за кілька хвилин.',
+  ru: 'Ошибка почтового провайдера — попробуй ещё раз через несколько минут.',
+};
+
+const EMAIL_LOCALES = new Set(['en', 'uk', 'ru']);
 
 /**
  * @param {{
@@ -72,6 +89,7 @@ const EMAIL_UNSENT_PUBLIC_MSG = 'Email provider error — try again in a few min
  *   publicEncryption: (cs: any) => any,
  *   getPublicBaseUrl: () => string,
  *   setLocaleCookie: (req: import('http').IncomingMessage, res: import('http').ServerResponse, locale: string) => void,
+ *   readLocaleCookie?: (req: import('http').IncomingMessage) => (string|null),
  *   VERIFY_TOKEN_TTL: number,
  *   RESET_TOKEN_TTL: number,
  * }} deps
@@ -91,9 +109,28 @@ function createAuthRoutesModule(deps) {
     publicEncryption,
     getPublicBaseUrl,
     setLocaleCookie,
+    // Reads the `kt-lang` cookie (server.js's own parser — the twin of
+    // setLocaleCookie above). Wired in as of this change; falls back to
+    // `null` if an older server.js wiring hasn't added it yet, so
+    // resolveEmailLocale() below still degrades to preferred_locale -> 'en'.
+    readLocaleCookie,
     VERIFY_TOKEN_TTL,
     RESET_TOKEN_TTL,
   } = deps;
+
+  // Locale for a transactional email (and for EMAIL_UNSENT_PUBLIC_MSG, which
+  // rides along in the same response as `email_error`). Priority order per
+  // the constitution's locale contract: the account's saved preference,
+  // then the `kt-lang` cookie on this request (anonymous-adjacent flows —
+  // e.g. right after register, before any preference is saved), then 'en'.
+  // `user` may be the request's signed-in user or, for forgot-password, the
+  // looked-up target account — either way it's whose preference should win.
+  function resolveEmailLocale(user, req) {
+    if (user && EMAIL_LOCALES.has(user.preferred_locale)) return user.preferred_locale;
+    const cookieLocale = typeof readLocaleCookie === 'function' ? readLocaleCookie(req) : null;
+    if (cookieLocale && EMAIL_LOCALES.has(cookieLocale)) return cookieLocale;
+    return 'en';
+  }
 
   function handleMe(req, res) {
     const user = auth.getCurrentUser(req);
@@ -111,6 +148,7 @@ function createAuthRoutesModule(deps) {
         // Send verify email synchronously so we can surface failure to the
         // client. Registration itself stays successful regardless — the user
         // can retry via /api/auth/verify-email/request from the banner.
+        const locale = resolveEmailLocale(user, req);
         let emailSent = false;
         let emailError = null;
         try {
@@ -120,12 +158,17 @@ function createAuthRoutesModule(deps) {
             email: user.email,
             expirySeconds: VERIFY_TOKEN_TTL,
           });
-          const result = await sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl());
+          const result = await sendVerifyEmail(
+            { email: user.email },
+            tok,
+            getPublicBaseUrl(),
+            locale,
+          );
           // dev-mode short-circuit returns { dev: true, link } and doesn't actually deliver
           emailSent = !result || !('dev' in result) || !result.dev;
         } catch (err) {
           // Generic on the wire, specific in the log + admin alert.
-          emailError = EMAIL_UNSENT_PUBLIC_MSG;
+          emailError = EMAIL_UNSENT_PUBLIC_MSG[locale];
           log.error({ err }, 'register verify-email send failed');
           notifyAdmin(
             `Verify email send failed for new user <code>${notifyEscape(user.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,
@@ -239,6 +282,7 @@ function createAuthRoutesModule(deps) {
   function handleVerifyEmailRequest(req, res) {
     const user = auth.getCurrentUser(req);
     if (!user) return sendError(res, 401, 'unauthorized', 'Sign in first');
+    const locale = resolveEmailLocale(user, req);
     if (!auth.checkVerifyEmailLimit(req)) {
       return sendError(
         res,
@@ -271,10 +315,10 @@ function createAuthRoutesModule(deps) {
       return sendJson(res, 200, {
         success: true,
         email_sent: false,
-        email_error: EMAIL_UNSENT_PUBLIC_MSG,
+        email_error: EMAIL_UNSENT_PUBLIC_MSG[locale],
       });
     }
-    return sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl()).then(
+    return sendVerifyEmail({ email: user.email }, tok, getPublicBaseUrl(), locale).then(
       () => sendJson(res, 200, { success: true, email_sent: true }),
       (sendErr) => {
         log.error({ err: sendErr }, 'verify-email request send failed');
@@ -285,7 +329,7 @@ function createAuthRoutesModule(deps) {
         sendJson(res, 200, {
           success: true,
           email_sent: false,
-          email_error: EMAIL_UNSENT_PUBLIC_MSG,
+          email_error: EMAIL_UNSENT_PUBLIC_MSG[locale],
         });
       },
     );
@@ -336,7 +380,8 @@ function createAuthRoutesModule(deps) {
                 email: u.email,
                 expirySeconds: RESET_TOKEN_TTL,
               });
-              sendResetEmail({ email: u.email }, tok, getPublicBaseUrl()).catch((err) => {
+              const locale = resolveEmailLocale(u, req);
+              sendResetEmail({ email: u.email }, tok, getPublicBaseUrl(), locale).catch((err) => {
                 log.error({ err }, 'forgot-password send failed');
                 notifyAdmin(
                   `Reset-password email failed for <code>${notifyEscape(u.email)}</code>\n<pre>${notifyEscape(err.message.slice(0, 500))}</pre>`,

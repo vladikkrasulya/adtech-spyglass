@@ -48,6 +48,24 @@ const L = {
     uk: 'Перенести в markdown-пост',
     ru: 'Перенести в markdown-пост',
   },
+  // The reject confirm() dialog, the promote alert(), and the two error
+  // surfaces (list-fetch failure banner + adminPost() failure alert) were
+  // hardcoded English literals bypassing this module's own L/pick() table.
+  confirmReject: {
+    en: 'Reject this draft?',
+    uk: 'Відхилити цей драфт?',
+    ru: 'Отклонить этот черновик?',
+  },
+  promotedPrefix: {
+    en: 'Promoted! ',
+    uk: 'Перенесено в markdown! ',
+    ru: 'Перенесено в markdown! ',
+  },
+  errorPrefix: {
+    en: 'Error: ',
+    uk: 'Помилка: ',
+    ru: 'Ошибка: ',
+  },
 };
 
 function pick(map, lang) {
@@ -194,13 +212,13 @@ export default {
       } catch (e) {
         if (e.name === 'AbortError') return;
         if (container)
-          container.innerHTML = `<p class="ablog-error">Error: ${escapeHtml(e.message)}</p>`;
+          container.innerHTML = `<p class="ablog-error">${escapeHtml(pick(L.errorPrefix, lang))}${escapeHtml(e.message)}</p>`;
       }
     }
 
     async function handleAction(id, action) {
       if (action === 'reject') {
-        if (!confirm('Reject this draft?')) return;
+        if (!confirm(pick(L.confirmReject, lang))) return;
         await adminPost('/api/admin/blog/reject', { id });
         await fetchAndRender();
         return;
@@ -215,7 +233,7 @@ export default {
         if (!slug) return;
         const result = await adminPost('/api/admin/blog/approve', { id, action: 'promote', slug });
         if (result && result.hint) {
-          alert('Promoted! ' + result.hint);
+          alert(pick(L.promotedPrefix, lang) + result.hint);
         }
         await fetchAndRender();
         return;
@@ -240,7 +258,7 @@ export default {
         }
         return await resp.json();
       } catch (e) {
-        if (e.name !== 'AbortError') alert('Error: ' + e.message);
+        if (e.name !== 'AbortError') alert(pick(L.errorPrefix, lang) + e.message);
         return null;
       }
     }

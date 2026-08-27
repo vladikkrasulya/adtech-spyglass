@@ -39,10 +39,12 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const core = require('../packages/core');
 const FL = require('../packages/core/finding-location');
 const { buildSourceMap } = require('../packages/core/source-map');
+const messages = require('../packages/core/messages');
 
 const CATALOGS = {
   en: require('../packages/core/messages/en.json'),
@@ -114,6 +116,120 @@ function loadSamples() {
       }
       return { name: name, raw: raw, payload: payload };
     });
+}
+
+/**
+ * A minimal stubbed-browser vm context for evaluating public/i18n.js and its
+ * module dictionaries. Both reference bare `document`/`localStorage` globals
+ * (not `window.document`), which is why this needs node:vm rather than the
+ * `new Function('window', src)(window)` trick used above and in
+ * source-nav-i18n.test.js — that trick only ever injects `window`.
+ */
+function makeBrowserSandbox() {
+  const store = new Map();
+  const localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+  const document = { documentElement: { getAttribute: () => null } };
+  const window = { kt_i18n_modules: [] };
+  return vm.createContext({ window, document, localStorage, console });
+}
+
+/** Every `i18n.js` / `*.i18n.js` file one level under public/modules/. */
+function findModuleI18nFiles() {
+  const modulesDir = path.join(__dirname, '..', 'public', 'modules');
+  const out = [];
+  for (const dir of fs.readdirSync(modulesDir)) {
+    const dirPath = path.join(modulesDir, dir);
+    if (!fs.statSync(dirPath).isDirectory()) continue;
+    for (const name of fs.readdirSync(dirPath)) {
+      if (name === 'i18n.js' || name.endsWith('.i18n.js')) {
+        out.push(path.join('public', 'modules', dir, name));
+      }
+    }
+  }
+  return out.sort();
+}
+
+/**
+ * Boots public/i18n.js in a stubbed browser context, then loads every module
+ * i18n.js in the SAME context, so each one takes the real "central script
+ * already booted" path (window.registerI18nModule is a function → call it
+ * directly, per the either-or contract every module file documents and
+ * source-nav-i18n.test.js pins for one of them). window.registerI18nModule
+ * is wrapped here, not replaced, so the real merge into the app's I18N table
+ * still runs — this captures the exact specs the app itself would register,
+ * not a re-derived approximation of them.
+ *
+ * A file that fails to evaluate as a classic script (public/modules/
+ * dialects/i18n.js is ESM — `export const uk = …` — and is being deleted
+ * elsewhere this session) is SKIPPED rather than fatal: one broken module
+ * must not take the whole regression net down with it. But the skip is
+ * logged via console.warn so it stays visible in `node --test` output — a
+ * catalog that silently fails to load must not be able to pass this test
+ * merely by not being there.
+ */
+function loadRegisteredBrowserSpecs() {
+  const ctx = makeBrowserSandbox();
+  const centralSrc = fs.readFileSync(path.join(__dirname, '..', 'public/i18n.js'), 'utf8');
+  vm.runInContext(centralSrc, ctx, { filename: 'public/i18n.js' });
+
+  const specs = [];
+  const realRegister = ctx.window.registerI18nModule;
+  ctx.window.registerI18nModule = function (spec) {
+    specs.push(spec);
+    return realRegister(spec);
+  };
+
+  const skipped = [];
+  for (const rel of findModuleI18nFiles()) {
+    const src = fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+    try {
+      vm.runInContext(src, ctx, { filename: rel });
+    } catch (e) {
+      skipped.push({ file: rel, error: e.message });
+    }
+  }
+  for (const s of skipped) {
+    console.warn(`[i18n-audit] skipped ${s.file} (could not evaluate as a script): ${s.error}`);
+  }
+  return { specs, skipped };
+}
+
+// Ukrainian-only letters (і/ї/є/ґ) must never appear in a Russian value, and
+// Russian-only letters (ы/ъ/э/ё) must never appear in a Ukrainian value — the
+// two alphabets overlap almost completely, so a value written in the wrong
+// one still LOOKS like plausible text at a glance; only these four letters
+// per language give it away. English must contain no Cyrillic at all. This
+// is the exact class of defect "Сидбід" was: one dotted Ukrainian і sitting
+// inside an otherwise fully Russian ru.json sentence.
+const UK_ONLY_LETTERS = /[іїєґІЇЄҐ]/;
+const RU_ONLY_LETTERS = /[ыъэёЫЪЭЁ]/;
+const ANY_CYRILLIC = /[Ѐ-ӿ]/;
+
+// A small, explicitly-named allowlist for a legitimate cross-alphabet letter
+// (a quoted foreign term, a proper noun). Empty today — add an entry only for
+// a real, confirmed case, and say why right here when you do.
+const SCRIPT_HYGIENE_EXCEPTIONS = new Set([
+  // 'core:ru:some.id' — none needed yet.
+]);
+
+function scriptHygieneViolations(sourceTag, id, locale, value) {
+  if (typeof value !== 'string') return [];
+  if (SCRIPT_HYGIENE_EXCEPTIONS.has(`${sourceTag}:${locale}:${id}`)) return [];
+  const out = [];
+  if (locale === 'ru' && UK_ONLY_LETTERS.test(value)) {
+    out.push(`${sourceTag}/${id} (ru) uses a Ukrainian-only letter: ${value}`);
+  }
+  if (locale === 'uk' && RU_ONLY_LETTERS.test(value)) {
+    out.push(`${sourceTag}/${id} (uk) uses a Russian-only letter: ${value}`);
+  }
+  if (locale === 'en' && ANY_CYRILLIC.test(value)) {
+    out.push(`${sourceTag}/${id} (en) contains Cyrillic: ${value}`);
+  }
+  return out;
 }
 
 // ── 1. the two templates that printed their own placeholder ─────────────────
@@ -204,11 +320,40 @@ test('catalogs: every locale consumes the SAME parameters for the same finding i
   const ids = Object.keys(CATALOGS.en).filter((k) => k[0] !== '_');
   assert.ok(ids.length > 300, 'expected the full English catalog, not a stub');
 
+  // Key-set parity FIRST, before comparing placeholders. The confirmed
+  // weakness this closes: `if (!(id in CATALOGS[locale])) continue` used to
+  // treat an id missing from a locale entirely the same as an id with
+  // nothing to report — silently fine either way. It is not fine: a missing
+  // id is exactly what resolve() prints as a raw `[id]` to a real reader.
+  // And because the loop below only ever walks Object.keys(CATALOGS.en), an
+  // id that exists in uk/ru but was never added to en.json could not have
+  // been caught by any loop keyed off en's list — so this checks every
+  // locale against the UNION of all three id sets, not just en's.
+  const allIds = new Set(
+    [...Object.keys(CATALOGS.en), ...Object.keys(CATALOGS.uk), ...Object.keys(CATALOGS.ru)].filter(
+      (k) => k[0] !== '_',
+    ),
+  );
+  const missing = [];
+  for (const id of allIds) {
+    for (const locale of ['en', 'uk', 'ru']) {
+      if (!(id in CATALOGS[locale])) missing.push(`${id}: missing from ${locale}.json`);
+    }
+  }
+  assert.deepEqual(missing, [], 'a finding id must exist in all three locale catalogs');
+
   const drift = [];
   for (const id of ids) {
     const base = templateVars(CATALOGS.en[id]);
     for (const locale of ['uk', 'ru']) {
-      if (!(id in CATALOGS[locale])) continue;
+      // Defense in depth: the parity assertion above already fails loudly,
+      // by id, when a locale is missing one. This loop must not go back to
+      // silently skipping it if it is ever reached in isolation — e.g. a
+      // future refactor that runs this half without the check above.
+      if (!(id in CATALOGS[locale])) {
+        drift.push(`${id}: missing entirely from ${locale}.json`);
+        continue;
+      }
       const other = templateVars(CATALOGS[locale][id]);
       const onlyThere = [...other].filter((v) => !base.has(v));
       const onlyEn = [...base].filter((v) => !other.has(v));
@@ -464,5 +609,120 @@ test('location contract still carries no payload VALUE for byte-level findings',
   const blob = JSON.stringify(findings.map((f) => f.location));
   for (const value of ['0.5', '2.5', 'req-1', 'https://a.b/c']) {
     assert.ok(!blob.includes(value), `location contract leaked payload value "${value}"`);
+  }
+});
+
+// ── 4. browser catalogs: module i18n.js files keep the same triple-locale ───
+//      + placeholder contract the core catalogs do ──────────────────────────
+
+test('browser catalogs: every registered module key carries full uk/en/ru with matching placeholders', () => {
+  // Same class of defect as the core-catalog test above, one layer down: a
+  // module i18n.js is a hand-written object literal per key, and it is
+  // exactly as easy to add a key with `uk:`/`en:` and forget the `ru:` line
+  // as it was to forget a whole id in ru.json. This sweeps every key any
+  // module ACTUALLY registers through the real /i18n.js merge — not a
+  // re-derived guess at what should be there — and is the invariant that
+  // would have caught a module catalog shipping a key with no ru line.
+  const { specs } = loadRegisteredBrowserSpecs();
+  assert.ok(specs.length >= 15, `expected most module catalogs to load, got ${specs.length}`);
+
+  let totalKeys = 0;
+  const drift = [];
+  for (const spec of specs) {
+    for (const [key, translations] of Object.entries(spec.keys || {})) {
+      totalKeys++;
+      const base = templateVars(translations.en);
+      for (const locale of ['uk', 'en', 'ru']) {
+        const value = translations[locale];
+        if (typeof value !== 'string' || !value.trim()) {
+          drift.push(`${spec.id}/${key}: missing ${locale}`);
+          continue;
+        }
+        const variables = templateVars(value);
+        const onlyLocale = [...variables].filter((v) => !base.has(v));
+        const onlyEn = [...base].filter((v) => !variables.has(v));
+        if (onlyLocale.length || onlyEn.length) {
+          drift.push(
+            `${spec.id}/${key}: ${locale}-only={${onlyLocale.join(',')}} en-only={${onlyEn.join(',')}}`,
+          );
+        }
+      }
+    }
+  }
+  assert.ok(totalKeys > 100, `expected a meaningful sweep of module keys, got ${totalKeys}`);
+  assert.deepEqual(drift, [], 'module catalog locale/placeholder drift');
+  // No assertion is pinned to a fixed file list or count here — see the
+  // loader's own comment for why. A silently-empty skip list is not required
+  // for this test to be meaningful: it still sweeps every module that DID
+  // load, and console.warn above makes any skip visible in the run's output.
+});
+
+// ── 5. script hygiene: no locale spells its text with another alphabet ──────
+
+test('script hygiene: core and browser catalogs never use another locale exclusive letters', () => {
+  const violations = [];
+  for (const locale of ['en', 'uk', 'ru']) {
+    for (const [id, value] of Object.entries(CATALOGS[locale])) {
+      if (id[0] === '_') continue;
+      violations.push(...scriptHygieneViolations('core', id, locale, value));
+    }
+  }
+  const { specs } = loadRegisteredBrowserSpecs();
+  for (const spec of specs) {
+    for (const [key, translations] of Object.entries(spec.keys || {})) {
+      for (const locale of ['en', 'uk', 'ru']) {
+        violations.push(
+          ...scriptHygieneViolations(`browser:${spec.id}`, key, locale, translations[locale]),
+        );
+      }
+    }
+  }
+  assert.deepEqual(violations, [], 'a locale value used another locale exclusive alphabet');
+});
+
+// ── 6. resolve() falls back requested → en → uk, never straight to uk ───────
+
+test('messages/index.js resolve(): falls back requested -> en -> uk, never straight to uk', () => {
+  // resolve() used to go straight from the requested locale to a hard-coded
+  // UK fallback (`const FALLBACK_LOCALE = 'uk'`), skipping en entirely — the
+  // same silent-uk-fallback shape public/i18n.js's window.t() had before its
+  // own fix above. This pins the corrected contract: requested locale first,
+  // then en, then uk as the true last resort.
+  //
+  // It mutates a REAL, shared id in place rather than inventing a synthetic
+  // one — the JSON catalogs are require()-cached, so this file's CATALOGS.*
+  // and messages/index.js's internal LOCALES.* are the identical in-memory
+  // objects — and restores it in `finally` so no other test in this process
+  // ever sees the gap, whether this test passes or throws.
+  const id = 'crosscheck.bid.above_floor';
+  assert.ok(
+    CATALOGS.en[id] && CATALOGS.uk[id] && CATALOGS.ru[id],
+    'fixture id must exist in all three catalogs to prove a real fallback step',
+  );
+  assert.notEqual(
+    CATALOGS.en[id],
+    CATALOGS.uk[id],
+    'en and uk text must differ, or a wrong fallback would look identical to a right one',
+  );
+
+  const savedRu = CATALOGS.ru[id];
+  const savedEn = CATALOGS.en[id];
+  try {
+    delete CATALOGS.ru[id];
+    assert.equal(
+      messages.resolve(id, {}, 'ru'),
+      savedEn,
+      'missing from ru, present in en and uk → must resolve via en, not uk',
+    );
+
+    delete CATALOGS.en[id];
+    assert.equal(
+      messages.resolve(id, {}, 'ru'),
+      CATALOGS.uk[id],
+      'missing from ru AND en → uk is still the true last resort',
+    );
+  } finally {
+    CATALOGS.ru[id] = savedRu;
+    CATALOGS.en[id] = savedEn;
   }
 });

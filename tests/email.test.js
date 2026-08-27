@@ -52,6 +52,12 @@ function mockHttps({ statusCode = 200, responseBody = '{"id":"em_test"}' } = {})
   };
 }
 
+/**
+ * @template T
+ * @param {() => void} mutate
+ * @param {() => (T | PromiseLike<T>)} fn
+ * @returns {Promise<T>}
+ */
 function withEnv(mutate, fn) {
   const saved = {
     NODE_ENV: process.env.NODE_ENV,
@@ -128,8 +134,18 @@ test('prod-mode posts to api.resend.com/emails with Bearer + JSON body', async (
         process.env.NODE_ENV = 'production';
       },
       async () => {
+        // Locale is the 4th argument (3rd is a baseUrl override, left
+        // undefined so PUBLIC_BASE_URL applies). 'uk' is passed explicitly
+        // because this case asserts the Ukrainian template still renders —
+        // an omitted locale now means English, not Ukrainian. See the
+        // locale-selection tests below for that contract.
         const result = /** @type {any} */ (
-          await email.sendResetEmail({ email: 'reset@example.com' }, 'token-abc-123')
+          await email.sendResetEmail(
+            { email: 'reset@example.com' },
+            'token-abc-123',
+            undefined,
+            'uk',
+          )
         );
         assert.equal(result.id, 'em_xyz');
         assert.equal(mock.observed.opts.host, 'api.resend.com');
@@ -217,3 +233,116 @@ test('HTML escapes user email to prevent injection in template', async () => {
     mock.restore();
   }
 });
+
+// ── Locale selection ────────────────────────────────────────────────────────
+//
+// Both senders take `locale` as their 4th argument and resolve it through the
+// same {en, uk, ru} copy tables the templates are built from. The regression
+// these cover: every transactional email used to be Ukrainian for every
+// recipient regardless of account language (docs/i18n-audit-2026-08-27.md
+// finding 1, P0). English is the fallback, not Ukrainian — a sender may be
+// invoked with no request context at all, so "no locale" must not mean "the
+// author's locale".
+
+const LOCALE_EXPECTATIONS = {
+  verify: {
+    en: {
+      subject: 'Confirm your email — ortbtools',
+      heading: 'Confirm your email',
+      textIntro: 'Confirm your email — ortbtools',
+    },
+    uk: {
+      subject: 'Підтверди свою адресу — ortbtools',
+      heading: 'Підтвердження адреси',
+      textIntro: 'Підтвердження адреси ortbtools',
+    },
+    ru: {
+      subject: 'Подтверди свой адрес — ortbtools',
+      heading: 'Подтверждение адреса',
+      textIntro: 'Подтверждение адреса ortbtools',
+    },
+  },
+  reset: {
+    en: {
+      subject: 'Reset your password — ortbtools',
+      heading: 'Password reset',
+      textIntro: 'Password reset — ortbtools',
+    },
+    uk: {
+      subject: 'Скидання паролю — ortbtools',
+      heading: 'Скидання паролю',
+      textIntro: 'Скидання паролю ortbtools',
+    },
+    ru: {
+      subject: 'Сброс пароля — ortbtools',
+      heading: 'Сброс пароля',
+      textIntro: 'Сброс пароля ortbtools',
+    },
+  },
+};
+
+// `args` is spread, so a 2-element array genuinely omits `locale` rather than
+// passing an explicit `undefined` — the "caller never heard of locales" case.
+/**
+ * @param {string} kind  'verify' | 'reset' — left as plain string because the
+ *   call sites iterate `['verify', 'reset']`, which widens past the literal
+ *   union anyway
+ * @param {[user: {email: string}, token: string, baseUrl?: string, locale?: string]} args
+ *   Tuple, not a plain array — sendVerifyEmail/sendResetEmail take this
+ *   fixed, non-rest parameter list (see their JSDoc in email.js), and
+ *   `send` below is a union of both, so the spread at the call site needs
+ *   a tuple type to type-check.
+ */
+function sendAndParse(kind, args) {
+  const mock = mockHttps();
+  return withEnv(
+    () => {
+      process.env.RESEND_API_KEY = 're_test';
+      process.env.NODE_ENV = 'production';
+    },
+    async () => {
+      const send = kind === 'verify' ? email.sendVerifyEmail : email.sendResetEmail;
+      await send(...args);
+      return JSON.parse(mock.observed.body);
+    },
+  ).finally(() => mock.restore());
+}
+
+for (const kind of ['verify', 'reset']) {
+  for (const locale of ['en', 'uk', 'ru']) {
+    test(`${kind} email renders the ${locale} template when locale is '${locale}'`, async () => {
+      const expected = LOCALE_EXPECTATIONS[kind][locale];
+      const parsed = await sendAndParse(kind, [
+        { email: 'locale@example.com' },
+        'tok',
+        undefined,
+        locale,
+      ]);
+      assert.equal(parsed.subject, expected.subject);
+      assert.ok(
+        parsed.html.includes(`>${expected.heading}</h2>`),
+        `html heading must be ${locale}: ${expected.heading}`,
+      );
+      assert.ok(
+        parsed.text.startsWith(expected.textIntro),
+        `text body must be ${locale}: ${expected.textIntro}`,
+      );
+    });
+  }
+
+  test(`${kind} email falls back to English when locale is omitted or invalid`, async () => {
+    const en = LOCALE_EXPECTATIONS[kind].en;
+    const omitted = await sendAndParse(kind, [{ email: 'nolocale@example.com' }, 'tok']);
+    assert.equal(omitted.subject, en.subject, 'omitted locale must render English');
+    assert.ok(omitted.text.startsWith(en.textIntro));
+
+    const invalid = await sendAndParse(kind, [
+      { email: 'nolocale@example.com' },
+      'tok',
+      undefined,
+      'xx',
+    ]);
+    assert.equal(invalid.subject, en.subject, 'unrecognized locale must render English');
+    assert.ok(invalid.text.startsWith(en.textIntro));
+  });
+}

@@ -152,6 +152,10 @@ function createIntelModule(deps) {
   }
 
   // ── /api/intel/simulate-bids — deterministic 3-strategy simulator ─────────
+  // Body: { bid_req, locale? }. locale is validated against ['en','uk','ru']
+  // here and passed through so intelRules.simulateBids() can localize the
+  // per-strategy `reason` text; an unrecognised/missing locale falls back
+  // to 'en'.
   function handleIntelSimulateBids(req, res) {
     if (!intelLimiter(auth.clientIp(req))) {
       return sendError(
@@ -162,7 +166,8 @@ function createIntelModule(deps) {
       );
     }
     readJson(req)
-      .then(({ bid_req }) => {
+      .then(({ bid_req, locale }) => {
+        const cleanLocale = ['en', 'uk', 'ru'].includes(locale) ? locale : 'en';
         let parsed = null;
         const MAX_BYTES = 250_000;
         try {
@@ -195,7 +200,7 @@ function createIntelModule(deps) {
             'BidRequest must contain a non-empty imp[] array.',
           );
         }
-        const results = intelRules.simulateBids(parsed);
+        const results = intelRules.simulateBids(parsed, cleanLocale);
         if (!results) {
           return sendError(res, 400, 'invalid_input', 'bid_req must be an object');
         }

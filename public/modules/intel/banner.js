@@ -23,6 +23,11 @@
 
   let _root = null;
   let _stylesInjected = false;
+  // Last summary handed to refresh() — kept so a `kt:lang-change` re-render
+  // (see the listener at the bottom of this file) can redraw the chip's
+  // text in the new locale without the caller (observer.js) having to
+  // re-run its own async summarise + refresh round trip.
+  let _lastSummary = null;
 
   function injectStyles() {
     if (_stylesInjected) return;
@@ -147,12 +152,18 @@
    * automatically when total === 0 or user has dismissed.
    */
   function refresh(summary) {
+    _lastSummary = summary || null;
     if (!summary || summary.total === 0) {
       if (_root) _root.hidden = true;
       return;
     }
     if (isDismissed()) return;
     const root = ensureRoot();
+    renderText(root, summary);
+    root.hidden = false;
+  }
+
+  function renderText(root, summary) {
     const title = pickLocalised(summary);
     const sub = formatBucketBreakdown(summary.byBucket);
     root.querySelector('[data-intel-title]').textContent = title;
@@ -160,7 +171,6 @@
     root.querySelector('[data-intel-announcement]').textContent = [title, sub]
       .filter(Boolean)
       .join('. ');
-    root.hidden = false;
   }
 
   function pickLocalised(summary) {
@@ -184,6 +194,18 @@
     }
     return parts.join(' · ');
   }
+
+  // The chip is permanent chrome (loaded via a bare <script defer> tag, same
+  // as nav/topbar) rather than a registry-managed section, so it is never
+  // unmounted by registry.deactivate()'s DOM sweep and text set at refresh()
+  // time otherwise survives untranslated across a language switch. Mirrors
+  // nav/index.js's and topbar/index.js's `kt:lang-change` handling: redraw
+  // from the cached summary rather than re-fetching one.
+  window.addEventListener('kt:lang-change', () => {
+    if (_root && !_root.hidden && _lastSummary) {
+      renderText(_root, _lastSummary);
+    }
+  });
 
   window.OrtbtoolsIntelBanner = {
     refresh,

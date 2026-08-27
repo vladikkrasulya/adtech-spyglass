@@ -147,10 +147,17 @@ async function activateFromUrl() {
     // Unknown SPA route — show 404-ish content inline. Server should
     // have caught this and 404'd before we got here, but the SPA can
     // also reach unknown routes via pushState.
+    const notFoundLang = document.documentElement.lang || 'en';
+    const notFoundBodyByLang = {
+      en: 'No section registered for',
+      uk: 'Розділ не зареєстровано для',
+      ru: 'Раздел не зарегистрирован для',
+    };
+    const notFoundBody = notFoundBodyByLang[notFoundLang] || notFoundBodyByLang.en;
     root.innerHTML = `
       <section style="padding:48px;text-align:center;color:var(--text-muted);">
         <h1 style="margin:0 0 8px;">404</h1>
-        <p>No section registered for <code>${canonical}</code>.</p>
+        <p>${notFoundBody} <code>${canonical}</code>.</p>
       </section>
     `;
     return;
@@ -160,9 +167,17 @@ async function activateFromUrl() {
     await registry.activate(id, root);
   } catch (err) {
     console.error('[shell-boot] activate failed:', err);
+    const activationFailedLang = document.documentElement.lang || 'en';
+    const activationFailedTitleByLang = {
+      en: 'Module activation failed',
+      uk: 'Не вдалося активувати модуль',
+      ru: 'Не удалось активировать модуль',
+    };
+    const activationFailedTitle =
+      activationFailedTitleByLang[activationFailedLang] || activationFailedTitleByLang.en;
     root.innerHTML = `
       <section style="padding:48px;text-align:center;color:var(--danger,#dc2626);">
-        <h1 style="margin:0 0 8px;">Module activation failed</h1>
+        <h1 style="margin:0 0 8px;">${activationFailedTitle}</h1>
         <p>${err.message}</p>
       </section>
     `;

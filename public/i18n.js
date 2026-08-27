@@ -1,8 +1,13 @@
 /* ============================================================
-   ortbtools frontend i18n (Phase 3 — partial).
+   ortbtools frontend i18n — three co-equal locales: uk | en | ru.
    - `t(key, params)` resolves a UI string in the active locale.
-   - Active locale: localStorage['kt-lang'] (uk | en); default 'uk'.
-   - Missing keys fall back: en → uk → '[key]' placeholder.
+   - Active locale: <html lang="…"> per the /uk/ | /en/ | /ru/ route (set
+     server-side), with localStorage['kt-lang'] (en | ru) as a fallback
+     source for surfaces that haven't set the attribute yet; default 'uk'.
+     See activeLocale() below for the exact order.
+   - Missing keys fall back: requested locale → en → uk → '[key]'
+     placeholder, and window.t() console.warns once per missing key so
+     locale drift is visible in dev.
    - Backend finding/crosscheck messages still resolve server-side via
      /api/analyze?locale=…; this file covers chrome (toasts, modals,
      button labels, confirm-dialogs, empty-states).
@@ -43,7 +48,7 @@
       // toast.library_unlocked → /modules/unlock/i18n.js
       // toast.hello + toast.account_created + toast.account_created_email_failed
       //   → /modules/auth/i18n.js
-      'toast.signed_out': 'Ви вийшли з акаунту',
+      'toast.signed_out': 'Сесію завершено',
       'toast.analysis_complete': 'Аналіз завершено · {status}',
       'toast.email_verified': 'Email підтверджено ✓',
       'toast.verify_email_sent': 'Лист підтвердження відправлено на {email}',
@@ -73,10 +78,13 @@
       // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
       'finding.detail.path': 'Шлях у JSON',
+      'finding.jump_to_path': 'Перейти до цього шляху в JSON',
       'finding.detail.value_at_path': 'Поточне значення',
       'finding.detail.value_missing': 'Поле відсутнє у вставленому JSON (тому й знахідка).',
       'finding.detail.severity': 'Серйозність',
       'finding.detail.spec': 'Специфікація',
+      'finding.spec_tooltip': 'Посилання на специфікацію OpenRTB',
+      'finding.spec_label': 'Специфікація OpenRTB ↗',
       'finding.detail.rule_id': 'ID правила',
       'finding.severity.error.label': 'error',
       'finding.severity.error.text': 'Біржі відхилять запит/ставку — bid не дійде до аукціону.',
@@ -96,7 +104,7 @@
       'corpus.label.fraud': 'шахрайство',
       'corpus.label.ambiguous': 'неоднозначно',
       'toast.corpus_deleted': 'Запис видалено',
-      'toast.corpus_delete_failed': 'Не вдалось видалити: {error}',
+      'toast.corpus_delete_failed': 'Не вдалося видалити: {error}',
       'confirm.corpus_delete': 'Видалити цей запис corpus? Це незворотно.',
       'matrix.empty':
         'Поки порожньо. Збережи хоча б по одному «легітимному» і «шахрайському» зразку — і таблиця заповниться.',
@@ -106,6 +114,10 @@
       'matrix.col.pattern': 'патерн',
       'matrix.col.precision': 'precision',
       'matrix.col.recall': 'recall',
+      'matrix.tp_tooltip': 'True Positive — патерн спрацював, і зразок дійсно шахрайський.',
+      'matrix.fp_tooltip': 'False Positive — патерн спрацював, але зразок легітимний.',
+      'matrix.fn_tooltip': 'False Negative — патерн не спрацював, хоча зразок шахрайський.',
+      'matrix.tn_tooltip': 'True Negative — патерн не спрацював, і зразок дійсно легітимний.',
       'builder.title': 'Конструктор тимчасового діалекту',
       'builder.name_label': 'Назва діалекту',
       'builder.name_placeholder': 'наприклад, SSP-Custom',
@@ -115,10 +127,16 @@
       'builder.use_cluster': 'Використати',
       'builder.cancel': 'Скасувати',
       'builder.create': 'Створити тимчасовий діалект',
-      'builder.info': '{n} полів обрано',
+      'builder.info': 'Полів: {n} обрано',
       'builder.suggest_name': 'Запропонувати',
       'builder.suggest_name_tooltip': 'Запропонувати назву за детермінованими серверними правилами',
       'builder.suggesting': 'Обчислюю…',
+      'builder.cluster_meta': 'Полів: {n} · оцінка {score}',
+      'builder.field_total': '{n} усього',
+      'builder.field_purpose_tooltip':
+        'Призначення за правилами: {purpose} (впевненість: {confidence})',
+      'builder.default_name_prefix': 'Користувацький',
+      'builder.close_aria': 'Закрити конструктор діалекту',
       'banner.new_patterns': 'Виявлено {n} нових патернів полів',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
 
@@ -140,7 +158,7 @@
 
       // ── behavior tab (creative-probe) ─────────────────────
       'behavior.empty':
-        'Відрендер креатив справа — Behavior-двигун аналізує спроби клік-джекінгу, бот-патерни, маніпуляції з фреймами та важкі креативи.',
+        'Відрендери креатив справа — Behavior-двигун аналізує спроби клік-джекінгу, бот-патерни, маніпуляції з фреймами та важкі креативи.',
       'behavior.label.trigger': 'тригер',
       'behavior.kind.click_skim_suspect': 'підозра на click-skim',
       'behavior.kind.auto_navigate': 'авто-навігація без gesture',
@@ -176,6 +194,7 @@
       'status.error_one': 'помилка',
       'status.warning_one': 'попередження',
       'status.local': 'локально',
+      'status.backend_offline': 'бекенд недоступний',
       // Вердикт — одне речення про те, що знайдене означає для payload.
       // Рушій перевіряє відповідність специфікації, а не передбачає аукціон,
       // тому формулювання не обіцяє за SSP чи DSP, як вони поведуться.
@@ -391,11 +410,14 @@
       // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
       'finding.detail.path': 'JSON path',
+      'finding.jump_to_path': 'Jump to this path in the JSON',
       'finding.detail.value_at_path': 'Current value',
       'finding.detail.value_missing':
         'Field is absent in the pasted JSON (which is exactly why this finding fires).',
       'finding.detail.severity': 'Severity',
       'finding.detail.spec': 'Spec reference',
+      'finding.spec_tooltip': 'OpenRTB spec reference',
+      'finding.spec_label': 'OpenRTB spec ↗',
       'finding.detail.rule_id': 'Rule id',
       'finding.severity.error.label': 'error',
       'finding.severity.error.text':
@@ -426,6 +448,11 @@
       'matrix.col.pattern': 'pattern',
       'matrix.col.precision': 'precision',
       'matrix.col.recall': 'recall',
+      'matrix.tp_tooltip': 'True Positive — the pattern fired, and the sample really is fraud.',
+      'matrix.fp_tooltip': 'False Positive — the pattern fired, but the sample is legitimate.',
+      'matrix.fn_tooltip': 'False Negative — the pattern did not fire, though the sample is fraud.',
+      'matrix.tn_tooltip':
+        'True Negative — the pattern did not fire, and the sample really is legitimate.',
       'builder.title': 'Temporary Dialect Builder',
       'builder.name_label': 'Dialect name',
       'builder.name_placeholder': 'e.g. SSP-Custom',
@@ -435,10 +462,15 @@
       'builder.use_cluster': 'Use cluster',
       'builder.cancel': 'Cancel',
       'builder.create': 'Create temporary dialect',
-      'builder.info': '{n} fields selected',
+      'builder.info': 'Fields: {n} selected',
       'builder.suggest_name': 'Suggest',
       'builder.suggest_name_tooltip': 'Suggest a name with deterministic server-side rules',
       'builder.suggesting': 'Calculating…',
+      'builder.cluster_meta': '{n} fields · score {score}',
+      'builder.field_total': '{n} total',
+      'builder.field_purpose_tooltip': 'Rule-based purpose: {purpose} (confidence: {confidence})',
+      'builder.default_name_prefix': 'Custom',
+      'builder.close_aria': 'Close dialect builder',
       'banner.new_patterns': '{n} new field patterns detected',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
 
@@ -496,6 +528,7 @@
       'status.error_one': 'error',
       'status.warning_one': 'warning',
       'status.local': 'local',
+      'status.backend_offline': 'backend unreachable',
       // The verdict is one sentence about what the findings mean for this
       // payload. The engine checks conformance; it does not predict an
       // auction, so the wording never promises how an SSP or DSP will act.
@@ -686,7 +719,7 @@
       // toast.library_unlocked → /modules/unlock/i18n.js
       // toast.hello + toast.account_created + toast.account_created_email_failed
       //   → /modules/auth/i18n.js
-      'toast.signed_out': 'Вы вышли из аккаунта',
+      'toast.signed_out': 'Сессия завершена',
       'toast.analysis_complete': 'Анализ завершён · {status}',
       'toast.email_verified': 'Email подтверждён ✓',
       'toast.verify_email_sent': 'Письмо подтверждения отправлено на {email}',
@@ -710,11 +743,14 @@
       // modal.save_sample.* keys live in modules/save-sample/i18n.js
       // modal.mirror.* + toast.mirror_share_* keys live in modules/mirror/i18n.js
       'finding.detail.path': 'Путь в JSON',
+      'finding.jump_to_path': 'Перейти к этому пути в JSON',
       'finding.detail.value_at_path': 'Текущее значение',
       'finding.detail.value_missing':
         'Поле отсутствует во вставленном JSON (именно поэтому находка).',
       'finding.detail.severity': 'Серьёзность',
       'finding.detail.spec': 'Спецификация',
+      'finding.spec_tooltip': 'Ссылка на спецификацию OpenRTB',
+      'finding.spec_label': 'Спецификация OpenRTB ↗',
       'finding.detail.rule_id': 'ID правила',
       'finding.severity.error.label': 'error',
       'finding.severity.error.text': 'Биржи отклонят запрос/ставку — bid не дойдёт до аукциона.',
@@ -744,6 +780,12 @@
       'matrix.col.pattern': 'паттерн',
       'matrix.col.precision': 'precision',
       'matrix.col.recall': 'recall',
+      'matrix.tp_tooltip':
+        'True Positive — паттерн сработал, и образец действительно мошеннический.',
+      'matrix.fp_tooltip': 'False Positive — паттерн сработал, но образец легитимный.',
+      'matrix.fn_tooltip': 'False Negative — паттерн не сработал, хотя образец мошеннический.',
+      'matrix.tn_tooltip':
+        'True Negative — паттерн не сработал, и образец действительно легитимный.',
       'builder.title': 'Конструктор временного диалекта',
       'builder.name_label': 'Название диалекта',
       'builder.name_placeholder': 'например, SSP-Custom',
@@ -753,10 +795,16 @@
       'builder.use_cluster': 'Использовать',
       'builder.cancel': 'Отмена',
       'builder.create': 'Создать временный диалект',
-      'builder.info': '{n} полей выбрано',
+      'builder.info': 'Полей: {n} выбрано',
       'builder.suggest_name': 'Предложить',
       'builder.suggest_name_tooltip': 'Предложить название по детерминированным серверным правилам',
       'builder.suggesting': 'Вычисляю…',
+      'builder.cluster_meta': 'Полей: {n} · оценка {score}',
+      'builder.field_total': '{n} всего',
+      'builder.field_purpose_tooltip':
+        'Назначение по правилам: {purpose} (уверенность: {confidence})',
+      'builder.default_name_prefix': 'Пользовательский',
+      'builder.close_aria': 'Закрыть конструктор диалекта',
       'banner.new_patterns': 'Обнаружено {n} новых паттернов полей',
       // modal.simbids.* + toast.simbids_* keys live in modules/simulate/i18n.js
       'btn.cancel': 'отмена',
@@ -804,6 +852,7 @@
       'status.error_one': 'ошибка',
       'status.warning_one': 'предупреждение',
       'status.local': 'локально',
+      'status.backend_offline': 'бэкенд недоступен',
       // Вердикт — одно предложение о том, что найденное значит для payload.
       // Движок проверяет соответствие спецификации, а не предсказывает
       // аукцион, поэтому формулировка не обещает за SSP или DSP.
@@ -1012,7 +1061,7 @@
     },
     'toast.sample_load_failed': {
       en: "Couldn't load example",
-      uk: 'Не вдалось завантажити приклад',
+      uk: 'Не вдалося завантажити приклад',
       ru: 'Не удалось загрузить пример',
     },
     'error.generic': {
@@ -1191,7 +1240,7 @@
     // crypto error name nobody understands.
     'toast.decrypt_failed_with_hint': {
       en: "Couldn't decrypt this sample. Most likely your session expired — sign out and back in to refresh.",
-      uk: 'Не вдалось розшифрувати цей запит. Найімовірніше сесія застаріла — вийди й увійди ще раз.',
+      uk: 'Не вдалося розшифрувати цей запит. Найімовірніше сесія застаріла — вийди й увійди ще раз.',
       ru: 'Не удалось расшифровать этот запрос. Скорее всего сессия истекла — выйди и войди заново.',
     },
   };
@@ -1232,8 +1281,8 @@
       ru: '— (ещё не было анализов)',
     },
     'cabinet.status.clean_pct': { en: 'clean {pct}%', uk: 'чисто {pct}%', ru: 'чисто {pct}%' },
-    'cabinet.status.warn_pct': { en: 'warn {pct}%', uk: 'warn {pct}%', ru: 'warn {pct}%' },
-    'cabinet.status.err_pct': { en: 'err {pct}%', uk: 'err {pct}%', ru: 'err {pct}%' },
+    'cabinet.status.warn_pct': { en: 'warn {pct}%', uk: 'попередж. {pct}%', ru: 'предупр. {pct}%' },
+    'cabinet.status.err_pct': { en: 'err {pct}%', uk: 'помилки {pct}%', ru: 'ошибки {pct}%' },
     'cabinet.heatmap.tooltip': {
       en: '{date}: {n} analyses',
       uk: '{date}: {n} аналізів',
@@ -1249,6 +1298,21 @@
     I18N.en[key] = cab[key].en;
     I18N.uk[key] = cab[key].uk;
     I18N.ru[key] = cab[key].ru;
+  }
+
+  // Tier-4 i18n batch (2026-08-27 — i18n audit fix bundle F1). New key needed
+  // by the library module for a generic catalog-fetch failure reason.
+  const tier4 = {
+    'library.load_failed_reason': {
+      en: 'Could not load the library catalog. Try again in a moment.',
+      uk: 'Не вдалося завантажити каталог бібліотеки. Спробуй ще раз за хвилину.',
+      ru: 'Не удалось загрузить каталог библиотеки. Попробуй ещё раз через минуту.',
+    },
+  };
+  for (const key of Object.keys(tier4)) {
+    I18N.en[key] = tier4[key].en;
+    I18N.uk[key] = tier4[key].uk;
+    I18N.ru[key] = tier4[key].ru;
   }
 
   // ── Per-module i18n registration ──────────────────────────────
@@ -1289,12 +1353,23 @@
     }
   }
 
-  // Resolve a key in the active locale, with UK fallback. {var} placeholders
-  // are interpolated from the params object (missing → literal `{var}` so a
-  // bug surfaces visually rather than silently dropping the variable).
+  // Resolve a key in the active locale, falling back requested locale → en →
+  // uk → '[key]' placeholder. A silent fallback to Ukrainian used to render
+  // for ANY locale (including en) whenever a key was missing, with no marker
+  // distinguishing it from a legitimate string in that locale — so a missing
+  // key now warns once (deduped) instead of hiding as fluent-looking copy.
+  // {var} placeholders are interpolated from the params object (missing →
+  // literal `{var}` so a bug surfaces visually rather than silently dropping
+  // the variable).
+  const warnedMissingI18nKeys = new Set();
   window.t = function (key, params) {
     const lang = activeLocale();
-    const tpl = (I18N[lang] && I18N[lang][key]) || I18N.uk[key];
+    const hit = I18N[lang] && I18N[lang][key];
+    const tpl = hit || (lang !== 'en' && I18N.en[key]) || I18N.uk[key];
+    if (!hit && !warnedMissingI18nKeys.has(key)) {
+      warnedMissingI18nKeys.add(key);
+      console.warn('[i18n] missing key "' + key + '" for locale "' + lang + '" — falling back');
+    }
     if (typeof tpl !== 'string') return '[' + key + ']';
     if (!params) return tpl;
     return tpl.replace(/\{(\w+)\}/g, function (_, k) {
@@ -1312,6 +1387,7 @@
       locale: activeLocale(),
       keys_uk: Object.keys(I18N.uk).length,
       keys_en: Object.keys(I18N.en).length,
+      keys_ru: Object.keys(I18N.ru).length,
     };
   };
 })();

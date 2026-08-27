@@ -77,17 +77,18 @@ export async function openSimBidsModal() {
 
   let results;
   try {
+    const locale = (window.tLocale && window.tLocale()) || 'uk';
     const r = await fetch('/api/intel/simulate-bids', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bid_req: JSON.stringify(parsed) }),
+      body: JSON.stringify({ bid_req: JSON.stringify(parsed), locale }),
     });
     const j = await r.json();
     if (!j.success) {
       renderFailure(
         j.code === 'ollama_unavailable'
           ? t('modal.simbids.ollama_down')
-          : j.error || 'simulation_failed',
+          : j.error || t('modal.simbids.failed_generic'),
       );
       return;
     }

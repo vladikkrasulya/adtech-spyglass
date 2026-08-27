@@ -28,7 +28,11 @@ const FALLBACK_LOCALE = 'uk';
  *
  *   resolve('imp.banner.size_required', { num: 1 }, 'uk')
  *
- * Resolution order: requested locale → UK fallback → "[id]" placeholder.
+ * Resolution order: requested locale → en → UK fallback → "[id]" placeholder.
+ * en sits before uk because en is this codebase's canonical locale (see
+ * public/core/routes.js and packages/core/categories.js) — a key missing
+ * from the requested locale should surface in the canonical language before
+ * falling through to uk specifically.
  *
  * @param {string} id
  * @param {Record<string, unknown>} [params]
@@ -36,11 +40,20 @@ const FALLBACK_LOCALE = 'uk';
  * @returns {string}
  */
 function resolve(id, params, locale) {
-  const dict = LOCALES[locale] || LOCALES[FALLBACK_LOCALE];
-  const fallback = LOCALES[FALLBACK_LOCALE];
-  const tpl = dict[id] || fallback[id];
+  const tpl = pickTemplate(id, locale);
   if (!tpl) return '[' + id + ']';
   return interpolate(tpl, params || {});
+}
+
+// requested locale → en → uk, each step skipped if that dict or key isn't
+// there. A fully-populated requested locale never reaches past step one.
+function pickTemplate(id, locale) {
+  const order = [locale, 'en', FALLBACK_LOCALE];
+  for (let i = 0; i < order.length; i++) {
+    const dict = LOCALES[order[i]];
+    if (dict && dict[id]) return dict[id];
+  }
+  return undefined;
 }
 
 // Tiny `{var}` interpolator. Missing vars stay literal (helps debugging).

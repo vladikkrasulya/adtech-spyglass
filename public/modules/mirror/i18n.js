@@ -68,6 +68,15 @@
         en: 'could not generate',
         ru: 'не удалось сгенерировать',
       },
+      // Fallback reason when the server responds success:false with no
+      // j.error string — shown after the 'modal.mirror.failed' prefix, e.g.
+      // "не вдалось згенерувати: причина невідома", so the user never sees
+      // the raw 'mirror_failed' token.
+      'modal.mirror.failed_generic': {
+        uk: 'причина невідома',
+        en: 'unknown reason',
+        ru: 'причина неизвестна',
+      },
       'modal.mirror.dir.response_from_request': {
         uk: 'BidRequest → BidResponse',
         en: 'BidRequest → BidResponse',

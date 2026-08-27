@@ -42,9 +42,14 @@ as an available localized document.
 Localized text has several deliberate owners:
 
 - Core finding messages live in `packages/core/messages/{en,uk,ru}.json`; Core's missing-message
-  fallback is Ukrainian, and a key absent from all catalogs renders visibly as a bracketed id.
-- Shared browser chrome and cross-module strings live in `public/i18n.js`. Its runtime lookup uses
-  the route-owned active locale and falls back to Ukrainian for a missing key.
+  fallback (`resolve()`) tries the requested locale, then English, then Ukrainian only as the last
+  resort, and a key absent from all catalogs renders visibly as a bracketed id.
+- Shared browser chrome and cross-module strings live in `public/i18n.js`. Its runtime lookup
+  (`window.t()`) uses the route-owned active locale and falls back the same way — requested locale,
+  then English (when the requested locale is not already English), then Ukrainian as the last
+  resort — warning on every fallback in development. English is also the server's default when a
+  request omits its locale parameter entirely (`server.js`'s `DEFAULT_LOCALE`), per
+  [ADR-014](../../decisions/ADR-014-default-locale-english.md).
 - Lazy feature-specific browser strings live beside their feature in `public/modules/**/i18n.js` and
   register into the shared runtime catalog when that feature loads.
 - Localized page shells and substantial static copy live in `public/index.{en,uk,ru}.html`,

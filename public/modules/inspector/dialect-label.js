@@ -360,6 +360,7 @@
           signal_path: sig.path,
           signal_value: sig.value,
           imp: impFromEditor(sig.path),
+          locale: (window.tLocale && window.tLocale()) || 'en',
         }),
       });
       const j = await r.json().catch(() => null);

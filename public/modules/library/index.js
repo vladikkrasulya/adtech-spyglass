@@ -430,7 +430,7 @@ function renderSavedRow(s, lang, localeP, partnerName, t) {
   const body = Number(s.is_encrypted) ? t('cabinet.pill.encrypted') : t('cabinet.pill.plain');
   return (
     `<div class="lib-row" data-row role="row" data-id="${escapeHtml(s.id)}">` +
-    titleCell(href, s.title || '(no title)', meta, notes || undefined) +
+    titleCell(href, s.title || t('cabinet.untitled'), meta, notes || undefined) +
     `<span class="lib-row__partner" role="cell">${escapeHtml(
       partnerName || pick(T.none, lang),
     )}</span>` +
@@ -464,7 +464,7 @@ function renderBody(state, lang, localeP, t) {
       // out — reloading the whole document was the only retry the UI
       // offered, and it throws away the scope and facet the user had set.
       return note(
-        `<p>${escapeHtml(pick(T.loadFailed, lang) + ': ' + state.catalogError)}</p>`,
+        `<p>${escapeHtml(t('library.load_failed_reason'))}</p>`,
         `<button type="button" class="lib-btn lib-btn--primary" data-action="retry-catalog">` +
           `${escapeHtml(pick(T.retry, lang))}</button>`,
       );
@@ -753,6 +753,9 @@ export default {
         state.catalog = await fetchCatalog(ctx.signal);
       } catch (e) {
         if (e.name === 'AbortError') return;
+        // Raw HTTP/network detail is developer-facing only — the UI shows a
+        // localized generic reason (library.load_failed_reason) instead.
+        console.warn('[library] catalog fetch failed:', e.message);
         state.catalog = [];
         state.catalogError = e.message;
       }

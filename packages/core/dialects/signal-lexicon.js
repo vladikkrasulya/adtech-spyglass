@@ -213,6 +213,97 @@ function isNumericCode(value) {
 }
 
 /**
+ * Localized `reason:` sentences for every branch below that returns a
+ * suggestion. Keyed by locale then by an internal reason id, so a branch
+ * only ever names WHICH sentence fires — never its language.
+ *
+ * Inline rather than a `packages/core/messages/*.json` catalog on purpose:
+ * this table is intrinsic to resolveSignal()'s own branches (adding a branch
+ * means adding a reason id right here), not a general finding-message
+ * registry, and Core stays a deterministic data-to-data function with no
+ * network call (Constitution IV) either way. `pop`/`push`/the semantic
+ * label names are never translated — they are the same identifiers
+ * SEMANTIC_LABELS exports, not prose.
+ */
+const REASONS = {
+  uk: {
+    sizeIdZero: () =>
+      'Ключ «sizeID» зі значенням [0] — характерна ознака pop-інвентаря: розміру немає, бо креатив відкривається в окремому вікні.',
+    popShapeFlag: (key) =>
+      `Ключ «${key}» — vendor-прапорець, який pop-мережі надсилають замість оголошення формату; рушій читає його як ознаку pop.`,
+    flagKey: (key, family) =>
+      `Ключ «${key}» сам називає формат (${family}-родина), значення — лише прапорець.`,
+    nonFormatIgnore: (key) =>
+      `Ключ «${key}» — службовий ідентифікатор або технічне поле, а не оголошення формату.`,
+    nonFormatInformational: (key) =>
+      `Ключ «${key}» несе метадані (версія, партнер, локаль), а не формат.`,
+    popToken: (value) => `Значення «${value}» прямо називає pop-родину (нове вікно або вкладка).`,
+    pushToken: (value) => `Значення «${value}» прямо називає push-родину.`,
+    nonMediaWithInstl: (label, value) =>
+      `Значення «${value}» називає ${label}, і imp.instl=1 це підтверджує.`,
+    nonMediaNoInstl: (label, value) =>
+      `Значення «${value}» називає ${label}, але в impression немає поля, яке б це підтвердило.`,
+    mediaCorroborated: (label, value) =>
+      `Значення «${value}» називає ${label}, і impression несе відповідний об'єкт imp.${label}.`,
+    mediaNoObject: (label, value) =>
+      `Значення «${value}» називає ${label}; impression не містить медіа-об'єкта, тож підтвердити нічим.`,
+  },
+  ru: {
+    sizeIdZero: () =>
+      'Ключ «sizeID» со значением [0] — характерный признак pop-инвентаря: размера нет, потому что креатив открывается в отдельном окне.',
+    popShapeFlag: (key) =>
+      `Ключ «${key}» — vendor-флаг, который pop-сети присылают вместо объявления формата; движок читает его как признак pop.`,
+    flagKey: (key, family) =>
+      `Ключ «${key}» сам называет формат (${family}-семейство), значение — лишь флаг.`,
+    nonFormatIgnore: (key) =>
+      `Ключ «${key}» — служебный идентификатор или техническое поле, а не объявление формата.`,
+    nonFormatInformational: (key) =>
+      `Ключ «${key}» несёт метаданные (версия, партнёр, локаль), а не формат.`,
+    popToken: (value) =>
+      `Значение «${value}» прямо называет pop-семейство (новое окно или вкладка).`,
+    pushToken: (value) => `Значение «${value}» прямо называет push-семейство.`,
+    nonMediaWithInstl: (label, value) =>
+      `Значение «${value}» называет ${label}, и imp.instl=1 это подтверждает.`,
+    nonMediaNoInstl: (label, value) =>
+      `Значение «${value}» называет ${label}, но в impression нет поля, которое бы это подтвердило.`,
+    mediaCorroborated: (label, value) =>
+      `Значение «${value}» называет ${label}, и impression несёт соответствующий объект imp.${label}.`,
+    mediaNoObject: (label, value) =>
+      `Значение «${value}» называет ${label}; impression не содержит медиа-объекта, так что подтвердить нечем.`,
+  },
+  en: {
+    sizeIdZero: () =>
+      'The "sizeID" key with value [0] is a characteristic pop-inventory marker: there is no size because the creative opens in a separate window.',
+    popShapeFlag: (key) =>
+      `The "${key}" key is a vendor flag that pop networks send instead of declaring a format; the engine reads it as a pop signal.`,
+    flagKey: (key, family) =>
+      `The "${key}" key names the format itself (${family} family); its value is just a flag.`,
+    nonFormatIgnore: (key) =>
+      `The "${key}" key is a bookkeeping identifier or technical field, not a format declaration.`,
+    nonFormatInformational: (key) =>
+      `The "${key}" key carries metadata (version, partner, locale), not a format.`,
+    popToken: (value) =>
+      `The value "${value}" names the pop family directly (a new window or tab).`,
+    pushToken: (value) => `The value "${value}" names the push family directly.`,
+    nonMediaWithInstl: (label, value) =>
+      `The value "${value}" names ${label}, and imp.instl=1 confirms it.`,
+    nonMediaNoInstl: (label, value) =>
+      `The value "${value}" names ${label}, but the impression has no field to confirm it.`,
+    mediaCorroborated: (label, value) =>
+      `The value "${value}" names ${label}, and the impression carries the matching imp.${label} object.`,
+    mediaNoObject: (label, value) =>
+      `The value "${value}" names ${label}; the impression carries no media object, so there is nothing to confirm it against.`,
+  },
+};
+
+/** Look up one localized reason sentence, falling back to `en` for an unknown locale. */
+function reason(locale, id, ...args) {
+  const dict = REASONS[locale] || REASONS.en;
+  const build = dict[id] || REASONS.en[id];
+  return build(...args);
+}
+
+/**
  * Resolve a single vendor ext signal, or abstain.
  *
  * @param {object} input
@@ -222,10 +313,15 @@ function isNumericCode(value) {
  *   the signal is imp-scoped. Request-level signals pass null and therefore
  *   never get media corroboration — which is why format words at request level
  *   resolve at lower confidence.
+ * @param {string} [input.locale='en']  'en' | 'uk' | 'ru' — governs only the
+ *   human-readable `reason` text; label/confidence/source/evidence are the
+ *   same for every locale. Defaults to 'en' so callers that predate locale
+ *   awareness (e.g. scripts/label-calibration.js, which only checks whether
+ *   the return value is null) keep working unchanged.
  * @returns {{label: string, confidence: number, reason: string, source: 'lexicon',
  *            evidence: string[]}|null} null = abstain, ask the model
  */
-function resolveSignal({ signalPath, signalValue, imp }) {
+function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
   const key = String(signalPath || '')
     .split('.')
     .pop()
@@ -255,8 +351,7 @@ function resolveSignal({ signalPath, signalValue, imp }) {
       return {
         label: 'pop',
         confidence: 0.8,
-        reason:
-          'Ключ «sizeID» зі значенням [0] — характерна ознака pop-інвентаря: розміру немає, бо креатив відкривається в окремому вікні.',
+        reason: reason(locale, 'sizeIdZero'),
         source: 'lexicon',
         evidence: ['pop-shape:sizeID=[0]'],
       };
@@ -269,7 +364,7 @@ function resolveSignal({ signalPath, signalValue, imp }) {
     return {
       label: 'pop',
       confidence: 0.8,
-      reason: `Ключ «${key}» — vendor-прапорець, який pop-мережі надсилають замість оголошення формату; движок читає його як ознаку pop.`,
+      reason: reason(locale, 'popShapeFlag', key),
       source: 'lexicon',
       evidence: [`pop-shape-flag:${key}`],
     };
@@ -283,7 +378,7 @@ function resolveSignal({ signalPath, signalValue, imp }) {
     return {
       label: isPush ? 'push' : 'pop',
       confidence: 0.9,
-      reason: `Ключ «${key}» сам називає формат (${isPush ? 'push' : 'pop'}-родина), значення — лише прапорець.`,
+      reason: reason(locale, 'flagKey', key, isPush ? 'push' : 'pop'),
       source: 'lexicon',
       evidence: [`flag-key:${key}`],
     };
@@ -302,8 +397,8 @@ function resolveSignal({ signalPath, signalValue, imp }) {
       confidence: 0.9,
       reason:
         label === 'ignore'
-          ? `Ключ «${key}» — службовий ідентифікатор або технічне поле, а не оголошення формату.`
-          : `Ключ «${key}» несе метадані (версія, партнер, локаль), а не формат.`,
+          ? reason(locale, 'nonFormatIgnore', key)
+          : reason(locale, 'nonFormatInformational', key),
       source: 'lexicon',
       evidence: [`key:${key}`],
     };
@@ -333,7 +428,7 @@ function resolveSignal({ signalPath, signalValue, imp }) {
       return {
         label: 'pop',
         confidence: 0.95,
-        reason: `Значення «${signalValue}» прямо називає pop-родину (нове вікно або вкладка).`,
+        reason: reason(locale, 'popToken', signalValue),
         source: 'lexicon',
         evidence: [`value-token:${tok}`],
       };
@@ -342,7 +437,7 @@ function resolveSignal({ signalPath, signalValue, imp }) {
       return {
         label: tok === 'nativepush' ? 'in-page-push' : 'push',
         confidence: 0.9,
-        reason: `Значення «${signalValue}» прямо називає push-родину.`,
+        reason: reason(locale, 'pushToken', signalValue),
         source: 'lexicon',
         evidence: [`value-token:${tok}`],
       };
@@ -378,8 +473,8 @@ function resolveSignal({ signalPath, signalValue, imp }) {
       label: hit.label,
       confidence: instl ? 0.85 : 0.7,
       reason: instl
-        ? `Значення «${signalValue}» називає ${hit.label}, і imp.instl=1 це підтверджує.`
-        : `Значення «${signalValue}» називає ${hit.label}, але в impression немає поля, яке б це підтвердило.`,
+        ? reason(locale, 'nonMediaWithInstl', hit.label, signalValue)
+        : reason(locale, 'nonMediaNoInstl', hit.label, signalValue),
       source: 'lexicon',
       evidence: instl ? [`value-token:${hit.tok}`, 'imp.instl=1'] : [`value-token:${hit.tok}`],
     };
@@ -389,7 +484,7 @@ function resolveSignal({ signalPath, signalValue, imp }) {
     return {
       label: hit.label,
       confidence: 0.95,
-      reason: `Значення «${signalValue}» називає ${hit.label}, і impression несе відповідний об'єкт imp.${hit.label}.`,
+      reason: reason(locale, 'mediaCorroborated', hit.label, signalValue),
       source: 'lexicon',
       evidence: [`value-token:${hit.tok}`, `imp.${hit.label}`],
     };
@@ -401,7 +496,7 @@ function resolveSignal({ signalPath, signalValue, imp }) {
     return {
       label: hit.label,
       confidence: 0.6,
-      reason: `Значення «${signalValue}» називає ${hit.label}; impression не містить медіа-об'єкта, тож підтвердити нічим.`,
+      reason: reason(locale, 'mediaNoObject', hit.label, signalValue),
       source: 'lexicon',
       evidence: [`value-token:${hit.tok}`],
     };

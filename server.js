@@ -75,7 +75,10 @@ const SyntheticGenerator = require('./samples/synthetic-generator');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const DEFAULT_LOCALE = 'uk';
+// en is canonical (ADR-014) — matches public/core/routes.js:41 and
+// packages/core/categories.js:26. Changing this changes what a
+// POST /api/analyze caller that omits ?locale= receives.
+const DEFAULT_LOCALE = 'en';
 const DEFAULT_DIALECT = 'iab';
 
 // Phase 8 token durations
@@ -1087,6 +1090,7 @@ router.register(
     publicUser,
     publicEncryption,
     getPublicBaseUrl,
+    readLocaleCookie,
     setLocaleCookie,
     VERIFY_TOKEN_TTL,
     RESET_TOKEN_TTL,

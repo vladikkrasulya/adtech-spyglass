@@ -203,7 +203,7 @@ export async function openMirrorModal() {
         body: JSON.stringify({ input: sourceInput, mode: currentMode }),
       });
       const j = await r.json();
-      if (!j.success) throw new Error(j.error || 'mirror_failed');
+      if (!j.success) throw new Error(j.error || t('modal.mirror.failed_generic'));
       result = j.result;
     } catch (err) {
       $('modalRoot').innerHTML =

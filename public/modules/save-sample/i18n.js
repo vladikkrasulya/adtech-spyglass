@@ -40,6 +40,16 @@
         en: 'update sample · #{id}',
         ru: 'обновить запись · #{id}',
       },
+      // Localized fallback for the title field when neither a stored title
+      // nor the pasted payload (id / site.domain / app.bundle) offers one —
+      // used in openSaveModal() and confirmSave(); the confirmSave() case is
+      // PERSISTED and later shown as-is in the Library list, so it must not
+      // be the bare English word.
+      'sample.default_title': {
+        uk: 'зразок',
+        en: 'sample',
+        ru: 'образец',
+      },
     },
   };
 

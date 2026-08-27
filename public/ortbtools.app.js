@@ -2776,7 +2776,9 @@ export async function mountInspector(root, ctx) {
           // attribute; escapeHtml alone leaves the quotes raw → the attribute
           // truncates at the first " and JSON.parse fails (the jump silently no-ops).
           (f.location ? escapeHtml(JSON.stringify(f.location)).replace(/"/g, '&quot;') : '') +
-          '" title="Jump to this path in the JSON">' +
+          '" title="' +
+          escapeHtml(t('finding.jump_to_path')) +
+          '">' +
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
           'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
           '<path d="M5 12h14M13 6l6 6-6 6"></path></svg>' +
@@ -2788,7 +2790,11 @@ export async function mountInspector(root, ctx) {
       const specLink = f.specRef
         ? '<a class="finding-spec" href="' +
           escapeHtml(f.specRef) +
-          '" target="_blank" rel="noopener noreferrer" title="OpenRTB spec reference">spec ↗</a>'
+          '" target="_blank" rel="noopener noreferrer" title="' +
+          escapeHtml(t('finding.spec_tooltip')) +
+          '">' +
+          escapeHtml(t('finding.spec_label')) +
+          '</a>'
         : '';
       const code = f.id ? '<span class="finding-code">' + escapeHtml(f.id) + '</span>' : '';
 
@@ -4403,7 +4409,7 @@ export async function mountInspector(root, ctx) {
         $('stEntity').innerText = entity + ' · ' + t('status.local');
         $('stEntity').dataset.status = ''; // backend unreachable — no canonical status
         $('statusDot').className = 'status-dot error';
-        $('statusText').textContent = 'backend offline';
+        $('statusText').textContent = t('status.backend_offline');
       }
 
       // Validation tab — new findings model: { id, level, path, params, specRef, msg }

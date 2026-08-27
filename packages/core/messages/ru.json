@@ -101,7 +101,7 @@
   "crosscheck.bid.size_mismatch": "Сидбид #{sNum} → ставка #{bNum}: размер креатива {w}×{h} не совпадает ни с одним из допустимых ({allowed}). Креатив может обрезаться или не вставиться в плейсмент.",
   "crosscheck.bid.native_complete": "Сидбид #{sNum} → ставка #{bNum}: все {count} обязательных native-ассетов на месте.",
   "crosscheck.bid.native_missing_assets": "Сидбид #{sNum} → ставка #{bNum}: в native-ответе не хватает обязательных ассетов (id: {missing}). Без них SSP не сможет собрать креатив — добавь эти поля в adm.native.assets[].",
-  "crosscheck.bid.native_extra_assets": "Сидбід #{sNum} → ставка #{bNum}: в native-ответе есть неожиданные ассеты (id: {extra}). Запрос их не требовал — SSP их проигнорирует, но это маркер несоответствия темплейтов.",
+  "crosscheck.bid.native_extra_assets": "Сидбид #{sNum} → ставка #{bNum}: в native-ответе есть неожиданные ассеты (id: {extra}). Запрос их не требовал — SSP их проигнорирует, но это маркер несоответствия темплейтов.",
   "crosscheck.bid.native_invalid_request": "Сидбид #{sNum} → ставка #{bNum}: imp.native.request — не валидный JSON. Это поле должно быть JSON-строкой со спецификацией native-слота.",
   "crosscheck.bid.native_invalid_adm": "Сидбид #{sNum} → ставка #{bNum}: bid.adm — не валидный JSON для native-ответа. Ожидается {\"native\":{\"assets\":[...],\"link\":...}}.",
   "crosscheck.bid.video_vast": "Сидбид #{sNum} → ставка #{bNum}: adm — валидный VAST XML для видео-слота.",

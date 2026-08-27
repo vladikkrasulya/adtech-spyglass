@@ -33,6 +33,11 @@
         en: 'Service temporarily unavailable — try again in a minute.',
         ru: 'Сервис временно недоступен — попробуй ещё раз через минуту.',
       },
+      'modal.simbids.failed_generic': {
+        uk: 'Не вдалося виконати симуляцію. Спробуй ще раз.',
+        en: 'Simulation failed. Try again.',
+        ru: 'Не удалось выполнить симуляцию. Попробуй ещё раз.',
+      },
       'modal.simbids.bid': {
         uk: '✓ ставить',
         en: '✓ bids',

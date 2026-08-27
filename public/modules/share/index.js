@@ -200,6 +200,19 @@
     return window.OrtbtoolsCrypto;
   }
 
+  // ── Server error code → localized message ────────────────────────
+  // GET /api/v1/gists/:id answers with a machine `code` alongside its
+  // English `error` sentence (see modules/gists/handler.js) — that English
+  // text is the machine-readable field, not user copy, so it must never
+  // reach the toast verbatim. Same shape as humanAuthError()/
+  // humanResetError() in modules/auth/ and modules/password-reset/.
+  function humanGistError(e) {
+    const code = (e && e.code) || '';
+    if (code === 'gist_expired') return tt('toast.share_gist_expired');
+    if (code === 'not_found') return tt('toast.share_gist_not_found');
+    return tt('toast.share_gist_invalid', { error: (e && e.message) || String(e) });
+  }
+
   async function createGist(reqText, resText) {
     const api = cryptoApi();
     if (!api || typeof api.generateContentKey !== 'function') {
@@ -238,7 +251,9 @@
     });
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok || !body.ciphertext) {
-      throw new Error(body.error || 'HTTP ' + resp.status);
+      const err = new Error(body.error || 'HTTP ' + resp.status);
+      err.code = body.code;
+      throw err;
     }
     const key = await api.importContentKey(keyB64u);
     // AES-GCM verifies its tag here: a tampered ciphertext or a wrong key
@@ -360,7 +375,7 @@
         toastOk(tt('toast.share_gist_loaded'));
         return true;
       } catch (e) {
-        toastErr(tt('toast.share_gist_invalid', { error: e.message || String(e) }));
+        toastErr(humanGistError(e));
         return false;
       }
     }

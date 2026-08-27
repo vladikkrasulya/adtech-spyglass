@@ -9,9 +9,10 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { mkdtempSync, rmSync } = require('node:fs');
+const { mkdtempSync, rmSync, readFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
+const { EventEmitter } = require('node:events');
 
 // Auth module needs Users; we use the real one over a temp DB so we exercise
 // the actual query path.
@@ -20,6 +21,7 @@ process.env.ORTBTOOLS_DATA_DIR = TMP;
 
 const { Users } = require('../db');
 const { createAuth } = require('../auth');
+const { createAuthRoutesModule } = require('../modules/auth/handler');
 
 const auth = createAuth({ Users, logger: { info: () => {} } });
 
@@ -323,6 +325,163 @@ test('checkForgotPasswordLimit: returns true under limit, false over', () => {
     assert.equal(auth.checkForgotPasswordLimit(fakeReq({ ip })), true, `attempt ${i + 1}`);
   }
   assert.equal(auth.checkForgotPasswordLimit(fakeReq({ ip })), false, '6th attempt blocked');
+});
+
+// ── resolveEmailLocale (feature 015: trilingual output parity) ─────────────
+//
+// modules/auth/handler.js's resolveEmailLocale() picks the language for a
+// transactional email in this priority order: the account's saved
+// preferred_locale, then the request's `kt-lang` cookie (read through the
+// injected `readLocaleCookie` dependency), then 'en'. It is exercised here
+// through the real /api/auth/forgot-password route rather than called
+// directly, because the priority order is only meaningful in the context
+// the route actually builds it in (a looked-up target user + the inbound
+// request), and because the DI-missing case below only means anything when
+// driven through createAuthRoutesModule's own guard.
+//
+// This mirrors a throwaway proof another session ran against the real
+// server.js `readLocaleCookie` (kept for reference, not part of the suite,
+// at the session's scratchpad path) — the stub below reimplements that
+// same `kt-lang` contract (decode, restrict to en/uk/ru, else null) rather
+// than importing behavior out of server.js, so this suite does not depend
+// on server.js's internal source shape. The wiring itself — that server.js
+// actually passes its real readLocaleCookie into createAuthRoutesModule —
+// is what the source-text guard test below checks instead.
+
+/** Mirrors server.js's readLocaleCookie() contract for `kt-lang`. */
+function stubReadLocaleCookie(req) {
+  const cookie = (req.headers && req.headers.cookie) || '';
+  for (const part of cookie.split(';')) {
+    const [k, v] = part.trim().split('=');
+    if (k === 'kt-lang') {
+      const decoded = decodeURIComponent(v || '').trim();
+      if (decoded === 'en' || decoded === 'uk' || decoded === 'ru') return decoded;
+    }
+  }
+  return null;
+}
+
+/**
+ * Drive POST /api/auth/forgot-password through createAuthRoutesModule with a
+ * full, minimal dep set (the handler destructures the whole deps object, so
+ * a stub missing an unrelated key can fail somewhere other than what the
+ * test targets) and report the locale sendResetEmail was called with.
+ *
+ * @param {{ wireCookieDep: boolean, cookie?: string, preferred_locale?: string }} opts
+ * @returns {Promise<string>} the locale seen by sendResetEmail, or the
+ *   sentinel 'NO-EMAIL-SENT' if it was never called.
+ */
+function runForgotPassword({ wireCookieDep, cookie, preferred_locale }) {
+  return new Promise((resolve) => {
+    let seenLocale = 'NO-EMAIL-SENT';
+    const deps = {
+      auth: { checkForgotPasswordLimit: () => true },
+      Users: { getByEmail: () => ({ id: 1, email: 'u@x.com', preferred_locale }) },
+      signToken: () => 'tok',
+      verifyToken: () => ({}),
+      TokenError: function TokenError() {},
+      sendVerifyEmail: async () => ({}),
+      sendResetEmail: async (_user, _token, _base, locale) => {
+        seenLocale = String(locale);
+        return {};
+      },
+      notifyAdmin: () => {},
+      notifyEscape: (s) => s,
+      publicUser: (u) => u,
+      publicEncryption: (c) => c,
+      getPublicBaseUrl: () => 'https://example.com',
+      setLocaleCookie: () => {},
+      VERIFY_TOKEN_TTL: 900,
+      RESET_TOKEN_TTL: 900,
+    };
+    if (wireCookieDep) deps.readLocaleCookie = stubReadLocaleCookie;
+
+    // The `wireCookieDep: false` case above deliberately omits
+    // readLocaleCookie — that omission IS the test (see
+    // 'missing readLocaleCookie dependency falls back to en' below).
+    // modules/auth/handler.js's own JSDoc marks the dep as required, but its
+    // implementation and doc comment both say it degrades gracefully when
+    // absent ("If an older server.js wiring omits it, resolveEmailLocale()
+    // degrades to preferred_locale -> 'en' instead of throwing" — see
+    // modules/auth/handler.js around the `readLocaleCookie` destructure).
+    // So this is a source-side JSDoc/runtime mismatch, not a stub bug; the
+    // fix here is a narrow cast at the call site rather than always
+    // supplying the dep, which would silently defeat the fallback test.
+    const mod = createAuthRoutesModule(
+      // Double cast: the two shapes don't structurally overlap (`deps`'s
+      // inferred type has no `readLocaleCookie` slot at all in the
+      // wireCookieDep:false branch), so TS wants the `unknown` bridge for
+      // what is, at runtime, a deliberately-partial deps object.
+      /** @type {Parameters<typeof createAuthRoutesModule>[0]} */ (/** @type {unknown} */ (deps)),
+    );
+    const route = mod.routes.find((r) => r.path === '/api/auth/forgot-password');
+
+    // Fake IncomingMessage: an EventEmitter (for the 'data'/'end' events
+    // readJson listens on) plus the two fields the route reads directly.
+    const req = /** @type {EventEmitter & { method: string, headers: Record<string, string> }} */ (
+      new EventEmitter()
+    );
+    req.method = 'POST';
+    req.headers = { 'content-type': 'application/json', cookie: cookie || '' };
+    const res = { writeHead() {}, setHeader() {}, getHeader() {}, end() {} };
+
+    const handled = route.handler(req, res);
+    req.emit('data', Buffer.from(JSON.stringify({ email: 'u@x.com' })));
+    req.emit('end');
+
+    // TRAP: handleForgotPassword does not await sendResetEmail — it fires
+    // the send via `.catch()` and returns as soon as sendJson(200) is
+    // queued. Reading `seenLocale` right after `handled` resolves races the
+    // stub's own assignment; a setImmediate lets that microtask flush first.
+    Promise.resolve(handled).then(() => setImmediate(() => resolve(seenLocale)));
+  });
+}
+
+test('resolveEmailLocale: kt-lang cookie is used when no saved preference exists', async () => {
+  const locale = await runForgotPassword({ wireCookieDep: true, cookie: 'kt-lang=ru; other=1' });
+  assert.equal(locale, 'ru');
+});
+
+test('resolveEmailLocale: missing readLocaleCookie dependency falls back to en', () => {
+  // This is the important case: it is the ONLY one of the four that goes
+  // red if server.js's DI wiring for readLocaleCookie silently disappears.
+  // Every other case here stays green even without that wiring, because
+  // none of them depend on the cookie at all (a saved preferred_locale
+  // wins first) or the cookie is absent anyway.
+  return runForgotPassword({ wireCookieDep: false, cookie: 'kt-lang=ru; other=1' }).then((locale) =>
+    assert.equal(locale, 'en'),
+  );
+});
+
+test('resolveEmailLocale: a saved preferred_locale outranks the cookie', async () => {
+  const locale = await runForgotPassword({
+    wireCookieDep: true,
+    cookie: 'kt-lang=ru; other=1',
+    preferred_locale: 'uk',
+  });
+  assert.equal(locale, 'uk');
+});
+
+test('resolveEmailLocale: no cookie and no saved preference defaults to en', async () => {
+  const locale = await runForgotPassword({ wireCookieDep: true, cookie: '' });
+  assert.equal(locale, 'en');
+});
+
+test('server.js wires readLocaleCookie into createAuthRoutesModule (DI guard, source-text)', () => {
+  // Per this repo's existing idiom (tests/docs-truth.test.js,
+  // tests/spec-kit-contract.test.js): assert over source text rather than
+  // refactor server.js to make the wiring independently testable. This is
+  // the cheap guard against the one dependency the case above proves is
+  // load-bearing quietly being dropped from the deps literal.
+  const src = readFileSync(join(__dirname, '..', 'server.js'), 'utf8');
+  const call = src.match(/createAuthRoutesModule\(\{[\s\S]*?\}\)/);
+  assert.ok(call, 'could not find the createAuthRoutesModule({ ... }) call in server.js');
+  assert.match(
+    call[0],
+    /\breadLocaleCookie\b/,
+    'server.js must pass readLocaleCookie into createAuthRoutesModule — without it, ' +
+      'resolveEmailLocale() silently falls back to "en" for every cookie-only case',
+  );
 });
 
 // ── teardown ─────────────────────────────────────────────────────────────

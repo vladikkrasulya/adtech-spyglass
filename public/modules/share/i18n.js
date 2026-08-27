@@ -107,6 +107,19 @@
         en: "Couldn't open the encrypted link: {error}. It may have expired, been truncated, or been altered.",
         ru: 'Не удалось открыть зашифрованную ссылку: {error}. Она могла устареть, быть обрезанной или изменённой.',
       },
+      // Server tells these two apart precisely (410 vs 404) — see
+      // modules/gists/handler.js — so we can name the cause instead of
+      // falling through to the hedged toast.share_gist_invalid above.
+      'toast.share_gist_expired': {
+        uk: 'Термін дії цього посилання сплив — попроси надіслати нове.',
+        en: 'This share link has expired — ask for a new one.',
+        ru: 'Срок действия этой ссылки истёк — попроси прислать новую.',
+      },
+      'toast.share_gist_not_found': {
+        uk: 'Такого посилання не існує — перевір, чи скопійоване воно повністю.',
+        en: "This share link doesn't exist — check that you copied it in full.",
+        ru: 'Такой ссылки не существует — проверь, скопирована ли она полностью.',
+      },
     },
   };
 

@@ -50,6 +50,11 @@ const log = require('../../lib/logger').child('ai-label');
 
 const SIGNAL_PATH_MAX = 200;
 const SIGNAL_VALUE_MAX = 512;
+// Mirrors the ?locale= pattern documented in public/i18n.js and used by
+// /api/analyze and /api/analyze-behavior — here it arrives in the JSON body
+// instead of a query string because this route is a POST with a body
+// already, and dialect-label.js's askAgent() is the one caller.
+const SUPPORTED_LOCALES = ['en', 'uk', 'ru'];
 // Mirrors SIGNAL_PATH_RX in modules/dialects/handler.js plus the bracket
 // syntax findings use (`imp[0].ext.type`) — a path we would suggest for but
 // the save route would reject is a broken round trip.
@@ -156,11 +161,12 @@ function createAiLabelModule({ auth, aiLabelLimiter } = {}) {
     if (typeof signalValue === 'string' && signalValue.length > SIGNAL_VALUE_MAX) {
       return sendError(res, 400, 'signal_value_too_long', 'signal_value exceeds 512 chars');
     }
+    const locale = SUPPORTED_LOCALES.includes(body.locale) ? body.locale : 'en';
 
     const { sketch, siblingKeys } = redactImp(body.imp);
 
     // ── Stage 1: deterministic ────────────────────────────────────────
-    const fromLexicon = resolveSignal({ signalPath, signalValue, imp: body.imp });
+    const fromLexicon = resolveSignal({ signalPath, signalValue, imp: body.imp, locale });
     if (fromLexicon) {
       return sendJson(res, 200, {
         ok: true,
@@ -188,6 +194,7 @@ function createAiLabelModule({ auth, aiLabelLimiter } = {}) {
         signalValue,
         impSketch: sketch,
         siblingKeys,
+        locale,
       });
       if (!SEMANTIC_LABELS.includes(suggestion.label)) {
         // Belt and braces: lib/ollama already checks its own enum, but the

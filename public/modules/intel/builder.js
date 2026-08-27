@@ -286,6 +286,7 @@
   function ensureRoot() {
     if (_root && document.body.contains(_root)) return _root;
     injectStyles();
+    const t = localised();
     _root = document.createElement('div');
     _root.className = 'ortbtools-intel-modal-bg';
     _root.id = 'ortbtoolsIntelBuilder';
@@ -295,7 +296,9 @@
       '  <div class="ortbtools-intel-modal__header">',
       '    <span aria-hidden="true">🧬</span>',
       '    <span class="ortbtools-intel-modal__title" id="ortbtoolsIntelBuilderTitle"></span>',
-      '    <button type="button" class="ortbtools-intel-modal__close" aria-label="Close" data-builder-close>×</button>',
+      '    <button type="button" class="ortbtools-intel-modal__close" aria-label="' +
+        escapeHtml(t.closeAria) +
+        '" data-builder-close>×</button>',
       '  </div>',
       '  <div class="ortbtools-intel-modal__body" data-builder-body></div>',
       '  <div class="ortbtools-intel-modal__footer">',
@@ -382,6 +385,12 @@
       suggestName: t('builder.suggest_name'),
       suggestNameTooltip: t('builder.suggest_name_tooltip'),
       suggesting: t('builder.suggesting'),
+      closeAria: t('builder.close_aria'),
+      clusterMeta: (n, score) => t('builder.cluster_meta', { n, score }),
+      fieldTotal: (n) => t('builder.field_total', { n }),
+      fieldPurposeTooltip: (purpose, confidence) =>
+        t('builder.field_purpose_tooltip', { purpose, confidence }),
+      defaultNamePrefix: t('builder.default_name_prefix'),
     };
   }
 
@@ -468,9 +477,7 @@
           '<div class="ortbtools-intel-cluster">',
           '  <div class="ortbtools-intel-cluster__head">',
           '    <span>' +
-            cl.fields.length +
-            ' fields · score ' +
-            cl.totalCount.toFixed(0) +
+            escapeHtml(t.clusterMeta(cl.fields.length, cl.totalCount.toFixed(0))) +
             '</span>',
           '    <button type="button" class="ortbtools-intel-cluster__use-btn" data-cluster-pick="' +
             escapeAttr(cl.fields.join('|')) +
@@ -520,8 +527,8 @@
           ' · ' +
           decayed.toFixed(1) +
           '× · ' +
-          (r.count || 0) +
-          ' total</span>',
+          escapeHtml(t.fieldTotal(r.count || 0)) +
+          '</span>',
         '</label>',
       );
     }
@@ -642,8 +649,7 @@
                 meta.textContent = meta.textContent + ai;
                 meta.dataset.aiAdded = '1';
               }
-              row.title =
-                'Rule-based purpose: ' + r.purpose + ' (confidence: ' + r.confidence + ')';
+              row.title = t.fieldPurposeTooltip(r.purpose, r.confidence);
             }
           }
         } catch (_e) {
@@ -670,10 +676,11 @@
   async function create() {
     const storage = window.OrtbtoolsIntelStorage;
     if (!storage || _selection.size === 0) return;
+    const t = localised();
     const nameInput = _root.querySelector('[data-builder-name]');
     const name =
       (nameInput && nameInput.value && nameInput.value.trim()) ||
-      'Custom ' + new Date().toISOString().slice(0, 16).replace('T', ' ');
+      t.defaultNamePrefix + ' ' + new Date().toISOString().slice(0, 16).replace('T', ' ');
 
     // Pick the most-frequent bucket among selected fields as the
     // dialect's primary bucket.

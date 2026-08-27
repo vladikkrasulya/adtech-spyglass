@@ -89,16 +89,16 @@ export function openSaveModal() {
   let presetPartner;
   let presetNotes;
   if (updating) {
-    title = currentSampleMeta.title || 'sample';
+    title = currentSampleMeta.title || t('sample.default_title');
     presetPartner = currentSampleMeta.partner_id;
     presetNotes = currentSampleMeta.notes || '';
   } else {
     title = (() => {
       try {
         const j = JSON.parse(reqVal);
-        return j.id || j.site?.domain || j.app?.bundle || 'sample';
+        return j.id || j.site?.domain || j.app?.bundle || t('sample.default_title');
       } catch {
-        return 'sample';
+        return t('sample.default_title');
       }
     })();
     // Don't seed the save-modal partner picker from the library filter.
@@ -310,7 +310,7 @@ export async function confirmSave(opts) {
   const currentSampleId = S.currentSampleId;
   const currentSampleMeta = S.currentSampleMeta;
   const updating = !asNew && !!currentSampleId;
-  let title = $('mTitle').value.trim() || 'sample';
+  let title = $('mTitle').value.trim() || t('sample.default_title');
   const partnerId = $('mPartner').value || null;
   const notes = $('mNotes').value.trim();
   // "Save as new" forks the current sample. If the user didn't tweak the
