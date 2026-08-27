@@ -297,11 +297,11 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
       `packages/core/messages/index.js` fallback-order change) warrant a Core patch bump per
       Constitution Principle IV/VIII; record the decision (bump or explicit no-bump rationale)
       in this file's Evidence.
-- [ ] T016 Run `npm run ci`; add the 015 row to `specs/ROADMAP.md` (In Progress → Complete when
+- [x] T016 Run `npm run ci`; add the 015 row to `specs/ROADMAP.md` (In Progress → Complete when
       done) and a CHANGELOG bullet under the next unreleased app version; commit ONLY authored
       paths per package (never `git add -A` in this shared worktree — stage each package's
       exact file list plus this feature's own `specs/`/`docs/` paths).
-- [ ] T017 Release through the standing path when gates settle (push → hosted CI → fresh
+- [x] T017 Release through the standing path when gates settle (push → hosted CI → fresh
       backup → exact-SHA deploy → live verification), then close the 015 rows and report
       version/tag/SHA/gates.
 
@@ -434,16 +434,41 @@ tests/locale-routes.test.js tests/model-free-contract.test.js` → **159/159 pas
   same pass (caret on 0.x pins the minor; without this the CLI cannot resolve the new Core), and
   CLI itself takes a patch bump `0.1.1` → `0.1.2` to carry that range change (no CLI contract
   change).
-- T016: Partially done in this release-prep pass (2026-08-27). Done: all version surfaces
-  (`package.json`, `packages/core/package.json`, `packages/cli/package.json`,
-  `package-lock.json` workspace entries, `public/version.js`, the 9 static-HTML
-  `data-ortbtools-version` spots, `specs/000-platform-baseline/spec.md`/`plan.md`, this
-  package's own `locales-versioning.md` table); the `specs/ROADMAP.md` 015 row moved to
-  Implemented/release-pending with the `1.18.0`/`0.37.0`/`0.1.2` triple and both commit SHAs;
-  the `CHANGELOG.md` `v1.18.0` entry added citing `d66e643`/`e921648`; `npm run ci` run (see
-  report for exit status). Not done, and deliberately left to the operator per this session's
-  standing instructions: staging and committing the authored paths — this agent does not run
-  `git add`/`commit`.
-- T017: Not started. Release (push → hosted CI → fresh backup → exact-SHA deploy → live
-  verification) is the operator's next step once T016's commit lands; `d66e643` and `e921648`
-  are committed locally but not yet pushed to `origin/main` (currently 2 commits ahead).
+- T016: Completed 2026-08-27. All version surfaces synced (`package.json`,
+  `packages/core/package.json`, `packages/cli/package.json`, `package-lock.json` workspace
+  entries, `public/version.js`, the 9 static-HTML `data-ortbtools-version` spots,
+  `specs/000-platform-baseline/spec.md`/`plan.md`, this package's own
+  `locales-versioning.md` table); the `CHANGELOG.md` `v1.18.0` entry added citing
+  `d66e643`/`e921648`/`adde7f5`; also folded in the English half of the `builder.info`/
+  `builder.cluster_meta` plural-agreement fix (the uk/ru sides landed in `d66e643`/`e921648`,
+  English had carried the same `{n}` agreement defect all along). `npm run ci` green: 2743
+  tests, 0 failures, 0 typecheck errors, 3 pre-existing lint warnings in files this feature
+  did not touch. Staged and committed by the integrator as `adde7f5` (this agent did not run
+  `git add`/`commit`, per standing instructions).
+- T017: Completed 2026-08-27 through the standing path. Pushed `f8966cb..adde7f5` `main` ->
+  `main`; `HEAD == main == origin/main == adde7f5`. Pre-push gate `npm run ci` green (same
+  2743/0/0/3 result cited in T016). Fresh pre-deploy backup taken at 13:49, immediately before
+  deploy: `/srv/DATA/Backups/ortbtools/ortbtools-2026-08-27.db.gz` (3,173,360 bytes) and
+  `content-posts-2026-08-27.tar.gz` (1,814 bytes), both `0600 root`. `./scripts/deploy.sh` ->
+  "DEPLOY OK: v1.18.0 (adde7f5) is live", image `ortbtools:adde7f5`, readiness healthy at t=6s,
+  SMOKE OK across all 19 checks including all three locales of `/inspector`, `/about`,
+  `/account`, and blog. `scripts/label-calibration.js` re-run before and after the persona
+  change scored identically (tune 19/19 mean deviation 0.011, holdout 9/10 mean deviation
+  0.005, zero answers at exactly 1.0 in both runs), confirming ADR-012 condition 2 held through
+  the release. Live post-deploy check: `/api/analyze` finding text resolves en/uk/ru correctly,
+  and with no `?locale=` it now returns English per ADR-014. A separate live-verification agent
+  ran immediately after deploy and returned **PASS with zero defects**: version.js and all 9
+  baked HTML fallbacks report `v1.18.0` with no stale versions; all 9 inspector/about/account
+  routes plus the 3 blog routes return 200 with `<html lang>` matching the route and
+  genuinely-translated visible copy (Cyrillic-density check plus direct title/heading reads);
+  hreflang/canonical/`og:locale:alternate` cover all three locales on public pages, and the
+  noindex,nofollow account pages still carry the full hreflang triple; the `kt-lang` cookie
+  redirect fires correctly for ru/uk and correctly does not fire for en; the blog smoke-test
+  endpoint returns ok/markdown/welcome with fully distinct translated titles for en/uk/ru; a
+  systematic grep of all 18 fetched pages found zero `[bracket.key]` leaks and zero
+  un-interpolated `{n}`/`{pct}` placeholders; the live `i18n.js` was loaded in a node sandbox
+  and confirmed exact 305/305/305 key parity across en/uk/ru with no empty values, and confirmed
+  the `builder.info`/`builder.cluster_meta` plural-agreement fix is present and correct in all
+  three locales; `/i18n.js` and `/version.js` served by the container are byte-identical to the
+  repo's `public/` files, ruling out a stale-cache false green. No open follow-ups from this
+  check.

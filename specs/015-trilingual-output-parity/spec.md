@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-27
 
-**Status**: In Progress
+**Status**: Complete
 
 **Input**: `docs/i18n-audit-2026-08-27.md` — a 20-agent audit (10 scanners, 10 skeptics, plus a
 deterministic key-parity script and a letter-set-contamination script) of every locale-carrying
