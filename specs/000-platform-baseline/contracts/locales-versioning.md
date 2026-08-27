@@ -71,9 +71,9 @@ The repository contains three independently versioned surfaces:
 
 | Surface           | Current version | Source of truth              | Coupled repository surfaces                                        |
 | ----------------- | --------------- | ---------------------------- | ------------------------------------------------------------------ |
-| Web application   | `1.17.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
-| `@ortbtools/core` | `0.36.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
-| `@ortbtools/cli`  | `0.1.1`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
+| Web application   | `1.18.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
+| `@ortbtools/core` | `0.37.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
+| `@ortbtools/cli`  | `0.1.2`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
 
 The app's browser display form is `v` followed by the root package version. `public/version.js`
 paints that value into runtime markers. The no-JavaScript/static fallback in every localized About

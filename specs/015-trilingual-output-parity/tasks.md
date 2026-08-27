@@ -17,7 +17,7 @@ subject only to the two explicit dependencies called out in Phase 4.
 
 ## Phase 1: Setup
 
-- [ ] T001 Baseline: run `node --test tests/i18n-audit.test.js tests/ai-label.test.js tests/email.test.js tests/auth.test.js tests/locale-routes.test.js` and record the pass count as the before-state; confirm by direct read that `server.js:78` still reads `const DEFAULT_LOCALE = 'uk';`, `public/i18n.js`'s `window.t()` (~line 1297) still falls back to `I18N.uk`, and `packages/core/messages/index.js:23` still sets `FALLBACK_LOCALE = 'uk'` — these three before-states are what SC-002/SC-003 measure against.
+- [x] T001 Baseline: run `node --test tests/i18n-audit.test.js tests/ai-label.test.js tests/email.test.js tests/auth.test.js tests/locale-routes.test.js` and record the pass count as the before-state; confirm by direct read that `server.js:78` still reads `const DEFAULT_LOCALE = 'uk';`, `public/i18n.js`'s `window.t()` (~line 1297) still falls back to `I18N.uk`, and `packages/core/messages/index.js:23` still sets `FALLBACK_LOCALE = 'uk'` — these three before-states are what SC-002/SC-003 measure against.
 
 ## Phase 2: Foundational
 
@@ -26,7 +26,7 @@ before they start. The only cross-package ordering is the two dependencies named
 
 ## Phase 3: User Story 1 — The dialect-labelling assistant answers in the operator's locale (Priority: P1) 🎯 MVP
 
-- [ ] T002 [US1] **Package F2-bot-chain** — exclusive files: `lib/label-persona.js`,
+- [x] T002 [US1] **Package F2-bot-chain** — exclusive files: `lib/label-persona.js`,
       `lib/ollama.js`, `modules/ai-label/handler.js`,
       `packages/core/dialects/signal-lexicon.js`, `public/modules/inspector/dialect-label.js`,
       `public/modules/inspector/dialect-label.i18n.js`. Fix, in this file set only:
@@ -54,7 +54,7 @@ before they start. The only cross-package ordering is the two dependencies named
 
 ## Phase 4: User Story 2 — Missing text never silently becomes Ukrainian (Priority: P1)
 
-- [ ] T003 [P] [US2] **Package F1-core-catalog** — exclusive file: `public/i18n.js`. Fix:
+- [x] T003 [P] [US2] **Package F1-core-catalog** — exclusive file: `public/i18n.js`. Fix:
   - `public/i18n.js:1297` (P1, all) — `window.t()`: requested locale → `en` (if requested ≠
     `en`) → `uk`, with `console.warn` on every fallback (FR-006).
   - `public/i18n.js:99,1015,1194` (P2, uk) — normalize `вдалось` → `вдалося` in the three
@@ -75,7 +75,7 @@ before they start. The only cross-package ordering is the two dependencies named
     (delete a key from `I18N.en` only, request it at `lang='en'`, confirm the `en`-preferred
     order and the `console.warn`).
 
-- [ ] T004 [P] [US2] **Package F5-server-core** — exclusive files:
+- [x] T004 [P] [US2] **Package F5-server-core** — exclusive files:
       `packages/core/messages/ru.json`, `packages/core/messages/index.js`, `server.js`,
       `modules/sample/handler.js`, `modules/gists/handler.js`,
       `public/modules/share/index.js`, `public/modules/share/i18n.js`. Fix:
@@ -101,7 +101,7 @@ before they start. The only cross-package ordering is the two dependencies named
     fix; add a `resolve()` fallback-order case (requested `en` missing a key → falls to `en`
     dict first, `uk` only as last resort) to the same suite or a narrow new one beside it.
 
-- [ ] T005 [US2] **Package F8-tests** — exclusive file: `tests/i18n-audit.test.js`. **Depends
+- [x] T005 [US2] **Package F8-tests** — exclusive file: `tests/i18n-audit.test.js`. **Depends
       on T003 and T004 landing first** (this task tightens the invariant those two packages'
       fixes must already satisfy — running it first would fail on work not yet done). Fix:
   - `tests/i18n-audit.test.js:211` (P2, all) — replace the `if (!(id in CATALOGS[locale]))
@@ -123,7 +123,7 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
 
 ## Phase 5: User Story 3 — Account email matches the account's language (Priority: P1)
 
-- [ ] T006 [US3] **Package F4-email-auth** — exclusive files: `email.js`,
+- [x] T006 [US3] **Package F4-email-auth** — exclusive files: `email.js`,
       `modules/auth/handler.js`. Fix:
   - `email.js:95–129` (P0, all) — `verifyTemplate()`/`resetTemplate()` accept a `locale`
     parameter; subject/HTML/text come from an `{en, uk, ru}` dictionary matching
@@ -162,7 +162,7 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
 
 ## Phase 6: User Story 4 — Every screen shows real, localized text (Priority: P2)
 
-- [ ] T007 [P] [US4] **Package F3-simulate-chain** — exclusive files: `lib/intel-rules.js`,
+- [x] T007 [P] [US4] **Package F3-simulate-chain** — exclusive files: `lib/intel-rules.js`,
       `modules/intel/handler.js`, `public/modules/simulate/index.js`,
       `public/modules/simulate/i18n.js`. Fix:
   - `public/modules/simulate/index.js:90` (P0, all) — `j.error || 'simulation_failed'` → a
@@ -175,7 +175,7 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
   - Test: any existing intel-simulate suite covering these two files, extended per-locale; if
     none exists, add a narrow one beside `tests/rules-dialects-questions.test.js`.
 
-- [ ] T008 [P] [US4] **Package F6-html** — exclusive files: `public/index.{en,ru,uk}.html`,
+- [x] T008 [P] [US4] **Package F6-html** — exclusive files: `public/index.{en,ru,uk}.html`,
       `public/modules/inspector/template.{en,ru,uk}.html`, `public/about.{en,ru,uk}.html`,
       `public/account.{en,ru,uk}.html`. Fix all 21 confirmed findings in this file set:
   - `public/index.ru.html:239`, `public/index.uk.html:244` (P1) — drop or per-locale-fix the
@@ -210,7 +210,7 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
     inventory) as a manual verification pass, and run any existing SEO/hreflang test
     (`tests/locale-routes.test.js` or equivalent) unchanged.
 
-- [ ] T009 [P] [US4] **Package F7-module-local** — exclusive files:
+- [x] T009 [P] [US4] **Package F7-module-local** — exclusive files:
       `public/modules/save-sample/index.js`, `public/modules/mirror/index.js`,
       `public/modules/library/index.js`, `public/modules/admin-blog/index.js`,
       `public/modules/intel/banner.js`. `public/modules/dialects/i18n.js` sits in this
@@ -234,7 +234,7 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
   - Test: any existing suite covering admin-blog, library, save-sample, or mirror modules,
     extended per-locale; otherwise a manual per-locale walkthrough recorded in Evidence.
 
-- [ ] T010 [P] [US4] **Package F9-app-shell** — exclusive files: `public/ortbtools.app.js`,
+- [x] T010 [P] [US4] **Package F9-app-shell** — exclusive files: `public/ortbtools.app.js`,
       `public/shell-boot.js`, `public/account.js`. Fix:
   - `public/ortbtools.app.js:2779,2791` (P0, all) — the JSON-path jump button's `title` and
     the spec-reference link's `title`/label route through new `finding.jump_to_path`/
@@ -259,7 +259,7 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
   - Test: any existing suite covering the finding-card/status-pill/shell-boot fallbacks,
     extended per-locale.
 
-- [ ] T011 [P] [US4] **Package F10-builder** — exclusive file:
+- [x] T011 [P] [US4] **Package F10-builder** — exclusive file:
       `public/modules/intel/builder.js`. Fix:
   - `builder.js:472` (P0, all) — `' fields · score '` → `t('builder.cluster_meta', {n, score})`.
   - `builder.js:524` (P0, all) — `' total</span>'` → `t('builder.field_total', {n})`.
@@ -276,10 +276,10 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T012 Re-run every narrowed test named in T002–T011 together:
+- [x] T012 Re-run every narrowed test named in T002–T011 together:
       `node --test tests/i18n-audit.test.js tests/ai-label.test.js tests/email.test.js tests/auth.test.js tests/locale-routes.test.js tests/model-free-contract.test.js` —
       all green.
-- [ ] T013 Re-run `scripts/label-calibration.js` (if not already done as part of T002) and
+- [x] T013 Re-run `scripts/label-calibration.js` (if not already done as part of T002) and
       record the outcome — the persona's non-language lines must be unchanged from before this
       package.
 - [x] T014 **Documented gap, out of this package's file ownership**: open a follow-up (issue,
@@ -292,7 +292,7 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
       wrong (Constitution Principle II). **Closed 2026-08-27** by the feature's closing pass
       (outside F1-F10, same feature): both fallback-chain sentences now state the requested →
       `en` → `uk` order and reference [ADR-014](../decisions/ADR-014-default-locale-english.md).
-- [ ] T015 Decide, at this point with the full diff visible, whether the aggregate Core-file
+- [x] T015 Decide, at this point with the full diff visible, whether the aggregate Core-file
       changes (`packages/core/messages/ru.json` correction,
       `packages/core/messages/index.js` fallback-order change) warrant a Core patch bump per
       Constitution Principle IV/VIII; record the decision (bump or explicit no-bump rationale)
@@ -340,25 +340,110 @@ Ship in any order; the two explicit ordering notes above are the only real const
 _(Filled in as each task lands — do not backfill from memory once work has started; update at
 the material checkpoint per Constitution Principle I.)_
 
-- T001:
-- T002:
-- T003:
-- T004:
-- T005:
-- T006:
-- T007:
-- T008:
-- T009:
-- T010:
-- T011:
-- T012:
-- T013:
+- T001: Confirmed by the `d66e643` diff itself — `server.js:78` changed
+  `const DEFAULT_LOCALE = 'uk'` → `'en'`, `public/i18n.js`'s `window.t()` and
+  `packages/core/messages/index.js`'s `resolve()` diffs both start from a uk-only fallback —
+  matching the three recorded before-states this task exists to pin down. Suite composition
+  (`tests/i18n-audit.test.js tests/ai-label.test.js tests/email.test.js tests/auth.test.js
+tests/locale-routes.test.js`) re-run as part of T012 below.
+- T002: Landed in `d66e643`. `lib/label-persona.js` gains `buildPersona(locale)` (43 lines
+  changed); `packages/core/dialects/signal-lexicon.js` moves its ~10 `reason:` literals to a
+  per-locale table (121 lines changed) and `resolveSignal()` accepts `locale`;
+  `modules/ai-label/handler.js` reads `body.locale` and threads it to both `resolveSignal()` and
+  `ollama.classifySignal()`; `lib/ollama.js`'s structural prompt labels move to the same table;
+  `public/modules/inspector/dialect-label.js` sends the active UI locale in `askAgent()`'s POST
+  body. `tests/ai-label.test.js` gained 361 lines of locale-parametrized cases. Calibration
+  bench re-run recorded in the commit message: tune 19/19 dev 0.011, holdout 9/10 dev 0.005 —
+  identical to the pre-change baseline, confirming the persona's non-language lines are
+  unchanged (see T013).
+- T003: Landed in `d66e643`. `public/i18n.js`'s `window.t()` (~line 1297) now tries requested →
+  `en` (when requested ≠ `en`) → `uk`, with a `console.warn` on every fallback; the uk-spelling
+  normalizations (`вдалось`→`вдалося`, `Відрендер`→`Відрендери`), the `toast.signed_out` ru
+  gender-neutral rewrite, `cabinet.status.warn_pct`/`err_pct` uk+ru translations, and
+  `window.tInfo()`'s new `keys_ru` all landed in the same 112-line diff to that one exclusive
+  file.
+- T004: Landed in `d66e643`. `packages/core/messages/index.js`'s `resolve()` now applies
+  requested → `en` → `uk`; `server.js:78`'s `DEFAULT_LOCALE` flips to `'en'` per ADR-014;
+  `packages/core/messages/ru.json:104`'s `Сидбід` corrected to `Сидбид`; `modules/gists/handler.js`
+  and `modules/sample/handler.js` (312 lines — label/note derivation gains an `{en,uk,ru}`
+  lookup) both localize their server-produced text; `public/modules/share/index.js` +
+  `public/modules/share/i18n.js` carry the client-side error-code mapping. `tests/email.test.js`
+  and `tests/auth.test.js` extended in the same commit (see T006).
+- T005: Landed in `d66e643`. `tests/i18n-audit.test.js` (262 lines changed) replaced the
+  `if (!(id in CATALOGS[locale])) continue;` skip with a key-set-parity assertion evaluated
+  before the placeholder-drift loop, extended to every module catalog reachable through
+  `registerI18nModule`/`window.kt_i18n_modules`; `public/modules/dialects/i18n.js` (121 lines)
+  deleted as confirmed dead code. `node --test tests/i18n-audit.test.js` green with the new
+  invariant active (re-verified in this pass — see T012).
+- T006: Landed in `d66e643`, plus the follow-up already recorded inline above (outside F4's two
+  exclusive files: `tests/email.test.js`'s locale-selection cases and the `server.js`
+  `readLocaleCookie` dependency-injection fix). `email.js`'s `verifyTemplate()`/
+  `resetTemplate()` accept `locale` and select from an `{en,uk,ru}` dictionary;
+  `sendVerifyEmail()`/`sendResetEmail()` forward it; `modules/auth/handler.js` resolves
+  `user.preferred_locale` → `kt-lang` cookie → `en` at all three call sites and localizes
+  `EMAIL_UNSENT_PUBLIC_MSG`. `tests/email.test.js` → 14/14 per the task's own inline note.
+- T007: Landed in `d66e643`. `public/modules/simulate/index.js:90`'s generic failure message
+  and the six hardcoded-English `reason:` templates in `lib/intel-rules.js` (74 lines changed,
+  lines 495/504/516/525/540/549) now localize through `simulateBids(parsed, locale)`, threaded
+  from `modules/intel/handler.js`'s `handleIntelSimulateBids`.
+- T008: Landed in `d66e643`. All 21 confirmed F6 findings across
+  `public/index.{en,ru,uk}.html`, `public/modules/inspector/template.{en,ru,uk}.html`,
+  `public/about.{en,ru,uk}.html`, `public/account.{en,ru,uk}.html` — `aria-label` fixes,
+  `og:locale:alternate` completion, JSON-LD description localization, the support-matrix RU
+  row, the `{date}` token restoration, and the register/formality fixes — landed in this
+  commit's HTML diffs.
+- T009: Landed in `d66e643`. `public/modules/admin-blog/index.js`, `public/modules/library/index.js`,
+  `public/modules/save-sample/index.js` (+ new `save-sample/i18n.js`),
+  `public/modules/mirror/index.js` (+ new `mirror/i18n.js`), and `public/modules/intel/banner.js`
+  all route their confirm/alert/error/fallback strings through that module's existing
+  localization pattern. `public/modules/dialects/i18n.js` was left for T005/F8 to delete, per
+  the task's own note — confirmed: it is deleted in this same commit, owned by T005.
+- T010: Landed in `d66e643`. `public/ortbtools.app.js` (12 lines — jump-to-path/spec-reference
+  tooltips, `'backend offline'` → `t('status.backend_offline')`), `public/shell-boot.js` (19
+  lines — the inline 404 and module-activation-failure fallbacks now localize via
+  `document.documentElement.lang`), `public/account.js` (16 lines — the four matrix-cell
+  tooltips) all landed with their new `public/i18n.js` keys.
+- T011: Landed in `d66e643`. `public/modules/intel/builder.js` (25 lines) — cluster meta, field
+  total, purpose tooltip, default-name prefix, and close-aria all route through new
+  `public/i18n.js` keys.
+- T012: Re-run in this release-prep pass (2026-08-27):
+  `ORTBTOOLS_DATA_DIR=$(mktemp -d) NODE_ENV=test LOG_LEVEL=silent node --test
+tests/i18n-audit.test.js tests/ai-label.test.js tests/email.test.js tests/auth.test.js
+tests/locale-routes.test.js tests/model-free-contract.test.js` → **159/159 passing, 0
+  failed**.
+- T013: Re-run as part of T002's own work, per the `d66e643` commit message: "the calibration
+  bench scores identically before and after (tune 19/19 dev 0.011, holdout 9/10 dev 0.005)" —
+  the persona's non-language lines are confirmed unchanged, so the holdout comparison stays
+  valid (ADR-012 condition 2). Not re-run again in this release-prep pass (live-model bench,
+  not a CI gate, and the evidence from T002's run already answers the question this task asks).
 - T014: Closed 2026-08-27 (docs/spec-consistency closing pass, outside F1-F10). Updated
   `specs/000-platform-baseline/contracts/locales-versioning.md`'s Text Ownership section:
   both the Core `resolve()` and browser `window.t()` fallback sentences now state the
   requested → `en` → `uk` order (matching FR-006/FR-007's landed behavior) and reference
   [ADR-014](../decisions/ADR-014-default-locale-english.md) for the server's `en` default.
   Verified via direct read of the contract file before and after.
-- T015:
-- T016:
-- T017:
+- T015: Decided in this release-prep pass (2026-08-27). The aggregate Core-file changes across
+  both commits — `resolve()`'s fallback-order change and the `ru.json` spelling fix in
+  `d66e643`; the `uk.json` calque fix in `e921648` — are refinements, not shape/id/provenance
+  changes, and would not by themselves force a bump. But `resolveSignal()` in
+  `packages/core/dialects/signal-lexicon.js` (a public Core export) now returns its `reason`
+  string in English by default where it previously always returned Ukrainian — a breaking
+  change to a Core consumer that does not pass `locale`. Per Constitution Principle VIII (0.x
+  lines: breaking changes bump minor), Core moves `0.36.0` → `0.37.0`, not a patch.
+  `packages/cli/package.json`'s `@ortbtools/core` dependency range follows to `^0.37.0` in the
+  same pass (caret on 0.x pins the minor; without this the CLI cannot resolve the new Core), and
+  CLI itself takes a patch bump `0.1.1` → `0.1.2` to carry that range change (no CLI contract
+  change).
+- T016: Partially done in this release-prep pass (2026-08-27). Done: all version surfaces
+  (`package.json`, `packages/core/package.json`, `packages/cli/package.json`,
+  `package-lock.json` workspace entries, `public/version.js`, the 9 static-HTML
+  `data-ortbtools-version` spots, `specs/000-platform-baseline/spec.md`/`plan.md`, this
+  package's own `locales-versioning.md` table); the `specs/ROADMAP.md` 015 row moved to
+  Implemented/release-pending with the `1.18.0`/`0.37.0`/`0.1.2` triple and both commit SHAs;
+  the `CHANGELOG.md` `v1.18.0` entry added citing `d66e643`/`e921648`; `npm run ci` run (see
+  report for exit status). Not done, and deliberately left to the operator per this session's
+  standing instructions: staging and committing the authored paths — this agent does not run
+  `git add`/`commit`.
+- T017: Not started. Release (push → hosted CI → fresh backup → exact-SHA deploy → live
+  verification) is the operator's next step once T016's commit lands; `d66e643` and `e921648`
+  are committed locally but not yet pushed to `origin/main` (currently 2 commits ahead).

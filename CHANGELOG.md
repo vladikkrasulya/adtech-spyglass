@@ -6,6 +6,53 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.18.0 — the product answers in the reader's language
+
+- App `1.18.0`, `@ortbtools/core` `0.37.0`, `@ortbtools/cli` `0.1.2`.
+
+- The AI-assisted dialect labeller, the bid simulator, and transactional email all replied in
+  Ukrainian regardless of the visitor's own locale. A 20-agent audit
+  (`docs/i18n-audit-2026-08-27.md`, 68 confirmed defects) found none of the three ever had a
+  locale plumbed to them at all: `lib/label-persona.js`'s system prompt and
+  `packages/core/dialects/signal-lexicon.js`'s ~10 hardcoded `reason:` strings were fixed
+  Ukrainian; `lib/intel-rules.js`'s bid-simulator reasons carried the mirror-image defect in
+  fixed English; and `email.js`'s verify/reset templates never read `users.preferred_locale`, a
+  column that had existed all along. All three now resolve and follow the requesting locale end
+  to end (`buildPersona(locale)` varies exactly one sentence; the calibration bench scores
+  identically before and after — tune 19/19 dev 0.011, holdout 9/10 dev 0.005).
+
+- Both message-resolution fallback chains — `public/i18n.js`'s `window.t()` and Core's
+  `packages/core/messages/index.js` `resolve()` — fell back to Ukrainian for every locale,
+  including English, so a single missing key could show Ukrainian text to an English reader with
+  no signal anything was wrong. Both fallback chains changed from "requested locale → uk" to
+  "requested locale → en → uk", and the browser now warns on every fallback in development.
+
+- **BREAKING**: `server.js`'s `DEFAULT_LOCALE` changed from `'uk'` to `'en'`. A
+  `POST /api/analyze` call (or any other route through `resolveLocale()`) that omits `?locale=`
+  now receives English finding text instead of Ukrainian — there is no version negotiation or
+  deprecation window. See
+  [ADR-014](specs/decisions/ADR-014-default-locale-english.md).
+
+- **BREAKING for @ortbtools/core consumers**: `resolveSignal()`'s `reason` field now defaults to
+  English rather than Ukrainian when no locale is requested, mirroring the fallback-order change
+  above; `@ortbtools/core` 0.36.0 → 0.37.0.
+
+- New regression gates: three-locale key parity now fails (not skips) for every Core message
+  catalog and every browser module dictionary reachable through `registerI18nModule`/
+  `window.kt_i18n_modules`; a script-hygiene check rejects Ukrainian-exclusive letters
+  (і ї є ґ) inside Russian values and Russian-exclusive letters (ы ъ э ё) inside Ukrainian ones;
+  and a lexical calque guard catches what spelling alone cannot — a Russian or Ukrainian word
+  built entirely of letters the other alphabet also uses, sitting in the wrong locale's string.
+  The calque guard caught three defects that had already shipped (two `движок` calques and one
+  `співпадає` calque) and fixed all three, plus an unrelated agreement bug in `builder.info`'s
+  pluralization.
+
+- `@ortbtools/cli` bumped 0.1.1 → 0.1.2 to move its `@ortbtools/core` dependency range to
+  `^0.37.0` (caret on a 0.x version pins the minor, so without this bump the CLI cannot resolve
+  the new Core); no CLI contract change.
+
+  Commits `d66e643` and `e921648`.
+
 ### v1.17.0 — the push creative is drawn, icon first
 
 - The creative panel now synthesizes a push-notification card for push-material
