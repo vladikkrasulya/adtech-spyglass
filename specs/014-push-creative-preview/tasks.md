@@ -33,8 +33,8 @@ _(none — the change rides entirely on existing pipeline seams; no shared refac
 
 - [x] T006 Re-run existing preview suites: `node --test tests/creative-preview-browser.test.js tests/clear-resets-results-browser.test.js` — unchanged green (FR-007)
 - [x] T007 Measure-then-look: capture the after screenshot with the scratchpad harness, OPEN it and look (icon visible first, image second, no clipping); record before/after in Evidence (FR-008)
-- [ ] T008 Run `npm run ci`; add the 014 row to specs/ROADMAP.md (In Progress → Complete when done) and a CHANGELOG bullet under the next unreleased app version; commit ONLY authored paths (public/ortbtools.app.js, tests/push-preview-browser.test.js, specs/014-push-creative-preview/, specs/ROADMAP.md, CHANGELOG.md, .specify/feature.json is untracked)
-- [ ] T009 Release through the standing path when gates settle (push → hosted CI → fresh backup → exact-SHA deploy → live verification on the production Inspector), then close the 014 rows and report version/tag/SHA/gates
+- [x] T008 Run `npm run ci`; add the 014 row to specs/ROADMAP.md (In Progress → Complete when done) and a CHANGELOG bullet under the next unreleased app version; commit ONLY authored paths (public/ortbtools.app.js, tests/push-preview-browser.test.js, specs/014-push-creative-preview/, specs/ROADMAP.md, CHANGELOG.md, .specify/feature.json is untracked)
+- [x] T009 Release through the standing path when gates settle (push → hosted CI → fresh backup → exact-SHA deploy → live verification on the production Inspector), then close the 014 rows and report version/tag/SHA/gates
 
 ## Dependencies & Execution Order
 
@@ -56,3 +56,5 @@ after T003 if anything derails.
 - Discovered and specced: the frame CSP (`img-src data: blob:`) blocks remote images by design; the card inherits `maybeOfferAssetInlining` from the markup branch — the suite pins the offer with count 2. Spec edge case corrected accordingly (Constitution II).
 - T006: creative-preview + clear-resets suites 3/3 green.
 - T007 measure-then-look: after.png (safe-demo blur + "Show creative" over the painted card) and after-revealed.png (label, icon top-left, headline, body, hero image, click URL footer) captured and LOOKED AT — hierarchy icon→image per the owner. Suite: push-preview-browser 1/1 green (7 scenarios).
+- T008: first full gate caught the whole version surface (lock root, version.js, 6 HTML fallbacks, baseline docs — which were also still saying Core 0.35.0 from the 013 release) plus the assertJsonRoot static pin; all synced, `npm run ci` exit 0.
+- T009 release 2026-08-26/27: pushed `2efabb9..d854ae2`, hosted CI green, fresh verified backup (db 3173362 B + content, gunzip/tar-tested), `deploy.sh` → DEPLOY OK `v1.17.0` (`d854ae2`), smoke 18/18 PASS, RestartCount=0; live bundle serves `v1.17.0` with `findPushMaterial`/`renderPushToHtml`, and `/api/analyze` accepts the materials-array payload.
