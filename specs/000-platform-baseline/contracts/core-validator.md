@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.31.0`; CLI `0.1.1`
+**Current versions**: Core `0.37.0`; CLI `0.1.2`
 
 ## Public Core Surface
 
@@ -117,9 +117,12 @@ generation failure returns no output and no self-test rather than claiming succe
 
 ## Locales
 
-Core finding locales are `en`, `uk`, and `ru`. The Core fallback is Ukrainian. A message lookup that
-exists in no locale renders a bracketed finding id, making the missing key visible. Message files,
-spec-reference coverage, and localized behavior are part of rule delivery.
+Core finding locales are `en`, `uk`, and `ru`. A message missing from the requested locale resolves
+requested → `en` → `uk`, then renders a bracketed finding id when it exists in no locale, making the
+missing key visible. English sits ahead of Ukrainian because `en` is this codebase's canonical
+locale ([ADR-014](../../decisions/ADR-014-default-locale-english.md)); before 2026-08-27 the chain
+fell straight to Ukrainian, which silently returned Ukrainian text to English and Russian readers.
+Message files, spec-reference coverage, and localized behavior are part of rule delivery.
 
 ## CLI Contract
 
