@@ -127,12 +127,32 @@ the corpus does not supply it.
 
 The separately sourced rules the confidence and 14-scenario oracles name. Distinct provenance class.
 
-| Field        | Type   | Notes                                                                     |
-| ------------ | ------ | ------------------------------------------------------------------------- |
-| `key`        | string | Exact spelling                                                            |
-| `provenance` | enum   | `repo-grounded` \| `specification-rule`                                   |
-| `citation`   | string | Repository citation, or explicit "specification-frozen adjudication"      |
-| `outcome`    | object | Role + required exact score, or `ambiguous` with candidates, or `abstain` |
+| Field        | Type    | Notes                                                                |
+| ------------ | ------- | -------------------------------------------------------------------- |
+| `key`        | string  | Exact spelling                                                       |
+| `provenance` | enum    | `repo-grounded` \| `specification-rule`                              |
+| `citation`   | string  | Repository citation, or explicit "specification-frozen adjudication" |
+| `condition`  | object? | Predicate that must hold for the rule to apply; absent = always      |
+| `outcome`    | object  | One of four kinds, below                                             |
+
+**`condition` predicates** — closed set. A rule whose condition fails is treated as not present, so
+it neither resolves nor caps.
+
+| Predicate         | Value              | Needed by                                                             |
+| ----------------- | ------------------ | --------------------------------------------------------------------- |
+| `valueForm`       | `digit-only`       | `build` → `metadata @ 0.70` applies only to a digit-only string value |
+| `namespace`       | `ext` \| `imp.ext` | reviewed entries narrowed to one supported namespace                  |
+| `vendor` / `path` | partition selector | reviewed vendor/path partitions                                       |
+
+**`outcome` kinds** — closed set. The `cap` kind is what the first draft was missing: `type` and
+`format` do **not** establish a role at `0.40`, they bound whatever another source derives.
+
+| Kind        | Fields             | Semantics                                                                                                                                     |
+| ----------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolved`  | `role`, `score`    | Establishes one role at an exact score                                                                                                        |
+| `cap`       | `maxScore`         | Establishes nothing; lowers any score another source derives for this key. If no source establishes a singular role, the result is `abstain`. |
+| `ambiguous` | `roleCandidates[]` | `flag`, `limit`                                                                                                                               |
+| `abstain`   | —                  | `mode`, `t`                                                                                                                                   |
 
 Frozen contents: `adtype` / `ad_type` / `adformat` / `ad_format` → `format-declaration @ 0.90`;
 `creative_type` → `0.70`; `type` / `format` capped at `0.40`; `imp_count` → `measurement @ 0.70`;
@@ -148,7 +168,48 @@ Frozen contents: `adtype` / `ad_type` / `adformat` / `ad_format` → `format-dec
 
 ---
 
-## 6. LegacyVerdict — the classified existing resolver (R-05)
+## 6. RoutingFixture — `key-role-routing-matrix.v1.json`
+
+The SC-002 / SC-011 artifact. One fixture per required case; `D0` is frozen data captured before any
+resolver change, `D1` is measured by the test run.
+
+| Field         | Type    | Notes                                                                                       |
+| ------------- | ------- | ------------------------------------------------------------------------------------------- |
+| `id`          | string  | Stable fixture ID                                                                           |
+| `signalPath`  | string  | `ext.<key>` or `imp[].ext.<key>` — both namespaces are covered                              |
+| `signalValue` | any     | Value under test                                                                            |
+| `context`     | object? | Allowlisted impression context when the partition needs one                                 |
+| `partition`   | object? | The adjudication partition this fixture covers                                              |
+| `class`       | enum    | `partition` \| `named-rule` \| `collision-member` \| `unlisted-casing` \| `absent-key`      |
+| `D0`          | object  | **Frozen**: the final deterministic answer before the change, or `model` if it routed there |
+
+**Required coverage** (the generator rejects an incomplete matrix)
+
+- Every adjudication namespace/vendor/path partition across all **322** exact names.
+- Every separately named repo-backed rule.
+- **Every member** of each of the **22** case-collision groups — 47 spellings, not 22 representatives.
+- Unlisted-casing controls: a spelling absent from the manifests that differs only by case from a
+  present one. Expected `abstain`, never inheritance.
+- An opaque absent-key control in **both** supported namespaces.
+
+**Measured outcome per run**
+
+`D1` is recorded per fixture, and five route counts are reported **separately**: `exact-format`,
+`role-resolved`, `role-ambiguous`, `preserved-legacy`, `model`.
+
+**Invariants**
+
+- `D1 > D0` on deterministic answers (SC-002).
+- **No fixture answered deterministically in `D0` may reach the model in `D1`.** This is the
+  no-demotion guarantee, and it is only provable against a frozen baseline.
+- Every `resolved` / `ambiguous` outcome makes **zero** model calls.
+- `abstain` follows the precedence matrix; it does not automatically mean a model call.
+- `D0` must be captured against pre-change code. Capturing it after the change measures the new
+  behaviour against itself (R-09).
+
+---
+
+## 7. LegacyVerdict — the classified existing resolver (R-05)
 
 | `kind`                  | Meaning                                                                                                       |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
@@ -160,7 +221,7 @@ Frozen contents: `adtype` / `ad_type` / `adformat` / `ad_format` → `format-dec
 
 ---
 
-## 7. SignalAnswer — the response the operator receives
+## 8. SignalAnswer — the response the operator receives
 
 Discriminated on `resolutionStatus`.
 
@@ -172,18 +233,33 @@ makes no specific value claim.
 **`ambiguous`** (new variant, the contract extension): `resolutionStatus`, `roleCandidates[]`,
 `evidence[]`. No singular role, no confidence, no preselected label.
 
-**Model answer**: existing `label` / `confidence` / `source` shape unchanged; may additionally carry
-routing evidence that a table abstention preceded it.
+**`preserved-legacy`** (not a new variant — the _existing_ deterministic response, unchanged): when
+the precedence matrix preserves a legacy `broad-heuristic` or exact-format verdict, the response is
+byte-compatible with today's `source: 'lexicon'` answer. It carries **no** `resolutionStatus`, no
+`role`, no `roleConfidence`. Clients that predate this feature keep working because this path did not
+change. This is the row the first draft of the contract omitted.
+
+**Model answer**: existing `label` / `confidence` / `source` shape unchanged, and it **MUST** carry
+routing evidence recording that the role layer abstained before the model was called. Required, not
+optional — without it, `preserved-legacy` and `model` are indistinguishable in the route counts
+SC-002 demands.
 
 **Invariants**
 
 - Only `valueStatus: resolved` may carry a specific `valueLabel` (FR-010).
+- **No-decode**: `valueLabel` is never derived from an opaque numeric value, in any variant, in any
+  locale, at any confidence (FR-009). A numeric value can never produce a `FORMAT_LABELS` member.
+- `label` is a **projection**, never an alias of `role`. The projection is the enumerated mapping in
+  §1; no other mapping exists.
 - Existing model success / unavailable / timeout / error required fields and semantics are unchanged.
-- `label` is a **projection**, never an alias of `role`.
+- **No suppression from a suggestion.** None of these variants suppresses a finding. Suppression
+  begins only after an explicit operator save, and then only for the exact matching `question` — the
+  suppression matrix in the spec governs it, and no role introduced here creates the
+  value-independent mapping deferred by CL-001.
 
 ---
 
-## 8. Unchanged: DialectMapping
+## 9. Unchanged: DialectMapping
 
 `dialect_mappings` keeps its columns, its `(dialect_id, signal_path, signal_value)` identity, and its
 `signal_value TEXT NOT NULL` constraint. **No migration.** Only the accepted value set for
@@ -197,6 +273,9 @@ and is explicitly out of scope.
 ```text
 signal
   └─ exact saved mapping? ──────────────── yes ─→ saved mapping (stop)
+       │   (resolved server-side: default dialect for the authenticated
+       │    operator → lookupMapping(normalizedPath, serializedValue); R-11.
+       │    No default dialect ⇒ no saved-mapping precedence.)
        │ no
        ├─ legacy verdict classified (§6)
        ├─ role layer state resolved (§4/§5, exact-case §3)

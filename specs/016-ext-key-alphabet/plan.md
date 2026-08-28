@@ -70,28 +70,31 @@ roles; one new response variant; 14 frozen regression scenarios plus a 2-fixture
 
 _GATE: evaluated before Phase 0 and re-evaluated after Phase 1 design._
 
-| Principle                                | Verdict          | How this plan satisfies it                                                                                                                                                                                                                                                                                      |
-| ---------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **I. Spec Kit is working memory**        | Pass             | Constitution, roadmap, baseline contracts and the feature package were read before authoring. `spec.md` → this `plan.md` → `tasks.md` next. Task state updates at phase boundaries.                                                                                                                             |
-| **II. Truth is evidence-backed**         | Pass             | Every frozen count and digest re-verified this session (see Summary). No unrun check is reported as passing. Repository state and deployed state are distinguished throughout.                                                                                                                                  |
-| **III. Privacy and security**            | **Action req.**  | FR-013 sends the impression-shape assessment to the model — **new data on the egress path**, so `docs/PRIVACY.md` and its regression test MUST change in the same commit. FR-012 forbids retaining the live payload: the two live observations enter the repo only as redacted synthetic replicas.              |
-| **IV. Deterministic, compatible**        | **ADR required** | Nine new storable labels and the `ambiguous` response variant are public contract changes. Requires ADR-015, boundary tests, and FR-021/SC-010 compatibility coverage. Finding IDs, dedup semantics and storage schema are untouched. Core stays network-free.                                                  |
-| **V. Architecture explicit and bounded** | Pass             | No new framework, bundler, service or store. The role layer is a pure module beside `signal-lexicon.js` in the subsystem that already owns this vocabulary. Manifests are data, not code generation at runtime.                                                                                                 |
-| **VI. Locales move together**            | Pass             | Nine new labels need display names and descriptions in en/uk/ru in the same change. Resolves the picker inconsistency in Phase 0 (see research R-06).                                                                                                                                                           |
-| **VII. Proportional verification**       | Pass             | Every behaviour change carries a regression test. The 14-scenario oracle and the 2-fixture ceiling oracle are executable. Bench is run before and after and recorded, and is explicitly not a CI gate.                                                                                                          |
-| **VIII. Traceable releases**             | Pass             | Core public contract changes → `@ortbtools/core` `0.37.0` → `0.38.0` (MINOR, additive). CLI dependency range and `package-lock.json` follow. App bump only if operator-visible copy changes — it does (FR-015, FR-023), so app `1.18.0` → `1.19.0` with `public/version.js`, the per-locale HTML, and baseline. |
+| Principle                                | Verdict          | How this plan satisfies it                                                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **I. Spec Kit is working memory**        | Pass             | Constitution, roadmap, baseline contracts and the feature package were read before authoring. `spec.md` → this `plan.md` → `tasks.md` next. Task state updates at phase boundaries.                                                                                                                                                                                                      |
+| **II. Truth is evidence-backed**         | Pass             | Every frozen count and digest re-verified this session (see Summary). No unrun check is reported as passing. Repository state and deployed state are distinguished throughout.                                                                                                                                                                                                           |
+| **III. Privacy and security**            | Pass             | **The model privacy allowlist does not expand** (spec assumption; R-08). FR-013's shape verdict is computed and surfaced locally, never added to the prompt — the model keeps receiving exactly what ADR-012 §6 enumerates, and `docs/PRIVACY.md` is unchanged. FR-012 forbids retaining the live payload: the two live observations enter the repo only as redacted synthetic replicas. |
+| **IV. Deterministic, compatible**        | **ADR required** | Nine new storable labels and the `ambiguous` response variant are public contract changes. Requires ADR-015, boundary tests, and FR-021/SC-010 compatibility coverage. Finding IDs, dedup semantics and storage schema are untouched. Core stays network-free.                                                                                                                           |
+| **V. Architecture explicit and bounded** | Pass             | No new framework, bundler, service or store. The role layer is a pure module beside `signal-lexicon.js` in the subsystem that already owns this vocabulary. Manifests are data, not code generation at runtime.                                                                                                                                                                          |
+| **VI. Locales move together**            | Pass             | Nine new labels need display names and descriptions in en/uk/ru in the same change. Resolves the picker inconsistency in Phase 0 (see research R-06).                                                                                                                                                                                                                                    |
+| **VII. Proportional verification**       | Pass             | Every behaviour change carries a regression test. The 14-scenario oracle and the 2-fixture ceiling oracle are executable. Bench is run before and after and recorded, and is explicitly not a CI gate.                                                                                                                                                                                   |
+| **VIII. Traceable releases**             | Pass             | Core public contract changes → `@ortbtools/core` `0.37.0` → `0.38.0` (MINOR, additive). CLI dependency range and `package-lock.json` follow. App bump only if operator-visible copy changes — it does (FR-015, FR-023), so app `1.18.0` → `1.19.0` with `public/version.js`, the per-locale HTML, and baseline.                                                                          |
 
-**No unjustified violations.** Two obligations are recorded rather than waived: the privacy-contract
-update (III) and ADR-015 (IV). Both are tasks, not exceptions, so the Complexity Tracking table
-stays empty.
+**No unjustified violations.** One obligation is recorded rather than waived: ADR-015 (IV). It is a
+task, not an exception, so the Complexity Tracking table stays empty.
 
 ### Gate consequences carried into tasks
 
 1. **ADR-015 is authored before any code change** that widens the accepted label set — Principle IV
    forbids silent contract changes, and Spec-Driven Delivery §6 requires the record when the reason
    behind an architecture boundary changes.
-2. **`docs/PRIVACY.md` changes in the same commit** as the prompt change, with its regression test.
-3. **`tests/model-free-contract.test.js`** must keep asserting ADR-003's surviving scope: the role
+2. **`D0` is captured before any resolver change lands.** The routing matrix's pre-change baseline
+   must be measured against current code and committed as data, or `D1 > D0` measures the new
+   behaviour against itself (R-09).
+3. **A privacy-boundary regression test** asserts the model prompt gains no new field — the shape
+   verdict stays local. `docs/PRIVACY.md` is unchanged and must stay unchanged.
+4. **`tests/model-free-contract.test.js`** must keep asserting ADR-003's surviving scope: the role
    layer is deterministic and adds no model reachability anywhere new.
 
 ## Project Structure
@@ -127,7 +130,9 @@ packages/core/dialects/
 └── data/
     ├── key-role-corpus.v1.json         # NEW 322 entries, full provenance, digests
     ├── key-role-adjudication.v1.json   # NEW reviewed roles/states/scores, two review passes
-    ├── key-role-named-rules.v1.json    # NEW repo-backed and specification-frozen rules
+    ├── key-role-named-rules.v1.json    # NEW repo-backed rules, with conditions and caps
+    ├── key-role-routing-matrix.v1.json # NEW SC-002 fixtures: every partition, every collision
+    │                                   #     group member, casing + absence controls, frozen D0
     └── ATTRIBUTION.md                  # NEW Apache-2.0 attribution shipped with the table
 
 packages/core/
@@ -139,8 +144,12 @@ modules/
 └── dialects/handler.js         # CHANGED accepted label set widened
 
 lib/
-├── ollama.js                   # CHANGED response schema enum, shape context in the prompt
+├── ollama.js                   # CHANGED response schema enum ONLY; prompt payload unchanged
 └── label-persona.js            # CHANGED claim-aware ceiling; locale repair (Story 4)
+
+public/core/
+└── key-role-vocabulary.js      # NEW generated browser mirror of STORABLE_LABELS + catalog;
+                                #     CI asserts set equality with Core (R-10)
 
 public/modules/inspector/
 ├── dialect-label.js            # CHANGED role/value split, ambiguous variant, scope warning
@@ -155,12 +164,14 @@ tests/
 ├── key-role-precedence.test.js     # NEW every row of the FR-001 matrix
 ├── key-role-manifests.test.js      # NEW set equality, digests, invariants — no corpus needed
 ├── key-role-oracle.test.js         # NEW the 14 frozen scenarios + 2 ceiling fixtures
+├── key-role-routing-matrix.test.js # NEW D0/D1, five route counts, no-new-model-call
+├── key-role-browser-mirror.test.js # NEW browser mirror equals Core's export
 ├── ai-label.test.js                # CHANGED new variant, widened label set
 ├── dialects.test.js                # CHANGED compatibility floor for pre-existing labels
 └── model-free-contract.test.js     # CHANGED asserts the role layer adds no model reach
 
-docs/PRIVACY.md                 # CHANGED shape assessment added to what travels
 specs/decisions/ADR-015-*.md    # NEW storable roles + ambiguous response variant
+                                #     docs/PRIVACY.md is deliberately UNCHANGED (R-08)
 ```
 
 **Structure Decision**: The role layer lives in `packages/core/dialects/` beside `signal-lexicon.js`
@@ -171,17 +182,27 @@ is separately testable, and precedence is the piece most likely to change, so it
 either of the other two. The manifests are `data/` rather than generated code so CI can verify their
 digests and set equality directly, and so the maintainer-run generator has no runtime presence.
 
+Two consequences of the review are structural, not cosmetic. **Core performs no mapping lookup**: it
+has no database and Principle IV keeps it pure, so `modules/ai-label/handler.js` resolves the saved
+mapping from the authenticated operator's default dialect and passes it in (R-11) — the request stays
+unchanged and carries no dialect ID. And **the browser gets a generated mirror**
+(`public/core/key-role-vocabulary.js`) with a CI equality gate, because FR-024's single-import rule
+cannot be satisfied literally in a no-bundler IIFE loaded by script tag (R-10); `public/core/` already
+exists for exactly this purpose.
+
 ## Complexity Tracking
 
-> No Constitution Check violations require justification. The two recorded obligations
-> (privacy-contract update, ADR-015) are tasks within the existing rules, not exceptions to them.
+> No Constitution Check violations require justification. The one recorded obligation (ADR-015) is a
+> task within the existing rules, not an exception to it. `docs/PRIVACY.md` is deliberately
+> unchanged — the model allowlist does not expand (R-08).
 
 ## Phase Outputs
 
-- **Phase 0** → [research.md](./research.md): eight decisions, each with rationale and rejected
-  alternatives. Resolves the exact-case lookup conflict, manifest layout, generator/CI split,
-  picker localization, persona editing strategy, bench band revision, ADR scope, and the
-  shape-context privacy boundary.
+- **Phase 0** → [research.md](./research.md): eleven decisions, each with rationale and rejected
+  alternatives. Resolves the exact-case lookup conflict, manifest layout, generator/CI split, score
+  double-entry, resolver classification, picker localization, persona editing strategy, the
+  shape-context privacy boundary (R-08, reversed on review), the routing-matrix artifact (R-09), the
+  browser mirror (R-10), and where a saved mapping comes from (R-11).
 - **Phase 1** → [data-model.md](./data-model.md), [contracts/](./contracts/),
   [quickstart.md](./quickstart.md).
 - **Phase 2** → `tasks.md`, produced by `/speckit-tasks`, not by this command.

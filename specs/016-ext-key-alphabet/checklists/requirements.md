@@ -31,10 +31,11 @@
 
 ## Notes
 
-- **All three clarifications are resolved** with the maintainer on 2026-08-28 and folded into the
+- **All four clarifications are resolved** with the maintainer on 2026-08-28 and folded into the
   spec's `Clarifications` section. CL-001 defers value-independent mappings to a follow-on feature.
   CL-002 makes roles storable, which extends a public contract. CL-003 admits every available key
-  name but stratifies authority by evidence strength. Every checklist item now passes.
+  name but stratifies authority by evidence strength. CL-004 makes the role alphabet augment the
+  existing resolver under the explicit precedence matrix. Every checklist item now passes.
 - **CL-002 raises this feature's obligations materially.** Extending the savable label set is a
   public contract change under Constitution Principle IV, so this feature requires a decision record
   of its own alongside the specification, tests at the public boundary, and locale coverage for the

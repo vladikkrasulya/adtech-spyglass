@@ -19,7 +19,7 @@ Validation, limits (`SIGNAL_PATH_MAX` 200, `SIGNAL_VALUE_MAX` 512), the path pat
 
 ---
 
-## Response 200 — three variants
+## Response 200 — four variants
 
 ### A. `resolved` — new, from the role layer
 
@@ -66,11 +66,82 @@ Validation, limits (`SIGNAL_PATH_MAX` 200, `SIGNAL_VALUE_MAX` 512), the path pat
 No singular `role`, no `roleConfidence`, no `confidence`, **no preselected `label`**. The client must
 not preselect an option in the picker for this variant.
 
-### C. Model answer — unchanged
+### C. Preserved legacy deterministic answer — unchanged shape
 
-Existing `label` / `confidence` / `source: "model"` shape. May additionally carry routing evidence
-recording that a table abstention preceded it. Required fields and their semantics are identical to
-today.
+When the precedence matrix preserves an existing verdict — a terminal format flag, a specific-format
+string verdict, or a broad `ignore`/`informational` heuristic over which the role layer abstained —
+the response is **byte-compatible with today's**:
+
+```json
+{
+  "ok": true,
+  "suggestion": {
+    "label": "pop",
+    "confidence": 0.9,
+    "reason": "…",
+    "source": "lexicon",
+    "evidence": ["flag-key:popunder"]
+  },
+  "signal": { "path": "imp[0].ext.popunder", "value": 1 }
+}
+```
+
+No `resolutionStatus`, no `role`, no `roleConfidence`. A client that predates this feature keeps
+working on this path because the path did not change. **This is the variant the first draft of this
+contract omitted**, and it is the one that carries the no-demotion guarantee: a signal answered
+deterministically today is still answered deterministically, in the same shape.
+
+### D. Model answer — unchanged shape, routing evidence now required
+
+Existing `label` / `confidence` / `source: "model"` shape and semantics. It **MUST** additionally
+carry routing evidence recording that every deterministic source abstained before the model was
+called:
+
+```json
+{
+  "label": "identifier",
+  "confidence": 0.7,
+  "source": "model",
+  "routing": { "roleLayer": "abstain", "legacy": "abstain" }
+}
+```
+
+Required, not optional. Without it, variants C and D cannot be told apart, and the five route counts
+SC-002 demands (`exact-format`, `role-resolved`, `role-ambiguous`, `preserved-legacy`, `model`)
+cannot be produced.
+
+---
+
+## Saved-mapping precedence — resolved server-side
+
+The request is **unchanged** and carries no dialect ID. The handler resolves the mapping itself
+(R-11): default dialect for the authenticated operator → `loadUserDialect` →
+`lookupMapping(normalizedPath, serializedValue)`, using the index-collapsed path form
+(`imp[].ext.<key>`) and the same value serialization the save route and the question rule already
+use. **No default dialect ⇒ no saved-mapping precedence**, and routing proceeds at the next matrix
+row.
+
+Recorded limitation: an operator may save into a chosen dialect that is not their default, so
+precedence covers the default dialect only. This is strictly better than today, where this route
+consults no mapping at all, and it never fails dangerously — a missed mapping yields a suggestion the
+operator can still override, whereas applying a _different_ dialect's mapping would be wrong.
+
+---
+
+## Hard invariants across all four variants
+
+1. **No decode.** No variant ever derives a specific ad format from an opaque numeric value, in any
+   locale, at any confidence (FR-009). `valueLabel` appears only when `valueStatus` is `resolved`,
+   and never from a numeric code.
+2. **Projection, not aliasing.** `label` is the enumerated projection of `role`. `format-declaration`
+   projects to `custom` while the value is unknown; the nine new roles project to themselves; no
+   other mapping exists.
+3. **A suggestion suppresses nothing.** Suppression begins only after an explicit operator save, and
+   then only for the exact matching `question` at that dialect + path + serialized value. Nothing
+   here creates the value-independent mapping deferred by CL-001.
+4. **The model prompt payload is unchanged.** The role layer adds no field to what travels: the model
+   still receives only the signal path and value, the redacted impression sketch and sibling key
+   names. `docs/PRIVACY.md` is unchanged and must stay unchanged (R-08).
 
 ---
 

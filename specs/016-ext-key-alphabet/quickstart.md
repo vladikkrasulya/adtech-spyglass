@@ -92,6 +92,38 @@ named rules, saved mappings and legacy rules before using it.
 
 ---
 
+## 4b. The routing matrix — coverage, D0 vs D1, route counts
+
+```bash
+node --test tests/key-role-routing-matrix.test.js
+```
+
+**Expected**: a fixture for every adjudication partition across all 322 names, every named rule, all
+47 spellings in the 22 collision groups, an unlisted-casing control and an absent-key control in both
+namespaces. The run prints five route counts separately — `exact-format`, `role-resolved`,
+`role-ambiguous`, `preserved-legacy`, `model` — and asserts:
+
+- `D1 > D0`, and
+- **no fixture that was deterministic in `D0` reaches the model in `D1`.**
+
+`D0` is committed data captured against pre-change code. If it is regenerated after the resolver
+changes, this step proves nothing.
+
+---
+
+## 4c. The model prompt gained no field
+
+```bash
+node --test tests/key-role-privacy-boundary.test.js
+```
+
+**Expected**: the prompt payload sent to the model contains exactly the signal path, the value, the
+redacted impression sketch and sibling key names — the ADR-012 §6 allowlist, unchanged. The
+impression-shape verdict is present in the local explanation and in `evidence[]`, and **absent** from
+the prompt. `git diff docs/PRIVACY.md` is empty for this feature.
+
+---
+
 ## 5. Compatibility floor
 
 ```bash
@@ -114,6 +146,15 @@ node --test tests/i18n-parity.test.js tests/model-free-contract.test.js
 **Expected**: all twenty labels carry a display name and description in en/uk/ru; the ambiguity copy
 exists in all three; the model-free contract still holds — the role layer is deterministic and opens
 no new model reachability.
+
+The browser mirror is gated separately, because the no-bundler picker cannot import Core:
+
+```bash
+node --test tests/key-role-browser-mirror.test.js
+```
+
+**Expected**: `public/core/key-role-vocabulary.js` is set-equal to Core's `STORABLE_LABELS` and the
+display catalog. Drift is a build failure, not a runtime surprise.
 
 For Story 4, the locale repair needs its own assertion: a low-evidence signal requested at
 `locale: ru` returns Russian prose with no Ukrainian fragments. **The calibration bench cannot see

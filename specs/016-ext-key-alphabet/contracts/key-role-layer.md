@@ -95,10 +95,25 @@ thin projection of `classifySignal()`. Existing callers — including
 ```js
 /**
  * Combine the classified legacy verdict with the role-layer state per FR-001.
+ *
+ * `savedMapping` is supplied BY THE CALLER, already resolved. Core performs no
+ * lookup: it has no database, and Principle IV keeps it a pure data-to-data
+ * function. `modules/ai-label/handler.js` resolves it from the authenticated
+ * operator's default dialect before calling in (R-11); `null` when the operator
+ * has no default dialect, and precedence then starts at the next row.
+ *
+ * @param {object} input
+ * @param {object|null} input.savedMapping  pre-resolved by the caller, never looked up here
+ * @param {{kind:string, suggestion:object|null}} input.legacy
+ * @param {object} input.role
  * @returns {{outcome:'saved'|'resolved'|'ambiguous'|'legacy'|'model', answer: object|null}}
  */
 combine({ savedMapping, legacy, role });
 ```
+
+`outcome: 'legacy'` returns the existing deterministic answer **unchanged in shape** — it is the
+preserved-legacy response variant, not a new one. `outcome: 'model'` carries routing evidence that
+every deterministic source abstained; the handler must forward it (see the API contract).
 
 **The matrix is the contract.** Every row of the spec's precedence table is a test case in
 `tests/key-role-precedence.test.js`. Two guarantees carry the most weight:
@@ -116,7 +131,10 @@ combine({ savedMapping, legacy, role });
 ## Non-goals, asserted by test
 
 - No value dictionary. `lookupKeyRole` never returns a decoded meaning for an opaque numeric value,
-  in any state (FR-002).
+  in any state (FR-002). It never returns a `FORMAT_LABELS` member as a value meaning.
+- No prompt expansion. Nothing in this layer adds a field to what travels to the model. The
+  impression-shape verdict FR-013 permits is surfaced **locally**, in the explanation and in
+  `evidence[]` — never in the prompt (R-08).
 - No writes. Nothing in this layer touches `dialect_mappings` (FR-014).
 - No network, no filesystem read at call time; manifests are `require`d once at module scope.
 - No suppression. A layer result is a suggestion; suppression begins only after an operator save.

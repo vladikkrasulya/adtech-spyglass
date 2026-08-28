@@ -1,4 +1,4 @@
-# Contract: The Three Manifests
+# Contract: The Four Manifests
 
 **Owner**: `packages/core/dialects/data/` | **Feature**: [016](../spec.md) | **Date**: 2026-08-28
 
@@ -68,15 +68,22 @@ Runs against the committed manifests alone. No corpus, no network, no live model
    outside the corpus is excluded from every 322-count assertion; an overlapping key keeps both
    provenance classes but one runtime identity.
 5. **Vocabulary**: `STORABLE_LABELS` has exactly 20 members; the nine new IDs are absent from
-   `FORMAT_LABELS`; `format-declaration` / `unknown` / `ambiguous` / `other` are not storable.
-6. **Attribution ships**: the Apache-2.0 attribution file is present next to the data and is
+   `FORMAT_LABELS`; `format-declaration` / `unknown` / `ambiguous` / `other` are not storable. The
+   generated browser mirror `public/core/key-role-vocabulary.js` is set-equal to Core's export
+   (R-10) — the no-bundler picker cannot `require` Core, so equality is gated instead of assumed.
+6. **Routing matrix**: a fixture exists for every adjudication partition across all 322 names, every
+   named rule, **every one of the 47 spellings** in the 22 collision groups, an unlisted-casing
+   control, and an absent-key control in both namespaces. Every fixture carries a frozen `D0`. The
+   run reports `D1` and the five route counts separately, asserts `D1 > D0`, and asserts that **no
+   fixture deterministic in `D0` reaches the model in `D1`**.
+7. **Attribution ships**: the Apache-2.0 attribution file is present next to the data and is
    referenced from the product, not only from the research directory (FR-005).
 
 ---
 
 ## Generator — `scripts/build-key-role-corpus.js`
 
-Maintainer-only. Reads the out-of-tree corpus, writes the three manifests, and **rejects** rather
+Maintainer-only. Reads the out-of-tree corpus, writes the four manifests, and **rejects** rather
 than repairs: missing, extra, duplicate, unreviewed, score-mismatched or silently flattened records
 are hard failures. It reproduces every assertion above before writing, so a corpus change that moves
 a count fails loudly instead of quietly re-baselining.
@@ -85,3 +92,12 @@ The generator never invents a role. The corpus supplies evidence; the reviewed a
 supplies role truth. Majority voting, lexical plausibility alone and generator inference cannot
 establish a role — the recorded independent review is the semantic acceptance oracle that digests
 alone cannot provide.
+
+---
+
+## `D0` is captured once, before the change
+
+The routing matrix's `D0` column must be measured against **pre-change** code and committed as data.
+It is the baseline the no-demotion guarantee is proved against; capturing it after the resolver
+changes would compare the new behaviour with itself and prove nothing. This ordering is a task
+dependency, not a preference: `D0` capture blocks every subsequent implementation task.
