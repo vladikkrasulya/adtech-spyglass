@@ -19,7 +19,29 @@ Validation, limits (`SIGNAL_PATH_MAX` 200, `SIGNAL_VALUE_MAX` 512), the path pat
 
 ---
 
-## Response 200 — four variants
+## Response 200 — five variants
+
+### A0. Saved-mapping hit — new behaviour on this route
+
+When the operator's default dialect carries an exact mapping for the signal, the response returns
+the stored mapping itself (Spec §Public response compatibility):
+
+```json
+{
+  "ok": true,
+  "suggestion": {
+    "label": "ignore",
+    "source": "saved-mapping",
+    "notes": "…stored notes if any…",
+    "reason": "…"
+  },
+  "signal": { "path": "imp[0].ext.request_uuid", "value": "7c1e-44a0" }
+}
+```
+
+No numeric confidence — the operator confirmed this mapping, and a score would misrepresent
+certainty as measurement. No model call. Today the route consults no mapping at all, so this is a
+new variant and part of the recorded compatibility decision (FR-028).
 
 ### A. `resolved` — new, from the role layer
 
@@ -128,7 +150,7 @@ operator can still override, whereas applying a _different_ dialect's mapping wo
 
 ---
 
-## Hard invariants across all four variants
+## Hard invariants across all five variants
 
 1. **No decode.** No variant ever derives a specific ad format from an opaque numeric value, in any
    locale, at any confidence (FR-009). `valueLabel` appears only when `valueStatus` is `resolved`,
@@ -141,7 +163,13 @@ operator can still override, whereas applying a _different_ dialect's mapping wo
    here creates the value-independent mapping deferred by CL-001.
 4. **The model prompt payload is unchanged.** The role layer adds no field to what travels: the model
    still receives only the signal path and value, the redacted impression sketch and sibling key
-   names. `docs/PRIVACY.md` is unchanged and must stay unchanged (R-08).
+   names. `docs/PRIVACY.md` is unchanged and must stay unchanged (R-08; now a requirement, FR-033).
+5. **`valueStatus: resolved` is reserved.** No v1 path produces it (Spec §FR-010); a test asserts
+   the role layer never emits it. The state exists so future value evidence extends the contract
+   instead of changing it.
+6. **Outcome→variant mapping is exhaustive** (Spec §Public response compatibility): saved-mapping
+   hit → A0; every "preserve" row → C unchanged; role-layer resolved/ambiguous → A/B; only the final
+   matrix row → D. No outcome is unmapped.
 
 ---
 
