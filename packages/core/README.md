@@ -74,7 +74,7 @@ Validates a `BidRequest`, `BidResponse`, supported vendor-feed payload, or recog
 Options:
 
 - `dialect` — `'iab'` (default), `'ext-rtb'`, or `'inpage-push'`; unknown ids fall back to `iab`
-- `locale` — `'uk'` (default), `'en'`, or `'ru'`; unknown ids fall back to Ukrainian
+- `locale` — `'uk'` (default), `'en'`, or `'ru'`; unknown ids fall back to English, then Ukrainian (ADR-014)
 - `disabledRules` — `string[]` of finding ids to suppress; supports trailing `*` prefix (e.g. `['imp.bidfloorcur_missing', 'regs.*']`)
 - `strictness` — `'pedantic'` (default, all findings) | `'normal'` (errors, warnings, and non-blocking questions) | `'lax'` (errors only). Applies to both validator and crosscheck scales (`crit`≡`error`, `warn`≡`warning`).
 - `expectedVersion` — `'2.5' | '2.6' | '3.0'`; emits `version.mismatch` when heuristic detection selects another bucket
@@ -165,7 +165,7 @@ const result = validate(payload, { locale: 'uk' });
 result.findings[0].msg; // 'Слот #1: банер без розмірів...'
 ```
 
-Shipping locales: English (`en`), Ukrainian (`uk`), and Russian (`ru`). Unknown locale ids fall back to Ukrainian.
+Shipping locales: English (`en`), Ukrainian (`uk`), and Russian (`ru`). Unknown locale ids fall back to English, then Ukrainian (ADR-014).
 
 ## How validation works (the 5-second map)
 

@@ -274,8 +274,8 @@ the adjudication land as its own increment with `D1` as its acceptance number.
       from the params the rule already ships (`role_state`/`role`/`role_confidence`/
       `role_candidates`): localized role name from the mirror catalog for `resolved`, a candidates
       hint for `ambiguous`, nothing for `abstain` — so "роль відома" is visible without a second
-      request, per T027, US2/AC1 (partial)
+      request, per T027, US2/AC1
 - [x] T046 [US3] Give the stored dialect view a real surface for labels: a minimal mappings list in
       the account cabinet (`public/account.js`) showing each mapping's localized label name from
       the mirror catalog beside path=value — or, if the maintainer prefers, a recorded decision
-      that the JSON export is the read-back surface — per FR-023/SC-009 (partial)
+      that the JSON export is the read-back surface — per FR-023/SC-009

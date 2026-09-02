@@ -59,7 +59,7 @@ only that it agrees with what was just written.
 - [x] T009 (SC-005) Run `npm run ci`, `bash scripts/npm-pack-smoke.sh`, `bash scripts/ci-docker-smoke.sh`
       and `git diff --check`, capturing **real** exit codes rather than a pipeline's; record results here
 - [x] T010 Update `specs/ROADMAP.md`, mark the intake entries resolved, and re-run Spec Kit analysis
-- [ ] T011 Commit the feature scope, push, and wait for green hosted CI on the merge SHA
+- [x] T011 Commit the feature scope, push, and wait for green hosted CI on the merge SHA
 
 ## Dependencies & Execution Order
 

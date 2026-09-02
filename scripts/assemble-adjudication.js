@@ -194,9 +194,7 @@ function finalize() {
   console.log(
     `finalized: ${records.length} records → packages/core/dialects/data/key-role-adjudication.v1.json`,
   );
-  console.log(
-    'NEXT: drop the STAGING marker in data/README.md, append matrix slice B, run npm run ci.',
-  );
+  console.log('NEXT: run npm run ci.');
 }
 
 const argv = process.argv.slice(2);
