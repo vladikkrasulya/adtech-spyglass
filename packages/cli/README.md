@@ -52,7 +52,7 @@ node packages/cli/bin/ortbtools.js detect payload.json
 | `--no-color`            | Disable ANSI colors (also honors the `NO_COLOR` env var)              |
 
 Use the listed locale, dialect, and version ids. The current CLI delegates
-unknown values to core: an unknown locale falls back to Ukrainian, an unknown
+unknown values to core: an unknown locale falls back to English, then Ukrainian, an unknown
 dialect falls back to `iab`, and an unrecognized expected version is ignored.
 
 ## Exit codes

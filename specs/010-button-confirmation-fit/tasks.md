@@ -26,7 +26,7 @@ red state is quoted below.
 - [x] T005 (SC-003) Run `npm run ci`, `bash scripts/npm-pack-smoke.sh`, `bash scripts/ci-docker-smoke.sh`
       and `git diff --check` with real exit codes; record results here
 - [x] T006 Update `specs/ROADMAP.md` and mark the intake entry resolved
-- [ ] T007 Commit the feature scope, push, and wait for green hosted CI on the merge SHA
+- [x] T007 Commit the feature scope, push, and wait for green hosted CI on the merge SHA
 
 ## Dependencies & Execution Order
 

@@ -1,8 +1,13 @@
+> **Historical.** This file predates Spec Kit and documents the last pre-Speckit priority
+> (#4, OpenRTB 2.6 Migration Advisor). Since 2026-08-11 (ADR-009) the canonical project memory
+> is `specs/` — `specs/ROADMAP.md` for status, feature packages for detail. This file is kept
+> for its git-history pointers and is no longer updated.
+
 # Walkthrough — Priority #4: OpenRTB 2.6 Migration Advisor (UI)
 
 > Earlier priorities' walkthroughs are in git history, not in this file: #0
 > (privacy-safe product telemetry) is at `ad4ef27`, its predecessor at
-> `8032c55`. This file always documents the priority just closed.
+> `8032c55`. At the time, this file documented the priority that had just closed.
 
 The advisor rules themselves landed earlier as `bc07e5a` + `1e12257`, built in a
 separate worktree and verified here against 17 adversarial probes. They were

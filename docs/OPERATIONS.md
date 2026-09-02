@@ -707,6 +707,11 @@ concentrated secret-at-rest on the box. `backup-db.sh` therefore:
 The cron job runs as **root**; the archives are `root:root 0600`. **No non-root
 process consumes the backups**, so locking them down breaks nothing.
 
+> **Observed drift, pending owner decision (I-2):** the live backup directory and the newest
+> manually invoked backup pair are currently `vk:vk`, while older cron-produced archives remain
+> `root:root`. This observation does not ratify mixed ownership or supersede the root-only contract;
+> no ownership change is part of the reconciliation sweep.
+
 The live **data dir** (`/srv/DATA/AppData/ortbtools`) has three container
 consumers — keep this in mind before tightening its modes:
 
@@ -1169,6 +1174,13 @@ unbumped version (a same-version retry, or a hotfix that forgot to bump SemVer)
 therefore never collide on the same tag name and silently overwrite a different
 commit's rollback target; a genuinely repeated deploy of the identical commit
 re-tags the identical name (harmless).
+
+The host's biweekly `/home/vk/.local/bin/cleanup-server.sh` delegates these tags to the tracked
+`scripts/cleanup-rollback-tags.sh`, which ranks them by the referenced image's machine-readable
+creation timestamp and retains the ten newest. A tag whose image timestamp cannot be inspected or
+parsed is retained and logged for manual review; if the helper itself is unavailable, every tag is
+retained and a warning is logged. Ordinary dangling-image pruning does not govern named rollback
+tags.
 
 **Privacy floor.** `deploy.sh`/`rollback.sh` refuse to deploy/roll back to any
 image that does not descend from the immutable `PRIVACY_BASELINE_SHA` (v1.2.1,

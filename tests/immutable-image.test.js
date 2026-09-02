@@ -235,6 +235,19 @@ test('disposable Docker smoke verifies the hashed Blog vendor graph and shipped 
   }
 });
 
+test('disposable Docker smoke derives native dependency versions from the lockfile', () => {
+  const smoke = read('scripts/ci-docker-smoke.sh');
+  assert.match(
+    smoke,
+    /package-lock\.json'[\s\S]*node_modules\/better-sqlite3[\s\S]*EXPECTED_SQLITE/u,
+  );
+  assert.match(smoke, /node_modules\/bcrypt[\s\S]*EXPECTED_BCRYPT/u);
+  assert.match(smoke, /sqlite !== process\.env\.EXPECTED_SQLITE/u);
+  assert.match(smoke, /bcrypt !== process\.env\.EXPECTED_BCRYPT/u);
+  assert.doesNotMatch(smoke, /sqlite !== ['"]\d/u);
+  assert.doesNotMatch(smoke, /bcrypt !== ['"]\d/u);
+});
+
 // ── CP2 amendment guards ────────────────────────────────────────────────────
 
 test('deploy/rollback wait for readiness (polling), not a fixed sleep before smoke', () => {
