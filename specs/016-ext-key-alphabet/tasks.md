@@ -221,12 +221,12 @@ warning tells the truth; all twenty labels speak three languages.
 - [x] T039 [P] Extend HOLDOUT in `scripts/label-calibration.js` with post-change cases authored
       fresh (FR-012); note in the file header that the deterministic layer now shrinks the bench
       population and the oracle owns those cases
-- [ ] T040 [P] Update `specs/000-platform-baseline/contracts/core-validator.md`: the classified
+- [x] T040 [P] Update `specs/000-platform-baseline/contracts/core-validator.md`: the classified
       resolver, the role layer, the widened label set, the response variants
-- [ ] T041 Version bumps per FR-028 and the 013/014 lessons: `@ortbtools/core` 0.37.0 → 0.38.0,
+- [x] T041 Version bumps per FR-028 and the 013/014 lessons: `@ortbtools/core` 0.37.0 → 0.38.0,
       CLI dependency range + `package-lock.json` follow; app 1.18.0 → 1.19.0 with
       `public/version.js`, per-locale HTML version refs, and the baseline record
-- [ ] T042 Update `CHANGELOG.md` and `specs/ROADMAP.md` (016 row: implemented, evidence links)
+- [x] T042 Update `CHANGELOG.md` and `specs/ROADMAP.md` (016 row: implemented, evidence links)
 - [ ] T043 Full gate + release through the standing path: fresh verified backup, `scripts/deploy.sh`
       from clean `HEAD == main == origin/main`, smoke, report version/tag/SHA/gates (Constitution
       VIII); rollback stays armed
