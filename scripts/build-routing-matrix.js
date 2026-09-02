@@ -68,7 +68,56 @@ function fixture(id, cls, signalPath, signalValue, extra = {}) {
   return { id, class: cls, signalPath, signalValue, ...extra, D0: d0(signalPath, signalValue) };
 }
 
+/**
+ * Slice B (T010B): one fixture per adjudication record, appended AFTER the
+ * adjudication manifest lands. D0 for these fixtures is still measured
+ * against the LEGACY resolver only — the pre-016 baseline the no-demotion
+ * guarantee is proved against — which stays honest because resolveSignal()
+ * is a byte-identical projection of the unchanged legacy chain.
+ */
+function sliceB() {
+  const adjPath = path.join(DATA, 'key-role-adjudication.v1.json');
+  if (!fs.existsSync(adjPath)) {
+    console.error('slice B needs the adjudication manifest first (T008 finalize)');
+    process.exit(1);
+  }
+  const adj = JSON.parse(fs.readFileSync(adjPath, 'utf8'));
+  const matrix = JSON.parse(fs.readFileSync(OUT, 'utf8'));
+  if (matrix.sliceB && matrix.sliceB.fixtures && matrix.sliceB.fixtures.length) {
+    console.error('slice B already present — refusing to overwrite a frozen baseline');
+    process.exit(1);
+  }
+  /** Representative value per state: resolved role fixtures use a numeric 7
+   * (roles are value-independent in v1), ambiguous/abstain likewise. */
+  const fixtures = [];
+  let seq = 0;
+  for (const r of adj.records) {
+    seq += 1;
+    const id = `fxB-${String(seq).padStart(3, '0')}-${r.name}`;
+    const signalPath = `imp[].ext.${r.name}`;
+    fixtures.push({
+      id,
+      class: 'partition',
+      signalPath,
+      signalValue: 7,
+      partition: r.partition,
+      adjState: r.state,
+      D0: d0(signalPath, 7),
+    });
+  }
+  matrix.sliceB = {
+    capturedAgainst: 'legacy resolver only (the pre-016 baseline; projection is byte-identical)',
+    note: 'One fixture per adjudication record (T010B). Appended after T008 finalize.',
+    fixtures,
+  };
+  fs.writeFileSync(OUT, JSON.stringify(matrix, null, 2) + '\n');
+  const routes = {};
+  for (const f of fixtures) routes[f.D0.route] = (routes[f.D0.route] || 0) + 1;
+  console.log(`slice B appended: ${fixtures.length} fixtures | D0 routes:`, routes);
+}
+
 function main() {
+  if (process.argv.includes('--slice-b')) return sliceB();
   const fixtures = [];
   let seq = 0;
   const fid = (tag) => `fx-${String((seq += 1)).padStart(3, '0')}-${tag}`;
