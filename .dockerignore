@@ -12,6 +12,10 @@
 # the blog seed under content/posts (read at runtime via CONTENT_DIR default).
 **/*.md
 !content/posts/**/*.md
+# …and the key-role data manifests' companions: the staging marker README the
+# alphabet reads at load, and the Apache-2.0 ATTRIBUTION that 016 FR-005
+# requires to ship IN the product (the 41e05a6 rollback was exactly this).
+!packages/core/dialects/data/*.md
 docs/
 
 # Agent / IDE metadata — never needed at runtime
