@@ -227,10 +227,10 @@ warning tells the truth; all twenty labels speak three languages.
       CLI dependency range + `package-lock.json` follow; app 1.18.0 → 1.19.0 with
       `public/version.js`, per-locale HTML version refs, and the baseline record
 - [x] T042 Update `CHANGELOG.md` and `specs/ROADMAP.md` (016 row: implemented, evidence links)
-- [ ] T043 Full gate + release through the standing path: fresh verified backup, `scripts/deploy.sh`
+- [x] T043 Full gate + release through the standing path: fresh verified backup, `scripts/deploy.sh`
       from clean `HEAD == main == origin/main`, smoke, report version/tag/SHA/gates (Constitution
       VIII); rollback stays armed
-- [ ] T044 Post-deploy verification: quickstart §9 against production with the synthetic replica,
+- [x] T044 Post-deploy verification: quickstart §9 against production with the synthetic replica,
       three locales; record PASS/defects in the 016 package
 
 ---

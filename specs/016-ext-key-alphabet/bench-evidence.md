@@ -66,3 +66,15 @@ resident model: **six of six answers in the requested language, zero cross-alpha
 `ad_type=30`-class leak this story was opened for is gone. Bonus confirmation of FR-008 on the live
 path: the model answered `identifier @ 0.6` for the numeric control — the claim-aware behaviour the
 old blanket ceiling used to clamp to 0.3.
+
+## Release — 2026-09-02
+
+`v1.19.0` live at `b729505` (app 1.19.0 / core 0.38.0 / cli 0.1.3). First deploy of `41e05a6`
+failed readiness and auto-rolled back to `adde7f5` — the alphabet's own loud-failure rule caught an
+image missing `data/README.md` (staging marker) and `ATTRIBUTION.md`, both stripped by
+`.dockerignore`'s `**/*.md`; proven by `ls` and a require-throw on the failed image itself. One
+ignore-exception line fixed it. Redeploy: readiness 6s, smoke 19/19, rollback armed throughout.
+T044 live verification: the suggest route is 401-gated; `/api/analyze` in en/uk/ru carries
+`role_state`/`role`/`role_confidence` on the question findings exactly per the oracle
+(`ad_type` → `format-declaration@0.9`, `subage` → `measurement@0.9`, `limit` → ambiguous over
+delivery-control/pricing/format-declaration); no cross-alphabet leaks in finding prose.
