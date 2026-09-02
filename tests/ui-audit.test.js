@@ -739,3 +739,45 @@ test('the canonical /live section is the only live-stream surface', () => {
     'Streams remains permanently reachable from the rail',
   );
 });
+
+// ── 016 Phase 8 (T045/T046): the role is visible without a second request,
+//    and the stored dialect view renders localized names, never raw-only. ──
+
+test('T045: the finding card renders the role badge from params, both states', () => {
+  const src = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', 'public', 'ortbtools.app.js'),
+    'utf8',
+  );
+  assert.match(src, /role_state === 'resolved'/, 'resolved branch renders');
+  assert.match(src, /role_state === 'ambiguous'/, 'ambiguous branch renders');
+  assert.match(
+    src,
+    /'format-declaration' \? 'custom'/,
+    'format-declaration displays through its custom projection',
+  );
+  assert.match(src, /finding-role-badge/, 'the badge reaches the foot markup');
+  // abstain renders nothing: no third branch mentions it.
+  assert.doesNotMatch(src, /role_state === 'abstain'/);
+});
+
+test('T046: the cabinet mappings list localizes labels with a verbatim fallback (FR-030)', () => {
+  const src = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', 'public', 'account.js'),
+    'utf8',
+  );
+  assert.match(src, /dialect\.label\.name\./, 'names come from the shared catalog');
+  assert.match(
+    src,
+    /named === '\[' \+ key \+ '\]' \? id : named/,
+    'an unknown/withdrawn label passes through verbatim rather than failing',
+  );
+  for (const lang of ['en', 'uk', 'ru']) {
+    const html = require('node:fs').readFileSync(
+      require('node:path').join(__dirname, '..', 'public', `account.${lang}.html`),
+      'utf8',
+    );
+    assert.match(html, /dialectMappingsList/, `${lang}: container present`);
+    assert.match(html, /core\/key-role-vocabulary\.js/, `${lang}: mirror loaded`);
+    assert.match(html, /dialect-label\.i18n\.js/, `${lang}: catalog loaded`);
+  }
+});

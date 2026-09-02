@@ -318,15 +318,18 @@ function reason(locale, id, ...args) {
  *   same for every locale. Defaults to 'en' so callers that predate locale
  *   awareness (e.g. scripts/label-calibration.js, which only checks whether
  *   the return value is null) keep working unchanged.
- * @returns {{label: string, confidence: number, reason: string, source: 'lexicon',
- *            evidence: string[]}|null} null = abstain, ask the model
+ * @returns {{kind: 'terminal-flag'|'specific-format'|'guarded-contradiction'
+ *                  |'broad-heuristic'|'abstain',
+ *            suggestion: {label: string, confidence: number, reason: string,
+ *                         source: 'lexicon', evidence: string[]}|null}}
+ *   the classified verdict; `suggestion` is null on abstain/contradiction
  */
-function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
+function classifySignal({ signalPath, signalValue, imp, locale = 'en' }) {
   const key = String(signalPath || '')
     .split('.')
     .pop()
     .toLowerCase();
-  if (!key) return null;
+  if (!key) return { kind: 'abstain', suggestion: null };
 
   // ── 0. Keys that ARE the signal ───────────────────────────────────────
   // Two vendor conventions put the format in the key rather than the value:
@@ -349,38 +352,47 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
   if (normKey === 'sizeid') {
     if (Array.isArray(signalValue) && signalValue.length === 1 && signalValue[0] === 0) {
       return {
-        label: 'pop',
-        confidence: 0.8,
-        reason: reason(locale, 'sizeIdZero'),
-        source: 'lexicon',
-        evidence: ['pop-shape:sizeID=[0]'],
+        kind: 'terminal-flag',
+        suggestion: {
+          label: 'pop',
+          confidence: 0.8,
+          reason: reason(locale, 'sizeIdZero'),
+          source: 'lexicon',
+          evidence: ['pop-shape:sizeID=[0]'],
+        },
       };
     }
-    return null;
+    return { kind: 'abstain', suggestion: null };
   }
 
   for (const flag of POP_SHAPE_FLAG_KEYS) {
     if (normaliseFormatName(flag) !== normKey) continue;
     return {
-      label: 'pop',
-      confidence: 0.8,
-      reason: reason(locale, 'popShapeFlag', key),
-      source: 'lexicon',
-      evidence: [`pop-shape-flag:${key}`],
+      kind: 'terminal-flag',
+      suggestion: {
+        label: 'pop',
+        confidence: 0.8,
+        reason: reason(locale, 'popShapeFlag', key),
+        source: 'lexicon',
+        evidence: [`pop-shape-flag:${key}`],
+      },
     };
   }
   for (const flag of FLAG_HINT_KEYS) {
     if (flag !== normKey) continue;
     // Only a truthy value marks the flag as set; `popunder: 0` is the vendor
     // explicitly saying this slot is NOT one.
-    if (!signalValue) return null;
+    if (!signalValue) return { kind: 'abstain', suggestion: null };
     const isPush = PUSH_FORMAT_NAMES.has(flag);
     return {
-      label: isPush ? 'push' : 'pop',
-      confidence: 0.9,
-      reason: reason(locale, 'flagKey', key, isPush ? 'push' : 'pop'),
-      source: 'lexicon',
-      evidence: [`flag-key:${key}`],
+      kind: 'terminal-flag',
+      suggestion: {
+        label: isPush ? 'push' : 'pop',
+        confidence: 0.9,
+        reason: reason(locale, 'flagKey', key, isPush ? 'push' : 'pop'),
+        source: 'lexicon',
+        evidence: [`flag-key:${key}`],
+      },
     };
   }
 
@@ -393,14 +405,17 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
     // is metadata, but a bare `format` is not, whatever else it matches.
     if (FORMAT_DECLARING_KEYS.has(key)) break;
     return {
-      label,
-      confidence: 0.9,
-      reason:
-        label === 'ignore'
-          ? reason(locale, 'nonFormatIgnore', key)
-          : reason(locale, 'nonFormatInformational', key),
-      source: 'lexicon',
-      evidence: [`key:${key}`],
+      kind: 'broad-heuristic',
+      suggestion: {
+        label,
+        confidence: 0.9,
+        reason:
+          label === 'ignore'
+            ? reason(locale, 'nonFormatIgnore', key)
+            : reason(locale, 'nonFormatInformational', key),
+        source: 'lexicon',
+        evidence: [`key:${key}`],
+      },
     };
   }
 
@@ -408,15 +423,16 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
   // See the conservatism rule in the file header. There is no shared numeric
   // registry across vendors, so any mapping we produced here would be a
   // coin flip dressed up as an answer.
-  if (isNumericCode(signalValue)) return null;
+  if (isNumericCode(signalValue)) return { kind: 'abstain', suggestion: null };
 
   // Objects and arrays carry no single word to read; the model gets a better
   // look at their shape than a regex would.
-  if (signalValue !== null && typeof signalValue === 'object') return null;
-  if (typeof signalValue === 'boolean') return null;
+  if (signalValue !== null && typeof signalValue === 'object')
+    return { kind: 'abstain', suggestion: null };
+  if (typeof signalValue === 'boolean') return { kind: 'abstain', suggestion: null };
 
   const tokens = tokenise(signalValue);
-  if (tokens.length === 0) return null;
+  if (tokens.length === 0) return { kind: 'abstain', suggestion: null };
 
   // ── 3. Pop / push family — delegate to the engine's own vocabulary ─────
   // These names are unambiguous by construction: nothing is called
@@ -426,20 +442,26 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
   for (const tok of tokens) {
     if (POP_FORMAT_NAMES.has(tok)) {
       return {
-        label: 'pop',
-        confidence: 0.95,
-        reason: reason(locale, 'popToken', signalValue),
-        source: 'lexicon',
-        evidence: [`value-token:${tok}`],
+        kind: 'specific-format',
+        suggestion: {
+          label: 'pop',
+          confidence: 0.95,
+          reason: reason(locale, 'popToken', signalValue),
+          source: 'lexicon',
+          evidence: [`value-token:${tok}`],
+        },
       };
     }
     if (PUSH_FORMAT_NAMES.has(tok)) {
       return {
-        label: tok === 'nativepush' ? 'in-page-push' : 'push',
-        confidence: 0.9,
-        reason: reason(locale, 'pushToken', signalValue),
-        source: 'lexicon',
-        evidence: [`value-token:${tok}`],
+        kind: 'specific-format',
+        suggestion: {
+          label: tok === 'nativepush' ? 'in-page-push' : 'push',
+          confidence: 0.9,
+          reason: reason(locale, 'pushToken', signalValue),
+          source: 'lexicon',
+          evidence: [`value-token:${tok}`],
+        },
       };
     }
   }
@@ -448,7 +470,7 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
   // Without this gate a key like `creative_video_url` would resolve to
   // "video" off its own name. The key has to be the kind of key that
   // declares a format before its value is read as one.
-  if (!FORMAT_DECLARING_KEYS.has(key)) return null;
+  if (!FORMAT_DECLARING_KEYS.has(key)) return { kind: 'abstain', suggestion: null };
 
   let hit = null;
   for (const tok of tokens) {
@@ -458,7 +480,7 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
       break;
     }
   }
-  if (!hit) return null;
+  if (!hit) return { kind: 'abstain', suggestion: null };
 
   // ── 5. Corroborate against the impression ─────────────────────────────
   const families = impMediaFamilies(imp);
@@ -470,23 +492,29 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
     // corroborator available, and only for interstitial.
     const instl = imp && Number(imp.instl) === 1;
     return {
-      label: hit.label,
-      confidence: instl ? 0.85 : 0.7,
-      reason: instl
-        ? reason(locale, 'nonMediaWithInstl', hit.label, signalValue)
-        : reason(locale, 'nonMediaNoInstl', hit.label, signalValue),
-      source: 'lexicon',
-      evidence: instl ? [`value-token:${hit.tok}`, 'imp.instl=1'] : [`value-token:${hit.tok}`],
+      kind: 'specific-format',
+      suggestion: {
+        label: hit.label,
+        confidence: instl ? 0.85 : 0.7,
+        reason: instl
+          ? reason(locale, 'nonMediaWithInstl', hit.label, signalValue)
+          : reason(locale, 'nonMediaNoInstl', hit.label, signalValue),
+        source: 'lexicon',
+        evidence: instl ? [`value-token:${hit.tok}`, 'imp.instl=1'] : [`value-token:${hit.tok}`],
+      },
     };
   }
 
   if (families.has(hit.label)) {
     return {
-      label: hit.label,
-      confidence: 0.95,
-      reason: reason(locale, 'mediaCorroborated', hit.label, signalValue),
-      source: 'lexicon',
-      evidence: [`value-token:${hit.tok}`, `imp.${hit.label}`],
+      kind: 'specific-format',
+      suggestion: {
+        label: hit.label,
+        confidence: 0.95,
+        reason: reason(locale, 'mediaCorroborated', hit.label, signalValue),
+        source: 'lexicon',
+        evidence: [`value-token:${hit.tok}`, `imp.${hit.label}`],
+      },
     };
   }
 
@@ -494,11 +522,14 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
     // Request-level signal, or an imp with no media object at all. The word
     // is all we have; say so rather than implying corroboration.
     return {
-      label: hit.label,
-      confidence: 0.6,
-      reason: reason(locale, 'mediaNoObject', hit.label, signalValue),
-      source: 'lexicon',
-      evidence: [`value-token:${hit.tok}`],
+      kind: 'specific-format',
+      suggestion: {
+        label: hit.label,
+        confidence: 0.6,
+        reason: reason(locale, 'mediaNoObject', hit.label, signalValue),
+        source: 'lexicon',
+        evidence: [`value-token:${hit.tok}`],
+      },
     };
   }
 
@@ -506,11 +537,25 @@ function resolveSignal({ signalPath, signalValue, imp, locale = 'en' }) {
   // This is the `type: "video_slider"` on a banner-only imp case. Abstain:
   // either the vendor's naming is misleading or the slot is a hybrid, and
   // both are exactly the situation a human should look at.
-  return null;
+  return { kind: 'guarded-contradiction', suggestion: null };
+}
+
+/**
+ * The historical public entry point, unchanged in signature and behaviour
+ * (016 R-05): a thin projection of classifySignal(). Callers that predate
+ * the precedence matrix — scripts/label-calibration.js among them — keep
+ * working byte-identically.
+ *
+ * @param {object} input  same as classifySignal
+ * @returns {object|null} the suggestion, or null on abstain/contradiction
+ */
+function resolveSignal(input) {
+  return classifySignal(input).suggestion;
 }
 
 module.exports = {
   resolveSignal,
+  classifySignal,
   impMediaFamilies,
   tokenise,
   isNumericCode,

@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.37.0`; CLI `0.1.2`
+**Current versions**: Core `0.38.0`; CLI `0.1.3`
 
 ## Public Core Surface
 
@@ -123,6 +123,36 @@ missing key visible. English sits ahead of Ukrainian because `en` is this codeba
 locale ([ADR-014](../../decisions/ADR-014-default-locale-english.md)); before 2026-08-27 the chain
 fell straight to Ukrainian, which silently returned Ukrainian text to English and Russian readers.
 Message files, spec-reference coverage, and localized behavior are part of rule delivery.
+
+## Key-Role Layer (016, ADR-015; Core 0.38.0)
+
+The dialect vocabulary and the labelling resolution are a layered contract:
+
+- `packages/core/dialects/key-role-vocabulary.js` is the ONE normative enumeration: ten canonical
+  roles, twenty storable labels (the eleven pre-existing plus nine role labels), and the explicit
+  `FORMAT_LABELS` allowlist. Every surface that lists labels imports it (the save route, the model
+  schema, the generated browser mirror `public/core/key-role-vocabulary.js` gated by a
+  byte-equality test); no consumer declares its own array. Format recognition tests `FORMAT_LABELS`
+  membership, never "is an accepted stored label" — the nine role labels are inert to it by test.
+- `classifySignal()` in `signal-lexicon.js` returns the legacy resolver's verdict CLASSIFIED
+  (`terminal-flag` / `specific-format` / `guarded-contradiction` / `broad-heuristic` / `abstain`);
+  `resolveSignal()` is a byte-compatible thin projection and keeps its public shape.
+- `key-role-alphabet.js` resolves a key's ROLE over four committed manifests in
+  `packages/core/dialects/data/` (corpus 322 exact-case names, adjudication — staged until the US2
+  increment per the `STAGING:` marker, named rules, routing matrix with frozen `D0`). Identity is
+  exact code-point spelling; an unlisted casing abstains. Lookup never returns null: the states are
+  `resolved` (one role, one of the exact scores 0.90/0.80/0.70/0.60/0.40), `ambiguous` (candidates,
+  no singular score), `abstain`.
+- `resolve-precedence.js` combines the two per the 016 FR-001 matrix. Guarantees: an exact saved
+  mapping outranks everything; terminal flags stay terminal; a role-layer abstain never demotes a
+  deterministic answer to a model call. Routes partition into exact-format / role-resolved /
+  role-ambiguous / preserved-legacy / model (SC-002).
+- The suggest-label response gained three variants (role-resolved with `role`/`roleConfidence`/
+  `valueStatus`/projected `label`, ambiguous with `roleCandidates` and nothing preselected,
+  saved-mapping without a numeric confidence); preserved legacy and model answers are
+  field-identical to before, model answers carry routing evidence. `valueStatus: 'resolved'` is a
+  RESERVED state no v1 path produces. The model prompt payload is frozen to the ADR-012 §6
+  allowlist, asserted by test; `docs/PRIVACY.md` is unchanged.
 
 ## CLI Contract
 

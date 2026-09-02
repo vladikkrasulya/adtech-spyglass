@@ -2861,9 +2861,43 @@ export async function mountInspector(root, ctx) {
               '</button>'
             : '';
 
+      // 016 T045: the role the deterministic layer already resolved travels
+      // on the finding's params (role_state/role/role_confidence/
+      // role_candidates) — render it on the card so "the role is known" is
+      // visible WITHOUT a second request. Localized names come from the same
+      // dialect-label catalog the picker uses; format-declaration displays
+      // through its `custom` projection. `abstain` renders nothing — absence
+      // of a claim is not a claim.
+      let roleBadge = '';
+      if (lvl === 'question' && f.params && f.params.role_state === 'resolved') {
+        const shown = f.params.role === 'format-declaration' ? 'custom' : f.params.role;
+        roleBadge =
+          '<span class="finding-role-badge" title="' +
+          escapeHtml(t('dialect.label.desc.' + shown)) +
+          '">' +
+          escapeHtml(t('dialect.label.role')) +
+          ': <strong>' +
+          escapeHtml(t('dialect.label.name.' + shown)) +
+          '</strong> · ' +
+          Math.round(Number(f.params.role_confidence) * 100) +
+          '%</span>';
+      } else if (lvl === 'question' && f.params && f.params.role_state === 'ambiguous') {
+        const cands = (f.params.role_candidates || [])
+          .map(function (c) {
+            return t('dialect.label.name.' + (c === 'format-declaration' ? 'custom' : c));
+          })
+          .join(' / ');
+        roleBadge =
+          '<span class="finding-role-badge finding-role-ambiguous">' +
+          escapeHtml(t('dialect.label.candidates')) +
+          ': ' +
+          escapeHtml(cands) +
+          '</span>';
+      }
+
       const foot =
-        pathChip || specLink || actionBtn
-          ? '<span class="finding-foot">' + pathChip + specLink + actionBtn + '</span>'
+        pathChip || specLink || actionBtn || roleBadge
+          ? '<span class="finding-foot">' + pathChip + specLink + roleBadge + actionBtn + '</span>'
           : '';
 
       return (

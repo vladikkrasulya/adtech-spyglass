@@ -29,21 +29,10 @@
 (function () {
   'use strict';
 
-  // Mirrors SEMANTIC_LABELS in modules/dialects/handler.js. Anything else is
-  // rejected by the save route, so the picker cannot offer it.
-  const LABELS = [
-    'pop',
-    'native',
-    'banner',
-    'video',
-    'audio',
-    'in-page-push',
-    'push',
-    'interstitial-banner',
-    'ignore',
-    'informational',
-    'custom',
-  ];
+  // The twenty storable labels come from the generated Core mirror
+  // (/core/key-role-vocabulary.js, loaded before this file) — one source of
+  // truth, gated by tests/key-role-browser-mirror.test.js (016 FR-024, R-10).
+  const LABELS = (window.KeyRoleVocabulary && window.KeyRoleVocabulary.STORABLE_LABELS) || [];
 
   // Below this the proposal is shown with an explicit "check this yourself"
   // warning. Chosen to sit above the persona's own "no ground for an answer"
@@ -177,8 +166,14 @@
     }
 
     const signalPath = toSignalPath(sig.path);
-    const low = suggestion && Number(suggestion.confidence) < LOW_CONFIDENCE;
-    const picked = (suggestion && suggestion.label) || '';
+    const isAmbiguous = suggestion && suggestion.resolutionStatus === 'ambiguous';
+    const isRoleResolved = suggestion && suggestion.resolutionStatus === 'resolved';
+    const isSaved = suggestion && suggestion.source === 'saved-mapping';
+    const low =
+      suggestion && !isAmbiguous && !isSaved && Number(suggestion.confidence) < LOW_CONFIDENCE;
+    // An ambiguous answer preselects NOTHING (016 §response compatibility);
+    // everything else preselects its label.
+    const picked = (!isAmbiguous && suggestion && suggestion.label) || '';
 
     const sourceBadge = suggestion
       ? '<span class="dl-src dl-src-' +
@@ -188,24 +183,81 @@
         '</span>'
       : '';
 
+    // 016: the role/value split, provenance and states the role layer adds.
+    const roleName = (id) => t('dialect.label.name.' + id);
+    const evid = Array.isArray(suggestion && suggestion.evidence) ? suggestion.evidence : [];
+    const unverified = evid.some((e) => e && e.unverifiedOnly === true);
+    const citations = evid
+      .flatMap((e) => (Array.isArray(e.citations) ? e.citations : e.citation ? [e.citation] : []))
+      .slice(0, 3);
+    const provenance =
+      citations.length || unverified
+        ? '<p class="dl-evid"><span class="dl-lbl">' +
+          esc(t('dialect.label.evidence')) +
+          ':</span> ' +
+          citations.map(esc).join(' · ') +
+          (unverified
+            ? ' <span class="dl-unverified">' + esc(t('dialect.label.unverified')) + '</span>'
+            : '') +
+          '</p>'
+        : '';
+    const roleSplit = isRoleResolved
+      ? '<p class="dl-role"><span class="dl-lbl">' +
+        esc(t('dialect.label.role')) +
+        ':</span> <strong>' +
+        esc(roleName(suggestion.role === 'format-declaration' ? 'custom' : suggestion.role)) +
+        '</strong></p>' +
+        (suggestion.valueStatus === 'unknown'
+          ? '<p class="dl-value-note">' + esc(t('dialect.label.value_yours')) + '</p>'
+          : '') +
+        (suggestion.conflict
+          ? '<p class="dl-conflict">' + esc(t('dialect.label.conflict_note')) + '</p>'
+          : '')
+      : '';
+    const candidateList = isAmbiguous
+      ? '<p class="dl-candidates"><span class="dl-lbl">' +
+        esc(t('dialect.label.candidates')) +
+        ':</span> ' +
+        suggestion.roleCandidates
+          .map(
+            (c) =>
+              '<strong>' + esc(roleName(c === 'format-declaration' ? 'custom' : c)) + '</strong>',
+          )
+          .join(' / ') +
+        '</p>'
+      : '';
+
+    // Confidence renders ONLY where a number was measured: never on an
+    // ambiguous answer (no singular claim) and never on a saved mapping
+    // (the operator confirmed it — a score would fake measurement).
+    const confBadge =
+      suggestion && !isAmbiguous && !isSaved && suggestion.confidence !== undefined
+        ? '<span class="dl-conf">' +
+          esc(t('dialect.label.confidence')) +
+          ' ' +
+          Math.round(Number(suggestion.confidence) * 100) +
+          '%</span>'
+        : '';
+    const proposalTitle = isAmbiguous
+      ? t('dialect.label.ambiguous_title')
+      : t('dialect.label.proposal_title');
     const proposal = suggestion
       ? '<div class="dl-proposal' +
         (low ? ' dl-low' : '') +
         '">' +
         '<div class="dl-proposal-head">' +
         '<span class="dl-proposal-title">' +
-        esc(t('dialect.label.proposal_title')) +
+        esc(proposalTitle) +
         '</span>' +
         sourceBadge +
-        '<span class="dl-conf">' +
-        esc(t('dialect.label.confidence')) +
-        ' ' +
-        Math.round(Number(suggestion.confidence) * 100) +
-        '%</span>' +
+        confBadge +
         '</div>' +
+        roleSplit +
+        candidateList +
         '<p class="dl-reason">' +
-        esc(suggestion.reason || '') +
+        esc(suggestion.reason || (isSaved ? suggestion.notes || '' : '')) +
         '</p>' +
+        provenance +
         '<p class="dl-src-hint">' +
         esc(t('dialect.label.source.' + suggestion.source + '_hint')) +
         '</p>' +
@@ -219,8 +271,10 @@
         esc(l) +
         '"' +
         (l === picked ? ' selected' : '') +
-        '>' +
-        esc(l) +
+        ' title="' +
+        esc(t('dialect.label.desc.' + l)) +
+        '">' +
+        esc(t('dialect.label.name.' + l)) +
         '</option>',
     ).join('');
 
@@ -267,6 +321,9 @@
       esc(t('dialect.label.notes')) +
       '</span>' +
       '<input id="dlNotes" type="text" maxlength="1000"></label>' +
+      '<p class="dl-scope-note">' +
+      esc(t('dialect.label.scope_note')) +
+      '</p>' +
       '<div class="dl-actions">' +
       '<button type="button" class="btn btn-ghost" data-action="dl-cancel">' +
       esc(t('dialect.label.cancel')) +

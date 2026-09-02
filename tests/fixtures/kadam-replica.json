@@ -1,0 +1,47 @@
+{
+  "_comment": "Redacted SYNTHETIC replicas of the two live observations behind feature 016 (FR-012). No live payload bytes: ids, domains, prices and asset layout are invented; only the signal keys, their numeric values and the structural facts the classifier reads (native present, secure, zero floor) reproduce the observed shape. Constitution III: synthetic or redacted evidence only.",
+  "adTypeReplica": {
+    "signalPath": "imp[0].ext.ad_type",
+    "signalValue": 30,
+    "imp": {
+      "id": "1",
+      "secure": 1,
+      "bidfloor": 0,
+      "bidfloorcur": "USD",
+      "native": {
+        "ver": "1.2",
+        "request": "{\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"title\":{\"len\":75}}]}"
+      },
+      "ext": { "ad_type": 30, "limit": 1, "subage": 18 }
+    },
+    "expected": {
+      "role": "format-declaration",
+      "label": "custom",
+      "valueStatus": "unknown",
+      "roleConfidence": 0.9,
+      "route": "role-resolved"
+    }
+  },
+  "subageReplica": {
+    "signalPath": "imp[0].ext.subage",
+    "signalValue": 18,
+    "imp": {
+      "id": "1",
+      "secure": 1,
+      "bidfloor": 0,
+      "bidfloorcur": "USD",
+      "native": {
+        "ver": "1.2",
+        "request": "{\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"title\":{\"len\":75}}]}"
+      },
+      "ext": { "ad_type": 30, "limit": 1, "subage": 18 }
+    },
+    "expected": {
+      "role": "measurement",
+      "label": "measurement",
+      "valueStatus": "not-applicable",
+      "roleConfidence": 0.9,
+      "route": "role-resolved"
+    }
+  }
+}

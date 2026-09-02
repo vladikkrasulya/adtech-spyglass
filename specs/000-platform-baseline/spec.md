@@ -17,7 +17,7 @@ ortbtools is an OpenRTB inspection toolkit with three delivery surfaces:
 2. the CommonJS `@ortbtools/core` workspace for deterministic, network-free validation logic; and
 3. the `@ortbtools/cli` workspace, which wraps Core for local terminal and CI use.
 
-The app currently reports version `1.18.0`, Core reports `0.37.0`, and CLI reports `0.1.2`. The
+The app currently reports version `1.19.1`, Core reports `0.38.0`, and CLI reports `0.1.3`. The
 workspace packages are not currently published to npm; repository-local use and the publication
 procedure are the only documented package paths.
 

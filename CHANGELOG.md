@@ -6,6 +6,43 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.19.1 — convergence: the role is visible on the card, the dialect reads back (2026-09-02)
+
+- The question card now shows the resolved role (or the ambiguity candidates) right on the finding,
+  localized, without opening the picker — the params were already travelling since v1.19.0.
+- The account cabinet gains the stored dialect view: each dialect expands to its mappings with the
+  localized label name from the same catalog the picker uses; an unknown or withdrawn label ID
+  passes through verbatim rather than failing.
+- Also in this line (data increment, same contract): the 322-name adjudication landed with both
+  review passes — resolved 219 / ambiguous 20 / abstain 83 — and the full 403-fixture routing matrix
+  measures deterministic answers 168 → 338 with zero demotions.
+
+### v1.19.0 — vendor ext-key role alphabet, wave 1 (2026-09-02)
+
+Vendor ext-key role alphabet, wave 1 (spec 016, ADR-015; Core 0.38.0, CLI 0.1.3).
+
+- The dialect labeller now answers WHAT ROLE an unknown vendor key plays, deterministically and
+  before any model call. `imp[0].ext.ad_type=30` answers "format declaration — the code is the
+  vendor's" at 0.90 instead of a dead-end 0.30; `subage=18` resolves as measurement at 0.90.
+- Nine new storable role labels (identifier, credential, metadata, media-property, pricing,
+  targeting, privacy-consent, delivery-control, measurement) join the eleven existing ones — the
+  picker shows localized names and descriptions in en/uk/ru; stored IDs are unchanged and every
+  pre-existing mapping behaves exactly as before.
+- New response variants: role-resolved (role and value split — the role is supplied with citable
+  provenance, the value stays yours), ambiguous (candidates listed, nothing preselected), and
+  saved-mapping (your stored label, no score). Answers arrive in the operator's locale on every
+  path — the model-path Ukrainian leak is fixed and live-verified in three locales.
+- The scope warning now tells the truth: a mapping applies to this dialect, this path, this exact
+  value — not "all your future traffic".
+- Measured on the frozen routing matrix: deterministic answers 39 → 61 of 81 fixtures, zero
+  demotions, zero model calls on deterministic outcomes. Calibration bench after the persona's
+  claim-aware rework: TUNE 19/19 and HOLDOUT 15/15 at deviation 0.000 (see
+  specs/016-ext-key-alphabet/bench-evidence.md; bands revised deliberately, five hold-out cases
+  authored post-change).
+- The 322-name corpus manifest ships with full provenance and Apache-2.0 attribution
+  (prebid-server @ 0ba3523); the reviewed adjudication of those names is staged as its own
+  increment and gates nothing in this release.
+
 ### v1.18.0 — the product answers in the reader's language
 
 - App `1.18.0`, `@ortbtools/core` `0.37.0`, `@ortbtools/cli` `0.1.2`.

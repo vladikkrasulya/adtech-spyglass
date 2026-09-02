@@ -25,6 +25,9 @@ secrets/
 *.sqlite
 *.sqlite3
 data/
+# …but the committed key-role manifests are source data, not the /data
+# runtime mount (016; plan §Structure Decision):
+!packages/core/dialects/data/
 backups/
 
 # ── Build / dist ──────────────────────────────────────────────

@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "note": "Repo-backed and specification-frozen named rules (016 §Confidence and authority oracle; data-model §5). Separate provenance class from the 322-name corpus: a key listed here that also appears in the corpus keeps both provenance classes under ONE exact runtime identity, and on disagreement the named rule wins with the disagreement recorded. Exact code-point spelling is identity; no case folding anywhere.",
+  "rules": [
+    {
+      "key": "adtype",
+      "provenance": "repo-grounded",
+      "citation": "packages/core/dialects/signal-lexicon.js FORMAT_DECLARING_KEYS; 016 spec frozen adjudication",
+      "outcome": { "kind": "resolved", "role": "format-declaration", "score": 0.9 }
+    },
+    {
+      "key": "ad_type",
+      "provenance": "repo-grounded",
+      "citation": "packages/core/dialects/signal-lexicon.js FORMAT_DECLARING_KEYS; 016 spec frozen adjudication",
+      "outcome": { "kind": "resolved", "role": "format-declaration", "score": 0.9 }
+    },
+    {
+      "key": "adformat",
+      "provenance": "repo-grounded",
+      "citation": "packages/core/dialects/signal-lexicon.js FORMAT_DECLARING_KEYS; 016 spec frozen adjudication",
+      "outcome": { "kind": "resolved", "role": "format-declaration", "score": 0.9 }
+    },
+    {
+      "key": "ad_format",
+      "provenance": "repo-grounded",
+      "citation": "packages/core/dialects/signal-lexicon.js FORMAT_DECLARING_KEYS; 016 spec frozen adjudication",
+      "outcome": { "kind": "resolved", "role": "format-declaration", "score": 0.9 }
+    },
+    {
+      "key": "creative_type",
+      "provenance": "specification-rule",
+      "citation": "016 spec §Confidence and authority oracle — specification-frozen adjudication",
+      "outcome": { "kind": "resolved", "role": "format-declaration", "score": 0.7 }
+    },
+    {
+      "key": "type",
+      "provenance": "specification-rule",
+      "citation": "016 spec §Confidence and authority oracle — generic key cap; establishes no role by itself",
+      "outcome": { "kind": "cap", "maxScore": 0.4 }
+    },
+    {
+      "key": "format",
+      "provenance": "specification-rule",
+      "citation": "016 spec §Confidence and authority oracle — generic key cap; establishes no role by itself",
+      "outcome": { "kind": "cap", "maxScore": 0.4 }
+    },
+    {
+      "key": "imp_count",
+      "provenance": "repo-grounded",
+      "citation": "scripts/label-calibration.js TUNE case 'counter' — 'counter; numeric but key is clear'",
+      "outcome": { "kind": "resolved", "role": "measurement", "score": 0.7 }
+    },
+    {
+      "key": "ttl",
+      "provenance": "specification-rule",
+      "citation": "016 spec: 'delivery-control @ 0.70 for ttl is an explicit reviewed specification rule, not a corpus fact'",
+      "outcome": { "kind": "resolved", "role": "delivery-control", "score": 0.7 }
+    },
+    {
+      "key": "build",
+      "provenance": "repo-grounded",
+      "citation": "scripts/label-calibration.js HOLDOUT case 'ho-buildno' — build number = metadata",
+      "condition": { "valueForm": "digit-only" },
+      "outcome": { "kind": "resolved", "role": "metadata", "score": 0.7 }
+    },
+    {
+      "key": "subage",
+      "provenance": "repo-grounded",
+      "citation": "Ext-RTB contract: subage = subscription age in days (016 spec frozen adjudication)",
+      "outcome": { "kind": "resolved", "role": "measurement", "score": 0.9 }
+    },
+    {
+      "key": "flag",
+      "provenance": "specification-rule",
+      "citation": "016 spec §Confidence and authority oracle — bare 'flag' is ambiguous by adjudication",
+      "outcome": {
+        "kind": "ambiguous",
+        "roleCandidates": ["delivery-control", "format-declaration"]
+      }
+    },
+    {
+      "key": "limit",
+      "provenance": "specification-rule",
+      "citation": "016 spec §Confidence and authority oracle — bare 'limit' is ambiguous by adjudication (bench TUNE 'limit-1': cap? bid limit? no ground)",
+      "outcome": {
+        "kind": "ambiguous",
+        "roleCandidates": ["delivery-control", "pricing", "format-declaration"]
+      }
+    },
+    {
+      "key": "mode",
+      "provenance": "specification-rule",
+      "citation": "016 spec §Confidence and authority oracle — 'mode' abstains",
+      "outcome": { "kind": "abstain" }
+    },
+    {
+      "key": "t",
+      "provenance": "specification-rule",
+      "citation": "016 spec §Confidence and authority oracle — one-letter 't' abstains",
+      "outcome": { "kind": "abstain" }
+    }
+  ]
+}

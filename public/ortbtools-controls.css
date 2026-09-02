@@ -357,3 +357,21 @@ details.kt-lang-menu:not([open]) > .kt-lang-menu-list {
     overflow-wrap: anywhere;
   }
 }
+
+/* 016 T046: the stored dialect view in the account cabinet. */
+.dialect-mappings {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.dialect-mappings-item summary {
+  cursor: pointer;
+  font-size: 0.9em;
+}
+.dialect-mapping-row {
+  padding: 0.15rem 0 0.15rem 1rem;
+  font-size: 0.88em;
+}
+.dialect-mapping-row code {
+  opacity: 0.8;
+}

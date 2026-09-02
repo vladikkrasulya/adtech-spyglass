@@ -111,7 +111,9 @@ thin projection of `classifySignal()`. Existing callers — including
 combine({ savedMapping, legacy, role });
 ```
 
-`outcome: 'legacy'` returns the existing deterministic answer **unchanged in shape** — it is the
+`outcome: 'saved'` becomes the saved-mapping response variant (Spec §Public response
+compatibility): the stored label, `source: 'saved-mapping'`, no numeric confidence. `outcome:
+'legacy'` returns the existing deterministic answer **unchanged in shape** — it is the
 preserved-legacy response variant, not a new one. `outcome: 'model'` carries routing evidence that
 every deterministic source abstained; the handler must forward it (see the API contract).
 

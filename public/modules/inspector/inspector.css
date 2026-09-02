@@ -6150,3 +6150,25 @@ body:has(.app-footer) .toast-container {
     transform: none;
   }
 }
+
+/* 016 T045: the role badge on a question card — the deterministic layer's
+   verdict, visible without opening the picker. Ambiguity renders muted:
+   candidates are an invitation, not a claim. */
+.finding-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.1em 0.55em;
+  border-radius: 999px;
+  font-size: 0.78em;
+  background: color-mix(in srgb, var(--accent, #0284c7) 12%, transparent);
+  color: var(--text, inherit);
+  white-space: nowrap;
+}
+.finding-role-badge strong {
+  font-weight: 600;
+}
+.finding-role-ambiguous {
+  background: color-mix(in srgb, var(--muted, #77848f) 14%, transparent);
+  white-space: normal;
+}

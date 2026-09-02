@@ -1064,7 +1064,7 @@ router.register(
 );
 router.register(createAccountModule({ auth, AnalyzeLog }));
 router.register(createDialectsModule({ auth, db }));
-router.register(createAiLabelModule({ auth, aiLabelLimiter }));
+router.register(createAiLabelModule({ auth, aiLabelLimiter, db }));
 router.register(createCreativeAssetModule({ auth, assetLimiter }));
 router.register(createAdminModule({ db, Users, auth }));
 router.register(createAdminBlogModule());

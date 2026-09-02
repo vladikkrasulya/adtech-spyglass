@@ -266,7 +266,10 @@ model and has little evidence behind it; each answer's prose is in the requested
   the operator. Every role-layer answer MUST surface all evidence supporting its displayed role
   candidate(s), including unverified status, without making the operator leave the product.
 - **FR-005**: The source material's attribution obligations MUST travel with the table into the
-  product, not remain only in the out-of-tree research directory.
+  product, not remain only in the out-of-tree research directory. Concretely: the attribution file
+  ships beside the committed manifests in the repository, and the operator-facing provenance display
+  names the source and its licence — the obligation is met in both the repository and the running
+  product, not in either alone.
 - **FR-006**: An opaque numeric code carried by a role-declaring key that does not itself name a
   specific format — for example `ad_type = 30` — MUST resolve deterministically to a
   `format-declaration` role projected to `custom`, rather than being passed to the model. A numeric or
@@ -291,7 +294,12 @@ model and has little evidence behind it; each answer's prose is in the requested
 - **FR-010**: Every singular key-role-layer answer MUST carry `resolutionStatus: resolved`, a
   canonical `role`, `roleConfidence`, `valueStatus`, and the proposed storable `label` separately.
   `valueStatus` is `resolved`, `unknown` or `not-applicable`; only `resolved` may carry a specific
-  `valueLabel`. The answer MUST state in the operator's language which claim is established and which
+  `valueLabel`. In v1 `valueStatus: resolved` is a RESERVED state that no resolution path produces:
+  the evidence classes able to resolve a value (explicit format words, format-naming truthy flags,
+  established shape flags) are terminal in the precedence matrix and never reach the role layer, so
+  the role layer never has a resolved value to report. A test MUST assert the role layer never emits
+  it; the state exists so that future value evidence extends the contract instead of changing it.
+  The answer MUST state in the operator's language which claim is established and which
   remains unknown. Existing exact-format and model response fields remain unchanged when the role
   layer does not produce the answer.
 - **FR-011**: The confidence contract MUST be re-measured against all twelve existing numeric-classified
@@ -318,7 +326,10 @@ model and has little evidence behind it; each answer's prose is in the requested
 - **FR-017**: The committed corpus snapshot, 322-name adjudication manifest, and distinct repo-backed
   named-rule manifest MUST be reproducible and complete under the frozen contracts below. Continuous
   integration MUST verify their exact sets, provenance, digests and invariants without depending on
-  the out-of-tree corpus; external corpus regeneration is a separate maintainer operation.
+  the out-of-tree corpus; external corpus regeneration is a separate maintainer operation. A
+  contributor without the research corpus can run every repository gate and change every runtime
+  surface; the only operation closed to them is manifest regeneration, and nothing in the gates may
+  assume the corpus is present.
 - **FR-018**: Prose returned by the model MUST be in the locale the request names, including on
   answers with little evidence behind them.
 
@@ -332,7 +343,7 @@ alphabet plus the separately sourced named rules in this specification.
 
 | Existing deterministic result                                                                                 | Applicable role-layer result                       | Required combined outcome                                                                      |
 | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Exact saved mapping                                                                                           | Any                                                | Saved mapping; stop                                                                            |
+| Exact saved mapping                                                                                           | Any                                                | Return the stored mapping as the saved-mapping response variant below; stop                    |
 | Accepted format-naming truthy flag or established shape flag (`popunder`, `push`, `allowShock`, `sizeID=[0]`) | Any                                                | Preserve the current exact-format verdict; stop                                                |
 | Specific-format string verdict                                                                                | `resolved: format-declaration` or `abstain`/absent | Preserve the current specific-format verdict and its existing shape calibration; stop          |
 | Specific-format string verdict                                                                                | Resolved non-format role or `ambiguous`            | Return deterministic `ambiguous` with the conflicting evidence; do not guess or call the model |
@@ -354,30 +365,40 @@ format verdict remains part of the specific-format evaluation.
 #### Storable roles (from CL-002)
 
 - **FR-019**: The set of labels an operator may save MUST be extended with exactly the nine new
-  non-format role IDs defined below. Canonical role `format-declaration` is projected to the existing
-  `custom` label when the value is unknown, or to an existing specific format label only when separate
-  evidence resolves the value. `format-declaration`, `unknown`, `ambiguous` and `other` MUST NOT be
-  stored as semantic labels.
+  non-format role IDs defined below. The closed role-vocabulary table in this specification is the
+  single normative enumeration of the canonical roles and their stored projections; every surface
+  that lists labels derives from it and none defines its own. Canonical role `format-declaration` is
+  projected to the existing `custom` label when the value is unknown, or to an existing specific
+  format label only when separate evidence resolves the value (see FR-010 for why no v1 path does).
+  Identifiers this specification uses that are not labels — the neutral role `format-declaration`,
+  the resolution states `resolved`/`ambiguous`/`abstain`, and the `valueStatus` members `unknown`
+  and `not-applicable` — MUST NOT be accepted as semantic labels.
 - **FR-020**: Extending that set and introducing a discriminated ambiguous-answer variant are public
   contract changes. A recorded compatibility decision MUST name both changes, the compatibility
   treatment below, what stays, and why the existing definition was insufficient.
 - **FR-021**: Every mapping already stored MUST retain exactly its current meaning and MUST continue
-  to behave exactly as it does today. No stored mapping may be rewritten, reinterpreted, or
-  invalidated by this change.
+  to behave exactly as it does today. "Current meaning" decomposes into four observable behaviours,
+  each of which MUST be unchanged for every pre-existing label: what the mapping suppresses, whether
+  it participates in format recognition, how it is displayed, and how it serializes in any export or
+  API response. No stored mapping may be rewritten, reinterpreted, or invalidated by this change.
 - **FR-022**: Suppression and format-recognition behaviour MUST follow the matrix below. Every new
   role is inert to format recognition and, after an explicit save, suppresses only the exact matching
   `question`; this MUST be asserted per role rather than inferred from its name.
 - **FR-023**: The extended set MUST be presented identically wherever an operator meets it — the
-  suggestion, the manual picker, and the stored dialect view — and MUST carry its meaning in all
-  three supported languages in the same change.
+  suggestion, the manual picker, and the stored dialect view. "Identically" is measurable: the same
+  closed set, the same relative ordering, and the same localized display name and one-line localized
+  description, all drawn from one shared catalog. Every label MUST carry both the name and the
+  description in all three supported languages in the same change; a localized name alone does not
+  satisfy this requirement.
 - **FR-024**: Any interface, model-output validator, prompt, export, or stored form that enumerates
   the label set MUST be updated together with it, so that no surface can present or accept a set that
   disagrees with another.
 
 #### Closed role vocabulary and stored projection
 
-The canonical key-role enum is the following closed set. The stored label vocabulary remains every
-pre-existing semantic label plus the nine new non-format IDs below. `format-declaration` is a neutral
+The canonical key-role enum is the following closed set: exactly ten canonical roles, of which nine
+are storable. The stored label vocabulary is exactly twenty labels — the eleven pre-existing
+semantic labels plus the nine new non-format IDs below. `format-declaration` is a neutral
 role, not a stored label: it projects to existing `custom` when the private value is unknown and to an
 existing specific format label only when independent value evidence establishes that format.
 
@@ -404,6 +425,9 @@ control. Such a name resolves only when cited evidence and applicable context se
 
 An alphabet answer is a suggestion and suppresses nothing. Suppression begins only after an explicit
 operator save, and no role introduced here creates the value-independent mapping deferred by CL-001.
+The pre-existing labels are exactly: `pop`, `native`, `banner`, `video`, `audio`, `in-page-push`,
+`push`, `interstitial-banner`, `ignore`, `informational`, `custom` — this list is the normative
+subject of the compatibility floor in FR-021 and SC-010.
 
 | Stored-label group                      | Suppresses exact matching `question` after save | Suppresses non-question findings | Participates in format recognition |
 | --------------------------------------- | ----------------------------------------------- | -------------------------------- | ---------------------------------- |
@@ -433,6 +457,39 @@ pre-existing label retains its current public meaning and runtime behaviour.
   A reviewed exact namespace/vendor/path partition MAY resolve only within that partition. The
   format-family context scoped out by FR-013 is not a contradiction to `format-declaration`.
 
+#### Contract scope, versioning and change management
+
+- **FR-028**: The public contract this feature changes comprises exactly four surfaces: the
+  suggest-label HTTP response, Core's exported label and role enums, the stored `semantic_label`
+  value set, and the model-output schema. The recorded compatibility decision MUST name all four,
+  MUST record the version consequence — a MINOR bump of the Core line under Constitution VIII, with
+  the CLI dependency range and the lockfile following in the same change — and MUST exist in the
+  repository before any code that widens the label set lands.
+- **FR-029**: Withdrawing or renaming a storable label after release is a public contract change
+  requiring its own recorded decision. Whatever that decision says, a stored mapping carrying a
+  withdrawn label MUST continue to load, suppress and display (as its raw ID when no catalog entry
+  remains) exactly as before. Likewise, re-adjudication of a role in a later manifest version never
+  rewrites, re-scopes or invalidates a saved mapping: FR-016 precedence is unconditional and
+  survives any table change.
+- **FR-030**: The CLI ships no labelling surface and gains none here; its only obligation is the
+  dependency-range follow-through in FR-028. Any export or stored form carries labels as opaque IDs,
+  and a reader encountering an ID it has no catalog entry for MUST pass it through verbatim rather
+  than fail or translate it.
+- **FR-031**: The Inspector UI is the only consumer of the suggest-label response and ships in the
+  same immutable image as the server, so no deployed client can predate the new variants; this
+  deployment property MUST be recorded in the compatibility decision, and any future external
+  consumer of the route inherits the variants as documented API rather than as a surprise.
+- **FR-032**: This feature requires no storage migration. The nine new labels are new accepted
+  values of the existing `semantic_label` column; a schema change of any kind is out of scope.
+- **FR-033**: The model prompt payload is frozen. Implementation MUST NOT add any field to what
+  travels to the model beyond the ADR-012 §6 allowlist, and a regression test MUST assert the
+  assembled prompt contains exactly the allowlisted items. The impression-shape verdict is surfaced
+  locally only. (This promotes the corresponding assumption to a requirement.)
+- **FR-034**: Nothing in this feature may create or emulate a value-independent mapping: the save
+  route continues to require a non-empty exact serialized value, and no role's suppression extends
+  beyond the exact dialect + normalized path + serialized value triple. CL-001 remains deferred, and
+  this boundary is a requirement implementation reads, not only a deferred-decision note.
+
 #### Resolution states
 
 Table membership and successful role resolution are different facts. For the observed context, an
@@ -456,8 +513,9 @@ contract remains intact and the preceding table abstention is additive routing e
 
 #### Public response compatibility
 
-The role layer adds a discriminated response variant without redefining existing exact-format or
-model suggestions. A role-layer singular answer uses `resolutionStatus: resolved`, canonical
+The role layer adds discriminated response variants without redefining existing exact-format or
+model suggestions. Preserved deterministic answers are field-identical to today's — the same
+required fields, no additions and no removals, not merely a compatible superset. A role-layer singular answer uses `resolutionStatus: resolved`, canonical
 `role`, `roleConfidence`, `valueStatus`, and a projected storable `label`. The pre-existing
 `confidence` field remains for compatibility and equals `roleConfidence` on these answers because
 their projected label makes no specific value claim: `custom` explicitly includes "value unknown",
@@ -466,13 +524,29 @@ not an alias of the canonical role; specifically, `role: format-declaration` pro
 `label: custom` while the numeric code stays unknown.
 
 An `ambiguous` answer carries `resolutionStatus: ambiguous`, canonical `roleCandidates`, no singular
-role/confidence, and no preselected label. This new variant is the intentional contract extension
-that the compatibility decision and boundary tests MUST record. `abstain` is routing metadata, not a
+role/confidence, and no preselected label. From an `ambiguous` answer the operator may save any
+storable label through the ordinary manual picker, including one of the displayed candidates; the
+answer itself preselects nothing and blocks nothing. This new variant is the intentional contract
+extension that the compatibility decision and boundary tests MUST record.
+
+A **saved-mapping hit** — new behaviour on this route, which today consults no mapping — returns the
+stored mapping itself: `label` is the stored `semantic_label`, `source` is `saved-mapping`, the
+stored notes travel if present, and no numeric confidence is attached, because the operator
+confirmed this mapping and a score would misrepresent certainty as measurement. No model call is
+made. This variant is part of the same recorded compatibility decision.
+
+The precedence matrix's outcomes map onto response variants one-to-one and exhaustively: a
+saved-mapping hit returns the saved-mapping variant; every "preserve" row returns the pre-existing
+deterministic shape unchanged; role-layer `resolved` and `ambiguous` return their variants; only the
+final row's model call returns a model answer. No outcome is unmapped. `abstain` is routing metadata, not a
 fabricated answer; existing model success/unavailable/timeout/error required fields and semantics
 remain unchanged, while additive routing evidence records a preceding table abstention.
 
 The model's accepted-label enum gains the same nine new storable role labels so fallback suggestions
-can stop collapsing them into `ignore`/`informational`. Its existing singular
+can stop collapsing them into `ignore`/`informational`. A conflict between a model answer and a
+deterministic resolution is unreachable by construction — the model runs only after every
+deterministic source abstains, so there is never a deterministic answer to disagree with; routing
+evidence showing otherwise is a precedence-matrix defect, not a reconciliation question. Its existing singular
 `label`/`confidence`/`source` response shape and calibrated, non-deterministic confidence semantics
 otherwise remain unchanged; the numeric ceiling becomes claim-aware under FR-008 and may not clamp a
 role-only label merely because its observed value is numeric.
@@ -606,6 +680,14 @@ semantic rationale explaining why the evidence establishes, conflicts on, or fai
 role.
 
 Every record receives two independent review passes whose reviewer IDs and decisions are retained.
+The two passes MUST be by different reviewers, identified by stable pseudonymous IDs that carry no
+personal data; an automated agent MAY serve as at most one of the two, never both. "Maintainer"
+means the repository owner, and the escalation path for reviewer disagreement is exactly one step:
+the maintainer resolves it with a recorded rationale or the record stays `ambiguous`. Review is not
+a one-time event — a new corpus snapshot version, a change to the authority oracle, or a recorded
+dispute reopens the affected records, and only those. The effort is bounded by design: `abstain` is
+itself a reviewed state and is deliberately cheap to confirm, so completeness means every name has
+a reviewed record, not that every name has a resolved role.
 `resolved` requires reviewer agreement on the singular role/context or an explicit maintainer
 resolution of a recorded disagreement with rationale. Otherwise source or reviewer disagreement is
 `ambiguous`; absence of citable semantic evidence is `abstain`. Majority voting, lexical plausibility
@@ -614,10 +696,18 @@ duplicate, unreviewed, score-mismatched, or silently flattened records. Automate
 this schema and set equality; the recorded independent review is the semantic acceptance oracle that
 digests alone cannot provide.
 
+A missing, truncated or unparseable committed manifest is a startup failure of the affected
+process, never a silent degradation: the role layer MUST refuse to load rather than answer from a
+partial table, and the pre-existing resolver alone MUST NOT be presented as if it were the full
+combined behaviour.
+
 The repo-backed named-rule manifest lists exactly the rules frozen in the confidence and 14-scenario
 oracles, with repository citation or explicit specification-rule provenance and the required score,
 ambiguity, or abstention. A named key that overlaps the 322 corpus names retains both provenance
-classes but only one exact runtime identity; a named key outside the corpus remains outside the
+classes but only one exact runtime identity; where the named rule and the corpus adjudication
+disagree on state or score for that key, the named rule wins — it is the narrower,
+specification-frozen adjudication — and the disagreement MUST be recorded on the entry rather than
+silently resolved. A named key outside the corpus remains outside the
 322-count assertions.
 
 ### Key Entities
@@ -657,7 +747,13 @@ classes but only one exact runtime identity; a named key outside the corpus rema
   deterministically before may newly reach the model; every role-layer `resolved`/`ambiguous` outcome
   makes zero model calls; and `abstain` follows the precedence matrix rather than automatically calling
   the model. Results report exact-format, role-resolved, role-ambiguous, preserved-legacy, and model
-  route counts separately.
+  route counts separately. "Answered deterministically" means the fixture's final combined route is
+  any of the four non-model routes; the five counts partition the matrix — membership is decided by
+  the single final outcome, so every fixture lands in exactly one. Together, `D1 > D0` and the
+  no-demotion clause make the pass non-degenerate: no fixture may leave the deterministic set, so
+  the set grows strictly and a regression in one class cannot hide behind growth in another.
+  Determinism is asserted by procedure, not assumption: the same matrix run in two separate
+  processes and in each of the three locales MUST yield identical routes and identical exact scores.
 - **SC-003**: Every displayed role candidate sourced from the role layer exposes its source, precise
   citation, coverage and literal verification status in-product, and a reviewer can re-find the
   frozen record from that information without external navigation.

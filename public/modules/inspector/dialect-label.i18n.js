@@ -52,9 +52,214 @@
       },
       'dialect.label.confidence': { uk: 'впевненість', en: 'confidence', ru: 'уверенность' },
       'dialect.label.low_confidence_warn': {
-        uk: 'Низька впевненість. Найімовірніше потрібен словник вендора — збережеш здогад, і він мовчки застосується до всього подальшого трафіку.',
-        en: 'Low confidence. This likely needs the vendor’s dictionary — saving a guess applies it silently to all your future traffic.',
-        ru: 'Низкая уверенность. Скорее всего нужен словарь вендора — сохранишь догадку, и она молча применится ко всему дальнейшему трафику.',
+        uk: 'Низька впевненість. Перевір здогад, перш ніж зберігати: мапінг застосується там, де цей шлях має саме це значення, у вибраному діалекті.',
+        en: 'Low confidence. Check the guess before saving: the mapping applies where this path has exactly this value, in the chosen dialect.',
+        ru: 'Низкая уверенность. Проверь догадку, прежде чем сохранять: маппинг применится там, где этот путь имеет именно это значение, в выбранном диалекте.',
+      },
+      // FR-015: the saved mapping's REAL scope — this dialect, this
+      // normalized path, this exact serialized value. Never "all traffic".
+      'dialect.label.scope_note': {
+        uk: 'Мапінг діє лише у вибраному діалекті, для цього шляху з саме цим значенням. Інших значень, шляхів чи діалектів він не торкається.',
+        en: 'The mapping applies only within the chosen dialect, to this path with exactly this value. Other values, paths or dialects are untouched.',
+        ru: 'Маппинг действует только в выбранном диалекте, для этого пути с именно этим значением. Других значений, путей и диалектов он не касается.',
+      },
+
+      // ── 016: the role/value split, variants, provenance ──
+      'dialect.label.role': { uk: 'Роль поля', en: 'Field role', ru: 'Роль поля' },
+      'dialect.label.value_yours': {
+        uk: 'Значення — код вендора. Що воно означає, вирішуєш ти.',
+        en: 'The value is the vendor’s code. What it means is your call.',
+        ru: 'Значение — код вендора. Что оно значит, решаешь ты.',
+      },
+      'dialect.label.source.saved-mapping': {
+        uk: 'твій мапінг',
+        en: 'your mapping',
+        ru: 'твой маппинг',
+      },
+      'dialect.label.source.saved-mapping_hint': {
+        uk: 'Цей сигнал ти вже розмітив; збережений лейбл показано без оцінки — ти його підтвердив.',
+        en: 'You already labelled this signal; the stored label is shown without a score — you confirmed it.',
+        ru: 'Этот сигнал ты уже разметил; сохранённый лейбл показан без оценки — ты его подтвердил.',
+      },
+      'dialect.label.ambiguous_title': {
+        uk: 'Кілька можливих ролей',
+        en: 'Several possible roles',
+        ru: 'Несколько возможных ролей',
+      },
+      'dialect.label.candidates': { uk: 'кандидати', en: 'candidates', ru: 'кандидаты' },
+      'dialect.label.evidence': { uk: 'докази', en: 'evidence', ru: 'доказательства' },
+      'dialect.label.unverified': {
+        uk: 'доказ не підтверджено другим читачем',
+        en: 'evidence not independently confirmed',
+        ru: 'доказательство не подтверждено вторым читателем',
+      },
+      'dialect.label.conflict_note': {
+        uk: 'Значення і форма impression суперечать одне одному — роль стоїть на назві ключа, конфлікт показано.',
+        en: 'The value and the impression shape contradict each other — the role rests on the key name; the conflict is shown.',
+        ru: 'Значение и форма impression противоречат друг другу — роль стоит на имени ключа, конфликт показан.',
+      },
+
+      // ── localized names + one-line descriptions for all twenty labels
+      //    (016 R-06/FR-023): stored IDs never change; display only. ──
+      'dialect.label.name.pop': {
+        uk: 'поп (нове вікно)',
+        en: 'pop (new window)',
+        ru: 'поп (новое окно)',
+      },
+      'dialect.label.desc.pop': {
+        uk: 'Popunder/clickunder: відкривається нове вікно чи вкладка.',
+        en: 'Popunder/clickunder: a new window or tab opens.',
+        ru: 'Popunder/clickunder: открывается новое окно или вкладка.',
+      },
+      'dialect.label.name.native': { uk: 'нативний', en: 'native', ru: 'нативный' },
+      'dialect.label.desc.native': {
+        uk: 'Канонічний IAB native-формат.',
+        en: 'Canonical IAB native format.',
+        ru: 'Канонический IAB native-формат.',
+      },
+      'dialect.label.name.banner': { uk: 'банер', en: 'banner', ru: 'баннер' },
+      'dialect.label.desc.banner': {
+        uk: 'Канонічний IAB банер.',
+        en: 'Canonical IAB banner.',
+        ru: 'Канонический IAB баннер.',
+      },
+      'dialect.label.name.video': { uk: 'відео', en: 'video', ru: 'видео' },
+      'dialect.label.desc.video': {
+        uk: 'Канонічний IAB відеоформат.',
+        en: 'Canonical IAB video format.',
+        ru: 'Канонический IAB видеоформат.',
+      },
+      'dialect.label.name.audio': { uk: 'аудіо', en: 'audio', ru: 'аудио' },
+      'dialect.label.desc.audio': {
+        uk: 'Канонічний IAB аудіоформат.',
+        en: 'Canonical IAB audio format.',
+        ru: 'Канонический IAB аудиоформат.',
+      },
+      'dialect.label.name.in-page-push': {
+        uk: 'in-page push',
+        en: 'in-page push',
+        ru: 'in-page push',
+      },
+      'dialect.label.desc.in-page-push': {
+        uk: 'Віджет у сторінці, що імітує сповіщення.',
+        en: 'An in-page widget imitating a notification.',
+        ru: 'Виджет на странице, имитирующий уведомление.',
+      },
+      'dialect.label.name.push': { uk: 'push', en: 'push', ru: 'push' },
+      'dialect.label.desc.push': {
+        uk: 'Системне сповіщення пристрою.',
+        en: 'A system device notification.',
+        ru: 'Системное уведомление устройства.',
+      },
+      'dialect.label.name.interstitial-banner': {
+        uk: 'міжсторінковий банер',
+        en: 'interstitial banner',
+        ru: 'межстраничный баннер',
+      },
+      'dialect.label.desc.interstitial-banner': {
+        uk: 'Повноекранний банер усередині сторінки.',
+        en: 'A full-screen banner inside the page.',
+        ru: 'Полноэкранный баннер внутри страницы.',
+      },
+      'dialect.label.name.ignore': { uk: 'ігнорувати', en: 'ignore', ru: 'игнорировать' },
+      'dialect.label.desc.ignore': {
+        uk: 'Технічний шум: службові id, трасування.',
+        en: 'Technical noise: bookkeeping ids, traces.',
+        ru: 'Технический шум: служебные id, трассировка.',
+      },
+      'dialect.label.name.informational': {
+        uk: 'інформаційне',
+        en: 'informational',
+        ru: 'информационное',
+      },
+      'dialect.label.desc.informational': {
+        uk: 'Метадані, які варто бачити, але це не формат.',
+        en: 'Metadata worth seeing, but not a format.',
+        ru: 'Метаданные, которые стоит видеть, но это не формат.',
+      },
+      'dialect.label.name.custom': {
+        uk: 'формат не визначено',
+        en: 'format undetermined',
+        ru: 'формат не определён',
+      },
+      'dialect.label.desc.custom': {
+        uk: 'Поле оголошує формат, але який саме — не встановлено.',
+        en: 'The field declares a format; which one is not established.',
+        ru: 'Поле объявляет формат, но какой именно — не установлено.',
+      },
+      'dialect.label.name.identifier': {
+        uk: 'ідентифікатор',
+        en: 'identifier',
+        ru: 'идентификатор',
+      },
+      'dialect.label.desc.identifier': {
+        uk: 'Посилання на акаунт, плейсмент, запит чи іншу сутність.',
+        en: 'A reference to an account, placement, request or other entity.',
+        ru: 'Ссылка на аккаунт, плейсмент, запрос или другую сущность.',
+      },
+      'dialect.label.name.credential': {
+        uk: 'облікові дані',
+        en: 'credential',
+        ru: 'учётные данные',
+      },
+      'dialect.label.desc.credential': {
+        uk: 'Токен, ключ або підпис інтеграції.',
+        en: 'An integration token, key or signature.',
+        ru: 'Токен, ключ или подпись интеграции.',
+      },
+      'dialect.label.name.metadata': { uk: 'метадані', en: 'metadata', ru: 'метаданные' },
+      'dialect.label.desc.metadata': {
+        uk: 'Версія, партнер, середовище, локаль — контекст інтеграції.',
+        en: 'Version, partner, environment, locale — integration context.',
+        ru: 'Версия, партнёр, среда, локаль — контекст интеграции.',
+      },
+      'dialect.label.name.media-property': {
+        uk: 'властивість медіа',
+        en: 'media property',
+        ru: 'свойство медиа',
+      },
+      'dialect.label.desc.media-property': {
+        uk: 'Розміри, mimes, тривалість — параметри креативу.',
+        en: 'Sizes, mimes, duration — creative parameters.',
+        ru: 'Размеры, mimes, длительность — параметры креатива.',
+      },
+      'dialect.label.name.pricing': { uk: 'ціна', en: 'pricing', ru: 'цена' },
+      'dialect.label.desc.pricing': {
+        uk: 'Флор, валюта, множник — грошове правило.',
+        en: 'Floor, currency, multiplier — a monetary rule.',
+        ru: 'Флор, валюта, множитель — денежное правило.',
+      },
+      'dialect.label.name.targeting': { uk: 'таргетинг', en: 'targeting', ru: 'таргетинг' },
+      'dialect.label.desc.targeting': {
+        uk: 'Аудиторія, ключові слова, категорія, гео.',
+        en: 'Audience, keywords, category, geography.',
+        ru: 'Аудитория, ключевые слова, категория, гео.',
+      },
+      'dialect.label.name.privacy-consent': {
+        uk: 'згода/приватність',
+        en: 'privacy/consent',
+        ru: 'согласие/приватность',
+      },
+      'dialect.label.desc.privacy-consent': {
+        uk: 'Сигнал згоди чи регульованої обробки.',
+        en: 'A consent or regulated-processing signal.',
+        ru: 'Сигнал согласия или регулируемой обработки.',
+      },
+      'dialect.label.name.delivery-control': {
+        uk: 'керування доставкою',
+        en: 'delivery control',
+        ru: 'управление доставкой',
+      },
+      'dialect.label.desc.delivery-control': {
+        uk: 'Перемикач, ліміт, таймаут, режим, ендпойнт.',
+        en: 'A switch, limit, timeout, mode or endpoint.',
+        ru: 'Переключатель, лимит, таймаут, режим, эндпойнт.',
+      },
+      'dialect.label.name.measurement': { uk: 'вимірювання', en: 'measurement', ru: 'измерение' },
+      'dialect.label.desc.measurement': {
+        uk: 'Лічильник, метрика, трекінг — звітує, а не керує.',
+        en: 'A counter, metric or tracking value — reports, not controls.',
+        ru: 'Счётчик, метрика, трекинг — сообщает, а не управляет.',
       },
 
       // ── the label picker ──
