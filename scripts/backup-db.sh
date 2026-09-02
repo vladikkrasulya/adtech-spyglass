@@ -12,6 +12,15 @@
 # Install via /etc/cron.d/ortbtools-backup:
 #   30 3 * * * root /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh >> /var/log/ortbtools-backup.log 2>&1
 #
+# PRE-DEPLOY (the constitution's standing deployment gate):
+#   sudo -n /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh --pre-deploy
+# `--pre-deploy` stamps the archive names with the time (ortbtools-YYYY-MM-DDTHHMM.db.gz)
+# so an operator gate run NEVER overwrites the nightly YYYY-MM-DD archive of the same
+# day — which is exactly what happened on 2026-09-02, three times, when the gate was
+# run without the suffix (and without sudo). Retention globs match both shapes.
+# Always run through `sudo -n`: the directory is root:root 0700 by contract, and an
+# unprivileged run fails on the chmod below with a hint instead of half-writing.
+#
 # RESTORE:
 #   DB:            gunzip -c $DEST_DIR/ortbtools-YYYY-MM-DD.db.gz > /srv/DATA/AppData/ortbtools/ortbtools.db
 #                 (stop the container first; remove stale -wal/-shm)
@@ -33,8 +42,17 @@ SRC="$DATA_DIR/ortbtools.db"
 CONTENT_DIR="$DATA_DIR/content-posts"
 RETENTION_DAYS=30
 DATE=$(date +%Y-%m-%d)
+MODE="nightly"
+if [ "${1:-}" = "--pre-deploy" ]; then
+  MODE="pre-deploy"
+  DATE="$(date +%Y-%m-%dT%H%M)" # never collide with the nightly archive of the day
+fi
 
 mkdir -p "$DEST_DIR"
+if [ ! -w "$DEST_DIR" ]; then
+  echo "$(date -Is) ERROR: $DEST_DIR is not writable by $(id -un) — run through 'sudo -n' (the directory is root:root 0700 by contract; see docs/OPERATIONS.md)" >&2
+  exit 3
+fi
 chmod 700 "$DEST_DIR" # restrictive even if an older run created it 0755
 
 # ── SQLite ──────────────────────────────────────────────────────────────────
@@ -44,7 +62,7 @@ if [ -f "$SRC" ]; then
   gzip -f "$DEST"
   chmod 600 "$DEST.gz" # explicit: never inherit a stale 0644 when overwriting same-day
   find "$DEST_DIR" -maxdepth 1 -name "ortbtools-*.db.gz" -mtime +"$RETENTION_DAYS" -delete
-  echo "$(date -Is) db backup ok: $DEST.gz ($(stat -c%s "$DEST.gz") bytes)"
+  echo "$(date -Is) db backup ok [$MODE]: $DEST.gz ($(stat -c%s "$DEST.gz") bytes)"
 else
   echo "$(date -Is) db skip: $SRC does not exist" >&2
 fi
@@ -61,7 +79,7 @@ if [ -d "$CONTENT_DIR" ]; then
   chmod 600 "$ARCHIVE" # explicit: never inherit a stale 0644 when overwriting same-day
   trap - EXIT
   find "$DEST_DIR" -maxdepth 1 -name "content-posts-*.tar.gz" -mtime +"$RETENTION_DAYS" -delete
-  echo "$(date -Is) content backup ok: $ARCHIVE ($(stat -c%s "$ARCHIVE") bytes)"
+  echo "$(date -Is) content backup ok [$MODE]: $ARCHIVE ($(stat -c%s "$ARCHIVE") bytes)"
 else
   echo "$(date -Is) content skip: $CONTENT_DIR does not exist (not yet seeded)" >&2
 fi

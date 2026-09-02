@@ -525,6 +525,23 @@ test('backup-sim: generated archives are 0600 and the dir is 0700 even if it pre
   assert.match(out, /DEST_DIR_MODE=700/, 'backup dir must end up 0700');
   assert.match(out, /DB_GZ_MODE=600/, 'db archive must be 0600 (full DB dump — secret at rest)');
   assert.match(out, /CONTENT_GZ_MODE=600/, 'content archive must be 0600');
+  // 016 I-2: a --pre-deploy run must never overwrite the nightly archive of the
+  // same day (the 2026-09-02 incident), and its own archive is 0600 too.
+  assert.match(
+    out,
+    /NIGHTLY_SURVIVED=yes/,
+    'pre-deploy run must not overwrite the nightly archive',
+  );
+  assert.match(out, /PREDEPLOY_NAMED=yes/, 'pre-deploy archive must carry a THHMM suffix');
+  assert.match(out, /PREDEPLOY_MODE=600/, 'pre-deploy archive must be 0600');
+});
+
+test('backup-db.sh: --pre-deploy time-stamps names and an unwritable dir fails fast with the sudo hint', () => {
+  const b = read('scripts/backup-db.sh');
+  assert.match(b, /--pre-deploy/, 'the gate flag exists');
+  assert.match(b, /%Y-%m-%dT%H%M/, 'pre-deploy names carry the time');
+  assert.match(b, /if \[ ! -w "\$DEST_DIR" \]/, 'unwritable destination is detected before chmod');
+  assert.match(b, /sudo -n/, 'the failure hint names the documented sudo invocation');
 });
 
 test('deploy-lib defines a permission preflight that allows grafana read but forbids world-write', () => {

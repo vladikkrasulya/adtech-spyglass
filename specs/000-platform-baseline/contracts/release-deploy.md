@@ -87,8 +87,10 @@ Backup readiness is a separate operator gate and is not created or validated by 
 every production deployment, the operator runs the WAL-aware backup script and verifies the fresh
 SQLite and persistent-content archives. This separate gate is included in the standing deployment
 authorization; it does not require another approval. `backup-db.sh` owns the backup directory/archive
-permission contract (`0700`/`0600`); the exact command and verification procedure live in the
-operations runbook.
+permission contract (`root:root`, `0700`/`0600`) and is always invoked through `sudo -n`; the
+pre-deploy run uses `--pre-deploy`, which time-stamps the archive names so the gate never
+overwrites the nightly archive of the same day. The exact command and verification procedure live
+in the operations runbook.
 
 The deployment script fetches remote Git state, builds the image, writes operator-owned state, and
 controls Docker. Running it is therefore a standing-authorized production operation only after all

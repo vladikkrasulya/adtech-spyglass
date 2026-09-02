@@ -707,10 +707,14 @@ concentrated secret-at-rest on the box. `backup-db.sh` therefore:
 The cron job runs as **root**; the archives are `root:root 0600`. **No non-root
 process consumes the backups**, so locking them down breaks nothing.
 
-> **Observed drift, pending owner decision (I-2):** the live backup directory and the newest
-> manually invoked backup pair are currently `vk:vk`, while older cron-produced archives remain
-> `root:root`. This observation does not ratify mixed ownership or supersede the root-only contract;
-> no ownership change is part of the reconciliation sweep.
+> **Decision (I-2, 2026-09-02): the root-only contract stands; the drift was an operator error and
+> is repaired.** Three pre-deploy gate runs on 2026-09-02 were invoked without `sudo -n`, which (a)
+> flipped the directory and that day's archives to `vk:vk`, and (b) — worse — overwrote the nightly
+> `ortbtools-2026-09-02.db.gz` three times, because the gate used the same date-only name as cron.
+> Ownership was restored with `chown root:root`. The structural fix is `backup-db.sh --pre-deploy`:
+> the gate now writes `ortbtools-YYYY-MM-DDTHHMM.db.gz` (and the matching content archive), so it
+> can never collide with the nightly file, and an unprivileged run fails fast with a hint instead of
+> half-writing. Retention globs cover both shapes. Mixed ownership is not ratified; it is prevented.
 
 The live **data dir** (`/srv/DATA/AppData/ortbtools`) has three container
 consumers — keep this in mind before tightening its modes:
@@ -787,14 +791,16 @@ A clean Git checkout plus a rebuild recreates it.
 set -euo pipefail
 
 backup_started_at="$(date +%s)"
-sudo -n /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh
+sudo -n /srv/DATA/Stacks/ortbtools/scripts/backup-db.sh --pre-deploy
 
-backup_date="$(date +%Y-%m-%d)"
+# --pre-deploy stamps the names with the time (ortbtools-YYYY-MM-DDTHHMM.db.gz), so the
+# nightly YYYY-MM-DD archive is never overwritten; pick up exactly what this invocation wrote.
 backup_dir="/srv/DATA/Backups/ortbtools"
-db_archive="$backup_dir/ortbtools-$backup_date.db.gz"
-content_archive="$backup_dir/content-posts-$backup_date.tar.gz"
+db_archive="$(sudo -n find "$backup_dir" -maxdepth 1 -name 'ortbtools-????-??-??T????.db.gz' -newermt "@$backup_started_at" | sort | tail -1)"
+content_archive="$(sudo -n find "$backup_dir" -maxdepth 1 -name 'content-posts-????-??-??T????.tar.gz' -newermt "@$backup_started_at" | sort | tail -1)"
 
 # Both halves must exist and must have been written by this invocation.
+test -n "$db_archive" && test -n "$content_archive"
 sudo -n test -s "$db_archive"
 sudo -n test -s "$content_archive"
 test "$(sudo -n stat -c %Y "$db_archive")" -ge "$backup_started_at"
@@ -818,7 +824,9 @@ sudo -n stat -c '%n %s bytes %y' "$db_archive" "$content_archive"
 )
 ```
 
-If today's files already exist, this run replaces both completed archives.
+Without `--pre-deploy` (the nightly cron shape) a same-day run replaces both completed
+archives; with it, each run adds a time-stamped pair beside the nightly one. Both shapes rotate
+after the same retention window.
 
 `deploy.sh` does not create, validate, or inspect a backup. Immediately before every production
 deployment, run the command above and verify the fresh database gzip (including a SQLite integrity

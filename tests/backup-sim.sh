@@ -41,6 +41,18 @@ PATH="$BIN:$PATH" \
   ORTBTOOLS_BACKUP_DEST_DIR="$DEST" \
   bash "$REPO/scripts/backup-db.sh" >/dev/null 2>&1
 
+# Second run in --pre-deploy mode: the nightly archive of the same day must
+# survive untouched, and a timestamped sibling must appear (016 I-2).
+nightly_db="$(find "$DEST" -name 'ortbtools-????-??-??.db.gz' | head -1)"
+nightly_bytes="$(stat -c '%s' "$nightly_db" 2>/dev/null || echo 0)"
+printf 'later-bytes-so-a-collision-would-change-size\n' >>"$DATA/ortbtools.db"
+PATH="$BIN:$PATH" \
+  ORTBTOOLS_BACKUP_DATA_DIR="$DATA" \
+  ORTBTOOLS_BACKUP_DEST_DIR="$DEST" \
+  bash "$REPO/scripts/backup-db.sh" --pre-deploy >/dev/null 2>&1
+nightly_after="$(stat -c '%s' "$nightly_db" 2>/dev/null || echo 0)"
+predeploy_db="$(find "$DEST" -name 'ortbtools-????-??-??T????.db.gz' | head -1)"
+
 mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null; }
 db_gz="$(find "$DEST" -name 'ortbtools-*.db.gz' | head -1)"
 ct_gz="$(find "$DEST" -name 'content-posts-*.tar.gz' | head -1)"
@@ -48,3 +60,6 @@ ct_gz="$(find "$DEST" -name 'content-posts-*.tar.gz' | head -1)"
 echo "DEST_DIR_MODE=$(mode "$DEST")"
 echo "DB_GZ_MODE=$([ -n "$db_gz" ] && mode "$db_gz" || echo none)"
 echo "CONTENT_GZ_MODE=$([ -n "$ct_gz" ] && mode "$ct_gz" || echo none)"
+echo "NIGHTLY_SURVIVED=$([ "$nightly_bytes" = "$nightly_after" ] && [ "$nightly_bytes" != 0 ] && echo yes || echo no)"
+echo "PREDEPLOY_NAMED=$([ -n "$predeploy_db" ] && echo yes || echo no)"
+echo "PREDEPLOY_MODE=$([ -n "$predeploy_db" ] && mode "$predeploy_db" || echo none)"
