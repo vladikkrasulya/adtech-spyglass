@@ -44,7 +44,14 @@
  */
 
 const { readJson, sendJson, sendError } = require('../../lib/http');
-const { resolveSignal, SEMANTIC_LABELS } = require('../../packages/core/dialects/signal-lexicon');
+const { classifySignal } = require('../../packages/core/dialects/signal-lexicon');
+const { lookupKeyRole } = require('../../packages/core/dialects/key-role-alphabet');
+const { combine } = require('../../packages/core/dialects/resolve-precedence');
+const {
+  loadUserDialect,
+  getDefaultDialectForUser,
+} = require('../../packages/core/dialects/user-dialect-runtime');
+const { STORABLE_LABELS } = require('../../packages/core/dialects/key-role-vocabulary');
 const ollama = require('../../lib/ollama');
 const log = require('../../lib/logger').child('ai-label');
 
@@ -131,9 +138,33 @@ function numOrNull(v) {
 }
 
 /**
- * @param {{auth?: any, aiLabelLimiter?: (key: string) => boolean}} [deps]
+ * @param {{auth?: any, aiLabelLimiter?: (key: string) => boolean, db?: any}} [deps]
  */
-function createAiLabelModule({ auth, aiLabelLimiter } = {}) {
+function createAiLabelModule({ auth, aiLabelLimiter, db } = {}) {
+  /**
+   * R-11: the request carries no dialect ID, so the handler resolves the
+   * saved mapping itself from the authenticated operator's DEFAULT dialect.
+   * No default dialect => no saved-mapping precedence (null), and routing
+   * proceeds at the next matrix row. Core performs no lookup — it has no
+   * database (Principle IV).
+   *
+   * @param {number} userId
+   * @param {string} normalizedPath  index-collapsed, e.g. 'imp[].ext.ad_type'
+   * @param {unknown} value
+   * @returns {object|null}
+   */
+  function resolveSavedMapping(userId, normalizedPath, value) {
+    if (!db) return null;
+    try {
+      const dialectId = getDefaultDialectForUser(db, userId);
+      if (!dialectId) return null;
+      const dialect = loadUserDialect(db, dialectId);
+      return dialect.lookupMapping(normalizedPath, value);
+    } catch (_) {
+      // A broken dialect must not take the suggestion route down with it.
+      return null;
+    }
+  }
   async function handleSuggest(req, res) {
     const user = auth && auth.getCurrentUser(req);
     if (!user) {
@@ -165,17 +196,26 @@ function createAiLabelModule({ auth, aiLabelLimiter } = {}) {
 
     const { sketch, siblingKeys } = redactImp(body.imp);
 
-    // ── Stage 1: deterministic ────────────────────────────────────────
-    const fromLexicon = resolveSignal({ signalPath, signalValue, imp: body.imp, locale });
-    if (fromLexicon) {
+    // ── Deterministic resolution: the FR-001 precedence matrix ────────
+    // The legacy resolver is evaluated as classified evidence; the
+    // exact-case role layer answers what it reviewed; combine() applies
+    // the matrix. The model runs only when every deterministic source
+    // abstains (016 §Resolver precedence).
+    const normalizedPath = signalPath.replace(/\[\d+\]/g, '[]');
+    const savedMapping = resolveSavedMapping(user.id, normalizedPath, signalValue);
+    const legacy = classifySignal({ signalPath, signalValue, imp: body.imp, locale });
+    const role = lookupKeyRole({ signalPath: normalizedPath, signalValue, locale });
+    const combined = combine({ savedMapping, legacy, role });
+
+    if (combined.outcome !== 'model') {
       return sendJson(res, 200, {
         ok: true,
-        suggestion: fromLexicon,
+        suggestion: combined.answer,
         signal: { path: signalPath, value: signalValue },
       });
     }
 
-    // ── Stage 2: local persona ────────────────────────────────────────
+    // ── Model fallback: every deterministic source abstained ──────────
     const health = await ollama.verifyPersona();
     if (!health.ok) {
       return sendError(
@@ -196,14 +236,19 @@ function createAiLabelModule({ auth, aiLabelLimiter } = {}) {
         siblingKeys,
         locale,
       });
-      if (!SEMANTIC_LABELS.includes(suggestion.label)) {
+      if (!STORABLE_LABELS.includes(suggestion.label)) {
         // Belt and braces: lib/ollama already checks its own enum, but the
-        // set that matters is the one the SAVE route accepts.
+        // set that matters is the one the SAVE route accepts — since
+        // ADR-015 that is the twenty STORABLE_LABELS, not the legacy
+        // eleven of SEMANTIC_LABELS.
         return sendError(res, 502, 'bad_model_output', 'Model returned a label the store rejects');
       }
       return sendJson(res, 200, {
         ok: true,
-        suggestion,
+        // Required routing evidence (016 §Public response compatibility):
+        // without it the preserved-legacy and model variants cannot be told
+        // apart in the SC-002 route counts.
+        suggestion: { ...suggestion, routing: { roleLayer: role.state, legacy: legacy.kind } },
         signal: { path: signalPath, value: signalValue },
       });
     } catch (e) {

@@ -104,42 +104,42 @@ code separated in the reason, no model call.
 **Independent test**: quickstart §4 — the 14-scenario oracle rows for named-rule keys pass without
 the 322-name adjudication being consulted at all.
 
-- [ ] T014 [P] [US1] Implement `packages/core/dialects/key-role-alphabet.js`: exact-case
+- [x] T014 [P] [US1] Implement `packages/core/dialects/key-role-alphabet.js`: exact-case
       `lookupKeyRole()` over named rules + adjudication, never-null (explicit `abstain` with
       evidence), scores only on `resolved`, named rule wins recorded disagreements (R-01, spec
       §snapshot identity); manifests `require`d once at module scope; missing/unparseable manifest
       throws at load (loud startup failure per spec); an opaque numeric code under a format-declaring key resolves deterministically to `format-declaration`→`custom` (FR-006)
-- [ ] T015 [P] [US1] Add `classifySignal()` to `packages/core/dialects/signal-lexicon.js` returning
+- [x] T015 [P] [US1] Add `classifySignal()` to `packages/core/dialects/signal-lexicon.js` returning
       `{kind, suggestion}`; reimplement `resolveSignal()` as a thin projection with byte-identical
       behaviour, verified by the existing test suite untouched (R-05)
-- [ ] T016 [US1] Implement `packages/core/dialects/resolve-precedence.js`: `combine({savedMapping,
+- [x] T016 [US1] Implement `packages/core/dialects/resolve-precedence.js`: `combine({savedMapping,
 legacy, role})` per the FR-001 matrix with FR-016's unconditional saved-mapping precedence; `saved` → saved-mapping variant, `legacy` → unchanged
       shape, abstain never demotes a deterministic answer to a model call
-- [ ] T017 [US1] Write `tests/key-role-precedence.test.js`: every matrix row as its own case;
+- [x] T017 [US1] Write `tests/key-role-precedence.test.js`: every matrix row as its own case;
       the two load-bearing guarantees called out in quickstart §3 (`popunder=1` stays terminal;
       abstain-over-broad-heuristic preserves legacy, no model)
-- [ ] T018 [US1] Route `modules/ai-label/handler.js` through the precedence matrix: resolve
+- [x] T018 [US1] Route `modules/ai-label/handler.js` through the precedence matrix: resolve
       savedMapping server-side via `getDefaultDialectForUser` + `loadUserDialect` +
       `lookupMapping(normalizedPath, serializedValue)` (R-11); no default dialect ⇒ null; response
       variants per contracts/suggest-label-api.md including A0 saved-mapping and required routing
       evidence on model answers; the handler still never writes a mapping (FR-014)
-- [ ] T019 [P] [US1] Add localized `reason` sentences for role-layer answers to
+- [x] T019 [P] [US1] Add localized `reason` sentences for role-layer answers to
       `packages/core/messages/{en,uk,ru}.json`: resolved (role vs unknown code separated, FR-010),
       ambiguous, saved-mapping; three locales in the same change (Constitution VI)
-- [ ] T020 [US1] Write `tests/key-role-oracle.test.js`: all 14 frozen scenarios (exact role, label,
+- [x] T020 [US1] Write `tests/key-role-oracle.test.js`: all 14 frozen scenarios (exact role, label,
       valueStatus, exact confidence, route) + the `publisher_account_ref` ceiling pair with its
       negative-control assertions (spec §oracles)
-- [ ] T021 [US1] Update `lib/ollama.js`: response-schema enum imports the widened label set from
+- [x] T021 [US1] Update `lib/ollama.js`: response-schema enum imports the widened label set from
       key-role-vocabulary; prompt payload UNTOUCHED — add `tests/key-role-privacy-boundary.test.js`
       asserting the assembled prompt contains exactly the ADR-012 §6 items (FR-033); schema-level guard that no numeric value can yield a specific format label (FR-009)
-- [ ] T022 [US1] Edit `lib/label-persona.js` ONCE (R-07): claim-aware ceiling (numeric ceiling
+- [x] T022 [US1] Edit `lib/label-persona.js` ONCE (R-07): claim-aware ceiling (numeric ceiling
       constrains only value-decoding claims, role-only exempt — FR-008) + locale repair (the
       CLOSING language instruction hardened so low-evidence answers compose in the requested
       language — FR-018); do not run the bench yet, T031 owns it
-- [ ] T023 [US1] Extend `tests/ai-label.test.js`: enum equality across all surfaces via the single
+- [x] T023 [US1] Extend `tests/ai-label.test.js`: enum equality across all surfaces via the single
       source, the model-output validator accepting `identifier @ 0.70` on a numeric value, and
       `bad_model_output` unchanged semantics
-- [ ] T024 [US1] Update `tests/model-free-contract.test.js`: the role layer is deterministic and
+- [x] T024 [US1] Update `tests/model-free-contract.test.js`: the role layer is deterministic and
       opens no new model reachability; intel/news paths still model-free (ADR-003 scope)
 
 **Checkpoint**: `ad_type=30` through the real endpoint returns the US1 answer; oracle green in CI.
@@ -170,7 +170,7 @@ route counts reported.
       (FR-022, the quiet failure mode)
 - [ ] T030 [US2] Suppression semantics per matrix: saved new-role labels suppress only the exact
       matching question, never beyond the exact dialect+path+value triple (FR-034); extend `tests/rules-dialects-questions.test.js` per role (all nine)
-- [ ] T031 [US2] Maintainer bench "after" run: `node scripts/label-calibration.js` post-T022
+- [x] T031 [US2] Maintainer bench "after" run: `node scripts/label-calibration.js` post-T022
       against the live host model; compare with T010's recorded "before" run, revise the
       numeric-case bands deliberately per FR-011 (notably `counter`), and complete
       `specs/016-ext-key-alphabet/bench-evidence.md` with both runs side by side
@@ -209,16 +209,16 @@ warning tells the truth; all twenty labels speak three languages.
 
 **Independent test**: quickstart §6 — low-evidence signal at `locale: ru` returns Russian prose.
 
-- [ ] T037 [US4] Write the locale regression: low-evidence model answer at each locale contains no
+- [x] T037 [US4] Write the locale regression: low-evidence model answer at each locale contains no
       cross-alphabet contamination (reuse 015's letter-set scan against model `reason` fixtures);
       lives with the ai-label tests, mocked transport, CI-safe
-- [ ] T038 [US4] Maintainer live check: three locales × two low-evidence signals against the real
+- [x] T038 [US4] Maintainer live check: three locales × two low-evidence signals against the real
       host model; record in `specs/016-ext-key-alphabet/bench-evidence.md` (the bench cannot see
       language — research §cross-cutting)
 
 ## Phase 7: Polish & release
 
-- [ ] T039 [P] Extend HOLDOUT in `scripts/label-calibration.js` with post-change cases authored
+- [x] T039 [P] Extend HOLDOUT in `scripts/label-calibration.js` with post-change cases authored
       fresh (FR-012); note in the file header that the deterministic layer now shrinks the bench
       population and the oracle owns those cases
 - [ ] T040 [P] Update `specs/000-platform-baseline/contracts/core-validator.md`: the classified

@@ -486,7 +486,7 @@ test('persona: the calibrated body has not drifted', () => {
   const body = splitPersona(buildPersona('uk')).body;
   assert.equal(
     createHash('sha256').update(body, 'utf8').digest('hex'),
-    '6590777b82620a4c2510e506f76919b85a6be77a000f97a42d086558e4f2a7d4',
+    '35a7428f22dd6407459fbf032f81c98635cb1a43f1f63b7626187429605e7584',
     'the persona body changed — re-run scripts/label-calibration.js before updating this digest',
   );
 });
