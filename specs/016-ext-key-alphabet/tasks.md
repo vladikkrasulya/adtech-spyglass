@@ -23,8 +23,9 @@ US1 deliberately needs only the named-rule manifest, so it ships before the 322-
 
 1. **T004 (ADR-015) blocks every code task**: FR-028 — the compatibility decision MUST exist in the
    repository before any code that widens the label set lands.
-2. **T010 (D0 capture) blocks every resolver change**: R-09/SC-002 — `D0` is measured against
-   pre-change code and committed as data; captured later it proves nothing.
+2. **T010 (baseline freeze) blocks every resolver and persona change**: R-09/SC-002/FR-011 —
+   `D0` and the bench "before" run are measured against pre-change code and committed; captured
+   later they prove nothing. Slice B (partition fixtures) lands after T008 and gates only US2.
 3. The calibration bench (T031/T038) runs only against the live host model — maintainer operation,
    never CI (ADR-012).
 
@@ -47,7 +48,8 @@ record and the working skeleton.
 ## Phase 2: Foundational (blocks all user stories)
 
 **Goal**: the decision record, the vocabulary, the manifests, and the frozen baseline. Nothing here
-changes runtime behaviour yet — that is what makes T010's baseline honest.
+changes runtime resolution behaviour yet — that is what makes T010's baseline honest (T013 widens
+the save route's accepted set, which the baseline does not measure).
 
 - [ ] T004 Author `specs/decisions/ADR-015-storable-roles-and-response-variants.md`: names the four
       contract surfaces (FR-028), the nine labels, the three response variants (resolved, ambiguous,
@@ -69,10 +71,15 @@ changes runtime behaviour yet — that is what makes T010's baseline honest.
 - [ ] T009 [P] Author `packages/core/dialects/data/key-role-named-rules.v1.json`: exactly the rules
       frozen in the spec's oracles, with `condition` predicates (digit-only `build`) and four
       outcome kinds including `cap` for bare `type`/`format` (data-model §5); roles only, no value dictionary of any kind (FR-002)
-- [ ] T010 Build routing-matrix fixtures and capture `D0` against CURRENT code into
-      `packages/core/dialects/data/key-role-routing-matrix.v1.json`: one fixture per partition,
-      per named rule, per each of the 47 collision-group spellings, unlisted-casing and absent-key
-      controls in both namespaces (R-09; BLOCKS every resolver change)
+- [ ] T010 Freeze every pre-change baseline against CURRENT code, in two slices plus the bench.
+      Slice A (blocks US1): routing-matrix fixtures for every named rule, all 47 collision-group
+      spellings, unlisted-casing and absent-key controls in both namespaces, with their `D0`, into
+      `packages/core/dialects/data/key-role-routing-matrix.v1.json`. Slice B (after T008, blocks
+      US2 only): one fixture per adjudication partition, appended to the same manifest with its own
+      `D0` — SC-002's full-matrix claim is asserted at US2, so the MVP does not wait for the
+      322-name adjudication. Bench: run `node scripts/label-calibration.js` against the live host
+      model NOW, before any persona or resolver change, and record the "before" run in
+      `specs/016-ext-key-alphabet/bench-evidence.md` (R-09; FR-011; maintainer operation)
 - [ ] T011 Write `tests/key-role-manifests.test.js`: all seven CI assertion groups from
       contracts/manifests.md — set equality, partition, digests, score double-entry (recompute via
       T006), review completeness, named-rule consistency, routing-fixture coverage — with NO corpus
@@ -148,7 +155,7 @@ route counts reported.
       resolves, different casing abstains — the 22 collision groups), resolved/ambiguous/abstain
       state semantics, provenance completeness, unverified status surfaced literally
 - [ ] T026 [US2] Write `tests/key-role-routing-matrix.test.js`: full-matrix run computing `D1`,
-      asserting `D1 > D0`, no-demotion per fixture, zero model calls on resolved/ambiguous, and
+      asserting `D1 > D0`, no-demotion per fixture (requires T010 slice B complete), zero model calls on resolved/ambiguous, and
       the five separate route counts (partition rule from SC-002)
 - [ ] T027 [P] [US2] Wire the dialects-questions rule's skip-path:
       `packages/core/rules/dialects-questions/index.js` continues to ask questions (never suppresses
@@ -163,10 +170,10 @@ route counts reported.
       (FR-022, the quiet failure mode)
 - [ ] T030 [US2] Suppression semantics per matrix: saved new-role labels suppress only the exact
       matching question, never beyond the exact dialect+path+value triple (FR-034); extend `tests/rules-dialects-questions.test.js` per role (all nine)
-- [ ] T031 [US2] Maintainer bench run: `node scripts/label-calibration.js` BEFORE T022's edit
-      (from git stash or the pre-change commit) and AFTER; revise the numeric-case bands
-      deliberately per FR-011 (notably `counter`), record both runs in
-      `specs/016-ext-key-alphabet/bench-evidence.md`
+- [ ] T031 [US2] Maintainer bench "after" run: `node scripts/label-calibration.js` post-T022
+      against the live host model; compare with T010's recorded "before" run, revise the
+      numeric-case bands deliberately per FR-011 (notably `counter`), and complete
+      `specs/016-ext-key-alphabet/bench-evidence.md` with both runs side by side
 
 **Checkpoint**: SC-002 measurable — `D1 > D0` recorded with route counts.
 
@@ -191,8 +198,8 @@ warning tells the truth; all twenty labels speak three languages.
 - [ ] T035 [US3] Fix the scope warning in `public/modules/inspector/dialect-label.js` and its i18n:
       "цей діалект, цей шлях, це точне значення" — never "all future traffic" (FR-015); update
       `tests/ui-audit.test.js` accordingly
-- [ ] T036 [US3] Extend `tests/i18n-parity.test.js` (or the module-dictionary parity test that owns
-      this surface): three-locale key parity for every new key, calque guard over the new strings
+- [ ] T036 [US3] Extend `tests/i18n-audit.test.js` — the test that owns three-locale parity for
+      module dictionaries: key parity for every new key, calque guard over the new strings
 
 **Checkpoint**: the manual quickstart §9 walkthrough passes in all three locales.
 
@@ -238,10 +245,12 @@ Phase 1 ──→ Phase 2 ──→ US1 (Phase 3) ──→ US2 (Phase 4) ──
 ```
 
 - T004 (ADR-015) blocks T005+ — every code task (FR-028).
-- T010 (D0) blocks T014–T018 — every resolver change (R-09).
-- T008 (adjudication) blocks T010's partition fixtures and T025; named-rule-only rows of the oracle
-  (T020) do NOT wait for it — that is what makes US1 independent.
-- T022 (persona) blocks T031's "after" run and T037/T038.
+- T010 slice A + the bench "before" run block T014–T018 — every resolver or persona change (R-09,
+  FR-011). Slice B waits for T008 and blocks only T026/US2, so the MVP chain is
+  T004 → T010A → US1 with no adjudication on it.
+- T008 (adjudication) blocks T010 slice B and T025; named-rule-only rows of the oracle (T020) do
+  NOT wait for it — that is what makes US1 independent.
+- T022 (persona) blocks T031 (the "after" bench run) and T037/T038.
 - US3 depends on US1's response variants (T018); US4 depends on T022 only.
 - T041–T044 close the feature and depend on everything above.
 

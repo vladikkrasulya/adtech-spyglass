@@ -122,6 +122,7 @@ packages/core/dialects/
 ├── key-role-vocabulary.js      # NEW closed role enum, projection to storable labels,
 │                               #     suppression + format-recognition matrix
 ├── key-role-alphabet.js        # NEW exact-case lookup over the manifests; pure, no I/O
+├── key-role-authority.js       # NEW authority oracle: evidence → exact score (pure)
 ├── resolve-precedence.js       # NEW the FR-001 matrix; classifies the legacy resolver's
 │                               #     result and combines it with the role layer
 ├── signal-lexicon.js           # CHANGED returns a classified verdict instead of a bare
@@ -163,14 +164,18 @@ tests/
 ├── key-role-alphabet.test.js       # NEW lookup, exact-case identity, states
 ├── key-role-precedence.test.js     # NEW every row of the FR-001 matrix
 ├── key-role-manifests.test.js      # NEW set equality, digests, invariants — no corpus needed
+├── key-role-vocabulary.test.js     # NEW 20 labels, projection, reserved valueStatus
 ├── key-role-oracle.test.js         # NEW the 14 frozen scenarios + 2 ceiling fixtures
 ├── key-role-routing-matrix.test.js # NEW D0/D1, five route counts, no-new-model-call
 ├── key-role-browser-mirror.test.js # NEW browser mirror equals Core's export
+├── key-role-privacy-boundary.test.js # NEW prompt payload = ADR-012 §6 allowlist, exactly
+├── fixtures/kadam-replica.json     # NEW redacted synthetic replicas of the live pair
 ├── ai-label.test.js                # CHANGED new variant, widened label set
 ├── dialects.test.js                # CHANGED compatibility floor for pre-existing labels
 └── model-free-contract.test.js     # CHANGED asserts the role layer adds no model reach
 
-specs/decisions/ADR-015-*.md    # NEW storable roles + ambiguous response variant
+specs/decisions/ADR-015-*.md    # NEW storable roles + response variants
+specs/016-ext-key-alphabet/bench-evidence.md  # NEW before/after bench runs (maintainer)
                                 #     docs/PRIVACY.md is deliberately UNCHANGED (R-08)
 ```
 

@@ -140,7 +140,7 @@ treats all nine new roles as inert.
 ## 6. Locale parity
 
 ```bash
-node --test tests/i18n-parity.test.js tests/model-free-contract.test.js
+node --test tests/i18n-audit.test.js tests/model-free-contract.test.js
 ```
 
 **Expected**: all twenty labels carry a display name and description in en/uk/ru; the ambiguity copy
