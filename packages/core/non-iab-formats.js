@@ -1,5 +1,7 @@
 'use strict';
 
+const { FORMAT_LABELS } = require('./dialects/key-role-vocabulary');
+
 /**
  * packages/core/non-iab-formats.js — shared constants + helpers for the
  * non-IAB ad formats ortbtools recognises (pop family, push family).
@@ -117,6 +119,12 @@ function scanExtForFormatHints(ext, basePath, userDialect) {
       if (v == null) continue;
       const mapping = userDialect.lookupMapping(`${signalBase}.${k}`, v);
       if (!mapping || !mapping.semantic_label) continue;
+      // FR-022 (016/ADR-015): format recognition consults the explicit
+      // FORMAT_LABELS allowlist, never "is an accepted stored label". The
+      // nine role labels (identifier, pricing, delivery-control, …) are
+      // inert here by construction — a plausible role name must not become
+      // a format hint.
+      if (!FORMAT_LABELS.includes(mapping.semantic_label)) continue;
       const n = normaliseFormatName(mapping.semantic_label);
       if (ALL_NON_STANDARD.has(n)) pushHint(n, k);
     }

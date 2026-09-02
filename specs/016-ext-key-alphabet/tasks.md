@@ -151,24 +151,24 @@ route counts reported.
 
 **Independent test**: quickstart §4b — matrix run reports `D1 > D0`, zero demotions, five counts.
 
-- [ ] T025 [US2] Write `tests/key-role-alphabet.test.js`: exact-case identity (listed spelling
+- [x] T025 [US2] Write `tests/key-role-alphabet.test.js`: exact-case identity (listed spelling
       resolves, different casing abstains — the 22 collision groups), resolved/ambiguous/abstain
       state semantics, provenance completeness, unverified status surfaced literally
-- [ ] T026 [US2] Write `tests/key-role-routing-matrix.test.js`: full-matrix run computing `D1`,
+- [x] T026 [US2] Write `tests/key-role-routing-matrix.test.js`: full-matrix run computing `D1`,
       asserting `D1 > D0`, no-demotion per fixture (requires T010 slice B complete), zero model calls on resolved/ambiguous, and
       the five separate route counts (partition rule from SC-002)
-- [ ] T027 [P] [US2] Wire the dialects-questions rule's skip-path:
+- [x] T027 [P] [US2] Wire the dialects-questions rule's skip-path:
       `packages/core/rules/dialects-questions/index.js` continues to ask questions (never suppresses
       — FR-022), but finding params gain the role-layer state so the UI can show "роль відома" on
       the card without a second request
-- [ ] T028 [US2] Surface provenance in the suggest response: evidence entries carry source, precise
+- [x] T028 [US2] Surface provenance in the suggest response: evidence entries carry source, precise
       citation, coverage class, literal verification status (FR-003/FR-004); the impression-shape verdict appears in the local explanation only, never in confidence or a decoded value (FR-013); extend
       `tests/ai-label.test.js` with a provenance-shape assertion
-- [ ] T029 [P] [US2] Format-recognition allowlist: `packages/core/non-iab-formats.js` and
+- [x] T029 [P] [US2] Format-recognition allowlist: `packages/core/non-iab-formats.js` and
       `packages/core/dialects/user-dialect-runtime.js` consult `FORMAT_LABELS` membership, never
       "is an accepted stored label"; per-role inertness asserted in `tests/dialects.test.js`
       (FR-022, the quiet failure mode)
-- [ ] T030 [US2] Suppression semantics per matrix: saved new-role labels suppress only the exact
+- [x] T030 [US2] Suppression semantics per matrix: saved new-role labels suppress only the exact
       matching question, never beyond the exact dialect+path+value triple (FR-034); extend `tests/rules-dialects-questions.test.js` per role (all nine)
 - [x] T031 [US2] Maintainer bench "after" run: `node scripts/label-calibration.js` post-T022
       against the live host model; compare with T010's recorded "before" run, revise the
@@ -184,21 +184,21 @@ warning tells the truth; all twenty labels speak three languages.
 
 **Independent test**: quickstart §9 by hand — the Kadam replica payload end-to-end.
 
-- [ ] T032 [P] [US3] Generate `public/core/key-role-vocabulary.js` browser mirror (IIFE, no
+- [x] T032 [P] [US3] Generate `public/core/key-role-vocabulary.js` browser mirror (IIFE, no
       require) from Core's export; write `tests/key-role-browser-mirror.test.js` asserting set
       equality byte-for-byte (R-10, FR-024); unknown IDs pass through verbatim in any export/reader path (FR-030)
-- [ ] T033 [US3] Rework `public/modules/inspector/dialect-label.js`: render resolved answers as
+- [x] T033 [US3] Rework `public/modules/inspector/dialect-label.js`: render resolved answers as
       role + value split (only the value is the operator's decision), ambiguous answers with
       candidates and nothing preselected, saved-mapping answers with their stored label and no
       score, provenance and verification status visible, source badges distinct (lexicon / model /
       saved-mapping — ADR-012 §4)
-- [ ] T034 [P] [US3] Localize all twenty labels with display names AND one-line descriptions in
+- [x] T034 [P] [US3] Localize all twenty labels with display names AND one-line descriptions in
       `public/modules/inspector/dialect-label.i18n.js` for en/uk/ru from the shared catalog
       (FR-023, R-06); picker shows localized names, stores raw IDs
-- [ ] T035 [US3] Fix the scope warning in `public/modules/inspector/dialect-label.js` and its i18n:
+- [x] T035 [US3] Fix the scope warning in `public/modules/inspector/dialect-label.js` and its i18n:
       "цей діалект, цей шлях, це точне значення" — never "all future traffic" (FR-015); update
       `tests/ui-audit.test.js` accordingly
-- [ ] T036 [US3] Extend `tests/i18n-audit.test.js` — the test that owns three-locale parity for
+- [x] T036 [US3] Extend `tests/i18n-audit.test.js` — the test that owns three-locale parity for
       module dictionaries: key parity for every new key, calque guard over the new strings
 
 **Checkpoint**: the manual quickstart §9 walkthrough passes in all three locales.

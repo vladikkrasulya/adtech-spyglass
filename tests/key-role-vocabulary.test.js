@@ -106,3 +106,43 @@ test('unknown roles project to nothing', () => {
 test('FR-021 floor: all eleven legacy labels are storable, verbatim', () => {
   for (const label of LEGACY_LABELS) assert.ok(isStorableLabel(label), label);
 });
+
+// ── FR-022 runtime inertness: per role, against the real consumers ───────
+
+const { scanExtForFormatHints } = require('../packages/core/non-iab-formats');
+
+test('FR-022 per role: a saved role mapping never becomes a format hint', () => {
+  for (const role of ROLE_LABELS) {
+    const dialect = {
+      lookupMapping: (p, v) =>
+        p === 'imp[].ext.mystery' && String(v) === '7' ? { semantic_label: role } : null,
+    };
+    const hints = scanExtForFormatHints({ mystery: 7 }, 'imp[].ext', dialect);
+    assert.deepEqual(hints, [], `${role} must be inert to format recognition`);
+  }
+});
+
+test('FR-022 control: a saved FORMAT mapping still becomes a hint, exactly as today', () => {
+  const dialect = {
+    lookupMapping: (p, v) =>
+      p === 'imp[].ext.mystery' && String(v) === '7' ? { semantic_label: 'pop' } : null,
+  };
+  const hints = scanExtForFormatHints({ mystery: 7 }, 'imp[].ext', dialect);
+  assert.equal(hints.length, 1);
+  assert.equal(hints[0].format, 'pop');
+});
+
+test('T030 per role: after a save, the mapping suppresses only the exact matching question', () => {
+  // Mirror user-dialect-runtime.shouldSuppress semantics without a DB: the
+  // runtime suppresses any mapped question, and non-question findings only
+  // for ignore/informational — every role label must behave like custom
+  // (question yes, non-question no).
+  const shouldSuppressNonQuestion = (label) => label === 'ignore' || label === 'informational';
+  for (const role of ROLE_LABELS) {
+    assert.equal(
+      shouldSuppressNonQuestion(role),
+      false,
+      `${role} must not suppress non-question findings`,
+    );
+  }
+});

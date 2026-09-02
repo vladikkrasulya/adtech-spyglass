@@ -27,6 +27,7 @@ const {
   recommendedFormat,
   shapeFingerprint,
 } = require('../../dialects/shape-fingerprint');
+const { lookupKeyRole } = require('../../dialects/key-role-alphabet');
 
 // Known IAB / industry-blessed ext.* keys at the imp level. Anything
 // outside this list is treated as 'unknown vendor extension'. Sourced
@@ -103,6 +104,11 @@ module.exports = {
           }
 
           const findingPath = `imp[${i}].ext.${key}`;
+          // 016 T027: the role-layer state travels on the finding so the
+          // card can show "роль відома" without a second request. A table
+          // SUGGESTION suppresses nothing (FR-022) — the question still
+          // asks; it just asks better.
+          const roleHint = lookupKeyRole({ signalPath, signalValue: value });
           findings.push(
             makeFinding('dialects.question.unknown_ext_signal', 'question', findingPath, {
               path: findingPath,
@@ -110,6 +116,13 @@ module.exports = {
               candidates: impCandidates,
               recommended: impRecommended,
               shape_signature: impFingerprint,
+              role_state: roleHint.state,
+              ...(roleHint.state === 'resolved'
+                ? { role: roleHint.role, role_confidence: roleHint.score }
+                : {}),
+              ...(roleHint.state === 'ambiguous'
+                ? { role_candidates: roleHint.roleCandidates }
+                : {}),
             }),
           );
           count += 1;
@@ -142,6 +155,7 @@ module.exports = {
         if (userDialect && userDialect.lookupMapping(signalPath, valueStr)) continue;
 
         const findingPath = `ext.${key}`;
+        const roleHint = lookupKeyRole({ signalPath, signalValue: value });
         findings.push(
           makeFinding('dialects.question.unknown_ext_signal', 'question', findingPath, {
             path: findingPath,
@@ -149,6 +163,11 @@ module.exports = {
             candidates: [],
             recommended: null,
             shape_signature: fingerprint,
+            role_state: roleHint.state,
+            ...(roleHint.state === 'resolved'
+              ? { role: roleHint.role, role_confidence: roleHint.score }
+              : {}),
+            ...(roleHint.state === 'ambiguous' ? { role_candidates: roleHint.roleCandidates } : {}),
           }),
         );
         count += 1;

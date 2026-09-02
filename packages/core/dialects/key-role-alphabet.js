@@ -146,6 +146,12 @@ function lookupKeyRole({ signalPath, signalValue, locale = 'en' }) {
       unverifiedOnly:
         corpusEntry.adapterEvidence.length > 0 &&
         corpusEntry.adapterEvidence.every((a) => a.status === 'unverified'),
+      // FR-003/SC-003: a citation precise enough to re-check, without
+      // leaving the product — the first attestations of each class.
+      citations: [
+        ...corpusEntry.schemaEvidence.slice(0, 2).map((e) => `${e.file}#${e.pointer}`),
+        ...corpusEntry.adapterEvidence.slice(0, 2).map((e) => `${e.bidder}: ${e.citation}`),
+      ],
       source: 'key-role-corpus.v1',
     });
   }
