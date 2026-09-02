@@ -27,3 +27,11 @@ package-lock.json
 .specify/init-options.json
 .specify/integration.json
 .specify/memory/.constitution-template.json
+
+# Generated key-role data manifests: byte-exact regeneration is the contract
+# (scripts/build-key-role-corpus.js --check); ATTRIBUTION.md is a byte-true
+# copy of the research corpus original with a pinned digest (016 FR-005/017).
+packages/core/dialects/data/key-role-corpus.v1.json
+packages/core/dialects/data/key-role-routing-matrix.v1.json
+packages/core/dialects/data/key-role-adjudication.v1.json
+packages/core/dialects/data/ATTRIBUTION.md

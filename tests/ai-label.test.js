@@ -170,27 +170,42 @@ test('lexicon: every resolution returns a storable label', () => {
 // ── 2. vocabulary parity ─────────────────────────────────────────────
 
 test('label vocabularies agree across lexicon, model client and store', () => {
-  // The store's list is the authority — it is what the save route validates
-  // against. Read it from the source rather than restating it here, so this
-  // test fails when the store changes and nobody updated the other two.
+  // Since 016 (ADR-015) the one normative enumeration lives in
+  // key-role-vocabulary: the store accepts all twenty STORABLE_LABELS, and
+  // this test asserts the store IMPORTS them rather than declaring its own
+  // array (FR-024). The lexicon's own SEMANTIC_LABELS stays the legacy
+  // eleven — it is what the LEGACY resolver may return, a subset of the
+  // store's accepted set, unchanged by FR-021.
+  const vocab = require('../packages/core/dialects/key-role-vocabulary');
   const handlerSrc = require('node:fs').readFileSync(
     require('node:path').join(__dirname, '..', 'modules', 'dialects', 'handler.js'),
     'utf8',
   );
-  const block = handlerSrc.match(/const SEMANTIC_LABELS = new Set\(\[([\s\S]*?)\]\)/);
-  assert.ok(block, 'could not locate SEMANTIC_LABELS in the dialects store');
-  const storeLabels = [...block[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  assert.match(
+    handlerSrc,
+    /require\('\.\.\/\.\.\/packages\/core\/dialects\/key-role-vocabulary'\)/,
+    'the dialects store must import the shared vocabulary, not declare its own array',
+  );
+  assert.doesNotMatch(
+    handlerSrc,
+    /const SEMANTIC_LABELS = new Set\(\[\s*'/,
+    'the dialects store must not carry a literal label array',
+  );
 
   assert.deepEqual(
     [...lex.SEMANTIC_LABELS].sort(),
-    [...storeLabels].sort(),
-    'signal-lexicon and the dialects store disagree on the label vocabulary',
+    [...vocab.LEGACY_LABELS].sort(),
+    'the legacy resolver vocabulary must stay exactly the pre-existing eleven (FR-021)',
   );
-  assert.deepEqual(
-    [...ollama.LABELS].sort(),
-    [...storeLabels].sort(),
-    'the model client and the dialects store disagree on the label vocabulary',
-  );
+  for (const label of lex.SEMANTIC_LABELS) {
+    assert.ok(vocab.STORABLE_LABELS.includes(label), `legacy label ${label} must remain storable`);
+  }
+  for (const label of ollama.LABELS) {
+    assert.ok(
+      vocab.STORABLE_LABELS.includes(label),
+      `model client offers unstorable label ${label}`,
+    );
+  }
 });
 
 // ── 3. redaction is an allowlist ─────────────────────────────────────

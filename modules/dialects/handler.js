@@ -28,19 +28,11 @@ const { readJson, sendJson, sendError } = require('../../lib/http');
 const { clearCacheForDb } = require('../../packages/core/dialects/user-dialect-runtime');
 const log = require('../../lib/logger').child('dialects');
 
-const SEMANTIC_LABELS = new Set([
-  'pop',
-  'native',
-  'banner',
-  'video',
-  'audio',
-  'in-page-push',
-  'push',
-  'interstitial-banner',
-  'ignore',
-  'informational',
-  'custom',
-]);
+// The one normative label enumeration lives in Core (016 FR-024, ADR-015):
+// eleven pre-existing labels plus the nine storable role labels. This route
+// used to declare its own array; importing keeps every surface in step.
+const { STORABLE_LABELS } = require('../../packages/core/dialects/key-role-vocabulary');
+const SEMANTIC_LABELS = new Set(STORABLE_LABELS);
 
 const NAME_MAX = 80;
 const SIGNAL_VALUE_MAX = 256;

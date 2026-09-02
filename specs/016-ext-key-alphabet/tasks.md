@@ -36,12 +36,12 @@ US1 deliberately needs only the named-rule manifest, so it ships before the 322-
 **Goal**: nothing to install — no new dependencies (plan §Technical Context). Setup is the decision
 record and the working skeleton.
 
-- [ ] T001 Create `packages/core/dialects/data/` directory with a `README.md` stub naming the four
+- [x] T001 Create `packages/core/dialects/data/` directory with a `README.md` stub naming the four
       manifests, their versioning rule, and the regeneration command
-- [ ] T002 [P] Copy Apache-2.0 attribution into `packages/core/dialects/data/ATTRIBUTION.md` from
+- [x] T002 [P] Copy Apache-2.0 attribution into `packages/core/dialects/data/ATTRIBUTION.md` from
       `~/.local/share/ortbtools-research/prebid-2026-08-20/ATTRIBUTION.md`, pinned digests included
       (FR-005; digest `06ab88a6…` per contracts/manifests.md)
-- [ ] T003 [P] Add redacted synthetic replicas of the two live observations (`ad_type=30`,
+- [x] T003 [P] Add redacted synthetic replicas of the two live observations (`ad_type=30`,
       `subage=18` on a native imp) as fixtures in `tests/fixtures/kadam-replica.json` — synthetic
       values, no live payload bytes (FR-012, Constitution III)
 
@@ -51,27 +51,27 @@ record and the working skeleton.
 changes runtime resolution behaviour yet — that is what makes T010's baseline honest (T013 widens
 the save route's accepted set, which the baseline does not measure).
 
-- [ ] T004 Author `specs/decisions/ADR-015-storable-roles-and-response-variants.md`: names the four
+- [x] T004 Author `specs/decisions/ADR-015-storable-roles-and-response-variants.md`: names the four
       contract surfaces (FR-028), the nine labels, the three response variants (resolved, ambiguous,
       saved-mapping), the Core MINOR consequence with CLI follow-through, withdrawal policy
       (FR-029), the same-image deployment property (FR-031), and the no-migration statement (FR-032), satisfying FR-020's recorded-decision obligation; index it in `specs/DECISIONS.md`
-- [ ] T005 [P] Implement `packages/core/dialects/key-role-vocabulary.js`: `CANONICAL_ROLES` (10),
+- [x] T005 [P] Implement `packages/core/dialects/key-role-vocabulary.js`: `CANONICAL_ROLES` (10),
       `STORABLE_LABELS` (20), `FORMAT_LABELS` (explicit allowlist), `projectRoleToLabel()` with
       JSDoc types; contract per contracts/key-role-layer.md
-- [ ] T006 [P] Implement the authority-oracle pure function in
+- [x] T006 [P] Implement the authority-oracle pure function in
       `packages/core/dialects/key-role-authority.js`: evidence → exact score
       {0.90, 0.80, 0.70, 0.60, 0.40} with every cap from spec §Confidence and authority oracle — the FR-007 exact-band rule and the FR-026 evidence-strength authority rule
-- [ ] T007 Implement `scripts/build-key-role-corpus.js`: reads the out-of-tree corpus, reproduces
+- [x] T007 Implement `scripts/build-key-role-corpus.js`: reads the out-of-tree corpus, reproduces
       every frozen assertion (272/697/289/279, histogram 364/824/42/2/1, 133→128, 95,
       194+33+95=322, digests), records per-entry coverage class per FR-025, writes `key-role-corpus.v1.json`, and REJECTS on any mismatch —
       never runs in CI (FR-017, R-03)
 - [ ] T008 Generate adjudication skeleton and run the review: first pass may be an agent, second
       pass is the maintainer, per spec §review rules (two distinct reviewer IDs, pseudonymous);
       output `packages/core/dialects/data/key-role-adjudication.v1.json` covering exactly 322 names + partitions; conflicting credible roles become `ambiguous` per FR-027, and `abstain` is a valid reviewed state and deliberately cheap
-- [ ] T009 [P] Author `packages/core/dialects/data/key-role-named-rules.v1.json`: exactly the rules
+- [x] T009 [P] Author `packages/core/dialects/data/key-role-named-rules.v1.json`: exactly the rules
       frozen in the spec's oracles, with `condition` predicates (digit-only `build`) and four
       outcome kinds including `cap` for bare `type`/`format` (data-model §5); roles only, no value dictionary of any kind (FR-002)
-- [ ] T010 Freeze every pre-change baseline against CURRENT code, in two slices plus the bench.
+- [ ] T010 (slice A + bench "before" DONE 2026-09-02; slice B awaits T008) Freeze every pre-change baseline against CURRENT code, in two slices plus the bench.
       Slice A (blocks US1): routing-matrix fixtures for every named rule, all 47 collision-group
       spellings, unlisted-casing and absent-key controls in both namespaces, with their `D0`, into
       `packages/core/dialects/data/key-role-routing-matrix.v1.json`. Slice B (after T008, blocks
@@ -80,15 +80,15 @@ the save route's accepted set, which the baseline does not measure).
       322-name adjudication. Bench: run `node scripts/label-calibration.js` against the live host
       model NOW, before any persona or resolver change, and record the "before" run in
       `specs/016-ext-key-alphabet/bench-evidence.md` (R-09; FR-011; maintainer operation)
-- [ ] T011 Write `tests/key-role-manifests.test.js`: all seven CI assertion groups from
+- [x] T011 Write `tests/key-role-manifests.test.js`: all seven CI assertion groups from
       contracts/manifests.md — set equality, partition, digests, score double-entry (recompute via
       T006), review completeness, named-rule consistency, routing-fixture coverage — with NO corpus
       dependency
-- [ ] T012 [P] Write `tests/key-role-vocabulary.test.js`: 20 storable labels, nine new IDs absent
+- [x] T012 [P] Write `tests/key-role-vocabulary.test.js`: 20 storable labels, nine new IDs absent
       from `FORMAT_LABELS`, non-labels rejected (`format-declaration`, resolution states,
       valueStatus members — FR-019), projection rules, `valueStatus: resolved` never produced in v1
       (FR-010)
-- [ ] T013 Widen the save route in `modules/dialects/handler.js`: `SEMANTIC_LABELS` imports from
+- [x] T013 Widen the save route in `modules/dialects/handler.js`: `SEMANTIC_LABELS` imports from
       key-role-vocabulary (single source, FR-024); extend `tests/dialects.test.js` with the
       compatibility floor — all eleven pre-existing labels store/read/behave identically (FR-021,
       SC-010) and the nine new labels are accepted

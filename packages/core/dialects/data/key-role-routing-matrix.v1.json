@@ -1,0 +1,819 @@
+{
+  "version": 1,
+  "sliceA": {
+    "capturedAgainst": "pre-change resolver (v1.18.0 line, before the role layer)",
+    "note": "D0 frozen per R-09. Slice B (adjudication partitions) is appended after the adjudication manifest exists and gates US2 only."
+  },
+  "sliceB": null,
+  "fixtures": [
+    {
+      "id": "fx-001-named-adtype-req",
+      "class": "named-rule",
+      "signalPath": "ext.adtype",
+      "signalValue": 8,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-002-named-adtype-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.adtype",
+      "signalValue": 8,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-003-named-ad_type-req",
+      "class": "named-rule",
+      "signalPath": "ext.ad_type",
+      "signalValue": 30,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-004-named-ad_type-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.ad_type",
+      "signalValue": 30,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-005-named-adformat-req",
+      "class": "named-rule",
+      "signalPath": "ext.adformat",
+      "signalValue": 12,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-006-named-adformat-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.adformat",
+      "signalValue": 12,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-007-named-ad_format-req",
+      "class": "named-rule",
+      "signalPath": "ext.ad_format",
+      "signalValue": 12,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-008-named-ad_format-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.ad_format",
+      "signalValue": 12,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-009-named-creative_type-req",
+      "class": "named-rule",
+      "signalPath": "ext.creative_type",
+      "signalValue": 3,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-010-named-creative_type-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.creative_type",
+      "signalValue": 3,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-011-named-type-req",
+      "class": "named-rule",
+      "signalPath": "ext.type",
+      "signalValue": 5,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-012-named-type-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.type",
+      "signalValue": 5,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-013-named-format-req",
+      "class": "named-rule",
+      "signalPath": "ext.format",
+      "signalValue": 12,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-014-named-format-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.format",
+      "signalValue": 12,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-015-named-imp_count-req",
+      "class": "named-rule",
+      "signalPath": "ext.imp_count",
+      "signalValue": 3,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-016-named-imp_count-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.imp_count",
+      "signalValue": 3,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-017-named-ttl-req",
+      "class": "named-rule",
+      "signalPath": "ext.ttl",
+      "signalValue": 300,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-018-named-ttl-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.ttl",
+      "signalValue": 300,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-019-named-build-req",
+      "class": "named-rule",
+      "signalPath": "ext.build",
+      "signalValue": "20260812",
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-020-named-build-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.build",
+      "signalValue": "20260812",
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-021-named-subage-req",
+      "class": "named-rule",
+      "signalPath": "ext.subage",
+      "signalValue": 18,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-022-named-subage-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.subage",
+      "signalValue": 18,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-023-named-flag-req",
+      "class": "named-rule",
+      "signalPath": "ext.flag",
+      "signalValue": 1,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-024-named-flag-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.flag",
+      "signalValue": 1,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-025-named-limit-req",
+      "class": "named-rule",
+      "signalPath": "ext.limit",
+      "signalValue": 1,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-026-named-limit-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.limit",
+      "signalValue": 1,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-027-named-mode-req",
+      "class": "named-rule",
+      "signalPath": "ext.mode",
+      "signalValue": 2,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-028-named-mode-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.mode",
+      "signalValue": 2,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-029-named-t-req",
+      "class": "named-rule",
+      "signalPath": "ext.t",
+      "signalValue": 1,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-030-named-t-imp",
+      "class": "named-rule",
+      "signalPath": "imp[].ext.t",
+      "signalValue": 1,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-031-collision-siteID",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.siteID",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-032-collision-siteId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.siteId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-033-collision-siteid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.siteid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-034-collision-zoneId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.zoneId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-035-collision-zoneid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.zoneid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-036-collision-cId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.cId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-037-collision-cid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.cid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-038-collision-accountId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.accountId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-039-collision-accountid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.accountid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-040-collision-pageType",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.pageType",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-041-collision-pagetype",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.pagetype",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-042-collision-pubId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.pubId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-043-collision-pubid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.pubid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-044-collision-TagID",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.TagID",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-045-collision-tagId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.tagId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-046-collision-tagid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.tagid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-047-collision-networkId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.networkId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-048-collision-networkid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.networkid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-049-collision-placementId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.placementId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-050-collision-placementid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.placementid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-051-collision-PublisherPath",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.PublisherPath",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-052-collision-publisherPath",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.publisherPath",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-053-collision-bidFloor",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.bidFloor",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-054-collision-bidfloor",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.bidfloor",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-055-collision-adUnitID",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.adUnitID",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-056-collision-adUnitId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.adUnitId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-057-collision-adunitid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.adunitid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-058-collision-sourceId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.sourceId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-059-collision-sourceid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.sourceid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-060-collision-publisherId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.publisherId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-061-collision-publisherid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.publisherid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-062-collision-appId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.appId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-063-collision-appid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.appid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-064-collision-PId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.PId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-065-collision-pid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.pid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-066-collision-sspId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.sspId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-067-collision-sspid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.sspid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-068-collision-partnerId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.partnerId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-069-collision-partnerid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.partnerid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-070-collision-adSlotID",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.adSlotID",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-071-collision-adslotId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.adslotId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-072-collision-bidFloorCur",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.bidFloorCur",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-073-collision-bidfloorcur",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.bidfloorcur",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-074-collision-slotId",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.slotId",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-075-collision-slotid",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.slotid",
+      "signalValue": 7,
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-076-collision-adUnitCode",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.adUnitCode",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-077-collision-adunitcode",
+      "class": "collision-member",
+      "signalPath": "imp[].ext.adunitcode",
+      "signalValue": 7,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-078-unlisted-casing-pId",
+      "class": "unlisted-casing",
+      "signalPath": "imp[].ext.pId",
+      "signalValue": 7,
+      "note": "differs only by case from a listed spelling; must abstain, never inherit",
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-079-unlisted-casing-tagID",
+      "class": "unlisted-casing",
+      "signalPath": "imp[].ext.tagID",
+      "signalValue": 7,
+      "note": "differs only by case from a listed spelling; must abstain, never inherit",
+      "D0": {
+        "route": "legacy-deterministic",
+        "label": "ignore",
+        "confidence": 0.9
+      }
+    },
+    {
+      "id": "fx-080-absent-req",
+      "class": "absent-key",
+      "signalPath": "ext.publisher_account_ref",
+      "signalValue": 42,
+      "D0": {
+        "route": "model"
+      }
+    },
+    {
+      "id": "fx-081-absent-imp",
+      "class": "absent-key",
+      "signalPath": "imp[].ext.publisher_account_ref",
+      "signalValue": 42,
+      "D0": {
+        "route": "model"
+      }
+    }
+  ]
+}
