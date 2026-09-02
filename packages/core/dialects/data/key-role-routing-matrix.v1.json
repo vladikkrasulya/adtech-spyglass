@@ -4,7 +4,3812 @@
     "capturedAgainst": "pre-change resolver (v1.18.0 line, before the role layer)",
     "note": "D0 frozen per R-09. Slice B (adjudication partitions) is appended after the adjudication manifest exists and gates US2 only."
   },
-  "sliceB": null,
+  "sliceB": {
+    "capturedAgainst": "legacy resolver only (the pre-016 baseline; projection is byte-identical)",
+    "note": "One fixture per adjudication record (T010B). Appended after T008 finalize.",
+    "fixtures": [
+      {
+        "id": "fxB-001-PId",
+        "class": "partition",
+        "signalPath": "imp[].ext.PId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-002-PublisherPath",
+        "class": "partition",
+        "signalPath": "imp[].ext.PublisherPath",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-003-TagID",
+        "class": "partition",
+        "signalPath": "imp[].ext.TagID",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-004-acat",
+        "class": "partition",
+        "signalPath": "imp[].ext.acat",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-005-access_token",
+        "class": "partition",
+        "signalPath": "imp[].ext.access_token",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-006-account",
+        "class": "partition",
+        "signalPath": "imp[].ext.account",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-007-accountId",
+        "class": "partition",
+        "signalPath": "imp[].ext.accountId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-008-account_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.account_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-009-accountid",
+        "class": "partition",
+        "signalPath": "imp[].ext.accountid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-010-adCode",
+        "class": "partition",
+        "signalPath": "imp[].ext.adCode",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-011-adSlot",
+        "class": "partition",
+        "signalPath": "imp[].ext.adSlot",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-012-adSlotID",
+        "class": "partition",
+        "signalPath": "imp[].ext.adSlotID",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-013-adSlots",
+        "class": "partition",
+        "signalPath": "imp[].ext.adSlots",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-014-adUnitCode",
+        "class": "partition",
+        "signalPath": "imp[].ext.adUnitCode",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-015-adUnitID",
+        "class": "partition",
+        "signalPath": "imp[].ext.adUnitID",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-016-adUnitId",
+        "class": "partition",
+        "signalPath": "imp[].ext.adUnitId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-017-ad_unit_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.ad_unit_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-018-adapterVersion",
+        "class": "partition",
+        "signalPath": "imp[].ext.adapterVersion",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-019-adbreakId",
+        "class": "partition",
+        "signalPath": "imp[].ext.adbreakId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-020-adhese",
+        "class": "partition",
+        "signalPath": "imp[].ext.adhese",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-021-adslotId",
+        "class": "partition",
+        "signalPath": "imp[].ext.adslotId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-022-adspaceId",
+        "class": "partition",
+        "signalPath": "imp[].ext.adspaceId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-023-adtest",
+        "class": "partition",
+        "signalPath": "imp[].ext.adtest",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-024-adtype",
+        "class": "partition",
+        "signalPath": "imp[].ext.adtype",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-025-adunit",
+        "class": "partition",
+        "signalPath": "imp[].ext.adunit",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-026-adunit_code",
+        "class": "partition",
+        "signalPath": "imp[].ext.adunit_code",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-027-adunitcode",
+        "class": "partition",
+        "signalPath": "imp[].ext.adunitcode",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-028-adunitid",
+        "class": "partition",
+        "signalPath": "imp[].ext.adunitid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-029-adzoneid",
+        "class": "partition",
+        "signalPath": "imp[].ext.adzoneid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-030-ae",
+        "class": "partition",
+        "signalPath": "imp[].ext.ae",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-031-aid",
+        "class": "partition",
+        "signalPath": "imp[].ext.aid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-032-allow_smaller_sizes",
+        "class": "partition",
+        "signalPath": "imp[].ext.allow_smaller_sizes",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-033-allowedAds",
+        "class": "partition",
+        "signalPath": "imp[].ext.allowedAds",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-034-api",
+        "class": "partition",
+        "signalPath": "imp[].ext.api",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-035-apiKey",
+        "class": "partition",
+        "signalPath": "imp[].ext.apiKey",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-036-appId",
+        "class": "partition",
+        "signalPath": "imp[].ext.appId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-037-appIds",
+        "class": "partition",
+        "signalPath": "imp[].ext.appIds",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-038-app_auth_token",
+        "class": "partition",
+        "signalPath": "imp[].ext.app_auth_token",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-039-app_store_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.app_store_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-040-appid",
+        "class": "partition",
+        "signalPath": "imp[].ext.appid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-041-appnexus",
+        "class": "partition",
+        "signalPath": "imp[].ext.appnexus",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-042-asi",
+        "class": "partition",
+        "signalPath": "imp[].ext.asi",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-043-assetKey",
+        "class": "partition",
+        "signalPath": "imp[].ext.assetKey",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-044-auId",
+        "class": "partition",
+        "signalPath": "imp[].ext.auId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-045-audiences",
+        "class": "partition",
+        "signalPath": "imp[].ext.audiences",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-046-auth",
+        "class": "partition",
+        "signalPath": "imp[].ext.auth",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-047-badv",
+        "class": "partition",
+        "signalPath": "imp[].ext.badv",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-048-banner",
+        "class": "partition",
+        "signalPath": "imp[].ext.banner",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-049-banner_frameworks",
+        "class": "partition",
+        "signalPath": "imp[].ext.banner_frameworks",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-050-bapp",
+        "class": "partition",
+        "signalPath": "imp[].ext.bapp",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-051-battr",
+        "class": "partition",
+        "signalPath": "imp[].ext.battr",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-052-bcat",
+        "class": "partition",
+        "signalPath": "imp[].ext.bcat",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-053-bcid",
+        "class": "partition",
+        "signalPath": "imp[].ext.bcid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-054-bcrid",
+        "class": "partition",
+        "signalPath": "imp[].ext.bcrid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-055-bidFloor",
+        "class": "partition",
+        "signalPath": "imp[].ext.bidFloor",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-056-bidFloorCur",
+        "class": "partition",
+        "signalPath": "imp[].ext.bidFloorCur",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-057-bidType",
+        "class": "partition",
+        "signalPath": "imp[].ext.bidType",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-058-bidder",
+        "class": "partition",
+        "signalPath": "imp[].ext.bidder",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-059-bidfloor",
+        "class": "partition",
+        "signalPath": "imp[].ext.bidfloor",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-060-bidfloorcur",
+        "class": "partition",
+        "signalPath": "imp[].ext.bidfloorcur",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-061-bidonmultiformat",
+        "class": "partition",
+        "signalPath": "imp[].ext.bidonmultiformat",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-062-bids",
+        "class": "partition",
+        "signalPath": "imp[].ext.bids",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-063-bundleId",
+        "class": "partition",
+        "signalPath": "imp[].ext.bundleId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-064-cId",
+        "class": "partition",
+        "signalPath": "imp[].ext.cId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-065-campaign",
+        "class": "partition",
+        "signalPath": "imp[].ext.campaign",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-066-category",
+        "class": "partition",
+        "signalPath": "imp[].ext.category",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-067-channel",
+        "class": "partition",
+        "signalPath": "imp[].ext.channel",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-068-ci",
+        "class": "partition",
+        "signalPath": "imp[].ext.ci",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-069-cid",
+        "class": "partition",
+        "signalPath": "imp[].ext.cid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-070-clientToken",
+        "class": "partition",
+        "signalPath": "imp[].ext.clientToken",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-071-code",
+        "class": "partition",
+        "signalPath": "imp[].ext.code",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-072-company_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.company_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-073-connatix",
+        "class": "partition",
+        "signalPath": "imp[].ext.connatix",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-074-consent",
+        "class": "partition",
+        "signalPath": "imp[].ext.consent",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-075-consented_providers_settings",
+        "class": "partition",
+        "signalPath": "imp[].ext.consented_providers_settings",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-076-context",
+        "class": "partition",
+        "signalPath": "imp[].ext.context",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-077-cp",
+        "class": "partition",
+        "signalPath": "imp[].ext.cp",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-078-creative",
+        "class": "partition",
+        "signalPath": "imp[].ext.creative",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-079-creativeType",
+        "class": "partition",
+        "signalPath": "imp[].ext.creativeType",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-080-crid",
+        "class": "partition",
+        "signalPath": "imp[].ext.crid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-081-ct",
+        "class": "partition",
+        "signalPath": "imp[].ext.ct",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-082-cur",
+        "class": "partition",
+        "signalPath": "imp[].ext.cur",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-083-currency",
+        "class": "partition",
+        "signalPath": "imp[].ext.currency",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "informational",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-084-custom1",
+        "class": "partition",
+        "signalPath": "imp[].ext.custom1",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-085-custom2",
+        "class": "partition",
+        "signalPath": "imp[].ext.custom2",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-086-custom3",
+        "class": "partition",
+        "signalPath": "imp[].ext.custom3",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-087-custom4",
+        "class": "partition",
+        "signalPath": "imp[].ext.custom4",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-088-custom5",
+        "class": "partition",
+        "signalPath": "imp[].ext.custom5",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-089-customFloor",
+        "class": "partition",
+        "signalPath": "imp[].ext.customFloor",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-090-customParams",
+        "class": "partition",
+        "signalPath": "imp[].ext.customParams",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-091-customTargeting",
+        "class": "partition",
+        "signalPath": "imp[].ext.customTargeting",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-092-custom_site_section_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.custom_site_section_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-093-customerId",
+        "class": "partition",
+        "signalPath": "imp[].ext.customerId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-094-cwcreative",
+        "class": "partition",
+        "signalPath": "imp[].ext.cwcreative",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-095-cwdebug",
+        "class": "partition",
+        "signalPath": "imp[].ext.cwdebug",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-096-cwfeatures",
+        "class": "partition",
+        "signalPath": "imp[].ext.cwfeatures",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-097-dcn",
+        "class": "partition",
+        "signalPath": "imp[].ext.dcn",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-098-dctr",
+        "class": "partition",
+        "signalPath": "imp[].ext.dctr",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-099-debug",
+        "class": "partition",
+        "signalPath": "imp[].ext.debug",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-100-decoration",
+        "class": "partition",
+        "signalPath": "imp[].ext.decoration",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-101-delDomain",
+        "class": "partition",
+        "signalPath": "imp[].ext.delDomain",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-102-displaySizes",
+        "class": "partition",
+        "signalPath": "imp[].ext.displaySizes",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-103-displayio",
+        "class": "partition",
+        "signalPath": "imp[].ext.displayio",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-104-divId",
+        "class": "partition",
+        "signalPath": "imp[].ext.divId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-105-dmxid",
+        "class": "partition",
+        "signalPath": "imp[].ext.dmxid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-106-domainId",
+        "class": "partition",
+        "signalPath": "imp[].ext.domainId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-107-endpoint",
+        "class": "partition",
+        "signalPath": "imp[].ext.endpoint",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-108-endpointId",
+        "class": "partition",
+        "signalPath": "imp[].ext.endpointId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-109-env",
+        "class": "partition",
+        "signalPath": "imp[].ext.env",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-110-exchange",
+        "class": "partition",
+        "signalPath": "imp[].ext.exchange",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-111-exp",
+        "class": "partition",
+        "signalPath": "imp[].ext.exp",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-112-ext",
+        "class": "partition",
+        "signalPath": "imp[].ext.ext",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-113-extId",
+        "class": "partition",
+        "signalPath": "imp[].ext.extId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-114-ext_imp_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.ext_imp_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-115-ext_inv_code",
+        "class": "partition",
+        "signalPath": "imp[].ext.ext_inv_code",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-116-external_imp_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.external_imp_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-117-favoredMediaType",
+        "class": "partition",
+        "signalPath": "imp[].ext.favoredMediaType",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-118-floor",
+        "class": "partition",
+        "signalPath": "imp[].ext.floor",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-119-floorPrice",
+        "class": "partition",
+        "signalPath": "imp[].ext.floorPrice",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-120-force_bid",
+        "class": "partition",
+        "signalPath": "imp[].ext.force_bid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-121-format",
+        "class": "partition",
+        "signalPath": "imp[].ext.format",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-122-formatId",
+        "class": "partition",
+        "signalPath": "imp[].ext.formatId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-123-formats",
+        "class": "partition",
+        "signalPath": "imp[].ext.formats",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-124-gdpr",
+        "class": "partition",
+        "signalPath": "imp[].ext.gdpr",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-125-generate_ad_pod_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.generate_ad_pod_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-126-groupId",
+        "class": "partition",
+        "signalPath": "imp[].ext.groupId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-127-group_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.group_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-128-hash",
+        "class": "partition",
+        "signalPath": "imp[].ext.hash",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-129-host",
+        "class": "partition",
+        "signalPath": "imp[].ext.host",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-130-id",
+        "class": "partition",
+        "signalPath": "imp[].ext.id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-131-imageUrl",
+        "class": "partition",
+        "signalPath": "imp[].ext.imageUrl",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-132-imp_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.imp_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-133-insticator",
+        "class": "partition",
+        "signalPath": "imp[].ext.insticator",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-134-instl",
+        "class": "partition",
+        "signalPath": "imp[].ext.instl",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-135-integration",
+        "class": "partition",
+        "signalPath": "imp[].ext.integration",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "informational",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-136-integrationType",
+        "class": "partition",
+        "signalPath": "imp[].ext.integrationType",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-137-inv",
+        "class": "partition",
+        "signalPath": "imp[].ext.inv",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-138-invCode",
+        "class": "partition",
+        "signalPath": "imp[].ext.invCode",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-139-inv_code",
+        "class": "partition",
+        "signalPath": "imp[].ext.inv_code",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-140-inventory",
+        "class": "partition",
+        "signalPath": "imp[].ext.inventory",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-141-inventoryCode",
+        "class": "partition",
+        "signalPath": "imp[].ext.inventoryCode",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-142-inventoryId",
+        "class": "partition",
+        "signalPath": "imp[].ext.inventoryId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-143-ip",
+        "class": "partition",
+        "signalPath": "imp[].ext.ip",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-144-irisid",
+        "class": "partition",
+        "signalPath": "imp[].ext.irisid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-145-isTest",
+        "class": "partition",
+        "signalPath": "imp[].ext.isTest",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-146-is_prebid",
+        "class": "partition",
+        "signalPath": "imp[].ext.is_prebid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-147-is_rewarded_inventory",
+        "class": "partition",
+        "signalPath": "imp[].ext.is_rewarded_inventory",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-148-ixdiag",
+        "class": "partition",
+        "signalPath": "imp[].ext.ixdiag",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-149-just_an_unused_vrtcal_param",
+        "class": "partition",
+        "signalPath": "imp[].ext.just_an_unused_vrtcal_param",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-150-jxprop1",
+        "class": "partition",
+        "signalPath": "imp[].ext.jxprop1",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-151-jxprop2",
+        "class": "partition",
+        "signalPath": "imp[].ext.jxprop2",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-152-kadfloor",
+        "class": "partition",
+        "signalPath": "imp[].ext.kadfloor",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-153-key",
+        "class": "partition",
+        "signalPath": "imp[].ext.key",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-154-keyValues",
+        "class": "partition",
+        "signalPath": "imp[].ext.keyValues",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-155-keyid",
+        "class": "partition",
+        "signalPath": "imp[].ext.keyid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-156-keywords",
+        "class": "partition",
+        "signalPath": "imp[].ext.keywords",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-157-language",
+        "class": "partition",
+        "signalPath": "imp[].ext.language",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "informational",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-158-location",
+        "class": "partition",
+        "signalPath": "imp[].ext.location",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-159-mandantId",
+        "class": "partition",
+        "signalPath": "imp[].ext.mandantId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-160-maxDeals",
+        "class": "partition",
+        "signalPath": "imp[].ext.maxDeals",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-161-maxduration",
+        "class": "partition",
+        "signalPath": "imp[].ext.maxduration",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-162-med_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.med_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-163-mediaId",
+        "class": "partition",
+        "signalPath": "imp[].ext.mediaId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-164-member",
+        "class": "partition",
+        "signalPath": "imp[].ext.member",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-165-memberid",
+        "class": "partition",
+        "signalPath": "imp[].ext.memberid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-166-mid",
+        "class": "partition",
+        "signalPath": "imp[].ext.mid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-167-mimes",
+        "class": "partition",
+        "signalPath": "imp[].ext.mimes",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-168-mktag",
+        "class": "partition",
+        "signalPath": "imp[].ext.mktag",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-169-mname",
+        "class": "partition",
+        "signalPath": "imp[].ext.mname",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-170-nativery",
+        "class": "partition",
+        "signalPath": "imp[].ext.nativery",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-171-network",
+        "class": "partition",
+        "signalPath": "imp[].ext.network",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "informational",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-172-networkId",
+        "class": "partition",
+        "signalPath": "imp[].ext.networkId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-173-network_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.network_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-174-networkid",
+        "class": "partition",
+        "signalPath": "imp[].ext.networkid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-175-networkids",
+        "class": "partition",
+        "signalPath": "imp[].ext.networkids",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-176-nid",
+        "class": "partition",
+        "signalPath": "imp[].ext.nid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-177-noCookies",
+        "class": "partition",
+        "signalPath": "imp[].ext.noCookies",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-178-ntpnid",
+        "class": "partition",
+        "signalPath": "imp[].ext.ntpnid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-179-options",
+        "class": "partition",
+        "signalPath": "imp[].ext.options",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-180-org",
+        "class": "partition",
+        "signalPath": "imp[].ext.org",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-181-organizationId",
+        "class": "partition",
+        "signalPath": "imp[].ext.organizationId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-182-originalPublisherid",
+        "class": "partition",
+        "signalPath": "imp[].ext.originalPublisherid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-183-owner",
+        "class": "partition",
+        "signalPath": "imp[].ext.owner",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-184-pageId",
+        "class": "partition",
+        "signalPath": "imp[].ext.pageId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-185-pageTemplate",
+        "class": "partition",
+        "signalPath": "imp[].ext.pageTemplate",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-186-pageType",
+        "class": "partition",
+        "signalPath": "imp[].ext.pageType",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-187-page_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.page_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-188-pagetype",
+        "class": "partition",
+        "signalPath": "imp[].ext.pagetype",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-189-parallax",
+        "class": "partition",
+        "signalPath": "imp[].ext.parallax",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-190-params",
+        "class": "partition",
+        "signalPath": "imp[].ext.params",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-191-partnerId",
+        "class": "partition",
+        "signalPath": "imp[].ext.partnerId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-192-partnerName",
+        "class": "partition",
+        "signalPath": "imp[].ext.partnerName",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "informational",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-193-partnerid",
+        "class": "partition",
+        "signalPath": "imp[].ext.partnerid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-194-path",
+        "class": "partition",
+        "signalPath": "imp[].ext.path",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-195-pbs",
+        "class": "partition",
+        "signalPath": "imp[].ext.pbs",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-196-pbsBufferMs",
+        "class": "partition",
+        "signalPath": "imp[].ext.pbsBufferMs",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-197-pbsHost",
+        "class": "partition",
+        "signalPath": "imp[].ext.pbsHost",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-198-pchain",
+        "class": "partition",
+        "signalPath": "imp[].ext.pchain",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-199-pid",
+        "class": "partition",
+        "signalPath": "imp[].ext.pid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-200-pix_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.pix_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-201-pkey",
+        "class": "partition",
+        "signalPath": "imp[].ext.pkey",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-202-placement",
+        "class": "partition",
+        "signalPath": "imp[].ext.placement",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-203-placementId",
+        "class": "partition",
+        "signalPath": "imp[].ext.placementId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-204-placement_code",
+        "class": "partition",
+        "signalPath": "imp[].ext.placement_code",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-205-placement_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.placement_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-206-placement_reference_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.placement_reference_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-207-placementid",
+        "class": "partition",
+        "signalPath": "imp[].ext.placementid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-208-platform",
+        "class": "partition",
+        "signalPath": "imp[].ext.platform",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-209-plc",
+        "class": "partition",
+        "signalPath": "imp[].ext.plc",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-210-pmzoneid",
+        "class": "partition",
+        "signalPath": "imp[].ext.pmzoneid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-211-pos",
+        "class": "partition",
+        "signalPath": "imp[].ext.pos",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-212-position",
+        "class": "partition",
+        "signalPath": "imp[].ext.position",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-213-ppid",
+        "class": "partition",
+        "signalPath": "imp[].ext.ppid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-214-prebid",
+        "class": "partition",
+        "signalPath": "imp[].ext.prebid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-215-priceType",
+        "class": "partition",
+        "signalPath": "imp[].ext.priceType",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-216-private_sizes",
+        "class": "partition",
+        "signalPath": "imp[].ext.private_sizes",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-217-product",
+        "class": "partition",
+        "signalPath": "imp[].ext.product",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-218-productId",
+        "class": "partition",
+        "signalPath": "imp[].ext.productId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-219-profile_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.profile_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-220-programmaticGuaranteed",
+        "class": "partition",
+        "signalPath": "imp[].ext.programmaticGuaranteed",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-221-protocols",
+        "class": "partition",
+        "signalPath": "imp[].ext.protocols",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-222-pt",
+        "class": "partition",
+        "signalPath": "imp[].ext.pt",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-223-pubId",
+        "class": "partition",
+        "signalPath": "imp[].ext.pubId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-224-pub_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.pub_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-225-pubclick",
+        "class": "partition",
+        "signalPath": "imp[].ext.pubclick",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-226-pubid",
+        "class": "partition",
+        "signalPath": "imp[].ext.pubid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-227-publisher",
+        "class": "partition",
+        "signalPath": "imp[].ext.publisher",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "informational",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-228-publisherDomain",
+        "class": "partition",
+        "signalPath": "imp[].ext.publisherDomain",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-229-publisherId",
+        "class": "partition",
+        "signalPath": "imp[].ext.publisherId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-230-publisherNameIdentifier",
+        "class": "partition",
+        "signalPath": "imp[].ext.publisherNameIdentifier",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-231-publisherPath",
+        "class": "partition",
+        "signalPath": "imp[].ext.publisherPath",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-232-publisher_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.publisher_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-233-publisherid",
+        "class": "partition",
+        "signalPath": "imp[].ext.publisherid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-234-query",
+        "class": "partition",
+        "signalPath": "imp[].ext.query",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-235-rateLimit",
+        "class": "partition",
+        "signalPath": "imp[].ext.rateLimit",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-236-region",
+        "class": "partition",
+        "signalPath": "imp[].ext.region",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-237-relevant",
+        "class": "partition",
+        "signalPath": "imp[].ext.relevant",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-238-reserve",
+        "class": "partition",
+        "signalPath": "imp[].ext.reserve",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-239-rewarded",
+        "class": "partition",
+        "signalPath": "imp[].ext.rewarded",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-240-route",
+        "class": "partition",
+        "signalPath": "imp[].ext.route",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-241-rp",
+        "class": "partition",
+        "signalPath": "imp[].ext.rp",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-242-sample",
+        "class": "partition",
+        "signalPath": "imp[].ext.sample",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-243-sdkOptions",
+        "class": "partition",
+        "signalPath": "imp[].ext.sdkOptions",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-244-seat",
+        "class": "partition",
+        "signalPath": "imp[].ext.seat",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-245-seatCode",
+        "class": "partition",
+        "signalPath": "imp[].ext.seatCode",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-246-seatId",
+        "class": "partition",
+        "signalPath": "imp[].ext.seatId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-247-secure",
+        "class": "partition",
+        "signalPath": "imp[].ext.secure",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-248-seller_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.seller_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-249-settings",
+        "class": "partition",
+        "signalPath": "imp[].ext.settings",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-250-sid",
+        "class": "partition",
+        "signalPath": "imp[].ext.sid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-251-signkey",
+        "class": "partition",
+        "signalPath": "imp[].ext.signkey",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-252-site",
+        "class": "partition",
+        "signalPath": "imp[].ext.site",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-253-siteID",
+        "class": "partition",
+        "signalPath": "imp[].ext.siteID",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-254-siteId",
+        "class": "partition",
+        "signalPath": "imp[].ext.siteId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-255-site_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.site_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-256-siteid",
+        "class": "partition",
+        "signalPath": "imp[].ext.siteid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-257-size",
+        "class": "partition",
+        "signalPath": "imp[].ext.size",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-258-sizes",
+        "class": "partition",
+        "signalPath": "imp[].ext.sizes",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-259-slot",
+        "class": "partition",
+        "signalPath": "imp[].ext.slot",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-260-slotId",
+        "class": "partition",
+        "signalPath": "imp[].ext.slotId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-261-slotid",
+        "class": "partition",
+        "signalPath": "imp[].ext.slotid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-262-smartadId",
+        "class": "partition",
+        "signalPath": "imp[].ext.smartadId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-263-source",
+        "class": "partition",
+        "signalPath": "imp[].ext.source",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "informational",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-264-sourceId",
+        "class": "partition",
+        "signalPath": "imp[].ext.sourceId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-265-sourceid",
+        "class": "partition",
+        "signalPath": "imp[].ext.sourceid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-266-sparteo",
+        "class": "partition",
+        "signalPath": "imp[].ext.sparteo",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-267-spid",
+        "class": "partition",
+        "signalPath": "imp[].ext.spid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-268-srid",
+        "class": "partition",
+        "signalPath": "imp[].ext.srid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-269-sspId",
+        "class": "partition",
+        "signalPath": "imp[].ext.sspId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-270-sspid",
+        "class": "partition",
+        "signalPath": "imp[].ext.sspid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-271-storeUrl",
+        "class": "partition",
+        "signalPath": "imp[].ext.storeUrl",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-272-str",
+        "class": "partition",
+        "signalPath": "imp[].ext.str",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-273-style",
+        "class": "partition",
+        "signalPath": "imp[].ext.style",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-274-subpoolId",
+        "class": "partition",
+        "signalPath": "imp[].ext.subpoolId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-275-supplierId",
+        "class": "partition",
+        "signalPath": "imp[].ext.supplierId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-276-supplyId",
+        "class": "partition",
+        "signalPath": "imp[].ext.supplyId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-277-supplyPartnerId",
+        "class": "partition",
+        "signalPath": "imp[].ext.supplyPartnerId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-278-supplySourceId",
+        "class": "partition",
+        "signalPath": "imp[].ext.supplySourceId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-279-supplyType",
+        "class": "partition",
+        "signalPath": "imp[].ext.supplyType",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-280-supply_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.supply_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-281-tagId",
+        "class": "partition",
+        "signalPath": "imp[].ext.tagId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-282-tag_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.tag_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-283-tagid",
+        "class": "partition",
+        "signalPath": "imp[].ext.tagid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-284-tappxkey",
+        "class": "partition",
+        "signalPath": "imp[].ext.tappxkey",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-285-targeting",
+        "class": "partition",
+        "signalPath": "imp[].ext.targeting",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-286-targets",
+        "class": "partition",
+        "signalPath": "imp[].ext.targets",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-287-tenantId",
+        "class": "partition",
+        "signalPath": "imp[].ext.tenantId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-288-test",
+        "class": "partition",
+        "signalPath": "imp[].ext.test",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-289-tid",
+        "class": "partition",
+        "signalPath": "imp[].ext.tid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-290-token",
+        "class": "partition",
+        "signalPath": "imp[].ext.token",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-291-tokenId",
+        "class": "partition",
+        "signalPath": "imp[].ext.tokenId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-292-track",
+        "class": "partition",
+        "signalPath": "imp[].ext.track",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-293-trafficSourceCode",
+        "class": "partition",
+        "signalPath": "imp[].ext.trafficSourceCode",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-294-traffic_source_code",
+        "class": "partition",
+        "signalPath": "imp[].ext.traffic_source_code",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-295-ttx",
+        "class": "partition",
+        "signalPath": "imp[].ext.ttx",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-296-type",
+        "class": "partition",
+        "signalPath": "imp[].ext.type",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-297-uid",
+        "class": "partition",
+        "signalPath": "imp[].ext.uid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-298-unit",
+        "class": "partition",
+        "signalPath": "imp[].ext.unit",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-299-unitId",
+        "class": "partition",
+        "signalPath": "imp[].ext.unitId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-300-unitName",
+        "class": "partition",
+        "signalPath": "imp[].ext.unitName",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-301-us_privacy",
+        "class": "partition",
+        "signalPath": "imp[].ext.us_privacy",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-302-useSourceBidderCode",
+        "class": "partition",
+        "signalPath": "imp[].ext.useSourceBidderCode",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-303-use_payment_rule",
+        "class": "partition",
+        "signalPath": "imp[].ext.use_payment_rule",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-304-use_pmt_rule",
+        "class": "partition",
+        "signalPath": "imp[].ext.use_pmt_rule",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-305-userKey",
+        "class": "partition",
+        "signalPath": "imp[].ext.userKey",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-306-version",
+        "class": "partition",
+        "signalPath": "imp[].ext.version",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "informational",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-307-video",
+        "class": "partition",
+        "signalPath": "imp[].ext.video",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-308-videoResponseType",
+        "class": "partition",
+        "signalPath": "imp[].ext.videoResponseType",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-309-videotype",
+        "class": "partition",
+        "signalPath": "imp[].ext.videotype",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-310-viewabilityPercentage",
+        "class": "partition",
+        "signalPath": "imp[].ext.viewabilityPercentage",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "ambiguous",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-311-visitor",
+        "class": "partition",
+        "signalPath": "imp[].ext.visitor",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-312-vungle",
+        "class": "partition",
+        "signalPath": "imp[].ext.vungle",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-313-website",
+        "class": "partition",
+        "signalPath": "imp[].ext.website",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-314-wid",
+        "class": "partition",
+        "signalPath": "imp[].ext.wid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-315-widgetId",
+        "class": "partition",
+        "signalPath": "imp[].ext.widgetId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-316-wrapper",
+        "class": "partition",
+        "signalPath": "imp[].ext.wrapper",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-317-zid",
+        "class": "partition",
+        "signalPath": "imp[].ext.zid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-318-zone",
+        "class": "partition",
+        "signalPath": "imp[].ext.zone",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-319-zoneId",
+        "class": "partition",
+        "signalPath": "imp[].ext.zoneId",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-320-zoneIds",
+        "class": "partition",
+        "signalPath": "imp[].ext.zoneIds",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "abstain",
+        "D0": {
+          "route": "model"
+        }
+      },
+      {
+        "id": "fxB-321-zone_id",
+        "class": "partition",
+        "signalPath": "imp[].ext.zone_id",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      },
+      {
+        "id": "fxB-322-zoneid",
+        "class": "partition",
+        "signalPath": "imp[].ext.zoneid",
+        "signalValue": 7,
+        "partition": null,
+        "adjState": "resolved",
+        "D0": {
+          "route": "legacy-deterministic",
+          "label": "ignore",
+          "confidence": 0.9
+        }
+      }
+    ]
+  },
   "fixtures": [
     {
       "id": "fx-001-named-adtype-req",

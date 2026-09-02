@@ -65,13 +65,13 @@ the save route's accepted set, which the baseline does not measure).
       every frozen assertion (272/697/289/279, histogram 364/824/42/2/1, 133→128, 95,
       194+33+95=322, digests), records per-entry coverage class per FR-025, writes `key-role-corpus.v1.json`, and REJECTS on any mismatch —
       never runs in CI (FR-017, R-03)
-- [ ] T008 Generate adjudication skeleton and run the review: first pass may be an agent, second
+- [x] T008 Generate adjudication skeleton and run the review: first pass may be an agent, second
       pass is the maintainer, per spec §review rules (two distinct reviewer IDs, pseudonymous);
       output `packages/core/dialects/data/key-role-adjudication.v1.json` covering exactly 322 names + partitions; conflicting credible roles become `ambiguous` per FR-027, and `abstain` is a valid reviewed state and deliberately cheap
 - [x] T009 [P] Author `packages/core/dialects/data/key-role-named-rules.v1.json`: exactly the rules
       frozen in the spec's oracles, with `condition` predicates (digit-only `build`) and four
       outcome kinds including `cap` for bare `type`/`format` (data-model §5); roles only, no value dictionary of any kind (FR-002)
-- [ ] T010 (slice A + bench "before" DONE 2026-09-02; slice B awaits T008) Freeze every pre-change baseline against CURRENT code, in two slices plus the bench.
+- [x] T010 (slice A + bench "before" 2026-09-02; slice B appended post-T008 the same day) Freeze every pre-change baseline against CURRENT code, in two slices plus the bench.
       Slice A (blocks US1): routing-matrix fixtures for every named rule, all 47 collision-group
       spellings, unlisted-casing and absent-key controls in both namespaces, with their `D0`, into
       `packages/core/dialects/data/key-role-routing-matrix.v1.json`. Slice B (after T008, blocks

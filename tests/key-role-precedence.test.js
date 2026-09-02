@@ -67,13 +67,26 @@ test('sizeID=[0] and allowShock stay terminal shape verdicts', () => {
 
 // ── Rows 3–4: specific-format string verdicts ────────────────────────────
 
-test('a corroborated format word is preserved when the role layer resolves format-declaration', () => {
-  // `type` is a named cap rule (no role), so the role layer abstains and the
-  // string verdict survives — the "or abstain/absent" half of the row.
+test('a corroborated format word is preserved on BOTH halves of the row', () => {
+  // Half 1 — role layer resolves format-declaration: `adtype` is a named
+  // format-declaration rule, the string verdict still wins.
+  const viaFmt = resolve('imp[].ext.adtype', 'preroll_video', { video: { w: 640, h: 480 } });
+  assert.equal(viaFmt.outcome, 'legacy');
+  assert.equal(viaFmt.answer.label, 'video');
+  // Half 2 — role layer abstains: `slottype` is format-declaring for the
+  // legacy lexicon but has no named rule and no adjudicated role.
+  const viaAbstain = resolve('imp[].ext.slottype', 'preroll_video', { video: { w: 640, h: 480 } });
+  assert.equal(viaAbstain.outcome, 'legacy');
+  assert.equal(viaAbstain.route, 'exact-format');
+  assert.equal(viaAbstain.answer.label, 'video');
+});
+
+test('a corroborated format word meeting the now-ambiguous `type` becomes deterministic ambiguity', () => {
+  // Post-adjudication, `type` is ambiguous [delivery-control,
+  // format-declaration] — the matrix row for specific-format + ambiguous.
   const r = resolve('imp[].ext.type', 'preroll_video', { video: { w: 640, h: 480 } });
-  assert.equal(r.outcome, 'legacy');
-  assert.equal(r.route, 'exact-format');
-  assert.equal(r.answer.label, 'video');
+  assert.equal(r.outcome, 'ambiguous');
+  assert.ok(!('label' in r.answer));
 });
 
 test('a specific-format verdict meeting a resolved NON-format role becomes deterministic ambiguity', () => {
@@ -122,11 +135,18 @@ test('guarded contradiction + resolved format-declaration → role answer with t
 });
 
 test('guarded contradiction + role abstain → the current model fallback is preserved', () => {
-  // Real chain: video_slider on a banner-only imp; `type` caps, so the role
-  // layer abstains.
-  const r = resolve('imp[].ext.type', 'video_slider', { banner: { w: 300, h: 250 } });
+  // Real chain: video_slider on a banner-only imp via `slottype`, which is
+  // format-declaring for the lexicon but role-abstaining (no named rule, no
+  // adjudicated role). `type` itself is now role-ambiguous and takes the
+  // deterministic-ambiguity row instead — asserted separately below.
+  const r = resolve('imp[].ext.slottype', 'video_slider', { banner: { w: 300, h: 250 } });
   assert.equal(r.outcome, 'model');
   assert.equal(r.answer, null);
+});
+
+test('guarded contradiction + role ambiguity → deterministic ambiguity, not the model', () => {
+  const r = resolve('imp[].ext.type', 'video_slider', { banner: { w: 300, h: 250 } });
+  assert.equal(r.outcome, 'ambiguous');
 });
 
 // ── Rows 8–10: broad heuristics ──────────────────────────────────────────

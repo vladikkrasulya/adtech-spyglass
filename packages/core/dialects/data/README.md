@@ -15,8 +15,7 @@ Versioning: a new corpus snapshot is a new `vN` file plus a recorded regeneratio
 is deleted in the same change, never silently overwritten. Identity is exact code-point spelling —
 no lowercasing anywhere (R-01).
 
-Staged delivery (per tasks.md T010): the adjudication manifest lands with the US2 increment once
-both review passes exist; until then its absence is the expected state and
-`tests/key-role-manifests.test.js` asserts the staging marker below rather than failing blind.
-
-STAGING: adjudication=pending
+The adjudication manifest landed 2026-09-02 with both review passes recorded
+(agent pass 1, adversarially self-checked; maintainer pass 2). The staged-delivery
+marker is gone deliberately — its absence plus the manifest's presence is what
+`tests/key-role-manifests.test.js` now asserts.

@@ -98,10 +98,19 @@ test('corpus evidence travels with the answer, carrying its literal unverified s
   assert.equal(typeof c.unverifiedOnly, 'boolean', 'literal verification status surfaced');
 });
 
-test('membership alone never supplies a role: a corpus-only name abstains until adjudicated', () => {
-  // `placementId` is a corpus name with no named rule and (in slice A) no
-  // adjudication record — the row proves the name exists, not its role.
-  const r = lookupKeyRole({ signalPath: 'imp[].ext.placementId', signalValue: 'abc' });
+test('membership alone never supplies a role: an adjudicated-abstain name stays abstain', () => {
+  // `PId` is a corpus name whose only description ("PID") restates the name —
+  // both review passes recorded abstain, so the row proves existence, not a
+  // role. (placementId, the pre-adjudication example here, now resolves to
+  // identifier @ 0.9 — asserted below.)
+  const r = lookupKeyRole({ signalPath: 'imp[].ext.PId', signalValue: 'abc' });
   assert.equal(r.state, 'abstain');
   assert.ok(r.evidence.some((e) => e.type === 'corpus'));
+});
+
+test('the adjudication landing flipped placementId to resolved identifier', () => {
+  const r = lookupKeyRole({ signalPath: 'imp[].ext.placementId', signalValue: 'abc' });
+  assert.equal(r.state, 'resolved');
+  assert.equal(r.role, 'identifier');
+  assert.equal(r.score, 0.9);
 });
