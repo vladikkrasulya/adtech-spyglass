@@ -33,6 +33,21 @@
       id: 'cabinet',
       keys: {
         'cabinet.dialects.engine_rules': { en: 'rules', uk: 'правила', ru: 'правила' },
+        'cabinet.dialects.mappings_show': {
+          en: 'Show mappings',
+          uk: 'Показати мапінги',
+          ru: 'Показать маппинги',
+        },
+        'cabinet.dialects.mappings_empty': {
+          en: 'No mappings yet.',
+          uk: 'Мапінгів ще немає.',
+          ru: 'Маппингов ещё нет.',
+        },
+        'cabinet.dialects.mappings_error': {
+          en: 'Could not load mappings.',
+          uk: 'Не вдалося завантажити мапінги.',
+          ru: 'Не удалось загрузить маппинги.',
+        },
         'cabinet.dialects.export_empty': {
           en: 'Nothing to export yet — create a dialect first.',
           uk: 'Ще нема чого експортувати — спершу створи діалект.',
@@ -280,6 +295,64 @@
     // the handler because init() re-runs on kt:lang-change and the handler is
     // bound once, so a captured array would go stale after the first render.
     exportable = dialects;
+
+    // 016 T046 (FR-023/SC-009): the stored dialect view — each dialect gets a
+    // lazy <details> listing its mappings with the LOCALIZED label name from
+    // the same catalog the picker uses (dialect-label.i18n.js + the Core
+    // mirror, both loaded by account.{lang}.html). Stored IDs never render
+    // raw here; reading your dialect back shows the same thing you saved.
+    const $list = document.getElementById('dialectMappingsList');
+    if ($list) {
+      const labelName = function (id) {
+        const key = 'dialect.label.name.' + id;
+        const named = T(key);
+        // Unknown/withdrawn label: pass the raw ID through verbatim (FR-030)
+        // rather than failing or hiding the row.
+        return named === '[' + key + ']' ? id : named;
+      };
+      $list.textContent = '';
+      dialects.forEach(function (d) {
+        const det = document.createElement('details');
+        det.className = 'dialect-mappings-item';
+        const sum = document.createElement('summary');
+        sum.textContent =
+          (d.name || 'dialect-' + d.id) +
+          ' · ' +
+          String(d.mapping_count || 0) +
+          ' — ' +
+          T('cabinet.dialects.mappings_show');
+        det.appendChild(sum);
+        const box = document.createElement('div');
+        det.appendChild(box);
+        det.addEventListener('toggle', async function () {
+          if (!det.open || det.dataset.loaded) return;
+          det.dataset.loaded = '1';
+          try {
+            const data = await api('/api/dialects/' + encodeURIComponent(d.id) + '/mappings');
+            const rows = (data && data.mappings) || [];
+            if (!rows.length) {
+              box.textContent = T('cabinet.dialects.mappings_empty');
+              return;
+            }
+            rows.forEach(function (m) {
+              const row = document.createElement('div');
+              row.className = 'dialect-mapping-row';
+              const label = document.createElement('strong');
+              label.textContent = labelName(m.semantic_label);
+              const sig = document.createElement('code');
+              sig.textContent = ' ' + m.signal_path + ' = ' + m.signal_value;
+              row.appendChild(label);
+              row.appendChild(sig);
+              box.appendChild(row);
+            });
+          } catch (_) {
+            det.dataset.loaded = '';
+            box.textContent = T('cabinet.dialects.mappings_error');
+          }
+        });
+        $list.appendChild(det);
+      });
+    }
     if ($btnExport) {
       const empty = dialects.length === 0;
       $btnExport.disabled = empty;

@@ -6,6 +6,17 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.19.1 — convergence: the role is visible on the card, the dialect reads back (2026-09-02)
+
+- The question card now shows the resolved role (or the ambiguity candidates) right on the finding,
+  localized, without opening the picker — the params were already travelling since v1.19.0.
+- The account cabinet gains the stored dialect view: each dialect expands to its mappings with the
+  localized label name from the same catalog the picker uses; an unknown or withdrawn label ID
+  passes through verbatim rather than failing.
+- Also in this line (data increment, same contract): the 322-name adjudication landed with both
+  review passes — resolved 219 / ambiguous 20 / abstain 83 — and the full 403-fixture routing matrix
+  measures deterministic answers 168 → 338 with zero demotions.
+
 ### v1.19.0 — vendor ext-key role alphabet, wave 1 (2026-09-02)
 
 Vendor ext-key role alphabet, wave 1 (spec 016, ADR-015; Core 0.38.0, CLI 0.1.3).
