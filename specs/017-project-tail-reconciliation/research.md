@@ -152,5 +152,16 @@ unmerged historical branch remains the original owner choice.
 - **Dependency PR**: refreshed head `d46a0bc65eeb298b0e2a17e92cbe2b10749c01d3` passed its actual
   native module loads and every non-Docker gate. Hosted run `33620307675` failed only because the
   smoke script still asserted `better-sqlite3` 11.10.0 while the PR image correctly contained
-  13.0.3. A local run of the lockfile-derived assertion on that exact PR head passed; merge still
-  waits for a refreshed hosted run containing the gate fix.
+  13.0.3. The lockfile-derived gate fix reached `main` in `a0859de` after complete local, package,
+  and production-image gates; push run `33628332708` passed every hosted step. Refreshed PR head
+  `f39268afbab556a73d73ea6b18333859c9561eb2` has that exact base as an ancestor, changes only
+  `package.json` and `package-lock.json`, and passed every step in hosted run `33628862161`, including
+  the lockfile-matched `better-sqlite3` 13.0.3 production-image load. Ordinary merge completed as
+  `ff97d1c61ed0bc077e702fac0e5abe5b2879e02a`; GitHub readback reports PR #4 `MERGED`, preserves the
+  successful check, and confirms the merged dependency branch was deleted.
+- **Final dependency state**: local `main` fast-forwarded to `ff97d1c`, `npm ci` installed
+  `better-sqlite3` 13.0.3 and reported zero vulnerabilities, and a direct in-memory SQLite query
+  returned 42. `npm run ci` passed 151 non-browser plus 19 browser files; package smoke passed; the
+  production Docker smoke derived and loaded 13.0.3 and removed its image, container, and volume.
+  Hosted merge run `33629453571` independently passed format, lint, typecheck, tests, package smoke,
+  and production Docker smoke.

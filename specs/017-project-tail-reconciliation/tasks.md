@@ -114,10 +114,10 @@ merge occurs only if all are successful.
       `scripts/ci-docker-smoke.sh` with exact lockfile-to-image verification
 - [x] T023 [US4] Run the complete local gate, package smoke, and production Docker smoke on the
       maintenance scope containing the gate fix
-- [ ] T024 [US4] Stage only the bounded maintenance scope, commit and non-force push `main`, and wait
+- [x] T024 [US4] Stage only the bounded maintenance scope, commit and non-force push `main`, and wait
       for green hosted CI on the pushed gate fix
-- [ ] T025 [US4] Refresh PR #4 onto the pushed gate fix and read back every required hosted check
-- [ ] T026 [US4] Merge GitHub PR #4 if all required checks pass, or leave it open and record the exact
+- [x] T025 [US4] Refresh PR #4 onto the pushed gate fix and read back every required hosted check
+- [x] T026 [US4] Merge GitHub PR #4 if all required checks pass, or leave it open and record the exact
       non-green gate in `specs/017-project-tail-reconciliation/tasks.md`
 
 **Checkpoint**: PR #4 is either safely merged or explicitly blocked by current evidence.
@@ -128,12 +128,19 @@ merge occurs only if all are successful.
 
 **Purpose**: Settle repository scope and close the feature with reproducible evidence.
 
-- [ ] T027 Fast-forward local `main` after the PR outcome and rerun every gate affected by the final
+- [x] T027 Fast-forward local `main` after the PR outcome and rerun every gate affected by the final
       dependency state
-- [ ] T028 Update completion evidence and status in `specs/017-project-tail-reconciliation/spec.md`,
+- [x] T028 Update completion evidence and status in `specs/017-project-tail-reconciliation/spec.md`,
       `specs/017-project-tail-reconciliation/tasks.md`, and `specs/ROADMAP.md`
-- [ ] T029 Commit and non-force push the final evidence-only closure, then wait for green hosted CI
+- [x] T029 Commit and non-force push the final evidence-only closure, then wait for green hosted CI
       on the pushed revision
+
+**Completion evidence**: maintenance commit `a0859de` passed local and hosted gates (run
+`33628332708`); refreshed PR head `f39268a` passed run `33628862161` and merged normally as
+`ff97d1c`. After fast-forward and `npm ci`, final-state `npm run ci` passed 151 non-browser + 19
+browser files, package smoke passed, Docker smoke loaded `better-sqlite3` 13.0.3 and cleaned all
+resources, and hosted merge run `33629453571` passed every step. Release and host readbacks remain
+27/27 and 10/10 respectively.
 
 ---
 

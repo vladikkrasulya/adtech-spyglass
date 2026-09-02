@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-02
 
-**Status**: Draft
+**Status**: Complete
 
 **Input**: Complete the owner-requested cleanup identified by the six-source loose-end inventory:
 make canonical documentation agree with shipped behavior, restore traceable release bookkeeping,
@@ -172,3 +172,17 @@ gates, then confirm its final state matches the recorded evidence.
 - The dependency proposal remains a separate change and follows its own hosted gate results.
 - The owner's short approval authorizes completion of the previously enumerated mechanical work but
   does not silently answer the eight choices previously identified as owner-only.
+
+## Completion Evidence
+
+- Maintenance revision `a0859de` passed the complete local gate, package smoke, production-image
+  smoke, non-force push, and hosted run `33628332708` before the dependency proposal was refreshed.
+- PR #4 head `f39268a` contained that revision, changed only the dependency manifest and lockfile,
+  and passed hosted run `33628862161` before ordinary merge `ff97d1c`.
+- On final dependency state `ff97d1c`, `npm ci` installed `better-sqlite3` 13.0.3 with zero reported
+  vulnerabilities; `npm run ci` passed all 151 non-browser and 19 browser files, package smoke
+  passed, and production Docker smoke loaded 13.0.3 and removed every disposable resource. Hosted
+  merge run `33629453571` also passed every step.
+- Exact readback passed for all 27 annotated tag/release mappings, the ten retained chronological
+  rollback refs, and the archived backup tree's inode, counts, bytes, and manifest hash. No product
+  deploy or npm publication occurred.
