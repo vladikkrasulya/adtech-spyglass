@@ -27,6 +27,12 @@ updates:
       runtime:
         patterns:
           - 'better-sqlite3'
+    ignore:
+      # TypeScript 7 removed `moduleResolution: node` and tightens JSDoc checking
+      # (442 new errors on 2026-09-03 under every replacement resolution). That is
+      # a typing migration, not a weekly bump — take majors deliberately.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: 'chore(deps)'
 
