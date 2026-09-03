@@ -5,25 +5,25 @@ Update: node scripts/sync-browser-vendors.js --write
 Verify: node scripts/sync-browser-vendors.js --check
 
 Marked
-Package: marked@15.0.12
+Package: marked@18.0.11
 Repository: https://github.com/markedjs/marked
-Release: v15.0.12
+Release: v18.0.11
 Source artifact: node_modules/marked/lib/marked.esm.js
 Public asset: public/vendor/marked.es.js
-SHA-256: 29e25cdf1a06075c90e9885af06ddd23fb22a5424ed23a61dda986c73a8af641
+SHA-256: 05e41134d075ad3a009a748d6c779c3d83cea9b942be911c2d9abade36d1dd31
 Parity: byte-identical
 License: MIT
-License source: node_modules/marked/LICENSE.md
+License source: node_modules/marked/LICENSE
 License copy: public/vendor/licenses/Marked-MIT.txt
 License SHA-256: 8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c
 
 DOMPurify
-Package: dompurify@3.4.13
+Package: dompurify@3.4.14
 Repository: https://github.com/cure53/DOMPurify
-Release: 3.4.13 (signed tag commit 3067f77)
+Release: 3.4.14 (tag 3.4.14 at commit 4e6fe24)
 Source artifact: node_modules/dompurify/dist/purify.es.mjs
 Public asset: public/vendor/dompurify.es.js
-SHA-256: 1939de7b9b248a4ffdf7f8065af45116a1babb96362eaf84d8f9fc3756c26fad
+SHA-256: c9b47d08c160843d5e51fdd3f67a6a2c15e2ee26d3b84ec5132288e947a55fcf
 Parity: byte-identical
 License: Apache-2.0
 License source: node_modules/dompurify/LICENSE

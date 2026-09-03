@@ -20,12 +20,12 @@ content at read time without requiring a production scan or migration.
 ## Decision
 
 Every browser-rendered Blog body (`.blog-post__body`) is treated as untrusted and crosses one final
-fragment boundary regardless of source. Editorial content uses exact Marked `15.0.12` with
+fragment boundary regardless of source. Editorial content uses exact Marked `18.0.11` (bumped from `15.0.12` on 2026-09-03 through the vendor sync contract) with
 per-instance renderers that turn raw HTML into literal text, images
 into alternative text, task controls into inert markers, and unsafe links into labels. Existing
 escape-first news rendering remains the presentation input for non-Markdown sources.
 
-Both paths then pass through exact DOMPurify `3.4.13` with a closed tag/attribute configuration,
+Both paths then pass through exact DOMPurify `3.4.14` with a closed tag/attribute configuration,
 ARIA/data attributes disabled, and `RETURN_DOM_FRAGMENT`. The Blog inserts that fragment with DOM
 APIs rather than HTML interpolation. Any dependency, parser, sanitizer, policy, fragment, or
 insertion failure displays the original body using `textContent`; abort and root-ownership checks

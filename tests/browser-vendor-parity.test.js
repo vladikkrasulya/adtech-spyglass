@@ -16,21 +16,21 @@ const VENDORS = [
   {
     displayName: 'Marked',
     packageName: 'marked',
-    version: '15.0.12',
+    version: '18.0.11',
     repository: 'https://github.com/markedjs/marked',
-    release: 'v15.0.12',
+    release: 'v18.0.11',
     sourceAsset: 'node_modules/marked/lib/marked.esm.js',
     publicAsset: 'public/vendor/marked.es.js',
-    sourceLicense: 'node_modules/marked/LICENSE.md',
+    sourceLicense: 'node_modules/marked/LICENSE',
     publicLicense: 'public/vendor/licenses/Marked-MIT.txt',
     license: 'MIT',
   },
   {
     displayName: 'DOMPurify',
     packageName: 'dompurify',
-    version: '3.4.13',
+    version: '3.4.14',
     repository: 'https://github.com/cure53/DOMPurify',
-    release: '3.4.13 (signed tag commit 3067f77)',
+    release: '3.4.14 (tag 3.4.14 at commit 4e6fe24)',
     sourceAsset: 'node_modules/dompurify/dist/purify.es.mjs',
     publicAsset: 'public/vendor/dompurify.es.js',
     sourceLicense: 'node_modules/dompurify/LICENSE',
@@ -140,8 +140,8 @@ function createSyntheticVendorRepo() {
     'package.json',
     JSON.stringify({
       devDependencies: {
-        dompurify: '3.4.13',
-        marked: '15.0.12',
+        dompurify: '3.4.14',
+        marked: '18.0.11',
       },
     }),
   );
@@ -152,20 +152,20 @@ function createSyntheticVendorRepo() {
       packages: {
         '': {
           devDependencies: {
-            dompurify: '3.4.13',
-            marked: '15.0.12',
+            dompurify: '3.4.14',
+            marked: '18.0.11',
           },
         },
         'node_modules/dompurify': {
-          version: '3.4.13',
+          version: '3.4.14',
           dev: true,
-          resolved: 'https://registry.npmjs.org/dompurify/-/dompurify-3.4.13.tgz',
+          resolved: 'https://registry.npmjs.org/dompurify/-/dompurify-3.4.14.tgz',
           integrity: 'sha512-synthetic-dompurify',
         },
         'node_modules/marked': {
-          version: '15.0.12',
+          version: '18.0.11',
           dev: true,
-          resolved: 'https://registry.npmjs.org/marked/-/marked-15.0.12.tgz',
+          resolved: 'https://registry.npmjs.org/marked/-/marked-18.0.11.tgz',
           integrity: 'sha512-synthetic-marked',
         },
       },
@@ -174,14 +174,14 @@ function createSyntheticVendorRepo() {
   writeFixtureFile(
     root,
     'node_modules/marked/package.json',
-    JSON.stringify({ version: '15.0.12' }),
+    JSON.stringify({ version: '18.0.11' }),
   );
   writeFixtureFile(root, 'node_modules/marked/lib/marked.esm.js', 'marked-v1\n');
-  writeFixtureFile(root, 'node_modules/marked/LICENSE.md', 'marked-license-v1\n');
+  writeFixtureFile(root, 'node_modules/marked/LICENSE', 'marked-license-v1\n');
   writeFixtureFile(
     root,
     'node_modules/dompurify/package.json',
-    JSON.stringify({ version: '3.4.13' }),
+    JSON.stringify({ version: '3.4.14' }),
   );
   writeFixtureFile(root, 'node_modules/dompurify/dist/purify.es.mjs', 'dompurify-v1\n');
   writeFixtureFile(root, 'node_modules/dompurify/LICENSE', 'dompurify-license-v1\n');
@@ -193,7 +193,7 @@ function createSyntheticVendorRepo() {
 
 function changeSyntheticSources(root) {
   writeFixtureFile(root, 'node_modules/marked/lib/marked.esm.js', 'marked-v2\n');
-  writeFixtureFile(root, 'node_modules/marked/LICENSE.md', 'marked-license-v2\n');
+  writeFixtureFile(root, 'node_modules/marked/LICENSE', 'marked-license-v2\n');
   writeFixtureFile(root, 'node_modules/dompurify/dist/purify.es.mjs', 'dompurify-v2\n');
   writeFixtureFile(root, 'node_modules/dompurify/LICENSE', 'dompurify-license-v2\n');
 }

@@ -215,7 +215,7 @@ test('disposable Docker smoke verifies the hashed Blog vendor graph and shipped 
   }
   assert.match(smoke, /OLD_MARKED_STATUS[\s\S]{0,240}!= "404"/u);
   const notice = read('public/vendor/NOTICE.txt');
-  for (const packageLine of ['Package: marked@15.0.12', 'Package: dompurify@3.4.13']) {
+  for (const packageLine of ['Package: marked@18.0.11', 'Package: dompurify@3.4.14']) {
     assert.ok(notice.includes(packageLine), `vendor notice must contain ${packageLine}`);
     assert.ok(
       smoke.includes(packageLine),
