@@ -157,16 +157,13 @@
   display: block;
 }
 
-/* ── Workbench-in-shell overrides ──────────────────────────────────
-   .workbench is a legacy class that used to be the page-level grid
-   (when inspector was the whole page). Now it lives inside #app-root
-   inside .kt-shell__column. The inherited rules from inspector.css
-   (height: 100vh, max-width: 2200px @ ≥2000px, margin: 0 auto) fight
-   the shell. Override them so the workbench fills the column. */
+/* The shell owns the viewport; the inspector owns a bounded work canvas.
+   Width:100% keeps grid intrinsic sizing from stretching it on long JSON. */
 .kt-shell #app-root.workbench {
   height: 100%;
-  max-width: none;
-  margin: 0;
+  width: 100%;
+  max-width: 2200px;
+  margin-inline: auto;
 }
 
 /* ── Sidebar collapse (desktop) ────────────────────────────────────

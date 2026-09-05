@@ -1,0 +1,6090 @@
+{
+  "baseline": {
+    "results": [
+      {
+        "width": 2560,
+        "theme": "dark",
+        "context": false,
+        "viewport": 2560,
+        "sizes": {
+          ".finding-title": "16.896px",
+          ".finding-code": "14px",
+          "#bidReq": "16.64px",
+          ".verdict-headline": "19px"
+        },
+        "panels": {
+          "#app-root": 2324,
+          ".workbench-payload": 1162,
+          ".center-panel": 1162,
+          ".sidebar-left": 0
+        },
+        "documentWidth": 2560,
+        "cards": [
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1128,
+            "scrollWidth": 1128,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1128,
+            "scrollWidth": 1128,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 1126,
+            "scrollWidth": 1126,
+            "bodyVisible": true
+          }
+        ]
+      },
+      {
+        "width": 2560,
+        "theme": "dark",
+        "context": true,
+        "viewport": 2560,
+        "sizes": {
+          ".finding-title": "16.896px",
+          ".finding-code": "14px",
+          "#bidReq": "16.64px",
+          ".verdict-headline": "19px"
+        },
+        "panels": {
+          "#app-root": 2324,
+          ".workbench-payload": 997,
+          ".center-panel": 997,
+          ".sidebar-left": 330
+        },
+        "documentWidth": 2560,
+        "cards": [
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 963,
+            "scrollWidth": 963,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 963,
+            "scrollWidth": 963,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          },
+          {
+            "open": false,
+            "width": 961,
+            "scrollWidth": 961,
+            "bodyVisible": true
+          }
+        ]
+      }
+    ],
+    "errors": []
+  },
+  "candidate": {
+    "observations": [
+      {
+        "label": "en-1440-light-false",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 236,
+          "right": 838,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 601,
+          "client": 601
+        },
+        "results": {
+          "x": 838,
+          "right": 1440,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 602,
+          "client": 602
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 869,
+          "right": 1229.390625,
+          "width": 360.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 360,
+          "client": 360
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 823,
+          "width": 547.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 547
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 900,
+          "right": 1242.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 77.421875
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 59.234375
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "en-1440-light-true",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 436,
+          "right": 910.25,
+          "width": 474.25,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 473,
+          "client": 473
+        },
+        "results": {
+          "x": 910.25,
+          "right": 1440,
+          "width": 529.75,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 530,
+          "client": 530
+        },
+        "context": {
+          "x": 236,
+          "right": 436,
+          "width": 200,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 189,
+          "client": 189
+        },
+        "title": {
+          "x": 941.25,
+          "right": 1229.390625,
+          "width": 288.140625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 288,
+          "client": 288
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 475.609375,
+          "right": 895.25,
+          "width": 419.640625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 420
+        },
+        "gutter": {
+          "x": 436,
+          "right": 475.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 972.25,
+          "right": 1271,
+          "width": 298.75,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 299,
+          "client": 299
+        },
+        "cards": [
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 139.75
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "en-1440-dark-false",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 236,
+          "right": 838,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 601,
+          "client": 601
+        },
+        "results": {
+          "x": 838,
+          "right": 1440,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 602,
+          "client": 602
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 869,
+          "right": 1229.390625,
+          "width": 360.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 360,
+          "client": 360
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 823,
+          "width": 547.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 547
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 900,
+          "right": 1242.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 77.421875
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 59.234375
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "en-1440-dark-true",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 436,
+          "right": 910.25,
+          "width": 474.25,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 473,
+          "client": 473
+        },
+        "results": {
+          "x": 910.25,
+          "right": 1440,
+          "width": 529.75,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 530,
+          "client": 530
+        },
+        "context": {
+          "x": 236,
+          "right": 436,
+          "width": 200,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 189,
+          "client": 189
+        },
+        "title": {
+          "x": 941.25,
+          "right": 1229.390625,
+          "width": 288.140625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 288,
+          "client": 288
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 475.609375,
+          "right": 895.25,
+          "width": 419.640625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 420
+        },
+        "gutter": {
+          "x": 436,
+          "right": 475.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 972.25,
+          "right": 1271,
+          "width": 298.75,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 299,
+          "client": 299
+        },
+        "cards": [
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 139.75
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "en-1920-light-false",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 236,
+          "right": 1120,
+          "width": 884,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 883,
+          "client": 883
+        },
+        "results": {
+          "x": 1120,
+          "right": 1920,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1151,
+          "right": 1709.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 1719.390625,
+          "right": 1891,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 1105,
+          "width": 829.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 829,
+          "client": 829
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1182,
+          "right": 1524.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-1920-light-true",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 476,
+          "right": 1179.046875,
+          "width": 703.046875,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 702,
+          "client": 702
+        },
+        "results": {
+          "x": 1179.046875,
+          "right": 1920,
+          "width": 740.953125,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 741,
+          "client": 741
+        },
+        "context": {
+          "x": 236,
+          "right": 476,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1210.046875,
+          "right": 1709.390625,
+          "width": 499.34375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 499,
+          "client": 499
+        },
+        "meta": {
+          "x": 1719.390625,
+          "right": 1891,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 515.609375,
+          "right": 1164.046875,
+          "width": 648.4375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 648
+        },
+        "gutter": {
+          "x": 476,
+          "right": 515.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1241.046875,
+          "right": 1583.328125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 34.1875
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "en-1920-dark-false",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 236,
+          "right": 1120,
+          "width": 884,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 883,
+          "client": 883
+        },
+        "results": {
+          "x": 1120,
+          "right": 1920,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1151,
+          "right": 1709.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 1719.390625,
+          "right": 1891,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 1105,
+          "width": 829.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 829,
+          "client": 829
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1182,
+          "right": 1524.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-1920-dark-true",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 476,
+          "right": 1179.046875,
+          "width": 703.046875,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 702,
+          "client": 702
+        },
+        "results": {
+          "x": 1179.046875,
+          "right": 1920,
+          "width": 740.953125,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 741,
+          "client": 741
+        },
+        "context": {
+          "x": 236,
+          "right": 476,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1210.046875,
+          "right": 1709.390625,
+          "width": 499.34375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 499,
+          "client": 499
+        },
+        "meta": {
+          "x": 1719.390625,
+          "right": 1891,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 515.609375,
+          "right": 1164.046875,
+          "width": 648.4375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 648
+        },
+        "gutter": {
+          "x": 476,
+          "right": 515.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1241.046875,
+          "right": 1583.328125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 34.1875
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "en-2560-light-false",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 298,
+          "right": 1698,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1729,
+          "right": 2287.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 2297.390625,
+          "right": 2469,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 337.609375,
+          "right": 1683,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 298,
+          "right": 337.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2102.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-2560-light-true",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 538,
+          "right": 1698,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 298,
+          "right": 538,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1729,
+          "right": 2287.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 2297.390625,
+          "right": 2469,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 577.609375,
+          "right": 1683,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 538,
+          "right": 577.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2102.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-2560-dark-false",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 298,
+          "right": 1698,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1729,
+          "right": 2287.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 2297.390625,
+          "right": 2469,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 337.609375,
+          "right": 1683,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 298,
+          "right": 337.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2102.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-2560-dark-true",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 538,
+          "right": 1698,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 298,
+          "right": 538,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1729,
+          "right": 2287.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 2297.390625,
+          "right": 2469,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 577.609375,
+          "right": 1683,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 538,
+          "right": 577.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2102.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-3840-light-false",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 938,
+          "right": 2338,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 2369,
+          "right": 2927.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 2937.390625,
+          "right": 3109,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 977.609375,
+          "right": 2323,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 938,
+          "right": 977.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2742.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-3840-light-true",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 1178,
+          "right": 2338,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 938,
+          "right": 1178,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 2369,
+          "right": 2927.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 2937.390625,
+          "right": 3109,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 1217.609375,
+          "right": 2323,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 1178,
+          "right": 1217.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2742.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-3840-dark-false",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 938,
+          "right": 2338,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 2369,
+          "right": 2927.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 2937.390625,
+          "right": 3109,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 977.609375,
+          "right": 2323,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 938,
+          "right": 977.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2742.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "en-3840-dark-true",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 1178,
+          "right": 2338,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 938,
+          "right": 1178,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 2369,
+          "right": 2927.390625,
+          "width": 558.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 558,
+          "client": 558
+        },
+        "meta": {
+          "x": 2937.390625,
+          "right": 3109,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 1217.609375,
+          "right": 2323,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 1178,
+          "right": 1217.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2742.28125,
+          "width": 342.28125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 342,
+          "client": 342
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 121.5625
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-1440-light-false",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 236,
+          "right": 838,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 601,
+          "client": 601
+        },
+        "results": {
+          "x": 838,
+          "right": 1440,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 602,
+          "client": 602
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 869,
+          "right": 1229.390625,
+          "width": 360.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 360,
+          "client": 360
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 823,
+          "width": 547.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 547
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 900,
+          "right": 1250.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 77.421875
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 59.234375
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "uk-1440-light-true",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 436,
+          "right": 910.25,
+          "width": 474.25,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 473,
+          "client": 473
+        },
+        "results": {
+          "x": 910.25,
+          "right": 1440,
+          "width": 529.75,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 530,
+          "client": 530
+        },
+        "context": {
+          "x": 236,
+          "right": 436,
+          "width": 200,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 189,
+          "client": 189
+        },
+        "title": {
+          "x": 941.25,
+          "right": 1229.390625,
+          "width": 288.140625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 288,
+          "client": 288
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 475.609375,
+          "right": 895.25,
+          "width": 419.640625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 420
+        },
+        "gutter": {
+          "x": 436,
+          "right": 475.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 972.25,
+          "right": 1277.296875,
+          "width": 305.046875,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 305,
+          "client": 305
+        },
+        "cards": [
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "uk-1440-dark-false",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 236,
+          "right": 838,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 601,
+          "client": 601
+        },
+        "results": {
+          "x": 838,
+          "right": 1440,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 602,
+          "client": 602
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 869,
+          "right": 1229.390625,
+          "width": 360.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 360,
+          "client": 360
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 823,
+          "width": 547.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 547
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 900,
+          "right": 1250.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 77.421875
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 59.234375
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "uk-1440-dark-true",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 436,
+          "right": 910.25,
+          "width": 474.25,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 473,
+          "client": 473
+        },
+        "results": {
+          "x": 910.25,
+          "right": 1440,
+          "width": 529.75,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 530,
+          "client": 530
+        },
+        "context": {
+          "x": 236,
+          "right": 436,
+          "width": 200,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 189,
+          "client": 189
+        },
+        "title": {
+          "x": 941.25,
+          "right": 1229.390625,
+          "width": 288.140625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 288,
+          "client": 288
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 475.609375,
+          "right": 895.25,
+          "width": 419.640625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 420
+        },
+        "gutter": {
+          "x": 436,
+          "right": 475.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 972.25,
+          "right": 1277.296875,
+          "width": 305.046875,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 305,
+          "client": 305
+        },
+        "cards": [
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "uk-1920-light-false",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 236,
+          "right": 1120,
+          "width": 884,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 883,
+          "client": 883
+        },
+        "results": {
+          "x": 1120,
+          "right": 1920,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1151,
+          "right": 1653.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 1663.859375,
+          "right": 1835.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 1105,
+          "width": 829.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 829,
+          "client": 829
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1182,
+          "right": 1532.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-1920-light-true",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 476,
+          "right": 1179.046875,
+          "width": 703.046875,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 702,
+          "client": 702
+        },
+        "results": {
+          "x": 1179.046875,
+          "right": 1920,
+          "width": 740.953125,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 741,
+          "client": 741
+        },
+        "context": {
+          "x": 236,
+          "right": 476,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1210.046875,
+          "right": 1709.390625,
+          "width": 499.34375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 499,
+          "client": 499
+        },
+        "meta": {
+          "x": 1719.390625,
+          "right": 1891,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 515.609375,
+          "right": 1164.046875,
+          "width": 648.4375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 648
+        },
+        "gutter": {
+          "x": 476,
+          "right": 515.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1241.046875,
+          "right": 1591.609375,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 34.1875
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "uk-1920-dark-false",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 236,
+          "right": 1120,
+          "width": 884,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 883,
+          "client": 883
+        },
+        "results": {
+          "x": 1120,
+          "right": 1920,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1151,
+          "right": 1653.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 1663.859375,
+          "right": 1835.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 1105,
+          "width": 829.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 829,
+          "client": 829
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1182,
+          "right": 1532.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-1920-dark-true",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 476,
+          "right": 1179.046875,
+          "width": 703.046875,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 702,
+          "client": 702
+        },
+        "results": {
+          "x": 1179.046875,
+          "right": 1920,
+          "width": 740.953125,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 741,
+          "client": 741
+        },
+        "context": {
+          "x": 236,
+          "right": 476,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1210.046875,
+          "right": 1709.390625,
+          "width": 499.34375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 499,
+          "client": 499
+        },
+        "meta": {
+          "x": 1719.390625,
+          "right": 1891,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 515.609375,
+          "right": 1164.046875,
+          "width": 648.4375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 648
+        },
+        "gutter": {
+          "x": 476,
+          "right": 515.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1241.046875,
+          "right": 1591.609375,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 34.1875
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "uk-2560-light-false",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 298,
+          "right": 1698,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1729,
+          "right": 2231.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 2241.859375,
+          "right": 2413.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 337.609375,
+          "right": 1683,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 298,
+          "right": 337.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2110.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-2560-light-true",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 538,
+          "right": 1698,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 298,
+          "right": 538,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1729,
+          "right": 2231.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 2241.859375,
+          "right": 2413.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 577.609375,
+          "right": 1683,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 538,
+          "right": 577.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2110.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-2560-dark-false",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 298,
+          "right": 1698,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1729,
+          "right": 2231.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 2241.859375,
+          "right": 2413.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 337.609375,
+          "right": 1683,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 298,
+          "right": 337.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2110.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-2560-dark-true",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 538,
+          "right": 1698,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 298,
+          "right": 538,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1729,
+          "right": 2231.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 2241.859375,
+          "right": 2413.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 577.609375,
+          "right": 1683,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 538,
+          "right": 577.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2110.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-3840-light-false",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 938,
+          "right": 2338,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 2369,
+          "right": 2871.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 2881.859375,
+          "right": 3053.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 977.609375,
+          "right": 2323,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 938,
+          "right": 977.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2750.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-3840-light-true",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 1178,
+          "right": 2338,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 938,
+          "right": 1178,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 2369,
+          "right": 2871.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 2881.859375,
+          "right": 3053.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 1217.609375,
+          "right": 2323,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 1178,
+          "right": 1217.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2750.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-3840-dark-false",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 938,
+          "right": 2338,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 2369,
+          "right": 2871.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 2881.859375,
+          "right": 3053.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 977.609375,
+          "right": 2323,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 938,
+          "right": 977.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2750.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "uk-3840-dark-true",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 1178,
+          "right": 2338,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 938,
+          "right": 1178,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 2369,
+          "right": 2871.859375,
+          "width": 502.859375,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 503,
+          "client": 503
+        },
+        "meta": {
+          "x": 2881.859375,
+          "right": 3053.46875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 1217.609375,
+          "right": 2323,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 1178,
+          "right": 1217.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2750.5625,
+          "width": 350.5625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 351,
+          "client": 351
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          }
+        ]
+      },
+      {
+        "label": "ru-1440-light-false",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 236,
+          "right": 838,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 601,
+          "client": 601
+        },
+        "results": {
+          "x": 838,
+          "right": 1440,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 602,
+          "client": 602
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 869,
+          "right": 1229.390625,
+          "width": 360.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 360,
+          "client": 360
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 823,
+          "width": 547.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 547
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 900,
+          "right": 1260.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 77.421875
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 59.234375
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "ru-1440-light-true",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 436,
+          "right": 910.25,
+          "width": 474.25,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 473,
+          "client": 473
+        },
+        "results": {
+          "x": 910.25,
+          "right": 1440,
+          "width": 529.75,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 530,
+          "client": 530
+        },
+        "context": {
+          "x": 236,
+          "right": 436,
+          "width": 200,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 189,
+          "client": 189
+        },
+        "title": {
+          "x": 941.25,
+          "right": 1229.390625,
+          "width": 288.140625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 288,
+          "client": 288
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 475.609375,
+          "right": 895.25,
+          "width": 419.640625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 420
+        },
+        "gutter": {
+          "x": 436,
+          "right": 475.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 972.25,
+          "right": 1273.953125,
+          "width": 301.703125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 302,
+          "client": 302
+        },
+        "cards": [
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "ru-1440-dark-false",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 236,
+          "right": 838,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 601,
+          "client": 601
+        },
+        "results": {
+          "x": 838,
+          "right": 1440,
+          "width": 602,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 602,
+          "client": 602
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 869,
+          "right": 1229.390625,
+          "width": 360.390625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 360,
+          "client": 360
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 823,
+          "width": 547.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 547
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 900,
+          "right": 1260.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 121.5625
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 77.421875
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 59.234375
+          },
+          {
+            "width": 566,
+            "scroll": 566,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "ru-1440-dark-true",
+        "viewport": 1440,
+        "document": 1440,
+        "canvas": {
+          "x": 236,
+          "right": 1440,
+          "width": 1204,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1204,
+          "client": 1204
+        },
+        "payload": {
+          "x": 436,
+          "right": 910.25,
+          "width": 474.25,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 473,
+          "client": 473
+        },
+        "results": {
+          "x": 910.25,
+          "right": 1440,
+          "width": 529.75,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 530,
+          "client": 530
+        },
+        "context": {
+          "x": 236,
+          "right": 436,
+          "width": 200,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 189,
+          "client": 189
+        },
+        "title": {
+          "x": 941.25,
+          "right": 1229.390625,
+          "width": 288.140625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 288,
+          "client": 288
+        },
+        "meta": {
+          "x": 1239.390625,
+          "right": 1411,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 475.609375,
+          "right": 895.25,
+          "width": 419.640625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 420
+        },
+        "gutter": {
+          "x": 436,
+          "right": 475.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 972.25,
+          "right": 1273.953125,
+          "width": 301.703125,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 302,
+          "client": 302
+        },
+        "cards": [
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 121.5625
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 77.421875
+          },
+          {
+            "width": 494,
+            "scroll": 494,
+            "summary": 76.375
+          }
+        ]
+      },
+      {
+        "label": "ru-1920-light-false",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 236,
+          "right": 1120,
+          "width": 884,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 883,
+          "client": 883
+        },
+        "results": {
+          "x": 1120,
+          "right": 1920,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1151,
+          "right": 1617.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 1627.265625,
+          "right": 1798.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 1105,
+          "width": 829.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 829,
+          "client": 829
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1182,
+          "right": 1542.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-1920-light-true",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 476,
+          "right": 1179.046875,
+          "width": 703.046875,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 702,
+          "client": 702
+        },
+        "results": {
+          "x": 1179.046875,
+          "right": 1920,
+          "width": 740.953125,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 741,
+          "client": 741
+        },
+        "context": {
+          "x": 236,
+          "right": 476,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1210.046875,
+          "right": 1676.3125,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 1686.3125,
+          "right": 1857.921875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 515.609375,
+          "right": 1164.046875,
+          "width": 648.4375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 648
+        },
+        "gutter": {
+          "x": 476,
+          "right": 515.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1241.046875,
+          "right": 1601.671875,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 103.375
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 34.1875
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-1920-dark-false",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 236,
+          "right": 1120,
+          "width": 884,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 883,
+          "client": 883
+        },
+        "results": {
+          "x": 1120,
+          "right": 1920,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1151,
+          "right": 1617.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 1627.265625,
+          "right": 1798.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 275.609375,
+          "right": 1105,
+          "width": 829.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 829,
+          "client": 829
+        },
+        "gutter": {
+          "x": 236,
+          "right": 275.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1182,
+          "right": 1542.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-1920-dark-true",
+        "viewport": 1920,
+        "document": 1920,
+        "canvas": {
+          "x": 236,
+          "right": 1920,
+          "width": 1684,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1684,
+          "client": 1684
+        },
+        "payload": {
+          "x": 476,
+          "right": 1179.046875,
+          "width": 703.046875,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 702,
+          "client": 702
+        },
+        "results": {
+          "x": 1179.046875,
+          "right": 1920,
+          "width": 740.953125,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 741,
+          "client": 741
+        },
+        "context": {
+          "x": 236,
+          "right": 476,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1210.046875,
+          "right": 1676.3125,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 1686.3125,
+          "right": 1857.921875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 515.609375,
+          "right": 1164.046875,
+          "width": 648.4375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 757,
+          "client": 648
+        },
+        "gutter": {
+          "x": 476,
+          "right": 515.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1241.046875,
+          "right": 1601.671875,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 103.375
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 121.5625
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 34.1875
+          },
+          {
+            "width": 705,
+            "scroll": 705,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-2560-light-false",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 298,
+          "right": 1698,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1729,
+          "right": 2195.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 2205.265625,
+          "right": 2376.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 337.609375,
+          "right": 1683,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 298,
+          "right": 337.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2120.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-2560-light-true",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 538,
+          "right": 1698,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 298,
+          "right": 538,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1729,
+          "right": 2195.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 2205.265625,
+          "right": 2376.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 577.609375,
+          "right": 1683,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 538,
+          "right": 577.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2120.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-2560-dark-false",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 298,
+          "right": 1698,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 1729,
+          "right": 2195.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 2205.265625,
+          "right": 2376.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 337.609375,
+          "right": 1683,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 298,
+          "right": 337.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2120.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-2560-dark-true",
+        "viewport": 2560,
+        "document": 2560,
+        "canvas": {
+          "x": 298,
+          "right": 2498,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 538,
+          "right": 1698,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 1698,
+          "right": 2498,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 298,
+          "right": 538,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 1729,
+          "right": 2195.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 2205.265625,
+          "right": 2376.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 577.609375,
+          "right": 1683,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 538,
+          "right": 577.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 1760,
+          "right": 2120.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-3840-light-false",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 938,
+          "right": 2338,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 2369,
+          "right": 2835.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 2845.265625,
+          "right": 3016.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 977.609375,
+          "right": 2323,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 938,
+          "right": 977.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2760.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-3840-light-true",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 1178,
+          "right": 2338,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 938,
+          "right": 1178,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 2369,
+          "right": 2835.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 2845.265625,
+          "right": 3016.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 1217.609375,
+          "right": 2323,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 1178,
+          "right": 1217.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2760.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-3840-dark-false",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 938,
+          "right": 2338,
+          "width": 1400,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1399,
+          "client": 1399
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 0,
+          "client": 0
+        },
+        "title": {
+          "x": 2369,
+          "right": 2835.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 2845.265625,
+          "right": 3016.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 977.609375,
+          "right": 2323,
+          "width": 1345.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1345,
+          "client": 1345
+        },
+        "gutter": {
+          "x": 938,
+          "right": 977.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2760.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      },
+      {
+        "label": "ru-3840-dark-true",
+        "viewport": 3840,
+        "document": 3840,
+        "canvas": {
+          "x": 938,
+          "right": 3138,
+          "width": 2200,
+          "height": 1388,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 2200,
+          "client": 2200
+        },
+        "payload": {
+          "x": 1178,
+          "right": 2338,
+          "width": 1160,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 1159,
+          "client": 1159
+        },
+        "results": {
+          "x": 2338,
+          "right": 3138,
+          "width": 800,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 800,
+          "client": 800
+        },
+        "context": {
+          "x": 938,
+          "right": 1178,
+          "width": 240,
+          "height": 1306,
+          "font": 15,
+          "line": "23.25px",
+          "scroll": 229,
+          "client": 229
+        },
+        "title": {
+          "x": 2369,
+          "right": 2835.265625,
+          "width": 466.265625,
+          "height": 18.1875,
+          "font": 13,
+          "line": "18.2px",
+          "scroll": 466,
+          "client": 466
+        },
+        "meta": {
+          "x": 2845.265625,
+          "right": 3016.875,
+          "width": 171.609375,
+          "height": 17.046875,
+          "font": 11,
+          "line": "17.05px",
+          "scroll": 172,
+          "client": 172
+        },
+        "editor": {
+          "x": 1217.609375,
+          "right": 2323,
+          "width": 1105.390625,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 1105,
+          "client": 1105
+        },
+        "gutter": {
+          "x": 1178,
+          "right": 1217.609375,
+          "width": 39.609375,
+          "height": 1226,
+          "font": 13,
+          "line": "22.1px",
+          "scroll": 40,
+          "client": 40
+        },
+        "verdict": {
+          "x": 2400,
+          "right": 2760.625,
+          "width": 360.625,
+          "height": 21.25,
+          "font": 17,
+          "line": "21.25px",
+          "scroll": 361,
+          "client": 361
+        },
+        "cards": [
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 103.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 34.1875
+          },
+          {
+            "width": 764,
+            "scroll": 764,
+            "summary": 52.375
+          }
+        ]
+      }
+    ],
+    "errors": []
+  }
+}

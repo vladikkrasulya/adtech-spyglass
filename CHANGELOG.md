@@ -6,6 +6,12 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.19.3 — compact Inspector on large displays (2026-09-05)
+
+- Keep editor and finding text at 13px across desktop widths instead of enlarging it at WQHD/4K breakpoints. Rule metadata remains subordinate and the verdict uses a compact 17px heading.
+- Bound the workbench to 2200px, results to 800px and the optional context/history column to 240px. The editor receives the remaining space without being covered by the context panel.
+- Tighten repeated finding-summary spacing; preserve expanded details, source navigation, mobile stacking, native browser zoom and all three locales/themes.
+
 ### v1.19.2 — model confidence limits and completed maintenance (2026-09-05)
 
 - Enforce the labeller persona's confidence ceilings in code. A generic `enabled=true` suggestion

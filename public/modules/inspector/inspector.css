@@ -397,58 +397,21 @@ body {
      it wins on small viewports. */
 }
 
-/* ── Large-display responsive (added 2026-05-04) ──────────────────
-         The original tokens (--fs-* in design-system.css) are tuned for
-         laptop/desktop viewports up to ~1600px. On WQHD / UWQHD / 4K the
-         site looked tiny + content sprawled across the entire viewport.
+/* Desktop density is independent of viewport width. Browser zoom remains
+   the user's size control; extra desktop space belongs to the editor. */
+.workbench {
+  --fs-mono: 11px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-md: 17px;
+  --fs-lg: 20px;
+  --fs-card: 13px;
+  --fs-verdict: 17px;
+}
 
-         Strategy:
-           1. Override font-size tokens with clamp() at ≥1600px so type
-              scales fluidly with viewport width up to a sensible cap.
-           2. Cap workbench at max-width 2200px and centre it — prevents
-              JSON paste areas from becoming a kilometre wide on UWQHD.
-           3. Bump padding tokens at ≥2000px so the chrome doesn't look
-              cramped against the absolute edges of the centred workbench.
-      */
-@media (min-width: 1600px) {
-  :root {
-    --fs-mono: clamp(11px, 0.55vw, 14px);
-    --fs-sm: clamp(13px, 0.65vw, 17px);
-    --fs-base: clamp(15px, 0.75vw, 20px);
-    --fs-md: clamp(17px, 0.85vw, 22px);
-    --fs-lg: clamp(20px, 1vw, 26px);
-  }
-}
-@media (min-width: 2000px) {
-  .workbench {
-    max-width: 2200px;
-    margin: 0 auto;
-    /* The body still fills the whole viewport — anything outside
-             the centred workbench shows the body background colour. */
-  }
-  .app-header,
-  .input-section,
-  .footer-bar {
-    padding-left: var(--space-6);
-    padding-right: var(--space-6);
-  }
-}
-@media (min-width: 2800px) {
-  /* True 4K / 5K2K / Dual-QHD: workbench is centred at 2200px so the
-           clamp() math (which uses vw of the *whole* viewport) hits its cap
-           and stops growing. Apply a viewport-relative font-size on the html
-           root that nudges the rem baseline up a little. */
-  :root {
-    --fs-mono: clamp(13px, 0.5vw, 17px);
-    --fs-sm: clamp(15px, 0.55vw, 19px);
-    --fs-base: clamp(17px, 0.65vw, 22px);
-    --fs-md: clamp(19px, 0.7vw, 25px);
-    --fs-lg: clamp(22px, 0.85vw, 30px);
-  }
-  .stat-value,
-  .winning-bid-amount,
-  .stat-num {
-    font-size: clamp(22px, 1vw, 36px);
+@media (min-width: 1101px) {
+  .workbench-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, min(50%, 800px));
   }
 }
 
@@ -4662,14 +4625,14 @@ body:not(.sb-left-hidden) .workbar-drawer-btn {
   overflow: hidden;
 }
 .validation-item.finding-detail > summary {
-  padding: 12px 14px;
-  gap: 10px;
+  padding: 10px 12px;
+  gap: 8px;
 }
 /* Collapsed rows sit on one line: title and path side by side with the code
-   and chevron, vertically centred, 11px of padding instead of 12. */
+   and chevron, vertically centred, with compact vertical padding. */
 .validation-item.finding-detail:not(.is-lead) > summary {
   align-items: center;
-  padding: 11px 14px;
+  padding: 8px 12px;
 }
 .validation-item.finding-detail:not(.is-lead) .finding-desc {
   display: none;
@@ -5827,13 +5790,13 @@ body:has(.app-footer) .toast-container {
    therefore only needs to become a grid track: the first one. Nothing about
    the toggle, its localStorage key or resetLayout() changes — `display:none`
    when closed already removes it from flow, so the closed layout stays the
-   two equal columns it was.
+   two bounded columns it was.
 
    Overlay is kept below 1100px, where the split stacks into rows and there is
    no width to share in the first place. */
 @media (min-width: 1101px) {
   body:not(.sb-left-hidden) .workbench-split {
-    grid-template-columns: clamp(260px, 20%, 330px) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: clamp(200px, 16%, 240px) minmax(0, 1fr) minmax(0, min(44%, 800px));
   }
   body:not(.sb-left-hidden) .sidebar-left {
     position: relative;
@@ -5847,45 +5810,17 @@ body:has(.app-footer) .toast-container {
   }
 }
 
-/* ── 2. Finding rows — the sentence outranks the rule id again ────────────
-   `--fs-card` and `--fs-chip` are fixed px on .kt-shell, so the card text
-   stayed 14px/12px on every display while `--fs-mono` — which the rule id
-   uses — climbed to 17px at 4K. The result was an inverted hierarchy: the
-   machine identifier was the biggest, brightest thing in the row and the
-   Ukrainian sentence a human actually reads was smaller than it.
-
-   Two local steps, scoped to the inspector so no other module inherits them,
-   following the same breakpoints the file already uses for --fs-*. */
+/* Finding text keeps its hierarchy at every desktop width. The results
+   track caps line length; metadata stays subordinate without growing at 4K. */
 .workbench {
-  --fs-finding: var(--fs-card, 14px);
-  --fs-finding-meta: var(--fs-chip, 12px);
-}
-@media (min-width: 1600px) {
-  .workbench {
-    --fs-finding: clamp(14px, 0.66vw, 17px);
-    --fs-finding-meta: clamp(12px, 0.55vw, 14px);
-  }
-}
-@media (min-width: 2800px) {
-  .workbench {
-    --fs-finding: 19px;
-    --fs-finding-meta: 15px;
-  }
+  --fs-finding: var(--fs-card, 13px);
+  --fs-finding-meta: 11px;
 }
 .finding-title,
 .finding-desc {
   font-size: var(--fs-finding);
 }
-/* A sentence has a measure, but only the 4K panel is wide enough to break it:
-   below that the row is narrower than the limit and capping it would only buy
-   extra wrapped lines in a list that is already 23 rows long. `ch` is taken
-   from --fs-finding, so the measure tracks the scale step. */
-@media (min-width: 2800px) {
-  .finding-title,
-  .finding-desc {
-    max-width: 96ch;
-  }
-}
+
 .validation-item.question .finding-desc {
   font-size: var(--fs-finding-meta);
 }

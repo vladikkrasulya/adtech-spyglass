@@ -109,6 +109,12 @@ watchdog, window facades, session adapter, and preview state are scoped to the c
 on cleanup. Mutations intentionally allowed to finish after navigation must still avoid painting or
 toasting into a later mount.
 
+## Inspector Display Density
+
+Desktop type does not scale with viewport width. Editor/finding body text uses 13px, metadata 11–12px, and the verdict 17px at normal browser zoom. The shell bounds the workbench to 2200px; the desktop split bounds results to 800px and optional context to 200–240px, leaving the remaining space for the payload. Context takes a real grid column above 1100px and retains its existing drawer behavior below that breakpoint. Native browser zoom remains available. Shared styles serve all three locales and both themes.
+
+`tests/inspector-density-browser.test.js` verifies rendered type, gutter alignment, panel geometry and expanded findings across desktop widths. Existing mobile tests guard stacking and whole controls.
+
 ## Creative Preview and Behavior Probe
 
 The creative body is macro-resolved and classified once before display. Raw payload bytes reach
