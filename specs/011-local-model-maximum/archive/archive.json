@@ -1,0 +1,11 @@
+{
+  "created_at": "2026-09-05T08:49:23.201298+00:00",
+  "host": "vkbox",
+  "path": "/home/vk/.local/share/ortbtools-research/archive/2026-09-05/bench-results-and-replay-code.tgz",
+  "sha256": "a78e5d1ea98cb567f2fce96020ecda5e0b0437d3561de8dc588142dd0415f27d",
+  "bytes": 28700578,
+  "complete_runs_verified": 47,
+  "incomplete_directories": 3,
+  "verification": "Every archived file under runs/ and aborted-runs/ compared byte-for-byte by SHA-256; every complete run passed original exact-inventory integrity validation.",
+  "contents": "All benchmark runs, incomplete evidence, input sets, metrics/scorers, prompts, taxonomy, router, miner, and replay runner. Python bytecode caches excluded."
+}

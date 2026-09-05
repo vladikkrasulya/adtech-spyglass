@@ -131,16 +131,14 @@ by every request.
       Principle VIII is Partial until this lands. — this change
 - [x] T023 Add this feature to `specs/ROADMAP.md` with its true status and next gate, and state that
       the package was written after the work, as the roadmap does for 004. — this change
-- [ ] T024 [US2] Close the two known calibration misses: a bare boolean under a generic key returns
-      0.6 where the persona's own ceiling is 0.5, and `sticky_bottom` is labelled
-      `interstitial-banner`. The second is a lexicon vocabulary question, not a confidence one, and
-      may belong in `packages/core/dialects/signal-lexicon.js` rather than the persona.
-- [ ] T025 Verify the finding-card layout in the expanded state and in the light theme at widths
-      above 1500px. `84cc6ea` repaired the collapsed state only; Principle VII is Partial until
-      this is checked by looking, not only by measuring.
-- [ ] T026 Decide whether the shared-model coupling needs a health signal of its own. Today a rename
-      or rebuild of the fleet model surfaces as an operator-facing unavailable state plus a 5xx
-      alert; that may be sufficient, and this task may close as "no change needed".
+- [x] T024 [US2] Enforce the persona's confidence ceilings in the model client; 37 focused tests and
+      six live locale cases pass. The positional `sticky_bottom` case already resolves to banner.
+      See [closure evidence](./closure-2026-09-05.md).
+- [x] T025 Visually verify expanded findings in light and dark themes at 1600 and 1920 px; all 15
+      details are visible with no overflow or browser errors. See [closure evidence](./closure-2026-09-05.md).
+- [x] T026 Decide no additional app health dependency is needed: optional model assistance already
+      has availability checks, named failure responses, 5xx alerts and manual fallback. See
+      [the recorded decision](./closure-2026-09-05.md).
 
 ---
 

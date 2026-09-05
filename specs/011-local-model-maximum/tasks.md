@@ -1,8 +1,12 @@
 # Tasks: Local Model Maximum v3
 
 **Input**: [spec.md](./spec.md), [plan.md](./plan.md)
-**Convention**: `[X]` done and verified · `[ ]` open. Paths under
+**Convention**: `[X]` done and verified, or explicitly closed by the dated archive decision · `[ ]` active work. Paths under
 `~/.local/share/ortbtools-research/bench/` unless stated. Every number cites an immutable run id.
+
+**Archive closure (2026-09-05)**: the owner stopped further experiments and requested preserved
+results. See [the final archive](./archive/README.md). Cancelled proposals below are not successful
+experiments; historical unmet targets remain unmet.
 
 ## Phase P0 — Reproducibility
 
@@ -36,15 +40,15 @@
 - [x] T019 [FR-007] `data/make-triage-cases.py` → `triage-cases-v1.json` (101 cases, 21 families, family-disjoint 51/26/24, `blocks_release` per family).
 - [x] T020 First dev run `p1-tri-v1-8b-gpu-tf-dev`: 81%; `POLICY_GATE` 0/5 (family `spec-refs-orphan`, unseen in tune) → 4 false-safe. Finding, not a fix.
 - [x] T021 [FR-007] Freeze manifests (`frozen: true`, hashes) before any tuning; recorded in both split files. Triage holdout opening is recorded once for `t047`; extraction holdout remains sealed.
-- [ ] T022 Metrics module for extraction: candidate recall, micro P/R/F1, macro-F1 per effect and per legacy disposition with per-class support, exact source/target/effect/trigger/scope, condition accuracy, citation resolvability, evidence support, hallucination and schema-invalid rate, adapter exact-set accuracy, latency/tokens/RAM/VRAM, escalation rate.
-- [ ] T023 Metrics module for triage: macro-F1, confusion matrix, `blocks_release` accuracy, false-safe rate, fabricated `look_at`, calibration, p50/p95, escalation.
+- [x] T022 [FR-007] **Closed as partial reporting, 2026-09-05**: existing extraction metrics and immutable scores are preserved in [the archive](./archive/README.md). Additional fact-axis, condition, citation-support and resource reporting is cancelled, not claimed implemented.
+- [x] T023 [FR-007] **Closed by archival verification, 2026-09-05**: existing triage metrics, confusion matrices, false-safe definitions, calibration and latency exports are preserved; 75 offline benchmark tests pass. Further reporting expansion is cancelled.
 
 ## Phase P1 — Candidate miner
 
 - [x] T024 [FR-008] `miner/` Go module (`go/packages` with types; entrypoints MakeRequests / Builder; kinds read, assign, struct_construct, marshal_sink, header_write, query_write, uri_write, filter, validation, error_branch, helper_call; `ortb_path_guess`; control path; use-def; reach-to-outbound; evidence slices; bundles 2–8k tokens; `-all`; `analysis_status=partial` on typing failure).
 - [x] T025 Run `-all`: 271 adapters, 260 complete / 11 partial.
 - [x] T026 `miner/recall.py`: 360/364 = 98.9%; forbidden 5/5, required 74/74, validated 13/13, moved 57/57, injected 39/39, conditional 18/18, defaulted 14/14, rewritten 98/99, dropped 42/45 (huaweiads ×2 partial-typed whole-body rewrite; smartadserver evidence in `openrtb_ext/`). SC-003 `dropped` clause reported, not gated — decision.md.
-- [ ] T027 Decide with the owner: whole-file fallback for `dropped`, or report 42/45.
+- [x] T027 **Closed by owner archive decision, 2026-09-05**: preserve measured `dropped` recall 42/45 and its named misses; cancel the proposed whole-file fallback. The critical-class target is still not met.
 
 ## Phase P1 — Router
 
@@ -60,13 +64,13 @@
 
 ## Phase P2 — Optimisation (one variable, ×3, tune only; promote on dev at ≥ 3 pp macro-F1)
 
-- [ ] T034 [FR-011] Parsing-failure rule on/off — isolated effect vs v2.
-- [ ] T035 Fact schema vs disposition schema.
-- [ ] T036 Boundary few-shot on/off.
+- [x] T034 [FR-011] **Cancelled, 2026-09-05**: isolated parsing-failure rule on/off experiment was not run. Existing v2/v3 evidence is archived without pretending it isolates this variable.
+- [x] T035 **Cancelled, 2026-09-05**: controlled fact-schema versus disposition-schema experiment was not run. Existing runs have different scopes and remain historical evidence.
+- [x] T036 **Cancelled, 2026-09-05**: separate boundary-few-shot ablation was not run. The related combined few-shot-and-line-number experiment `t032-b-fewshot-lines-8b` already failed and is preserved.
 - [x] T037 Extract → verify (`t037-verify-on-e-8b`, ×3): F1 0.16 vs E 0.15 — +1 pp for double the calls. **Not worth it.**
 - [x] T038 Thinking on/off. Triage tune: 8B off 10/10 vs on 9/10; 31B (before retirement) off 30/30 vs on 26/30 + 4 one-hour timeouts. Facts (`t038-e-think-8b-x1.aborted`): the third call exceeded 12k generated tokens and was still going — the same runaway as 31B triage-with-thinking. **Thinking is off for every workload; closed.**
-- [ ] T039 Retrieval of examples from tune only.
-- [x] T040 Triage prompt v2 (`t040-tri-v2-8b-gpu-tf-dev`, dev ×3): `POLICY_GATE` names the repo's real gate tests → **0/5 → 15/15, false-safe 4 → 0, blocks_release acc 1.00, acc 0.81 → 0.92**. New confusion: REAL_REGRESSION→POLICY_GATE ×6 (family `contract-value-changed`: `finding-catalog: served severity…` is a product contract, not a gate) — my list named the test, not the failure kind. Next variable v3: gate = artifact missing / file forbidden / registry record violates a rule; a wrong served VALUE is a regression even in a gate-named test. Control v1 ×3 running for paired.
+- [x] T039 **Cancelled, 2026-09-05**: retrieval-of-tune-examples proposal was not executed; no retrieval quality result is claimed.
+- [x] T040 Triage prompt v2 (`t040-tri-v2-8b-gpu-tf-dev`, dev ×3): `POLICY_GATE` names the repo's real gate tests → **0/5 → 15/15, false-safe 4 → 0, blocks_release acc 1.00, acc 0.81 → 0.92**. New confusion: REAL_REGRESSION→POLICY_GATE ×6 (family `contract-value-changed`: `finding-catalog: served severity…` is a product contract, not a gate) — my list named the test, not the failure kind. Next variable v3: gate = artifact missing / file forbidden / registry record violates a rule; a wrong served VALUE is a regression even in a gate-named test. Control v1 ×3 completed as `t040-tri-v1-8b-gpu-tf-dev-x3`; the result is in the archive.
 
 ## Report
 

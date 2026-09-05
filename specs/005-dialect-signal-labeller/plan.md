@@ -8,6 +8,9 @@
 can be an honest record of what was built and what still is not, rather than a forward plan for work
 that has already happened. See the spec's Record Order section.
 
+**Verification closed 2026-09-05**: [final evidence and the health decision](./closure-2026-09-05.md).
+The execution notes below are historical; no verification task remains active.
+
 ## Summary
 
 An unrecognised vendor `ext` key turns an Inspector finding into a question. Two stages answer it: a

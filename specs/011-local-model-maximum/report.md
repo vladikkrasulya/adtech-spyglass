@@ -6,6 +6,13 @@
 **Model under decision**: `gemma4-prod`, digest
 `112b5e266519c958d490400f9f038669147246cb1654a05b51ea3d1ed882e68b`
 
+## Archive closure — 2026-09-05
+
+This is a historical report. The [final SpecKit archive](./archive/README.md) preserves 47 verified
+complete runs, includes the later `t059`/`t060` decision, and closes the stale follow-up list by the
+owner's instruction. Older statements below about seven remaining tasks or QAT still being
+installed describe the report cut-off, not current work. Unmet quality targets remain unmet.
+
 ## Verdict
 
 The research infrastructure is reproducible and the current model-selection decision is supported:
@@ -196,7 +203,7 @@ Exact host snapshot at report cut-off:
 | Ollama                       | 0.32.9; container image id `sha256:1685741456770df6e3cceb2a945a5f75e020f658d1701509668d6f4688f1dd3f`                                                                |
 | resident model               | `gemma4-prod:latest`, 100% GPU, context 32768, keep-alive Forever                                                                                                   |
 
-## Remaining formal work
+## Historical remaining formal work (closed 2026-09-05)
 
 Seven tasks remain open: T022, T023, T027, T034, T035, T036 and T039. They are follow-up research,
 not missing evidence for the one-model decision. Any further triage tuning needs a new sealed set;

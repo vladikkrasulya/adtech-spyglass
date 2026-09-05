@@ -69,6 +69,12 @@ before baseline; no external LLM; runs immutable; secrets never printed; `.env` 
 - **D7 — Two DoD clauses reported-not-gated** (macro-F1 per-class support; `dropped` 42/45) until
   the owner confirms — see decision.md.
 
+## Final disposition — 2026-09-05
+
+The owner closed the cycle and cancelled additional experiments. [The archive](./archive/README.md)
+preserves the full result inventory and gives each former follow-up an explicit disposition.
+The phase descriptions below record the earlier execution history, not an active queue.
+
 ## Project Structure
 
 ```text
@@ -101,7 +107,7 @@ specs/011-local-model-maximum/   # this package (spec, plan, tasks, checklists, 
 - **P1 router** — per-fact, cached, guarded. _Built and smoke-tested. The 31B comparison was closed
   by the owner's retirement decision; escalations now go to the human queue._
 - **P2 optimisation** — one variable at a time on tune; promotion on dev; holdout once. _Partially
-  executed. T037/T038/T040 and the per-candidate series are measured; T034–T036 and T039 remain
-  open, and no extraction candidate was promoted._
+  executed. T037/T038/T040 and the per-candidate series are measured; T034–T036 and T039 were not completed as isolated experiments and are now cancelled by
+  the archive decision; no extraction candidate was promoted._
 - **Report** — before/after, confusion matrices, Pareto, rejected hypotheses, migration proposal,
-  rollback, exact host state. _Done in [report.md](./report.md); seven follow-up tasks remain open._
+  rollback, exact host state. _Done in [report.md](./report.md); the seven former follow-ups are closed by the dated archive decision._

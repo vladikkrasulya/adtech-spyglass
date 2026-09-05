@@ -6,6 +6,17 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.19.2 — model confidence limits and completed maintenance (2026-09-05)
+
+- Enforce the labeller persona's confidence ceilings in code. A generic `enabled=true` suggestion
+  can no longer return 0.6 against a promised 0.5 maximum; empty and numeric format claims keep
+  their 0.3 limits, role claims retain their own scale, and absolute certainty caps at 0.95.
+- Ship synchronized browser vendors: marked 18.0.11 and DOMPurify 3.4.14, plus @sentry/node 10.72.0.
+  The recovered rebase retains the newer development tools and the vendor integrity contract.
+- Close the remaining labeller verification items, including expanded findings in both themes,
+  and archive Local Model Maximum results in SpecKit with 47 verified runs and explicit owner
+  cancellation of additional experiments. Historical unmet quality targets remain recorded.
+
 ### v1.19.1 — convergence: the role is visible on the card, the dialect reads back (2026-09-02)
 
 - The question card now shows the resolved role (or the ambiguity candidates) right on the finding,

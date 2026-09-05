@@ -4,7 +4,10 @@
 
 **Created**: 2026-08-23
 
-**Status**: Verification
+**Status**: Complete
+
+**Closure**: Research archived on 2026-09-05 by owner decision; this status closes the research
+cycle, not the unmet quality targets. [Final results and task dispositions](./archive/README.md).
 
 **Input**: Handoff from [assessment decision](../../.specify/assessments/local-model-maximum/decision.md)
 (verdict: go — Option B, two Definition-of-Done clauses reported-not-gated until the owner confirms

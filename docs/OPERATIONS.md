@@ -1407,3 +1407,18 @@ also require valid `CLICKHOUSE_*` credentials; without them those features no-op
 ---
 
 _Last updated: 2026-08-12._
+
+## Checkout recovery and worktree permissions — 2026-09-05
+
+The interrupted vendor rebase was completed with both updated vendors and the newer main-branch
+development dependencies. Its original git state, unmerged files, patches and labeller draft were
+preserved under `/home/vk/.local/share/ortbtools-repair/2026-09-05/` before recovery.
+
+The sibling worktree parent `/srv/DATA/Stacks/ortbtools.worktrees` is owned by `vk:vk`, mode `0755`.
+An actual detached worktree creation and clean removal succeeded there. Keep `/srv/DATA/Stacks`
+root-owned; provision only this project-specific worktree parent when restoring the checkout.
+
+The completed Local Model Maximum cycle is indexed in
+[its SpecKit archive](../specs/011-local-model-maximum/archive/README.md). Research outputs are
+kept outside the live application data directory and never enter the production image as source
+overlays. The archive decision cancels further inference experiments; no scheduler was created.

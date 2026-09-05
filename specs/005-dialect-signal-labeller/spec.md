@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-20
 
-**Status**: Verification
+**Status**: Complete
 
 **Input**: Retroactive specification for work already in production. The feature answers one
 question inside the Inspector: "this vendor `ext` signal is unknown to the engine — what does it

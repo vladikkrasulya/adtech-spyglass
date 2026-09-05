@@ -1,0 +1,76 @@
+{
+  "date": "2026-09-05T08:51:59.869Z",
+  "phase": "candidate-worktree",
+  "modelHealth": {
+    "ok": true,
+    "reason": null,
+    "model": "gemma4-prod"
+  },
+  "sourceHashes": {
+    "lib/ollama.js": "00541e5a1d8827cdfdbcba708d8bf6ed165e7d793ab404308aa3308ac9eb74c6",
+    "lib/label-ceilings.js": "9b7ddc2943844f9cfb3b9eb1cedcc5b98739e1cfef43036cd96f45d951de8f16",
+    "lib/label-persona.js": "2584986e8faa3e4066ebdfaf56dca3c84c9febce5a0e1cf7d8eeb4b7ba53eced"
+  },
+  "cases": [
+    {
+      "locale": "en",
+      "key": "enabled",
+      "value": true,
+      "label": "ignore",
+      "confidence": 0.5,
+      "reason": "The key 'enabled' with a boolean value is likely a technical flag or switch, indicating the status of the impression slot rather than defining an ad format.",
+      "model": "gemma4-prod",
+      "source": "model"
+    },
+    {
+      "locale": "en",
+      "key": "pos_kind",
+      "value": "sticky_bottom",
+      "label": "banner",
+      "confidence": 0.7,
+      "reason": "The presence of a specific size (320x50) combined with a positional value like 'sticky_bottom' suggests a standard banner ad format rather than a full-screen interstitial.",
+      "model": "gemma4-prod",
+      "source": "model"
+    },
+    {
+      "locale": "uk",
+      "key": "enabled",
+      "value": true,
+      "label": "ignore",
+      "confidence": 0.4,
+      "reason": "Ключ 'enabled' є загальним прапорцем, який не визначає рекламний формат; його значення 'true' лише вказує на активність елемента.",
+      "model": "gemma4-prod",
+      "source": "model"
+    },
+    {
+      "locale": "uk",
+      "key": "pos_kind",
+      "value": "sticky_bottom",
+      "label": "banner",
+      "confidence": 0.7,
+      "reason": "Наявність позиційного слова 'sticky_bottom' у контексті банера вказує на його розміщення, але оскільки немає ознак повноекранності (interstitial), це класифікується як звичайний banner.",
+      "model": "gemma4-prod",
+      "source": "model"
+    },
+    {
+      "locale": "ru",
+      "key": "enabled",
+      "value": true,
+      "label": "ignore",
+      "confidence": 0.5,
+      "reason": "Ключ 'enabled' с булевым значением часто является техническим флагом или переключателем, что соответствует категории игнорируемых данных.",
+      "model": "gemma4-prod",
+      "source": "model"
+    },
+    {
+      "locale": "ru",
+      "key": "pos_kind",
+      "value": "sticky_bottom",
+      "label": "banner",
+      "confidence": 0.7,
+      "reason": "Поле указывает на позицию баннера ('sticky_bottom'), а структура импрессии подтверждает наличие стандартного баннерного формата.",
+      "model": "gemma4-prod",
+      "source": "model"
+    }
+  ]
+}
