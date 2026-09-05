@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@ortbtools/core": "*",
-    "@sentry/node": "^10.70.0",
+    "@sentry/node": "^10.72.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^13.0.3",
     "pino": "^10.3.1"

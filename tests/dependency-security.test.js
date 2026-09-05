@@ -147,7 +147,7 @@ test('version comparator and advisory predicates enforce their exact boundaries'
 });
 
 test('root manifest and lock retain the reviewed Sentry 10.x floor', () => {
-  const expectedRange = '^10.70.0';
+  const expectedRange = '^10.72.0';
   const rootLockEntry = packageLock.packages?.[''];
   const sentryLockEntry = packageLock.packages?.['node_modules/@sentry/node'];
 
