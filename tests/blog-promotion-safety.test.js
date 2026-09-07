@@ -89,10 +89,14 @@ test('encoded RSS → authorized promotion → public handler → actual Blog mo
       summary: normalized.summary,
       title: normalized.title,
       url: normalized.link,
+      status: 'pending',
+      slug: '',
     };
     clickhouse.chQuery = async () => [draft];
     clickhouse.chExec = async (sql) => {
       mutations.push(sql);
+      draft.status = 'promoted';
+      draft.slug = 'feature003-promoted-post';
     };
     clickhouse.chInsert = async () => {};
     clickhouse.isEnabled = () => false;

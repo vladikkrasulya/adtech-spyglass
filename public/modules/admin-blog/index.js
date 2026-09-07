@@ -108,6 +108,24 @@ function formatDate(s, lang) {
   }
 }
 
+// Draft URLs are external content, including rows written by older producers.
+// Attribute escaping alone does not restrict navigation capabilities.
+function safeSourceHref(value) {
+  if (typeof value !== 'string') return '';
+  const url = value.trim();
+  const hasAmbiguousCharacter = Array.from(url).some((character) => {
+    const code = character.charCodeAt(0);
+    return code <= 0x20 || code === 0x7f || character === '\\';
+  });
+  if (!/^https?:\/\//i.test(url) || hasAmbiguousCharacter) return '';
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname && !parsed.username && !parsed.password ? url : '';
+  } catch {
+    return '';
+  }
+}
+
 export default {
   id: 'admin-blog',
   css: '/modules/admin-blog/admin-blog.css',
@@ -256,7 +274,9 @@ export default {
           renderAuthForm();
           return null;
         }
-        return await resp.json();
+        const result = await resp.json();
+        if (!resp.ok) throw new Error(result.error || 'HTTP ' + resp.status);
+        return result;
       } catch (e) {
         if (e.name !== 'AbortError') alert(pick(L.errorPrefix, lang) + e.message);
         return null;
@@ -279,7 +299,7 @@ function renderTable(drafts, lang) {
     <tr>
       <td class="ablog-td ablog-td--title">
         ${escapeHtml(d.title)}
-        ${d.url ? `<a class="ablog-link" href="${escapeHtml(d.url)}" target="_blank" rel="noopener">↗</a>` : ''}
+        ${safeSourceHref(d.url) ? `<a class="ablog-link" href="${escapeHtml(safeSourceHref(d.url))}" target="_blank" rel="noopener noreferrer">↗</a>` : d.url ? `<span class="ablog-source">${escapeHtml(d.url)}</span>` : ''}
       </td>
       <td class="ablog-td">${escapeHtml(d.category)}</td>
       <td class="ablog-td">${escapeHtml(d.lang)}</td>

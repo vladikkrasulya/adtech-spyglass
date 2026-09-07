@@ -669,10 +669,7 @@ test('static: password-reset/unlock/save-sample still call the SAME facade metho
   const facadeSrc = fs.readFileSync(path.join(ROOT, 'public/core/session.js'), 'utf8');
   const facadeBody = facadeSrc.slice(facadeSrc.indexOf('export function installSessionFacade'));
   const consumers = [
-    [
-      'modules/unlock/index.js',
-      ['user', 'api', 'openFromPassword', 'refreshSamples', 'wireEnterSubmit'],
-    ],
+    ['modules/unlock/index.js', ['user', 'api', 'openFromPassword', 'refreshSamples']],
     ['modules/password-reset/index.js', ['importDEKFromBytes', 'api']],
     ['modules/save-sample/index.js', ['user', 'hasSession']],
     [

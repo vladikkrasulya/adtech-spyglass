@@ -81,6 +81,65 @@ function registerSections() {
   // every nav section is a real module now.)
 }
 
+// Resource failures never replace a still-mounted editor. Recovery is an
+// explicit action: refreshing can discard work, so no automatic reload runs.
+function showActivationFailure(root, error) {
+  if (error && error.name === 'AbortError') return;
+  const lang = document.documentElement.lang || 'en';
+  const messages = {
+    en: [
+      'This section could not load',
+      'Your open work is still here. Retry the connection, or copy your work before refreshing for the latest version.',
+      'Retry',
+      'Refresh page',
+    ],
+    uk: [
+      'Не вдалося завантажити розділ',
+      'Твої відкриті дані залишилися тут. Спробуй підключитися ще раз або скопіюй їх перед оновленням сторінки до нової версії.',
+      'Спробувати ще раз',
+      'Оновити сторінку',
+    ],
+    ru: [
+      'Не удалось загрузить раздел',
+      'Твои открытые данные остались здесь. Попробуй подключиться ещё раз или скопируй их перед обновлением страницы до новой версии.',
+      'Повторить',
+      'Обновить страницу',
+    ],
+  };
+  const [title, description, retryText, refreshText] = messages[lang] || messages.en;
+  document.getElementById('section-load-recovery')?.remove();
+  const notice = document.createElement('section');
+  notice.id = 'section-load-recovery';
+  notice.setAttribute('role', 'alert');
+  notice.style.cssText =
+    'padding:16px;margin:12px;border:1px solid var(--danger,#dc2626);border-radius:8px;';
+  const heading = document.createElement('h2');
+  heading.textContent = title;
+  const detail = document.createElement('p');
+  detail.textContent = description;
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.textContent = retryText;
+  retry.addEventListener('click', () => activateFromUrl());
+  const refresh = document.createElement('button');
+  refresh.type = 'button';
+  refresh.textContent = refreshText;
+  refresh.addEventListener('click', () => location.reload());
+  notice.append(heading, detail, retry, refresh);
+  root.before(notice);
+}
+
+async function activateSection(id, root) {
+  try {
+    await registry.activate(id, root);
+    document.getElementById('section-load-recovery')?.remove();
+  } catch (error) {
+    if (error && error.name === 'AbortError') return;
+    console.error('[shell-boot] section load failed:', error);
+    showActivationFailure(root, error);
+  }
+}
+
 // ── Activation by URL ────────────────────────────────────────────
 async function activateFromUrl() {
   const root = document.getElementById('app-root');
@@ -113,31 +172,19 @@ async function activateFromUrl() {
   const hashMatch = canonical.match(/^\/r\/([0-9a-f]{8,12})$/i);
   if (hashMatch) {
     window.__pendingSpecimenHash = hashMatch[1];
-    try {
-      await registry.activate('inspector', root);
-    } catch (err) {
-      console.error('[shell-boot] /r/:hash activate failed:', err);
-    }
+    await activateSection('inspector', root);
     return;
   }
 
   // Blog post deep routes: /blog/{lang}/{slug} (canonicalized — locale prefix stripped)
   if (canonical.startsWith('/blog/')) {
-    try {
-      await registry.activate('blog', root);
-    } catch (err) {
-      console.error('[shell-boot] blog post activate failed:', err);
-    }
+    await activateSection('blog', root);
     return;
   }
 
   // Admin blog route
   if (canonical === '/admin/blog') {
-    try {
-      await registry.activate('admin-blog', root);
-    } catch (err) {
-      console.error('[shell-boot] admin-blog activate failed:', err);
-    }
+    await activateSection('admin-blog', root);
     return;
   }
 
@@ -163,25 +210,7 @@ async function activateFromUrl() {
     return;
   }
 
-  try {
-    await registry.activate(id, root);
-  } catch (err) {
-    console.error('[shell-boot] activate failed:', err);
-    const activationFailedLang = document.documentElement.lang || 'en';
-    const activationFailedTitleByLang = {
-      en: 'Module activation failed',
-      uk: 'Не вдалося активувати модуль',
-      ru: 'Не удалось активировать модуль',
-    };
-    const activationFailedTitle =
-      activationFailedTitleByLang[activationFailedLang] || activationFailedTitleByLang.en;
-    root.innerHTML = `
-      <section style="padding:48px;text-align:center;color:var(--danger,#dc2626);">
-        <h1 style="margin:0 0 8px;">${activationFailedTitle}</h1>
-        <p>${err.message}</p>
-      </section>
-    `;
-  }
+  await activateSection(id, root);
 }
 
 // ── Section title ────────────────────────────────────────────────
@@ -295,33 +324,18 @@ function mountChrome() {
 // listeners). The currently-active section module also needs to be
 // re-mounted so its localised copy (sidebar group labels, empty-state
 // strings, section-specific placeholders) reflects the new locale.
-// We deactivate the current section and re-activate it into the same
-// root — registry.activate() tears down the old mount first.
+// The registry prepares the requested locale before replacing the old mount;
+// failed preparation preserves its editor and listeners.
 function wireLangChange() {
   window.addEventListener('kt:lang-change', async () => {
-    const id = registry.current();
-    if (!id) return; // no section active — nothing to re-mount
+    const current = registry.current();
+    if (!current) return;
     const root = document.getElementById('app-root');
     if (!root) return;
-    try {
-      // Deactivate (registry unmounts the section, clears root.innerHTML).
-      await registry.deactivate();
-      // Re-activate the same section — it reads the now-updated
-      // document.documentElement.lang so all ctx.lang-derived strings
-      // are in the new locale.
-      await registry.activate(id, root);
-      // Title follows the new locale too (e.g. Library → Бібліотека).
-      updateSectionTitle();
-    } catch (err) {
-      console.warn('[shell-boot] kt:lang-change section remount failed:', err);
-      // Best-effort fallback: re-activate from URL so the shell
-      // doesn't get stuck on a blank #app-root.
-      try {
-        await activateFromUrl();
-      } catch (_) {
-        /* ignore */
-      }
-    }
+    // The registry prepares the new locale before removing the old mount.
+    // A rejected template must leave its previous inputs and listeners intact.
+    await activateSection(current.id, root);
+    updateSectionTitle();
   });
 }
 

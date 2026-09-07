@@ -179,8 +179,10 @@ test('content and security contracts own the closed Blog-body fragment boundary'
   assert.match(contract, /Raw HTML remains visible as literal text/i);
   assert.match(
     contract,
-    /Source-URL scheme parity outside[\s\S]{0,240}remain separately assessed/i,
+    /Admin table grants source-link navigation only to unambiguous HTTP\(S\) URLs/i,
   );
+  assert.match(contract, /Promotion creates the locale\/slug file exclusively/i);
+  assert.match(contract, /JSON-encoded scalar per field[\s\S]{0,140}indexable false/i);
   assert.doesNotMatch(contract, /full, unsanitized Marked|trusted-editorial assumption/i);
   assert.doesNotMatch(contract, /runtime hardening requires a separate assessed feature/i);
 });

@@ -1,7 +1,8 @@
 # ortbtools — Operations Runbook
 
-Maintainer: Vladik. Machine: `vkbox`, Debian 13, LAN `192.168.1.6`,
-Tailscale `100.86.20.34`. Stack root: `/srv/DATA/Stacks/ortbtools/`.
+Maintainer: Vladik. Machine: `vkbox`, Debian 13. Stack root:
+`/srv/DATA/Stacks/ortbtools/`. Discover the current Tailscale endpoint with
+`tailscale ip -4` on the host; use the loopback health URL below for local checks.
 
 ---
 
@@ -912,7 +913,7 @@ cd /srv/DATA/Stacks/ortbtools
 ### 7.1 Beszel (container metrics)
 
 Hub + agent compose at `/srv/DATA/Stacks/beszel/`. Hub UI: `http://127.0.0.1:8190`
-(or via Tailscale at `100.86.20.34:8190`). Container `ortbtools` should appear
+(or via the current address reported by `tailscale ip -4`, port `8190`). Container `ortbtools` should appear
 in the system list. CPU, RAM, and network are tracked by the agent via Docker socket.
 
 ### 7.2 Docker healthcheck
@@ -1363,6 +1364,13 @@ Internal automation can call `GET /api/admin/stats` over `kt-shared` with the
 credentials are managed outside this repository.
 
 ### 10.5 Sentry-compatible error tracking
+
+Maintenance 019 retains the existing Telegram channel and optional, unconfigured Sentry
+integration. On 2026-09-07 the container had both Telegram configuration fields and
+reported `sentry.ready: false`; mocked notifier tests passed. This is configuration and
+local-path evidence, not an upstream delivery claim. No new destination or synthetic
+alert message was sent as part of that check. A future change starts with a specified
+target and the controlled verification described below.
 
 Server-side reporting is implemented in `lib/logger.js` with `@sentry/node`.
 When `SENTRY_DSN` is present and the SDK retains a valid parsed DSN,

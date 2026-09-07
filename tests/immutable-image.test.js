@@ -203,9 +203,9 @@ test('disposable Docker smoke verifies the hashed Blog vendor graph and shipped 
   const smoke = read('scripts/ci-docker-smoke.sh');
   for (const required of [
     '/modules/blog/index.js',
-    '/modules/blog/markdown-renderer\\.js\\?v=[0-9a-f]{8}',
-    '/vendor/marked\\.es\\.js\\?v=[0-9a-f]{8}',
-    '/vendor/dompurify\\.es\\.js\\?v=[0-9a-f]{8}',
+    '/modules/blog/markdown-renderer\\.js\\?v=a2-[0-9a-f]{64}',
+    '/vendor/marked\\.es\\.js\\?v=a2-[0-9a-f]{64}',
+    '/vendor/dompurify\\.es\\.js\\?v=a2-[0-9a-f]{64}',
     '/vendor/NOTICE.txt',
     '/vendor/licenses/Marked-MIT.txt',
     '/vendor/licenses/DOMPurify-Apache-2.0.txt',

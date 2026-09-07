@@ -169,6 +169,90 @@ test('teardown is idempotent (double deactivate, no throw) and a mount() failure
   assert.equal(registry.current(), null, 'no active module after a failed mount');
 });
 
+test('a visible async mount stays live when a newer preparation fails', async () => {
+  /** @type {() => void} */
+  let finishMount;
+  /** @type {() => void} */
+  let markVisible;
+  /** @type {(error: Error) => void} */
+  let failPreparation;
+  /** @type {() => void} */
+  let markPreparing;
+  const mountGate = new Promise((resolve) => {
+    finishMount = () => resolve(undefined);
+  });
+  const visible = new Promise((resolve) => {
+    markVisible = () => resolve(undefined);
+  });
+  const preparationGate = new Promise((_resolve, reject) => {
+    failPreparation = reject;
+  });
+  const preparing = new Promise((resolve) => {
+    markPreparing = () => resolve(undefined);
+  });
+  /** @type {AbortSignal} */
+  let currentSignal;
+  let currentCleanups = 0;
+  let inputEvents = 0;
+  let candidateCleanups = 0;
+  registry.register({
+    id: 'visible-async-mount',
+    async mount(el, ctx) {
+      el.innerHTML = '<textarea id="still-editable">unsaved draft</textarea>';
+      currentSignal = ctx.signal;
+      el.addEventListener('input', () => inputEvents++, { signal: ctx.signal });
+      ctx.addCleanup(() => currentCleanups++);
+      markVisible();
+      await mountGate;
+    },
+  });
+  registry.register({
+    id: 'failed-new-preparation',
+    async prepare(ctx) {
+      ctx.addCleanup(() => candidateCleanups++);
+      markPreparing();
+      await preparationGate;
+    },
+    async mount() {
+      assert.fail('a failed candidate must not mount');
+    },
+  });
+  // Attach outcome handlers immediately so a regression cannot create an
+  // unhandled rejection while the test deliberately holds mount() open.
+  const mounting = registry.activate('visible-async-mount', root()).then(
+    () => null,
+    (error) => error,
+  );
+  await visible;
+  const candidate = registry.activate('failed-new-preparation', root()).then(
+    () => null,
+    (error) => error,
+  );
+  await preparing;
+  const beforeFailure = { aborted: currentSignal.aborted, cleanups: currentCleanups };
+  failPreparation(new Error('template HTTP 409'));
+  const candidateError = await candidate;
+  root().dispatchEvent(new global.window.Event('input', { bubbles: true }));
+  finishMount();
+  const mountError = await mounting;
+
+  assert.deepEqual(
+    beforeFailure,
+    { aborted: false, cleanups: 0 },
+    'staged navigation must not abort the visible mount',
+  );
+  assert.match(candidateError.message, /template HTTP 409/);
+  assert.equal(candidateCleanups, 1);
+  assert.equal(mountError, null, 'the active mount can finish normally after a candidate fails');
+  assert.equal(currentSignal.aborted, false);
+  assert.equal(currentCleanups, 0);
+  assert.equal(inputEvents, 1, 'the old editor listener remains attached');
+  assert.equal(root().querySelector('textarea').value, 'unsaved draft');
+  assert.equal(registry.current().id, 'visible-async-mount');
+  await registry.deactivate();
+  assert.equal(currentCleanups, 1, 'the active context is cleaned only on actual deactivation');
+});
+
 test('stale async continuation from mount N is guarded by ctx.signal.aborted and never mutates mount N+1', async () => {
   const pending = [];
   let mountSeq = 0;
@@ -473,9 +557,9 @@ test('static: shell-boot no longer force-reloads onto the inspector (mitigation 
   // The /r/{hash} SPA handoff (activate('inspector') via __pendingSpecimenHash)
   // must still be present — /r/ routes through the client router, not a reload.
   assert.match(SHELL, /__pendingSpecimenHash/, '/r/{hash} still routes to the inspector via SPA');
-  // The only remaining hard-load is the SSR-landing one; the inspector route
-  // now flows through registry.activate() with no reload.
-  assert.match(SHELL, /registry\.activate\('inspector'/, 'inspector mounts via registry.activate');
+  // The recovery wrapper still uses the registry, without forcing a reload.
+  assert.match(SHELL, /activateSection\('inspector'/, 'inspector uses the recovery wrapper');
+  assert.match(SHELL, /await registry\.activate\(id, root\)/, 'wrapper mounts through registry');
 });
 
 // ── RUNTIME: secondary async guard shape ────────────────────────────────────

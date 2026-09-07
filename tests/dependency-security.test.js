@@ -107,6 +107,33 @@ function lockPathMatchesPackage(lockPath, packageName) {
   return lockPath === suffix || lockPath.endsWith(`/${suffix}`);
 }
 
+// Preserve the already-reviewed minimum without requiring a test edit for each
+// compatible update. New resolutions still need release review and both audits.
+const MIN_REVIEWED_SENTRY_VERSION = '10.72.0';
+
+function assertReviewedSentryGraph(manifestRange, rootLockRange, resolvedVersion) {
+  assert.equal(typeof manifestRange, 'string', 'the root Sentry dependency is required');
+  assert.match(
+    manifestRange,
+    /^\^10\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/,
+    'the Sentry range must be a stable caret range limited to major 10',
+  );
+  const manifestFloor = manifestRange.slice(1);
+  assert.ok(
+    compareVersions(manifestFloor, MIN_REVIEWED_SENTRY_VERSION) >= 0,
+    `the Sentry range must retain the reviewed minimum ${MIN_REVIEWED_SENTRY_VERSION}`,
+  );
+  assert.equal(rootLockRange, manifestRange, 'the lock root must match the Sentry manifest range');
+
+  const resolved = parseVersion(resolvedVersion);
+  assert.equal(resolved.major, 10, 'the locked Sentry version must remain on major 10');
+  assert.equal(resolved.prerelease.length, 0, 'the locked Sentry version must be stable');
+  assert.ok(
+    compareVersions(resolvedVersion, manifestFloor) >= 0,
+    `root @sentry/node resolved to ${resolvedVersion}; expected >=${manifestFloor}`,
+  );
+}
+
 test('version comparator and advisory predicates enforce their exact boundaries', () => {
   assert.equal(lockPathMatchesPackage('node_modules/@sentry/node', '@sentry/node'), true);
   assert.equal(
@@ -146,18 +173,75 @@ test('version comparator and advisory predicates enforce their exact boundaries'
   }
 });
 
+test('Sentry policy accepts compatible stable updates without weakening the reviewed minimum', () => {
+  for (const [range, resolved] of [
+    ['^10.72.0', '10.72.0'],
+    ['^10.72.0', '10.73.0'],
+    ['^10.73.0', '10.73.1'],
+    ['^10.73.0', '10.73.0+build.1'],
+    ['^10.99.0', '10.100.0'],
+  ]) {
+    assert.doesNotThrow(
+      () => assertReviewedSentryGraph(range, range, resolved),
+      `${range}: ${resolved}`,
+    );
+  }
+});
+
+test('Sentry policy rejects lowered, broad, unstable or inconsistent dependency declarations', () => {
+  for (const range of [
+    undefined,
+    null,
+    10,
+    '',
+    '*',
+    'latest',
+    '10.73.0',
+    '~10.73.0',
+    '>=10.72.0',
+    '^10.72.0 || ^11.0.0',
+    '^10.x',
+    '^10.73',
+    '^10.073.0',
+    '^10.73.0-rc.1',
+    ' ^10.73.0',
+    '^10.73.0 ',
+    '^9.99.0',
+    '^11.0.0',
+    '^10.71.99',
+  ]) {
+    assert.throws(
+      () => assertReviewedSentryGraph(range, range, '10.73.0'),
+      /Sentry/,
+      `reject unsupported declaration ${String(range)}`,
+    );
+  }
+
+  for (const rootLockRange of [undefined, '^10.72.0', '^11.0.0']) {
+    assert.throws(
+      () => assertReviewedSentryGraph('^10.73.0', rootLockRange, '10.73.0'),
+      /lock root must match/,
+    );
+  }
+
+  for (const resolved of [undefined, 'invalid', '9.99.0', '11.0.0', '10.73.0-rc.1', '10.72.9']) {
+    assert.throws(
+      () => assertReviewedSentryGraph('^10.73.0', '^10.73.0', resolved),
+      /version|expected >=10\.73\.0/,
+      `reject incompatible resolution ${String(resolved)}`,
+    );
+  }
+});
+
 test('root manifest and lock retain the reviewed Sentry 10.x floor', () => {
-  const expectedRange = '^10.72.0';
   const rootLockEntry = packageLock.packages?.[''];
   const sentryLockEntry = packageLock.packages?.['node_modules/@sentry/node'];
 
-  assert.equal(packageJson.dependencies?.['@sentry/node'], expectedRange);
-  assert.equal(rootLockEntry?.dependencies?.['@sentry/node'], expectedRange);
   assert.ok(sentryLockEntry, 'package-lock.json must resolve the root @sentry/node dependency');
-  assert.equal(parseVersion(sentryLockEntry.version).major, 10);
-  assert.ok(
-    compareVersions(sentryLockEntry.version, '10.70.0') >= 0,
-    `root @sentry/node resolved to ${sentryLockEntry.version}; expected >=10.70.0`,
+  assertReviewedSentryGraph(
+    packageJson.dependencies?.['@sentry/node'],
+    rootLockEntry?.dependencies?.['@sentry/node'],
+    sentryLockEntry.version,
   );
 });
 

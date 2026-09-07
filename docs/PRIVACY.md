@@ -536,6 +536,18 @@ See also [OPERATIONS §4.9](./OPERATIONS.md#49-disable-clickhouse-derived-teleme
 
 ### What ortbtools protects against
 
+**Untrusted editorial metadata.** Blog source links have a restricted navigation scheme. Promoting
+a draft validates its publication state and content location, preserves existing articles, and
+encodes metadata without allowing embedded fields to grant search indexing. Promoted article
+metadata retains its source draft identifier so an interrupted status update can be retried safely.
+This identifier belongs to the public-content workflow and contains no Inspector payload or account
+encryption material.
+
+**Accidental resource mixing after deployment.** The server validates versioned static resources
+against their delivered content and dependencies. Repaired clients retain active unsaved work when
+a deferred resource update fails and offer a retry. Resource identity checks do not upload or persist
+the editor contents; they are a consistency control, not protection against a compromised server.
+
 **Server-side data breach (full DB dump).** An attacker who reads the SQLite database
 file sees bcrypt hashes, encrypted body blobs produced by the current web UI, and all
 plaintext metadata described above. Without the user's password or recovery key, those

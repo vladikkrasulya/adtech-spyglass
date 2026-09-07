@@ -34,6 +34,7 @@ import {
 // partner state + renderers) that the shell service delegates to when
 // Inspector happens to be mounted.
 import { session } from '/core/session.js';
+import { enhanceSelectControls } from '/modules/inspector/select-control.js';
 import {
   parseRequestInput,
   renderInputBadge,
@@ -42,6 +43,8 @@ import {
 
 export async function mountInspector(root, ctx) {
   'use strict';
+
+  const selectControls = enhanceSelectControls(root, ctx);
 
   // Utilities ($/escapeHtml/toast) and tab-badge helpers (setTabBadge,
   // severityFromFindings, severityFromCrosschecks) imported above from
@@ -6674,6 +6677,7 @@ export async function mountInspector(root, ctx) {
           select.value = value;
         }
       });
+      selectControls.refresh();
     }
 
     root.addEventListener(

@@ -67,8 +67,13 @@ The browser uses exact reviewed Marked and DOMPurify assets, a closed element/at
 without logging or reporting that body. Content source or admin approval is never treated as proof
 that markup is safe. The server-side/no-JavaScript renderer remains independently escape-first.
 
-The full invariant, compatibility grammar, dependency provenance, and deliberately deferred
-source-link/promotion-integrity scope are recorded in the
+Admin source links independently allow only unambiguous HTTP(S) navigation. Promotion validates
+persisted state and route dimensions, creates content exclusively, and encodes frontmatter fields
+without permitting draft text to grant indexability. Ambiguous filesystem/database completion is
+reported explicitly and can be reconciled by an identical promotion retry without overwriting an
+article. No administrator token grants permission to escape the content directory.
+
+The full invariant, compatibility grammar, dependency provenance, and promotion integrity rules are recorded in the
 [Content/SEO contract](./specs/000-platform-baseline/contracts/content-seo.md) and
 [ADR-011](./specs/decisions/ADR-011-browser-markdown-sanitization.md).
 

@@ -158,7 +158,10 @@ continue;` skip with a key-set-parity assertion evaluated across all three Core 
       Verified by driving `/api/auth/forgot-password` with the real `readLocaleCookie`:
       dep wired + `kt-lang=ru` → `ru`; dep missing → `en` (the silent degradation this
       closes); `preferred_locale=uk` outranks the cookie → `uk`; no signal → `en`.
-    - Still open for F4: the `tests/auth.test.js` extension named above.
+    - Closed 2026-09-07 by feature 019: `tests/auth.test.js` now drives registration,
+      verification resend and recovery through the real shared locale-cookie parser, checking
+      all three supported preferences, cookie fallback, absent/unsupported/malformed sources
+      and missing optional parser wiring. The malformed-cookie parser failure is corrected too.
 
 ## Phase 6: User Story 4 — Every screen shows real, localized text (Priority: P2)
 

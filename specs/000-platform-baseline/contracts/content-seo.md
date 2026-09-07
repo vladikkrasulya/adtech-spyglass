@@ -140,9 +140,35 @@ programmatic landing, it injects the localized landing body. Client navigation o
 landing performs a full navigation so the server can reconstruct content; first load mounts a
 lightweight module that preserves the existing SSR body.
 
-This boundary does not change the Blog HTTP or authorization model. Source-URL scheme parity outside
-`.blog-post__body`, promotion state/locale/collision/frontmatter integrity, global CSP or Trusted
-Types policy, unrelated DOM sinks, and a broader CMS redesign remain separately assessed work.
+The token-gated Admin table grants source-link navigation only to unambiguous HTTP(S) URLs;
+unsupported destinations remain readable text. SSR applies its own source-link check.
+
+## Editorial Promotion Integrity
+
+Admin publication accepts pending drafts; editorial promotion accepts pending or published drafts.
+Persisted locale/category and the final bounded lowercase ASCII route slug are validated before content or
+status changes. Generated non-route-compatible title slugs use a validated identifier fallback.
+Draft title and body must be strings with a nonempty title. Authentication alone does not establish
+that stored metadata is safe.
+
+Promotion creates the locale/slug file exclusively and refuses symlinked locale directories or
+existing non-regular targets. Existing unrelated articles cannot be overwritten. New frontmatter
+uses one JSON-encoded scalar per field, records the source draft identifier, and sets indexable false.
+The exact `frontmatter_encoding: json-v1` marker enables decoding; unmarked legacy backslashes
+retain their literal meaning. U+2028/U+2029 are escaped as well as ordinary line breaks.
+The public API and SSR use the same shallow parser, preserving existing ordinary quoted/unquoted
+metadata while decoding the new escaped scalars. A title cannot introduce metadata fields or
+search-index approval.
+
+The filesystem and ClickHouse do not share a transaction. Admin decisions for one draft serialize
+within the single application process; exclusive creation arbitrates file collisions. Promotion
+waits for a guarded status update and readback. If transport failure leaves the status uncertain,
+the created article is preserved and the request returns 503 with an explicit retry instruction.
+Repeating the same draft and slug reconciles only a matching provenance/title/category/body artifact;
+it never rewrites different content. A confirmed conflicting decision returns 409 and removes only
+the file created by that request. Already promoted matching artifacts support idempotent readback.
+
+Global CSP or Trusted Types policy and a broader CMS redesign remain separate product assessments.
 
 ## News Pipeline Boundary
 

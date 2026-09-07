@@ -51,7 +51,6 @@ function loadPluralKey(locale) {
   }
   assert.notEqual(end, -1, 'pluralKey() body must be brace-balanced');
   const body = APP_SRC.slice(start, end);
-  // eslint-disable-next-line no-new-func
   return new Function(
     '__locale',
     `function activeLocale(){return __locale;}\n${body}\nreturn pluralKey;`,

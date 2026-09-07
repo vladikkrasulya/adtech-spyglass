@@ -112,7 +112,7 @@ echo "==> verify content-hashed Blog renderer/vendor graph"
 BLOG_JS="$(curl -fsS --max-time 8 --user-agent 'ortbtools-ci-docker-smoke/1' \
   "http://127.0.0.1:${PORT}/modules/blog/index.js")"
 RENDERER_PATH="$(
-  echo "$BLOG_JS" | grep -oE '/modules/blog/markdown-renderer\.js\?v=[0-9a-f]{8}' | head -1 || true
+  echo "$BLOG_JS" | grep -oE '/modules/blog/markdown-renderer\.js\?v=a2-[0-9a-f]{64}' | head -1 || true
 )"
 if [ -z "$RENDERER_PATH" ]; then
   echo "FAIL: served Blog module has no content-hashed Markdown renderer import" >&2
@@ -122,10 +122,10 @@ fi
 RENDERER_JS="$(curl -fsS --max-time 8 --user-agent 'ortbtools-ci-docker-smoke/1' \
   "http://127.0.0.1:${PORT}${RENDERER_PATH}")"
 MARKED_PATH="$(
-  echo "$RENDERER_JS" | grep -oE '/vendor/marked\.es\.js\?v=[0-9a-f]{8}' | head -1 || true
+  echo "$RENDERER_JS" | grep -oE '/vendor/marked\.es\.js\?v=a2-[0-9a-f]{64}' | head -1 || true
 )"
 DOMPURIFY_PATH="$(
-  echo "$RENDERER_JS" | grep -oE '/vendor/dompurify\.es\.js\?v=[0-9a-f]{8}' | head -1 || true
+  echo "$RENDERER_JS" | grep -oE '/vendor/dompurify\.es\.js\?v=a2-[0-9a-f]{64}' | head -1 || true
 )"
 if [ -z "$MARKED_PATH" ] || [ -z "$DOMPURIFY_PATH" ]; then
   echo "FAIL: served Markdown renderer lacks both content-hashed vendor imports" >&2

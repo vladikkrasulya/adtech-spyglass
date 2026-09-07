@@ -260,7 +260,7 @@ test(
       });
       await page.waitForSelector('#bidReq', { timeout: 10000 });
       assert.ok(
-        probeRequests.some((url) => /\/creative-probe\.js\?v=[0-9a-f]{8}(?:$|&)/.test(url)),
+        probeRequests.some((url) => /\/creative-probe\.js\?v=a2-[0-9a-f]{64}(?:$|&)/.test(url)),
         'the runtime-fetched probe must carry its content hash',
       );
 

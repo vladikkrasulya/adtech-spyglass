@@ -150,7 +150,10 @@ page routes return a real 404.
 
 The static handler rejects traversal outside `public/`, content-hashes asset references, rewrites
 route SEO, and optionally injects blog/landing SSR. HTML and unversioned assets are `no-cache`;
-content-hashed assets are immutable for a long cache lifetime. Non-HTML assets carry
+only an exact current content or module token receives immutable caching. Stale, invalid and duplicate
+versions return 409 with no-store cache controls at browser and CDN boundaries. Asset identities cover
+delivered bytes after dependency rewriting; coupled template/style versions cover their module graph.
+Non-HTML assets carry
 `X-Robots-Tag: noindex`.
 
 All responses receive baseline headers for MIME sniffing, same-origin framing, referrer policy,

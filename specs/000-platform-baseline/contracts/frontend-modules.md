@@ -10,6 +10,12 @@ Locale shells load persistent chrome and use dynamic `import()` for route sectio
 modules. The Node server injects transitive content hashes into served HTML/JavaScript references;
 normal source changes do not use manual cache-bust numbers.
 
+`lib/static-assets.js` owns exact-byte SHA-256 identities (`a2-`) and coupled module identities
+(`m2-`) covering template/style files and dependencies. Production images cache these identities
+for their immutable lifetime; development roots verify content and directory membership. Only an
+exact current token receives immutable caching. Invalid, stale or duplicate versions receive 409
+with no-store cache controls, including CDN controls. Old eight-character tokens are not reused.
+
 Classic scripts and explicit `window.*` compatibility APIs still coexist with ES modules. A new
 module follows the loading contract of its caller rather than assuming every folder is a route or
 every script is an IIFE.
@@ -55,7 +61,8 @@ return 404.
 ## Section Module Interface
 
 A route module default-exports an object with a unique `id`, optional route/style/manifest metadata,
-required `mount(root, ctx)`, and optional `unmount(root)`.
+required `mount(root, ctx, prepared)`, optional `prepare(ctx)` before replacing the active section, and optional
+`unmount(root)`.
 
 Each activation receives a fresh context:
 
@@ -81,6 +88,12 @@ and cleans everything registered before the failure. A module stylesheet declare
 before mount and remains cached for later activations; a module that appends a temporary stylesheet
 itself owns its removal.
 
+Preparation and required stylesheet failures propagate before the active section is torn down.
+Inspector locale fallback applies only to a missing translation (404); aborted loads and stale
+versions do not silently fall back. The shell presents a localized retry while retaining the active
+section and its unsaved input. Clients already running the pre-1.19.4 registry need a reload to gain
+this recovery behavior; the server still refuses incompatible bytes for their stale URLs.
+
 ## Persistent Chrome and Action Modules
 
 Navigation, topbar, search integration, shell session, and the modal host are outside the active
@@ -94,6 +107,18 @@ contracts only where a producer and consumer use them. A new global requires a n
 when mount-scoped, and coverage in the window-contract tests; implicit global state is prohibited.
 
 ## Inspector Boundary
+
+Inspector's five native selects retain their values/options as the source of truth. A scoped
+combobox/listbox enhancement provides themed presentation, accessible names and selection state,
+keyboard/typeahead and touch interaction, disabled groups, dynamic options and viewport bounds.
+It emits the existing change contract and cleans listeners, observers and popups on unmount.
+Desktop/mobile paired values synchronize explicitly. Named tabs and More share common height and
+text baseline while retaining the active underline and mobile overflow behavior.
+
+Unlock owns one form with the escaped account username and current-password field. One guarded
+submit path handles keyboard and button activation; concurrent submission and canceled-dialog
+completion cannot duplicate or revive the operation. Password handling and session ownership remain
+within the existing client encryption flow.
 
 The Inspector route:
 

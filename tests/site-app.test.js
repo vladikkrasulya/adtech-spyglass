@@ -211,8 +211,9 @@ function photograph() {
   const byId = (id) => document.getElementById(id);
   const sel = /** @type {any} */ (byId('dialectSelector'));
   return {
-    dialectSwitchShown: shown(sel),
-    versionPinShown: shown(byId('versionPinSelector')),
+    // The native selects retain state; people use the enhanced comboboxes.
+    dialectSwitchShown: shown(byId('dialectSelectorControl')),
+    versionPinShown: shown(byId('versionPinSelectorControl')),
     validityChipShown: shown(byId('validityChip')),
     verdictShown: shown(byId('verdict')),
     dialectSwitchValue: sel ? sel.value : null,
@@ -285,7 +286,18 @@ test(
 
       // ── Switching before any analysis has to take effect and be stated.
       const switchTo = async (value) => {
-        await page.select('#dialectSelector', value);
+        const optionIndex = await page.$eval(
+          '#dialectSelector',
+          (select, target) =>
+            Array.from(/** @type {HTMLSelectElement} */ (select).options).findIndex(
+              (option) => option.value === target,
+            ),
+          value,
+        );
+        assert.notEqual(optionIndex, -1, `the dialect switch has no ${value} option`);
+        await page.click('#dialectSelectorControl');
+        await page.waitForSelector('#dialectSelectorOptions:not([hidden])', { visible: true });
+        await page.click(`#dialectSelectorOptions [role="option"][data-index="${optionIndex}"]`);
         await delay(500);
         return page.evaluate(photograph);
       };

@@ -32,7 +32,7 @@ const LANGS = ['uk', 'en', 'ru'];
 const { ORIGIN: PUBLIC_BASE } = require('../../lib/seo');
 // RSS is restricted to the indexable (approved-markdown) surface — the public
 // list/post endpoints below still serve the full corpus unchanged.
-const { listIndexablePosts } = require('../../lib/blog-service');
+const { listIndexablePosts, parseFrontmatter } = require('../../lib/blog-service');
 
 // ── ClickHouse client (same approach as lib/event-log.js) ─────────────────
 const CH_URL = (process.env.CLICKHOUSE_URL || 'http://clickhouse:8123').replace(/\/+$/, '');
@@ -68,35 +68,6 @@ async function chQuery(sql) {
     .trim()
     .split('\n')
     .map((line) => JSON.parse(line));
-}
-
-// ── Frontmatter parser ──────────────────────────────────────────────────────
-function parseFrontmatter(content) {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-  if (!match) return { meta: {}, body: content };
-  const raw = match[1];
-  const body = match[2];
-  const meta = {};
-  for (const line of raw.split('\n')) {
-    const kv = line.match(/^(\w+):\s*(.*)$/);
-    if (!kv) continue;
-    const key = kv[1];
-    let val = kv[2].trim();
-    // Strip surrounding quotes
-    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      val = val.slice(1, -1);
-    }
-    // Array: [a, b, c]
-    if (val.startsWith('[') && val.endsWith(']')) {
-      val = val
-        .slice(1, -1)
-        .split(',')
-        .map((s) => s.trim().replace(/^["']|["']$/g, ''))
-        .filter(Boolean);
-    }
-    meta[key] = val;
-  }
-  return { meta, body };
 }
 
 // ── Editorial post reader ───────────────────────────────────────────────────

@@ -15,3 +15,7 @@ The corrected `npm run ci` passed: formatting, lint, type checking, coverage and
 ## Final convergence
 
 The implementation satisfies FR-001 through FR-006 and the build/verification portions of SC-001 through SC-004. Layout/type changes stay within their existing CSS owners. Browser regression covers stable type, bounded and separate panels, expanded finding visibility and editor/gutter metrics; existing mobile, contrast, lifecycle and window-contract tests pass. 2560px light/closed and dark/open, 1920px dark/open and 3840px dark/open screenshots were visually inspected. No additional implementation task remains. Release execution follows the prepared exact-SHA gate after commit; it is not represented as already deployed in these immutable candidate artifacts.
+
+## Delivered state verified 2026-09-07
+
+The candidate was committed as `2f9c3a99074ac1e39c702c8730824e2c333a330c` and tagged `v1.19.3`. [Hosted CI 33959249196](https://github.com/vladikkrasulya/adtech-spyglass/actions/runs/33959249196) passed all required steps, including package and Docker smoke. On 2026-09-07, local and public health returned build `2f9c3a9` with database true; container `ortbtools:2f9c3a9` reported version 1.19.3, healthy, restart always and zero restarts. The [GitHub Release](https://github.com/vladikkrasulya/adtech-spyglass/releases/tag/v1.19.3) now records that exact revision and changelog section. This readback confirms deployment; it does not reconstruct an unobserved historical backup execution.

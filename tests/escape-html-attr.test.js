@@ -37,7 +37,6 @@ function loadEscapeHtml() {
   const src = fs.readFileSync(UTILS, 'utf8');
   const m = src.match(/export function escapeHtml\(s\) \{[\s\S]*?\n\}/);
   assert.ok(m, 'escapeHtml declaration not found in public/core/utils.js');
-  // eslint-disable-next-line no-new-func
   return new Function(`${m[0].replace('export function', 'function')}; return escapeHtml;`)();
 }
 
@@ -103,7 +102,6 @@ test('the client helper now agrees with the server one in lib/seo.js', () => {
   const seoSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'seo.js'), 'utf8');
   const m = seoSrc.match(/function escapeHtml\(s\) \{[\s\S]*?\n\}/);
   assert.ok(m, 'escapeHtml not found in lib/seo.js');
-  // eslint-disable-next-line no-new-func
   const serverEscape = new Function(`${m[0]}; return escapeHtml;`)();
   for (const s of ['a"b', "c'd", '<e>', 'f&g', 'plain', '', 'імпресія «300×250»']) {
     assert.equal(escapeHtml(s), serverEscape(s), `disagreement on ${JSON.stringify(s)}`);

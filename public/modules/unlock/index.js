@@ -41,8 +41,6 @@
      - window.OrtbtoolsSession.refreshSamples
                                           re-render saved-list once
                                           the DEK is back
-     - window.OrtbtoolsSession.wireEnterSubmit
-                                          ⏎-to-submit on the input
 
    Auth gate: the dispatcher's 'open-unlock' case is responsible
    for the guest fallback (it's a UX courtesy — falling through to
@@ -56,6 +54,8 @@
    crypto or password problem.
    ============================================================ */
 import { $, escapeHtml, toast, t } from '/core/utils.js';
+
+const pendingForms = new WeakSet();
 
 // Every "you are not signed in after all" exit from this modal routes
 // here. window.openAuthModal only exists once /modules/auth/ has been
@@ -78,7 +78,10 @@ export function openUnlockModal() {
   }
   $('modalRoot').innerHTML =
     '<div class="modal-backdrop" data-action="modal-backdrop-close">' +
-    '<div class="modal-card">' +
+    '<form class="modal-card" id="unlockForm" name="unlock" autocomplete="on">' +
+    '<input type="text" name="username" autocomplete="username" hidden value="' +
+    escapeHtml(user.email) +
+    '">' +
     '<div class="modal-title">' +
     t('modal.unlock.title') +
     '</div>' +
@@ -87,26 +90,27 @@ export function openUnlockModal() {
     '</div>' +
     '<div class="modal-row"><label for="unlockPwInput">' +
     t('auth.label.password') +
-    '</label><input id="unlockPwInput" type="password" autocomplete="current-password"></div>' +
+    '</label><input id="unlockPwInput" name="password" type="password" autocomplete="current-password" required></div>' +
     '<div id="unlockError" style="color:var(--danger);font-size:var(--fs-sm);min-height:1.2em;margin-bottom:var(--space-2)"></div>' +
     '<div style="margin-bottom:var(--space-2);text-align:right"><a href="#" data-action="open-forgot" style="font-size:var(--fs-sm);color:var(--text-dim)">' +
     t('auth.forgot_password') +
     '</a></div>' +
     '<div class="modal-actions">' +
-    '<button class="btn btn-ghost btn-sm" data-action="signout">' +
+    '<button type="button" class="btn btn-ghost btn-sm" data-action="signout">' +
     t('btn.signout_instead') +
     '</button>' +
-    '<button class="btn btn-primary btn-sm" data-action="do-unlock">' +
+    '<button type="submit" class="btn btn-primary btn-sm">' +
     t('btn.unlock') +
     '</button>' +
-    '</div></div></div>';
+    '</div></form></div>';
+  $('unlockForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    doUnlock();
+  });
   setTimeout(() => {
     const el = $('unlockPwInput');
     if (el) el.focus();
   }, 0);
-  if (window.OrtbtoolsSession && typeof window.OrtbtoolsSession.wireEnterSubmit === 'function') {
-    window.OrtbtoolsSession.wireEnterSubmit('unlockPwInput', () => window.doUnlock());
-  }
 }
 
 export async function doUnlock() {
@@ -114,6 +118,11 @@ export async function doUnlock() {
   const pwEl = $('unlockPwInput');
   const errEl = $('unlockError');
   if (!pwEl || !errEl || !session) return;
+  const form = pwEl.form;
+  if (!form || pendingForms.has(form)) return;
+  pendingForms.add(form);
+  const submit = form.querySelector('button[type="submit"]');
+  submit.disabled = true;
   const password = pwEl.value;
   errEl.textContent = '';
   try {
@@ -122,6 +131,7 @@ export async function doUnlock() {
     // facade to derive KEK + unwrap DEK; the raw key never leaves
     // the shell closure.
     const me = await session.api('GET', 'api/auth/me');
+    if (!form.isConnected) return;
     // The cookie can die between opening this modal and submitting it —
     // a sign-out in another tab, a password reset, ordinary expiry. The
     // `session.user` this modal greeted the user by is a stale client-side
@@ -142,11 +152,15 @@ export async function doUnlock() {
       return;
     }
     await session.openFromPassword(password, me.encryption, { extractable: true });
+    if (!form.isConnected) return;
     if (typeof window.closeModal === 'function') window.closeModal();
     toast(t('toast.library_unlocked'), 'success');
     if (typeof session.refreshSamples === 'function') session.refreshSamples();
   } catch {
     errEl.textContent = t('unlock.err.wrong_password');
+  } finally {
+    pendingForms.delete(form);
+    if (form.isConnected) submit.disabled = false;
   }
 }
 

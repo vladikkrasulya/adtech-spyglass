@@ -18,11 +18,71 @@ const crypto = require('crypto');
 const { sendJson, sendError, readJson } = require('../../lib/http');
 const log = require('../../lib/logger').child('admin-blog');
 const { chQuery, chInsert, chExec, chEsc } = require('../../lib/clickhouse');
-const { publishPost, rejectPost, slugify, nowCh } = require('../../lib/blog-service');
+const {
+  publishPost,
+  rejectPost,
+  slugify,
+  nowCh,
+  parseFrontmatter,
+  SLUG_RE,
+} = require('../../lib/blog-service');
 
 // Env-overridable (prod: /data/content-posts persistent volume — promoted posts
 // persist across container recreate). Default = repo seed / baked copy.
 const CONTENT_DIR = process.env.CONTENT_DIR || path.join(__dirname, '../../content/posts');
+const LANGS = ['en', 'uk', 'ru'];
+const CATEGORIES = ['news', 'analysis', 'guide'];
+// The app has one Node process. Serialize its admin decisions for each draft;
+// filesystem exclusivity separately arbitrates different drafts using one slug.
+const activeDraftActions = new Set();
+
+function validDraftId(id) {
+  return typeof id === 'string' && id.length > 0 && id.length <= 256 && id.trim() === id;
+}
+
+function promotedMarkdown(draft, slug, now) {
+  const fields = {
+    title: draft.title,
+    date: `${now}Z`,
+    category: draft.category,
+    tags: [],
+    slug,
+    source_draft_id: draft.id,
+    indexable: false,
+  };
+  return `---\nfrontmatter_encoding: json-v1\n${Object.entries(fields)
+    .map(([key, value]) => {
+      const encoded = JSON.stringify(value)
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+      return `${key}: ${encoded}`;
+    })
+    .join('\n')}\n---\n\n${draft.summary}\n`;
+}
+
+function matchesPromotion(filePath, draft, slug) {
+  // Do not follow an existing symlink, directory or operator-owned article.
+  const stat = fs.lstatSync(filePath);
+  if (!stat.isFile()) return false;
+  const { meta, body } = parseFrontmatter(fs.readFileSync(filePath, 'utf8'));
+  return (
+    meta.source_draft_id === draft.id &&
+    meta.slug === slug &&
+    meta.title === draft.title &&
+    meta.category === draft.category &&
+    meta.indexable === 'false' &&
+    body === `\n${draft.summary}\n`
+  );
+}
+
+function removeOwnFile(filePath, identity) {
+  try {
+    const current = fs.lstatSync(filePath);
+    if (current.dev === identity.dev && current.ino === identity.ino) fs.unlinkSync(filePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+}
 
 function requireAdminToken(req, res) {
   const expected = process.env.ADMIN_STATS_TOKEN;
@@ -78,29 +138,63 @@ function createAdminBlogModule() {
       return sendError(res, 400, 'bad_json', 'Invalid JSON body');
     }
     const { id, action, slug: providedSlug } = body || {};
-    if (!id || !action) {
+    if (!validDraftId(id) || !action) {
       return sendError(res, 400, 'missing_fields', 'id and action required');
     }
     if (action !== 'publish' && action !== 'promote') {
       return sendError(res, 400, 'invalid_action', 'action must be publish or promote');
     }
+    if (activeDraftActions.has(id)) {
+      return sendError(res, 409, 'draft_busy', 'A decision for this draft is already in progress');
+    }
+    activeDraftActions.add(id);
 
     try {
       const rows = await chQuery(
-        `SELECT id, title, url, summary, category, lang, created_at, source_event_id
+        `SELECT id, title, url, summary, category, lang, created_at, source_event_id, status, slug
          FROM analytics.blog_drafts
-         WHERE id = '${id.replace(/'/g, '')}'
+         WHERE id = '${chEsc(id)}'
          LIMIT 1`,
       );
       if (!rows.length) {
         return sendError(res, 404, 'draft_not_found', 'Draft not found');
       }
       const draft = rows[0];
-      // Always normalise through slugify — a raw providedSlug flows into a
-      // filesystem path below (promote → `${slug}.md`); slugify strips path
-      // separators / `..` so an admin-supplied slug can't traverse out of
-      // content/posts/<lang>/.
-      const slug = slugify(providedSlug || draft.title) || id.slice(0, 8);
+      const allowedStates =
+        action === 'publish' ? ['pending'] : ['pending', 'published', 'promoted'];
+      if (!allowedStates.includes(draft.status)) {
+        return sendError(
+          res,
+          409,
+          'invalid_draft_status',
+          'This draft cannot make that transition',
+        );
+      }
+      if (!LANGS.includes(draft.lang) || !CATEGORIES.includes(draft.category)) {
+        return sendError(res, 400, 'invalid_draft_metadata', 'Draft locale or category is invalid');
+      }
+      if (
+        draft.id !== id ||
+        typeof draft.title !== 'string' ||
+        !draft.title.trim() ||
+        typeof draft.summary !== 'string'
+      ) {
+        return sendError(res, 400, 'invalid_draft_metadata', 'Draft title or body is invalid');
+      }
+      const titleSlug = slugify(draft.title);
+      const fallbackSlug = SLUG_RE.test(titleSlug) ? titleSlug : slugify(id).slice(0, 8);
+      const slug = providedSlug == null ? draft.slug || fallbackSlug : providedSlug;
+      if (typeof slug !== 'string' || !SLUG_RE.test(slug) || slug !== slug.toLowerCase()) {
+        return sendError(
+          res,
+          400,
+          'invalid_slug',
+          'Slug must match the lowercase public Blog route',
+        );
+      }
+      if (draft.status === 'promoted' && draft.slug !== slug) {
+        return sendError(res, 409, 'invalid_draft_status', 'This draft was already promoted');
+      }
       const now = nowCh();
 
       if (action === 'publish') {
@@ -119,17 +213,80 @@ function createAdminBlogModule() {
         });
         sendJson(res, 200, { ok: true, action: 'published', slug, lang: draft.lang });
       } else {
-        // action === 'promote' — write markdown file to disk
+        // A published draft may be deliberately upgraded to editorial content.
+        // Repeated promotion only reconciles the exact artifact made by this
+        // same draft; it never replaces an article with new or revised content.
         const dir = path.join(CONTENT_DIR, draft.lang);
         fs.mkdirSync(dir, { recursive: true });
+        if (fs.realpathSync(dir) !== path.join(fs.realpathSync(CONTENT_DIR), draft.lang)) {
+          return sendError(
+            res,
+            409,
+            'invalid_content_directory',
+            'Content locale directory is invalid',
+          );
+        }
         const filePath = path.join(dir, `${slug}.md`);
-        const frontmatter = `---\ntitle: "${draft.title.replace(/"/g, '\\"')}"\ndate: "${now}Z"\ncategory: ${draft.category}\ntags: []\nslug: ${slug}\n---\n\n${draft.summary}\n`;
-        fs.writeFileSync(filePath, frontmatter, 'utf8');
+        let createdIdentity;
+        if (draft.status === 'promoted') {
+          if (!fs.existsSync(filePath) || !matchesPromotion(filePath, draft, slug)) {
+            return sendError(res, 409, 'invalid_draft_status', 'This draft was already promoted');
+          }
+        } else {
+          let fd;
+          try {
+            fd = fs.openSync(filePath, 'wx', 0o600);
+            createdIdentity = fs.fstatSync(fd);
+            fs.writeFileSync(fd, promotedMarkdown(draft, slug, now), 'utf8');
+          } catch (error) {
+            if (createdIdentity) removeOwnFile(filePath, createdIdentity);
+            if (error.code !== 'EEXIST') throw error;
+            if (!matchesPromotion(filePath, draft, slug)) {
+              return sendError(
+                res,
+                409,
+                'slug_exists',
+                'An article already uses this locale and slug',
+              );
+            }
+          } finally {
+            if (fd !== undefined) fs.closeSync(fd);
+          }
 
-        // Update draft status to promoted
-        await chExec(
-          `ALTER TABLE analytics.blog_drafts UPDATE status = 'promoted', approved_at = '${now}', slug = '${chEsc(slug)}' WHERE id = '${chEsc(id)}'`,
-        );
+          try {
+            // Wait for visibility before replying. Never blindly overwrite a
+            // newer rejected/promoted decision made by another producer.
+            await chExec(
+              `ALTER TABLE analytics.blog_drafts UPDATE status = 'promoted', approved_at = '${now}', approved_by = 'admin', slug = '${chEsc(slug)}' WHERE id = '${chEsc(id)}' AND status IN ('pending', 'published') SETTINGS mutations_sync = 1`,
+            );
+            const [updated] = await chQuery(
+              `SELECT status, slug FROM analytics.blog_drafts WHERE id = '${chEsc(id)}' LIMIT 1`,
+            );
+            if (!updated || updated.status !== 'promoted' || updated.slug !== slug) {
+              if (createdIdentity) removeOwnFile(filePath, createdIdentity);
+              return sendError(
+                res,
+                409,
+                'draft_status_changed',
+                'The draft decision changed during promotion',
+              );
+            }
+          } catch {
+            // A transport failure cannot establish whether CH accepted the
+            // mutation. Keep the exclusively created artifact and provenance:
+            // retrying this same draft/slug can reconcile without data loss.
+            log.warn(
+              { code: 'promotion_status_unconfirmed' },
+              'promotion status was not confirmed',
+            );
+            return sendError(
+              res,
+              503,
+              'promotion_status_unconfirmed',
+              'The article is preserved; retry this draft with the same slug to confirm its status',
+            );
+          }
+        }
         sendJson(res, 200, {
           ok: true,
           action: 'promoted',
@@ -145,6 +302,8 @@ function createAdminBlogModule() {
     } catch (e) {
       log.error({ err: e }, 'approve failed');
       sendError(res, 500, 'approve_failed', e.message);
+    } finally {
+      activeDraftActions.delete(id);
     }
   }
 
@@ -161,15 +320,21 @@ function createAdminBlogModule() {
       return sendError(res, 400, 'bad_json', 'Invalid JSON body');
     }
     const { id } = body || {};
-    if (!id) {
+    if (!validDraftId(id)) {
       return sendError(res, 400, 'missing_id', 'id required');
     }
+    if (activeDraftActions.has(id)) {
+      return sendError(res, 409, 'draft_busy', 'A decision for this draft is already in progress');
+    }
+    activeDraftActions.add(id);
     try {
       await rejectPost(id, { approvedBy: 'admin' });
       sendJson(res, 200, { ok: true, action: 'rejected', id });
     } catch (e) {
       log.error({ err: e }, 'reject failed');
       sendError(res, 500, 'reject_failed', e.message);
+    } finally {
+      activeDraftActions.delete(id);
     }
   }
 

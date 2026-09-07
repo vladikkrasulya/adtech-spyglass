@@ -5,7 +5,9 @@ wrap the engine used by [ortbtools.com](https://ortbtools.com).
 
 **Current registry status:** neither package has been published. Both names are
 available only as workspaces in this repository until the first release is
-completed and verified.
+completed and verified. Registry lookups on 2026-09-07 returned E404 for both
+names. Maintenance 019 retains workspace-only distribution; the procedure below is
+for a separately requested future publication.
 
 ## Packages
 

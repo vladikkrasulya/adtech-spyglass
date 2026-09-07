@@ -32,39 +32,51 @@ import { loadSpecimenIntoEditor } from '/modules/inspector/specimen-handoff.js';
 
 // Bundle hash for the inspector module. The literal `__INSPECTOR_BUNDLE_HASH__`
 // is replaced at serve time by server.js → injectModuleBundleHashes() with the
-// sha1 of all files in public/modules/inspector/. Any CSS/template/JS edit in
-// this module flips the hash → all consumers re-fetch. No manual knob.
+// SHA-256 identity of module filenames, byte boundaries and dependencies.
+// CSS and templates share this validated revision; obsolete revisions fail
+// before the registry tears down the current editor. No manual knob.
 const ASSET_VERSION = '__INSPECTOR_BUNDLE_HASH__';
 
-async function loadStylesheet(href) {
+async function loadStylesheet(href, ctx) {
+  ctx.signal.throwIfAborted();
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = href;
-  document.head.appendChild(link);
-  // Wait for parse so injected markup paints with full chrome. The error
-  // listener also resolves so a 404 doesn't hang the module forever — we
-  // log instead.
-  await new Promise((resolve) => {
-    link.addEventListener('load', () => resolve(), { once: true });
-    link.addEventListener(
-      'error',
-      () => {
-        console.error('[inspector] stylesheet load failed:', href);
-        resolve();
-      },
-      { once: true },
-    );
+  // Prepare without changing the currently visible section. The registry only
+  // removes its existing mount once both this sheet and the template are ready.
+  link.media = 'not all';
+  ctx.addCleanup(() => link.remove());
+  await new Promise((resolve, reject) => {
+    const finish = (error) => {
+      link.removeEventListener('load', loaded);
+      link.removeEventListener('error', failed);
+      ctx.signal.removeEventListener('abort', aborted);
+      if (error) reject(error);
+      else resolve();
+    };
+    const loaded = () => finish(null);
+    const failed = () => finish(new Error('Inspector stylesheet unavailable'));
+    const aborted = () => finish(ctx.signal.reason);
+    link.addEventListener('load', loaded, { once: true });
+    link.addEventListener('error', failed, { once: true });
+    ctx.signal.addEventListener('abort', aborted, { once: true });
+    document.head.appendChild(link);
   });
+  ctx.signal.throwIfAborted();
   return link;
 }
 
-async function fetchTemplate(lang) {
+async function fetchTemplate(lang, signal) {
   const url = `/modules/inspector/template.${lang}.html?v=${ASSET_VERSION}`;
-  const resp = await fetch(url);
+  const resp = await fetch(url, { signal });
   if (!resp.ok) {
-    throw new Error(`template ${lang} HTTP ${resp.status}`);
+    const error = new Error(`template ${lang} HTTP ${resp.status}`);
+    error.status = resp.status;
+    throw error;
   }
-  return resp.text();
+  const html = await resp.text();
+  signal.throwIfAborted();
+  return html;
 }
 
 export default {
@@ -83,7 +95,25 @@ export default {
     },
   },
 
-  async mount(root, ctx) {
+  async prepare(ctx) {
+    const cssLink = await loadStylesheet(
+      `/modules/inspector/inspector.css?v=${ASSET_VERSION}`,
+      ctx,
+    );
+    const lang = ['en', 'uk', 'ru'].includes(ctx.lang) ? ctx.lang : 'en';
+    let html;
+    try {
+      html = await fetchTemplate(lang, ctx.signal);
+    } catch (error) {
+      if (error.status !== 404 || lang === 'en') throw error;
+      html = await fetchTemplate('en', ctx.signal);
+    }
+    return { cssLink, html, lang };
+  },
+
+  async mount(root, ctx, prepared) {
+    const { cssLink, html, lang } = prepared || (await this.prepare(ctx));
+    ctx.signal.throwIfAborted();
     // 0. Stage 0 multi-section shell: the shell HTML provides a bare
     //    <main id="app-root"> root. Inspector layout (the .workbench
     //    grid in inspector.css) requires the workbench class on root.
@@ -91,21 +121,7 @@ export default {
     root.classList.add('workbench');
     ctx.addCleanup(() => root.classList.remove('workbench'));
 
-    // 1. Component CSS — append + await + register cleanup so the
-    //    next mount starts from a clean head.
-    const cssLink = await loadStylesheet(`/modules/inspector/inspector.css?v=${ASSET_VERSION}`);
-    ctx.addCleanup(() => cssLink.remove());
-
-    // 2. Fetch the locale-matched template, with EN fallback so an
-    //    unknown lang never leaves the user with a blank shell.
-    const lang = ctx.lang || 'en';
-    let html;
-    try {
-      html = await fetchTemplate(lang);
-    } catch (e) {
-      console.warn(`[inspector] template.${lang}.html missing — falling back to EN:`, e.message);
-      html = await fetchTemplate('en');
-    }
+    cssLink.media = 'all';
 
     // 3. Inject markup. From this point on, #bidReq / #bidRes / #modalRoot
     //    et al. exist and can be queried by legacy code.

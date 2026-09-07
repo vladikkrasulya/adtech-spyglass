@@ -6,6 +6,15 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.19.4 — close audited maintenance debt (2026-09-07)
+
+- Tie immutable asset URLs to the exact delivered bytes and transitive dependencies. Stale or malformed versions fail without cache retention; repaired clients preserve active work when a deferred update fails and provide a localized retry.
+- Give Inspector selections themed, keyboard-accessible controls, align tabs across locales and themes, and associate unlock credentials with one guarded form submission.
+- Verify locale precedence for registration, verification resend and password recovery, including malformed cookies. Replace ten disabled SQLite-era event-log checks with regressions for the active ClickHouse HTTP contract.
+- Harden Blog Admin source links and promotion boundaries: validate stored state and route dimensions, preserve existing articles on collisions, and serialize metadata without admitting new fields. Public readers share the same scalar grammar.
+- Integrate reviewed Sentry and development dependency updates, retain effective version/advisory guards, and remove obsolete lint suppressions.
+- Reconcile historical releases and feature records, preserve old local work in a verified private archive, and distinguish completed maintenance from future product plans.
+
 ### v1.19.3 — compact Inspector on large displays (2026-09-05)
 
 - Keep editor and finding text at 13px across desktop widths instead of enlarging it at WQHD/4K breakpoints. Rule metadata remains subordinate and the verdict uses a compact 17px heading.

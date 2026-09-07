@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-22
 
-**Status**: In Progress
+**Status**: Complete
 
 **Input**: Owner testing production `v1.14.4`, reporting defects with screenshots. Queue kept in
 [the intake](../../.specify/assessments/inspector-ui-consistency/intake.md); each entry here was

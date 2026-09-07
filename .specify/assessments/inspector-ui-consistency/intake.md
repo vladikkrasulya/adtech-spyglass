@@ -6,6 +6,10 @@
   incrementally with screenshots
 - **Type**: defect cluster + cohesion work
 
+## Current disposition — 2026-09-07
+
+Q2–Q4 were completed by feature 009; Q8 was completed by feature 010. Their original diagnosis below is retained as historical evidence. Q1 and Q5–Q7 now belong to the accepted [019 closure package](../../../specs/019-close-project-debt/spec.md), which owns implementation and fresh verification. The original intake-stage authorization text describes the 2026-08-22 state, not the current accepted repair scope.
+
 ## How this list is kept
 
 The owner reports findings as they are found and asked that they be worked **in arrival order**.
@@ -50,7 +54,7 @@ reveals it and sizes the svg 17×17 (~5532). Measured on production at 1440/1024
 reproduced**, so the cause is a state, not a width. The summary computes `display: list-item` on
 desktop, which is a candidate for the stray marker.
 
-## Q2 — Fix action does not switch payload tab · `diagnosed` · **confirmed on every point**
+## Q2 — Fix action does not switch payload tab · `done` · feature 009
 
 **DIAGNOSED.** `OrtbtoolsSourceNav.navigate()` reveals a target pane only through `expand(side)`
 (`source-nav.js:503-506`), which removes `is-collapsed` — the fold mechanism of the **old two-pane
@@ -63,7 +67,7 @@ one insertion in `navigate()`: activate the owning tab before painting.
 finding's fix action leaves the view on Request, which has no errors, so nothing is highlighted.
 Expected: switch to the tab that owns the finding, then highlight.
 
-## Q3 — Line-number gutter has a fixed width · `diagnosed` · **confirmed, two CSS lines**
+## Q3 — Line-number gutter has a fixed width · `done` · feature 009
 
 **Reported**: with fewer lines than the indent allows for, the gutter should shrink; the width should
 follow the line count.
@@ -78,7 +82,7 @@ correct a padding tie in the later block.
 **Established**: `#gutterReq` computes to exactly **44px** whether the document has 1 line or many.
 Not a large-ish default — a constant.
 
-## Q4 — Verdict block, "Ещё", and the black rectangle · `diagnosed` · **confirmed, one CSS line**
+## Q4 — Verdict block, "Ещё", and the black rectangle · `done` · feature 009
 
 **Reported**: the block could be tidier; the "Ещё" overflow list might deserve to be partly expanded
 (the owner explicitly flagged this as possibly wrong and wants options, not a verdict); and there is
@@ -159,7 +163,7 @@ cross-user disclosure. It is still PII surfacing where nobody asked for it, it s
 and it lands in a field that gets screenshotted — as it just did. It should be worked before the
 cosmetic entries regardless of arrival order, if the owner agrees.
 
-## Q8 — Toast text overlaps itself on copy and on format · `reported`
+## Q8 — Toast text overlaps itself on copy and on format · `done` · feature 010
 
 **Reported**: pressing copy-request/copy-response, and separately the format action, produces a
 confirmation whose text is overlaid by other content. Screenshots show "скопирован…" and

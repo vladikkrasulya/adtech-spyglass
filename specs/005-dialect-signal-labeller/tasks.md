@@ -16,8 +16,9 @@ or is unchecked because nothing satisfies it yet.
 
 **Record order**: tasks T001–T018 were completed **before** this list existed and are reconstructed
 from the commits, not from memory. They are marked complete because the evidence column names the
-change that did them, and each was verified against the deployed image or a test run. T019 onward is
-genuine remaining work.
+change that did them, and each was verified against the deployed image or a test run. T019 onward
+was the remaining work when this list was created; T019–T026 are now closed, with the final
+2026-09-05 evidence in [the closure record](./closure-2026-09-05.md).
 
 ## Format: `[ID] [P?] [Story] Description`
 

@@ -2323,6 +2323,10 @@ body:not(.sb-left-hidden) .sidebar-left {
   flex-shrink: 0;
   white-space: nowrap;
 }
+.tab-bar .tab-list-scroll > .tab-btn {
+  margin-bottom: 0;
+  border-top: 2px solid transparent;
+}
 .tab-btn {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -6106,4 +6110,97 @@ body:has(.app-footer) .toast-container {
 .finding-role-ambiguous {
   background: color-mix(in srgb, var(--muted, #77848f) 14%, transparent);
   white-space: normal;
+}
+
+/* Native selects remain the data/form contract. Their Inspector presentation
+   owns only the popup and keyboard state; the popup escapes clipped panels. */
+.inspector-select {
+  display: inline-flex;
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.inspector-select[hidden],
+.inspector-select-source {
+  display: none !important;
+}
+.inspector-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  max-width: 100%;
+  text-align: left;
+  cursor: pointer;
+  background-image: none;
+}
+.inspector-select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inspector-select-caret {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+.inspector-select-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inspector-select-trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+}
+.inspector-select-trigger:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.workbar-settings-field .inspector-select,
+.saved-toolbar .inspector-select {
+  width: 100%;
+}
+.inspector-select-list {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  padding: var(--space-2);
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 30px rgba(13, 23, 38, 0.18);
+  font-family: var(--font-body, sans-serif);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.inspector-select-list[hidden] {
+  display: none;
+}
+.inspector-select-list [role='option'] {
+  padding: 7px var(--space-3);
+  border-radius: var(--r-sm);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.inspector-select-list [role='option']:hover,
+.inspector-select-list [role='option'].is-active {
+  background: var(--accent-soft);
+  color: var(--accent-text, var(--accent));
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+.inspector-select-list [aria-disabled='true'] {
+  color: var(--text-muted);
+  opacity: 0.65;
+  cursor: default;
+  outline: none;
+  background: transparent;
 }
