@@ -8,7 +8,7 @@
 
 ## Current disposition — 2026-09-07
 
-Q2–Q4 were completed by feature 009; Q8 was completed by feature 010. Their original diagnosis below is retained as historical evidence. Q1 and Q5–Q7 now belong to the accepted [019 closure package](../../../specs/019-close-project-debt/spec.md), which owns implementation and fresh verification. The original intake-stage authorization text describes the 2026-08-22 state, not the current accepted repair scope.
+Q2–Q4 were completed by feature 009; Q8 was completed by feature 010. Their original diagnosis below is retained as historical evidence. Q1 and Q5–Q7 were completed and deployed as v1.19.4 by the [019 closure package](../../../specs/019-close-project-debt/spec.md), which owns the implementation and fresh verification evidence. The original intake-stage authorization text describes the 2026-08-22 state, not the current accepted repair scope.
 
 ## How this list is kept
 

@@ -41,16 +41,16 @@ Independent test: exact dependency/release/Git/archive/owner evidence readback.
 - [x] T017 [P] [US3] Inventory and preserve stashes, branch commits and linked-worktree changes outside Git; record unique-work dispositions in specs/019-close-project-debt/inventory.md (FR-008, SC-004).
 - [x] T018 [US3] Record received choices or the stated conservative maintenance baseline in specs/ROADMAP.md and canonical decision/operations/npm records; do not infer approval for external changes (FR-009, FR-012, SC-006).
 - [x] T019 [US3] Reconcile outdated feature/intake records and exact v1.19.2/v1.19.3 delivery evidence in specs/ROADMAP.md and owning feature records (FR-007).
-- [ ] T020 [US3] Finish GitHub PR and historical Release dispositions with exact revision readback recorded in specs/019-close-project-debt/verification.md (FR-006, FR-007, SC-003).
+- [x] T020 [US3] Finish GitHub PR and historical Release dispositions with exact revision readback recorded in specs/019-close-project-debt/verification.md (FR-006, FR-007, SC-003).
 
 ## Phase 6: Integration and release
 
 - [x] T021 Update affected baseline/privacy/operations contracts, application version surfaces and CHANGELOG.md; remove confirmed in-scope lint warnings (FR-010).
 - [x] T022 Run focused integration and complete local CI/package/native-image gates; record commands/outcomes in specs/019-close-project-debt/verification.md (FR-011, SC-005).
 - [x] T023 Run convergence against all requirements and dispositions; append any unmet work to specs/019-close-project-debt/tasks.md (FR-012, SC-006).
-- [ ] T024 Commit reviewed authored scope, non-force push clean main and verify hosted gates; record exact revision in specs/019-close-project-debt/verification.md (FR-011).
-- [ ] T025 Run fresh canonical backup and verification, deploy exact SHA and read back public/local/container state using scripts/backup-db.sh and scripts/deploy.sh (FR-011, SC-005).
-- [ ] T026 Finish current release metadata and evidence-backed closure report in specs/019-close-project-debt/verification.md and inventory.md (FR-007, FR-012, SC-003, SC-006).
+- [x] T024 Commit reviewed authored scope, non-force push clean main and verify hosted gates; record exact revision in specs/019-close-project-debt/verification.md (FR-011).
+- [x] T025 Run fresh canonical backup and verification, deploy exact SHA and read back public/local/container state using scripts/backup-db.sh and scripts/deploy.sh (FR-011, SC-005).
+- [x] T026 Finish current release metadata and evidence-backed closure report in specs/019-close-project-debt/verification.md and inventory.md (FR-007, FR-012, SC-003, SC-006).
 
 ## Dependencies and parallel execution
 

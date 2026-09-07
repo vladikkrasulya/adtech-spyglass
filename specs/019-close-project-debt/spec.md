@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-07
 
-**Status**: In Progress
+**Status**: Complete — released as v1.19.4 on 2026-09-07
 
 **Input**: Owner: “Зможеш все закрити, і не лишити тех боргу?” following the 2026-09-07 project inventory.
 
