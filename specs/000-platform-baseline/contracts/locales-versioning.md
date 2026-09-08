@@ -71,7 +71,7 @@ The repository contains three independently versioned surfaces:
 
 | Surface           | Current version | Source of truth              | Coupled repository surfaces                                        |
 | ----------------- | --------------- | ---------------------------- | ------------------------------------------------------------------ |
-| Web application   | `1.19.4`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
+| Web application   | `1.20.0`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
 | `@ortbtools/core` | `0.46.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
 | `@ortbtools/cli`  | `0.1.3`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
 
@@ -148,3 +148,5 @@ plus the relevant Core/CLI API and package smoke tests. Before merge, run the co
 A supported-locale, fallback, canonical-prefix, preference, text-owner, voice, terminology, or
 version-surface change updates this contract and its enforcement tests in the same feature. New
 localizable UI must name its text owner and cannot ship with one locale silently omitted.
+
+Release `1.20.0` (2026-09-09) is the first app bump since `1.19.4`. It carries features 021 through 030 — every documented creative carrier now renders, the Inspector no longer describes anything that has left the screen, specification qualifiers map to validator levels, and the documented vendor feed requests are decoded. Core moved `0.38.0` to `0.46.0` across those features and CLI stays `0.1.3` with the dependency range following Core. Every localized string the features add exists in en/uk/ru.

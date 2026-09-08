@@ -6,6 +6,17 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+### v1.20.0 — the Inspector shows what the response actually carries (2026-09-09)
+
+- Read every documented creative carrier instead of the empty state: an OpenRTB 3.0 AdCOM Native creative, an In-Page Push bid whose creative travels in `bid.ext`, a vendor Native material, and a vendor banner wrapper each render as the creative they are. A redirect-script pop shows the destination it would have opened, and a material whose creative is a bare link now says which material it belongs to. The sealed preview is unchanged: nothing is fetched, remote artwork stays blocked and explained, and every sandbox refusal is still recorded.
+- Repair three ways the Inspector could describe something that was no longer on screen: a failed analysis no longer leaves the previous verdict, an explicit paste starts a new byte-level reading of the input, and every returned bid or material is reachable through its own selector. The creative frame carries an accessible name.
+- Report specification qualifiers as what they are: a missing recommended field is a warning and a missing optional field is information, while a supplied malformed one remains an error with its own identifier. Callers that treated a missing `device` or an empty `seatbid` as an error will see a lower level for it.
+- Tell the truth about money: a coerced or negative bid price no longer earns a floor verdict, a matched deal floor governs through the one resolver both engines share, and the OpenRTB 3.0 path reads its own currency fields.
+- Decode the documented EXADS, Kadam, PPCmate and Adon3 feed requests, validate their responses in their own terms, and complete format recognition for the vendor carriers and for structured AdCOM Native.
+- Complete the audio checks and the response crosschecks: audio MIME validation and safe XML detection, selected media and buyer-seat checks, structured Native asset presence and completeness, whitespace markup, unassigned no-bid codes and malformed COPPA.
+- Survive malformed input instead of dropping it: non-array `seatbid`/`bid`, a scalar response payload, and an oversized body that now answers `400` rather than consuming memory.
+- Close the ad-format verification ledger. All 257 corpus cases are asserted normatively at Core, real HTTP and real Chrome, and the audit records no remaining known gaps.
+
 **Core 0.46.0 — vendor carrier inspection (SpecKit 028)**
 
 - Inspect documented EXADS request/bid wrappers and PPCmate/Kadam/EXADS GET families through the existing Core boundary, preserving original query evidence and excluding proprietary EXADS pairs from inapplicable IAB commercial crosscheck.
