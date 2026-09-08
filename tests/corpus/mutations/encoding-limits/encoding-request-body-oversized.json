@@ -28,18 +28,6 @@
       "code": "payload_too_large"
     }
   },
-  "knownGap": {
-    "id": "DEF-303",
-    "layers": ["http"],
-    "note": "docs/api-v1.md promises 400 payload_too_large for a body over the 2 MiB cap; the server instead resets the connection during the upload (100 Continue, then ECONNRESET), so a standard client observes a transport failure and never sees the documented error envelope.",
-    "matches": {
-      "http": [
-        "^http\\.status: expected 400, got 0 \\(transport: (ECONNRESET|UND_ERR_SOCKET|fetch failed|socket hang up|other side closed)\\)$",
-        "^http\\.code: expected payload_too_large, got null$",
-        "^http: expected success:false error envelope$"
-      ]
-    }
-  },
   "specNotes": [
     "The posted body is 2106113 bytes, 8961 bytes over the 2097152-byte cap; the response side is the base pair's own small response, unchanged, so the overage comes entirely from request.ext.pad.",
     "This case asserts only the HTTP transport contract. Core is not applicable here (the payload is rejected before parsing reaches validate()) and is intentionally left with no request/response/crosscheck expectations — tests/corpus-core.test.js skips it via coreApplicability() and asserts that knownGap does not name the core layer.",
