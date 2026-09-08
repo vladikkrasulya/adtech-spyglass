@@ -111,6 +111,37 @@ function stopChild(proc) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Wait for an Analyze click to actually finish, instead of sleeping a fixed
+ * number of milliseconds and hoping.
+ *
+ * Every completion wait in this file used to be `delay(4500)`. That is fine on
+ * an idle machine and wrong on a loaded one: the browser phase launches Chrome
+ * once per test file, and by the time this file runs the fixed budget is no
+ * longer enough. The file then failed twice in a row and the runner correctly
+ * called that a real failure, blocking delivery — three times in one day.
+ *
+ * Polling the real condition is strictly stronger than the sleep it replaces:
+ * it returns as soon as the verdict is on screen, waits far longer than 4.5s
+ * when the machine is busy, and still fails honestly (with the elapsed time)
+ * if the analysis genuinely never completes.
+ *
+ * @param {any} page
+ * @param {number} [timeoutMs]
+ */
+async function waitForVerdict(page, timeoutMs = 30000) {
+  const started = Date.now();
+  for (;;) {
+    const shot = await page.evaluate(photograph);
+    if (shot.verdictShown) return shot;
+    const waited = Date.now() - started;
+    if (waited > timeoutMs) {
+      throw new Error(`analysis never showed a verdict (waited ${waited}ms)`);
+    }
+    await delay(150);
+  }
+}
+
 function startServer(port, dataDir) {
   return new Promise((resolve, reject) => {
     const proc = spawn(process.execPath, [path.join(ROOT, 'server.js')], {
@@ -242,7 +273,7 @@ test(
       await page.evaluate(() => {
         /** @type {any} */ (document.getElementById('analyzeBtn')).click();
       });
-      await delay(4500);
+      await waitForVerdict(page);
 
       const analysed = await page.evaluate(photograph);
       assert.equal(
@@ -332,7 +363,7 @@ test(
       await page.evaluate(() => {
         /** @type {any} */ (document.getElementById('analyzeBtn')).click();
       });
-      await delay(4500);
+      await waitForVerdict(page);
       const good = await page.evaluate(photograph);
       assert.equal(good.verdictShown, true, 'the second analysis should also produce a verdict');
 
