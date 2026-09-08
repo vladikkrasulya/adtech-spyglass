@@ -60,7 +60,13 @@
     "response": {
       "maxLevel": "warning",
       "type": "Push-Materials Feed Response (single)",
-      "must": [{ "id": "feed.push.bid_string_type", "path": "cpc", "level": "warning" }],
+      "must": [
+        {
+          "id": "feed.push.bid_string_type",
+          "path": "cpc",
+          "level": "warning"
+        }
+      ],
       "mustNot": ["feed.push.bid_not_numeric", "feed.push.bid_required"]
     },
     "format": {
@@ -76,16 +82,6 @@
     },
     "http": {
       "status": 200
-    }
-  },
-  "knownGap": {
-    "id": "DEF-160",
-    "layers": ["core", "http", "browser"],
-    "note": "detectFeedFormat's hasImage/hasClick heuristic (format-detect.js) recognizes only bare image/icon keys, not the image_url/icon_url aliases validatePushMaterial (and this Kadam contract) accepts; a fully valid, cleanly-validated Kadam material gets no push format tag.",
-    "matches": {
-      "core": ["^format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"],
-      "http": ["^format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"],
-      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"]
     }
   }
 }
