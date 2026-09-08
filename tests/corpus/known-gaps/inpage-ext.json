@@ -28,27 +28,6 @@
         "Only missing vendor tagging and case-specific creative identity failures remain pinned. Response-dialect validation and baseline request rejection are asserted independently.",
         "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
       ]
-    },
-    "DEF-181": {
-      "id": "DEF-181",
-      "title": "The clickurl feed alias, recognized by format-detect.js, is missing from detect.js's single-object classifier and rules-feed.js's push-material validator",
-      "category": "false-positive",
-      "severity": "medium",
-      "source": "packages/core/knowledge_base/jsonfeed/inpage/inpage-card.json",
-      "code": [
-        "packages/core/detect.js:184",
-        "packages/core/rules-feed.js:164",
-        "public/ortbtools.app.js:3234"
-      ],
-      "expected": "The product's own committed in-page card feed sample (manifest id kb-jsonfeed-inpage-001) uses `clickurl`, which packages/core/format-detect.js's hasClick set already recognizes as a click-key alias (alongside clickUrl/click_url/redirectUrl/link) for FORMATS.INPAGE tagging. The same alias should be recognized consistently everywhere else a click key is checked for this shape: detect.js's single-object payload-type classifier, rules-feed.js's push-materials click role (canonical click_url, alias link), and the front-end's findPushMaterial()/isMat() card-recognition heuristic.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["inpage-x-card-feed-single", "inpage-x-card-feed-array"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from the product's own knowledge_base/jsonfeed/inpage/inpage-card.json sample and format-detect.js's hasClick set before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
-        "Three symptoms of one alias-propagation gap (payload-type detection, push-material field validation, and front-end card recognition) are grouped under this one id, matching the established one-id-per-case convention.",
-        "inpage-x-card-feed-array additionally, unavoidably reproduces the pre-existing DEF-201 ('Inspector cannot select every returned bid or feed material') for its second card; that signature is folded into this case's own knownGap.matches.browser rather than declared as a second knownGap, and DEF-201 itself is left untouched in known-gaps.json since this case's declared id is DEF-181, not DEF-201."
-      ]
     }
   }
 }
