@@ -1,0 +1,92 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-inpage-no-bid",
+  "title": "inpage: a valid no-bid response carries no in-page card; show the empty preview and do not invent bid-specific crosscheck successes.",
+  "base": "inpage-x-widget-openrtb-canonical",
+  "category": "multiplicity",
+  "format": "inpage",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "inpage-push",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "multiplicity"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools In-Page Push dialect contract (bid.ext.title/description/image/icon/url/cta field carrier)",
+      "path": "packages/core/dialects/inpage-push.js",
+      "version": "repo HEAD a61fc25 (2026-09-07)",
+      "license": "MIT (ortbtools)",
+      "notes": "Exercises the product's own documented, vendor-neutral In-Page Push field contract; this derivative removes the bid entirely, so no carrier field is exercised at all."
+    },
+    "modifications": [
+      "Wholly original OpenRTB envelope, imp, site, device and bid fields; only the field ROLE NAMES (bid.ext.title/description/image/icon/url/cta) are taken from the dialect's own source comment.",
+      "IP uses TEST-NET-1 192.0.2.44; user/site identifiers are clearly synthetic fixture strings; asset/click/tracking URLs use reserved .test hostnames.",
+      "Coverage derivative of inpage-x-widget-openrtb-canonical: the response is replaced by a bare no-bid for the same auction id, so the in-page placement receives no card at all."
+    ],
+    "sanitized": "No real visitor, publisher or advertiser data. IP 192.0.2.44 is TEST-NET-1; user.id/site.id are synthetic-fixture strings; every asset/click/tracking URL uses a reserved .test hostname."
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "replaceResponse": {
+      "id": "inpage-x-widget-openrtb-canonical",
+      "nbr": 0
+    }
+  },
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.format_required",
+          "path": "imp[0]",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "response.no_bid",
+          "path": "nbr",
+          "level": "info"
+        }
+      ],
+      "mustNot": ["response.seatbid_or_nbr_required", "response.bid.payload_missing"],
+      "mustNotPrefix": ["inpage-push."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "inpage-x-widget-openrtb-canonical"
+          }
+        }
+      ],
+      "mustNot": [
+        "crosscheck.no_response",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.above_floor"
+      ]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a"
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "specNotes": [
+    "inpage: a valid no-bid response carries no in-page card; show the empty preview and do not invent bid-specific crosscheck successes.",
+    "An In-Page Push bid carries its creative in bid.ext, so the empty preview state for this format can only be reached where there is no bid at all — the dialect claims any bid whose ext carries a title-shaped or image-shaped field, and the preview renders exactly what the dialect claims (specs/029-preview-carrier-identity/contracts/inpage-push-preview.md).",
+    "Creative body classification follows specs/012 sections 1-2 independently of auction format validity. Original base provenance is retained; fixture bytes are synthetic."
+  ],
+  "knownGap": null
+}

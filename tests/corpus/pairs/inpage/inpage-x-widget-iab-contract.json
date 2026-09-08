@@ -139,12 +139,12 @@
       "formats": ["inpage"]
     },
     "preview": {
-      "kind": "empty",
-      "rendered": "empty",
+      "kind": "push",
+      "rendered": "partial",
       "mediaPlays": "n/a",
       "marker": "A quiet harbor at dawn",
-      "limitation": "No renderable creative field (adm/native/iurl) is present in the response; the winning bid's content lives entirely in bid.ext, which the preview pipeline never reads regardless of the selected dialect.",
-      "capabilityGap": "Dialect selection is a Core validation concept only; the front-end creative preview does not consult it at all, so this bid renders exactly as empty under 'iab' as it would under 'inpage-push'."
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": null
     },
     "http": {
       "status": 200
@@ -157,10 +157,7 @@
     "matches": {
       "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
       "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
-      "browser": [
-        "^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ harbor\\ at\\ dawn\"\\ absent$"
-      ]
+      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"]
     }
   }
 }

@@ -78,8 +78,8 @@
       "rendered": "partial",
       "mediaPlays": "n/a",
       "marker": "A shelf for favorite books",
-      "limitation": "Desired vendor card rendering remains subject to sealed-preview remote image blocking.",
-      "capabilityGap": "The dialect validates bid.ext cards; rendering this carrier is a desired capability currently missing from the frontend."
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": null
     }
   },
   "request": {
@@ -162,10 +162,7 @@
       "core": ["^format\\.formats: expected \\[banner, inpage\\], got \\[banner\\]$"],
       "http": ["^format\\.formats: expected \\[banner, inpage\\], got \\[banner\\]$"],
       "browser": [
-        "^browser\\.format\\.formats:\\ expected\\ \\[banner,\\ inpage\\],\\ got\\ \\[banner\\]$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ shelf\\ for\\ favorite\\ books\"\\ absent$"
+        "^browser\\.format\\.formats:\\ expected\\ \\[banner,\\ inpage\\],\\ got\\ \\[banner\\]$"
       ]
     }
   }

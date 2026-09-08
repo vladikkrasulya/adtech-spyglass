@@ -173,15 +173,5 @@
     "browser": {
       "sandboxRefusals": ["popup"]
     }
-  },
-  "knownGap": {
-    "id": "DEF-245",
-    "layers": ["browser"],
-    "note": "The redirect-script pop is detected and an inert destination note is built, but it does not reach the measured on-screen identity: the caption is appended beside a zero-footprint iframe and the harness still reads no visible marker. The sandbox refusal itself is correct and unchanged.",
-    "matches": {
-      "browser": [
-        "^browser\\.bid\\[0,0\\]\\.identity: expected marker \"https:\\/\\/offers\\.example\\.test\\/landing\\/pop\\-x\\-openrtb\\-shape\\-flag\\-allowshock\" absent$"
-      ]
-    }
   }
 }

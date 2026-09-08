@@ -1698,7 +1698,19 @@ export async function mountInspector(root, ctx) {
     } else {
       iframe.style.cssText = 'border:none;background:#fff;width:100%;height:100%;display:block;';
     }
-    if (dims && dims.w > 0 && dims.h > 0) {
+    if (popRedirect) {
+      // DEF-245: the bid's own dims (often a near-zero 1x1 pop/clickunder
+      // placeholder) size the WHOLE .preview-safe box via the --bid-w/
+      // --bid-h CSS vars (inspector.css .preview-safe[data-has-creative]),
+      // not just the iframe — so `.preview-text`/`.preview-text-body` (the
+      // note this branch is about to append) would inherit a collapsed
+      // ancestor box and measure as invisible even though its text content
+      // is already correct. Same 300×250 fallback already used by the
+      // VAST/JSON/URL/unidentified inert-text branches below: it exists
+      // purely to give the note room to be read — the iframe itself stays
+      // zero-footprint via its own inline style above regardless of dims.
+      setDims(300, 250);
+    } else if (dims && dims.w > 0 && dims.h > 0) {
       setDims(dims.w, dims.h);
     } else {
       // Unknown dims fallback: tag as has-creative=1 with default 300×250
@@ -3472,6 +3484,82 @@ export async function mountInspector(root, ctx) {
     return null;
   }
 
+  // DEF-180 — the In-Page Push carrier. The product's own dialect overlay
+  // (packages/core/dialects/inpage-push.js) documents `bid.ext.*` as this
+  // format's creative carrier — such a bid legitimately has neither `adm`
+  // nor an oRTB Native object — and that module explicitly hands the render
+  // to this file: "Render the In-Page Push creative … belongs to the
+  // frontend preview pipeline (analogous to renderNativeToHtml in
+  // ortbtools.app.js)". `claimsBid` there is the engine's own predicate for
+  // "this bid IS In-Page Push", and rules-response.js already suppresses the
+  // IAB `payload_missing` warning on its strength; mirroring the same
+  // predicate here makes the preview claim exactly what the validator claims
+  // instead of dropping the bid into the generic empty state.
+  //
+  // Normalised into renderPushToHtml's canonical field names rather than
+  // widened into isPushMaterialShape — two properties of the carrier, not
+  // style preferences, force that:
+  //  - the two alias tables genuinely disagree. `text` is a TITLE alias in
+  //    the dialect and a DESCRIPTION alias in renderPushToHtml (Kadam feed
+  //    materials, push-x-kadam-array-alias-mixed), so handing bid.ext to the
+  //    renderer raw would print the headline into the body slot for
+  //    inpage-x-widget-openrtb-aliases;
+  //  - the price lives one level up on the Bid while the creative lives in
+  //    ext, so the flat sibling-key gate isPushMaterialShape applies cannot
+  //    match this shape by construction — and must not be loosened to match
+  //    it, since that same gate is what keeps vendor banner and pop wrappers
+  //    from being dressed as notification cards (DEF-203).
+  function pickStringAlias(obj, names) {
+    if (!obj || typeof obj !== 'object') return '';
+    for (const k of names) {
+      const v = obj[k];
+      if (typeof v === 'string' && v.length > 0) return v;
+    }
+    return '';
+  }
+
+  /**
+   * @param {unknown} bid one resolved oRTB Bid
+   * @returns {object|null} a push material in renderPushToHtml's canonical
+   *   field names, or null when this bid is not an In-Page Push carrier.
+   */
+  function inpagePushCardFrom(bid) {
+    if (!bid || typeof bid !== 'object' || Array.isArray(bid)) return null;
+    const ext = bid.ext;
+    if (!ext || typeof ext !== 'object' || Array.isArray(ext)) return null;
+    // Kept inside the function, like renderPushToHtml's and
+    // isPushMaterialShape's own alias chains: this list is a transcription of
+    // one external contract, and it stays next to the only code that reads it.
+    const roles = {
+      title: ['title', 'text'],
+      description: ['description', 'body', 'desc'],
+      image: ['image', 'image_url', 'picture'],
+      icon: ['icon', 'favicon'],
+      link: ['url', 'click', 'click_url', 'href', 'link'],
+    };
+    const title = pickStringAlias(ext, roles.title);
+    const image = pickStringAlias(ext, roles.image);
+    // Exactly the dialect's claimsBid rule: a title-shaped OR an image-shaped
+    // field is enough to claim. A missing click or image is the engine's
+    // finding to raise (inpage-push.click_required / image_required), not a
+    // reason to hide the card the analyst opened the preview to look at.
+    if (!title && !image) return null;
+    const description = pickStringAlias(ext, roles.description);
+    const icon = pickStringAlias(ext, roles.icon);
+    const link = pickStringAlias(ext, roles.link);
+    // Only present roles are carried over: renderPushToHtml reads a missing
+    // title as its "No title" placeholder and a missing link as an inert
+    // `#`, whereas an empty string would render an empty headline and an
+    // href that silently resolves to the Inspector's own page.
+    const card = {};
+    if (title) card.title = title;
+    if (description) card.description = description;
+    if (image) card.image = image;
+    if (icon) card.icon = icon;
+    if (link) card.link = link;
+    return card;
+  }
+
   // DEF-202: when neither an oRTB `adm` nor a push-material shape resolves a
   // creative, the response may still document a redirect/landing destination
   // under a vendor-specific wire wrapper. Every path below was read directly
@@ -3726,7 +3814,7 @@ export async function mountInspector(root, ctx) {
       } else {
         adm = findAdm(bid);
         if (!adm) {
-          pushMaterial = findPushMaterial(bid);
+          pushMaterial = findPushMaterial(bid) || inpagePushCardFrom(bid);
           if (pushMaterial) {
             adm = renderPushToHtml(pushMaterial);
           } else {
@@ -4557,7 +4645,7 @@ export async function mountInspector(root, ctx) {
         // to give up with the empty state. Synthesize the notification card
         // and let it travel the markup pipeline like any banner creative.
         if (!adm) {
-          pushMaterial = findPushMaterial(res);
+          pushMaterial = findPushMaterial(res) || inpagePushCardFrom(bid);
           if (pushMaterial) {
             adm = renderPushToHtml(pushMaterial);
           } else {

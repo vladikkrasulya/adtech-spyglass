@@ -1,30 +1,4 @@
 {
   "schemaVersion": 1,
-  "gaps": {
-    "DEF-245": {
-      "id": "DEF-245",
-      "title": "Script-shaped pop creatives (window.open / location redirect) render with no on-screen identity text",
-      "category": "preview-capability",
-      "severity": "low",
-      "source": "specs/012-creative-preview-repair/contracts/creative-preview.md; public/modules/inspector/creative-classify.js",
-      "code": [
-        "public/modules/inspector/creative-classify.js:190-197",
-        "public/ortbtools.app.js:1639-1671"
-      ],
-      "expected": "A pop adm shaped as a redirect script (window.open(...) / location.href|replace|assign(...) / top.location...) is spec-grounded, documented pop markup (packages/core/rules/pop-response/index.js's own header comment). The rendered preview correctly shows kind=markup and rendered=empty (there is genuinely no visible DOM), but the analyst has no way to see WHICH destination the script would have navigated to without reading raw JSON elsewhere.",
-      "actual": "creative-classify.js routes any `<script>...</script>` body into the markup/iframe branch rather than the inert-text branch used for VAST/JSON/URL/unidentified kinds — unlike those kinds, a script-only pop creative never surfaces its destination text anywhere the browser measurement can see (setAdPreview never extracts or displays the script's target URL). The per-bid identity/marker check in the corpus browser harness therefore cannot confirm which creative was returned for any script-shaped pop adm.",
-      "cases": [
-        "pop-x-openrtb-adtype-popunder-window-open",
-        "pop-x-openrtb-adtype-clickunder-location",
-        "pop-x-openrtb-flag-popunder-bool",
-        "pop-x-openrtb-shape-flag-allowshock"
-      ],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "kind and rendered are measured correctly per case (markup / empty); only the identity/marker assertion fails, since the destination text never appears in document.body.innerText or an image alt.",
-        "A bare-URL pop adm (pop-x-openrtb-adtype-popup-bare-url) does NOT hit this gap — it classifies as kind=url and is shown as inert text, so its destination is visible and the identity check passes without a known-gap entry.",
-        "2026-09-08 (feature 027): the redirect script is now detected and an inert destination note is built, but the caption still does not reach the measured on-screen identity. The sandbox refusal is correct and unchanged; the record stays open on the identity half only."
-      ]
-    }
-  }
+  "gaps": {}
 }

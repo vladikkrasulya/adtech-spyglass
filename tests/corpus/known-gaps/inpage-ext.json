@@ -3,17 +3,13 @@
   "gaps": {
     "DEF-180": {
       "id": "DEF-180",
-      "title": "In-page vendor signals in OpenRTB envelopes lack format tagging and bid.ext preview",
+      "title": "In-page vendor placement signals in OpenRTB envelopes lack format tagging",
       "category": "vendor-support",
       "severity": "medium",
       "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectmodel",
-      "code": [
-        "packages/core/format-detect.js:220",
-        "packages/core/dialects/inpage-push.js",
-        "public/ortbtools.app.js"
-      ],
-      "expected": "The project-documented widget/zone and bid.ext in-page dialect can be identified as vendor in-page content even when carried in an OpenRTB envelope; bid.ext-only creative support is reported separately. Standard OpenRTB requires a media object, so imp.format_required for these bare widget impressions is correct and remains asserted.",
-      "actual": "Format detection does not tag these imp/seatbid-shaped widget examples as inpage, and the preview does not render nested bid.ext cards. The adm-bearing control renders its markup correctly. The request media-object error is not an implementation deviation.",
+      "code": ["packages/core/format-detect.js:443"],
+      "expected": "The project-documented widget/zone and bid.ext in-page dialect can be identified as vendor in-page content even when carried in an OpenRTB envelope. Standard OpenRTB requires a media object, so imp.format_required for these bare widget impressions is correct and remains asserted.",
+      "actual": "Format detection does not tag these imp/seatbid-shaped widget examples as inpage: format-detect.js rule 5 reads the ext.widget_id/zone_id placement signal only for the JSON-feed single-object/array shape and is gated off whenever the payload is already imp[]/seatbid[]-shaped. The adm-bearing control renders its markup correctly. The request media-object error is not an implementation deviation.",
       "cases": [
         "inpage-x-widget-openrtb-canonical",
         "inpage-x-widget-openrtb-aliases",
@@ -26,7 +22,8 @@
       "notes": [
         "This is a vendor capability distinction, not proof that media-free impressions comply with IAB OpenRTB. The earlier reading of conditional Imp field-table entries was incomplete; section 3.1 explicitly requires a media object.",
         "Only missing vendor tagging and case-specific creative identity failures remain pinned. Response-dialect validation and baseline request rejection are asserted independently.",
-        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
+        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects.",
+        "2026-09-08 (feature 029): the preview half of this record is CLOSED. public/ortbtools.app.js now resolves the bid.ext carrier through the In-Page Push dialect's own alias table and renders the card, so all five carrier cases measure kind=push, rendered=partial and a visible headline marker; their preview.kind, preview.rendered and identity signatures are retired and expect.preview.capabilityGap is cleared. Only the format-tagging line remains on each case, and it is Core work."
       ]
     }
   }

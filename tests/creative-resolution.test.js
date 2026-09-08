@@ -65,6 +65,8 @@ function loadHelpers() {
     'findDestinationUrl',
     'findAdm',
     'renderPushToHtml',
+    'pickStringAlias',
+    'inpagePushCardFrom',
     'creativeCandidatesFor',
     'resolveCreativeAt',
   ];
@@ -460,5 +462,150 @@ test('findDestinationUrl: a materials-array element that carries a picture but f
     findDestinationUrl(res),
     null,
     'an element with a visual-asset key must never fall through to the bare .link/.url guess',
+  );
+});
+
+// ── DEF-180 — the In-Page Push carrier (bid.ext), feature 029 ──
+
+test('inpagePushCardFrom: the canonical carrier resolves every role from its own key name', () => {
+  const { inpagePushCardFrom } = loadHelpers();
+  const c = fixture('pairs/inpage/inpage-x-widget-openrtb-canonical.json');
+  const bid = c.response.seatbid[0].bid[0];
+  assert.deepEqual(inpagePushCardFrom(bid), {
+    title: 'A quiet harbor at dawn',
+    description: 'Compare three original travel-planning tools before you book.',
+    image: 'https://assets.example.test/feeds/inpage-x-widget-openrtb-canonical-hero-492x328.png',
+    icon: 'https://assets.example.test/feeds/inpage-x-widget-openrtb-canonical-icon-192x192.png',
+    link: 'https://advertiser.example.test/offers/inpage-x-widget-openrtb-canonical',
+  });
+});
+
+test("inpagePushCardFrom: the dialect's alias names land in their own roles — `text` is a HEADLINE here, not a body line as it is in a flat Kadam feed", () => {
+  const { inpagePushCardFrom, renderPushToHtml } = loadHelpers();
+  const c = fixture('pairs/inpage/inpage-x-widget-openrtb-aliases.json');
+  const card = inpagePushCardFrom(c.response.seatbid[0].bid[0]);
+  assert.deepEqual(card, {
+    title: 'Two ferries crossing at sunset',
+    description: 'See why commuters are switching routes this month.',
+    image: 'https://assets.example.test/feeds/inpage-x-widget-openrtb-aliases-hero-492x328.png',
+    icon: 'https://assets.example.test/feeds/inpage-x-widget-openrtb-aliases-icon-192x192.png',
+    link: 'https://advertiser.example.test/offers/inpage-x-widget-openrtb-aliases',
+  });
+  const html = renderPushToHtml(card);
+  assert.match(
+    html,
+    /<div class="t">Two ferries crossing at sunset<\/div>/,
+    'the `text` role must render in the headline slot',
+  );
+  assert.match(
+    html,
+    /<div class="d">See why commuters are switching routes this month\.<\/div>/,
+    'the `desc` role must render in the body slot',
+  );
+});
+
+test('inpagePushCardFrom: the in-app carrier resolves the body/image_url/href aliases', () => {
+  const { inpagePushCardFrom } = loadHelpers();
+  const c = fixture('pairs/inpage/inpage-x-widget-inapp.json');
+  const card = inpagePushCardFrom(c.response.seatbid[0].bid[0]);
+  assert.equal(card.title, 'A rooftop garden after rain');
+  assert.equal(card.description, 'Read what three reviewers said about the new app tab.');
+  assert.equal(
+    card.image,
+    'https://assets.example.test/feeds/inpage-x-widget-inapp-hero-492x328.png',
+  );
+  assert.equal(card.link, 'https://advertiser.example.test/offers/inpage-x-widget-inapp');
+});
+
+test('inpagePushCardFrom: only present roles are carried, so the renderer keeps its own placeholders', () => {
+  const { inpagePushCardFrom, renderPushToHtml } = loadHelpers();
+  const card = inpagePushCardFrom({ price: 1, ext: { image: 'https://a.test/hero.png' } });
+  assert.deepEqual(
+    card,
+    { image: 'https://a.test/hero.png' },
+    'absent roles must not become empty strings',
+  );
+  const html = renderPushToHtml(card);
+  assert.match(html, /class="t muted">No title</, 'a missing title must render the placeholder');
+  assert.match(html, /href="#"/, 'a missing click must render an inert target');
+});
+
+test('inpagePushCardFrom: a bid the dialect does not claim is not dressed as a card', () => {
+  const { inpagePushCardFrom } = loadHelpers();
+  for (const bid of [
+    null,
+    'string',
+    [],
+    {},
+    { ext: null },
+    { ext: 'string' },
+    { ext: [] },
+    { ext: { bidder: 'x', dsp_id: 7, deal_tier: 3 } },
+    { ext: { title: 42, image: [] } },
+    { ext: { title: '' } },
+  ]) {
+    assert.equal(inpagePushCardFrom(bid), null, `must not claim ${JSON.stringify(bid)}`);
+  }
+});
+
+test('resolveCreativeAt: an In-Page Push bid resolves to its rendered card, and a sibling carrying adm still resolves the markup', () => {
+  const { resolveCreativeAt } = loadHelpers();
+  const carrier = fixture('pairs/inpage/inpage-x-widget-openrtb-canonical.json');
+  const resolved = resolveCreativeAt(carrier.request, carrier.response, 0, 0);
+  assert.ok(resolved.pushMaterial, 'the carrier must resolve a push material');
+  assert.match(resolved.adm, /A quiet harbor at dawn/);
+  assert.match(resolved.adm, /push · synthetic render/);
+  assert.deepEqual(
+    resolved.previewDims,
+    { w: 360, h: 300 },
+    'a bare widget impression declares no banner size, so the push aspect applies',
+  );
+
+  const withAdm = fixture('pairs/inpage/inpage-x-widget-adm-and-ext.json');
+  const admResolved = resolveCreativeAt(withAdm.request, withAdm.response, 0, 0);
+  assert.equal(admResolved.pushMaterial, null, 'a real adm must win over the ext carrier');
+  assert.equal(admResolved.adm, withAdm.response.seatbid[0].bid[0].adm);
+});
+
+test('inpagePushCardFrom: across the whole corpus it claims exactly the five documented In-Page Push carriers and nothing else', () => {
+  const { inpagePushCardFrom } = loadHelpers();
+  const corpusRoot = path.join(ROOT, 'tests/corpus');
+  const claimed = [];
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!['assets', 'lib', 'known-gaps'].includes(entry.name)) walk(full);
+      } else if (entry.name.endsWith('.json')) {
+        let parsed;
+        try {
+          parsed = JSON.parse(fs.readFileSync(full, 'utf8'));
+        } catch {
+          continue;
+        }
+        const res = parsed.response;
+        if (!res || typeof res !== 'object' || !Array.isArray(res.seatbid)) continue;
+        for (const seat of res.seatbid) {
+          if (!seat || !Array.isArray(seat.bid)) continue;
+          for (const bid of seat.bid) {
+            if (!bid || typeof bid !== 'object') continue;
+            if (typeof bid.adm === 'string' && bid.adm) continue;
+            if (bid.native) continue;
+            if (inpagePushCardFrom(bid)) claimed.push(parsed.id);
+          }
+        }
+      }
+    }
+  })(corpusRoot);
+  assert.deepEqual(
+    [...new Set(claimed)].sort(),
+    [
+      'cover-vendor-inpage-openrtb26',
+      'inpage-x-widget-iab-contract',
+      'inpage-x-widget-inapp',
+      'inpage-x-widget-openrtb-aliases',
+      'inpage-x-widget-openrtb-canonical',
+    ],
+    'the carrier predicate must reach the documented In-Page Push cases and no other bid in the corpus',
   );
 });
