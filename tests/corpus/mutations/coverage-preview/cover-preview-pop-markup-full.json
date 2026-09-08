@@ -1,0 +1,115 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-pop-markup-full",
+  "title": "pop: markup-full; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+  "base": "pop-x-openrtb-adtype-popunder-window-open",
+  "category": "format-mismatch",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "format-mismatch"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools Core pop-family ext-hint recognition contract (packages/core/non-iab-formats.js STRING_HINT_KEYS, packages/core/rules/pop-request/index.js, packages/core/rules/pop-response/index.js) layered on IAB OpenRTB 2.x Imp/ext extensibility \u2014 the product's own documented, in-repo mechanism for pop/clickunder signalling, not a named vendor's wire format",
+      "url": "packages/core/non-iab-formats.js",
+      "version": "repo HEAD at session start, commit a61fc25",
+      "license": "Internal product code (ortbtools); no third-party material copied. MIT for the original fixture values.",
+      "notes": "This case exercises the plain `iab` dialect plus Core's baseline non-IAB format scanner, deliberately without loading the `ext-rtb` vendor dialect \u2014 the pop-request/pop-response rule plugins and non-iab-formats.js hint scanner run unconditionally regardless of dialect selection."
+    },
+    "modifications": [
+      "All IDs, domains, prices and timestamps independently authored.",
+      "device.ip uses TEST-NET 192.0.2.44; user.id is a clearly synthetic string.",
+      "advertiser.example.test / tracking.example.test / publisher.example.test are reserved .test hosts; no live host, tracker or subscriber identifier.",
+      "Coverage-closure derivative of pop-x-openrtb-adtype-popunder-window-open: pop: markup-full; classify the actual creative body and assert visible identity while retaining auction diagnostics."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; every identifier is a synthetic-fixture string; every URL uses a reserved .test hostname.",
+    "notes": "synthesized-from-product-code-contract"
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<div style=\"width:300px;height:250px;background:#fff;color:#111\"><p>POP FULL CLOSURE</p><script>window.open('https://advertiser.example.test/closure/pop', '_blank');</script></div>"
+      },
+      {
+        "op": "add",
+        "path": "/seatbid/0/bid/0/w",
+        "value": 300
+      },
+      {
+        "op": "add",
+        "path": "/seatbid/0/bid/0/h",
+        "value": 250
+      }
+    ],
+    "request": [
+      {
+        "op": "replace",
+        "path": "/imp/0/banner",
+        "value": {
+          "w": 300,
+          "h": 250
+        }
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.adtype",
+          "level": "info",
+          "params": {
+            "format": "popunder"
+          }
+        }
+      ],
+      "mustNot": ["imp.format_required", "imp.banner.size_required", "request.device_required"]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "mustNot": ["bid.pop.adm_not_redirect"],
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "POP FULL CLOSURE"
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "sandboxRefusals": ["popup"]
+    }
+  },
+  "specNotes": [
+    "pop: markup-full; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+    "Creative body classification follows specs/012 \u00a71\u20132 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic."
+  ],
+  "knownGap": null
+}

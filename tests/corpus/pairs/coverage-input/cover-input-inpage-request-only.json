@@ -1,0 +1,100 @@
+{
+  "kind": "pair",
+  "id": "cover-input-inpage-request-only",
+  "title": "inpage: independently analyze the request without the opposite auction side",
+  "format": "inpage",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "request-only",
+  "tags": ["coverage-closure", "standalone-input"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "EXADS OpenRTB request, including in-page vendor plcmttype 501",
+      "url": "https://docs.exads.com/docs/rtb-publishers/open-rtb/bid-request/open-rtb-publishers-request/",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, prices, timestamps, creative text and URLs independently authored.",
+      "Required visitor addresses use TEST-NET 192.0.2.44; required user IDs are clearly synthetic. No real subscriber data or feed credentials.",
+      "Media URLs use reserved .test hosts and require interception from fixtureAssets.",
+      "Remove the response from inpage-exads-native-501; no auction relation may be invented from an absent side."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; user IDs/feed keys are synthetic-fixture strings; all executable URLs use reserved .test hostnames and require local interception.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "exads-openrtb-2.x",
+    "vendorDialect": "exads",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "request-only-reference",
+      "note": "The opposite auction side is deliberately absent; validation remains meaningful and crosscheck must be empty."
+    },
+    "sourceIds": ["feeds:feeds-exads-ortb-request", "feeds:feeds-exads-ortb-response"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": ["asset-f06381ac250e605b"],
+  "request": {
+    "id": "inpage-exads-native-501",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "inpage-exads-native-501-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "native": {
+          "ver": "1.2",
+          "request": "{\"native\":{\"ver\":\"1.2\",\"plcmttype\":501,\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"img\":{\"type\":1}},{\"id\":2,\"required\":1,\"title\":{\"len\":60}},{\"id\":3,\"required\":1,\"data\":{\"type\":2,\"len\":110}}]}}"
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "specNotes": [
+    "The Inspector/API accept either auction side independently. Apply validation to the submitted side and do not manufacture auction matches, floors or required-asset comparisons from the absent side.",
+    "Preview expectation is retained only for a submitted response. The body and public-source provenance come from inpage-exads-native-501."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "preview": {
+      "kind": "n/a",
+      "rendered": "n/a",
+      "mediaPlays": "n/a"
+    },
+    "http": {
+      "status": 200
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": ["web"]
+    }
+  },
+  "knownGap": null
+}

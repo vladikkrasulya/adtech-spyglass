@@ -19,12 +19,14 @@
         "inpage-x-widget-openrtb-aliases",
         "inpage-x-widget-iab-contract",
         "inpage-x-widget-adm-and-ext",
-        "inpage-x-widget-inapp"
+        "inpage-x-widget-inapp",
+        "cover-vendor-inpage-openrtb26"
       ],
-      "reviewedAt": "2026-09-07",
+      "reviewedAt": "2026-09-08",
       "notes": [
         "This is a vendor capability distinction, not proof that media-free impressions comply with IAB OpenRTB. The earlier reading of conditional Imp field-table entries was incomplete; section 3.1 explicitly requires a media object.",
-        "Only missing vendor tagging and case-specific creative identity failures remain pinned. Response-dialect validation and baseline request rejection are asserted independently."
+        "Only missing vendor tagging and case-specific creative identity failures remain pinned. Response-dialect validation and baseline request rejection are asserted independently.",
+        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
       ]
     },
     "DEF-181": {

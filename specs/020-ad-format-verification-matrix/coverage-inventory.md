@@ -13,14 +13,16 @@ The generated coverage-matrix.md describes the new corpus's actual executions. T
 | Sharing                                  | `tests/gists-browser.test.js` and gist route/crypto tests                                                                                             | Encrypted sharing is separate from Inspector input; no Inspector file-upload workflow was found in current templates/handler |
 | Public Core options                      | Validator, dialect, strictness and version-related tests                                                                                              | New corpus does not exhaust expectedVersion pins, disabledRules or strictness permutations                                   |
 
-## Explicit gaps in the new corpus
+## Coverage closure and remaining boundaries
+
+The closure adds 72 scenarios to the earlier 184. All 160 applicable pairwise cells and all 56 applicable standard format × protocol × context triples now have cases. Nine pairwise states remain excluded by product contract, 48 are not applicable to the curated axes, and the four standard OpenRTB 2.5 × DOOH triples are not applicable. These exclusions are retained with reasons in coverage-axes.md; case presence and product conformance remain separate measurements. The axes guard prevents a removed case from silently reopening coverage.
 
 - OpenRTB 3.0 has banner, video, audio and corrected structured Native probes. They do not establish full AdCOM subtype or plugin coverage; the generated axes distinguish executed cases from conformant cells. Additional AdCOM variants and the full 2.5/2.6 revision differences need further examples.
-- DOOH has banner and video pairs and a conflicting-context probe. DOOH audio, applicable Native screen contexts and production digital-screen behavior are not covered.
+- DOOH now has banner, video, audio and Native examples under standard 2.6 and AdCOM 3.0 contexts; CTV and absent-context variants are also represented. Real screen devices and production digital-screen behavior remain outside this offline audit.
 - Vendor push/pop/inpage examples are grouped by their source-documented placement. EXADS Native 500/501 and Kadam Native carriers are validated as Native; this does not establish push/inpage tagging for those placements. Several other public wire shapes remain unrecognized. Dedicated negative mutations for each proprietary schema remain future work.
 - Request/response links cover representative commercial, identity, multiplicity, media and Native changes. Arbitrary extensions, every enum and every nested field combination are not exhausted.
 - UI checks cover Chromium at desktop/mobile CSS widths, three locales and two themes. The additional 19-scenario accessibility/state suite measures accessible names, keyboard operation, ten visible composited contrast samples, overflow, large input, CSS scaling and device scale. Safari/Firefox, real devices, actual screen-reader journeys, complete WCAG conformance, real browser zoom and subjective usability require separate review.
 - Live ad delivery, external wrapper resolution, auction notices, production trackers/click destinations, creative network failures under real ad networks, sustained load and race/concurrency stress are not certified.
 - History/save/load/share/Mirror/Migrate/custom-dialect workflows are not repeated for all corpus formats. Existing tests above remain relevant independent coverage.
 
-The finite matrix therefore answers which representative paths work, fail or lack support; it cannot justify a claim that every possible request/response combination is covered.
+The defined matrix has complete case coverage. Higher-order combinations, arbitrary fields/extensions and the external environments listed above are separate boundaries; complete matrix coverage does not justify a claim that every possible request/response works.

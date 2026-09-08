@@ -1,0 +1,87 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-banner-partial-image",
+  "title": "banner: partial-image; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+  "base": "bn-banner-25-fixed",
+  "category": "format-mismatch",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "format-mismatch"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.5 final specification \u2014 Banner, Native and Bid objects",
+      "url": "https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "Public example object/asset structure adapted; source values replaced and optional tracking omitted.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "Coverage-closure derivative of bn-banner-25-fixed: banner: partial-image; classify the actual creative body and assert visible identity while retaining auction diagnostics."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "adapted-public-example"
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<div style=\"width:300px;height:250px;background:#fff;color:#111\"><p>BANNER PARTIAL CLOSURE</p><img width=\"80\" height=\"80\" src=\"https://assets.example.test/closure/unavailable.png\" alt=\"Blocked artwork\"></div>"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "BANNER PARTIAL CLOSURE",
+      "assets": {
+        "imgTotal": 1,
+        "imgLoaded": 0,
+        "imgFailed": 1
+      }
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "specNotes": [
+    "banner: partial-image; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+    "Creative body classification follows specs/012 \u00a71\u20132 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic."
+  ],
+  "knownGap": null
+}

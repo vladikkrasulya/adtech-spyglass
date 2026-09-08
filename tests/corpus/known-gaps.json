@@ -7,7 +7,7 @@
       "category": "false-positive",
       "severity": "medium",
       "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdevice",
-      "code": ["packages/core/rules-request.js:259"],
+      "code": ["packages/core/rules-request.js:259", "packages/core/rules-request-30.js"],
       "expected": "Optional Device attributes may produce guidance; their omission must not invalidate otherwise valid requests.",
       "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
       "cases": [
@@ -19,11 +19,16 @@
         "video-x-inapp-26-interstitial-skippable",
         "video-x-web-42-wrapper-companion",
         "native-x-prebid-zeroclickfraud",
-        "field-shape-device-missing"
+        "field-shape-device-missing",
+        "cover-context-banner-30-dooh",
+        "cover-context-audio-30-dooh",
+        "cover-context-video-30-dooh"
       ],
-      "reviewedAt": "2026-09-07",
+      "reviewedAt": "2026-09-08",
       "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
+        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
+        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects.",
+        "AdCOM Device.ip/ua are optional too; 3.0 DOOH variants reproduce the same false mandatory-field behavior under request.30.context.device.* findings."
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
       "relatedBrowserDefects": ["DEF-201"]
@@ -50,11 +55,17 @@
         "audio-x-ctv-smartspeaker-postroll",
         "audio-x-nvol-companion-html",
         "audio-x-stitched-preroll-podcast",
-        "audio-x-vast41-bitrate-ladder"
+        "audio-x-vast41-bitrate-ladder",
+        "cover-context-audio-25-unspecified",
+        "cover-context-audio-25-ctv",
+        "cover-context-audio-25-inapp",
+        "cover-context-audio-26-dooh",
+        "cover-context-audio-26-unspecified"
       ],
-      "reviewedAt": "2026-09-07",
+      "reviewedAt": "2026-09-08",
       "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
+        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
+        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
       "relatedBrowserDefects": ["DEF-201"]
@@ -136,10 +147,18 @@
       ],
       "expected": "Documented proprietary EXADS contracts remain intact; the validator should identify them or explicitly explain the unsupported dialect. They are not OpenRTB bid pairs.",
       "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["inpage-exads-wrapper", "pop-exads-wrapper", "push-exads-icon-cpc"],
-      "reviewedAt": "2026-09-07",
+      "cases": [
+        "inpage-exads-wrapper",
+        "pop-exads-wrapper",
+        "push-exads-icon-cpc",
+        "cover-vendor-banner-exads-json",
+        "cover-vendor-inpage-exads-url",
+        "cover-vendor-push-exads-url"
+      ],
+      "reviewedAt": "2026-09-08",
       "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
+        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
+        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
       "relatedBrowserDefects": ["DEF-202"]

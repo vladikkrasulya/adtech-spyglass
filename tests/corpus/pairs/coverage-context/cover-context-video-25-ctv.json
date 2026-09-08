@@ -1,0 +1,186 @@
+{
+  "kind": "pair",
+  "id": "cover-context-video-25-ctv",
+  "title": "ortb-2.5 video: ctv channel with matched auction, media and creative identity",
+  "format": "video",
+  "protocol": "ortb-2.5",
+  "context": "ctv",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "valid", "source-grounded", "ortb-2.5", "ctv", "iab"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.5 BidRequest, distribution channel, Device, impression and bid objects",
+      "url": "https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf",
+      "version": "FINAL December 2016",
+      "license": "CC BY 3.0 (IAB field semantics); MIT (original fixture)",
+      "notes": "Context combination independently constructed from the normative object tables; no claim of a captured production example."
+    },
+    "modifications": [
+      "Adapted the original local video-web-25-inline-vast2 media/asset fixture into a ortb-2.5 ctv auction.",
+      "Changed actual distribution-channel/device objects, matched request/response IDs and creative marker; assertions require the corresponding detected runtime contexts.",
+      "Use OpenRTB 2.x device.devicetype and language. Only 2.6 cases add rwdd and mtype markers; 2.5 cases omit newer fields.",
+      "All prices/floors/currencies, impression/item references, media constraints and required Native assets remain explicitly matched."
+    ],
+    "sanitized": "Original synthetic creatives and reserved .test resource hosts; TEST-NET device address where supplied. No customer payloads, personal identifiers or live advertising/tracking calls."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Matched auction and impression/item references; source archive identifies the reusable seed corpus, not this newly authored context variant."
+    },
+    "sourceIds": [
+      "video-audio:va-ortb25",
+      "video-audio:va-example-response",
+      "video-audio:va-vast-xsd",
+      "banner-native:bn-ortb25"
+    ],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [
+    "asset-2fc4e973b7b95b2a",
+    "asset-f0aa8786b975f5a7",
+    "asset-5c2f145c88fd2658",
+    "asset-b689a36c3ffc2438"
+  ],
+  "request": {
+    "id": "cover-context-video-25-ctv",
+    "test": 1,
+    "at": 1,
+    "tmax": 500,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "video-1",
+        "secure": 1,
+        "bidfloor": 1,
+        "bidfloorcur": "USD",
+        "video": {
+          "mimes": ["video/mp4"],
+          "minduration": 30,
+          "maxduration": 30,
+          "protocols": [2],
+          "w": 640,
+          "h": 480,
+          "linearity": 1,
+          "placement": 1,
+          "startdelay": 0,
+          "delivery": [2],
+          "playbackmethod": [3]
+        }
+      }
+    ],
+    "app": {
+      "id": "cover-context-video-25-ctv-app",
+      "name": "Synthetic television app",
+      "bundle": "test.example.television"
+    },
+    "device": {
+      "devicetype": 3,
+      "ua": "Mozilla/5.0 (Synthetic context audit)",
+      "ip": "192.0.2.19",
+      "language": "en"
+    }
+  },
+  "response": {
+    "id": "cover-context-video-25-ctv",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "fixture-seat",
+        "bid": [
+          {
+            "id": "cover-context-video-25-ctv-bid",
+            "impid": "video-1",
+            "price": 3,
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"><Ad id=\"video-web-25-inline-vast2\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><AdTitle>C25 video ctv</AdTitle><Impression><![CDATA[https://track.example.test/video-web-25-inline-vast2/impression]]></Impression><Creatives><Creative id=\"video-web-25-inline-vast2-creative\"><Linear><Duration>00:00:30</Duration><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-web-25-inline-vast2/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-web-25-inline-vast2/complete]]></Tracking></TrackingEvents><MediaFiles><MediaFile id=\"video-web-25-inline-vast2\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"800\" width=\"640\" height=\"480\"><![CDATA[https://media.example.test/video-web-25-inline-vast2.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "cover-context-video-25-ctv-creative",
+            "protocol": 2,
+            "w": 640,
+            "h": 480
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Primary context definitions: https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf (sections 3.2.1, 3.2.13, 3.2.14, 3.2.18 and 5.21). Site/App/Device are not mandatory for protocol validity.",
+    "The app channel plus device type 3 must produce both inapp and ctv contexts; a banner or Native format does not change this runtime classification.",
+    "The oracle asserts auction identity, offered impression/item resolution, matching currency and above-floor price, media/native/size semantics where applicable, and exact creative identity; these are not metadata-only copies.",
+    "IAB dialect is used without disabled rules.",
+    "The marker is newly authored and must be visible in the selected original bid. Existing reserved media URLs/controlled assets are retained; no media delivery or playback success is inferred from inert VAST text."
+  ],
+  "notes": [
+    "New coverage-closure case; normative expectations precede execution. Exact deviations are tracked separately after measured Core/HTTP/browser execution."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "version": "2.5"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "mustNotPrefix": ["vast."],
+      "version": "2.5"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "cover-context-video-25-ctv"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "1.0000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.video_vast",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "vast",
+      "rendered": "inert-text",
+      "mediaPlays": "no",
+      "marker": "C25 video ctv",
+      "limitation": null,
+      "capabilityGap": "VAST is inert text under the current preview contract; playback is not promised."
+    },
+    "format": {
+      "formats": ["video"],
+      "contexts": ["inapp", "ctv"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

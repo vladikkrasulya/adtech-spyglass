@@ -21,7 +21,10 @@
       "All auction, bid, creative, app and publisher identifiers are synthetic.",
       "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
       "device.ip is the documentation-only address 192.0.2.14; OS values describe a synthetic test device.",
-      "Currency is kept USD end to end (request cur[], item.flrcur, response cur, bid price) to isolate the audio-specific plumbing from the unrelated 3.0 currency-envelope defect already recorded as DEF-105 on bn-banner-30-adcom."
+      "Currency is kept USD end to end (request cur[], item.flrcur, response cur, bid price) to isolate the audio-specific plumbing from the unrelated 3.0 currency-envelope defect already recorded as DEF-105 on bn-banner-30-adcom.",
+      "Coverage closure: omit optional AdCOM Device.os/osv; os is an integer enum, not an OpenRTB 2.x string (pinned AdCOM df8ba06, Object: Device).",
+      "Coverage closure: AdCOM Audio.mime is a string array; this valid fixture now uses an array (pinned AdCOM df8ba06, Object: Audio).",
+      "Add original AdServingId after Impression: VAST4.1 Inline_type requires it (IAB VAST XSD revision e0858cd714474bf17ef61065097456d7643ff838)."
     ],
     "sanitized": "Only synthetic identifiers, original fixture creative, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
     "notes": "synthesized-from-spec"
@@ -77,9 +80,7 @@
           "device": {
             "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
             "lang": "en",
-            "ip": "192.0.2.14",
-            "os": "Linux",
-            "osv": "6.1"
+            "ip": "192.0.2.14"
           }
         }
       }
@@ -107,9 +108,9 @@
                     "adomain": ["advertiser.example.test"],
                     "secure": 1,
                     "audio": {
-                      "mime": "audio/mpeg",
+                      "mime": ["audio/mpeg"],
                       "dur": 20,
-                      "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.1\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"audio-x-ortb30-placement-audio\" adType=\"audio\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><Impression><![CDATA[https://track.example.test/audio-x-ortb30-placement-audio/impression]]></Impression><AdTitle>audio-x-ortb30-placement-audio</AdTitle><Creatives><Creative id=\"audio-x-ortb30-placement-audio-creative\"><UniversalAdId idRegistry=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/audio-x-ortb30-placement-audio/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/audio-x-ortb30-placement-audio/complete]]></Tracking></TrackingEvents><Duration>00:00:20</Duration><MediaFiles><MediaFile id=\"audio-x-ortb30-placement-audio\" delivery=\"progressive\" type=\"audio/mpeg\" bitrate=\"128\" width=\"0\" height=\"0\"><![CDATA[https://media.example.test/audio-x-ortb30-placement-audio.mp3]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>"
+                      "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.1\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"audio-x-ortb30-placement-audio\" adType=\"audio\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><Impression><![CDATA[https://track.example.test/audio-x-ortb30-placement-audio/impression]]></Impression><AdServingId>audio-x-ortb30-placement-audio-serving</AdServingId><AdTitle>audio-x-ortb30-placement-audio</AdTitle><Creatives><Creative id=\"audio-x-ortb30-placement-audio-creative\"><UniversalAdId idRegistry=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/audio-x-ortb30-placement-audio/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/audio-x-ortb30-placement-audio/complete]]></Tracking></TrackingEvents><Duration>00:00:20</Duration><MediaFiles><MediaFile id=\"audio-x-ortb30-placement-audio\" delivery=\"progressive\" type=\"audio/mpeg\" bitrate=\"128\" width=\"0\" height=\"0\"><![CDATA[https://media.example.test/audio-x-ortb30-placement-audio.mp3]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>"
                     }
                   }
                 }

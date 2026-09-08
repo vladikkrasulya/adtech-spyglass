@@ -1,0 +1,96 @@
+{
+  "kind": "pair",
+  "id": "cover-input-pop-response-only",
+  "title": "pop: validate and preview a standalone response with runtime context unspecified",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "n/a",
+  "dialect": "iab",
+  "scenario": "response-only",
+  "tags": ["coverage-closure", "standalone-input"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools Core pop-family ext-hint recognition contract (packages/core/non-iab-formats.js STRING_HINT_KEYS, packages/core/rules/pop-request/index.js, packages/core/rules/pop-response/index.js) layered on IAB OpenRTB 2.x Imp/ext extensibility — the product's own documented, in-repo mechanism for pop/clickunder signalling, not a named vendor's wire format",
+      "url": "packages/core/non-iab-formats.js",
+      "version": "repo HEAD at session start, commit a61fc25",
+      "license": "Internal product code (ortbtools); no third-party material copied. MIT for the original fixture values.",
+      "notes": "Same mechanism as pop-x-openrtb-adtype-popunder-window-open, with the 'popup' string value and a bare-URL adm instead of a window.open script."
+    },
+    "modifications": [
+      "All IDs, domains, prices and timestamps independently authored.",
+      "device.ip uses TEST-NET 192.0.2.44; user.id is a clearly synthetic string.",
+      "advertiser.example.test / tracking.example.test / publisher.example.test are reserved .test hosts; no live host, tracker or subscriber identifier.",
+      "Remove the request: validate and render the response independently, without deriving runtime context from absent input."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; every identifier is a synthetic-fixture string; every URL uses a reserved .test hostname.",
+    "notes": "synthesized-from-product-code-contract"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "response-only-reference",
+      "note": "No request supplied; originating format comes from the source convention, runtime context is unspecified."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "response": {
+    "id": "pop-x-openrtb-adtype-popup-bare-url",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "pop-x-openrtb-adtype-popup-bare-url-bid",
+            "impid": "pop-x-openrtb-adtype-popup-bare-url-imp",
+            "price": 0.37,
+            "adm": "https://advertiser.example.test/offers/pop-x-openrtb-adtype-popup-bare-url",
+            "adomain": ["advertiser.example.test"],
+            "crid": "pop-x-openrtb-adtype-popup-bare-url-creative",
+            "nurl": "https://tracking.example.test/notice/pop-x-openrtb-adtype-popup-bare-url",
+            "ext": {
+              "adtype": "popup"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Independent response validation and actual creative identity must remain available without a paired request; auction crosscheck is empty."
+  ],
+  "notes": [
+    "Plain `iab` dialect, deliberately not the `ext-rtb` vendor dialect used by the sibling EXADS/Kadam/PPCmate/Adon3 pop cases."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "info",
+      "type": "oRTB BidResponse",
+      "status": "clean",
+      "mustNot": ["bid.pop.adm_not_redirect", "response.bid.payload_missing"]
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "format": {
+      "formats": ["pops"],
+      "contexts": []
+    },
+    "preview": {
+      "kind": "url",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/offers/pop-x-openrtb-adtype-popup-bare-url",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

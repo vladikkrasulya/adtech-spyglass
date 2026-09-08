@@ -21,7 +21,8 @@
       "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
       "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
       "All text and SVG artwork are original; no public creative copied.",
-      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device."
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "Coverage closure: omit optional AdCOM Device.os/osv; os is an integer enum, not an OpenRTB 2.x string (pinned AdCOM df8ba06, Object: Device)."
     ],
     "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
     "notes": "synthesized-from-spec"
@@ -82,9 +83,7 @@
           "device": {
             "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
             "lang": "en",
-            "ip": "192.0.2.11",
-            "os": "Linux",
-            "osv": "6.1"
+            "ip": "192.0.2.11"
           }
         }
       }

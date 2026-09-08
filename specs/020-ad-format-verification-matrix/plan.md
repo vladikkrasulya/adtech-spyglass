@@ -30,3 +30,7 @@ Foundation contracts precede parallel corpus, oracle and browser work. Root owns
 ## Complexity Tracking
 
 No new framework or service. One original portable archive is retained outside the repository, with hash/provenance and extracted local assets in the test corpus. Normalized files keep individual cases reviewable.
+
+## Coverage closure — 2026-09-08
+
+Reopen the existing feature after the user rejected the remaining 52 pairwise gaps. First review applicability independently, then add source-grounded protocol/context/dialect, standalone-input and preview edge cases. Root owns preview fixtures, harness/report changes and integration; parallel authors own disjoint new fixture paths and ledger shards. Retain normative assertions when recording exact known deviations. Browser execution remains serial. Add a coverage regression guard, run focused layers and the complete audit/CI, regenerate matrices and the portable export, and reconcile completion against FR-010/SC-005.

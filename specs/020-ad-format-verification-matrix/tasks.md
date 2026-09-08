@@ -70,3 +70,17 @@ MVP is US1 validated without browser dependency, followed by US2 and US3. All th
 ## Phase 8: Pointer actionability follow-up
 
 - [x] T021 [US2] Stabilize real pointer coordinates in tests/corpus/lib/browser.js after the mobile reveal race exposed by the pre-push gate; retain actual mouse activation and all reveal assertions, verify the UX suite without screenshot timing, then run repository CI and complete delivery (FR-006, FR-007, FR-009).
+
+## Phase 9: Close enumerated coverage gaps
+
+- [x] T022 [US3] Review all remaining pairwise cells and protocol/context triples against source and product contracts; record applicability decisions and add a non-vacuous coverage regression guard (FR-010).
+- [x] T023 [P] [US1] Add attributed protocol/context/dialect fixtures and standalone request/response scenarios, with substantive assertions and exact ledger evidence for deviations (FR-002–FR-005, FR-010).
+- [x] T024 [P] [US2] Add missing creative kinds, empty/unrecognized/partial rendering and blocked-media scenarios; verify actual browser identity and state (FR-006, FR-010).
+- [x] T025 [US3] Run focused layers, full audit and required local CI; regenerate reports and portable corpus, review applicability/conformance/coverage, and prepare the verified scope and evidence for delivery (FR-008–FR-010).
+- [x] T026 [US1] Independently validate source properties in positive fixtures (AdCOM field types/Native nesting/context and VAST Inline identifiers), correct inherited fixture errors with provenance, and add tests/corpus-fixture-contract.test.js to the dedicated audit (FR-002, FR-005, FR-010).
+
+Dependency: T022 applicability review precedes T023/T024 decisions; fixture authors may inspect source examples in parallel. T025 requires T026, all new cases measured and the coverage guard passing. FR-010 maps to T022–T026.
+
+## Delivery of the completed implementation
+
+The operator must commit the verified scope, perform the standing-authorized non-force push, and wait for hosted checks before reporting delivery complete. The pre-push hook remains mandatory. These operational outcomes are recorded in `/home/vk/.local/share/ortbtools-research/2026-09-08-coverage-closure/delivery.json`, separately from the completed implementation tasks, so the committed report does not invent its own future commit SHA or hosted result.

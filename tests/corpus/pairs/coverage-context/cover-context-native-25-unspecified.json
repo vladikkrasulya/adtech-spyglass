@@ -1,0 +1,171 @@
+{
+  "kind": "pair",
+  "id": "cover-context-native-25-unspecified",
+  "title": "ortb-2.5 native: unspecified channel with matched auction, media and creative identity",
+  "format": "native",
+  "protocol": "ortb-2.5",
+  "context": "n/a",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "valid", "source-grounded", "ortb-2.5", "unspecified", "iab"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.5 BidRequest, distribution channel, Device, impression and bid objects",
+      "url": "https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf",
+      "version": "FINAL December 2016",
+      "license": "CC BY 3.0 (IAB field semantics); MIT (original fixture)",
+      "notes": "Context combination independently constructed from the normative object tables; no claim of a captured production example."
+    },
+    "modifications": [
+      "Adapted the original local bn-native-26-text-cta media/asset fixture into a ortb-2.5 unspecified auction.",
+      "Changed actual distribution-channel/device objects, matched request/response IDs and creative marker; assertions require the corresponding detected runtime contexts.",
+      "Use OpenRTB 2.x device.devicetype and language. Only 2.6 cases add rwdd and mtype markers; 2.5 cases omit newer fields.",
+      "All prices/floors/currencies, impression/item references, media constraints and required Native assets remain explicitly matched."
+    ],
+    "sanitized": "Original synthetic creatives and reserved .test resource hosts; TEST-NET device address where supplied. No customer payloads, personal identifiers or live advertising/tracking calls."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Matched auction and impression/item references; source archive identifies the reusable seed corpus, not this newly authored context variant."
+    },
+    "sourceIds": [
+      "banner-native:bn-native12",
+      "banner-native:bn-ortb26",
+      "banner-native:bn-ortb25"
+    ],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "cover-context-native-25-unspecified",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "native-slot",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "native": {
+          "ver": "1.2",
+          "request": "{\"ver\":\"1.2\",\"context\":1,\"plcmttype\":1,\"assets\":[{\"id\":31,\"required\":1,\"title\":{\"len\":90}},{\"id\":32,\"required\":1,\"data\":{\"type\":2,\"len\":140}},{\"id\":33,\"required\":1,\"data\":{\"type\":12,\"len\":20}},{\"id\":34,\"required\":1,\"data\":{\"type\":1,\"len\":30}}]}"
+        }
+      }
+    ]
+  },
+  "response": {
+    "id": "cover-context-native-25-unspecified",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "cover-context-native-25-unspecified-bid",
+            "impid": "native-slot",
+            "price": 1.25,
+            "adm": "{\"ver\":\"1.2\",\"assets\":[{\"id\":31,\"title\":{\"text\":\"C25 native unspecified\"}},{\"id\":32,\"data\":{\"value\":\"Read an original short guide and organize your next project.\"}},{\"id\":33,\"data\":{\"value\":\"Read the guide\"}},{\"id\":34,\"data\":{\"value\":\"Fixture Press\"}}],\"link\":{\"url\":\"https://advertiser.example.test/offer/bn-native-26-text-cta\"}}",
+            "adomain": ["advertiser.example.test"],
+            "crid": "cover-context-native-25-unspecified-creative"
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Primary context definitions: https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf (sections 3.2.1, 3.2.13, 3.2.14, 3.2.18 and 5.21). Site/App/Device are not mandatory for protocol validity.",
+    "The request deliberately omits the distribution channel and device. Detector contexts must be empty; optional-context guidance must not become a validation error.",
+    "The oracle asserts auction identity, offered impression/item resolution, matching currency and above-floor price, media/native/size semantics where applicable, and exact creative identity; these are not metadata-only copies.",
+    "IAB dialect is used without disabled rules.",
+    "The marker is newly authored and must be visible in the selected original bid. Existing reserved media URLs/controlled assets are retained; no media delivery or playback success is inferred from inert VAST text."
+  ],
+  "notes": [
+    "New coverage-closure case; normative expectations precede execution. Exact deviations are tracked separately after measured Core/HTTP/browser execution."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "version": "2.5"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "version": "2.5"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "cover-context-native-25-unspecified"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "C25 native unspecified",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": []
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-302",
+    "layers": ["core", "http", "browser"],
+    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "matches": {
+      "core": [
+        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua, request\\.no_site_or_app\\[error\\]@site/app$"
+      ],
+      "http": [
+        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua, request\\.no_site_or_app\\[error\\]@site/app$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device,\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua,\\ request\\.no_site_or_app\\[error\\]@site/app$"
+      ]
+    }
+  }
+}

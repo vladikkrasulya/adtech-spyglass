@@ -1,6 +1,6 @@
 # Ad format verification matrix
 
-Generated: 2026-09-08T06:45:32.832Z. Baseline: f840925baa8ed89ab4b41f7afd6fe92b5a85e57b.
+Generated: 2026-09-08T08:07:51.892Z. Baseline: dd0e7681a7d1db5bd5e52f48f68c377af7602727.
 
 Audit execution: **complete**. Product conformity across asserted cases: **not fully satisfied**.
 
@@ -8,19 +8,19 @@ A known gap is a reproducible unmet expectation, not a passing product check. No
 
 | Format | Qualified pairs | Provisional references | Standalone probes | Mutations |
 | ------ | --------------: | ---------------------: | ----------------: | --------: |
-| banner |              14 |                      0 |                 0 |        78 |
-| video  |              13 |                      0 |                 0 |         8 |
-| audio  |              11 |                      0 |                 1 |         2 |
-| native |              12 |                      0 |                 0 |         6 |
-| push   |               6 |                      1 |                 4 |         0 |
-| pop    |              12 |                      2 |                 1 |         1 |
-| inpage |              10 |                      0 |                 2 |         0 |
+| banner |              23 |                      0 |                 0 |        82 |
+| video  |              21 |                      0 |                 2 |        12 |
+| audio  |              20 |                      0 |                 2 |         4 |
+| native |              22 |                      0 |                 3 |         9 |
+| push   |               8 |                      1 |                 6 |         2 |
+| pop    |              13 |                      2 |                 3 |         4 |
+| inpage |              12 |                      0 |                 3 |         2 |
 
 | Layer   | Pass | Known gap | Fail | Skip | Not applicable | Missing |
 | ------- | ---: | --------: | ---: | ---: | -------------: | ------: |
-| core    |  105 |        76 |    0 |    0 |              3 |       0 |
-| http    |  104 |        80 |    0 |    0 |              0 |       0 |
-| browser |   94 |        89 |    0 |    0 |              1 |       0 |
+| core    |  151 |       102 |    0 |    0 |              3 |       0 |
+| http    |  150 |       106 |    0 |    0 |              0 |       0 |
+| browser |  140 |       115 |    0 |    0 |              1 |       0 |
 | ux      |    0 |        12 |    0 |    0 |              0 |       0 |
 | a11y    |   17 |         2 |    0 |    0 |              0 |       0 |
 
@@ -52,6 +52,58 @@ A known gap is a reproducible unmet expectation, not a passing product check. No
 | bn-banner-26-multiimp-multiseat                | banner / web     | ortb-2.6 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | known-gap      | DEF-201 |
 | bn-banner-26-pmp-multisize                     | banner / web     | ortb-2.6 / iab         | pair          | markup / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-104 |
 | bn-banner-30-adcom                             | banner / web     | ortb-3.0 / iab         | pair          | markup / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-105 |
+| cover-context-audio-25-ctv                     | audio / ctv      | ortb-2.5 / iab         | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-101 |
+| cover-context-audio-25-inapp                   | audio / inapp    | ortb-2.5 / ext-rtb     | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-101 |
+| cover-context-audio-25-unspecified             | audio / n/a      | ortb-2.5 / iab         | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-101 |
+| cover-context-audio-26-dooh                    | audio / dooh     | ortb-2.6 / iab         | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-101 |
+| cover-context-audio-26-unspecified             | audio / n/a      | ortb-2.6 / iab         | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-101 |
+| cover-context-audio-30-ctv                     | audio / ctv      | ortb-3.0 / iab         | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-context-audio-30-dooh                    | audio / dooh     | ortb-3.0 / iab         | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-100 |
+| cover-context-audio-30-unspecified             | audio / n/a      | ortb-3.0 / iab         | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-context-audio-30-web                     | audio / web      | ortb-3.0 / iab         | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-context-banner-25-ctv                    | banner / ctv     | ortb-2.5 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-context-banner-25-unspecified            | banner / n/a     | ortb-2.5 / iab         | pair          | markup / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-302 |
+| cover-context-banner-26-inapp                  | banner / inapp   | ortb-2.6 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-context-banner-26-unspecified            | banner / n/a     | ortb-2.6 / iab         | pair          | markup / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-302 |
+| cover-context-banner-30-ctv                    | banner / ctv     | ortb-3.0 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-context-banner-30-dooh                   | banner / dooh    | ortb-3.0 / iab         | pair          | markup / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-100 |
+| cover-context-banner-30-inapp                  | banner / inapp   | ortb-3.0 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-context-banner-30-unspecified            | banner / n/a     | ortb-3.0 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-context-native-25-ctv                    | native / ctv     | ortb-2.5 / iab         | pair          | native / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-context-native-25-unspecified            | native / n/a     | ortb-2.5 / iab         | pair          | native / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-302 |
+| cover-context-native-26-ctv                    | native / ctv     | ortb-2.6 / iab         | pair          | native / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-context-native-26-dooh                   | native / dooh    | ortb-2.6 / iab         | pair          | native / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-context-native-26-unspecified            | native / n/a     | ortb-2.6 / iab         | pair          | native / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-302 |
+| cover-context-native-30-ctv                    | native / ctv     | ortb-3.0 / iab         | pair          | native / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-151 |
+| cover-context-native-30-dooh                   | native / dooh    | ortb-3.0 / iab         | pair          | native / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-151 |
+| cover-context-native-30-inapp                  | native / inapp   | ortb-3.0 / iab         | pair          | native / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-151 |
+| cover-context-native-30-unspecified            | native / n/a     | ortb-3.0 / iab         | pair          | native / full / play:n/a             | known-gap      | known-gap | known-gap      | DEF-151 |
+| cover-context-push-26-inapp                    | push / inapp     | ortb-2.6 / ext-rtb     | pair          | native / partial / play:n/a          | pass           | pass      | pass           |         |
+| cover-context-video-25-ctv                     | video / ctv      | ortb-2.5 / iab         | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-context-video-25-inapp                   | video / inapp    | ortb-2.5 / ext-rtb     | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-context-video-25-unspecified             | video / n/a      | ortb-2.5 / iab         | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-302 |
+| cover-context-video-26-unspecified             | video / n/a      | ortb-2.6 / iab         | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-302 |
+| cover-context-video-30-ctv                     | video / ctv      | ortb-3.0 / iab         | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-context-video-30-dooh                    | video / dooh     | ortb-3.0 / iab         | pair          | vast / inert-text / play:no          | known-gap      | known-gap | known-gap      | DEF-100 |
+| cover-context-video-30-inapp                   | video / inapp    | ortb-3.0 / iab         | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-context-video-30-unspecified             | video / n/a      | ortb-3.0 / iab         | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-input-audio-response-only                | audio / n/a      | ortb-3.0 / iab         | response-only | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-input-inpage-request-only                | inpage / web     | ortb-2.5 / ext-rtb     | request-only  | n/a / n/a / play:n/a                 | pass           | pass      | pass           |         |
+| cover-input-native-request-only                | native / web     | ortb-2.6 / iab         | request-only  | n/a / n/a / play:n/a                 | pass           | pass      | pass           |         |
+| cover-input-native-response-only               | native / n/a     | ortb-2.6 / iab         | response-only | native / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-input-pop-request-only                   | pop / web        | ortb-2.5 / iab         | request-only  | n/a / n/a / play:n/a                 | pass           | pass      | pass           |         |
+| cover-input-pop-response-only                  | pop / n/a        | ortb-2.5 / iab         | response-only | url / inert-text / play:n/a          | pass           | pass      | pass           |         |
+| cover-input-push-request-only                  | push / web       | ortb-2.6 / iab         | request-only  | n/a / n/a / play:n/a                 | pass           | pass      | pass           |         |
+| cover-input-push-response-only                 | push / n/a       | ortb-2.5 / ext-rtb     | response-only | native / partial / play:n/a          | known-gap      | known-gap | known-gap      | DEF-460 |
+| cover-input-video-request-only                 | video / web      | ortb-2.6 / iab         | request-only  | n/a / n/a / play:n/a                 | pass           | pass      | pass           |         |
+| cover-input-video-response-only                | video / n/a      | ortb-2.6 / iab         | response-only | vast / inert-text / play:no          | pass           | pass      | pass           |         |
+| cover-vendor-banner-exads-json                 | banner / web     | jsonfeed / ext-rtb     | pair          | markup / empty / play:n/a            | known-gap      | known-gap | known-gap      | DEF-106 |
+| cover-vendor-inpage-exads-url                  | inpage / web     | url-request / ext-rtb  | pair          | push / partial / play:n/a            | known-gap      | known-gap | known-gap      | DEF-106 |
+| cover-vendor-inpage-openrtb26                  | inpage / web     | ortb-2.6 / inpage-push | pair          | push / partial / play:n/a            | known-gap      | known-gap | known-gap      | DEF-180 |
+| cover-vendor-native-kadam-json                 | native / n/a     | jsonfeed / ext-rtb     | response-only | native / partial / play:n/a          | known-gap      | known-gap | known-gap      | DEF-441 |
+| cover-vendor-native-kadam-url                  | native / web     | url-request / ext-rtb  | pair          | native / partial / play:n/a          | known-gap      | known-gap | known-gap      | DEF-441 |
+| cover-vendor-pop-openrtb26                     | pop / web        | ortb-2.6 / iab         | pair          | url / inert-text / play:n/a          | pass           | pass      | pass           |         |
+| cover-vendor-push-exads-url                    | push / web       | url-request / ext-rtb  | pair          | push / partial / play:n/a            | known-gap      | known-gap | known-gap      | DEF-106 |
 | inpage-exads-native-501                        | inpage / web     | ortb-2.5 / ext-rtb     | pair          | native / partial / play:n/a          | pass           | pass      | pass           |         |
 | inpage-exads-wrapper                           | inpage / web     | jsonfeed / ext-rtb     | pair          | push / partial / play:n/a            | known-gap      | known-gap | known-gap      | DEF-106 |
 | inpage-kadam-icon-notice                       | inpage / web     | jsonfeed / ext-rtb     | pair          | push / partial / play:n/a            | known-gap      | known-gap | known-gap      | DEF-107 |
@@ -127,6 +179,26 @@ A known gap is a reproducible unmet expectation, not a passing product check. No
 | price-invalid-negative                         | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-110 |
 | price-invalid-null                             | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | price-invalid-numeric-string                   | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-110 |
+| cover-preview-audio-no-bid                     | audio / web      | ortb-2.5 / iab         | pair          | empty / empty / play:n/a             | pass           | pass      | pass           |         |
+| cover-preview-audio-unidentified-inert         | audio / web      | ortb-2.5 / iab         | pair          | unidentified / inert-text / play:n/a | known-gap      | known-gap | known-gap      | DEF-194 |
+| cover-preview-banner-blocked-media             | banner / web     | ortb-2.5 / iab         | pair          | markup / partial / play:no           | pass           | pass      | pass           |         |
+| cover-preview-banner-json-inert                | banner / web     | ortb-2.5 / iab         | pair          | json / inert-text / play:n/a         | pass           | pass      | pass           |         |
+| cover-preview-banner-partial-image             | banner / web     | ortb-2.5 / iab         | pair          | markup / partial / play:n/a          | pass           | pass      | pass           |         |
+| cover-preview-banner-url-inert                 | banner / web     | ortb-2.5 / iab         | pair          | url / inert-text / play:n/a          | pass           | pass      | pass           |         |
+| cover-preview-inpage-blocked-media             | inpage / web     | ortb-2.5 / inpage-push | pair          | markup / partial / play:no           | pass           | pass      | pass           |         |
+| cover-preview-inpage-unidentified-inert        | inpage / web     | ortb-2.5 / inpage-push | pair          | unidentified / inert-text / play:n/a | pass           | pass      | pass           |         |
+| cover-preview-native-json-without-assets       | native / web     | ortb-2.6 / iab         | pair          | json / inert-text / play:n/a         | pass           | pass      | pass           |         |
+| cover-preview-native-no-bid                    | native / web     | ortb-2.6 / iab         | pair          | empty / empty / play:n/a             | pass           | pass      | pass           |         |
+| cover-preview-native-unidentified-inert        | native / web     | ortb-2.6 / iab         | pair          | unidentified / inert-text / play:n/a | pass           | pass      | pass           |         |
+| cover-preview-pop-markup-full                  | pop / web        | ortb-2.5 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-preview-pop-markup-partial-media         | pop / web        | ortb-2.5 / iab         | pair          | markup / partial / play:no           | pass           | pass      | pass           |         |
+| cover-preview-pop-unidentified-inert           | pop / web        | ortb-2.5 / iab         | pair          | unidentified / inert-text / play:n/a | pass           | pass      | pass           |         |
+| cover-preview-push-no-bid                      | push / web       | ortb-2.6 / ext-rtb     | pair          | empty / empty / play:n/a             | pass           | pass      | pass           |         |
+| cover-preview-push-unidentified-inert          | push / web       | ortb-2.6 / ext-rtb     | pair          | unidentified / inert-text / play:n/a | pass           | pass      | pass           |         |
+| cover-preview-video-html-full                  | video / web      | ortb-2.6 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |
+| cover-preview-video-html-partial               | video / web      | ortb-2.6 / iab         | pair          | markup / partial / play:n/a          | pass           | pass      | pass           |         |
+| cover-preview-video-no-bid                     | video / web      | ortb-2.6 / iab         | pair          | empty / empty / play:n/a             | pass           | pass      | pass           |         |
+| cover-preview-video-unidentified-inert         | video / web      | ortb-2.6 / iab         | pair          | unidentified / inert-text / play:n/a | pass           | pass      | pass           |         |
 | encoding-adm-base64-html                       | banner / web     | ortb-2.5 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |
 | encoding-adm-bom-prefixed-vast                 | video / web      | ortb-2.6 / iab         | pair          | vast / inert-text / play:no          | pass           | pass      | pass           |         |
 | encoding-adm-forged-postmessage                | banner / web     | ortb-2.5 / iab         | pair          | markup / full / play:n/a             | pass           | pass      | pass           |         |

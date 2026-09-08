@@ -14,6 +14,26 @@ const { FORMATS, PROTOCOLS, CONTEXTS } = require('./corpus/lib/schema');
 
 const fake = (id, meta) => ({ id, kind: 'pair', meta });
 
+test('axes: every required corpus cell and standard protocol/context triple has an executable case', () => {
+  const { loadCorpus } = require('./corpus/lib/load');
+  // This is a repository coverage gate even when a focused layer uses a filter.
+  const corpus = loadCorpus({ caseFilter: '', formatFilter: '' });
+  const built = axes.buildAxes(corpus.all);
+  const missing = built.tables.flatMap((table) =>
+    Object.entries(table.cells)
+      .filter(([, cell]) => cell.status === 'unverified')
+      .map(([key]) => `${table.title}: ${key}`),
+  );
+  missing.push(
+    ...built.triples
+      .filter((triple) => triple.status === 'applicable' && triple.cases.length === 0)
+      .map((triple) => `${triple.format} × ${triple.protocol} × ${triple.context}`),
+  );
+  assert.deepEqual(missing, [], `Required coverage disappeared:\n${missing.join('\n')}`);
+  // Presence above is deliberately distinct from conformance. The full audit
+  // separately requires a measured outcome for each case at all three layers.
+});
+
 test('axes: applicability rules follow the specifications and product contracts', () => {
   assert.equal(axes.protocolApplies('push', 'ortb-3.0').status, 'n/a');
   for (const format of ['banner', 'native']) {
@@ -27,12 +47,35 @@ test('axes: applicability rules follow the specifications and product contracts'
     assert.equal(axes.contextApplies(format, 'n/a').status, 'applicable');
   assert.equal(axes.contextApplies('video', 'dooh').status, 'applicable');
   assert.equal(axes.dialectApplies('banner', 'inpage-push').status, 'n/a');
-  assert.equal(axes.renderedApplies('video', 'full').status, 'unsupported');
+  assert.equal(axes.renderedApplies('video', 'full').status, 'applicable');
   assert.match(axes.renderedApplies('audio', 'partial').reason, /inert text by contract/);
   assert.equal(axes.mediaApplies('banner', 'yes').status, 'unsupported');
   assert.match(axes.mediaApplies('video', 'yes').reason, /media-src 'none'/);
   assert.equal(axes.previewKindApplies('pop', 'url').status, 'applicable');
   assert.equal(axes.previewKindApplies('audio', 'native').status, 'n/a');
+  assert.equal(axes.previewKindApplies('inpage', 'markup').status, 'applicable');
+  for (const format of ['push', 'inpage'])
+    assert.equal(axes.renderedApplies(format, 'inert-text').status, 'applicable');
+  for (const format of ['pop', 'inpage'])
+    assert.equal(axes.mediaApplies(format, 'no').status, 'applicable');
+});
+
+test('axes: standard context triples distinguish 2.5 extensions from AdCOM distribution channels', () => {
+  for (const format of ['banner', 'video', 'audio', 'native']) {
+    const oldDooh = axes.protocolContextApplies(format, 'ortb-2.5', 'dooh');
+    assert.equal(oldDooh.status, 'n/a');
+    assert.match(oldDooh.reason, /no standard top-level DOOH/);
+    for (const protocol of ['ortb-2.6', 'ortb-3.0'])
+      assert.equal(axes.protocolContextApplies(format, protocol, 'dooh').status, 'applicable');
+    for (const protocol of ['ortb-2.5', 'ortb-2.6', 'ortb-3.0']) {
+      assert.equal(axes.protocolContextApplies(format, protocol, 'ctv').status, 'applicable');
+      assert.equal(axes.protocolContextApplies(format, protocol, 'n/a').status, 'applicable');
+    }
+  }
+  const built = axes.buildAxes([]);
+  assert.equal(built.triples.length, 60, 'excluded standard triples remain visible');
+  assert.equal(built.triples.filter((cell) => cell.status === 'n/a').length, 4);
+  assert.match(axes.markdown(built), /ortb-2\.5 \| dooh \| — n\/a: OpenRTB 2\.5/);
 });
 
 test('axes: every format × column cell is classified and empty applicable cells read unverified', () => {
@@ -73,7 +116,7 @@ test('axes: every format × column cell is classified and empty applicable cells
   assert.equal(ctx.cells['native|dooh'].status, 'unverified');
   assert.equal(ctx.cells['banner|n/a'].status, 'unverified');
   const rendered = built.tables.find((t) => t.title === 'Format × rendered state');
-  assert.equal(rendered.cells['video|full'].status, 'unsupported');
+  assert.equal(rendered.cells['video|full'].status, 'unverified');
   assert.equal(rendered.cells['video|inert-text'].status, 'covered');
   const total =
     built.summary.covered +
@@ -241,7 +284,18 @@ test('axes: the committed corpus renders without unclassified cells', () => {
   for (const t of built.tables) {
     for (const cell of Object.values(t.cells)) {
       assert.ok(['covered', 'unverified', 'unsupported', 'n/a'].includes(cell.status));
+      if (cell.cases.length) {
+        assert.equal(cell.status, 'covered', `${t.title}: cases cannot occupy an excluded cell`);
+      }
     }
+  }
+  for (const triple of built.triples) {
+    if (triple.cases.length)
+      assert.equal(
+        triple.status,
+        'applicable',
+        'standard-context cases cannot occupy excluded triples',
+      );
   }
 });
 

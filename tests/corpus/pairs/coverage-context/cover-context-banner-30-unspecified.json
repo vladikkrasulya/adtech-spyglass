@@ -1,0 +1,193 @@
+{
+  "kind": "pair",
+  "id": "cover-context-banner-30-unspecified",
+  "title": "ortb-3.0 banner: unspecified channel with matched auction, media and creative identity",
+  "format": "banner",
+  "protocol": "ortb-3.0",
+  "context": "n/a",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "valid", "source-grounded", "ortb-3.0", "unspecified", "iab"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB AdCOM 1.0 context, Device, Dooh and placement/media objects; OpenRTB 3.0 envelope",
+      "url": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#requestcontext",
+      "version": "df8ba06de0ba77c82efee7a2dc832bd4968474d6",
+      "license": "CC BY 3.0 (IAB field semantics); MIT (original fixture)",
+      "notes": "Context combination independently constructed from the normative object tables; no claim of a captured production example."
+    },
+    "modifications": [
+      "Adapted the original local bn-banner-30-adcom media/asset fixture into a ortb-3.0 unspecified auction.",
+      "Changed actual distribution-channel/device objects, matched request/response IDs and creative marker; assertions require the corresponding detected runtime contexts.",
+      "Use AdCOM device.type and lang; omit optional OS rather than copying the incompatible OpenRTB 2.x string os. Inline audio/video/display markup is admitted via placement.admx=1.",
+      "All prices/floors/currencies, impression/item references, media constraints and required Native assets remain explicitly matched."
+    ],
+    "sanitized": "Original synthetic creatives and reserved .test resource hosts; TEST-NET device address where supplied. No customer payloads, personal identifiers or live advertising/tracking calls."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-3.0",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Matched auction and impression/item references; source archive identifies the reusable seed corpus, not this newly authored context variant."
+    },
+    "sourceIds": ["banner-native:bn-ortb30", "banner-native:bn-adcom"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "request": {
+        "id": "cover-context-banner-30-unspecified",
+        "test": 1,
+        "at": 2,
+        "tmax": 800,
+        "cur": ["USD"],
+        "item": [
+          {
+            "id": "item-display",
+            "qty": 1,
+            "flr": 0.5,
+            "flrcur": "USD",
+            "spec": {
+              "placement": {
+                "secure": 1,
+                "admx": 1,
+                "display": {
+                  "w": 300,
+                  "h": 250,
+                  "displayfmt": [
+                    {
+                      "w": 300,
+                      "h": 250
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "response": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "response": {
+        "id": "cover-context-banner-30-unspecified",
+        "cur": "USD",
+        "seatbid": [
+          {
+            "seat": "synthetic-seat-a",
+            "bid": [
+              {
+                "id": "cover-context-banner-30-unspecified-bid",
+                "item": "item-display",
+                "price": 1.25,
+                "media": {
+                  "ad": {
+                    "id": "cover-context-banner-30-unspecified-creative",
+                    "adomain": ["advertiser.example.test"],
+                    "secure": 1,
+                    "display": {
+                      "mime": "text/html",
+                      "w": 300,
+                      "h": 250,
+                      "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:300px;height:250px;overflow:hidden;font-family:Arial,sans-serif;background:#223b62}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#162d49;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"BANNER ADCOM\" role=\"img\" aria-label=\"BANNER ADCOM\"><img alt=\"BANNER ADCOM landscape\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjUwIiB2aWV3Qm94PSIwIDAgMzAwIDI1MCI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyNTAiIHJ4PSIxMiIgZmlsbD0iIzIyM2I2MiIvPjxjaXJjbGUgY3g9IjIyNS4wIiBjeT0iOTUuMCIgcj0iNjAuMCIgZmlsbD0iI2ZmZDE2NiIvPjxwYXRoIGQ9Ik0wIDI1MCBMMTQ0LjAgNzUuMCBMMzAwIDI1MCBaIiBmaWxsPSIjNTViNmE1Ii8+PHRleHQgeD0iMTIiIHk9IjIzMiIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4Ij5CQU5ORVIgQURDT008L3RleHQ+PC9zdmc+\"><span class=\"label\">C30 banner unspecified</span></div></body></html>"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "specNotes": [
+    "Primary context definitions: https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#requestcontext; device.type=3 is Connected TV (https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#list_devicetypes), whereas site/app/dooh identify the distribution channel.",
+    "The request deliberately omits the distribution channel and device. Detector contexts must be empty; optional-context guidance must not become a validation error.",
+    "The oracle asserts auction identity, offered impression/item resolution, matching currency and above-floor price, media/native/size semantics where applicable, and exact creative identity; these are not metadata-only copies.",
+    "IAB dialect is used without disabled rules.",
+    "The marker is newly authored and must be visible in the selected original bid. Existing reserved media URLs/controlled assets are retained; no media delivery or playback success is inferred from inert VAST text."
+  ],
+  "notes": [
+    "New coverage-closure case; normative expectations precede execution. Exact deviations are tracked separately after measured Core/HTTP/browser execution."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "version": "3.0"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "version": "3.0"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "openrtb.response.id",
+          "level": "ok",
+          "params": {
+            "id": "cover-context-banner-30-unspecified"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "openrtb.response.seatbid[0].bid[0].item",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "openrtb.response.seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.5000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "openrtb.response.seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.floor_currency_mismatch"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "C30 banner unspecified",
+      "limitation": null,
+      "capabilityGap": null,
+      "assets": {
+        "imgTotal": 1,
+        "imgLoaded": 1
+      }
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": []
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

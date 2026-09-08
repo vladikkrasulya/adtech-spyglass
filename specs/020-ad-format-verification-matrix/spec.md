@@ -33,6 +33,7 @@ Acceptance: generated case/layer matrix and machine-readable results; explicit s
 - **FR-007**: Check locale/theme/responsive/keyboard, loading/error/reset/reanalysis and source navigation; retain reproducible evidence and describe automation limits.
 - **FR-008**: Produce coverage matrix, verification report, defect ledger and separate cleanup backlog. Provide a single command for the complete audit and fail missing-browser prerequisites for that command.
 - **FR-009**: Run repository required checks; preserve product contracts and avoid unrelated runtime changes.
+- **FR-010**: Close every applicable unverified cell in the published pairwise axes with substantive, attributed cases and measured Core/HTTP/browser outcomes. Review the separately published protocol/context triples too. Correct an applicability rule only with documented specification or product-contract evidence; never reclassify a missing test merely to reduce the count. Keep contractual exclusions and reproduced product defects visible.
 
 ## Scope and assumptions
 
@@ -44,3 +45,4 @@ This deliverable is test infrastructure, source corpus and audit evidence. Produ
 - **SC-002**: Every executable case/layer has an explicit outcome; novel deviations, missing prerequisites and stale known gaps fail the dedicated audit.
 - **SC-003**: All admitted creative cases and 12 locale/theme/viewport scenarios have recorded browser outcomes.
 - **SC-004**: Every verified defect and cleanup item has affected behavior/path, evidence and a follow-up validation criterion; full CI outcome is recorded accurately.
+- **SC-005**: The final pairwise matrix has zero applicable unverified cells, every added case has complete measured outcomes, and an automated coverage guard fails if required coverage disappears. The portable corpus and reports include the added cases and distinguish the earlier representative run from this closure.

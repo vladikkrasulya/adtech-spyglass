@@ -21,7 +21,9 @@
       "All auction, bid, creative, site and publisher identifiers are synthetic.",
       "All domains use reserved .test names; device.ip is the documentation-only address 192.0.2.12.",
       "AdCOM VideoPlacement.mime/ctype/mindur/maxdur and the response Ad.video.mime/ctype/dur/adm field names are used exactly as defined by AdCOM 1.0 (video's own mime/ctype are distinct from the sibling Display object's singular-string mime).",
-      "reference.sourceIds cites banner-native:bn-ortb30 for the OpenRTB 3.0 transaction envelope (Item/Bid, request/response wrapper) — that record documents the envelope generically, not banner-specific content; the video-specific AdCOM Ad.video/VideoPlacement objects are cited separately via video-audio:va-adcom."
+      "reference.sourceIds cites banner-native:bn-ortb30 for the OpenRTB 3.0 transaction envelope (Item/Bid, request/response wrapper) — that record documents the envelope generically, not banner-specific content; the video-specific AdCOM Ad.video/VideoPlacement objects are cited separately via video-audio:va-adcom.",
+      "Coverage closure: omit optional AdCOM Device.os/osv; os is an integer enum, not an OpenRTB 2.x string (pinned AdCOM df8ba06, Object: Device).",
+      "Explicitly advertise inline markup support using Placement.admx=1 (pinned AdCOM df8ba06, Object: Placement)."
     ],
     "sanitized": "No production payload or PII used. All resource and tracking hosts end in .test; external network must remain blocked.",
     "notes": "synthesized-from-spec"
@@ -67,7 +69,8 @@
                   "playmethod": [2],
                   "w": 1280,
                   "h": 720
-                }
+                },
+                "admx": 1
               }
             }
           }
@@ -81,9 +84,7 @@
           "device": {
             "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
             "lang": "en",
-            "ip": "192.0.2.12",
-            "os": "Linux",
-            "osv": "6.1"
+            "ip": "192.0.2.12"
           }
         }
       }

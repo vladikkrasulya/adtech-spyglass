@@ -1,0 +1,106 @@
+{
+  "kind": "pair",
+  "id": "cover-vendor-inpage-exads-url",
+  "title": "EXADS inpage GET request with its original JSON bid wrapper",
+  "format": "inpage",
+  "protocol": "url-request",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "public-reference", "synthetic"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "EXADS inpage GET request with its original JSON bid wrapper",
+      "url": "https://docs.exads.com/docs/rtb-publishers/exads-rtb/bid-request/exads-rtb-publishers-request/",
+      "version": "accessed 2026-09-08",
+      "license": "MIT for independently authored fixture; public source field definitions referenced, no upstream prose or creative copied."
+    },
+    "modifications": [
+      "All identifiers, prices, creative text and URLs independently authored. Reserved .test domains and TEST-NET addresses replace live values.",
+      "New closure fixture. The archive hash records the earlier corpus family provenance, not membership of this newly authored case in that archive."
+    ],
+    "sanitized": "Only synthetic IDs, fixture access keys, TEST-NET 192.0.2.44 and reserved .test domains; no visitor traffic or live requests."
+  },
+  "reference": {
+    "wireProtocol": "url-request",
+    "vendorDialect": "inpage",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "vendor-request-response",
+      "note": "An independently authored vendor wire example; not an OpenRTB auction pair."
+    },
+    "sourceIds": ["feeds:feeds-exads-request", "feeds:feeds-exads-response"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "specNotes": [
+    "EXADS documents this GET type explicitly under Bid request GET: URL; all mandatory request fields and a synthetic idzone/fid are present.",
+    "The corresponding JSON response retains bid.imgUrl, clickUrl, nUrl, title, description, btype and value. Response source: https://docs.exads.com/docs/rtb-publishers/exads-rtb/bid-response/exads-rtb-publishers-response/",
+    "GET decoding and documented vendor format identification are capability expectations. No endpoint is called and no CPC/CPM conversion is inferred."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "http": {
+      "status": 200
+    },
+    "request": {
+      "maxLevel": "warning",
+      "type": "URL Request"
+    },
+    "format": {
+      "formats": ["inpage"]
+    },
+    "preview": {
+      "kind": "push",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A quiet reading corner",
+      "limitation": "The initial sealed preview blocks remote artwork.",
+      "capabilityGap": "The documented EXADS bid wrapper is not a top-level push material."
+    }
+  },
+  "request": "https://feed.example.test/rtb.php?idzone=730001&fid=synthetic-coverage-feed-key&id=cover-vendor-inpage-exads-url&ip=192.0.2.44&language=en&type=in_page_push_notification&ua=Mozilla%2F5.0+%28X11%3B+Linux+x86_64%29+AppleWebKit%2F537.36+Chrome%2F124.0.0.0+Safari%2F537.36&url=https%3A%2F%2Fpublisher.example.test%2Fcoverage&user_id=synthetic-coverage-user&sub=730001&export=json&size=192x192",
+  "response": {
+    "bid": {
+      "id": "cover-vendor-inpage-exads-url",
+      "imgUrl": "https://assets.example.test/coverage/inpage-192x192.png",
+      "clickUrl": "https://advertiser.example.test/coverage/inpage",
+      "nUrl": "https://tracking.example.test/coverage/inpage",
+      "title": "A quiet reading corner",
+      "description": "An original offline creative for the coverage audit.",
+      "btype": 1,
+      "value": 0.012
+    }
+  },
+  "knownGap": {
+    "id": "DEF-106",
+    "layers": ["core", "http", "browser"],
+    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "matches": {
+      "core": [
+        "^request: findings above warning: request\\.url\\.no_decoder\\[error\\]@$",
+        "^response: findings above warning: payload\\.unknown_type\\[error\\]@$",
+        "^format\\.formats: expected \\[inpage\\], got \\[\\]$"
+      ],
+      "http": [
+        "^request: findings above warning: request\\.url\\.no_decoder\\[error\\]@$",
+        "^response: findings above warning: payload\\.unknown_type\\[error\\]@$",
+        "^format\\.formats: expected \\[inpage\\], got \\[\\]$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ reading\\ corner\"\\ absent$"
+      ]
+    }
+  }
+}

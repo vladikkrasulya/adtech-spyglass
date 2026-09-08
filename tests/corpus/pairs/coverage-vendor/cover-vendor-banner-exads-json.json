@@ -1,0 +1,115 @@
+{
+  "kind": "pair",
+  "id": "cover-vendor-banner-exads-json",
+  "title": "EXADS banner JSON POST and image/click bid wrapper",
+  "format": "banner",
+  "protocol": "jsonfeed",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "public-reference", "synthetic"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "EXADS banner JSON POST and image/click bid wrapper",
+      "url": "https://docs.exads.com/docs/rtb-publishers/exads-rtb/bid-request/exads-rtb-publishers-request/",
+      "version": "accessed 2026-09-08",
+      "license": "MIT for independently authored fixture; public source field definitions referenced, no upstream prose or creative copied."
+    },
+    "modifications": [
+      "All identifiers, prices, creative text and URLs independently authored. Reserved .test domains and TEST-NET addresses replace live values.",
+      "New closure fixture. The archive hash records the earlier corpus family provenance, not membership of this newly authored case in that archive."
+    ],
+    "sanitized": "Only synthetic IDs, fixture access keys, TEST-NET 192.0.2.44 and reserved .test domains; no visitor traffic or live requests."
+  },
+  "reference": {
+    "wireProtocol": "jsonfeed",
+    "vendorDialect": "banner",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "vendor-request-response",
+      "note": "An independently authored vendor wire example; not an OpenRTB auction pair."
+    },
+    "sourceIds": ["feeds:feeds-exads-request", "feeds:feeds-exads-response"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "specNotes": [
+    "EXADS Request Banner: JSON requires id/ip/language/type/ua/url/user_id/export and size. sub uses six digits despite the shorter value in the upstream example.",
+    "EXADS Response Banner: JSON carries bid.imgUrl, clickUrl, nUrl, btype and value; btype=1 denotes CPM. Preserve this wrapper and separate the landing URL from win-notice URL.",
+    "Response source: https://docs.exads.com/docs/rtb-publishers/exads-rtb/bid-response/exads-rtb-publishers-response/",
+    "No auction crosscheck applies to this proprietary object pair. Native/Push aliases are not substituted to make the product recognize it.",
+    "A conforming sealed image-only preview has no visible artwork: expected markup/empty records blocked artwork without inventing visible pixels. The absent vendor-wrapper renderer remains a separate preview capability gap."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "http": {
+      "status": 200
+    },
+    "request": {
+      "maxLevel": "warning"
+    },
+    "format": {
+      "formats": ["banner"]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "limitation": "Only remote artwork is supplied; the sealed preview blocks it, leaving no visible body or identity.",
+      "capabilityGap": "The documented EXADS bid wrapper needs image/click preview support."
+    }
+  },
+  "request": {
+    "id": "cover-vendor-banner-exads-json",
+    "ip": "192.0.2.44",
+    "language": "en",
+    "type": "banner",
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+    "url": "https://publisher.example.test/coverage",
+    "user_id": "synthetic-coverage-user",
+    "sub": 730001,
+    "export": "json",
+    "size": "300x250"
+  },
+  "response": {
+    "bid": {
+      "id": "cover-vendor-banner-exads-json",
+      "imgUrl": "https://assets.example.test/coverage/exads-banner-300x250.png",
+      "clickUrl": "https://advertiser.example.test/coverage/exads-banner",
+      "nUrl": "https://tracking.example.test/coverage/exads-banner",
+      "btype": 1,
+      "value": 1.25
+    }
+  },
+  "knownGap": {
+    "id": "DEF-106",
+    "layers": ["core", "http", "browser"],
+    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "matches": {
+      "core": [
+        "^request: findings above warning: payload\\.unknown_type\\[error\\]@$",
+        "^response: findings above warning: payload\\.unknown_type\\[error\\]@$",
+        "^format\\.formats: expected \\[banner\\], got \\[\\]$"
+      ],
+      "http": [
+        "^request: findings above warning: payload\\.unknown_type\\[error\\]@$",
+        "^response: findings above warning: payload\\.unknown_type\\[error\\]@$",
+        "^crosscheck: expected no crosscheck findings, got crosscheck\\.no_request\\[crit\\]@req$",
+        "^format\\.formats: expected \\[banner\\], got \\[\\]$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^browser\\.crosscheck:\\ expected\\ no\\ crosscheck\\ findings,\\ got\\ crosscheck\\.no_request\\[crit\\]@req$",
+        "^browser\\.format\\.formats:\\ expected\\ \\[banner\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ markup,\\ got\\ empty$"
+      ]
+    }
+  }
+}

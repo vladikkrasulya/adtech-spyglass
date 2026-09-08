@@ -1,0 +1,94 @@
+{
+  "kind": "pair",
+  "id": "cover-input-native-response-only",
+  "title": "native: independently analyze the response without the opposite auction side",
+  "format": "native",
+  "protocol": "ortb-2.6",
+  "context": "n/a",
+  "dialect": "iab",
+  "scenario": "response-only",
+  "tags": ["coverage-closure", "standalone-input"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB Native 1.2 — markup objects and social clickout example",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "version": "dd45d0733d96710981541ea213f4452952f41c40",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "Remove the request from bn-native-26-text-cta; no auction relation may be invented from an absent side."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "response-only-reference",
+      "note": "The opposite auction side is deliberately absent; validation remains meaningful and crosscheck must be empty."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "response": {
+    "id": "bn-native-26-text-cta",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "bn-native-26-text-cta-bid",
+            "impid": "native-slot",
+            "price": 1.25,
+            "adm": "{\"ver\":\"1.2\",\"assets\":[{\"id\":31,\"title\":{\"text\":\"An illustrated guide to better notes\"}},{\"id\":32,\"data\":{\"value\":\"Read an original short guide and organize your next project.\"}},{\"id\":33,\"data\":{\"value\":\"Read the guide\"}},{\"id\":34,\"data\":{\"value\":\"Fixture Press\"}}],\"link\":{\"url\":\"https://advertiser.example.test/offer/bn-native-26-text-cta\"}}",
+            "adomain": ["advertiser.example.test"],
+            "crid": "bn-native-26-text-cta-bid-creative",
+            "mtype": 4
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "The Inspector/API accept either auction side independently. Apply validation to the submitted side and do not manufacture auction matches, floors or required-asset comparisons from the absent side.",
+    "Preview expectation is retained only for a submitted response. The body and public-source provenance come from bn-native-26-text-cta."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "An illustrated guide to better notes",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": []
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

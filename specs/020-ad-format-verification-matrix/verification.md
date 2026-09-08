@@ -1,97 +1,82 @@
-# Verification: ad format matrix
+# Verification: ad format matrix — coverage closure
 
-The final integrated audit completed on 2026-09-08: **184 corpus scenarios, 12 locale/theme/viewport journeys and 19 accessibility/state scenarios**, with no unexpected failures, missing observations or browser skips. All eight phases exited 0 without retries. Execution is complete; product conformance is not: `auditComplete: true`, `productConformant: false`. Known gaps preserve unmet expectations and are never counted as passing product checks.
+The coverage-closure audit completed on 2026-09-08: **256 scenarios, 160/160 applicable pairwise cells and 56/56 applicable standard protocol/context triples**, with zero unverified cells, unexpected failures, missing observations or browser skips. All nine phases exited 0 without retries. `auditComplete: true`; `productConformant: false`. Reproduced product gaps remain unmet expectations, not passing product checks.
 
-## Reproduction and evidence
+This supersedes the earlier 184-case representative run. The user's objection to its 52 remaining cells reopened this feature. Applicability review exposed six additional genuine gaps and corrected an already exercised inpage cell; 72 new cases now close the resulting set. See [the applicability review](coverage-closure-review.md). Nine pairwise states remain excluded by product contract, 48 are outside the documented projections, and four standard OpenRTB 2.5 × DOOH triples are N/A. The curated body-kind axes are bounded robustness coverage; their exclusions do not claim other malformed bodies are impossible.
 
-Product baseline: `f840925baa8ed89ab4b41f7afd6fe92b5a85e57b` plus this feature's test, script and documentation changes. App 1.19.4, Core 0.38.0, CLI 0.1.3; Node v22.23.2, Chrome/151.0.7922.137. No product code, dependencies, public contracts or production deployment changed.
+## Reproduction and measured outcomes
+
+Product state: `dd0e7681a7d1db5bd5e52f48f68c377af7602727` plus this test/corpus/documentation scope. App 1.19.4, Core 0.38.0, CLI 0.1.3; Node v22.23.2, Chrome/151.0.7922.137. Runtime code, dependencies, public contracts and deployed production are unchanged.
 
 ```sh
-CORPUS_REPORT_DIR=/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/runs npm run test:corpus
+CORPUS_REPORT_DIR=/home/vk/.local/share/ortbtools-research/2026-09-08-coverage-closure/runs npm run test:corpus
 npm run ci
 ```
 
-Final run: `2026-09-08T06:39:19.394Z`–`2026-09-08T06:45:32.753Z`. The [persistent report directory](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/runs/ortbtools-audit-8nihgL) contains `run.json`, `report.json`, per-layer JSONL, `ux-a11y-findings.json`, generated matrices and 234 screenshots. Evidence is from isolated local servers and Chromium, not from production or live ad delivery. The checked-in [case matrix](coverage-matrix.md) and [coverage axes](coverage-axes.md) are copied from this measured run.
+The [measured run](/home/vk/.local/share/ortbtools-research/2026-09-08-coverage-closure/runs/ortbtools-audit-77LxpT) ran from `2026-09-08T07:59:40.610Z` to `2026-09-08T08:07:51.802Z`. It contains `run.json`, `report.json`, per-layer JSONL, `ux-a11y-findings.json`, both generated matrices and **301 screenshots**. The [case matrix](coverage-matrix.md) and [axes](coverage-axes.md) are copied from these observations. All execution used isolated local servers and offline assets.
 
 | Layer   | Pass | Known gap | Not applicable | Unexpected failure | Skipped / missing |
 | ------- | ---: | --------: | -------------: | -----------------: | ----------------: |
-| core    |  105 |        76 |              3 |                  0 |             0 / 0 |
-| http    |  104 |        80 |              0 |                  0 |             0 / 0 |
-| browser |   94 |        89 |              1 |                  0 |             0 / 0 |
+| core    |  151 |       102 |              3 |                  0 |             0 / 0 |
+| http    |  150 |       106 |              0 |                  0 |             0 / 0 |
+| browser |  140 |       115 |              1 |                  0 |             0 / 0 |
 | ux      |    0 |        12 |              0 |                  0 |             0 / 0 |
 | a11y    |   17 |         2 |              0 |                  0 |             0 / 0 |
 
-Three Core cases are inapplicable because lexical JSON parsing or the HTTP body limit precedes the data-to-data API. The single browser exception is the oversized HTTP-envelope probe: it tests the server's transport cap independently of the Inspector editor. Every other browser case executes. The 12 UX journeys reproduce DEF-200 and DEF-205; the accessibility/state catalogue has 17 passing scenarios and two known gaps (DEF-260 and the existing all-bid limitation DEF-201).
+Of the **72 additional scenarios, 46 pass and 26 reproduce known deviations on each of Core, HTTP and browser**. All have exactly one outcome per layer. The full corpus has three Core N/A cases for lexical JSON/HTTP-envelope rejection and one browser N/A case for the oversized HTTP-envelope probe. These are explicit transport boundaries, not skipped checks. All other 255 browser cases execute.
 
-| Phase                                  | Exit | Seconds |
-| -------------------------------------- | ---: | ------: |
-| `tests/corpus-lib.test.js`             |    0 |     0.3 |
-| `tests/corpus-report.test.js`          |    0 |     0.7 |
-| `tests/corpus-axes.test.js`            |    0 |     0.2 |
-| `tests/corpus-core.test.js`            |    0 |     0.4 |
-| `tests/corpus-http.test.js`            |    0 |     1.4 |
-| `tests/corpus-browser.test.js`         |    0 |   252.7 |
-| `tests/corpus-ux-browser.test.js`      |    0 |    74.2 |
-| `tests/corpus-ux-a11y-browser.test.js` |    0 |    43.5 |
+| Phase                                   | Exit | Seconds |
+| --------------------------------------- | ---: | ------: |
+| `tests/corpus-lib.test.js`              |    0 |     0.3 |
+| `tests/corpus-report.test.js`           |    0 |     0.7 |
+| `tests/corpus-axes.test.js`             |    0 |     0.3 |
+| `tests/corpus-fixture-contract.test.js` |    0 |     0.7 |
+| `tests/corpus-core.test.js`             |    0 |     0.4 |
+| `tests/corpus-http.test.js`             |    0 |     1.6 |
+| `tests/corpus-browser.test.js`          |    0 |   369.1 |
+| `tests/corpus-ux-browser.test.js`       |    0 |    74.2 |
+| `tests/corpus-ux-a11y-browser.test.js`  |    0 |    43.8 |
 
-The first three phases run 45 harness, report and applicability tests. They exercise exact known-gap matching/retirement, required scenario coverage, unknown/duplicate/missing records and the separation of observed coverage from product conformance. A missing Chromium executable fails the dedicated command. Fresh run directories and no automatic retry prevent stale observations or hidden reruns from satisfying this audit.
+The axes gate rejects any reopened applicable cell or standard triple even when a focused run uses a case filter. Known-gap guards reject new failure signatures and already-fixed deviations. The new independent fixture-contract tests reject common source-data mistakes without consulting Core's validator output. A missing usable Chromium fails the dedicated audit.
 
-## Corpus and portable file
+## Source corpus and single-file delivery
 
-The [single portable JSON](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/ad-format-corpus.json) contains **89 base examples and 95 materialized mutations**, with request/response bodies, raw lexical inputs where relevant, expectations, source attribution, adaptations, the 42-group ledger, 25 public source records and 77 embedded offline assets. It is 10,227,773 bytes; SHA-256: `07c7a60797288a444af5d84a88ba44b7cce5a27e95d3016eec4b51f3ab8e78f4`. The adjacent `.sha256` file permits integrity checking.
+[Download the portable JSON](/home/vk/.local/share/ortbtools-research/2026-09-08-coverage-closure/ad-format-corpus.json): **141 base examples and 115 materialized mutations = 256 cases**. It includes requests/responses, raw lexical inputs, expectations, provenance/adaptations, 44 ledger groups, 25 source-catalog records plus case-level references, and 77 embedded offline assets. Size: 10,836,348 bytes. SHA-256: `9fef49188de1af40495bd1276169b58d9c8e0a0fb785b06566ebc3d782b779ec`. The adjacent `.sha256` file verifies the artifact; `export-corpus.cjs` beside it reproduces the export from the normalized corpus and original asset archive.
 
 | Format | Qualified pairs | Provisional pairs | Standalone probes | Mutations |
 | ------ | --------------: | ----------------: | ----------------: | --------: |
-| banner |              14 |                 0 |                 0 |        78 |
-| video  |              13 |                 0 |                 0 |         8 |
-| audio  |              11 |                 0 |                 1 |         2 |
-| native |              12 |                 0 |                 0 |         6 |
-| push   |               6 |                 1 |                 4 |         0 |
-| pop    |              12 |                 2 |                 1 |         1 |
-| inpage |              10 |                 0 |                 2 |         0 |
+| banner |              23 |                 0 |                 0 |        82 |
+| video  |              21 |                 0 |                 2 |        12 |
+| audio  |              20 |                 0 |                 2 |         4 |
+| native |              22 |                 0 |                 3 |         9 |
+| push   |               8 |                 1 |                 6 |         2 |
+| pop    |              13 |                 2 |                 3 |         4 |
+| inpage |              12 |                 0 |                 3 |         2 |
 
-The minimum is satisfied for all seven formats: 78 qualified pairs in total, plus three provisional Adon3 pairs and eight standalone probes. “89 base examples” does not mean 89 request/response pairs. Cases are synthetic adaptations of cited public specifications, vendor documentation and public adapter examples, not captured customer traffic. Source versions, license notes, redactions and adaptations are preserved. In-page widget carriers remain explicitly non-IAB shapes; their missing standard media object must still be rejected by baseline IAB validation.
+Every format has at least five qualified request/response pairs. There are 119 qualified pairs, three provisional Adon3 pairs and 19 standalone examples; base-case count is not pair count. Source placement intent remains distinct from detectable wire carrier (for example EXADS push/inpage using Native). No customer traffic or live ads are used. The original 38-case source archive and the earlier 184-case delivery remain retained separately; this file supersedes neither artifact's historical bytes.
 
-Mutations cover commercial conditions (12), identity (10), multiplicity (12), format mismatch (9), media (9), field shape (15), encoding/limits (15) and input shape (13). This is representative coverage; proprietary push/inpage negative schemas and many cross-product combinations remain unverified. OpenRTB 3.0 includes banner, video, audio and corrected structured Native probes; DOOH includes banner and video; DAAST includes request negotiation and inline audio probes. The matrices name applicability and remaining coverage.
+Normal tests use 65 stored assets. Twelve media bodies remain embedded only in the private portable archives with `stored: false` repository manifest entries; the interceptor returns unavailable instead of making live requests. No successful playback or asset-loading claim depends on these absent bodies. Deliberately blocked new resource URLs need no fetched image/video bytes.
 
-The original 38-case archive remains [available separately](/home/vk/.local/share/ortbtools-research/2026-09-07-codex-corpus/ad-format-corpus.json), SHA-256 `b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7`. Normal repository runs use normalized fixtures and 65 stored assets. Twelve media bodies are embedded in the private portable archives, with integrity metadata and `stored: false` manifest entries in the repository; the interceptor reports these unavailable instead of contacting a network. The current preview policy forbids media playback, so no successful rendering assertion relies on unavailable media bytes.
+## Independent source checks
 
-## Creative, UI/UX and accessibility evidence
+The new `tests/corpus-fixture-contract.test.js` has 19 source-property and negative-control tests. It checks 98 positive standard contexts and 21 AdCOM cases, including field types, actual context/metadata agreement, structured Native nesting/required assets and VAST 4.1/4.2 Inline serving identifiers. Checks run even with nonmatching corpus filters. This selected property guard is independent of product validation and is not an exhaustive OpenRTB schema certificate.
 
-Browser checks perform the actual Analyze action and transaction, inspect visible findings and crosscheck rows, reveal creatives, measure loaded/visible images, and verify identity through visible text or a decoded image source. Original bid/seat indices are preserved; absent selection controls are reported rather than simulated by reordering payloads. Each observed bid has one record, including an explicit identity explanation for a declared empty render or deliberately blank inert input. VAST text visibility, media readiness and actual playback are distinct; sandbox refusals are admitted only through fixed popup/navigation refusal classifiers. CSP remains unchanged.
+A separate [pinned XSD check](/home/vk/.local/share/ortbtools-research/2026-09-08-coverage-closure/vast-source-validation/final-results.json) validated **45/45 positive VAST documents** with `xmllint`, including the Native `video.vasttag`. Exact XML, schemas, hashes and the reproduction script are retained alongside the results. Schema revision: IAB VAST `e0858cd714474bf17ef61065097456d7643ff838`.
 
-The 12 UX journeys cover EN/UK/RU × light/dark × desktop/mobile, including keyboard analysis, loading, source navigation, reset/reanalysis, network failure, structured 429 and clean input following duplicate-key JSON. The 19 additional scenarios cover four viewport sizes, two contrast themes, accessible names, keyboard order/actions, empty/unsupported/request-only/response-only/partial/warning/error/large-JSON states and two scaling probes. Ten visible alpha-composited contrast samples pass their unrounded thresholds; they are samples, not a complete contrast or WCAG certification. Device scale 2 and CSS scale 150% are measured explicitly and are not represented as actual browser zoom.
+Source review corrected four inherited AdCOM fixtures (optional OS string fields, Audio MIME array, explicit video markup capability), six copies of an incomplete VAST 4.1 Inline body, and three older VAST element-order/required-attribute errors. Each correction has fixture provenance. These corrections repair test evidence; they are not counted as product fixes.
 
-Independent screenshot review confirms that desktop and mobile controls remain visible and the representative banner is revealed. It also records mobile tab-edge clipping and stacked notifications over findings as qualitative usability follow-ups. DEF-260 is independently verified through Chromium's accessibility tree: the rendered frame is exposed but has an empty accessible name. Automated names/focus/contrast checks do not replace real screen-reader or user testing.
+## Creative and UI/UX evidence
 
-## Findings and cleanup
+The browser uses the real Analyze POST, checks displayed findings and crosscheck rows, reveals the selected creative through a real pointer action, and verifies visible identity and loaded assets. New probes include standalone inputs, no-bid/empty/unidentified/JSON/URL bodies, full and partial markup, and blocked images/media. Original bid/seat indices remain intact; unsupported later-bid selection stays visible as DEF-201. VAST is measured as inert text; frame existence and media readiness never count as playback.
 
-The [defect report](defects.md) describes **42 ledger groups**, including validation/API defects, vendor support gaps, preview limitations and a provisional reference group. These are not 42 interchangeable confirmed IAB bugs. Exact per-case/layer signatures live in `tests/corpus/known-gaps.json`, its shards and fixture metadata. New deviations fail; disappearance of a recorded deviation requires deliberate retirement.
+The 12 locale/theme/viewport journeys reproduce DEF-200 and DEF-205 across EN/UK/RU, light/dark, desktop/mobile. The 19 accessibility/state scenarios have 17 passing outcomes and two known gaps (DEF-260 unnamed iframe and DEF-201 later-bid selection). They include accessible names, keyboard actions, ten visible composited contrast samples, overflow, large input, device scale and CSS scaling. They do not certify actual browser zoom, screen-reader usage or complete WCAG conformance.
 
-Priority follow-ups include price/floor/deal and format-selection errors, malformed-input failures, stale results after structured HTTP errors (DEF-200), stale lexical input after repasting (DEF-205), unavailable later bids (DEF-201), and the unnamed creative iframe (DEF-260). The empty first bid array now independently reproduces DEF-204 before the Analyze POST. Scalar/array root rejections are correctly explained preflight paths and are not mistaken for that TypeError defect.
+Visual review of the new video-HTML and pop partial previews confirms visible creative labels, blocked artwork and resource-refusal notices. One additional qualitative UX observation remains: the video/HTML mismatch shows a clean validation headline while the separate Crosscheck tab reports a warning. Clarifying which checks the headline summarizes merits follow-up; this is an observation rather than a new counted protocol defect. Earlier mobile tab clipping and notification overlays remain documented qualitative follow-ups.
 
-The separate [cleanup backlog](cleanup-backlog.md) contains 23 consolidated items across functional behavior, capabilities, UI/UX and refactoring, plus ten retained architecture proposals. It records affected paths, evidence, priority, proposed changes and regression criteria. Preliminary proposals and projection-only observations are labeled; public finding IDs and exports must retain compatibility. Product fixes and cleanup implementation are separate follow-up scope.
+## Defects, cleanup and delivery gates
 
-## Review and repository gates
+The [defect report](defects.md) now has **44 groups**, including two new detection/vendor capabilities: DEF-441 (literal Kadam Native feed) and DEF-460 (standalone Native body without optional mtype). Context and carrier variants of existing defects were consolidated, preserving exact per-case/layer failures. The [cleanup backlog](cleanup-backlog.md) remains separate: 23 consolidated items plus ten retained architecture proposals. This audit does not implement those product fixes or refactors.
 
-Before final acceptance, source review corrected several invalid test assumptions: grouped seats need not cover every impression; Site/App/Device presence is recommended rather than mandatory; Native 1.2 permits object exchange by agreement; duplicate Bid IDs are not asserted to violate a nonexistent uniqueness rule; structured AdCOM Native uses the documented nesting. Retired DEF-193/196 and merged DEF-199 are documented in the ledger report. The blank creative and root-shape harness checks now distinguish absent identity, explained preflight rejection and actual runtime crashes.
+The dedicated audit, focused checks, source validation, lint and typecheck have passed. The initial repository CI found an invalid authored status label in spec.md; that diagnostic run was stopped, the status changed to the allowed `Verification` value, and the focused Spec Kit contract suite passed. The initial failure is retained in `ci-initial-doc-status.log`, not counted as successful CI. The final `npm run ci` exited 0 without runner retries: 161 nonbrowser and 25 browser files, 4,057 tests/subtests, 3,846 passes, 208 expected-failure markers and three explicit Core transport skips; zero unexpected failures or cancellations. `ci.log` and `ci-summary.json` retain the exact results. Final convergence found no unbuilt work across ten functional requirements, five success criteria, three user stories and eight governing principles; tasks.md stayed byte-for-byte unchanged during that assessment. Normal completion bookkeeping follows it. Commit, mandatory pre-push CI and hosted checks are the remaining operational delivery steps; final completion is reported only after their results are recorded. Evidence belongs under `/home/vk/.local/share/ortbtools-research/2026-09-08-coverage-closure`. The delivery receipt records final commit, clean-remote agreement and hosted CI separately from the measured working-tree baseline above.
 
-The diagnostic integrated run `ortbtools-audit-9fSncA` is retained with its nine unexpected browser failures. Review separated two expected root-shape rejections, a missing blank-input identity contract, and exact browser manifestations of existing product gaps. A focused ten-case rerun passed before the final full run above; no runtime fix or weakened normative finding was used to make the audit green. DEF-302 signatures were narrowed to exact aggregate findings so an unrelated error cannot be hidden by a wildcard.
-
-Final `npm run ci` after the pointer correction exited 0 without retries: formatting, lint, typechecking and coverage-enabled tests passed across 160 nonbrowser and 25 browser files. The runner reported 3,768 tests/subtests: 3,609 passed, 156 known-gap expected-failure markers and three explicitly nonapplicable Core transport skips; zero failures or cancellations. The [final CI summary](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/ci-pointer-final-summary.json) and `ci-pointer-final.log` retain the evidence. Runner counts are not unique payload counts. Earlier unsuccessful delivery attempts and their diagnosis are described below; they do not replace the final successful gate.
-
-The source-control guard previously found a literal BOM in `encoding-adm-bom-prefixed-vast.json`. It was replaced by a visible Unicode escape, with parsed JSON equality asserted. This changes the source representation only: the tested payload and portable archive are unchanged. The diagnosed initial run is retained in `ci-initial.log` / `ci-initial-outcome.json`.
-
-Final convergence, including the pointer follow-up, checked nine functional requirements, four success criteria, three user stories, seven plan decisions and eight governing principles. No buildable gaps remained and no convergence tasks were appended. During assessment tasks.md stayed byte-for-byte unchanged (SHA-256 `080d9efc98c5ddecaac0fd0b0d7062e8bf9098e84ab53c82a530aa9c175d1f52`). Normal completion bookkeeping closes T020/T021 and updates the feature records; product fixes and cleanup implementation remain follow-up scope. Documentation/governance checks are repeated on the closed records. The pre-push gate reruns local CI; hosted CI independently owns package and Docker smoke, with exact-SHA outcomes retained in the delivery evidence. The earlier 81-case first-pass report is retained as [historical evidence](/home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/verification-before-final.md) and does not describe current counts.
-
-Remaining combinations and complementary existing suites are listed in [coverage-inventory.md](coverage-inventory.md). This audit does not certify arbitrary payloads, every custom dialect/Core option, every format in Mirror/Migrate/history/sharing, other browser engines, real devices, external wrappers, live bidding/tracking or sustained concurrency.
-
-## Pointer actionability follow-up before delivery
-
-The initial local CI passed with one existing macro-browser protocol retry. A subsequent pre-push CI passed without retries, but the SSH push exited 141 after the checks and left origin/main unchanged. The HTTPS retry then correctly stopped at the gate: the Ukrainian light mobile UX scenario failed on both attempts; Russian dark mobile also failed on the first attempt. Both cases reported an offered reveal control remaining blurred. No failure signature or product expectation was weakened to admit this behavior.
-
-The diagnostic pointer trace records mobile control rectangles moving by about 33.5 pixels between animation frames near the click. The original helper only hit-tested one instantaneous rectangle, then obtained coordinates in another protocol call. The driver now requires the target rectangle to remain stable and unobscured for 100 ms within the existing eight-second actionability bound, and takes the pointer coordinates from that same measurement. It still sends exactly one real mouse click and retains the three-second reveal-result assertion.
-
-The regression in tests/corpus-ux-browser.test.js uses an animated target and 60 ms of pointer-protocol latency. With the previous driver loaded from f840925, the test fails because the target is missed; with the corrected driver it passes and records one trusted click after the movement ends. A separate broken-handler assertion confirms a delivered click still returns an unrevealed failure instead of fabricating success. Both fixtures are isolated browser documents, not runtime application changes.
-
-Evidence is retained under /home/vk/.local/share/ortbtools-research/2026-09-08-final-corpus/: reveal-diagnostic/, pointer-regression-before.log (expected failure), pointer-regression-fixed.log (pass), pointer-ux-1.log (13 tests passed), and pointer-ux-2.log (14 tests passed, including the regression). Both full UX acceptance runs used no screenshots or report I/O, so their success does not depend on screenshot delays. This is a harness correction and does not add a 43rd product-defect group. The final dedicated audit and repository gates following this correction provide the completion evidence above.
+[Coverage inventory](coverage-inventory.md) states the remaining boundaries: arbitrary extensions and higher-order combinations, every custom dialect/Core option, per-format Mirror/Migrate/history/sharing, other browser engines, real devices, external wrappers, live bidding/tracking and sustained concurrency. These are separate from the now-closed enumerated matrix.

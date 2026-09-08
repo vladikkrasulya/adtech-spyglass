@@ -1,0 +1,91 @@
+{
+  "kind": "pair",
+  "id": "cover-vendor-native-kadam-json",
+  "title": "Kadam Native JSON response-only with original material keys",
+  "format": "native",
+  "protocol": "jsonfeed",
+  "context": "n/a",
+  "dialect": "ext-rtb",
+  "scenario": "response-only",
+  "tags": ["coverage-closure", "public-reference", "synthetic"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "Kadam Native JSON response-only with original material keys",
+      "url": "https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP",
+      "version": "accessed 2026-09-08",
+      "license": "MIT for independently authored fixture; public source field definitions referenced, no upstream prose or creative copied."
+    },
+    "modifications": [
+      "All identifiers, prices, creative text and URLs independently authored. Reserved .test domains and TEST-NET addresses replace live values.",
+      "New closure fixture. The archive hash records the earlier corpus family provenance, not membership of this newly authored case in that archive."
+    ],
+    "sanitized": "Only synthetic IDs, fixture access keys, TEST-NET 192.0.2.44 and reserved .test domains; no visitor traffic or live requests."
+  },
+  "reference": {
+    "wireProtocol": "jsonfeed",
+    "vendorDialect": "native",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "response-only-reference",
+      "note": "An independently authored vendor wire example; not an OpenRTB auction pair."
+    },
+    "sourceIds": ["feeds:feeds-kadam-feed"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "specNotes": [
+    "Kadam documents Native feed GET format=native and a JSON array with id,url,cid,title,image,cpc. All field names are preserved.",
+    "This JSON response does not use the IAB Native assets envelope. It is not an invented JSON POST request.",
+    "Response-only metadata identifies the documented source placement; an isolated ambiguous card is not required to infer a unique native tag without request context.",
+    "No bid floor or impression-id pairing is invented for CPC feed delivery."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "http": {
+      "status": 200
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A notebook for field sketches",
+      "limitation": "The initial sealed preview blocks remote artwork.",
+      "capabilityGap": "Kadam Native url/image/cpc material needs a card preview; preserve its wire keys."
+    }
+  },
+  "response": [
+    {
+      "id": "cover-vendor-native-kadam-json-material",
+      "url": "https://advertiser.example.test/coverage/cover-vendor-native-kadam-json",
+      "cid": "synthetic-native-campaign",
+      "title": "A notebook for field sketches",
+      "image": "https://assets.example.test/coverage/cover-vendor-native-kadam-json-492x328.png",
+      "cpc": 0.0032
+    }
+  ],
+  "knownGap": {
+    "id": "DEF-441",
+    "layers": ["core", "http", "browser"],
+    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "matches": {
+      "core": [
+        "^response: findings above warning: feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$"
+      ],
+      "http": [
+        "^response: findings above warning: feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$"
+      ],
+      "browser": [
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ notebook\\ for\\ field\\ sketches\"\\ absent$"
+      ]
+    }
+  }
+}

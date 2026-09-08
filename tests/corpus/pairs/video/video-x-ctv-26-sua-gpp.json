@@ -21,7 +21,8 @@
       "All auction, bid, creative, app and publisher identifiers are synthetic.",
       "device.ua is a synthetic Smart-TV-labelled string kept alongside device.sua, matching the 2.6 §3.2.18 recommendation to keep sending ua for backwards compatibility even when sua is present.",
       "regs.gpp uses the corpus-wide non-decodable placeholder string (matching banner-x-gpid-tid-gpp-26's convention), not a real or realistic-looking consent string. regs.gpp_sid=[7] (US National) is supplied alongside it so neither gpp_sid_without_string nor gpp_string_without_sid fires.",
-      "device.ip uses the documentation-only address 192.0.2.20."
+      "device.ip uses the documentation-only address 192.0.2.20.",
+      "Coverage closure: VAST4.0 XSD: move AdTitle after Impression and supply the required UniversalAdId.idValue attribute. Corrected body independently validates with xmllint against pinned IAB VAST revision e0858cd714474bf17ef61065097456d7643ff838."
     ],
     "sanitized": "No production payload or PII used. Placeholder GPP string only, not a real consent record. All resource and tracking hosts end in .test; external network must remain blocked.",
     "notes": "synthesized-from-spec"
@@ -109,7 +110,7 @@
             "id": "video-x-ctv-26-sua-gpp-bid",
             "impid": "video-1",
             "price": 3,
-            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.0\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"video-x-ctv-26-sua-gpp\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><AdTitle>video-x-ctv-26-sua-gpp</AdTitle><Impression><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/impression]]></Impression><Creatives><Creative id=\"video-x-ctv-26-sua-gpp-creative\"><UniversalAdId idRegistry=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/complete]]></Tracking></TrackingEvents><Duration>00:00:15</Duration><MediaFiles><MediaFile id=\"video-x-ctv-26-sua-gpp\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"4000\" width=\"1920\" height=\"1080\"><![CDATA[https://media.example.test/video-x-ctv-26-sua-gpp.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.0\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"video-x-ctv-26-sua-gpp\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><Impression><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/impression]]></Impression><AdTitle>video-x-ctv-26-sua-gpp</AdTitle><Creatives><Creative id=\"video-x-ctv-26-sua-gpp-creative\"><UniversalAdId idRegistry=\"unknown\" idValue=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/complete]]></Tracking></TrackingEvents><Duration>00:00:15</Duration><MediaFiles><MediaFile id=\"video-x-ctv-26-sua-gpp\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"4000\" width=\"1920\" height=\"1080\"><![CDATA[https://media.example.test/video-x-ctv-26-sua-gpp.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
             "adomain": ["advertiser.example.test"],
             "crid": "video-x-ctv-26-sua-gpp-bid-creative",
             "protocol": 7,

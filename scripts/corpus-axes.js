@@ -90,6 +90,27 @@ function contextApplies(format, context) {
   return { status: 'n/a' };
 }
 
+/**
+ * Standard wire contexts, rather than every historical vendor extension.
+ * OpenRTB 2.5 §3.2.1 has Site/App; the standard DOOH object was added in
+ * OpenRTB 2.6 §3.2.32. AdCOM's Dooh distribution channel is available through
+ * OpenRTB 3.0 request.context (AdCOM Appendix C, Request Context).
+ * References and the extension boundary are recorded in coverage-closure-review.md.
+ * @type {(format: string, protocol: string, context: string) => Applicability}
+ */
+function protocolContextApplies(format, protocol, context) {
+  const formatContext = contextApplies(format, context);
+  if (formatContext.status !== 'applicable') return formatContext;
+  if (protocol === 'ortb-2.5' && context === 'dooh') {
+    return {
+      status: 'n/a',
+      reason:
+        'OpenRTB 2.5 has no standard top-level DOOH object; vendor extensions are outside this standard-context projection',
+    };
+  }
+  return protocolApplies(format, protocol);
+}
+
 /** @type {(format: string, dialect: string) => Applicability} */
 function dialectApplies(format, dialect) {
   if (dialect === 'iab') {
@@ -120,6 +141,11 @@ const MEDIA = ['yes', 'no', 'n/a'];
 
 /** @type {(format: string, kind: string) => Applicability} */
 function previewKindApplies(format, kind) {
+  // This is a bounded set of normal carriers and selected malformed/mismatched
+  // bodies, not a claim that all other input bodies are impossible. The
+  // classifier itself selects by body shape, independently of requested format
+  // (specs/012 creative-preview.md §§1–2). A malformed carrier remains a
+  // validation error even when its inert display behaves correctly.
   const table = {
     banner: ['markup', 'empty', 'url', 'json', 'unidentified'],
     video: ['vast', 'markup', 'empty', 'unidentified'],
@@ -127,24 +153,28 @@ function previewKindApplies(format, kind) {
     native: ['native', 'json', 'empty', 'unidentified'],
     push: ['push', 'native', 'empty', 'unidentified'],
     pop: ['url', 'markup', 'empty', 'unidentified'],
-    inpage: ['native', 'push', 'empty', 'unidentified'],
+    inpage: ['native', 'push', 'markup', 'empty', 'unidentified'],
   };
   if (table[format].includes(kind)) return { status: 'applicable' };
-  return { status: 'n/a', reason: 'the format never produces this creative body kind' };
+  return {
+    status: 'n/a',
+    reason: 'outside the enumerated carrier and robustness cases for this format',
+  };
 }
 
 /** @type {(format: string, rendered: string) => Applicability} */
 function renderedApplies(format, rendered) {
-  if (rendered === 'inert-text') {
-    return ['video', 'audio', 'pop', 'banner', 'native'].includes(format)
-      ? { status: 'applicable' }
-      : { status: 'n/a', reason: 'no inert-text body for this format' };
-  }
+  // Every format includes unidentified bodies in the robustness set. Nonempty
+  // unidentified text is inert under specs/012, including push and inpage.
+  if (rendered === 'inert-text') return { status: 'applicable' };
   if (rendered === 'full' || rendered === 'partial') {
-    if (format === 'video' || format === 'audio') {
+    // Video includes markup in the bounded carrier set: that HTML can be
+    // visible even though VAST text never becomes a playing video.
+    if (format === 'audio') {
       return {
         status: 'unsupported',
-        reason: 'VAST/DAAST is shown as inert text by contract (specs/012); no player exists',
+        reason:
+          'the enumerated audio carriers are VAST/DAAST or absent/unidentified bodies; VAST/DAAST remains inert text by contract (specs/012), with no player',
       };
     }
     return { status: 'applicable' };
@@ -162,9 +192,13 @@ function mediaApplies(format, media) {
     };
   }
   if (media === 'no') {
-    return ['video', 'audio', 'banner'].includes(format)
-      ? { status: 'applicable', reason: 'a media element is present but blocked' }
-      : { status: 'n/a', reason: 'the format carries no media element' };
+    return ['video', 'audio', 'banner', 'pop', 'inpage'].includes(format)
+      ? {
+          status: 'applicable',
+          reason:
+            'VAST remains inert, or a media element in an enumerated markup carrier is blocked',
+        }
+      : { status: 'n/a', reason: 'the enumerated card carriers create no media element' };
   }
   return { status: 'applicable' };
 }
@@ -308,11 +342,13 @@ function buildAxes(cases, rows = []) {
   for (const format of OPENRTB) {
     for (const protocol of OPENRTB_PROTOCOLS) {
       for (const context of CONTEXTS) {
-        if (contextApplies(format, context).status !== 'applicable') continue;
+        const app = protocolContextApplies(format, protocol, context);
         triples.push({
           format,
           protocol,
           context,
+          status: app.status,
+          reason: app.reason,
           cases: cases
             .filter(
               (c) =>
@@ -348,7 +384,7 @@ function markdown(axes) {
   const lines = [
     '# Coverage axes (pairwise)',
     '',
-    'Legend: `✓ n` covered by n cases (presence of cases, not conformance) · `? unverified` applicable but no case · `✗ unsupported` ruled out by a product contract (reason listed below the table) · `— n/a` no applicable form in the referenced specifications or vendor contracts. Context `n/a` means absent or unspecified runtime context.',
+    'Legend: `✓ n` covered by n cases (presence of cases, not conformance) · `? unverified` applicable but no case · `✗ unsupported` ruled out by a product contract (reason listed below the table) · `— n/a` outside the documented projection. Context `n/a` means absent or unspecified runtime context. Preview kinds are a bounded set of normal carriers and malformed/mismatched-body probes; an inertly displayed invalid body is not a valid bid. See coverage-closure-review.md for applicability decisions.',
     '',
     axes.measured
       ? 'Measured results follow each case count: `ok` requires exactly one Core, HTTP and browser result, every applicable layer passed, and at least one pass; other layers must explicitly report not-applicable with a reason. `deviating` means at least one measured known-gap or failure. `incomplete` means missing, skipped, duplicate or invalid layer results; a deviating case can also be incomplete. `all N/A` means all three layers explicitly reported not-applicable with reasons, so no conformance was measured. A covered cell alone does not claim product conformance.'
@@ -386,7 +422,7 @@ function markdown(axes) {
   );
   for (const t of axes.triples)
     lines.push(
-      `| ${t.format} | ${t.protocol} | ${t.context} | ${t.cases.length ? t.cases.join(', ') : '? unverified'} |`,
+      `| ${t.format} | ${t.protocol} | ${t.context} | ${t.status !== 'applicable' ? `— ${t.status}: ${t.reason}` : t.cases.length ? t.cases.join(', ') : '? unverified'} |`,
     );
   lines.push('');
   return lines.join('\n');
@@ -397,6 +433,7 @@ module.exports = {
   markdown,
   protocolApplies,
   contextApplies,
+  protocolContextApplies,
   dialectApplies,
   previewKindApplies,
   renderedApplies,

@@ -1,0 +1,90 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-native-unidentified-inert",
+  "title": "native: unidentified-inert; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+  "base": "bn-native-26-text-cta",
+  "category": "format-mismatch",
+  "format": "native",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "format-mismatch"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB Native 1.2 \u2014 markup objects and social clickout example",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "version": "dd45d0733d96710981541ea213f4452952f41c40",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "Coverage-closure derivative of bn-native-26-text-cta: native: unidentified-inert; classify the actual creative body and assert visible identity while retaining auction diagnostics."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "NATIVE UNRECOGNIZED CREATIVE CLOSURE"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.native_invalid_adm",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "warn"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_complete"
+      ]
+    },
+    "preview": {
+      "kind": "unidentified",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "NATIVE UNRECOGNIZED CREATIVE CLOSURE"
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "specNotes": [
+    "native: unidentified-inert; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+    "Creative body classification follows specs/012 \u00a71\u20132 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic."
+  ],
+  "knownGap": null
+}

@@ -1,0 +1,105 @@
+{
+  "kind": "pair",
+  "id": "cover-vendor-native-kadam-url",
+  "title": "Kadam Native GET with the documented url/image/cpc response array",
+  "format": "native",
+  "protocol": "url-request",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "public-reference", "synthetic"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "Kadam Native GET with the documented url/image/cpc response array",
+      "url": "https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP",
+      "version": "accessed 2026-09-08",
+      "license": "MIT for independently authored fixture; public source field definitions referenced, no upstream prose or creative copied."
+    },
+    "modifications": [
+      "All identifiers, prices, creative text and URLs independently authored. Reserved .test domains and TEST-NET addresses replace live values.",
+      "New closure fixture. The archive hash records the earlier corpus family provenance, not membership of this newly authored case in that archive."
+    ],
+    "sanitized": "Only synthetic IDs, fixture access keys, TEST-NET 192.0.2.44 and reserved .test domains; no visitor traffic or live requests."
+  },
+  "reference": {
+    "wireProtocol": "url-request",
+    "vendorDialect": "native",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "vendor-request-response",
+      "note": "An independently authored vendor wire example; not an OpenRTB auction pair."
+    },
+    "sourceIds": ["feeds:feeds-kadam-feed"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "specNotes": [
+    "Kadam documents Native feed GET format=native and a JSON array with id,url,cid,title,image,cpc. All field names are preserved.",
+    "This JSON response does not use the IAB Native assets envelope. It is not an invented JSON POST request.",
+    "Response-only metadata identifies the documented source placement; an isolated ambiguous card is not required to infer a unique native tag without request context.",
+    "No bid floor or impression-id pairing is invented for CPC feed delivery."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "http": {
+      "status": 200
+    },
+    "request": {
+      "maxLevel": "warning",
+      "type": "URL Request"
+    },
+    "format": {
+      "formats": ["native"]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A garden along the canal",
+      "limitation": "The initial sealed preview blocks remote artwork.",
+      "capabilityGap": "Kadam Native url/image/cpc material needs a card preview; preserve its wire keys."
+    }
+  },
+  "response": [
+    {
+      "id": "cover-vendor-native-kadam-url-material",
+      "url": "https://advertiser.example.test/coverage/cover-vendor-native-kadam-url",
+      "cid": "synthetic-native-campaign",
+      "title": "A garden along the canal",
+      "image": "https://assets.example.test/coverage/cover-vendor-native-kadam-url-492x328.png",
+      "cpc": 0.0032
+    }
+  ],
+  "request": "https://feed.example.test/feed?sid=730002&skey=synthetic-native-feed-key&ua=Mozilla%2F5.0+%28X11%3B+Linux+x86_64%29+AppleWebKit%2F537.36+Chrome%2F124.0.0.0+Safari%2F537.36&ip=192.0.2.44&uid=synthetic-native-user&limit=1&language=en&pid=730003&page=publisher.example.test&format=native",
+  "knownGap": {
+    "id": "DEF-441",
+    "layers": ["core", "http", "browser"],
+    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "matches": {
+      "core": [
+        "^request: findings above warning: request\\.url\\.no_decoder\\[error\\]@$",
+        "^response: findings above warning: feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$",
+        "^format\\.formats: expected \\[native\\], got \\[\\]$"
+      ],
+      "http": [
+        "^request: findings above warning: request\\.url\\.no_decoder\\[error\\]@$",
+        "^response: findings above warning: feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$",
+        "^format\\.formats: expected \\[native\\], got \\[\\]$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$",
+        "^browser\\.format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ garden\\ along\\ the\\ canal\"\\ absent$"
+      ]
+    }
+  }
+}

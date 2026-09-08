@@ -1,0 +1,107 @@
+{
+  "kind": "pair",
+  "id": "cover-input-native-request-only",
+  "title": "native: independently analyze the request without the opposite auction side",
+  "format": "native",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "request-only",
+  "tags": ["coverage-closure", "standalone-input"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB Native 1.2 — markup objects and social clickout example",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "version": "dd45d0733d96710981541ea213f4452952f41c40",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "Remove the response from bn-native-26-text-cta; no auction relation may be invented from an absent side."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "request-only-reference",
+      "note": "The opposite auction side is deliberately absent; validation remains meaningful and crosscheck must be empty."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "bn-native-26-text-cta",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "native-slot",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "native": {
+          "ver": "1.2",
+          "request": "{\"ver\":\"1.2\",\"context\":1,\"plcmttype\":1,\"assets\":[{\"id\":31,\"required\":1,\"title\":{\"len\":90}},{\"id\":32,\"required\":1,\"data\":{\"type\":2,\"len\":140}},{\"id\":33,\"required\":1,\"data\":{\"type\":12,\"len\":20}},{\"id\":34,\"required\":1,\"data\":{\"type\":1,\"len\":30}}]}"
+        },
+        "rwdd": 0
+      }
+    ],
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 2,
+      "language": "en",
+      "ip": "192.0.2.11",
+      "os": "Linux",
+      "osv": "6.1"
+    },
+    "site": {
+      "id": "synthetic-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/audit",
+      "publisher": {
+        "id": "synthetic-publisher"
+      }
+    }
+  },
+  "specNotes": [
+    "The Inspector/API accept either auction side independently. Apply validation to the submitted side and do not manufacture auction matches, floors or required-asset comparisons from the absent side.",
+    "Preview expectation is retained only for a submitted response. The body and public-source provenance come from bn-native-26-text-cta."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "preview": {
+      "kind": "n/a",
+      "rendered": "n/a",
+      "mediaPlays": "n/a"
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

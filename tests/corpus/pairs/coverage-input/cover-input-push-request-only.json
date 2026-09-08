@@ -1,0 +1,113 @@
+{
+  "kind": "pair",
+  "id": "cover-input-push-request-only",
+  "title": "push: independently analyze the request without the opposite auction side",
+  "format": "push",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "request-only",
+  "tags": ["coverage-closure", "standalone-input"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB Native Ads 1.2 asset objects, carried in an OpenRTB 2.6 Bid.adm",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All ids, domains, prices and creative text independently authored; icon (asset id 1, IAB Native 1.2 img.type=1 ICON) and main image (asset id 3, img.type=3 MAIN) are both required assets, differentiating this pair from push-exads-openrtb-native-500 (icon-only, no main image, vendor plcmttype=500).",
+      "imp.ext.adtype=\"push\" is this project's own non-IAB extension-detection convention (packages/core/non-iab-formats.js STRING_HINT_KEYS), not an IAB-standardized field and not attributed to a named vendor's documented contract \u2014 unlike push-exads-openrtb-native-500's vendor-specific native.request.plcmttype=500, this pair stays entirely inside plain Native 1.2 (plcmttype=1) and layers the push signal only in imp.ext.",
+      "bid.mtype=4 (NATIVE) is set explicitly, matching the asset payload, so response-side format detection does not depend on adm content-sniffing alone.",
+      "Remove the response from push-x-ext-rtb-native-push; no auction relation may be invented from an absent side.",
+      "Standalone 2.6 request now declares rwdd=0; no response-side mtype marker is needed. The source pair used ext-rtb, while this fixture tests the same generic extension with the IAB baseline dialect."
+    ],
+    "sanitized": "No real user, device or tracking data. device.ip is the documentation-only address 192.0.2.44 (TEST-NET-1); user.id is a synthetic-fixture string; all domains use reserved .test hostnames; icon/image URLs are placeholders the preview's content policy never fetches automatically."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "request-only-reference",
+      "note": "The opposite auction side is deliberately absent; validation remains meaningful and crosscheck must be empty."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "push-x-ext-rtb-native-push",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "push-x-ext-rtb-native-push-imp",
+        "secure": 1,
+        "bidfloor": 0.05,
+        "bidfloorcur": "USD",
+        "ext": {
+          "adtype": "push"
+        },
+        "native": {
+          "ver": "1.2",
+          "request": "{\"native\":{\"ver\":\"1.2\",\"plcmttype\":1,\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"img\":{\"type\":1,\"w\":48,\"h\":48,\"wmin\":48,\"hmin\":48}},{\"id\":2,\"required\":1,\"title\":{\"len\":60}},{\"id\":3,\"required\":1,\"img\":{\"type\":3,\"w\":300,\"h\":150,\"wmin\":300,\"hmin\":150}},{\"id\":4,\"required\":0,\"data\":{\"type\":2,\"len\":140}}]}}"
+        },
+        "rwdd": 0
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "specNotes": [
+    "The Inspector/API accept either auction side independently. Apply validation to the submitted side and do not manufacture auction matches, floors or required-asset comparisons from the absent side.",
+    "Preview expectation is retained only for a submitted response. The body and public-source provenance come from push-x-ext-rtb-native-push."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.adtype",
+          "level": "info",
+          "params": {
+            "format": "push"
+          }
+        }
+      ]
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "format": {
+      "formats": ["native", "push"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "n/a",
+      "rendered": "n/a",
+      "mediaPlays": "n/a"
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

@@ -1,0 +1,94 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-push-no-bid",
+  "title": "push: a valid no-bid response contains no creative; show empty preview and do not invent bid-specific crosscheck successes.",
+  "base": "push-x-ext-rtb-native-push",
+  "category": "multiplicity",
+  "format": "push",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "multiplicity"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB Native Ads 1.2 asset objects, carried in an OpenRTB 2.6 Bid.adm",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All ids, domains, prices and creative text independently authored; icon (asset id 1, IAB Native 1.2 img.type=1 ICON) and main image (asset id 3, img.type=3 MAIN) are both required assets, differentiating this pair from push-exads-openrtb-native-500 (icon-only, no main image, vendor plcmttype=500).",
+      "imp.ext.adtype=\"push\" is this project's own non-IAB extension-detection convention (packages/core/non-iab-formats.js STRING_HINT_KEYS), not an IAB-standardized field and not attributed to a named vendor's documented contract \u2014 unlike push-exads-openrtb-native-500's vendor-specific native.request.plcmttype=500, this pair stays entirely inside plain Native 1.2 (plcmttype=1) and layers the push signal only in imp.ext.",
+      "bid.mtype=4 (NATIVE) is set explicitly, matching the asset payload, so response-side format detection does not depend on adm content-sniffing alone.",
+      "Coverage-closure derivative of push-x-ext-rtb-native-push: push: a valid no-bid response contains no creative; show empty preview and do not invent bid-specific crosscheck successes."
+    ],
+    "sanitized": "No real user, device or tracking data. device.ip is the documentation-only address 192.0.2.44 (TEST-NET-1); user.id is a synthetic-fixture string; all domains use reserved .test hostnames; icon/image URLs are placeholders the preview's content policy never fetches automatically."
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "replaceResponse": {
+      "id": "push-x-ext-rtb-native-push",
+      "nbr": 0
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.adtype",
+          "level": "info",
+          "params": {
+            "format": "push"
+          }
+        }
+      ]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "response.no_bid",
+          "path": "nbr",
+          "level": "info"
+        }
+      ],
+      "mustNot": ["response.seatbid_or_nbr_required", "response.bid.payload_missing"]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.no_response",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.above_floor",
+        "crosscheck.bid.native_complete",
+        "crosscheck.bid.video_vast"
+      ]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a"
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "specNotes": [
+    "push: a valid no-bid response contains no creative; show empty preview and do not invent bid-specific crosscheck successes.",
+    "Creative body classification follows specs/012 \u00a71\u20132 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic."
+  ],
+  "knownGap": null
+}

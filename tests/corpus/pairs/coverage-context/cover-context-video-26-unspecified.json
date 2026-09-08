@@ -1,0 +1,187 @@
+{
+  "kind": "pair",
+  "id": "cover-context-video-26-unspecified",
+  "title": "ortb-2.6 video: unspecified channel with matched auction, media and creative identity",
+  "format": "video",
+  "protocol": "ortb-2.6",
+  "context": "n/a",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "valid", "source-grounded", "ortb-2.6", "unspecified", "iab"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.6 BidRequest, distribution channel, Device, impression and bid objects",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+      "version": "403cbba542de3a5d9cfcccd0a34e74b01b79a9f1",
+      "license": "CC BY 3.0 (IAB field semantics); MIT (original fixture)",
+      "notes": "Context combination independently constructed from the normative object tables; no claim of a captured production example."
+    },
+    "modifications": [
+      "Adapted the original local video-x-dooh-26-mtype-dur media/asset fixture into a ortb-2.6 unspecified auction.",
+      "Changed actual distribution-channel/device objects, matched request/response IDs and creative marker; assertions require the corresponding detected runtime contexts.",
+      "Use OpenRTB 2.x device.devicetype and language. Only 2.6 cases add rwdd and mtype markers; 2.5 cases omit newer fields.",
+      "All prices/floors/currencies, impression/item references, media constraints and required Native assets remain explicitly matched."
+    ],
+    "sanitized": "Original synthetic creatives and reserved .test resource hosts; TEST-NET device address where supplied. No customer payloads, personal identifiers or live advertising/tracking calls."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Matched auction and impression/item references; source archive identifies the reusable seed corpus, not this newly authored context variant."
+    },
+    "sourceIds": ["video-audio:va-ortb26", "video-audio:va-vast-xsd", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "cover-context-video-26-unspecified",
+    "test": 1,
+    "at": 1,
+    "tmax": 500,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "screen-1",
+        "secure": 1,
+        "bidfloor": 2,
+        "bidfloorcur": "USD",
+        "qty": {
+          "multiplier": 1200,
+          "sourcetype": 2,
+          "vendor": "ExampleAudienceCorp"
+        },
+        "video": {
+          "mimes": ["video/mp4"],
+          "minduration": 10,
+          "maxduration": 15,
+          "protocols": [11],
+          "w": 1920,
+          "h": 1080,
+          "linearity": 1,
+          "plcmt": 1,
+          "startdelay": 0,
+          "delivery": [2]
+        },
+        "rwdd": 0
+      }
+    ]
+  },
+  "response": {
+    "id": "cover-context-video-26-unspecified",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "fixture-seat",
+        "bid": [
+          {
+            "id": "cover-context-video-26-unspecified-bid",
+            "impid": "screen-1",
+            "price": 3,
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.1\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"video-x-dooh-26-mtype-dur\" adType=\"video\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><Impression><![CDATA[https://track.example.test/video-x-dooh-26-mtype-dur/impression]]></Impression><AdServingId>video-x-dooh-26-mtype-dur-serving</AdServingId><AdTitle>C26 video unspecified</AdTitle><Creatives><Creative id=\"video-x-dooh-26-mtype-dur-creative\"><UniversalAdId idRegistry=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-x-dooh-26-mtype-dur/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-x-dooh-26-mtype-dur/complete]]></Tracking></TrackingEvents><Duration>00:00:12</Duration><MediaFiles><MediaFile id=\"video-x-dooh-26-mtype-dur\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"6000\" width=\"1920\" height=\"1080\"><![CDATA[https://media.example.test/video-x-dooh-26-mtype-dur.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "cover-context-video-26-unspecified-creative",
+            "protocol": 11,
+            "mtype": 2,
+            "dur": 12,
+            "w": 1920,
+            "h": 1080
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Primary context definitions: https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest. Site/App/Device are not mandatory for protocol validity.",
+    "The request deliberately omits the distribution channel and device. Detector contexts must be empty; optional-context guidance must not become a validation error.",
+    "The oracle asserts auction identity, offered impression/item resolution, matching currency and above-floor price, media/native/size semantics where applicable, and exact creative identity; these are not metadata-only copies.",
+    "IAB dialect is used without disabled rules.",
+    "The marker is newly authored and must be visible in the selected original bid. Existing reserved media URLs/controlled assets are retained; no media delivery or playback success is inferred from inert VAST text."
+  ],
+  "notes": [
+    "New coverage-closure case; normative expectations precede execution. Exact deviations are tracked separately after measured Core/HTTP/browser execution."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "version": "2.6"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "mustNotPrefix": ["vast."],
+      "version": "2.6"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "cover-context-video-26-unspecified"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "2.0000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.video_vast",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.size_mismatch"
+      ]
+    },
+    "preview": {
+      "kind": "vast",
+      "rendered": "inert-text",
+      "mediaPlays": "no",
+      "marker": "C26 video unspecified",
+      "limitation": null,
+      "capabilityGap": "VAST is inert text under the current preview contract; playback is not promised."
+    },
+    "format": {
+      "formats": ["video"],
+      "contexts": []
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-302",
+    "layers": ["core", "http", "browser"],
+    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "matches": {
+      "core": [
+        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua, request\\.no_site_or_app\\[error\\]@site/app$"
+      ],
+      "http": [
+        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua, request\\.no_site_or_app\\[error\\]@site/app$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device,\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua,\\ request\\.no_site_or_app\\[error\\]@site/app$"
+      ]
+    }
+  }
+}

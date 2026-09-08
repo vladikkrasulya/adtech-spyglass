@@ -1,0 +1,115 @@
+{
+  "kind": "pair",
+  "id": "cover-input-pop-request-only",
+  "title": "pop: independently analyze the request without the opposite auction side",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "request-only",
+  "tags": ["coverage-closure", "standalone-input"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools Core pop-family ext-hint recognition contract (packages/core/non-iab-formats.js STRING_HINT_KEYS, packages/core/rules/pop-request/index.js, packages/core/rules/pop-response/index.js) layered on IAB OpenRTB 2.x Imp/ext extensibility \u2014 the product's own documented, in-repo mechanism for pop/clickunder signalling, not a named vendor's wire format",
+      "url": "packages/core/non-iab-formats.js",
+      "version": "repo HEAD at session start, commit a61fc25",
+      "license": "Internal product code (ortbtools); no third-party material copied. MIT for the original fixture values.",
+      "notes": "This case exercises the plain `iab` dialect plus Core's baseline non-IAB format scanner, deliberately without loading the `ext-rtb` vendor dialect \u2014 the pop-request/pop-response rule plugins and non-iab-formats.js hint scanner run unconditionally regardless of dialect selection."
+    },
+    "modifications": [
+      "All IDs, domains, prices and timestamps independently authored.",
+      "device.ip uses TEST-NET 192.0.2.44; user.id is a clearly synthetic string.",
+      "advertiser.example.test / tracking.example.test / publisher.example.test are reserved .test hosts; no live host, tracker or subscriber identifier.",
+      "Remove the response from pop-x-openrtb-adtype-popunder-window-open; no auction relation may be invented from an absent side."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; every identifier is a synthetic-fixture string; every URL uses a reserved .test hostname.",
+    "notes": "synthesized-from-product-code-contract"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "request-only-reference",
+      "note": "The opposite auction side is deliberately absent; validation remains meaningful and crosscheck must be empty."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "pop-x-openrtb-adtype-popunder-window-open",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "pop-x-openrtb-adtype-popunder-window-open-imp",
+        "secure": 0,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "banner": {
+          "w": 1,
+          "h": 1
+        },
+        "ext": {
+          "adtype": "popunder",
+          "fcap": 3
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "specNotes": [
+    "The Inspector/API accept either auction side independently. Apply validation to the submitted side and do not manufacture auction matches, floors or required-asset comparisons from the absent side.",
+    "Preview expectation is retained only for a submitted response. The body and public-source provenance come from pop-x-openrtb-adtype-popunder-window-open."
+  ],
+  "notes": [
+    "This is the plain `iab` dialect, not the `ext-rtb` vendor dialect used by the sibling EXADS/Kadam/PPCmate/Adon3 pop cases \u2014 the mechanism under test (non-iab-formats.js hint scanning, pop-request/pop-response plugins, the 3d-pop crosscheck rule) runs unconditionally regardless of which dialect is loaded."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.adtype",
+          "level": "info",
+          "params": {
+            "format": "popunder"
+          }
+        }
+      ],
+      "mustNot": ["imp.format_required", "imp.banner.size_required", "request.device_required"]
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "format": {
+      "formats": ["banner", "pops"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "n/a",
+      "rendered": "n/a",
+      "mediaPlays": "n/a"
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

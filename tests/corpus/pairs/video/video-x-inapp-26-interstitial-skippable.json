@@ -20,7 +20,8 @@
     "modifications": [
       "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
       "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
-      "Independently authored skippable-interstitial fixture (not a reproduction of a single named public example); imp.instl=1 with no rwdd differentiates it from the existing rewarded-portrait interstitial case."
+      "Independently authored skippable-interstitial fixture (not a reproduction of a single named public example); imp.instl=1 with no rwdd differentiates it from the existing rewarded-portrait interstitial case.",
+      "Coverage closure: VAST3.0 XSD: move TrackingEvents after Duration within Linear. Corrected body independently validates with xmllint against pinned IAB VAST revision e0858cd714474bf17ef61065097456d7643ff838."
     ],
     "sanitized": "No production payload or PII used. All resource and tracking hosts end in .test; external network must remain blocked.",
     "notes": "synthesized-from-spec"
@@ -90,7 +91,7 @@
             "id": "video-x-inapp-26-interstitial-skippable-bid",
             "impid": "video-1",
             "price": 3,
-            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"><Ad id=\"video-x-inapp-26-interstitial-skippable\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><AdTitle>video-x-inapp-26-interstitial-skippable</AdTitle><Impression><![CDATA[https://track.example.test/video-x-inapp-26-interstitial-skippable/impression]]></Impression><Creatives><Creative id=\"video-x-inapp-26-interstitial-skippable-creative\"><Linear skipoffset=\"00:00:15\"><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-x-inapp-26-interstitial-skippable/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-x-inapp-26-interstitial-skippable/complete]]></Tracking></TrackingEvents><Duration>00:00:20</Duration><MediaFiles><MediaFile id=\"video-x-inapp-26-interstitial-skippable\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"900\" width=\"1024\" height=\"576\"><![CDATA[https://media.example.test/video-x-inapp-26-interstitial-skippable.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"><Ad id=\"video-x-inapp-26-interstitial-skippable\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><AdTitle>video-x-inapp-26-interstitial-skippable</AdTitle><Impression><![CDATA[https://track.example.test/video-x-inapp-26-interstitial-skippable/impression]]></Impression><Creatives><Creative id=\"video-x-inapp-26-interstitial-skippable-creative\"><Linear skipoffset=\"00:00:15\"><Duration>00:00:20</Duration><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-x-inapp-26-interstitial-skippable/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-x-inapp-26-interstitial-skippable/complete]]></Tracking></TrackingEvents><MediaFiles><MediaFile id=\"video-x-inapp-26-interstitial-skippable\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"900\" width=\"1024\" height=\"576\"><![CDATA[https://media.example.test/video-x-inapp-26-interstitial-skippable.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
             "adomain": ["advertiser.example.test"],
             "crid": "video-x-inapp-26-interstitial-skippable-bid-creative",
             "protocol": 3,

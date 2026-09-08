@@ -1,0 +1,148 @@
+{
+  "kind": "pair",
+  "id": "cover-vendor-pop-openrtb26",
+  "title": "OpenRTB 2.6 pop extension with structured user-agent and bid media type",
+  "format": "pop",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "public-reference", "synthetic"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "OpenRTB 2.6 pop extension with structured user-agent and bid media type",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md",
+      "version": "accessed 2026-09-08",
+      "license": "MIT for independently authored fixture; public source field definitions referenced, no upstream prose or creative copied.",
+      "notes": "The envelope is IAB 2.6; imp.ext.adtype is the product convention in packages/core/non-iab-formats.js, not an IAB or vendor enum."
+    },
+    "modifications": [
+      "All identifiers, prices, creative text and URLs independently authored. Reserved .test domains and TEST-NET addresses replace live values.",
+      "New closure fixture. The archive hash records the earlier corpus family provenance, not membership of this newly authored case in that archive."
+    ],
+    "sanitized": "Only synthetic IDs, fixture access keys, TEST-NET 192.0.2.44 and reserved .test domains; no visitor traffic or live requests."
+  },
+  "assetRefs": [],
+  "specNotes": [
+    "IAB OpenRTB2.6 device.sua and Bid.mtype make the version explicit in both input sides; this case does not relabel a marker-free2.5 fixture.",
+    "Non-IAB format intent is signalled only by the documented product ext.adtype convention; standard media objects remain present so a vendor extension does not replace baseline validation.",
+    "Pop URL adm remains inert text per preview contract; successful preview does not execute or navigate the pop destination."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse",
+      "version": "2.6"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.below_floor"
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "version": "2.6"
+    },
+    "format": {
+      "formats": ["banner", "pops"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "url",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/coverage/openrtb26-pop"
+    }
+  },
+  "request": {
+    "id": "cover-vendor-pop-openrtb26",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "cover-vendor-pop-openrtb26-imp",
+        "secure": 1,
+        "bidfloor": 0.05,
+        "bidfloorcur": "USD",
+        "ext": {
+          "adtype": "popup"
+        },
+        "banner": {
+          "w": 1,
+          "h": 1
+        }
+      }
+    ],
+    "site": {
+      "id": "synthetic-coverage-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/coverage"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en",
+      "sua": {
+        "source": 1,
+        "browsers": [
+          {
+            "brand": "Chromium",
+            "version": ["124", "0"]
+          }
+        ],
+        "platform": {
+          "brand": "Linux"
+        }
+      }
+    },
+    "user": {
+      "id": "synthetic-coverage-user"
+    }
+  },
+  "response": {
+    "id": "cover-vendor-pop-openrtb26",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "cover-vendor-pop-openrtb26-bid",
+            "impid": "cover-vendor-pop-openrtb26-imp",
+            "price": 0.25,
+            "adomain": ["advertiser.example.test"],
+            "crid": "cover-vendor-pop-openrtb26-creative",
+            "ext": {
+              "adtype": "popup"
+            },
+            "mtype": 1,
+            "adm": "https://advertiser.example.test/coverage/openrtb26-pop"
+          }
+        ]
+      }
+    ]
+  }
+}

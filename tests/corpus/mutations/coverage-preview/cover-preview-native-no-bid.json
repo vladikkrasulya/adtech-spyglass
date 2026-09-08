@@ -1,0 +1,86 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-native-no-bid",
+  "title": "native: a valid no-bid response contains no creative; show empty preview and do not invent bid-specific crosscheck successes.",
+  "base": "bn-native-26-text-cta",
+  "category": "multiplicity",
+  "format": "native",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "multiplicity"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB Native 1.2 \u2014 markup objects and social clickout example",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "version": "dd45d0733d96710981541ea213f4452952f41c40",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "Coverage-closure derivative of bn-native-26-text-cta: native: a valid no-bid response contains no creative; show empty preview and do not invent bid-specific crosscheck successes."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "replaceResponse": {
+      "id": "bn-native-26-text-cta",
+      "nbr": 0
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "response.no_bid",
+          "path": "nbr",
+          "level": "info"
+        }
+      ],
+      "mustNot": ["response.seatbid_or_nbr_required", "response.bid.payload_missing"]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.no_response",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.above_floor",
+        "crosscheck.bid.native_complete",
+        "crosscheck.bid.video_vast"
+      ]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a"
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "specNotes": [
+    "native: a valid no-bid response contains no creative; show empty preview and do not invent bid-specific crosscheck successes.",
+    "Creative body classification follows specs/012 \u00a71\u20132 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic."
+  ],
+  "knownGap": null
+}

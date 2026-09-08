@@ -26,6 +26,7 @@ try {
     'tests/corpus-lib.test.js',
     'tests/corpus-report.test.js',
     'tests/corpus-axes.test.js',
+    'tests/corpus-fixture-contract.test.js',
     'tests/corpus-core.test.js',
     'tests/corpus-http.test.js',
     'tests/corpus-browser.test.js',

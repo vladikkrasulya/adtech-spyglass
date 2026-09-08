@@ -1,0 +1,273 @@
+{
+  "kind": "pair",
+  "id": "cover-context-native-30-ctv",
+  "title": "ortb-3.0 native: ctv channel with matched auction, media and creative identity",
+  "format": "native",
+  "protocol": "ortb-3.0",
+  "context": "ctv",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "valid", "source-grounded", "ortb-3.0", "ctv", "iab"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB AdCOM 1.0 context, Device, Dooh and placement/media objects; OpenRTB 3.0 envelope",
+      "url": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#requestcontext",
+      "version": "df8ba06de0ba77c82efee7a2dc832bd4968474d6",
+      "license": "CC BY 3.0 (IAB field semantics); MIT (original fixture)",
+      "notes": "Context combination independently constructed from the normative object tables; no claim of a captured production example."
+    },
+    "modifications": [
+      "Adapted the original local native-x-ortb30-adcom-stub media/asset fixture into a ortb-3.0 ctv auction.",
+      "Changed actual distribution-channel/device objects, matched request/response IDs and creative marker; assertions require the corresponding detected runtime contexts.",
+      "Use AdCOM device.type and lang; omit optional OS rather than copying the incompatible OpenRTB 2.x string os. Inline audio/video/display markup is admitted via placement.admx=1.",
+      "All prices/floors/currencies, impression/item references, media constraints and required Native assets remain explicitly matched."
+    ],
+    "sanitized": "Original synthetic creatives and reserved .test resource hosts; TEST-NET device address where supplied. No customer payloads, personal identifiers or live advertising/tracking calls."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-3.0",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Matched auction and impression/item references; source archive identifies the reusable seed corpus, not this newly authored context variant."
+    },
+    "sourceIds": ["banner-native:bn-ortb30", "banner-native:bn-adcom"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "request": {
+        "id": "cover-context-native-30-ctv",
+        "test": 1,
+        "at": 2,
+        "tmax": 800,
+        "cur": ["USD"],
+        "item": [
+          {
+            "id": "item-native",
+            "qty": 1,
+            "flr": 0.2,
+            "flrcur": "USD",
+            "spec": {
+              "placement": {
+                "secure": 1,
+                "display": {
+                  "nativefmt": {
+                    "asset": [
+                      {
+                        "id": 1,
+                        "req": 1,
+                        "title": {
+                          "len": 90
+                        }
+                      },
+                      {
+                        "id": 2,
+                        "req": 1,
+                        "img": {
+                          "type": 3,
+                          "w": 1,
+                          "h": 1
+                        }
+                      },
+                      {
+                        "id": 3,
+                        "req": 1,
+                        "data": {
+                          "type": 1,
+                          "len": 25
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "context": {
+          "app": {
+            "id": "cover-context-native-30-ctv-app",
+            "name": "Synthetic television app",
+            "bundle": "test.example.television"
+          },
+          "device": {
+            "type": 3,
+            "ua": "Mozilla/5.0 (Synthetic context audit)",
+            "ip": "192.0.2.19",
+            "lang": "en"
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "response": {
+        "id": "cover-context-native-30-ctv",
+        "cur": "USD",
+        "seatbid": [
+          {
+            "seat": "synthetic-seat-a",
+            "bid": [
+              {
+                "id": "cover-context-native-30-ctv-bid",
+                "item": "item-native",
+                "price": 1.25,
+                "media": {
+                  "ad": {
+                    "id": "cover-context-native-30-ctv-creative",
+                    "adomain": ["advertiser.example.test"],
+                    "display": {
+                      "native": {
+                        "link": {
+                          "url": "https://advertiser.example.test/offer/native-x-ortb30-adcom-stub"
+                        },
+                        "asset": [
+                          {
+                            "id": 1,
+                            "title": {
+                              "text": "C30 native ctv"
+                            }
+                          },
+                          {
+                            "id": 2,
+                            "image": {
+                              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUAAcAmiQAAAAAASUVORK5CYII=",
+                              "w": 1,
+                              "h": 1
+                            }
+                          },
+                          {
+                            "id": 3,
+                            "data": {
+                              "value": "Fixture AdCOM"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "specNotes": [
+    "Primary context definitions: https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#requestcontext; device.type=3 is Connected TV (https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#list_devicetypes), whereas site/app/dooh identify the distribution channel.",
+    "The app channel plus device type 3 must produce both inapp and ctv contexts; a banner or Native format does not change this runtime classification.",
+    "The oracle asserts auction identity, offered impression/item resolution, matching currency and above-floor price, media/native/size semantics where applicable, and exact creative identity; these are not metadata-only copies.",
+    "IAB dialect is used without disabled rules.",
+    "The marker is newly authored and must be visible in the selected original bid. Existing reserved media URLs/controlled assets are retained; no media delivery or playback success is inferred from inert VAST text."
+  ],
+  "notes": [
+    "New coverage-closure case; normative expectations precede execution. Exact deviations are tracked separately after measured Core/HTTP/browser execution."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "version": "3.0"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "version": "3.0"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "openrtb.response.id",
+          "level": "ok",
+          "params": {
+            "id": "cover-context-native-30-ctv"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "openrtb.response.seatbid[0].bid[0].item",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "openrtb.response.seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "openrtb.response.seatbid[0].bid[0].media.ad",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.floor_currency_mismatch"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "C30 native ctv",
+      "assets": {
+        "imgTotal": 1,
+        "imgLoaded": 1
+      },
+      "limitation": null,
+      "capabilityGap": "Structured AdCOM Native support must be measured; the existing DEF-151 records a schema/detection/completeness/preview capability gap."
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": ["inapp", "ctv"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-151",
+    "layers": ["core", "http", "browser"],
+    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "matches": {
+      "core": [
+        "^response: findings above warning: response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
+        "^crosscheck: missing crosscheck\\.bid\\.native_complete @ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur, crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item, crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^format\\.formats: expected \\[native\\], got \\[banner\\]$"
+      ],
+      "http": [
+        "^response: findings above warning: response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
+        "^crosscheck: missing crosscheck\\.bid\\.native_complete @ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur, crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item, crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^format\\.formats: expected \\[native\\], got \\[banner\\]$"
+      ],
+      "browser": [
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
+        "^browser\\.crosscheck:\\ missing\\ crosscheck\\.bid\\.native_complete\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\ \\[ok\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^browser\\.format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[banner\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ full,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgTotal:\\ expected\\ 1,\\ got\\ 0$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgLoaded:\\ expected\\ 1,\\ got\\ 0$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"C30\\ native\\ ctv\"\\ absent$"
+      ]
+    }
+  }
+}

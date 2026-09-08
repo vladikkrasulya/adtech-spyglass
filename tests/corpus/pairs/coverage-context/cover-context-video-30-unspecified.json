@@ -1,0 +1,196 @@
+{
+  "kind": "pair",
+  "id": "cover-context-video-30-unspecified",
+  "title": "ortb-3.0 video: unspecified channel with matched auction, media and creative identity",
+  "format": "video",
+  "protocol": "ortb-3.0",
+  "context": "n/a",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "valid", "source-grounded", "ortb-3.0", "unspecified", "iab"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB AdCOM 1.0 context, Device, Dooh and placement/media objects; OpenRTB 3.0 envelope",
+      "url": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#requestcontext",
+      "version": "df8ba06de0ba77c82efee7a2dc832bd4968474d6",
+      "license": "CC BY 3.0 (IAB field semantics); MIT (original fixture)",
+      "notes": "Context combination independently constructed from the normative object tables; no claim of a captured production example."
+    },
+    "modifications": [
+      "Adapted the original local video-x-web-30-adcom-video media/asset fixture into a ortb-3.0 unspecified auction.",
+      "Changed actual distribution-channel/device objects, matched request/response IDs and creative marker; assertions require the corresponding detected runtime contexts.",
+      "Use AdCOM device.type and lang; omit optional OS rather than copying the incompatible OpenRTB 2.x string os. Inline audio/video/display markup is admitted via placement.admx=1.",
+      "All prices/floors/currencies, impression/item references, media constraints and required Native assets remain explicitly matched."
+    ],
+    "sanitized": "Original synthetic creatives and reserved .test resource hosts; TEST-NET device address where supplied. No customer payloads, personal identifiers or live advertising/tracking calls."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-3.0",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Matched auction and impression/item references; source archive identifies the reusable seed corpus, not this newly authored context variant."
+    },
+    "sourceIds": [
+      "banner-native:bn-ortb30",
+      "video-audio:va-adcom",
+      "video-audio:va-vast-xsd",
+      "banner-native:bn-adcom"
+    ],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "request": {
+        "id": "cover-context-video-30-unspecified",
+        "test": 1,
+        "at": 2,
+        "tmax": 800,
+        "cur": ["USD"],
+        "item": [
+          {
+            "id": "item-video",
+            "qty": 1,
+            "flr": 1,
+            "flrcur": "USD",
+            "spec": {
+              "placement": {
+                "secure": 1,
+                "video": {
+                  "mime": ["video/mp4"],
+                  "ctype": [11],
+                  "mindur": 15,
+                  "maxdur": 15,
+                  "delay": 0,
+                  "skip": 0,
+                  "playmethod": [2],
+                  "w": 1280,
+                  "h": 720
+                },
+                "admx": 1
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "response": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "response": {
+        "id": "cover-context-video-30-unspecified",
+        "cur": "USD",
+        "seatbid": [
+          {
+            "seat": "synthetic-seat-a",
+            "bid": [
+              {
+                "id": "cover-context-video-30-unspecified-bid",
+                "item": "item-video",
+                "price": 1.5,
+                "media": {
+                  "ad": {
+                    "id": "cover-context-video-30-unspecified-creative",
+                    "adomain": ["advertiser.example.test"],
+                    "secure": 1,
+                    "video": {
+                      "mime": ["video/mp4"],
+                      "ctype": 11,
+                      "dur": 15,
+                      "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.1\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"video-x-web-30-adcom-video\" adType=\"video\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><Impression><![CDATA[https://track.example.test/video-x-web-30-adcom-video/impression]]></Impression><AdServingId>video-x-web-30-adcom-video-serving</AdServingId><AdTitle>C30 video unspecified</AdTitle><Creatives><Creative id=\"video-x-web-30-adcom-video-creative\"><UniversalAdId idRegistry=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-x-web-30-adcom-video/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-x-web-30-adcom-video/complete]]></Tracking></TrackingEvents><Duration>00:00:15</Duration><MediaFiles><MediaFile id=\"video-x-web-30-adcom-video\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"1500\" width=\"1280\" height=\"720\"><![CDATA[https://media.example.test/video-x-web-30-adcom-video.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "specNotes": [
+    "Primary context definitions: https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#requestcontext; device.type=3 is Connected TV (https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#list_devicetypes), whereas site/app/dooh identify the distribution channel.",
+    "The request deliberately omits the distribution channel and device. Detector contexts must be empty; optional-context guidance must not become a validation error.",
+    "The oracle asserts auction identity, offered impression/item resolution, matching currency and above-floor price, media/native/size semantics where applicable, and exact creative identity; these are not metadata-only copies.",
+    "IAB dialect is used without disabled rules.",
+    "The marker is newly authored and must be visible in the selected original bid. Existing reserved media URLs/controlled assets are retained; no media delivery or playback success is inferred from inert VAST text."
+  ],
+  "notes": [
+    "New coverage-closure case; normative expectations precede execution. Exact deviations are tracked separately after measured Core/HTTP/browser execution."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "version": "3.0"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "version": "3.0",
+      "mustNotPrefix": ["vast."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "openrtb.response.id",
+          "level": "ok",
+          "params": {
+            "id": "cover-context-video-30-unspecified"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "openrtb.response.seatbid[0].bid[0].item",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "openrtb.response.seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "1.0000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.video_vast",
+          "path": "openrtb.response.seatbid[0].bid[0].media.ad.video.adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.size_mismatch",
+        "crosscheck.bid.floor_currency_mismatch"
+      ]
+    },
+    "preview": {
+      "kind": "vast",
+      "rendered": "inert-text",
+      "mediaPlays": "no",
+      "marker": "C30 video unspecified",
+      "limitation": null,
+      "capabilityGap": "VAST is inert text under the current preview contract; playback is not promised."
+    },
+    "format": {
+      "formats": ["video"],
+      "contexts": []
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

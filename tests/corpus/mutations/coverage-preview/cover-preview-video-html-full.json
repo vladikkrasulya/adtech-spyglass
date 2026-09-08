@@ -1,0 +1,92 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-video-html-full",
+  "title": "video: html-full; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+  "base": "video-x-web-42-inline-linear",
+  "category": "format-mismatch",
+  "format": "video",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "format-mismatch"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB VAST_Samples repository \u2014 VAST 4.2 Samples/Inline_Linear_Tag-test.xml",
+      "url": "https://github.com/InteractiveAdvertisingBureau/VAST_Samples/blob/master/VAST%204.2%20Samples/Inline_Linear_Tag-test.xml",
+      "version": "VAST_Samples repository (master branch), accessed 2026-09-07",
+      "license": "IAB Tech Lab VAST_Samples repository; the repository LICENSE.txt is a disclaimer only, granting no explicit reuse right (see video-audio:va-sample-license) \u2014 treated as reference-only, structure/tag-set informed the fixture; all text content and hosts rewritten as original test data (MIT)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All tracking, media, click and error hosts rewritten to *.example.test; the Ad id, AdServingId, AdTitle and MediaFile filenames are namespaced to this case id.",
+      "AdSystem text 'iabtechlab' replaced with the fixture label 'ortbtools test fixture'; AdTitle content set to this case's id so a rendered/inert-text check has a unique marker.",
+      "Extension total_available changed from the sample's 2 to 1, Pricing changed from 25.00 to 3.00 (matching bid.price) and the ClickThrough id attribute changed from 'blog' to 'offer'; these are the only content-value edits beyond hosts and labels.",
+      "The OpenRTB 2.6 BidRequest/BidResponse envelope around the VAST document is original test data; the VAST tag set, attribute names and nesting are otherwise unmodified from the IAB sample.",
+      "Request/response IDs and impid are intentionally paired.",
+      "No real person, cookie, advertising ID, IP address or live tracking endpoint is retained.",
+      "Coverage-closure derivative of video-x-web-42-inline-linear: video: html-full; classify the actual creative body and assert visible identity while retaining auction diagnostics."
+    ],
+    "sanitized": "No production payload or PII used. All resource and tracking hosts end in .test; external network must remain blocked.",
+    "notes": "adapted-public-example"
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<div style=\"width:300px;height:250px;background:#fff;color:#111\"><p>VIDEO HTML CLOSURE</p></div>"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.video_not_vast",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "warn"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.video_vast"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "VIDEO HTML CLOSURE"
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "specNotes": [
+    "video: html-full; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+    "Creative body classification follows specs/012 \u00a71\u20132 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic."
+  ],
+  "knownGap": null
+}

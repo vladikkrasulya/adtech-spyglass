@@ -1,0 +1,105 @@
+{
+  "kind": "mutation",
+  "id": "cover-preview-audio-unidentified-inert",
+  "title": "audio: unidentified-inert; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+  "base": "audio-web-25-mp3-legacy",
+  "category": "format-mismatch",
+  "format": "audio",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "format-mismatch"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.5, sections 3.2.7, 3.2.8 and 5.8",
+      "url": "https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf",
+      "version": "FINAL December 2016",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, titles, XML and media descriptions are original test data.",
+      "Request/response IDs and impid are intentionally paired.",
+      "Public examples are references; no real person, cookie, advertising ID, IP address or live tracking endpoint is retained.",
+      "Coverage-closure derivative of audio-web-25-mp3-legacy: audio: unidentified-inert; classify the actual creative body and assert visible identity while retaining auction diagnostics."
+    ],
+    "sanitized": "No production payload or PII used. All resource and tracking hosts end in .test; external network must remain blocked.",
+    "notes": "synthesized-from-spec"
+  },
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "AUDIO UNRECOGNIZED CREATIVE CLOSURE"
+      }
+    ],
+    "request": [
+      {
+        "op": "add",
+        "path": "/device/ip",
+        "value": "192.0.2.99"
+      },
+      {
+        "op": "add",
+        "path": "/device/ua",
+        "value": "Synthetic coverage closure"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"],
+      "mustIssueAt": ["seatbid[0].bid[0].adm"]
+    },
+    "preview": {
+      "kind": "unidentified",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "AUDIO UNRECOGNIZED CREATIVE CLOSURE"
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "specNotes": [
+    "audio: unidentified-inert; classify the actual creative body and assert visible identity while retaining auction diagnostics.",
+    "Creative body classification follows specs/012 \u00a71\u20132 independently of auction format validity. A visible preview does not make a mismatched response valid. Original base provenance is retained; fixture bytes are synthetic.",
+    "Audio protocols=[7] negotiates VAST4.0; plain prose must produce an auction media mismatch, independently of the correct inert preview."
+  ],
+  "knownGap": {
+    "id": "DEF-194",
+    "layers": ["core", "http", "browser"],
+    "note": "Prose cannot satisfy negotiated VAST audio; the preview remains correctly inert while auction media mismatch is absent.",
+    "matches": {
+      "core": ["^crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
+      "http": ["^crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
+      "browser": [
+        "^browser\\.crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ]
+    }
+  }
+}

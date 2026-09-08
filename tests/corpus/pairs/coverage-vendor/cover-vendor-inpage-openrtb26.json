@@ -1,0 +1,172 @@
+{
+  "kind": "pair",
+  "id": "cover-vendor-inpage-openrtb26",
+  "title": "OpenRTB 2.6 inpage card extension with a baseline Banner placement",
+  "format": "inpage",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "inpage-push",
+  "scenario": "pair",
+  "tags": ["coverage-closure", "public-reference", "synthetic"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "OpenRTB 2.6 inpage extension with structured user-agent and bid media type",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md",
+      "version": "accessed 2026-09-08",
+      "license": "MIT for independently authored fixture; public source field definitions referenced, no upstream prose or creative copied.",
+      "notes": "IAB 2.6 envelope and Banner objects plus the product inpage-push dialect bid.ext card contract; packages/core/format-detect.js documents widget_id/zone_id inpage placement signals. No third-party2.6vendor support claim."
+    },
+    "modifications": [
+      "All identifiers, prices, creative text and URLs independently authored. Reserved .test domains and TEST-NET addresses replace live values.",
+      "New closure fixture. The archive hash records the earlier corpus family provenance, not membership of this newly authored case in that archive.",
+      "The baseline Banner object remains present; widget metadata does not substitute for required standard media."
+    ],
+    "sanitized": "Only synthetic IDs, fixture access keys, TEST-NET 192.0.2.44 and reserved .test domains; no visitor traffic or live requests."
+  },
+  "assetRefs": [],
+  "specNotes": [
+    "OpenRTB2.6 device.sua and Bid.mtype declare version-specific fields in both sides. Banner placement retains the IAB required media object.",
+    "The product inpage-push dialect documents bid.ext.title/description/image/icon/url/cta and explicitly limits itself to response validation. Its widget_id/zone_id inpage signal is documented by the product feed-format detector, but is not currently traversed under an OpenRTB Imp.",
+    "No third-party vendor is claimed to support this2.6shape. This tests the product-owned extension contract within an IAB2.6envelope.",
+    "The empty preview is a recorded capability limitation: current preview lookup does not consume bid.ext. The failed inpage tag assertion is distinct from this empty rendering."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse",
+      "version": "2.6"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.below_floor"
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "version": "2.6"
+    },
+    "format": {
+      "formats": ["banner", "inpage"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "push",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A shelf for favorite books",
+      "limitation": "Desired vendor card rendering remains subject to sealed-preview remote image blocking.",
+      "capabilityGap": "The dialect validates bid.ext cards; rendering this carrier is a desired capability currently missing from the frontend."
+    }
+  },
+  "request": {
+    "id": "cover-vendor-inpage-openrtb26",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "cover-vendor-inpage-openrtb26-imp",
+        "secure": 1,
+        "bidfloor": 0.05,
+        "bidfloorcur": "USD",
+        "ext": {
+          "widget_id": "synthetic-coverage-widget",
+          "zone_id": "synthetic-coverage-zone"
+        },
+        "banner": {
+          "w": 320,
+          "h": 250
+        }
+      }
+    ],
+    "site": {
+      "id": "synthetic-coverage-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/coverage"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en",
+      "sua": {
+        "source": 1,
+        "browsers": [
+          {
+            "brand": "Chromium",
+            "version": ["124", "0"]
+          }
+        ],
+        "platform": {
+          "brand": "Linux"
+        }
+      }
+    },
+    "user": {
+      "id": "synthetic-coverage-user"
+    }
+  },
+  "response": {
+    "id": "cover-vendor-inpage-openrtb26",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "cover-vendor-inpage-openrtb26-bid",
+            "impid": "cover-vendor-inpage-openrtb26-imp",
+            "price": 0.25,
+            "adomain": ["advertiser.example.test"],
+            "crid": "cover-vendor-inpage-openrtb26-creative",
+            "ext": {
+              "title": "A shelf for favorite books",
+              "description": "An original offline inpage card.",
+              "image": "https://assets.example.test/coverage/inpage-card-492x328.png",
+              "icon": "https://assets.example.test/coverage/inpage-icon-192x192.png",
+              "url": "https://advertiser.example.test/coverage/inpage-card",
+              "cta": "Read more"
+            },
+            "mtype": 1
+          }
+        ]
+      }
+    ]
+  },
+  "knownGap": {
+    "id": "DEF-180",
+    "layers": ["core", "http", "browser"],
+    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "matches": {
+      "core": ["^format\\.formats: expected \\[banner, inpage\\], got \\[banner\\]$"],
+      "http": ["^format\\.formats: expected \\[banner, inpage\\], got \\[banner\\]$"],
+      "browser": [
+        "^browser\\.format\\.formats:\\ expected\\ \\[banner,\\ inpage\\],\\ got\\ \\[banner\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ shelf\\ for\\ favorite\\ books\"\\ absent$"
+      ]
+    }
+  }
+}
