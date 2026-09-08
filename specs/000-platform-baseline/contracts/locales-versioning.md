@@ -72,13 +72,15 @@ The repository contains three independently versioned surfaces:
 | Surface           | Current version | Source of truth              | Coupled repository surfaces                                        |
 | ----------------- | --------------- | ---------------------------- | ------------------------------------------------------------------ |
 | Web application   | `1.19.4`        | root `package.json`          | root lock metadata, `public/version.js`, and static HTML fallbacks |
-| `@ortbtools/core` | `0.40.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
+| `@ortbtools/core` | `0.42.0`        | `packages/core/package.json` | its package-lock workspace metadata and documented Core contract   |
 | `@ortbtools/cli`  | `0.1.3`         | `packages/cli/package.json`  | its package-lock workspace metadata and documented CLI contract    |
 
 The app's browser display form is `v` followed by the root package version. `public/version.js`
 paints that value into runtime markers. The no-JavaScript/static fallback in every localized About
 page and Inspector template carries the same value, and `tests/version-consistency.test.js` fails an
 incomplete bump.
+
+Feature [023](../../023-audio-repair/contracts/audio-behavior.md) adds two audio MIME error IDs in en/uk/ru and corrects audio protocol detection. Its Core0.42.0 minor bump and CLI dependency `^0.42.0` move with workspace lock metadata; app1.19.4 and CLI0.1.3 retain their independent versions. The existing DAAST document preview reuses the inert text presentation and introduces no new localized control.
 
 Core and CLI versions do not follow the app version automatically. Their manifests and package-lock
 workspace entries move only when the corresponding package contract changes. The workspace package

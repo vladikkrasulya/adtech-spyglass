@@ -355,5 +355,7 @@
   "request.30.context.device.ip_invalid": "openrtb.request.context.device.ip має бути рядком. Виправ передане значення або прибери це необов’язкове поле.",
   "request.30.context.device.ipv6_invalid": "openrtb.request.context.device.ipv6 має бути рядком. Виправ передане значення або прибери це необов’язкове поле.",
   "response.nbr_invalid": "nbr має бути цілим числом. Виправ передане значення або прибери це необов’язкове поле.",
-  "response.30.nbr_invalid": "openrtb.response.nbr має бути цілим числом. Виправ передане значення або прибери це необов’язкове поле."
+  "response.30.nbr_invalid": "openrtb.response.nbr має бути цілим числом. Виправ передане значення або прибери це необов’язкове поле.",
+  "imp.audio.mimes_required": "Слот #{num}: аудіо без audio.mimes. Перерахуй MIME-типи що приймає плеєр (наприклад [\"audio/mp4\",\"audio/mpeg\"]) — інакше біддер не знає чим відповідати.",
+  "imp.audio.mimes_invalid": "Слот #{num}: audio.mimes має бути непорожнім масивом непорожніх MIME-рядків (наприклад [\"audio/mp4\",\"audio/mpeg\"])."
 }

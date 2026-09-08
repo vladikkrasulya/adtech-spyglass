@@ -323,3 +323,137 @@ test('detectFormat: ext.widget_id still wins over push with link click key (013)
   assert.ok(r.formats.includes(FORMATS.INPAGE));
   assert.ok(!r.formats.includes(FORMATS.PUSH));
 });
+
+test('detectFormat: mtype=audio does not suppress real video MediaFile (R1)', () => {
+  const r = detectFormat({
+    id: 'test-r1',
+    seatbid: [
+      {
+        bid: [
+          {
+            id: 'b1',
+            impid: 'slot',
+            price: 1,
+            mtype: 3,
+            adm: '<VAST version="4.2"><Ad><InLine><Creatives><Creative><Linear><MediaFiles><MediaFile type="video/mp4">https://example.test/video.mp4</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>',
+          },
+        ],
+      },
+    ],
+  });
+  assert.ok(r.formats.includes(FORMATS.AUDIO), 'has audio from mtype');
+  assert.ok(r.formats.includes(FORMATS.VIDEO), 'has video from MediaFile');
+  assert.ok(r.protocols.includes('vast-4'));
+});
+
+test('detectFormat: XML comments and CDATA do not leak false audio MIME/adType (R2)', () => {
+  // Video wrapper with audio only in comment
+  const rComment = detectFormat({
+    id: 'test-r2-comment',
+    seatbid: [
+      {
+        bid: [
+          {
+            id: 'b1',
+            impid: 'slot',
+            price: 1,
+            mtype: 2,
+            adm: '<VAST version="4.2"><Ad><!-- Example: <MediaFile type="audio/mpeg"> --><Wrapper><VASTAdTagURI>https://example.test/wrapper.xml</VASTAdTagURI></Wrapper></Ad></VAST>',
+          },
+        ],
+      },
+    ],
+  });
+  assert.deepEqual(rComment.formats, [FORMATS.VIDEO]);
+
+  // Audio mime inside companion HTMLResource CDATA
+  const rCdata = detectFormat({
+    id: 'test-r2-cdata',
+    seatbid: [
+      {
+        bid: [
+          {
+            id: 'b1',
+            impid: 'slot',
+            price: 1,
+            mtype: 2,
+            adm: '<VAST version="4.2"><Ad><Wrapper><VASTAdTagURI>https://example.test/wrapper.xml</VASTAdTagURI><Creatives><Creative><CompanionAds><Companion><HTMLResource><![CDATA[<span type="audio/mpeg">label</span>]]></HTMLResource></Companion></CompanionAds></Creative></Creatives></Wrapper></Ad></VAST>',
+          },
+        ],
+      },
+    ],
+  });
+  assert.deepEqual(rCdata.formats, [FORMATS.VIDEO]);
+
+  // Genuine audio MediaFile
+  const rGenuine = detectFormat({
+    id: 'test-r2-genuine',
+    seatbid: [
+      {
+        bid: [
+          {
+            id: 'b1',
+            impid: 'slot',
+            price: 1,
+            adm: '<VAST version="4.2"><Ad><InLine><Creatives><Creative><Linear><MediaFiles><MediaFile type="audio/mpeg">https://example.test/audio.mp3</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>',
+          },
+        ],
+      },
+    ],
+  });
+  assert.deepEqual(rGenuine.formats, [FORMATS.AUDIO]);
+});
+
+test('detectFormat: AdCOM 3.0 response handles scalar ad.audio.ctype and ad.video.ctype (R3)', () => {
+  const rAudioDaast = detectFormat({
+    openrtb: {
+      ver: '3.0',
+      response: {
+        seatbid: [
+          {
+            bid: [
+              {
+                id: 'b1',
+                media: {
+                  ad: {
+                    audio: {
+                      ctype: 9, // DAAST 1.0
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  });
+  assert.ok(rAudioDaast.formats.includes(FORMATS.AUDIO));
+  assert.ok(rAudioDaast.protocols.includes('daast'));
+
+  const rAudioVast4 = detectFormat({
+    openrtb: {
+      ver: '3.0',
+      response: {
+        seatbid: [
+          {
+            bid: [
+              {
+                id: 'b1',
+                media: {
+                  ad: {
+                    audio: {
+                      ctype: 11, // VAST 4.1
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  });
+  assert.ok(rAudioVast4.formats.includes(FORMATS.AUDIO));
+  assert.ok(rAudioVast4.protocols.includes('vast-4'));
+});

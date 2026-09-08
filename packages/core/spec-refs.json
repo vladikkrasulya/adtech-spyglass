@@ -243,7 +243,7 @@
   "warn-tmax-too-large": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#311-object-bidrequest",
   "err-podid-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
   "err-rqddurs-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#327-object-video",
-  "err-rqddurs-conflict": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#328-object-audio",
+  "err-rqddurs-conflict": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
   "err-schain-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
   "err-schain-node-invalid": "https://github.com/InteractiveAdvertisingBureau/SupplyChain/blob/main/Specification.md",
   "err-eids-entry-invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/eids.md",
@@ -334,5 +334,7 @@
   "request.30.context.device.ip_invalid": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_device",
   "request.30.context.device.ipv6_invalid": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_device",
   "response.nbr_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidresponse",
-  "response.30.nbr_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#object_response"
+  "response.30.nbr_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#object_response",
+  "imp.audio.mimes_required": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
+  "imp.audio.mimes_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio"
 }

@@ -355,5 +355,7 @@
   "request.30.context.device.ip_invalid": "openrtb.request.context.device.ip должно быть строкой. Исправь переданное значение или убери это необязательное поле.",
   "request.30.context.device.ipv6_invalid": "openrtb.request.context.device.ipv6 должно быть строкой. Исправь переданное значение или убери это необязательное поле.",
   "response.nbr_invalid": "nbr должно быть целым числом. Исправь переданное значение или убери это необязательное поле.",
-  "response.30.nbr_invalid": "openrtb.response.nbr должно быть целым числом. Исправь переданное значение или убери это необязательное поле."
+  "response.30.nbr_invalid": "openrtb.response.nbr должно быть целым числом. Исправь переданное значение или убери это необязательное поле.",
+  "imp.audio.mimes_required": "Слот #{num}: аудио без audio.mimes. Перечисли MIME-типы которые принимает плеер (например [\"audio/mp4\",\"audio/mpeg\"]) — иначе биддер не знает чем отвечать.",
+  "imp.audio.mimes_invalid": "Слот #{num}: audio.mimes должен быть непустым массивом непустых MIME-строк (например [\"audio/mp4\",\"audio/mpeg\"])."
 }

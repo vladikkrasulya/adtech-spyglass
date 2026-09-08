@@ -427,9 +427,9 @@
         ru: 'Сначала раскодировано из base64',
       },
       'creative.kind.vast': {
-        uk: 'vast · відео xml · лише перегляд, без відтворення',
-        en: 'vast · video xml · preview-only, no playback',
-        ru: 'vast · видео xml · только просмотр, без воспроизведения',
+        uk: 'vast / daast · xml реклами · лише перегляд, без відтворення',
+        en: 'vast / daast · ad xml · preview-only, no playback',
+        ru: 'vast / daast · xml рекламы · только просмотр, без воспроизведения',
       },
       'creative.kind.trimmed': {
         uk: '… обрізано (приховано {n} символів)',

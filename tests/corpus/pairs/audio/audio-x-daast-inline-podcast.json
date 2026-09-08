@@ -167,20 +167,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-102",
-    "layers": ["core", "http", "browser"],
-    "note": "Audio protocols 9 and 10 negotiate DAAST 1.0 inline/Wrapper and must yield the DAAST protocol family. At the browser layer the DAAST document is not recognized by the creative classifier (Core has no DAAST detector; isVastShape matches only <VAST>), so an element-like XML body is classified as markup and reaches the sandboxed frame as HTML text instead of the inert VAST-style text view; the audio slot is reported as playable-looking markup, not as an audio document. Missing capability: DAAST recognition in the shared detector.",
-    "matches": {
-      "core": ["^format\\.protocols:\\ expected\\ \\[daast\\],\\ got\\ \\[\\]$"],
-      "http": ["^format\\.protocols:\\ expected\\ \\[daast\\],\\ got\\ \\[\\]$"],
-      "browser": [
-        "^browser\\.format\\.protocols: expected \\[daast\\], got \\[\\]$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind: expected vast, got markup$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered: expected inert-text, got full$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.mediaPlays: expected no, got n/a$"
-      ]
-    }
   }
 }

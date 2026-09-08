@@ -18,6 +18,7 @@ owner's content.
 | Where is the latest governed audit?                 | [Ad format verification report](./020-ad-format-verification-matrix/verification.md)                                                                |
 | How was that audit delivered?                       | [Verification plan](./020-ad-format-verification-matrix/plan.md) and [tasks](./020-ad-format-verification-matrix/tasks.md)                          |
 | Why are missing recommended objects warnings?       | [ADR-016](./decisions/ADR-016-recommended-fields-are-guidance.md) and the [validator contract](./000-platform-baseline/contracts/core-validator.md) |
+| Where is the audio repair tracked?                  | [023 audio repair](./023-audio-repair/spec.md), [plan](./023-audio-repair/plan.md) and [tasks](./023-audio-repair/tasks.md)                         |
 | How is production operated?                         | [Operations runbook](../docs/OPERATIONS.md)                                                                                                         |
 | How is a security concern reported?                 | [Security policy](../SECURITY.md)                                                                                                                   |
 | What is the public HTTP contract?                   | [HTTP API documentation](../docs/api-v1.md)                                                                                                         |

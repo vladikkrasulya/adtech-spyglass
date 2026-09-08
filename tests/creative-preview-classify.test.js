@@ -88,6 +88,12 @@ const ROWS = [
     body: '<?xml version="1.0" encoding="UTF-8"?><VAST version="4.2"><Ad/></VAST>',
   },
   {
+    row: 1,
+    kind: 'vast',
+    name: 'DAAST XML document',
+    body: '<?xml version="1.0" encoding="UTF-8"?><DAAST version="1.0"><Ad/></DAAST>',
+  },
+  {
     row: 2,
     kind: 'native',
     name: 'native, wrapped',

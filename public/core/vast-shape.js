@@ -52,7 +52,8 @@
   'use strict';
 
   /** `<VAST`, `<vast:VAST`, `<v:VAST` — an optional namespace prefix, then the name. */
-  const ROOT_NAME = /^<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?VAST(?![A-Za-z0-9_.-])/i;
+  const ROOT_NAME = /^<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?VAST(?![A-Za-z0-9_.:-])/i;
+  const DAAST_ROOT_NAME = /^<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?DAAST(?![A-Za-z0-9_.:-])/i;
   const VERSION_ATTR = /(?:^|\s)version\s*=\s*(?:"(\d+(?:\.\d+)?)"|'(\d+(?:\.\d+)?)')/i;
 
   function isWhitespace(ch) {
@@ -175,6 +176,16 @@
   }
 
   /**
+   * True when the string's ROOT element is `DAAST`, ignoring any legal prolog.
+   */
+  function isDaastShape(s) {
+    if (typeof s !== 'string') return false;
+    const start = rootElementStart(s);
+    if (start < 0) return false;
+    return DAAST_ROOT_NAME.test(s.slice(start, start + 64));
+  }
+
+  /**
    * The `version` attribute of the ROOT element, as a `major.minor` string, or
    * null. Only the root's own start tag is read — never the rest of the
    * document, and never CDATA.
@@ -189,5 +200,5 @@
     return m ? m[1] || m[2] : null;
   }
 
-  return { isVastShape, detectVastVersion };
+  return { isVastShape, detectVastVersion, isDaastShape };
 });

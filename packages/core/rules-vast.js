@@ -327,8 +327,23 @@ function validateVast(adm, path) {
       'video/x-ms-wmv',
       'video/x-msvideo',
       'application/x-mpegurl',
+      'application/vnd.apple.mpegurl',
       'video/mp2t',
       'application/dash+xml',
+      'audio/mp4',
+      'audio/mpeg',
+      'audio/aac',
+      'audio/ogg',
+      'audio/webm',
+      'audio/wav',
+      'audio/x-wav',
+      'audio/flac',
+      'audio/x-flac',
+      'audio/mp3',
+      'audio/m4a',
+      'audio/x-m4a',
+      'audio/3gpp',
+      'audio/3gpp2',
     ]);
     const mfTags = adm.match(/<MediaFile\b[^>]*>/gi) || [];
     let badType = null;

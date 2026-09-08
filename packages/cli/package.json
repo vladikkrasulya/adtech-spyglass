@@ -1,7 +1,7 @@
 {
   "name": "@ortbtools/cli",
   "version": "0.1.3",
-  "description": "Validate OpenRTB BidRequest/BidResponse payloads from the command line \u2014 the same engine that powers ortbtools.com. Version/format autodetect, IAB-spec findings, request\u2194response crosscheck.",
+  "description": "Validate OpenRTB BidRequest/BidResponse payloads from the command line — the same engine that powers ortbtools.com. Version/format autodetect, IAB-spec findings, request↔response crosscheck.",
   "license": "MIT",
   "bin": {
     "ortbtools": "bin/ortbtools.js"
@@ -17,7 +17,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@ortbtools/core": "^0.41.0"
+    "@ortbtools/core": "^0.42.0"
   },
   "keywords": [
     "openrtb",

@@ -674,6 +674,20 @@ function validateImp(imp, i) {
     }
   }
 
+  if (imp.audio) {
+    if (!Array.isArray(imp.audio.mimes) || !imp.audio.mimes.length) {
+      findings.push(F('imp.audio.mimes_required', LEVELS.ERROR, `${p}.audio.mimes`, { num }));
+    } else {
+      imp.audio.mimes.forEach((mime, m) => {
+        if (!isStr(mime) || !mime.trim()) {
+          findings.push(
+            F('imp.audio.mimes_invalid', LEVELS.ERROR, `${p}.audio.mimes[${m}]`, { num }),
+          );
+        }
+      });
+    }
+  }
+
   if (imp.native) {
     try {
       const native =

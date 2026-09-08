@@ -729,6 +729,20 @@ test('validateVast: valid MediaFile type "application/dash+xml" → no mediafile
   );
 });
 
+test('validateVast: valid MediaFile type "audio/mpeg" → no mediafile_type_invalid', () => {
+  assert.equal(
+    findById(validateVast(SKEL_TYPE('audio/mpeg'), 'adm'), 'vast.mediafile_type_invalid'),
+    undefined,
+  );
+});
+
+test('validateVast: valid MediaFile type "audio/mp4" → no mediafile_type_invalid', () => {
+  assert.equal(
+    findById(validateVast(SKEL_TYPE('audio/mp4'), 'adm'), 'vast.mediafile_type_invalid'),
+    undefined,
+  );
+});
+
 test('validateVast: invalid MediaFile type "video/avi" → mediafile_type_invalid WARNING', () => {
   const f = findById(validateVast(SKEL_TYPE('video/avi'), 'adm'), 'vast.mediafile_type_invalid');
   assert.ok(f);
@@ -943,4 +957,18 @@ test('vast: setting the attribute either way resolves it', () => {
 test('vast: a single-ad wrapper has no ambiguity to report', () => {
   // Silence on a document where the attribute changes nothing.
   assert.deepEqual(ambiguityIds(wrapperDoc('', 1)), []);
+});
+
+test('vast-shape: isDaastShape correctly distinguishes namespace prefixes from local element name (R4)', () => {
+  const { isDaastShape } = require('../packages/core/vast-shape.js');
+  // DAAST as namespace prefix, Creative as local-name -> must be false
+  assert.equal(isDaastShape('<DAAST:Creative xmlns:DAAST="urn:test"/>'), false);
+  // DAAST as local-name with prefix p -> must be true
+  assert.equal(isDaastShape('<p:DAAST xmlns:p="urn:test"/>'), true);
+  // Standard root DAAST -> must be true
+  assert.equal(isDaastShape('<DAAST version="1.0"/>'), true);
+  assert.equal(isDaastShape('<DAAST/>'), true);
+  assert.equal(isDaastShape('<DAAST>\n<Ad>...</Ad>\n</DAAST>'), true);
+  // Not root element -> must be false
+  assert.equal(isDaastShape('<div><DAAST/></div>'), false);
 });

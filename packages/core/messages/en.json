@@ -356,5 +356,7 @@
   "request.30.context.device.ip_invalid": "openrtb.request.context.device.ip must be a string. Correct the supplied value or omit this optional field.",
   "request.30.context.device.ipv6_invalid": "openrtb.request.context.device.ipv6 must be a string. Correct the supplied value or omit this optional field.",
   "response.nbr_invalid": "nbr must be an integer. Correct the supplied value or omit this optional field.",
-  "response.30.nbr_invalid": "openrtb.response.nbr must be an integer. Correct the supplied value or omit this optional field."
+  "response.30.nbr_invalid": "openrtb.response.nbr must be an integer. Correct the supplied value or omit this optional field.",
+  "imp.audio.mimes_required": "Slot #{num}: audio has no audio.mimes. List the MIME types the player accepts (e.g. [\"audio/mp4\",\"audio/mpeg\"]). Without it the bidder doesn't know what to send.",
+  "imp.audio.mimes_invalid": "Slot #{num}: audio.mimes must be a non-empty array of non-empty MIME type strings (e.g. [\"audio/mp4\",\"audio/mpeg\"])."
 }

@@ -223,24 +223,11 @@
     }
   },
   "knownGap": {
-    "id": "DEF-101",
-    "layers": ["core", "http", "browser"],
-    "note": "Audio VAST and audio MediaFiles must remain valid and be identified as audio; optional request Device attributes do not invalidate the pair.",
+    "id": "DEF-201",
+    "layers": ["browser"],
+    "note": "The Inspector previews only the first bid; seat[0].bid[1] of this two-bid reverse-ordered response cannot be selected or inspected (recorded capability gap DEF-201). The audio MIME warnings and video format mis-tag this case used to carry under DEF-101 were resolved.",
     "matches": {
-      "core": [
-        "^response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_type_invalid\\ →\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm,\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[1\\]\\.adm$",
-        "^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
-      ],
-      "http": [
-        "^response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_type_invalid\\ →\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm,\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[1\\]\\.adm$",
-        "^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
-      ],
-      "browser": [
-        "^browser\\.row:\\ forbidden\\ response\\ vast\\.mediafile_type_invalid$",
-        "^browser\\.response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_type_invalid\\ →\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm,\\ vast\\.mediafile_type_invalid\\[warning\\]@seatbid\\[0\\]\\.bid\\[1\\]\\.adm$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$",
-        "^browser\\.selection:\\ unavailable\\ seat\\[0\\]\\.bid\\[1\\]$"
-      ]
+      "browser": ["^browser\\.selection: unavailable seat\\[0\\]\\.bid\\[1\\]$"]
     }
   }
 }

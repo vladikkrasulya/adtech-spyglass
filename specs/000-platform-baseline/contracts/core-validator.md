@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.40.0`; CLI `0.1.3`
+**Current versions**: Core `0.42.0`; CLI `0.1.3`
 
 ## Public Core Surface
 
@@ -185,7 +185,7 @@ All existing finding ids remain. Core 0.40.0 adds exactly 13 invalid-type error 
 paths in the [021 finding contract](../../021-recommended-fields-guidance/contracts/finding-levels.md).
 Existing 3.0 Site/App/Device invalid ids remain errors, including for supplied falsy wrong types.
 The additive ids and restored blocking verdicts for malformed inputs justify the minor bump from
-0.39.0; the CLI's Core dependency range is `^0.40.0`. Public-boundary tests must distinguish valid
+0.39.0; that release used CLI Core dependency `^0.40.0` (superseded by 023 below). Public-boundary tests must distinguish valid
 omissions from supplied wrong types in both protocol families, and every new id must have en/uk/ru
 messages. Core tests cover explicit `undefined`; HTTP tests cover JSON omission and invalid values.
 
@@ -207,6 +207,16 @@ unusable branches unchanged. A negative floor is not flagged by any rule today a
 On the OpenRTB 3.0 path the item projection reads the floor currency from `flrcur`, and a paired 3.0
 request reaches the response rule pass projected to `{cur}` from `openrtb.request.cur` so a permitted
 currency is not reported as a mismatch. The projection deliberately carries nothing else.
+
+## Audio Detection and Required MIME Values (023; Core 0.42.0)
+
+The [023 audio contract](../../023-audio-repair/contracts/audio-behavior.md) corrects audio/VAST/DAAST detection and adds two OpenRTB 2.x audio errors. `imp.audio.mimes_required` reports absent, non-array or empty `imp[i].audio.mimes`; `imp.audio.mimes_invalid` reports a non-string or blank element at `imp[i].audio.mimes[m]`. Both are errors with en/uk/ru messages and specification references. Valid nonempty string arrays produce neither error; MIME presence/type validation does not enumerate all supported media capabilities.
+
+Format detection preserves independent actual audio/video evidence, ignores apparent attributes inside another quoted value or XML comments/CDATA/DOCTYPE, and terminates on malformed attribute tokens without manufacturing valid media evidence. Actual video remains visible alongside audio metadata. The VAST media whitelist accepts its documented audio MIME variants. OpenRTB audio/video codes 9/10 mean DAAST; 7/8/11–14 mean VAST4; code4 does not mean DAAST. AdCOM Audio/Video response `ctype` contributes scalar integer protocol evidence; malformed response arrays do not.
+
+DAAST shape recognition accepts an actual DAAST local root, including supported namespace/prolog forms; a DAAST prefix on another root is not sufficient. Browser preview uses the existing inert `vast` document-text kind. No playback, wrapper fetch, entity expansion, new network path or sandbox privilege is added.
+
+Existing public result shapes, finding IDs, ordering/deduplication and CLI exit-code policy remain. The two additive errors can change consumer verdicts and justify Core0.42.0 with CLI dependency `^0.42.0`; app1.19.4 and CLI0.1.3 retain their version lines. Release/verification state is recorded in [023](../../023-audio-repair/spec.md), separately from repository contract state.
 
 ## CLI Contract
 

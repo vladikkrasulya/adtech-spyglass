@@ -1,60 +1,6 @@
 {
   "schemaVersion": 1,
   "gaps": {
-    "DEF-101": {
-      "id": "DEF-101",
-      "title": "Valid audio fixtures receive video MIME warnings and video format tags",
-      "category": "audio-validation",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
-      "code": [
-        "packages/core/rules-request.js:259",
-        "packages/core/rules-vast.js:322",
-        "packages/core/format-detect.js"
-      ],
-      "expected": "Audio VAST and audio MediaFiles must remain valid and be identified as audio; optional request Device attributes do not invalidate the pair.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": [
-        "audio-inapp-26-podcast-companion",
-        "audio-inapp-26-wrapper",
-        "audio-web-25-mp3-legacy",
-        "audio-web-26-live-exact-aac",
-        "audio-web-26-multi-imp-reversed",
-        "audio-x-ctv-smartspeaker-postroll",
-        "audio-x-nvol-companion-html",
-        "audio-x-stitched-preroll-podcast",
-        "audio-x-vast41-bitrate-ladder",
-        "cover-context-audio-25-unspecified",
-        "cover-context-audio-25-ctv",
-        "cover-context-audio-25-inapp",
-        "cover-context-audio-26-dooh",
-        "cover-context-audio-26-unspecified"
-      ],
-      "reviewedAt": "2026-09-08",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
-        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects.",
-        "2026-09-08 (021): the optional-device ERRORs that used to accompany these cases were resolved by ADR-016; the recorded signatures now carry only the audio-specific deviations."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "relatedBrowserDefects": ["DEF-201"]
-    },
-    "DEF-102": {
-      "id": "DEF-102",
-      "title": "DAAST request protocol enumeration is not detected",
-      "category": "format-detection",
-      "severity": "medium",
-      "source": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/main/AdCOM%20v1.0%20FINAL.md#list_creativesubtypesaudiovideo",
-      "code": ["packages/core/format-detect.js:85"],
-      "expected": "Audio protocols 9 and 10 negotiate DAAST 1.0 inline/Wrapper and must yield the DAAST protocol family.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps. Browser (extension case audio-x-daast-inline-podcast): a <DAAST> document is classified as markup and framed as HTML text because no DAAST detector exists; expected the inert audio-document text view.",
-      "cases": ["audio-daast-26-request-only", "audio-x-daast-inline-podcast"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
     "DEF-106": {
       "id": "DEF-106",
       "title": "Documented EXADS proprietary request and bid wrapper are unsupported",
@@ -156,22 +102,6 @@
         "format-mixed-impression-video-wins",
         "mut-format-mismatch-mixed-video-mtype-banner"
       ],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-112": {
-      "id": "DEF-112",
-      "title": "Missing required Audio.mimes has no validation issue",
-      "category": "media-constraint",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
-      "code": ["packages/core/rules-request.js"],
-      "expected": "Audio.mimes is required. Its absence must produce a field-local warning or error; the oracle does not invent a future finding identifier.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["audio-mimes-missing"],
       "reviewedAt": "2026-09-07",
       "notes": [
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
