@@ -1,0 +1,91 @@
+{
+  "kind": "pair",
+  "id": "push-x-numeric-string-cpc",
+  "title": "single material with cpc as a parseable numeric string and hosted https creative assets",
+  "format": "push",
+  "protocol": "jsonfeed",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "response-only",
+  "tags": ["public-reference", "vendor-valid", "kadam", "kadam-json-feed", "numeric-string-cpc"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "Kadam Feed and RTB contracts, including in-page and clickunder examples",
+      "url": "https://wiki.kadam.net/en/index.php?title=RTB_setting&oldid=7076",
+      "version": "MediaWiki oldid=7076",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All ids, domains, prices, timestamps, creative text and URLs independently authored.",
+      "cpc is deliberately a numeric string (\"0.0175\") rather than a JSON number — many SSPs send it this way and Core's own field contract (rules-feed.js) explicitly tolerates and flags it, distinct from a non-numeric string.",
+      "icon_url/image_url are hosted https URLs (not data: URIs), so the preview's initial sealed state stays blocked-with-limitation — the deliberate counterpart to push-x-kadam-material-single's full-render data: URI case.",
+      "No OpenRTB or GET-URL request is invented for this response-only scenario: no registered decoder recognizes a Kadam-style feed request query string (push-kadam-icon-notice, known gap DEF-107)."
+    ],
+    "sanitized": "No real visitor or subscriber data. All URLs use reserved .test hostnames; icon_url/image_url are placeholder addresses that the preview's content policy never fetches automatically.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "kadam-json-feed",
+    "vendorDialect": "kadam",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "response-only-reference",
+      "note": "Response-only: no registered decoder recognizes the Kadam feed's GET request shape (DEF-107), so only the documented single-object response material shape is exercised here."
+    },
+    "sourceIds": ["feeds:feeds-kadam-feed", "feeds:feeds-kadam-current"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "response": {
+    "id": "push-x-numeric-string-cpc",
+    "title": "Fresh paint for the porch",
+    "text": "A weekend project told in one card.",
+    "image_url": "https://assets.example.test/feeds/push-x-numeric-string-cpc-hero-492x328.png",
+    "icon_url": "https://assets.example.test/feeds/push-x-numeric-string-cpc-icon-192x192.png",
+    "click_url": "https://advertiser.example.test/offers/push-x-numeric-string-cpc",
+    "cpc": "0.0175",
+    "nurl": "https://tracking.example.test/notice/push-x-numeric-string-cpc"
+  },
+  "specNotes": [
+    "rules-feed.js's 3-tier cpc/price contract (formats-feeds map §1.1/§2) distinguishes missing, wrong-type-but-parseable, and wrong-type-unparseable: a numeric string such as \"0.0175\" is parseable and must warn, not error — this is documented Core behavior being asserted as correct, not a gap.",
+    "Desired capability: detectFeedFormat recognizes a cleanly-validated, documented push material as push regardless of whether its image/icon keys carry the `_url` suffix. Existing product acceptance is not the validity oracle.",
+    "Remote https creative assets stay blocked in the initial sealed preview; the title and description text remain visible inline on the synthetic card regardless (spec 014 FR-001/FR-005) — this is the documented \"partial\" render, not a missing-creative failure.",
+    "The documented vendor ad type must be identified in the merged format result. Public Core vocabulary uses pops for pop traffic; this is a vendor capability expectation, not an invented IAB extension."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning",
+      "type": "Push-Materials Feed Response (single)",
+      "must": [{ "id": "feed.push.bid_string_type", "path": "cpc", "level": "warning" }],
+      "mustNot": ["feed.push.bid_not_numeric", "feed.push.bid_required"]
+    },
+    "format": {
+      "formats": ["push"]
+    },
+    "preview": {
+      "kind": "push",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "Fresh paint for the porch",
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "Images remain blocked in the initial sealed preview; request interception does not bypass CSP."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-160",
+    "layers": ["core", "http", "browser"],
+    "note": "detectFeedFormat's hasImage/hasClick heuristic (format-detect.js) recognizes only bare image/icon keys, not the image_url/icon_url aliases validatePushMaterial (and this Kadam contract) accepts; a fully valid, cleanly-validated Kadam material gets no push format tag.",
+    "matches": {
+      "core": ["^format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"],
+      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"]
+    }
+  }
+}

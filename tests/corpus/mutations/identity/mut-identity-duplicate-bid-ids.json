@@ -1,0 +1,126 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-identity-duplicate-bid-ids",
+  "title": "Repeated bidder tracking ID preserves distinct impression references",
+  "scenario": "pair",
+  "tags": ["mutation", "identity"],
+  "base": "bn-banner-25-fixed",
+  "category": "identity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/imp/-",
+        "value": {
+          "id": "slot-2",
+          "secure": 1,
+          "bidfloor": 0.2,
+          "bidfloorcur": "USD",
+          "banner": {
+            "w": 300,
+            "h": 250
+          }
+        }
+      }
+    ],
+    "response": [
+      {
+        "op": "add",
+        "path": "/seatbid/0/bid/-",
+        "value": {
+          "id": "bid-fixed",
+          "impid": "slot-2",
+          "price": 1.25,
+          "adm": "<!doctype html><html><head><meta charset=\"utf-8\"></head><body><div style=\"width:300px;height:250px;background:#223b62\">DUPLICATE ID CREATIVE</div></body></html>",
+          "adomain": ["advertiser.example.test"],
+          "crid": "bid-fixed-creative-2",
+          "w": 300,
+          "h": 250
+        }
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "mustNot": [
+        {
+          "id": "response.bid.id_required"
+        }
+      ],
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "bn-banner-25-fixed"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[1].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[1].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[1].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "specNotes": [
+    "OpenRTB 2.6 Bid.id is bidder-generated tracking information; its field description does not prescribe the uniqueness scope asserted by the earlier draft. This positive control preserves two distinct bid.impid references while reusing a tracking ID.",
+    "A diagnostic for repeated tracking IDs may be a useful explicit policy proposal, but is not an unconditional IAB conformance requirement. Impression resolution, price and size assertions remain independent."
+  ]
+}

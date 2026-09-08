@@ -1,0 +1,80 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-identity-missing-bid-impid",
+  "title": "A bid with no impid cannot be resolved and is excluded from every crosscheck",
+  "scenario": "pair",
+  "tags": ["mutation", "identity"],
+  "base": "bn-banner-25-fixed",
+  "category": "identity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
+  "patch": {
+    "response": [
+      {
+        "op": "remove",
+        "path": "/seatbid/0/bid/0/impid"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "response.bid.impid_required",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "error"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.bid.impid_unresolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "crit"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.impid_resolved"
+        },
+        {
+          "id": "crosscheck.bid.above_floor"
+        },
+        {
+          "id": "crosscheck.bid.size_match"
+        }
+      ]
+    },
+    "consistency": ["unresolved-impid-not-filled"],
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "OpenRTB 2.6 §4.2.3: impid is required and ties the Bid to the offered Imp (§3.2.4). Without it the resolution key is null, so crosscheck.js skips price/floor/size/native/VAST checks for this bid entirely (the `continue` at the unresolved branch) — the bid still counts toward totalBids but contributes nothing to impsFilled or bidsAboveFloor."
+  ]
+}

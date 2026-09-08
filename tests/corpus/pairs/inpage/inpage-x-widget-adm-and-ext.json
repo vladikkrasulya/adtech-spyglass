@@ -1,0 +1,166 @@
+{
+  "kind": "pair",
+  "id": "inpage-x-widget-adm-and-ext",
+  "title": "In-page push bid carrying both a rendering adm and dialect bid.ext fields",
+  "format": "inpage",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "inpage-push",
+  "scenario": "pair",
+  "tags": ["synthetic", "inpage-push-dialect", "widget-zone", "adm-and-ext"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools In-Page Push dialect contract — adm/bid.ext precedence",
+      "path": "packages/core/dialects/inpage-push.js",
+      "version": "repo HEAD a61fc25 (2026-09-07)",
+      "license": "MIT (ortbtools)",
+      "notes": "Adds a plain, self-contained adm markup string alongside the dialect's bid.ext fields to observe which carrier Core validates and which one the preview renders when a bid legitimately supplies both."
+    },
+    "modifications": [
+      "Wholly original OpenRTB envelope, imp, site, device and bid fields; adm is a minimal inline HTML fragment with a 1x1 data: URI pixel so no external network access is implied.",
+      "IP uses TEST-NET-1 192.0.2.44; user/site identifiers are clearly synthetic fixture strings; asset/click/tracking URLs use reserved .test hostnames."
+    ],
+    "sanitized": "No real visitor, publisher or advertiser data. IP 192.0.2.44 is TEST-NET-1; user.id/site.id are synthetic-fixture strings; every non-data asset/click/tracking URL uses a reserved .test hostname."
+  },
+  "request": {
+    "id": "inpage-x-widget-adm-and-ext",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "inpage-x-widget-adm-and-ext-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "ext": {
+          "widget_id": "widget-12",
+          "zone_id": "zone-3"
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "inpage-x-widget-adm-and-ext",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "inpage-x-widget-adm-and-ext-bid",
+            "impid": "inpage-x-widget-adm-and-ext-imp",
+            "price": 0.42,
+            "adomain": ["advertiser.example.test"],
+            "crid": "inpage-x-widget-adm-and-ext-creative",
+            "adm": "<div style=\"width:300px;height:100px;background:#ffffff\"><img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7\" width=\"1\" height=\"1\" alt=\"\"/><p>In-page push preview via adm markup</p></div>",
+            "ext": {
+              "title": "A quiet harbor at dawn",
+              "description": "Compare three original travel-planning tools before you book.",
+              "image": "https://assets.example.test/feeds/inpage-x-widget-adm-and-ext-hero-492x328.png",
+              "icon": "https://assets.example.test/feeds/inpage-x-widget-adm-and-ext-icon-192x192.png",
+              "url": "https://advertiser.example.test/offers/inpage-x-widget-adm-and-ext",
+              "cta": "Learn more"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "rules-response.js only checks `!isStr(b.adm) && !isStr(b.nurl)` before considering response.bid.payload_missing; a bid supplying a string adm never reaches that check at all, independent of dialect or bid.ext content.",
+    "packages/core/dialects/inpage-push.js's claimsBid()/validateResponse() key off bid.ext alone (title-alias or image-alias present); they run and validate title/description/image/icon/url/cta exactly the same whether or not adm is also present — the two carriers are validated independently, not merged or reconciled.",
+    "public/ortbtools.app.js findAdm() walks the response tree for the first truthy .adm (or .iurl); a bid.ext card is never consulted while an adm string exists on the same bid, so the preview renders the adm markup and the bid.ext fields have no visible effect on what the analyst sees.",
+    "OpenRTB object-model requirements require at least one Banner, Video, Audio or Native object. A widget/zone extension alone does not satisfy that baseline requirement; imp.format_required is an expected error under both the IAB baseline and the current response-focused inpage-push dialect. The vendor format-tag/preview gap is separate from this correct diagnostic."
+  ],
+  "notes": [
+    "adm is intentionally inert/benign (a static 1x1 data: pixel and a text label) so the static creative scanner and the preview both stay clean, isolating the precedence question from any unrelated finding."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.format_required",
+          "path": "imp[0]",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "info",
+      "mustNot": [
+        {
+          "id": "response.bid.payload_missing"
+        }
+      ],
+      "mustNotPrefix": ["inpage-push."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "inpage-x-widget-adm-and-ext"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0010"
+          }
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "format": {
+      "formats": ["inpage"]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "In-page push preview via adm markup",
+      "assets": {
+        "imgTotal": 1,
+        "imgLoaded": 1,
+        "refused": 0
+      }
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-180",
+    "layers": ["core", "http", "browser"],
+    "note": "The standard OpenRTB media-object requirement is correctly reported and is not this gap. The remaining expectation concerns recognizing the project-documented in-page vendor signal in an OpenRTB envelope and exposing bid.ext creative content where applicable.",
+    "matches": {
+      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"]
+    }
+  }
+}

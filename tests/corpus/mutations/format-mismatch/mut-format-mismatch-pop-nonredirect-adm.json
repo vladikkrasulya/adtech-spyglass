@@ -1,0 +1,81 @@
+{
+  "kind": "mutation",
+  "id": "mut-format-mismatch-pop-nonredirect-adm",
+  "title": "A pop-declared impression is filled with plain banner HTML instead of a redirect script",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["mutation", "format-mismatch"],
+  "base": "pop-x-openrtb-adtype-popunder-window-open",
+  "category": "format-mismatch",
+  "specRef": "packages/core/rules/pop-response/index.js — admLooksLikePop / bid.pop.adm_not_redirect, documented against oRTB 2.6 §3.2.4 Object:Imp extensibility (imp.ext.adtype pop-family hint)",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<!doctype html><html><head><meta charset=\"utf-8\"></head><body><div style=\"width:300px;height:250px;background:#223b62\">NOT A REDIRECT — PLAIN BANNER MARKUP</div></body></html>"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.adtype",
+          "level": "info"
+        }
+      ]
+    },
+    "response": {
+      "maxLevel": "error",
+      "must": [
+        {
+          "id": "bid.pop.adm_not_redirect",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "error"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.bid.pop.adomain_landing_match",
+        "crosscheck.bid.pop.adomain_landing_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.id_mismatch",
+        "crosscheck.no_request",
+        "crosscheck.no_response"
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "This case demonstrates a format-mismatch check that already works: the pop-response plugin's per-bid gate is satisfied because bid.ext.adtype='popunder' is unchanged from the base fixture, so admLooksLikePop(bid.adm) is evaluated against the new plain-HTML adm, finds none of its three accepted redirect shapes (bare URL / window.open / location redirect), and reports bid.pop.adm_not_redirect at ERROR.",
+    "The crosscheck pop-landing rule (3d-pop) is a separate, silently-skipped check here: extractPopLandingHost(adm) finds no host to extract from plain HTML, so neither crosscheck.bid.pop.adomain_landing_match nor _mismatch fires — that silence is itself the documented behavior (packages/core/crosscheck.js:395-408 comment), not a gap being asserted by this case.",
+    "bid.w/bid.h are absent on this bid (as in the base fixture), so crosscheck's banner-size block never runs at all; the only signal that this fill is wrong is the response-side pop-response finding asserted above."
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "multiplicity-three-imps-single-seat",
+  "title": "One seat may answer three offered impressions in a single seatbid",
+  "scenario": "pair",
+  "tags": ["mutation", "multiplicity"],
+  "base": "bn-banner-26-multiimp-multiseat",
+  "category": "multiplicity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectseatbid",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/imp/-",
+        "value": {
+          "id": "footer",
+          "secure": 1,
+          "bidfloor": 0.2,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 50
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "replaceResponse": {
+      "id": "bn-banner-26-multiimp-multiseat",
+      "cur": "USD",
+      "seatbid": [
+        {
+          "seat": "synthetic-seat-a",
+          "bid": [
+            {
+              "id": "bid-top",
+              "impid": "top",
+              "price": 1.25,
+              "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:728px;height:90px;overflow:hidden;font-family:Arial,sans-serif;background:#223b62}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#162d49;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"TOP CREATIVE\" role=\"img\" aria-label=\"TOP CREATIVE\"><img alt=\"TOP CREATIVE landscape\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MjgiIGhlaWdodD0iOTAiIHZpZXdCb3g9IjAgMCA3MjggOTAiPjxyZWN0IHdpZHRoPSI3MjgiIGhlaWdodD0iOTAiIHJ4PSIxMiIgZmlsbD0iIzIyM2I2MiIvPjxjaXJjbGUgY3g9IjU0Ni4wIiBjeT0iMzQuMiIgcj0iMjEuNTk5OTk5OTk5OTk5OTk4IiBmaWxsPSIjZmZkMTY2Ii8+PHBhdGggZD0iTTAgOTAgTDM0OS40NCAyNy4wIEw3MjggOTAgWiIgZmlsbD0iIzU1YjZhNSIvPjx0ZXh0IHg9IjEyIiB5PSI3MiIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0Ij5UT1AgQ1JFQVRJVkU8L3RleHQ+PC9zdmc+\"><span class=\"label\">TOP CREATIVE · TEST AD</span></div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid-top-creative",
+              "w": 728,
+              "h": 90,
+              "mtype": 1
+            },
+            {
+              "id": "bid-rail",
+              "impid": "rail",
+              "price": 1.25,
+              "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:160px;height:600px;overflow:hidden;font-family:Arial,sans-serif;background:#223b62}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#162d49;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"RAIL CREATIVE\" role=\"img\" aria-label=\"RAIL CREATIVE\"><img alt=\"RAIL CREATIVE landscape\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMTYwIDYwMCI+PHJlY3Qgd2lkdGg9IjE2MCIgaGVpZ2h0PSI2MDAiIHJ4PSIxMiIgZmlsbD0iIzIyM2I2MiIvPjxjaXJjbGUgY3g9IjEyMC4wIiBjeT0iMjI4LjAiIHI9IjM4LjQiIGZpbGw9IiNmZmQxNjYiLz48cGF0aCBkPSJNMCA2MDAgTDc2LjggMTgwLjAgTDE2MCA2MDAgWiIgZmlsbD0iIzU1YjZhNSIvPjx0ZXh0IHg9IjEyIiB5PSI1ODIiIGZpbGw9IndoaXRlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiI+UkFJTCBDUkVBVElWRTwvdGV4dD48L3N2Zz4=\"><span class=\"label\">RAIL CREATIVE · TEST AD</span></div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid-rail-creative",
+              "w": 160,
+              "h": 600,
+              "mtype": 1
+            },
+            {
+              "id": "bid-footer",
+              "impid": "footer",
+              "price": 1.25,
+              "adm": "<!doctype html><html><body><div data-fixture=\"FOOTER CREATIVE\" role=\"img\" aria-label=\"FOOTER CREATIVE\">FOOTER CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid-footer-creative",
+              "w": 300,
+              "h": 50,
+              "mtype": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.auction.summary",
+          "path": "auction",
+          "level": "ok",
+          "params": {
+            "totalBids": 3,
+            "impsFilled": 3,
+            "impsTotal": 3
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[1].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[1].size",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[2].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[2].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "OpenRTB 2.6 §4.2.2: \"Array of 1+ Bid objects... each related to an impression. Multiple bids can relate to the same impression\" — nothing restricts one seatbid.bid[] array from covering every offered impression."
+  ]
+}

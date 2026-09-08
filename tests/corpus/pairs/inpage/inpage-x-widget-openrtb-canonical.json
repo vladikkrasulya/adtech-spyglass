@@ -1,0 +1,165 @@
+{
+  "kind": "pair",
+  "id": "inpage-x-widget-openrtb-canonical",
+  "title": "OpenRTB in-page push bid via bid.ext canonical fields on a widget/zone-only imp",
+  "format": "inpage",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "inpage-push",
+  "scenario": "pair",
+  "tags": ["synthetic", "inpage-push-dialect", "widget-zone", "canonical-fields"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools In-Page Push dialect contract (bid.ext.title/description/image/icon/url/cta field carrier)",
+      "path": "packages/core/dialects/inpage-push.js",
+      "version": "repo HEAD a61fc25 (2026-09-07)",
+      "license": "MIT (ortbtools)",
+      "notes": "Exercises the product's own documented, vendor-neutral In-Page Push field contract and its imp.ext.widget_id/zone_id placement signal (packages/core/format-detect.js detectFeedFormat rule 5), not a third-party IAB spec or a named vendor wire format."
+    },
+    "modifications": [
+      "Wholly original OpenRTB envelope, imp, site, device and bid fields; only the field ROLE NAMES (bid.ext.title/description/image/icon/url/cta) are taken from the dialect's own source comment.",
+      "IP uses TEST-NET-1 192.0.2.44; user/site identifiers are clearly synthetic fixture strings; asset/click/tracking URLs use reserved .test hostnames."
+    ],
+    "sanitized": "No real visitor, publisher or advertiser data. IP 192.0.2.44 is TEST-NET-1; user.id/site.id are synthetic-fixture strings; every asset/click/tracking URL uses a reserved .test hostname."
+  },
+  "request": {
+    "id": "inpage-x-widget-openrtb-canonical",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "inpage-x-widget-openrtb-canonical-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "ext": {
+          "widget_id": "widget-12",
+          "zone_id": "zone-3"
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "inpage-x-widget-openrtb-canonical",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "inpage-x-widget-openrtb-canonical-bid",
+            "impid": "inpage-x-widget-openrtb-canonical-imp",
+            "price": 0.42,
+            "adomain": ["advertiser.example.test"],
+            "crid": "inpage-x-widget-openrtb-canonical-creative",
+            "ext": {
+              "title": "A quiet harbor at dawn",
+              "description": "Compare three original travel-planning tools before you book.",
+              "image": "https://assets.example.test/feeds/inpage-x-widget-openrtb-canonical-hero-492x328.png",
+              "icon": "https://assets.example.test/feeds/inpage-x-widget-openrtb-canonical-icon-192x192.png",
+              "url": "https://advertiser.example.test/offers/inpage-x-widget-openrtb-canonical",
+              "cta": "Learn more"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "packages/core/dialects/inpage-push.js: bid.ext carries the creative (title/description/image/icon/url, alias cta) instead of adm/native; claimsBid(bid) is true whenever bid.ext has a title-alias or image-alias, and rules-response.js then skips the base IAB response.bid.payload_missing check for that bid so the dialect's own field checks run instead.",
+    "packages/core/format-detect.js detectFeedFormat() rule 5 tags FORMATS.INPAGE from exactly this ext.widget_id/zone_id/format==='inpage' signal, but only for the JSON-feed single-object/array shape (line 443 gates it off whenever the payload is already imp[]/seatbid[]-shaped) — an OpenRTB carrier of the same documented placement signal is never reached by that rule.",
+    "Preview pipeline (public/ortbtools.app.js): findAdm() only reads adm/iurl anywhere in the response tree, and findPushMaterial()/isMat() only looks at top-level cpc|price + click_url|link + a creative key — neither ever reads a nested bid.ext card, so a bid whose entire creative lives in bid.ext renders the generic empty state.",
+    "OpenRTB object-model requirements require at least one Banner, Video, Audio or Native object. A widget/zone extension alone does not satisfy that baseline requirement; imp.format_required is an expected error under both the IAB baseline and the current response-focused inpage-push dialect. The vendor format-tag/preview gap is separate from this correct diagnostic."
+  ],
+  "notes": [
+    "The dialect's own field validation (title/image/click required, icon/description/cta length-checked) is exercised elsewhere by the alias-variant sibling case; this case keeps all fields canonical and well-formed to isolate the imp-shape and format-tag deviations."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.format_required",
+          "path": "imp[0]",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "info",
+      "mustNot": [
+        {
+          "id": "response.bid.payload_missing"
+        }
+      ],
+      "mustNotPrefix": ["inpage-push."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "inpage-x-widget-openrtb-canonical"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0010"
+          }
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "format": {
+      "formats": ["inpage"]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "marker": "A quiet harbor at dawn",
+      "limitation": "No renderable creative field (adm/native/iurl) is present in the response; the winning bid's content lives entirely in bid.ext, which the preview pipeline never reads.",
+      "capabilityGap": "The in-page push dialect validates bid.ext.title/description/image/icon/url/cta, but the Inspector's creative preview has no renderer for that carrier — findAdm() and findPushMaterial() only look at adm/iurl/nurl and top-level cpc+click_url+creative fields, never at a nested bid.ext card."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-180",
+    "layers": ["core", "http", "browser"],
+    "note": "The standard OpenRTB media-object requirement is correctly reported and is not this gap. The remaining expectation concerns recognizing the project-documented in-page vendor signal in an OpenRTB envelope and exposing bid.ext creative content where applicable.",
+    "matches": {
+      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "browser": [
+        "^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ harbor\\ at\\ dawn\"\\ absent$"
+      ]
+    }
+  }
+}

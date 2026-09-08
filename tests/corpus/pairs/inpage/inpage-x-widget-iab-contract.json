@@ -1,0 +1,166 @@
+{
+  "kind": "pair",
+  "id": "inpage-x-widget-iab-contract",
+  "title": "The same in-page push bid.ext bid under the plain IAB dialect draws payload_missing",
+  "format": "inpage",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["synthetic", "iab-dialect", "widget-zone", "dialect-contrast"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools In-Page Push dialect contract — dialect-selection contrast (default IAB dialect vs inpage-push)",
+      "path": "packages/core/dialects/inpage-push.js",
+      "version": "repo HEAD a61fc25 (2026-09-07)",
+      "license": "MIT (ortbtools)",
+      "notes": "Same bid.ext bytes as the canonical-field sibling case, analyzed under case.dialect 'iab' instead of 'inpage-push', to demonstrate the documented contract difference: only the In-Page Push dialect exposes claimsBid() to suppress the base IAB payload_missing check."
+    },
+    "modifications": [
+      "Wholly original OpenRTB envelope, imp, site, device and bid fields; bid.ext values are the same canonical set used in the sibling case, reused deliberately to isolate the dialect-selection variable.",
+      "IP uses TEST-NET-1 192.0.2.44; user/site identifiers are clearly synthetic fixture strings; asset/click/tracking URLs use reserved .test hostnames."
+    ],
+    "sanitized": "No real visitor, publisher or advertiser data. IP 192.0.2.44 is TEST-NET-1; user.id/site.id are synthetic-fixture strings; every asset/click/tracking URL uses a reserved .test hostname."
+  },
+  "request": {
+    "id": "inpage-x-widget-iab-contract",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "inpage-x-widget-iab-contract-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "ext": {
+          "widget_id": "widget-12",
+          "zone_id": "zone-3"
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "inpage-x-widget-iab-contract",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "inpage-x-widget-iab-contract-bid",
+            "impid": "inpage-x-widget-iab-contract-imp",
+            "price": 0.42,
+            "adomain": ["advertiser.example.test"],
+            "crid": "inpage-x-widget-iab-contract-creative",
+            "ext": {
+              "title": "A quiet harbor at dawn",
+              "description": "Compare three original travel-planning tools before you book.",
+              "image": "https://assets.example.test/feeds/inpage-x-widget-iab-contract-hero-492x328.png",
+              "icon": "https://assets.example.test/feeds/inpage-x-widget-iab-contract-icon-192x192.png",
+              "url": "https://advertiser.example.test/offers/inpage-x-widget-iab-contract",
+              "cta": "Learn more"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "packages/core/dialects/iab.js has no claimsBid predicate, so rules-response.js's base IAB rule (a bid with neither a string adm nor a string nurl draws response.bid.payload_missing, WARNING) fires unconditionally — this is documented, correct behaviour for the default dialect, not a defect.",
+    "Because the default dialect never inspects bid.ext at all, none of the inpage-push.* field checks (title/image/click required, icon/description/cta length limits) run either — the bid's well-formed ext content is simply unexamined under this dialect, which is the contract this case pins.",
+    "OpenRTB object-model requirements require at least one Banner, Video, Audio or Native object. A widget/zone extension alone does not satisfy that baseline requirement; imp.format_required is an expected error under both the IAB baseline and the current response-focused inpage-push dialect. The vendor format-tag/preview gap is separate from this correct diagnostic."
+  ],
+  "notes": [
+    "Same bid.ext bytes as inpage-x-widget-openrtb-canonical, deliberately reused so the only variable between the two cases is case.dialect."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.format_required",
+          "path": "imp[0]",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "response.bid.payload_missing",
+          "level": "warning",
+          "path": "seatbid[0].bid[0].adm"
+        }
+      ],
+      "mustNotPrefix": ["inpage-push."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "inpage-x-widget-iab-contract"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0010"
+          }
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "format": {
+      "formats": ["inpage"]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "marker": "A quiet harbor at dawn",
+      "limitation": "No renderable creative field (adm/native/iurl) is present in the response; the winning bid's content lives entirely in bid.ext, which the preview pipeline never reads regardless of the selected dialect.",
+      "capabilityGap": "Dialect selection is a Core validation concept only; the front-end creative preview does not consult it at all, so this bid renders exactly as empty under 'iab' as it would under 'inpage-push'."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-180",
+    "layers": ["core", "http", "browser"],
+    "note": "The standard OpenRTB media-object requirement is correctly reported and is not this gap. The remaining expectation concerns recognizing the project-documented in-page vendor signal in an OpenRTB envelope and exposing bid.ext creative content where applicable.",
+    "matches": {
+      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "browser": [
+        "^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ harbor\\ at\\ dawn\"\\ absent$"
+      ]
+    }
+  }
+}

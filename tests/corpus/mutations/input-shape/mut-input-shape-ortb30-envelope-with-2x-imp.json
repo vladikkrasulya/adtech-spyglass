@@ -1,0 +1,62 @@
+{
+  "format": "banner",
+  "protocol": "ortb-3.0",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-3.0",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb30", "banner-native:bn-adcom"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-ortb30-envelope-with-2x-imp",
+  "title": "A 3.0 envelope carrying a stray top-level 2.x imp[] is still validated as 3.0, with the mix flagged",
+  "scenario": "request-only",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-30-adcom",
+  "category": "input-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#object_openrtb",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/imp",
+        "value": [{ "id": "stray-2x-imp", "banner": { "w": 1, "h": 1 } }]
+      }
+    ],
+    "response": null
+  },
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "payload.ambiguous_envelope",
+          "level": "warning",
+          "path": "",
+          "params": { "validated": "3.0" }
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "OpenRTB 3.0 §Object: OpenRTB defines the transport envelope as `{ver, domainspec, domainver, request|response}`; 2.x root fields such as `imp[]`/`seatbid[]` have no place inside or beside that envelope. A payload carrying a real 3.0 `openrtb.request` envelope AND a stray top-level `imp[]` mixes the two generations and is malformed with respect to both, not a legitimate hybrid.",
+    "The tool resolves this the same way it resolves the 2.x hybrid case (`mut-input-shape-hybrid-imp-and-seatbid`): the real 3.0 envelope wins (it is a fully-formed `openrtb.request`, unlike the empty-envelope fallback case documented in the core validation map), the payload is validated as 3.0, and `payload.ambiguous_envelope` names which layer won (`params.validated: '3.0'`) and says the other layer was ignored — rather than silently validating one layer with no acknowledgement of the mix.",
+    "This is a documented correct-behavior case, not a defect. The base pair bn-banner-30-adcom's own request already carries the informational `request.30.deep_validation_limited` finding independent of this mutation; `maxLevel: warning` tolerates it."
+  ]
+}

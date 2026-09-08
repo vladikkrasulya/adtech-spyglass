@@ -1,0 +1,183 @@
+{
+  "kind": "pair",
+  "scenario": "pair",
+  "dialect": "iab",
+  "assetRefs": [],
+  "id": "banner-x-prebid-appush-iframe",
+  "title": "Prebid Server appush adapter exemplary banner fixture, adapted with an iframe-wrapped adm",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "inapp",
+  "tags": ["vendor-derived", "valid", "iab", "openrtb-2.5", "apache-2.0", "nested-iframe"],
+  "provenance": {
+    "synthetic": false,
+    "source": {
+      "name": "prebid/prebid-server — adapters/appush/appushtest/exemplary/simple-banner.json (mockBidRequest + mockResponse)",
+      "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/appush/appushtest/exemplary/simple-banner.json",
+      "version": "0ba352315253f6692af6497d553cfb12909a1b8b",
+      "license": "Apache-2.0",
+      "notes": "Facts (field shapes), not prose, are reused per the clone's own ATTRIBUTION.md; the fixture's comments/prose are not reproduced. NOTICE file absent upstream, which only removes 4(d), not the licence itself.",
+      "path": "adapters/appush/appushtest/exemplary/simple-banner.json"
+    },
+    "modifications": [
+      "device.ip changed from the fixture's public-looking 123.123.123.123 to the RFC 5737 TEST-NET-3 address 203.0.113.10 — no real IP is retained.",
+      "Top-level BidRequest/BidResponse id, imp.id, bid.id renamed to this corpus's id convention; cid/crid/dealid left as the fixture's own literal test constants (already non-functional placeholders in the public fixture, not live identifiers).",
+      "The fixture's httpCalls/expectedBidResponses wrapper (a Prebid-Server-internal test-runner shape) is not reproduced; only the plain oRTB mockBidRequest and the oRTB body of mockResponse are kept, since this corpus is about the wire-level oRTB pair, not the adapter test harness.",
+      "imp.ext.bidder.placementId is kept unchanged — it is exactly the kind of vendor-adapter ext key this corpus wants represented, and it is not a live identifier.",
+      "The adm string (an <iframe> pointing at http://example.com/pserver&k=...) is kept byte-for-byte: example.com is the IANA-reserved documentation domain (RFC 2606), and the k= token is the fixture's own static test constant."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "vendor-adapter-fixture; see modifications for the one required IP substitution."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "The fixture's mockBidRequest/mockResponse.body are a real bid-response-to-bid-request pair (impid resolves, id matches after renaming)."
+    },
+    "sourceIds": ["vendor:prebid-server:appush:simple-banner"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "banner-x-prebid-appush-iframe",
+    "imp": [
+      {
+        "id": "imp-appush",
+        "tagid": "test",
+        "banner": {
+          "format": [
+            {
+              "w": 300,
+              "h": 250
+            },
+            {
+              "w": 300,
+              "h": 600
+            }
+          ]
+        },
+        "ext": {
+          "bidder": {
+            "placementId": "test"
+          }
+        }
+      }
+    ],
+    "app": {
+      "id": "1",
+      "bundle": "com.wls.testwlsapplication"
+    },
+    "device": {
+      "ip": "203.0.113.10",
+      "ua": "iPad"
+    }
+  },
+  "response": {
+    "id": "banner-x-prebid-appush-iframe",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "appush",
+        "bid": [
+          {
+            "id": "bid-appush",
+            "impid": "imp-appush",
+            "price": 0.27543,
+            "adm": "<iframe id=\"adm-banner-16\" width=\"300\" height=\"250\" frameborder=\"0\" marginheight=\"0\" marginwidth=\"0\" style=\"{overflow:hidden}\" src=\"http://example.com/pserver&k=882b2510ed6d6c94fa69c99aa522a708\"></iframe>",
+            "cid": "test_cid",
+            "crid": "test_crid",
+            "dealid": "test_dealid",
+            "w": 300,
+            "h": 250,
+            "ext": {
+              "prebid": {
+                "type": "banner"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "imp.ext.bidder is an unrecognized vendor ext key by design — Core's dialects-questions plugin (request-only) is expected to ask about it at question level, which never affects rollupStatus/maxLevel; this is correct behaviour being exercised, not a defect.",
+    "The adm is a bare <iframe> element (no surrounding document, no visible label) pointing at a second-hop ad-server URL — this is the real observed Prebid-adapter shape, not an invented one.",
+    "The sandboxed preview frame's injected CSP is frame-src 'none' with no data:/blob: exception (public/ortbtools.app.js buildProbedSrcdoc) — a nested <iframe> inside the creative is refused by design, the same way a remote <img> is refused by img-src. This is a documented contract limitation (creative-preview contract, \"Unchanged by this contract\" clause), not a defect: the outer wrapper document loads (script-src 'unsafe-inline', the probe runs) but the nested ad-server frame the creative depends on for its actual visible content never mounts.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser. Assert the refusal ledger (#creativeBlocked) reports exactly one blocked resource for directive frame-src and host example.com — a deliberate, explained refusal, not a silent empty rectangle.",
+    "No marker text exists in this adm at all (it is a single self-closing iframe tag) — this case does not assert expect.preview.marker; it proves the blocked-nested-frame contract path instead."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "dialects.question.unknown_ext_signal",
+          "path": "imp[0].ext.bidder",
+          "level": "question"
+        }
+      ]
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "banner-x-prebid-appush-iframe"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "limitation": "The creative is a nested <iframe> tag; the preview frame policy sets frame-src 'none', so the child frame is refused and nothing paints (correct per the 012 contract). The refusal ledger reports the blocked frame.",
+      "capabilityGap": "No way to inspect an iframe-wrapped tag creative beyond its wrapper markup."
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["inapp"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

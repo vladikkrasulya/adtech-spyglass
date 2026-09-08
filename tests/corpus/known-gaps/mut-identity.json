@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "gaps": {
+    "DEF-190": {
+      "id": "DEF-190",
+      "title": "Repeated buyer seat identifiers across SeatBid objects are not diagnosed",
+      "category": "missing-capability",
+      "severity": "medium",
+      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectseatbid",
+      "code": ["packages/core/rules-response.js:132-134", "packages/core/crosscheck.js"],
+      "expected": "OpenRTB 2.6 section 4.2.2 describes multiple SeatBid objects as representing different buyer seats. Repeating a seat identifier across separate SeatBid objects should be diagnosed; multiple bids within one seat remain valid.",
+      "actual": "The response validator and crosscheck do not compare seatbid[].seat identifiers. The repeated-seat control produces no corresponding finding.",
+      "cases": ["mut-identity-duplicate-seat-ids"],
+      "reviewedAt": "2026-09-08",
+      "notes": [
+        "Repeated Bid.id tracking values are separately exercised as a robustness control. Their uniqueness scope is not specified by the cited Bid field description and is not included in this defect."
+      ]
+    }
+  }
+}

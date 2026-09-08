@@ -1,0 +1,68 @@
+{
+  "format": "banner",
+  "protocol": "url-request",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-url-no-decoder",
+  "title": "A well-formed URL request whose host and path match no registered decoder is refused, not silently ignored",
+  "scenario": "request-only",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "input-shape",
+  "specRef": "docs/url-input-spec-2026-08-13.md §4 «Контракт результату» (D2: refusal must carry a reason)",
+  "patch": {
+    "replaceRequest": "https://ads.example.invalid/unmatched-placement?zone=42&sub=99",
+    "response": null
+  },
+  "expect": {
+    "request": {
+      "type": "URL Request",
+      "status": "errors",
+      "must": [
+        {
+          "id": "request.url.no_decoder",
+          "level": "error",
+          "path": "",
+          "params": {
+            "protocol": "https:",
+            "host": "ads.example.invalid",
+            "pathname": "/unmatched-placement",
+            "params": "zone, sub"
+          }
+        }
+      ],
+      "mustNot": [
+        "request.url.no_decoder_no_params",
+        "request.url.unparseable",
+        "request.url.unsupported_scheme",
+        "payload.invalid_root",
+        "payload.unknown_type"
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "The URL registry (packages/core/decoders/request/index.js) is a documented, closed set of feed signatures (clickunder /feed, authenticated JSON /search and /link — see the existing base pair pop-x-feed-linkfeed-get). This host and path were chosen to be well-formed and address-like (so `looksLikeUrlRequest` recognizes it as an intended feed URL, per docs/url-input-spec-2026-08-13.md D2) while matching none of the three registered decoders' path prefixes.",
+    "The product's own documented contract (D2, §4) is that a URL which looks like a feed request but claims no decoder must say so with a reason (`no_decoder`, carrying the parsed protocol/host/pathname/params) rather than being silently accepted or reported as a generic parse failure — this case asserts that documented contract holds, and is a correct-behavior case, not a defect.",
+    "Two query parameters (`zone`, `sub`) are present so the `no_decoder` id fires rather than its no-params sibling `request.url.no_decoder_no_params`; the sibling id is asserted absent via mustNot for the same reason."
+  ]
+}

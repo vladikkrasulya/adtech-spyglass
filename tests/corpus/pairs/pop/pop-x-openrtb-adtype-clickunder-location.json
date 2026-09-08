@@ -1,0 +1,186 @@
+{
+  "kind": "pair",
+  "id": "pop-x-openrtb-adtype-clickunder-location",
+  "title": "in-app ext.adtype='clickunder' hint, top.location.href redirect script, adomain omitted",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "inapp",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["core-mechanism", "non-iab-formats", "adtype-string-hint", "location-redirect"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools Core pop-family ext-hint recognition contract (packages/core/non-iab-formats.js STRING_HINT_KEYS, packages/core/rules/pop-request/index.js, packages/core/rules/pop-response/index.js) layered on IAB OpenRTB 2.x Imp/ext extensibility — the product's own documented, in-repo mechanism for pop/clickunder signalling, not a named vendor's wire format",
+      "url": "packages/core/non-iab-formats.js",
+      "version": "repo HEAD at session start, commit a61fc25",
+      "license": "Internal product code (ortbtools); no third-party material copied. MIT for the original fixture values.",
+      "notes": "Same mechanism as the sibling adtype cases, with the 'clickunder' string value, an in-app impression, a top.location redirect script, and no bid.adomain — exercises the adomain-absent branch of the pop-landing crosscheck rule."
+    },
+    "modifications": [
+      "All IDs, domains, prices and timestamps independently authored.",
+      "device.ip uses TEST-NET 192.0.2.44; user.id is a clearly synthetic string.",
+      "advertiser.example.test / tracking.example.test are reserved .test hosts; test.publisher.example.invalid is a reserved .invalid bundle id; no live host, tracker or subscriber identifier."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; every identifier is a synthetic-fixture string; every URL/bundle id uses a reserved .test/.invalid name.",
+    "notes": "synthesized-from-product-code-contract"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "A genuine oRTB auction pair: the response bid references the offered impression, ids match, and the ext hint is a Core-recognized, non-vendor-attributed extension convention, not a proprietary wire wrapper."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "pop-x-openrtb-adtype-clickunder-location",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "pop-x-openrtb-adtype-clickunder-location-imp",
+        "secure": 1,
+        "bidfloor": 0.002,
+        "bidfloorcur": "USD",
+        "banner": {
+          "w": 1,
+          "h": 1
+        },
+        "ext": {
+          "adtype": "clickunder",
+          "fcap": 2
+        }
+      }
+    ],
+    "app": {
+      "id": "fixture-app",
+      "bundle": "test.publisher.example.invalid"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en",
+      "devicetype": 4
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "pop-x-openrtb-adtype-clickunder-location",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "pop-x-openrtb-adtype-clickunder-location-bid",
+            "impid": "pop-x-openrtb-adtype-clickunder-location-imp",
+            "price": 0.29,
+            "adm": "<script>top.location.href='https://advertiser.example.test/offers/pop-x-openrtb-adtype-clickunder-location';</script>",
+            "crid": "pop-x-openrtb-adtype-clickunder-location-creative",
+            "nurl": "https://tracking.example.test/notice/pop-x-openrtb-adtype-clickunder-location",
+            "ext": {
+              "adtype": "clickunder"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "packages/core/non-iab-formats.js STRING_HINT_KEYS recognizes imp.ext.adtype='clickunder' — the third documented value of POP_FORMAT_NAMES alongside 'popunder'/'popup' (non-iab-formats.js:30). The finding is the same imp.non_standard_format INFO used by the other two string-hint cases (rules-request.js:527).",
+    "`top.location.href = URL` is the third accepted pop adm shape documented in packages/core/rules/pop-response/index.js's header comment ('location.href = URL' / 'top.location = URL' redirect); admLooksLikePop's (top|parent).location branch must accept it.",
+    "bid.adomain is intentionally omitted: oRTB 2.6 §3.2.3 Object:Bid lists adomain as RECOMMENDED, not required — response.bid.adomain_missing (WARNING) is the correct, spec-grounded outcome, not an error. With adomain absent, crosscheck.js's pop-landing rule (gated on 'bid.adomain is a non-empty array') is silently skipped — neither adomain_landing_match nor _mismatch may fire.",
+    "context=inapp (app.bundle set, device.devicetype=4/tablet) diversifies the context axis away from the web-only siblings; devicetype 4 does not map to CTV (deviceTypeToContext only maps 3/7), so contexts stay ['inapp'].",
+    "Browser preview must not open a real popup or dispatch tracking."
+  ],
+  "notes": [
+    "Plain `iab` dialect, deliberately not the `ext-rtb` vendor dialect used by the sibling EXADS/Kadam/PPCmate/Adon3 pop cases."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.adtype",
+          "level": "info",
+          "params": {
+            "format": "clickunder"
+          }
+        }
+      ],
+      "mustNot": ["imp.format_required", "imp.banner.size_required", "request.no_site_or_app"]
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse",
+      "must": [
+        {
+          "id": "response.bid.adomain_missing",
+          "level": "warning",
+          "path": "seatbid[0].bid[0].adomain"
+        }
+      ],
+      "mustNot": ["bid.pop.adm_not_redirect", "response.bid.payload_missing"]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.bid.pop.adomain_landing_match",
+        "crosscheck.bid.pop.adomain_landing_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.id_mismatch",
+        "crosscheck.no_request",
+        "crosscheck.no_response"
+      ]
+    },
+    "format": {
+      "formats": ["banner", "pops"],
+      "contexts": ["inapp"]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/offers/pop-x-openrtb-adtype-clickunder-location",
+      "limitation": "pop script has no visual body",
+      "capabilityGap": "no landing-page preview"
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "sandboxRefusals": ["navigation"]
+    }
+  },
+  "knownGap": {
+    "id": "DEF-245",
+    "layers": ["browser"],
+    "note": "A script-shaped pop adm (window.open/location redirect) renders correctly as inert markup with nothing visible — kind and rendered state are measured correctly — but the destination text never appears on screen, so the browser layer's per-bid identity/marker check cannot confirm which creative loaded.",
+    "matches": {
+      "browser": [
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop-x-openrtb-adtype-clickunder-location\"\\ absent$"
+      ]
+    }
+  }
+}

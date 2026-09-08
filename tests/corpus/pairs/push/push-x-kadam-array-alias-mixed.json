@@ -1,0 +1,122 @@
+{
+  "kind": "pair",
+  "id": "push-x-kadam-array-alias-mixed",
+  "title": "array of three materials mixing the tId/image/icon/link/price alias set with icon-only and image-only Kadam entries",
+  "format": "push",
+  "protocol": "jsonfeed",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "response-only",
+  "tags": [
+    "public-reference",
+    "vendor-valid",
+    "kadam",
+    "kadam-json-feed",
+    "alias-keys",
+    "data-uri-full-render"
+  ],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "Kadam Feed and RTB contracts, including in-page and clickunder examples",
+      "url": "https://wiki.kadam.net/en/index.php?title=RTB_setting&oldid=7076",
+      "version": "MediaWiki oldid=7076",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All ids, domains, prices, timestamps, creative text and URLs independently authored.",
+      "Material [0] uses the tId/image/icon/link/price alias set — the owner-ruled 013 baseline shape's own alternate field names (specs/013-single-push-recognition/spec.md), not a named vendor's; it is included here, alongside two Kadam-shaped entries, because it is the array's only element with bare image/icon keys and therefore the one whose preview is drawn (see specNotes).",
+      "Material [0]'s icon/image are inline data: URIs (proving full render on the drawn material); materials [1]/[2] use hosted https URLs, which the sealed preview always blocks pre-fetch — those two are not the drawn material, so their image bytes are never exercised by the preview contract in this case.",
+      "No OpenRTB or GET-URL request is invented for this response-only scenario: no registered decoder recognizes a Kadam-style feed request query string (push-kadam-icon-notice, known gap DEF-107)."
+    ],
+    "sanitized": "No real visitor or subscriber data. click_url/link values use reserved .test hostnames and are not intended to be fetched; material [0]'s icon/image are self-contained data: URIs with no external network access at all.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "kadam-json-feed",
+    "vendorDialect": "kadam",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "response-only-reference",
+      "note": "Response-only: no registered decoder recognizes the Kadam feed's GET request shape (DEF-107), so only the documented array-of-materials response shape is exercised here."
+    },
+    "sourceIds": ["feeds:feeds-kadam-feed", "feeds:feeds-kadam-current"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "response": [
+    {
+      "tId": "push-x-kadam-array-alias-mixed-a",
+      "title": "A quiet harbor at dawn",
+      "description": "Alias-key material using tId, image, icon, link and price — the 013 baseline shape's own alternate names, not a vendor's.",
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "link": "https://advertiser.example.test/offers/push-x-kadam-array-alias-mixed-a",
+      "price": 0.019
+    },
+    {
+      "id": "push-x-kadam-array-alias-mixed-b",
+      "title": "Icon-only evening reminder",
+      "text": "A short reminder with only an icon slot filled.",
+      "icon_url": "https://assets.example.test/feeds/push-x-kadam-array-alias-mixed-b-icon-192x192.png",
+      "click_url": "https://advertiser.example.test/offers/push-x-kadam-array-alias-mixed-b",
+      "cpc": 0.012
+    },
+    {
+      "id": "push-x-kadam-array-alias-mixed-c",
+      "title": "A hillside vineyard row",
+      "text": "A wide hero shot with no icon slot at all.",
+      "image_url": "https://assets.example.test/feeds/push-x-kadam-array-alias-mixed-c-hero-492x328.png",
+      "click_url": "https://advertiser.example.test/offers/push-x-kadam-array-alias-mixed-c",
+      "cpc": 0.017
+    }
+  ],
+  "specNotes": [
+    "Kadam documents the array-of-materials shape (formats-feeds map §1.1); this case's three elements cover three distinct, spec-valid material shapes at once: the tId/image/icon/link/price alias set, an icon-only material, and an image-only material.",
+    "Spec 014 (push creative preview) requires a material missing an optional creative part to render with what it has — the empty state must not appear while at least one creative element (icon, image, title, or description) is present; icon-only and image-only are both explicitly valid per that contract, not partially-broken shapes.",
+    "Spec 014 US2 previews only the array's first material; material [0] is the one exercised by expect.preview here, which is why it — not [1] or [2] — carries the data: URI proving full render.",
+    "detectFeedFormat unions tags across every array element (format-detect.js), so material [0]'s bare image/icon/link keys are enough to tag the whole array push even though [1]/[2] use the `_url`-suffixed aliases detectFeedFormat does not recognize on their own (see push-x-kadam-material-single, DEF-160, for that alias gap in isolation)."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning",
+      "type": "Push-Materials Feed Response",
+      "must": [
+        {
+          "id": "feed.push.image_url_recommended",
+          "path": "[1].image_url"
+        },
+        {
+          "id": "feed.push.nurl_recommended",
+          "path": "[2].nurl"
+        }
+      ],
+      "mustNot": ["feed.push.id_required", "feed.push.click_url_required", "feed.push.bid_required"]
+    },
+    "format": {
+      "formats": ["push"]
+    },
+    "preview": {
+      "kind": "push",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "A quiet harbor at dawn",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-201",
+    "layers": ["browser"],
+    "note": "The Inspector previews only the first push material of an array; materials [1] and [2] of this three-item feed cannot be selected or inspected (recorded capability gap DEF-201).",
+    "matches": {
+      "browser": ["^browser\\.selection: unavailable material\\[\\d+\\]$"]
+    }
+  }
+}

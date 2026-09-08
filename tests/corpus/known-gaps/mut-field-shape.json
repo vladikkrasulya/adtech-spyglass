@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "gaps": {
+    "DEF-197": {
+      "id": "DEF-197",
+      "title": "regs.coppa outside {0,1} produces no finding at all",
+      "category": "missing-capability",
+      "severity": "low",
+      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectregs",
+      "code": ["packages/core/rules-request.js:242"],
+      "expected": "OpenRTB 2.6 §3.2.3 types Regs.coppa as an integer flag limited to 0 or 1 (\"Flag indicating if this request is subject to the COPPA regulations\"). A value outside that pair (e.g. 2) is not a value the field can hold and should be reported.",
+      "actual": "rules-request.js only inspects regs.coppa inside `if (req.regs && req.regs.coppa === 1)`, to cross-check PII fields when the flag is set. Any other value, valid or not, takes neither branch and produces no finding.",
+      "cases": ["field-shape-regs-coppa-invalid"],
+      "reviewedAt": "2026-09-08",
+      "notes": [
+        "Normative assertion authored from the OpenRTB 2.6 §3.2.3 Regs field table before execution; the known-gap signature documents the observed absence of any finding, not an expected output snapshot.",
+        "packages/core/crosscheck.js never reads regs.coppa at all, so this is a request-validation-only gap, confirmed by the case's own crosscheck assertions passing cleanly (identical to the unmodified base pair)."
+      ]
+    },
+    "DEF-302": {
+      "id": "DEF-302",
+      "title": "Request without site or app is rejected although OpenRTB marks both as recommended",
+      "category": "false-positive",
+      "severity": "medium",
+      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3.2.1",
+      "code": ["packages/core/rules-request.js"],
+      "expected": "OpenRTB 2.5/2.6 §3.2.1 lists site and app as recommended; a request carrying neither remains valid and may receive guidance, not an error.",
+      "actual": "Core emits request.no_site_or_app at ERROR and the request status becomes errors.",
+      "cases": ["field-shape-no-site-or-app"],
+      "reviewedAt": "2026-09-08",
+      "notes": ["Same class as DEF-100 (optional Device treated as mandatory)."]
+    }
+  }
+}

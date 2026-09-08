@@ -1,0 +1,92 @@
+{
+  "kind": "mutation",
+  "id": "encoding-adm-null",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "title": "a bid with adm explicitly null (and no nurl) is flagged payload_missing and shown as empty",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid — Bid.adm or Bid.nurl is required to deliver a creative; packages/core/rules-response.js already fires response.bid.payload_missing (WARNING) whenever both are absent, and null fails the same isStr() presence check as undefined.",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": null
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "response.bid.payload_missing",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "warning"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "limitation": "adm is null; there is no ad markup for the preview to render",
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "public/ortbtools.app.js setAdPreview() checks `if (!adm)` before any classification and renders the dedicated preview-empty state (t('preview.no_adm')) for any falsy adm, null included — this mirrors the already-verified pop-x-nurl-only-response.json preview shape."
+  ]
+}

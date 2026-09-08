@@ -1,0 +1,92 @@
+{
+  "kind": "mutation",
+  "id": "mut-format-mismatch-video-html-adm",
+  "title": "Video-only impression is filled with plain banner HTML instead of VAST",
+  "format": "video",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["mutation", "format-mismatch"],
+  "base": "video-web-25-inline-vast2",
+  "category": "format-mismatch",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectvideo",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/device/ua",
+        "value": "Mozilla/5.0 (Synthetic fixture; audit)"
+      },
+      {
+        "op": "add",
+        "path": "/device/ip",
+        "value": "192.0.2.11"
+      }
+    ],
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<!doctype html><html><head><meta charset=\"utf-8\"></head><body><div style=\"width:640px;height:480px;background:#223b62\">NOT A VAST DOCUMENT</div></body></html>"
+      },
+      {
+        "op": "remove",
+        "path": "/seatbid/0/bid/0/protocol"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.video_not_vast",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "warn"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.video_vast",
+          "path": "seatbid[0].bid[0].adm"
+        },
+        {
+          "id": "crosscheck.bid.native_invalid_adm",
+          "path": "seatbid[0].bid[0].adm"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "This case demonstrates a format-mismatch check that already works: crosscheck.js gates its VAST check on imp.video && bid.adm and reports crosscheck.bid.video_not_vast (WARN) whenever the returned adm is not VAST-shaped, independent of anything else in the payload.",
+    "device.ua/device.ip are patched in only to keep the request clean of the unrelated optional-Device deviation already recorded for this base pair as DEF-100; this case is scoped to the video/HTML content-type question."
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "format": "native",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": ["asset-806502543744d40c"],
+  "kind": "mutation",
+  "id": "native-asset-kind",
+  "title": "Native asset-kind fails the requested asset contract",
+  "scenario": "pair",
+  "tags": ["mutation", "media-constraints"],
+  "base": "bn-native-26-editorial-bare",
+  "category": "media-constraints",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectnative",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "{\"ver\":\"1.2\",\"assets\":[{\"id\":21,\"data\":{\"value\":\"wrong asset kind\"}},{\"id\":22,\"img\":{\"url\":\"https://assets.example.test/native/bn-native-26-editorial-bare/22-600x315.svg\",\"w\":600,\"h\":315}},{\"id\":23,\"data\":{\"value\":\"Fixture Garden\"}}],\"link\":{\"url\":\"https://advertiser.example.test/offer/bn-native-26-editorial-bare\"}}"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.bid.native_asset_kind",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "warn"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": []
+}

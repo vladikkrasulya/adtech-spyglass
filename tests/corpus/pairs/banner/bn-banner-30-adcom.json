@@ -1,0 +1,227 @@
+{
+  "kind": "pair",
+  "id": "bn-banner-30-adcom",
+  "title": "Spec-strict AdCOM media.ad wrapper, required Ad.id, flrcur EUR",
+  "format": "banner",
+  "protocol": "ortb-3.0",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-3.0"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 3.0 — transaction examples and Item/Bid objects",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#examples",
+      "version": "9af34fc79580f67f6abaf89b1e48d18398c9a697",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-3.0",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb30", "banner-native:bn-adcom"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "request": {
+        "id": "bn-banner-30-adcom",
+        "test": 1,
+        "at": 2,
+        "tmax": 800,
+        "cur": ["EUR"],
+        "item": [
+          {
+            "id": "item-display",
+            "qty": 1,
+            "flr": 0.5,
+            "flrcur": "EUR",
+            "spec": {
+              "placement": {
+                "secure": 1,
+                "admx": 1,
+                "display": {
+                  "w": 300,
+                  "h": 250,
+                  "displayfmt": [
+                    {
+                      "w": 300,
+                      "h": 250
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "context": {
+          "site": {
+            "id": "synthetic-site",
+            "domain": "publisher.example.test",
+            "page": "https://publisher.example.test/adcom"
+          },
+          "device": {
+            "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+            "lang": "en",
+            "ip": "192.0.2.11",
+            "os": "Linux",
+            "osv": "6.1"
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "response": {
+        "id": "bn-banner-30-adcom",
+        "cur": "EUR",
+        "seatbid": [
+          {
+            "seat": "synthetic-seat-a",
+            "bid": [
+              {
+                "id": "bid-adcom",
+                "item": "item-display",
+                "price": 1.25,
+                "media": {
+                  "ad": {
+                    "id": "creative-adcom",
+                    "adomain": ["advertiser.example.test"],
+                    "secure": 1,
+                    "display": {
+                      "mime": "text/html",
+                      "w": 300,
+                      "h": 250,
+                      "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:300px;height:250px;overflow:hidden;font-family:Arial,sans-serif;background:#223b62}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#162d49;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"BANNER ADCOM\" role=\"img\" aria-label=\"BANNER ADCOM\"><img alt=\"BANNER ADCOM landscape\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjUwIiB2aWV3Qm94PSIwIDAgMzAwIDI1MCI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyNTAiIHJ4PSIxMiIgZmlsbD0iIzIyM2I2MiIvPjxjaXJjbGUgY3g9IjIyNS4wIiBjeT0iOTUuMCIgcj0iNjAuMCIgZmlsbD0iI2ZmZDE2NiIvPjxwYXRoIGQ9Ik0wIDI1MCBMMTQ0LjAgNzUuMCBMMzAwIDI1MCBaIiBmaWxsPSIjNTViNmE1Ii8+PHRleHQgeD0iMTIiIHk9IjIzMiIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4Ij5CQU5ORVIgQURDT008L3RleHQ+PC9zdmc+\"><span class=\"label\">BANNER ADCOM · TEST AD</span></div></body></html>"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "specNotes": [
+    "OpenRTB 3.0 Item currency field is flrcur, not flrcu.",
+    "AdCOM Ad object is nested under bid.media.ad and includes required id.",
+    "Spec supports inline display.adm because placement.admx is 1.",
+    "Any parser rejection or missing preview is an implementation gap to report; do not change this pair into the legacy flattened media shape.",
+    "Known direct-Core observation: currency plugin reads allowed currencies from the wrong request envelope; EUR is explicitly allowed by the correct openrtb.request.cur field.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser.",
+    "Do not infer rendering from analysis.status or iframe existence alone.",
+    "HTML and original embedded SVG need no external resources. Assert the fixture label is visible, image.complete and naturalWidth > 0, and expected creative dimensions.",
+    "No scripts, trackers, navigation handlers, external font/CDN URLs or live network fetches are present in the banner markup."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse",
+      "mustNot": ["err-bid-currency-mismatch"]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "openrtb.response.id",
+          "level": "ok",
+          "params": {
+            "id": "bn-banner-30-adcom"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "openrtb.response.seatbid[0].bid[0].item",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "openrtb.response.seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.5000"
+          }
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.floor_currency_mismatch"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "BANNER ADCOM · TEST AD",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-105",
+    "layers": ["core", "http", "browser"],
+    "note": "The 3.0 request envelope permits EUR and item.flrcur is EUR, so an EUR bid above its EUR floor cannot produce a currency mismatch.",
+    "matches": {
+      "core": [
+        "^response:\\ findings\\ above\\ warning:\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
+        "^response:\\ forbidden\\ finding\\ present\\ err\\-bid\\-currency\\-mismatch\\ →\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
+        "^crosscheck:\\ missing\\ crosscheck\\.bid\\.above_floor\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[ok\\]\\ params=\\{\"floor\":\"0\\.5000\"\\}\\ —\\ got\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.size_match\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.floor_currency_mismatch\\ →\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
+      ],
+      "http": [
+        "^response:\\ findings\\ above\\ warning:\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
+        "^response:\\ forbidden\\ finding\\ present\\ err\\-bid\\-currency\\-mismatch\\ →\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
+        "^crosscheck:\\ missing\\ crosscheck\\.bid\\.above_floor\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[ok\\]\\ params=\\{\"floor\":\"0\\.5000\"\\}\\ —\\ got\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.size_match\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.floor_currency_mismatch\\ →\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
+      ],
+      "browser": [
+        "^browser\\.row:\\ forbidden\\ response\\ err\\-bid\\-currency\\-mismatch$",
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
+        "^browser\\.response:\\ forbidden\\ finding\\ present\\ err\\-bid\\-currency\\-mismatch\\ →\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
+        "^browser\\.crosscheck:\\ missing\\ crosscheck\\.bid\\.above_floor\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[ok\\]\\ params=\\{\"floor\":\"0\\.5000\"\\}\\ —\\ got\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.size_match\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.floor_currency_mismatch\\ →\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
+      ]
+    }
+  }
+}

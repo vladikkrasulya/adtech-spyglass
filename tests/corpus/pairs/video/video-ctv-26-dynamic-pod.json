@@ -1,0 +1,238 @@
+{
+  "kind": "pair",
+  "id": "video-ctv-26-dynamic-pod",
+  "title": "Two distinct bids fill a 45-second dynamic CTV pod",
+  "format": "video",
+  "protocol": "ortb-2.6",
+  "context": "ctv",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.6"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.6 Video, Audio and Bid objects",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/1debba8001f40eb14597102dec3205afddf811d4/2.6.md#objectvideo",
+      "version": "1debba8001f40eb14597102dec3205afddf811d4",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, titles, XML and media descriptions are original test data.",
+      "Request/response IDs and impid are intentionally paired.",
+      "Public examples are references; no real person, cookie, advertising ID, IP address or live tracking endpoint is retained."
+    ],
+    "sanitized": "No production payload or PII used. All resource and tracking hosts end in .test; external network must remain blocked.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Use x-openrtb-version: 2.6 when replaying HTTP; envelope itself has no version field."
+    },
+    "sourceIds": ["video-audio:va-ortb26", "video-audio:va-adcom", "video-audio:va-vast-xsd"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [
+    "asset-4a06622eccd49bb3",
+    "asset-0a3dcde600238edd",
+    "asset-ce937b74ad76230c",
+    "asset-e0b1a0d69f271f1e",
+    "asset-0717751cc2df63ff",
+    "asset-84eec027082b00fd",
+    "asset-eee2e5140b62fa4f",
+    "asset-951fab1fd1179185"
+  ],
+  "request": {
+    "id": "video-ctv-26-dynamic-pod",
+    "test": 1,
+    "at": 1,
+    "tmax": 500,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "pod-1",
+        "secure": 1,
+        "bidfloor": 1,
+        "bidfloorcur": "USD",
+        "video": {
+          "mimes": ["video/mp4"],
+          "rqddurs": [15, 30],
+          "poddur": 45,
+          "maxseq": 2,
+          "podid": "ctv-break-1",
+          "podseq": 1,
+          "protocols": [11],
+          "w": 1280,
+          "h": 720,
+          "linearity": 1,
+          "plcmt": 1,
+          "startdelay": 0,
+          "delivery": [2],
+          "mincpmpersec": 0.05
+        },
+        "ssai": 1
+      }
+    ],
+    "app": {
+      "id": "fixture-app",
+      "name": "Fixture Player",
+      "bundle": "test.example.fixture",
+      "publisher": {
+        "id": "fixture-publisher"
+      }
+    },
+    "device": {
+      "devicetype": 3
+    }
+  },
+  "response": {
+    "id": "video-ctv-26-dynamic-pod",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "fixture-seat",
+        "bid": [
+          {
+            "id": "video-ctv-26-dynamic-pod-15",
+            "impid": "pod-1",
+            "price": 3,
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.1\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"video-ctv-26-dynamic-pod-15\" adType=\"video\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><Impression><![CDATA[https://track.example.test/video-ctv-26-dynamic-pod-15/impression]]></Impression><AdServingId>video-ctv-26-dynamic-pod-15-serving</AdServingId><AdTitle>video-ctv-26-dynamic-pod-15</AdTitle><Creatives><Creative id=\"video-ctv-26-dynamic-pod-15-creative\"><UniversalAdId idRegistry=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-ctv-26-dynamic-pod-15/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-ctv-26-dynamic-pod-15/complete]]></Tracking></TrackingEvents><Duration>00:00:15</Duration><MediaFiles><MediaFile id=\"video-ctv-26-dynamic-pod-15\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"800\" width=\"1280\" height=\"720\"><![CDATA[https://media.example.test/video-ctv-26-dynamic-pod-15.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "video-ctv-26-dynamic-pod-15-creative",
+            "protocol": 11,
+            "mtype": 2,
+            "dur": 15,
+            "w": 1280,
+            "h": 720
+          },
+          {
+            "id": "video-ctv-26-dynamic-pod-30",
+            "impid": "pod-1",
+            "price": 3,
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.1\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"video-ctv-26-dynamic-pod-30\" adType=\"video\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><Impression><![CDATA[https://track.example.test/video-ctv-26-dynamic-pod-30/impression]]></Impression><AdServingId>video-ctv-26-dynamic-pod-30-serving</AdServingId><AdTitle>video-ctv-26-dynamic-pod-30</AdTitle><Creatives><Creative id=\"video-ctv-26-dynamic-pod-30-creative\"><UniversalAdId idRegistry=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-ctv-26-dynamic-pod-30/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-ctv-26-dynamic-pod-30/complete]]></Tracking></TrackingEvents><Duration>00:00:30</Duration><MediaFiles><MediaFile id=\"video-ctv-26-dynamic-pod-30\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"800\" width=\"1280\" height=\"720\"><![CDATA[https://media.example.test/video-ctv-26-dynamic-pod-30.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "video-ctv-26-dynamic-pod-30-creative",
+            "protocol": 11,
+            "mtype": 2,
+            "dur": 30,
+            "w": 1280,
+            "h": 720
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "rqddurs is used without minduration/maxduration; 15+30 equals poddur and two bids satisfy maxseq.",
+    "Each bid costs CPM 3, exceeding duration*mincpmpersec. Pod allocation is not an Inspector playback feature.",
+    "Validity describes protocol structure and declared constraints; generated media bytes must be checked against declared MIME/duration before playback tests.",
+    "Current Inspector contract displays VAST as inert XML; text visibility must not be counted as creative rendering or media playback.",
+    "fixtureAssets lists controlled resources; intercept .test URLs locally. Never fetch public advertising/tracking hosts.",
+    "Companion image visibility is a separate preview capability."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "video-ctv-26-dynamic-pod"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "1.0000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[1].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[1].price",
+          "level": "ok",
+          "params": {
+            "floor": "1.0000"
+          }
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "vast",
+      "rendered": "inert-text",
+      "mediaPlays": "no",
+      "marker": "video-ctv-26-dynamic-pod-15",
+      "limitation": null,
+      "capabilityGap": "The current VAST preview is inert XML; video/audio playback and Wrapper resolution are not implemented.",
+      "bids": [
+        {
+          "seatIndex": 0,
+          "bidIndex": 0,
+          "marker": "video-ctv-26-dynamic-pod-15"
+        },
+        {
+          "seatIndex": 0,
+          "bidIndex": 1,
+          "marker": "video-ctv-26-dynamic-pod-30"
+        }
+      ]
+    },
+    "format": {
+      "formats": ["video"],
+      "contexts": ["ctv", "inapp"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-100",
+    "layers": ["core", "http", "browser"],
+    "note": "Optional Device attributes may produce guidance; their omission must not invalidate otherwise valid requests.",
+    "matches": {
+      "core": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ],
+      "http": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$",
+        "^browser\\.selection:\\ unavailable\\ seat\\[0\\]\\.bid\\[1\\]$"
+      ]
+    }
+  }
+}

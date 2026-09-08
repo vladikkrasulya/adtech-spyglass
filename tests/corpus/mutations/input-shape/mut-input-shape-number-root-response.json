@@ -1,0 +1,79 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-number-root-response",
+  "title": "A bare JSON number pasted as the response is not silently a clean BidResponse",
+  "scenario": "pair",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "input-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidresponse",
+  "patch": {
+    "rawResponse": "42"
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "type": "unknown",
+      "status": "invalid",
+      "must": [
+        {
+          "id": "payload.invalid_root",
+          "level": "error",
+          "path": ""
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.no_response",
+          "path": "res",
+          "level": "crit"
+        }
+      ],
+      "mustNotPrefix": ["crosscheck.bid."]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "failed",
+      "toastMatch": "The bid response pane must hold a JSON object — got number"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-300",
+    "layers": ["http"],
+    "note": "Core correctly rejects a bare JSON number as a BidResponse root (payload.invalid_root, status:invalid — OpenRTB 2.6 §4.2.1 defines BidResponse as an object) when called directly. POST /api/analyze does not: a numeric bidRes value is silently treated as though no response had been submitted at all — the merged validation envelope comes back clean with only the request's own findings, and crosscheck comes back empty instead of crosscheck.no_response. This is an HTTP-only discrepancy: the browser correctly rejects this scalar before any Analyze POST, with a specific message and no stale results.",
+    "matches": {
+      "http": [
+        "^response: no result produced$",
+        "^crosscheck: missing crosscheck\\.no_response @ res \\[crit\\] — got \\(none\\)$"
+      ]
+    }
+  },
+  "specNotes": [
+    "OpenRTB 2.6 §4.2.1 defines BidResponse as an object carrying `id` and either `seatbid[]` or `nbr`. A bare JSON number satisfies neither the object requirement nor any documented vendor feed shape (every vendor response dialect in this corpus is an object or an array, never a scalar).",
+    "`rawResponse` is used rather than `replaceResponse` because the patch schema restricts `replaceResponse` to object/array/null; a scalar root can only be expressed as raw transport text. The raw text \"42\" is valid JSON (a number), so this is NOT a `parse: invalid-json` case — it reaches Core as a real, if non-object, value.",
+    "Confirmed directly against the running server (not inferred): posting {bidReq: <this base request>, bidRes: 42} returns HTTP 200, `validation.status: 'clean'` with only the request's own `version.assumed` finding, and `crosscheck: []` — the numeric response is dropped before it reaches any response-shaped check.",
+    "The browser correctly rejects this scalar root before transport; the exact shape rejection, zero Analyze POSTs and absence of stale results are checked independently of HTTP DEF-300."
+  ]
+}

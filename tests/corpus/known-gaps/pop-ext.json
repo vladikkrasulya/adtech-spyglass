@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "gaps": {
+    "DEF-170": {
+      "id": "DEF-170",
+      "title": "Pop-response plugin rejects a spec-complete nurl-only bid that Core's own baseline rule already accepts",
+      "category": "false-positive",
+      "severity": "medium",
+      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#333-object-bid",
+      "code": [
+        "packages/core/rules/pop-response/index.js:76-80",
+        "packages/core/rules-response.js:140"
+      ],
+      "expected": "IAB OpenRTB 2.6 §4.3.3 marks Bid.adm OPTIONAL; a bid carrying only nurl (win notice URL) already satisfies Core's own baseline completeness rule (response.bid.payload_missing, which only warns when BOTH adm and nurl are absent). A pop-tagged bid in that exact shape should not be treated as an incomplete/broken creative just because it also carries a pop-family ext hint.",
+      "actual": "packages/core/rules/pop-response/index.js's admLooksLikePop check runs on bid.adm alone; an absent adm is treated as \"not a redirect\", producing bid.pop.adm_not_redirect (ERROR) regardless of a present, well-formed nurl. This is a stricter, internally inconsistent contract than Core's own baseline rule applied to the identical bid.",
+      "cases": ["pop-x-nurl-only-response"],
+      "reviewedAt": "2026-09-07",
+      "notes": [
+        "Reproduces the still-open item recorded historically in docs/cu-pops-audit-2026-05-12.md §2/§3 (\"No validation of bid.nurl for pop win tracking\") against current code.",
+        "The preview layer is NOT part of this gap: nurl/burl are documented as never read by the creative-preview path (public/ortbtools.app.js findAdm), so a nurl-only bid correctly renders the empty state; only the response-side validation ERROR is the deviation."
+      ]
+    },
+    "DEF-245": {
+      "id": "DEF-245",
+      "title": "Script-shaped pop creatives (window.open / location redirect) render with no on-screen identity text",
+      "category": "preview-capability",
+      "severity": "low",
+      "source": "specs/012-creative-preview-repair/contracts/creative-preview.md; public/modules/inspector/creative-classify.js",
+      "code": [
+        "public/modules/inspector/creative-classify.js:190-197",
+        "public/ortbtools.app.js:1639-1671"
+      ],
+      "expected": "A pop adm shaped as a redirect script (window.open(...) / location.href|replace|assign(...) / top.location...) is spec-grounded, documented pop markup (packages/core/rules/pop-response/index.js's own header comment). The rendered preview correctly shows kind=markup and rendered=empty (there is genuinely no visible DOM), but the analyst has no way to see WHICH destination the script would have navigated to without reading raw JSON elsewhere.",
+      "actual": "creative-classify.js routes any `<script>...</script>` body into the markup/iframe branch rather than the inert-text branch used for VAST/JSON/URL/unidentified kinds — unlike those kinds, a script-only pop creative never surfaces its destination text anywhere the browser measurement can see (setAdPreview never extracts or displays the script's target URL). The per-bid identity/marker check in the corpus browser harness therefore cannot confirm which creative was returned for any script-shaped pop adm.",
+      "cases": [
+        "pop-x-openrtb-adtype-popunder-window-open",
+        "pop-x-openrtb-adtype-clickunder-location",
+        "pop-x-openrtb-flag-popunder-bool",
+        "pop-x-openrtb-shape-flag-allowshock"
+      ],
+      "reviewedAt": "2026-09-07",
+      "notes": [
+        "kind and rendered are measured correctly per case (markup / empty); only the identity/marker assertion fails, since the destination text never appears in document.body.innerText or an image alt.",
+        "A bare-URL pop adm (pop-x-openrtb-adtype-popup-bare-url) does NOT hit this gap — it classifies as kind=url and is shown as inert text, so its destination is visible and the identity check passes without a known-gap entry."
+      ]
+    }
+  }
+}

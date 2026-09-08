@@ -1,0 +1,65 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-array-root-request",
+  "title": "A well-formed JSON array pasted as the request is shape-detected as a vendor feed, not a BidRequest",
+  "scenario": "request-only",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "input-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "patch": {
+    "request": [
+      {
+        "op": "replace",
+        "path": "",
+        "value": [
+          {
+            "id": "stray-item-1",
+            "click_url": "https://advertiser.example.test/offer",
+            "cpc": 0.05,
+            "title": "Ad title",
+            "image_url": "https://assets.example.test/icon.png",
+            "nurl": "https://tracking.example.test/win"
+          }
+        ]
+      }
+    ],
+    "response": null
+  },
+  "expect": {
+    "request": {
+      "type": "Push-Materials Feed Response",
+      "status": "clean",
+      "maxLevel": "info"
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "failed",
+      "toastMatch": "must hold a JSON object"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "OpenRTB 2.6 §3.2.1 defines BidRequest as an object, never an array — so a well-formed request never looks like this on the wire. `detectType()` (packages/core/detect.js) has no concept of which UI field a payload came from: `validate()` is one function called identically on whatever is pasted into either pane (core-run.js calls it the same way for both `values.request` and `values.response`), and any array root is routed to the vendor push-materials feed validator regardless of slot — every array-rooted vendor shape documented elsewhere in this corpus (push-x-richads-bare-array, pop-adon3-*, push-ppcmate-multi, …) is itself a RESPONSE, but nothing in the architecture enforces that at the type-detection layer.",
+    "This is recorded as the tool's actual, consistent, documented decision rule (core-validate map §4: 'Array root: VENDOR_FEED unconditionally'), not a spec violation to gap: the IAB specification has no opinion on which UI field a tool exposes for which payload, and shape-based (rather than slot-based) detection is this product's architecture end to end. The array item is deliberately well-formed by every push-material field rule so the case demonstrates the full extent of the behavior: a genuinely clean vendor-response payload is classified 'clean' when pasted as a request, with the type label ('Push-Materials Feed Response') being the only signal that it was not read as a BidRequest.",
+    "A person relying on the type label to notice the mismatch is a real but separate UI/UX question (does the Inspector's own chrome make the type label prominent enough on the request side); that question belongs to the UI/UX pass, not to a Core protocol-compliance gap."
+  ]
+}

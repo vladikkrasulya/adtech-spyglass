@@ -1,0 +1,89 @@
+{
+  "kind": "pair",
+  "id": "push-x-kadam-material-single",
+  "title": "single-object Kadam material carrying inline data-URI icon and hero image",
+  "format": "push",
+  "protocol": "jsonfeed",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "response-only",
+  "tags": ["public-reference", "vendor-valid", "kadam", "kadam-json-feed", "data-uri-full-render"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "Kadam Feed and RTB contracts, including in-page and clickunder examples",
+      "url": "https://wiki.kadam.net/en/index.php?title=RTB_setting&oldid=7076",
+      "version": "MediaWiki oldid=7076",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All ids, domains, prices, timestamps, creative text and URLs independently authored.",
+      "icon_url and image_url carry a tiny inline data: URI PNG instead of a hosted file, so the sealed preview frame's img-src data: blob: policy can load them without the explicit fetch action — this proves the full-render path for the documented Kadam field set, which the sibling push-kadam-icon-notice case (https assets, partial render) does not exercise.",
+      "No OpenRTB or GET-URL request is invented for this response-only scenario: the Kadam feed request query string has no registered decoder (push-kadam-icon-notice, known gap DEF-107), so this case exercises the response side alone instead of repeating that already-recorded gap."
+    ],
+    "sanitized": "No real visitor or subscriber data. click_url/nurl use reserved .test hostnames and are not intended to be fetched; icon_url/image_url are self-contained data: URIs with no external network access at all.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "kadam-json-feed",
+    "vendorDialect": "kadam",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "response-only-reference",
+      "note": "Response-only: the Kadam feed's documented GET request query string has no registered decoder (DEF-107), so only the documented single-object response material shape is exercised here."
+    },
+    "sourceIds": ["feeds:feeds-kadam-feed", "feeds:feeds-kadam-current"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "response": {
+    "id": "push-x-kadam-material-single",
+    "title": "A tidy garden shed",
+    "text": "Repaint the shed before the rain arrives.",
+    "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "icon_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "click_url": "https://advertiser.example.test/offers/push-x-kadam-material-single",
+    "cpc": 0.021,
+    "nurl": "https://tracking.example.test/notice/push-x-kadam-material-single"
+  },
+  "specNotes": [
+    "Kadam documents the material contract as title/text/image_url/icon_url/click_url/cpc/nurl on a single object as well as inside an array (formats-feeds map §1.1/§1.2); push-kadam-icon-notice already covers the array form, so this case is the single-object counterpart.",
+    "icon_url and image_url are inline data: URIs so the sealed preview frame's img-src data: blob: policy renders both assets immediately, without the explicit \"Load images\" action — proving the full-render path, not only the always-blocked https path the sibling Kadam case already covers.",
+    "Desired capability: detectFeedFormat recognizes a cleanly-validated, documented push material as push regardless of whether its image/icon keys carry the `_url` suffix. Existing product acceptance is not the validity oracle.",
+    "The documented vendor ad type must be identified in the merged format result. Public Core vocabulary uses pops for pop traffic; this is a vendor capability expectation, not an invented IAB extension."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "info",
+      "type": "Push-Materials Feed Response (single)",
+      "status": "clean"
+    },
+    "format": {
+      "formats": ["push"]
+    },
+    "preview": {
+      "kind": "push",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "A tidy garden shed",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-160",
+    "layers": ["core", "http", "browser"],
+    "note": "detectFeedFormat's hasImage/hasClick heuristic (format-detect.js) recognizes only bare image/icon keys, not the image_url/icon_url aliases validatePushMaterial (and this Kadam contract) accepts; a fully valid, cleanly-validated Kadam material gets no push format tag.",
+    "matches": {
+      "core": ["^format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"],
+      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"]
+    }
+  }
+}

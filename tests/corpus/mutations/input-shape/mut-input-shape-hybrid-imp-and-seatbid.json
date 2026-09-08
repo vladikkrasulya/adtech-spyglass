@@ -1,0 +1,68 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-hybrid-imp-and-seatbid",
+  "title": "A payload carrying both imp[] and seatbid[] is resolved as a request, not silently one or the other",
+  "scenario": "request-only",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "input-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/seatbid",
+        "value": [
+          {
+            "seat": "synthetic-seat-a",
+            "bid": [{ "id": "stray-bid", "impid": "slot-1", "price": 1 }]
+          }
+        ]
+      }
+    ],
+    "response": null
+  },
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "payload.ambiguous_both_sides",
+          "level": "warning",
+          "path": "",
+          "params": { "validated": "BidRequest" }
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "OpenRTB 2.6 §3.2.1 (BidRequest) and §4.2.1 (BidResponse) are mutually exclusive top-level shapes: a request carries `imp[]`, a response carries `seatbid[]`. Neither object is ever documented with both arrays at once, so a payload carrying both is malformed with respect to either object, not a legitimate third shape.",
+    "This corpus documents the tool's actual, spec-consistent resolution rule for that malformed case rather than treating it as unspecified: `imp[]` wins detection (it is checked first), the payload is validated as a BidRequest only, and `payload.ambiguous_both_sides` says explicitly which side was picked and that the other side was ignored, instead of silently validating one side with no acknowledgement that the input was ambiguous.",
+    "The stray `seatbid` key also trips the unknown-fields checker as an exact field name on the wrong object (`payload.field_wrong_object`, WARNING) — a second, independent, and equally correct signal that the payload mixes the two objects; `maxLevel: warning` tolerates it without hard-coding the exact count of secondary findings.",
+    "This is a documented correct-behavior case, not a defect: it exercises the `payload.ambiguous_both_sides` resolution path described in the core validation map (index.js's detectType-adjacent ambiguity handling)."
+  ]
+}

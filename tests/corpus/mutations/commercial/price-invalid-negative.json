@@ -1,0 +1,102 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "price-invalid-negative",
+  "title": "Price negative cannot produce a numeric floor verdict",
+  "scenario": "pair",
+  "tags": ["mutation", "commercial"],
+  "base": "bn-banner-25-fixed",
+  "category": "commercial",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/price",
+        "value": -1
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "err-bid-price-negative",
+          "path": "seatbid[0].bid[0].price",
+          "level": "error"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.bid.price_invalid",
+          "path": "seatbid[0].bid[0].price",
+          "level": "crit"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price"
+        },
+        {
+          "id": "crosscheck.bid.below_floor",
+          "path": "seatbid[0].bid[0].price"
+        }
+      ]
+    },
+    "consistency": ["price-invalid-blocks-floor-verdict"],
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-110",
+    "layers": ["core", "http", "browser"],
+    "note": "Bid.price is a non-negative JSON number. Values rejected by validation must also receive price_invalid in crosscheck and never above_floor or below_floor.",
+    "matches": {
+      "core": [
+        "^crosscheck:\\ missing\\ crosscheck\\.bid\\.price_invalid\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.below_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ →\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^consistency:\\ price\\ rejected\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ but\\ crosscheck\\ still\\ judged\\ the\\ floor:\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^consistency:\\ price\\ rejected\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ but\\ crosscheck\\.bid\\.price_invalid\\ is\\ absent$"
+      ],
+      "http": [
+        "^crosscheck:\\ missing\\ crosscheck\\.bid\\.price_invalid\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.below_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ →\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^consistency:\\ price\\ rejected\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ but\\ crosscheck\\ still\\ judged\\ the\\ floor:\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^consistency:\\ price\\ rejected\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ but\\ crosscheck\\.bid\\.price_invalid\\ is\\ absent$"
+      ],
+      "browser": [
+        "^browser\\.crosscheck:\\ missing\\ crosscheck\\.bid\\.price_invalid\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.below_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ →\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^browser\\.consistency:\\ price\\ rejected\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ but\\ crosscheck\\ still\\ judged\\ the\\ floor:\\ crosscheck\\.bid\\.below_floor\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^browser\\.consistency:\\ price\\ rejected\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ but\\ crosscheck\\.bid\\.price_invalid\\ is\\ absent$"
+      ]
+    }
+  },
+  "specNotes": []
+}

@@ -1,0 +1,164 @@
+{
+  "kind": "pair",
+  "id": "push-exads-openrtb-native-500",
+  "title": "OpenRTB Native 1.2 push placement 500 with exact icon dimensions and CPM settlement",
+  "format": "push",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["public-reference", "vendor-valid", "exads", "openrtb-2.5"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "EXADS OpenRTB 2.5 request and popunder impression contract",
+      "url": "https://docs.exads.com/docs/rtb-publishers/open-rtb/bid-request/open-rtb-publishers-request-2p5/",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, prices, timestamps, creative text and URLs independently authored.",
+      "Required visitor addresses use TEST-NET 192.0.2.44; required user IDs are clearly synthetic. No real subscriber data or feed credentials.",
+      "Media URLs use reserved .test hosts and require interception from fixtureAssets."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; user IDs/feed keys are synthetic-fixture strings; all executable URLs use reserved .test hostnames and require local interception.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "exads",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Independently constructed offline pair preserving documented field names and carrier. Reserved endpoint replaces the vendor hostname; no live request or bid was made. Vendor zone/feed selection is fixture metadata where absent from body."
+    },
+    "sourceIds": ["feeds:feeds-exads-ortb25-request", "feeds:feeds-exads-ortb-response"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": ["asset-d96d1472ac951cbc"],
+  "request": {
+    "id": "push-exads-openrtb-native-500",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "push-exads-openrtb-native-500-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "native": {
+          "ver": "1.2",
+          "request": "{\"native\":{\"ver\":\"1.2\",\"plcmttype\":500,\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"img\":{\"type\":1,\"w\":192,\"h\":192,\"wmin\":192,\"hmin\":192}},{\"id\":2,\"required\":1,\"title\":{\"len\":60}},{\"id\":3,\"required\":1,\"data\":{\"type\":2,\"len\":110}}]}}"
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "push-exads-openrtb-native-500",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "push-exads-openrtb-native-500-bid",
+            "impid": "push-exads-openrtb-native-500-imp",
+            "price": 0.42,
+            "adm": "{\"native\":{\"ver\":\"1.2\",\"link\":{\"url\":\"https://advertiser.example.test/offers/push-exads-openrtb-native-500\"},\"assets\":[{\"id\":1,\"img\":{\"url\":\"https://assets.example.test/feeds/push-exads-openrtb-native-500-icon-192x192.png\",\"w\":192,\"h\":192}},{\"id\":2,\"title\":{\"text\":\"An original woodland notice\"}},{\"id\":3,\"data\":{\"value\":\"A push creative carried in Native JSON.\"}}],\"imptrackers\":[\"https://tracking.example.test/notice/push-exads-openrtb-native-500-imp\"]}}",
+            "adomain": ["advertiser.example.test"],
+            "crid": "push-exads-openrtb-native-500-creative",
+            "nurl": "https://tracking.example.test/notice/push-exads-openrtb-native-500",
+            "ext": {
+              "btype": 1
+            },
+            "w": 192,
+            "h": 192
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "EXADS documents native.plcmttype=500 for push notifications; it is a vendor extension rather than an IAB standard placement enum.",
+    "The request fixes the icon at 192x192; response image and embedded fixture match those dimensions.",
+    "Response ext.btype=1 means CPM; floor and price use CPM consistently. No CPC-to-CPM inference is necessary.",
+    "Desired capability: show actual title and all supplied image assets after fixture interception; not a claim of current product support.",
+    "Preserve the documented carrier to measure unsupported vendor shapes. Existing product acceptance is not the validity oracle.",
+    "All assets must load from the embedded fixture route; block tracking and destination navigation.",
+    "Core/HTTP assert the Native carrier asset contract. EXADS plcmttype 500 is a vendor-defined push placement signal, but automatic push tagging is not asserted by this case; it is a bounded classification coverage gap, not an invented IAB rule."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "push-exads-openrtb-native-500"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0010"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "An original woodland notice",
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "Images remain blocked in the initial sealed preview; request interception does not bypass CSP."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

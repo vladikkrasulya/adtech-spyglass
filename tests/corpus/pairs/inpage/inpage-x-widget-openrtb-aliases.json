@@ -1,0 +1,163 @@
+{
+  "kind": "pair",
+  "id": "inpage-x-widget-openrtb-aliases",
+  "title": "OpenRTB in-page push bid via bid.ext text/desc/picture/favicon/click alias fields",
+  "format": "inpage",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "inpage-push",
+  "scenario": "pair",
+  "tags": ["synthetic", "inpage-push-dialect", "widget-zone", "alias-fields"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools In-Page Push dialect contract (bid.ext alias field carrier)",
+      "path": "packages/core/dialects/inpage-push.js",
+      "version": "repo HEAD a61fc25 (2026-09-07)",
+      "license": "MIT (ortbtools)",
+      "notes": "Exercises the dialect's documented per-role alias table (title: title/text; description: description/body/desc; image: image/image_url/picture; icon: icon/favicon; click: url/click/click_url/href/link) using the text/desc/picture/favicon/click spelling."
+    },
+    "modifications": [
+      "Wholly original OpenRTB envelope, imp, site, device and bid fields; only the field ROLE ALIASES (text/desc/picture/favicon/click) are taken from the dialect's own source comment.",
+      "IP uses TEST-NET-1 192.0.2.44; user/site identifiers are clearly synthetic fixture strings; asset/click/tracking URLs use reserved .test hostnames."
+    ],
+    "sanitized": "No real visitor, publisher or advertiser data. IP 192.0.2.44 is TEST-NET-1; user.id/site.id are synthetic-fixture strings; every asset/click/tracking URL uses a reserved .test hostname."
+  },
+  "request": {
+    "id": "inpage-x-widget-openrtb-aliases",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "inpage-x-widget-openrtb-aliases-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "ext": {
+          "widget_id": "widget-12",
+          "zone_id": "zone-3"
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "inpage-x-widget-openrtb-aliases",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "inpage-x-widget-openrtb-aliases-bid",
+            "impid": "inpage-x-widget-openrtb-aliases-imp",
+            "price": 0.42,
+            "adomain": ["advertiser.example.test"],
+            "crid": "inpage-x-widget-openrtb-aliases-creative",
+            "ext": {
+              "text": "Two ferries crossing at sunset",
+              "desc": "See why commuters are switching routes this month.",
+              "picture": "https://assets.example.test/feeds/inpage-x-widget-openrtb-aliases-hero-492x328.png",
+              "favicon": "https://assets.example.test/feeds/inpage-x-widget-openrtb-aliases-icon-192x192.png",
+              "click": "https://advertiser.example.test/offers/inpage-x-widget-openrtb-aliases"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "packages/core/dialects/inpage-push.js pickAlias(): title accepts title|text, description accepts description|body|desc, image accepts image|image_url|picture, icon accepts icon|favicon, click accepts url|click|click_url|href|link — this case exercises the text/desc/picture/favicon/click spelling from each list, first-present-wins.",
+    "claimsBid(bid) checks a title-ALIAS or image-ALIAS, not only the canonical key names; 'text' alone is enough to claim this bid, same as 'title' would be.",
+    "OpenRTB object-model requirements require at least one Banner, Video, Audio or Native object. A widget/zone extension alone does not satisfy that baseline requirement; imp.format_required is an expected error under both the IAB baseline and the current response-focused inpage-push dialect. The vendor format-tag/preview gap is separate from this correct diagnostic."
+  ],
+  "notes": [
+    "Deliberately distinct from the sibling canonical-field case only in which alias name is used per role, so a Core regression in alias resolution shows up independently of the canonical path."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.format_required",
+          "path": "imp[0]",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "info",
+      "mustNot": [
+        {
+          "id": "response.bid.payload_missing"
+        }
+      ],
+      "mustNotPrefix": ["inpage-push."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "inpage-x-widget-openrtb-aliases"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0010"
+          }
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "format": {
+      "formats": ["inpage"]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "marker": "Two ferries crossing at sunset",
+      "limitation": "No renderable creative field (adm/native/iurl) is present in the response; the winning bid's content lives entirely in bid.ext, which the preview pipeline never reads.",
+      "capabilityGap": "The in-page push dialect resolves the text/desc/picture/favicon/click aliases for validation, but the Inspector's creative preview has no renderer for any bid.ext card, canonical or aliased."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-180",
+    "layers": ["core", "http", "browser"],
+    "note": "The standard OpenRTB media-object requirement is correctly reported and is not this gap. The remaining expectation concerns recognizing the project-documented in-page vendor signal in an OpenRTB envelope and exposing bid.ext creative content where applicable.",
+    "matches": {
+      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "browser": [
+        "^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"Two\\ ferries\\ crossing\\ at\\ sunset\"\\ absent$"
+      ]
+    }
+  }
+}

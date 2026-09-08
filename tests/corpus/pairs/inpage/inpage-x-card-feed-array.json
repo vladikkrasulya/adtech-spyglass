@@ -1,0 +1,99 @@
+{
+  "kind": "pair",
+  "id": "inpage-x-card-feed-array",
+  "title": "The product's own in-page card feed shape, as a two-card array, mistypes clickurl",
+  "format": "inpage",
+  "protocol": "jsonfeed",
+  "context": "n/a",
+  "dialect": "iab",
+  "scenario": "response-only",
+  "tags": ["synthetic", "jsonfeed", "kb-shape", "widget-zone", "multi-material"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools knowledge base — in-page native widget card",
+      "path": "packages/core/knowledge_base/jsonfeed/inpage/inpage-card.json",
+      "version": "kb-jsonfeed-inpage-001, repo HEAD a61fc25 (2026-09-07)",
+      "license": "MIT (ortbtools)",
+      "notes": "Field shape is the product's own documented in-page widget card sample, reproduced as a two-element array (the KB file itself ships a one-element array) to exercise the array/multi-material form."
+    },
+    "modifications": [
+      "Card ids, titles, image/click/impression URLs and advertiser domain independently authored per card; the KB sample's cdn.example/click.example/imp.example hosts replaced with this corpus's assets/advertiser/tracking.example.test convention.",
+      "A second synthetic card was added; the KB sample ships only one."
+    ],
+    "sanitized": "No real advertiser or subscriber data; all hosts are reserved .test domains; price values are small synthetic placeholders."
+  },
+  "response": [
+    {
+      "id": "inpage-x-card-feed-array-a",
+      "title": "A quiet morning by the lake",
+      "text": "Compare three original travel-planning tools before you book.",
+      "image": "https://assets.example.test/feeds/inpage-x-card-feed-array-a-hero-492x328.png",
+      "icon": "https://assets.example.test/feeds/inpage-x-card-feed-array-a-icon-192x192.png",
+      "clickurl": "https://advertiser.example.test/offers/inpage-x-card-feed-array-a",
+      "impurl": "https://tracking.example.test/notice/inpage-x-card-feed-array-a",
+      "advertiser": "publisher-net.example.test",
+      "price": 0.004,
+      "currency": "USD",
+      "ext": { "format": "inpage", "widget_id": "widget-12", "zone_id": "zone-3" }
+    },
+    {
+      "id": "inpage-x-card-feed-array-b",
+      "title": "Two ferries crossing at sunset",
+      "text": "See why commuters are switching routes this month.",
+      "image": "https://assets.example.test/feeds/inpage-x-card-feed-array-b-hero-492x328.png",
+      "icon": "https://assets.example.test/feeds/inpage-x-card-feed-array-b-icon-192x192.png",
+      "clickurl": "https://advertiser.example.test/offers/inpage-x-card-feed-array-b",
+      "impurl": "https://tracking.example.test/notice/inpage-x-card-feed-array-b",
+      "advertiser": "publisher-net.example.test",
+      "price": 0.006,
+      "currency": "USD",
+      "ext": { "format": "inpage", "widget_id": "widget-12", "zone_id": "zone-4" }
+    }
+  ],
+  "specNotes": [
+    "packages/core/detect.js routes every JSON array unconditionally to TYPES.VENDOR_FEED (no shape check at the type-detection layer); packages/core/rules-feed.js then routes every array unconditionally to validatePushMaterialsFeed(), which checks the click role via click_url|link only — this card's clickurl (no separator) satisfies neither alias, so feed.push.click_url_required (ERROR) fires per element even though price/title/image/icon are all recognised by their own alias pairs.",
+    "packages/core/format-detect.js detectFeedFormat() iterates every array element independently and unions the tags; its hasClick set includes clickurl, so FORMATS.INPAGE is still tagged correctly for the whole array despite the per-element validation false positive — the same disagreement as the single-object sibling case, now doubled (one false error per card).",
+    "public/ortbtools.app.js's Inspector has no bid/material selector; only the first array element is ever measured for creative preview (specs/014-push-creative-preview Assumptions, and the existing known gap DEF-201 'Inspector cannot select every returned bid or feed material'), so this case's second card's preview is unreachable through the UI regardless of the clickurl alias question."
+  ],
+  "notes": [
+    "No request side exists for this scenario, for the same reason as the single-object sibling case.",
+    "The second card's selection-unavailability is the pre-existing, differently-caused DEF-201 gap; it is folded into this case's own knownGap.matches.browser (see report.js precedent in pop-ppcmate-json-multi.json) rather than declared as a second knownGap, since one case may declare only one."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": { "empty": true },
+    "format": { "formats": ["inpage"] },
+    "preview": {
+      "kind": "push",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A quiet morning by the lake",
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "findPushMaterial()'s isMat() test requires click_url or link on every candidate material; neither card's clickurl key satisfies it, so the front-end never recognises either card as a push-style material and shows the empty state instead of a card."
+    },
+    "http": { "status": 200 }
+  },
+  "knownGap": {
+    "id": "DEF-181",
+    "layers": ["core", "http", "browser"],
+    "note": "The clickurl (no separator) click-key alias is recognised by packages/core/format-detect.js's hasClick set but by neither packages/core/rules-feed.js's push-material click alias pair (click_url|link) nor the front-end's findPushMaterial()/isMat() helper (public/ortbtools.app.js). On the product's own knowledge_base/jsonfeed/inpage/inpage-card.json shape this produces: (a) as a bare object (sibling case), payload.unknown_type from Core even though detectFormat correctly tags FORMATS.INPAGE; (b) as this array, a false feed.push.click_url_required error per card from the push-materials validator even though the same format tag is correct; (c) in both shapes, the browser preview shows the generic empty state instead of the push-style card the fields would otherwise support. This case also unavoidably exercises the pre-existing, differently-caused DEF-201 (no bid/material selector), folded into matches.browser below rather than declared separately.",
+    "matches": {
+      "core": [
+        "^response:\\ findings\\ above\\ warning:\\ feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url,\\ feed\\.push\\.click_url_required\\[error\\]@\\[1\\]\\.click_url$"
+      ],
+      "http": [
+        "^response:\\ findings\\ above\\ warning:\\ feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url,\\ feed\\.push\\.click_url_required\\[error\\]@\\[1\\]\\.click_url$"
+      ],
+      "browser": [
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url,\\ feed\\.push\\.click_url_required\\[error\\]@\\[1\\]\\.click_url$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ morning\\ by\\ the\\ lake\"\\ absent$",
+        "^browser\\.selection:\\ unavailable\\ material\\[1\\]$"
+      ]
+    }
+  }
+}

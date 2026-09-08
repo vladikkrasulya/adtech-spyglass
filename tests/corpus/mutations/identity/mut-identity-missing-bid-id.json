@@ -1,0 +1,87 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-identity-missing-bid-id",
+  "title": "A bid with no id at all is rejected, but crosscheck still resolves it by impid",
+  "scenario": "pair",
+  "tags": ["mutation", "identity"],
+  "base": "bn-banner-25-fixed",
+  "category": "identity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
+  "patch": {
+    "response": [
+      {
+        "op": "remove",
+        "path": "/seatbid/0/bid/0/id"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "response.bid.id_required",
+          "path": "seatbid[0].bid[0].id",
+          "level": "error"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "bn-banner-25-fixed"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "crosscheck.js resolves every bid by impid alone and never reads bid.id (confirmed: the sole bid.id reference in the file is inside the unrelated 3.0 projector). A missing bid.id is therefore a clean response-validation error with an otherwise fully-resolved crosscheck, unlike a missing bid.impid which also blocks crosscheck resolution (see mut-identity-missing-bid-impid)."
+  ]
+}

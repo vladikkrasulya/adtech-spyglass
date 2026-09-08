@@ -1,0 +1,193 @@
+{
+  "kind": "pair",
+  "id": "video-web-25-inline-vast2",
+  "title": "30-second user-started instream VAST 2.0 inline",
+  "format": "video",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.5"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.5, sections 3.2.7, 3.2.8 and 5.8",
+      "url": "https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf",
+      "version": "FINAL December 2016",
+      "license": "CC BY 3.0 (adapted IAB request/response structure); MIT (original XML and fixture additions)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, titles, XML and media descriptions are original test data.",
+      "Request/response IDs and impid are intentionally paired.",
+      "Public examples are references; no real person, cookie, advertising ID, IP address or live tracking endpoint is retained.",
+      "Adapted public IAB request/response envelope; replaced legacy API/media options, removed profiling data, matched restrictions to independently authored creative."
+    ],
+    "sanitized": "No production payload or PII used. All resource and tracking hosts end in .test; external network must remain blocked.",
+    "notes": "adapted-public-example"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Use x-openrtb-version: 2.5 when replaying HTTP; envelope itself has no version field."
+    },
+    "sourceIds": [
+      "video-audio:va-ortb25",
+      "video-audio:va-example-response",
+      "video-audio:va-vast-xsd"
+    ],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [
+    "asset-2fc4e973b7b95b2a",
+    "asset-f0aa8786b975f5a7",
+    "asset-5c2f145c88fd2658",
+    "asset-b689a36c3ffc2438"
+  ],
+  "request": {
+    "id": "video-web-25-inline-vast2",
+    "test": 1,
+    "at": 1,
+    "tmax": 500,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "video-1",
+        "secure": 1,
+        "bidfloor": 1,
+        "bidfloorcur": "USD",
+        "video": {
+          "mimes": ["video/mp4"],
+          "minduration": 30,
+          "maxduration": 30,
+          "protocols": [2],
+          "w": 640,
+          "h": 480,
+          "linearity": 1,
+          "placement": 1,
+          "startdelay": 0,
+          "delivery": [2],
+          "playbackmethod": [3]
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/content",
+      "publisher": {
+        "id": "fixture-publisher"
+      }
+    },
+    "device": {
+      "devicetype": 2
+    }
+  },
+  "response": {
+    "id": "video-web-25-inline-vast2",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "fixture-seat",
+        "bid": [
+          {
+            "id": "video-web-25-inline-vast2-bid",
+            "impid": "video-1",
+            "price": 3,
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"><Ad id=\"video-web-25-inline-vast2\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><AdTitle>video-web-25-inline-vast2</AdTitle><Impression><![CDATA[https://track.example.test/video-web-25-inline-vast2/impression]]></Impression><Creatives><Creative id=\"video-web-25-inline-vast2-creative\"><Linear><Duration>00:00:30</Duration><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-web-25-inline-vast2/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-web-25-inline-vast2/complete]]></Tracking></TrackingEvents><MediaFiles><MediaFile id=\"video-web-25-inline-vast2\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"800\" width=\"640\" height=\"480\"><![CDATA[https://media.example.test/video-web-25-inline-vast2.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "video-web-25-inline-vast2-bid-creative",
+            "protocol": 2,
+            "w": 640,
+            "h": 480
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Legacy OpenRTB 2.5 protocol 2; required video bounds and MIME match.",
+    "Validity describes protocol structure and declared constraints; generated media bytes must be checked against declared MIME/duration before playback tests.",
+    "Current Inspector contract displays VAST as inert XML; text visibility must not be counted as creative rendering or media playback.",
+    "fixtureAssets lists controlled resources; intercept .test URLs locally. Never fetch public advertising/tracking hosts.",
+    "Companion image visibility is a separate preview capability."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "video-web-25-inline-vast2"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "1.0000"
+          }
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "vast",
+      "rendered": "inert-text",
+      "mediaPlays": "no",
+      "marker": "video-web-25-inline-vast2",
+      "limitation": null,
+      "capabilityGap": "The current VAST preview is inert XML; video/audio playback and Wrapper resolution are not implemented."
+    },
+    "format": {
+      "formats": ["video"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-100",
+    "layers": ["core", "http", "browser"],
+    "note": "Optional Device attributes may produce guidance; their omission must not invalidate otherwise valid requests.",
+    "matches": {
+      "core": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ],
+      "http": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device\\.ip_required\\[error\\]@device\\.ip,\\ request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ]
+    }
+  }
+}

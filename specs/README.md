@@ -6,22 +6,22 @@ owner's content.
 
 ## Find the Owner
 
-| Question                                            | Canonical owner                                                                                         |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| What rules govern every change?                     | [Project constitution](../.specify/memory/constitution.md)                                              |
-| What product exists now?                            | [Platform baseline specification](./000-platform-baseline/spec.md)                                      |
-| How is the current system wired?                    | [Platform baseline plan](./000-platform-baseline/plan.md)                                               |
-| What are the current public and runtime boundaries? | [Platform baseline contracts](./000-platform-baseline/contracts/)                                       |
-| What data exists and where can it persist?          | [Baseline data model](./000-platform-baseline/data-model.md) and [privacy contract](../docs/PRIVACY.md) |
-| Why was a durable choice made?                      | [Decision index](./DECISIONS.md)                                                                        |
-| What is active or next?                             | [Current roadmap](./ROADMAP.md)                                                                         |
-| What is the current governed change?                | [Spec Kit foundation feature](./001-spec-kit-foundation/spec.md)                                        |
-| How will that change be delivered?                  | [Foundation plan](./001-spec-kit-foundation/plan.md) and [tasks](./001-spec-kit-foundation/tasks.md)    |
-| How is production operated?                         | [Operations runbook](../docs/OPERATIONS.md)                                                             |
-| How is a security concern reported?                 | [Security policy](../SECURITY.md)                                                                       |
-| What is the public HTTP contract?                   | [HTTP API documentation](../docs/api-v1.md)                                                             |
-| What is the npm release state?                      | [npm publication runbook](../docs/NPM_PUBLISH.md)                                                       |
-| What has shipped?                                   | [Release history](../CHANGELOG.md)                                                                      |
+| Question                                            | Canonical owner                                                                                                            |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| What rules govern every change?                     | [Project constitution](../.specify/memory/constitution.md)                                                                 |
+| What product exists now?                            | [Platform baseline specification](./000-platform-baseline/spec.md)                                                         |
+| How is the current system wired?                    | [Platform baseline plan](./000-platform-baseline/plan.md)                                                                  |
+| What are the current public and runtime boundaries? | [Platform baseline contracts](./000-platform-baseline/contracts/)                                                          |
+| What data exists and where can it persist?          | [Baseline data model](./000-platform-baseline/data-model.md) and [privacy contract](../docs/PRIVACY.md)                    |
+| Why was a durable choice made?                      | [Decision index](./DECISIONS.md)                                                                                           |
+| What is active or next?                             | [Current roadmap](./ROADMAP.md)                                                                                            |
+| Where is the latest governed audit?                 | [Ad format verification report](./020-ad-format-verification-matrix/verification.md)                                       |
+| How was that audit delivered?                       | [Verification plan](./020-ad-format-verification-matrix/plan.md) and [tasks](./020-ad-format-verification-matrix/tasks.md) |
+| How is production operated?                         | [Operations runbook](../docs/OPERATIONS.md)                                                                                |
+| How is a security concern reported?                 | [Security policy](../SECURITY.md)                                                                                          |
+| What is the public HTTP contract?                   | [HTTP API documentation](../docs/api-v1.md)                                                                                |
+| What is the npm release state?                      | [npm publication runbook](../docs/NPM_PUBLISH.md)                                                                          |
+| What has shipped?                                   | [Release history](../CHANGELOG.md)                                                                                         |
 
 The conventional privacy, security, operations, API, package, and release documents remain at their
 public paths. The [document-ownership contract](./001-spec-kit-foundation/contracts/document-ownership.md)

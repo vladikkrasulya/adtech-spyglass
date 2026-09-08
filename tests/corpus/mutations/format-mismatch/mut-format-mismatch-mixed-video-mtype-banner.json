@@ -1,0 +1,160 @@
+{
+  "kind": "mutation",
+  "id": "mut-format-mismatch-mixed-video-mtype-banner",
+  "title": "A banner bid on a mixed banner+video impression is still checked against the unchosen video slot",
+  "format": "video",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["mutation", "format-mismatch"],
+  "base": "video-web-26-companion-vast3",
+  "category": "format-mismatch",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectimp",
+  "patch": {
+    "replaceRequest": {
+      "id": "mut-format-mismatch-mixed-video-mtype-banner",
+      "test": 1,
+      "at": 1,
+      "tmax": 500,
+      "cur": ["USD"],
+      "imp": [
+        {
+          "id": "video-1",
+          "secure": 1,
+          "bidfloor": 1,
+          "bidfloorcur": "USD",
+          "video": {
+            "mimes": ["video/mp4"],
+            "minduration": 5,
+            "maxduration": 30,
+            "protocols": [3],
+            "w": 640,
+            "h": 480,
+            "linearity": 1,
+            "plcmt": 1,
+            "startdelay": 0,
+            "minbitrate": 300,
+            "maxbitrate": 1500,
+            "delivery": [2],
+            "playbackmethod": [3],
+            "battr": [13, 14]
+          },
+          "banner": {
+            "w": 300,
+            "h": 250
+          }
+        }
+      ],
+      "site": {
+        "id": "fixture-site",
+        "domain": "publisher.example.test",
+        "page": "https://publisher.example.test/content",
+        "publisher": {
+          "id": "fixture-publisher"
+        }
+      },
+      "device": {
+        "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+        "devicetype": 2,
+        "language": "en",
+        "ip": "192.0.2.11",
+        "os": "Linux",
+        "osv": "6.1"
+      }
+    },
+    "replaceResponse": {
+      "id": "mut-format-mismatch-mixed-video-mtype-banner",
+      "cur": "USD",
+      "seatbid": [
+        {
+          "seat": "fixture-seat",
+          "bid": [
+            {
+              "id": "mut-format-mismatch-mixed-video-mtype-banner-bid",
+              "impid": "video-1",
+              "price": 2,
+              "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:300px;height:250px;overflow:hidden;font-family:Arial,sans-serif;background:#223b62}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#162d49;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"MIXED BANNER SIDE\" role=\"img\" aria-label=\"MIXED BANNER SIDE\"><img alt=\"MIXED BANNER SIDE\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjUwIiB2aWV3Qm94PSIwIDAgMzAwIDI1MCI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyNTAiIHJ4PSIxMiIgZmlsbD0iIzIyM2I2MiIvPjwvc3ZnPg==\"><span class=\"label\">MIXED BANNER SIDE · TEST AD</span></div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "mut-format-mismatch-mixed-video-mtype-banner-creative",
+              "mtype": 1,
+              "w": 300,
+              "h": 250
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.video_not_vast",
+          "path": "seatbid[0].bid[0].adm"
+        },
+        {
+          "id": "crosscheck.bid.native_invalid_adm",
+          "path": "seatbid[0].bid[0].adm"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-111",
+    "layers": ["core", "http", "browser"],
+    "note": "A valid mtype=2 video bid answering mixed offered inventory is checked against its selected video format, not against unchosen banner/native requirements.",
+    "matches": {
+      "core": [
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.video_not_vast\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.video_not_vast\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ],
+      "http": [
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.video_not_vast\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.video_not_vast\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ],
+      "browser": [
+        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.video_not_vast\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.video_not_vast\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ]
+    }
+  },
+  "specNotes": [
+    "OpenRTB 2.6 §5.8 introduced bid.mtype precisely to disambiguate which of a mixed impression's offered media types a bid answers. Here mtype:1 (banner) unambiguously selects the banner side, so the video block's isVastShape gate should not apply to this bid at all.",
+    "crosscheck.js never reads bid.mtype (confirmed absent from the whole file); the video block runs unconditionally off imp.video presence, so a legitimate banner fill on a mixed imp still receives a spurious crosscheck.bid.video_not_vast WARN. Same root cause as DEF-111 (format-mixed-impression-video-wins), mirrored onto the video side of the same imp shape."
+  ],
+  "notes": [
+    "Browser acceptance 2026-09-08 independently reproduced the existing semantic/preview deviation through the actual Analyze action. Only the reviewed failure strings are admitted on the browser layer; all declared assertions remain unchanged."
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "gaps": {
+    "DEF-150": {
+      "id": "DEF-150",
+      "title": "Structured bid.native object is invisible to schema markup-presence and crosscheck native completeness",
+      "category": "missing-capability",
+      "severity": "medium",
+      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
+      "code": ["packages/core/rules-response.js:140", "packages/core/crosscheck.js:443"],
+      "expected": "A bid that legitimately conveys its markup via a structured bid.native object (the documented, Inspector-supported SSP convention in public/ortbtools.app.js:4026-4034 and specs/014-push-creative-preview) must not be flagged as missing markup, and its native completeness must be verified the same way an adm-carried native bid's is.",
+      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
+      "cases": ["native-x-structured-bid-object"],
+      "reviewedAt": "2026-09-07",
+      "notes": [
+        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
+        "rules-response.js:140 gates its markup-presence check on `isStr(b.adm) || isStr(b.nurl)` only; crosscheck.js:443 gates the native crossmatch block on `imp.native && bid.adm` only. Neither reads bid.native at all, so both symptoms share one root cause."
+      ]
+    },
+    "DEF-151": {
+      "id": "DEF-151",
+      "title": "OpenRTB 3.0 structured AdCOM native is rejected as missing display markup, detected as banner and omitted from native completeness",
+      "category": "missing-capability",
+      "severity": "medium",
+      "source": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_nativeformat",
+      "code": [
+        "packages/core/rules-response-30.js:226",
+        "packages/core/format-detect.js",
+        "packages/core/crosscheck.js:576",
+        "public/ortbtools.app.js"
+      ],
+      "expected": "A valid AdCOM placement.display.nativefmt / media.ad.display.native pair must be recognized as native, accept its structured native creative without also requiring display.adm or display.curl, and verify the three required asset IDs and their content. The Inspector should render the structured native title and embedded image.",
+      "actual": "On the corrected standard AdCOM envelopes, Core and HTTP falsely emit response.30.bid.display.markup_required, identify the native display subtype as banner, and omit crosscheck.bid.native_complete. Each measured failure has a separate exact signature. Browser empty-preview behavior was recorded before the envelope correction; the corrected fixture requires centralized browser remeasurement before final acceptance.",
+      "cases": ["native-x-ortb30-adcom-stub"],
+      "reviewedAt": "2026-09-08",
+      "notes": [
+        "The primary contract places NativeFormat under DisplayPlacement.nativefmt and Native under Display.native. Placement.native and Ad.native are not standard AdCOM fields. The corrected fixture uses the standard envelopes and declares the actual 1x1 embedded image dimensions on both sides.",
+        "Display explicitly permits structured native as an alternative to adm or curl. The false markup error is therefore grounded in the primary contract, independent of the implementation.",
+        "Current Core format detection treats the display parent as banner without recognizing nativefmt/native. The 3.0 crosscheck projector also does not project native assets; the missing verdict is recorded as a capability gap, not as a protocol rule requiring a particular UI message.",
+        "Normative assertions describe valid payload behavior; exact known-gap signatures document observed failures only and must be retired individually when the product starts satisfying those assertions.",
+        "Corrected AdCOM fixture browser evidence: browser-acceptance/initial/browser.jsonl on 2026-09-08 reproduces the same schema/format/completeness issues plus empty creative preview. Exact browser signatures are pinned separately in the case."
+      ],
+      "layers": ["core", "http", "browser"]
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "kind": "mutation",
+  "id": "encoding-adm-forged-postmessage",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "title": "adm script forging an ortbtools-probe postMessage is rejected by channel pinning",
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md (probe isolation invariant); public/ortbtools.app.js:6601-6609 documents that the message receiver pins both e.source (the mounted iframe contentWindow) and a per-mount d.channel secret the creative markup is never given, so a same-origin-looking forged ortbtools-probe message from inside the rendered adm cannot be accepted as telemetry.",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<!doctype html><html><body><div style=\"width:300px;height:250px;background:#112233;color:#fff;font-family:Arial\" data-fixture=\"FORGED PROBE TEST\">FORGED PROBE TEST</div><script>try{parent.postMessage({type:'ortbtools-probe',v:1,ts:Date.now(),kind:'heartbeat',channel:'guessed-channel'},'*');}catch(e){}</script></body></html>"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "FORGED PROBE TEST",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success",
+      "verdict": "clean"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "packages/core/behavior/rules/static.js OBFUSCATION_PATTERNS/MINER_PATTERNS match eval(atob(...)), the Function constructor, packer/jjencode/aaencode shapes and cryptomining strings; a bare parent.postMessage(...) call matches none of them, so Core must not raise a static finding from this adm.",
+    "The forged message is expected to be silently dropped by the channel check, not to throw or to surface a toast; the schema has no vocabulary for \"no behavior event was recorded\", so the case proves the frame still renders its own benign content undisturbed (the marker) rather than asserting a negative about an unmeasured channel.",
+    "The iframe sandbox is \"allow-scripts\" only (no allow-same-origin), so the script executes with an opaque origin; execution is expected — the isolation this case is about is the receiver-side channel secret, not blocking the postMessage call itself."
+  ]
+}

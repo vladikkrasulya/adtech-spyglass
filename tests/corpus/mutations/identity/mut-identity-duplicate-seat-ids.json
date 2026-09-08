@@ -1,0 +1,120 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-identity-duplicate-seat-ids",
+  "title": "Two seatbid entries name the same seat, which the spec never sanctions",
+  "scenario": "pair",
+  "tags": ["mutation", "identity"],
+  "base": "bn-banner-26-multiimp-multiseat",
+  "category": "identity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectseatbid",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/1/seat",
+        "value": "synthetic-seat-a"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "must": [
+        {
+          "id": "expected.response.seatbid_seat_duplicated",
+          "path": "seatbid[1].seat",
+          "level": "error",
+          "params": {
+            "seat": "synthetic-seat-a"
+          }
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "bn-banner-26-multiimp-multiseat"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[1].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[1].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[1].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-190",
+    "layers": ["core", "http", "browser"],
+    "note": "SeatBid.seat identifies the buyer seat on whose behalf a bid is made (OpenRTB 2.6 §4.2.2); two SeatBid entries claiming the same seat conflate distinct bidders, but rules-response.js has no presence, type or uniqueness check for seatbid[].seat anywhere, so the collision validates cleanly.",
+    "matches": {
+      "core": [
+        "^response: missing required finding expected\\.response\\.seatbid_seat_duplicated @ seatbid\\[1\\]\\.seat \\[error\\] params=\\{\"seat\":\"synthetic-seat-a\"\\} — got version\\.single_marker\\[info\\]@$"
+      ],
+      "http": [
+        "^response: missing required finding expected\\.response\\.seatbid_seat_duplicated @ seatbid\\[1\\]\\.seat \\[error\\] params=\\{\"seat\":\"synthetic-seat-a\"\\} — got version\\.single_marker\\[info\\]@$"
+      ],
+      "browser": [
+        "^browser\\.response:\\ missing\\ required\\ finding\\ expected\\.response\\.seatbid_seat_duplicated\\ @\\ seatbid\\[1\\]\\.seat\\ \\[error\\]\\ params=\\{\"seat\":\"synthetic\\-seat\\-a\"\\}\\ —\\ got\\ version\\.single_marker\\[info\\]@$"
+      ]
+    }
+  },
+  "specNotes": [
+    "Browser measured on 2026-09-08 in run ortbtools-audit-9fSncA; only the exact observed product deviations are admitted. Normative finding and successful-analysis assertions are retained."
+  ]
+}

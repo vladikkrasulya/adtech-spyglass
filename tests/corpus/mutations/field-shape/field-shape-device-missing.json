@@ -1,0 +1,116 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "field-shape-device-missing",
+  "title": "A non-DOOH request without any Device object loses IP and UA reach",
+  "scenario": "pair",
+  "tags": ["mutation", "field-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "field-shape",
+  "specRef": "OpenRTB 2.5/2.6 §3.2.1 BidRequest.device is recommended; §3.2.18 Device.ua and Device.ip are optional. Their absence must not invalidate an otherwise valid request.",
+  "patch": {
+    "request": [
+      {
+        "op": "remove",
+        "path": "/device"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "mustNot": [
+        {
+          "id": "request.device_required",
+          "level": "error"
+        },
+        {
+          "id": "request.device.ip_required",
+          "level": "error"
+        },
+        {
+          "id": "request.device.ua_required",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-100",
+    "layers": ["core", "http", "browser"],
+    "note": "Same recorded cause as DEF-100: optional Device attributes are treated as mandatory (request.device_required at ERROR).",
+    "matches": {
+      "core": [
+        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua$",
+        "^request: forbidden finding present request\\.device_required \\[error\\] → request\\.device_required\\[error\\]@device$",
+        "^request: forbidden finding present request\\.device\\.ip_required \\[error\\] → request\\.device\\.ip_required\\[error\\]@device\\.ip$",
+        "^request: forbidden finding present request\\.device\\.ua_required \\[error\\] → request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ],
+      "http": [
+        "^request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua$",
+        "^request: forbidden finding present request\\.device_required \\[error\\] → request\\.device_required\\[error\\]@device$",
+        "^request: forbidden finding present request\\.device\\.ip_required \\[error\\] → request\\.device\\.ip_required\\[error\\]@device\\.ip$",
+        "^request: forbidden finding present request\\.device\\.ua_required \\[error\\] → request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ],
+      "browser": [
+        "^browser\\.request: findings above warning: request\\.device_required\\[error\\]@device, request\\.device\\.ip_required\\[error\\]@device\\.ip, request\\.device\\.ua_required\\[error\\]@device\\.ua$",
+        "^browser\\.request: forbidden finding present request\\.device_required \\[error\\] → request\\.device_required\\[error\\]@device$",
+        "^browser\\.request: forbidden finding present request\\.device\\.ip_required \\[error\\] → request\\.device\\.ip_required\\[error\\]@device\\.ip$",
+        "^browser\\.request: forbidden finding present request\\.device\\.ua_required \\[error\\] → request\\.device\\.ua_required\\[error\\]@device\\.ua$",
+        "^browser\\.row: forbidden request request\\.device(\\.ip|\\.ua)?_required$"
+      ]
+    }
+  },
+  "specNotes": [
+    "Device.ip/device.ua only relax to INFO on a DOOH-only request (no site/app); this fixture keeps its site channel, so a missing Device object produces three independent ERROR findings, not one.",
+    "Crosscheck never reads Device at all, so bid resolution and the floor/size verdicts are unaffected."
+  ]
+}

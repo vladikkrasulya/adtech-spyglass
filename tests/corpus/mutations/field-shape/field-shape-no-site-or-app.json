@@ -1,0 +1,101 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "field-shape-no-site-or-app",
+  "title": "A request naming neither site, app nor dooh has no distribution channel",
+  "scenario": "pair",
+  "tags": ["mutation", "field-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "field-shape",
+  "specRef": "OpenRTB 2.5/2.6 §3.2.1 BidRequest: site and app are recommended, not required; a request with neither is valid and may at most warrant guidance.",
+  "patch": {
+    "request": [
+      {
+        "op": "remove",
+        "path": "/site"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "mustNot": [
+        {
+          "id": "request.no_site_or_app",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-302",
+    "layers": ["core", "http", "browser"],
+    "note": "Core reports request.no_site_or_app as an ERROR although §3.2.1 only recommends site/app (false positive, same class as DEF-100 for device).",
+    "matches": {
+      "core": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.no_site_or_app\\[error\\]@site/app$",
+        "^request:\\ forbidden\\ finding\\ present\\ request\\.no_site_or_app\\ \\[error\\]\\ →\\ request\\.no_site_or_app\\[error\\]@site/app$"
+      ],
+      "http": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.no_site_or_app\\[error\\]@site/app$",
+        "^request:\\ forbidden\\ finding\\ present\\ request\\.no_site_or_app\\ \\[error\\]\\ →\\ request\\.no_site_or_app\\[error\\]@site/app$"
+      ],
+      "browser": [
+        "^browser\\.row:\\ forbidden\\ request\\ request\\.no_site_or_app$",
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.no_site_or_app\\[error\\]@site/app$",
+        "^browser\\.request:\\ forbidden\\ finding\\ present\\ request\\.no_site_or_app\\ \\[error\\]\\ →\\ request\\.no_site_or_app\\[error\\]@site/app$"
+      ]
+    }
+  },
+  "specNotes": [
+    "OpenRTB 2.6 section 3.2.1 recommends Site/App/DOOH context objects; it does not require a context object. Their mutual exclusivity is separate from presence. Removing Site leaves the Device object and bid resolution unchanged."
+  ]
+}

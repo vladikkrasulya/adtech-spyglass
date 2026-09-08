@@ -1,0 +1,97 @@
+{
+  "kind": "mutation",
+  "id": "mut-format-mismatch-audio-video-mediafile",
+  "title": "Audio-only impression is filled with a VAST document whose MediaFile is video/mp4",
+  "format": "audio",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["mutation", "format-mismatch"],
+  "base": "audio-web-25-mp3-legacy",
+  "category": "format-mismatch",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/device/ua",
+        "value": "Mozilla/5.0 (Synthetic fixture; audit)"
+      },
+      {
+        "op": "add",
+        "path": "/device/ip",
+        "value": "192.0.2.11"
+      }
+    ],
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.0\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"mut-format-mismatch-audio-video-mediafile\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><Impression><![CDATA[https://track.example.test/mut-format-mismatch-audio-video-mediafile/impression]]></Impression><AdTitle>mut-format-mismatch-audio-video-mediafile</AdTitle><Creatives><Creative id=\"mut-format-mismatch-audio-video-mediafile-creative\"><UniversalAdId idRegistry=\"unknown\" idValue=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/mut-format-mismatch-audio-video-mediafile/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/mut-format-mismatch-audio-video-mediafile/complete]]></Tracking></TrackingEvents><Duration>00:00:15</Duration><MediaFiles><MediaFile id=\"mut-format-mismatch-audio-video-mediafile\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"800\" width=\"640\" height=\"360\"><![CDATA[https://media.example.test/mut-format-mismatch-audio-video-mediafile.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "expected.crosscheck.bid.audio_video_mediafile_mismatch",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "crit"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-194",
+    "layers": ["core", "http", "browser"],
+    "note": "Crosscheck has no content-type check for a banner or audio impression: the banner size block runs off imp.banner presence alone and never inspects whether bid.adm actually looks like markup, so a bid carrying a full VAST document into a banner-only slot still receives a plain size_match OK when its declared dimensions happen to coincide with the offered banner size, and nothing anywhere reports that the content itself cannot render as a banner.",
+    "matches": {
+      "core": [
+        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.audio_video_mediafile_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
+      ],
+      "http": [
+        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.audio_video_mediafile_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
+      ],
+      "browser": [
+        "^browser\\.crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.audio_video_mediafile_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
+      ]
+    }
+  },
+  "specNotes": [
+    "crosscheck.js has zero references to `audio` anywhere in the file (confirmed by grep) — imp.audio receives no size, format or VAST-shape equivalent of the video block's isVastShape gate, so a VAST document whose only MediaFile declares video/mp4 for an audio-only impression produces no crosscheck finding at all.",
+    "This is not caught at the schema-validation layer either: packages/core/rules-vast.js's R15 MediaFile-type check (VALID_MF_TYPES) is an allowlist of ten VIDEO container MIME types and contains no audio MIME type at all — video/mp4 passes the check as 'valid' regardless of the fact that the impression requested audio/mpeg, and no rule reads imp.audio.mimes to compare against the returned MediaFile.type.",
+    "Same underlying architectural gap as mut-format-mismatch-banner-vast-adm: neither the banner slot nor the audio slot has any check that the returned creative's content type actually matches the offered media object; only imp.video has an equivalent (isVastShape) check at all."
+  ],
+  "notes": [
+    "Browser acceptance 2026-09-08 independently reproduced the existing semantic/preview deviation through the actual Analyze action. Only the reviewed failure strings are admitted on the browser layer; all declared assertions remain unchanged."
+  ]
+}

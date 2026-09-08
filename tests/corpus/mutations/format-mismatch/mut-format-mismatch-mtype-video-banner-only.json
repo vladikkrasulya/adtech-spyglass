@@ -1,0 +1,89 @@
+{
+  "kind": "mutation",
+  "id": "mut-format-mismatch-mtype-video-banner-only",
+  "title": "Response bid declares mtype video while the offered impression has no video object at all",
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["mutation", "format-mismatch"],
+  "base": "bn-banner-25-fixed",
+  "category": "format-mismatch",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#list_markuptypes",
+  "patch": {
+    "response": [
+      {
+        "op": "add",
+        "path": "/seatbid/0/bid/0/mtype",
+        "value": 2
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        },
+        {
+          "id": "expected.crosscheck.bid.mtype_offered_mismatch",
+          "path": "seatbid[0].bid[0].mtype",
+          "level": "crit"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-195",
+    "layers": ["core", "http", "browser"],
+    "note": "Response bid.mtype (OpenRTB 2.6 List: Markup Types, values 1=Banner, 2=Video, 3=Audio, 4=Native) is never validated by Core: MTYPE_TO_FORMAT in packages/core/format-detect.js silently ignores any value outside 1-4 for detection purposes, and rules-response.js contains no reference to mtype at all, so an out-of-range value such as 5 produces no finding of any kind.",
+    "matches": {
+      "core": [
+        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.mtype_offered_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
+      ],
+      "http": [
+        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.mtype_offered_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
+      ],
+      "browser": [
+        "^browser\\.crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.mtype_offered_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
+      ]
+    }
+  },
+  "specNotes": [
+    "The impression offers only imp.banner; there is no imp.video anywhere on this request, so a bid whose own mtype declares itself Video (2) cannot possibly be a valid fill for this impression under any interpretation — this is a direct contradiction between the bid's declared type and the auction it answered, not merely an ambiguous shape.",
+    "crosscheck.js never reads bid.mtype (confirmed by grep across the whole file), so no crosscheck rule can compare the declared markup type against which media objects the impression actually offered. This is the same root defect as DEF-195's enum case: bid.mtype carries meaning under OpenRTB 2.6 §5.8 that nothing in Core consumes."
+  ],
+  "notes": [
+    "Browser acceptance 2026-09-08 independently reproduced the existing semantic/preview deviation through the actual Analyze action. Only the reviewed failure strings are admitted on the browser layer; all declared assertions remain unchanged."
+  ]
+}

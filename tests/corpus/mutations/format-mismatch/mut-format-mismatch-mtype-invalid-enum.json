@@ -1,0 +1,88 @@
+{
+  "kind": "mutation",
+  "id": "mut-format-mismatch-mtype-invalid-enum",
+  "title": "Response bid.mtype carries a value outside the documented 1-4 enum range",
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["mutation", "format-mismatch"],
+  "base": "bn-banner-25-fixed",
+  "category": "format-mismatch",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#list_markuptypes",
+  "patch": {
+    "response": [
+      {
+        "op": "add",
+        "path": "/seatbid/0/bid/0/mtype",
+        "value": 5
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "must": [
+        {
+          "id": "expected.response.bid.mtype_invalid_enum",
+          "path": "seatbid[0].bid[0].mtype",
+          "level": "error",
+          "params": {
+            "mtype": 5
+          }
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-195",
+    "layers": ["core", "http", "browser"],
+    "note": "Response bid.mtype (OpenRTB 2.6 List: Markup Types, values 1=Banner, 2=Video, 3=Audio, 4=Native) is never validated by Core: MTYPE_TO_FORMAT in packages/core/format-detect.js silently ignores any value outside 1-4 for detection purposes, and rules-response.js contains no reference to mtype at all, so an out-of-range value such as 5 produces no finding of any kind.",
+    "matches": {
+      "core": [
+        "^response:\\ missing\\ required\\ finding\\ expected\\.response\\.bid\\.mtype_invalid_enum\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[error\\]\\ params=\\{\"mtype\":5\\}\\ —\\ got\\ version\\.single_marker\\[info\\]@$"
+      ],
+      "http": [
+        "^response:\\ missing\\ required\\ finding\\ expected\\.response\\.bid\\.mtype_invalid_enum\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[error\\]\\ params=\\{\"mtype\":5\\}\\ —\\ got\\ version\\.single_marker\\[info\\]@$"
+      ],
+      "browser": [
+        "^browser\\.response:\\ missing\\ required\\ finding\\ expected\\.response\\.bid\\.mtype_invalid_enum\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[error\\]\\ params=\\{\"mtype\":5\\}\\ —\\ got\\ version\\.single_marker\\[info\\]@$"
+      ]
+    }
+  },
+  "specNotes": [
+    "OpenRTB 2.6's Markup Types list defines exactly four values (1 Banner, 2 Video, 3 Audio, 4 Native); a bid declaring mtype:5 uses a value the specification does not define and should be flagged the same way any other undocumented enum value is flagged elsewhere in this codebase (field-local error, not silence).",
+    "grep of packages/core/rules-response.js confirms zero references to `mtype`; format-detect.js's MTYPE_TO_FORMAT table is a lookup used only for the format-detection axis (chips/tags), not a validation rule, and an unmatched key is simply skipped there with no side effect."
+  ],
+  "notes": [
+    "Browser acceptance 2026-09-08 independently reproduced the existing semantic/preview deviation through the actual Analyze action. Only the reviewed failure strings are admitted on the browser layer; all declared assertions remain unchanged."
+  ]
+}

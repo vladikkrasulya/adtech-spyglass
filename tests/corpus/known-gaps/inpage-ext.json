@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "gaps": {
+    "DEF-180": {
+      "id": "DEF-180",
+      "title": "In-page vendor signals in OpenRTB envelopes lack format tagging and bid.ext preview",
+      "category": "vendor-support",
+      "severity": "medium",
+      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectmodel",
+      "code": [
+        "packages/core/format-detect.js:220",
+        "packages/core/dialects/inpage-push.js",
+        "public/ortbtools.app.js"
+      ],
+      "expected": "The project-documented widget/zone and bid.ext in-page dialect can be identified as vendor in-page content even when carried in an OpenRTB envelope; bid.ext-only creative support is reported separately. Standard OpenRTB requires a media object, so imp.format_required for these bare widget impressions is correct and remains asserted.",
+      "actual": "Format detection does not tag these imp/seatbid-shaped widget examples as inpage, and the preview does not render nested bid.ext cards. The adm-bearing control renders its markup correctly. The request media-object error is not an implementation deviation.",
+      "cases": [
+        "inpage-x-widget-openrtb-canonical",
+        "inpage-x-widget-openrtb-aliases",
+        "inpage-x-widget-iab-contract",
+        "inpage-x-widget-adm-and-ext",
+        "inpage-x-widget-inapp"
+      ],
+      "reviewedAt": "2026-09-07",
+      "notes": [
+        "This is a vendor capability distinction, not proof that media-free impressions comply with IAB OpenRTB. The earlier reading of conditional Imp field-table entries was incomplete; section 3.1 explicitly requires a media object.",
+        "Only missing vendor tagging and case-specific creative identity failures remain pinned. Response-dialect validation and baseline request rejection are asserted independently."
+      ]
+    },
+    "DEF-181": {
+      "id": "DEF-181",
+      "title": "The clickurl feed alias, recognized by format-detect.js, is missing from detect.js's single-object classifier and rules-feed.js's push-material validator",
+      "category": "false-positive",
+      "severity": "medium",
+      "source": "packages/core/knowledge_base/jsonfeed/inpage/inpage-card.json",
+      "code": [
+        "packages/core/detect.js:184",
+        "packages/core/rules-feed.js:164",
+        "public/ortbtools.app.js:3234"
+      ],
+      "expected": "The product's own committed in-page card feed sample (manifest id kb-jsonfeed-inpage-001) uses `clickurl`, which packages/core/format-detect.js's hasClick set already recognizes as a click-key alias (alongside clickUrl/click_url/redirectUrl/link) for FORMATS.INPAGE tagging. The same alias should be recognized consistently everywhere else a click key is checked for this shape: detect.js's single-object payload-type classifier, rules-feed.js's push-materials click role (canonical click_url, alias link), and the front-end's findPushMaterial()/isMat() card-recognition heuristic.",
+      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
+      "cases": ["inpage-x-card-feed-single", "inpage-x-card-feed-array"],
+      "reviewedAt": "2026-09-07",
+      "notes": [
+        "Normative assertions were authored from the product's own knowledge_base/jsonfeed/inpage/inpage-card.json sample and format-detect.js's hasClick set before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
+        "Three symptoms of one alias-propagation gap (payload-type detection, push-material field validation, and front-end card recognition) are grouped under this one id, matching the established one-id-per-case convention.",
+        "inpage-x-card-feed-array additionally, unavoidably reproduces the pre-existing DEF-201 ('Inspector cannot select every returned bid or feed material') for its second card; that signature is folded into this case's own knownGap.matches.browser rather than declared as a second knownGap, and DEF-201 itself is left untouched in known-gaps.json since this case's declared id is DEF-181, not DEF-201."
+      ]
+    }
+  }
+}

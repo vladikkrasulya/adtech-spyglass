@@ -1,0 +1,62 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "nobid-explicit-reason",
+  "title": "A valid no-bid response does not need a creative",
+  "scenario": "pair",
+  "tags": ["mutation", "multiplicity"],
+  "base": "bn-banner-25-fixed",
+  "category": "multiplicity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidresponse",
+  "patch": {
+    "replaceResponse": {
+      "id": "bn-banner-25-fixed",
+      "nbr": 0,
+      "cur": "USD"
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.no_response"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "BidResponse.seatbid may be empty when no bids are offered; nbr is optional.",
+    "Grounding: OpenRTB 2.6 section 4.1 treats a response without actual bids as no-bid and encourages a reason; the 4.2.1 BidResponse table requires seatbid only when bidding and leaves nbr optional. The 4.2.1 prose separately describes 204 or nbr-bearing examples. id_match is the application finding used to verify auction identity recognition, not an IAB-mandated identifier."
+  ]
+}

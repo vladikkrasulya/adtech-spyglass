@@ -1,0 +1,64 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "encoding-response-duplicate-price",
+  "title": "Raw response bytes retain duplicate price evidence",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "specRef": "https://www.rfc-editor.org/rfc/rfc8259#section-4",
+  "patch": {
+    "rawResponse": "{\"id\":\"bn-banner-25-fixed\",\"cur\":\"USD\",\"seatbid\":[{\"seat\":\"synthetic-seat-a\",\"bid\":[{\"id\":\"bid-fixed\",\"impid\":\"slot-1\",\"price\":1.25,\"price\":1.25,\"adm\":\"<!doctype html><html><head><meta charset=\\\"utf-8\\\"><style>html,body{margin:0}.ad{position:relative;width:300px;height:250px;overflow:hidden;font-family:Arial,sans-serif;background:#223b62}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#162d49;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\\\"ad\\\" data-fixture=\\\"BANNER FIXED\\\" role=\\\"img\\\" aria-label=\\\"BANNER FIXED\\\"><img alt=\\\"BANNER FIXED landscape\\\" src=\\\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjUwIiB2aWV3Qm94PSIwIDAgMzAwIDI1MCI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyNTAiIHJ4PSIxMiIgZmlsbD0iIzIyM2I2MiIvPjxjaXJjbGUgY3g9IjIyNS4wIiBjeT0iOTUuMCIgcj0iNjAuMCIgZmlsbD0iI2ZmZDE2NiIvPjxwYXRoIGQ9Ik0wIDI1MCBMMTQ0LjAgNzUuMCBMMzAwIDI1MCBaIiBmaWxsPSIjNTViNmE1Ii8+PHRleHQgeD0iMTIiIHk9IjIzMiIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4Ij5CQU5ORVIgRklYRUQ8L3RleHQ+PC9zdmc+\\\"><span class=\\\"label\\\">BANNER FIXED \\u00b7 TEST AD</span></div></body></html>\",\"adomain\":[\"advertiser.example.test\"],\"crid\":\"bid-fixed-creative\",\"w\":300,\"h\":250}]}]}"
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "payload.duplicate_key",
+          "path": "seatbid[0].bid[0].price",
+          "level": "error"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "RFC8259 names SHOULD be unique. The same value is repeated so the parsed object is unchanged; only raw bytes contain the ambiguity.",
+    "Duplicate consequential id/price must be surfaced even when JSON.parse retains a valid final value."
+  ]
+}

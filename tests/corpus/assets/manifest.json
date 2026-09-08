@@ -1,0 +1,802 @@
+{
+  "schemaVersion": 1,
+  "sourceArchiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7",
+  "assets": [
+    {
+      "id": "asset-4be9dca24e8ead63",
+      "url": "https://assets.example.test/native/bn-native-25-social-wrapped/12-400x300.svg",
+      "contentType": "image/svg+xml",
+      "path": "asset-4be9dca24e8ead63.svg",
+      "sha256": "e13f8904e686b73728c24fd94fce7dd18395a6689f09b6aca2a8c174327cdbb6",
+      "role": "image",
+      "byteLength": 376
+    },
+    {
+      "id": "asset-169783ee663f65e2",
+      "url": "https://assets.example.test/native/bn-native-25-social-wrapped/13-64x64.svg",
+      "contentType": "image/svg+xml",
+      "path": "asset-169783ee663f65e2.svg",
+      "sha256": "7cd789a3b58b8be30d08f04a6add7720c6bbbbc177e2116b7811300bbe5fa77f",
+      "role": "image",
+      "byteLength": 366
+    },
+    {
+      "id": "asset-806502543744d40c",
+      "url": "https://assets.example.test/native/bn-native-26-editorial-bare/22-600x315.svg",
+      "contentType": "image/svg+xml",
+      "path": "asset-806502543744d40c.svg",
+      "sha256": "bd7acb5230570cf77148b527d2c9d7a10f68cef8c5b1ea527e2583ac91da39c9",
+      "role": "image",
+      "byteLength": 376
+    },
+    {
+      "id": "asset-14a88e4a6375bc37",
+      "url": "https://assets.example.test/native/bn-native-25-app-install/42-96x96.svg",
+      "contentType": "image/svg+xml",
+      "path": "asset-14a88e4a6375bc37.svg",
+      "sha256": "67c1f1d6c813d6bc4985e8bcaf73f37a46463ce307c71c8f9f4e6833ef5b6118",
+      "role": "image",
+      "byteLength": 390
+    },
+    {
+      "id": "asset-2fc4e973b7b95b2a",
+      "url": "https://media.example.test/video-web-25-inline-vast2.mp4",
+      "contentType": "video/mp4",
+      "path": "asset-2fc4e973b7b95b2a.mp4",
+      "sha256": "f787eb0aceca4b6502724e06605bec86f26fe36d8d3e2d7ca13a6e2a7d9e3d30",
+      "role": "media",
+      "byteLength": 2983740,
+      "width": 640,
+      "height": 480,
+      "durationSeconds": 30,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-2fc4e973b7b95b2a.mp4"
+    },
+    {
+      "id": "asset-f0aa8786b975f5a7",
+      "url": "https://track.example.test/video-web-25-inline-vast2/complete",
+      "contentType": "image/gif",
+      "path": "asset-f0aa8786b975f5a7.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-5c2f145c88fd2658",
+      "url": "https://track.example.test/video-web-25-inline-vast2/impression",
+      "contentType": "image/gif",
+      "path": "asset-5c2f145c88fd2658.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-b689a36c3ffc2438",
+      "url": "https://track.example.test/video-web-25-inline-vast2/start",
+      "contentType": "image/gif",
+      "path": "asset-b689a36c3ffc2438.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-ba680246fde48925",
+      "url": "https://assets.example.test/video-web-26-companion-vast3-companion.svg",
+      "contentType": "image/svg+xml",
+      "path": "asset-ba680246fde48925.svg",
+      "sha256": "e2a6941eaacaf014c37be2a3de2b4db889e36c6020bd9e101637bff6125fc5eb",
+      "role": "image",
+      "byteLength": 193,
+      "width": 300,
+      "height": 250
+    },
+    {
+      "id": "asset-a24e1013875bab3c",
+      "url": "https://media.example.test/video-web-26-companion-vast3.mp4",
+      "contentType": "video/mp4",
+      "path": "asset-a24e1013875bab3c.mp4",
+      "sha256": "f97195e2af30cdc9bcd0316c50acc8b5c412e0c1e699cffc878934b28e88864c",
+      "role": "media",
+      "byteLength": 1482639,
+      "width": 640,
+      "height": 480,
+      "durationSeconds": 15,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-a24e1013875bab3c.mp4"
+    },
+    {
+      "id": "asset-276aa5df0f1e0ae9",
+      "url": "https://track.example.test/video-web-26-companion-vast3/complete",
+      "contentType": "image/gif",
+      "path": "asset-276aa5df0f1e0ae9.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-d4759e0d4c3fcfb0",
+      "url": "https://track.example.test/video-web-26-companion-vast3/impression",
+      "contentType": "image/gif",
+      "path": "asset-d4759e0d4c3fcfb0.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-730aa76e032c3b3d",
+      "url": "https://track.example.test/video-web-26-companion-vast3/start",
+      "contentType": "image/gif",
+      "path": "asset-730aa76e032c3b3d.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-c8b4ab1bc27b1cba",
+      "url": "https://media.example.test/video-web-26-outstream-wrapper-terminal.mp4",
+      "contentType": "video/mp4",
+      "path": "asset-c8b4ab1bc27b1cba.mp4",
+      "sha256": "d2f43e16dfea94011e0e2509c3408fea1a9bc6dc716bd474063ffad8ba84bd96",
+      "role": "media",
+      "byteLength": 1482640,
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 15,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-c8b4ab1bc27b1cba.mp4"
+    },
+    {
+      "id": "asset-3b9e0a5e3b301da1",
+      "url": "https://track.example.test/video-web-26-outstream-wrapper-terminal/complete",
+      "contentType": "image/gif",
+      "path": "asset-3b9e0a5e3b301da1.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-b1726d0ee5cb1bde",
+      "url": "https://track.example.test/video-web-26-outstream-wrapper-terminal/impression",
+      "contentType": "image/gif",
+      "path": "asset-b1726d0ee5cb1bde.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-b70b0571d045500a",
+      "url": "https://track.example.test/video-web-26-outstream-wrapper-terminal/start",
+      "contentType": "image/gif",
+      "path": "asset-b70b0571d045500a.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-c5eb1c522149c3ed",
+      "url": "https://track.example.test/video-web-26-outstream-wrapper/impression",
+      "contentType": "image/gif",
+      "path": "asset-c5eb1c522149c3ed.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-23557920556e673b",
+      "url": "https://vast.example.test/video-web-26-outstream-wrapper-terminal.xml",
+      "contentType": "application/xml",
+      "path": "asset-23557920556e673b.xml",
+      "sha256": "b5b75466d173ff458a56fb2d31b20e737fe4ae45989877142366b9f7c8467b9d",
+      "role": "vast",
+      "byteLength": 1149
+    },
+    {
+      "id": "asset-b85a23b9e5ccc93b",
+      "url": "https://media.example.test/video-inapp-26-rewarded-portrait.mp4",
+      "contentType": "video/mp4",
+      "path": "asset-b85a23b9e5ccc93b.mp4",
+      "sha256": "8f081d2cf3ccd1745ac2b8eaf2d10af7034e3ef05e9cb132f3609f684aa2e5b2",
+      "role": "media",
+      "byteLength": 1982999,
+      "width": 720,
+      "height": 1280,
+      "durationSeconds": 20,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-b85a23b9e5ccc93b.mp4"
+    },
+    {
+      "id": "asset-66282f49eef76921",
+      "url": "https://track.example.test/video-inapp-26-rewarded-portrait/complete",
+      "contentType": "image/gif",
+      "path": "asset-66282f49eef76921.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-c4d973d665462be5",
+      "url": "https://track.example.test/video-inapp-26-rewarded-portrait/impression",
+      "contentType": "image/gif",
+      "path": "asset-c4d973d665462be5.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-808d027ee13337e0",
+      "url": "https://track.example.test/video-inapp-26-rewarded-portrait/start",
+      "contentType": "image/gif",
+      "path": "asset-808d027ee13337e0.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-4a06622eccd49bb3",
+      "url": "https://media.example.test/video-ctv-26-dynamic-pod-15.mp4",
+      "contentType": "video/mp4",
+      "path": "asset-4a06622eccd49bb3.mp4",
+      "sha256": "79af7f01fd39109d001ab3ffdbf1fc7928aa88be49291c480a0abc733ecaa394",
+      "role": "media",
+      "byteLength": 1482639,
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 15,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-4a06622eccd49bb3.mp4"
+    },
+    {
+      "id": "asset-0a3dcde600238edd",
+      "url": "https://media.example.test/video-ctv-26-dynamic-pod-30.mp4",
+      "contentType": "video/mp4",
+      "path": "asset-0a3dcde600238edd.mp4",
+      "sha256": "9fa7e8818ff11b8e0164e040cbfc5336e6877cca0657c3f0c56927d380cc21b7",
+      "role": "media",
+      "byteLength": 2983740,
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 30,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-0a3dcde600238edd.mp4"
+    },
+    {
+      "id": "asset-ce937b74ad76230c",
+      "url": "https://track.example.test/video-ctv-26-dynamic-pod-15/complete",
+      "contentType": "image/gif",
+      "path": "asset-ce937b74ad76230c.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-e0b1a0d69f271f1e",
+      "url": "https://track.example.test/video-ctv-26-dynamic-pod-15/impression",
+      "contentType": "image/gif",
+      "path": "asset-e0b1a0d69f271f1e.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-0717751cc2df63ff",
+      "url": "https://track.example.test/video-ctv-26-dynamic-pod-15/start",
+      "contentType": "image/gif",
+      "path": "asset-0717751cc2df63ff.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-84eec027082b00fd",
+      "url": "https://track.example.test/video-ctv-26-dynamic-pod-30/complete",
+      "contentType": "image/gif",
+      "path": "asset-84eec027082b00fd.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-eee2e5140b62fa4f",
+      "url": "https://track.example.test/video-ctv-26-dynamic-pod-30/impression",
+      "contentType": "image/gif",
+      "path": "asset-eee2e5140b62fa4f.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-951fab1fd1179185",
+      "url": "https://track.example.test/video-ctv-26-dynamic-pod-30/start",
+      "contentType": "image/gif",
+      "path": "asset-951fab1fd1179185.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-2899406ab5cec07b",
+      "url": "https://media.example.test/audio-web-25-mp3-legacy.mp3",
+      "contentType": "audio/mpeg",
+      "path": "asset-2899406ab5cec07b.mp3",
+      "sha256": "0eb7a41083c1a1aa25272ec1085b9d4d5dbda619796d079a893cdfb4c29864bb",
+      "role": "media",
+      "byteLength": 241205,
+      "width": 0,
+      "height": 0,
+      "durationSeconds": 15,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-2899406ab5cec07b.mp3"
+    },
+    {
+      "id": "asset-7e6d64b7084259e2",
+      "url": "https://track.example.test/audio-web-25-mp3-legacy/complete",
+      "contentType": "image/gif",
+      "path": "asset-7e6d64b7084259e2.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-c3073892f8e2b030",
+      "url": "https://track.example.test/audio-web-25-mp3-legacy/impression",
+      "contentType": "image/gif",
+      "path": "asset-c3073892f8e2b030.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-5cc995bcda28acaa",
+      "url": "https://track.example.test/audio-web-25-mp3-legacy/start",
+      "contentType": "image/gif",
+      "path": "asset-5cc995bcda28acaa.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-37abea6f68a2068d",
+      "url": "https://assets.example.test/audio-inapp-26-podcast-companion-companion.svg",
+      "contentType": "image/svg+xml",
+      "path": "asset-37abea6f68a2068d.svg",
+      "sha256": "e2a6941eaacaf014c37be2a3de2b4db889e36c6020bd9e101637bff6125fc5eb",
+      "role": "image",
+      "byteLength": 193,
+      "width": 300,
+      "height": 250
+    },
+    {
+      "id": "asset-f541ad5baf4e23f2",
+      "url": "https://media.example.test/audio-inapp-26-podcast-companion.mp3",
+      "contentType": "audio/mpeg",
+      "path": "asset-f541ad5baf4e23f2.mp3",
+      "sha256": "2fb3b8843d7e5a524c676e37f478aa42fb9d70da8b328b7bef76347554c3b65c",
+      "role": "media",
+      "byteLength": 481114,
+      "width": 0,
+      "height": 0,
+      "durationSeconds": 30,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-f541ad5baf4e23f2.mp3"
+    },
+    {
+      "id": "asset-c7087c6b35e805a6",
+      "url": "https://track.example.test/audio-inapp-26-podcast-companion/complete",
+      "contentType": "image/gif",
+      "path": "asset-c7087c6b35e805a6.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-dbc27224ec891a27",
+      "url": "https://track.example.test/audio-inapp-26-podcast-companion/impression",
+      "contentType": "image/gif",
+      "path": "asset-dbc27224ec891a27.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-781ff2116122a6f3",
+      "url": "https://track.example.test/audio-inapp-26-podcast-companion/start",
+      "contentType": "image/gif",
+      "path": "asset-781ff2116122a6f3.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-628b10937b640433",
+      "url": "https://media.example.test/audio-web-26-live-exact-aac.m4a",
+      "contentType": "audio/mp4",
+      "path": "asset-628b10937b640433.m4a",
+      "sha256": "55b55543f370f308e628fed9fa83b89b90750194f7bf2e103dc8e53f29c896c5",
+      "role": "media",
+      "byteLength": 486788,
+      "width": 0,
+      "height": 0,
+      "durationSeconds": 30,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-628b10937b640433.m4a"
+    },
+    {
+      "id": "asset-4669ac100ba22797",
+      "url": "https://track.example.test/audio-web-26-live-exact-aac/complete",
+      "contentType": "image/gif",
+      "path": "asset-4669ac100ba22797.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-6b7544be104243a6",
+      "url": "https://track.example.test/audio-web-26-live-exact-aac/impression",
+      "contentType": "image/gif",
+      "path": "asset-6b7544be104243a6.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-a28622f79bb63b9f",
+      "url": "https://track.example.test/audio-web-26-live-exact-aac/start",
+      "contentType": "image/gif",
+      "path": "asset-a28622f79bb63b9f.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-0e48691347ffdf81",
+      "url": "https://media.example.test/audio-inapp-26-wrapper-terminal.mp3",
+      "contentType": "audio/mpeg",
+      "path": "asset-0e48691347ffdf81.mp3",
+      "sha256": "0eb7a41083c1a1aa25272ec1085b9d4d5dbda619796d079a893cdfb4c29864bb",
+      "role": "media",
+      "byteLength": 241205,
+      "width": 0,
+      "height": 0,
+      "durationSeconds": 15,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-0e48691347ffdf81.mp3"
+    },
+    {
+      "id": "asset-9fd76b0144231f00",
+      "url": "https://track.example.test/audio-inapp-26-wrapper-terminal/complete",
+      "contentType": "image/gif",
+      "path": "asset-9fd76b0144231f00.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-db9b96051805b963",
+      "url": "https://track.example.test/audio-inapp-26-wrapper-terminal/impression",
+      "contentType": "image/gif",
+      "path": "asset-db9b96051805b963.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-dfd6cc83659d3467",
+      "url": "https://track.example.test/audio-inapp-26-wrapper-terminal/start",
+      "contentType": "image/gif",
+      "path": "asset-dfd6cc83659d3467.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-01c6066089c440c3",
+      "url": "https://track.example.test/audio-inapp-26-wrapper/impression",
+      "contentType": "image/gif",
+      "path": "asset-01c6066089c440c3.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-5bcc344ee8d7434e",
+      "url": "https://vast.example.test/audio-inapp-26-wrapper-terminal.xml",
+      "contentType": "application/xml",
+      "path": "asset-5bcc344ee8d7434e.xml",
+      "sha256": "04fa68ae3c703dfe7facc6a4dffd9101b9d6af9a4ddea89ab9e8972407587789",
+      "role": "vast",
+      "byteLength": 1145
+    },
+    {
+      "id": "asset-71f09347ca4aaef8",
+      "url": "https://media.example.test/audio-web-26-multi-imp-reversed-post.m4a",
+      "contentType": "audio/mp4",
+      "path": "asset-71f09347ca4aaef8.m4a",
+      "sha256": "55b55543f370f308e628fed9fa83b89b90750194f7bf2e103dc8e53f29c896c5",
+      "role": "media",
+      "byteLength": 486788,
+      "width": 0,
+      "height": 0,
+      "durationSeconds": 30,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-71f09347ca4aaef8.m4a"
+    },
+    {
+      "id": "asset-ad92f950d81fe53f",
+      "url": "https://media.example.test/audio-web-26-multi-imp-reversed-pre.mp3",
+      "contentType": "audio/mpeg",
+      "path": "asset-ad92f950d81fe53f.mp3",
+      "sha256": "0eb7a41083c1a1aa25272ec1085b9d4d5dbda619796d079a893cdfb4c29864bb",
+      "role": "media",
+      "byteLength": 241205,
+      "width": 0,
+      "height": 0,
+      "durationSeconds": 15,
+      "stored": false,
+      "archive": "ortbtools-research/2026-09-07-codex-corpus/media/asset-ad92f950d81fe53f.mp3"
+    },
+    {
+      "id": "asset-6775bfdf84228b4a",
+      "url": "https://track.example.test/audio-web-26-multi-imp-reversed-post/complete",
+      "contentType": "image/gif",
+      "path": "asset-6775bfdf84228b4a.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-2d4cfe2a80a5683e",
+      "url": "https://track.example.test/audio-web-26-multi-imp-reversed-post/impression",
+      "contentType": "image/gif",
+      "path": "asset-2d4cfe2a80a5683e.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-602506a2e877795e",
+      "url": "https://track.example.test/audio-web-26-multi-imp-reversed-post/start",
+      "contentType": "image/gif",
+      "path": "asset-602506a2e877795e.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-7edf6a6dec62aba6",
+      "url": "https://track.example.test/audio-web-26-multi-imp-reversed-pre/complete",
+      "contentType": "image/gif",
+      "path": "asset-7edf6a6dec62aba6.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-dbd5a13b0ab072d9",
+      "url": "https://track.example.test/audio-web-26-multi-imp-reversed-pre/impression",
+      "contentType": "image/gif",
+      "path": "asset-dbd5a13b0ab072d9.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-f70e508247108056",
+      "url": "https://track.example.test/audio-web-26-multi-imp-reversed-pre/start",
+      "contentType": "image/gif",
+      "path": "asset-f70e508247108056.gif",
+      "sha256": "1e85ec81b9800b4c443d39caca0d0926089a3ac201120db1ceb45b93789480b8",
+      "role": "tracking",
+      "byteLength": 34
+    },
+    {
+      "id": "asset-dc1c3aaf26e660fe",
+      "url": "https://assets.example.test/feeds/push-ppcmate-single-hero-492x328.png",
+      "contentType": "image/png",
+      "path": "asset-dc1c3aaf26e660fe.png",
+      "sha256": "da352a4f7f828d90ca148e4d597d2104b86e6e5338ca95ac33c83a745568f19a",
+      "role": "image",
+      "byteLength": 2482,
+      "width": 492,
+      "height": 328
+    },
+    {
+      "id": "asset-18606c7681bee73c",
+      "url": "https://assets.example.test/feeds/push-ppcmate-single-icon-192x192.png",
+      "contentType": "image/png",
+      "path": "asset-18606c7681bee73c.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-7b757123ae7897fa",
+      "url": "https://assets.example.test/feeds/push-ppcmate-multi-a-hero-492x328.png",
+      "contentType": "image/png",
+      "path": "asset-7b757123ae7897fa.png",
+      "sha256": "da352a4f7f828d90ca148e4d597d2104b86e6e5338ca95ac33c83a745568f19a",
+      "role": "image",
+      "byteLength": 2482,
+      "width": 492,
+      "height": 328
+    },
+    {
+      "id": "asset-9c196b7998eff191",
+      "url": "https://assets.example.test/feeds/push-ppcmate-multi-a-icon-192x192.png",
+      "contentType": "image/png",
+      "path": "asset-9c196b7998eff191.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-923581a3371c4e2c",
+      "url": "https://assets.example.test/feeds/push-ppcmate-multi-b-hero-492x328.png",
+      "contentType": "image/png",
+      "path": "asset-923581a3371c4e2c.png",
+      "sha256": "da352a4f7f828d90ca148e4d597d2104b86e6e5338ca95ac33c83a745568f19a",
+      "role": "image",
+      "byteLength": 2482,
+      "width": 492,
+      "height": 328
+    },
+    {
+      "id": "asset-8136eb80f62ac2ff",
+      "url": "https://assets.example.test/feeds/push-ppcmate-multi-b-icon-192x192.png",
+      "contentType": "image/png",
+      "path": "asset-8136eb80f62ac2ff.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-b07373026ac6f0b0",
+      "url": "https://assets.example.test/feeds/push-exads-icon-cpc-icon-192x192.png",
+      "contentType": "image/png",
+      "path": "asset-b07373026ac6f0b0.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-2af6f75509d195bb",
+      "url": "https://assets.example.test/feeds/push-adon3-string-cpc-hero-360x240.png",
+      "contentType": "image/png",
+      "path": "asset-2af6f75509d195bb.png",
+      "sha256": "596948384a72bb04952fb62d21cfe5f6f4b5b64e04d67d6d9e8a11b47e2ebcf7",
+      "role": "image",
+      "byteLength": 1447,
+      "width": 360,
+      "height": 240
+    },
+    {
+      "id": "asset-e0da3185e110b7ef",
+      "url": "https://assets.example.test/feeds/push-adon3-string-cpc-icon-192x192.png",
+      "contentType": "image/png",
+      "path": "asset-e0da3185e110b7ef.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-ec1659cf2456b7db",
+      "url": "https://assets.example.test/feeds/push-kadam-icon-notice-hero-492x328.png",
+      "contentType": "image/png",
+      "path": "asset-ec1659cf2456b7db.png",
+      "sha256": "da352a4f7f828d90ca148e4d597d2104b86e6e5338ca95ac33c83a745568f19a",
+      "role": "image",
+      "byteLength": 2482,
+      "width": 492,
+      "height": 328
+    },
+    {
+      "id": "asset-4abdb4ccf21e4cb5",
+      "url": "https://assets.example.test/feeds/push-kadam-icon-notice-icon-192x192.png?notice=synthetic-fixture",
+      "contentType": "image/png",
+      "path": "asset-4abdb4ccf21e4cb5.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-5304cca964bc1047",
+      "url": "https://assets.example.test/feeds/inpage-exads-wrapper-hero-720x480.png",
+      "contentType": "image/png",
+      "path": "asset-5304cca964bc1047.png",
+      "sha256": "8dbd12d652f7dfe1a0992b7ef97dbf5aef64fcbfcd57524fda21974f42065a92",
+      "role": "image",
+      "byteLength": 5416,
+      "width": 720,
+      "height": 480
+    },
+    {
+      "id": "asset-f06381ac250e605b",
+      "url": "https://assets.example.test/feeds/inpage-exads-native-501-icon-192x192.png",
+      "contentType": "image/png",
+      "path": "asset-f06381ac250e605b.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-e53a443200ede76d",
+      "url": "https://assets.example.test/feeds/inpage-kadam-icon-notice-hero-492x328.png",
+      "contentType": "image/png",
+      "path": "asset-e53a443200ede76d.png",
+      "sha256": "da352a4f7f828d90ca148e4d597d2104b86e6e5338ca95ac33c83a745568f19a",
+      "role": "image",
+      "byteLength": 2482,
+      "width": 492,
+      "height": 328
+    },
+    {
+      "id": "asset-2052f971ae70788e",
+      "url": "https://assets.example.test/feeds/inpage-kadam-icon-notice-icon-192x192.png?notice=synthetic-fixture",
+      "contentType": "image/png",
+      "path": "asset-2052f971ae70788e.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-d3014fd8093f2397",
+      "url": "https://assets.example.test/feeds/inpage-kadam-separate-notice-alias-hero-492x328.png",
+      "contentType": "image/png",
+      "path": "asset-d3014fd8093f2397.png",
+      "sha256": "da352a4f7f828d90ca148e4d597d2104b86e6e5338ca95ac33c83a745568f19a",
+      "role": "image",
+      "byteLength": 2482,
+      "width": 492,
+      "height": 328
+    },
+    {
+      "id": "asset-26820a02e8530ccc",
+      "url": "https://assets.example.test/feeds/inpage-kadam-separate-notice-alias-icon-192x192.png",
+      "contentType": "image/png",
+      "path": "asset-26820a02e8530ccc.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    },
+    {
+      "id": "asset-4984d1131a450c21",
+      "url": "https://assets.example.test/feeds/inpage-kadam-native-square-hero-200x200.png",
+      "contentType": "image/png",
+      "path": "asset-4984d1131a450c21.png",
+      "sha256": "77e4e99dd3a1f8ff867b947257ebb0592567db035d52e68530e75595d759a3e1",
+      "role": "image",
+      "byteLength": 718,
+      "width": 200,
+      "height": 200
+    },
+    {
+      "id": "asset-d96d1472ac951cbc",
+      "url": "https://assets.example.test/feeds/push-exads-openrtb-native-500-icon-192x192.png",
+      "contentType": "image/png",
+      "path": "asset-d96d1472ac951cbc.png",
+      "sha256": "82cbac6d3fc7e238c3f0eefc59ec2277a89c4475356639416c427746fd5304b8",
+      "role": "image",
+      "byteLength": 667,
+      "width": 192,
+      "height": 192
+    }
+  ],
+  "mediaNote": "Media bodies (mp4/mp3/m4a, ~14 MB) are retained outside the repository under the private research archive named in each entry. The preview frame policy (media-src none) never fetches them, so the in-repo corpus keeps only their identity, hash and dimensions; the interceptor answers 404 for unstored assets and the measurement records them as unavailable rather than loaded."
+}

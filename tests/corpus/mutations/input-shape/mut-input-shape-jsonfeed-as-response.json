@@ -1,0 +1,67 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-jsonfeed-as-response",
+  "title": "A JSON Feed 1.1 document as the response is recognized and honestly marked not validated",
+  "scenario": "pair",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "input-shape",
+  "specRef": "https://www.jsonfeed.org/version/1.1/",
+  "patch": {
+    "replaceResponse": {
+      "version": "https://jsonfeed.org/version/1.1",
+      "title": "Synthetic ad-adjacent content feed",
+      "home_page_url": "https://feed.example.invalid/",
+      "items": [
+        {
+          "id": "item-1",
+          "content_text": "A short original item used only to exercise JSON Feed shape detection.",
+          "url": "https://feed.example.invalid/item-1"
+        }
+      ]
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "type": "JSON Feed 1.1",
+      "status": "clean",
+      "must": [{ "id": "jsonfeed.not_validated", "level": "info", "path": "" }]
+    },
+    "crosscheck": {
+      "must": [{ "id": "crosscheck.no_response", "path": "res", "level": "crit" }],
+      "mustNot": ["crosscheck.id_match"],
+      "mustNotPrefix": ["crosscheck.bid."]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "JSON Feed 1.1 (jsonfeed.org, version+items shape) is not an OpenRTB response and this corpus does not treat it as a BidResponse pair; the base request stays a valid, independent oRTB BidRequest so the case can show what happens when a JSON Feed document lands in the response field of an otherwise normal request/response Inspector session.",
+    "Core's own design note (index.js, 'Honest non-validation') is the product's documented policy for this shape: recognize the format by its own version+items signature, return INFO rather than silently 'clean, no findings at all', and never run OpenRTB rules against fields that are not OpenRTB fields.",
+    "Crosscheck correctly refuses to compare a real BidRequest against a document with no `seatbid[]` (`crosscheck.no_response`), and must not report a false `crosscheck.id_match` — the JSON Feed document has no `id` field at all in the oRTB sense, and its `items[].id` is not an auction identifier."
+  ]
+}

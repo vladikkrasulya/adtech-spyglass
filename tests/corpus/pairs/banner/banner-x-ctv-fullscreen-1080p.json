@@ -1,0 +1,186 @@
+{
+  "kind": "pair",
+  "scenario": "pair",
+  "dialect": "iab",
+  "assetRefs": [],
+  "id": "banner-x-ctv-fullscreen-1080p",
+  "title": "CTV app placement, devicetype Connected TV, full 1920x1080 banner surface",
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "ctv",
+  "tags": ["synthetic", "valid", "iab", "openrtb-2.6", "ctv"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.6 — Object: Device (devicetype 3 = Connected TV, List 5.21) and Object: BrandVersion/UserAgent (sua, §3.2.29/§3.2.30)",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdevice",
+      "version": "403cbba542de3a5d9cfcccd0a34e74b01b79a9f1",
+      "license": "MIT (original fixture)",
+      "notes": "CTV app + Connected TV devicetype combination synthesized from spec object definitions; no vendor CTV sample copied."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "app.bundle/app.id and device.sua fields describe a wholly synthetic CTV app and set-top device; no real store listing or device fingerprint is referenced."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "banner-x-ctv-fullscreen-1080p",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "slot-1",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "banner": {
+          "w": 1920,
+          "h": 1080,
+          "pos": 7
+        }
+      }
+    ],
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit; SmartTV)",
+      "devicetype": 3,
+      "language": "en",
+      "ip": "192.0.2.11",
+      "os": "Linux",
+      "osv": "6.1",
+      "sua": {
+        "platform": {
+          "brand": "Synthetic TV OS",
+          "version": ["6"]
+        },
+        "browsers": [
+          {
+            "brand": "Synthetic TV Browser",
+            "version": ["1"]
+          }
+        ],
+        "mobile": 0
+      }
+    },
+    "app": {
+      "id": "synthetic-ctv-app",
+      "bundle": "com.publisher.ctvapp.test",
+      "publisher": {
+        "id": "synthetic-publisher"
+      }
+    }
+  },
+  "response": {
+    "id": "banner-x-ctv-fullscreen-1080p",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "bid-ctv",
+            "impid": "slot-1",
+            "price": 3.5,
+            "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:Arial,sans-serif;background:#0b3d2e}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#0b3d2e;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"CTV FULLSCREEN 1080P\" role=\"img\" aria-label=\"CTV FULLSCREEN 1080P\"><img alt=\"CTV FULLSCREEN 1080P\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxyZWN0IHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHJ4PSIxMCIgZmlsbD0iIzBiM2QyZSIvPjxjaXJjbGUgY3g9IjE0NDAiIGN5PSIzNzgiIHI9IjIzOCIgZmlsbD0iI2ZmZDE2NiIvPjx0ZXh0IHg9IjEwIiB5PSIxMDY0IiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNzYiPkNUViBGVUxMU0NSRUVOIDEwODBQPC90ZXh0Pjwvc3ZnPg==\"><span class=\"label\">CTV FULLSCREEN 1080P · TEST AD</span></div></body></html>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "bid-ctv-creative",
+            "w": 1920,
+            "h": 1080,
+            "mtype": 1
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "device.devicetype 3 (Connected TV) combined with an app object makes this placement both an in-app and a CTV context by the product's own union-of-signals context detection (format-detect.js: app→inapp, devicetype 3/7→ctv are independent additions to the same Set) — this is a correct dual tag, not a defect.",
+    "device.sua is a 2.6-only signal (§3.2.29/§3.2.30); combined with an explicit device.os/osv it avoids the generic client-hints \"os unknown\"/\"browser unknown\" advisories.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser.",
+    "HTML and original embedded SVG need no external resources. Assert the fixture label is visible, image.complete and naturalWidth > 0, and expected creative dimensions (1920x1080).",
+    "No scripts, trackers, navigation handlers, external font/CDN URLs or live network fetches are present in the banner markup."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "version": "2.6"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "banner-x-ctv-fullscreen-1080p"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "CTV FULLSCREEN 1080P · TEST AD",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["ctv", "inapp"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

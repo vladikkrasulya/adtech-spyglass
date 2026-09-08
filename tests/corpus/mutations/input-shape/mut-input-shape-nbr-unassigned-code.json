@@ -1,0 +1,94 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-nbr-unassigned-code",
+  "title": "A no-bid reason code outside both the canonical list and the exchange-specific range is not distinguished from a real one",
+  "scenario": "pair",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "input-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#list_nobidreasoncodes",
+  "patch": {
+    "replaceResponse": {
+      "id": "bn-banner-25-fixed",
+      "nbr": 42,
+      "cur": "USD"
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "response.no_bid",
+          "level": "info",
+          "path": "nbr",
+          "params": {
+            "nbr": 42
+          }
+        },
+        {
+          "id": "expected.response.nbr_code_unassigned",
+          "level": "warning",
+          "path": "nbr"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.no_response"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-301",
+    "layers": ["core", "http", "browser"],
+    "note": "The canonical No-Bid Reason Codes list (OpenRTB 3.0 §List: No-Bid Reason Codes, incorporated by reference from 2.6 §4.2.1) enumerates 0-17 and reserves 500+ for exchange-specific use; 18-499 is not assigned to anything. `nbr` is validated only for being a number (rules-response.js) — an unassigned code such as 42 is treated exactly like a real one (response.no_bid INFO, status clean), the same way an out-of-range Video.protocols value gets `imp.video.protocols_unknown` (WARNING) rather than silent acceptance. No such analogous check exists for `nbr`.",
+    "matches": {
+      "core": [
+        "^response: missing required finding expected\\.response\\.nbr_code_unassigned @ nbr \\[warning\\] — got version\\.assumed\\[info\\]@, response\\.no_bid\\[info\\]@nbr$"
+      ],
+      "http": [
+        "^response: missing required finding expected\\.response\\.nbr_code_unassigned @ nbr \\[warning\\] — got version\\.assumed\\[info\\]@, response\\.no_bid\\[info\\]@nbr$"
+      ],
+      "browser": [
+        "^browser\\.response:\\ missing\\ required\\ finding\\ expected\\.response\\.nbr_code_unassigned\\ @\\ nbr\\ \\[warning\\]\\ —\\ got\\ version\\.assumed\\[info\\]@,\\ response\\.no_bid\\[info\\]@nbr$"
+      ]
+    }
+  },
+  "specNotes": [
+    "This mutation is paired with mut-input-shape-nbr-exchange-specific, which uses nbr=700 (a valid exchange-specific code) to show the tool treats both identically today — the missing check is the ability to tell them apart, not a rejection of code 42 outright (an unassigned code is not itself an error, only unremarkable-worthy).",
+    "`expected.response.nbr_code_unassigned` is a descriptive placeholder id, not a real Core finding id: this records a missing capability, modeled directly on the existing `imp.video.protocols_unknown` pattern (out-of-range enum values outside the reserved exchange band get a WARNING) for the same shape of enumeration on the response side.",
+    "response.no_bid still fires correctly (nbr is a number, seatbid absent) — the gap is the absence of a second, code-quality finding alongside it, not a false claim about the no-bid shape itself.",
+    "Browser measured on 2026-09-08 in run ortbtools-audit-9fSncA; only the exact observed product deviations are admitted. Normative finding and successful-analysis assertions are retained."
+  ]
+}

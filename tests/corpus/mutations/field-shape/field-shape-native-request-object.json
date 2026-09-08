@@ -1,0 +1,143 @@
+{
+  "format": "native",
+  "protocol": "ortb-2.5",
+  "context": "inapp",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb25"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": ["asset-14a88e4a6375bc37"],
+  "kind": "mutation",
+  "id": "field-shape-native-request-object",
+  "title": "Native request object form is accepted as documented exchange compatibility",
+  "scenario": "pair",
+  "tags": ["mutation", "field-shape"],
+  "base": "bn-native-25-app-install",
+  "category": "field-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#4-1",
+  "patch": {
+    "request": [
+      {
+        "op": "replace",
+        "path": "/imp/0/native/request",
+        "value": {
+          "native": {
+            "ver": "1.2",
+            "context": 1,
+            "plcmttype": 1,
+            "assets": [
+              {
+                "id": 41,
+                "required": 1,
+                "title": {
+                  "len": 90
+                }
+              },
+              {
+                "id": 42,
+                "required": 1,
+                "img": {
+                  "type": 1,
+                  "w": 96,
+                  "h": 96,
+                  "mimes": ["image/svg+xml"]
+                }
+              },
+              {
+                "id": 43,
+                "required": 1,
+                "data": {
+                  "type": 3,
+                  "len": 5
+                }
+              },
+              {
+                "id": 44,
+                "required": 1,
+                "data": {
+                  "type": 5,
+                  "len": 20
+                }
+              },
+              {
+                "id": 45,
+                "required": 1,
+                "data": {
+                  "type": 12,
+                  "len": 20
+                }
+              },
+              {
+                "id": 46,
+                "required": 1,
+                "data": {
+                  "type": 1,
+                  "len": 25
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.native_invalid_request"
+        },
+        {
+          "id": "crosscheck.bid.native_missing_assets"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "specNotes": [
+    "Native Ads 1.2 section 4.1 acknowledges direct JSON objects as exchange-dependent compatibility while noting official OpenRTB 2.x string transport. This positive control verifies the product can inspect the documented object form without treating the native content as invalid.",
+    "The current product has no separately promised strict wire-type profile; its strictness option filters finding levels. A new strict transport diagnostic would require an explicit product decision and is not an unmet requirement in this compatibility case.",
+    "The decoded Native asset structure is unchanged from the base string payload, so native completeness and bid/impression crosscheck assertions remain applicable."
+  ]
+}

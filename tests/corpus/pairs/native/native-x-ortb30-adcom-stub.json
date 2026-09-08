@@ -1,0 +1,278 @@
+{
+  "kind": "pair",
+  "id": "native-x-ortb30-adcom-stub",
+  "title": "AdCOM placement.display.nativefmt / media.ad.display.native — complete native creative under 3.0",
+  "format": "native",
+  "protocol": "ortb-3.0",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-3.0", "adcom-native"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB AdCOM 1.0 — Object: NativeFormat, Object: Native, Object: Asset/AssetFormat",
+      "url": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_nativeformat",
+      "version": "df8ba06de0ba77c82efee7a2dc832bd4968474d6",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "The image asset is a minimal original 1x1 PNG data: URI; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-3.0",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb30", "banner-native:bn-adcom"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "request": {
+        "id": "native-x-ortb30-adcom-stub",
+        "test": 1,
+        "at": 2,
+        "tmax": 800,
+        "cur": ["USD"],
+        "item": [
+          {
+            "id": "item-native",
+            "qty": 1,
+            "flr": 0.2,
+            "flrcur": "USD",
+            "spec": {
+              "placement": {
+                "secure": 1,
+                "display": {
+                  "nativefmt": {
+                    "asset": [
+                      {
+                        "id": 1,
+                        "req": 1,
+                        "title": {
+                          "len": 90
+                        }
+                      },
+                      {
+                        "id": 2,
+                        "req": 1,
+                        "img": {
+                          "type": 3,
+                          "w": 1,
+                          "h": 1
+                        }
+                      },
+                      {
+                        "id": 3,
+                        "req": 1,
+                        "data": {
+                          "type": 1,
+                          "len": 25
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "context": {
+          "site": {
+            "id": "synthetic-site",
+            "domain": "publisher.example.test",
+            "page": "https://publisher.example.test/adcom-native"
+          },
+          "device": {
+            "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+            "lang": "en",
+            "ip": "192.0.2.11",
+            "os": "Linux",
+            "osv": "6.1"
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "openrtb": {
+      "ver": "3.0",
+      "domainspec": "adcom",
+      "domainver": "1.0",
+      "response": {
+        "id": "native-x-ortb30-adcom-stub",
+        "cur": "USD",
+        "seatbid": [
+          {
+            "seat": "synthetic-seat-a",
+            "bid": [
+              {
+                "id": "bid-native-adcom",
+                "item": "item-native",
+                "price": 1.25,
+                "media": {
+                  "ad": {
+                    "id": "creative-native-adcom",
+                    "adomain": ["advertiser.example.test"],
+                    "display": {
+                      "native": {
+                        "link": {
+                          "url": "https://advertiser.example.test/offer/native-x-ortb30-adcom-stub"
+                        },
+                        "asset": [
+                          {
+                            "id": 1,
+                            "title": {
+                              "text": "A quiet corner for weekend reading"
+                            }
+                          },
+                          {
+                            "id": 2,
+                            "image": {
+                              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUAAcAmiQAAAAAASUVORK5CYII=",
+                              "w": 1,
+                              "h": 1
+                            }
+                          },
+                          {
+                            "id": 3,
+                            "data": {
+                              "value": "Fixture AdCOM"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "specNotes": [
+    "Protocol validity is based on the pinned IAB AdCOM 1.0 primary contract, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "AdCOM Placement.display contains DisplayPlacement.nativefmt, whose NativeFormat.asset array specifies AssetFormat entries. The response uses Ad.display.native, whose Native.asset array supplies the matching Asset entries. Native is a display subtype; neither Placement.native nor Ad.native is a standard field.",
+    "Each AssetFormat contains exactly one subtype and the response supplies all three requested IDs: title.text within title.len, image.url with the requested 1x1 dimensions, and data.value within data.len. Request img and response image are the different field names prescribed by their respective AdCOM tables.",
+    "AdCOM Display permits exactly one creative representation: banner, native, adm or curl. This structured native response therefore legitimately omits adm and curl; requiring either field is a product validation error.",
+    "The expected native-completeness verdict is justified by the three required request assets and matching response assets. The current 3.0 crosscheck projector omits native assets, which is tracked as a missing capability independently of the valid payload.",
+    "Floor and currency are USD throughout so this pair does not also exercise the separate flrcur currency-plugin gap DEF-105.",
+    "The original embedded 1x1 PNG data URI matches the 1x1 dimensions declared on both sides and permits image-load verification without network access.",
+    "The centralized browser audit must remeasure the corrected AdCOM envelopes. The existing browser gap records empty preview/source-selection behavior; its guard must still reproduce after this fixture correction.",
+    "Inspect the intended click target without following it."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference.",
+    "Browser acceptance 2026-09-08 independently reproduced the existing semantic/preview deviation through the actual Analyze action. Only the reviewed failure strings are admitted on the browser layer; all declared assertions remain unchanged."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "openrtb.response.id",
+          "level": "ok",
+          "params": {
+            "id": "native-x-ortb30-adcom-stub"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "openrtb.response.seatbid[0].bid[0].item",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "openrtb.response.seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "openrtb.response.seatbid[0].bid[0].media.ad",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.floor_currency_mismatch"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "A quiet corner for weekend reading",
+      "assets": {
+        "imgTotal": 1,
+        "imgLoaded": 1
+      },
+      "limitation": null,
+      "capabilityGap": "The Inspector must locate a structured AdCOM media.ad.display.native creative under a full OpenRTB 3.0 envelope; the current 2.x-oriented preview source selection may leave it empty."
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-151",
+    "layers": ["core", "http", "browser"],
+    "note": "A valid AdCOM native pair uses placement.display.nativefmt and media.ad.display.native. Current validation incorrectly requires display.adm or display.curl for this structured native creative; format detection and native completeness must also recognize the standard display subtype. Browser preview source selection must locate the same structured creative.",
+    "matches": {
+      "core": [
+        "^response:\\ findings\\ above\\ warning:\\ response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
+        "^crosscheck: missing crosscheck\\.bid\\.native_complete @ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur, crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item, crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[banner\\]$"
+      ],
+      "http": [
+        "^response:\\ findings\\ above\\ warning:\\ response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
+        "^crosscheck: missing crosscheck\\.bid\\.native_complete @ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad \\[ok\\] — got crosscheck\\.auction\\.summary\\[ok\\]@auction, crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur, crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id, crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item, crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[banner\\]$"
+      ],
+      "browser": [
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ response\\.30\\.bid\\.display\\.markup_required\\[error\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\.display$",
+        "^browser\\.crosscheck:\\ missing\\ crosscheck\\.bid\\.native_complete\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.media\\.ad\\ \\[ok\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^browser\\.format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[banner\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ full,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgTotal:\\ expected\\ 1,\\ got\\ 0$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgLoaded:\\ expected\\ 1,\\ got\\ 0$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ corner\\ for\\ weekend\\ reading\"\\ absent$"
+      ]
+    }
+  }
+}

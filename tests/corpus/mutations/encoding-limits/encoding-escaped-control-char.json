@@ -1,0 +1,74 @@
+{
+  "kind": "mutation",
+  "id": "encoding-escaped-control-char",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "title": "a properly \\u0000-escaped control character in a string parses cleanly with no finding",
+  "specRef": "RFC 8259 §7 requires control characters U+0000–U+001F inside a JSON string to be escaped, and a conforming escape denotes an ordinary character, not a defect. packages/core/raw-json.js documents this exactly: \"A properly escaped \\u0007 is legal and stays quiet\" — only a raw, unescaped control byte is reported as payload.control_character (packages/core/rules-raw-json.js).",
+  "patch": {
+    "rawRequest": "{\"id\":\"bn-banner-25-fixed\",\"test\":1,\"at\":2,\"tmax\":800,\"cur\":[\"USD\"],\"imp\":[{\"id\":\"slot-1\",\"secure\":1,\"bidfloor\":0.2,\"bidfloorcur\":\"USD\",\"banner\":{\"w\":300,\"h\":250,\"pos\":0}}],\"device\":{\"ua\":\"Mozilla/5.0 (Synthetic fixture; audit)\\u0000\",\"devicetype\":2,\"language\":\"en\",\"ip\":\"192.0.2.11\",\"os\":\"Linux\",\"osv\":\"6.1\"},\"site\":{\"id\":\"synthetic-site\",\"domain\":\"publisher.example.test\",\"page\":\"https://publisher.example.test/audit\",\"publisher\":{\"id\":\"synthetic-publisher\"}}}"
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "mustNot": ["payload.control_character"]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "The escape sequence is written in this case file as \\\\u0000 (a doubled backslash) so that, once this JSON file itself is parsed, the stored rawRequest text contains the six literal characters backslash-u-0-0-0-0 — the wire form a client actually sends — rather than an already-decoded NUL byte.",
+    "device.ua carries the escape because it has no format validation in Core; the assertion is purely that JSON.parse succeeds, no crash occurs anywhere in validate()/crosscheck(), and the properly-escaped control character raises no payload.control_character finding."
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "kind": "pair",
+  "scenario": "pair",
+  "dialect": "iab",
+  "assetRefs": [],
+  "id": "banner-x-gpid-tid-gpp-26",
+  "title": "imp.ext carries gpid/tid; regs carries 2.6 gpp/gpp_sid — both recognized, neither flagged",
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "tags": ["synthetic", "valid", "iab", "openrtb-2.6", "gpid", "gpp"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.6 — Object: Regs (gpp/gpp_sid, §3.2.3); imp.ext.gpid/imp.ext.tid are widely-adopted IAB-adjacent extension conventions Core already allowlists (packages/core/rules/dialects-questions), not 2.6.md root fields",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectregs",
+      "version": "403cbba542de3a5d9cfcccd0a34e74b01b79a9f1",
+      "license": "MIT (original fixture)",
+      "notes": "gpp/gpp_sid values are synthetic placeholders with no real-world consent semantics decoded or claimed; no TCF/GPP decoding is performed or asserted (see docs/USER_GUIDE.md — GPP decoding is out of scope for this product)."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "regs.gpp is a short synthetic placeholder string, not a captured real consent string."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "banner-x-gpid-tid-gpp-26",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "slot-1",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "banner": {
+          "w": 300,
+          "h": 250,
+          "pos": 0
+        },
+        "ext": {
+          "gpid": "/1234/homepage#header",
+          "tid": "22222222-3333-4444-5555-666666666666"
+        }
+      }
+    ],
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 2,
+      "language": "en",
+      "ip": "192.0.2.11",
+      "os": "Linux",
+      "osv": "6.1"
+    },
+    "site": {
+      "id": "synthetic-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/audit",
+      "publisher": {
+        "id": "synthetic-publisher"
+      }
+    },
+    "regs": {
+      "gpp": "SYNTHETIC-GPP-PLACEHOLDER",
+      "gpp_sid": [2]
+    }
+  },
+  "response": {
+    "id": "banner-x-gpid-tid-gpp-26",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "bid-gpid",
+            "impid": "slot-1",
+            "price": 1.25,
+            "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:300px;height:250px;overflow:hidden;font-family:Arial,sans-serif;background:#1b6b6b}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#1b6b6b;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"BANNER GPID TID GPP\" role=\"img\" aria-label=\"BANNER GPID TID GPP\"><img alt=\"BANNER GPID TID GPP\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjUwIiB2aWV3Qm94PSIwIDAgMzAwIDI1MCI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyNTAiIHJ4PSIxMCIgZmlsbD0iIzFiNmI2YiIvPjxjaXJjbGUgY3g9IjIyNSIgY3k9Ijg4IiByPSI1NSIgZmlsbD0iI2ZmZDE2NiIvPjx0ZXh0IHg9IjEwIiB5PSIyMzQiIGZpbGw9IndoaXRlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCI+QkFOTkVSIEdQSUQgVElEIEdQUDwvdGV4dD48L3N2Zz4=\"><span class=\"label\">BANNER GPID TID GPP · TEST AD</span></div></body></html>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "bid-gpid-creative",
+            "w": 300,
+            "h": 250,
+            "mtype": 1
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "imp.ext.gpid and imp.ext.tid are both members of Core's own imp[].ext allowlist (rules/dialects-questions: {skadn,gpid,dpid,is_secure,tid,data,reward,dlp,omidpn,omidpv}) — they are expected to be silently accepted, not raised as dialects.question.unknown_ext_signal.",
+    "regs.gpp and regs.gpp_sid are supplied together (both non-empty) specifically to avoid the two paired advisories (regs.gpp_sid_without_string / regs.gpp_string_without_sid) that fire when only one of the pair is present.",
+    "regs.gpp/gpp_sid are each independently a listed 2.6 request signal (packages/core/detect.js SIGNALS_2_6); this pins the request to 2.6 at confidence 1 even though nothing else in the payload is version-specific.",
+    "This product does not decode GPP/TCF consent strings (docs/USER_GUIDE.md) — no claim is made about the string's internal validity, only that its presence alongside gpp_sid is accepted cleanly.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser.",
+    "HTML and original embedded SVG need no external resources. Assert the fixture label is visible, image.complete and naturalWidth > 0, and expected creative dimensions.",
+    "No scripts, trackers, navigation handlers, external font/CDN URLs or live network fetches are present in the banner markup."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "version": "2.6",
+      "mustNot": [
+        {
+          "id": "dialects.question.unknown_ext_signal",
+          "path": "imp[0].ext.gpid"
+        },
+        {
+          "id": "dialects.question.unknown_ext_signal",
+          "path": "imp[0].ext.tid"
+        },
+        "regs.gpp_sid_without_string",
+        "regs.gpp_string_without_sid"
+      ]
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "banner-x-gpid-tid-gpp-26"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "BANNER GPID TID GPP · TEST AD",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

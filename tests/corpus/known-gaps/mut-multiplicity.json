@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "gaps": {
+    "DEF-192": {
+      "id": "DEF-192",
+      "title": "wseat/bseat buyer-seat allow/block lists are never enforced or even read",
+      "category": "commercial-contradiction",
+      "kind": "missing-capability",
+      "severity": "medium",
+      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#321-object-bidrequest",
+      "code": ["packages/core/crosscheck.js", "packages/core/unknown-fields.js"],
+      "expected": "BidRequest.wseat (\"Array of names for allowed buyer seats\") and BidRequest.bseat (\"Block list of buyer seats… restricted from bidding\") are request-side auction-integrity fields. A responding seatbid.seat outside an explicit wseat allow-list, or present in bseat, is a request/response consistency violation an auditor should surface.",
+      "actual": "grep across packages/core/ confirms crosscheck.js never reads seatbid.seat, wseat or bseat under any name; wseat/bseat are recognized only as allowlisted field names (so no unknown-field note fires either) with zero semantic enforcement. A seat entirely outside wseat, or explicitly blocked by bseat, produces byte-identical crosscheck output to a fully authorized seat. Reviewed directly against current HEAD (commit a61fc25) via packages/core, not inferred from prior audits.",
+      "cases": [
+        "multiplicity-wseat-allows-other-seat",
+        "multiplicity-bseat-blocks-responding-seat"
+      ],
+      "reviewedAt": "2026-09-08",
+      "notes": [
+        "One underlying cause serves both directions of the same missing check (allow-list and block-list are the same seat-membership test with an inverted set), so both mutation cases share this single gap id per the reuse-one-id-for-one-cause rule.",
+        "The case files use the placeholder crosscheck id `expected.crosscheck.seat.not_allowed` — no such id exists in packages/core/findings.js today; it names the finding a future rule should emit, not a snapshot of current output.",
+        "Empirically reproduced by direct packages/core.crosscheck() calls against bn-banner-26-multiimp-multiseat with wseat/bseat added to the request; exact failure text captured and pinned in each case's knownGap.matches, not hand-transcribed."
+      ]
+    }
+  }
+}

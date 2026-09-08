@@ -1,0 +1,160 @@
+{
+  "kind": "pair",
+  "id": "inpage-kadam-native-square",
+  "title": "Native carrier, square main image and no body/icon requested",
+  "format": "inpage",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["public-reference", "vendor-valid", "kadam", "kadam-openrtb-2.x"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "Kadam Feed and RTB contracts, including in-page and clickunder examples",
+      "url": "https://wiki.kadam.net/en/index.php?title=RTB_setting&oldid=7076",
+      "version": "MediaWiki oldid=7076",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, prices, timestamps, creative text and URLs independently authored.",
+      "Required visitor addresses use TEST-NET 192.0.2.44; required user IDs are clearly synthetic. No real subscriber data or feed credentials.",
+      "Media URLs use reserved .test hosts and require interception from fixtureAssets."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; user IDs/feed keys are synthetic-fixture strings; all executable URLs use reserved .test hostnames and require local interception.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "kadam-openrtb-2.x",
+    "vendorDialect": "kadam",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Independently constructed offline pair preserving documented field names and carrier. Reserved endpoint replaces the vendor hostname; no live request or bid was made. Vendor zone/feed selection is fixture metadata where absent from body."
+    },
+    "sourceIds": ["feeds:feeds-kadam-feed", "feeds:feeds-kadam-current"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": ["asset-4984d1131a450c21"],
+  "request": {
+    "id": "inpage-kadam-native-square",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "inpage-kadam-native-square-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "native": {
+          "ver": "1.2",
+          "request": "{\"ver\":\"1.2\",\"assets\":[{\"id\":5,\"required\":1,\"title\":{\"len\":50}},{\"id\":2,\"required\":1,\"img\":{\"type\":3,\"w\":200,\"h\":200,\"wmin\":200,\"hmin\":200}}]}"
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "inpage-kadam-native-square",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "inpage-kadam-native-square-bid",
+            "impid": "inpage-kadam-native-square-imp",
+            "price": 0.42,
+            "adm": "{\"native\":{\"ver\":\"1.2\",\"link\":{\"url\":\"https://advertiser.example.test/offers/inpage-kadam-native-square\",\"directUrl\":\"https://advertiser.example.test/offers/inpage-kadam-native-square\"},\"assets\":[{\"id\":5,\"title\":{\"text\":\"An original geometric landscape\"}},{\"id\":2,\"img\":{\"url\":\"https://assets.example.test/feeds/inpage-kadam-native-square-hero-200x200.png\",\"w\":200,\"h\":200}}]}}",
+            "adomain": ["advertiser.example.test"],
+            "crid": "inpage-kadam-native-square-creative",
+            "nurl": "https://tracking.example.test/notice/inpage-kadam-native-square",
+            "lurl": "https://tracking.example.test/notice/inpage-kadam-native-square-loss"
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "In-page is vendor endpoint context; Native carrier does not imply all standard Native ads are in-page push.",
+    "Independently authored matched IDs and image dimensions. Published request/response illustrations contain inconsistent IDs/dimensions and malformed syntax, so those errors are not reproduced.",
+    "Inner native ver is a string, with response 1.2 matching request. directUrl is a vendor addition.",
+    "Desired capability: show actual title and all supplied image assets after fixture interception; not a claim of current product support.",
+    "Preserve the documented carrier to measure unsupported vendor shapes. Existing product acceptance is not the validity oracle.",
+    "All assets must load from the embedded fixture route; block tracking and destination navigation.",
+    "Core/HTTP assert the Native request/response asset contract. This wire pair has no unambiguous inpage discriminator, so its inpage grouping is from vendor provenance; automatic inpage format tagging is not claimed."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "inpage-kadam-native-square"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0010"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "An original geometric landscape",
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "Images remain blocked in the initial sealed preview; request interception does not bypass CSP."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

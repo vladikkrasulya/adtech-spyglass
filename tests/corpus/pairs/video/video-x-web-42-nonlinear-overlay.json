@@ -1,0 +1,211 @@
+{
+  "kind": "pair",
+  "id": "video-x-web-42-nonlinear-overlay",
+  "title": "Non-linear overlay ad on a linearity-2 video slot exposes a MediaFile false positive",
+  "format": "video",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.6", "vast-4.2", "non-linear"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB VAST_Samples repository — VAST 4.2 Samples/Inline_Non-Linear_Tag-test.xml",
+      "url": "https://github.com/InteractiveAdvertisingBureau/VAST_Samples/blob/master/VAST%204.2%20Samples/Inline_Non-Linear_Tag-test.xml",
+      "version": "VAST_Samples repository (master branch), accessed 2026-09-07",
+      "license": "IAB Tech Lab VAST_Samples repository; the repository LICENSE.txt is a disclaimer only, granting no explicit reuse right (see video-audio:va-sample-license) — treated as reference-only, structure/tag-set informed the fixture; all text content and hosts rewritten as original test data (MIT)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All tracking, static-resource and click hosts rewritten to *.example.test, namespaced to this case id.",
+      "AdSystem text 'iabtechlab' replaced with 'ortbtools test fixture'; AdTitle set to this case's id; Description replaced with a short fixture sentence (the sample's Description was authoring instructions to sample consumers, not ad content).",
+      "Extension total_available changed from the sample's 2 to 1 and Pricing changed from 25.00 to 3.00 (matching bid.price); these are the only content-value edits beyond hosts and labels.",
+      "The OpenRTB 2.6 BidRequest/BidResponse envelope and imp.video.linearity=2 (Non-Linear/Overlay) are original test data; the NonLinearAds/StaticResource tag names and nesting are otherwise unmodified from the IAB sample.",
+      "Request/response IDs and impid are intentionally paired.",
+      "No real person, cookie, advertising ID, IP address or live tracking endpoint is retained."
+    ],
+    "sanitized": "No production payload or PII used. All resource and tracking hosts end in .test; external network must remain blocked.",
+    "notes": "adapted-public-example"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Use x-openrtb-version: 2.6 when replaying HTTP; envelope itself has no version field."
+    },
+    "sourceIds": [
+      "video-audio:va-ortb26",
+      "video-audio:va-vast-xsd",
+      "video-audio:va-sample-license"
+    ],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "video-x-web-42-nonlinear-overlay",
+    "test": 1,
+    "at": 1,
+    "tmax": 500,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "video-1",
+        "secure": 1,
+        "bidfloor": 1,
+        "bidfloorcur": "USD",
+        "video": {
+          "mimes": ["video/mp4"],
+          "minduration": 20,
+          "maxduration": 20,
+          "protocols": [13],
+          "w": 640,
+          "h": 360,
+          "linearity": 2,
+          "plcmt": 1,
+          "startdelay": 0,
+          "delivery": [2]
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/content",
+      "publisher": {
+        "id": "fixture-publisher"
+      }
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 2,
+      "language": "en",
+      "ip": "192.0.2.13",
+      "os": "Linux",
+      "osv": "6.1"
+    }
+  },
+  "response": {
+    "id": "video-x-web-42-nonlinear-overlay",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "fixture-seat",
+        "bid": [
+          {
+            "id": "video-x-web-42-nonlinear-overlay-bid",
+            "impid": "video-1",
+            "price": 3,
+            "adm": "<VAST version=\"4.2\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"video-x-web-42-nonlinear-overlay\" sequence=\"1\"><InLine><AdSystem version=\"1\">ortbtools test fixture</AdSystem><Error><![CDATA[https://track.example.test/video-x-web-42-nonlinear-overlay/error]]></Error><Extensions><Extension type=\"iab-Count\"><total_available><![CDATA[ 1 ]]></total_available></Extension></Extensions><Impression id=\"Impression-ID\"><![CDATA[https://track.example.test/video-x-web-42-nonlinear-overlay/impression]]></Impression><Pricing model=\"cpm\" currency=\"USD\"><![CDATA[ 3.00 ]]></Pricing><AdServingId>video-x-web-42-nonlinear-overlay-serving</AdServingId><AdTitle>video-x-web-42-nonlinear-overlay</AdTitle><Creatives><Creative id=\"5480\" sequence=\"1\" adId=\"2447226\"><NonLinearAds><NonLinear width=\"350\" height=\"350\"><StaticResource creativeType=\"image/png\"><![CDATA[https://assets.example.test/video-x-web-42-nonlinear-overlay.png]]></StaticResource><NonLinearClickThrough><![CDATA[https://advertiser.example.test/offer]]></NonLinearClickThrough><NonLinearClickTracking><![CDATA[https://track.example.test/video-x-web-42-nonlinear-overlay/clickTracking]]></NonLinearClickTracking></NonLinear></NonLinearAds><UniversalAdId idRegistry=\"Ad-ID\">8465</UniversalAdId></Creative></Creatives><Description><![CDATA[Non-linear overlay creative test fixture]]></Description></InLine></Ad></VAST>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "video-x-web-42-nonlinear-overlay-bid-creative",
+            "protocol": 13,
+            "mtype": 2,
+            "w": 350,
+            "h": 350
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "imp.video.linearity=2 requests a non-linear/overlay creative (OpenRTB 2.6 List: Video Linearity); the returned VAST InLine ad answers with only <NonLinearAds><NonLinear><StaticResource> — a complete VAST 4.4 §3.12 non-linear ad with no <Linear> creative and therefore no <MediaFile>.",
+    "VAST §3.9 <MediaFile> is a child of <Linear>; §3.12 requires only that InLine provide at least one of <Linear> or <NonLinearAds>. This document is spec-valid, but packages/core/rules-vast.js:133-136 checks for a <MediaFile> tag anywhere in the document whenever <InLine> is present, so it misreports vast.mediafile_missing on this valid non-linear-only ad — see knownGap DEF-130.",
+    "bid.w/h (350x350) describe the NonLinear creative's own pixel size, not the main video canvas (640x360).",
+    "Validity describes protocol structure and declared constraints; generated media bytes must be checked against declared MIME/duration before playback tests.",
+    "Current Inspector contract displays VAST as inert XML; text visibility must not be counted as creative rendering or media playback.",
+    "fixtureAssets lists controlled resources; intercept .test URLs locally. Never fetch public advertising/tracking hosts."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse",
+      "mustNot": [
+        {
+          "id": "vast.mediafile_missing",
+          "level": "error"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "video-x-web-42-nonlinear-overlay"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "1.0000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.video_vast",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.size_mismatch"
+      ]
+    },
+    "preview": {
+      "kind": "vast",
+      "rendered": "inert-text",
+      "mediaPlays": "no",
+      "marker": "video-x-web-42-nonlinear-overlay",
+      "limitation": null,
+      "capabilityGap": "The current VAST preview is inert XML; video/audio playback and Wrapper resolution are not implemented."
+    },
+    "format": {
+      "formats": ["video"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-130",
+    "layers": ["core", "http", "browser"],
+    "note": "MediaFile is a Linear-creative element (VAST §3.9); an InLine ad delivering only NonLinearAds must not be flagged for a missing MediaFile.",
+    "matches": {
+      "core": [
+        "^response:\\ findings\\ above\\ warning:\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
+        "^response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_missing\\ \\[error\\]\\ →\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ],
+      "http": [
+        "^response:\\ findings\\ above\\ warning:\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
+        "^response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_missing\\ \\[error\\]\\ →\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ],
+      "browser": [
+        "^browser\\.row:\\ forbidden\\ response\\ vast\\.mediafile_missing$",
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
+        "^browser\\.response:\\ forbidden\\ finding\\ present\\ vast\\.mediafile_missing\\ \\[error\\]\\ →\\ vast\\.mediafile_missing\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ]
+    }
+  }
+}

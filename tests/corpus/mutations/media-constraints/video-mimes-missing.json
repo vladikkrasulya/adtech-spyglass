@@ -1,0 +1,121 @@
+{
+  "format": "video",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Use x-openrtb-version: 2.6 when replaying HTTP; envelope itself has no version field."
+    },
+    "sourceIds": [
+      "video-audio:va-ortb26",
+      "video-audio:va-example-request",
+      "video-audio:va-vast-xsd"
+    ],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [
+    "asset-ba680246fde48925",
+    "asset-a24e1013875bab3c",
+    "asset-276aa5df0f1e0ae9",
+    "asset-d4759e0d4c3fcfb0",
+    "asset-730aa76e032c3b3d"
+  ],
+  "kind": "mutation",
+  "id": "video-mimes-missing",
+  "title": "Required video MIME list cannot disappear silently",
+  "scenario": "pair",
+  "tags": ["mutation", "media-constraints"],
+  "base": "video-web-26-companion-vast3",
+  "category": "media-constraints",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectvideo",
+  "patch": {
+    "replaceRequest": {
+      "id": "video-web-26-companion-vast3",
+      "test": 1,
+      "at": 1,
+      "tmax": 500,
+      "cur": ["USD"],
+      "imp": [
+        {
+          "id": "video-1",
+          "secure": 1,
+          "bidfloor": 1,
+          "bidfloorcur": "USD",
+          "video": {
+            "minduration": 5,
+            "maxduration": 30,
+            "protocols": [3],
+            "w": 640,
+            "h": 480,
+            "linearity": 1,
+            "plcmt": 1,
+            "startdelay": 0,
+            "minbitrate": 300,
+            "maxbitrate": 1500,
+            "delivery": [2],
+            "playbackmethod": [3],
+            "battr": [13, 14],
+            "companionad": [
+              {
+                "id": "companion-1",
+                "w": 300,
+                "h": 250,
+                "mimes": ["image/svg+xml"],
+                "battr": [13, 14]
+              }
+            ],
+            "companiontype": [1]
+          }
+        }
+      ],
+      "site": {
+        "id": "fixture-site",
+        "domain": "publisher.example.test",
+        "page": "https://publisher.example.test/content",
+        "publisher": {
+          "id": "fixture-publisher"
+        }
+      },
+      "device": {
+        "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+        "devicetype": 2,
+        "language": "en",
+        "ip": "192.0.2.11",
+        "os": "Linux",
+        "osv": "6.1"
+      }
+    }
+  },
+  "expect": {
+    "request": {
+      "mustIssueAt": ["imp[0].video.mimes"]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "Path-level warning/error oracle is used because audio has no existing MIME-required public finding ID."
+  ]
+}

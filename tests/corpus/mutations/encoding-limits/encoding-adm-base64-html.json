@@ -1,0 +1,89 @@
+{
+  "kind": "mutation",
+  "id": "encoding-adm-base64-html",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "title": "adm delivered as base64(HTML) is decoded exactly once and renders as markup",
+  "specRef": "specs/012-creative-preview-repair/contracts/creative-preview.md §1 (classification order: base64 is decoded exactly once, the decoded body is the creative); https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid does not forbid a base64-wrapped adm string — the wrapping is an SSP-side convention, not a protocol violation.",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "PCFkb2N0eXBlIGh0bWw+PGh0bWw+PGJvZHk+PGRpdiBzdHlsZT0id2lkdGg6MzAwcHg7aGVpZ2h0OjI1MHB4O2JhY2tncm91bmQ6IzE3M2EyZTtjb2xvcjojZmZmO2ZvbnQtZmFtaWx5OkFyaWFsIiBkYXRhLWZpeHR1cmU9IkJBTk5FUiBCNjQgVEVTVCI+QkFOTkVSIEI2NCBURVNUPC9kaXY+PC9ib2R5PjwvaHRtbD4="
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "BANNER B64 TEST",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success",
+      "verdict": "clean"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "Core never decodes bid.adm; it validates the base64 text as an opaque string (no VAST/native shape, no obfuscation pattern) and must produce no error from the encoding alone.",
+    "The encoded run is 240 base64 characters, held well under the 500-character BASE64_MIN_RUN the static entropy scanner (packages/core/behavior/rules/static.js) uses before it ever inspects entropy — this case is not exercising that scanner.",
+    "public/modules/inspector/creative-classify.js classifies a base64 body by decoding exactly one round and re-classifying the decoded text; a plain HTML document decodes to kind \"markup\" and is the only kind the preview frames."
+  ]
+}

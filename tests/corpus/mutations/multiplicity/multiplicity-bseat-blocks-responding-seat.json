@@ -1,0 +1,92 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "multiplicity-bseat-blocks-responding-seat",
+  "title": "A seat listed in bseat still bids and its bid is accepted uncontested",
+  "scenario": "pair",
+  "tags": ["mutation", "multiplicity"],
+  "base": "bn-banner-26-multiimp-multiseat",
+  "category": "multiplicity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/bseat",
+        "value": ["synthetic-seat-a"]
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "expected.crosscheck.seat.not_allowed",
+          "path": "seatbid[0].seat",
+          "level": "crit",
+          "params": {
+            "seat": "synthetic-seat-a",
+            "bseat": ["synthetic-seat-a"]
+          }
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-192",
+    "layers": ["core", "http", "browser"],
+    "note": "BidRequest.wseat (§3.2.1) restricts which buyer seats are allowed to bid. Crosscheck never reads seatbid.seat, wseat, or bseat at all — a seat outside the wseat allow-list is indistinguishable from an authorized one.",
+    "matches": {
+      "core": [
+        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.seat\\.not_allowed\\ @\\ seatbid\\[0\\]\\.seat\\ \\[crit\\]\\ params=\\{\"seat\":\"synthetic-seat-a\",\"bseat\":\\[\"synthetic-seat-a\"\\]\\}\\ \\u2014\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.size$"
+      ],
+      "http": [
+        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.seat\\.not_allowed\\ @\\ seatbid\\[0\\]\\.seat\\ \\[crit\\]\\ params=\\{\"seat\":\"synthetic-seat-a\",\"bseat\":\\[\"synthetic-seat-a\"\\]\\}\\ \\u2014\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.size$"
+      ],
+      "browser": [
+        "^browser\\.crosscheck:\\ missing\\ expected\\.crosscheck\\.seat\\.not_allowed\\ @\\ seatbid\\[0\\]\\.seat\\ \\[crit\\]\\ params=\\{\"seat\":\"synthetic\\-seat\\-a\",\"bseat\":\\[\"synthetic\\-seat\\-a\"\\]\\}\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[1\\]\\.bid\\[0\\]\\.size$"
+      ]
+    }
+  },
+  "specNotes": [
+    "OpenRTB 2.6 §3.2.1 BidRequest.bseat: \"Block list of buyer seats... restricted from bidding.\" A responding seatbid.seat present in bseat is a request/response consistency violation the auditor should surface; same missing capability as wseat, recorded once as DEF-192.",
+    "Browser measured on 2026-09-08 in run ortbtools-audit-9fSncA; only the exact observed product deviations are admitted. Normative finding and successful-analysis assertions are retained."
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "multiplicity-missing-bid-key",
+  "title": "A seatbid entry missing the bid key entirely is the same error as an empty array",
+  "scenario": "pair",
+  "tags": ["mutation", "multiplicity"],
+  "base": "bn-banner-26-multiimp-multiseat",
+  "category": "multiplicity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectseatbid",
+  "patch": {
+    "response": [
+      {
+        "op": "remove",
+        "path": "/seatbid/0/bid"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "response.seatbid.empty",
+          "path": "seatbid[0].bid",
+          "level": "error",
+          "params": {
+            "num": 1
+          }
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.auction.summary",
+          "path": "auction",
+          "level": "ok",
+          "params": {
+            "totalBids": 1,
+            "impsFilled": 1,
+            "impsTotal": 2
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[1].bid[0].impid",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "OpenRTB 2.6 §4.2.2 SeatBid.bid: \"Array of 1+ Bid objects... required.\" A missing key is the same violation as an empty array — the JSON schema-level coercion in rules-response.js treats both identically."
+  ]
+}

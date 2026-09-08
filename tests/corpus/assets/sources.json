@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "sourceArchiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7",
+  "sources": [
+    {
+      "id": "banner-native:bn-ortb26",
+      "title": "IAB OpenRTB 2.6 — simple banner example and request/response objects",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#simplebanner",
+      "accessedAt": "2026-09-07",
+      "revision": "403cbba542de3a5d9cfcccd0a34e74b01b79a9f1",
+      "usage": "reference plus explicit adaptation of example structure; all values and creative authored independently",
+      "licenseNote": "Upstream specification declares Creative Commons Attribution 3.0; attributed structural adaptations; no upstream prose or creative copied."
+    },
+    {
+      "id": "banner-native:bn-native12",
+      "title": "IAB Native 1.2 — markup objects and social clickout example",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "accessedAt": "2026-09-07",
+      "revision": "dd45d0733d96710981541ea213f4452952f41c40",
+      "usage": "reference plus explicit adaptation of example structure; all values and creative authored independently",
+      "licenseNote": "Upstream specification declares Creative Commons Attribution 3.0; attributed structural adaptations; no upstream prose or creative copied."
+    },
+    {
+      "id": "banner-native:bn-ortb30",
+      "title": "IAB OpenRTB 3.0 — transaction examples and Item/Bid objects",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#examples",
+      "accessedAt": "2026-09-07",
+      "revision": "9af34fc79580f67f6abaf89b1e48d18398c9a697",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Upstream specification declares Creative Commons Attribution 3.0; attributed structural adaptations; no upstream prose or creative copied."
+    },
+    {
+      "id": "banner-native:bn-adcom",
+      "title": "IAB AdCOM 1.0 — Ad, Display, Placement and DisplayFormat",
+      "url": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_display",
+      "accessedAt": "2026-09-07",
+      "revision": "df8ba06de0ba77c82efee7a2dc832bd4968474d6",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Upstream specification declares Creative Commons Attribution 3.0; attributed structural adaptations; no upstream prose or creative copied."
+    },
+    {
+      "id": "banner-native:bn-ortb25",
+      "title": "IAB OpenRTB 2.5 final specification — Banner, Native and Bid objects",
+      "url": "https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "No source text or creative copied; only protocol field definitions used."
+    },
+    {
+      "id": "video-audio:va-ortb26",
+      "title": "IAB OpenRTB 2.6 Video, Audio and Bid objects",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/1debba8001f40eb14597102dec3205afddf811d4/2.6.md#objectvideo",
+      "accessedAt": "2026-09-07",
+      "revision": "1debba8001f40eb14597102dec3205afddf811d4",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "CC BY 3.0, license in specification; original fixtures except explicitly identified structural adaptations."
+    },
+    {
+      "id": "video-audio:va-ortb25",
+      "title": "IAB OpenRTB 2.5, sections 3.2.7, 3.2.8 and 5.8",
+      "url": "https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf",
+      "accessedAt": "2026-09-07",
+      "revision": "FINAL December 2016",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "CC BY 3.0; independently authored fixtures."
+    },
+    {
+      "id": "video-audio:va-adcom",
+      "title": "IAB AdCOM creative protocol values",
+      "url": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/26c59ba1b235cd8d938c9877409e506f1b8d3f0c/AdCOM%20v1.0%20FINAL.md#list--creative-subtypes---audiovideo-",
+      "accessedAt": "2026-09-07",
+      "revision": "26c59ba1b235cd8d938c9877409e506f1b8d3f0c",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Reference only; XML, prose and sample values are not copied."
+    },
+    {
+      "id": "video-audio:va-example-request",
+      "title": "IAB public request example 6.2.4",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/1debba8001f40eb14597102dec3205afddf811d4/2.6.md#example4video",
+      "accessedAt": "2026-09-07",
+      "revision": "1debba8001f40eb14597102dec3205afddf811d4",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "CC BY 3.0; attribution IAB Tech Lab; request structure adapted, all sample identity/content rewritten."
+    },
+    {
+      "id": "video-audio:va-example-response",
+      "title": "IAB public response example 6.3.2",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/1debba8001f40eb14597102dec3205afddf811d4/2.6.md#vastxml",
+      "accessedAt": "2026-09-07",
+      "revision": "1debba8001f40eb14597102dec3205afddf811d4",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "CC BY 3.0; attribution IAB Tech Lab; response structure adapted, all XML authored independently."
+    },
+    {
+      "id": "video-audio:va-vast-xsd",
+      "title": "IAB VAST schemas",
+      "url": "https://github.com/InteractiveAdvertisingBureau/VAST/tree/e0858cd714474bf17ef61065097456d7643ff838",
+      "accessedAt": "2026-09-07",
+      "revision": "e0858cd714474bf17ef61065097456d7643ff838",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Reference only; XML, prose and sample values are not copied."
+    },
+    {
+      "id": "video-audio:va-audio-history",
+      "title": "IAB DAAST deprecation notice",
+      "url": "https://iabtechlab.com/standards-old/digital-audio-ad-serving-template-daast/",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Reference only; XML, prose and sample values are not copied."
+    },
+    {
+      "id": "video-audio:va-audio-sample-caution",
+      "title": "IAB Audio_DAAST_Sample: VAST 4.1 adType=audio, not DAAST XML",
+      "url": "https://github.com/InteractiveAdvertisingBureau/VAST_Samples/blob/6a60797f3b17f6d371ebe8ee3f511e9944078073/VAST%204.1%20Samples/Audio_DAAST_Sample.xml",
+      "accessedAt": "2026-09-07",
+      "revision": "6a60797f3b17f6d371ebe8ee3f511e9944078073",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Repository LICENSE contains a disclaimer only; no source XML copied or relicensed. Filename and media declarations are not accepted as validity evidence."
+    },
+    {
+      "id": "video-audio:va-sample-license",
+      "title": "IAB VAST Samples license file",
+      "url": "https://github.com/InteractiveAdvertisingBureau/VAST_Samples/blob/6a60797f3b17f6d371ebe8ee3f511e9944078073/LICENSE",
+      "accessedAt": "2026-09-07",
+      "revision": "6a60797f3b17f6d371ebe8ee3f511e9944078073",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Disclaimer only; public visibility is not a reuse grant."
+    },
+    {
+      "id": "feeds:feeds-ppcmate-push",
+      "title": "PPCmate push feed request parameters and JSON single/multi material response",
+      "url": "https://kb.ppcmate.com/kb/references-and-guidelines/how-to-create-a-push-endpoint-xml-feed",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-exads-request",
+      "title": "EXADS proprietary RTB 1.0 request contract",
+      "url": "https://docs.exads.com/docs/rtb-publishers/exads-rtb/bid-request/exads-rtb-publishers-request/",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-exads-response",
+      "title": "EXADS proprietary RTB bid wrapper and pop/push/in-page response contracts",
+      "url": "https://docs.exads.com/docs/rtb-publishers/exads-rtb/bid-response/exads-rtb-publishers-response/",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-adon3-request",
+      "title": "Adon3 provisional v1 feed endpoint parameters",
+      "url": "https://adon3.com/docs/xml/bid-endpoint",
+      "accessedAt": "2026-09-07",
+      "revision": "provisional v1.0; live documentation; not a finalized standard",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-adon3-response",
+      "title": "Adon3 feed ads envelope and string CPC prices",
+      "url": "https://adon3.com/docs/xml/response",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-kadam-feed",
+      "title": "Kadam Feed and RTB contracts, including in-page and clickunder examples",
+      "url": "https://wiki.kadam.net/en/index.php?title=RTB_setting&oldid=7076",
+      "accessedAt": "2026-09-07",
+      "revision": "MediaWiki oldid=7076",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-kadam-current",
+      "title": "Kadam SSP Feed / OpenRTB integration",
+      "url": "https://wiki.kadam.net/en/index.php?title=OpenRTB/Feed_Integration_SSP&oldid=7231",
+      "accessedAt": "2026-09-07",
+      "revision": "MediaWiki oldid=7231",
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-exads-ortb-request",
+      "title": "EXADS OpenRTB request, including in-page vendor plcmttype 501",
+      "url": "https://docs.exads.com/docs/rtb-publishers/open-rtb/bid-request/open-rtb-publishers-request/",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-exads-ortb25-request",
+      "title": "EXADS OpenRTB 2.5 request and popunder impression contract",
+      "url": "https://docs.exads.com/docs/rtb-publishers/open-rtb/bid-request/open-rtb-publishers-request-2p5/",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-exads-ortb-response",
+      "title": "EXADS OpenRTB 2.5 bid and pop URL/native notification adm carriers",
+      "url": "https://docs.exads.com/docs/rtb-publishers/open-rtb/bid-response/open-rtb-publishers-response-2p5/",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative copy, tracker tokens or media copied. Original fixture content is MIT."
+    },
+    {
+      "id": "feeds:feeds-ppcmate-pop",
+      "title": "PPCmate Pop Endpoint: URL parameters and XML/JSON delivery examples",
+      "url": "https://kb.ppcmate.com/kb/references-and-guidelines/how-to-create-a-pop-endpoint-xml-feed",
+      "accessedAt": "2026-09-07",
+      "revision": null,
+      "usage": "reference-only; fixture independently authored",
+      "licenseNote": "Vendor documentation used as technical reference only; no source prose, creative text, tracker tokens or media copied. Original fixture content is MIT."
+    }
+  ]
+}

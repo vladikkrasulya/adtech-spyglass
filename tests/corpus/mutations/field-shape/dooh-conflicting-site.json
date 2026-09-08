@@ -1,0 +1,69 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "dooh",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Original DOOH context composed with the already authored banner media."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "dooh-conflicting-site",
+  "title": "DOOH and website contexts cannot silently coexist",
+  "scenario": "pair",
+  "tags": ["mutation", "field-shape"],
+  "base": "banner-dooh-26-screen",
+  "category": "field-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdooh",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/site",
+        "value": {
+          "id": "fixture-web",
+          "page": "https://publisher.example.test/"
+        }
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "must": [
+        {
+          "id": "request.site_and_app_both",
+          "path": "site/app",
+          "level": "warning"
+        }
+      ]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": []
+}

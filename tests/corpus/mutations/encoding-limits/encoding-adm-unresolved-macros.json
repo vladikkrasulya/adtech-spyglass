@@ -1,0 +1,89 @@
+{
+  "kind": "mutation",
+  "id": "encoding-adm-unresolved-macros",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "title": "adm carrying AUCTION_PRICE, AUCTION_ID and CACHEBUSTER macros stays literal in preview",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid — win/loss macro substitution (${AUCTION_PRICE}, ${AUCTION_ID}) is only meaningful once a real auction has cleared; an inert preview must leave the tokens exactly as delivered rather than fabricate a resolution. GAM-style %%CACHEBUSTER%% is the equivalent non-OpenRTB spelling some adapters emit in adm.",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<!doctype html><html><body><div style=\"width:300px;height:250px;background:#3a1c1c;color:#fff;font-family:Arial\" data-fixture=\"MACRO TEST\">MACRO TEST price=${AUCTION_PRICE} id=${AUCTION_ID} cb=%%CACHEBUSTER%%</div></body></html>"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "${AUCTION_PRICE}",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success",
+      "verdict": "clean"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "Core has no rule that inspects adm content for macro tokens; nurl/burl/lurl macro substitution (rules-response.js NOTICE_MACRO_RE) is unrelated to this field and is not exercised here — no macro-specific finding is expected from Core at any layer.",
+    "The literal \"${AUCTION_PRICE}\" text in the rendered body is itself proof the token was left unresolved, which is why it is used as the preview marker instead of a separate assertion.",
+    "public/ortbtools.app.js noteUnresolvedMacros() recognizes both the ${MACRO} and %%MACRO%% spellings and adds a below-frame note; that note is a real, already-shipped feature. It is not asserted here via expect.preview.limitation because tests/corpus/lib/browser.js measurePreview() computes limitationShown only from kind/refusal/CSP signals and does not read the notes strip — asserting it would test the harness, not the product."
+  ]
+}

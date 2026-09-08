@@ -1,0 +1,61 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-nbr-exchange-specific",
+  "title": "A no-bid reason code in the reserved exchange-specific range (500+) is a valid, clean no-bid",
+  "scenario": "pair",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "input-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#list_nobidreasoncodes",
+  "patch": {
+    "replaceResponse": {
+      "id": "bn-banner-25-fixed",
+      "nbr": 700,
+      "cur": "USD"
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "status": "clean",
+      "must": [
+        { "id": "response.no_bid", "level": "info", "path": "nbr", "params": { "nbr": 700 } }
+      ],
+      "mustNot": ["expected.response.nbr_code_unassigned"]
+    },
+    "crosscheck": {
+      "must": [{ "id": "crosscheck.id_match", "path": "id", "level": "ok" }],
+      "mustNot": ["crosscheck.no_response"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "The No-Bid Reason Codes list (OpenRTB 3.0 §List: No-Bid Reason Codes) explicitly reserves 500+ for exchange-specific values, so 700 is a fully valid, spec-legal no-bid reason — this must remain a clean no-bid with no error, no warning, and (unlike its sibling mutation mut-input-shape-nbr-unassigned-code, which uses the unassigned code 42) no code-quality finding at all.",
+    "This is the positive control for mut-input-shape-nbr-unassigned-code's missing-capability gap: `expected.response.nbr_code_unassigned` is asserted absent here (mustNot) as a real regression guard — a future range check must not start flagging exchange-specific codes as if they were unassigned ones."
+  ]
+}

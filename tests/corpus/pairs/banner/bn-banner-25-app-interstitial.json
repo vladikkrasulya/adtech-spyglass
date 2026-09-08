@@ -1,0 +1,172 @@
+{
+  "kind": "pair",
+  "id": "bn-banner-25-app-interstitial",
+  "title": "Mobile app interstitial with standalone HTML, no SDK needed",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "inapp",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.5"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.5 final specification — Banner, Native and Bid objects",
+      "url": "https://iabtechlab.com/wp-content/uploads/2016/07/OpenRTB-API-Specification-Version-2-5-FINAL.pdf",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "bn-banner-25-app-interstitial",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "slot-app",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "banner": {
+          "w": 320,
+          "h": 480,
+          "pos": 7
+        },
+        "instl": 1
+      }
+    ],
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 4,
+      "language": "en",
+      "ip": "192.0.2.11",
+      "os": "Linux",
+      "osv": "6.1"
+    },
+    "app": {
+      "id": "synthetic-app",
+      "name": "Fixture Reader",
+      "bundle": "test.example.fixture.reader",
+      "domain": "publisher.example.test",
+      "publisher": {
+        "id": "synthetic-publisher"
+      }
+    }
+  },
+  "response": {
+    "id": "bn-banner-25-app-interstitial",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "bid-app",
+            "impid": "slot-app",
+            "price": 1.25,
+            "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:320px;height:480px;overflow:hidden;font-family:Arial,sans-serif;background:#223b62}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#162d49;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"BANNER APP\" role=\"img\" aria-label=\"BANNER APP\"><img alt=\"BANNER APP landscape\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iNDgwIiB2aWV3Qm94PSIwIDAgMzIwIDQ4MCI+PHJlY3Qgd2lkdGg9IjMyMCIgaGVpZ2h0PSI0ODAiIHJ4PSIxMiIgZmlsbD0iIzIyM2I2MiIvPjxjaXJjbGUgY3g9IjI0MC4wIiBjeT0iMTgyLjQiIHI9Ijc2LjgiIGZpbGw9IiNmZmQxNjYiLz48cGF0aCBkPSJNMCA0ODAgTDE1My42IDE0NC4wIEwzMjAgNDgwIFoiIGZpbGw9IiM1NWI2YTUiLz48dGV4dCB4PSIxMiIgeT0iNDYyIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiPkJBTk5FUiBBUFA8L3RleHQ+PC9zdmc+\"><span class=\"label\">BANNER APP · TEST AD</span></div></body></html>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "bid-app-creative",
+            "w": 320,
+            "h": 480
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser.",
+    "Do not infer rendering from analysis.status or iframe existence alone.",
+    "HTML and original embedded SVG need no external resources. Assert the fixture label is visible, image.complete and naturalWidth > 0, and expected creative dimensions.",
+    "No scripts, trackers, navigation handlers, external font/CDN URLs or live network fetches are present in the banner markup."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "bn-banner-25-app-interstitial"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "BANNER APP · TEST AD",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["inapp"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

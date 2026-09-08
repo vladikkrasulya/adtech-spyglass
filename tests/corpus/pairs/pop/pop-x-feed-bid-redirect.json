@@ -1,0 +1,84 @@
+{
+  "kind": "pair",
+  "id": "pop-x-feed-bid-redirect",
+  "title": "minimal bid-redirect feed object {bid, redirecturl, campaignid}, response only",
+  "format": "pop",
+  "protocol": "jsonfeed",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "response-only",
+  "tags": ["core-mechanism", "bid-redirect-feed", "response-only"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools Bid-Redirect Feed response validator (packages/core/rules-feed.js validateBidRedirectFeed) — the product's own documented minimal redirect-feed shape ({bid, redirecturl, campaignid}); no matching request-side decoder is registered in this product for any known redirect-feed GET shape, so only the response side is exercised (design.md: never invent an OpenRTB or undecodable request for a feed)",
+      "url": "packages/core/rules-feed.js",
+      "version": "repo HEAD at session start, commit a61fc25",
+      "license": "Internal product code (ortbtools); no third-party material copied. MIT for the original fixture values.",
+      "notes": "packages/core/decoders/request/index.js registers exactly three request decoders (url-clickunder-feed /feed, url-search-feed /search, url-linkfeed /link); none match a redirect-feed-style GET path, so no vendor-attributed request string exists for this response shape in this product today."
+    },
+    "modifications": [
+      "bid, redirecturl and campaignid values independently authored.",
+      "advertiser.example.test is a reserved .test host; fixture-campaign-42 is a clearly synthetic campaign identifier."
+    ],
+    "sanitized": "No real visitor, publisher or subscriber data. The destination host is a reserved .test name; the campaign id is a synthetic-fixture string.",
+    "notes": "synthesized-from-product-code-contract"
+  },
+  "reference": {
+    "wireProtocol": "bid-redirect-feed",
+    "vendorDialect": "ext-rtb",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "response-only-reference",
+      "note": "No registered request decoder exists in this product for a redirect-feed-style GET request; per design.md, the case does not invent one and stays response-only."
+    },
+    "sourceIds": ["feeds:feeds-ppcmate-pop"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "response": {
+    "bid": 0.18,
+    "redirecturl": "https://advertiser.example.test/offers/pop-x-feed-bid-redirect",
+    "campaignid": "fixture-campaign-42"
+  },
+  "specNotes": [
+    "packages/core/detect.js's unique discriminator for this shape is the lowercase, no-underscore key `redirecturl` (detect.js:191); packages/core/rules-feed.js validateBidRedirectFeed then requires bid (number, present: 0.18) and redirecturl (string, present) and treats campaignid as optional-but-typed (string or number, present here as a string) — zero findings expected.",
+    "detectFormat's detectFeedFormat tags FORMATS.POPS via `hasRedirect && !hasImage && !hasTitle` (format-detect.js:210-219) — this object has neither an image nor a title key, so the redirect-only branch fires cleanly.",
+    "Preview: findAdm/findPushMaterial recognize neither `redirecturl` nor `campaignid` (findAdm only reads adm/iurl; findPushMaterial requires a price key plus a click key plus a creative key, and this object has no click_url/link/title/description/image key at all) — the current preview shows the top-level empty state instead of the destination as inert text, the same root cause already recorded as DEF-202 for the sibling wire-wrapper cases.",
+    "Browser preview must not open a real popup or dispatch tracking."
+  ],
+  "notes": [
+    "response-only per design.md: no request decoder in this product recognizes any redirect-feed-style GET shape, so no request payload is included rather than inventing one that would only reproduce an already-recorded no_decoder gap."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "info",
+      "type": "Bid-Redirect Feed Response",
+      "status": "clean"
+    },
+    "format": {
+      "formats": ["pops"]
+    },
+    "preview": {
+      "kind": "url",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/offers/pop-x-feed-bid-redirect",
+      "limitation": "documented response wrapper is not recognized by the preview's creative-lookup walk",
+      "capabilityGap": "no inert-destination preview for this wrapper shape"
+    },
+    "http": { "status": 200 }
+  },
+  "knownGap": {
+    "id": "DEF-202",
+    "layers": ["browser"],
+    "note": "Documented response creatives retain their wire wrappers; a visible card or inert destination should be available, or absence reported as an unsupported preview capability.",
+    "matches": {
+      "browser": [
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop-x-feed-bid-redirect\"\\ absent$"
+      ]
+    }
+  }
+}

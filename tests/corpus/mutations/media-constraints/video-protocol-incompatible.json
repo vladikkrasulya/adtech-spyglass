@@ -1,0 +1,128 @@
+{
+  "format": "video",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Use x-openrtb-version: 2.6 when replaying HTTP; envelope itself has no version field."
+    },
+    "sourceIds": [
+      "video-audio:va-ortb26",
+      "video-audio:va-example-request",
+      "video-audio:va-vast-xsd"
+    ],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [
+    "asset-ba680246fde48925",
+    "asset-a24e1013875bab3c",
+    "asset-276aa5df0f1e0ae9",
+    "asset-d4759e0d4c3fcfb0",
+    "asset-730aa76e032c3b3d"
+  ],
+  "kind": "mutation",
+  "id": "video-protocol-incompatible",
+  "title": "Returned VAST violates the requested protocol constraint",
+  "scenario": "pair",
+  "tags": ["mutation", "media-constraints"],
+  "base": "video-web-26-companion-vast3",
+  "category": "media-constraints",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectvideo",
+  "patch": {
+    "replaceRequest": {
+      "id": "video-web-26-companion-vast3",
+      "test": 1,
+      "at": 1,
+      "tmax": 500,
+      "cur": ["USD"],
+      "imp": [
+        {
+          "id": "video-1",
+          "secure": 1,
+          "bidfloor": 1,
+          "bidfloorcur": "USD",
+          "video": {
+            "mimes": ["video/mp4"],
+            "minduration": 5,
+            "maxduration": 30,
+            "protocols": [7],
+            "w": 640,
+            "h": 480,
+            "linearity": 1,
+            "plcmt": 1,
+            "startdelay": 0,
+            "minbitrate": 300,
+            "maxbitrate": 1500,
+            "delivery": [2],
+            "playbackmethod": [3],
+            "battr": [13, 14],
+            "companionad": [
+              {
+                "id": "companion-1",
+                "w": 300,
+                "h": 250,
+                "mimes": ["image/svg+xml"],
+                "battr": [13, 14]
+              }
+            ],
+            "companiontype": [1]
+          }
+        }
+      ],
+      "site": {
+        "id": "fixture-site",
+        "domain": "publisher.example.test",
+        "page": "https://publisher.example.test/content",
+        "publisher": {
+          "id": "fixture-publisher"
+        }
+      },
+      "device": {
+        "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+        "devicetype": 2,
+        "language": "en",
+        "ip": "192.0.2.11",
+        "os": "Linux",
+        "osv": "6.1"
+      }
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "mustIssueAt": ["seatbid[0].bid[0].adm"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-113",
+    "layers": ["core", "http", "browser"],
+    "note": "A response creative incompatible with the requested MIME, duration or protocol must produce an issue on the affected bid adm. Detecting VAST shape alone is insufficient.",
+    "matches": {
+      "core": ["^crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
+      "http": ["^crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
+      "browser": [
+        "^browser\\.crosscheck:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ]
+    }
+  },
+  "specNotes": [
+    "No public per-constraint finding ID exists. Require a warn/crit at the affected adm path, where the valid base has no unrelated warning.",
+    "A shape-only video_vast row does not check negotiated MIME, duration or protocol."
+  ]
+}

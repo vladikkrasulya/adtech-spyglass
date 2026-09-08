@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "gaps": {
+    "DEF-198": {
+      "id": "DEF-198",
+      "title": "Whitespace-only Bid.adm passes the isStr() presence check and is never flagged as a blank creative",
+      "category": "false-negative",
+      "severity": "medium",
+      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
+      "code": ["packages/core/helpers.js:9", "packages/core/rules-response.js:140"],
+      "expected": "Bid.adm is documented as carrying the actual ad markup for the impression; a string containing only whitespace carries none of it and should be distinguishable from a real creative.",
+      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
+      "cases": ["encoding-adm-whitespace-only"],
+      "reviewedAt": "2026-09-08",
+      "notes": [
+        "isStr(v) = typeof v === 'string' && v.length > 0 (packages/core/helpers.js:9) treats any nonempty string, including one made only of spaces, as a present adm — response.bid.payload_missing (rules-response.js:140) therefore never fires for a blank creative, and no other rule reports it either.",
+        "Normative assertions were authored from the primary OpenRTB contract before execution. Known-gap signatures document the observed failure only; they are not an expected-output snapshot."
+      ]
+    },
+    "DEF-303": {
+      "id": "DEF-303",
+      "title": "Oversized analyze body resets the connection instead of returning the documented 400 payload_too_large",
+      "category": "http-shape",
+      "severity": "medium",
+      "source": "docs/api-v1.md (POST /api/analyze errors: 400 payload_too_large when the body exceeds the 2 MiB parser limit)",
+      "code": ["lib/http.js:40-52"],
+      "expected": "A body over the 2 MiB cap receives HTTP 400 with code payload_too_large in the documented error envelope.",
+      "actual": "The server answers 100 Continue, then resets the socket while the body is still uploading; curl exits 56 and node/undici report ECONNRESET / fetch failed; no status or envelope is observable.",
+      "cases": ["encoding-request-body-oversized"],
+      "reviewedAt": "2026-09-08",
+      "notes": [
+        "Reproduced directly with curl --data-binary (3 MB) and node http.request against an isolated server; the documented status is never delivered.",
+        "Consolidated the independent encoding-limits observation formerly labeled DEF-199. The HTTP harness now records status 0 and the transport cause; this case uses the exact DEF-303 signatures."
+      ]
+    }
+  }
+}

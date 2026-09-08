@@ -1,0 +1,66 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "field-shape-imp-empty-array",
+  "title": "An empty imp array still lets crosscheck run, unlike an absent imp key",
+  "scenario": "pair",
+  "tags": ["mutation", "field-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "field-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "patch": {
+    "request": [{ "op": "replace", "path": "/imp", "value": [] }]
+  },
+  "expect": {
+    "request": {
+      "status": "errors",
+      "must": [{ "id": "request.imp_required", "path": "imp", "level": "error" }]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        { "id": "crosscheck.id_match", "path": "id", "level": "ok" },
+        {
+          "id": "crosscheck.bid.impid_unresolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "crit"
+        }
+      ],
+      "mustNot": [
+        { "id": "crosscheck.no_request" },
+        { "id": "crosscheck.bid.impid_resolved" },
+        { "id": "crosscheck.bid.above_floor" },
+        { "id": "crosscheck.bid.below_floor" },
+        { "id": "crosscheck.bid.size_match" }
+      ]
+    },
+    "consistency": ["unresolved-impid-not-filled"],
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "`imp: []` fails the same root check as an absent imp key (`!Array.isArray(req.imp) || !req.imp.length`, 2.6 §3.2.1), so request-side validation is identical to field-shape-imp-missing. But crosscheck's own gate is only `!Array.isArray(req.imp)` (buildRequestView) — an empty array IS an array, so the view builds successfully with an empty impression index, and the response bid falls through to the ordinary unresolved-impid path instead of the whole-payload no_request short-circuit. Distinct from both field-shape-imp-missing (imp key absent entirely, buildRequestView returns null, no per-bid findings at all) and field-shape-imp-id-missing (one imp present but unindexed because its own id is absent)."
+  ]
+}

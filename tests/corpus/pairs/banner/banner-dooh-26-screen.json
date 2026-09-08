@@ -1,0 +1,169 @@
+{
+  "kind": "pair",
+  "id": "banner-dooh-26-screen",
+  "title": "DOOH display with no site, app or personal device identity",
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "dooh",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["synthetic-context-regression", "dooh", "valid"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.6 Object DOOH / BidRequest",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdooh",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "Public example object/asset structure adapted; source values replaced and optional tracking omitted.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "Replaced web context with independently authored DOOH-only context; removed personal device metadata.",
+      "Derived DOOH regression: site and optional device omitted; dooh object and mtype=1 supplied."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "adapted-public-example"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Original DOOH context composed with the already authored banner media."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "banner-dooh-26-screen",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "slot-1",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "banner": {
+          "w": 300,
+          "h": 250,
+          "pos": 0
+        }
+      }
+    ],
+    "dooh": {
+      "id": "fixture-station-screen",
+      "name": "Synthetic station screen",
+      "domain": "publisher.example.test",
+      "publisher": {
+        "id": "fixture-publisher"
+      }
+    }
+  },
+  "response": {
+    "id": "banner-dooh-26-screen",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "bid-fixed",
+            "impid": "slot-1",
+            "price": 1.25,
+            "adm": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:300px;height:250px;overflow:hidden;font-family:Arial,sans-serif;background:#223b62}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#162d49;padding:4px 7px;border-radius:4px;font-size:12px}</style></head><body><div class=\"ad\" data-fixture=\"BANNER FIXED\" role=\"img\" aria-label=\"BANNER FIXED\"><img alt=\"BANNER FIXED landscape\" src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjUwIiB2aWV3Qm94PSIwIDAgMzAwIDI1MCI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyNTAiIHJ4PSIxMiIgZmlsbD0iIzIyM2I2MiIvPjxjaXJjbGUgY3g9IjIyNS4wIiBjeT0iOTUuMCIgcj0iNjAuMCIgZmlsbD0iI2ZmZDE2NiIvPjxwYXRoIGQ9Ik0wIDI1MCBMMTQ0LjAgNzUuMCBMMzAwIDI1MCBaIiBmaWxsPSIjNTViNmE1Ii8+PHRleHQgeD0iMTIiIHk9IjIzMiIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4Ij5CQU5ORVIgRklYRUQ8L3RleHQ+PC9zdmc+\"><span class=\"label\">BANNER FIXED · TEST AD</span></div></body></html>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "bid-fixed-creative",
+            "w": 300,
+            "h": 250,
+            "mtype": 1
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "OpenRTB 2.6 DOOH must not coexist with site/app. Device and personal IP are not required for a DOOH-only placement."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "maxLevel": "warning",
+      "mustNot": [
+        {
+          "id": "request.no_site_or_app",
+          "level": "error"
+        },
+        {
+          "id": "request.device.ip_required",
+          "level": "error"
+        },
+        {
+          "id": "request.device.ua_required",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ]
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["dooh"]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "BANNER FIXED · TEST AD",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-103",
+    "layers": ["core", "http", "browser"],
+    "note": "A valid DOOH-only BidRequest does not require the optional Device object.",
+    "matches": {
+      "core": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device$"
+      ],
+      "http": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.device_required\\[error\\]@device$"
+      ]
+    }
+  }
+}

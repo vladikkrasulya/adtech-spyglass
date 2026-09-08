@@ -1,0 +1,168 @@
+{
+  "kind": "pair",
+  "id": "pop-exads-openrtb-url-adm",
+  "title": "popunder impression and bare URL adm",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["public-reference", "vendor-valid", "exads", "openrtb-2.5"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "EXADS OpenRTB 2.5 request and popunder impression contract",
+      "url": "https://docs.exads.com/docs/rtb-publishers/open-rtb/bid-request/open-rtb-publishers-request-2p5/",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, prices, timestamps, creative text and URLs independently authored.",
+      "Required visitor addresses use TEST-NET 192.0.2.44; required user IDs are clearly synthetic. No real subscriber data or feed credentials.",
+      "Media URLs use reserved .test hosts and require interception from fixtureAssets."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; user IDs/feed keys are synthetic-fixture strings; all executable URLs use reserved .test hostnames and require local interception.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "exads",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Independently constructed offline pair preserving documented field names and carrier. Reserved endpoint replaces the vendor hostname; no live request or bid was made. Vendor zone/feed selection is fixture metadata where absent from body."
+    },
+    "sourceIds": ["feeds:feeds-exads-ortb25-request", "feeds:feeds-exads-ortb-response"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "pop-exads-openrtb-url-adm",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "pop-exads-openrtb-url-adm-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "instl": 1
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "pop-exads-openrtb-url-adm",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "pop-exads-openrtb-url-adm-bid",
+            "impid": "pop-exads-openrtb-url-adm-imp",
+            "price": 0.42,
+            "adm": "https://advertiser.example.test/offers/pop-exads-openrtb-url-adm",
+            "adomain": ["advertiser.example.test"],
+            "crid": "pop-exads-openrtb-url-adm-creative",
+            "nurl": "https://tracking.example.test/notice/pop-exads-openrtb-url-adm",
+            "ext": {
+              "btype": 1
+            },
+            "w": 0,
+            "h": 0
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "EXADS uses instl=1 for this popunder inventory. In base IAB OpenRTB, instl=1 alone only means interstitial; endpoint context is essential.",
+    "This is a vendor pop contract carried in OpenRTB, not a new standard media object.",
+    "Expose destination(s) as inert URL text. This response provides navigation, not embedded visual creative; do not count a preview of the URL as rendered landing-page creative.",
+    "Browser preview must not open real popups or dispatch tracking."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "pop-exads-openrtb-url-adm"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0010"
+          }
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "url",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/offers/pop-exads-openrtb-url-adm",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-109",
+    "layers": ["core", "http", "browser"],
+    "note": "The EXADS documented popunder extension permits instl-only impression shape and URL adm; generic IAB media rules need dialect awareness.",
+    "matches": {
+      "core": [
+        "^request:\\ findings\\ above\\ warning:\\ imp\\.format_required\\[error\\]@imp\\[0\\]$"
+      ],
+      "http": [
+        "^request:\\ findings\\ above\\ warning:\\ imp\\.format_required\\[error\\]@imp\\[0\\]$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ imp\\.format_required\\[error\\]@imp\\[0\\]$"
+      ]
+    }
+  }
+}

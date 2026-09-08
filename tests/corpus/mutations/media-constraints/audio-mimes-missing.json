@@ -1,0 +1,108 @@
+{
+  "format": "audio",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Use x-openrtb-version: 2.5 when replaying HTTP; envelope itself has no version field."
+    },
+    "sourceIds": ["video-audio:va-ortb25", "video-audio:va-adcom", "video-audio:va-vast-xsd"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [
+    "asset-2899406ab5cec07b",
+    "asset-7e6d64b7084259e2",
+    "asset-c3073892f8e2b030",
+    "asset-5cc995bcda28acaa"
+  ],
+  "kind": "mutation",
+  "id": "audio-mimes-missing",
+  "title": "Required audio MIME list cannot disappear silently",
+  "scenario": "pair",
+  "tags": ["mutation", "media-constraints"],
+  "base": "audio-web-25-mp3-legacy",
+  "category": "media-constraints",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectaudio",
+  "patch": {
+    "replaceRequest": {
+      "id": "audio-web-25-mp3-legacy",
+      "test": 1,
+      "at": 1,
+      "tmax": 500,
+      "cur": ["USD"],
+      "imp": [
+        {
+          "id": "audio-1",
+          "secure": 1,
+          "bidfloor": 1,
+          "bidfloorcur": "USD",
+          "audio": {
+            "minduration": 15,
+            "maxduration": 15,
+            "protocols": [7],
+            "startdelay": 0,
+            "delivery": [2],
+            "feed": 3
+          }
+        }
+      ],
+      "site": {
+        "id": "fixture-site",
+        "domain": "publisher.example.test",
+        "page": "https://publisher.example.test/content",
+        "publisher": {
+          "id": "fixture-publisher"
+        }
+      },
+      "device": {
+        "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+        "devicetype": 2,
+        "language": "en",
+        "ip": "192.0.2.11",
+        "os": "Linux",
+        "osv": "6.1"
+      }
+    }
+  },
+  "expect": {
+    "request": {
+      "mustIssueAt": ["imp[0].audio.mimes"]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-112",
+    "layers": ["core", "http", "browser"],
+    "note": "Audio.mimes is required. Its absence must produce a field-local warning or error; the oracle does not invent a future finding identifier.",
+    "matches": {
+      "core": ["^request:\\ missing\\ issue\\ at\\ imp\\[0\\]\\.audio\\.mimes$"],
+      "http": ["^request:\\ missing\\ issue\\ at\\ imp\\[0\\]\\.audio\\.mimes$"],
+      "browser": ["^browser\\.request:\\ missing\\ issue\\ at\\ imp\\[0\\]\\.audio\\.mimes$"]
+    }
+  },
+  "specNotes": [
+    "Path-level warning/error oracle is used because audio has no existing MIME-required public finding ID."
+  ]
+}

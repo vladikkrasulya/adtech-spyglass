@@ -1,0 +1,193 @@
+{
+  "kind": "pair",
+  "id": "native-x-prebid-zeroclickfraud",
+  "title": "Prebid Server zeroclickfraud adapter fixture: sparse optional-asset fill, no bidfloor",
+  "format": "native",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["vendor-derived", "valid", "iab", "openrtb-2.5", "apache-2.0", "sparse-fill"],
+  "provenance": {
+    "synthetic": false,
+    "source": {
+      "name": "prebid/prebid-server — adapters/zeroclickfraud/zeroclickfraudtest/exemplary/native.json (mockBidRequest + mockResponse)",
+      "url": "https://github.com/prebid/prebid-server/blob/0ba352315253f6692af6497d553cfb12909a1b8b/adapters/zeroclickfraud/zeroclickfraudtest/exemplary/native.json",
+      "version": "0ba352315253f6692af6497d553cfb12909a1b8b",
+      "license": "Apache-2.0",
+      "notes": "Facts (field shapes, required/optional composition, adapter ext keys), not prose, are reused per the clone's own ATTRIBUTION.md; the fixture's own creative title/description text is not reproduced. NOTICE file absent upstream, which only removes §4(d), not the licence itself.",
+      "path": "adapters/zeroclickfraud/zeroclickfraudtest/exemplary/native.json"
+    },
+    "modifications": [
+      "device.ip changed from the fixture's public-looking 8.8.8.10 to the RFC 5737 TEST-NET-3 address 203.0.113.20 — no real IP is retained.",
+      "user.buyeruid changed from the fixture's numeric constant to the clearly synthetic string buyeruid-fixture-0001.",
+      "ext.bidder.host changed from the fixture's live-looking q.0cf.io to the reserved adapter.example.test domain; ext.bidder.sourceId is kept as the fixture's own non-identifying numeric adapter config constant.",
+      "link.url and the imptrackers[] URL changed from the fixture's live-looking t.0cf.io host to reserved advertiser.example.test / track.example.test domains.",
+      "Top-level BidRequest/BidResponse id, imp.id and bid.impid renamed to this corpus's id convention; bid.id, cid, adid and crid are left as the fixture's own literal numeric test constants (already non-functional placeholders in the public fixture, not live identifiers).",
+      "Title and description creative text are original — the fixture's own ad copy ('Datablocks Inc.' / 'Datablocks provides world class...') is prose, not a field shape, and is not reproduced per the source's own ATTRIBUTION.md.",
+      "Assets 1 (img), 2 (data type 1) and 4 (data type 6) are omitted from the response exactly as the fixture omits them — none are required, so this is the fixture's own real sparse-fill behaviour, not an invented mutation."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creative text, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "vendor-adapter-fixture; see modifications for every substitution."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "The fixture's mockBidRequest/mockResponse.body are a real bid-response-to-bid-request pair (impid resolves, id matches after renaming)."
+    },
+    "sourceIds": ["vendor:prebid-server:zeroclickfraud:native"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "native-x-prebid-zeroclickfraud",
+    "at": 1,
+    "tmax": 500,
+    "imp": [
+      {
+        "id": "native-slot",
+        "native": {
+          "ver": "1.1",
+          "request": "{\"ver\":\"1.1\",\"context\":1,\"contextsubtype\":11,\"plcmttype\":4,\"plcmtcnt\":1,\"assets\":[{\"id\":0,\"required\":1,\"title\":{\"len\":500}},{\"id\":1,\"img\":{\"type\":3,\"wmin\":1,\"hmin\":1}},{\"id\":2,\"data\":{\"type\":1,\"len\":200}},{\"id\":3,\"data\":{\"type\":2,\"len\":15000}},{\"id\":4,\"data\":{\"type\":6,\"len\":40}}]}"
+        },
+        "ext": {
+          "bidder": {
+            "host": "adapter.example.test",
+            "sourceId": 906295
+          }
+        }
+      }
+    ],
+    "site": {
+      "page": "https://publisher.example.test/audit"
+    },
+    "device": {
+      "ip": "203.0.113.20"
+    },
+    "user": {
+      "buyeruid": "buyeruid-fixture-0001"
+    }
+  },
+  "response": {
+    "id": "native-x-prebid-zeroclickfraud",
+    "bidid": "183975330-3-29038-2",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "906295",
+        "bid": [
+          {
+            "id": "2181314346",
+            "impid": "native-slot",
+            "price": 13.37,
+            "adm": "{\"native\":{\"ver\":\"1.2\",\"assets\":[{\"id\":0,\"required\":1,\"title\":{\"text\":\"A modest catalogue of everyday tools\"}},{\"id\":3,\"required\":0,\"data\":{\"value\":\"A short original description used only to exercise fixture rendering.\"}}],\"link\":{\"url\":\"https://advertiser.example.test/offer/native-x-prebid-zeroclickfraud\"},\"imptrackers\":[\"https://track.example.test/imp/native-x-prebid-zeroclickfraud\"],\"jstracker\":[]}}",
+            "cid": "906293",
+            "adid": "906297",
+            "crid": "906299",
+            "ext": {}
+          }
+        ]
+      }
+    ],
+    "ext": {}
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "IAB Native 1.1/1.2 §4.2 Object: Asset Request — `required` defaults to 0 (optional) when omitted. Assets 1, 2 and 4 are optional in the request and legitimately omitted from the response; only asset 0 (title, required) must be present for completeness.",
+    "The response adm declares native ver 1.2 while the request declared ver 1.1 on the same fixture — a genuine, faithful-to-source version drift from the real adapter, not an authoring mistake; neither side's version is asserted here.",
+    "No imp.bidfloor is present in the source fixture (a real, common vendor shape) — crosscheck.js defaults the floor to 0 and still emits crosscheck.bid.no_floor_set (WARN) once per imp; the numeric compare still runs against that defaulted floor.",
+    "No image asset is returned (asset 1 is optional and omitted) — a title+description text-only card is the intended complete creative, not a failed image load.",
+    "The source fixture's device object carries only ip, no ua — a real, common vendor shape (OpenRTB 2.5/2.6 §3.2.18 device.ua is optional). packages/core/rules-request.js unconditionally requires device.ua at ERROR for any non-DOOH request; this is the same underlying cause already recorded as DEF-100 for video/audio pairs, extended here to native. See knownGap.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser for this case.",
+    "Do not infer rendering from analysis.status or iframe existence alone.",
+    "Inspect intended click target without following it."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "native-x-prebid-zeroclickfraud"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.no_floor_set",
+          "path": "imp[0].bidfloor",
+          "level": "warn"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "A modest catalogue of everyday tools",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-100",
+    "layers": ["core", "http", "browser"],
+    "note": "The fixture's real device object carries only ip, no ua; rules-request.js requires device.ua unconditionally at ERROR for any non-DOOH request even though OpenRTB §3.2.18 makes it optional. Same recorded cause as the video/audio DEF-100 cases, now also observed on a native pair.",
+    "matches": {
+      "core": [
+        "^request: findings above warning: request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ],
+      "http": [
+        "^request: findings above warning: request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ],
+      "browser": [
+        "^browser\\.request: findings above warning: request\\.device\\.ua_required\\[error\\]@device\\.ua$"
+      ]
+    }
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "kind": "mutation",
+  "id": "encoding-ext-nested-50-levels",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "title": "a 50-level deep nested ext object is processed without error or truncation",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest §3.1 — ext is the open vendor-extension surface at every object level; packages/core/unknown-fields.js documents \"ext is never inspected — not the key, not one level of its subtree\", so nesting inside it is opaque to every unknown-field and structural rule.",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/ext",
+        "value": {
+          "n0": {
+            "n1": {
+              "n2": {
+                "n3": {
+                  "n4": {
+                    "n5": {
+                      "n6": {
+                        "n7": {
+                          "n8": {
+                            "n9": {
+                              "n10": {
+                                "n11": {
+                                  "n12": {
+                                    "n13": {
+                                      "n14": {
+                                        "n15": {
+                                          "n16": {
+                                            "n17": {
+                                              "n18": {
+                                                "n19": {
+                                                  "n20": {
+                                                    "n21": {
+                                                      "n22": {
+                                                        "n23": {
+                                                          "n24": {
+                                                            "n25": {
+                                                              "n26": {
+                                                                "n27": {
+                                                                  "n28": {
+                                                                    "n29": {
+                                                                      "n30": {
+                                                                        "n31": {
+                                                                          "n32": {
+                                                                            "n33": {
+                                                                              "n34": {
+                                                                                "n35": {
+                                                                                  "n36": {
+                                                                                    "n37": {
+                                                                                      "n38": {
+                                                                                        "n39": {
+                                                                                          "n40": {
+                                                                                            "n41": {
+                                                                                              "n42": {
+                                                                                                "n43": {
+                                                                                                  "n44": {
+                                                                                                    "n45": {
+                                                                                                      "n46": {
+                                                                                                        "n47": {
+                                                                                                          "n48": {
+                                                                                                            "n49": {
+                                                                                                              "marker": "deep-ext-50"
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "The nesting is 50 levels of {\"nNN\": {...}} ending in {\"marker\":\"deep-ext-50\"}, well under packages/core/raw-json.js DEFAULT_LIMITS.maxDepth (512) and under every recursion path Core actually walks (none of which descend into ext at all).",
+    "This is a robustness/no-crash assertion, mirroring the existing encoding-large-ext-string.json case for a large (wide) ext value rather than a deep one."
+  ]
+}

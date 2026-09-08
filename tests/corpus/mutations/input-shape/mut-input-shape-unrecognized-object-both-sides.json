@@ -1,0 +1,65 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-input-shape-unrecognized-object-both-sides",
+  "title": "An object matching neither BidRequest nor BidResponse shape on either side is honestly unrecognized",
+  "scenario": "pair",
+  "tags": ["mutation", "input-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "input-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "patch": {
+    "replaceRequest": {
+      "note": "neither a BidRequest nor a BidResponse",
+      "marker": "unrecognized-request-side"
+    },
+    "replaceResponse": {
+      "note": "neither a BidRequest nor a BidResponse",
+      "marker": "unrecognized-response-side"
+    }
+  },
+  "expect": {
+    "request": {
+      "type": "unknown",
+      "status": "errors",
+      "must": [{ "id": "payload.unknown_type", "level": "error", "path": "" }]
+    },
+    "response": {
+      "type": "unknown",
+      "status": "errors",
+      "must": [{ "id": "payload.unknown_type", "level": "error", "path": "" }]
+    },
+    "crosscheck": {
+      "must": [{ "id": "crosscheck.no_request", "path": "req", "level": "crit" }],
+      "mustNotPrefix": ["crosscheck.bid."]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "OpenRTB 2.6 §3.2.1 defines BidRequest as an object carrying at minimum `id` and a non-empty `imp[]`; §4.2.1 defines BidResponse as an object carrying at minimum `id` and either `seatbid[]` or `nbr`. A plain object with unrelated keys satisfies neither shape and is not a documented vendor dialect shape either, so both sides must be reported as unrecognized, not silently accepted as one or the other.",
+    "detectType() checks `imp[]`, `seatbid[]`, the 3.0 envelope, the vendor-feed heuristics and the malformed-payload site/app/device and id+cur/bidid/nbr heuristics in order; an object with neither `id` nor any of those signals matches none of them, so both sides fall through to `payload.unknown_type` rather than being misclassified as one or the other.",
+    "Crosscheck is asked to compare two objects that are neither a valid request nor a valid response; it must refuse with `crosscheck.no_request` rather than inventing a per-bid verdict against an empty seatbid or an empty imp list.",
+    "A literal `{}` on both sides was considered instead, but the real HTTP contract (modules/analyze/handler.js, `hasReq`/`hasRes` computed as `Object.keys(x).length > 0`) treats `{}` as indistinguishable from 'nothing submitted' and returns a deliberate, documented 400 `empty_payload` (the in-code comment reads: 'Empty payload is now an explicit 400 instead of a synthetic unknown_type finding masquerading as a real validation error') — a sensible product decision, not a defect, but one that would prevent this case from ever exercising Core's own `payload.unknown_type` path at the HTTP layer. A small non-empty object that still matches no recognized shape exercises the same Core behavior while keeping `hasReq`/`hasRes` true, so the 200 pipeline (and the crosscheck refusal) is what actually runs end to end."
+  ]
+}

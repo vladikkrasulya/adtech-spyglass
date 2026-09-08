@@ -1,0 +1,182 @@
+{
+  "kind": "pair",
+  "id": "native-x-video-vast-asset",
+  "title": "Content-context native card with a video sub-asset carrying inline VAST",
+  "format": "native",
+  "protocol": "ortb-2.6",
+  "context": "inapp",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.6", "native-video-asset"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB Native 1.2 §6.2 — Content Context, Video Response",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-2",
+      "version": "dd45d0733d96710981541ea213f4452952f41c40",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied — only the field composition (a video sub-asset alongside title/icon/main/sponsor/desc) is adapted from the source example.",
+      "The vasttag payload is an original minimal, well-formed VAST 3.0 Inline document, not copied from any source.",
+      "Corrected the source example's plcmttype:11 to plcmttype:2, as required by the actual §7.3 enumeration (max defined value 4); the example contains a stale/invalid value — same class of correction as bn-native-25-social-wrapped's §6.1 fix.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "adapted-public-example"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "native-x-video-vast-asset",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "native-slot",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "native": {
+          "ver": "1.2",
+          "request": "{\"ver\":\"1.2\",\"context\":1,\"contextsubtype\":10,\"plcmttype\":2,\"assets\":[{\"id\":81,\"video\":{\"linearity\":1,\"minduration\":15,\"maxduration\":30,\"protocols\":[2,3],\"mimes\":[\"video/mp4\"]}},{\"id\":82,\"required\":1,\"title\":{\"len\":140}},{\"id\":83,\"required\":0,\"img\":{\"type\":3,\"wmin\":836,\"hmin\":627,\"mimes\":[\"image/svg+xml\"]}},{\"id\":84,\"required\":1,\"img\":{\"type\":1,\"wmin\":50,\"hmin\":50,\"mimes\":[\"image/svg+xml\"]}},{\"id\":85,\"required\":1,\"data\":{\"type\":1,\"len\":25}},{\"id\":86,\"required\":1,\"data\":{\"type\":2,\"len\":140}}]}"
+        },
+        "rwdd": 0
+      }
+    ],
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 4,
+      "language": "en",
+      "ip": "192.0.2.11",
+      "os": "Linux",
+      "osv": "6.1"
+    },
+    "app": {
+      "id": "synthetic-app",
+      "name": "Fixture Reader",
+      "bundle": "test.example.fixture.reader",
+      "domain": "publisher.example.test",
+      "publisher": {
+        "id": "synthetic-publisher"
+      }
+    }
+  },
+  "response": {
+    "id": "native-x-video-vast-asset",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "native-x-video-vast-asset-bid",
+            "impid": "native-slot",
+            "price": 1.25,
+            "adm": "{\"native\":{\"ver\":\"1.2\",\"assets\":[{\"id\":82,\"title\":{\"text\":\"Watch a two minute tour of the quiet workshop\"}},{\"id\":81,\"video\":{\"vasttag\":\"<VAST version=\\\"3.0\\\"><Ad id=\\\"native-x-video-vast-asset-ad\\\"><InLine><AdSystem>FixtureAdSystem</AdSystem><AdTitle>Fixture Workshop Tour</AdTitle><Impression><![CDATA[https://track.example.test/imp]]></Impression><Creatives><Creative><Linear><Duration>00:00:20</Duration><MediaFiles><MediaFile delivery=\\\"progressive\\\" type=\\\"video/mp4\\\" width=\\\"640\\\" height=\\\"360\\\"><![CDATA[https://cdn.example.test/video/native-x-video-vast-asset.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>\"}},{\"id\":83,\"img\":{\"url\":\"https://assets.example.test/native/native-x-video-vast-asset/83-900x627.svg\",\"w\":900,\"h\":627}},{\"id\":84,\"img\":{\"url\":\"https://assets.example.test/native/native-x-video-vast-asset/84-64x64.svg\",\"w\":64,\"h\":64}},{\"id\":86,\"data\":{\"value\":\"A short original tour of a quiet, well-organized workshop.\"}},{\"id\":85,\"data\":{\"value\":\"Fixture Workshop\"}}],\"link\":{\"url\":\"https://advertiser.example.test/offer/native-x-video-vast-asset\"}}}",
+            "adomain": ["advertiser.example.test"],
+            "crid": "native-x-video-vast-asset-bid-creative",
+            "mtype": 4
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "IAB Native 1.2 §4.5/§5.6 Video (Request/Response): a video sub-asset carries VAST markup in `vasttag`. Asset id 81 is requested as a `video` kind and returned as a `video` kind — nativeAssetKind matches, so no kind-mismatch finding is expected.",
+    "crosscheck.js's nativeAssetFitness has no video-specific fitness rule (no duration/mimes/VAST-well-formedness check against a native video sub-asset) — this is a documented absent capability (crosscheck map §6/§8 item 9), not asserted here as a defect because the spec does not mandate a specific finding id for it; the well-formed vasttag is simply accepted as present.",
+    "The top-level bid.adm is the native JSON envelope, not VAST XML itself — isVastShape(bid.adm) is false, so no rules-vast.js findings are expected on this response at all; the VAST document is opaque payload nested inside the native asset string.",
+    "renderNativeToHtml (public/ortbtools.app.js:3163) only inspects title/img/data sub-assets — a video sub-asset contributes nothing to the rendered synthetic card. Documented via expect.preview.capabilityGap, not asserted as a knownGap (no spec-mandated finding is missing; this is a rendering completeness note).",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser for this case.",
+    "Do not infer rendering from analysis.status or iframe existence alone.",
+    "HTTPS Native image URLs use reserved .test domains and are not registered in tests/corpus/assets/manifest.json (assetRefs is empty) — the browser's img-src CSP blocks any remote fetch regardless of interceptor/manifest registration, so no stored fixture is required for this pair's blocked/partial assertions; do not permit live DNS/HTTP traffic.",
+    "Current production preview CSP blocks remote Native images. Record card-text rendering and image blocking separately; intercepting a request does not bypass CSP. Do not claim fully rendered images if naturalWidth remains zero.",
+    "Inspect intended click target without following it."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "native-x-video-vast-asset"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.native_asset_kind"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "Watch a two minute tour of the quiet workshop",
+      "assets": {
+        "imgTotal": 2,
+        "imgLoaded": 0
+      },
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "Images remain blocked in the initial sealed preview; the video sub-asset's VAST document is not surfaced by the synthetic native card renderer at all (title/icon/main image/text only)."
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": ["inapp"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

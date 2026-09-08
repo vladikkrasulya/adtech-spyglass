@@ -1,0 +1,89 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "field-shape-regs-coppa-invalid",
+  "title": "regs.coppa outside 0/1 is not a boolean flag the spec defines",
+  "scenario": "pair",
+  "tags": ["mutation", "field-shape"],
+  "base": "bn-banner-25-fixed",
+  "category": "field-shape",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectregs",
+  "patch": {
+    "request": [
+      {
+        "op": "add",
+        "path": "/regs",
+        "value": {
+          "coppa": 2
+        }
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "mustIssueAt": ["regs.coppa"]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-197",
+    "layers": ["core", "http", "browser"],
+    "note": "OpenRTB 2.6 §3.2.3 Regs.coppa is integer 0 or 1 (\"Flag indicating if this request is subject to the COPPA regulations\"). rules-request.js only inspects regs.coppa when it is exactly === 1 (to cross-check PII fields); any other non-0/1 value produces no finding at all.",
+    "matches": {
+      "core": ["^request:\\ missing\\ issue\\ at\\ regs\\.coppa$"],
+      "http": ["^request:\\ missing\\ issue\\ at\\ regs\\.coppa$"],
+      "browser": ["^browser\\.request:\\ missing\\ issue\\ at\\ regs\\.coppa$"]
+    }
+  },
+  "specNotes": [
+    "packages/core/crosscheck.js never reads regs.coppa, so this is a request-validation-only gap; the crosscheck and response findings are identical to the unmodified base pair.",
+    "Browser measured on 2026-09-08 in run ortbtools-audit-9fSncA; only the exact observed product deviations are admitted. Normative finding and successful-analysis assertions are retained."
+  ]
+}

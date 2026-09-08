@@ -1,0 +1,100 @@
+{
+  "kind": "pair",
+  "id": "pop-x-feed-linkfeed-get",
+  "title": "url-linkfeed GET request decodes cleanly, response is result.link array",
+  "format": "pop",
+  "protocol": "url-request",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["core-mechanism", "url-linkfeed", "decodable", "link-feed"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools url-linkfeed URL-request decoder contract (packages/core/decoders/request/url-linkfeed/index.js) and the paired Link-Feed response validator (packages/core/rules-feed.js validateLinkFeed) — the product's own documented, host-agnostic GET request/response shape (path /link, format=json+feed+auth), not a named vendor's public documentation page",
+      "url": "packages/core/decoders/request/url-linkfeed/index.js",
+      "version": "repo HEAD at session start, commit a61fc25",
+      "license": "Internal product code (ortbtools); no third-party material copied. MIT for the original fixture values.",
+      "notes": "The decoder is deliberately host-agnostic (recognized by path+params, never by hostname) per the decoder registry's own stated policy; the exact field list documented here traces to an in-repo operational shape (CHANGELOG.md records the field list as derived from real partner-integration samples, not a public vendor doc page) and is cited here as the product's own contract, not as a public vendor source."
+    },
+    "modifications": [
+      "All ids, tokens, prices, IPs and destination URLs independently authored.",
+      "feed.example.test is a reserved .test host; device.ip uses TEST-NET 192.0.2.44; feed/auth tokens and subid are clearly synthetic fixture strings."
+    ],
+    "sanitized": "No real visitor, publisher or subscriber data. IP 192.0.2.44 is TEST-NET-1; feed/auth/subid values are synthetic-fixture strings; the host is a reserved .test name.",
+    "notes": "synthesized-from-product-code-contract"
+  },
+  "reference": {
+    "wireProtocol": "url-linkfeed",
+    "vendorDialect": "ext-rtb",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "vendor-request-response",
+      "note": "A GET/JSON feed pair, not an oRTB auction — the URL request decodes to a canonical GET request and the JSON response is the documented result.link wire shape for that decoder; crosscheck does not apply (string request, no oRTB seatbid pairing)."
+    },
+    "sourceIds": ["feeds:feeds-kadam-feed"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": "https://feed.example.test/link?format=json&feed=fixture-pop-feed&auth=fixture-auth-token&subid=synthetic-fixture-user&user_ip=192.0.2.44&ua=Mozilla%2F5.0+%28X11%3B+Linux+x86_64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F120.0.0.0+Safari%2F537.36&url=https%3A%2F%2Fpublisher.example.test%2Farticle&lang=en",
+  "response": {
+    "result": {
+      "link": [
+        {
+          "bid": 0.27,
+          "url": "https://advertiser.example.test/offers/pop-x-feed-linkfeed-get",
+          "seat": "fixture-seat-1"
+        }
+      ]
+    }
+  },
+  "specNotes": [
+    "packages/core/decoders/request/url-linkfeed/index.js requires exactly: path /link (case-insensitive, trailing-slash tolerant) and query params format=json AND feed AND auth present (no `query` param requirement, unlike the sibling search-feed decoder) — every required param is present here with a plausible value, so decode must succeed with canonical.format='pops' and zero request findings.",
+    "The decoded canonical request also maps optional params: device.ip from user_ip, device.ua from ua, device.language from lang, site.page from url, user.id from subid — all present here, none malformed, so request.url.* findings (insecure_http, ch_field_empty, etc.) must not fire.",
+    "The response shape `{result:{link:[{bid,url,seat}]}}` is the exact documented wire response for this decoder (packages/core/decoders/request/url-linkfeed/index.js file header, line 26-28) and validates via packages/core/rules-feed.js validateLinkFeed: url required (present), bid required numeric>0 (present, 0.27), seat recommended (present) — zero findings.",
+    "detectFormat's hasPopBidCollectionShape test (format-detect.js) tags FORMATS.POPS on both the decoded request (canonical.format='pops') and the result.link row shape (url+bid present) — both sides agree.",
+    "Preview: findAdm/findPushMaterial only recognize `adm`/`iurl` (oRTB shapes) or the push-material key set (cpc/price + click_url/link + a creative key); `result.link[].url` matches none of those, so the current preview shows the top-level empty state instead of the destination as inert text — see knownGap DEF-202, already recorded for the sibling pop-kadam-clickunder/pop-ppcmate/pop-adon3 cases and shared here for the same root cause.",
+    "Browser preview must not open a real popup or dispatch tracking."
+  ],
+  "notes": [
+    "This request decodes cleanly end to end (no no_decoder gap) — unlike the sibling PPCmate/Adon3/Kadam feed cases, which pair a documented vendor GET shape that this product's decoder registry does not (yet) recognize."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "info",
+      "type": "URL Request",
+      "status": "clean"
+    },
+    "response": {
+      "maxLevel": "info",
+      "type": "Link-Feed Response",
+      "status": "clean"
+    },
+    "crosscheck": { "empty": true },
+    "format": {
+      "formats": ["pops"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "url",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/offers/pop-x-feed-linkfeed-get",
+      "limitation": "documented response wrapper is not recognized by the preview's creative-lookup walk",
+      "capabilityGap": "no inert-destination preview for this wrapper shape"
+    },
+    "http": { "status": 200 }
+  },
+  "knownGap": {
+    "id": "DEF-202",
+    "layers": ["browser"],
+    "note": "Documented response creatives retain their wire wrappers; a visible card or inert destination should be available, or absence reported as an unsupported preview capability.",
+    "matches": {
+      "browser": [
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop-x-feed-linkfeed-get\"\\ absent$"
+      ]
+    }
+  }
+}

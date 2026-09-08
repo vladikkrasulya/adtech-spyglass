@@ -1,0 +1,121 @@
+{
+  "kind": "pair",
+  "id": "pop-exads-wrapper",
+  "title": "proprietary bid wrapper containing popunder url",
+  "format": "pop",
+  "protocol": "jsonfeed",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["public-reference", "vendor-valid", "exads", "exads-rtb-1.0"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "EXADS proprietary RTB 1.0 request contract",
+      "url": "https://docs.exads.com/docs/rtb-publishers/exads-rtb/bid-request/exads-rtb-publishers-request/",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, prices, timestamps, creative text and URLs independently authored.",
+      "Required visitor addresses use TEST-NET 192.0.2.44; required user IDs are clearly synthetic. No real subscriber data or feed credentials.",
+      "Media URLs use reserved .test hosts and require interception from fixtureAssets."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; user IDs/feed keys are synthetic-fixture strings; all executable URLs use reserved .test hostnames and require local interception.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "exads-rtb-1.0",
+    "vendorDialect": "exads",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "vendor-request-response",
+      "note": "Independently constructed offline pair preserving documented field names and carrier. Reserved endpoint replaces the vendor hostname; no live request or bid was made. Vendor zone/feed selection is fixture metadata where absent from body."
+    },
+    "sourceIds": ["feeds:feeds-exads-request", "feeds:feeds-exads-response"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "pop-exads-wrapper",
+    "ip": "192.0.2.44",
+    "language": "en",
+    "type": "popunder",
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "url": "https://publisher.example.test/article",
+    "user_id": "synthetic-fixture-user",
+    "sub": 700003,
+    "export": "json"
+  },
+  "response": {
+    "bid": {
+      "id": "pop-exads-wrapper",
+      "url": "https://advertiser.example.test/offers/pop-exads-wrapper",
+      "nUrl": "https://tracking.example.test/notice/pop-exads-wrapper",
+      "btype": 1,
+      "value": 0.42
+    }
+  },
+  "specNotes": [
+    "value with btype=1 is CPM in this EXADS contract. Do not interpret it as CPC.",
+    "Expose destination(s) as inert URL text. This response provides navigation, not embedded visual creative; do not count a preview of the URL as rendered landing-page creative.",
+    "Browser preview must not open real popups or dispatch tracking.",
+    "The documented vendor ad type must be identified in the merged format result. Public Core vocabulary uses pops for pop traffic. This is a vendor capability expectation, not an invented IAB extension."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "preview": {
+      "kind": "url",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/offers/pop-exads-wrapper",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "http": {
+      "status": 200
+    },
+    "format": {
+      "formats": ["pops"]
+    }
+  },
+  "knownGap": {
+    "id": "DEF-106",
+    "layers": ["core", "http", "browser"],
+    "note": "Documented proprietary EXADS contracts remain intact; the validator should identify them or explicitly explain the unsupported dialect. They are not OpenRTB bid pairs.",
+    "matches": {
+      "core": [
+        "^request:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$"
+      ],
+      "http": [
+        "^request:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^crosscheck:\\ expected\\ no\\ crosscheck\\ findings,\\ got\\ crosscheck\\.no_request\\[crit\\]@req$",
+        "^format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^browser\\.crosscheck:\\ expected\\ no\\ crosscheck\\ findings,\\ got\\ crosscheck\\.no_request\\[crit\\]@req$",
+        "^browser\\.format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop\\-exads\\-wrapper\"\\ absent$"
+      ]
+    }
+  }
+}

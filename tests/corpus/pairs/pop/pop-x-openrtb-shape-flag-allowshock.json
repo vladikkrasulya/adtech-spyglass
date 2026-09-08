@@ -1,0 +1,187 @@
+{
+  "kind": "pair",
+  "id": "pop-x-openrtb-shape-flag-allowshock",
+  "title": "shape-fingerprint flags ext.allowShock/allowMT (no adtype, no boolean pop key)",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["core-mechanism", "non-iab-formats", "shape-flag-hint", "window-open"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools Core pop-family shape-signal recognition contract (packages/core/non-iab-formats.js POP_SHAPE_FLAG_KEYS, mirrored in dialects/shape-fingerprint.js) — the product's own documented, in-repo mechanism for recognizing pop intent purely from vendor allow-flag presence, with no ext.adtype string and no boolean pop-named key at all",
+      "url": "packages/core/non-iab-formats.js",
+      "version": "repo HEAD at session start, commit a61fc25",
+      "license": "Internal product code (ortbtools); no third-party material copied. MIT for the original fixture values.",
+      "notes": "Distinct mechanism from both the adtype-string-hint and the boolean-flag-hint siblings: POP_SHAPE_FLAG_KEYS is a P1 shape signal — presence of any of allowMT/allowLayer/allowShock/viewOnClick/directLink with a permissive value (bool/0/1/'0'/'1'/'true'/'false') is itself the pop tell, independent of the key's own name meaning 'pop'."
+    },
+    "modifications": [
+      "All IDs, domains, prices and timestamps independently authored.",
+      "device.ip uses TEST-NET 192.0.2.44; user.id is a clearly synthetic string.",
+      "offers.example.test / tracking.example.test / publisher.example.test are reserved .test hosts; no live host, tracker or subscriber identifier."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; every identifier is a synthetic-fixture string; every URL uses a reserved .test hostname.",
+    "notes": "synthesized-from-product-code-contract"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "A genuine oRTB auction pair: the response bid references the offered impression, ids match, and the shape-flag hint is a Core-recognized, non-vendor-attributed extension convention, not a proprietary wire wrapper."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "pop-x-openrtb-shape-flag-allowshock",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "pop-x-openrtb-shape-flag-allowshock-imp",
+        "secure": 0,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "banner": {
+          "w": 1,
+          "h": 1
+        },
+        "ext": {
+          "allowShock": true,
+          "allowMT": false,
+          "fcap": 1
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "pop-x-openrtb-shape-flag-allowshock",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "pop-x-openrtb-shape-flag-allowshock-bid",
+            "impid": "pop-x-openrtb-shape-flag-allowshock-imp",
+            "price": 0.19,
+            "adm": "<script>window.open('https://offers.example.test/landing/pop-x-openrtb-shape-flag-allowshock','_blank');</script>",
+            "adomain": ["offers.example.test"],
+            "crid": "pop-x-openrtb-shape-flag-allowshock-creative",
+            "nurl": "https://tracking.example.test/notice/pop-x-openrtb-shape-flag-allowshock",
+            "ext": {
+              "allowShock": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "packages/core/non-iab-formats.js POP_SHAPE_FLAG_KEYS treats presence of allowMT/allowShock with a permissive value as pop intent even though neither key name contains 'pop'; scanExtForFormatHints iterates the flag-key list in declared order (allowMT before allowShock), so with both present the resulting imp.non_standard_format finding lands at the first-matched key's path (imp[0].ext.allowMT), deduplicated by format name — only one INFO finding for the whole imp, not one per flag key.",
+    "This is exactly the P1 shape-signal path the file's own header describes: 'Lets pop RULES detect onclick/popunder traffic that carries only these markers (e.g. imp.ext.allowShock) and no canonical hint.'",
+    "The response bid re-declares only ext.allowShock=true (not allowMT) — packages/core/rules/pop-response/index.js's per-bid gate only needs ONE recognized hint on that specific bid's own ext to run admLooksLikePop against its adm.",
+    "window.open(...) is the second of the three accepted pop adm shapes documented in packages/core/rules/pop-response/index.js's header comment.",
+    "packages/core/crosscheck.js's pop-landing rule must match the window.open destination host against bid.adomain regardless of which pop-hint mechanism tagged the bid — a different landing domain (offers.example.test) than the sibling cases exercises this independently of any single hardcoded host.",
+    "Browser preview must not open a real popup or dispatch tracking."
+  ],
+  "notes": [
+    "Plain `iab` dialect, deliberately not the `ext-rtb` vendor dialect used by the sibling EXADS/Kadam/PPCmate/Adon3 pop cases."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.allowMT",
+          "level": "info",
+          "params": {
+            "format": "pop"
+          }
+        }
+      ],
+      "mustNot": ["imp.format_required", "imp.banner.size_required", "request.device_required"]
+    },
+    "response": {
+      "maxLevel": "info",
+      "type": "oRTB BidResponse",
+      "status": "clean",
+      "mustNot": ["bid.pop.adm_not_redirect", "response.bid.payload_missing"]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.pop.adomain_landing_match",
+          "level": "ok",
+          "path": "seatbid[0].bid[0].adm"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.bid.pop.adomain_landing_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.id_mismatch",
+        "crosscheck.no_request",
+        "crosscheck.no_response"
+      ]
+    },
+    "format": {
+      "formats": ["banner", "pops"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "marker": "https://offers.example.test/landing/pop-x-openrtb-shape-flag-allowshock",
+      "limitation": "pop script has no visual body",
+      "capabilityGap": "no landing-page preview"
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "sandboxRefusals": ["popup"]
+    }
+  },
+  "knownGap": {
+    "id": "DEF-245",
+    "layers": ["browser"],
+    "note": "A script-shaped pop adm (window.open/location redirect) renders correctly as inert markup with nothing visible — kind and rendered state are measured correctly — but the destination text never appears on screen, so the browser layer's per-bid identity/marker check cannot confirm which creative loaded.",
+    "matches": {
+      "browser": [
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://offers\\.example\\.test/landing/pop-x-openrtb-shape-flag-allowshock\"\\ absent$"
+      ]
+    }
+  }
+}

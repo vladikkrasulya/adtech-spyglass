@@ -1,0 +1,98 @@
+{
+  "kind": "mutation",
+  "id": "mut-format-mismatch-banner-vast-adm",
+  "title": "Banner-only impression is filled with a VAST video document instead of markup",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["mutation", "format-mismatch"],
+  "base": "bn-banner-25-fixed",
+  "category": "format-mismatch",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbanner",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"><Ad id=\"mut-format-mismatch-banner-vast-adm\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><AdTitle>mut-format-mismatch-banner-vast-adm</AdTitle><Impression><![CDATA[https://track.example.test/mut-format-mismatch-banner-vast-adm/impression]]></Impression><Creatives><Creative id=\"mut-format-mismatch-banner-vast-adm-creative\"><Linear><Duration>00:00:30</Duration><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/mut-format-mismatch-banner-vast-adm/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/mut-format-mismatch-banner-vast-adm/complete]]></Tracking></TrackingEvents><MediaFiles><MediaFile id=\"mut-format-mismatch-banner-vast-adm\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"800\" width=\"640\" height=\"480\"><![CDATA[https://media.example.test/mut-format-mismatch-banner-vast-adm.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "expected.crosscheck.bid.banner_content_mismatch",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "warn"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.native_invalid_adm",
+          "path": "seatbid[0].bid[0].adm"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-194",
+    "layers": ["core", "http", "browser"],
+    "note": "Crosscheck has no content-type check for a banner or audio impression: the banner size block runs off imp.banner presence alone and never inspects whether bid.adm actually looks like markup, so a bid carrying a full VAST document into a banner-only slot still receives a plain size_match OK when its declared dimensions happen to coincide with the offered banner size, and nothing anywhere reports that the content itself cannot render as a banner.",
+    "matches": {
+      "core": [
+        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.banner_content_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[warn\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_match\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ \\[ok\\]\\ →\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
+      ],
+      "http": [
+        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.banner_content_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[warn\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_match\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ \\[ok\\]\\ →\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
+      ],
+      "browser": [
+        "^browser\\.crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.banner_content_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[warn\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_match\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ \\[ok\\]\\ →\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
+      ]
+    }
+  },
+  "specNotes": [
+    "OpenRTB 2.6 §3.2.6 Object:Banner / §4.3.3 Object:Bid — a bid answering a banner-only impression is expected to deliver banner markup; a VAST video document cannot be displayed as a banner and provides no playable video slot either, so it is not a valid fill for this impression under any reading.",
+    "video-web-25-inline-vast2 supplies the reused, independently-valid VAST 2.0 document — its own base pair passes VAST-internal validation cleanly, isolating this case to the banner/VAST content-type question rather than to unrelated VAST well-formedness findings."
+  ],
+  "notes": [
+    "Browser acceptance 2026-09-08 independently reproduced the existing semantic/preview deviation through the actual Analyze action. Only the reviewed failure strings are admitted on the browser layer; all declared assertions remain unchanged."
+  ]
+}

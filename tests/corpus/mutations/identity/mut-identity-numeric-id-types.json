@@ -1,0 +1,109 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "mut-identity-numeric-id-types",
+  "title": "JSON numbers where the spec requires a string identifier are type errors",
+  "scenario": "pair",
+  "tags": ["mutation", "identity"],
+  "base": "bn-banner-25-fixed",
+  "category": "identity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "patch": {
+    "request": [
+      {
+        "op": "replace",
+        "path": "/id",
+        "value": 123
+      }
+    ],
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/impid",
+        "value": 1
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "request.id_required",
+          "path": "id",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "response.bid.impid_required",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "error"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_mismatch",
+          "path": "id",
+          "level": "crit",
+          "params": {
+            "reqId": 123,
+            "resId": "bn-banner-25-fixed"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_unresolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "crit",
+          "params": {
+            "impid": 1
+          }
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.id_match"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved"
+        },
+        {
+          "id": "crosscheck.bid.above_floor"
+        },
+        {
+          "id": "crosscheck.bid.size_match"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "OpenRTB 2.6 §3.2.1 BidRequest.id and §4.2.3 Bid.impid are both typed `string`. Core's isStr() rejects a JSON number for either (typeof !== 'string'), so both surface as *_required type errors even though a value is present. Separately, request.id (number 123) and response.id (string, unchanged) are never coerced for the id_match/id_mismatch comparison (strict ===), so the auction id is also flagged mismatched. The fixture's imp.id is the non-numeric string \"slot-1\", so bid.impid: 1 does not coincidentally string-match it; crosscheck.js's own numeric-vs-string tolerance for impid RESOLUTION (String(1) === String('1')) is a separate, deliberately lenient mechanism not exercised by this case — see contracts/corpus-oracle.md and packages/core/crosscheck.js impid lookup."
+  ]
+}

@@ -20,7 +20,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage",
-    "test:browser": "node --test --test-concurrency=1 $(grep -rl puppeteer tests/*.test.js)"
+    "test:browser": "node --test --test-concurrency=1 $(grep -rl puppeteer tests/*.test.js)",
+    "test:corpus": "node scripts/run-corpus.js"
   },
   "dependencies": {
     "@ortbtools/core": "*",

@@ -1,0 +1,1119 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "multiplicity-forty-imps-forty-bids",
+  "title": "Forty offered impressions each filled by their own bid resolve cleanly",
+  "scenario": "pair",
+  "tags": ["mutation", "multiplicity", "scale"],
+  "base": "bn-banner-26-multiimp-multiseat",
+  "category": "multiplicity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectseatbid",
+  "patch": {
+    "replaceRequest": {
+      "id": "bn-banner-26-multiimp-multiseat",
+      "test": 1,
+      "at": 2,
+      "tmax": 800,
+      "cur": ["USD"],
+      "imp": [
+        {
+          "id": "slot1",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          },
+          "rwdd": 0
+        },
+        {
+          "id": "slot2",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot3",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot4",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot5",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot6",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot7",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot8",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot9",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot10",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot11",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot12",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot13",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot14",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot15",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot16",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot17",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot18",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot19",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot20",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot21",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot22",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot23",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot24",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot25",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot26",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot27",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot28",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot29",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot30",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot31",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot32",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot33",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot34",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot35",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot36",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot37",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot38",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot39",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        },
+        {
+          "id": "slot40",
+          "secure": 1,
+          "bidfloor": 0.1,
+          "bidfloorcur": "USD",
+          "banner": {
+            "format": [
+              {
+                "w": 300,
+                "h": 250
+              }
+            ]
+          }
+        }
+      ],
+      "device": {
+        "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+        "devicetype": 2,
+        "language": "en",
+        "ip": "192.0.2.11",
+        "os": "Linux",
+        "osv": "6.1"
+      },
+      "site": {
+        "id": "synthetic-site",
+        "domain": "publisher.example.test",
+        "page": "https://publisher.example.test/audit",
+        "publisher": {
+          "id": "synthetic-publisher"
+        }
+      }
+    },
+    "replaceResponse": {
+      "id": "bn-banner-26-multiimp-multiseat",
+      "cur": "USD",
+      "seatbid": [
+        {
+          "seat": "synthetic-seat-a",
+          "bid": [
+            {
+              "id": "bid1",
+              "impid": "slot1",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 1 CREATIVE\" role=\"img\" aria-label=\"SLOT 1 CREATIVE\">SLOT 1 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid1-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid2",
+              "impid": "slot2",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 2 CREATIVE\" role=\"img\" aria-label=\"SLOT 2 CREATIVE\">SLOT 2 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid2-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid3",
+              "impid": "slot3",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 3 CREATIVE\" role=\"img\" aria-label=\"SLOT 3 CREATIVE\">SLOT 3 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid3-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid4",
+              "impid": "slot4",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 4 CREATIVE\" role=\"img\" aria-label=\"SLOT 4 CREATIVE\">SLOT 4 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid4-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid5",
+              "impid": "slot5",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 5 CREATIVE\" role=\"img\" aria-label=\"SLOT 5 CREATIVE\">SLOT 5 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid5-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid6",
+              "impid": "slot6",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 6 CREATIVE\" role=\"img\" aria-label=\"SLOT 6 CREATIVE\">SLOT 6 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid6-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid7",
+              "impid": "slot7",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 7 CREATIVE\" role=\"img\" aria-label=\"SLOT 7 CREATIVE\">SLOT 7 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid7-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid8",
+              "impid": "slot8",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 8 CREATIVE\" role=\"img\" aria-label=\"SLOT 8 CREATIVE\">SLOT 8 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid8-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid9",
+              "impid": "slot9",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 9 CREATIVE\" role=\"img\" aria-label=\"SLOT 9 CREATIVE\">SLOT 9 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid9-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid10",
+              "impid": "slot10",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 10 CREATIVE\" role=\"img\" aria-label=\"SLOT 10 CREATIVE\">SLOT 10 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid10-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid11",
+              "impid": "slot11",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 11 CREATIVE\" role=\"img\" aria-label=\"SLOT 11 CREATIVE\">SLOT 11 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid11-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid12",
+              "impid": "slot12",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 12 CREATIVE\" role=\"img\" aria-label=\"SLOT 12 CREATIVE\">SLOT 12 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid12-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid13",
+              "impid": "slot13",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 13 CREATIVE\" role=\"img\" aria-label=\"SLOT 13 CREATIVE\">SLOT 13 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid13-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid14",
+              "impid": "slot14",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 14 CREATIVE\" role=\"img\" aria-label=\"SLOT 14 CREATIVE\">SLOT 14 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid14-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid15",
+              "impid": "slot15",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 15 CREATIVE\" role=\"img\" aria-label=\"SLOT 15 CREATIVE\">SLOT 15 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid15-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid16",
+              "impid": "slot16",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 16 CREATIVE\" role=\"img\" aria-label=\"SLOT 16 CREATIVE\">SLOT 16 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid16-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid17",
+              "impid": "slot17",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 17 CREATIVE\" role=\"img\" aria-label=\"SLOT 17 CREATIVE\">SLOT 17 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid17-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid18",
+              "impid": "slot18",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 18 CREATIVE\" role=\"img\" aria-label=\"SLOT 18 CREATIVE\">SLOT 18 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid18-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid19",
+              "impid": "slot19",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 19 CREATIVE\" role=\"img\" aria-label=\"SLOT 19 CREATIVE\">SLOT 19 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid19-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid20",
+              "impid": "slot20",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 20 CREATIVE\" role=\"img\" aria-label=\"SLOT 20 CREATIVE\">SLOT 20 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid20-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid21",
+              "impid": "slot21",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 21 CREATIVE\" role=\"img\" aria-label=\"SLOT 21 CREATIVE\">SLOT 21 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid21-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid22",
+              "impid": "slot22",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 22 CREATIVE\" role=\"img\" aria-label=\"SLOT 22 CREATIVE\">SLOT 22 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid22-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid23",
+              "impid": "slot23",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 23 CREATIVE\" role=\"img\" aria-label=\"SLOT 23 CREATIVE\">SLOT 23 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid23-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid24",
+              "impid": "slot24",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 24 CREATIVE\" role=\"img\" aria-label=\"SLOT 24 CREATIVE\">SLOT 24 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid24-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid25",
+              "impid": "slot25",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 25 CREATIVE\" role=\"img\" aria-label=\"SLOT 25 CREATIVE\">SLOT 25 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid25-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid26",
+              "impid": "slot26",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 26 CREATIVE\" role=\"img\" aria-label=\"SLOT 26 CREATIVE\">SLOT 26 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid26-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid27",
+              "impid": "slot27",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 27 CREATIVE\" role=\"img\" aria-label=\"SLOT 27 CREATIVE\">SLOT 27 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid27-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid28",
+              "impid": "slot28",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 28 CREATIVE\" role=\"img\" aria-label=\"SLOT 28 CREATIVE\">SLOT 28 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid28-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid29",
+              "impid": "slot29",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 29 CREATIVE\" role=\"img\" aria-label=\"SLOT 29 CREATIVE\">SLOT 29 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid29-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid30",
+              "impid": "slot30",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 30 CREATIVE\" role=\"img\" aria-label=\"SLOT 30 CREATIVE\">SLOT 30 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid30-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid31",
+              "impid": "slot31",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 31 CREATIVE\" role=\"img\" aria-label=\"SLOT 31 CREATIVE\">SLOT 31 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid31-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid32",
+              "impid": "slot32",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 32 CREATIVE\" role=\"img\" aria-label=\"SLOT 32 CREATIVE\">SLOT 32 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid32-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid33",
+              "impid": "slot33",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 33 CREATIVE\" role=\"img\" aria-label=\"SLOT 33 CREATIVE\">SLOT 33 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid33-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid34",
+              "impid": "slot34",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 34 CREATIVE\" role=\"img\" aria-label=\"SLOT 34 CREATIVE\">SLOT 34 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid34-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid35",
+              "impid": "slot35",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 35 CREATIVE\" role=\"img\" aria-label=\"SLOT 35 CREATIVE\">SLOT 35 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid35-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid36",
+              "impid": "slot36",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 36 CREATIVE\" role=\"img\" aria-label=\"SLOT 36 CREATIVE\">SLOT 36 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid36-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid37",
+              "impid": "slot37",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 37 CREATIVE\" role=\"img\" aria-label=\"SLOT 37 CREATIVE\">SLOT 37 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid37-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid38",
+              "impid": "slot38",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 38 CREATIVE\" role=\"img\" aria-label=\"SLOT 38 CREATIVE\">SLOT 38 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid38-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid39",
+              "impid": "slot39",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 39 CREATIVE\" role=\"img\" aria-label=\"SLOT 39 CREATIVE\">SLOT 39 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid39-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            },
+            {
+              "id": "bid40",
+              "impid": "slot40",
+              "price": 0.5,
+              "adm": "<!doctype html><html><body><div data-fixture=\"SLOT 40 CREATIVE\" role=\"img\" aria-label=\"SLOT 40 CREATIVE\">SLOT 40 CREATIVE · TEST AD</div></body></html>",
+              "adomain": ["advertiser.example.test"],
+              "crid": "bid40-creative",
+              "w": 300,
+              "h": 250,
+              "mtype": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.auction.summary",
+          "path": "auction",
+          "level": "ok",
+          "params": {
+            "totalBids": 40,
+            "impsFilled": 40,
+            "impsTotal": 40
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[39].impid",
+          "level": "ok",
+          "count": 1
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[39].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "Sanity/scale check: nothing in OpenRTB 2.6 caps imp[]/bid[] length; forty offered impressions each answered 1:1 by their own bid must produce forty ok verdicts and no crash, mirroring DEF-115's concern about array traversal but at ordinary (not malformed) shape."
+  ]
+}

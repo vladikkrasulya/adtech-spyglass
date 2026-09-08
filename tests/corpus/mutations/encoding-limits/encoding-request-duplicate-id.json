@@ -1,0 +1,64 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb25", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "encoding-request-duplicate-id",
+  "title": "Raw request bytes retain duplicate id evidence",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "specRef": "https://www.rfc-editor.org/rfc/rfc8259#section-4",
+  "patch": {
+    "rawRequest": "{\"id\":\"bn-banner-25-fixed\",\"id\":\"bn-banner-25-fixed\",\"test\":1,\"at\":2,\"tmax\":800,\"cur\":[\"USD\"],\"imp\":[{\"id\":\"slot-1\",\"secure\":1,\"bidfloor\":0.2,\"bidfloorcur\":\"USD\",\"banner\":{\"w\":300,\"h\":250,\"pos\":0}}],\"device\":{\"ua\":\"Mozilla/5.0 (Synthetic fixture; audit)\",\"devicetype\":2,\"language\":\"en\",\"ip\":\"192.0.2.11\",\"os\":\"Linux\",\"osv\":\"6.1\"},\"site\":{\"id\":\"synthetic-site\",\"domain\":\"publisher.example.test\",\"page\":\"https://publisher.example.test/audit\",\"publisher\":{\"id\":\"synthetic-publisher\"}}}"
+  },
+  "expect": {
+    "request": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "payload.duplicate_key",
+          "path": "id",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "RFC8259 names SHOULD be unique. The same value is repeated so the parsed object is unchanged; only raw bytes contain the ambiguity.",
+    "Duplicate consequential id/price must be surfaced even when JSON.parse retains a valid final value."
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "kind": "pair",
+  "id": "bn-native-25-app-install",
+  "title": "App context with icon, sponsored title, rating and downloads",
+  "format": "native",
+  "protocol": "ortb-2.5",
+  "context": "inapp",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.5"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB Native 1.2 — markup objects and social clickout example",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "version": "dd45d0733d96710981541ea213f4452952f41c40",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb25"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": ["asset-14a88e4a6375bc37"],
+  "request": {
+    "id": "bn-native-25-app-install",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "native-slot",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "native": {
+          "ver": "1.2",
+          "request": "{\"native\":{\"ver\":\"1.2\",\"context\":1,\"plcmttype\":1,\"assets\":[{\"id\":41,\"required\":1,\"title\":{\"len\":90}},{\"id\":42,\"required\":1,\"img\":{\"type\":1,\"w\":96,\"h\":96,\"mimes\":[\"image/svg+xml\"]}},{\"id\":43,\"required\":1,\"data\":{\"type\":3,\"len\":5}},{\"id\":44,\"required\":1,\"data\":{\"type\":5,\"len\":20}},{\"id\":45,\"required\":1,\"data\":{\"type\":12,\"len\":20}},{\"id\":46,\"required\":1,\"data\":{\"type\":1,\"len\":25}}]}}"
+        }
+      }
+    ],
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 4,
+      "language": "en",
+      "ip": "192.0.2.11",
+      "os": "Linux",
+      "osv": "6.1"
+    },
+    "app": {
+      "id": "synthetic-app",
+      "name": "Fixture Reader",
+      "bundle": "test.example.fixture.reader",
+      "domain": "publisher.example.test",
+      "publisher": {
+        "id": "synthetic-publisher"
+      }
+    }
+  },
+  "response": {
+    "id": "bn-native-25-app-install",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "bn-native-25-app-install-bid",
+            "impid": "native-slot",
+            "price": 1.25,
+            "adm": "{\"native\":{\"ver\":\"1.2\",\"assets\":[{\"id\":41,\"title\":{\"text\":\"A tiny notebook for everyday discoveries\"}},{\"id\":42,\"img\":{\"url\":\"https://assets.example.test/native/bn-native-25-app-install/42-96x96.svg\",\"w\":96,\"h\":96}},{\"id\":43,\"data\":{\"value\":\"5\"}},{\"id\":44,\"data\":{\"value\":\"100000\"}},{\"id\":45,\"data\":{\"value\":\"Explore the app\"}},{\"id\":46,\"data\":{\"value\":\"Fixture Notebook\"}}],\"link\":{\"url\":\"https://advertiser.example.test/offer/bn-native-25-app-install\"}}}",
+            "adomain": ["advertiser.example.test"],
+            "crid": "bn-native-25-app-install-bid-creative"
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "Native payloads are JSON strings at imp.native.request and bid.adm; Native version is 1.2.",
+    "Asset ids, requested types, required flags, text lengths and image dimensions match.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser.",
+    "Do not infer rendering from analysis.status or iframe existence alone.",
+    "Native title/body must be visible in the synthetic card; verify actual DOM text and nonzero element rectangles.",
+    "HTTPS Native image URLs are reserved fixture identifiers. Harness may fulfill them from fixtureAssets; do not permit live DNS/HTTP traffic.",
+    "Current production preview CSP blocks remote Native images. Record card-text rendering and image blocking separately; intercepting a request does not bypass CSP. Do not claim fully rendered images if naturalWidth remains zero.",
+    "Inspect intended click target without following it."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "bn-native-25-app-install"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A tiny notebook for everyday discoveries",
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "Images remain blocked in the initial sealed preview; request interception does not bypass CSP."
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": ["inapp"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

@@ -1,0 +1,163 @@
+{
+  "kind": "pair",
+  "id": "inpage-x-widget-inapp",
+  "title": "In-app in-page push bid via bid.ext body/image_url/href aliases on a widget/zone-only imp",
+  "format": "inpage",
+  "protocol": "ortb-2.5",
+  "context": "inapp",
+  "dialect": "inpage-push",
+  "scenario": "pair",
+  "tags": ["synthetic", "inpage-push-dialect", "widget-zone", "inapp", "alias-fields"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools In-Page Push dialect contract — in-app context",
+      "path": "packages/core/dialects/inpage-push.js",
+      "version": "repo HEAD a61fc25 (2026-09-07)",
+      "license": "MIT (ortbtools)",
+      "notes": "Exercises the same widget/zone in-page-push carrier inside an App request object instead of a Site object, and covers the remaining body/image_url/href aliases not used by the web-context sibling cases."
+    },
+    "modifications": [
+      "Wholly original OpenRTB envelope, imp, app, device and bid fields.",
+      "IP uses TEST-NET-1 192.0.2.44; user/app identifiers are clearly synthetic fixture strings; asset/click/tracking URLs use reserved .test hostnames."
+    ],
+    "sanitized": "No real visitor, publisher or advertiser data. IP 192.0.2.44 is TEST-NET-1; user.id/app.bundle are synthetic-fixture strings; every asset/click/tracking URL uses a reserved .test hostname."
+  },
+  "request": {
+    "id": "inpage-x-widget-inapp",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "inpage-x-widget-inapp-imp",
+        "secure": 1,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "ext": {
+          "widget_id": "widget-12",
+          "zone_id": "zone-3"
+        }
+      }
+    ],
+    "app": {
+      "id": "fixture-app",
+      "name": "Fixture Reader App",
+      "bundle": "test.publisher.inpageapp"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "inpage-x-widget-inapp",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "inpage-x-widget-inapp-bid",
+            "impid": "inpage-x-widget-inapp-imp",
+            "price": 0.42,
+            "adomain": ["advertiser.example.test"],
+            "crid": "inpage-x-widget-inapp-creative",
+            "ext": {
+              "title": "A rooftop garden after rain",
+              "body": "Read what three reviewers said about the new app tab.",
+              "image_url": "https://assets.example.test/feeds/inpage-x-widget-inapp-hero-492x328.png",
+              "icon": "https://assets.example.test/feeds/inpage-x-widget-inapp-icon-192x192.png",
+              "href": "https://advertiser.example.test/offers/inpage-x-widget-inapp"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "packages/core/dialects/inpage-push.js pickAlias() covers description via description|body|desc, image via image|image_url|picture and click via url|click|click_url|href|link; this case uses body/image_url/href to cover the remaining untested aliases from those lists (canonical title and icon are reused here).",
+    "packages/core/format-detect.js: context detection (app→INAPP) is independent of the format axis; the same missing FORMATS.INPAGE tag for OpenRTB-shaped in-page-push bids applies under App exactly as under Site.",
+    "OpenRTB object-model requirements require at least one Banner, Video, Audio or Native object. A widget/zone extension alone does not satisfy that baseline requirement; imp.format_required is an expected error under both the IAB baseline and the current response-focused inpage-push dialect. The vendor format-tag/preview gap is separate from this correct diagnostic."
+  ],
+  "notes": [
+    "Uses a minimal App object (id/name/bundle) per the pattern already established in the audio in-app corpus, with device.ua/ip supplied so this case does not additionally exercise the unrelated optional-Device-attributes gap (DEF-100)."
+  ],
+  "expect": {
+    "request": {
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.format_required",
+          "path": "imp[0]",
+          "level": "error"
+        }
+      ]
+    },
+    "response": {
+      "type": "oRTB BidResponse",
+      "maxLevel": "info",
+      "mustNot": [
+        {
+          "id": "response.bid.payload_missing"
+        }
+      ],
+      "mustNotPrefix": ["inpage-push."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "inpage-x-widget-inapp"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.0010"
+          }
+        }
+      ],
+      "mustNot": ["crosscheck.id_mismatch", "crosscheck.bid.impid_unresolved"]
+    },
+    "format": {
+      "formats": ["inpage"]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "marker": "A rooftop garden after rain",
+      "limitation": "No renderable creative field (adm/native/iurl) is present in the response; the winning bid's content lives entirely in bid.ext, which the preview pipeline never reads.",
+      "capabilityGap": "The in-page push dialect resolves the body/image_url/href aliases for validation, but the Inspector's creative preview has no renderer for any bid.ext card, in-app or web."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-180",
+    "layers": ["core", "http", "browser"],
+    "note": "The standard OpenRTB media-object requirement is correctly reported and is not this gap. The remaining expectation concerns recognizing the project-documented in-page vendor signal in an OpenRTB envelope and exposing bid.ext creative content where applicable.",
+    "matches": {
+      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
+      "browser": [
+        "^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ rooftop\\ garden\\ after\\ rain\"\\ absent$"
+      ]
+    }
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "kind": "pair",
+  "scenario": "pair",
+  "dialect": "iab",
+  "assetRefs": [],
+  "id": "banner-x-js-tag-docwrite",
+  "title": "Script-tag adm that document.writes static markup; inert, no network call",
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "tags": ["synthetic", "valid", "iab", "openrtb-2.6", "js-tag"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.6 — Bid.adm (\"ad markup\"); document.write ad-tag pattern is a common real-world wire shape, not a spec object",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "The document.write pattern itself is a widely-observed ad-tag idiom; the specific script and markup here are original, invented for this corpus."
+    },
+    "modifications": [
+      "All auction, bid, creative, site, app and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All text and SVG artwork are original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device.",
+      "adm is a <script> element that calls document.write with a literal markup string; no external script src, no fetch/XHR, no navigation — deliberately inert so this case isolates the classify→execute path from any network concern."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "banner-x-js-tag-docwrite",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "slot-1",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "rwdd": 0,
+        "banner": {
+          "w": 300,
+          "h": 250,
+          "pos": 0
+        }
+      }
+    ],
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 2,
+      "language": "en",
+      "ip": "192.0.2.11",
+      "os": "Linux",
+      "osv": "6.1"
+    },
+    "site": {
+      "id": "synthetic-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/audit",
+      "publisher": {
+        "id": "synthetic-publisher"
+      }
+    }
+  },
+  "response": {
+    "id": "banner-x-js-tag-docwrite",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "bid-jstag",
+            "impid": "slot-1",
+            "price": 1.25,
+            "adm": "<script>document.write('<div class=\"ad\" style=\"position:relative;width:300px;height:250px;overflow:hidden;font-family:Arial,sans-serif;background:#2f6d4f\"><span class=\"label\" style=\"position:absolute;top:8px;left:8px;background:#fff;color:#173d29;padding:4px 7px;border-radius:4px;font-size:12px\">JS TAG DOCWRITE · TEST AD</span></div>');</script>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "bid-jstag-creative",
+            "w": 300,
+            "h": 250,
+            "mtype": 1
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "The adm is markup by the classifier's own cheapest-honest-test (creative-classify.js MARKUP_SHAPE: an opening angle bracket) — a <script> element is markup, and the only kind that reaches an iframe srcdoc is markup, so this reaches the frame like any banner HTML.",
+    "The sandboxed frame is script-src 'unsafe-inline' with no external src allowed; this creative never attempts a network call, so no CSP refusal and no #creativeBlocked ledger entry is expected.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser.",
+    "Assert the fixture label text is visible in the DOM after document.write runs (not merely present in the raw adm string before script execution)."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "version": "2.6"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "banner-x-js-tag-docwrite"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "JS TAG DOCWRITE · TEST AD",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

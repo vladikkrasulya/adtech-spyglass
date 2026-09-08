@@ -1,0 +1,185 @@
+{
+  "kind": "pair",
+  "id": "pop-x-nurl-only-response",
+  "title": "pop-tagged bid carries only nurl, no adm at all — a spec-complete bid",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["core-mechanism", "non-iab-formats", "nurl-only", "false-positive"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.6 §4.3.3 Object:Bid (adm OPTIONAL, nurl the win-notice URL) plus ortbtools' own baseline response completeness check (packages/core/rules-response.js response.bid.payload_missing, which already accepts nurl alone) — the payload is a plain oRTB pop-tagged bid deliberately shipping only the win-notice URL",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#333-object-bid",
+      "version": "repo HEAD at session start, commit a61fc25; IAB 2.6 §4.3.3 (Object:Bid table)",
+      "license": "Internal product code (ortbtools) plus IAB OpenRTB spec citation; no third-party material copied. MIT for the original fixture values.",
+      "notes": "Constructed to isolate the pop-response plugin's independent, stricter demand from Core's own baseline completeness rule."
+    },
+    "modifications": [
+      "All IDs, domains, prices and timestamps independently authored.",
+      "device.ip uses TEST-NET 192.0.2.44; user.id is a clearly synthetic string.",
+      "advertiser.example.test / tracking.example.test / publisher.example.test are reserved .test hosts; no live host, tracker or subscriber identifier."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; every identifier is a synthetic-fixture string; every URL uses a reserved .test hostname.",
+    "notes": "synthesized-from-spec-and-product-code-contract"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "A genuine oRTB auction pair: the response bid references the offered impression and ids match. The bid deliberately carries no adm, only nurl, to test the win-notice-only completeness path."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "pop-x-nurl-only-response",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "pop-x-nurl-only-response-imp",
+        "secure": 0,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "banner": {
+          "w": 1,
+          "h": 1
+        },
+        "ext": {
+          "adtype": "popunder",
+          "fcap": 4
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": {
+      "id": "synthetic-fixture-user"
+    }
+  },
+  "response": {
+    "id": "pop-x-nurl-only-response",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "pop-x-nurl-only-response-bid",
+            "impid": "pop-x-nurl-only-response-imp",
+            "price": 0.11,
+            "adomain": ["advertiser.example.test"],
+            "crid": "pop-x-nurl-only-response-creative",
+            "nurl": "https://tracking.example.test/win/pop-x-nurl-only-response",
+            "ext": {
+              "adtype": "popunder"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "IAB OpenRTB 2.6 §4.3.3 Object:Bid: `adm` is marked OPTIONAL, and `nurl` (win notice URL, called by the exchange on win) is a documented, independent completeness signal. packages/core/rules-response.js's own baseline check (response.bid.payload_missing) already treats nurl alone as complete — it only WARNs when BOTH adm and nurl are absent.",
+    "packages/core/rules/pop-response/index.js's header comment documents exactly three accepted pop adm shapes (bare URL / window.open script / location redirect) and says nothing about nurl as an alternative — its admLooksLikePop check runs on `bid.adm` alone and treats an absent adm the same as an unrecognized adm, regardless of nurl. This is a narrower, INTERNALLY INCONSISTENT contract than Core's own baseline response rule for the exact same bid shape.",
+    "A bid this validator itself would accept as complete when the SAME imp had no pop hint (nurl alone, no adm) becomes an ERROR purely because the imp/bid also carries a pop-family ext hint — the pop-response plugin does not special-case a genuinely nurl-only bid.",
+    "docs/cu-pops-audit-2026-05-12.md §2/§3 records this exact class of gap as still open ('No validation of bid.nurl for pop win tracking') as of the historical snapshot; this case reproduces it directly against current code.",
+    "Preview: nurl/burl are never read by the creative preview path (public/ortbtools.app.js findAdm explicitly skips them) — a nurl-only bid correctly renders the top-level empty state; that part of the contract is not in dispute, only the response-side ERROR is."
+  ],
+  "notes": [
+    "Plain `iab` dialect. This case's expectation is deliberately grounded in the spec + Core's own baseline rule, not in the pop-response plugin's stricter behavior — see knownGap DEF-170."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.adtype",
+          "level": "info",
+          "params": {
+            "format": "popunder"
+          }
+        }
+      ],
+      "mustNot": ["imp.format_required", "imp.banner.size_required", "request.device_required"]
+    },
+    "response": {
+      "maxLevel": "info",
+      "type": "oRTB BidResponse",
+      "mustNot": ["bid.pop.adm_not_redirect", "response.bid.payload_missing"]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.bid.pop.adomain_landing_match",
+        "crosscheck.bid.pop.adomain_landing_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.id_mismatch",
+        "crosscheck.no_request",
+        "crosscheck.no_response"
+      ]
+    },
+    "format": {
+      "formats": ["banner", "pops"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "empty",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "limitation": "nurl-only bid has no adm for the preview to render",
+      "capabilityGap": null
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-170",
+    "layers": ["core", "http", "browser"],
+    "note": "packages/core/rules/pop-response/index.js requires bid.adm alone to look like a redirect and does not accept a nurl-only bid, even though Core's own baseline response.bid.payload_missing check (and IAB OpenRTB 2.6 §4.3.3) already treats adm-or-nurl as complete. A pop-tagged bid shipping only nurl is rejected with bid.pop.adm_not_redirect ERROR.",
+    "matches": {
+      "core": [
+        "^response:\\ findings\\ above\\ info:\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
+        "^response:\\ forbidden\\ finding\\ present\\ bid\\.pop\\.adm_not_redirect\\ →\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ],
+      "http": [
+        "^response:\\ findings\\ above\\ info:\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
+        "^response:\\ forbidden\\ finding\\ present\\ bid\\.pop\\.adm_not_redirect\\ →\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ],
+      "browser": [
+        "^browser\\.row:\\ forbidden\\ response\\ bid\\.pop\\.adm_not_redirect$",
+        "^browser\\.response:\\ findings\\ above\\ info:\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
+        "^browser\\.response:\\ forbidden\\ finding\\ present\\ bid\\.pop\\.adm_not_redirect\\ →\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
+      ]
+    }
+  }
+}

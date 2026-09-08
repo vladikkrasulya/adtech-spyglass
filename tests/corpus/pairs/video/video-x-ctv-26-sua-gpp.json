@@ -1,0 +1,199 @@
+{
+  "kind": "pair",
+  "id": "video-x-ctv-26-sua-gpp",
+  "title": "Single CTV preroll slot with structured user agent and a GPP consent string",
+  "format": "video",
+  "protocol": "ortb-2.6",
+  "context": "ctv",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.6", "ctv", "sua", "gpp"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB 2.6 Object: Device (sua) and Object: Regs (gpp, gpp_sid)",
+      "url": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/1debba8001f40eb14597102dec3205afddf811d4/2.6.md#objectdevice",
+      "version": "1debba8001f40eb14597102dec3205afddf811d4",
+      "license": "CC BY 3.0 (OpenRTB 2.6 field semantics); MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, app and publisher identifiers are synthetic.",
+      "device.ua is a synthetic Smart-TV-labelled string kept alongside device.sua, matching the 2.6 §3.2.18 recommendation to keep sending ua for backwards compatibility even when sua is present.",
+      "regs.gpp uses the corpus-wide non-decodable placeholder string (matching banner-x-gpid-tid-gpp-26's convention), not a real or realistic-looking consent string. regs.gpp_sid=[7] (US National) is supplied alongside it so neither gpp_sid_without_string nor gpp_string_without_sid fires.",
+      "device.ip uses the documentation-only address 192.0.2.20."
+    ],
+    "sanitized": "No production payload or PII used. Placeholder GPP string only, not a real consent record. All resource and tracking hosts end in .test; external network must remain blocked.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Use x-openrtb-version: 2.6 when replaying HTTP; envelope itself has no version field."
+    },
+    "sourceIds": ["video-audio:va-ortb26", "video-audio:va-adcom", "video-audio:va-vast-xsd"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "video-x-ctv-26-sua-gpp",
+    "test": 1,
+    "at": 1,
+    "tmax": 500,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "video-1",
+        "secure": 1,
+        "bidfloor": 1,
+        "bidfloorcur": "USD",
+        "video": {
+          "mimes": ["video/mp4"],
+          "minduration": 15,
+          "maxduration": 15,
+          "protocols": [7, 8],
+          "w": 1920,
+          "h": 1080,
+          "linearity": 1,
+          "plcmt": 1,
+          "startdelay": 0,
+          "delivery": [2],
+          "playbackmethod": [6]
+        }
+      }
+    ],
+    "app": {
+      "id": "fixture-app",
+      "name": "Fixture CTV App",
+      "bundle": "test.example.fixture.ctv",
+      "publisher": {
+        "id": "fixture-publisher"
+      }
+    },
+    "device": {
+      "devicetype": 3,
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit; SmartTV)",
+      "ip": "192.0.2.20",
+      "language": "en",
+      "os": "Linux",
+      "osv": "6.1",
+      "sua": {
+        "browsers": [
+          {
+            "brand": "Synthetic TV Browser",
+            "version": ["1"]
+          }
+        ],
+        "platform": {
+          "brand": "Synthetic TV OS",
+          "version": ["6"]
+        },
+        "mobile": 0
+      }
+    },
+    "regs": {
+      "gpp": "SYNTHETIC-GPP-PLACEHOLDER",
+      "gpp_sid": [7]
+    }
+  },
+  "response": {
+    "id": "video-x-ctv-26-sua-gpp",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "fixture-seat",
+        "bid": [
+          {
+            "id": "video-x-ctv-26-sua-gpp-bid",
+            "impid": "video-1",
+            "price": 3,
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"4.0\" xmlns=\"http://www.iab.com/VAST\"><Ad id=\"video-x-ctv-26-sua-gpp\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><AdTitle>video-x-ctv-26-sua-gpp</AdTitle><Impression><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/impression]]></Impression><Creatives><Creative id=\"video-x-ctv-26-sua-gpp-creative\"><UniversalAdId idRegistry=\"unknown\">unknown</UniversalAdId><Linear><TrackingEvents><Tracking event=\"start\"><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/start]]></Tracking><Tracking event=\"complete\"><![CDATA[https://track.example.test/video-x-ctv-26-sua-gpp/complete]]></Tracking></TrackingEvents><Duration>00:00:15</Duration><MediaFiles><MediaFile id=\"video-x-ctv-26-sua-gpp\" delivery=\"progressive\" type=\"video/mp4\" bitrate=\"4000\" width=\"1920\" height=\"1080\"><![CDATA[https://media.example.test/video-x-ctv-26-sua-gpp.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "video-x-ctv-26-sua-gpp-bid-creative",
+            "protocol": 7,
+            "mtype": 2,
+            "dur": 15,
+            "w": 1920,
+            "h": 1080
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Single (non-pod) CTV preroll slot, distinct from the existing dynamic-pod CTV case; protocols [7,8] (VAST 4.0 Inline/Wrapper) are declared, the bid answers with Inline VAST 4.0 (protocol 7).",
+    "device.sua/regs.gpp are not read by packages/core/format-detect.js beyond 2.6-version detection; they carry no dedicated validation rule, so this pair asserts no false errors from their presence.",
+    "Validity describes protocol structure and declared constraints; generated media bytes must be checked against declared MIME/duration before playback tests.",
+    "Current Inspector contract displays VAST as inert XML; text visibility must not be counted as creative rendering or media playback.",
+    "fixtureAssets lists controlled resources; intercept .test URLs locally. Never fetch public advertising/tracking hosts."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse",
+      "mustNotPrefix": ["vast."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "video-x-ctv-26-sua-gpp"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "1.0000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.video_vast",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm",
+        "crosscheck.bid.size_mismatch"
+      ]
+    },
+    "preview": {
+      "kind": "vast",
+      "rendered": "inert-text",
+      "mediaPlays": "no",
+      "marker": "video-x-ctv-26-sua-gpp",
+      "limitation": null,
+      "capabilityGap": "The current VAST preview is inert XML; video/audio playback and Wrapper resolution are not implemented."
+    },
+    "format": {
+      "formats": ["video"],
+      "contexts": ["ctv", "inapp"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

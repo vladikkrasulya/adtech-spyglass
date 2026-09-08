@@ -1,0 +1,93 @@
+{
+  "kind": "pair",
+  "id": "push-x-richads-bare-array",
+  "title": "RichAds Telegram SSP bare JSON array with no id field and a bid_price/notification_url naming",
+  "format": "push",
+  "protocol": "jsonfeed",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "response-only",
+  "tags": ["public-reference", "documented-reference", "richads", "richads-telegram-ssp"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "RichAds Telegram SSP API — bare JSON array response contract",
+      "url": "https://docs.richads.com/ssp/telegram-native.html",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All creative text and URLs independently authored; no live subscriber, publisher, or SSP token.",
+      "The documented shape has no id/tId field at all, prices are keyed bid_price (not cpc/price), and the win-notify pixel is keyed notification_url (not icon_url/icon/nurl) — this fixture preserves that exact field-name set rather than substituting Core's generic push aliases.",
+      "image_preload is carried through unmodified even though nothing in Core consumes it; it is part of the documented wire shape, not padding.",
+      "No POST body / request side is modeled: RichAds' request is a flat snake_case POST body (ip, user_agent, publisher_id, widget_id, telegram_id, bid_floor, ...), an entirely different field set from any registered URL-request decoder, so this case stays response-only rather than inventing a request the vendor's own docs do not describe as a GET/URL contract."
+    ],
+    "sanitized": "No real Telegram user, publisher, or SSP identifiers. All URLs use reserved .test hostnames and are not intended to be fetched.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "response": [
+    {
+      "title": "A weekend hobby to try",
+      "description": "A short original description for the fixture card.",
+      "image": "https://assets.example.test/feeds/push-x-richads-bare-array-hero-492x328.png",
+      "image_preload": "https://assets.example.test/feeds/push-x-richads-bare-array-hero-preload.png",
+      "notification_url": "https://tracking.example.test/notice/push-x-richads-bare-array",
+      "link": "https://advertiser.example.test/offers/push-x-richads-bare-array",
+      "bid_price": 0.008
+    }
+  ],
+  "specNotes": [
+    "RichAds documents this response as a bare JSON array of {title, description, image, image_preload, notification_url, link, bid_price} — no oRTB envelope, no id/tId field, and price/win-notify keyed differently from every other push vendor in this corpus (sources-vendor map §2a).",
+    "detectFeedFormat correctly tags this array push (RichAds happens to use the bare `image`/`link`/`title` keys detectFeedFormat's hasImage/hasClick/hasTitle test recognizes) — the deviation recorded here is scoped to the field-level false positives only, not format detection.",
+    "Desired capability per the vendor's own documented contract: a complete RichAds material validates with no id-required or price-required error, and no nurl-missing warning, because notification_url already fills the win-notify role by a different name. Existing product acceptance is not the validity oracle.",
+    "Wrapping this identical object in a bare array (rather than posting it as a single object) is what triggers the deviation: validateFeedResponse dispatches ANY array unconditionally to the push-material validator (rules-feed.js), bypassing the detectSingleBidShape discriminator that would otherwise recognize notification_url/bid_price as the bid-price vendor shape (validateBidPriceFeed) — see knownGap DEF-161."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "response": {
+      "type": "Push-Materials Feed Response",
+      "mustNot": ["feed.push.id_required", "feed.push.bid_required", "feed.push.nurl_recommended"]
+    },
+    "format": {
+      "formats": ["push"]
+    },
+    "preview": {
+      "kind": "push",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A weekend hobby to try",
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "Images remain blocked in the initial sealed preview; request interception does not bypass CSP."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-161",
+    "layers": ["core", "http", "browser"],
+    "note": "Array dispatch in validateFeedResponse (rules-feed.js) forces push-material field names onto elements documented under a different vendor's single-bid shape (RichAds bid-price-style: bid_price/notification_url, no id field), producing false id/price-required errors and a false nurl-missing warning. Browser: because the array is misclassified, no push card is drawn (empty preview, marker absent).",
+    "matches": {
+      "core": [
+        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.id_required\\ →\\ feed\\.push\\.id_required\\[error\\]@\\[0\\]\\.id$",
+        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.bid_required\\ →\\ feed\\.push\\.bid_required\\[error\\]@\\[0\\]\\.cpc$",
+        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.nurl_recommended\\ →\\ feed\\.push\\.nurl_recommended\\[warning\\]@\\[0\\]\\.nurl$"
+      ],
+      "http": [
+        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.id_required\\ →\\ feed\\.push\\.id_required\\[error\\]@\\[0\\]\\.id$",
+        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.bid_required\\ →\\ feed\\.push\\.bid_required\\[error\\]@\\[0\\]\\.cpc$",
+        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.nurl_recommended\\ →\\ feed\\.push\\.nurl_recommended\\[warning\\]@\\[0\\]\\.nurl$"
+      ],
+      "browser": [
+        "^browser\\.row: forbidden response feed\\.push\\.(id_required|bid_required|nurl_recommended)$",
+        "^browser\\.response: forbidden finding present feed\\.push\\.(id_required|bid_required|nurl_recommended) → .*$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ weekend\\ hobby\\ to\\ try\"\\ absent$"
+      ]
+    }
+  }
+}

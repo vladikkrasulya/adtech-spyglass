@@ -1,0 +1,104 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "price-below-matched-deal-floor",
+  "title": "The matched deal floor governs even when the impression floor is lower",
+  "scenario": "pair",
+  "tags": ["mutation", "commercial"],
+  "base": "bn-banner-26-pmp-multisize",
+  "category": "commercial",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdeal",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/price",
+        "value": 0.5
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "must": [
+        {
+          "id": "err-bid-price-below-floor",
+          "path": "seatbid[0].bid[0].price",
+          "params": {
+            "floor": 0.75
+          },
+          "level": "warning"
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.bid.below_floor",
+          "path": "seatbid[0].bid[0].price",
+          "params": {
+            "floor": "0.7500"
+          },
+          "level": "warn"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price"
+        }
+      ]
+    },
+    "consistency": ["deal-floor-governs"],
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-104",
+    "layers": ["core", "http", "browser"],
+    "note": "The matching Deal.bidfloor governs its bid; validation and crosscheck must agree on both effective floor and below-floor outcome.",
+    "matches": {
+      "core": [
+        "^crosscheck:\\ missing\\ crosscheck\\.bid\\.below_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[warn\\]\\ params=\\{\"floor\":\"0\\.7500\"\\}\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.above_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ →\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^consistency:\\ validation\\ says\\ below\\ deal\\ floor\\ 0\\.75\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\ says\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^consistency:\\ crosscheck\\.bid\\.below_floor\\ missing\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ although\\ validation\\ found\\ the\\ bid\\ below\\ the\\ governing\\ floor$"
+      ],
+      "http": [
+        "^crosscheck:\\ missing\\ crosscheck\\.bid\\.below_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[warn\\]\\ params=\\{\"floor\":\"0\\.7500\"\\}\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.above_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ →\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^consistency:\\ validation\\ says\\ below\\ deal\\ floor\\ 0\\.75\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\ says\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^consistency:\\ crosscheck\\.bid\\.below_floor\\ missing\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ although\\ validation\\ found\\ the\\ bid\\ below\\ the\\ governing\\ floor$"
+      ],
+      "browser": [
+        "^browser\\.crosscheck:\\ missing\\ crosscheck\\.bid\\.below_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[warn\\]\\ params=\\{\"floor\":\"0\\.7500\"\\}\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
+        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.above_floor\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ →\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^browser\\.consistency:\\ validation\\ says\\ below\\ deal\\ floor\\ 0\\.75\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\ says\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price$",
+        "^browser\\.consistency:\\ crosscheck\\.bid\\.below_floor\\ missing\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ although\\ validation\\ found\\ the\\ bid\\ below\\ the\\ governing\\ floor$"
+      ]
+    }
+  },
+  "specNotes": []
+}

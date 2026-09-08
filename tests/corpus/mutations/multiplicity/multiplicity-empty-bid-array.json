@@ -1,0 +1,108 @@
+{
+  "format": "banner",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "kind": "mutation",
+  "id": "multiplicity-empty-bid-array",
+  "title": "An empty bid array in one seatbid is a response error, not silence",
+  "scenario": "pair",
+  "tags": ["mutation", "multiplicity"],
+  "base": "bn-banner-26-multiimp-multiseat",
+  "category": "multiplicity",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectseatbid",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid",
+        "value": []
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "status": "errors",
+      "must": [
+        {
+          "id": "response.seatbid.empty",
+          "path": "seatbid[0].bid",
+          "level": "error",
+          "params": {
+            "num": 1
+          }
+        }
+      ]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.auction.summary",
+          "path": "auction",
+          "level": "ok",
+          "params": {
+            "totalBids": 1,
+            "impsFilled": 1,
+            "impsTotal": 2
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[1].bid[0].impid",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": {
+    "id": "DEF-204",
+    "layers": ["browser"],
+    "note": "A structurally invalid empty first seat must reach structured validation; the client instead dereferences its absent first bid.cur before submitting the request.",
+    "matches": {
+      "browser": [
+        "^browser\\.state:\\ expected\\ success,\\ got\\ failed$",
+        "^browser\\.console:\\ Analysis\\ error:\\ TypeError:\\ Cannot\\ read\\ properties\\ of\\ undefined\\ \\(reading\\ 'cur'\\)$"
+      ]
+    }
+  },
+  "specNotes": [
+    "OpenRTB 2.6 §4.2.2 SeatBid.bid: \"Array of 1+ Bid objects... required.\" An empty array is a structural error on that seatbid, not a silent no-bid; the surviving seatbid must still be crosschecked normally.",
+    "Browser measured on 2026-09-08 in run ortbtools-audit-9fSncA; only the exact observed product deviations are admitted. Normative finding and successful-analysis assertions are retained."
+  ]
+}

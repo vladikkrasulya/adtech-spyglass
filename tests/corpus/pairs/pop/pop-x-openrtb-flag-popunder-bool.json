@@ -1,0 +1,158 @@
+{
+  "kind": "pair",
+  "id": "pop-x-openrtb-flag-popunder-bool",
+  "title": "boolean flag ext.popunder=1 hint (no adtype string), location.replace redirect script",
+  "format": "pop",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["core-mechanism", "non-iab-formats", "flag-hint", "location-redirect"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools Core pop-family ext-hint recognition contract (packages/core/non-iab-formats.js FLAG_HINT_KEYS, packages/core/rules/pop-request/index.js, packages/core/rules/pop-response/index.js) layered on IAB OpenRTB 2.x Imp/ext extensibility — the product's own documented, in-repo mechanism for pop signalling by a truthy flag key, not a named vendor's wire format",
+      "url": "packages/core/non-iab-formats.js",
+      "version": "repo HEAD at session start, commit a61fc25",
+      "license": "Internal product code (ortbtools); no third-party material copied. MIT for the original fixture values.",
+      "notes": "Distinct mechanism from the adtype-string-hint siblings: FLAG_HINT_KEYS is a separate boolean-presence signal (ext.popunder=1) rather than a string value in ext.adtype."
+    },
+    "modifications": [
+      "All IDs, domains, prices and timestamps independently authored.",
+      "device.ip uses TEST-NET 192.0.2.44; user.id is a clearly synthetic string.",
+      "advertiser.example.test / tracking.example.test / publisher.example.test are reserved .test hosts; no live host, tracker or subscriber identifier."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; every identifier is a synthetic-fixture string; every URL uses a reserved .test hostname.",
+    "notes": "synthesized-from-product-code-contract"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.5",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "A genuine oRTB auction pair: the response bid references the offered impression, ids match, and the ext hint is a Core-recognized, non-vendor-attributed extension convention, not a proprietary wire wrapper."
+    },
+    "sourceIds": ["banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "pop-x-openrtb-flag-popunder-bool",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "pop-x-openrtb-flag-popunder-bool-imp",
+        "secure": 0,
+        "bidfloor": 0.001,
+        "bidfloorcur": "USD",
+        "banner": { "w": 1, "h": 1 },
+        "ext": { "popunder": 1, "fcap": 5 }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": { "id": "synthetic-fixture-user" }
+  },
+  "response": {
+    "id": "pop-x-openrtb-flag-popunder-bool",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "pop-x-openrtb-flag-popunder-bool-bid",
+            "impid": "pop-x-openrtb-flag-popunder-bool-imp",
+            "price": 0.31,
+            "adm": "<script>location.replace('https://advertiser.example.test/offers/pop-x-openrtb-flag-popunder-bool');</script>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "pop-x-openrtb-flag-popunder-bool-creative",
+            "nurl": "https://tracking.example.test/notice/pop-x-openrtb-flag-popunder-bool",
+            "ext": { "popunder": 1 }
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "packages/core/non-iab-formats.js FLAG_HINT_KEYS recognizes a truthy imp.ext.popunder value as a pop hint independent of any ext.adtype string — 'imp.ext.popunder = 1 instead of imp.ext.adtype = \"popunder\"' per the file's own header comment. imp.non_standard_format (INFO) fires with params.format='popunder' at path imp[0].ext.popunder.",
+    "`location.replace(URL)` is explicitly named in admLooksLikePop's regex (location.(href|replace|assign)) and in packages/core/rules/pop-response/index.js's header comment ('location.href = URL' redirect family) as an accepted pop adm shape.",
+    "packages/core/crosscheck.js's pop-landing rule extracts the redirect destination from inside the location.replace(...) call (extractPopLandingHost's 'inside the redirect call sites' branch) and must match bid.adomain.",
+    "Browser preview must not open a real popup or dispatch tracking."
+  ],
+  "notes": [
+    "Plain `iab` dialect, deliberately not the `ext-rtb` vendor dialect used by the sibling EXADS/Kadam/PPCmate/Adon3 pop cases."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.popunder",
+          "level": "info",
+          "params": { "format": "popunder" }
+        }
+      ],
+      "mustNot": ["imp.format_required", "imp.banner.size_required", "request.device_required"]
+    },
+    "response": {
+      "maxLevel": "info",
+      "type": "oRTB BidResponse",
+      "status": "clean",
+      "mustNot": ["bid.pop.adm_not_redirect", "response.bid.payload_missing"]
+    },
+    "crosscheck": {
+      "must": [
+        { "id": "crosscheck.id_match", "level": "ok" },
+        { "id": "crosscheck.bid.impid_resolved", "level": "ok" },
+        { "id": "crosscheck.bid.above_floor", "level": "ok" },
+        {
+          "id": "crosscheck.bid.pop.adomain_landing_match",
+          "level": "ok",
+          "path": "seatbid[0].bid[0].adm"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.bid.pop.adomain_landing_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.id_mismatch",
+        "crosscheck.no_request",
+        "crosscheck.no_response"
+      ]
+    },
+    "format": {
+      "formats": ["banner", "pops"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "empty",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/offers/pop-x-openrtb-flag-popunder-bool",
+      "limitation": "pop script has no visual body",
+      "capabilityGap": "no landing-page preview"
+    },
+    "http": { "status": 200 }
+  },
+  "knownGap": {
+    "id": "DEF-245",
+    "layers": ["browser"],
+    "note": "A script-shaped pop adm (window.open/location redirect) renders correctly as inert markup with nothing visible — kind and rendered state are measured correctly — but the destination text never appears on screen, so the browser layer's per-bid identity/marker check cannot confirm which creative loaded.",
+    "matches": {
+      "browser": [
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"https://advertiser\\.example\\.test/offers/pop-x-openrtb-flag-popunder-bool\"\\ absent$"
+      ]
+    }
+  }
+}

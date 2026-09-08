@@ -1,0 +1,8 @@
+# Research decisions
+
+1. **Decision**: reuse the verified 38-case archive (SHA-256 b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7) and Opus's recovered research. **Rationale**: 35 qualified pairs (five per format) and three provisional references, 25 primary-source records, 77 generated assets, checked media metadata and XML. **Alternative**: random live ads would add privacy, execution and reproducibility problems. Case-level primary URLs and revisions remain in corpus provenance.
+2. **Decision**: normative expectations are authored independently of Core output. **Rationale**: observations already reproduce floor/price, 3.0 projection/currency, vendor decoding and optional-device discrepancies. **Alternative**: snapshots would bless existing defects.
+3. **Decision**: exact expected deviation signatures with hard guards. **Rationale**: An expected-failure marker alone masks regressions and fixes. **Alternative**: blanket per-format known gaps are rejected.
+4. **Decision**: verify actual UI and local assets under unchanged CSP. **Rationale**: VAST is inert and external Native images can be blocked; readiness cannot prove playback. **Alternative**: replacing product policy or reordering original bids would overstate coverage.
+5. **Decision**: enumerate representative combinations and uncovered dimensions. **Rationale**: 5–10 examples per format cannot exhaust arbitrary OpenRTB extensions or the complete cross-product. Target DOOH/DAAST and 3.0 explicitly.
+6. **Decision**: continue the existing Spec Kit feature on the current checkout. **Rationale**: artifacts and harness survived Opus's quota limit. No product release is needed for an audit artifact.

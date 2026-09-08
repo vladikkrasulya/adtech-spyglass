@@ -1,0 +1,108 @@
+{
+  "kind": "pair",
+  "id": "pop-ppcmate-json-material",
+  "title": "JSON-negotiated pop material array with text metadata but no image assets",
+  "format": "pop",
+  "protocol": "jsonfeed",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["public-reference", "vendor-valid", "ppcmate", "ppcmate-json-feed"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "PPCmate Pop Endpoint: URL parameters and XML/JSON delivery examples",
+      "url": "https://kb.ppcmate.com/kb/references-and-guidelines/how-to-create-a-pop-endpoint-xml-feed",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All IDs, domains, prices, timestamps, creative text and URLs independently authored.",
+      "Required visitor addresses use TEST-NET 192.0.2.44; required user IDs are clearly synthetic. No real subscriber data or feed credentials.",
+      "Media URLs use reserved .test hosts and require interception from fixtureAssets."
+    ],
+    "sanitized": "No real visitor or subscriber data. IP 192.0.2.44 is TEST-NET-1; user IDs/feed keys are synthetic-fixture strings; all executable URLs use reserved .test hostnames and require local interception.",
+    "notes": "synthesized-from-vendor-docs"
+  },
+  "reference": {
+    "wireProtocol": "ppcmate-json-feed",
+    "vendorDialect": "ppcmate",
+    "validity": "vendor-valid",
+    "pairApplicability": {
+      "kind": "vendor-request-response",
+      "note": "Independently constructed offline pair preserving documented field names and carrier. Reserved endpoint replaces the vendor hostname; no live request or bid was made. Vendor zone/feed selection is fixture metadata where absent from body."
+    },
+    "sourceIds": ["feeds:feeds-ppcmate-pop"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": "https://feed.example.test/?pubid=700007&feedid=700008&ip=192.0.2.44&lang=en&useragent=Mozilla%2F5.0+%28X11%3B+Linux+x86_64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F120.0.0.0+Safari%2F537.36&domain=https%3A%2F%2Fpublisher.example.test%2Farticle&format=json&impression-number=1",
+  "response": [
+    {
+      "id": "pop-ppcmate-json-material",
+      "title": "Original fixture destination",
+      "description": "A pop landing route for local interception.",
+      "link": "https://advertiser.example.test/offers/pop-ppcmate-json-material",
+      "cpc": 5.24e-5
+    }
+  ],
+  "specNotes": [
+    "The endpoint is explicitly pop inventory, yet its JSON material resembles push with id/title/description/link/cpc; image/icon absence is documented, not malformed push.",
+    "format=json is required to change this endpoint from its default XML representation.",
+    "The impression-number request parameter carries the within-day delivery ordinal.",
+    "Expose destination(s) as inert URL text. This response provides navigation, not embedded visual creative; do not count a preview of the URL as rendered landing-page creative.",
+    "Browser preview must not open real popups or dispatch tracking.",
+    "The documented vendor ad type must be identified in the merged format result. Public Core vocabulary uses pops for pop traffic. This is a vendor capability expectation, not an invented IAB extension."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "URL Request"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "empty": true
+    },
+    "preview": {
+      "kind": "url",
+      "rendered": "inert-text",
+      "mediaPlays": "n/a",
+      "marker": "https://advertiser.example.test/offers/pop-ppcmate-json-material",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "http": {
+      "status": 200
+    },
+    "format": {
+      "formats": ["pops"]
+    }
+  },
+  "knownGap": {
+    "id": "DEF-107",
+    "layers": ["core", "http", "browser"],
+    "note": "Publicly documented vendor URL request contracts should be decoded consistently with their feed responses; fixture host and token values are synthetic.",
+    "matches": {
+      "core": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
+        "^format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$"
+      ],
+      "http": [
+        "^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
+        "^format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$"
+      ],
+      "browser": [
+        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
+        "^browser\\.format\\.formats:\\ expected\\ \\[pops\\],\\ got\\ \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ url,\\ got\\ push$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ inert\\-text,\\ got\\ full$"
+      ]
+    }
+  }
+}

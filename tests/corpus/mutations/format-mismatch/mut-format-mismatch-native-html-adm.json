@@ -1,0 +1,80 @@
+{
+  "kind": "mutation",
+  "id": "mut-format-mismatch-native-html-adm",
+  "title": "Native-only impression is filled with plain banner HTML instead of a Native JSON payload",
+  "format": "native",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["mutation", "format-mismatch"],
+  "base": "bn-native-26-editorial-bare",
+  "category": "format-mismatch",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<!doctype html><html><head><meta charset=\"utf-8\"></head><body><div style=\"width:600px;height:315px;background:#223b62\">NOT A NATIVE JSON PAYLOAD</div></body></html>"
+      },
+      {
+        "op": "remove",
+        "path": "/seatbid/0/bid/0/mtype"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.native_invalid_adm",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "warn"
+        }
+      ],
+      "mustNot": [
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm"
+        },
+        {
+          "id": "crosscheck.bid.native_missing_assets",
+          "path": "seatbid[0].bid[0].adm"
+        }
+      ]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "This case demonstrates a format-mismatch check that already works: nativeAssetCrosscheck (gated on imp.native && bid.adm) tries to parse bid.adm as the Native 1.2 JSON/base64 asset payload; plain HTML is neither, so tryParseNativePayload throws and crosscheck.bid.native_invalid_adm (WARN) fires.",
+    "bid.mtype is removed because the base fixture sets mtype:4 (native) to describe the correct native fill; keeping it on an HTML payload would conflate this content-type case with the separate, unvalidated bid.mtype question covered by DEF-195."
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "kind": "pair",
+  "id": "push-x-ext-rtb-native-push",
+  "title": "OpenRTB Native 1.2 bid pair signaled as push via imp.ext.adtype, icon and main image both required",
+  "format": "push",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "ext-rtb",
+  "scenario": "pair",
+  "tags": ["public-reference", "native-1.2", "openrtb-2.6", "ext-adtype-push"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB OpenRTB Native Ads 1.2 asset objects, carried in an OpenRTB 2.6 Bid.adm",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#6-1",
+      "version": "accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All ids, domains, prices and creative text independently authored; icon (asset id 1, IAB Native 1.2 img.type=1 ICON) and main image (asset id 3, img.type=3 MAIN) are both required assets, differentiating this pair from push-exads-openrtb-native-500 (icon-only, no main image, vendor plcmttype=500).",
+      "imp.ext.adtype=\"push\" is this project's own non-IAB extension-detection convention (packages/core/non-iab-formats.js STRING_HINT_KEYS), not an IAB-standardized field and not attributed to a named vendor's documented contract — unlike push-exads-openrtb-native-500's vendor-specific native.request.plcmttype=500, this pair stays entirely inside plain Native 1.2 (plcmttype=1) and layers the push signal only in imp.ext.",
+      "bid.mtype=4 (NATIVE) is set explicitly, matching the asset payload, so response-side format detection does not depend on adm content-sniffing alone."
+    ],
+    "sanitized": "No real user, device or tracking data. device.ip is the documentation-only address 192.0.2.44 (TEST-NET-1); user.id is a synthetic-fixture string; all domains use reserved .test hostnames; icon/image URLs are placeholders the preview's content policy never fetches automatically."
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "ext-rtb",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "A plain, spec-legal OpenRTB 2.6 Native 1.2 bid pair; the only non-IAB element is the imp.ext.adtype push hint, which is a project convention layered on top rather than a deviation from the Native/OpenRTB contract itself."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "request": {
+    "id": "push-x-ext-rtb-native-push",
+    "at": 1,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "push-x-ext-rtb-native-push-imp",
+        "secure": 1,
+        "bidfloor": 0.05,
+        "bidfloorcur": "USD",
+        "ext": { "adtype": "push" },
+        "native": {
+          "ver": "1.2",
+          "request": "{\"native\":{\"ver\":\"1.2\",\"plcmttype\":1,\"plcmtcnt\":1,\"assets\":[{\"id\":1,\"required\":1,\"img\":{\"type\":1,\"w\":48,\"h\":48,\"wmin\":48,\"hmin\":48}},{\"id\":2,\"required\":1,\"title\":{\"len\":60}},{\"id\":3,\"required\":1,\"img\":{\"type\":3,\"w\":300,\"h\":150,\"wmin\":300,\"hmin\":150}},{\"id\":4,\"required\":0,\"data\":{\"type\":2,\"len\":140}}]}}"
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/article"
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "ip": "192.0.2.44",
+      "language": "en"
+    },
+    "user": { "id": "synthetic-fixture-user" }
+  },
+  "response": {
+    "id": "push-x-ext-rtb-native-push",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "bid": [
+          {
+            "id": "push-x-ext-rtb-native-push-bid",
+            "impid": "push-x-ext-rtb-native-push-imp",
+            "price": 0.42,
+            "adm": "{\"native\":{\"ver\":\"1.2\",\"link\":{\"url\":\"https://advertiser.example.test/offers/push-x-ext-rtb-native-push\"},\"assets\":[{\"id\":1,\"img\":{\"url\":\"https://assets.example.test/feeds/push-x-ext-rtb-native-push-icon-48x48.png\",\"w\":48,\"h\":48}},{\"id\":2,\"title\":{\"text\":\"A rooftop herb garden\"}},{\"id\":3,\"img\":{\"url\":\"https://assets.example.test/feeds/push-x-ext-rtb-native-push-hero-300x150.png\",\"w\":300,\"h\":150}},{\"id\":4,\"data\":{\"value\":\"Grow herbs in a small rooftop planter.\"}}],\"imptrackers\":[\"https://tracking.example.test/notice/push-x-ext-rtb-native-push-imp\"]}}",
+            "adomain": ["advertiser.example.test"],
+            "crid": "push-x-ext-rtb-native-push-creative",
+            "nurl": "https://tracking.example.test/notice/push-x-ext-rtb-native-push",
+            "mtype": 4,
+            "w": 300,
+            "h": 150
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "imp.ext.adtype is one of the STRING_HINT_KEYS non-iab-formats.js scans for on every imp; \"push\" normalizes into PUSH_FORMAT_NAMES, so imp.non_standard_format (INFO, oRTB 2.6 §3.2.4 Imp) is expected, alongside format-detect.js unioning PUSH into the request-side tags — this is the documented, generic non-IAB-format-hint mechanism, not a claim that \"adtype\" is an IAB-standardized key.",
+    "All 3 required Native 1.2 assets (icon id 1, title id 2, main image id 3) are present in bid.adm; crosscheck.bid.native_complete must report the full required set, matching the same contract push-exads-openrtb-native-500 already exercises with a icon-only required set.",
+    "bid.mtype=4 is an OpenRTB 2.6 addition (oRTB 2.6 §4.3 Bid); its presence is what version-detection promotes the response side from an assumed 2.5 baseline to a detected 2.6, which is why this pair — unlike the request-side-only-optional-fields case — is tagged protocol ortb-2.6 rather than ortb-2.5.",
+    "Desired capability: the format union carries both native and push for this pair (request-side ext hint plus response-side native asset detection); existing product acceptance is not the validity oracle."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest",
+      "must": [
+        {
+          "id": "imp.non_standard_format",
+          "path": "imp[0].ext.adtype",
+          "level": "info",
+          "params": { "format": "push" }
+        }
+      ]
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": { "id": "push-x-ext-rtb-native-push" }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": { "floor": "0.0500" }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "format": {
+      "formats": ["native", "push"],
+      "contexts": ["web"]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A rooftop herb garden",
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "Images remain blocked in the initial sealed preview; request interception does not bypass CSP."
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

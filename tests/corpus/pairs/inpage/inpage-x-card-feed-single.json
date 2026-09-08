@@ -1,0 +1,78 @@
+{
+  "kind": "pair",
+  "id": "inpage-x-card-feed-single",
+  "title": "The product's own in-page card feed shape, as a bare single object, is untyped",
+  "format": "inpage",
+  "protocol": "jsonfeed",
+  "context": "n/a",
+  "dialect": "iab",
+  "scenario": "response-only",
+  "tags": ["synthetic", "jsonfeed", "kb-shape", "widget-zone", "single-object"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "ortbtools knowledge base — in-page native widget card",
+      "path": "packages/core/knowledge_base/jsonfeed/inpage/inpage-card.json",
+      "version": "kb-jsonfeed-inpage-001, repo HEAD a61fc25 (2026-09-07)",
+      "license": "MIT (ortbtools)",
+      "notes": "Field shape (id/title/text/image/icon/clickurl/impurl/advertiser/price/currency/ext.format+widget_id+zone_id) is the product's own documented in-page widget card sample, reproduced here as a bare single object instead of the KB file's one-element array."
+    },
+    "modifications": [
+      "Card id, image/click/impression URLs and advertiser domain independently authored; the KB sample's cdn.example/click.example/imp.example hosts replaced with this corpus's assets/advertiser/tracking.example.test convention.",
+      "Presented as a bare object rather than the KB file's `[{...}]` wrapper, to isolate the single-object-vs-array behaviour difference."
+    ],
+    "sanitized": "No real advertiser or subscriber data; all hosts are reserved .test domains; price is a small synthetic placeholder."
+  },
+  "response": {
+    "id": "inpage-x-card-feed-single",
+    "title": "A quiet morning by the lake",
+    "text": "Compare three original travel-planning tools before you book.",
+    "image": "https://assets.example.test/feeds/inpage-x-card-feed-single-hero-492x328.png",
+    "icon": "https://assets.example.test/feeds/inpage-x-card-feed-single-icon-192x192.png",
+    "clickurl": "https://advertiser.example.test/offers/inpage-x-card-feed-single",
+    "impurl": "https://tracking.example.test/notice/inpage-x-card-feed-single",
+    "advertiser": "publisher-net.example.test",
+    "price": 0.004,
+    "currency": "USD",
+    "ext": { "format": "inpage", "widget_id": "widget-12", "zone_id": "zone-3" }
+  },
+  "specNotes": [
+    "packages/core/detect.js looksLikeJsonFeedSingle() only accepts click_url|link as the click-key half of its price+click+creative co-occurrence test (and clickUrl/notification_url/bid_price/redirecturl for the other single-object shapes); this card's `clickurl` (no separator) satisfies none of them, so detectType() falls through to TYPES.UNKNOWN and the top-level validator reports payload.unknown_type.",
+    "packages/core/format-detect.js detectFeedFormat() is a separate function from detectType(); its hasClick set explicitly includes clickurl (alongside clickUrl/click_url/redirectUrl/link), so it correctly tags FORMATS.INPAGE for this exact object even while detectType() cannot name a payload type for it at all — the format-tagging and payload-typing layers disagree about whether this shape is recognised.",
+    "This is the product's own committed knowledge_base/jsonfeed/inpage/inpage-card.json sample (manifest id kb-jsonfeed-inpage-001), reproduced as a bare object; the KB file itself only ships the one-element-array form, so the single-object form of its own reference shape was never previously exercised anywhere in the repo."
+  ],
+  "notes": [
+    "No request side exists for this scenario: the KB shape has no documented paired BidRequest, and inventing an OpenRTB request for a feed-only material would not reflect any real wire contract."
+  ],
+  "expect": {
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": { "empty": true },
+    "format": { "formats": ["inpage"] },
+    "preview": {
+      "kind": "push",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A quiet morning by the lake",
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "findPushMaterial()'s isMat() test requires click_url or link; this card's clickurl key satisfies neither, so the front-end never recognises it as a push-style material and shows the empty state instead of a card, matching the same clickurl-alias gap as the Core validator."
+    },
+    "http": { "status": 200 }
+  },
+  "knownGap": {
+    "id": "DEF-181",
+    "layers": ["core", "http", "browser"],
+    "note": "The clickurl (no separator) click-key alias is recognised by packages/core/format-detect.js's hasClick set but by neither packages/core/detect.js's single-object type classifier nor the front-end's findPushMaterial()/isMat() helper (public/ortbtools.app.js). On the product's own knowledge_base/jsonfeed/inpage/inpage-card.json shape this produces: (a) as a bare object, payload.unknown_type from Core even though detectFormat correctly tags FORMATS.INPAGE; (b) as an array (sibling case), a false feed.push.click_url_required error from the push-materials validator even though the same format tag is correct; (c) in both shapes, the browser preview shows the generic empty state instead of the push-style card the fields would otherwise support.",
+    "matches": {
+      "core": ["^response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$"],
+      "http": ["^response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$"],
+      "browser": [
+        "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
+        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ morning\\ by\\ the\\ lake\"\\ absent$"
+      ]
+    }
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "kind": "pair",
+  "id": "native-x-rich-data-privacy-tracking",
+  "title": "Icon plus main image, rating and price data assets, privacy link and 1.2 eventtrackers",
+  "format": "native",
+  "protocol": "ortb-2.6",
+  "context": "inapp",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.6", "privacy-eventtrackers"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "IAB Native 1.2 §4.1/§5.1 (privacy, eventtrackers) and §7.4 (Data Asset Types: rating, price)",
+      "url": "https://github.com/InteractiveAdvertisingBureau/Native-Ads/blob/dd45d0733d96710981541ea213f4452952f41c40/OpenRTB-Native-Ads-Specification-Final-1.2.md#5-1",
+      "version": "dd45d0733d96710981541ea213f4452952f41c40",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds."
+    },
+    "modifications": [
+      "All auction, bid, creative, site and publisher identifiers are synthetic.",
+      "All domains use reserved .test names; no real user IDs, IP addresses, consent strings or tracker endpoints.",
+      "All SVG artwork is original; no public creative copied.",
+      "device.ip is the documentation-only address 192.0.2.11; OS values describe a synthetic test device."
+    ],
+    "sanitized": "Only synthetic identifiers, original fixture creatives, reserved domains and TEST-NET addresses. No live tokens, subscriber IDs or real tracking URLs.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Every response bid references an offered impression/item; auction identifiers match."
+    },
+    "sourceIds": ["banner-native:bn-native12", "banner-native:bn-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "native-x-rich-data-privacy-tracking",
+    "test": 1,
+    "at": 2,
+    "tmax": 800,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "native-slot",
+        "secure": 1,
+        "bidfloor": 0.2,
+        "bidfloorcur": "USD",
+        "native": {
+          "ver": "1.2",
+          "request": "{\"ver\":\"1.2\",\"context\":1,\"plcmttype\":1,\"privacy\":1,\"eventtrackers\":[{\"event\":1,\"methods\":[1,2]},{\"event\":2,\"methods\":[1]}],\"assets\":[{\"id\":91,\"required\":1,\"title\":{\"len\":90}},{\"id\":92,\"required\":1,\"img\":{\"type\":1,\"w\":48,\"h\":48,\"mimes\":[\"image/png\"]}},{\"id\":93,\"required\":1,\"img\":{\"type\":3,\"w\":320,\"h\":180,\"mimes\":[\"image/png\"]}},{\"id\":94,\"required\":1,\"data\":{\"type\":3,\"len\":5}},{\"id\":95,\"required\":1,\"data\":{\"type\":6,\"len\":10}}]}"
+        },
+        "rwdd": 0
+      }
+    ],
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 4,
+      "language": "en",
+      "ip": "192.0.2.11",
+      "os": "Linux",
+      "osv": "6.1"
+    },
+    "app": {
+      "id": "synthetic-app",
+      "name": "Fixture Reader",
+      "bundle": "test.example.fixture.reader",
+      "domain": "publisher.example.test",
+      "publisher": {
+        "id": "synthetic-publisher"
+      }
+    }
+  },
+  "response": {
+    "id": "native-x-rich-data-privacy-tracking",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "synthetic-seat-a",
+        "bid": [
+          {
+            "id": "native-x-rich-data-privacy-tracking-bid",
+            "impid": "native-slot",
+            "price": 1.25,
+            "adm": "{\"native\":{\"ver\":\"1.2\",\"assets\":[{\"id\":91,\"title\":{\"text\":\"A pocket almanac rated by weekend gardeners\"}},{\"id\":92,\"img\":{\"url\":\"https://assets.example.test/native/native-x-rich-data-privacy-tracking/92-48x48.svg\",\"w\":48,\"h\":48}},{\"id\":93,\"img\":{\"url\":\"https://assets.example.test/native/native-x-rich-data-privacy-tracking/93-320x180.svg\",\"w\":320,\"h\":180}},{\"id\":94,\"data\":{\"value\":\"4.6\"}},{\"id\":95,\"data\":{\"value\":\"$9.00\"}}],\"link\":{\"url\":\"https://advertiser.example.test/offer/native-x-rich-data-privacy-tracking\"},\"privacy\":\"https://privacy.example.test/notice/native-x-rich-data-privacy-tracking\",\"eventtrackers\":[{\"event\":1,\"method\":1,\"url\":\"https://track.example.test/imp\"},{\"event\":2,\"method\":1,\"url\":\"https://track.example.test/viewable\"}]}}",
+            "adomain": ["advertiser.example.test"],
+            "crid": "native-x-rich-data-privacy-tracking-bid-creative",
+            "mtype": 4
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "Protocol validity is based on cited fields, not on current Core output. Optional-field warnings do not make this pair invalid.",
+    "IAB Native 1.2 §7.4 Data Asset Types: type 3 = rating, type 6 = price. Neither Core validation, crosscheck.js nor renderNativeToHtml compares the data asset's `type` field against what was requested (crosscheck map §8 item 8) — a returned value of the right kind (data) and length passes regardless of which data type id it claims; this base pair is valid either way and asserts no finding tied to `type`.",
+    "IAB Native 1.2 §4.1/§5.1: request-side `privacy` (integer) and `eventtrackers` (array of {event, methods[]}); response-side `privacy` (string URL) and `eventtrackers` (array of {event, method, url}). Neither field is read anywhere in packages/core (schema, crosscheck) nor in the Inspector's native renderer — they are spec-legal, inert payload for this corpus and require no dedicated finding.",
+    "Browser assertions are proposed observables; this corpus has not been run in a browser for this case.",
+    "Do not infer rendering from analysis.status or iframe existence alone.",
+    "HTTPS Native image URLs use reserved .test domains and are not registered in tests/corpus/assets/manifest.json (assetRefs is empty) — the browser's img-src CSP blocks any remote fetch regardless of interceptor/manifest registration, so no stored fixture is required for this pair's blocked/partial assertions; do not permit live DNS/HTTP traffic.",
+    "Current production preview CSP blocks remote Native images. Record card-text rendering and image blocking separately; intercepting a request does not bypass CSP. Do not claim fully rendered images if naturalWidth remains zero.",
+    "Inspect intended click target without following it.",
+    "crosscheck.js's unsafeNativeScheme (crosscheck.js:873-879) restricts img.url to http(s) only, exactly like link.url; a data: image URI would CRIT as native_unsafe_scheme there even though it cannot execute script as an <img> src. This pair therefore uses remote https URLs (blocked by the preview CSP, not a defect) rather than data: images, so its crosscheck signal stays about asset richness only; see native-x-structured-bid-object for the data:-image full-render proof."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "native-x-rich-data-privacy-tracking"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.native_complete",
+          "path": "seatbid[0].bid[0].adm",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "native",
+      "rendered": "partial",
+      "mediaPlays": "n/a",
+      "marker": "A pocket almanac rated by weekend gardeners",
+      "assets": {
+        "imgTotal": 2,
+        "imgLoaded": 0
+      },
+      "limitation": "Remote creative assets are blocked by the preview content policy.",
+      "capabilityGap": "Images remain blocked in the initial sealed preview; request interception does not bypass CSP."
+    },
+    "format": {
+      "formats": ["native"],
+      "contexts": ["inapp"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": null
+}

@@ -1,0 +1,88 @@
+{
+  "kind": "mutation",
+  "id": "encoding-adm-mixed-scripts-image",
+  "format": "banner",
+  "protocol": "ortb-2.5",
+  "context": "web",
+  "dialect": "iab",
+  "base": "bn-banner-25-fixed",
+  "category": "encoding-limits",
+  "scenario": "pair",
+  "tags": ["mutation", "encoding-limits"],
+  "title": "adm mixing escaped quotes, Cyrillic, an emoji, RTL Arabic text and a data: image renders in full",
+  "specRef": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid — Bid.adm is transmitted as a JSON string (RFC 8259 §7 permits any Unicode scalar value, including RTL scripts and emoji); attribute quoting inside the markup is ordinary JSON string escaping, not a distinct wire feature.",
+  "patch": {
+    "response": [
+      {
+        "op": "replace",
+        "path": "/seatbid/0/bid/0/adm",
+        "value": "<!doctype html><html><head><meta charset=\"utf-8\"><style>html,body{margin:0}.ad{position:relative;width:300px;height:250px;overflow:hidden;font-family:Arial,sans-serif;background:#2b1d3c;color:#fff}img{display:block;width:100%;height:100%}.label{position:absolute;top:8px;left:8px;background:#fff;color:#2b1d3c;padding:4px 7px;border-radius:4px;font-size:12px}.rtl{direction:rtl;unicode-bidi:embed}</style></head><body><div class=\"ad\" data-fixture=\"MIXED SCRIPT TEST\" role=\"img\" aria-label=\"MIXED SCRIPT TEST\"><img alt=\"mixed script fixture\" src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==\"><span class=\"label\">MIXED SCRIPT TEST · Кирилиця · 🎉 · <span class=\"rtl\">مرحبا بالعربية</span></span></div></body></html>"
+      }
+    ]
+  },
+  "expect": {
+    "request": {
+      "maxLevel": "warning"
+    },
+    "response": {
+      "maxLevel": "warning"
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "0.2000"
+          }
+        },
+        {
+          "id": "crosscheck.bid.size_match",
+          "path": "seatbid[0].bid[0].size",
+          "level": "ok"
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "markup",
+      "rendered": "full",
+      "mediaPlays": "n/a",
+      "marker": "MIXED SCRIPT TEST",
+      "limitation": null,
+      "capabilityGap": null
+    },
+    "format": {
+      "formats": ["banner"],
+      "contexts": ["web"]
+    },
+    "http": {
+      "status": 200
+    },
+    "browser": {
+      "state": "success",
+      "verdict": "clean"
+    }
+  },
+  "knownGap": null,
+  "specNotes": [
+    "The attribute values in this markup use ordinary double quotes; JSON-encoding the case file therefore stores them as \\\" escapes — no additional escaping mechanism is exercised beyond RFC 8259 §7.",
+    "The data: GIF is a 1x1 transparent pixel; naturalWidth/naturalHeight are expected greater than 0 once decoded."
+  ]
+}

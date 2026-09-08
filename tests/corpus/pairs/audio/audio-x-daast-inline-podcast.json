@@ -1,0 +1,186 @@
+{
+  "kind": "pair",
+  "id": "audio-x-daast-inline-podcast",
+  "title": "True DAAST 1.0 InLine root document for a podcast placement",
+  "format": "audio",
+  "protocol": "ortb-2.6",
+  "context": "web",
+  "dialect": "iab",
+  "scenario": "pair",
+  "tags": ["public-reference", "valid", "iab", "openrtb-2.6", "daast"],
+  "provenance": {
+    "synthetic": true,
+    "source": {
+      "name": "AdCOM 1.0 List: Creative Subtypes - Audio/Video (9=DAAST 1.0, 10=DAAST 1.0 Wrapper) and the IAB DAAST 1.0 deprecation notice",
+      "url": "https://iabtechlab.com/standards-old/digital-audio-ad-serving-template-daast/",
+      "version": "AdCOM 1.0 FINAL public creative-subtypes registry, accessed 2026-09-07",
+      "license": "MIT (original fixture)",
+      "notes": "All source records are retained in assets/sources.json by reference.sourceIds. No primary DAAST 1.0 element-schema document is archived in this repo's sources; the InLine/AdSystem/AdTitle/Impression/Creatives/Creative/Linear/Duration/MediaFiles/MediaFile hierarchy below is authored from the publicly documented DAAST-mirrors-VAST convention (DAAST reuses VAST's InLine/Wrapper element names under its own root), not copied from a DAAST XSD or sample file."
+    },
+    "modifications": [
+      "All IDs, domains, titles and XML are original test data; no upstream DAAST document was copied.",
+      "Request/response IDs and impid are intentionally paired.",
+      "No real person, cookie, advertising ID, IP address or live tracking endpoint is retained."
+    ],
+    "sanitized": "No production payload or PII used. All resource and tracking hosts end in .test; external network must remain blocked.",
+    "notes": "synthesized-from-spec"
+  },
+  "reference": {
+    "wireProtocol": "openrtb-2.6",
+    "vendorDialect": "iab",
+    "validity": "valid",
+    "pairApplicability": {
+      "kind": "bid-pair",
+      "note": "Use x-openrtb-version: 2.6 when replaying HTTP; envelope itself has no version field."
+    },
+    "sourceIds": ["video-audio:va-adcom", "video-audio:va-audio-history", "video-audio:va-ortb26"],
+    "archiveSha256": "b5299ee8e072231bdc3f8334231efd7ad5ae12418a43fddba70d29b5afd146d7"
+  },
+  "assetRefs": [],
+  "request": {
+    "id": "audio-x-daast-inline-podcast",
+    "test": 1,
+    "at": 1,
+    "tmax": 500,
+    "cur": ["USD"],
+    "imp": [
+      {
+        "id": "audio-1",
+        "secure": 1,
+        "bidfloor": 1,
+        "bidfloorcur": "USD",
+        "audio": {
+          "mimes": ["audio/mpeg"],
+          "minduration": 30,
+          "maxduration": 30,
+          "protocols": [9, 10],
+          "startdelay": 0,
+          "delivery": [2],
+          "feed": 3
+        }
+      }
+    ],
+    "site": {
+      "id": "fixture-site",
+      "domain": "publisher.example.test",
+      "page": "https://publisher.example.test/content",
+      "publisher": {
+        "id": "fixture-publisher"
+      }
+    },
+    "device": {
+      "ua": "Mozilla/5.0 (Synthetic fixture; audit)",
+      "devicetype": 2,
+      "language": "en",
+      "ip": "192.0.2.12",
+      "os": "Linux",
+      "osv": "6.1"
+    }
+  },
+  "response": {
+    "id": "audio-x-daast-inline-podcast",
+    "cur": "USD",
+    "seatbid": [
+      {
+        "seat": "fixture-seat",
+        "bid": [
+          {
+            "id": "audio-x-daast-inline-podcast-bid",
+            "impid": "audio-1",
+            "price": 3,
+            "adm": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><DAAST version=\"1.0\"><Ad id=\"audio-x-daast-inline-podcast\"><InLine><AdSystem version=\"1.0\">ortbtools test fixture</AdSystem><AdTitle>audio-x-daast-inline-podcast</AdTitle><Impression><![CDATA[https://track.example.test/audio-x-daast-inline-podcast/impression]]></Impression><Creatives><Creative id=\"audio-x-daast-inline-podcast-creative\"><Linear><Duration>00:00:30</Duration><MediaFiles><MediaFile id=\"audio-x-daast-inline-podcast\" delivery=\"progressive\" type=\"audio/mpeg\" bitrate=\"128\"><![CDATA[https://media.example.test/audio-x-daast-inline-podcast.mp3]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></DAAST>",
+            "adomain": ["advertiser.example.test"],
+            "crid": "audio-x-daast-inline-podcast-bid-creative",
+            "protocol": 9,
+            "mtype": 3,
+            "dur": 30
+          }
+        ]
+      }
+    ]
+  },
+  "specNotes": [
+    "DAAST 1.0 mirrors VAST's InLine/Creatives/Linear/MediaFiles hierarchy under its own <DAAST> root, per AdCOM's List: Creative Subtypes - Audio/Video (value 9 = DAAST 1.0, value 10 = DAAST 1.0 Wrapper). The code comment elsewhere assigning value 4 to DAAST is a known documentation drift, already corrected in audio-daast-26-request-only; this fixture uses the correct 9/10 pair.",
+    "isVastShape() is anchored to the literal VAST root element name; a <DAAST> root never matches it, so validateVast() never runs against this adm. Zero vast.* findings is spec-correct here — a DAAST document is not a VAST document and must not be judged by VAST's structural rules.",
+    "Because isVastShape() also gates the response-side FORMATS.VIDEO mis-tag that afflicts VAST-rooted audio bids elsewhere in this corpus (see audio-web-25-mp3-legacy, DEF-101), a genuinely DAAST-rooted audio bid does NOT inherit that mistake: format.formats is expected to stay audio-only here.",
+    "feed 3 identifies podcast (AOD) inventory per AdCOM List: Feed Types.",
+    "This fixture only proves protocol declaration and creative-shape recognition. DAAST structural validation (an IAB-rule-equivalent of vast.*) does not exist anywhere in Core (packages/core/rules-vast.js only recognizes a <VAST> root) — a deliberately broken DAAST body would currently validate as clean, but demonstrating that requires an invalid DAAST document, which is mutation-category territory, not a base pair, and is documented here for context rather than asserted.",
+    "Current Inspector contract shows VAST/DAAST creatives as inert text; text visibility must not be counted as creative rendering or media playback."
+  ],
+  "notes": [
+    "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
+  ],
+  "expect": {
+    "request": {
+      "maxLevel": "warning",
+      "type": "oRTB BidRequest"
+    },
+    "response": {
+      "maxLevel": "warning",
+      "type": "oRTB BidResponse",
+      "mustNotPrefix": ["vast."]
+    },
+    "crosscheck": {
+      "must": [
+        {
+          "id": "crosscheck.id_match",
+          "path": "id",
+          "level": "ok",
+          "params": {
+            "id": "audio-x-daast-inline-podcast"
+          }
+        },
+        {
+          "id": "crosscheck.bid.impid_resolved",
+          "path": "seatbid[0].bid[0].impid",
+          "level": "ok"
+        },
+        {
+          "id": "crosscheck.bid.above_floor",
+          "path": "seatbid[0].bid[0].price",
+          "level": "ok",
+          "params": {
+            "floor": "1.0000"
+          }
+        }
+      ],
+      "mustNot": [
+        "crosscheck.id_mismatch",
+        "crosscheck.bid.impid_unresolved",
+        "crosscheck.bid.native_missing_assets",
+        "crosscheck.bid.native_invalid_adm"
+      ]
+    },
+    "preview": {
+      "kind": "vast",
+      "rendered": "inert-text",
+      "mediaPlays": "no",
+      "marker": "audio-x-daast-inline-podcast",
+      "limitation": null,
+      "capabilityGap": "DAAST creatives have no dedicated preview path; the contract shows them as inert markup with no DAAST-aware structural validation and no audio playback."
+    },
+    "format": {
+      "formats": ["audio"],
+      "contexts": ["web"],
+      "protocols": ["daast"]
+    },
+    "http": {
+      "status": 200
+    }
+  },
+  "knownGap": {
+    "id": "DEF-102",
+    "layers": ["core", "http", "browser"],
+    "note": "Audio protocols 9 and 10 negotiate DAAST 1.0 inline/Wrapper and must yield the DAAST protocol family. At the browser layer the DAAST document is not recognized by the creative classifier (Core has no DAAST detector; isVastShape matches only <VAST>), so an element-like XML body is classified as markup and reaches the sandboxed frame as HTML text instead of the inert VAST-style text view; the audio slot is reported as playable-looking markup, not as an audio document. Missing capability: DAAST recognition in the shared detector.",
+    "matches": {
+      "core": ["^format\\.protocols:\\ expected\\ \\[daast\\],\\ got\\ \\[\\]$"],
+      "http": ["^format\\.protocols:\\ expected\\ \\[daast\\],\\ got\\ \\[\\]$"],
+      "browser": [
+        "^browser\\.format\\.protocols: expected \\[daast\\], got \\[\\]$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.kind: expected vast, got markup$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered: expected inert-text, got full$",
+        "^browser\\.bid\\[0,0\\]\\.preview\\.mediaPlays: expected no, got n/a$"
+      ]
+    }
+  }
+}

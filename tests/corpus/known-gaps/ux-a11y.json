@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "gaps": {
+    "DEF-260": {
+      "id": "DEF-260",
+      "title": "The rendered creative iframe has no accessible name",
+      "cases": ["names-desktop"],
+      "severity": "medium",
+      "layers": ["a11y"],
+      "expected": "The creative frame is exposed with a meaningful accessible name so assistive-technology users can identify its contents.",
+      "actual": "The banner iframe is rendered and revealable, but carries no title or ARIA naming attribute. The independent browser scenario reports the absent accessible frame name.",
+      "affectedPaths": ["public/ortbtools.app.js:1645", "public/ortbtools.app.js:1598"],
+      "source": "https://www.w3.org/WAI/WCAG22/Techniques/html/H64",
+      "evidence": "2026-09-08-final-corpus/a11y-acceptance/run-FZ18zN/ux-a11y-findings.json first records iframePresent=true and iframeTitle=null. The verification at a11y-acceptance/verified-C7zwzP/ux-a11y-findings.json confirms names-desktop.measured.frameAccessibleName is {found:true,name:'',ignored:false}; screenshots/a11y-names-desktop-final.png shows the rendered frame. The exact gap remains present while all other checks in the scenario pass.",
+      "matches": ["^a11y: creative frame or its accessible title is missing$"],
+      "followUp": "Give rendered creative frames a localized accessible name. Verify it through Chromium's accessibility tree for banner and native previews, then retire the pinned gap when the naming assertion passes. Removing the iframe must remain an independent failure."
+    }
+  }
+}
