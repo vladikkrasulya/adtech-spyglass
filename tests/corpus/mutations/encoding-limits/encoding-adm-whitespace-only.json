@@ -79,18 +79,6 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-198",
-    "layers": ["core", "http", "browser"],
-    "note": "A whitespace-only Bid.adm (with no nurl) passes the isStr() presence check unchanged, so response.bid.payload_missing never fires and no other rule reports the bid as carrying a blank creative.",
-    "matches": {
-      "core": ["^response:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
-      "http": ["^response:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"],
-      "browser": [
-        "^browser\\.response:\\ missing\\ issue\\ at\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ]
-    }
-  },
   "specNotes": [
     "Browser measured on 2026-09-08 in run ortbtools-audit-9fSncA; only the exact observed product deviations are admitted. Normative finding and successful-analysis assertions are retained.",
     "The documented classifier maps a blank body to unidentified/empty body. The browser verifies the exact whitespace in the inert text body and the absence of an iframe, images or media; no creative identity exists in this intentionally blank input. The validation finding is still required and remains DEF-198."

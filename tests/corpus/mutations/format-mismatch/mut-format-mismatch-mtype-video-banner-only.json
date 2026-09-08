@@ -50,7 +50,7 @@
           "level": "ok"
         },
         {
-          "id": "expected.crosscheck.bid.mtype_offered_mismatch",
+          "id": "crosscheck.bid.mtype_offered_mismatch",
           "path": "seatbid[0].bid[0].mtype",
           "level": "crit"
         }
@@ -61,22 +61,6 @@
     },
     "browser": {
       "state": "success"
-    }
-  },
-  "knownGap": {
-    "id": "DEF-195",
-    "layers": ["core", "http", "browser"],
-    "note": "Response bid.mtype (OpenRTB 2.6 List: Markup Types, values 1=Banner, 2=Video, 3=Audio, 4=Native) is never validated by Core: MTYPE_TO_FORMAT in packages/core/format-detect.js silently ignores any value outside 1-4 for detection purposes, and rules-response.js contains no reference to mtype at all, so an out-of-range value such as 5 produces no finding of any kind.",
-    "matches": {
-      "core": [
-        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.mtype_offered_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
-      ],
-      "http": [
-        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.mtype_offered_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
-      ],
-      "browser": [
-        "^browser\\.crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.mtype_offered_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.mtype\\ \\[crit\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
-      ]
     }
   },
   "specNotes": [

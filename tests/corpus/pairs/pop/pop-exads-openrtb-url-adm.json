@@ -148,21 +148,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-109",
-    "layers": ["core", "http", "browser"],
-    "note": "The EXADS documented popunder extension permits instl-only impression shape and URL adm; generic IAB media rules need dialect awareness.",
-    "matches": {
-      "core": [
-        "^request:\\ findings\\ above\\ warning:\\ imp\\.format_required\\[error\\]@imp\\[0\\]$"
-      ],
-      "http": [
-        "^request:\\ findings\\ above\\ warning:\\ imp\\.format_required\\[error\\]@imp\\[0\\]$"
-      ],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ imp\\.format_required\\[error\\]@imp\\[0\\]$"
-      ]
-    }
   }
 }

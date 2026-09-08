@@ -161,25 +161,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-170",
-    "layers": ["core", "http", "browser"],
-    "note": "packages/core/rules/pop-response/index.js requires bid.adm alone to look like a redirect and does not accept a nurl-only bid, even though Core's own baseline response.bid.payload_missing check (and IAB OpenRTB 2.6 §4.3.3) already treats adm-or-nurl as complete. A pop-tagged bid shipping only nurl is rejected with bid.pop.adm_not_redirect ERROR.",
-    "matches": {
-      "core": [
-        "^response:\\ findings\\ above\\ info:\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^response:\\ forbidden\\ finding\\ present\\ bid\\.pop\\.adm_not_redirect\\ →\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ],
-      "http": [
-        "^response:\\ findings\\ above\\ info:\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^response:\\ forbidden\\ finding\\ present\\ bid\\.pop\\.adm_not_redirect\\ →\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ],
-      "browser": [
-        "^browser\\.row:\\ forbidden\\ response\\ bid\\.pop\\.adm_not_redirect$",
-        "^browser\\.response:\\ findings\\ above\\ info:\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$",
-        "^browser\\.response:\\ forbidden\\ finding\\ present\\ bid\\.pop\\.adm_not_redirect\\ →\\ bid\\.pop\\.adm_not_redirect\\[error\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ]
-    }
   }
 }

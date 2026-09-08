@@ -45,7 +45,7 @@
           "level": "ok"
         },
         {
-          "id": "expected.crosscheck.bid.banner_content_mismatch",
+          "id": "crosscheck.bid.banner_not_banner",
           "path": "seatbid[0].bid[0].adm",
           "level": "warn"
         }
@@ -67,25 +67,6 @@
     },
     "browser": {
       "state": "success"
-    }
-  },
-  "knownGap": {
-    "id": "DEF-194",
-    "layers": ["core", "http", "browser"],
-    "note": "Crosscheck has no content-type check for a banner or audio impression: the banner size block runs off imp.banner presence alone and never inspects whether bid.adm actually looks like markup, so a bid carrying a full VAST document into a banner-only slot still receives a plain size_match OK when its declared dimensions happen to coincide with the offered banner size, and nothing anywhere reports that the content itself cannot render as a banner.",
-    "matches": {
-      "core": [
-        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.banner_content_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[warn\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_match\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ \\[ok\\]\\ →\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
-      ],
-      "http": [
-        "^crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.banner_content_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[warn\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_match\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ \\[ok\\]\\ →\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
-      ],
-      "browser": [
-        "^browser\\.crosscheck:\\ missing\\ expected\\.crosscheck\\.bid\\.banner_content_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ \\[warn\\]\\ —\\ got\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@cur,\\ crosscheck\\.id_match\\[ok\\]@id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.impid,\\ crosscheck\\.bid\\.above_floor\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_match\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ \\[ok\\]\\ →\\ crosscheck\\.bid\\.size_match\\[ok\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$"
-      ]
     }
   },
   "specNotes": [

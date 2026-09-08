@@ -133,24 +133,5 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-111",
-    "layers": ["core", "http", "browser"],
-    "note": "A valid mtype=2 video bid answering mixed offered inventory is checked against its selected video format, not against unchosen banner/native requirements.",
-    "matches": {
-      "core": [
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ →\\ crosscheck\\.bid\\.size_mismatch\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.native_invalid_adm\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.native_invalid_adm\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ],
-      "http": [
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ →\\ crosscheck\\.bid\\.size_mismatch\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.native_invalid_adm\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.native_invalid_adm\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ],
-      "browser": [
-        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.size_mismatch\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.size\\ →\\ crosscheck\\.bid\\.size_mismatch\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.native_invalid_adm\\ @\\ seatbid\\[0\\]\\.bid\\[0\\]\\.adm\\ →\\ crosscheck\\.bid\\.native_invalid_adm\\[warn\\]@seatbid\\[0\\]\\.bid\\[0\\]\\.adm$"
-      ]
-    }
-  },
   "specNotes": []
 }

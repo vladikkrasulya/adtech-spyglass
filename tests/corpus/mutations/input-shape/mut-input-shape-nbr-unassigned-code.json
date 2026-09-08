@@ -46,7 +46,7 @@
           }
         },
         {
-          "id": "expected.response.nbr_code_unassigned",
+          "id": "response.nbr_code_unassigned",
           "level": "warning",
           "path": "nbr"
         }
@@ -67,22 +67,6 @@
     },
     "browser": {
       "state": "success"
-    }
-  },
-  "knownGap": {
-    "id": "DEF-301",
-    "layers": ["core", "http", "browser"],
-    "note": "The canonical No-Bid Reason Codes list (OpenRTB 3.0 §List: No-Bid Reason Codes, incorporated by reference from 2.6 §4.2.1) enumerates 0-17 and reserves 500+ for exchange-specific use; 18-499 is not assigned to anything. `nbr` is validated only for being a number (rules-response.js) — an unassigned code such as 42 is treated exactly like a real one (response.no_bid INFO, status clean), the same way an out-of-range Video.protocols value gets `imp.video.protocols_unknown` (WARNING) rather than silent acceptance. No such analogous check exists for `nbr`.",
-    "matches": {
-      "core": [
-        "^response: missing required finding expected\\.response\\.nbr_code_unassigned @ nbr \\[warning\\] — got version\\.assumed\\[info\\]@, response\\.no_bid\\[info\\]@nbr$"
-      ],
-      "http": [
-        "^response: missing required finding expected\\.response\\.nbr_code_unassigned @ nbr \\[warning\\] — got version\\.assumed\\[info\\]@, response\\.no_bid\\[info\\]@nbr$"
-      ],
-      "browser": [
-        "^browser\\.response:\\ missing\\ required\\ finding\\ expected\\.response\\.nbr_code_unassigned\\ @\\ nbr\\ \\[warning\\]\\ —\\ got\\ version\\.assumed\\[info\\]@,\\ response\\.no_bid\\[info\\]@nbr$"
-      ]
     }
   },
   "specNotes": [
