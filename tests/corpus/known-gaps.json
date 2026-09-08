@@ -128,23 +128,6 @@
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
     },
-    "DEF-115": {
-      "id": "DEF-115",
-      "title": "HTTP analysis crashes in category traversal on non-array seatbid or bid",
-      "category": "http-shape",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidresponse",
-      "code": ["packages/core/categories.js:131"],
-      "expected": "Syntactically valid JSON containing malformed nested field types should retain structured validation findings and HTTP success envelope; internal forEach failures must not replace them with bad_request.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["shape-bid-object", "shape-seatbid-object"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "relatedBrowserDefects": ["DEF-204"]
-    },
     "DEF-200": {
       "id": "DEF-200",
       "title": "Structured HTTP error leaves the previous successful analysis visible",
@@ -243,23 +226,6 @@
       "cases": ["pop-ppcmate-json-material", "pop-ppcmate-json-multi"],
       "reviewedAt": "2026-09-07",
       "evidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-204": {
-      "id": "DEF-204",
-      "title": "Malformed first bid crashes client analysis before the API call",
-      "category": "browser-shape",
-      "severity": "high",
-      "source": "specs/020-ad-format-verification-matrix/spec.md FR-004/FR-007",
-      "code": ["public/ortbtools.app.js:4033", "public/ortbtools.app.js:4054"],
-      "expected": "Parseable malformed bid objects must reach structured validation, without a client-side null/undefined cur TypeError.",
-      "actual": "See exact browser-layer signatures and recorded observation artifact.",
-      "cases": ["shape-bid-null", "shape-bid-object", "multiplicity-empty-bid-array"],
-      "reviewedAt": "2026-09-07",
-      "evidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",
-      "notes": [
-        "An empty first SeatBid.bid also reproduces the undefined cur dereference, even though a later seat contains a valid bid. Core/HTTP correctly report response.seatbid.empty; the browser fails before POST. Reproduced in ortbtools-audit-9fSncA on 2026-09-08."
-      ]
     },
     "DEF-205": {
       "id": "DEF-205",

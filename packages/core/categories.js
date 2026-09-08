@@ -117,7 +117,11 @@ function extractAllCategories(payload, locale) {
     take('app.sectioncat', payload.app.sectioncat);
     take('app.pagecat', payload.app.pagecat);
   }
-  (payload.imp || []).forEach((imp, i) => {
+  // Malformed nested field types (imp/seatbid/bid supplied as a non-array
+  // object) must not crash the walk: they are a validation finding, not a
+  // reason to abort category decoding. Guard every level with Array.isArray so
+  // a bad shape yields no decoded categories rather than a forEach TypeError.
+  (Array.isArray(payload.imp) ? payload.imp : []).forEach((imp, i) => {
     if (imp && imp.pmp && Array.isArray(imp.pmp.deals)) {
       imp.pmp.deals.forEach((d, di) => {
         if (d && Array.isArray(d.bcat) && d.bcat.length) {
@@ -128,8 +132,8 @@ function extractAllCategories(payload, locale) {
   });
 
   // BidResponse-side (bid-level cat[])
-  (payload.seatbid || []).forEach((sb, sbi) => {
-    (sb && sb.bid ? sb.bid : []).forEach((bid, bi) => {
+  (Array.isArray(payload.seatbid) ? payload.seatbid : []).forEach((sb, sbi) => {
+    (sb && Array.isArray(sb.bid) ? sb.bid : []).forEach((bid, bi) => {
       if (bid && Array.isArray(bid.cat) && bid.cat.length) {
         out[`seatbid[${sbi}].bid[${bi}].cat`] = decodeCategories(bid.cat, locale);
       }

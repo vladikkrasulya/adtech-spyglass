@@ -4030,8 +4030,14 @@ export async function mountInspector(root, ctx) {
       // P0-bug post-c6f9611: SSPs that ship `bid.nurl + bid.native` together
       // were rendering the nurl pixel into the banner branch → blank iframe
       // (mixed-content) and zero behavior signal. Wrap bid.native first.
-      const seatbid = res.seatbid ? res.seatbid[0] : null;
-      const bid = seatbid && seatbid.bid ? seatbid.bid[0] : {};
+      // Malformed shapes (seatbid/bid supplied as a non-array object, a null
+      // first bid, or an empty bid array) must still reach structured
+      // validation. Guard every level so `bid` is always a plain object — a raw
+      // seatbid.bid[0] of null/undefined otherwise threw "Cannot read
+      // properties of … (reading 'cur')" here, before the Analyze POST.
+      const seatbid = Array.isArray(res.seatbid) ? res.seatbid[0] : null;
+      const bidList = seatbid && Array.isArray(seatbid.bid) ? seatbid.bid : [];
+      const bid = bidList[0] && typeof bidList[0] === 'object' ? bidList[0] : {};
       let adm;
       let pushMaterial = null;
       if (bid && bid.native && Array.isArray(bid.native.assets)) {

@@ -61,19 +61,5 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-115",
-    "layers": ["http", "browser"],
-    "note": "Syntactically valid JSON containing malformed nested field types should retain structured validation findings and HTTP success envelope; internal forEach failures must not replace them with bad_request.",
-    "matches": {
-      "http": [
-        "^http:\\ expected\\ 200,\\ got\\ 400\\ \\{\"success\":false,\"error\":\"\\(intermediate\\ value\\)\\(intermediate\\ value\\)\\(intermediate\\ value\\)\\.forEach\\ is\\ not\\ a\\ function\",\"code\":\"bad_request\"\\}$"
-      ],
-      "browser": [
-        "^browser\\.state:\\ expected\\ success,\\ got\\ failed$",
-        "^browser\\.console:\\ Analysis\\ error:\\ TypeError:\\ Cannot\\ read\\ properties\\ of\\ undefined\\ \\(reading\\ 'cur'\\)$"
-      ]
-    }
-  },
   "specNotes": []
 }

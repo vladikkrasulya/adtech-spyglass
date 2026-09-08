@@ -61,16 +61,5 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-204",
-    "layers": ["browser"],
-    "note": "Parseable malformed bid objects must reach structured validation, without a client-side null/undefined cur TypeError.",
-    "matches": {
-      "browser": [
-        "^browser\\.state:\\ expected\\ success,\\ got\\ failed$",
-        "^browser\\.console:\\ Analysis\\ error:\\ TypeError:\\ Cannot\\ read\\ properties\\ of\\ null\\ \\(reading\\ 'cur'\\)$"
-      ]
-    }
-  },
   "specNotes": []
 }
