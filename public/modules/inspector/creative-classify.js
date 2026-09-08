@@ -167,6 +167,9 @@
       return out('unidentified', 'core VAST detector unavailable');
     }
     if (vast.isVastShape(trimmed)) return out('vast', 'core isVastShape');
+    if (typeof vast.isDaastShape === 'function' && vast.isDaastShape(trimmed)) {
+      return out('vast', 'core isDaastShape');
+    }
 
     // 2 & 3. JSON. Native if it carries assets anywhere we accept, otherwise a
     //        payload we can name but not render — which is still infinitely

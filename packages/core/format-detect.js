@@ -74,15 +74,16 @@ const MTYPE_TO_FORMAT = {
   4: FORMATS.NATIVE,
 };
 
-// IAB OpenRTB 2.6 §5.8 (Video Bid Response Protocols).
-//   2 = VAST 2.0,  3 = VAST 3.0, 4 = DAAST 1.0,  5 = VAST 2.0 wrapper,
-//   6 = VAST 3.0 wrapper, 7 = VAST 4.0, 8 = VAST 4.0 wrapper,
-//   9 = DAAST 1.0 wrapper, 10 = VAST 4.1, 11 = VAST 4.2.
+// IAB OpenRTB 2.6 §5.8 (Creative Subtypes - Audio/Video Protocols).
+//   1 = VAST 1.0, 2 = VAST 2.0, 3 = VAST 3.0, 4 = VAST 1.0 wrapper,
+//   5 = VAST 2.0 wrapper, 6 = VAST 3.0 wrapper, 7 = VAST 4.0,
+//   8 = VAST 4.0 wrapper, 9 = DAAST 1.0, 10 = DAAST 1.0 wrapper,
+//   11 = VAST 4.1, 12 = VAST 4.1 wrapper, 13 = VAST 4.2, 14 = VAST 4.2 wrapper.
 function videoProtocolToFamily(p) {
   if (p === 2 || p === 5) return PROTOCOLS.VAST_2;
   if (p === 3 || p === 6) return PROTOCOLS.VAST_3;
-  if (p === 7 || p === 8 || p === 10 || p === 11) return PROTOCOLS.VAST_4;
-  if (p === 4 || p === 9) return PROTOCOLS.DAAST;
+  if (p === 7 || p === 8 || p === 11 || p === 12 || p === 13 || p === 14) return PROTOCOLS.VAST_4;
+  if (p === 9 || p === 10) return PROTOCOLS.DAAST;
   return null;
 }
 
@@ -144,7 +145,7 @@ function isCanonicalUrlRequest(o) {
  * `format-detect` are unaffected — importing from either place resolves to the
  * same one definition.
  */
-const { isVastShape, detectVastVersion } = require('./vast-shape');
+const { isVastShape, detectVastVersion, isDaastShape } = require('./vast-shape');
 
 /**
  * Does an envelope-less payload look like the inner body of a 3.0 BidResponse?
@@ -230,6 +231,224 @@ function detectFeedFormat(o, tags) {
 }
 
 /**
+ * Skip a DOCTYPE, including quoted values, comments and processing instructions
+ * in its internal subset. No entity resolution or external reads.
+ * @param {string} s
+ * @param {number} i
+ * @returns {number}
+ */
+function skipDocType(s, i) {
+  const n = s.length;
+  let bracket = -1;
+  let close = -1;
+  let quote = '';
+  for (let j = i + 9; j < n; j++) {
+    const ch = s[j];
+    if (quote) {
+      if (ch === quote) quote = '';
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === '[') {
+      bracket = j;
+      break;
+    }
+    if (ch === '>') {
+      close = j;
+      break;
+    }
+  }
+
+  if (close >= 0) {
+    return close + 1;
+  }
+  if (bracket < 0) {
+    const after = s.indexOf('>', i + 9);
+    return after < 0 ? n : after + 1;
+  }
+
+  let j = bracket + 1;
+  while (j < n) {
+    if (s.startsWith('<!--', j)) {
+      const end = s.indexOf('-->', j + 4);
+      if (end < 0) return n;
+      j = end + 3;
+      continue;
+    }
+    if (s.startsWith('<?', j)) {
+      const end = s.indexOf('?>', j + 2);
+      if (end < 0) return n;
+      j = end + 2;
+      continue;
+    }
+    const ch = s[j];
+    if (ch === '"' || ch === "'") {
+      const end = s.indexOf(ch, j + 1);
+      if (end < 0) return n;
+      j = end + 1;
+      continue;
+    }
+    if (ch === ']') {
+      const after = s.indexOf('>', j + 1);
+      return after < 0 ? n : after + 1;
+    }
+    j++;
+  }
+  return n;
+}
+
+/**
+ * Read complete quoted attributes, stopping on an invalid/incomplete token.
+ * Every iteration consumes a complete attribute or exits.
+ * @param {string} tagContent
+ * @param {number} nameEnd
+ * @returns {{name: string, value: string}[]}
+ */
+function parseTagAttributes(tagContent, nameEnd) {
+  const attrs = [];
+  const n = tagContent.length;
+  let i = nameEnd;
+  while (i < n) {
+    while (i < n && /[ \t\n\r]/.test(tagContent[i])) i++;
+    if (i >= n || tagContent[i] === '/') break;
+    const nameStart = i;
+    while (i < n && !/[= \t\n\r/>'"<]/.test(tagContent[i])) i++;
+    // A stray quoted '>' used to leave i unchanged and grow attrs forever.
+    if (i === nameStart) break;
+    const name = tagContent.slice(nameStart, i);
+    while (i < n && /[ \t\n\r]/.test(tagContent[i])) i++;
+    if (tagContent[i] !== '=') break;
+    i++;
+    while (i < n && /[ \t\n\r]/.test(tagContent[i])) i++;
+    const quote = tagContent[i];
+    if (quote !== '"' && quote !== "'") break;
+    const valueStart = ++i;
+    while (i < n && tagContent[i] !== quote) i++;
+    if (i >= n) break;
+    attrs.push({ name, value: tagContent.slice(valueStart, i) });
+    i++;
+  }
+  return attrs;
+}
+
+/**
+ * Scan VAST media evidence linearly, ignoring comments, CDATA, declarations and
+ * vendor extension subtrees. This is not a general XML conformance validator.
+ * @param {unknown} s
+ * @returns {{ hasAudioMedia: boolean, hasVideoMedia: boolean, adTypeAudio: boolean, adTypeVideo: boolean }}
+ */
+function inspectVastCreative(s) {
+  if (typeof s !== 'string') {
+    return { hasAudioMedia: false, hasVideoMedia: false, adTypeAudio: false, adTypeVideo: false };
+  }
+  let hasAudioMedia = false;
+  let hasVideoMedia = false;
+  let adTypeAudio = false;
+  let adTypeVideo = false;
+  let extensionDepth = 0;
+
+  const n = s.length;
+  let i = 0;
+  while (i < n) {
+    const nextLt = s.indexOf('<', i);
+    if (nextLt < 0) break;
+    i = nextLt;
+
+    if (s.startsWith('<!--', i)) {
+      const end = s.indexOf('-->', i + 4);
+      if (end < 0) break;
+      i = end + 3;
+      continue;
+    }
+    if (s.startsWith('<![CDATA[', i)) {
+      const end = s.indexOf(']]>', i + 9);
+      if (end < 0) break;
+      i = end + 3;
+      continue;
+    }
+    if (s.startsWith('<?', i)) {
+      const end = s.indexOf('?>', i + 2);
+      if (end < 0) break;
+      i = end + 2;
+      continue;
+    }
+    if (/^<!DOCTYPE/i.test(s.slice(i, i + 9))) {
+      i = skipDocType(s, i);
+      continue;
+    }
+    if (s.startsWith('</', i)) {
+      if (extensionDepth > 0) extensionDepth--;
+      const end = s.indexOf('>', i + 2);
+      if (end < 0) break;
+      i = end + 1;
+      continue;
+    }
+
+    let quote = '';
+    let tagEnd = -1;
+    for (let j = i + 1; j < n; j++) {
+      const ch = s[j];
+      if (quote) {
+        if (ch === quote) quote = '';
+        continue;
+      }
+      if (ch === '"' || ch === "'") {
+        quote = ch;
+        continue;
+      }
+      if (ch === '>') {
+        tagEnd = j;
+        break;
+      }
+    }
+    if (tagEnd < 0) break;
+
+    const tagContent = s.slice(i + 1, tagEnd);
+    i = tagEnd + 1;
+
+    const mName = /^([A-Za-z_][A-Za-z0-9_.-]*:)?([A-Za-z0-9_.-]+)/.exec(tagContent);
+    if (!mName) continue;
+    const localName = mName[2].toLowerCase();
+    const selfClosing = /\/\s*$/.test(tagContent);
+    if (extensionDepth > 0) {
+      if (!selfClosing) extensionDepth++;
+      continue;
+    }
+    if (
+      ['extensions', 'extension', 'creativeextensions', 'creativeextension'].includes(localName)
+    ) {
+      if (!selfClosing) extensionDepth = 1;
+      continue;
+    }
+
+    if (localName === 'mediafile') {
+      const attrs = parseTagAttributes(tagContent, mName[0].length);
+      for (const attr of attrs) {
+        if (attr.name.toLowerCase() === 'type') {
+          const mime = attr.value.trim().toLowerCase();
+          if (mime.startsWith('audio/')) hasAudioMedia = true;
+          else if (mime.startsWith('video/')) hasVideoMedia = true;
+        }
+      }
+    } else if (localName === 'ad' || localName === 'vast') {
+      const attrs = parseTagAttributes(tagContent, mName[0].length);
+      for (const attr of attrs) {
+        if (attr.name.toLowerCase() === 'adtype') {
+          const val = attr.value.trim().toLowerCase();
+          if (val === 'audio') adTypeAudio = true;
+          else if (val === 'video') adTypeVideo = true;
+        }
+      }
+    }
+  }
+
+  return { hasAudioMedia, hasVideoMedia, adTypeAudio, adTypeVideo };
+}
+
+/**
  * @param {unknown} payload
  * @param {{lookupMapping?: Function}|null} [userDialect] - optional user dialect; when present, dialect-mapped ext signals are recognised as format hints
  * @returns {{formats:string[], contexts:string[], protocols:string[], tags:string[], confidence:number}}
@@ -283,7 +502,15 @@ function detectFormat(payload, userDialect) {
             }
           }
         }
-        if (imp.audio) formats.add(FORMATS.AUDIO);
+        if (imp.audio) {
+          formats.add(FORMATS.AUDIO);
+          if (Array.isArray(imp.audio.protocols)) {
+            for (const proto of imp.audio.protocols) {
+              const fam = videoProtocolToFamily(proto);
+              if (fam) protocols.add(fam);
+            }
+          }
+        }
         if (imp.native) formats.add(FORMATS.NATIVE);
         // Non-IAB format hints (pop / popunder / clickunder / push / pushunder)
         // in vendor extensions. Add the corresponding FORMATS tag so the UI
@@ -318,8 +545,33 @@ function detectFormat(payload, userDialect) {
           // version regex, false-positive-ing on HTML creatives that merely
           // mention "<VAST" and drifting from detectVastVersion (the exact
           // divergence the helpers' doc-comment warns about).
+          if (bid.protocol != null) {
+            const fam = videoProtocolToFamily(bid.protocol);
+            if (fam) protocols.add(fam);
+          }
+          if (isDaastShape(bid.adm)) {
+            formats.add(FORMATS.AUDIO);
+            protocols.add(PROTOCOLS.DAAST);
+          }
           if (isVastShape(bid.adm)) {
-            formats.add(FORMATS.VIDEO);
+            const vastMedia = inspectVastCreative(bid.adm);
+            if (vastMedia.hasAudioMedia) formats.add(FORMATS.AUDIO);
+            if (vastMedia.hasVideoMedia) formats.add(FORMATS.VIDEO);
+
+            if (!vastMedia.hasAudioMedia && !vastMedia.hasVideoMedia) {
+              if (vastMedia.adTypeAudio) formats.add(FORMATS.AUDIO);
+              if (vastMedia.adTypeVideo) formats.add(FORMATS.VIDEO);
+
+              if (!vastMedia.adTypeAudio && !vastMedia.adTypeVideo) {
+                if (mt === FORMATS.AUDIO) {
+                  formats.add(FORMATS.AUDIO);
+                } else if (mt === FORMATS.VIDEO) {
+                  formats.add(FORMATS.VIDEO);
+                } else {
+                  formats.add(FORMATS.VIDEO);
+                }
+              }
+            }
             const ver = detectVastVersion(bid.adm);
             if (ver) {
               const major = ver.split('.')[0];
@@ -373,7 +625,15 @@ function detectFormat(payload, userDialect) {
         if (!isObj(it) || !isObj(it.spec) || !isObj(it.spec.placement)) continue;
         const pm = it.spec.placement;
         if (pm.display) formats.add(FORMATS.BANNER);
-        if (pm.audio) formats.add(FORMATS.AUDIO);
+        if (pm.audio) {
+          formats.add(FORMATS.AUDIO);
+          if (isObj(pm.audio) && Array.isArray(pm.audio.ctype)) {
+            for (const c of pm.audio.ctype) {
+              const fam = adcomCtypeToFamily(c);
+              if (fam) protocols.add(fam);
+            }
+          }
+        }
         if (pm.native) formats.add(FORMATS.NATIVE);
         if (pm.video) {
           formats.add(FORMATS.VIDEO);
@@ -413,17 +673,41 @@ function detectFormat(payload, userDialect) {
           if (!isObj(bid) || !isObj(bid.media)) continue;
           const ad = isObj(bid.media.ad) ? bid.media.ad : bid.media;
           if (ad.display) formats.add(FORMATS.BANNER);
-          if (ad.audio) formats.add(FORMATS.AUDIO);
+          if (ad.audio) {
+            formats.add(FORMATS.AUDIO);
+            if (isObj(ad.audio)) {
+              if (typeof ad.audio.ctype === 'number') {
+                const fam = adcomCtypeToFamily(ad.audio.ctype);
+                if (fam) protocols.add(fam);
+              }
+              const adm = ad.audio.adm;
+              if (isDaastShape(adm)) {
+                protocols.add(PROTOCOLS.DAAST);
+              } else if (isVastShape(adm)) {
+                const ver = detectVastVersion(adm);
+                const major = ver ? ver.split('.')[0] : null;
+                if (major === '2') protocols.add(PROTOCOLS.VAST_2);
+                else if (major === '3') protocols.add(PROTOCOLS.VAST_3);
+                else if (major === '4') protocols.add(PROTOCOLS.VAST_4);
+              }
+            }
+          }
           if (ad.native) formats.add(FORMATS.NATIVE);
           if (ad.video) {
             formats.add(FORMATS.VIDEO);
-            const adm = isObj(ad.video) ? ad.video.adm : null;
-            if (isVastShape(adm)) {
-              const ver = detectVastVersion(adm);
-              const major = ver ? ver.split('.')[0] : null;
-              if (major === '2') protocols.add(PROTOCOLS.VAST_2);
-              else if (major === '3') protocols.add(PROTOCOLS.VAST_3);
-              else if (major === '4') protocols.add(PROTOCOLS.VAST_4);
+            if (isObj(ad.video)) {
+              if (typeof ad.video.ctype === 'number') {
+                const fam = adcomCtypeToFamily(ad.video.ctype);
+                if (fam) protocols.add(fam);
+              }
+              const adm = ad.video.adm;
+              if (isVastShape(adm)) {
+                const ver = detectVastVersion(adm);
+                const major = ver ? ver.split('.')[0] : null;
+                if (major === '2') protocols.add(PROTOCOLS.VAST_2);
+                else if (major === '3') protocols.add(PROTOCOLS.VAST_3);
+                else if (major === '4') protocols.add(PROTOCOLS.VAST_4);
+              }
             }
           }
         }
@@ -455,4 +739,12 @@ function detectFormat(payload, userDialect) {
   };
 }
 
-module.exports = { detectFormat, isVastShape, detectVastVersion, FORMATS, CONTEXTS, PROTOCOLS };
+module.exports = {
+  detectFormat,
+  isVastShape,
+  isDaastShape,
+  detectVastVersion,
+  FORMATS,
+  CONTEXTS,
+  PROTOCOLS,
+};

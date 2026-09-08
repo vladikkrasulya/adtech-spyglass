@@ -92,16 +92,6 @@
       "state": "success"
     }
   },
-  "knownGap": {
-    "id": "DEF-112",
-    "layers": ["core", "http", "browser"],
-    "note": "Audio.mimes is required. Its absence must produce a field-local warning or error; the oracle does not invent a future finding identifier.",
-    "matches": {
-      "core": ["^request:\\ missing\\ issue\\ at\\ imp\\[0\\]\\.audio\\.mimes$"],
-      "http": ["^request:\\ missing\\ issue\\ at\\ imp\\[0\\]\\.audio\\.mimes$"],
-      "browser": ["^browser\\.request:\\ missing\\ issue\\ at\\ imp\\[0\\]\\.audio\\.mimes$"]
-    }
-  },
   "specNotes": [
     "Path-level warning/error oracle is used because audio has no existing MIME-required public finding ID."
   ]

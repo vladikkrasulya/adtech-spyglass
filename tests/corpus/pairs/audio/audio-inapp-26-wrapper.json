@@ -168,17 +168,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-101",
-    "layers": ["core", "http", "browser"],
-    "note": "Audio VAST and audio MediaFiles must remain valid and be identified as audio; optional request Device attributes do not invalidate the pair.",
-    "matches": {
-      "core": ["^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"],
-      "http": ["^format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"],
-      "browser": [
-        "^browser\\.format\\.formats:\\ expected\\ \\[audio\\],\\ got\\ \\[audio,\\ video\\]$"
-      ]
-    }
   }
 }
