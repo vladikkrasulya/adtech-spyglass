@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.44.0`; CLI `0.1.3`
+**Current versions**: Core `0.45.0`; CLI `0.1.3`
 
 ## Public Core Surface
 
@@ -247,6 +247,70 @@ its media type is unchanged (DEF-460). No finding id, level or message changes. 
 alignment incidentally corrects the response-format detection of the still-open DEF-107 Kadam cases,
 which stay recorded against their residual request-decoder gap. Recorded in the
 [025 public-boundary contract](../../025-format-detect-vendor-dialects/contracts/format-detection-boundary.md).
+
+## Selected Media and Buyer Seats (026 Wave A; Core 0.45.0)
+
+Feature [026](../../026-validation-crosscheck/spec.md) changes the applicability and evidence behind
+paired-media verdicts. On OpenRTB 2.x impressions, an offered `bid.mtype` selects its declared
+family; otherwise supported actual creative evidence selects an offered family, with a sole offered
+family as the fallback. Banner sizes, Native assets and video document checks apply only to that
+selected family. Merely offering several families no longer imposes all their constraints on one bid.
+The later wave B declaration-validation work is specified separately below.
+
+The exported `inspectVastMedia()` helper is owned by `packages/core/rules-vast.js` and imported by
+crosscheck. Its bounded scan records the actual VAST/DAAST root and version, InLine/Wrapper form,
+per-Linear rendition MIME alternatives and parsed duration. Comments, processing instructions,
+CDATA that only resembles markup, quoted attribute text and vendor/creative extension subtrees do
+not manufacture media facts. A malformed lexical token advances or ends inspection; no entities are
+expanded and no wrapper or creative URL is fetched.
+
+For selected video, each observed InLine Linear must have a rendition allowed by a supplied MIME
+list when both sides provide usable MIME facts. Observed durations are compared with explicit
+finite minimum/maximum bounds without discarding fractions. Known actual root-version/form protocol
+codes and a supplied integer `bid.protocol` are compared with the offered protocol list; metadata
+cannot hide an incompatible observed document. An unresolved Wrapper contributes its known protocol,
+without invented rendition or duration values. The existing `crosscheck.bid.video_vast` remains a
+shape verdict; it does not certify facts that were not supplied.
+
+For selected banner, supplied VAST/DAAST or structured Native content receives a media warning.
+For selected audio, unrecognized inline document shape receives a warning; observed video-only media
+or an InLine containing only NonLinear display content receives a critical media mismatch. An
+unresolved Wrapper is not presumed to contain video. Identified 2.x response seats are compared
+case-sensitively with explicit `wseat`/`bseat` lists at the SeatBid path, once per group after normal
+deduplication; absent identities do not become invented matches.
+
+Wave A adds these public finding IDs, with en/uk/ru messages and specification references:
+
+| ID                                       | Level  | Path               |
+| ---------------------------------------- | ------ | ------------------ |
+| `crosscheck.bid.video_mime_mismatch`     | `crit` | Affected bid `adm` |
+| `crosscheck.bid.video_duration_mismatch` | `crit` | Affected bid `adm` |
+| `crosscheck.bid.video_protocol_mismatch` | `crit` | Affected bid `adm` |
+| `crosscheck.bid.banner_not_banner`       | `warn` | Affected bid `adm` |
+| `crosscheck.bid.audio_not_vast`          | `warn` | Affected bid `adm` |
+| `crosscheck.bid.audio_media_mismatch`    | `crit` | Affected bid `adm` |
+| `crosscheck.seat.not_allowed`            | `crit` | `seatbid[i].seat`  |
+
+The existing `vast.mediafile_missing` error is retained and scoped to actual InLine Linear content,
+or InLine content with neither Linear media nor a NonLinear alternative. Valid NonLinearAds-only
+content no longer requires a Linear MediaFile, while a broken sibling Linear remains diagnosable.
+This bounded applicability correction is not a claim of exhaustive XML schema validation.
+
+Existing finding IDs, finalization order, deduplication, API shapes and CLI exit policy remain. The
+[022 economic contract](#price-and-floor-resolution-022-core-0410), including its currency-only
+3.0 response-plugin projection, remains unchanged. The seven additive findings justify the reserved
+Core 0.45.0 release with CLI dependency `^0.45.0`; app 1.19.4 and CLI 0.1.3 retain their independent
+versions. The [026 tasks](../../026-validation-crosscheck/tasks.md) record verification and delivery
+state rather than implying main integration or deployment.
+
+### Planned Wave B Boundary
+
+The [026 semantic contract](../../026-validation-crosscheck/contracts/validation-semantics.md#wave-b-response-and-supplied-fields)
+specifies the remaining declaration, structured Native, duplicate-seat, blank-markup, enum and
+bounded pop repairs. At the wave A boundary those requirements are planned, not part of this as-built
+claim. Their findings and verified behavior must be added here when the wave B implementation is
+integrated into this branch. DEF-151 also depends on separately owned recognition/preview observations
+and cannot be retired solely because its Core completeness check passes.
 
 ## CLI Contract
 

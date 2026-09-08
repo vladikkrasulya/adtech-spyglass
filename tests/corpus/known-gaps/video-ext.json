@@ -1,22 +1,4 @@
 {
   "schemaVersion": 1,
-  "gaps": {
-    "DEF-130": {
-      "id": "DEF-130",
-      "title": "InLine VAST document containing only NonLinearAds (no Linear creative) is flagged vast.mediafile_missing",
-      "category": "false-positive",
-      "severity": "medium",
-      "source": "https://github.com/InteractiveAdvertisingBureau/VAST/blob/master/VAST-4.4.md#312-nonlinearads",
-      "code": ["packages/core/rules-vast.js:133-136"],
-      "expected": "VAST 4.4 section 3.12 (NonLinearAds): within an InLine ad, at least one of <Linear> or <NonLinearAds> must be provided. <MediaFile> (section 3.9) is a child of <Linear> and is not required when the only Creative content is <NonLinearAds> delivered via <StaticResource>.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["video-x-web-42-nonlinear-overlay"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots.",
-        "rules-vast.js R4 (vast.mediafile_missing) gates only on hasInLine and a document-wide <MediaFile> tag search; it does not special-case a Creative whose only child is <NonLinearAds>, so a fully spec-valid non-linear-only InLine ad is misclassified as missing media.",
-        "crosscheck.bid.video_vast is unaffected (it only sniffs the <VAST> root element) — the deviation is confined to the response-side validateVast() findings."
-      ]
-    }
-  }
+  "gaps": {}
 }

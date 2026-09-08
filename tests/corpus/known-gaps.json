@@ -89,45 +89,6 @@
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
     },
-    "DEF-111": {
-      "id": "DEF-111",
-      "title": "Mixed-format impression applies unchosen banner and native constraints to video bid",
-      "category": "format-negotiation",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectimp",
-      "code": ["packages/core/crosscheck.js:420", "packages/core/crosscheck.js:523"],
-      "expected": "A valid mtype=2 video bid answering mixed offered inventory is checked against its selected video format, not against unchosen banner/native requirements.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": [
-        "format-mixed-impression-video-wins",
-        "mut-format-mismatch-mixed-video-mtype-banner"
-      ],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-113": {
-      "id": "DEF-113",
-      "title": "Returned VAST MIME, duration and protocol constraints are not crosschecked",
-      "category": "media-constraint",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectvideo",
-      "code": ["packages/core/crosscheck.js:523"],
-      "expected": "A response creative incompatible with the requested MIME, duration or protocol must produce an issue on the affected bid adm. Detecting VAST shape alone is insufficient.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": [
-        "video-duration-incompatible",
-        "video-mime-incompatible",
-        "video-protocol-incompatible"
-      ],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
     "DEF-200": {
       "id": "DEF-200",
       "title": "Structured HTTP error leaves the previous successful analysis visible",
