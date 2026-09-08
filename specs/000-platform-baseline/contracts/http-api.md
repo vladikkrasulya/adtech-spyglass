@@ -43,6 +43,15 @@ selects macro-resolved/classified/once-decoded markup or escaped synthetic Nativ
 probe/CSP instrumentation; details of that selection and the 1 MiB UTF-8 window live in
 [the frontend contract](./frontend-modules.md).
 
+`POST /api/analyze` stays inside its envelope for malformed-but-parseable and oversized input
+([024](../../024-analyze-input-robustness/spec.md), Core 0.42.0). A response whose `seatbid` or `bid`
+is a non-array value keeps the `200` success envelope with the validator's structured findings rather
+than crashing the category decode into `400 bad_request`. A present scalar `bidRes` (a non-null,
+non-object value) is validated as a response — `payload.invalid_root` with `crosscheck.no_response` —
+instead of being silently dropped as absent; an absent or empty-object `bidRes` is unchanged. A body
+over the 2 MiB cap returns the documented `400 payload_too_large` envelope and is drained rather than
+answered with a socket reset.
+
 These two endpoints are the documented HTTP integration contract. Their request, response, error,
 and additive-versioning semantics remain in [docs/api-v1.md](../../../docs/api-v1.md). Other routes
 listed below are current implementation surfaces and must not silently inherit that document's

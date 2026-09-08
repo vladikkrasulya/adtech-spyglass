@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.42.0`; CLI `0.1.3`
+**Current versions**: Core `0.43.0`; CLI `0.1.3`
 
 ## Public Core Surface
 
@@ -217,6 +217,20 @@ Format detection preserves independent actual audio/video evidence, ignores appa
 DAAST shape recognition accepts an actual DAAST local root, including supported namespace/prolog forms; a DAAST prefix on another root is not sufficient. Browser preview uses the existing inert `vast` document-text kind. No playback, wrapper fetch, entity expansion, new network path or sandbox privilege is added.
 
 Existing public result shapes, finding IDs, ordering/deduplication and CLI exit-code policy remain. The two additive errors can change consumer verdicts and justify Core0.42.0 with CLI dependency `^0.42.0`; app1.19.4 and CLI0.1.3 retain their version lines. Release/verification state is recorded in [023](../../023-audio-repair/spec.md), separately from repository contract state.
+
+## Malformed-Shape Category Decode (024; Core 0.43.0)
+
+`extractAllCategories(payload, locale)` guards `imp`, `seatbid` and each seat's `bid` with an
+array-type check before walking them. A syntactically valid payload whose `bid` or `seatbid` is a
+non-array value now decodes to no categories for that branch rather than throwing a `TypeError`; the
+validator's own structural finding (for example `response.seatbid.empty` or
+`response.seatbid_or_nbr_required`) remains the answer. This is the only behaviour change on the
+public Core surface and is why Core takes the minor bump; no finding id, level or message changes.
+The consuming HTTP boundary (`POST /api/analyze`) therefore keeps its `200` structured envelope for
+such shapes instead of returning `400 bad_request`, and a present scalar `bidRes` is validated to
+`payload.invalid_root` with `crosscheck.no_response` — both recorded in
+[the HTTP API contract](./http-api.md) and the
+[024 public-boundary contract](../../024-analyze-input-robustness/contracts/analyze-input-boundary.md).
 
 ## CLI Contract
 
