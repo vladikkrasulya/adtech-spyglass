@@ -3234,8 +3234,8 @@ export async function mountInspector(root, ctx) {
   function findPushMaterial(res) {
     const isMat = (o) => {
       if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
-      const hasPrice = 'cpc' in o || 'price' in o;
-      const hasClick = 'click_url' in o || 'link' in o;
+      const hasPrice = 'cpc' in o || 'price' in o || 'bid_price' in o;
+      const hasClick = 'click_url' in o || 'link' in o || 'clickurl' in o;
       const hasCreative =
         'title' in o ||
         'description' in o ||
@@ -3266,7 +3266,13 @@ export async function mountInspector(root, ctx) {
     const title = typeof m.title === 'string' ? m.title : null;
     const desc = typeof m.description === 'string' ? m.description : null;
     const link =
-      typeof m.link === 'string' ? m.link : typeof m.click_url === 'string' ? m.click_url : '#';
+      typeof m.link === 'string'
+        ? m.link
+        : typeof m.click_url === 'string'
+          ? m.click_url
+          : typeof m.clickurl === 'string'
+            ? m.clickurl
+            : '#';
     return (
       '<!doctype html><html><head><meta charset="utf-8"><style>' +
       "html,body{margin:0;padding:0;background:#fff;color:#1a1a1a;font:13px/1.4 system-ui,-apple-system,'Segoe UI',sans-serif}" +
@@ -4059,7 +4065,9 @@ export async function mountInspector(root, ctx) {
       // admits the numeric-string cpc that feed.push.bid_string_type merely
       // warns about: a chip beside the rendered card should show the value
       // the SSP will parseFloat, not a placeholder.
-      const pushPrice = pushMaterial ? Number(pushMaterial.cpc ?? pushMaterial.price) : NaN;
+      const pushPrice = pushMaterial
+        ? Number(pushMaterial.cpc ?? pushMaterial.price ?? pushMaterial.bid_price)
+        : NaN;
       $('mPrice').innerText = Number.isFinite(pushPrice)
         ? formatMoney(pushPrice, bidCur)
         : adm

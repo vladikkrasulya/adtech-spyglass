@@ -91,15 +91,5 @@
       "formats": ["native"],
       "contexts": []
     }
-  },
-  "knownGap": {
-    "id": "DEF-460",
-    "layers": ["core", "http", "browser"],
-    "note": "The Native1.2 asset body is renderable and unambiguous, but format detection relies on an absent optional mtype/paired-request hint. This is a detection capability gap, not a claim that a new mandatory wire field exists.",
-    "matches": {
-      "core": ["^format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[\\]$"],
-      "http": ["^format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[\\]$"],
-      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[\\]$"]
-    }
   }
 }

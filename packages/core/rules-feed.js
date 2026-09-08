@@ -174,7 +174,7 @@ function validatePushMaterial(m, num, prefix, findings) {
   if (!isStr(m.id) && !isStr(m.tId)) {
     findings.push(F('feed.push.id_required', LEVELS.ERROR, fp('id'), { num }));
   }
-  if (!isStr(m.click_url) && !isStr(m.link)) {
+  if (!isStr(m.click_url) && !isStr(m.link) && !isStr(m.clickurl)) {
     findings.push(F('feed.push.click_url_required', LEVELS.ERROR, fp('click_url'), { num }));
   }
   if (!isNum(m.cpc) && !isNum(m.price)) {
@@ -216,7 +216,19 @@ function validatePushMaterial(m, num, prefix, findings) {
 function validatePushMaterialsFeed(arr) {
   const findings = [];
   arr.forEach((m, i) => {
-    validatePushMaterial(m, i + 1, `[${i}]`, findings);
+    // Per-element shape dispatch: an array element whose keys match a
+    // documented single-bid vendor shape (RichAds bid-price:
+    // `notification_url`/`bid_price`) is validated against that shape's own
+    // field contract instead of being force-fit through the push-material
+    // alias table, which knows neither `bid_price` nor `notification_url` and
+    // would emit spurious `feed.push.id_required`/`bid_required`/
+    // `nurl_recommended`. Only a vendor-unique key diverts an element; a
+    // generic priced+clickable material stays on the push-material path.
+    if (isObj(m) && detectSingleBidShape(m) === 'bidprice') {
+      validateBidPriceMaterial(m, (name) => `[${i}].${name}`, findings);
+    } else {
+      validatePushMaterial(m, i + 1, `[${i}]`, findings);
+    }
   });
   return { type: 'Push-Materials Feed Response', findings };
 }
@@ -243,7 +255,7 @@ function detectSingleBidShape(o) {
   // bid-price response carries `link` + `title` too). Mirrors the claim in
   // detect.js looksLikeJsonFeedSingle(); spec 013.
   const hasPrice = 'cpc' in o || 'price' in o;
-  const hasClick = 'click_url' in o || 'link' in o;
+  const hasClick = 'click_url' in o || 'link' in o || 'clickurl' in o;
   const hasCreative =
     'title' in o ||
     'description' in o ||
@@ -282,25 +294,33 @@ function validateValueFeed(o) {
 
 // ── Bid-price feed ───────────────────────────────────────────────────
 
-function validateBidPriceFeed(o) {
-  const findings = [];
+// Shared bid-price field contract — used both for a standalone bid-price
+// object and for a bid-price-shaped element inside a materials array (DEF-161).
+// `fp` builds the path so array elements get `[i].bid_price` while the
+// standalone object gets root-relative `bid_price`.
+function validateBidPriceMaterial(o, fp, findings) {
   if (!isNum(o.bid_price)) {
-    findings.push(F('feed.bidprice.bid_price_required', LEVELS.ERROR, 'bid_price'));
+    findings.push(F('feed.bidprice.bid_price_required', LEVELS.ERROR, fp('bid_price')));
   }
   if (!isStr(o.link)) {
-    findings.push(F('feed.bidprice.link_required', LEVELS.ERROR, 'link'));
+    findings.push(F('feed.bidprice.link_required', LEVELS.ERROR, fp('link')));
   }
   if (!isStr(o.notification_url)) {
     findings.push(
-      F('feed.bidprice.notification_url_recommended', LEVELS.WARNING, 'notification_url'),
+      F('feed.bidprice.notification_url_recommended', LEVELS.WARNING, fp('notification_url')),
     );
   }
   if (!isStr(o.title) && !isStr(o.message)) {
-    findings.push(F('feed.bidprice.copy_recommended', LEVELS.WARNING, 'title'));
+    findings.push(F('feed.bidprice.copy_recommended', LEVELS.WARNING, fp('title')));
   }
   if (!isStr(o.icon)) {
-    findings.push(F('feed.bidprice.icon_recommended', LEVELS.WARNING, 'icon'));
+    findings.push(F('feed.bidprice.icon_recommended', LEVELS.WARNING, fp('icon')));
   }
+}
+
+function validateBidPriceFeed(o) {
+  const findings = [];
+  validateBidPriceMaterial(o, (name) => name, findings);
   return { type: 'Bid-Price Feed Response', findings };
 }
 

@@ -65,29 +65,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-161",
-    "layers": ["core", "http", "browser"],
-    "note": "Array dispatch in validateFeedResponse (rules-feed.js) forces push-material field names onto elements documented under a different vendor's single-bid shape (RichAds bid-price-style: bid_price/notification_url, no id field), producing false id/price-required errors and a false nurl-missing warning. Browser: because the array is misclassified, no push card is drawn (empty preview, marker absent).",
-    "matches": {
-      "core": [
-        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.id_required\\ →\\ feed\\.push\\.id_required\\[error\\]@\\[0\\]\\.id$",
-        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.bid_required\\ →\\ feed\\.push\\.bid_required\\[error\\]@\\[0\\]\\.cpc$",
-        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.nurl_recommended\\ →\\ feed\\.push\\.nurl_recommended\\[warning\\]@\\[0\\]\\.nurl$"
-      ],
-      "http": [
-        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.id_required\\ →\\ feed\\.push\\.id_required\\[error\\]@\\[0\\]\\.id$",
-        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.bid_required\\ →\\ feed\\.push\\.bid_required\\[error\\]@\\[0\\]\\.cpc$",
-        "^response:\\ forbidden\\ finding\\ present\\ feed\\.push\\.nurl_recommended\\ →\\ feed\\.push\\.nurl_recommended\\[warning\\]@\\[0\\]\\.nurl$"
-      ],
-      "browser": [
-        "^browser\\.row: forbidden response feed\\.push\\.(id_required|bid_required|nurl_recommended)$",
-        "^browser\\.response: forbidden finding present feed\\.push\\.(id_required|bid_required|nurl_recommended) → .*$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ weekend\\ hobby\\ to\\ try\"\\ absent$"
-      ]
-    }
   }
 }

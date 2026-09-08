@@ -148,6 +148,31 @@ function isCanonicalUrlRequest(o) {
 const { isVastShape, detectVastVersion, isDaastShape } = require('./vast-shape');
 
 /**
+ * Does a `bid.adm` string carry a Native 1.x creative? The body is JSON with a
+ * `native` wrapper (or a bare native root) that carries an `assets` array or an
+ * `assetsurl` pointer. Values are never inspected; a parse failure or any other
+ * shape is not native. Mirrors the Inspector's own creative classifier so the
+ * detected format matches what the browser renders.
+ *
+ * @param {unknown} adm
+ * @returns {boolean}
+ */
+function admLooksLikeNative(adm) {
+  if (typeof adm !== 'string') return false;
+  const s = adm.trim();
+  if (!s.startsWith('{')) return false;
+  let parsed;
+  try {
+    parsed = JSON.parse(s);
+  } catch {
+    return false;
+  }
+  if (!isObj(parsed)) return false;
+  const n = isObj(parsed.native) ? parsed.native : parsed;
+  return Array.isArray(n.assets) || typeof n.assetsurl === 'string';
+}
+
+/**
  * Does an envelope-less payload look like the inner body of a 3.0 BidResponse?
  *
  * `bid.media` has no counterpart anywhere in 2.x, so one of them is enough.
@@ -210,7 +235,10 @@ function detectFeedFormat(o, tags) {
   // the image+title bar below, same as the other click spellings.
   const hasClick =
     'clickurl' in o || 'clickUrl' in o || 'click_url' in o || 'redirectUrl' in o || 'link' in o;
-  const hasImage = 'image' in o || 'icon' in o;
+  // Accept the image_url/icon_url aliases the push-material validator already
+  // honours (Kadam contract), so a material recognized and cleanly validated
+  // under those alias names also earns its format tag rather than none.
+  const hasImage = 'image' in o || 'icon' in o || 'image_url' in o || 'icon_url' in o;
   const hasTitle = 'title' in o || 'name' in o;
   const hasRedirect = 'redirecturl' in o || 'redirect_url' in o;
 
@@ -540,6 +568,12 @@ function detectFormat(payload, userDialect) {
           if (!isObj(bid)) continue;
           const mt = MTYPE_TO_FORMAT[bid.mtype];
           if (mt) formats.add(mt);
+          // Standalone Native detection: a Native 1.x `adm` JSON body carries
+          // its own format identity even when the optional 2.6 `mtype` hint is
+          // absent. Gated on `!mt` so a bid that declared its media type keeps
+          // exactly its prior tags; generic JSON without a native carrier
+          // stays unclassified.
+          if (!mt && admLooksLikeNative(bid.adm)) formats.add(FORMATS.NATIVE);
           // Anchored sniff via the shared helpers above — this inline block
           // previously used a bare /<VAST\b/ substring test and its own
           // version regex, false-positive-ing on HTML creatives that merely

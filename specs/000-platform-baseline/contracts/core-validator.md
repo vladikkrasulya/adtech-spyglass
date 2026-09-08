@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.42.0`; CLI `0.1.3`
+**Current versions**: Core `0.44.0`; CLI `0.1.3`
 
 ## Public Core Surface
 
@@ -217,6 +217,22 @@ Format detection preserves independent actual audio/video evidence, ignores appa
 DAAST shape recognition accepts an actual DAAST local root, including supported namespace/prolog forms; a DAAST prefix on another root is not sufficient. Browser preview uses the existing inert `vast` document-text kind. No playback, wrapper fetch, entity expansion, new network path or sandbox privilege is added.
 
 Existing public result shapes, finding IDs, ordering/deduplication and CLI exit-code policy remain. The two additive errors can change consumer verdicts and justify Core0.42.0 with CLI dependency `^0.42.0`; app1.19.4 and CLI0.1.3 retain their version lines. Release/verification state is recorded in [023](../../023-audio-repair/spec.md), separately from repository contract state.
+
+## Format Detection and Feed Dispatch Alignment (025; Core 0.44.0)
+
+The feed key-role tables are aligned. `detectFeedFormat` treats `image_url`/`icon_url` as creative-slot
+aliases alongside `image`/`icon`, so a material validated under those aliases earns the same format
+tag (DEF-160). The `clickurl` click alias, already honoured by `format-detect.js`, is now also
+recognized by `detect.js`'s single-object classifier and `rules-feed.js`'s push-material click check
+(DEF-181). A materials array dispatches each element by shape through the shared
+`validateBidPriceMaterial(o, fp, findings)` contract, so a `bid_price`/`notification_url` element is
+validated as a bid-price shape with array-indexed paths instead of drawing push-material errors
+(DEF-161). A standalone Native 1.x `adm` body (a `native` wrapper or bare native root with an `assets`
+array or `assetsurl`) tags the format `native` when the bid declares no `mtype`; a bid that declares
+its media type is unchanged (DEF-460). No finding id, level or message changes. The same alias
+alignment incidentally corrects the response-format detection of the still-open DEF-107 Kadam cases,
+which stay recorded against their residual request-decoder gap. Recorded in the
+[025 public-boundary contract](../../025-format-detect-vendor-dialects/contracts/format-detection-boundary.md).
 
 ## CLI Contract
 
