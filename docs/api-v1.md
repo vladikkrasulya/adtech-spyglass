@@ -25,6 +25,14 @@ follow the core package's API-stability contract (`packages/core/README.md`).
 Validate an OpenRTB BidRequest and/or BidResponse, with semantic crosscheck
 when both sides are present.
 
+Core 0.46.0 also inspects documented EXADS JSON carriers and PPCmate, Kadam,
+EXADS and provisional Adon3 GET requests through this same endpoint. Vendor
+findings retain their original field paths; recognized EXADS pairs omit
+inapplicable IAB commercial crosscheck. Adon3 inspection includes an explicit
+provisional warning and preserves decimal-string prices. Recognition does not
+certify vendor compatibility or add a creative-preview capability. See the
+[Core carrier contract](../specs/028-vendor-request-dialects/contracts/vendor-inspection.md).
+
 **Rate limit:** 60 calls/min/IP → `429` with `code: "rate_limited"`.
 **Privacy:** payload bodies are processed transiently and are not persisted.
 Derived validation metrics may be recorded; authenticated calls also record

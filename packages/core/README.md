@@ -12,6 +12,8 @@ Use this package when an application, service, or local tool needs the same dete
 
 ## Package status
 
+The repository Core version is `0.46.0`; the CLI remains `0.1.3` with dependency `^0.46.0`. These are workspace versions, not evidence of an npm publication.
+
 `@ortbtools/core` is not currently published to the npm registry. Inside this monorepo it is available as an npm workspace. Registry installation instructions will be added after the first verified public release.
 
 ## Usage
@@ -144,6 +146,16 @@ module.exports = {
 ```
 
 Then require it and register its slug in the static `DIALECTS` map in `index.js`; dialect files are not discovered automatically.
+
+## Vendor inspection in Core 0.46.0
+
+Documented EXADS JSON request and outer-bid carriers receive vendor-specific validation, while EXADS, PPCmate and Kadam GET families use the existing canonical URL-request result. Encoded query evidence, duplicate-key precedence and repair warnings remain available. Explicit source-backed subtype fields drive formats; opaque account keys and absent optional subscription data do not disclose hidden inpage provisioning.
+
+Kadam Native material accepts its documented `url`/`image`/`cpc` roles without fabricating an IAB Native assets envelope. Inpage extension hints and nested AdCOM Native objects contribute format evidence while mandatory IAB media findings and actual banner alternatives remain intact.
+
+Adon3-shaped inputs are inspected as **provisional and unsupported**. Response prices remain decimal strings, and the result contains an explicit limitation warning; recognition is not vendor certification. Recognized EXADS request/response pairs do not run inapplicable IAB impression, floor or currency crosscheck, and no vendor payload is rewritten into an OpenRTB auction. Core makes no request to a vendor endpoint and does not render a creative.
+
+The [Core contract](../../specs/000-platform-baseline/contracts/core-validator.md) owns these semantics; [feature 028](../../specs/028-vendor-request-dialects/spec.md) records the scope, proof and independently owned browser residuals.
 
 ## OpenRTB version coverage
 

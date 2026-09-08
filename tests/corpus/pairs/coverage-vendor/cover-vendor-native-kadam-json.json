@@ -71,17 +71,10 @@
   ],
   "knownGap": {
     "id": "DEF-441",
-    "layers": ["core", "http", "browser"],
-    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "layers": ["browser"],
+    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
     "matches": {
-      "core": [
-        "^response: findings above warning: feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$"
-      ],
-      "http": [
-        "^response: findings above warning: feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$"
-      ],
       "browser": [
-        "^browser\\.response:\\ findings\\ above\\ warning:\\ feed\\.push\\.click_url_required\\[error\\]@\\[0\\]\\.click_url$",
         "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
         "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
         "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ notebook\\ for\\ field\\ sketches\"\\ absent$"

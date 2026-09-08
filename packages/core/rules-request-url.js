@@ -19,6 +19,12 @@
  */
 
 const { LEVELS, makeFinding } = require('./findings');
+const { validateExadsRequest } = require('./vendor-exads');
+const VENDOR_DECODERS = [
+  require('./decoders/request/url-ppcmate-feed'),
+  require('./decoders/request/url-kadam-feed'),
+  require('./decoders/request/url-adon3-feed'),
+];
 
 const F = makeFinding;
 
@@ -126,6 +132,36 @@ function validateUrlRequest(canonical) {
   }
 
   const raw = canonical._raw || {};
+
+  // Decoders own the source-backed parameter contracts; this public validator
+  // owns their diagnostic IDs/severity. Original query names remain locations.
+  const vendor = VENDOR_DECODERS.find((decoder) => decoder.id === canonical.variant);
+  const meta = canonical.meta || {};
+  const fields = meta.vendorRequest;
+  if (vendor && fields && typeof fields === 'object' && !Array.isArray(fields)) {
+    for (const param of vendor.requiredParameters) {
+      if (!Object.hasOwn(fields, param)) {
+        findings.push(F('request.url.required_parameter_missing', LEVELS.ERROR, param, { param }));
+      }
+    }
+    for (const [param, validate] of Object.entries(vendor.parameterValidators)) {
+      if (Object.hasOwn(fields, param) && !validate(fields[param])) {
+        findings.push(F('request.url.parameter_invalid', LEVELS.ERROR, param, { param }));
+      }
+    }
+  }
+  if (canonical.variant === 'url-exads-feed') {
+    findings.push(...validateExadsRequest(fields, { transport: 'url' }).findings);
+  }
+  if (meta.formatAmbiguous) findings.push(F('request.url.format_ambiguous', LEVELS.WARNING, ''));
+  if (meta.contractStatus === 'provisional-unsupported') {
+    findings.push(
+      F('request.url.provisional_contract', LEVELS.WARNING, '', {
+        vendor: 'Adon3',
+        version: '1.0',
+      }),
+    );
+  }
 
   // Plain HTTP can work server-to-server, but query parameters are exposed
   // in transit and browser-side calls from an HTTPS page may be rejected as

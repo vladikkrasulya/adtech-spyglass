@@ -11,7 +11,7 @@
         "packages/core/format-detect.js"
       ],
       "expected": "The documented Native response url is a valid click destination and should not be rejected for missing Push click_url. Paired format=native GET input supplies explicit Native placement intent.",
-      "actual": "The array is routed through Push rules, producing feed.push.click_url_required at [0].click_url. The Native GET shape has no decoder, so paired format intent is lost. Browser measurement also records empty preview and absent expected creative identity.",
+      "actual": "028 Core/HTTP Native url/image/cpc validation and explicit GET Native recognition pass. Both Native browser cards still have empty preview and missing creative identity.",
       "category": "coverage-closure-capability",
       "severity": "medium",
       "cases": ["cover-vendor-native-kadam-json", "cover-vendor-native-kadam-url"],
@@ -19,8 +19,10 @@
       "notes": [
         "Related earlier groups are linked for consolidation; these are additional documented carriers, not additional independent root causes.",
         "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects.",
-        "Core, real HTTP and browser were measured separately during coverage closure. The browser shows an empty creative instead of the desired Native card; exact per-case signatures are pinned."
-      ]
+        "Core, real HTTP and browser were measured separately during coverage closure. The browser shows an empty creative instead of the desired Native card; exact per-case signatures are pinned.",
+        "028: current Core, real HTTP and isolated browser observations justify only the recorded layer reductions. Unresolved preview assertions are unchanged; see specs/028-vendor-request-dialects/verification.md."
+      ],
+      "layers": ["browser"]
     }
   }
 }

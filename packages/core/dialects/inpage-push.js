@@ -93,6 +93,36 @@ function claimsBid(bid) {
   return !!(pickAlias(ext, TITLE_ALIASES) || pickAlias(ext, IMAGE_ALIASES));
 }
 
+/** Shared role projection; recognition and validation read the same aliases. */
+function getCreativeFields(ext) {
+  return {
+    title: pickAlias(ext, TITLE_ALIASES),
+    image: pickAlias(ext, IMAGE_ALIASES),
+    click: pickAlias(ext, CLICK_ALIASES),
+    icon: pickAlias(ext, ICON_ALIASES),
+    desc: pickAlias(ext, DESC_ALIASES),
+    cta: pickAlias(ext, CTA_ALIASES),
+  };
+}
+
+function hasInpagePlacement(ext) {
+  if (!isObj(ext)) return false;
+  const identifier = (v) =>
+    (typeof v === 'string' && v.trim().length > 0) ||
+    (typeof v === 'number' && Number.isInteger(v) && v >= 0);
+  const format =
+    typeof ext.format === 'string' ? ext.format.toLowerCase().replace(/[-_\s]/g, '') : '';
+  return (
+    identifier(ext.widget_id) || ['inpage', 'inpagepush', 'inpagepushnotification'].includes(format)
+  );
+}
+
+function hasInpageCreative(bid) {
+  if (!isObj(bid) || !isObj(bid.ext)) return false;
+  const fields = getCreativeFields(bid.ext);
+  return !!(fields.title.trim() && fields.image.trim() && fields.click.trim());
+}
+
 function validateResponse(res) {
   const findings = [];
   (res.seatbid || []).forEach((sb, sbi) => {
@@ -105,12 +135,7 @@ function validateResponse(res) {
       const bp = `seatbid[${sbi}].bid[${bi}]`;
       const ext = bid.ext || {};
 
-      const title = pickAlias(ext, TITLE_ALIASES);
-      const image = pickAlias(ext, IMAGE_ALIASES);
-      const click = pickAlias(ext, CLICK_ALIASES);
-      const icon = pickAlias(ext, ICON_ALIASES);
-      const desc = pickAlias(ext, DESC_ALIASES);
-      const cta = pickAlias(ext, CTA_ALIASES);
+      const { title, image, click, icon, desc, cta } = getCreativeFields(ext);
 
       // Required fields — In-Page Push without these renders as a
       // broken/empty card on the publisher side.
@@ -199,4 +224,7 @@ module.exports = {
   validateRequest: () => [],
   validateResponse,
   claimsBid,
+  getCreativeFields,
+  hasInpagePlacement,
+  hasInpageCreative,
 };

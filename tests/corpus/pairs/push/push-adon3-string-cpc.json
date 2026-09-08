@@ -91,27 +91,5 @@
     "format": {
       "formats": ["push"]
     }
-  },
-  "knownGap": {
-    "id": "DEF-108",
-    "layers": ["core", "http", "browser"],
-    "note": "Preserve provisional Adon3 references visibly as unsupported; this is not a confirmed protocol defect and does not count toward five qualified cases per format.",
-    "matches": {
-      "core": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
-        "^response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
-        "^format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"
-      ],
-      "http": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
-        "^response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
-        "^format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"
-      ],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
-        "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[push\\],\\ got\\ \\[\\]$"
-      ]
-    }
   }
 }

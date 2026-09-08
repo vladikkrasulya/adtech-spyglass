@@ -14,13 +14,13 @@
         "public/ortbtools.app.js"
       ],
       "expected": "A valid AdCOM placement.display.nativefmt / media.ad.display.native pair must be recognized as native, accept its structured native creative without also requiring display.adm or display.curl, and verify the three required asset IDs and their content. The Inspector should render the structured native title and embedded image.",
-      "actual": "On the corrected standard AdCOM envelopes, Core and HTTP falsely emit response.30.bid.display.markup_required, identify the native display subtype as banner, and omit crosscheck.bid.native_complete. Each measured failure has a separate exact signature. Browser empty-preview behavior was recorded before the envelope correction; the corrected fixture requires centralized browser remeasurement before final acceptance.",
+      "actual": "026 supplied structured Native validation and crosscheck; 028 completes nested AdCOM Native Core/HTTP recognition. All five cases retain measured empty-preview, asset and creative-identity browser failures.",
       "cases": [
-        "native-x-ortb30-adcom-stub",
         "cover-context-native-30-ctv",
-        "cover-context-native-30-inapp",
         "cover-context-native-30-dooh",
-        "cover-context-native-30-unspecified"
+        "cover-context-native-30-inapp",
+        "cover-context-native-30-unspecified",
+        "native-x-ortb30-adcom-stub"
       ],
       "reviewedAt": "2026-09-08",
       "notes": [
@@ -29,9 +29,10 @@
         "Current Core format detection treats the display parent as banner without recognizing nativefmt/native. The 3.0 crosscheck projector also does not project native assets; the missing verdict is recorded as a capability gap, not as a protocol rule requiring a particular UI message.",
         "Normative assertions describe valid payload behavior; exact known-gap signatures document observed failures only and must be retired individually when the product starts satisfying those assertions.",
         "Corrected AdCOM fixture browser evidence: browser-acceptance/initial/browser.jsonl on 2026-09-08 reproduces the same schema/format/completeness issues plus empty creative preview. Exact browser signatures are pinned separately in the case.",
-        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
+        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects.",
+        "028: current Core, real HTTP and isolated browser observations justify only the recorded layer reductions. Unresolved preview assertions are unchanged; see specs/028-vendor-request-dialects/verification.md."
       ],
-      "layers": ["core", "http", "browser"]
+      "layers": ["browser"]
     }
   }
 }

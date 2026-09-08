@@ -18,11 +18,15 @@
  */
 
 const { isObj } = require('./helpers');
+const { isNativeFeedMaterial } = require('./rules-feed');
+const { isExadsRequest, isExadsResponse } = require('./vendor-exads');
+const { isAdon3Response } = require('./vendor-adon3');
 
 const TYPES = {
   ORTB_REQUEST: 'oRTB BidRequest',
   ORTB_RESPONSE: 'oRTB BidResponse',
   VENDOR_FEED: 'Vendor Feed Response',
+  VENDOR_REQUEST: 'Vendor Feed Request',
   JSON_FEED: 'JSON Feed 1.1',
   // URL-style ad request (clickunder/teaser/pop GETs that take params in the
   // query-string instead of an oRTB JSON body). Decoded by
@@ -409,7 +413,14 @@ function detectType(obj) {
   // Single-bid JSON-feed responses (value-feed, bid-price, bid-redirect, …).
   // Get routed through the same VENDOR_FEED type — the rules-feed dispatcher
   // discriminates the actual format and returns a format-named result type.
-  if (looksLikeJsonFeedSingle(obj)) return TYPES.VENDOR_FEED;
+  if (isExadsRequest(obj)) return TYPES.VENDOR_REQUEST;
+  if (
+    isExadsResponse(obj) ||
+    isAdon3Response(obj) ||
+    isNativeFeedMaterial(obj) ||
+    looksLikeJsonFeedSingle(obj)
+  )
+    return TYPES.VENDOR_FEED;
 
   // Heuristics for malformed payloads.
   if (obj.site || obj.app || obj.device) return TYPES.ORTB_REQUEST;
