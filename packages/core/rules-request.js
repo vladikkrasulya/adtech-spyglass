@@ -74,7 +74,16 @@ function validateRequest(req, ctx) {
   // branch, and "more than one channel present" now reports identically no
   // matter which pair collided (the old `else if` could only ever see the
   // site+app collision).
-  const channels = ['site', 'app', 'dooh'].filter((k) => req[k]);
+  const channels = ['site', 'app', 'dooh'].filter((k) => req[k] !== undefined);
+  if (req.site !== undefined && !isObj(req.site)) {
+    findings.push(F('request.site_invalid', LEVELS.ERROR, 'site'));
+  }
+  if (req.app !== undefined && !isObj(req.app)) {
+    findings.push(F('request.app_invalid', LEVELS.ERROR, 'app'));
+  }
+  if (req.dooh !== undefined && !isObj(req.dooh)) {
+    findings.push(F('request.dooh_invalid', LEVELS.ERROR, 'dooh'));
+  }
   if (channels.length === 0) {
     // oRTB 2.6 §3.2.1 lists `site` and `app` as "object; recommended" and
     // `dooh` as a plain "object" — none of the three is required, so a
@@ -94,7 +103,7 @@ function validateRequest(req, ctx) {
   // request carrying dooh together with site or app is already flagged as
   // ambiguous above, and one of those two channels does imply a real client
   // — so it keeps the strict device rules.
-  const doohOnly = channels.length === 1 && channels[0] === 'dooh';
+  const doohOnly = channels.length === 1 && channels[0] === 'dooh' && isObj(req.dooh);
 
   // Impression ids must be unique within a request. A bid answers with
   // `bid.impid`, so two impressions sharing an id make that reference
@@ -274,8 +283,10 @@ function validateRequest(req, ctx) {
   // absent only `request.device_required` fires: the per-field findings
   // would restate the same omission three times. (021, ADR-016 — the audit
   // recorded the ERRORs as DEF-100 and DEF-103.)
-  if (!isObj(req.device)) {
+  if (req.device === undefined) {
     findings.push(F('request.device_required', LEVELS.WARNING, 'device'));
+  } else if (!isObj(req.device)) {
+    findings.push(F('request.device_invalid', LEVELS.ERROR, 'device'));
   } else {
     const dev = req.device;
     // `ip` and `ua` are how a bidder reaches a *client*: geo and fraud scoring
@@ -289,15 +300,23 @@ function validateRequest(req, ctx) {
     // So the level moves rather than the rule: on a DOOH-only request these
     // drop to INFO. Dropping the checks entirely would lose the signal for an
     // operator who did mean to send an address.
-    if (!dev.ip && !dev.ipv6) {
+    if (dev.ip !== undefined && typeof dev.ip !== 'string') {
+      findings.push(F('request.device.ip_invalid', LEVELS.ERROR, 'device.ip'));
+    }
+    if (dev.ipv6 !== undefined && typeof dev.ipv6 !== 'string') {
+      findings.push(F('request.device.ipv6_invalid', LEVELS.ERROR, 'device.ipv6'));
+    }
+    if ((dev.ip === undefined || dev.ip === '') && (dev.ipv6 === undefined || dev.ipv6 === '')) {
       findings.push(
         F('request.device.ip_required', doohOnly ? LEVELS.INFO : LEVELS.WARNING, 'device.ip'),
       );
     }
-    if (!isStr(dev.ua)) {
+    if (dev.ua === undefined || dev.ua === '') {
       findings.push(
         F('request.device.ua_required', doohOnly ? LEVELS.INFO : LEVELS.WARNING, 'device.ua'),
       );
+    } else if (typeof dev.ua !== 'string') {
+      findings.push(F('request.device.ua_invalid', LEVELS.ERROR, 'device.ua'));
     }
     if (dev.geo && dev.geo.country && !ISO_3166_ALPHA3.test(dev.geo.country)) {
       findings.push(
@@ -337,10 +356,10 @@ function validateRequest(req, ctx) {
   }
 
   // ── Site / App ───────────────────────────────────────────────────────────
-  if (req.site && !isStr(req.site.domain)) {
+  if (isObj(req.site) && !isStr(req.site.domain)) {
     findings.push(F('request.site.domain_missing', LEVELS.WARNING, 'site.domain'));
   }
-  if (req.app && !isStr(req.app.bundle)) {
+  if (isObj(req.app) && !isStr(req.app.bundle)) {
     findings.push(F('request.app.bundle_missing', LEVELS.WARNING, 'app.bundle'));
   }
 

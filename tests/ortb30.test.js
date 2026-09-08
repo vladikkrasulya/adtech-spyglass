@@ -605,7 +605,9 @@ test('samples: synthetic-ortb30-deep-errors.json fires expected deep errors', ()
   assert.ok(errs.length > 0);
   assert.ok(warns.length > 0);
   assert.ok(findById(r.findings, 'request.30.context.site_and_app_both'));
-  assert.ok(findById(r.findings, 'request.30.context.device.ua_required'));
+  // This sample supplies ua: 12345; it is an invalid string type, not an omission.
+  assert.equal(findById(r.findings, 'request.30.context.device.ua_invalid').level, 'error');
+  assert.equal(findById(r.findings, 'request.30.context.device.ua_required'), undefined);
   assert.ok(findById(r.findings, 'request.30.context.device.geo.country_invalid'));
   assert.ok(findById(r.findings, 'request.30.regs.gdpr_consent_missing'));
   assert.ok(findById(r.findings, 'request.30.regs.coppa_pii_present'));

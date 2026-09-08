@@ -1,7 +1,7 @@
 # Contract: Core Validator and CLI
 
 **Owner**: `packages/core/` and `packages/cli/`
-**Current versions**: Core `0.38.0`; CLI `0.1.3`
+**Current versions**: Core `0.40.0`; CLI `0.1.3`
 
 ## Public Core Surface
 
@@ -154,23 +154,40 @@ The dialect vocabulary and the labelling resolution are a layered contract:
   RESERVED state no v1 path produces. The model prompt payload is frozen to the ADR-012 §6
   allowlist, asserted by test; `docs/PRIVACY.md` is unchanged.
 
-## Recommended-Field Levels (021, ADR-016; Core 0.39.0)
+## Recommended Fields and Supplied Types (021, ADR-016; Core 0.40.0)
 
-A specification qualifier maps to a validator level: `required` → error, `recommended` → warning,
-`optional` → info, with two named exceptions recorded in ADR-016 — `device.ua`/`device.ip` (and
-their 3.0 mirrors) are warning on a site/app request because the client identity is what bidders
-key on, and info on a DOOH-only request; an empty `seatbid` array without `nbr` is an info-level
-no-bid. Concretely: `request.no_site_or_app`, `request.device_required`,
+For omitted fields, specification qualifiers map to levels: `required` → error, `recommended` →
+warning, `optional` → info, with the named exceptions in ADR-016. Device `ua`/`ip` omissions and
+their 3.0 mirrors are warnings on site/app requests and info on DOOH-only requests; an empty
+`seatbid` array without `nbr` is an info-level no-bid. An absent property or explicit JavaScript
+`undefined` counts as omitted; `null` does not.
+
+Concretely, `request.no_site_or_app`, `request.device_required`,
 `request.30.context.no_site_or_app` and `request.30.context.device_required` are warnings;
 `request.device.ip_required`/`ua_required` and `request.30.context.device.ip_required`/`ua_required`
 are warnings (info on DOOH-only); `response.seatbid_empty_no_nbr` and
 `response.30.seatbid_empty_no_nbr` are info. An absent 2.x `device` yields only
-`request.device_required`. Crosscheck reports only the id check for an empty `seatbid` array and
-`crosscheck.no_response` only when neither a `seatbid` array nor `nbr` exists. Wrong types
-(`request.30.context.device_invalid`) and the no-signal errors (`response.seatbid_or_nbr_required`,
-`response.30.seatbid_or_nbr_required`) stay errors. Ids are unchanged; the levels are pinned by
-`tests/validator.test.js`, `tests/rules-25-audit.test.js`, `tests/ortb30.test.js` and the 020
-corpus.
+`request.device_required`, without child-field cascades.
+
+Supplied `site`, `app`, `dooh` and `device` in 2.x requests or 3.0 request contexts must be
+non-null, non-array objects. Supplied Device `ua`, `ip` and `ipv6` must be strings; empty strings
+may retain existing omission guidance. Supplied response `nbr` must be an integer, regardless of
+whether `seatbid` is populated, empty or absent. Supplied wrong types, including falsy values and
+`null`, produce errors. Invalid Device objects do not trigger child-field cascades. These checks
+add no IP-address parsing, network-range checks, or `nbr` enum membership or numeric-range policy.
+
+Crosscheck reports only the id check for an empty `seatbid` array with absent or integer `nbr`;
+`crosscheck.no_response` remains for responses with neither a `seatbid` array nor `nbr`. No-bid
+handling must not suppress a validator error for malformed supplied `nbr`. The no-signal errors
+`response.seatbid_or_nbr_required` and `response.30.seatbid_or_nbr_required` remain errors.
+
+All existing finding ids remain. Core 0.40.0 adds exactly 13 invalid-type error ids enumerated with
+paths in the [021 finding contract](../../021-recommended-fields-guidance/contracts/finding-levels.md).
+Existing 3.0 Site/App/Device invalid ids remain errors, including for supplied falsy wrong types.
+The additive ids and restored blocking verdicts for malformed inputs justify the minor bump from
+0.39.0; the CLI's Core dependency range is `^0.40.0`. Public-boundary tests must distinguish valid
+omissions from supplied wrong types in both protocol families, and every new id must have en/uk/ru
+messages. Core tests cover explicit `undefined`; HTTP tests cover JSON omission and invalid values.
 
 ## CLI Contract
 

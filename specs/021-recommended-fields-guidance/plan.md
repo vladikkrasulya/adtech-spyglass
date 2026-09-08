@@ -106,7 +106,7 @@ packages/cli/package.json    # ^0.39.0
 package-lock.json
 tests/
 ├── validator.test.js, rules-25-audit.test.js, ortb30.test.js, cli.test.js
-└── corpus/                  # 21 cases without knownGap, 8 re-pinned, 2 ledger files
+└── corpus/                  # 20 cases without knownGap, 1 browser DEF-201, 8 re-pinned, 2 ledger files
 specs/000-platform-baseline/contracts/core-validator.md   # level policy section
 specs/decisions/ADR-016-recommended-fields-are-guidance.md
 ```
@@ -116,3 +116,15 @@ specs/decisions/ADR-016-recommended-fields-are-guidance.md
 ## Complexity Tracking
 
 No constitution violations to justify.
+
+## Review repair design (0.39.0 → 0.40.0)
+
+The original implementation described above is retained as delivery history. The review follow-up distinguishes `undefined`/omission from supplied invalid values before applying recommendation levels. Device and site/app/dooh must be objects when supplied; UA/IP/IPv6 must be strings. Existing empty-string guidance remains. A supplied nbr must be an integer; no network address parser or additional reason-code range policy is introduced.
+
+The four request/response modules emit 13 literal additive error ids, enumerated in contracts/finding-levels.md, with localized catalogs and packages/core/spec-refs.json in the same change. Existing guidance and no-bid identifiers remain stable. The severity registry continues reading literal call sites. Context/client checks run only for a valid parent Device, so malformed parents do not create cascaded child findings. Channel presence and type are evaluated separately, including false/0/empty-string values.
+
+A new tests/recommended-fields-types.test.js drives both public protocol families, the default CLI gate and the actual HTTP analyze endpoint. Negative examples include strings/arrays/booleans/numbers/null where objects are expected and malformed nbr; positive controls include true omission, empty strings retaining existing guidance, valid strings and integer no-bid reasons. The original 256-case corpus remains unchanged and its exact guards must still pass. No browser driver or assertion is weakened.
+
+Core 0.40.0 records the additive error ids and the corrected rejection of malformed inputs; the CLI dependency range and workspace lock move with it. The app and CLI versions remain 1.19.4 and 0.1.3 because their own API shapes and exit-code policy are unchanged. Updated feature records state 20 fully resolved cases, one residual browser DEF-201 and eight partial cases.
+
+Constitution recheck: the same feature owns the bounded repair (I); review reproductions and separate final evidence establish claims (II); no privacy/storage/network policy changes (III); explicit additive-id and version decision preserves deterministic contracts (IV); existing modules and test infrastructure remain owners (V); all three locales and finding metadata move together (VI); focused negative tests precede the fix and full gates follow (VII); isolated authored scope, no-force delivery and hosted evidence remain mandatory, with no deployment (VIII).

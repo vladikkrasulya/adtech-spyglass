@@ -321,5 +321,18 @@
   "consent.tcf_requires_consent_without_purpose": "https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md",
   "vast.wrapper_multiple_ads_ambiguous": "https://github.com/InteractiveAdvertisingBureau/vast/blob/master/4.3.md#3132-wrapper-attributes",
   "request.imp_id_duplicated": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#324---object-imp",
-  "request.user.eids_disagree": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220---object-user"
+  "request.user.eids_disagree": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3220---object-user",
+  "request.site_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "request.app_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "request.dooh_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "request.device_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidrequest",
+  "request.device.ua_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdevice",
+  "request.device.ip_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdevice",
+  "request.device.ipv6_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdevice",
+  "request.30.context.dooh_invalid": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_dooh",
+  "request.30.context.device.ua_invalid": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_device",
+  "request.30.context.device.ip_invalid": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_device",
+  "request.30.context.device.ipv6_invalid": "https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/df8ba06de0ba77c82efee7a2dc832bd4968474d6/AdCOM%20v1.0%20FINAL.md#object_device",
+  "response.nbr_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidresponse",
+  "response.30.nbr_invalid": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md#object_response"
 }

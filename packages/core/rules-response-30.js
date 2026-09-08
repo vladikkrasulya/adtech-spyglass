@@ -90,12 +90,14 @@ function validateResponseBody30(resp, base, findings) {
   //     so an empty seatbid is a no-bid whether or not a reason travels with
   //     it: INFO either way. Both missing → ERROR (no signal at all). (021)
   const hasSeatbid = Array.isArray(resp.seatbid);
-  const hasNbr = isNum(resp.nbr);
+  const nbrInvalid = resp.nbr !== undefined && !Number.isInteger(resp.nbr);
+  if (nbrInvalid) findings.push(F('response.30.nbr_invalid', LEVELS.ERROR, at('nbr')));
+  const hasNbr = Number.isInteger(resp.nbr);
   if (!hasSeatbid && !hasNbr) {
     findings.push(F('response.30.seatbid_or_nbr_required', LEVELS.ERROR, at('seatbid')));
   } else if (hasNbr && (!hasSeatbid || !resp.seatbid.length)) {
     findings.push(F('response.30.no_bid', LEVELS.INFO, at('nbr'), { nbr: resp.nbr }));
-  } else if (hasSeatbid && !resp.seatbid.length) {
+  } else if (hasSeatbid && !resp.seatbid.length && !nbrInvalid) {
     findings.push(F('response.30.seatbid_empty_no_nbr', LEVELS.INFO, at('seatbid')));
   }
 

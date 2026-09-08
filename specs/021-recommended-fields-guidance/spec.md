@@ -6,6 +6,8 @@
 
 **Status**: Complete
 
+Implementation verification and operational delivery evidence are recorded in [verification.md](./verification.md).
+
 **Input**: Owner instruction, 2026-09-08, after the [020 ad format verification matrix](../020-ad-format-verification-matrix/verification.md)
 closed: "Починай з rules-request.js, DEF-100/302/103/114". The four ledger groups are one class of
 defect. OpenRTB 2.6 §3.2.1 lists `site`, `app` and `device` as _recommended_ objects and `dooh` as a
@@ -17,7 +19,11 @@ The 3.0 rules repeated the same class for `request.context.device` and its `ip`/
 reproduced the class on 21 cases in four ad formats (video 10, banner 7, native 3, audio 1) across
 web, in-app, CTV, DOOH and unspecified contexts on OpenRTB 2.5, 2.6 and 3.0 (DEF-100: 12, DEF-302: 7, DEF-103: 1,
 DEF-114: 1) and on eight further cases where the false device errors travelled with unrelated
-deviations (DEF-101, DEF-151).
+deviations (DEF-101, DEF-151). Review of the first implementation found that omission checks also
+accepted supplied values of the wrong type. The follow-up preserves omission guidance while
+restoring blocking type errors. Of the 21 initially affected cases, 20 pass normatively on every
+layer; one retains the independent browser deviation DEF-201. The eight other cases remain
+re-pinned to their unrelated deviations.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -52,6 +58,11 @@ OpenRTB 3.0 envelope behave the same way.
 4. **Given** an OpenRTB 3.0 request whose `context` lacks `device`, or whose `device` lacks
    `ip`/`ua`, or whose `context` names no channel, **When** it is analyzed, **Then** the same
    levels apply; a `device` of the wrong type remains an error.
+5. **Given** a supplied `site`, `app`, `dooh` or `device` that is not a non-null, non-array object,
+   or a supplied `device.ua`, `device.ip` or `device.ipv6` that is not a string, **When** a 2.x or
+   3.0 request is analyzed, **Then** the offending field produces its error-level invalid-type
+   finding, including for `null`, `false` and `0`. An absent property or explicit `undefined`
+   retains omission guidance; an empty client-field string may retain the existing guidance.
 
 ---
 
@@ -79,6 +90,10 @@ nor `nbr` still yields the no-signal error and the crosscheck "no response".
    **Then** `response.30.seatbid_empty_no_nbr` is info and the status is `clean`.
 4. **Given** a response with neither a `seatbid` array nor an `nbr`, **When** it is analyzed and
    crosschecked, **Then** the no-signal error and `crosscheck.no_response` are unchanged.
+5. **Given** a supplied `nbr` that is not an integer, such as `"2"`, `{}`, `null`, `false` or
+   `2.5`, **When** a 2.x or 3.0 response is analyzed, **Then** its `nbr_invalid` finding is an
+   error, including with an empty `seatbid` array or with `nbr` as the only no-bid signal. An
+   absent `nbr` or explicit `undefined` follows the existing omission behavior.
 
 ---
 
@@ -91,29 +106,37 @@ case may pass by accident.
 **Why this priority**: The corpus is the regression net for every later fix; a stale record would
 make the guard "deviation is still the recorded one" lie.
 
-**Independent Test**: Run the Core, HTTP and browser corpus layers over the 21 resolved cases and
-the 8 re-pinned cases: the 21 pass normatively on every layer, the 8 report only their remaining
-recorded deviations, and the merged ledger has four fewer groups.
+**Independent Test**: Run the Core, HTTP and browser corpus layers over the 21 initially affected
+cases and the 8 other re-pinned cases: 20 pass normatively on every layer; one passes Core and HTTP
+but retains the exact browser DEF-201 signature; the 8 others report only their remaining recorded
+deviations. The merged ledger has four fewer groups.
 
 **Acceptance Scenarios**:
 
-1. **Given** the four ledger records DEF-100, DEF-103, DEF-114 and DEF-302 are removed and their
-   cases carry no `knownGap`, **When** the corpus layers run, **Then** those cases pass with zero
-   failures on Core, HTTP and browser.
+1. **Given** the four ledger records DEF-100, DEF-103, DEF-114 and DEF-302 are removed,
+   **When** the corpus layers run, **Then** 20 of their cases carry no `knownGap` and pass
+   normatively on Core, HTTP and browser; the remaining case passes Core and HTTP and retains
+   only the independently recorded browser DEF-201 deviation.
 2. **Given** the eight cases whose recorded signatures contained the device lines, **When** the
    corpus layers run, **Then** their guards pass against signatures that contain only the audio
    (DEF-101) and Native 3.0 (DEF-151) deviations.
 
 ### Edge Cases
 
-- `device` present with a non-object value: the 2.x rule keeps the single id
-  `request.device_required` at warning level (no new finding id is introduced by this feature);
-  the 3.0 rule already has `request.30.context.device_invalid` at error level and keeps it.
+- A supplied non-object `device` produces `request.device_invalid` (2.x) or the existing
+  `request.30.context.device_invalid` (3.0) at error level, without child-field cascades.
+  `null`, arrays, strings, booleans and numbers are invalid object values, including falsy values.
+  An absent property and explicit `undefined` count as omitted; `null` does not.
+- A supplied non-string `ua`, `ip` or `ipv6` is an error even if another client field is usable.
+  Empty strings may retain existing omission guidance. This feature adds no address parsing or
+  network-range validation.
 - `dooh` together with `site` or `app` is still the ambiguous-channel warning and keeps the
   site/app level for `ip`/`ua`, because a real client is claimed.
 - `seatbid` that is not an array (an object, `null`, a string) is not a no-bid: the validator's
   no-signal error and the crosscheck "no response" remain.
-- `nbr` present with an empty `seatbid` is unchanged: `response.no_bid` info with the reason.
+- An integer `nbr` with an empty `seatbid` keeps the existing no-bid info finding with its reason.
+  Any supplied non-integer `nbr` produces an error; a no-bid shortcut cannot suppress that error.
+  This feature does not add enum membership or numeric-range policy for `nbr`.
 
 ## Requirements _(mandatory)_
 
@@ -124,7 +147,8 @@ recorded deviations, and the merged ledger has four fewer groups.
 - **FR-002**: A 2.x request without a `device` object MUST produce exactly one device finding,
   `request.device_required`, at warning level, and no `request.device.ip_required`,
   `request.device.ua_required` or `request.device.language_missing` for the absent object.
-- **FR-003**: A 2.x `device` without `ip`/`ipv6` or without a string `ua` MUST produce
+- **FR-003**: A 2.x `device` with omitted or empty-string `ip`/`ipv6`, or omitted or empty-string
+  `ua`, MUST produce
   `request.device.ip_required` / `request.device.ua_required` at warning level when `site` or
   `app` is present and at info level when `dooh` is the only channel; the ids are unchanged.
 - **FR-004**: The OpenRTB 3.0 rules MUST apply the same levels: `request.30.context.no_site_or_app`
@@ -135,39 +159,66 @@ recorded deviations, and the merged ledger has four fewer groups.
   `response.seatbid_empty_no_nbr` (2.x) / `response.30.seatbid_empty_no_nbr` (3.0) at info level
   and roll up to status `clean`; a response with neither a `seatbid` array nor `nbr` MUST keep the
   error `response.seatbid_or_nbr_required` / `response.30.seatbid_or_nbr_required`.
-- **FR-006**: Crosscheck MUST treat an empty `seatbid` array as a no-bid: it MUST still report
+- **FR-006**: Crosscheck MUST treat an empty `seatbid` array with absent or integer `nbr` as a
+  no-bid: it MUST still report
   `crosscheck.id_match` or `crosscheck.id_mismatch` and MUST NOT report `crosscheck.no_response`;
   `crosscheck.no_response` MUST remain for a response with neither a `seatbid` array nor `nbr`.
-- **FR-007**: No finding id MUST be added, removed or renamed. The English, Ukrainian and Russian
-  texts of the ten affected ids MUST state the normative basis (recommended or optional, with the
+- **FR-007**: Every existing finding id MUST be preserved without renaming. Exactly the 13
+  error-level invalid-type ids enumerated in [the finding contract](contracts/finding-levels.md)
+  MUST be added for the reviewed type-validation follow-up. The English, Ukrainian and Russian
+  texts of the ten omission ids MUST state the normative basis (recommended or optional, with the
   section for OpenRTB 2.6 and the object name for AdCOM 1.0 / OpenRTB 3.0) and the operational
-  consequence, and MUST NOT call the omission required.
+  consequence, and MUST NOT call the omission required. All 13 new ids MUST have messages in all
+  three locales that identify the expected type.
 - **FR-008**: Every changed level MUST be pinned by a regression test at the public boundary, and
-  the 020 corpus MUST be updated in the same change: the 21 resolved cases lose their ledger
-  records, the 8 partially affected signatures are re-pinned, and every guard passes.
-- **FR-009**: The Core package MUST take a SemVer minor bump with the CLI dependency range and the
-  lock file in the same change, and the validator contract and decision index MUST record the
-  level policy.
+  the 020 corpus MUST be updated in the same change: 20 initially affected cases become fully
+  normative, one retains only browser DEF-201, the 8 other partially affected signatures are
+  re-pinned, and every guard passes. Supplied-invalid-value regressions MUST be tested separately
+  from valid omission controls.
+- **FR-009**: The follow-up MUST bump Core from 0.39.0 to 0.40.0, set the CLI dependency range to
+  `^0.40.0`, and update the lock file in the same change. The additive finding ids and newly
+  blocking verdicts for malformed supplied inputs justify the minor bump. The validator contract
+  and decision index MUST record the policy.
+- **FR-010**: In 2.x requests and 3.0 request contexts, supplied `site`, `app`, `dooh` and `device`
+  MUST be non-null, non-array objects; supplied `device.ua`, `device.ip` and `device.ipv6` MUST be
+  strings. A value of the wrong type MUST produce the field-specific error id, including falsy
+  values, regardless of any other valid channel or client field. An absent property or explicit
+  `undefined` MUST follow omission rules; `null` MUST be treated as supplied and invalid. Empty
+  client-field strings MAY keep existing omission guidance. Invalid Device objects MUST NOT
+  trigger child-field cascades. Address parsing and network-range policy are out of scope.
+- **FR-011**: A supplied response `nbr` MUST be an integer in both 2.x and 3.0 and MUST otherwise
+  produce `response.nbr_invalid` / `response.30.nbr_invalid` at error level. This check MUST apply
+  with non-empty or empty `seatbid`, or without `seatbid`; no-bid handling MUST NOT suppress it.
+  An absent `nbr` or explicit `undefined` MUST remain omitted; `null` is invalid. This requirement
+  validates the declared type only and adds no enum membership or numeric-range policy.
 
 ### Key Entities _(include if feature involves data)_
 
 - **Finding level policy**: the mapping from a specification qualifier (required, recommended,
-  optional) to a validator level (error, warning, info) recorded in ADR-016.
+  optional) to omission levels (error, warning, info), with supplied wrong types remaining errors,
+  recorded in ADR-016.
 - **Known-gap record**: a ledger entry with per-case, per-layer anchored signatures; four are
-  retired and eight are re-pinned by this feature.
+  retired, one initially affected case retains browser DEF-201, and eight other cases are
+  re-pinned by this feature.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: The 21 audit cases previously recorded under DEF-100, DEF-103, DEF-114 and DEF-302
-  pass normatively on the Core, HTTP and browser corpus layers with zero unexpected failures.
+- **SC-001**: Of the 21 audit cases previously recorded under DEF-100, DEF-103, DEF-114 and
+  DEF-302, 20 pass normatively on Core, HTTP and browser; one passes Core and HTTP and retains
+  only the exact browser DEF-201 signature. There are zero unexpected failures.
 - **SC-002**: The 8 re-pinned cases report only their DEF-101 / DEF-151 deviations on every layer,
   and no "deviation is still the recorded one" guard fails anywhere in the corpus.
-- **SC-003**: No finding id is added, removed or renamed; the locale parity suite passes; the ten
-  affected texts exist in all three locales.
+- **SC-003**: Every existing finding id is retained, exactly the 13 specified invalid-type ids are
+  added, and the locale parity suite passes. The ten revised omission texts and all 13 new
+  invalid-type texts exist in English, Ukrainian and Russian.
 - **SC-004**: `npm run ci` exits 0 with zero failures and zero runner retries on the settled tree,
   and the merged ledger has 40 groups (44 minus 4).
+- **SC-005**: Public-boundary regressions prove that supplied wrong object/client/`nbr` types
+  produce the specified error ids and offending field paths in both protocol families, including
+  falsy values and `null`. Omitted-value controls retain warning/info behavior. Explicit
+  `undefined` is tested at the Core boundary; JSON omission controls cover the HTTP boundary.
 
 ## Assumptions
 

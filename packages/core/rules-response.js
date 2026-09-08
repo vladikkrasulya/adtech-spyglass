@@ -80,13 +80,15 @@ function validateResponse(res, ctx) {
   // reason when one travels. If both seatbid AND nbr are absent there is no
   // bid signal at all — that stays ERROR (response.seatbid_or_nbr_required).
   // (021, ADR-016 — the audit recorded the empty-array ERROR as DEF-114.)
-  const nbrPresent = isNum(res.nbr);
+  const nbrInvalid = res.nbr !== undefined && !Number.isInteger(res.nbr);
+  if (nbrInvalid) findings.push(F('response.nbr_invalid', LEVELS.ERROR, 'nbr'));
+  const nbrPresent = Number.isInteger(res.nbr);
   const seatbidArr = Array.isArray(res.seatbid);
   if (!seatbidArr && !nbrPresent) {
     findings.push(F('response.seatbid_or_nbr_required', LEVELS.ERROR, 'seatbid'));
   } else if (nbrPresent && (!seatbidArr || !res.seatbid.length)) {
     findings.push(F('response.no_bid', LEVELS.INFO, 'nbr', { nbr: res.nbr }));
-  } else if (seatbidArr && !res.seatbid.length) {
+  } else if (seatbidArr && !res.seatbid.length && !nbrInvalid) {
     // Empty seatbid array without nbr: a no-bid that does not say why.
     findings.push(F('response.seatbid_empty_no_nbr', LEVELS.INFO, 'seatbid'));
   }

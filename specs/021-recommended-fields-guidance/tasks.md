@@ -81,3 +81,24 @@ the 020 corpus and the governing documents; no scaffolding phase is needed.
 | FR-007      | T006, T008             |
 | FR-008      | T009, T010, T011, T014 |
 | FR-009      | T012, T013, T014       |
+
+## Phase 6: Review regression repair (Core 0.40.0)
+
+The independent review of 977e6b1 found that malformed supplied Device/channel/client fields had received omission guidance, and malformed supplied nbr could roll up clean. These are implementation follow-ups to the same accepted defect class. The earlier evidence above describes the original 0.39.0 delivery only.
+
+- [x] T015 [US1] Amend spec/research/ADR-016/contracts to distinguish absence from supplied invalid types, enumerate the 13 additive error ids, correct the corpus result to 20 full retirements + one browser DEF-201 + eight other repins, and run the pre-implementation consistency review (FR-007–FR-011).
+- [x] T016 [US1] Add tests/recommended-fields-types.test.js proving the malformed Device/channel/client/nbr cases fail through public Core, CLI and HTTP boundaries in both protocol families while omission, empty-string guidance, valid strings and integer reasons preserve valid behavior (FR-002–FR-008, FR-010, FR-011).
+- [x] T017 [US1] Repair the four request/response rule files, add the 13 error messages in en/uk/ru and their spec-refs.json entries; retain existing ids, literal severity call sites and exact known-gap signatures (FR-007, FR-010, FR-011).
+- [x] T018 [US3] Bump Core to 0.40.0 with CLI range and lock metadata; update canonical version/validator/roadmap records and corrected measured outcomes without altering archived 020 evidence (FR-008, FR-009).
+- [x] T019 [US3] Run focused gates and full repository CI on the settled scope, review convergence, record final verification and prepare the verified implementation for delivery (FR-008–FR-011).
+
+T015 precedes T016/T017; T016 first records the failures on 977e6b1. T017/T018 precede T019. Root owns integration and delivery; a documentation reviewer edits only its explicit allowlist in an isolated worktree. No production deployment is part of this follow-up.
+
+### Follow-up evidence
+
+- Before implementation, tests/recommended-fields-types.test.js recorded eight failures on the original 0.39.0 rules and two passing omission controls. After the fix all ten test groups pass, including the actual HTTP endpoint and default CLI rejection. Logs are retained under `/home/vk/.local/share/ortbtools-research/2026-09-08-021-review-followup/`.
+- The updated compatibility decision resolves the prior contradictory wrong-type exception. Pre-implementation review maps all eleven requirements to tasks; the five amended policy/specification records are consistent. The original 3.0 deep-error sample supplies numeric ua, so its assertion now requires the new ua_invalid error and forbids the old omission finding. Focused validation then passed: 990 tests/subtests, 821 passes, 166 expected-failure markers, three transport skips and no failures. Format, lint, typecheck and independent code review passed. Full local `npm run ci` passed: 4,035 tests/subtests, 3,866 passes, 166 expected-failure markers, three transport skips, zero failures/cancellations and no runner retries. Convergence checked 11 requirements, five success criteria, 12 acceptance scenarios, eight plan decisions and eight constitution principles with zero findings; it left tasks.md byte-for-byte unchanged during assessment. Completion bookkeeping then marked T019 complete. Operational delivery follows under the obligation below; final results are recorded in the external receipt.
+
+### Operational delivery obligation
+
+After T019 prepares the verified scope, the operator must commit the authored changes, perform the standing-authorized non-force push with the pre-push gate enabled, and wait for hosted CI before reporting delivery complete. The final SHA, clean remote agreement, pre-push and hosted results belong in the external `2026-09-08-021-review-followup/delivery.json` receipt so this commit does not claim its own future outcomes.

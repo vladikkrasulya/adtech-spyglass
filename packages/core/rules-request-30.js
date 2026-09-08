@@ -103,7 +103,7 @@ function validateContext30(context, findings) {
   // 1. distribution channel — exactly one of site / app / dooh. AdCOM 1.0
   //    has three DistributionChannel subclasses; a DOOH request (billboard /
   //    kiosk) carries neither site nor app, so it must NOT trip "no channel".
-  const channels = ['site', 'app', 'dooh'].filter((k) => context[k]);
+  const channels = ['site', 'app', 'dooh'].filter((k) => context[k] !== undefined);
   if (channels.length > 1) {
     findings.push(
       F('request.30.context.site_and_app_both', LEVELS.WARNING, bp, {
@@ -120,10 +120,10 @@ function validateContext30(context, findings) {
   // A DOOH-only context relaxes the client-identity checks the same way the
   // 2.x rule does (rules-request.js): a screen has no browser agent and its
   // egress address says nothing about the audience in front of it.
-  const doohOnly = channels.length === 1 && channels[0] === 'dooh';
+  const doohOnly = channels.length === 1 && channels[0] === 'dooh' && isObj(context.dooh);
 
   // 2. site
-  if (context.site) {
+  if (context.site !== undefined) {
     if (!isObj(context.site)) {
       findings.push(F('request.30.context.site_invalid', LEVELS.ERROR, `${bp}.site`));
     } else if (!isStr(context.site.domain)) {
@@ -134,7 +134,7 @@ function validateContext30(context, findings) {
   }
 
   // 3. app
-  if (context.app) {
+  if (context.app !== undefined) {
     if (!isObj(context.app)) {
       findings.push(F('request.30.context.app_invalid', LEVELS.ERROR, `${bp}.app`));
     } else if (!isStr(context.app.bundle)) {
@@ -142,12 +142,16 @@ function validateContext30(context, findings) {
     }
   }
 
+  if (context.dooh !== undefined && !isObj(context.dooh)) {
+    findings.push(F('request.30.context.dooh_invalid', LEVELS.ERROR, `${bp}.dooh`));
+  }
+
   // 4. device — AdCOM 1.0 Object: Device marks `ua` as recommended and `ip`
   //    as a plain optional string; the object itself is one of the
   //    recommended context objects. Absence is guidance (WARNING), a wrong
   //    type is still a defect (ERROR). DOOH-only contexts drop the two
   //    client-identity findings to INFO. (021, ADR-016 — DEF-100 3.0 variants.)
-  if (!context.device) {
+  if (context.device === undefined) {
     findings.push(F('request.30.context.device_required', LEVELS.WARNING, `${bp}.device`));
   } else if (!isObj(context.device)) {
     findings.push(F('request.30.context.device_invalid', LEVELS.ERROR, `${bp}.device`));
@@ -156,7 +160,13 @@ function validateContext30(context, findings) {
     // The level stays inline at each call site: severity-registry.js reads
     // `cond ? LEVELS.A : LEVELS.B` as the union of both branches, but cannot
     // follow a variable.
-    if (!dev.ip && !dev.ipv6) {
+    if (dev.ip !== undefined && typeof dev.ip !== 'string') {
+      findings.push(F('request.30.context.device.ip_invalid', LEVELS.ERROR, `${bp}.device.ip`));
+    }
+    if (dev.ipv6 !== undefined && typeof dev.ipv6 !== 'string') {
+      findings.push(F('request.30.context.device.ipv6_invalid', LEVELS.ERROR, `${bp}.device.ipv6`));
+    }
+    if ((dev.ip === undefined || dev.ip === '') && (dev.ipv6 === undefined || dev.ipv6 === '')) {
       findings.push(
         F(
           'request.30.context.device.ip_required',
@@ -165,7 +175,7 @@ function validateContext30(context, findings) {
         ),
       );
     }
-    if (!isStr(dev.ua)) {
+    if (dev.ua === undefined || dev.ua === '') {
       findings.push(
         F(
           'request.30.context.device.ua_required',
@@ -173,6 +183,8 @@ function validateContext30(context, findings) {
           `${bp}.device.ua`,
         ),
       );
+    } else if (typeof dev.ua !== 'string') {
+      findings.push(F('request.30.context.device.ua_invalid', LEVELS.ERROR, `${bp}.device.ua`));
     }
     if (dev.geo) {
       if (!isObj(dev.geo)) {
