@@ -210,7 +210,7 @@ A known gap is a reproducible unmet expectation, not a passing product check. No
 | encoding-escaped-control-char                  | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | encoding-ext-nested-50-levels                  | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | encoding-large-ext-string                      | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
-| encoding-request-body-oversized                | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | not-applicable | known-gap | not-applicable | DEF-303 |
+| encoding-request-body-oversized                | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | not-applicable | pass      | not-applicable |         |
 | encoding-request-duplicate-id                  | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | encoding-response-duplicate-price              | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | encoding-unicode-auction-id                    | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
@@ -226,9 +226,9 @@ A known gap is a reproducible unmet expectation, not a passing product check. No
 | field-shape-regs-coppa-invalid                 | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-197 |
 | field-shape-request-id-missing                 | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | field-shape-tmax-negative                      | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
-| shape-bid-null                                 | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | known-gap      | DEF-204 |
-| shape-bid-object                               | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | known-gap | known-gap      | DEF-115 |
-| shape-seatbid-object                           | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | known-gap | known-gap      | DEF-115 |
+| shape-bid-null                                 | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
+| shape-bid-object                               | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
+| shape-seatbid-object                           | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | format-mixed-impression-video-wins             | video / web      | ortb-2.6 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-111 |
 | mut-format-mismatch-audio-video-mediafile      | audio / web      | ortb-2.5 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-194 |
 | mut-format-mismatch-banner-vast-adm            | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-194 |
@@ -257,7 +257,7 @@ A known gap is a reproducible unmet expectation, not a passing product check. No
 | mut-input-shape-jsonfeed-as-response           | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | mut-input-shape-nbr-exchange-specific          | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | mut-input-shape-nbr-unassigned-code            | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-301 |
-| mut-input-shape-number-root-response           | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | known-gap | pass           | DEF-300 |
+| mut-input-shape-number-root-response           | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | mut-input-shape-ortb30-envelope-with-2x-imp    | banner / web     | ortb-3.0 / iab         | request-only  | n/a                                  | pass           | pass      | pass           |         |
 | mut-input-shape-unrecognized-object-both-sides | banner / web     | ortb-2.5 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | mut-input-shape-url-no-decoder                 | banner / web     | url-request / ext-rtb  | request-only  | n/a                                  | pass           | pass      | pass           |         |
@@ -271,7 +271,7 @@ A known gap is a reproducible unmet expectation, not a passing product check. No
 | video-mimes-missing                            | video / web      | ortb-2.6 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | video-protocol-incompatible                    | video / web      | ortb-2.6 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-113 |
 | multiplicity-bseat-blocks-responding-seat      | banner / web     | ortb-2.6 / iab         | pair          | n/a                                  | known-gap      | known-gap | known-gap      | DEF-192 |
-| multiplicity-empty-bid-array                   | banner / web     | ortb-2.6 / iab         | pair          | n/a                                  | pass           | pass      | known-gap      | DEF-204 |
+| multiplicity-empty-bid-array                   | banner / web     | ortb-2.6 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | multiplicity-forty-imps-forty-bids             | banner / web     | ortb-2.6 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | multiplicity-group-partial-coverage            | banner / web     | ortb-2.6 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
 | multiplicity-missing-bid-key                   | banner / web     | ortb-2.6 / iab         | pair          | n/a                                  | pass           | pass      | pass           |         |
