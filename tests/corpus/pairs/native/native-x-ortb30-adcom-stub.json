@@ -237,7 +237,7 @@
         "imgLoaded": 1
       },
       "limitation": null,
-      "capabilityGap": "The Inspector must locate a structured AdCOM media.ad.display.native creative under a full OpenRTB 3.0 envelope; the current 2.x-oriented preview source selection may leave it empty."
+      "capabilityGap": null
     },
     "format": {
       "formats": ["native"],
@@ -247,18 +247,5 @@
       "status": 200
     }
   },
-  "knownGap": {
-    "id": "DEF-151",
-    "layers": ["browser"],
-    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
-    "matches": {
-      "browser": [
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ full,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgTotal:\\ expected\\ 1,\\ got\\ 0$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgLoaded:\\ expected\\ 1,\\ got\\ 0$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ corner\\ for\\ weekend\\ reading\"\\ absent$"
-      ]
-    }
-  }
+  "knownGap": null
 }

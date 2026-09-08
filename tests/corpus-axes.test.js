@@ -300,9 +300,20 @@ test('axes: the committed corpus renders without unclassified cells', () => {
 });
 
 test('axes: declared corpus gaps require measured outcomes and remain deviations when observed', () => {
-  const { loadCorpus } = require('./corpus/lib/load');
-  const c = loadCorpus().all.find((entry) => entry.meta.knownGap?.layers.length);
-  assert.ok(c, 'the committed corpus contains a recorded known-gap case');
+  // Asserted on a synthetic case, not on whatever the corpus happens to hold:
+  // as of feature 030 the corpus records no gaps at all, and the accounting
+  // this test is about must keep being verifiable when there are none. A case
+  // that declares a gap but has no measured rows is INCOMPLETE — a declaration
+  // is not an observation — and the same case with rows naming the deviating
+  // layer is DEVIATING.
+  const c = fake('gap-accounting-probe', {
+    format: 'banner',
+    protocol: 'ortb-2.6',
+    context: 'web',
+    dialect: 'iab',
+    scenario: 'pair',
+    knownGap: { id: 'DEF-000', layers: ['browser'] },
+  });
   const rows = ['core', 'http', 'browser'].map((layer) => ({
     id: c.id,
     layer,

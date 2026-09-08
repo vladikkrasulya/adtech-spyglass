@@ -63,7 +63,7 @@
       "mediaPlays": "n/a",
       "marker": "A garden along the canal",
       "limitation": "The initial sealed preview blocks remote artwork.",
-      "capabilityGap": "Kadam Native url/image/cpc material needs a card preview; preserve its wire keys."
+      "capabilityGap": null
     }
   },
   "response": [
@@ -77,16 +77,5 @@
     }
   ],
   "request": "https://feed.example.test/feed?sid=730002&skey=synthetic-native-feed-key&ua=Mozilla%2F5.0+%28X11%3B+Linux+x86_64%29+AppleWebKit%2F537.36+Chrome%2F124.0.0.0+Safari%2F537.36&ip=192.0.2.44&uid=synthetic-native-user&limit=1&language=en&pid=730003&page=publisher.example.test&format=native",
-  "knownGap": {
-    "id": "DEF-441",
-    "layers": ["browser"],
-    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
-    "matches": {
-      "browser": [
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ garden\\ along\\ the\\ canal\"\\ absent$"
-      ]
-    }
-  }
+  "knownGap": null
 }

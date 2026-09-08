@@ -56,7 +56,7 @@
       "mediaPlays": "n/a",
       "marker": "A notebook for field sketches",
       "limitation": "The initial sealed preview blocks remote artwork.",
-      "capabilityGap": "Kadam Native url/image/cpc material needs a card preview; preserve its wire keys."
+      "capabilityGap": null
     }
   },
   "response": [
@@ -69,16 +69,5 @@
       "cpc": 0.0032
     }
   ],
-  "knownGap": {
-    "id": "DEF-441",
-    "layers": ["browser"],
-    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
-    "matches": {
-      "browser": [
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ notebook\\ for\\ field\\ sketches\"\\ absent$"
-      ]
-    }
-  }
+  "knownGap": null
 }

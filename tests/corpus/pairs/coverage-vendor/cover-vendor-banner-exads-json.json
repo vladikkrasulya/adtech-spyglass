@@ -62,7 +62,7 @@
       "rendered": "empty",
       "mediaPlays": "n/a",
       "limitation": "Only remote artwork is supplied; the sealed preview blocks it, leaving no visible body or identity.",
-      "capabilityGap": "The documented EXADS bid wrapper needs image/click preview support."
+      "capabilityGap": null
     }
   },
   "request": {
@@ -87,12 +87,5 @@
       "value": 1.25
     }
   },
-  "knownGap": {
-    "id": "DEF-106",
-    "layers": ["browser"],
-    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
-    "matches": {
-      "browser": ["^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ markup,\\ got\\ empty$"]
-    }
-  }
+  "knownGap": null
 }

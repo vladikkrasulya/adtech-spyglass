@@ -84,14 +84,5 @@
       "formats": ["pops"]
     }
   },
-  "knownGap": {
-    "id": "DEF-107",
-    "layers": ["browser"],
-    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
-    "matches": {
-      "browser": [
-        "^browser\\.bid\\[0,0\\]\\.identity: expected marker \"Original fixture destination\" absent$"
-      ]
-    }
-  }
+  "knownGap": null
 }

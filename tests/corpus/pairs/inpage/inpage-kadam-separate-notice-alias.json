@@ -61,7 +61,7 @@
     "Desired capability: show actual title and all supplied image assets after fixture interception; not a claim of current product support.",
     "Preserve the documented carrier to measure unsupported vendor shapes. Existing product acceptance is not the validity oracle.",
     "All assets must load from the embedded fixture route; block tracking and destination navigation.",
-    "The documented vendor ad type must be identified in the merged format result. Public Core vocabulary uses pops for pop traffic. This is a vendor capability expectation, not an invented IAB extension."
+    "ADR-017 (2026-09-09): the merged format result for this pair is push, not inpage. The feed request omits the vendor's optional format parameter — whose documented values are push/native/teaser/cu/pops, with no inpage among them — and the response materials carry no ext.widget_id/zone_id/format placement signal, so neither half of the transaction states the distinction. The feed key identifies in-page inventory to the vendor's own account system, which never travels on the wire. The case's inpage corpus metadata is unchanged; only the assertion about what the tool can conclude is corrected."
   ],
   "notes": [
     "Core observations in the source archive were deliberately excluded from expectations. Protocol metadata may describe a vendor-specific 2.x carrier; it does not claim a normative minor-version inference."
@@ -89,17 +89,8 @@
       "status": 200
     },
     "format": {
-      "formats": ["inpage"]
+      "formats": ["push"]
     }
   },
-  "knownGap": {
-    "id": "DEF-107",
-    "layers": ["core", "http", "browser"],
-    "note": "028: documented carrier validation and Core recognition implemented. Retained signatures are measured residuals; preview work belongs to Opus. Hidden Kadam inpage context assertions remain unchanged pending the explicit owner decision.",
-    "matches": {
-      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"],
-      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"],
-      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"]
-    }
-  }
+  "knownGap": null
 }

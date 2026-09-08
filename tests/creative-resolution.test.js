@@ -65,8 +65,16 @@ function loadHelpers() {
     'findDestinationUrl',
     'findAdm',
     'renderPushToHtml',
+    'renderNativeToHtml',
     'pickStringAlias',
     'inpagePushCardFrom',
+    'unwrapResponseEnvelope',
+    'adcomNativeFrom',
+    'vendorNativeMaterialFrom',
+    'vendorBannerMarkupFrom',
+    'vendorIdentityFrom',
+    'firstVendorMaterial',
+    'vendorMaterialAdm',
     'creativeCandidatesFor',
     'resolveCreativeAt',
   ];
@@ -608,4 +616,198 @@ test('inpagePushCardFrom: across the whole corpus it claims exactly the five doc
     ],
     'the carrier predicate must reach the documented In-Page Push cases and no other bid in the corpus',
   );
+});
+
+// ── DEF-151/DEF-441/DEF-106/DEF-107 — vendor and AdCOM carriers, feature 030 ──
+
+test('unwrapResponseEnvelope: an OpenRTB 3.0 envelope yields its inner response; anything else is returned untouched', () => {
+  const { unwrapResponseEnvelope } = loadHelpers();
+  const c = fixture('pairs/native/native-x-ortb30-adcom-stub.json');
+  assert.equal(unwrapResponseEnvelope(c.response), c.response.openrtb.response);
+  const flat = { id: 'x', seatbid: [] };
+  assert.equal(unwrapResponseEnvelope(flat), flat, 'a 2.x response is not an envelope');
+  const arr = [{ id: 'm' }];
+  assert.equal(unwrapResponseEnvelope(arr), arr, 'a materials array is not an envelope');
+  for (const odd of [null, 'string', 42, { openrtb: null }, { openrtb: { response: [] } }]) {
+    assert.equal(unwrapResponseEnvelope(odd), odd, `left alone: ${JSON.stringify(odd)}`);
+  }
+});
+
+test("adcomNativeFrom: AdCOM's `asset`/`image` names map onto the oRTB Native 1.x shape the renderer reads", () => {
+  const { adcomNativeFrom, renderNativeToHtml } = loadHelpers();
+  const c = fixture('pairs/native/native-x-ortb30-adcom-stub.json');
+  const bid = c.response.openrtb.response.seatbid[0].bid[0];
+  const native = adcomNativeFrom(bid);
+  assert.equal(native.link.url, 'https://advertiser.example.test/offer/native-x-ortb30-adcom-stub');
+  assert.equal(native.assets.length, 3);
+  assert.equal(native.assets[0].title.text, 'A quiet corner for weekend reading');
+  assert.ok(native.assets[1].img, 'AdCOM `image` must arrive as oRTB `img`');
+  assert.match(native.assets[1].img.url, /^data:image\/png;base64,/);
+  assert.equal(native.assets[2].data.value, 'Fixture AdCOM');
+  const html = renderNativeToHtml(native);
+  assert.match(html, /native · synthetic render/);
+  assert.match(html, /A quiet corner for weekend reading/);
+});
+
+test('adcomNativeFrom: a bid with no AdCOM display native is not claimed', () => {
+  const { adcomNativeFrom } = loadHelpers();
+  for (const bid of [
+    null,
+    'string',
+    [],
+    {},
+    { media: null },
+    { media: { ad: null } },
+    { media: { ad: { display: { native: null } } } },
+    { media: { ad: { display: { native: { link: {} } } } } },
+    { media: { ad: { display: { banner: { img: 'x' } } } } },
+  ]) {
+    assert.equal(adcomNativeFrom(bid), null, `must not claim ${JSON.stringify(bid)}`);
+  }
+});
+
+test('vendorNativeMaterialFrom: the documented Kadam Native material becomes a native card, and a push-qualified material never reaches this path', () => {
+  const { vendorNativeMaterialFrom, isPushMaterialShape } = loadHelpers();
+  const c = fixture('pairs/coverage-vendor/cover-vendor-native-kadam-json.json');
+  const material = c.response[0];
+  assert.equal(isPushMaterialShape(material), false, 'DEF-203 still refuses it as a push card');
+  const native = vendorNativeMaterialFrom(material);
+  assert.equal(native.link.url, material.url);
+  assert.equal(native.assets[0].title.text, 'A notebook for field sketches');
+  assert.equal(native.assets[1].img.url, material.image);
+  const push = fixture('pairs/push/push-ppcmate-single.json').response;
+  const pushMaterial = Array.isArray(push) ? push[0] : push;
+  assert.equal(vendorNativeMaterialFrom(pushMaterial), null, 'a push card stays a push card');
+});
+
+test('vendorNativeMaterialFrom: every documented role is required — a material missing one is not claimed', () => {
+  const { vendorNativeMaterialFrom } = loadHelpers();
+  const full = {
+    title: 'T',
+    url: 'https://a.test/go',
+    image: 'https://a.test/hero.png',
+    cpc: 0.003,
+  };
+  assert.ok(vendorNativeMaterialFrom(full));
+  for (const missing of ['title', 'url', 'image', 'cpc']) {
+    const partial = { ...full };
+    delete partial[missing];
+    assert.equal(vendorNativeMaterialFrom(partial), null, `must not claim without ${missing}`);
+  }
+});
+
+test('vendorBannerMarkupFrom: the documented EXADS bid wrapper becomes banner markup carrying its own picture and destination', () => {
+  const { vendorBannerMarkupFrom, firstVendorMaterial } = loadHelpers();
+  const c = fixture('pairs/coverage-vendor/cover-vendor-banner-exads-json.json');
+  const material = firstVendorMaterial(c.response);
+  assert.equal(material, c.response.bid, 'the EXADS wrapper resolves to res.bid');
+  const markup = vendorBannerMarkupFrom(material);
+  assert.match(
+    markup,
+    /<img src="https:\/\/assets\.example\.test\/coverage\/exads-banner-300x250\.png"/,
+  );
+  assert.match(markup, /<a href="https:\/\/advertiser\.example\.test\/coverage\/exads-banner"/);
+});
+
+test('vendorBannerMarkupFrom: notification text disqualifies a wrapper — that is a push card, not a banner', () => {
+  const { vendorBannerMarkupFrom } = loadHelpers();
+  const banner = { value: 1.25, clickUrl: 'https://a.test/go', imgUrl: 'https://a.test/x.png' };
+  assert.ok(vendorBannerMarkupFrom(banner));
+  assert.equal(vendorBannerMarkupFrom({ ...banner, title: 'Hello' }), null);
+  assert.equal(vendorBannerMarkupFrom({ ...banner, description: 'Hello' }), null);
+  for (const missing of ['value', 'clickUrl', 'imgUrl']) {
+    const partial = { ...banner };
+    delete partial[missing];
+    assert.equal(vendorBannerMarkupFrom(partial), null, `must not claim without ${missing}`);
+  }
+});
+
+test('vendorIdentityFrom: a pop material supplies its own title and description, and nothing when it has neither', () => {
+  const { vendorIdentityFrom } = loadHelpers();
+  const c = fixture('pairs/pop/pop-ppcmate-json-material.json');
+  assert.equal(
+    vendorIdentityFrom(c.response[0]),
+    'Original fixture destination\nA pop landing route for local interception.',
+  );
+  assert.equal(vendorIdentityFrom({ link: 'https://a.test/go', cpc: 1 }), null);
+  assert.equal(vendorIdentityFrom(null), null);
+});
+
+test('resolveCreativeAt: the SECOND PPCmate material resolves its own destination and its own identity', () => {
+  const { resolveCreativeAt } = loadHelpers();
+  const c = fixture('pairs/pop/pop-ppcmate-json-multi.json');
+  const first = resolveCreativeAt({}, c.response, 0, 0);
+  const second = resolveCreativeAt({}, c.response, 0, 1);
+  assert.equal(first.adm, 'https://advertiser.example.test/offers/pop-ppcmate-json-multi-first');
+  assert.equal(first.identity, 'First fixture destination\nFirst local navigation offer.');
+  assert.equal(second.adm, 'https://advertiser.example.test/offers/pop-ppcmate-json-multi-second');
+  assert.equal(second.identity, 'Second fixture destination\nSecond local navigation offer.');
+});
+
+test('resolveCreativeAt: a 3.0 AdCOM bid resolves through the envelope to its native card', () => {
+  const { resolveCreativeAt } = loadHelpers();
+  const c = fixture('pairs/native/native-x-ortb30-adcom-stub.json');
+  const resolved = resolveCreativeAt(c.request, c.response, 0, 0);
+  const parsed = JSON.parse(resolved.adm);
+  assert.equal(parsed.native.assets[0].title.text, 'A quiet corner for weekend reading');
+  assert.equal(resolved.identity, null, 'a rendered creative needs no identity fallback');
+});
+
+test('the four carrier predicates reach exactly the documented cases across the whole corpus and nothing else', () => {
+  const H = loadHelpers();
+  const corpusRoot = path.join(ROOT, 'tests/corpus');
+  const reached = { adcom: [], vendorNative: [], vendorBanner: [], identity: [] };
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!['assets', 'lib', 'known-gaps'].includes(entry.name)) walk(full);
+        continue;
+      }
+      if (!entry.name.endsWith('.json')) continue;
+      let parsed;
+      try {
+        parsed = JSON.parse(fs.readFileSync(full, 'utf8'));
+      } catch {
+        continue;
+      }
+      const res = parsed.response;
+      if (res === undefined) continue;
+      const envelope = H.unwrapResponseEnvelope(res);
+      if (envelope && typeof envelope === 'object' && Array.isArray(envelope.seatbid)) {
+        for (const seat of envelope.seatbid) {
+          if (!seat || !Array.isArray(seat.bid)) continue;
+          for (const bid of seat.bid) {
+            if (!bid || typeof bid !== 'object') continue;
+            if (typeof bid.adm === 'string' && bid.adm) continue;
+            if (bid.native && Array.isArray(bid.native.assets)) continue;
+            if (H.adcomNativeFrom(bid)) reached.adcom.push(parsed.id);
+          }
+        }
+        continue;
+      }
+      const material = H.firstVendorMaterial(res);
+      if (!material || H.findAdm(res) || H.findPushMaterial(res)) continue;
+      if (H.vendorNativeMaterialFrom(material)) reached.vendorNative.push(parsed.id);
+      else if (H.vendorBannerMarkupFrom(material)) reached.vendorBanner.push(parsed.id);
+      else if (H.findDestinationUrl(res) && H.vendorIdentityFrom(material))
+        reached.identity.push(parsed.id);
+    }
+  })(corpusRoot);
+  assert.deepEqual([...new Set(reached.adcom)].sort(), [
+    'cover-context-native-30-ctv',
+    'cover-context-native-30-dooh',
+    'cover-context-native-30-inapp',
+    'cover-context-native-30-unspecified',
+    'native-x-ortb30-adcom-stub',
+  ]);
+  assert.deepEqual([...new Set(reached.vendorNative)].sort(), [
+    'cover-vendor-native-kadam-json',
+    'cover-vendor-native-kadam-url',
+  ]);
+  assert.deepEqual([...new Set(reached.vendorBanner)].sort(), ['cover-vendor-banner-exads-json']);
+  assert.deepEqual([...new Set(reached.identity)].sort(), [
+    'pop-ppcmate-json-material',
+    'pop-ppcmate-json-multi',
+  ]);
 });

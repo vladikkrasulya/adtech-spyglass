@@ -645,7 +645,11 @@ test('static: DEF-201 — the bid/material selector is wired into analyze, reset
   // stay wired together: the default render offers the strip, a failed/
   // cleared analysis tears it down (or it points at data that no longer
   // exists — the exact class of bug DEF-200 exists to close), and the
-  // delegated dispatcher still routes clicks on it to a real repaint.
+  // delegated dispatcher still routes clicks on it to a real repaint. Feature
+  // 030 adds a fourth piece of preview state — the vendor identity text shown
+  // beside an inert destination — and it is pinned here for the same reason:
+  // carried into the next creative it would caption one material with another
+  // material's name.
   assert.match(
     APP,
     /reRenderPreview\(\);[\s\S]{0,600}?renderCreativeBidSelector\(creativeCandidatesFor\(res\), 0, 0\);/,
@@ -653,7 +657,7 @@ test('static: DEF-201 — the bid/material selector is wired into analyze, reset
   );
   assert.match(
     APP,
-    /if \(\$\('creativePreview'\)\) setAdPreview\(null, \{\}, null\);[\s\S]{0,400}?clearCreativeBidSelector\(\);/,
+    /_currentPreviewIdentity = null;\s*if \(\$\('creativePreview'\)\) setAdPreview\(null, \{\}, null, null\);[\s\S]{0,400}?clearCreativeBidSelector\(\);/,
     'resetAnalysisArtifacts must tear the selector down along with everything else it owns',
   );
   assert.match(
@@ -663,7 +667,7 @@ test('static: DEF-201 — the bid/material selector is wired into analyze, reset
   );
   assert.match(
     APP,
-    /case 'select-creative-bid': \{[\s\S]{0,900}?_currentPreviewAdm = resolved\.adm;[\s\S]{0,200}?reRenderPreview\(\);/,
+    /case 'select-creative-bid': \{[\s\S]{0,900}?_currentPreviewAdm = resolved\.adm;[\s\S]{0,200}?_currentPreviewIdentity = resolved\.identity;\s*reRenderPreview\(\);/,
     'selecting a bid must repaint through the SAME preview state the default render uses, not a side channel',
   );
 });

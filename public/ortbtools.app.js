@@ -761,6 +761,10 @@ export async function mountInspector(root, ctx) {
   let _currentPreviewAdm = null;
   let _currentPreviewBaseContext = null;
   let _currentPreviewDims = null;
+  // DEF-107: identity text a documented vendor material supplies alongside a
+  // creative body that carries none of its own. Kept beside the adm, never
+  // inside it, so the classifier and the behaviour engine read unchanged bytes.
+  let _currentPreviewIdentity = null;
 
   function reRenderPreview() {
     if (!_currentPreviewBaseContext) return;
@@ -771,7 +775,7 @@ export async function mountInspector(root, ctx) {
       macros && typeof macros.mergeMacroContext === 'function'
         ? macros.mergeMacroContext(_currentPreviewBaseContext, overrides)
         : { ..._currentPreviewBaseContext, price: overrides.price || '' };
-    setAdPreview(_currentPreviewAdm, context, _currentPreviewDims);
+    setAdPreview(_currentPreviewAdm, context, _currentPreviewDims, _currentPreviewIdentity);
   }
 
   function renderMacros(res, req) {
@@ -1461,7 +1465,7 @@ export async function mountInspector(root, ctx) {
   // OrtbtoolsSourceNav (explicit side, RFC 6901 pointer, source-map resolved).
   // See the `goto-path` action handler.
 
-  function setAdPreview(adm, macroContext, dims) {
+  function setAdPreview(adm, macroContext, dims, identity) {
     _previewRenderRevision++;
     const el = $('creativePreview');
     el.innerHTML = '';
@@ -1639,7 +1643,17 @@ export async function mountInspector(root, ctx) {
           : cls.kind === 'url'
             ? t('creative.kind.url')
             : t('creative.kind.unidentified');
-      renderInertText(el, cls.body, label, 0);
+      // DEF-107: a bare destination says where the click goes, never WHICH
+      // material produced it. When the resolver knew the material's own
+      // documented title and description, they are shown above the destination
+      // in the same inert block — one block, because that is what a reader and
+      // the identity measurement both look at, and every line of it is the
+      // vendor's own bytes. `cls` was computed from `adm` alone, so the kind,
+      // the behaviour engine and the static scanner see exactly what they saw
+      // before this text was added.
+      const inertBody =
+        typeof identity === 'string' && identity ? identity + '\n' + cls.body : cls.body;
+      renderInertText(el, inertBody, label, 0);
       setDims(300, 250);
       setRevealable(false);
       return;
@@ -3560,6 +3574,165 @@ export async function mountInspector(root, ctx) {
     return card;
   }
 
+  // DEF-151 — the OpenRTB 3.0 creative carrier. A 3.0 response nests its whole
+  // payload under `openrtb.response`, and a structured Native creative lives at
+  // `bid.media.ad.display.native` rather than `bid.native`. AdCOM names two of
+  // the Native fields differently from oRTB Native 1.x — `asset` for the list
+  // and `image` for the picture object — but the sub-objects are otherwise the
+  // same shape, so this maps AdCOM onto the 1.x names and reuses
+  // renderNativeToHtml rather than adding a second native renderer that could
+  // drift from it.
+  function unwrapResponseEnvelope(res) {
+    if (!res || typeof res !== 'object' || Array.isArray(res)) return res;
+    const inner = res.openrtb && typeof res.openrtb === 'object' ? res.openrtb.response : null;
+    return inner && typeof inner === 'object' && !Array.isArray(inner) ? inner : res;
+  }
+
+  /**
+   * @param {unknown} bid one resolved Bid, in either protocol
+   * @returns {object|null} an oRTB Native 1.x shaped object, or null
+   */
+  function adcomNativeFrom(bid) {
+    if (!bid || typeof bid !== 'object' || Array.isArray(bid)) return null;
+    const media = bid.media;
+    const ad = media && typeof media === 'object' ? media.ad : null;
+    const display = ad && typeof ad === 'object' ? ad.display : null;
+    const native = display && typeof display === 'object' ? display.native : null;
+    if (!native || typeof native !== 'object') return null;
+    const source = Array.isArray(native.asset)
+      ? native.asset
+      : Array.isArray(native.assets)
+        ? native.assets
+        : null;
+    if (!source) return null;
+    const assets = source
+      .filter((a) => a && typeof a === 'object')
+      .map((a) => {
+        const out = { id: a.id };
+        if (a.title && typeof a.title === 'object') out.title = a.title;
+        // AdCOM `image`, oRTB Native `img` — the object inside is identical.
+        const picture = a.image && typeof a.image === 'object' ? a.image : a.img;
+        if (picture && typeof picture === 'object') out.img = picture;
+        if (a.data && typeof a.data === 'object') out.data = a.data;
+        if (a.video && typeof a.video === 'object') out.video = a.video;
+        return out;
+      });
+    return { link: native.link && typeof native.link === 'object' ? native.link : {}, assets };
+  }
+
+  // DEF-441 — a documented vendor Native material. Kadam's Native feed answers
+  // with `{title, url, image, cpc}`: a headline, a landing link and one picture,
+  // and deliberately NO push click alias — which is exactly why
+  // isPushMaterialShape refuses it (a bare `url` is a native landing link, not a
+  // push click-through, and widening that gate misclassified this very shape).
+  // It is still a creative, so it renders as the native card it is.
+  function vendorNativeMaterialFrom(material) {
+    if (!material || typeof material !== 'object' || Array.isArray(material)) return null;
+    // A material that qualifies as push is a push card, not a native one; this
+    // path only ever sees what that gate turned away.
+    if (isPushMaterialShape(material)) return null;
+    const hasPrice =
+      'cpc' in material || 'price' in material || 'value' in material || 'bid_price' in material;
+    const title = typeof material.title === 'string' ? material.title : '';
+    const image =
+      typeof material.image === 'string'
+        ? material.image
+        : typeof material.image_url === 'string'
+          ? material.image_url
+          : '';
+    const link = typeof material.url === 'string' ? material.url : '';
+    // All four roles are required together. A material missing any of them is
+    // not this documented shape, and guessing would put a card in front of an
+    // analyst that the vendor never described.
+    if (!hasPrice || !title || !image || !link) return null;
+    return { link: { url: link }, assets: [{ title: { text: title } }, { img: { url: image } }] };
+  }
+
+  // DEF-106 — a documented vendor BANNER wrapper. EXADS answers with
+  // `{value, clickUrl, imgUrl, btype}` under `res.bid`: price, click and one
+  // picture, and no notification text at all. DEF-203 is why that is not a push
+  // card — but it is a banner creative, and leaving it as the empty state told
+  // the analyst nothing about a bid that plainly carries artwork. Synthesised as
+  // ordinary markup so it travels the sealed frame exactly like banner adm: the
+  // remote image is blocked by the same content policy, and the analyst sees the
+  // creative's own shape and destination rather than a blank box.
+  function vendorBannerMarkupFrom(material) {
+    if (!material || typeof material !== 'object' || Array.isArray(material)) return null;
+    if (isPushMaterialShape(material)) return null;
+    // Notification text is what separates a push card from a banner bid; a
+    // material carrying it is not this shape (and would have qualified above).
+    if ('title' in material || 'description' in material) return null;
+    const hasPrice =
+      'cpc' in material || 'price' in material || 'value' in material || 'bid_price' in material;
+    const image =
+      typeof material.imgUrl === 'string'
+        ? material.imgUrl
+        : typeof material.image_url === 'string'
+          ? material.image_url
+          : typeof material.image === 'string'
+            ? material.image
+            : '';
+    const click =
+      typeof material.clickUrl === 'string'
+        ? material.clickUrl
+        : typeof material.click_url === 'string'
+          ? material.click_url
+          : typeof material.clickurl === 'string'
+            ? material.clickurl
+            : '';
+    if (!hasPrice || !image || !click) return null;
+    return (
+      '<a href="' +
+      escapeHtml(click) +
+      '" rel="noopener noreferrer">' +
+      '<img src="' +
+      escapeHtml(image) +
+      '" alt="" style="display:block;max-width:100%;border:0">' +
+      '</a>'
+    );
+  }
+
+  // DEF-107 — the identity of a material whose creative resolves to a bare
+  // destination. A PPCmate pop placement is documented as
+  // `{title, description, link, cpc}`: no picture, so it is correctly neither a
+  // push card nor markup, and the preview shows its destination as inert text.
+  // The destination alone does not say WHICH material produced it, though, and
+  // the material's own title and description are the only thing that does.
+  // Returned separately from the creative body so the classifier keeps seeing
+  // exactly the bytes it saw before — the kind stays `url`.
+  function vendorIdentityFrom(material) {
+    if (!material || typeof material !== 'object' || Array.isArray(material)) return null;
+    const lines = [];
+    if (typeof material.title === 'string' && material.title) lines.push(material.title);
+    if (typeof material.description === 'string' && material.description)
+      lines.push(material.description);
+    return lines.length ? lines.join('\n') : null;
+  }
+
+  // The same wrapper shapes findPushMaterial scans, reduced to the ONE material a
+  // whole-response resolution is about: the EXADS `res.bid` wrapper, the first
+  // element of a bare materials array, or Adon3's `res.ads[0]` — the same
+  // first-of-many convention the oRTB path applies to seatbid[0].bid[0].
+  function firstVendorMaterial(res) {
+    if (Array.isArray(res)) return res[0] && typeof res[0] === 'object' ? res[0] : null;
+    if (!res || typeof res !== 'object') return null;
+    if (res.bid && typeof res.bid === 'object' && !Array.isArray(res.bid)) return res.bid;
+    if (Array.isArray(res.ads) && res.ads[0] && typeof res.ads[0] === 'object') return res.ads[0];
+    return null;
+  }
+
+  /**
+   * One documented vendor material to one creative body, for the material
+   * shapes that carry a creative but are deliberately not push cards.
+   * @param {unknown} material
+   * @returns {string|null} an adm the existing pipeline can classify
+   */
+  function vendorMaterialAdm(material) {
+    const native = vendorNativeMaterialFrom(material);
+    if (native) return JSON.stringify({ native });
+    return vendorBannerMarkupFrom(material);
+  }
+
   // DEF-202: when neither an oRTB `adm` nor a push-material shape resolves a
   // creative, the response may still document a redirect/landing destination
   // under a vendor-specific wire wrapper. Every path below was read directly
@@ -3795,22 +3968,31 @@ export async function mountInspector(root, ctx) {
    *   bid: object,
    *   seat: object|null,
    *   pushMaterial: object|null,
+   *   identity: string|null,
    *   previewDims: {w:number,h:number}|null,
    *   previewMacroContext: object,
    * }}
    */
   function resolveCreativeAt(req, res, seatIndex, bidIndex) {
+    // DEF-151: a 3.0 response nests everything under `openrtb.response`.
+    const envelope = unwrapResponseEnvelope(res);
     const seatbidArr =
-      res && typeof res === 'object' && Array.isArray(res.seatbid) ? res.seatbid : null;
+      envelope && typeof envelope === 'object' && Array.isArray(envelope.seatbid)
+        ? envelope.seatbid
+        : null;
     let bid = {};
     let seat = null;
     let pushMaterial = null;
     let adm = null;
+    let identity = null;
     if (seatbidArr) {
       seat = seatbidArr[seatIndex] || null;
       bid = (seat && Array.isArray(seat.bid) && seat.bid[bidIndex]) || {};
+      const adcomNative = adcomNativeFrom(bid);
       if (bid && bid.native && Array.isArray(bid.native.assets)) {
         adm = JSON.stringify({ native: bid.native });
+      } else if (adcomNative) {
+        adm = JSON.stringify({ native: adcomNative });
       } else {
         adm = findAdm(bid);
         if (!adm) {
@@ -3835,11 +4017,20 @@ export async function mountInspector(root, ctx) {
           pushMaterial = material;
           adm = renderPushToHtml(pushMaterial);
         } else {
-          // findDestinationUrl already applies the SAME exclusion this file
-          // needs here (skip anything push-shaped or carrying a picture) —
-          // reusing it keeps this one function the single place that logic
-          // lives, instead of a second copy that could drift from it.
-          adm = findDestinationUrl(material);
+          // DEF-441/DEF-106: a documented vendor material that carries a
+          // creative but is deliberately not a push card still has one.
+          adm = vendorMaterialAdm(material);
+          if (!adm) {
+            // findDestinationUrl already applies the SAME exclusion this file
+            // needs here (skip anything push-shaped or carrying a picture) —
+            // reusing it keeps this one function the single place that logic
+            // lives, instead of a second copy that could drift from it.
+            adm = findDestinationUrl(material);
+            // DEF-107: the destination says where, never which. The material's
+            // own title and description are shown beside it, kept out of `adm`
+            // so the classifier still reads exactly the bytes it read before.
+            if (adm) identity = vendorIdentityFrom(material);
+          }
         }
       }
     }
@@ -3878,7 +4069,7 @@ export async function mountInspector(root, ctx) {
       discountCpm: '',
     };
     const bidCur = (typeof bid.cur === 'string' && bid.cur.trim()) || resCur || 'USD';
-    return { adm, bid, seat, pushMaterial, bidCur, previewDims, previewMacroContext };
+    return { adm, bid, seat, pushMaterial, identity, bidCur, previewDims, previewMacroContext };
   }
 
   // ── Analysis ──────────────────────────────────────────────────
@@ -4279,7 +4470,8 @@ export async function mountInspector(root, ctx) {
     _currentPreviewAdm = null;
     _currentPreviewBaseContext = null;
     _currentPreviewDims = null;
-    if ($('creativePreview')) setAdPreview(null, {}, null);
+    _currentPreviewIdentity = null;
+    if ($('creativePreview')) setAdPreview(null, {}, null, null);
     // DEF-201: a stale selector pointing at bids/materials from the analysis
     // that just failed or cleared is the same lie as a stale verdict — the
     // buttons would resolve indices into data window.__ortbtoolsLast no
@@ -4631,13 +4823,21 @@ export async function mountInspector(root, ctx) {
       // validation. Guard every level so `bid` is always a plain object — a raw
       // seatbid.bid[0] of null/undefined otherwise threw "Cannot read
       // properties of … (reading 'cur')" here, before the Analyze POST.
-      const seatbid = Array.isArray(res.seatbid) ? res.seatbid[0] : null;
+      // DEF-151: a 3.0 response nests its whole payload under `openrtb.response`,
+      // so a 2.x-shaped lookup finds no seatbid at all and every bid-derived
+      // panel below reads an empty object.
+      const resEnvelope = unwrapResponseEnvelope(res);
+      const seatbid = Array.isArray(resEnvelope.seatbid) ? resEnvelope.seatbid[0] : null;
       const bidList = seatbid && Array.isArray(seatbid.bid) ? seatbid.bid : [];
       const bid = bidList[0] && typeof bidList[0] === 'object' ? bidList[0] : {};
       let adm;
       let pushMaterial = null;
+      let previewIdentity = null;
+      const adcomNative = adcomNativeFrom(bid);
       if (bid && bid.native && Array.isArray(bid.native.assets)) {
         adm = JSON.stringify({ native: bid.native });
+      } else if (adcomNative) {
+        adm = JSON.stringify({ native: adcomNative });
       } else {
         adm = findAdm(res);
         // Push materials (spec 014) carry no adm/iurl, so findAdm dead-ends on
@@ -4649,14 +4849,25 @@ export async function mountInspector(root, ctx) {
           if (pushMaterial) {
             adm = renderPushToHtml(pushMaterial);
           } else {
-            // DEF-202: neither an oRTB creative nor a push-material shape
-            // resolved — the response may still document a redirect/landing
-            // destination under a vendor wire wrapper (documented response
-            // wrappers, the clickunder creative). Render it as an inert URL
-            // through the SAME `url`-kind pipeline classify() already uses
-            // for a bare-URL adm, rather than leaving the preview empty.
-            const destUrl = findDestinationUrl(res);
-            if (destUrl) adm = destUrl;
+            // DEF-441/DEF-106: a documented vendor material that carries a
+            // creative but is deliberately not a push card still has one — a
+            // Native card, or a banner's picture and click.
+            const vendorMaterial = firstVendorMaterial(res);
+            adm = vendorMaterial ? vendorMaterialAdm(vendorMaterial) : null;
+            if (!adm) {
+              // DEF-202: neither an oRTB creative nor a push-material shape
+              // resolved — the response may still document a redirect/landing
+              // destination under a vendor wire wrapper (documented response
+              // wrappers, the clickunder creative). Render it as an inert URL
+              // through the SAME `url`-kind pipeline classify() already uses
+              // for a bare-URL adm, rather than leaving the preview empty.
+              const destUrl = findDestinationUrl(res);
+              if (destUrl) {
+                adm = destUrl;
+                // DEF-107: the destination says where, never which.
+                previewIdentity = vendorMaterial ? vendorIdentityFrom(vendorMaterial) : null;
+              }
+            }
           }
         }
       }
@@ -4734,6 +4945,7 @@ export async function mountInspector(root, ctx) {
       _currentPreviewAdm = adm;
       _currentPreviewBaseContext = previewMacroContext;
       _currentPreviewDims = previewDims;
+      _currentPreviewIdentity = previewIdentity;
       reRenderPreview();
       // DEF-201: offer a control for every OTHER returned bid/material too —
       // the preview above is always seatbid[0].bid[0] (or materials[0]), and
@@ -7569,6 +7781,7 @@ export async function mountInspector(root, ctx) {
             _currentPreviewAdm = resolved.adm;
             _currentPreviewBaseContext = resolved.previewMacroContext;
             _currentPreviewDims = resolved.previewDims;
+            _currentPreviewIdentity = resolved.identity;
             reRenderPreview();
             const pushPrice = resolved.pushMaterial
               ? Number(

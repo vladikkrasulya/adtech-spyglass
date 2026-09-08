@@ -231,7 +231,7 @@
         "imgLoaded": 1
       },
       "limitation": null,
-      "capabilityGap": "Structured AdCOM Native support must be measured; the existing DEF-151 records a schema/detection/completeness/preview capability gap."
+      "capabilityGap": null
     },
     "format": {
       "formats": ["native"],
@@ -241,18 +241,5 @@
       "status": 200
     }
   },
-  "knownGap": {
-    "id": "DEF-151",
-    "layers": ["browser"],
-    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
-    "matches": {
-      "browser": [
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ full,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgTotal:\\ expected\\ 1,\\ got\\ 0$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgLoaded:\\ expected\\ 1,\\ got\\ 0$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"C30\\ native\\ dooh\"\\ absent$"
-      ]
-    }
-  }
+  "knownGap": null
 }
