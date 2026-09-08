@@ -48,5 +48,8 @@ Unchanged: `request.30.context.device_invalid` (error), `response.seatbid_or_nbr
 - `public/ortbtools.app.js` keys nothing on these ids or on `crosscheck.no_response`.
 - `packages/cli` prints levels and applies `--fail-on`; its test fixture was made to carry a real
   error (`imp.banner.size_required`) so the exit-1 path stays deterministic.
+- `scripts/npm-pack-smoke.sh` (hosted CI step "npm pack smoke") validates a sample and expects
+  exit 1; its sample had only the now-warning omissions, so the first hosted run of this feature
+  failed there. The sample now carries the same real error as the CLI fixture.
 - The 020 corpus is the regression net: 21 cases now pass normatively; 8 cases keep their other
   recorded deviations with the device lines removed from their signatures.

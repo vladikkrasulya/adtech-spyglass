@@ -37,8 +37,11 @@ echo "==> ortbtools --help"
 npx ortbtools --help | head -5
 
 REQ="${INSTALL_DIR}/req.json"
-printf '%s\n' '{"id":"1","imp":[{"id":"1","banner":{"w":300,"h":250}}],"at":1}' >"$REQ"
-echo "==> ortbtools validate (expect findings exit 1)"
+# The sizeless banner is a genuine error (imp.banner.size_required); the
+# missing site/app and device are only warnings since 021 (ADR-016), so the
+# request must carry a real error to exercise the exit-1 path.
+printf '%s\n' '{"id":"1","imp":[{"id":"1","banner":{}}],"at":1}' >"$REQ"
+echo "==> ortbtools validate (expect error findings, exit 1)"
 set +e
 npx ortbtools validate "$REQ" >/dev/null
 CODE=$?
