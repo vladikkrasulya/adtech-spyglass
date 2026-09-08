@@ -184,7 +184,8 @@
         "push-ppcmate-multi",
         "video-ctv-26-dynamic-pod",
         "push-x-kadam-array-alias-mixed",
-        "state-partial"
+        "state-partial",
+        "inpage-x-card-feed-array"
       ],
       "reviewedAt": "2026-09-07",
       "evidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json",

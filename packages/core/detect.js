@@ -198,7 +198,11 @@ function looksLikeJsonFeedSingle(o) {
   // told its cpc is a string by feed.push.bid_string_type, not bounced back
   // to payload.unknown_type.
   const hasPrice = 'cpc' in o || 'price' in o;
-  const hasClick = 'click_url' in o || 'link' in o;
+  // `clickurl` (all-lowercase) is the product's own committed in-page card
+  // feed alias, already recognized by format-detect.js's click set; recognize
+  // it here too so the single-object classifier does not bounce it to
+  // payload.unknown_type.
+  const hasClick = 'click_url' in o || 'link' in o || 'clickurl' in o;
   const hasCreative =
     'title' in o ||
     'description' in o ||

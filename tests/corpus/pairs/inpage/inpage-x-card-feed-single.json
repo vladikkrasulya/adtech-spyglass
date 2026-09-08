@@ -34,7 +34,11 @@
     "advertiser": "publisher-net.example.test",
     "price": 0.004,
     "currency": "USD",
-    "ext": { "format": "inpage", "widget_id": "widget-12", "zone_id": "zone-3" }
+    "ext": {
+      "format": "inpage",
+      "widget_id": "widget-12",
+      "zone_id": "zone-3"
+    }
   },
   "specNotes": [
     "packages/core/detect.js looksLikeJsonFeedSingle() only accepts click_url|link as the click-key half of its price+click+creative co-occurrence test (and clickUrl/notification_url/bid_price/redirecturl for the other single-object shapes); this card's `clickurl` (no separator) satisfies none of them, so detectType() falls through to TYPES.UNKNOWN and the top-level validator reports payload.unknown_type.",
@@ -48,8 +52,12 @@
     "response": {
       "maxLevel": "warning"
     },
-    "crosscheck": { "empty": true },
-    "format": { "formats": ["inpage"] },
+    "crosscheck": {
+      "empty": true
+    },
+    "format": {
+      "formats": ["inpage"]
+    },
     "preview": {
       "kind": "push",
       "rendered": "partial",
@@ -58,21 +66,8 @@
       "limitation": "Remote creative assets are blocked by the preview content policy.",
       "capabilityGap": "findPushMaterial()'s isMat() test requires click_url or link; this card's clickurl key satisfies neither, so the front-end never recognises it as a push-style material and shows the empty state instead of a card, matching the same clickurl-alias gap as the Core validator."
     },
-    "http": { "status": 200 }
-  },
-  "knownGap": {
-    "id": "DEF-181",
-    "layers": ["core", "http", "browser"],
-    "note": "The clickurl (no separator) click-key alias is recognised by packages/core/format-detect.js's hasClick set but by neither packages/core/detect.js's single-object type classifier nor the front-end's findPushMaterial()/isMat() helper (public/ortbtools.app.js). On the product's own knowledge_base/jsonfeed/inpage/inpage-card.json shape this produces: (a) as a bare object, payload.unknown_type from Core even though detectFormat correctly tags FORMATS.INPAGE; (b) as an array (sibling case), a false feed.push.click_url_required error from the push-materials validator even though the same format tag is correct; (c) in both shapes, the browser preview shows the generic empty state instead of the push-style card the fields would otherwise support.",
-    "matches": {
-      "core": ["^response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$"],
-      "http": ["^response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$"],
-      "browser": [
-        "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ push,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ partial,\\ got\\ empty$",
-        "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ morning\\ by\\ the\\ lake\"\\ absent$"
-      ]
+    "http": {
+      "status": 200
     }
   }
 }
