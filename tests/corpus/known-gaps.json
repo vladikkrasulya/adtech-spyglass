@@ -55,38 +55,6 @@
       ],
       "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
     },
-    "DEF-104": {
-      "id": "DEF-104",
-      "title": "Crosscheck ignores the matched PMP deal floor",
-      "category": "commercial-contradiction",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectdeal",
-      "code": ["packages/core/crosscheck.js:193", "packages/core/rules/price-floor/index.js"],
-      "expected": "The matching Deal.bidfloor governs its bid; validation and crosscheck must agree on both effective floor and below-floor outcome.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["bn-banner-26-pmp-multisize", "price-below-matched-deal-floor"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-105": {
-      "id": "DEF-105",
-      "title": "OpenRTB 3.0 response currency and Item.flrcur are read from wrong fields",
-      "category": "commercial-contradiction",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb/blob/9af34fc79580f67f6abaf89b1e48d18398c9a697/OpenRTB%20v3.0%20FINAL.md",
-      "code": ["packages/core/crosscheck.js:660", "packages/core/rules/currency/index.js:269"],
-      "expected": "The 3.0 request envelope permits EUR and item.flrcur is EUR, so an EUR bid above its EUR floor cannot produce a currency mismatch.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": ["bn-banner-30-adcom"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
     "DEF-106": {
       "id": "DEF-106",
       "title": "Documented EXADS proprietary request and bid wrapper are unsupported",
@@ -169,29 +137,6 @@
       "expected": "The EXADS documented popunder extension permits instl-only impression shape and URL adm; generic IAB media rules need dialect awareness.",
       "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
       "cases": ["pop-exads-openrtb-url-adm"],
-      "reviewedAt": "2026-09-07",
-      "notes": [
-        "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."
-      ],
-      "browserEvidence": "/tmp/ortbtools-opus-review-20260907/browser-failures-admitted.json"
-    },
-    "DEF-110": {
-      "id": "DEF-110",
-      "title": "Crosscheck coerces invalid bid price values and emits a floor verdict",
-      "category": "commercial-contradiction",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbid",
-      "code": ["packages/core/crosscheck.js:218", "packages/core/rules/price-floor/index.js"],
-      "expected": "Bid.price is a non-negative JSON number. Values rejected by validation must also receive price_invalid in crosscheck and never above_floor or below_floor.",
-      "actual": "The exact reviewed deviations are pinned separately for each case and layer; successful or unrelated findings are not admitted as gaps.",
-      "cases": [
-        "price-invalid-array-empty",
-        "price-invalid-array-one",
-        "price-invalid-boolean",
-        "price-invalid-empty-string",
-        "price-invalid-negative",
-        "price-invalid-numeric-string"
-      ],
       "reviewedAt": "2026-09-07",
       "notes": [
         "Normative assertions were authored from primary protocol/vendor contracts before execution. Known-gap signatures document observed failures only; they are not expected output snapshots."

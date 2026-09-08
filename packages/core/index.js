@@ -176,6 +176,39 @@ function project30Request(req30) {
 }
 
 /**
+ * Project a 3.0 paired-request envelope into the minimal 2.x-shaped `ctx.req`
+ * the ORTB_RESPONSE plugin pass needs (feature 022 / DEF-105).
+ *
+ * `opts.pairReq` for a 3.0 pair is the RAW envelope
+ * `{openrtb:{request:{...}}}`, not a 2.x BidRequest — its `cur` lives at
+ * `openrtb.request.cur`, not at the top level rules/currency's
+ * `ctx.req.cur` read expects. Passing the raw envelope straight through (as
+ * this did before) left `req.cur` reading `undefined`, so
+ * rules/currency/index.js silently defaulted the allowed-currency set to
+ * `['USD']` regardless of what the request actually permitted — an EUR
+ * response against a request that explicitly allowed EUR came back as a
+ * false `err-bid-currency-mismatch`.
+ *
+ * Deliberately projects ONLY `cur` — never `.item`/`.imp` — so
+ * rules/price-floor's `ctx.req.imp` guard stays exactly as unmet for 3.0 as
+ * it always was; extending this to a full item→imp projection would newly
+ * activate the per-bid floor compare for every 3.0 pair, which is out of
+ * DEF-105's scope and has no corpus coverage of its own.
+ *
+ * A non-3.0-envelope `pairReq` (2.x pairing, standalone paste, or a
+ * mismatched pairing) passes through unchanged.
+ *
+ * @param {any} pairReq
+ * @returns {object|null}
+ */
+function project30ResponsePairReq(pairReq) {
+  if (isObj(pairReq) && isObj(pairReq.openrtb) && isObj(pairReq.openrtb.request)) {
+    return { cur: pairReq.openrtb.request.cur };
+  }
+  return pairReq || null;
+}
+
+/**
  * Re-address findings produced against a projected view.
  *
  * A finding with an empty path is an envelope-level statement and stays that
@@ -391,7 +424,9 @@ function validate(payload, opts) {
           dialect,
           version,
           userDialect,
-          req: o.pairReq || null,
+          // See project30ResponsePairReq() above — the raw envelope has no
+          // top-level `cur`, so the currency plugin needs it projected.
+          req: project30ResponsePairReq(o.pairReq),
         });
         findings = findings.concat(
           hasEnv30 ? reprefixFindings(projected, 'openrtb.response') : projected,

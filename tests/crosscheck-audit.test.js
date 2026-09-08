@@ -57,7 +57,10 @@ const req30 = () => ({
         {
           id: 's1',
           flr: 1.0,
-          flrcu: 'USD',
+          // Spelled `flrcur` (feature 022 / DEF-105 — the old `flrcu` here
+          // matched crosscheck.js's own typo; both are USD so the outcome
+          // is unchanged, but this fixture must not keep testing the bug).
+          flrcur: 'USD',
           spec: { placement: { display: { w: 300, h: 250, displayfmt: [{ w: 728, h: 90 }] } } },
         },
       ],

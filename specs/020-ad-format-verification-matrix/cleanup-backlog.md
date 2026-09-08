@@ -1009,6 +1009,10 @@ CL-01 and CL-03 overlap with `scattered-format-03` and the price/currency defect
 
 The corpus harness now treats missing signatures, unexpected failures and retired gaps as hard errors; records nonapplicable execution separately; forwards lexical raw JSON to the real API; preserves original source provenance and local assets; and produces fresh per-run reports. Focused self-tests protect these behaviors. Browser-specific completion and rendering hardening are recorded with the final verification evidence.
 
+## Observed during 022 (follow-up, not scheduled)
+
+- **negative-floor-unflagged** — a negative `bidfloor`, on an impression or on a matched PMP deal, draws no finding at all: `imp.bidfloor_invalid` fires only for a non-numeric value (`packages/core/rules-request.js`), and both engines then rank bids against the stated negative number. Observed while closing DEF-104; nothing regressed, but a floor below zero is not a price any exchange can enforce. An additive warning-level finding would close it. Priority P3, size S; needs a new id with en/uk/ru messages and a spec-refs entry.
+
 ## Ordering
 
 First address reproduced incorrect verdicts (CL-01/CL-03) and the product defects they explain. Shape CL-02/CL-04 as separate bounded feature work because they touch public source paths and UI state. CL-05 is an additive contract decision. CL-06 improves repository test reliability without changing product behavior. Do not combine these into a broad rewrite or treat this document as evidence that every proposed refactor has already been implemented.

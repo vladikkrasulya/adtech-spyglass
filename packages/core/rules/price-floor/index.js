@@ -74,40 +74,38 @@ function normCur(raw, fallback) {
   return norm.length > 0 ? norm : fallback;
 }
 
-/**
- * Find the effective floor for a bid against an imp.
- *
- * Takes no request: nothing at request level participates in what a floor is
- * priced in. `BidRequest.cur` is the list of currencies the exchange accepts,
- * and reading it here is exactly the bug described below.
- *
- * Returns { floor, floorCur, source } or null if no floor is set.
- */
-function resolveFloor(bid, imp) {
-  // `bidfloorcur` carries its own spec default of "USD" (oRTB 2.5/2.6 §3.2.4
-  // for Imp, §3.2.12 for Deal) and is NOT tied to `BidRequest.cur`. `cur` is
-  // only the list of currencies the exchange will ACCEPT bids in; it says
-  // nothing about how an unlabelled floor was priced.
-  //
-  // Falling back to `req.cur[0]` — as this did — silently renamed the floor's
-  // currency. On the ordinary "exchange accepts EUR, floor sent without an
-  // explicit currency" request that made a USD floor look like a EUR floor,
-  // the bid currency then matched it, and the numeric compare below ran on two
-  // different denominations and reported a verdict with no meaning.
-  //
-  // Reading the spec default instead means such a payload now trips the
-  // currency-mismatch warning rather than producing a confident wrong answer.
-  // That warning is the honest output: the payload really is ambiguous about
-  // what its floor is priced in, and that ambiguity costs real money.
-  const SPEC_DEFAULT_CUR = 'USD';
+// `bidfloorcur` carries its own spec default of "USD" (oRTB 2.5/2.6 §3.2.4
+// for Imp, §3.2.12 for Deal) and is NOT tied to `BidRequest.cur`. `cur` is
+// only the list of currencies the exchange will ACCEPT bids in; it says
+// nothing about how an unlabelled floor was priced. See resolveFloor()'s own
+// comment below for the incident that made this the rule.
+const SPEC_DEFAULT_CUR = 'USD';
 
-  // PMP deal floor — check if bid.dealid matches a deal on imp.pmp.deals[]
-  //
-  // The Deal object's identifier is `id` (§3.2.12); `dealid` is the Bid-side
-  // field (§3.2.4) that REFERS to it. Matching `d.dealid` compared a bid's
-  // deal id against a property no conforming Deal carries, so it never
-  // matched and a PMP deal's floor was never applied — the imp-level floor
-  // was used in its place, or none at all.
+/**
+ * Resolve a PMP deal floor for a bid, if one governs.
+ *
+ * The Deal object's identifier is `id` (§3.2.12); `dealid` is the Bid-side
+ * field (§3.2.4) that REFERS to it. Matching `d.dealid` compared a bid's
+ * deal id against a property no conforming Deal carries, so it never
+ * matched and a PMP deal's floor was never applied — the imp-level floor
+ * was used in its place, or none at all.
+ *
+ * Extracted out of resolveFloor() (feature 022 / DEF-104) so crosscheck.js
+ * can resolve the identical deal floor instead of keeping its own,
+ * independently-drifting copy of this match — which is exactly how DEF-104
+ * happened: crosscheck compared every bid against imp.bidfloor only and
+ * never saw a matched deal's own floor.
+ *
+ * Deliberately no `> 0` gate on `deal.bidfloor`, unlike the imp-level branch
+ * in resolveFloor() below: a Deal is a self-contained economic object (oRTB
+ * 2.6 §3.2.12 — "This field does not inherit from Imp.bidfloorcur; it is
+ * either explicitly specified or defaults to USD"), so an explicit
+ * deal.bidfloor of exactly 0 is still an explicit floor, not an absent one.
+ *
+ * Returns { floor, floorCur, source: 'deal' }, or null when bid.dealid names
+ * no deal on this imp, or the matched deal has no usable numeric bidfloor.
+ */
+function resolveDealFloor(bid, imp) {
   if (bid.dealid && imp.pmp && Array.isArray(imp.pmp.deals)) {
     const deal = imp.pmp.deals.find((d) => d && d.id === bid.dealid);
     if (deal && typeof deal.bidfloor === 'number' && Number.isFinite(deal.bidfloor)) {
@@ -118,6 +116,33 @@ function resolveFloor(bid, imp) {
       };
     }
   }
+  return null;
+}
+
+/**
+ * Find the effective floor for a bid against an imp.
+ *
+ * Takes no request: nothing at request level participates in what a floor is
+ * priced in. `BidRequest.cur` is the list of currencies the exchange accepts,
+ * and reading it here is exactly the bug described below.
+ *
+ * Returns { floor, floorCur, source } or null if no floor is set.
+ */
+function resolveFloor(bid, imp) {
+  // Falling back to `req.cur[0]` — as this did — silently renamed the floor's
+  // currency. On the ordinary "exchange accepts EUR, floor sent without an
+  // explicit currency" request that made a USD floor look like a EUR floor,
+  // the bid currency then matched it, and the numeric compare below ran on two
+  // different denominations and reported a verdict with no meaning.
+  //
+  // Reading the spec default instead means such a payload now trips the
+  // currency-mismatch warning rather than producing a confident wrong answer.
+  // That warning is the honest output: the payload really is ambiguous about
+  // what its floor is priced in, and that ambiguity costs real money.
+
+  // PMP deal floor wins over the imp-level floor whenever one matches.
+  const deal = resolveDealFloor(bid, imp);
+  if (deal) return deal;
 
   // imp-level floor
   if (typeof imp.bidfloor === 'number' && Number.isFinite(imp.bidfloor) && imp.bidfloor > 0) {
@@ -242,4 +267,7 @@ module.exports = {
     'Validates bid.price >= 0 (zero is valid per IAB §4.3.1) and bid.price >= effective floor (deal or imp), with currency-aware mismatch warnings.',
   appliesTo: ['ORTB_RESPONSE'],
   validate,
+  // Exported for crosscheck.js (feature 022 / DEF-104) so the two engines
+  // resolve a PMP deal floor through one shared function, never two.
+  resolveDealFloor,
 };

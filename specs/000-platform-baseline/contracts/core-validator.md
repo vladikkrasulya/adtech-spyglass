@@ -189,6 +189,25 @@ The additive ids and restored blocking verdicts for malformed inputs justify the
 omissions from supplied wrong types in both protocol families, and every new id must have en/uk/ru
 messages. Core tests cover explicit `undefined`; HTTP tests cover JSON omission and invalid values.
 
+## Price and Floor Resolution (022; Core 0.41.0)
+
+A bid price is usable only when `bid.price` is a JSON number that is finite and not negative; zero is
+a real bid. No coercion is performed, so `[]`, `[1]`, `true`, `''` and a quoted number are not prices.
+Both engines apply that one predicate: the crosscheck emits `crosscheck.bid.price_invalid` (crit) and
+no floor verdict, and the auction summary counts only usable prices.
+
+The effective floor is resolved by one shared function, `resolveDealFloor(bid, imp)`, exported from
+`packages/core/rules/price-floor/index.js` and imported by `packages/core/crosscheck.js`, so the
+validation and crosscheck engines can never name different floors for the same pair. When `bid.dealid`
+matches an `imp.pmp.deals[].id` whose `bidfloor` is a finite number, that floor governs at any value
+including `0`, denominated in the deal's own `bidfloorcur`, which never inherits `imp.bidfloorcur`
+(oRTB 2.6 §3.2.12). Otherwise the impression floor applies with its existing absent, explicit and
+unusable branches unchanged. A negative floor is not flagged by any rule today and prints as stated.
+
+On the OpenRTB 3.0 path the item projection reads the floor currency from `flrcur`, and a paired 3.0
+request reaches the response rule pass projected to `{cur}` from `openrtb.request.cur` so a permitted
+currency is not reported as a mismatch. The projection deliberately carries nothing else.
+
 ## CLI Contract
 
 The CLI supports `validate`, `crosscheck`, `detect`, `dialects`, `locales`, `help`, and `version`; it

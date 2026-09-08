@@ -196,31 +196,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-105",
-    "layers": ["core", "http", "browser"],
-    "note": "The 3.0 request envelope permits EUR and item.flrcur is EUR, so an EUR bid above its EUR floor cannot produce a currency mismatch.",
-    "matches": {
-      "core": [
-        "^response:\\ findings\\ above\\ warning:\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
-        "^response:\\ forbidden\\ finding\\ present\\ err\\-bid\\-currency\\-mismatch\\ →\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
-        "^crosscheck:\\ missing\\ crosscheck\\.bid\\.above_floor\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[ok\\]\\ params=\\{\"floor\":\"0\\.5000\"\\}\\ —\\ got\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.size_match\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.floor_currency_mismatch\\ →\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
-      ],
-      "http": [
-        "^response:\\ findings\\ above\\ warning:\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
-        "^response:\\ forbidden\\ finding\\ present\\ err\\-bid\\-currency\\-mismatch\\ →\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
-        "^crosscheck:\\ missing\\ crosscheck\\.bid\\.above_floor\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[ok\\]\\ params=\\{\"floor\":\"0\\.5000\"\\}\\ —\\ got\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.size_match\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^crosscheck:\\ forbidden\\ crosscheck\\.bid\\.floor_currency_mismatch\\ →\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
-      ],
-      "browser": [
-        "^browser\\.row:\\ forbidden\\ response\\ err\\-bid\\-currency\\-mismatch$",
-        "^browser\\.response:\\ findings\\ above\\ warning:\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
-        "^browser\\.response:\\ forbidden\\ finding\\ present\\ err\\-bid\\-currency\\-mismatch\\ →\\ err\\-bid\\-currency\\-mismatch\\[error\\]@openrtb\\.response\\.cur$",
-        "^browser\\.crosscheck:\\ missing\\ crosscheck\\.bid\\.above_floor\\ @\\ openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price\\ \\[ok\\]\\ params=\\{\"floor\":\"0\\.5000\"\\}\\ —\\ got\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price,\\ crosscheck\\.auction\\.summary\\[ok\\]@auction,\\ crosscheck\\.cur_allowed\\[ok\\]@openrtb\\.response\\.cur,\\ crosscheck\\.id_match\\[ok\\]@openrtb\\.response\\.id,\\ crosscheck\\.bid\\.impid_resolved\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.item,\\ crosscheck\\.bid\\.size_match\\[ok\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.size$",
-        "^browser\\.crosscheck:\\ forbidden\\ crosscheck\\.bid\\.floor_currency_mismatch\\ →\\ crosscheck\\.bid\\.floor_currency_mismatch\\[warn\\]@openrtb\\.response\\.seatbid\\[0\\]\\.bid\\[0\\]\\.price$"
-      ]
-    }
   }
 }

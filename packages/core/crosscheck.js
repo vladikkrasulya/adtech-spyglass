@@ -14,6 +14,11 @@ const { isObj } = require('./helpers');
 const { CROSS_LEVELS, makeCross } = require('./findings');
 const { isVastShape } = require('./format-detect');
 const { scanExtForFormatHints, isPopFormat, extractPopLandingHost } = require('./non-iab-formats');
+// resolveDealFloor() is the same PMP-deal-floor match rules/price-floor's own
+// resolveFloor() uses (feature 022 / DEF-104) — a matched Deal.bidfloor
+// governs a bid over imp.bidfloor, and the two engines must never again
+// carry two independently-drifting copies of this rule.
+const { resolveDealFloor } = require('./rules/price-floor');
 
 const C = makeCross;
 
@@ -163,11 +168,16 @@ function crosscheck(req, res, _ctx) {
     );
 
     // 3b. price vs floor
-    // bid.price is REQUIRED per oRTB §3.2.5. Number(null|undefined|"abc")
-    // collapses to NaN, then `|| 0` would silently make a broken bid LOOK
-    // like 0 — which then false-positive passes a 0-floor and pollutes
-    // bidsAboveFloor + topPrice. Surface invalid prices as their own CRIT
-    // finding and skip the floor compare. bcat/badv/sizes still run.
+    // bid.price is REQUIRED per oRTB §3.2.5 and MUST be a non-negative JSON
+    // number. This used to run every price through `Number(priceRaw)` before
+    // testing finiteness, so `[]` (Number([])===0), `[1]` (===1), `true`
+    // (===1), `''` (===0) and `'1.25'` (===1.25) all "passed" and produced a
+    // confident above_floor/below_floor verdict on a value the response does
+    // not actually carry (feature 022 / DEF-110). The test below performs NO
+    // coercion at all — it mirrors rules/price-floor/index.js's validate()
+    // byte-for-byte (`typeof price !== 'number' || !Number.isFinite(price) ||
+    // price < 0`), so the two engines can never again disagree about which
+    // prices are real. bcat/badv/sizes still run for an invalid price.
     //
     // imp.bidfloor is OPTIONAL per spec — missing means "no minimum" (=0).
     // Spec-valid, but operationally a "no floor" auction means every bid
@@ -197,9 +207,22 @@ function crosscheck(req, res, _ctx) {
     // crosscheck id for it would need text in messages/*.json to render at
     // all, which is the same trade rules/price-floor documents for currency
     // codes.
-    const floorRaw = imp.bidfloor;
-    const floorPresent = floorRaw !== undefined && floorRaw !== null && floorRaw !== '';
-    const hasExplicitFloor = typeof floorRaw === 'number' && Number.isFinite(floorRaw);
+    //
+    // A matched PMP deal's own bidfloor governs over imp.bidfloor whenever
+    // bid.dealid names a deal on imp.pmp.deals[] (feature 022 / DEF-104) —
+    // resolveDealFloor() is the exact match rules/price-floor's resolveFloor()
+    // already used on the validation side, so the two engines name the same
+    // effective floor instead of one silently ignoring the deal. A matched
+    // deal's floor governs at ANY value, including exactly 0: a Deal is a
+    // self-contained economic object (oRTB 2.6 §3.2.12) so an explicit
+    // deal.bidfloor of 0 is still an explicit floor, and no_floor_set must
+    // not fire for it even when imp.bidfloor itself is absent or malformed.
+    const dealFloor = resolveDealFloor(bid, imp);
+    const floorRaw = dealFloor ? dealFloor.floor : imp.bidfloor;
+    const floorPresent =
+      !!dealFloor || (floorRaw !== undefined && floorRaw !== null && floorRaw !== '');
+    const hasExplicitFloor =
+      !!dealFloor || (typeof floorRaw === 'number' && Number.isFinite(floorRaw));
     // Present but unusable: distinct from absent, because "absent" has a
     // spec-defined meaning (no minimum = 0) that we CAN compare against,
     // while a garbage floor leaves us with no number at all.
@@ -223,8 +246,7 @@ function crosscheck(req, res, _ctx) {
     }
     const floor = hasExplicitFloor ? floorRaw : 0;
     const priceRaw = bid.price;
-    const priceIsValid =
-      priceRaw !== null && priceRaw !== undefined && Number.isFinite(Number(priceRaw));
+    const priceIsValid = typeof priceRaw === 'number' && Number.isFinite(priceRaw) && priceRaw >= 0;
     if (!priceIsValid) {
       out.push(
         C('crosscheck.bid.price_invalid', false, CROSS_LEVELS.CRIT, `${bp}.${leaf.price}`, {
@@ -237,31 +259,36 @@ function crosscheck(req, res, _ctx) {
       // the request does not contain — so no verdict, the same call the
       // currency-mismatch branch below makes for the same reason. The bid is
       // still a winning-bid contender; it just isn't ranked against a floor.
-      const price = Number(priceRaw);
+      const price = priceRaw;
       const cur = winningByImp.get(impKey) || 0;
       if (price > cur) winningByImp.set(impKey, price);
     } else {
-      const price = Number(priceRaw);
+      const price = priceRaw;
       const priceParams = {
         ...baseParams,
         price: price.toFixed(4),
         floor: floor.toFixed(4),
       };
       // Currency-safety: bid prices settle in the response currency, while the
-      // floor is denominated in imp.bidfloorcur (default = request currency).
-      // Comparing the raw numbers across currencies is meaningless without an
-      // FX rate, so when they differ we flag the mismatch instead of emitting a
-      // bogus above/below-floor verdict. (cur_not_in_request covers res.cur vs
-      // req.cur separately; this catches the floor-vs-bid denomination.)
-      // Both `imp.bidfloorcur` and `BidResponse.cur` default to "USD" by
-      // spec, independently of `BidRequest.cur` — which is only the list of
-      // currencies the exchange ACCEPTS, not a statement about how either
-      // figure was priced. Falling through `req.cur[0]` made two different
-      // denominations look like one and produced a confident above/below
-      // verdict on an incomparable pair. See resolveFloor() in
-      // rules/price-floor for the same correction on the rules side.
-      const floorCur =
-        (typeof imp.bidfloorcur === 'string' ? imp.bidfloorcur.toUpperCase() : null) || 'USD';
+      // floor is denominated in the governing object's own currency field
+      // (Deal.bidfloorcur when a deal governs, else imp.bidfloorcur — default
+      // = request currency either way). Comparing the raw numbers across
+      // currencies is meaningless without an FX rate, so when they differ we
+      // flag the mismatch instead of emitting a bogus above/below-floor
+      // verdict. (cur_not_in_request covers res.cur vs req.cur separately;
+      // this catches the floor-vs-bid denomination.)
+      // Both `imp.bidfloorcur`/`Deal.bidfloorcur` and `BidResponse.cur`
+      // default to "USD" by spec, independently of `BidRequest.cur` — which
+      // is only the list of currencies the exchange ACCEPTS, not a statement
+      // about how either figure was priced. Falling through `req.cur[0]` made
+      // two different denominations look like one and produced a confident
+      // above/below verdict on an incomparable pair. See resolveFloor() in
+      // rules/price-floor for the same correction on the rules side. A
+      // matched deal's currency is read independently via resolveDealFloor()
+      // — never falls back to imp.bidfloorcur — per the same §3.2.12 clause.
+      const floorCur = dealFloor
+        ? dealFloor.floorCur
+        : (typeof imp.bidfloorcur === 'string' ? imp.bidfloorcur.toUpperCase() : null) || 'USD';
       const bidCur = resCurUp || 'USD';
       if (hasExplicitFloor && floor > 0 && floorCur !== bidCur) {
         out.push(
@@ -564,7 +591,7 @@ function crosscheck(req, res, _ctx) {
  * it claims to answer, at a price the request would accept, with a creative the
  * request allows". Those questions are identical in 2.x and 3.0; only the
  * spelling changed. 3.0 wraps everything in an `openrtb` envelope, renames
- * `imp[]` to `request.item[]`, `bidfloor`/`bidfloorcur` to `flr`/`flrcu`,
+ * `imp[]` to `request.item[]`, `bidfloor`/`bidfloorcur` to `flr`/`flrcur`,
  * `bid.impid` to `bid.item`, and moves the creative under `bid.media`.
  *
  * Pre-fix this file tested `Array.isArray(req.imp)` and nothing else, so a
@@ -664,7 +691,11 @@ function projectItem30(item) {
   if (!isObj(item)) return item;
   const spec = isObj(item.spec) ? item.spec : {};
   const placement = isObj(spec.placement) ? spec.placement : {};
-  const out = { id: item.id, bidfloor: item.flr, bidfloorcur: item.flrcu };
+  // AdCOM/OpenRTB 3.0 spells the currency field `flrcur`, not `flrcu`
+  // (openrtb-3.0-FINAL.md:517, 586). The old typo read `item.flrcu`, which no
+  // conforming Item ever carries, so floorCur silently defaulted to 'USD' for
+  // every 3.0 payload regardless of the real value — feature 022 / DEF-105.
+  const out = { id: item.id, bidfloor: item.flr, bidfloorcur: item.flrcur };
   if (isObj(placement.display)) {
     // AdCOM DisplayPlacement carries one fixed w/h plus `displayfmt[]`
     // alternatives — the same split 2.x makes between banner.w/h and
