@@ -59,17 +59,6 @@
       "toastMatch": "The bid response pane must hold a JSON object — got number"
     }
   },
-  "knownGap": {
-    "id": "DEF-300",
-    "layers": ["http"],
-    "note": "Core correctly rejects a bare JSON number as a BidResponse root (payload.invalid_root, status:invalid — OpenRTB 2.6 §4.2.1 defines BidResponse as an object) when called directly. POST /api/analyze does not: a numeric bidRes value is silently treated as though no response had been submitted at all — the merged validation envelope comes back clean with only the request's own findings, and crosscheck comes back empty instead of crosscheck.no_response. This is an HTTP-only discrepancy: the browser correctly rejects this scalar before any Analyze POST, with a specific message and no stale results.",
-    "matches": {
-      "http": [
-        "^response: no result produced$",
-        "^crosscheck: missing crosscheck\\.no_response @ res \\[crit\\] — got \\(none\\)$"
-      ]
-    }
-  },
   "specNotes": [
     "OpenRTB 2.6 §4.2.1 defines BidResponse as an object carrying `id` and either `seatbid[]` or `nbr`. A bare JSON number satisfies neither the object requirement nor any documented vendor feed shape (every vendor response dialect in this corpus is an object or an array, never a scalar).",
     "`rawResponse` is used rather than `replaceResponse` because the patch schema restricts `replaceResponse` to object/array/null; a scalar root can only be expressed as raw transport text. The raw text \"42\" is valid JSON (a number), so this is NOT a `parse: invalid-json` case — it reaches Core as a real, if non-object, value.",

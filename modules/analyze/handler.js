@@ -169,7 +169,14 @@ function createAnalyzeModule(deps) {
         const hasReqStr = typeof bidReq === 'string' && bidReq.trim().length > 0;
         const hasReqObj = bidReq && typeof bidReq === 'object' && Object.keys(bidReq).length > 0;
         const hasReq = hasReqStr || hasReqObj;
-        const hasRes = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0;
+        // A response was submitted when bidRes is a non-empty object/array OR a
+        // present scalar (number/string/boolean). Dropping a scalar as "absent"
+        // let a bare `42` pass as a clean no-response; Core's validate() rejects
+        // it with payload.invalid_root, and the HTTP contract must surface the
+        // same rejection (and crosscheck.no_response) rather than silence it.
+        const hasResObj = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0;
+        const hasResScalar = bidRes !== undefined && bidRes !== null && typeof bidRes !== 'object';
+        const hasRes = hasResObj || hasResScalar;
 
         // Same bargain as `bidReqRaw`, for the other pane. The response arrives
         // parsed too, so a duplicate `id`, an integer past 2^53-1 and a raw

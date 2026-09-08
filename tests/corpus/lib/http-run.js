@@ -225,7 +225,15 @@ async function runHttp(baseUrl, c) {
   const hasReq =
     nonemptyObject(submitted.bidReq) ||
     (typeof submitted.bidReq === 'string' && submitted.bidReq.trim().length > 0);
-  const hasRes = nonemptyObject(submitted.bidRes);
+  // A response side is present when bidRes is a non-empty object/array OR a
+  // present scalar (e.g. a bare `42`). The scalar branch mirrors the handler:
+  // Core validates such a root and rejects it, so its findings belong to the
+  // response side rather than being folded into the request bucket.
+  const hasRes =
+    nonemptyObject(submitted.bidRes) ||
+    (submitted.bidRes !== undefined &&
+      submitted.bidRes !== null &&
+      typeof submitted.bidRes !== 'object');
   const reqFindings = (hasRes ? findings.filter((f) => !isResponseFinding(f)) : findings).map(
     (f) => ({ ...f, side: 'request' }),
   );
@@ -276,6 +284,12 @@ function httpExpectFor(c) {
   if (both && e.response) {
     delete e.response.type;
     delete e.response.version;
+    // When both sides are present the API returns one merged validation object;
+    // the harness synthesizes a per-side status from finding levels, so
+    // validate()'s root-level 'invalid' status is not reconstructible here (it
+    // is asserted directly at the Core layer). Drop only that status; errors/
+    // warnings/clean remain representable and stay checked.
+    if (e.response.status === 'invalid') delete e.response.status;
   }
   return e;
 }

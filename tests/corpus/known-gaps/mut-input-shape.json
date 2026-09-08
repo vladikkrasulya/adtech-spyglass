@@ -1,22 +1,6 @@
 {
   "schemaVersion": 1,
   "gaps": {
-    "DEF-300": {
-      "id": "DEF-300",
-      "title": "POST /api/analyze silently drops a non-object, non-array response body instead of reporting it as invalid",
-      "category": "http-shape",
-      "severity": "high",
-      "source": "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/403cbba542de3a5d9cfcccd0a34e74b01b79a9f1/2.6.md#objectbidresponse",
-      "code": ["modules/analyze/handler.js:172", "packages/core/index.js"],
-      "expected": "Core's own validate() correctly rejects a bare JSON scalar (e.g. a number) as a BidResponse root with payload.invalid_root, status:invalid. The HTTP contract exposed by POST /api/analyze should surface the same rejection when a caller submits such a value as bidRes.",
-      "actual": "Confirmed directly against the running server: posting {bidReq: <valid banner request>, bidRes: 42} returns HTTP 200 with validation.status:'clean' (only the request's own findings), and crosscheck:[] — the numeric response value is treated as though no response had been submitted at all, rather than being validated and rejected. Root cause: modules/analyze/handler.js:172 computes `hasRes = bidRes && typeof bidRes === 'object' && Object.keys(bidRes).length > 0`, which is false for a numeric bidRes, so validate(bidRes) is never even called for that side.",
-      "cases": ["mut-input-shape-number-root-response"],
-      "reviewedAt": "2026-09-08",
-      "notes": [
-        "The exact reviewed deviation is pinned per case and layer in knownGap.matches; unrelated failures are not admitted as this gap.",
-        "Distinct from DEF-115 (a crash in category traversal on non-array nested fields within an otherwise object-shaped, parsed response): this is a silent coercion of a non-container response root to 'absent', not a crash, and it affects the Core-vs-HTTP layer boundary specifically — Core's own validate() already gets this right when called directly."
-      ]
-    },
     "DEF-301": {
       "id": "DEF-301",
       "title": "A no-bid reason code outside both the canonical 0-17 list and the reserved 500+ exchange range is not distinguished from a real one",
