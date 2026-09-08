@@ -17,7 +17,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@ortbtools/core": "^0.45.0"
+    "@ortbtools/core": "^0.46.0"
   },
   "keywords": [
     "openrtb",

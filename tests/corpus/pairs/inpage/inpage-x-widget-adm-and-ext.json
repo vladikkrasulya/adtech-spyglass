@@ -152,15 +152,5 @@
     "http": {
       "status": 200
     }
-  },
-  "knownGap": {
-    "id": "DEF-180",
-    "layers": ["core", "http", "browser"],
-    "note": "The standard OpenRTB media-object requirement is correctly reported and is not this gap. The remaining expectation concerns recognizing the project-documented in-page vendor signal in an OpenRTB envelope and exposing bid.ext creative content where applicable.",
-    "matches": {
-      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
-      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
-      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"]
-    }
   }
 }

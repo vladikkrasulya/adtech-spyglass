@@ -11,6 +11,7 @@
  */
 
 const { isObj } = require('./helpers');
+const { isExadsRequest, isExadsResponse } = require('./vendor-exads');
 const { CROSS_LEVELS, makeCross } = require('./findings');
 const { isVastShape } = require('./format-detect');
 const { inspectVastMedia } = require('./rules-vast');
@@ -25,6 +26,9 @@ const C = makeCross;
 const MARKUP_MEDIA = ['banner', 'video', 'audio', 'native'];
 
 function crosscheck(req, res, _ctx) {
+  // Proprietary EXADS carriers have no IAB impression/seat/floor contract.
+  // The shared predicates reject even malformed supplied IAB carrier markers.
+  if (isExadsRequest(req) && isExadsResponse(res)) return [];
   // _ctx.dialect is reserved for future dialect-aware crosscheck rules
   // (e.g. vendor-specific bid.ext.bsection expectations). Today the rules
   // here are spec-agnostic; the param is accepted to keep the call shape

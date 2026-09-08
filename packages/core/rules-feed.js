@@ -23,10 +23,57 @@
 
 const { isObj, isStr, isNum } = require('./helpers');
 const { LEVELS, makeFinding } = require('./findings');
+const { isExadsResponse, validateExadsResponse } = require('./vendor-exads');
+const { isAdon3Response, validateAdon3Response } = require('./vendor-adon3');
 
 const F = makeFinding;
 
+/** A Native material carrier, independent of any vendor hostname. */
+function isNativeFeedMaterial(value) {
+  return (
+    isObj(value) &&
+    Object.hasOwn(value, 'url') &&
+    Object.hasOwn(value, 'image') &&
+    Object.hasOwn(value, 'cpc') &&
+    !['imp', 'seatbid', 'openrtb'].some((key) => Object.hasOwn(value, key)) &&
+    !detectSingleBidShape(value)
+  );
+}
+
+function isHttpTarget(value) {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.hostname;
+  } catch {
+    return false;
+  }
+}
+
+function validateNativeMaterial(value, prefix, findings) {
+  const path = (key) => (prefix ? prefix + '.' + key : key);
+  if (!isHttpTarget(value.url)) {
+    findings.push(F('feed.native.field_invalid', LEVELS.ERROR, path('url'), { field: 'url' }));
+  }
+  if (!isNum(value.cpc) || value.cpc < 0) {
+    findings.push(F('feed.native.price_invalid', LEVELS.ERROR, path('cpc')));
+  }
+  for (const field of ['title', 'image']) {
+    if (!Object.hasOwn(value, field)) {
+      findings.push(F('feed.native.field_missing', LEVELS.WARNING, path(field), { field }));
+    } else if (
+      typeof value[field] !== 'string' ||
+      !value[field].trim() ||
+      (field === 'image' && !isHttpTarget(value[field]))
+    ) {
+      findings.push(F('feed.native.field_invalid', LEVELS.ERROR, path(field), { field }));
+    }
+  }
+}
+
 function validateFeedResponse(arrOrObj) {
+  if (isExadsResponse(arrOrObj)) return validateExadsResponse(arrOrObj);
+  if (isAdon3Response(arrOrObj)) return validateAdon3Response(arrOrObj);
   // Clickunder feed
   // Clickunder XML-engine response — recognise BID (listing object OR
   // listing array) and NOBID shapes. See detect.js for the full shape table.
@@ -48,6 +95,12 @@ function validateFeedResponse(arrOrObj) {
   // Push-materials feed (array of materials)
   if (Array.isArray(arrOrObj)) {
     return validatePushMaterialsFeed(arrOrObj);
+  }
+
+  if (isNativeFeedMaterial(arrOrObj)) {
+    const findings = [];
+    validateNativeMaterial(arrOrObj, '', findings);
+    return { type: 'Native-Materials Feed Response (single)', findings };
   }
 
   // Single-bid object — discriminate vendor by signature key
@@ -226,11 +279,19 @@ function validatePushMaterialsFeed(arr) {
     // generic priced+clickable material stays on the push-material path.
     if (isObj(m) && detectSingleBidShape(m) === 'bidprice') {
       validateBidPriceMaterial(m, (name) => `[${i}].${name}`, findings);
+    } else if (isNativeFeedMaterial(m)) {
+      validateNativeMaterial(m, `[${i}]`, findings);
     } else {
       validatePushMaterial(m, i + 1, `[${i}]`, findings);
     }
   });
-  return { type: 'Push-Materials Feed Response', findings };
+  return {
+    type:
+      arr.length && arr.every(isNativeFeedMaterial)
+        ? 'Native-Materials Feed Response'
+        : 'Push-Materials Feed Response',
+    findings,
+  };
 }
 
 // Single push material outside an array — same field contract, root-relative
@@ -340,4 +401,4 @@ function validateBidRedirectFeed(o) {
   return { type: 'Bid-Redirect Feed Response', findings };
 }
 
-module.exports = { validateFeedResponse };
+module.exports = { validateFeedResponse, isNativeFeedMaterial };

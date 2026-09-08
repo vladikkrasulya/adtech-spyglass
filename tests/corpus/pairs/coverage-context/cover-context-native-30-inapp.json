@@ -245,13 +245,10 @@
   },
   "knownGap": {
     "id": "DEF-151",
-    "layers": ["core", "http", "browser"],
-    "note": "026 resolves structured Native response presence and required-asset crosscheck. DEF-151 remains open for AdCOM Native format recognition and actual creative preview in peer-owned files; the retained signatures cover only those original deviations.",
+    "layers": ["browser"],
+    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
     "matches": {
-      "core": ["^format\\.formats: expected \\[native\\], got \\[banner\\]$"],
-      "http": ["^format\\.formats: expected \\[native\\], got \\[banner\\]$"],
       "browser": [
-        "^browser\\.format\\.formats:\\ expected\\ \\[native\\],\\ got\\ \\[banner\\]$",
         "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ native,\\ got\\ empty$",
         "^browser\\.bid\\[0,0\\]\\.preview\\.rendered:\\ expected\\ full,\\ got\\ empty$",
         "^browser\\.bid\\[0,0\\]\\.preview\\.assets\\.imgTotal:\\ expected\\ 1,\\ got\\ 0$",

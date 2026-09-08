@@ -28,6 +28,13 @@ returns validation/crosscheck/category/format metadata, and does not persist raw
 Authenticated calls additionally write account-scoped derived counts; configured analytics can
 receive derived validation metrics.
 
+Core 0.46.0 adds vendor carrier inspection through this existing envelope. Recognized EXADS JSON
+request/response pairs retain vendor findings and omit inapplicable IAB commercial crosscheck;
+malformed or unknown IAB carriers retain their previous diagnostics. Canonical vendor GET metadata
+and explicit provisional Adon3 warnings pass through the same response. This adds no endpoint,
+payload retention, vendor request or preview-fetch permission; the detailed meaning belongs to the
+[Core contract](./core-validator.md).
+
 `POST /api/analyze-behavior` runs the behavior engine server-side over the required probe-event array
 and optional creative source. Events beyond the accepted bound are head/tail sampled. Legacy
 `{ events, adm }` remains accepted. The hosted Inspector uses additive

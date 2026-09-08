@@ -94,20 +94,11 @@
   "knownGap": {
     "id": "DEF-107",
     "layers": ["core", "http", "browser"],
-    "note": "Publicly documented vendor URL request contracts should be decoded consistently with their feed responses; fixture host and token values are synthetic.",
+    "note": "028: documented carrier validation and Core recognition implemented. Retained signatures are measured residuals; preview work belongs to Opus. Hidden Kadam inpage context assertions remain unchanged pending the explicit owner decision.",
     "matches": {
-      "core": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
-        "^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"
-      ],
-      "http": [
-        "^request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
-        "^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"
-      ],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ request\\.url\\.no_decoder\\[error\\]@$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"
-      ]
+      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"],
+      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"],
+      "browser": ["^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[push\\]$"]
     }
   }
 }

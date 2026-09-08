@@ -151,13 +151,10 @@
   },
   "knownGap": {
     "id": "DEF-180",
-    "layers": ["core", "http", "browser"],
-    "note": "The standard OpenRTB media-object requirement is correctly reported and is not this gap. The remaining expectation concerns recognizing the project-documented in-page vendor signal in an OpenRTB envelope and exposing bid.ext creative content where applicable.",
+    "layers": ["browser"],
+    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
     "matches": {
-      "core": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
-      "http": ["^format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$"],
       "browser": [
-        "^browser\\.format\\.formats:\\ expected\\ \\[inpage\\],\\ got\\ \\[\\]$",
         "^browser\\.bid\\[0,0\\]\\.identity:\\ expected\\ marker\\ \"A\\ quiet\\ harbor\\ at\\ dawn\"\\ absent$"
       ]
     }

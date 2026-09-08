@@ -89,27 +89,10 @@
   },
   "knownGap": {
     "id": "DEF-106",
-    "layers": ["core", "http", "browser"],
-    "note": "Normative expectations are unchanged. Core, real HTTP and browser separately reproduced these exact deviations during coverage closure on 2026-09-08.",
+    "layers": ["browser"],
+    "note": "028: Core and HTTP expectations pass. Retained signatures describe unresolved preview behavior owned by Opus; no preview expectation was changed.",
     "matches": {
-      "core": [
-        "^request: findings above warning: payload\\.unknown_type\\[error\\]@$",
-        "^response: findings above warning: payload\\.unknown_type\\[error\\]@$",
-        "^format\\.formats: expected \\[banner\\], got \\[\\]$"
-      ],
-      "http": [
-        "^request: findings above warning: payload\\.unknown_type\\[error\\]@$",
-        "^response: findings above warning: payload\\.unknown_type\\[error\\]@$",
-        "^crosscheck: expected no crosscheck findings, got crosscheck\\.no_request\\[crit\\]@req$",
-        "^format\\.formats: expected \\[banner\\], got \\[\\]$"
-      ],
-      "browser": [
-        "^browser\\.request:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
-        "^browser\\.response:\\ findings\\ above\\ warning:\\ payload\\.unknown_type\\[error\\]@$",
-        "^browser\\.crosscheck:\\ expected\\ no\\ crosscheck\\ findings,\\ got\\ crosscheck\\.no_request\\[crit\\]@req$",
-        "^browser\\.format\\.formats:\\ expected\\ \\[banner\\],\\ got\\ \\[\\]$",
-        "^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ markup,\\ got\\ empty$"
-      ]
+      "browser": ["^browser\\.bid\\[0,0\\]\\.preview\\.kind:\\ expected\\ markup,\\ got\\ empty$"]
     }
   }
 }

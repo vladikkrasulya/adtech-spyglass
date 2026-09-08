@@ -6,6 +6,13 @@ All notable changes to ortbtools are documented here. Format follows
 
 ## [Unreleased]
 
+**Core 0.46.0 — vendor carrier inspection (SpecKit 028)**
+
+- Inspect documented EXADS request/bid wrappers and PPCmate/Kadam/EXADS GET families through the existing Core boundary, preserving original query evidence and excluding proprietary EXADS pairs from inapplicable IAB commercial crosscheck.
+- Recognize Kadam Native material roles, project inpage hints and nested AdCOM Native formats while retaining required IAB findings and genuine media alternatives.
+- Inspect Adon3-shaped references with explicit provisional/unsupported warnings; preserve decimal-string prices and reject supplied invalid fields without certifying a finalized vendor protocol.
+- Keep browser preview work and whole-case closure separate from Core/backend delivery. CLI stays 0.1.3 with Core dependency `^0.46.0`; the application stays 1.19.4.
+
 ### v1.19.4 — close audited maintenance debt (2026-09-07)
 
 - Tie immutable asset URLs to the exact delivered bytes and transitive dependencies. Stale or malformed versions fail without cache retention; repaired clients preserve active work when a deferred update fails and provide a localized retry.

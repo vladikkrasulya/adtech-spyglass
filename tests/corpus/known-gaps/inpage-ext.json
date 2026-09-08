@@ -13,21 +13,22 @@
         "public/ortbtools.app.js"
       ],
       "expected": "The project-documented widget/zone and bid.ext in-page dialect can be identified as vendor in-page content even when carried in an OpenRTB envelope; bid.ext-only creative support is reported separately. Standard OpenRTB requires a media object, so imp.format_required for these bare widget impressions is correct and remains asserted.",
-      "actual": "Format detection does not tag these imp/seatbid-shaped widget examples as inpage, and the preview does not render nested bid.ext cards. The adm-bearing control renders its markup correctly. The request media-object error is not an implementation deviation.",
+      "actual": "028 Core/HTTP format recognition passes while IAB errors remain asserted. Current browser residuals are five extension-card identity/preview cases, including four peer-owned contradictory empty-preview assertions.",
       "cases": [
-        "inpage-x-widget-openrtb-canonical",
-        "inpage-x-widget-openrtb-aliases",
+        "cover-vendor-inpage-openrtb26",
         "inpage-x-widget-iab-contract",
-        "inpage-x-widget-adm-and-ext",
         "inpage-x-widget-inapp",
-        "cover-vendor-inpage-openrtb26"
+        "inpage-x-widget-openrtb-aliases",
+        "inpage-x-widget-openrtb-canonical"
       ],
       "reviewedAt": "2026-09-08",
       "notes": [
         "This is a vendor capability distinction, not proof that media-free impressions comply with IAB OpenRTB. The earlier reading of conditional Imp field-table entries was incomplete; section 3.1 explicitly requires a media object.",
         "Only missing vendor tagging and case-specific creative identity failures remain pinned. Response-dialect validation and baseline request rejection are asserted independently.",
-        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects."
-      ]
+        "Coverage-closure cases extend this existing group; exact additional signatures and measured browser evidence are recorded per case, not counted as independent new defects.",
+        "028: current Core, real HTTP and isolated browser observations justify only the recorded layer reductions. Unresolved preview assertions are unchanged; see specs/028-vendor-request-dialects/verification.md."
+      ],
+      "layers": ["browser"]
     }
   }
 }
